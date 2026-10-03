@@ -2,7 +2,7 @@
 #include <RiscHardwareConfigV1.h>
 #include <string.h>
 static const risc_hardware_device_v1* hardware;
-static const unsigned api=1;
+static const unsigned api[2]={1,sizeof(api)};
 static bool start(const risc_provider_dependency_v1* deps,size_t count) {
   if(count!=1 || strcmp(deps[0].capability_id,"hardware.device") || deps[0].api_version!=1) return false;
   hardware=deps[0].api;

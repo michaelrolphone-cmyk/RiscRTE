@@ -59,6 +59,19 @@ int main(int argc,char** argv){
   {Board b;assert(!b.load(doc.as<JsonObjectConst>()));}
   assert(parse(board,strlen(board),doc));
   {Board b;assert(b.reservePin(5));assert(!b.load(doc.as<JsonObjectConst>()));}
+  // Identity-bound declaration/grant policy never follows a child implicitly.
+  write(root+"/app.json",R"({"type":"application","id":"cap-test","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"cap-app.elf","entry":"app_main","requires":[{"capability":"test.probe","api":1}]})");
+  const char* grantBoot=R"({"board":"board.json","default_app":"cap-app.elf","drivers":[{"manifest":"probe.json","instance_id":7}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.probe","api":1,"instance_id":7}]}]})";
+  write(root+"/boot.json",grantBoot);generation=0;lines.clear();
+  {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}
+  assert((lines==std::vector<std::string>{"CAP granted","CAP child denied","CAP granted"}));
+  assert(parse(grantBoot,strlen(grantBoot),doc));doc["app_capabilities"][0]["grants"][0]["api"]=2;
+  bad.clear();serializeJson(doc,bad);write(root+"/boot.json",bad);
+  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+  assert(parse(grantBoot,strlen(grantBoot),doc));doc["app_capabilities"][0]["grants"][0]["instance_id"]=8;
+  bad.clear();serializeJson(doc,bad);write(root+"/boot.json",bad);
+  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+  puts("App grants: identity/declaration/exact instance, size/version checks, stale handles, child isolation and automatic revocation PASS");
   write(root+"/boot.json",R"({"board":"board.json","default_app":"heartbeat.elf","drivers":[]})");
   heartbeatMode=true;generation=0;lines.clear();
   {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}

@@ -20,6 +20,8 @@ class Runtime final {
   bool run();
   bool launch(const char* relative);
   bool health(risc_runtime_health_v1*);
+  bool acquire(const char*,uint32_t,uint64_t,risc_runtime_capability_v1*);
+  bool release(risc_runtime_capability_v1*);
   void yield(uint32_t);
   bool diagnostic(const char*);
   bool active() const { return active_ && port_.owner(); }
@@ -38,6 +40,23 @@ class Runtime final {
   bool manifest(JsonObjectConst, Driver&);
   bool validateGraph();
   bool runOne(const char*);
+  bool appPolicies(JsonVariantConst);
+  bool revokeApp();
+  struct AppGrantPolicy {
+    char capability[96]{}; uint32_t api=0; uint64_t instance=0;
+    int driver=-1, platform=-1;
+  };
+  struct AppPolicy {
+    char id[96]{}, version[64]{}, elf[256]{};
+    AppGrantPolicy grants[8]{}; size_t count=0;
+  } policies_[8]{};
+  size_t policyCount_=0;
+  const AppPolicy* appPolicy_=nullptr;
+  struct AppGrant {
+    RuntimeProviders::GrantV2 provider{}; const void* api=nullptr;
+    uint32_t generation=0; bool live=false;
+  } appGrants_[16]{};
+  uint32_t grantGeneration_=0;
   struct Platform {
     char capability[96]{}; uint32_t api=0; Scope scope=Scope::Global;
     uint64_t id=0; const void* table=nullptr;

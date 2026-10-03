@@ -12,7 +12,9 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](risc_runtime_health_v1* h){return currentRuntime && currentRuntime->health(h);},
     [](uint32_t ms){if(currentRuntime) currentRuntime->yield(ms);},
     [](const char* line){return currentRuntime && currentRuntime->diagnostic(line);},
-    [](const char* path){return currentRuntime && currentRuntime->launch(path);}};
+    [](const char* path){return currentRuntime && currentRuntime->launch(path);},
+    [](const char* cap,uint32_t version,uint64_t instance,risc_runtime_capability_v1* out){return currentRuntime && currentRuntime->acquire(cap,version,instance,out);},
+    [](risc_runtime_capability_v1* grant){return currentRuntime && currentRuntime->release(grant);}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 namespace RiscBoot {
@@ -127,6 +129,103 @@ bool Runtime::validateGraph() {
   for(size_t i=0;i<driverCount_;++i) if(edges[i][i]) return fail("driver dependency cycle");
   return true;
 }
+bool Runtime::appPolicies(JsonVariantConst value) {
+  if (value.isNull()) return true;
+  if (!value.is<JsonArrayConst>() || value.size()>8) return fail("invalid app capability policy");
+  for (JsonObjectConst item:value.as<JsonArrayConst>()) {
+    auto& policy=policies_[policyCount_]; char relative[193]; JsonDocument doc;
+    if (!keys(item,{"manifest","grants"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+        !path(root_,relative,policy.elf,sizeof(policy.elf)) || !readJson(policy.elf,doc)) return fail("invalid app policy manifest path");
+    JsonObjectConst manifest=doc.as<JsonObjectConst>(); char filename[128];
+    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name"}) ||
+        !eq(manifest["type"],"application") || !eq(manifest["architecture"],"xtensa-esp32s3") || !eq(manifest["entry"],"app_main") ||
+        !text(manifest["id"],policy.id,sizeof(policy.id)) || !RuntimePackages::safeId(policy.id) ||
+        !text(manifest["version"],policy.version,sizeof(policy.version)) || !RuntimePackages::safeVersion(policy.version) ||
+        !text(manifest["file_name"],filename,sizeof(filename)) || !RuntimePackages::safeArtifact(filename) || !elfPath(filename) ||
+        !manifest["requires"].is<JsonArrayConst>() || manifest["requires"].size()>8 ||
+        !item["grants"].is<JsonArrayConst>() || item["grants"].size()>8) return fail("invalid app identity/declarations");
+    char* slash=strrchr(policy.elf,'/'); if (!slash) return false;
+    *(slash+1)=0;
+    if (strlen(policy.elf)+strlen(filename)>=sizeof(policy.elf)) return fail("app path too long");
+    strcat(policy.elf,filename);
+    for (size_t i=0;i<policyCount_;++i) if (!strcmp(policies_[i].id,policy.id) || !strcmp(policies_[i].elf,policy.elf)) return fail("duplicate app identity/path policy");
+    for (JsonObjectConst request:manifest["requires"].as<JsonArrayConst>()) {
+      auto& grant=policy.grants[policy.count]; int64_t api=0;
+      if (!keys(request,{"capability","api"}) || !text(request["capability"],grant.capability,sizeof(grant.capability)) ||
+          !integer(request["api"],1,UINT32_MAX,api)) return fail("invalid app requirement");
+      grant.api=api;
+      for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,grant.capability)) return fail("duplicate app requirement");
+      unsigned matches=0;
+      for (JsonObjectConst allowed:item["grants"].as<JsonArrayConst>()) {
+        int64_t allowedApi=0, instance=0; char capability[96];
+        if (!keys(allowed,{"capability","api","instance_id"}) || !text(allowed["capability"],capability,sizeof(capability)) ||
+            !integer(allowed["api"],1,UINT32_MAX,allowedApi) || !integer(allowed["instance_id"],0,INT32_MAX,instance)) return fail("invalid app grant");
+        if (!strcmp(capability,grant.capability) && allowedApi==api) {++matches;grant.instance=instance;}
+      }
+      if (matches!=1) return fail("app requirement not uniquely authorized");
+      if (!strcmp(grant.capability,"platform.clock")) {
+        for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,grant.capability) && platforms_[p].api==grant.api) {
+          if (grant.platform>=0 || grant.instance) return fail("ambiguous app platform clock");
+          grant.platform=p;
+        }
+        if (grant.platform<0) return fail("app platform clock unavailable");
+      } else {
+        if (!strncmp(grant.capability,"platform.",9) || !strcmp(grant.capability,"spi.bus") || !strcmp(grant.capability,"hardware.device")) return fail("raw platform capability denied to app");
+        for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,grant.capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
+          if (grant.driver>=0) return fail("ambiguous app provider");
+          grant.driver=d;
+        }
+        if (grant.driver<0) return fail("app provider unavailable");
+      }
+      ++policy.count;
+    }
+    if (policy.count!=item["grants"].size()) return fail("undeclared app grant");
+    ++policyCount_;
+  }
+  return true;
+}
+bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
+  if (!active() || !appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
+  out->slot=out->generation=0;out->api=nullptr;
+  const AppGrantPolicy* allowed=nullptr;
+  for (size_t i=0;i<appPolicy_->count;++i) {
+    const auto& p=appPolicy_->grants[i];
+    const uint64_t selected=p.driver>=0?drivers_[p.driver].instance:0;
+    if (!strcmp(p.capability,capability) && p.api==api && (!instance || selected==instance)) allowed=&p;
+  }
+  if (!allowed) return false;
+  size_t slot=0;while(slot<16 && appGrants_[slot].live)++slot;
+  if (slot==16) return false;
+  auto& grant=appGrants_[slot];
+  if (allowed->driver>=0) {
+    const auto& driver=drivers_[allowed->driver];
+    grant.provider=graph_.acquireFrom(driver.id,capability,api,driver.instance);
+    if (!grant.provider.slot) return false;
+    grant.api=graph_.interfaceFor(grant.provider);
+  } else grant.api=platforms_[allowed->platform].table;
+  const auto* header=static_cast<const uint32_t*>(grant.api);
+  if (!header || header[0]!=api || header[1]<8) {
+    if (grant.provider.slot && !graph_.release(grant.provider)) {retained_=true;return fail("invalid app interface retained");}
+    grant={}; return false;
+  }
+  grant.live=true;grant.generation=++grantGeneration_;
+  out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
+}
+bool Runtime::release(risc_runtime_capability_v1* out) {
+  if (!active() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
+  auto& grant=appGrants_[out->slot-1];
+  if (!grant.live || grant.generation!=out->generation || grant.api!=out->api) return false;
+  if (grant.provider.slot && !graph_.release(grant.provider)) return false;
+  grant={};out->slot=out->generation=0;out->api=nullptr;return true;
+}
+bool Runtime::revokeApp() {
+  bool ok=true;
+  for (auto& grant:appGrants_) if (grant.live) {
+    if (grant.provider.slot && !graph_.release(grant.provider)) ok=false;
+    else grant={};
+  }
+  appPolicy_=nullptr;return ok;
+}
 bool Runtime::prepare(const char* root) {
   if(attempted_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);
@@ -134,7 +233,7 @@ bool Runtime::prepare(const char* root) {
   if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,config)) return fail("boot.json unreadable/invalid");
   JsonObjectConst c=config.as<JsonObjectConst>();
   if (!c["port"].isNull() && !board_.port(c["port"])) return fail(board_.error());
-  if(!keys(c,{"board","default_app","drivers"},{"port"}) || !text(c["board"],relative,sizeof(relative)) ||
+  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities"}) || !text(c["board"],relative,sizeof(relative)) ||
       !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
   if(!text(c["default_app"],relative,sizeof(relative)) || !elfPath(relative) || !path(root_,relative,current_,sizeof(current_))) return fail("invalid default app path");
   if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>16) return fail("invalid driver list");
@@ -147,7 +246,7 @@ bool Runtime::prepare(const char* root) {
     if(!readJson(d.elf,manifestDoc) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
     ++driverCount_;
   }
-  if(!validateGraph()) return false;
+  if(!validateGraph() || !appPolicies(c["app_capabilities"])) return false;
   for(size_t i=0;i<driverCount_;++i) {
     const Driver& d=drivers_[i];
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
@@ -188,11 +287,14 @@ bool Runtime::runOne(const char* name) {
   auto init=reinterpret_cast<int(*)()>(dlsym(module,"app_module_init"));
   auto fini=reinterpret_cast<void(*)()>(dlsym(module,"app_module_fini"));
   bool ok=entry && bool(init)==bool(fini), initialized=false;
+  appPolicy_=nullptr;
+  for (size_t p=0;p<policyCount_;++p) if (!strcmp(policies_[p].elf,name)) appPolicy_=&policies_[p];
   active_=true;
   if(ok && init) { initialized=init()==0; ok=initialized; }
   if(ok) entry();
   if(initialized) fini();
   active_=false;
+  if (retained_ || !revokeApp()) { retained_=true; return fail("app grants retained; image retained"); }
 #ifdef ESP_PLATFORM
   if(!native_app_memory_end()) { retained_=true; return fail("app memory busy; image retained"); }
 #endif
