@@ -1,0 +1,17 @@
+--- a/lib/PortableApps/src/adapter.c
++++ b/lib/PortableApps/src/adapter.c
+@@ -240,12 +240,11 @@
+   risc_battery_sample_v1 b = {0};
+   if (!gauge || !out || !gauge->read(gauge->context, &b))
+     return false;
+-  if (b.percent > 100 || (b.flags & RISC_BATTERY_PROFILE_MISSING))
+-    return false;
++  const bool known_soc = b.percent <= 100 && !(b.flags & RISC_BATTERY_PROFILE_MISSING);
+   memset(out, 0, sizeof(*out));
+   strcpy(out->board_name, "Battery provider");
+   out->available = out->gauge_ready = out->gauge_read_ok = 1;
+-  out->soc_percent = b.percent;
++  out->soc_percent = known_soc ? b.percent : UINT16_MAX;
+   out->gauge_voltage_mv = b.millivolts;
+   out->charging = !!(b.flags & RISC_BATTERY_CHARGING);
+   out->gauge_state =

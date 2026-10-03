@@ -40,6 +40,30 @@ int main(int argc,char** argv){
   {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}
   assert(generation==3 && lines.size()==5);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7}]})");
+  // One package artifact serves independent physical instances. Preserve both
+  // records; duplicate physical owners and inconsistent package versions fail.
+  {
+    JsonDocument dual;assert(parse(board,strlen(board),dual));
+    auto extra=dual["devices"].as<JsonArray>().add<JsonObject>();
+    extra.set(dual["devices"][0]);extra["instance_id"]=8;extra["config"]["pins"][0]=6;
+    std::string encoded;serializeJson(dual,encoded);write(root+"/board.json",encoded);
+    const char* two=R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7},{"manifest":"probe.json","instance_id":8}]})";
+    write(root+"/boot.json",two);
+    {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));}
+    JsonDocument config;assert(parse(two,strlen(two),config));
+    config["drivers"][1]["instance_id"]=7;encoded.clear();serializeJson(config,encoded);write(root+"/boot.json",encoded);
+    {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+    config["drivers"][1]["instance_id"]=8;config["drivers"][1]["manifest"]="probe-other.json";
+    encoded.clear();serializeJson(config,encoded);write(root+"/boot.json",encoded);
+    JsonDocument other;assert(parse(manifest,strlen(manifest),other));other["version"]="2.0.0";
+    encoded.clear();serializeJson(other,encoded);write(root+"/probe-other.json",encoded);
+    {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+    other["version"]="1.0.0";other["file_name"]="different.elf";
+    encoded.clear();serializeJson(other,encoded);write(root+"/probe-other.json",encoded);
+    {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+    write(root+"/board.json",board);
+    write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7}]})");
+  }
   // Invalid board always rejects before any driver entry/load or default app.
   JsonDocument doc;assert(parse(board,strlen(board),doc));
   doc["devices"][0]["config"]["pins"][0]=49;std::string bad;serializeJson(doc,bad);write(root+"/board.json",bad);
