@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstdio>
 #include <fstream>
+#include <filesystem>
 #include <string>
 #include <vector>
 using namespace RiscBoot;
@@ -27,6 +28,18 @@ int main(int argc,char** argv){
     assert((lines==std::vector<std::string>{"TEST default","TEST child","TEST default","RTE_APP child=failed action=reload-default","TEST default"}));
     assert(generation==3);
   }
+  // A live hardware driver may have the same basename as default.elf.
+  // Ownership is the returned mapping handle, never a global basename alias.
+  std::filesystem::create_directory(root+"/drivers");
+  std::filesystem::copy_file(root+"/probe.elf",root+"/drivers/default.elf");
+  JsonDocument named;assert(parse(manifest,strlen(manifest),named));
+  named["file_name"]="default.elf";std::string namedJson;serializeJson(named,namedJson);
+  write(root+"/drivers/probe.json",namedJson);
+  write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"drivers/probe.json","instance_id":7}]})");
+  lines.clear();generation=0;
+  {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}
+  assert(generation==3 && lines.size()==5);
+  write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7}]})");
   // Invalid board always rejects before any driver entry/load or default app.
   JsonDocument doc;assert(parse(board,strlen(board),doc));
   doc["devices"][0]["config"]["pins"][0]=49;std::string bad;serializeJson(doc,bad);write(root+"/board.json",bad);

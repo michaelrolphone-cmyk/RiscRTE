@@ -173,7 +173,8 @@ bool Runtime::runOne(const char* name) {
   if(!native_app_memory_begin()) return fail("app allocation context unavailable");
   native_app_memory_relocation(true);
 #endif
-  void* module=dlopen(name,RTLD_NOW);
+  // An app path may share a basename with a live driver; map a fresh image.
+  void* module=esp_dlopen_instance(name);
 #ifdef ESP_PLATFORM
   native_app_memory_relocation(false);
 #endif
