@@ -1,0 +1,28 @@
+{
+  "name": "elf_loader",
+  "version": "1.3.3",
+  "description": "Official espressif/elf_loader with documented T5S3 integration patches",
+  "license": "Apache-2.0",
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "build": {
+    "includeDir": "include",
+    "srcFilter": [
+      "+<esp_elf.c>",
+      "+<esp_elf_adapter.c>",
+      "+<esp_elf_symbol.c>",
+      "+<esp_privileged_os_cpu.c>",
+      "+<esp_privileged_elf.c>",
+      "+<esp_privileged_imports.c>",
+      "+<esp_privileged_manifest_imports.c>",
+      "+<arch/esp_elf_xtensa.c>",
+      "+<dlso/*.c>",
+      "+<esp_elf_validate.c>"
+    ],
+    "flags": [
+      "-DELF_LOADER_VER_MAJOR=1",
+      "-DELF_LOADER_VER_MINOR=3",
+      "-DELF_LOADER_VER_PATCH=3"
+    ]
+  }
+}
