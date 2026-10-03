@@ -65,8 +65,17 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   }
   return matches==1 || fail("incompatible/ambiguous selected hardware");
 }
+bool Runtime::selected(uint64_t instance) const {
+  for (size_t i=0;i<driverCount_;++i) if (drivers_[i].instance==instance) return true;
+  return false;
+}
+bool Runtime::uses(uint64_t instance,const char* capability,uint32_t api) const {
+  for (size_t i=0;i<driverCount_;++i) if (drivers_[i].instance==instance)
+    for (size_t j=0;j<drivers_[i].count;++j) if (drivers_[i].requirements[j].api==api && !strcmp(drivers_[i].requirements[j].capability,capability)) return true;
+  return false;
+}
 bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,uint64_t id,const void* table) {
-  if (attempted_ || !port_.owner() || !capability || !*capability || strlen(capability)>=96 || !api || !table || platformCount_==32 ||
+  if ((attempted_ && !registrationOpen_) || !port_.owner() || !capability || !*capability || strlen(capability)>=96 || !api || !table || platformCount_==32 ||
       (strncmp(capability,"platform.",9) && strcmp(capability,"spi.bus"))) return false;
   if (scope==Scope::Global) {
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board"))) return false;
@@ -245,6 +254,12 @@ bool Runtime::prepare(const char* root) {
     d.instance=instance; JsonDocument manifestDoc;
     if(!readJson(d.elf,manifestDoc) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
     ++driverCount_;
+  }
+  if (port_.bindPlatforms) {
+    registrationOpen_=true;
+    const bool bound=port_.bindPlatforms(*this);
+    registrationOpen_=false;
+    if (!bound) return fail("trusted platform binding failed");
   }
   if(!validateGraph() || !appPolicies(c["app_capabilities"])) return false;
   for(size_t i=0;i<driverCount_;++i) {

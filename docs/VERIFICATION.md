@@ -53,3 +53,23 @@ providers, PMU/RF electrical policy enforcement, attached-storage bootstrap,
 privileged OS/CPU admission and normal storage-volume capability services are not
 implemented here. Peripheral ELFs remain external files. Only minimal platform
 bootstrap and generic runtime/loader code belong to the firmware.
+
+
+## Generic CPU port and external clock checkpoint
+
+The generic native GPIO/I2C/SPI/clock backend now builds for ESP32-S3 with the
+pinned SDK. Local static RAM238896B/program425185B. Clock integration against
+Watch commit `aa7b03c15a59aa99b2d60ae20905edbdf62e35e6` passes through actual
+Runtime/Graph/CpuPort and five actual dynamically loaded drivers plus the clock
+app. Both115200-byte SPI-reconstructed frames match the actual renderer's valid
+and unset fixtures; there are no RTC time writes, and bad PMU identity/SPI
+failure roll back with no live pins/controllers. See [CPU_PORT.md](CPU_PORT.md)
+for the precise physical-model boundary. Physical Watch execution is unrun.
+
+Minimal X4 runtime plus heartbeat ELF at `6a7f7821` passed owner hardware status
+`X4 hardware / runtime heartbeat cleanup`:22 advancing candidate heartbeats,
+application readback match, protected flash unchanged, approved baseline cleanup
+and readback plus5 heartbeats. Its software integration run37097188948 and X4
+candidate run37097188954 passed. Later `be6efce` hardware run37098107114 failed
+both jobs; X4 timed out without exact-source proof, so no firmware regression or
+hardware pass is inferred. The6a7f7821 result is strictly source-specific.

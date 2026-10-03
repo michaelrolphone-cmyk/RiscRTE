@@ -73,7 +73,7 @@ or a package authorization mechanism.
 T-Watch test source is pinned to `e48a540cdc2c4c1e642fbf20807e2743e2a679a9`.
 `test/fixtures/watch/PROVENANCE.json` records exact unmodified hashes for eight
 profiles, package manifests, and the minimal real I2C driver/headers used by the
-independent-instance regression. Only `TWatchHardwareV1.h` is a production SDK
+independent-instance regression. `TWatchHardwareV1.h` is a production SDK
 addition; the Watch driver is a test fixture and is not linked into firmware or
 installed in the default store. That repository does not declare a separate root
 license at this snapshot; owner-requested extraction preserves source text and
@@ -83,3 +83,13 @@ The CAM-only immutable VFS adapts Reader `lib/NativeApps/src/SdVfs.cpp` descript
 locking/read/seek/close/fstat lifecycle. Its storage source is bounded linked-in
 const data rather than HalStorage; it is not a substitute filesystem driver or
 a native heartbeat stand-in. default.elf remains separately linked ELF input.
+
+The generic CPU port also imports three unchanged transport/clock contracts from
+Watch `aa7b03c15a59aa99b2d60ae20905edbdf62e35e6`: GardenPlatformV1.h,
+TWatchPlatformV1.h and RiscPlatformClockV1.h. SOURCE_MAP records their hashes.
+The native ESP-IDF backend and scoped adapter are new integration code; no chip
+protocol or Watch wiring is copied into firmware. The external clock regression
+checks out that exact Watch commit in an ignored build directory and compiles
+its real five drivers, app, renderer and golden fixture without modifying them.
+These remain test inputs in their owning repository, including original license
+notices. No Watch UI is installed in this repository's default heartbeat store.

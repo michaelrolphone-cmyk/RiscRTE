@@ -4,6 +4,7 @@
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include "bootstrap/Runtime.h"
+#include "ports/esp32s3/CpuPort.h"
 
 #ifndef RISC_TARGET
 #define RISC_TARGET "esp32s3-baseline"
@@ -25,7 +26,9 @@ void cooperate(uint32_t ms) { vTaskDelay(pdMS_TO_TICKS(ms)+1); }
 bool diagnostic(const char* line) { Serial.println(line); return true; }
 // Static lifetime intentionally retains manifests, dependency tables and ELF
 // mappings after failed quiescence. Never destroy these while hardware is live.
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic});
+RiscCpu::Port cpu(RiscCpu::nativeHardware(isOwner));
+bool bindPlatforms(RiscBoot::Runtime& runtime){return cpu.bind(runtime);}
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms});
 }
 void setup() {
   owner=xTaskGetCurrentTaskHandle(); Serial.begin(115200);

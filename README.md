@@ -10,8 +10,10 @@ application in this repository.
 
 This first port targets an ESP32-S3 with **8 MiB flash and octal PSRAM** using
 Arduino 2.0.17 / ESP-IDF 4.4 and the existing Xtensa ELF loader. It does not replace
-the RTOS. Firmware/ELF builds and host checks have passed; **hardware execution
-and Xtensa instruction execution are not yet verified**.
+the RTOS. Firmware/ELF builds and host checks pass. The minimal X4 runtime and external
+heartbeat ELF passed the owner’s physical test at commit `6a7f7821`; this does not
+qualify later commits, other boards, or peripheral drivers. Watch clock hardware
+execution remains pending. See [verification](docs/VERIFICATION.md).
 
 ## Build without touching a device
 
@@ -46,7 +48,9 @@ manifest. A missing store leaves a diagnostic and a yielding idle loop.
    The ESP32-S3 port reserves its flash/PSRAM and diagnostic pads.
 4. Read every selected driver manifest; check exact compatible ID, chip revision,
    config type/version, unique ownership, missing/ambiguous dependencies and
-   cycles **before any dynamic driver is opened**. Driver order in JSON does not
+   cycles **before any dynamic driver is opened**. The generic CPU port registers
+   config-scoped GPIO/I2C/SPI and clock interfaces without hardware I/O during
+   validation ([CPU port](docs/CPU_PORT.md)). Driver order in JSON does not
    determine dependency selection.
 5. The migrated provider graph loads dependencies first, resolves `t5_driver_get(2)`,
    and invokes `start`. Hardware providers receive the immutable, typed selected
@@ -67,8 +71,9 @@ manifest. A missing store leaves a diagnostic and a yielding idle loop.
    configuration and dependencies, revokes grants and blocks further launches;
    it never force-unmaps or silently reboots.
 
-The app SDK exposes only health snapshots, bounded one-way diagnostic lines,
-cooperative yield and launch handoff. It enforces the active app owner task.
+The app SDK exposes health snapshots, bounded one-way diagnostic lines,
+cooperative yield, launch handoff, and identity-bound capability acquire/release
+from explicit boot policy ([app contract](docs/APP_CAPABILITIES.md)). It enforces the active app owner task.
 Normal ELF imports exclude thread creation, process exit, networking and direct
 filesystem/peripheral APIs. Native code is trusted, **not memory-isolated**;
 apps/providers must return cooperatively and cannot retain background work after

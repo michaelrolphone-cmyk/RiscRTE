@@ -579,5 +579,26 @@
     "commit": "10f8e660a2dd6fd250f02852c1039aaf523aa8d4",
     "source": "partitions.csv",
     "source_sha256": "8eab8ddac3fe3b14ab1f5b3a108b8982ac7a6851d7e3e28d1848d37f9a62d2ed"
+  },
+  {
+    "destination": "sdk/driver/GardenPlatformV1.h",
+    "repository": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+    "commit": "aa7b03c15a59aa99b2d60ae20905edbdf62e35e6",
+    "source": "sdk/driver/GardenPlatformV1.h",
+    "source_sha256": "5b5f806a34615feef3f736a6cbf8481854c789067f477bd19d187206a9de333d"
+  },
+  {
+    "destination": "sdk/driver/TWatchPlatformV1.h",
+    "repository": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+    "commit": "aa7b03c15a59aa99b2d60ae20905edbdf62e35e6",
+    "source": "sdk/driver/TWatchPlatformV1.h",
+    "source_sha256": "88457c6cd36a8d2550c964ede1060b4006b72be5d290cff7cd108087bacc16dd"
+  },
+  {
+    "destination": "sdk/driver/RiscPlatformClockV1.h",
+    "repository": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+    "commit": "aa7b03c15a59aa99b2d60ae20905edbdf62e35e6",
+    "source": "sdk/driver/RiscPlatformClockV1.h",
+    "source_sha256": "41a12f6529f38731ee874f8bc166e1cf89fe376a1448fe5a4dd4c9abac90e5e2"
   }
 ]

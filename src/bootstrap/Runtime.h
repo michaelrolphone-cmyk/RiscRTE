@@ -3,11 +3,13 @@
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
 namespace RiscBoot {
+class Runtime;
 struct Port {
   bool (*owner)();
   bool (*health)(risc_runtime_health_v1*);
   void (*delay)(uint32_t);
   bool (*log)(const char*);
+  bool (*bindPlatforms)(Runtime&)=nullptr;
 };
 class Runtime final {
  public:
@@ -17,6 +19,8 @@ class Runtime final {
   // Tables/contexts must remain valid until successful runtime shutdown.
   bool registerPlatform(const char* capability, uint32_t api, Scope scope, uint64_t id, const void* table);
   bool prepare(const char* root);
+  bool uses(uint64_t instance,const char* capability,uint32_t api) const;
+  bool selected(uint64_t instance) const;
   bool run();
   bool launch(const char* relative);
   bool health(risc_runtime_health_v1*);
@@ -27,6 +31,7 @@ class Runtime final {
   bool active() const { return active_ && port_.owner(); }
   const char* error() const { return error_; }
   Board& board() { return board_; }
+  const Board& board() const { return board_; }
  private:
   struct Driver {
     char id[96]{}, provides[96]{}, elf[256]{}, version[64]{};
@@ -69,6 +74,7 @@ class Runtime final {
   Driver drivers_[16]{};
   size_t driverCount_=0, granted_=0;
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
+  bool registrationOpen_=false;
   bool prepared_=false, attempted_=false, active_=false, retained_=false;
 };
 }

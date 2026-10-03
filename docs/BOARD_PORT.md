@@ -46,17 +46,18 @@ I2C address uniqueness is scoped to bus.instance_id. WiFi and BLE unit0 are
 separate compatible-family resources; the trusted CPU port owns RF coexistence.
 Console/USB/flash reservations belong to the selected port, not universal mapper
 rules: baseline UART0 reserves43/44; a Watch mic at44 requires another explicitly
-selected console port. No Watch firmware port is installed by this change.
+selected console port. The generic CPU port is described in [CPU_PORT.md](CPU_PORT.md); no Watch-specific
+firmware or driver implementation is linked into it.
 
 `Runtime::registerPlatform` is a compiled-in port API, not an ELF export. It accepts
 bounded firmware-owned interface tables with explicit Device or Bus scope;
 only platform.clock/platform.board may be Global. Native transport interfaces
 (`platform.*`, `spi.bus`) cannot fall back to an arbitrary ordinary ELF. Contexts
 must enforce the selected config and physical resource policy and remain pinned
-through successful shutdown or retained failed quiescence. The baseline registers
-none of these peripheral services: attempting a Watch activation therefore fails
-closed until a real port is supplied. Registration/preflight tests use noninvoked
-headers; the actual I2C execution regression uses two bounded transport contexts.
+through successful shutdown or retained failed quiescence. The baseline now registers a generic clock and only the selected GPIO/I2C/SPI
+services through a compiled-in preflight hook. Unsupported transport operations
+still fail closed. The independent-instance I2C regression and pinned external
+clock integration exercise real modules through scoped transport contexts.
 
 Ordinary dependency edges come from requirements plus explicit device bindings.
 I2C dependency bus IDs must match; unused bindings, cycles, missing/ambiguous

@@ -38,6 +38,8 @@ class Board final {
   int physicalController(uint64_t busId) const;
   uint64_t deviceBus(uint64_t deviceId) const;
   const Device* device(uint64_t id) const;
+  size_t deviceCount() const { return devicesCount_; }
+  const Device* deviceAt(size_t i) const { return i<devicesCount_?&devices_[i]:nullptr; }
   const risc_hw_bus_v1* bus(uint64_t id) const;
   const char* error() const { return error_; }
   const risc_hardware_board_identity_v2* identity() const { return &identity_; }
