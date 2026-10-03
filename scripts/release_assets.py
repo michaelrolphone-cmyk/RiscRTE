@@ -89,7 +89,7 @@ def stage(source):
     validate_payloads(OUTPUT,v)
     # Verify the filesystem image by extracting with the same pinned SPIFFS tool.
     core=Path(os.environ.get('PLATFORMIO_CORE_DIR',Path.home()/'.platformio'))
-    tool=core/'packages/tool-mkspiffs/mkspiffs';extracted=ROOT/'build/verify-store'
+    tool=core/'packages/tool-mkspiffs/mkspiffs_espressif32_arduino';extracted=ROOT/'build/verify-store'
     if extracted.exists():shutil.rmtree(extracted)
     extracted.mkdir()
     subprocess.run([str(tool),'-u',str(extracted),'-b','4096','-p','256',str(OUTPUT/n['bootfs'])],check=True)
