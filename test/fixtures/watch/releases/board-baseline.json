@@ -1,0 +1,23 @@
+{
+  "schema": "riscrte.board-baseline",
+  "schema_version": 1,
+  "id": "lilygo-t-watch-s3",
+  "version": "1.0.0",
+  "mapping_schema": "riscrte.board-hardware",
+  "mapping_schema_version": 1,
+  "hardware_device_api": 1,
+  "hardware_catalog_api": 1,
+  "platform_board_api": 2,
+  "profile_schema": "docs/twatch-board-v1.schema.json",
+  "cpu_compatible": "espressif,esp32-s3",
+  "controller_namespaces": {
+    "spi": "riscrte.logical",
+    "i2c": "esp32.peripheral",
+    "i2s": "esp32.peripheral"
+  },
+  "schema_clarifications": [
+    "optional-reset-and-controller-namespace-v1"
+  ],
+  "controller_mapping_field": "buses[].physical_controller",
+  "shared_contract_commit": "7e30afc407c86f34364cbfa2035d6f7893fdea8c"
+}

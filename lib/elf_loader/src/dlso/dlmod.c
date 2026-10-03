@@ -264,7 +264,7 @@ esp_elf_t *dlmod_relocate(const char *path)
  * @return Pointer to the new module entry (struct dlmod_slist_t), NULL on failure
  *         (existing entry or relocation error).
  */
-struct dlmod_slist_t *dlmod_insert(const char *path, const char *name)
+static struct dlmod_slist_t *insert_module(const char *path, const char *name, bool independent)
 {
     if (!path || path[0] == '\0' || !name || name[0] == '\0') {
         return NULL;
@@ -283,10 +283,10 @@ struct dlmod_slist_t *dlmod_insert(const char *path, const char *name)
     if (!SLIST_EMPTY(&g_dlmod_slist_head)) {
         struct dlmod_slist_t *current;
         SLIST_FOREACH(current, &g_dlmod_slist_head, next) {
-            if (strcmp(current->name, name) == 0) {
+            if (!independent && strcmp(current->name, name) == 0) {
                 ESP_LOGD(TAG, "%s.so has been dynamically loaded", name);
                 xSemaphoreGive(g_dlmod_mutex);
-                return NULL; /* independent instances require unique module names */
+                return NULL; /* Ordinary duplicate open cannot alias ownership. */
             }
         }
     }
@@ -321,13 +321,13 @@ struct dlmod_slist_t *dlmod_insert(const char *path, const char *name)
     // Re-check if module was inserted by another thread
     struct dlmod_slist_t *existing;
     SLIST_FOREACH(existing, &g_dlmod_slist_head, next) {
-        if (strcmp(existing->name, name) == 0) {
+        if (!independent && strcmp(existing->name, name) == 0) {
             ESP_LOGD(TAG, "%s.so already loaded by another thread", name);
             xSemaphoreGive(g_dlmod_mutex);
             esp_elf_deinit(new_node->elf);
             esp_elf_free(new_node->elf);
             esp_elf_free(new_node);
-            return existing;
+            return NULL;
         }
     }
 
@@ -335,6 +335,13 @@ struct dlmod_slist_t *dlmod_insert(const char *path, const char *name)
     xSemaphoreGive(g_dlmod_mutex);
 
     return new_node;
+}
+
+struct dlmod_slist_t *dlmod_insert(const char *path, const char *name) {
+    return insert_module(path,name,false);
+}
+struct dlmod_slist_t *dlmod_insert_instance(const char *path, const char *name) {
+    return insert_module(path,name,true);
 }
 
 /**

@@ -51,14 +51,18 @@ int GraphV2::find(const char* capability, uint32_t api) const {
   return match;
 }
 
-int GraphV2::findProvider(const char* id, const char* capability, uint32_t api) const {
+int GraphV2::findProvider(const char* id, const char* capability, uint32_t api, uint64_t instance) const {
   if (!validName(id) || !validName(capability) || !api) return -1;
-  for (size_t i = 0; i < count_; ++i)
-    if (nodes_[i].spec.api == api &&
-        std::strcmp(nodes_[i].spec.id, id) == 0 &&
-        std::strcmp(nodes_[i].spec.provides, capability) == 0)
-      return static_cast<int>(i);
-  return -1;
+  int result=-1;
+  for (size_t i=0;i<count_;++i) {
+    const auto& s=nodes_[i].spec;
+    if (s.api==api && !std::strcmp(s.id,id) && !std::strcmp(s.provides,capability) &&
+        (!instance || (s.hardware && s.hardware->instance_id==instance))) {
+      if (result>=0) return -2;
+      result=static_cast<int>(i);
+    }
+  }
+  return result;
 }
 
 bool GraphV2::hasProvider(const char* providerId, const char* capability,
@@ -122,7 +126,8 @@ bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
   // quarantined after failed start/quiesce; those states deliberately retain
   // mapped code and dependency pins until explicit recovery succeeds.
   for (size_t i = 0; i < count_; ++i) {
-    if (std::strcmp(nodes_[i].spec.id, spec.id) == 0 ||
+    if ((std::strcmp(nodes_[i].spec.id, spec.id) == 0 &&
+         (!spec.hardware || !nodes_[i].spec.hardware || spec.hardware->instance_id==nodes_[i].spec.hardware->instance_id)) ||
         nodes_[i].visit == Visit::Visiting ||
         nodes_[i].module.state() == ModuleV2::State::Failed) return false;
   }
@@ -203,8 +208,12 @@ bool GraphV2::activate(size_t index) {
       node.boundDependencies[i]={requirement.capability,1,node.spec.hardware};
       continue;
     }
+    if (requirement.trustedApi) {
+      node.boundDependencies[i]={requirement.capability,requirement.api,requirement.trustedApi};
+      continue;
+    }
     const int dependency = requirement.providerId
-        ? findProvider(requirement.providerId,requirement.capability,requirement.api)
+        ? findProvider(requirement.providerId,requirement.capability,requirement.api,requirement.providerInstance)
         : find(requirement.capability, requirement.api);
     if (dependency < 0 ||
         !activate(static_cast<size_t>(dependency)) ||
@@ -235,7 +244,7 @@ bool GraphV2::activate(size_t index) {
       : node.module.load(node.spec.verifiedElfPath, node.spec.id,
                          node.spec.provides, node.spec.api,
                          node.spec.requirementCount ? node.boundDependencies : nullptr,
-                         node.spec.requirementCount);
+                         node.spec.requirementCount, node.spec.hardware!=nullptr);
   if (!loaded) {
     if (node.module.lastError()[0])
       copyError(error_, node.module.lastError());
@@ -293,9 +302,9 @@ GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
 }
 
 GrantV2 GraphV2::acquireFrom(const char* providerId, const char* capability,
-                           uint32_t api) {
+                           uint32_t api, uint64_t instance) {
   error_[0] = 0;
-  const int target = findProvider(providerId, capability, api);
+  const int target = findProvider(providerId, capability, api, instance);
   if (target < 0) fail("Provider not admitted", providerId);
   return target < 0 ? GrantV2{} : acquireIndex(static_cast<size_t>(target));
 }

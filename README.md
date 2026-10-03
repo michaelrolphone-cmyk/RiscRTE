@@ -114,20 +114,20 @@ storage call. The mounted store must remain immutable while a boot session runs.
 
 ## Deliberately bounded first migration
 
-- The shared Garden/T-Watch `RiscHardwareConfigV1.h` is copied byte-for-byte. Its
-  seven original config types are materialized. Unknown extension types fail
-  closed; this does **not** yet claim T-Watch's additive controller/PMIC/audio/LoRa
-  schemas or its drivers run here. See [the shared contract](docs/HARDWARE_CONTRACT.md).
-- Multiple instances must have distinct module basenames and driver IDs. Duplicate
-  module loads are rejected instead of aliasing a singleton image. Automatic
-  multi-instance cloning and bus-provider extensions are subsequent work.
+- The shared Garden/T-Watch header is copied byte-for-byte from the coordinated
+  clarification. Seven original and six exact additive Watch config types are
+  materialized. Eight real Watch profiles and their full manifest dependency
+  graphs pass admission tests. See [the port boundary](docs/BOARD_PORT.md).
+- Multiple hardware instances use independent ELF data/BSS and scoped dependency
+  tables. Package identity stays unchanged; selection includes instance ID.
+  Identical `driver.elf` paths/basenames do not alias a singleton module.
 - This slice loads ordinary ABI-2 providers only. Privileged OS/CPU package
   admission, normal storage-volume providers, app capability brokering, package
   installation and stream services are not enabled. Stream-dependent drivers fail
   admission without a host table. No alternate storage ABI was introduced.
 - Only flash-backed bootstrap is supplied. An attached-storage bootstrap port
   requires its own explicit noncyclic board/pin ownership and timeout design.
-- No production peripheral driver is bundled. Tiny dynamic providers under
+- No production peripheral driver is bundled. The real Watch I2C test driver and tiny dynamic providers under
   `test/` prove the real graph's binding, dependency, error and teardown paths.
 
 ## Checks
@@ -135,6 +135,7 @@ storage call. The mounted store must remain immutable while a boot session runs.
 ```sh
 bash test/run_board_test.sh
 bash test/run_runtime_test.sh
+bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
 python3 scripts/build_apps.py
 bash test/run_elf_test.sh

@@ -14,6 +14,8 @@ struct RequirementV2 {
   const char* capability;
   uint32_t api;
   const char* providerId = nullptr;
+  uint64_t providerInstance = 0;
+  const void* trustedApi = nullptr; // Firmware-owned and pinned for graph lifetime.
 };
 struct SpecV2 {
   const char* id;
@@ -50,7 +52,7 @@ class GraphV2 final {
   // Ordinary providers only; forged privileged specs fail regardless of hash.
   bool addVerified(const SpecV2& spec);
   GrantV2 acquire(const char* capability, uint32_t api);
-  GrantV2 acquireFrom(const char* providerId, const char* capability, uint32_t api);
+  GrantV2 acquireFrom(const char* providerId, const char* capability, uint32_t api, uint64_t instance = 0);
   bool release(GrantV2 grant);
   // Trusted capability broker only; consumer is an authenticated context ID.
   bool grantStream(GrantV2, uint32_t consumer, uint32_t endpoint, uint32_t rights);
@@ -139,7 +141,7 @@ class GraphV2 final {
   bool polling_ = false;
 
   int find(const char* capability, uint32_t api) const;
-  int findProvider(const char* id, const char* capability, uint32_t api) const;
+  int findProvider(const char* id, const char* capability, uint32_t api, uint64_t instance = 0) const;
   GrantV2 acquireIndex(size_t index);
   bool activate(size_t index);
   void releaseDependencies(size_t index);

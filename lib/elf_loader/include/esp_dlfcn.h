@@ -36,6 +36,8 @@ typedef enum {
  * @return Module handle on success, NULL on failure.
  */
 void *dlopen(const char *file, int mode);
+/* Trusted loader only: fresh relocation/data/BSS, no basename/path cache alias. */
+void *esp_dlopen_instance(const char *file);
 
 /**
  * @brief Dynamic loader compatibility interface - Look up symbol address.

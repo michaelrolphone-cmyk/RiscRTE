@@ -21,26 +21,25 @@ bool elfPath(const char* p) { size_t n=strlen(p); return n>4 && !strcmp(p+n-4,".
 }
 bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   if (!keys(m,{"type","id","version","driver_abi","architecture","file_name","requires","provides"},
-        {"hardware_compatibility","status","notes","description","display_name"}) ||
+        {"hardware_compatibility","status","notes","description","display_name","physical_verification","part","legacy_manual_only"}) ||
       !eq(m["type"],"driver") || !eq(m["architecture"],"xtensa-esp32s3") ||
       !m["driver_abi"].is<unsigned>() || m["driver_abi"].as<unsigned>()!=2 ||
       !text(m["id"],d.id,sizeof(d.id)) || !m["requires"].is<JsonArrayConst>() || !m["provides"].is<JsonArrayConst>()) return fail("invalid driver manifest");
-  char version[64]{};
-  if (!text(m["version"],version,sizeof(version)) || !RuntimePackages::safeVersion(version)) return fail("invalid driver version");
+  if (!text(m["version"],d.version,sizeof(d.version)) || !RuntimePackages::safeVersion(d.version)) return fail("invalid driver version");
   char filename[128]{}; if (!text(m["file_name"],filename,sizeof(filename)) || strchr(filename,'/') || !elfPath(filename)) return fail("invalid driver executable");
   char* slash=strrchr(d.elf,'/'); if (!slash) return false;
   *(slash+1)=0; if (strlen(d.elf)+strlen(filename)>=sizeof(d.elf)) return false;
   strcat(d.elf,filename);
   // Same directory as the manifest, with strict normalized basename.
   char checked[256]; if (!path("",filename,checked,sizeof(checked))) return false;
-  JsonArrayConst provides=m["provides"], requires=m["requires"];
-  if (provides.size()!=1 || requires.size()>16) return fail("driver capability bounds");
+  JsonArrayConst provides=m["provides"], required=m["requires"];
+  if (provides.size()!=1 || required.size()>16) return fail("driver capability bounds");
   JsonObjectConst p=provides[0]; int64_t api;
   if (!keys(p,{"capability","api"}) || !text(p["capability"],d.provides,sizeof(d.provides)) ||
       !integer(p["api"],1,UINT32_MAX,api) || !strcmp(d.provides,"hardware.device")) return fail("invalid provides");
   d.api=api;
   bool needsHardware=false;
-  for (JsonObjectConst req:requires) {
+  for (JsonObjectConst req:required) {
     if (!keys(req,{"capability","api"}) || !text(req["capability"],d.names[d.count],96) || !integer(req["api"],1,UINT32_MAX,api)) return fail("invalid requirement");
     for(size_t j=0;j<d.count;++j) if(!strcmp(d.names[j],d.names[d.count])) return fail("duplicate requirement");
     if (!strcmp(d.names[d.count],"hardware.device")) { if(api!=1) return false; needsHardware=true; }
@@ -64,20 +63,49 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   }
   return matches==1 || fail("incompatible/ambiguous selected hardware");
 }
+bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,uint64_t id,const void* table) {
+  if (attempted_ || !port_.owner() || !capability || !*capability || strlen(capability)>=96 || !api || !table || platformCount_==32 ||
+      (strncmp(capability,"platform.",9) && strcmp(capability,"spi.bus"))) return false;
+  if (scope==Scope::Global) {
+    if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board"))) return false;
+  } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
+  const auto* header=static_cast<const uint32_t*>(table);
+  if (header[0]!=api || header[1]<8) return false;
+  for (size_t i=0;i<platformCount_;++i) {
+    const auto& p=platforms_[i];
+    if (!strcmp(p.capability,capability) && p.api==api && p.scope==scope && p.id==id) return false;
+  }
+  auto& p=platforms_[platformCount_++]; strcpy(p.capability,capability);
+  p.api=api; p.scope=scope; p.id=id; p.table=table; return true;
+}
 bool Runtime::validateGraph() {
   bool edges[16][16]{};
   for(size_t i=0;i<driverCount_;++i) {
     Driver& d=drivers_[i];
     for(size_t j=0;j<i;++j) {
-      if (!strcmp(d.id,drivers_[j].id) || !strcmp(strrchr(d.elf,'/'),strrchr(drivers_[j].elf,'/')) ||
-          (d.instance && d.instance==drivers_[j].instance)) return fail("duplicate driver ID/module basename/hardware owner");
+      if (!strcmp(d.id,drivers_[j].id) && (strcmp(d.version,drivers_[j].version) || strcmp(d.elf,drivers_[j].elf))) return fail("package instances disagree on artifact/version");
+      if ((!strcmp(d.id,drivers_[j].id) && (!d.instance || !drivers_[j].instance)) ||
+          (d.instance && d.instance==drivers_[j].instance)) return fail("duplicate package singleton/hardware owner");
     }
     const auto* hw=d.instance?board_.device(d.instance):nullptr;
     for(size_t r=0;r<d.count;++r) {
       auto& req=d.requirements[r]; if(!strcmp(req.capability,"hardware.device")) continue;
       uint64_t wanted=0;
       if(hw) for(size_t b=0;b<hw->bindingCount;++b) if(!strcmp(hw->bindings[b].capability,req.capability)) wanted=hw->bindings[b].instance;
-      // Hardware consumers may never select a physical dependency by registry order.
+      const Platform* platform=nullptr;
+      for (size_t p=0;p<platformCount_;++p) {
+        const auto& candidate=platforms_[p];
+        if (candidate.api!=req.api || strcmp(candidate.capability,req.capability)) continue;
+        const bool match=candidate.scope==Scope::Global ||
+          (candidate.scope==Scope::Device && candidate.id==d.instance) ||
+          (candidate.scope==Scope::Bus && candidate.id==board_.deviceBus(d.instance));
+        if (!match) continue;
+        if (platform || wanted) return fail("ambiguous platform/dependency binding");
+        platform=&candidate;
+      }
+      if (platform) { req.trustedApi=platform->table; continue; }
+      // Missing native providers do not become fake devices or first-match ELFs.
+      if (!strncmp(req.capability,"platform.",9) || !strcmp(req.capability,"spi.bus")) return fail("missing scoped trusted platform provider");
       if(hw && !wanted) return fail("hardware dependency requires explicit instance binding");
       int found=-1;
       for(size_t j=0;j<driverCount_;++j) if(drivers_[j].api==req.api && !strcmp(drivers_[j].provides,req.capability) && (!wanted || drivers_[j].instance==wanted)) {
@@ -85,7 +113,9 @@ bool Runtime::validateGraph() {
         found=static_cast<int>(j);
       }
       if(found<0) return fail("missing dependency");
-      req.providerId=drivers_[found].id; edges[i][found]=true;
+      req.providerId=drivers_[found].id; req.providerInstance=drivers_[found].instance;
+      if (!strcmp(req.capability,"i2c.bus") && board_.deviceBus(d.instance)!=board_.deviceBus(drivers_[found].instance)) return fail("I2C dependency bus scope mismatch");
+      edges[i][found]=true;
     }
     if(hw) for(size_t b=0;b<hw->bindingCount;++b) {
       bool used=false; for(size_t r=0;r<d.count;++r) if(!strcmp(d.requirements[r].capability,hw->bindings[b].capability)) used=true;
@@ -103,7 +133,8 @@ bool Runtime::prepare(const char* root) {
   char filename[256], relative[193]; JsonDocument config, boardDoc;
   if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,config)) return fail("boot.json unreadable/invalid");
   JsonObjectConst c=config.as<JsonObjectConst>();
-  if(!keys(c,{"board","default_app","drivers"}) || !text(c["board"],relative,sizeof(relative)) ||
+  if (!c["port"].isNull() && !board_.port(c["port"])) return fail(board_.error());
+  if(!keys(c,{"board","default_app","drivers"},{"port"}) || !text(c["board"],relative,sizeof(relative)) ||
       !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
   if(!text(c["default_app"],relative,sizeof(relative)) || !elfPath(relative) || !path(root_,relative,current_,sizeof(current_))) return fail("invalid default app path");
   if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>16) return fail("invalid driver list");
@@ -176,7 +207,7 @@ bool Runtime::run() {
 #endif
   bool ok=true;
   for(size_t i=0;i<driverCount_;++i) {
-    grants_[granted_]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api);
+    grants_[granted_]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
     if(!grants_[granted_].slot) { ok=fail(graph_.lastError()); break; }
     ++granted_; port_.delay(1);
   }

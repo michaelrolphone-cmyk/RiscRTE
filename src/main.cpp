@@ -5,6 +5,12 @@
 #include <esp_system.h>
 #include "bootstrap/Runtime.h"
 
+#ifndef RISC_TARGET
+#define RISC_TARGET "esp32s3-baseline"
+#endif
+#ifdef RISC_EMBEDDED_BOOTSTORE
+extern esp_err_t riscrte_mount_embedded_store();
+#endif
 namespace {
 TaskHandle_t owner=nullptr;
 bool isOwner() { return xTaskGetCurrentTaskHandle()==owner; }
@@ -12,7 +18,7 @@ bool health(risc_runtime_health_v1* out) {
   out->uptime_ms=millis(); out->free_heap=ESP.getFreeHeap();
   const auto* app=esp_ota_get_running_partition(); out->app_address=app?app->address:0;
   esp_efuse_mac_get_default(out->mac);
-  snprintf(out->target,sizeof(out->target),"%s", "esp32s3-baseline");
+  snprintf(out->target,sizeof(out->target),"%s", RISC_TARGET);
   return true;
 }
 void cooperate(uint32_t ms) { vTaskDelay(pdMS_TO_TICKS(ms)+1); }
@@ -26,10 +32,14 @@ void setup() {
   Serial.println(RISC_BUILD_IDENTITY);
   // Minimal flash-backed module-store bootstrap. No formatting, discovery,
   // repair, partition writes, SD bus ownership or production volume capability.
+#ifdef RISC_EMBEDDED_BOOTSTORE
+  esp_err_t mounted=riscrte_mount_embedded_store();
+#else
   esp_vfs_spiffs_conf_t storage{};
   storage.base_path="/bootfs"; storage.partition_label="bootfs";
   storage.max_files=4; storage.format_if_mount_failed=false;
   esp_err_t mounted=esp_vfs_spiffs_register(&storage);
+#endif
   if(mounted!=ESP_OK) { Serial.printf("RTE_BOOT error=storage-mount code=%d\n",mounted); return; }
   // GPIO22..25 do not exist on S3; octal PSRAM/flash pads and UART0 are reserved.
   for(int p=22;p<=37;++p) runtime.board().reservePin(p);

@@ -1,0 +1,22 @@
+{
+  "type": "driver",
+  "id": "twatch-board",
+  "version": "0.1.1",
+  "driver_abi": 2,
+  "architecture": "xtensa-esp32s3",
+  "file_name": "driver.elf",
+  "requires": [
+    {
+      "capability": "platform.board",
+      "api": 2
+    }
+  ],
+  "provides": [
+    {
+      "capability": "hardware.catalog",
+      "api": 1
+    }
+  ],
+  "status": "software-only-runtime-backfill-required",
+  "physical_verification": "pending"
+}

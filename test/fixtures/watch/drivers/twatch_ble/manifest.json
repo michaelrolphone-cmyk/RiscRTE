@@ -1,0 +1,36 @@
+{
+  "type": "driver",
+  "id": "twatch-ble",
+  "version": "0.1.0",
+  "driver_abi": 2,
+  "architecture": "xtensa-esp32s3",
+  "file_name": "driver.elf",
+  "requires": [
+    {
+      "capability": "hardware.device",
+      "api": 1
+    },
+    {
+      "capability": "platform.hci.controller",
+      "api": 1
+    }
+  ],
+  "provides": [
+    {
+      "capability": "bluetooth.hci",
+      "api": 1
+    }
+  ],
+  "hardware_compatibility": [
+    {
+      "compatible": "espressif,esp32s3-ble",
+      "revisions": [
+        "unspecified"
+      ],
+      "config_type": "radio.integrated",
+      "config_version": 1
+    }
+  ],
+  "status": "software-only-runtime-backfill-required",
+  "physical_verification": "pending"
+}

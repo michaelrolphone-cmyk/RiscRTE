@@ -25,6 +25,52 @@ const risc_hw_bus_v1* Board::bus(uint64_t id) const {
   for (size_t i=0;i<busesCount_;++i) if (buses_[i].instance_id==id) return &buses_[i];
   return nullptr;
 }
+bool Board::port(JsonObjectConst p) {
+  if (loaded_ || portSet_ || !keys(p,{"cpu_compatible","controller_mappings"}) ||
+      !eq(p["cpu_compatible"],"espressif,esp32-s3") ||
+      !p["controller_mappings"].is<JsonArrayConst>() || p["controller_mappings"].size()>MaxBuses) return fail("invalid CPU port declaration");
+  portSet_=true;
+  for (JsonObjectConst m:p["controller_mappings"].as<JsonArrayConst>()) {
+    auto& entry=mappings_[mappingCount_];
+    if (!keys(m,{"bus_instance_id","controller_namespace","physical_controller"}) ||
+        !number(m["bus_instance_id"],1,INT32_MAX,entry.bus) ||
+        !number(m["physical_controller"],0,3,entry.physical) ||
+        (!eq(m["controller_namespace"],"esp32.peripheral") && !eq(m["controller_namespace"],"riscrte.logical"))) return fail("invalid port mapping");
+    entry.logical=eq(m["controller_namespace"],"riscrte.logical");
+    for (size_t i=0;i<mappingCount_;++i) if (mappings_[i].bus==entry.bus) return fail("duplicate port mapping");
+    ++mappingCount_;
+  }
+  return true;
+}
+int Board::physicalController(uint64_t id) const {
+  for (size_t i=0;i<busesCount_;++i) if (buses_[i].instance_id==id) return physical_[i];
+  return -1;
+}
+uint64_t Board::deviceBus(uint64_t id) const {
+  const auto* d=device(id); if (!d) return 0;
+  if (!strcmp(d->type,"controller.i2c")) return d->config.i2cController.bus.instance_id;
+  if (!strcmp(d->type,"peripheral.i2c")) return d->config.peripheral.bus.instance_id;
+  if (!strcmp(d->type,"power.axp2101")) return d->config.power.device.bus.instance_id;
+  if (!strcmp(d->type,"display.spi")) return d->config.display.bus.instance_id;
+  if (!strcmp(d->type,"touch.i2c")) return d->config.touch.bus.instance_id;
+  if (!strcmp(d->type,"storage.sd-spi")) return d->config.sd.bus.instance_id;
+  if (!strcmp(d->type,"radio.lora")) return d->config.lora.bus.instance_id;
+  return 0;
+}
+bool Board::address(uint64_t busId,uint8_t value) {
+  if (addressCount_==MaxDevices) return false;
+  for (size_t i=0;i<addressCount_;++i) if (addresses_[i].bus==busId && addresses_[i].value==value) return false;
+  addresses_[addressCount_++]={busId,value}; return true;
+}
+bool Board::i2cDevice(JsonObjectConst c,tw_hw_i2c_device_v1& x) {
+  uint64_t id;
+  if (!keys(c,{"bus_instance_id","address","chip_id","irq","irq_active_high","irq_pull_up"}) ||
+      !number(c["bus_instance_id"],1,INT32_MAX,id)) return false;
+  const auto* b=bus(id); if (!b || b->kind!=RISC_HW_BUS_I2C) return false;
+  x={}; x.struct_size=sizeof(x); x.bus=*b;
+  return number(c["address"],8,119,x.address) && address(id,x.address) && number(c["chip_id"],0,255,x.chip_id) &&
+    pin(c["irq"],x.irq,true) && claim(x.irq,true) && flag(c["irq_active_high"],x.irq_active_high) && flag(c["irq_pull_up"],x.irq_pull_up);
+}
 bool Board::materialize(JsonObjectConst c,Device& d) {
   if (!strcmp(d.type,"gpio.bank")) {
     if (!keys(c,{"pins","active_high","pull_up","debounce_us","long_press_us","click_min_us"})) return false;
@@ -48,7 +94,7 @@ bool Board::materialize(JsonObjectConst c,Device& d) {
     auto& x=d.config.radio; x={}; x.struct_size=sizeof(x);
     if (!number(c["unit"],0,0,x.unit) || !number(c["features"],1,3,x.features)) return false;
     for (size_t i=0;i<devicesCount_;++i)
-      if (!strcmp(devices_[i].type,"radio.integrated") && devices_[i].config.radio.unit==x.unit) return false;
+      if (!strcmp(devices_[i].type,"radio.integrated") && devices_[i].config.radio.unit==x.unit && !strcmp(devices_[i].compatible,d.compatible)) return false;
     d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
   }
   if (!strcmp(d.type,"input.quadrature")) {
@@ -59,9 +105,57 @@ bool Board::materialize(JsonObjectConst c,Device& d) {
         !number(c["debounce_us"],1,1000000,x.debounce_us) || !number(c["button_instance_id"],1,INT32_MAX,x.button_instance_id)) return false;
     d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
   }
+  if (!strcmp(d.type,"controller.gpio")) {
+    auto& x=d.config.gpioController; x={}; x.struct_size=sizeof(x);
+    if (!keys(c,{"unit","features"}) || !number(c["unit"],0,0,x.unit) || !number(c["features"],0,0,x.features)) return false;
+    for (size_t i=0;i<devicesCount_;++i) if (!strcmp(devices_[i].type,d.type)) return false;
+    d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
+  }
+  if (!strcmp(d.type,"audio.i2s")) {
+    auto& x=d.config.audio; x={}; x.struct_size=sizeof(x);
+    if (!keys(c,{"controller","pdm_rx","bclk","ws","data"}) || !number(c["controller"],0,1,x.controller) || !flag(c["pdm_rx"],x.pdm_rx) ||
+        !pin(c["bclk"],x.bclk) || !pin(c["data"],x.data) || !pin(c["ws"],x.ws,true) ||
+        (x.pdm_rx ? (x.controller!=0 || x.ws!=-1) : x.ws<0) || !claim(x.bclk) || !claim(x.ws,true) || !claim(x.data)) return false;
+    for (size_t i=0;i<devicesCount_;++i) if (!strcmp(devices_[i].type,d.type) && devices_[i].config.audio.controller==x.controller) return false;
+    d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
+  }
+  if (!strcmp(d.type,"peripheral.i2c")) {
+    auto& x=d.config.peripheral; if (!i2cDevice(c,x)) return false;
+    d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
+  }
+  if (!strcmp(d.type,"power.axp2101")) {
+    auto& x=d.config.power; x={};
+    if (!keys(c,{"device","charge_ma","rails"}) || !i2cDevice(c["device"],x.device) ||
+        !number(c["charge_ma"],0,65535,x.charge_ma) || !c["rails"].is<JsonArrayConst>() || c["rails"].size()>4) return false;
+    x.device.struct_size=sizeof(x);
+    for (JsonObjectConst rail:c["rails"].as<JsonArrayConst>()) {
+      auto& r=x.rails[x.rail_count];
+      if (!keys(rail,{"id","millivolts"}) || !number(rail["id"],1,255,r.id) || !number(rail["millivolts"],1,65535,r.millivolts)) return false;
+      for (size_t i=0;i<x.rail_count;++i) if (x.rails[i].id==r.id) return false;
+      ++x.rail_count;
+    }
+    // Electrical authorization/charge limits remain in the trusted port and PMU driver.
+    d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
+  }
   uint64_t busId=0;
   if (!number(c["bus_instance_id"],1,INT32_MAX,busId)) return false;
   const auto* b=bus(busId); if (!b) return false;
+  if (!strcmp(d.type,"controller.i2c")) {
+    auto& x=d.config.i2cController; x={}; x.struct_size=sizeof(x); x.bus=*b;
+    if (!keys(c,{"bus_instance_id"}) || b->kind!=RISC_HW_BUS_I2C) return false;
+    for (size_t i=0;i<devicesCount_;++i) if (!strcmp(devices_[i].type,d.type) && devices_[i].config.i2cController.bus.instance_id==busId) return false;
+    d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
+  }
+  if (!strcmp(d.type,"radio.lora")) {
+    auto& x=d.config.lora; x={}; x.struct_size=sizeof(x); x.bus=*b;
+    if (b->kind!=RISC_HW_BUS_SPI || !keys(c,{"bus_instance_id","cs","reset","busy","irq","minimum_hz","maximum_hz","tcxo_voltage","reset_active_high","busy_active_high","irq_active_high"}) ||
+        !pin(c["cs"],x.cs) || !pin(c["reset"],x.reset) || !pin(c["busy"],x.busy) || !pin(c["irq"],x.irq) ||
+        !claim(x.cs) || !claim(x.reset) || !claim(x.busy) || !claim(x.irq) ||
+        !number(c["minimum_hz"],1,UINT32_MAX,x.minimum_hz) || !number(c["maximum_hz"],x.minimum_hz,UINT32_MAX,x.maximum_hz) ||
+        !number(c["tcxo_voltage"],0,7,x.tcxo_voltage) || !flag(c["reset_active_high"],x.reset_active_high) ||
+        !flag(c["busy_active_high"],x.busy_active_high) || !flag(c["irq_active_high"],x.irq_active_high)) return false;
+    d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
+  }
   if (!strcmp(d.type,"storage.sd-spi")) {
     if (!keys(c,{"bus_instance_id","cs","detect","write_protect","detect_active_high","write_protect_active_high"}) || b->kind!=RISC_HW_BUS_SPI) return false;
     auto& x=d.config.sd; x={}; x.struct_size=sizeof(x); x.bus=*b;
@@ -74,11 +168,10 @@ bool Board::materialize(JsonObjectConst c,Device& d) {
     if (!keys(c,{"bus_instance_id","width","height","address","reset_active_high","irq_active_high","irq_pull_up","reset","irq","reset_assert_ms","reset_recovery_ms"}) || b->kind!=RISC_HW_BUS_I2C) return false;
     auto& x=d.config.touch; x={}; x.struct_size=sizeof(x); x.bus=*b;
     if (!number(c["width"],1,4096,x.width) || !number(c["height"],1,4096,x.height) || !number(c["address"],8,119,x.address) ||
-        !pin(c["reset"],x.reset) || !pin(c["irq"],x.irq) || !claim(x.reset) || !claim(x.irq) ||
+        !pin(c["reset"],x.reset,true) || !pin(c["irq"],x.irq) || !claim(x.reset,true) || !claim(x.irq) ||
         !flag(c["reset_active_high"],x.reset_active_high) || !flag(c["irq_active_high"],x.irq_active_high) || !flag(c["irq_pull_up"],x.irq_pull_up) ||
-        !number(c["reset_assert_ms"],1,500,x.reset_assert_ms) || !number(c["reset_recovery_ms"],1,500,x.reset_recovery_ms)) return false;
-    for (size_t i=0;i<devicesCount_;++i) if (!strcmp(devices_[i].type,"touch.i2c") &&
-        devices_[i].config.touch.bus.instance_id==busId && devices_[i].config.touch.address==x.address) return false;
+        !number(c["reset_assert_ms"],x.reset<0?0:1,x.reset<0?0:500,x.reset_assert_ms) || !number(c["reset_recovery_ms"],x.reset<0?0:1,x.reset<0?0:500,x.reset_recovery_ms)) return false;
+    if (!address(busId,x.address)) return false;
     d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
   }
   if (!strcmp(d.type,"display.spi")) {
@@ -86,10 +179,10 @@ bool Board::materialize(JsonObjectConst c,Device& d) {
     auto& x=d.config.display; x={}; x.struct_size=sizeof(x); x.bus=*b;
     if (!number(c["width"],1,4096,x.width) || !number(c["height"],1,4096,x.height) ||
         !number(c["offset_x"],0,4095,x.offset_x) || !number(c["offset_y"],0,4095,x.offset_y) || !number(c["rotation"],0,3,x.rotation) ||
-        !pin(c["cs"],x.cs) || !pin(c["dc"],x.dc) || !pin(c["reset"],x.reset) || !pin(c["backlight"],x.backlight,true) || !pin(c["busy"],x.busy,true) ||
-        !claim(x.cs) || !claim(x.dc) || !claim(x.reset) || !claim(x.backlight,true) || !claim(x.busy,true) ||
+        !pin(c["cs"],x.cs) || !pin(c["dc"],x.dc) || !pin(c["reset"],x.reset,true) || !pin(c["backlight"],x.backlight,true) || !pin(c["busy"],x.busy,true) ||
+        !claim(x.cs) || !claim(x.dc) || !claim(x.reset,true) || !claim(x.backlight,true) || !claim(x.busy,true) ||
         !flag(c["reset_active_high"],x.reset_active_high) || !flag(c["busy_active_high"],x.busy_active_high) || !flag(c["backlight_active_high"],x.backlight_active_high) ||
-        !number(c["reset_assert_ms"],1,500,x.reset_assert_ms) || !number(c["reset_recovery_ms"],1,500,x.reset_recovery_ms)) return false;
+        !number(c["reset_assert_ms"],x.reset<0?0:1,x.reset<0?0:500,x.reset_assert_ms) || !number(c["reset_recovery_ms"],x.reset<0?0:1,x.reset<0?0:500,x.reset_recovery_ms)) return false;
     if (!c["power_pins"].is<JsonArrayConst>() || !c["power_active_high"].is<JsonArrayConst>()) return false;
     JsonArrayConst pins=c["power_pins"], high=c["power_active_high"];
     if (pins.size()>4 || pins.size()!=high.size()) return false;
@@ -109,24 +202,43 @@ bool Board::load(JsonObjectConst root) {
   JsonArrayConst buses=root["buses"], devices=root["devices"];
   if (buses.size()>MaxBuses || devices.size()>MaxDevices) return fail("board bounds exceeded");
   for (JsonObjectConst record : buses) {
-    if (!keys(record,{"instance_id","kind","controller","frequency_hz","mode","pins"})) return fail("invalid bus fields");
+    if (!keys(record,{"instance_id","kind","controller","frequency_hz","mode","pins"},{"controller_namespace","physical_controller"})) return fail("invalid bus fields");
     auto& b=buses_[busesCount_]; b.struct_size=sizeof(b); b.sclk=b.mosi=b.miso=b.sda=b.scl=-1;
     if (!number(record["instance_id"],1,INT32_MAX,b.instance_id) || bus(b.instance_id) ||
         !number(record["frequency_hz"],1,10000000,b.frequency_hz) || !number(record["mode"],0,3,b.mode)) return fail("invalid bus identity/timing");
+    bool declared=false, logical=false; uint32_t physical=0;
+    for (size_t i=0;i<mappingCount_;++i) if (mappings_[i].bus==b.instance_id) {
+      declared=true; logical=mappings_[i].logical; physical=mappings_[i].physical;
+    }
+    if (!record["controller_namespace"].isNull()) {
+      const bool inLogical=eq(record["controller_namespace"],"riscrte.logical");
+      uint32_t inPhysical=0;
+      if ((!inLogical && !eq(record["controller_namespace"],"esp32.peripheral")) ||
+          !number(record[inLogical || !record["physical_controller"].isNull()?"physical_controller":"controller"],0,3,inPhysical) ||
+          (declared && (logical!=inLogical || physical!=inPhysical))) return fail("conflicting controller mapping");
+      declared=true; logical=inLogical; physical=inPhysical;
+    } else if (!record["physical_controller"].isNull()) return fail("physical controller needs namespace");
+    if (!declared || !number(record["controller"],0,3,b.controller) || (!logical && physical!=b.controller)) return fail("explicit controller mapping required");
+    physical_[busesCount_]=physical;
     JsonObjectConst p=record["pins"];
     if (eq(record["kind"],"spi")) {
       b.kind=RISC_HW_BUS_SPI;
-      if (!number(record["controller"],2,3,b.controller) || !keys(p,{"sclk","mosi","miso"}) ||
+      if ((logical ? b.controller>1 : b.controller<2) || physical<2 || physical>3 || !keys(p,{"sclk","mosi","miso"},{"sda","scl"}) ||
+          (!p["sda"].isUnbound() && (!p["sda"].is<int>() || p["sda"].as<int>()!=-1)) || (!p["scl"].isUnbound() && (!p["scl"].is<int>() || p["scl"].as<int>()!=-1)) ||
           !pin(p["sclk"],b.sclk) || !pin(p["mosi"],b.mosi) || !pin(p["miso"],b.miso,true) ||
           !claim(b.sclk) || !claim(b.mosi) || !claim(b.miso,true)) return fail("invalid/conflicting SPI bus");
     } else if (eq(record["kind"],"i2c")) {
       b.kind=RISC_HW_BUS_I2C;
-      if (!number(record["controller"],0,1,b.controller) || b.mode || b.frequency_hz>1000000 || !keys(p,{"sda","scl"}) ||
+      if (b.controller>1 || physical>1 || b.mode || b.frequency_hz>1000000 || !keys(p,{"sda","scl"},{"sclk","mosi","miso"}) ||
+          (!p["sclk"].isUnbound() && (!p["sclk"].is<int>() || p["sclk"].as<int>()!=-1)) ||
+          (!p["mosi"].isUnbound() && (!p["mosi"].is<int>() || p["mosi"].as<int>()!=-1)) ||
+          (!p["miso"].isUnbound() && (!p["miso"].is<int>() || p["miso"].as<int>()!=-1)) ||
           !pin(p["sda"],b.sda) || !pin(p["scl"],b.scl) || !claim(b.sda) || !claim(b.scl)) return fail("invalid/conflicting I2C bus");
     } else return fail("unknown bus kind");
-    for (size_t i=0;i<busesCount_;++i) if (buses_[i].kind==b.kind && buses_[i].controller==b.controller) return fail("duplicate controller");
+    for (size_t i=0;i<busesCount_;++i) if (buses_[i].kind==b.kind && (buses_[i].controller==b.controller || physical_[i]==physical)) return fail("duplicate controller");
     ++busesCount_;
   }
+  for (size_t i=0;i<mappingCount_;++i) if (!bus(mappings_[i].bus)) return fail("unused port mapping");
   for (JsonObjectConst record : devices) {
     if (!keys(record,{"instance_id","chip","compatible","config_type","config_version","config"},{"bindings"})) return fail("invalid device fields");
     auto& d=devices_[devicesCount_]; auto& h=d.hardware;

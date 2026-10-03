@@ -77,7 +77,8 @@ struct OwnedNodeV2 final {
     for (size_t i = 0; i < from.requirementCount; ++i) {
       if (!copyString(requirementNames[i], sizeof(requirementNames[i]),
                       from.requirements[i].capability)) return false;
-      requirements[i] = {requirementNames[i], from.requirements[i].api};
+      requirements[i] = from.requirements[i];
+      requirements[i].capability=requirementNames[i];
       if (from.requirements[i].providerId) {
         if (!copyString(requirementProviders[i],96,from.requirements[i].providerId)) return false;
         requirements[i].providerId=requirementProviders[i];

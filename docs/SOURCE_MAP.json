@@ -534,23 +534,23 @@
   {
     "destination": "sdk/hardware/RiscHardwareConfigV1.h",
     "repository": "michaelrolphone-cmyk/Garden-Controller",
-    "commit": "1f7fb82efec08cf8751057d84e707f20be2fb7a5",
+    "commit": "7e30afc407c86f34364cbfa2035d6f7893fdea8c",
     "source": "riscrte/sdk/RiscHardwareConfigV1.h",
-    "source_sha256": "9e56a6a19644afe0dc72097d8b5ab88082f79dff7dc5e738afafa34800ceb071"
+    "source_sha256": "47fa4cd7d4f09f571a5aedc87376d2f57520ad7873f5556af0a932011633e240"
   },
   {
     "destination": "docs/HARDWARE_CONTRACT.md",
     "repository": "michaelrolphone-cmyk/Garden-Controller",
-    "commit": "1f7fb82efec08cf8751057d84e707f20be2fb7a5",
+    "commit": "7e30afc407c86f34364cbfa2035d6f7893fdea8c",
     "source": "riscrte/hardware/CONTRACT.md",
-    "source_sha256": "27665ebf572ab919bf16c40246170d3a9782a4c80dcc5d12cfe13c295fa65dcf"
+    "source_sha256": "6111e4b2b8b0a3733c26922eb2c7f32d17633433a781a82e371a8a2305df4662"
   },
   {
     "destination": "docs/board-manifest-v1.schema.json",
     "repository": "michaelrolphone-cmyk/Garden-Controller",
-    "commit": "1f7fb82efec08cf8751057d84e707f20be2fb7a5",
+    "commit": "7e30afc407c86f34364cbfa2035d6f7893fdea8c",
     "source": "riscrte/hardware/board-manifest-v1.schema.json",
-    "source_sha256": "efcf4c3479f91717a5f87fa2997dd125b3ddbecf18a02b5dcb96e59b52bc9e47"
+    "source_sha256": "001ea82caae4277ce31a5d9f1064b97618193e84504f6b7f4f094c947c42f7cc"
   },
   {
     "destination": "apps/heartbeat/main.c",
@@ -558,5 +558,19 @@
     "commit": "10f8e660a2dd6fd250f02852c1039aaf523aa8d4",
     "source": "test/hardware/heartbeat/src/main.cpp",
     "source_sha256": "633f6f37bfeab9ed274be176f073d88b151e6ac567f29a2b0e2440b458f8942e"
+  },
+  {
+    "destination": "sdk/hardware/TWatchHardwareV1.h",
+    "repository": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+    "commit": "e48a540cdc2c4c1e642fbf20807e2743e2a679a9",
+    "source": "sdk/driver/TWatchHardwareV1.h",
+    "source_sha256": "19fdcd6999dd63b5aeede0ed22c699af5d63231760acb15e2a113c3605cc7128"
+  },
+  {
+    "destination": "src/bootstrap/EmbeddedStore.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/NativeApps/src/SdVfs.cpp",
+    "source_sha256": "fcde9c387ced10509bb7afb1077b16aaada57b03a1742140296c1561cdbfa025"
   }
 ]

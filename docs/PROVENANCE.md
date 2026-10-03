@@ -42,7 +42,7 @@ imported. New boot-selection, materialization and headless SDK glue are local to
 this extraction.
 
 Shared hardware contract: `michaelrolphone-cmyk/Garden-Controller`
-commit `1f7fb82efec08cf8751057d84e707f20be2fb7a5`:
+commit `7e30afc407c86f34364cbfa2035d6f7893fdea8c` (clarification after original `1f7fb82`):
 
 - `riscrte/sdk/RiscHardwareConfigV1.h` → `sdk/hardware/RiscHardwareConfigV1.h`
 - `riscrte/hardware/CONTRACT.md` → `docs/HARDWARE_CONTRACT.md`
@@ -69,3 +69,17 @@ CAM application, catalog or whole source repository history is migrated.
 `SOURCE_MAP.json` records original paths and SHA-256 hashes of the imported
 snapshots, including files subsequently adapted. It is provenance, not a signature
 or a package authorization mechanism.
+
+T-Watch test source is pinned to `e48a540cdc2c4c1e642fbf20807e2743e2a679a9`.
+`test/fixtures/watch/PROVENANCE.json` records exact unmodified hashes for eight
+profiles, package manifests, and the minimal real I2C driver/headers used by the
+independent-instance regression. Only `TWatchHardwareV1.h` is a production SDK
+addition; the Watch driver is a test fixture and is not linked into firmware or
+installed in the default store. That repository does not declare a separate root
+license at this snapshot; owner-requested extraction preserves source text and
+makes no new upstream licensing assertion.
+
+The CAM-only immutable VFS adapts Reader `lib/NativeApps/src/SdVfs.cpp` descriptor
+locking/read/seek/close/fstat lifecycle. Its storage source is bounded linked-in
+const data rather than HalStorage; it is not a substitute filesystem driver or
+a native heartbeat stand-in. default.elf remains separately linked ELF input.

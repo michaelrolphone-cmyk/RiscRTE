@@ -12,6 +12,10 @@ struct Port {
 class Runtime final {
  public:
   explicit Runtime(Port p) : port_(p) {}
+  enum class Scope : uint8_t { Global, Device, Bus };
+  // Compiled-in port registration only, never exported to apps/driver ELFs.
+  // Tables/contexts must remain valid until successful runtime shutdown.
+  bool registerPlatform(const char* capability, uint32_t api, Scope scope, uint64_t id, const void* table);
   bool prepare(const char* root);
   bool run();
   bool launch(const char* relative);
@@ -23,7 +27,7 @@ class Runtime final {
   Board& board() { return board_; }
  private:
   struct Driver {
-    char id[96]{}, provides[96]{}, elf[256]{};
+    char id[96]{}, provides[96]{}, elf[256]{}, version[64]{};
     uint32_t api=0;
     uint64_t instance=0;
     RuntimeProviders::RequirementV2 requirements[16]{};
@@ -34,6 +38,11 @@ class Runtime final {
   bool manifest(JsonObjectConst, Driver&);
   bool validateGraph();
   bool runOne(const char*);
+  struct Platform {
+    char capability[96]{}; uint32_t api=0; Scope scope=Scope::Global;
+    uint64_t id=0; const void* table=nullptr;
+  } platforms_[32]{};
+  size_t platformCount_=0;
   Port port_;
   Board board_;
   RuntimeProviders::GraphV2 graph_;

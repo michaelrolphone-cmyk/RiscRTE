@@ -32,7 +32,7 @@ class ModuleV2 final {
    * requiring OS/CPU privilege. Never grants privileged imports. */
   bool load(const char* validatedElf, const char* expectedId,
             const char* expectedCapability, uint32_t expectedApi,
-            const risc_provider_dependency_v1* dependencies, size_t count);
+            const risc_provider_dependency_v1* dependencies, size_t count, bool independent = false);
   /* PRIVATE firmware admission path. Installation checks all payload bytes.
    * Runtime loading verifies its owned ELF snapshot at cold/uncertain boundaries;
    * unchanged quiescent generation proof avoids repeated executable hashing.

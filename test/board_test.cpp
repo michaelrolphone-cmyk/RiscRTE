@@ -10,7 +10,7 @@ int main(int argc,char** argv) {
     if(!board->load(doc.as<JsonObjectConst>())) { fprintf(stderr,"%s: %s\n",argv[i],board->error());return 1; }
     printf("Shared board manifest materialization PASS: %s\n",board->identity()->board_id);
   }
-  const char* fixture=R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[{"instance_id":1,"kind":"spi","controller":2,"frequency_hz":10000000,"mode":0,"pins":{"sclk":4,"mosi":5,"miso":6}}],"devices":[{"instance_id":7,"chip":{"vendor":"test","model":"sd","revision":"unspecified"},"compatible":"test,sd","config_type":"storage.sd-spi","config_version":1,"config":{"bus_instance_id":1,"cs":7,"detect":-1,"write_protect":-1,"detect_active_high":true,"write_protect_active_high":false}}]})";
+  const char* fixture=R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[{"instance_id":1,"kind":"spi","controller_namespace":"esp32.peripheral","controller":2,"frequency_hz":10000000,"mode":0,"pins":{"sclk":4,"mosi":5,"miso":6}}],"devices":[{"instance_id":7,"chip":{"vendor":"test","model":"sd","revision":"unspecified"},"compatible":"test,sd","config_type":"storage.sd-spi","config_version":1,"config":{"bus_instance_id":1,"cs":7,"detect":-1,"write_protect":-1,"detect_active_high":true,"write_protect_active_high":false}}]})";
   JsonDocument doc;assert(parse(fixture,strlen(fixture),doc));
   { Board board;assert(board.load(doc.as<JsonObjectConst>()));
     const auto* hw=board.device(7);assert(hw && hw->hardware.config_size==sizeof(risc_hw_sd_spi_v1));
