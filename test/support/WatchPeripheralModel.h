@@ -44,7 +44,7 @@ bool spiTransfer(uint8_t physical,const uint8_t* tx,uint8_t*,size_t n,uint32_t m
   if(!model.levels[38]){assert(n==1);model.command=tx[0];}
   else if(model.command==0x2a){assert(n==4 && tx[0]==0 && tx[1]==0 && tx[2]==0 && tx[3]==239);}
   else if(model.command==0x2b){assert(n==4 && tx[0]==0 && tx[2]==0 && tx[1]==tx[3]);model.row=tx[1];}
-  else if(model.command==0x2c){assert(n==480 && model.row<240 && model.row==model.rows);for(size_t i=0;i<n;i+=2){model.frame[model.row*480+i]=tx[i+1];model.frame[model.row*480+i+1]=tx[i];}++model.rows;}
+  else if(model.command==0x2c){assert(n==480 && model.row<240 && model.row==model.rows%240);for(size_t i=0;i<n;i+=2){model.frame[model.row*480+i]=tx[i+1];model.frame[model.row*480+i+1]=tx[i];}++model.rows;}
   return true;
 }
 bool spiEnd(uint8_t physical,uint8_t cs,uint32_t){assert(physical==2 && cs==12 && model.held);model.held=false;model.levels[cs]=true;return true;}
