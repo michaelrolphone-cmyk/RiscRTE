@@ -145,3 +145,8 @@ ELF on Linux); it does not execute Xtensa instructions. The ELF test separately
 runs the migrated validator against actual Xtensa outputs and corrupted/truncated
 variants. `SANITIZE=1` enables ASan/UBSan for applicable graph regressions. See
 [verification evidence](docs/VERIFICATION.md) and [source provenance](docs/PROVENANCE.md).
+
+CI runs the integration checks on pull requests. Source-versioned firmware release
+publication runs on default-branch pushes or manual dispatch after successful
+checks; it never flashes devices. See [CI and releases](docs/CI_AND_RELEASES.md)
+for triggers, artifacts, version guards and credential scope.
