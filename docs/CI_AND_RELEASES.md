@@ -80,7 +80,7 @@ must match the candidate commit; stage requires a clean source checkout.
 The existing sole hardware controller must independently verify Actions/archive
 provenance, the approved CAM MAC28:84:85:4b:a1:1c and pinned partition digest,
 then own its normal device locks and application-only flash/cleanup lifecycle.
-The cloud check polls exact-SHA status `ESP32-CAM hardware / heartbeat cleanup`.
+A separate hardware-check.yml PR workflow polls exact-SHA status `ESP32-CAM hardware / heartbeat cleanup`.
 Absent execution, pending beyond ten minutes, transport error or failed cleanup
 ends as **failure**. A previous SHA's result is never consulted. The controller
 adapter is managed in Reader's CI work, not installed by this repository.
@@ -89,3 +89,9 @@ Release publishing remains a separately verified baseline-artifact operation;
 it does not dispatch a new lab flash on main or create branch protection rules.
 Published bytes are not a hardware qualification assertion. Existing PR hardware
 results remain visible and the owner can decide whether to merge a failed PR.
+
+
+The user-requested X4 serial-only candidate is described in [X4_HEARTBEAT.md](X4_HEARTBEAT.md).
+It has its own completed build workflow/artifact and distinct hardware status.
+Both candidate workflows finish after upload; status polling lives in a separate
+workflow so it cannot deadlock the trusted controller's completed-run selection.

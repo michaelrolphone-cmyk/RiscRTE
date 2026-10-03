@@ -1,7 +1,7 @@
 import hashlib,json,pathlib,sys,unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
-from hardware_gate import result,CONTEXT
+from hardware_gate import result,CONTEXT,X4_CONTEXT
 class ContractCustody(unittest.TestCase):
     def test_pinned_watch_sources(self):
         folder=ROOT/'test/fixtures/watch';record=json.loads((folder/'PROVENANCE.json').read_text())
@@ -17,3 +17,5 @@ class ContractCustody(unittest.TestCase):
         self.assertIsNone(result([{'context':CONTEXT,'state':'pending'}], 'exactsha'))
         self.assertFalse(result([{'context':CONTEXT,'state':'failure'},{'context':CONTEXT,'state':'success'}], 'exactsha'))
         self.assertTrue(result([{'context':CONTEXT,'state':'success'}], 'exactsha'))
+        self.assertIsNone(result([{'context':CONTEXT,'state':'success'}], 'exactsha',X4_CONTEXT))
+        self.assertTrue(result([{'context':X4_CONTEXT,'state':'success'}], 'exactsha',X4_CONTEXT))

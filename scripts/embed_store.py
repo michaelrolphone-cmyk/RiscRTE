@@ -8,7 +8,8 @@ subprocess.run([env.subst('$PYTHONEXE'),str(root/'scripts/build_apps.py'),'--cc'
 build=Path(env.subst('$BUILD_DIR'));build.mkdir(parents=True,exist_ok=True)
 lines=[];records=[]
 for i,name in enumerate(('boot.json','board.json','default.elf')):
-    data=(root/'build/store'/name).read_bytes()
+    source=root/env.GetProjectOption('custom_boot_board','data/board.json') if name=='board.json' else root/'build/store'/name
+    data=source.read_bytes()
     assert data and len(data)<1024*1024
     lines.append('static const unsigned char store_'+str(i)+'[]={'+','.join(map(str,data))+'};')
     records.append('{"/'+name+'",store_'+str(i)+',sizeof(store_'+str(i)+')}')

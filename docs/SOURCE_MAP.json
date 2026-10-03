@@ -572,5 +572,12 @@
     "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
     "source": "lib/NativeApps/src/SdVfs.cpp",
     "source_sha256": "fcde9c387ced10509bb7afb1077b16aaada57b03a1742140296c1561cdbfa025"
+  },
+  {
+    "destination": "test/hardware/x4/partitions.csv",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "10f8e660a2dd6fd250f02852c1039aaf523aa8d4",
+    "source": "partitions.csv",
+    "source_sha256": "8eab8ddac3fe3b14ab1f5b3a108b8982ac7a6851d7e3e28d1848d37f9a62d2ed"
   }
 ]

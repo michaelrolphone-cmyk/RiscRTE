@@ -30,6 +30,9 @@ RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic});
 void setup() {
   owner=xTaskGetCurrentTaskHandle(); Serial.begin(115200);
   Serial.println(RISC_BUILD_IDENTITY);
+#ifdef RISC_BOARD_MARKER
+  Serial.println(RISC_BOARD_MARKER);
+#endif
   // Minimal flash-backed module-store bootstrap. No formatting, discovery,
   // repair, partition writes, SD bus ownership or production volume capability.
 #ifdef RISC_EMBEDDED_BOOTSTORE
@@ -43,7 +46,11 @@ void setup() {
   if(mounted!=ESP_OK) { Serial.printf("RTE_BOOT error=storage-mount code=%d\n",mounted); return; }
   // GPIO22..25 do not exist on S3; octal PSRAM/flash pads and UART0 are reserved.
   for(int p=22;p<=37;++p) runtime.board().reservePin(p);
+#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
+  runtime.board().reservePin(19); runtime.board().reservePin(20);
+#else
   runtime.board().reservePin(43); runtime.board().reservePin(44);
+#endif
   if(!runtime.prepare("/bootfs")) { Serial.printf("RTE_BOOT error=manifest detail=%s\n",runtime.error()); return; }
   Serial.println("RTE_BOOT board=validated drivers=admitted");
   if(!runtime.run()) Serial.printf("RTE_BOOT error=runtime detail=%s\n",runtime.error());
