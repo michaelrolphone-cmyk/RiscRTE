@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <RiscBuildIdentity.h>
 #include <esp_spiffs.h>
 #include <esp_ota_ops.h>
 #include <esp_system.h>
@@ -22,6 +23,7 @@ RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic});
 }
 void setup() {
   owner=xTaskGetCurrentTaskHandle(); Serial.begin(115200);
+  Serial.println(RISC_BUILD_IDENTITY);
   // Minimal flash-backed module-store bootstrap. No formatting, discovery,
   // repair, partition writes, SD bus ownership or production volume capability.
   esp_vfs_spiffs_conf_t storage{};

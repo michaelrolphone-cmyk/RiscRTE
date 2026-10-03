@@ -81,7 +81,8 @@ bool Runtime::validateGraph() {
       if(hw && !wanted) return fail("hardware dependency requires explicit instance binding");
       int found=-1;
       for(size_t j=0;j<driverCount_;++j) if(drivers_[j].api==req.api && !strcmp(drivers_[j].provides,req.capability) && (!wanted || drivers_[j].instance==wanted)) {
-        if(found>=0) return fail("ambiguous dependency"); found=static_cast<int>(j);
+        if(found>=0) return fail("ambiguous dependency");
+        found=static_cast<int>(j);
       }
       if(found<0) return fail("missing dependency");
       req.providerId=drivers_[found].id; edges[i][found]=true;

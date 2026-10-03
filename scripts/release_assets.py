@@ -56,6 +56,8 @@ def names(v):
 def validate_payloads(folder,v):
     n=names(v);data={k:file_bytes(folder/f) for k,f in n.items()}
     esp_image(data['app']);esp_image(data['bootloader']);elf(data['symbols']);elf(data['default'],True)
+    marker=('RTE_SOURCE='+head()).encode()+b'\0'
+    require(marker in data['app'] and marker in data['symbols'],'compiled firmware source identity differs from checkout')
     require(len(data['app'])<=0x300000 and len(data['bootloader'])<=0x8000,'firmware exceeds its partition')
     partition_table(data['partitions']);require(len(data['bootfs'])==0x4f0000,'bootfs has wrong size')
     require(len(data['merged'])==0x800000,'merged image must cover declared 8 MiB layout')

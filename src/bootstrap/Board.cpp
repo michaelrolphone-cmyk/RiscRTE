@@ -6,7 +6,8 @@ template<class T> bool number(JsonVariantConst v,int64_t lo,int64_t hi,T& out) {
   int64_t n; if (!num(v,lo,hi,n)) return false; out=static_cast<T>(n); return true;
 }
 bool flag(JsonVariantConst v,uint8_t& out) {
-  if (!v.is<bool>()) return false; out=v.as<bool>()?1:0; return true;
+  if (!v.is<bool>()) return false;
+  out=v.as<bool>()?1:0; return true;
 }
 bool pin(JsonVariantConst v,int16_t& out,bool optional=false) { return number(v,optional?-1:0,48,out); }
 }
