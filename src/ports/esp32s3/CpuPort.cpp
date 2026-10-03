@@ -42,7 +42,7 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
           pinsFor(d,gpio.input,gpio.output,gpio.pullup);
     }
   } else pinsFor(selected,gpio.input,gpio.output,gpio.pullup);
-  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform};return true;
+  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep};return true;
 }
 bool Port::bind(RiscBoot::Runtime& runtime){
   if(bound_ || !available() || !hw_.now || !hw_.sleep || !hw_.gpioOpen || !hw_.gpioWrite || !hw_.gpioRead || !hw_.gpioPwm || !hw_.gpioClose ||
@@ -102,8 +102,38 @@ bool Port::gpioPwm(void* context,uint64_t token,uint32_t hz,uint16_t duty,uint16
   for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token && p.pins_[i].output)return p.hw_.gpioPwm(i,hz,duty,maximum);
   return false;
 }
+int32_t Port::gpioLightSleep(void* context,uint64_t token,bool active,risc_light_sleep_result_v1* out){
+  if(!context || !out || out->struct_size<sizeof(*out))return RISC_LIGHT_SLEEP_INVALID;
+  out->wake_cause=RISC_LIGHT_SLEEP_WAKE_NONE;
+  auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
+  if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
+  if(p.poisoned_)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.sleeping_ || p.transferring_)return RISC_LIGHT_SLEEP_BUSY;
+  for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
+  int pin=-1;
+  for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
+  if(pin<0)return RISC_LIGHT_SLEEP_INVALID;
+  if(!p.hw_.wakeValid || !p.hw_.wakeArm || !p.hw_.lightSleep || !p.hw_.wakeClear || !p.hw_.wakeValid(pin))return RISC_LIGHT_SLEEP_UNSUPPORTED;
+  bool level=false;
+  if(!p.hw_.gpioRead(pin,&level))return RISC_LIGHT_SLEEP_PLATFORM;
+  if(level==active)return RISC_LIGHT_SLEEP_ACTIVE_WAKE;
+  p.sleeping_=true;
+  int32_t result=RISC_LIGHT_SLEEP_PLATFORM;
+  if(p.hw_.wakeArm(pin,active)){
+    if(p.hw_.gpioRead(pin,&level)){
+      if(level==active)result=RISC_LIGHT_SLEEP_ACTIVE_WAKE;
+      else {uint32_t cause=RISC_LIGHT_SLEEP_WAKE_NONE;
+        if(p.hw_.lightSleep(&cause)){out->wake_cause=cause;result=RISC_LIGHT_SLEEP_OK;}
+      }
+    }
+  }
+  // Even a failed arm can leave partial configuration; cleanup is mandatory.
+  if(!p.hw_.wakeClear(pin)){p.poisoned_=p.sleepRetained_=true;result=RISC_LIGHT_SLEEP_RETAINED;}
+  p.sleeping_=false;
+  return result;
+}
 bool Port::gpioRelease(void* context,uint64_t token){
-  auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.hw_.owner() || !token)return false;
+  auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.hw_.owner() || p.sleepRetained_ || p.sleeping_ || !token)return false;
   for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token){if(!p.hw_.gpioClose(i))return false;p.unreserve(i,&c);return true;}
   return false;
 }
@@ -122,7 +152,8 @@ bool Port::i2cOpen(void* context,uint8_t controller,uint8_t sda,uint8_t scl,uint
 bool Port::i2cTransfer(void* context,uint64_t token,uint8_t address,const uint8_t* tx,size_t tn,uint8_t* rx,size_t rn,uint32_t ms){
   auto& c=*static_cast<I2c*>(context);auto& p=*c.port;
   if(!p.available() || !token || c.token!=token || address<8 || address>119 || (!tn && !rn) || tn>512 || rn>512 || (tn && !tx) || (rn && !rx) || !ms || ms>1000)return false;
-  return p.hw_.i2cTransfer(c.physical,address,tx,tn,rx,rn,ms);
+  if(p.transferring_)return false;
+  p.transferring_=true;const bool ok=p.hw_.i2cTransfer(c.physical,address,tx,tn,rx,rn,ms);p.transferring_=false;return ok;
 }
 bool Port::i2cClose(void* context,uint64_t token){
   auto& c=*static_cast<I2c*>(context);auto& p=*c.port;if(!p.hw_.owner() || !token || token!=c.token || !p.hw_.i2cClose(c.physical))return false;

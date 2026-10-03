@@ -2,6 +2,7 @@
 /* Proposed Garden contracts; NOT provided by the current Reader runtime.
  * All layouts use the target C ABI. See CAPABILITY_BACKFILL.md. */
 #include "RiscProviderV2.h"
+#include "RiscLightSleepV1.h"
 #define GARDEN_PLATFORM_API_V1 1u
 #include "RiscHardwareConfigV1.h"
 /* GPIO claims are exclusive across GPIO/PWM/SPI/I2C/waveform providers.
@@ -19,7 +20,10 @@ typedef struct {
      * durations; zero durations skip a level without a pulse. Retains the final phase level (even count LOW, odd HIGH).
      * Synchronous, bounded 20ms, no retained pointer. */
     bool (*waveform)(void *, uint64_t token, const uint32_t *durations_ns, size_t count);
+    /* Append-only: caller checks GARDEN_GPIO_LIGHT_SLEEP_V1_SIZE. */
+    risc_gpio_light_sleep_v1 light_sleep;
 } garden_gpio_v1;
+#define GARDEN_GPIO_LIGHT_SLEEP_V1_SIZE (offsetof(garden_gpio_v1, light_sleep) + sizeof(((garden_gpio_v1*)0)->light_sleep))
 /* SPI bus owner claims controller/pins and arbitrates complete transactions.
  * begin/end hold CS across multiple exchanges; begin has total timeout budget.
  * exchange NULL tx sends 0xff; NULL rx discards; max 512 bytes per exchange.

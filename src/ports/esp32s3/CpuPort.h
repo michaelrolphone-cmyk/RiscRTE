@@ -18,6 +18,10 @@ struct Hardware {
   bool (*spiBegin)(uint8_t,uint8_t,uint32_t,uint8_t,uint32_t);
   bool (*spiTransfer)(uint8_t,const uint8_t*,uint8_t*,size_t,uint32_t);
   bool (*spiEnd)(uint8_t,uint8_t,uint32_t); bool (*spiClose)(uint8_t);
+  bool (*wakeValid)(uint8_t)=nullptr;
+  bool (*wakeArm)(uint8_t,bool)=nullptr;
+  bool (*lightSleep)(uint32_t*)=nullptr;
+  bool (*wakeClear)(uint8_t)=nullptr;
 };
 class Port final {
  public:
@@ -31,16 +35,17 @@ class Port final {
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; garden_spi_v1 api{}; } spis_[8];
   struct SpiBus { uint64_t instance=0; unsigned refs=0; Spi* held=nullptr; } spiBuses_[2];
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false; } pins_[49];
-  Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false;
+  Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
   size_t gpioCount_=0,i2cCount_=0,spiCount_=0;
   risc_platform_clock_api_v1 clock_{};
-  bool available() const { return hw_.owner && hw_.owner() && !poisoned_; }
+  bool available() const { return hw_.owner && hw_.owner() && !poisoned_ && !sleeping_; }
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
   bool reserve(int16_t,const void*); void unreserve(int16_t,const void*);
   bool gpioScope(const RiscBoot::Runtime&,const RiscBoot::Board::Device&,Gpio&);
   static bool gpioClaim(void*,uint8_t,bool,bool,bool,uint64_t*);
   static bool gpioWrite(void*,uint64_t,bool); static bool gpioRead(void*,uint64_t,bool*);
   static bool gpioPwm(void*,uint64_t,uint32_t,uint16_t,uint16_t);
+  static int32_t gpioLightSleep(void*,uint64_t,bool,risc_light_sleep_result_v1*);
   static bool gpioRelease(void*,uint64_t); static bool waveform(void*,uint64_t,const uint32_t*,size_t){return false;}
   static bool i2cOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*);
   static bool i2cTransfer(void*,uint64_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);
