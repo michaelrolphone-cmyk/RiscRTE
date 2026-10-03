@@ -36,7 +36,7 @@ jobs:
           fi
       - name: Real host modules, board binding and default-child-default lifecycle
         run: |
-          bash test/run_board_test.sh
+          bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
           bash test/run_runtime_test.sh
           bash test/run_watch_test.sh
           SANITIZE=1 bash test/run_provider_graph_v2_test.sh

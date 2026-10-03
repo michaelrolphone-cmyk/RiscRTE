@@ -32,10 +32,16 @@ def main(source):
             require(prior['source_fingerprint']==record['source_fingerprint'],'existing version contains different source; increment firmware version')
             if not existing['draft']:
                 # Already published immutable version: verify its own full asset inventory/hash record.
-                from release_assets import sha
+                from release_assets import sha,names,validate_payloads
+                require(all(prior[k]==record[k] for k in ('schema','product','version','target','tag')),'existing release identity mismatch')
+                require(set(prior['assets'])==set(names(record['version']).values()),'existing release asset names mismatch')
                 require(set(p.name for p in Path(temp).iterdir())==set(prior['assets'])|{'release.json','SHA256SUMS'},'existing release incomplete/unexpected assets')
                 for name,meta in prior['assets'].items():
                     data=file_bytes(Path(temp)/name);require(meta=={'bytes':len(data),'sha256':sha(data)},'existing release asset corrupt')
+                checks={**prior['assets'],'release.json':{'sha256':sha(file_bytes(Path(temp)/'release.json'))}}
+                sums=''.join(f'{meta["sha256"]}  {name}\n' for name,meta in sorted(checks.items()))
+                require((Path(temp)/'SHA256SUMS').read_text()==sums,'existing release checksum manifest mismatch')
+                validate_payloads(Path(temp),prior['version'],prior['source_sha'])
                 print('Version already published unchanged; no release modified:',record['tag']);return
             require(prior==record,'draft belongs to a different candidate; explicit review required')
             verify(source,Path(temp))

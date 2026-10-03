@@ -53,10 +53,10 @@ def partition_table(data):
 def names(v):
     p=f'riscrte_{TARGET}_{v}'
     return {'app':p+'-app.bin','merged':p+'-merged.bin','symbols':p+'.elf','bootloader':p+'-bootloader.bin','partitions':p+'-partitions.bin','bootfs':p+'-bootfs.bin','default':'default.elf','default_manifest':'default.json','boot':'boot.json','board':'board.json'}
-def validate_payloads(folder,v):
+def validate_payloads(folder,v,source=None):
     n=names(v);data={k:file_bytes(folder/f) for k,f in n.items()}
     esp_image(data['app']);esp_image(data['bootloader']);elf(data['symbols']);elf(data['default'],True)
-    marker=('RTE_SOURCE='+head()).encode()+b'\0'
+    marker=('RTE_SOURCE='+(source or head())).encode()+b'\0'
     require(marker in data['app'] and marker in data['symbols'],'compiled firmware source identity differs from checkout')
     require(len(data['app'])<=0x300000 and len(data['bootloader'])<=0x8000,'firmware exceeds its partition')
     partition_table(data['partitions']);require(len(data['bootfs'])==0x4f0000,'bootfs has wrong size')

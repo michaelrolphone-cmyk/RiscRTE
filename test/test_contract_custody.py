@@ -8,6 +8,10 @@ class ContractCustody(unittest.TestCase):
         self.assertEqual(record['commit'],'e48a540cdc2c4c1e642fbf20807e2743e2a679a9')
         for name,digest in record['files'].items():
             self.assertEqual(hashlib.sha256((folder/name).read_bytes()).hexdigest(),digest,name)
+    def test_pinned_garden_sources(self):
+        folder=ROOT/'test/fixtures/garden';record=json.loads((folder/'PROVENANCE.json').read_text())
+        for name,meta in record['files'].items():
+            self.assertEqual(hashlib.sha256((folder/name).read_bytes()).hexdigest(),meta['sha256'],name)
     def test_missing_and_newest_hardware_result(self):
         self.assertIsNone(result([], 'exactsha'))
         self.assertIsNone(result([{'context':CONTEXT,'state':'pending'}], 'exactsha'))
