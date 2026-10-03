@@ -31,6 +31,7 @@ static bool clear(uint8_t,bool){test_deep_trace("CPU cleanup");return true;}
 static bool hold(uint8_t pin,bool enable){assert(pin==6 && enable);test_deep_trace("CPU held");return true;}
 static void enter(){test_deep_trace("CPU terminal-entry");_exit(73);}
 static bool bind(RiscBoot::Runtime& r){return cpu->bind(r);}
+static bool appExitSafe(){return cpu->appExitSafe();}
 static void file(const char* name,const char* contents){std::ofstream(root+"/"+name)<<contents;}
 static void runChild(const char* executable,const char* mode,int expected){
  pid_t child=fork();assert(child>=0);
@@ -43,7 +44,7 @@ int main(int argc,char** argv){
   wake=std::string(argv[2])=="wake";
   RiscCpu::Hardware h{owner,now,waitMs,open,write,read,pwm,close,iOpen,iTransfer,close,sOpen,sBegin,sTransfer,sEnd,close};
   h.deepWakeValid=valid;h.deepReady=ready;h.deepWakeArm=arm;h.deepWakeClear=clear;h.deepSleep=enter;h.deepHold=hold;
-  RiscCpu::Port port(h);cpu=&port;RiscBoot::Runtime runtime({owner,health,waitMs,log,bind});
+  RiscCpu::Port port(h);cpu=&port;RiscBoot::Runtime runtime({owner,health,waitMs,log,bind,nullptr,appExitSafe});
   assert(runtime.prepare(root.c_str()));
   if(!runtime.run()){fprintf(stderr,"Runtime failure: %s\n",runtime.error());return 98;}
   assert(wake && port.quiescent());return 0;

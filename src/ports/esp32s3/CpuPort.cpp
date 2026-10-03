@@ -24,6 +24,11 @@ bool Port::reserve(int16_t pin,const void* owner){
   pins_[pin].owner=owner;return true;
 }
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
+bool Port::appExitSafe() const {
+  if(!available() || sleepRetained_ || transferring_)return false;
+  for(const auto& pin:pins_)if(pin.held)return false;
+  return true;
+}
 bool Port::quiescent() const {
   for(const auto& p:pins_)if(p.owner)return false;
   return !poisoned_;

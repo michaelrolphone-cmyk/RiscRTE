@@ -51,3 +51,11 @@ Raw platform GPIO/SPI/hardware records are not exposed to apps. Optional native 
 namespace-bound storage.key-value@1 (see KEY_VALUE.md); ordinary
 clock apps can use health.uptime_ms and yield_ms instead. yield_ms continues the
 inherited bounded provider poll dispatcher so queued display work progresses.
+
+
+Native retention (firmware0.1.5) is checked by an optional compiled-in port
+callback before fini/unload and again after fini. A failed native barrier
+logically revokes app grants and disables owner APIs while retaining the image,
+allocations and provider references, rather than invoking cleanup or launching
+another app. This is separate from ordinary capability release and graph
+quiescence; see DEEP_SLEEP.md.

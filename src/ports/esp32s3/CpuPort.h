@@ -35,6 +35,9 @@ class Port final {
   Port(const Port&)=delete; Port& operator=(const Port&)=delete;
   bool bind(RiscBoot::Runtime&);
   bool quiescent() const;
+  // Ordinary live provider claims may survive app handoff. Poison, sleep entry
+  // or retained output holds may not outlive the invocation that owns policy.
+  bool appExitSafe() const;
  private:
   struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; garden_gpio_v1 api{}; } gpios_[16];
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];

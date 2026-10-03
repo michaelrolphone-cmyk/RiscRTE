@@ -319,7 +319,7 @@ bool Runtime::prepare(const char* root) {
   strcpy(default_,current_); prepared_=true; return true;
 }
 bool Runtime::launch(const char* relative) {
-  if(!active() || queued_[0] || !relative || !elfPath(relative)) return false;
+  if(!active() || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   return path(root_,relative,queued_,sizeof(queued_));
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
@@ -330,7 +330,16 @@ void Runtime::yield(uint32_t ms) {
   port_.delay(ms<1?1:ms>50?50:ms);
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }
+bool Runtime::appExitBarrier() {
+  if(!retained_ && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  // Revoke app authority without calling provider release/quiesce: the boot
+  // references and active invocation memory/images must remain pinned.
+  retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;
+  for(auto& grant:appGrants_)grant.live=false;
+  return fail("native retention barrier; app and providers retained; restart required");
+}
 bool Runtime::runOne(const char* name) {
+  if(!appExitBarrier())return false;
 #ifdef ESP_PLATFORM
   if(!native_app_memory_begin()) return fail("app allocation context unavailable");
   native_app_memory_relocation(true);
@@ -354,8 +363,14 @@ bool Runtime::runOne(const char* name) {
   for (size_t p=0;p<policyCount_;++p) if (!strcmp(policies_[p].elf,name)) appPolicy_=&policies_[p];
   active_=true;
   if(ok && init) { initialized=init()==0; ok=initialized; }
+  if(!appExitBarrier())return false;
   if(ok) entry();
+  // Native RETAINED must be observed before app callbacks or freeing anything.
+  // Boot-owned driver grants defer graph quiescence until after app teardown,
+  // so waiting for final graph shutdown is too late.
+  if(!appExitBarrier())return false;
   if(initialized) fini();
+  if(!appExitBarrier())return false;
   active_=false;
   if (retained_ || !revokeApp()) { retained_=true; return fail("app grants retained; image retained"); }
 #ifdef ESP_PLATFORM

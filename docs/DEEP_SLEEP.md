@@ -115,3 +115,32 @@ not change any external Watch source or constitute a full Watch deep-sleep bundl
 - [GPIO hold API and safe unhold ordering](https://github.com/espressif/esp-idf/blob/v4.4.7/components/driver/include/driver/gpio.h)
 - [Deep isolation and wake-input hold reset](https://github.com/espressif/esp-idf/blob/v4.4.7/components/esp_hw_support/sleep_gpio.c)
 - [S3 RTC GPIO mapping](https://github.com/espressif/esp-idf/blob/v4.4.7/components/soc/esp32s3/rtc_io_periph.c)
+
+
+## Invocation retention barrier (firmware0.1.5)
+
+A returned RETAINED status must pin the application as well as its providers.
+Boot-session provider grants outlive app grants, so releasing an app grant does
+not necessarily invoke provider quiescence. Waiting for final graph shutdown
+would discover native retention too late, after app fini and image unload.
+
+The optional compiled-in RiscBoot::Port::appExitSafe callback supplies a generic,
+non-mutating native retention barrier. Native ESP32-S3 wiring refuses exit when
+the CPU port is poisoned, sleeping, sleep-retained or transferring, or when any
+output hold remains. Ordinary active GPIO/provider claims may survive handoff;
+this check does not claim complete external-provider quiescence.
+
+Runtime checks it before opening an app, immediately after app entry/init returns
+and before fini, and again after fini. Failure deactivates app authority, clears
+queued launch requests, and retains invocation memory, ELF mapping, provider
+references/configuration and graph without calling fini (if not already entered),
+allocation cleanup, dlclose or provider teardown. Subsequent handoff/default
+reload is blocked until external restart. A fini that itself poisons hardware
+cannot be undone, but the post-fini barrier still forbids freeing its resources.
+Successful deep entry remains terminal and never reaches these checks. Ordinary
+refusal with successful rollback permits the usual fini/unload/handoff path.
+
+`test/run_retained_app_test.sh` exercises real runtime + CPU + dynamic apps and
+provider in fresh subprocesses, including retained failures from a non-default
+app and a queued launch. It is software lifecycle evidence, not hardware wake or
+power qualification.

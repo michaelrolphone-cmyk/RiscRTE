@@ -32,10 +32,11 @@ bool diagnostic(const char* line) { Serial.println(line); return true; }
 // mappings after failed quiescence. Never destroy these while hardware is live.
 RiscCpu::Port cpu(RiscCpu::nativeHardware(isOwner));
 bool bindPlatforms(RiscBoot::Runtime& runtime){return cpu.bind(runtime);}
+bool appExitSafe(){return cpu.appExitSafe();}
 #ifdef RISC_EMBEDDED_BOOTSTORE
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe});
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend()});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe});
 #endif
 }
 void setup() {

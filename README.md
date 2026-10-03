@@ -142,6 +142,7 @@ bash test/run_board_test.sh
 bash test/run_runtime_test.sh
 bash test/run_deep_sleep_test.sh
 bash test/run_key_value_test.sh
+bash test/run_retained_app_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
 python3 scripts/build_apps.py
@@ -174,3 +175,9 @@ Keys and blobs are bounded; only get/put is exposed. The backend disables Arduin
 partition erase recovery on initialization failures, with no bootfs writes. Application
 encoding, defaults, policy and UI remain external. See [contract and failure
 semantics](docs/KEY_VALUE.md). Deep/light sleep behavior is unchanged.
+
+Firmware0.1.5 additionally checks the generic native retention barrier before app
+fini/unload and subsequent launches. A returned native RETAINED status or uncleared
+output hold pins the invocation and dependencies until restart, including when
+the active app is a non-default child. Ordinary rolled-back refusal still allows
+normal handoff. See [deep-sleep lifecycle](docs/DEEP_SLEEP.md).
