@@ -12,6 +12,8 @@ cc "${flags[@]}" "$repo/test/fixtures/provider.c" -o "$build/probe.elf"
 cc "${flags[@]}" "${link[@]}" "$repo/apps/heartbeat/main.c" -o "$build/heartbeat.elf"
 cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/capability_app.c" -o "$build/cap-app.elf"
 cc "${flags[@]}" "${link[@]}" -DCHILD_WITHOUT_POLICY "$repo/test/fixtures/capability_app.c" -o "$build/cap-child.elf"
+cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/yield_app.c" -o "$build/yield.elf"
+cc "${flags[@]}" "${link[@]}" -DYIELD_PROVIDER "$repo/test/fixtures/provider.c" -o "$build/yield-probe.elf"
 c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic \
   -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
   "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \

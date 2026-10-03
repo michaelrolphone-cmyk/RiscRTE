@@ -277,8 +277,8 @@ bool Runtime::launch(const char* relative) {
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
 void Runtime::yield(uint32_t ms) {
   if(!active()) return;
-  // Owner task dispatch uses the same bounded provider poll as Reader.
-  graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},[](){currentRuntime->port_.delay(1);});
+  // Poll work is bounded separately; each app yield cooperates exactly once.
+  graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
   port_.delay(ms<1?1:ms>50?50:ms);
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }

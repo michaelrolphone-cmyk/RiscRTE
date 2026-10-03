@@ -95,3 +95,18 @@ The user-requested X4 serial-only candidate is described in [X4_HEARTBEAT.md](X4
 It has its own completed build workflow/artifact and distinct hardware status.
 Both candidate workflows finish after upload; status polling lives in a separate
 workflow so it cannot deadlock the trusted controller's completed-run selection.
+
+## Generic native-USB candidate
+
+The integration target job also builds `esp32s3-16mb-usb` with one build worker:
+16 MiB flash, 80 MHz QIO flash, octal PSRAM, 240 MHz CPU and native USB CDC on boot.
+It keeps the baseline partition table (bootfs at 0x310000, size 0x4f0000), leaving
+the upper 8 MiB unused. No product pins, drivers, application or board selector
+are compiled into this target. `scripts/usb_candidate.py` validates ESP checksums,
+image digests, flash size, partition layout and the compiled exact-source marker,
+and records checksums for the app, symbols, bootloader, partitions and build files.
+The artifact is `riscrte-esp32s3-16mb-usb-<source SHA>` and contains no product
+bootfs. Build locally with `pio run -e esp32s3-16mb-usb -j 1`; stage only from a
+clean, committed checkout with `python scripts/usb_candidate.py --source-sha
+$(git rev-parse HEAD)`. This is a software candidate, not physical qualification
+or permission to flash an existing device.

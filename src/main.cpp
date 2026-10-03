@@ -5,6 +5,7 @@
 #include <esp_system.h>
 #include "bootstrap/Runtime.h"
 #include "ports/esp32s3/CpuPort.h"
+#include "ports/esp32s3/CooperativeDelay.h"
 
 #ifndef RISC_TARGET
 #define RISC_TARGET "esp32s3-baseline"
@@ -22,7 +23,7 @@ bool health(risc_runtime_health_v1* out) {
   snprintf(out->target,sizeof(out->target),"%s", RISC_TARGET);
   return true;
 }
-void cooperate(uint32_t ms) { vTaskDelay(pdMS_TO_TICKS(ms)+1); }
+void cooperate(uint32_t ms) { vTaskDelay(RiscCpu::cooperativeDelayTicks(ms,configTICK_RATE_HZ)); }
 bool diagnostic(const char* line) { Serial.println(line); return true; }
 // Static lifetime intentionally retains manifests, dependency tables and ELF
 // mappings after failed quiescence. Never destroy these while hardware is live.

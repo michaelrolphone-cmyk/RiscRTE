@@ -58,8 +58,10 @@ class GraphV2 final {
   bool grantStream(GrantV2, uint32_t consumer, uint32_t endpoint, uint32_t rights);
   const void* interfaceFor(GrantV2 grant) const;
   bool shutdown();
-  // Serialized owner-task dispatcher: <=4 callbacks, 2ms each, 10ms per turn.
-  // Caller supplies monotonic time and a real scheduler yield; no graph lock.
+  // Serialized round-robin dispatcher: <=4 callbacks, <=8ms each, 10ms total.
+  // Each budget is clamped to remaining time before dispatch. Providers must
+  // return cooperatively; an overrun cannot be preempted. No graph lock.
+  // Optional scheduler yield runs once after work; omit when caller yields.
   void poll(uint32_t (*nowMs)(), void (*yield)());
   bool hasProvider(const char* providerId, const char* capability, uint32_t api) const;
   bool hasProviderId(const char* providerId) const;

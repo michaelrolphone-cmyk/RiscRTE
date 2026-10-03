@@ -94,3 +94,16 @@ jobs:
           path: dist/release/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Build and verify generic 16 MiB native-USB runtime
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-usb -j 1
+          python scripts/usb_candidate.py --source-sha "$SOURCE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-esp32s3-16mb-usb-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/esp32s3-16mb-usb/
+          if-no-files-found: error
+          retention-days: 14

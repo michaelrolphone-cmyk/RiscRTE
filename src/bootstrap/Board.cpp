@@ -205,7 +205,7 @@ bool Board::load(JsonObjectConst root) {
     if (!keys(record,{"instance_id","kind","controller","frequency_hz","mode","pins"},{"controller_namespace","physical_controller"})) return fail("invalid bus fields");
     auto& b=buses_[busesCount_]; b.struct_size=sizeof(b); b.sclk=b.mosi=b.miso=b.sda=b.scl=-1;
     if (!number(record["instance_id"],1,INT32_MAX,b.instance_id) || bus(b.instance_id) ||
-        !number(record["frequency_hz"],1,10000000,b.frequency_hz) || !number(record["mode"],0,3,b.mode)) return fail("invalid bus identity/timing");
+        !number(record["frequency_hz"],1,UINT32_MAX,b.frequency_hz) || !number(record["mode"],0,3,b.mode)) return fail("invalid bus identity/timing");
     bool declared=false, logical=false; uint32_t physical=0;
     for (size_t i=0;i<mappingCount_;++i) if (mappings_[i].bus==b.instance_id) {
       declared=true; logical=mappings_[i].logical; physical=mappings_[i].physical;
@@ -223,7 +223,7 @@ bool Board::load(JsonObjectConst root) {
     JsonObjectConst p=record["pins"];
     if (eq(record["kind"],"spi")) {
       b.kind=RISC_HW_BUS_SPI;
-      if ((logical ? b.controller>1 : b.controller<2) || physical<2 || physical>3 || !keys(p,{"sclk","mosi","miso"},{"sda","scl"}) ||
+      if (b.frequency_hz>40000000 || (logical ? b.controller>1 : b.controller<2) || physical<2 || physical>3 || !keys(p,{"sclk","mosi","miso"},{"sda","scl"}) ||
           (!p["sda"].isUnbound() && (!p["sda"].is<int>() || p["sda"].as<int>()!=-1)) || (!p["scl"].isUnbound() && (!p["scl"].is<int>() || p["scl"].as<int>()!=-1)) ||
           !pin(p["sclk"],b.sclk) || !pin(p["mosi"],b.mosi) || !pin(p["miso"],b.miso,true) ||
           !claim(b.sclk) || !claim(b.mosi) || !claim(b.miso,true)) return fail("invalid/conflicting SPI bus");

@@ -1,5 +1,6 @@
 #ifdef ESP_PLATFORM
 #include "CpuPort.h"
+#include "CooperativeDelay.h"
 #include <driver/gpio.h>
 #include <driver/i2c.h>
 #include <driver/ledc.h>
@@ -167,7 +168,7 @@ bool wakeClear(uint8_t pin){
 Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   return {[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
-    [](uint32_t ms){vTaskDelay(ticks(ms)+1);},gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
+    [](uint32_t ms){vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));},gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,wakeArm,lightSleep,wakeClear};
 }
 }

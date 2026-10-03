@@ -88,3 +88,15 @@ c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver"
   "$repo/test/drivers/provider_graph_destruction_guard_v2_test.cpp" \
   -ldl -o "$build/destruction-test"
 "$build/destruction-test" "$build/stuck.so"
+
+# Real mapped provider callbacks exercise production aggregate scheduling.
+for i in 0 1 2 3 4 5; do
+  cc "${flags[@]}" "${san[@]}" -DFIXTURE_SLOT="$i" -DFIXTURE_ID="\"poll-$i\"" \
+    "$repo/test/drivers/provider_poll_fixture.c" -o "$build/poll-$i.so"
+done
+c++ -std=c++17 -Wall -Wextra -Werror "${san[@]}" \
+  -I"$repo/sdk/hardware" -I"$repo/sdk/driver" -I"$repo/test/drivers/stubs" -I"$repo/src" \
+  "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
+  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \
+  "$repo/test/drivers/provider_poll_test.cpp" -ldl -o "$build/poll-test"
+"$build/poll-test" "$build"/poll-{0,1,2,3,4,5}.so
