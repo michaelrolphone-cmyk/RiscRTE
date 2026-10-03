@@ -32,7 +32,13 @@ start for combined register reads. GPIO PWM uses at most four independent LEDC
 timers, 10 bit duty and at most 40 kHz. GPIO initial output levels precede direction
 enablement. Failed close retains its token and physical reservation. Failed
 partial-open cleanup poisons the port and blocks new operations; restart is
-required if retained resources cannot be quiesced. No driver is force-unmapped.
+required if retained resources cannot be quiesced. In pinned IDF4.4.7, I2C
+configuration enables the peripheral before driver installation allocates its
+object. An installation failure can leave the peripheral enabled without a
+deletable driver; the native port retains ownership and fails cleanup rather
+than falsely declaring release. See the pinned [I2C implementation](https://github.com/espressif/esp-idf/blob/v4.4.7/components/driver/i2c.c)
+(`i2c_param_config`, installation error path and `i2c_driver_delete`).
+No driver is force-unmapped.
 
 Native sleep is cooperative FreeRTOS delay, bounded at 5000 ms; this is not a
 low-power or deep-sleep interface. Future sleep work must preserve driver/app

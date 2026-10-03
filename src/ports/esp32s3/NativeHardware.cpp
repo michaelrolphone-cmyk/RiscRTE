@@ -13,7 +13,7 @@
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
 int pwmPins[4]={-1,-1,-1,-1};
-struct I2cState { bool installed=false;int sda=-1,scl=-1; } i2c[2];
+struct I2cState { bool installed=false,configured=false;int sda=-1,scl=-1; } i2c[2];
 struct SpiState {
   bool initialized=false,held=false,pending=false;uint32_t hz=0;uint8_t mode=0;
   int sclk=-1,mosi=-1,miso=-1;spi_device_handle_t device=nullptr;
@@ -64,6 +64,7 @@ bool i2cOpen(uint8_t physical,uint8_t sda,uint8_t scl,uint32_t hz){
   i2c_config_t config{};config.mode=I2C_MODE_MASTER;config.sda_io_num=sda;config.scl_io_num=scl;
   config.sda_pullup_en=GPIO_PULLUP_ENABLE;config.scl_pullup_en=GPIO_PULLUP_ENABLE;config.master.clk_speed=hz;
   if(i2c_param_config(static_cast<i2c_port_t>(physical),&config)!=ESP_OK)return false;
+  state.configured=true;
   if(i2c_driver_install(static_cast<i2c_port_t>(physical),I2C_MODE_MASTER,0,0,0)!=ESP_OK)return false;
   state.installed=true;return true;
 }
@@ -77,7 +78,12 @@ bool i2cTransfer(uint8_t physical,uint8_t address,const uint8_t* tx,size_t tn,ui
 }
 bool i2cClose(uint8_t physical){
   auto& state=i2c[physical];
-  if(state.installed){if(i2c_driver_delete(static_cast<i2c_port_t>(physical))!=ESP_OK)return false;state.installed=false;}
+  // IDF4 param_config enables the peripheral before install allocates its
+  // driver. Failed install can leave that clock enabled without a deletable
+  // driver object. No public API safely clears the SDK ownership state then.
+  // Retain pins/controller and require restart; never claim clean release.
+  if(state.configured && !state.installed)return false;
+  if(state.installed){if(i2c_driver_delete(static_cast<i2c_port_t>(physical))!=ESP_OK)return false;state.installed=false;state.configured=false;}
   if(state.sda>=0 && !gpioClose(state.sda))return false;
   if(state.scl>=0 && !gpioClose(state.scl))return false;
   state={};return true;
