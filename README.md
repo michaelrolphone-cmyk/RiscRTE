@@ -141,6 +141,7 @@ storage call. The mounted store must remain immutable while a boot session runs.
 bash test/run_board_test.sh
 bash test/run_runtime_test.sh
 bash test/run_deep_sleep_test.sh
+bash test/run_key_value_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
 python3 scripts/build_apps.py
@@ -165,3 +166,11 @@ output retention alongside unchanged light sleep. Wake is a fresh runtime/defaul
 app boot; application timing, preparation, rail policy and UI remain external.
 See [contract, source constraints and verification](docs/DEEP_SLEEP.md). No full
 product quiescence, physical wake reliability or low-current result is claimed.
+
+## Bounded app persistence
+
+Firmware0.1.4 adds optional explicit namespace grants for storage.key-value@1.
+Keys and blobs are bounded; only get/put is exposed. The backend disables Arduino
+partition erase recovery on initialization failures, with no bootfs writes. Application
+encoding, defaults, policy and UI remain external. See [contract and failure
+semantics](docs/KEY_VALUE.md). Deep/light sleep behavior is unchanged.

@@ -1,4 +1,5 @@
 #include "Runtime.h"
+#include "KeyValueGeneration.h"
 #include <esp_dlfcn.h>
 #include <cstring>
 #ifdef ESP_PLATFORM
@@ -6,7 +7,20 @@
 #include "native/NativeAppMemory.h"
 extern "C" void native_app_memory_relocation(bool);
 #endif
-namespace { RiscBoot::Runtime* currentRuntime=nullptr; }
+namespace {
+RiscBoot::Runtime* currentRuntime=nullptr;
+// Pointer-sized opaque integers are never dereferenced; unlike a reusable slot
+// pointer, a copied context cannot silently become a new grant after release.
+uintptr_t keyValueGeneration=0;
+bool keyValueKey(const char* key) {
+  if (!key || !*key) return false;
+  for (unsigned i=0;i<=RISC_KEY_VALUE_KEY_MAX;++i) {
+    const char c=key[i]; if (!c) return true;
+    if (i==RISC_KEY_VALUE_KEY_MAX || !((c>='a' && c<='z') || (c>='0' && c<='9') || c=='_' || c=='.' || c=='-')) return false;
+  }
+  return false;
+}
+}
 extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
   static const risc_runtime_api_v1 api={1,sizeof(api),
     [](risc_runtime_health_v1* h){return currentRuntime && currentRuntime->health(h);},
@@ -172,7 +186,10 @@ bool Runtime::appPolicies(JsonVariantConst value) {
         if (!strcmp(capability,grant.capability) && allowedApi==api) {++matches;grant.instance=instance;}
       }
       if (matches!=1) return fail("app requirement not uniquely authorized");
-      if (!strcmp(grant.capability,"platform.clock")) {
+      if (!strcmp(grant.capability,RISC_KEY_VALUE_CAPABILITY)) {
+        if (grant.api!=RISC_KEY_VALUE_API_V1 || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put) return fail("app key-value backend/namespace unavailable");
+        grant.keyValue=true;
+      } else if (!strcmp(grant.capability,"platform.clock")) {
         for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,grant.capability) && platforms_[p].api==grant.api) {
           if (grant.platform>=0 || grant.instance) return fail("ambiguous app platform clock");
           grant.platform=p;
@@ -199,14 +216,19 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   const AppGrantPolicy* allowed=nullptr;
   for (size_t i=0;i<appPolicy_->count;++i) {
     const auto& p=appPolicy_->grants[i];
-    const uint64_t selected=p.driver>=0?drivers_[p.driver].instance:0;
+    const uint64_t selected=p.driver>=0?drivers_[p.driver].instance:p.instance;
     if (!strcmp(p.capability,capability) && p.api==api && (!instance || selected==instance)) allowed=&p;
   }
   if (!allowed) return false;
   size_t slot=0;while(slot<16 && appGrants_[slot].live)++slot;
   if (slot==16) return false;
   auto& grant=appGrants_[slot];
-  if (allowed->driver>=0) {
+  if (allowed->keyValue) {
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    grant.keyValueNamespace=allowed->instance;
+    grant.keyValue={RISC_KEY_VALUE_API_V1,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
+    grant.api=&grant.keyValue;
+  } else if (allowed->driver>=0) {
     const auto& driver=drivers_[allowed->driver];
     grant.provider=graph_.acquireFrom(driver.id,capability,api,driver.instance);
     if (!grant.provider.slot) return false;
@@ -219,6 +241,32 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   }
   grant.live=true;grant.generation=++grantGeneration_;
   out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
+}
+int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
+  if (outSize) *outSize=0;
+  Runtime* r=currentRuntime;
+  if (!r || !r->active() || !context || !r->port_.keyValue) return RISC_KEY_VALUE_CONTEXT;
+  const AppGrant* matched=nullptr;
+  for (const auto& grant:r->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
+  if (!matched) return RISC_KEY_VALUE_CONTEXT;
+  if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_KEY_VALUE_INVALID;
+  uint8_t temp[RISC_KEY_VALUE_BLOB_MAX]; uint32_t size=0;
+  const auto& backend=*r->port_.keyValue;
+  const int32_t result=backend.get(backend.context,matched->keyValueNamespace,key,temp,sizeof(temp),&size);
+  if (result==RISC_KEY_VALUE_NOT_FOUND) return result;
+  if (result!=RISC_KEY_VALUE_OK || !size || size>sizeof(temp)) return RISC_KEY_VALUE_IO;
+  if (capacity<size) {*outSize=size;return RISC_KEY_VALUE_BUFFER_SMALL;}
+  memcpy(buffer,temp,size);*outSize=size;return RISC_KEY_VALUE_OK;
+}
+int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint32_t size) {
+  Runtime* r=currentRuntime;
+  if (!r || !r->active() || !context || !r->port_.keyValue) return RISC_KEY_VALUE_CONTEXT;
+  const AppGrant* matched=nullptr;
+  for (const auto& grant:r->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
+  if (!matched) return RISC_KEY_VALUE_CONTEXT;
+  if (!keyValueKey(key) || !data || !size || size>RISC_KEY_VALUE_BLOB_MAX) return RISC_KEY_VALUE_INVALID;
+  const auto& backend=*r->port_.keyValue;
+  return backend.put(backend.context,matched->keyValueNamespace,key,data,size)==RISC_KEY_VALUE_OK ? RISC_KEY_VALUE_OK : RISC_KEY_VALUE_IO;
 }
 bool Runtime::release(risc_runtime_capability_v1* out) {
   if (!active() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
