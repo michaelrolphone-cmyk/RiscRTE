@@ -1,6 +1,7 @@
 #ifdef ESP_PLATFORM
 #include "CpuPort.h"
 #include "CooperativeDelay.h"
+#include "NativeSleep.h"
 #include <driver/gpio.h>
 #include <driver/i2c.h>
 #include <driver/ledc.h>
@@ -32,20 +33,18 @@ bool stopPwm(uint8_t pin){
   return true;
 }
 bool gpioOpen(uint8_t pin,bool output,bool initial,bool pullup){
-  if(!GPIO_IS_VALID_GPIO(pin) || (output && !GPIO_IS_VALID_OUTPUT_GPIO(pin)) || !stopPwm(pin))return false;
-  // Load output latch before changing direction, including the initial CS HIGH.
-  if(output && gpio_set_level(static_cast<gpio_num_t>(pin),initial)!=ESP_OK)return false;
-  gpio_config_t config{};config.pin_bit_mask=uint64_t(1)<<pin;
-  config.mode=output?GPIO_MODE_OUTPUT:GPIO_MODE_INPUT;
-  config.pull_up_en=pullup?GPIO_PULLUP_ENABLE:GPIO_PULLUP_DISABLE;
-  config.pull_down_en=GPIO_PULLDOWN_DISABLE;config.intr_type=GPIO_INTR_DISABLE;
-  return gpio_config(&config)==ESP_OK;
+  return pin<49 && stopPwm(pin) && NativeSleep::openPin(pin,output,initial,pullup);
 }
 bool gpioWrite(uint8_t pin,bool level){
   return stopPwm(pin) && gpio_set_level(static_cast<gpio_num_t>(pin),level)==ESP_OK;
 }
 bool gpioRead(uint8_t pin,bool* out){*out=gpio_get_level(static_cast<gpio_num_t>(pin))!=0;return true;}
-bool gpioClose(uint8_t pin){return stopPwm(pin) && gpio_reset_pin(static_cast<gpio_num_t>(pin))==ESP_OK;}
+bool gpioClose(uint8_t pin){
+  // A failed post-reset claim may still have a pad held at its retained state.
+  // Never claim clean release or unhold it without the requested safe config.
+  if(pin>=49 || !NativeSleep::canClose(pin))return false;
+  return stopPwm(pin) && gpio_reset_pin(static_cast<gpio_num_t>(pin))==ESP_OK;
+}
 bool gpioPwm(uint8_t pin,uint32_t hz,uint16_t duty,uint16_t maximum){
   int slot=-1;
   for(int i=0;i<4;++i)if(pwmPins[i]==pin)slot=i;
@@ -146,6 +145,12 @@ bool spiClose(uint8_t physical){
   for(int pin:{state.sclk,state.mosi,state.miso})if(pin>=0 && !gpioClose(pin))return false;
   state={};return true;
 }
+bool deepReady(){
+  // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
+  if(!NativeSleep::stackReady())return false;
+  for(const auto& state:spi)if(state.held || state.pending)return false;
+  return true;
+}
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
 bool wakeArm(uint8_t pin,bool active){
   return gpio_wakeup_enable(static_cast<gpio_num_t>(pin),active?GPIO_INTR_HIGH_LEVEL:GPIO_INTR_LOW_LEVEL)==ESP_OK &&
@@ -169,7 +174,8 @@ Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   return {[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
     [](uint32_t ms){vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));},gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
-    spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,wakeArm,lightSleep,wakeClear};
+    spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,wakeArm,lightSleep,wakeClear,
+    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold};
 }
 }
 #endif

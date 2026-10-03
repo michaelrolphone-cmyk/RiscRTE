@@ -22,6 +22,12 @@ struct Hardware {
   bool (*wakeArm)(uint8_t,bool)=nullptr;
   bool (*lightSleep)(uint32_t*)=nullptr;
   bool (*wakeClear)(uint8_t)=nullptr;
+  bool (*deepWakeValid)(uint8_t)=nullptr;
+  bool (*deepReady)()=nullptr;
+  bool (*deepWakeArm)(uint8_t,bool,bool)=nullptr;
+  bool (*deepWakeClear)(uint8_t,bool)=nullptr;
+  void (*deepSleep)()=nullptr;
+  bool (*deepHold)(uint8_t,bool)=nullptr;
 };
 class Port final {
  public:
@@ -34,7 +40,7 @@ class Port final {
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; garden_spi_v1 api{}; } spis_[8];
   struct SpiBus { uint64_t instance=0; unsigned refs=0; Spi* held=nullptr; } spiBuses_[2];
-  struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false; } pins_[49];
+  struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false; } pins_[49];
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
   size_t gpioCount_=0,i2cCount_=0,spiCount_=0;
   risc_platform_clock_api_v1 clock_{};
@@ -46,6 +52,8 @@ class Port final {
   static bool gpioWrite(void*,uint64_t,bool); static bool gpioRead(void*,uint64_t,bool*);
   static bool gpioPwm(void*,uint64_t,uint32_t,uint16_t,uint16_t);
   static int32_t gpioLightSleep(void*,uint64_t,bool,risc_light_sleep_result_v1*);
+  static int32_t gpioDeepSleep(void*,uint64_t,bool);
+  static int32_t gpioDeepSleepHold(void*,uint64_t,bool);
   static bool gpioRelease(void*,uint64_t); static bool waveform(void*,uint64_t,const uint32_t*,size_t){return false;}
   static bool i2cOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*);
   static bool i2cTransfer(void*,uint64_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);

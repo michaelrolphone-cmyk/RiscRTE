@@ -140,6 +140,7 @@ storage call. The mounted store must remain immutable while a boot session runs.
 ```sh
 bash test/run_board_test.sh
 bash test/run_runtime_test.sh
+bash test/run_deep_sleep_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
 python3 scripts/build_apps.py
@@ -156,3 +157,11 @@ CI runs the integration checks on pull requests. Source-versioned firmware relea
 publication runs on default-branch pushes or manual dispatch after successful
 checks; it never flashes devices. See [CI and releases](docs/CI_AND_RELEASES.md)
 for triggers, artifacts, version guards and credential scope.
+
+## Generic deep-sleep candidate
+
+Firmware0.1.3 adds explicit owned-RTC-input terminal deep entry and owned static
+output retention alongside unchanged light sleep. Wake is a fresh runtime/default
+app boot; application timing, preparation, rail policy and UI remain external.
+See [contract, source constraints and verification](docs/DEEP_SLEEP.md). No full
+product quiescence, physical wake reliability or low-current result is claimed.
