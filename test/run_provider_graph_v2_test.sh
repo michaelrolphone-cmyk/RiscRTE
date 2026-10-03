@@ -88,4 +88,3 @@ c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver"
   "$repo/test/drivers/provider_graph_destruction_guard_v2_test.cpp" \
   -ldl -o "$build/destruction-test"
 "$build/destruction-test" "$build/stuck.so"
-
