@@ -222,6 +222,16 @@ and non-KV duplicate capabilities still fail before app execution. This fixes
 Points/Wi-Fi production policies without adding or changing any app permission.
 No networking/OTA/partition behavior is added by this correction.
 
+## Bounded PDM input and healthy audio coexistence
+
+Runtime 0.1.16 adds selected I2S0 PDM RX through the existing raw controller ABI. The ESP32-S3 native port owns DMA/controller mechanics; board-specific microphone identity, pins and `audio.input` remain external driver policy:
+mono signed16, 8/16 kHz, at most256 frames and40ms per read. RX data stays input;
+cleanup preserves uncertain ownership. Healthy I2S streams may coexist with
+provider-bound storage, while every live stream still blocks sleep and app
+unload. Failed/partial transfers become cleanup-only and storage-unsafe.
+See [input, ownership and verification](docs/I2S_RX.md). Signal generation,
+spectrum analysis, shared-output policy and UI remain external applications.
+
 ## Graph-owned provider mappings
 
 Firmware0.1.13 gives every admitted provider graph node a fresh ELF mapping,

@@ -1,5 +1,9 @@
 # Standard I2S TX, firmware 0.1.8
 
+Firmware0.1.12 additionally provides [bounded PDM RX](I2S_RX.md). Its healthy
+I2S/provider-storage distinction and cleanup-only transfer-failure behavior
+supersede the original TX-only scope below; existing TX format/bounds remain.
+
 This is a generic CPU transport prerequisite, not an alarm implementation. It
 reuses the unchanged `platform.i2s.controller@1` table from `TWatchPlatformV1.h`
 and exact `audio.i2s@1` typed materializer. The selected provider receives a
