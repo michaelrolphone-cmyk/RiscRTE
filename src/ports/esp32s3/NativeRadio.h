@@ -7,6 +7,7 @@
  * calls have no cancellation API or enforceable 100-ms wall-clock bound. */
 #include <RiscRadioScanV1.h>
 #include <esp_event.h>
+#include <esp_heap_caps.h>
 #include <esp_log.h>
 #include <esp_netif.h>
 #include <esp_wifi.h>
@@ -30,7 +31,9 @@ struct State {
   uint8_t savedLogCount=0;
   esp_log_level_t savedLogLevels[4]{};
   int64_t scanDeadline=0,joinDeadline=0;
-  garden_radio_scan_result_v1 result{};
+  // One bounded scan-session snapshot; no permanent 600-byte DRAM cache.
+  // Native callbacks never touch this allocation, and never retain its address.
+  garden_radio_scan_result_v1* result=nullptr;
 };
 static State s;
 static const char* const LogTags[]={"wifi","wifi_init","wifi_init_default","wifi_netif"};
@@ -84,7 +87,7 @@ inline void event(void* argument,esp_event_base_t base,int32_t id,void* data){
   }
   // Never reconnect, copy credentials, call SDK functions or touch s here.
 }
-inline bool idle(){return !s.loop && !s.wifi && !s.netif && !s.handler && !s.closing && !s.savedLogCount;}
+inline bool idle(){return !s.loop && !s.wifi && !s.netif && !s.handler && !s.closing && !s.savedLogCount && !s.result;}
 inline bool wifiAbsent(esp_err_t result){return result==ESP_OK || result==ESP_ERR_WIFI_NOT_INIT || result==ESP_ERR_WIFI_NOT_STARTED;}
 inline bool leave(){
   // Revoke event authority before touching the SDK. A failed cleanup remains
@@ -150,6 +153,7 @@ inline bool leave(){
     esp_netif_destroy(s.netif);s.netif=nullptr;
   }
   if(!restoreLogs())return false;
+  if(s.result){wipe(s.result,sizeof(*s.result));heap_caps_free(s.result);s.result=nullptr;}
   s={};scanEvent.store(0,std::memory_order_release);joinFailed.store(0,std::memory_order_release);
   return true;
 }
@@ -243,13 +247,20 @@ inline uint8_t auth(wifi_auth_mode_t mode){
 }
 inline bool scanStart(){
   if(!idle())return false;
-  if(!begin(Scan))return false;
+  // Allocate a single fixed-size snapshot before any SDK setup. This is native
+  // session memory, not app-ledger memory; app return cannot reclaim it while
+  // RF/cleanup still owns it. A failed begin has not published this pointer.
+  auto* result=static_cast<garden_radio_scan_result_v1*>(
+    heap_caps_calloc(1,sizeof(garden_radio_scan_result_v1),MALLOC_CAP_8BIT));
+  if(!result)return false;
+  if(!begin(Scan)){wipe(result,sizeof(*result));heap_caps_free(result);return false;}
+  s.result=result;
   if(!ensureLogsSuppressed()){leave();return false;}
   s.startAttempted=true;
   if(esp_wifi_start()!=ESP_OK){leave();return false;}
   wifi_scan_config_t config{};config.show_hidden=true;config.scan_type=WIFI_SCAN_TYPE_ACTIVE;
   config.scan_time.active.min=0;config.scan_time.active.max=120;
-  s.result={};s.result.struct_size=sizeof(s.result);s.result.state=GARDEN_RADIO_SCAN_RUNNING;
+  s.result->struct_size=sizeof(*s.result);s.result->state=GARDEN_RADIO_SCAN_RUNNING;
   s.scanDeadline=esp_timer_get_time()+ScanTimeoutUs;
   if(!ensureLogsSuppressed()){leave();return false;}
   s.scanAttempted=true;s.scanList=true;
@@ -259,16 +270,17 @@ inline bool scanStart(){
 inline bool scanPoll(garden_radio_scan_result_v1* result){
   if(!result || result->struct_size<sizeof(*result) || s.closing)return false;
   if(s.operation!=Scan){*result={};result->struct_size=sizeof(*result);return true;}
-  if(s.result.state==GARDEN_RADIO_SCAN_RUNNING){
+  if(!s.result)return false;
+  if(s.result->state==GARDEN_RADIO_SCAN_RUNNING){
     const uint32_t done=scanEvent.load(std::memory_order_acquire);
-    if(done==2 || (!done && esp_timer_get_time()>=s.scanDeadline))s.result.state=GARDEN_RADIO_SCAN_FAILED;
+    if(done==2 || (!done && esp_timer_get_time()>=s.scanDeadline))s.result->state=GARDEN_RADIO_SCAN_FAILED;
     else if(done==1){
       wifi_ap_record_t records[GARDEN_RADIO_SCAN_MAX]{};uint16_t count=GARDEN_RADIO_SCAN_MAX;
-      if(esp_wifi_scan_get_ap_records(&count,records)!=ESP_OK || count>GARDEN_RADIO_SCAN_MAX)s.result.state=GARDEN_RADIO_SCAN_FAILED;
+      if(esp_wifi_scan_get_ap_records(&count,records)!=ESP_OK || count>GARDEN_RADIO_SCAN_MAX)s.result->state=GARDEN_RADIO_SCAN_FAILED;
       else{
-        s.scanList=false;s.scanAttempted=false;s.result.count=uint8_t(count);s.result.state=GARDEN_RADIO_SCAN_DONE;
+        s.scanList=false;s.scanAttempted=false;s.result->count=uint8_t(count);s.result->state=GARDEN_RADIO_SCAN_DONE;
         for(uint16_t i=0;i<count;++i){
-          auto& out=s.result.entries[i];std::memcpy(out.ssid,records[i].ssid,32);out.ssid[32]=0;
+          auto& out=s.result->entries[i];std::memcpy(out.ssid,records[i].ssid,32);out.ssid[32]=0;
           out.rssi=records[i].rssi;out.channel=records[i].primary;out.auth=auth(records[i].authmode);
         }
       }
@@ -276,7 +288,7 @@ inline bool scanPoll(garden_radio_scan_result_v1* result){
     // Cancellation is explicit, including after a failure. Until it succeeds,
     // native idle remains false and resources remain owned by the caller.
   }
-  *result=s.result;return true;
+  *result=*s.result;return true;
 }
 inline bool scanCancel(){return leave();}
 } }

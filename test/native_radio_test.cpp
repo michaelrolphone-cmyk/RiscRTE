@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 using namespace RiscCpu::NativeRadio;
@@ -24,6 +25,13 @@ static std::vector<wifi_event_sta_scan_done_t> queued;
 // Read only while the caller's local config is still alive, from start().
 static const wifi_config_t* pendingCredentialWipe=nullptr;
 static bool credentialWipeObserved=false;
+static bool allocationFails=false;
+static void* scanAllocation=nullptr;
+static unsigned scanAllocations=0,scanFrees=0;
+// Keep the boot-resident control state small on both host and Xtensa. The
+// public 600-byte scan record belongs only to an active scan's native heap.
+static_assert(sizeof(State)<=112,"radio control state must not embed scan cache");
+static_assert(sizeof(garden_radio_scan_result_v1)==600,"bounded scan allocation");
 static const esp_log_level_t originalLogLevels[4]={ESP_LOG_INFO,ESP_LOG_DEBUG,ESP_LOG_WARN,ESP_LOG_ERROR};
 static esp_log_level_t logLevels[4]={ESP_LOG_INFO,ESP_LOG_DEBUG,ESP_LOG_WARN,ESP_LOG_ERROR};
 static const esp_log_level_t unrelatedLogLevel=ESP_LOG_VERBOSE;
@@ -33,6 +41,16 @@ static void logsRestored(){for(unsigned i=0;i<4;++i)assert(logLevels[i]==origina
 static esp_err_t call(const char* name){calls.emplace_back(name);return failure==name || failure2==name?ESP_FAIL:ESP_OK;}
 static bool called(const char* name){return std::find(calls.begin(),calls.end(),name)!=calls.end();}
 static bool zero(const void* p,size_t n){const auto* bytes=static_cast<const uint8_t*>(p);for(size_t i=0;i<n;++i)if(bytes[i])return false;return true;}
+void* heap_caps_calloc(size_t count,size_t size,uint32_t capabilities){
+ assert(count==1 && size==sizeof(garden_radio_scan_result_v1) && capabilities==MALLOC_CAP_8BIT);
+ assert(!scanAllocation);++scanAllocations;
+ if(allocationFails)return nullptr;
+ scanAllocation=std::calloc(count,size);assert(scanAllocation);return scanAllocation;
+}
+void heap_caps_free(void* pointer){
+ assert(pointer && pointer==scanAllocation && zero(pointer,sizeof(garden_radio_scan_result_v1)));
+ std::free(pointer);scanAllocation=nullptr;++scanFrees;
+}
 static void emit(int32_t id,void* data=nullptr){if(handler.function)handler.function(handler.argument,WIFI_EVENT,id,data);}
 static void emitScan(uint32_t status=0){wifi_event_sta_scan_done_t done{status,uint8_t(found.size()),1};emit(WIFI_EVENT_SCAN_DONE,&done);scanning=false;}
 static unsigned logIndex(const char* tag){for(unsigned i=0;i<4;++i)if(!strcmp(tag,LogTags[i]))return i;assert(false);return 0;}
@@ -83,19 +101,24 @@ esp_err_t esp_wifi_scan_stop(){assert(wifi && started);auto result=call("scan_st
 esp_err_t esp_wifi_clear_ap_list(){assert(wifi && started);auto result=call("list_clear");if(result==ESP_OK)list=false;return result;}
 esp_err_t esp_wifi_scan_get_ap_records(uint16_t* count,wifi_ap_record_t* out){assert(wifi && started && *count==16 && !scanning);auto result=call("records");if(result!=ESP_OK)return result;*count=std::min<size_t>(*count,found.size());std::copy_n(found.begin(),*count,out);if(badCount)*count=17;list=false;return ESP_OK;}
 static void reset(){
- failure.clear();failure2.clear();assert(leave());assert(idle() && !wifi && !netif && !loop && !driver && !handler.function && !list);
+ failure.clear();failure2.clear();assert(leave());assert(idle() && !wifi && !netif && !loop && !driver && !handler.function && !list && !scanAllocation);
  logsRestored();assert(esp_log_level_get("unrelated")==ESP_LOG_VERBOSE);
- calls.clear();now=0;ip={};found.clear();badCount=startEmitsDone=externalLoop=false;pendingCredentialWipe=nullptr;credentialWipeObserved=false;copied={};initChangesLogs=configChangesLogs=startChangesLogs=blockLogRemute=false;
+ calls.clear();now=0;ip={};found.clear();badCount=startEmitsDone=externalLoop=false;pendingCredentialWipe=nullptr;credentialWipeObserved=false;copied={};allocationFails=false;initChangesLogs=configChangesLogs=startChangesLogs=blockLogRemute=false;
 }
 static garden_radio_scan_result_v1 poll(){garden_radio_scan_result_v1 value{};value.struct_size=sizeof(value);assert(scanPoll(&value));return value;}
 static uint8_t status(){uint8_t value=99;int8_t rssi=99;assert(state(&value,&rssi));assert((value==2 && rssi==-42) || (value!=2 && !rssi));return value;}
 int main(){
- assert(idle() && calls.empty());uint8_t sta[12],ap[12];assert(addresses(sta,ap) && zero(sta,12) && zero(ap,12));
+ assert(idle() && calls.empty() && !scanAllocation);uint8_t sta[12],ap[12];
+ allocationFails=true;assert(!scanStart() && idle() && calls.empty() && !scanAllocation);
+ assert(scanAllocations==1 && !scanFrees);allocationFails=false;
+ assert(addresses(sta,ap) && zero(sta,12) && zero(ap,12));
  assert(!join(nullptr,"") && !join("","") && !join("ssid",nullptr) && !join("ssid","short"));
  std::string longSsid(33,'s'),longPass(64,'p');assert(!join(longSsid.c_str(),"") && !join("ssid",longPass.c_str()) && calls.empty());
  wifi=true;assert(!join("other-owner", "") && idle());wifi=false;assert(!called("loop_create"));reset();
  failure="netif_init";assert(!join("ssid","") && idle());reset();assert(netifInitCount==0);
  externalLoop=true;assert(!join("ssid","") && idle());assert(!called("loop_delete"));reset();assert(netifInitCount==1);
+ // Recovery after OOM does not require a restart or consume a radio session.
+ assert(scanStart() && scanAllocation);assert(scanCancel() && idle() && !scanAllocation);reset();
  for(const char* failed:{"get_mode","loop_create","netif_new","attach_no_driver","attach","defaults","register","wifi_init","storage_ram","station_mode","credentials_copy","start","connect"}){
   failure=failed;assert(!join("copied-ssid","copied-password"));failure.clear();assert(leave() && idle());reset();
  }
@@ -136,7 +159,9 @@ int main(){
   reset();
  }
  assert(join("ssid","12345678"));failure="driver_clear";assert(!leave());failure="driver_config_clear";assert(!leave() && !idle());reset();
+ const auto beforeScan=scanAllocations;
  assert(scanStart() && poll().state==GARDEN_RADIO_SCAN_RUNNING && !scanStart() && !join("ssid",""));
+ assert(scanAllocations==beforeScan+1 && scanAllocation==s.result);
  assert(!scanPoll(nullptr));garden_radio_scan_result_v1 tooSmall{};assert(!scanPoll(&tooSmall));
  auto stale=handler;queued.push_back({0,1,1});assert(scanCancel() && queued.empty() && idle());
  assert(scanStart());wifi_event_sta_scan_done_t staleDone{0,1,1};stale.function(stale.argument,WIFI_EVENT,WIFI_EVENT_SCAN_DONE,&staleDone);
@@ -149,9 +174,19 @@ int main(){
  found.clear();auto again=poll();assert(!memcmp(&again,&value,sizeof(value)));assert(scanCancel());assert(poll().state==GARDEN_RADIO_SCAN_IDLE);reset();
  assert(scanStart());emitScan();assert(poll().state==GARDEN_RADIO_SCAN_DONE && !poll().count);reset();
  startEmitsDone=true;assert(scanStart());assert(poll().state==GARDEN_RADIO_SCAN_DONE);reset();
- for(const char* failed:{"start","scan_start"}){failure=failed;assert(!scanStart());failure.clear();assert(leave() && idle());reset();}
+ for(const char* failed:{"get_mode","loop_create","netif_new","attach_no_driver","attach","defaults","register","wifi_init","storage_ram","station_mode","start","scan_start"}){
+  const auto freesBefore=scanFrees;failure=failed;assert(!scanStart());failure.clear();assert(leave() && idle() && !scanAllocation);assert(scanFrees==freesBefore+1);reset();
+ }
+ // Before begin succeeds the cache is unpublished and can unwind even if SDK
+ // cleanup retains other resources; later scan failures retain the actual cache.
+ failure="wifi_init";failure2="loop_delete";assert(!scanStart() && !idle() && !scanAllocation);reset();
+ failure="scan_start";failure2="stop";assert(!scanStart() && !idle() && scanAllocation);reset();
+ assert(scanStart());const auto* cached=scanAllocation;const auto freesBeforeRestore=scanFrees;
+ failure="log_restore_wifi";assert(!scanCancel() && !idle() && scanAllocation==cached && scanFrees==freesBeforeRestore);reset();assert(scanFrees==freesBeforeRestore+1);
  for(const char* failed:{"scan_stop","list_clear","stop","deinit","unregister","driver_clear","loop_delete","dhcp_stop"}){
-  assert(scanStart());failure=failed;assert(!scanCancel() && !idle() && !scanStart());logsQuiet();reset();
+  assert(scanStart());const auto* retained=scanAllocation;const auto freesBefore=scanFrees;
+  failure=failed;assert(!scanCancel() && !idle() && !scanStart());
+  assert(scanAllocation==retained && scanFrees==freesBefore);logsQuiet();reset();assert(scanFrees==freesBefore+1);
  }
  assert(scanStart());emitScan(1);assert(poll().state==GARDEN_RADIO_SCAN_FAILED && !idle());reset();
  assert(scanStart());emitScan();failure="records";assert(poll().state==GARDEN_RADIO_SCAN_FAILED && !idle());reset();

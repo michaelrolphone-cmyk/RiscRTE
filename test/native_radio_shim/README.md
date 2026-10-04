@@ -147,3 +147,21 @@ console writes, unreviewed supplicant tags, or all behavior inside proprietary
 Wi-Fi binaries. The exact pinned supplicant implementation was unavailable to
 this source review. Host tests model the filter lifecycle and mutation/failure
 cases; they do not qualify physical UART privacy or all SDK-internal logging.
+
+## Scan-session allocation
+
+The copied scan cache is a single 600-byte
+[`heap_caps_calloc`](https://github.com/espressif/esp-idf/blob/v4.4.7/components/heap/include/esp_heap_caps.h) allocation with
+`MALLOC_CAP_8BIT`. No SDK or log calls occur when that allocation fails. Join-only
+and idle states do not allocate the cache. It is assigned to native state only
+after initialization succeeds, remains owned through scanning/results and failed
+cleanup, and is volatile-wiped before exactly one `heap_caps_free` on successful
+quiescence. A failed begin frees the unpublished cache, including if separate
+SDK cleanup remains retained. No app-ledger pointer or event callback references
+this memory. Tests inject OOM and retry, failed begin/start, result-copy stability,
+every cleanup fault and log-restoration failure; frees assert zeroed bytes.
+
+Pinned Xtensa GCC 8.4 size-only measurement using the shim declarations changed
+State from 664 to 72 bytes (592 static bytes recovered). The host suite bounds its
+control-state size as a regression guard. This is not proof of target runtime
+heap capacity; full target linking and physical qualification remain separate.

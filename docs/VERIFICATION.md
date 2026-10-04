@@ -93,3 +93,10 @@ installation after the pinned RISC-V toolchain download failed its checksum.
 No integrity check was bypassed. No target compilation pass is claimed here;
 exact-head CI is required to establish target-build status. No real radio,
 network association, credentials, device, flash, merge or release was used.
+
+Hosted exact-head candidate `52b085c2` subsequently passed host/version checks and
+baseline firmware/frozen-artifact generation. Its 16 MiB native-USB target failed
+linking with a 120-byte `dram0_0_seg` overflow. The scan-session allocation repair
+recovers 592 static bytes by pinned Xtensa size-only measurement; a new full
+hosted target result is required. It adds OOM/lifetime regression coverage and
+does not change SDK Wi-Fi buffer policy or claim sufficient dynamic heap.

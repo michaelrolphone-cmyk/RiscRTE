@@ -113,3 +113,48 @@ retained and retryable. The native shim README lists the exact tags and limits.
 This is not a guarantee about unreviewed supplicant, proprietary binary,
 early/DRAM, ROM or direct-console output, and no physical UART privacy test has
 been performed. No SDK-wide or NVS encryption claim is made.
+
+## Scan cache and DRAM budget repair
+
+Hosted candidate `52b085c2` built the baseline target but overflowed the native-USB
+variant's static DRAM region by 120 bytes. The 600-byte scan snapshot is now one
+fixed-size `MALLOC_CAP_8BIT` native heap allocation made before scan SDK setup.
+OOM returns false before SDK calls, owns no resources and permits later retry.
+The snapshot is never an app allocation and never used by an event callback.
+After successful native initialization it remains owned through DONE/FAILED and
+any unsuccessful cleanup, including log restoration. Successful cleanup wipes
+and frees it exactly once. Failed initialization frees the still-unpublished
+local snapshot while preserving any independently retained SDK state.
+
+A pinned Xtensa GCC 8.4 size-only compile against the test declarations measured
+NativeRadio control State at 664 bytes before and 72 bytes after, recovering
+592 static bytes. This measurement is not a full SDK/firmware link. Recovered
+linker capacity does not establish runtime heap headroom for Wi-Fi, DHCP or
+other apps, nor physical operation. The SDK buffer policy and unrelated Runtime
+pools are unchanged. The native regression injects allocation failure, retry,
+failed start and every cleanup stage and checks allocation ownership, zeroing
+and single free; a static-size assertion prevents embedding the scan cache again.
+
+## Arduino startup ownership review
+
+For the selected Arduino 2.0.17 core,
+[`initArduino`](https://github.com/espressif/arduino-esp32/blob/2.0.17/cores/esp32/esp32-hal-misc.c)
+initializes CPU/PSRAM, log defaults, NVS and weak init hooks; it does not initialize
+Wi-Fi or create the default event loop. The
+[selected board](https://github.com/platformio/platform-espressif32/blob/v6.13.0/boards/esp32-s3-devkitc-1.json)
+uses the `esp32s3` variant, which supplies
+[pin definitions](https://github.com/espressif/arduino-esp32/blob/2.0.17/variants/esp32s3/pins_arduino.h), and this Runtime supplies no init-hook or Arduino WiFi caller.
+[`app_main`](https://github.com/espressif/arduino-esp32/blob/2.0.17/cores/esp32/main.cpp)
+then creates the loop task. This repository's baseline and native-USB build flags
+retain that startup path.
+
+The USB target uses `ARDUINO_USB_MODE=1`.
+[`HWCDC`](https://github.com/espressif/arduino-esp32/blob/2.0.17/cores/esp32/HWCDC.cpp)
+does not create a default event loop in its constructor/begin path; its optional
+event-registration helper uses a separate explicit event-loop handle. By
+contrast, Arduino's optional
+[`WiFiGeneric`](https://github.com/espressif/arduino-esp32/blob/2.0.17/libraries/WiFi/src/WiFiGeneric.cpp)
+creates the default loop during network initialization, and its constructor is
+empty. NativeRadio does not call that wrapper. No startup ownership conflict was
+found in these sources; this is source evidence, not an executed hardware boot.
+The adapter still rejects an unexpected existing default-loop/Wi-Fi owner.
