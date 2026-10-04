@@ -45,6 +45,9 @@ struct Hardware {
   bool (*radioScanPoll)(garden_radio_scan_result_v1*)=nullptr;
   bool (*radioScanCancel)()=nullptr;
   bool (*radioIdle)()=nullptr;
+  // Additive mono signed16 PDM RX. Existing TX callback/order stays unchanged.
+  bool (*i2sOpenRx)(uint8_t,uint8_t,uint8_t,uint32_t)=nullptr;
+  bool (*i2sRead)(uint8_t,int16_t*,size_t,size_t*,uint32_t)=nullptr;
   const risc_http_client_v1* httpClient=nullptr;
   bool (*httpIdle)()=nullptr;
   bool (*httpSafe)()=nullptr;
@@ -63,7 +66,7 @@ class Port final {
   // Hardware/transport drain only. A bank owner may request its narrowly
   // authorized restart while its own durable-selection state retains exit.
   bool restartResourcesSafe() const;
-  // Healthy station/scan activity blocks exit but does not revoke provider KV.
+  // Healthy I2S/station/scan activity blocks exit but does not revoke provider KV.
   // Actual native cleanup failure retains the existing storage safety barrier.
   bool providerStorageSafe() const;
  private:
@@ -103,7 +106,7 @@ class Port final {
   static bool spiEnd(void*,uint64_t); static bool spiRelease(void*,uint64_t);
   static bool i2sOpen(void*,uint8_t,bool,uint8_t,int8_t,uint8_t,uint32_t,uint8_t,uint64_t*);
   static bool i2sWrite(void*,uint64_t,const int16_t*,size_t,size_t*,uint32_t);
-  static bool i2sRead(void*,uint64_t,int16_t*,size_t,size_t* done,uint32_t){if(done)*done=0;return false;}
+  static bool i2sRead(void*,uint64_t,int16_t*,size_t,size_t*,uint32_t);
   static bool i2sClose(void*,uint64_t);
   static bool radioClaim(void*,uint64_t*);
   static bool radioJoin(void*,uint64_t,const char*,const char*);
