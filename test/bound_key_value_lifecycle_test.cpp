@@ -284,22 +284,19 @@ static void retained() {
   for (const auto& event : events) assert(event.find("quiesce") == std::string::npos && event.find("stop") == std::string::npos);
   assert(!runtime->run()); deny(saved[0]); deny(saved[1]);
   retaining = false; exitSafe = true;
-  // An independent replacement must not revive stale contexts; the retained
-  // invocation and graph stay allocated and receive no cleanup callbacks.
-  // dlopen deliberately aliases an ordinary provider at the same path while
-  // retained. Distinct copied image paths isolate the replacement without
-  // pretending the retained provider was unloaded; normal() above separately
-  // verifies reuse of the original path after successful complete unload.
-  for (unsigned index = 0; index < 2; ++index) {
-    const std::string original = root + "/provider" + std::to_string(index) + ".elf";
-    const std::string fresh = "replacement" + std::to_string(index) + ".elf";
-    std::ifstream input(original, std::ios::binary);
-    std::ofstream output(root + "/" + fresh, std::ios::binary);
-    output << input.rdbuf(); output.close(); assert(input.good() && output.good());
-    auto manifest = parseDoc(driver(index)); manifest["file_name"] = fresh;
-    file(index ? "second.json" : "first.json", encode(manifest));
-  }
+  // Reload the same artifact paths while their old instances stay retained.
+  // Fresh mappings must not overwrite retained provider state or revive old
+  // storage tokens. The retained invocation/graph receive no cleanup callbacks.
+  const void* retainedImages[] = {providerImages[0], providerImages[1]};
+  const risc_bound_key_value_v1 retainedStorage[] = {saved[0], saved[1]};
   normal();
+  for (unsigned index = 0; index < 2; ++index) {
+    Dl_info info{};
+    assert(retainedImages[index] != providerImages[index]);
+    assert(dladdr(retainedImages[index], &info));
+    assert(retainedStorage[index].context != saved[index].context);
+    deny(retainedStorage[index]);
+  }
   _exit(0);
 }
 int main(int argc, char** argv) {
@@ -312,5 +309,5 @@ int main(int argc, char** argv) {
   if (!child) retained();
   int status = 0; assert(waitpid(child, &status, 0) == child);
   assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
-  puts("Native retention denies provider storage inside app before return, retains images, and never revives copied contexts PASS");
+  puts("Native retention denies provider storage, retains images across same-path reloads, and never revives copied contexts PASS");
 }

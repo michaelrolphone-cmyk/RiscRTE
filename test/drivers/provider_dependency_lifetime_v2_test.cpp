@@ -2,7 +2,6 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
-#include <dlfcn.h>
 
 using namespace RuntimeProviders;
 
@@ -27,16 +26,14 @@ int main(int argc, char** argv) {
   assert(graph.addVerified(root) && graph.addVerified(child));
   auto grant = graph.acquire("cap.retaining", 1);
   assert(grant.slot && graph.interfaceFor(grant));
-  // Holding a separate host dlopen reference allows inspection of the REAL
-  // loaded fixture without peeking into private GraphV2 internals.
-  void* probe = dlopen(argv[2], RTLD_NOW);
-  assert(probe);
-  auto valid = reinterpret_cast<int (*)()>(dlsym(probe, "retained_dependency_is_valid"));
-  assert(valid);
+  // Inspect the exact instance granted by the graph. A separate dlopen of
+  // the source path would inspect another image with unrelated static state.
+  struct RetainingApi { int (*dependency_is_valid)(); };
+  const auto* api = static_cast<const RetainingApi*>(graph.interfaceFor(grant));
+  assert(api && api->dependency_is_valid);
   churnStack(12);
-  assert(valid()); // ASan stack-use-after-return if graph passed local deps[].
+  assert(api->dependency_is_valid()); // ASan stack-use-after-return for local deps[].
   assert(graph.release(grant)); // quiesce() and stop() both re-read the table.
   assert(graph.shutdown());
-  assert(dlclose(probe) == 0);
   std::puts("Provider dependency table survives activation stack, quiesce and stop PASS");
 }

@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces]
+    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2]
   workflow_dispatch:
   workflow_call:
 permissions:
@@ -69,12 +69,16 @@ jobs:
           bash test/run_light_sleep_test.sh
           bash test/run_deep_sleep_test.sh
           SANITIZE=1 bash test/run_deep_sleep_test.sh
+          bash test/run_key_value_v2_test.sh
+          SANITIZE=1 bash test/run_key_value_v2_test.sh
           bash test/run_key_value_multi_test.sh
           SANITIZE=1 bash test/run_key_value_multi_test.sh
           bash test/run_key_value_test.sh
           SANITIZE=1 bash test/run_key_value_test.sh
           bash test/run_bound_key_value_test.sh
           SANITIZE=1 bash test/run_bound_key_value_test.sh
+          bash test/run_native_registry_test.sh
+          SANITIZE=1 bash test/run_native_registry_test.sh
           bash test/run_provider_module_lease_v2_test.sh
           SANITIZE=1 bash test/run_provider_module_lease_v2_test.sh
           bash test/run_retained_app_test.sh

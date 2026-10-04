@@ -166,3 +166,17 @@ including failed quiescence. Allocation failure rejects an unconfirmed boot;
 there is no internal-memory fallback. Existing target object placement remains
 unchanged. Native TLS still requires its explicit internal-heap guard; app and
 provider bulk workspaces retain their separate PSRAM allocation contracts.
+
+## Current integration baseline
+
+Firmware 0.1.15 incorporates the provider mapping correction and explicit KV v2
+prerequisite from Runtime PR11/PR12. Every graph-owned provider retains a separate
+native registry mapping, including the two update services whose ELF basenames
+match hardware providers. Ordinary application dlopen uniqueness is unchanged.
+The paired update path preserves both v1 and v2 manifest requirements and exact
+namespace authority; it does not grant v2 to existing applications. The original
+namespace, retained-resource and boot-health checks remain required.
+
+The target native-registry, v2 storage and paired update fault suites run together
+in CI. Host tests do not qualify hardware OTA, flash power-loss recovery, TLS or
+new flash layout migration.
