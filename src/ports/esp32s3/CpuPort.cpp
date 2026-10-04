@@ -336,7 +336,9 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
-  // Failed cleanup outranks healthy activity on either selected I2S unit.\n  for(const auto& c:p.i2ss_)if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;\n  for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
+  // Failed cleanup outranks healthy activity on either selected I2S unit.
+  for(const auto& c:p.i2ss_)if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;if(c.active)return RISC_LIGHT_SLEEP_BUSY;}
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
@@ -382,7 +384,9 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
-  // Failed cleanup outranks healthy activity on either selected I2S unit.\n  for(const auto& c:p.i2ss_)if(c.closing)return RISC_DEEP_SLEEP_RETAINED;\n  for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
+  // Failed cleanup outranks healthy activity on either selected I2S unit.
+  for(const auto& c:p.i2ss_)if(c.closing)return RISC_DEEP_SLEEP_RETAINED;
+  for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_DEEP_SLEEP_RETAINED;if(c.active)return RISC_DEEP_SLEEP_BUSY;}
   for(const auto& pin:p.pins_)if(pin.pwm)return RISC_DEEP_SLEEP_BUSY;
   int pin=-1;
