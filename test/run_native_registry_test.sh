@@ -5,7 +5,7 @@ support="$repo/test/support/native_registry"
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
 flags=(-g)
-if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
+if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer); fi
 cc="${CC:-cc}"; cxx="${CXX:-c++}"
 mkdir -p "$build/hardware" "$build/service" "$build/other" "$build/corrupt"
 shared=(-std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -I"$repo/sdk/driver" -I"$repo/sdk/hardware")
