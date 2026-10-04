@@ -101,6 +101,24 @@ recovers 592 static bytes by pinned Xtensa size-only measurement; a new full
 hosted target result is required. It adds OOM/lifetime regression coverage and
 does not change SDK Wi-Fi buffer policy or claim sufficient dynamic heap.
 
+## PDM RX prerequisite, firmware0.1.12
+
+The I2S suite now includes input-only DATA cleanup faults, I2S0 mono PDM
+configuration, whole-read deadlines/partial copies, direction/owner/core
+checks, and22 real Runtime/Graph/dlopen TX/RX lifecycle cases. The latter
+exercise actual bound-KV get/put while healthy audio is active, permanent
+revocation after unsafe storage access, sleep rejection, failed-open retention,
+cleanup retries, and no app fini/unload/child launch behind a live token.
+Normal and ASan/UBSan I2S runs pass locally; leak detection is disabled because
+this executor rejects LSan under ptrace. Existing normal board, runtime, radio,
+light/deep sleep, KV/multi-KV/bound-KV, lease, retained-app, Watch and graph suites
+pass. All six target app/provider fixture ELFs compile and pass ELF validation;
+the eight Python custody/release checks pass with the existing pinned test venv.
+The local Arduino framework SDK is absent, so firmware target compilation has
+not run and remains an exact-head CI requirement. No dependency installation,
+hardware access, recording or audio output occurred. See [the RX contract](I2S_RX.md).
+No hardware qualification is claimed.
+
 ## Native module-name regression (Firmware0.1.13)
 
 The owner reported Alarm0.6.5 and Wi-Fi1.1.0 boot failures at
