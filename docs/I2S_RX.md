@@ -1,9 +1,9 @@
-# Bounded PDM input, firmware 0.1.12
+# Bounded PDM input, Runtime 0.1.16
 
 This adds one generic CPU transport to the existing unchanged
 `platform.i2s.controller@1` table and `audio.i2s@1` configuration. No application,
 FFT, recording, waveform, microphone identity, watch pin or speaker policy lives
-in firmware. Standard TX remains available on I2S0/1. Selected PDM RX is accepted
+in the ESP32-S3 native Runtime port. Standard TX remains available on I2S0/1. Selected PDM RX is accepted
 only on I2S0, with `ws=-1`, mono signed16 PCM and 8000/16000 Hz. The external
 provider must explicitly select the immutable controller and pads. Board graph
 validation already rejects duplicate controllers, overlapping pads and RX on
