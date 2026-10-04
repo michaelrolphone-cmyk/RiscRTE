@@ -33,7 +33,11 @@ file_namedefault.elf, entryapp_main, and requires entries `{capability,api}`.
 The ELF is the manifest's safe basename beside that manifest. The loader binds
 this exact path to manifest identity/version and the intersection of declared
 requirements with authorized grants before any ELF runs. Missing, extra,
-duplicate or ambiguous grants fail boot. This is provisioning consistency for
+duplicate or ambiguous grants fail boot. The sole additive exception is multiple
+distinct, positive storage.key-value@1 namespaces for one manifest requirement;
+all are explicit owner-provisioned grants and still count toward the same eight-
+grant bound. Non-KV capability uniqueness is unchanged. ID0 acquisition rejects
+multiple matches; an app must name the intended namespace. This is provisioning consistency for
 trusted native code, not a signature scheme or memory sandbox.
 
 Limits are 16 app policies (`Runtime::MaxAppPolicies`), 8 declared capabilities

@@ -209,3 +209,14 @@ handoffs; active or failed-cleanup radio blocks Light/Deep sleep and app unload.
 Credentials are copied into RAM-only SDK storage and cleared on leave. Connection
 policy, saved credentials, UI, DHCP success handling and retry decisions stay in
 external applications. See [station ownership and cleanup](docs/RADIO_STATION.md).
+
+## Explicit multi-namespace correction
+
+Firmware0.1.10 corrects admission for apps that declare storage.key-value@1 once
+and have multiple distinct owner-provisioned namespace grants. Eight total
+per-app grants and the existing ABI/static storage/layout remain unchanged.
+The caller must choose an explicit authorized namespace when more than one is
+present; instance0 rejects ambiguity. Duplicate namespaces, undeclared grants,
+and non-KV duplicate capabilities still fail before app execution. This fixes
+Points/Wi-Fi production policies without adding or changing any app permission.
+No networking/OTA/partition behavior is added by this correction.

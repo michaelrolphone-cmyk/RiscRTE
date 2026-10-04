@@ -189,39 +189,51 @@ bool Runtime::appPolicies(JsonVariantConst value) {
     strcat(policy.elf,filename);
     for (size_t i=0;i<policyCount_;++i) if (!strcmp(policies_[i].id,policy.id) || !strcmp(policies_[i].elf,policy.elf)) return fail("duplicate app identity/path policy");
     for (JsonObjectConst request:manifest["requires"].as<JsonArrayConst>()) {
-      auto& grant=policy.grants[policy.count]; int64_t api=0;
-      if (!keys(request,{"capability","api"}) || !text(request["capability"],grant.capability,sizeof(grant.capability)) ||
+      char requested[96];int64_t api=0;
+      if (!keys(request,{"capability","api"}) || !text(request["capability"],requested,sizeof(requested)) ||
           !integer(request["api"],1,UINT32_MAX,api)) return fail("invalid app requirement");
-      grant.api=api;
-      if (!strcmp(grant.capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
-      for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,grant.capability)) return fail("duplicate app requirement");
+      if (!strcmp(requested,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
+      // A manifest declares each capability once. The owner may independently
+      // authorize more than one positive KV namespace, still within eight
+      // total grants; no other capability's uniqueness rule is broadened.
+      for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,requested)) return fail("duplicate app requirement");
+      const bool keyValue=!strcmp(requested,RISC_KEY_VALUE_CAPABILITY);
       unsigned matches=0;
       for (JsonObjectConst allowed:item["grants"].as<JsonArrayConst>()) {
-        int64_t allowedApi=0, instance=0; char capability[96];
+        int64_t allowedApi=0,instance=0;char capability[96];
         if (!keys(allowed,{"capability","api","instance_id"}) || !text(allowed["capability"],capability,sizeof(capability)) ||
             !integer(allowed["api"],1,UINT32_MAX,allowedApi) || !integer(allowed["instance_id"],0,INT32_MAX,instance)) return fail("invalid app grant");
         if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
-        if (!strcmp(capability,grant.capability) && allowedApi==api) {++matches;grant.instance=instance;}
-      }
-      if (matches!=1) return fail("app requirement not uniquely authorized");
-      if (!strcmp(grant.capability,RISC_KEY_VALUE_CAPABILITY)) {
-        if (grant.api!=RISC_KEY_VALUE_API_V1 || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put) return fail("app key-value backend/namespace unavailable");
-        grant.keyValue=true;
-      } else if (!strcmp(grant.capability,"platform.clock")) {
-        for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,grant.capability) && platforms_[p].api==grant.api) {
-          if (grant.platform>=0 || grant.instance) return fail("ambiguous app platform clock");
-          grant.platform=p;
+        if (strcmp(capability,requested) || allowedApi!=api) continue;
+        if (++matches>1 && !keyValue) return fail("app requirement not uniquely authorized");
+        if (policy.count==8) return fail("too many app grants");
+        for (size_t i=0;i<policy.count;++i) {
+          const auto& earlier=policy.grants[i];
+          if (!strcmp(earlier.capability,capability) && earlier.api==uint32_t(api) && earlier.instance==uint64_t(instance))
+            return fail("duplicate app grant");
         }
-        if (grant.platform<0) return fail("app platform clock unavailable");
-      } else {
-        if (!strncmp(grant.capability,"platform.",9) || !strcmp(grant.capability,"spi.bus") || !strcmp(grant.capability,"hardware.device")) return fail("raw platform capability denied to app");
-        for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,grant.capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
-          if (grant.driver>=0) return fail("ambiguous app provider");
-          grant.driver=d;
+        auto& grant=policy.grants[policy.count];
+        strcpy(grant.capability,capability);grant.api=api;grant.instance=instance;
+        if (keyValue) {
+          if (grant.api!=RISC_KEY_VALUE_API_V1 || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put) return fail("app key-value backend/namespace unavailable");
+          grant.keyValue=true;
+        } else if (!strcmp(grant.capability,"platform.clock")) {
+          for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,grant.capability) && platforms_[p].api==grant.api) {
+            if (grant.platform>=0 || grant.instance) return fail("ambiguous app platform clock");
+            grant.platform=p;
+          }
+          if (grant.platform<0) return fail("app platform clock unavailable");
+        } else {
+          if (!strncmp(grant.capability,"platform.",9) || !strcmp(grant.capability,"spi.bus") || !strcmp(grant.capability,"hardware.device")) return fail("raw platform capability denied to app");
+          for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,grant.capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
+            if (grant.driver>=0) return fail("ambiguous app provider");
+            grant.driver=d;
+          }
+          if (grant.driver<0) return fail("app provider unavailable");
         }
-        if (grant.driver<0) return fail("app provider unavailable");
+        ++policy.count;
       }
-      ++policy.count;
+      if (!matches) return fail("app requirement not uniquely authorized");
     }
     if (policy.count!=item["grants"].size()) return fail("undeclared app grant");
     ++policyCount_;
@@ -235,7 +247,12 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   for (size_t i=0;i<appPolicy_->count;++i) {
     const auto& p=appPolicy_->grants[i];
     const uint64_t selected=p.driver>=0?drivers_[p.driver].instance:p.instance;
-    if (!strcmp(p.capability,capability) && p.api==api && (!instance || selected==instance)) allowed=&p;
+    if (!strcmp(p.capability,capability) && p.api==api && (!instance || selected==instance)) {
+      // instance0 means unique, never last/first match. Explicit namespaces
+      // remain independently bound to their original owner-provisioned ID.
+      if (allowed) return false;
+      allowed=&p;
+    }
   }
   if (!allowed) return false;
   size_t slot=0;while(slot<16 && appGrants_[slot].live)++slot;
