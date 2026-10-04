@@ -12,6 +12,7 @@ from pathlib import Path
 sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip()
 build=Path(env.subst('$BUILD_DIR'));build.mkdir(parents=True,exist_ok=True)
 header=build/'RiscBuildIdentity.h'
-content='#define RISC_BUILD_IDENTITY "RTE_SOURCE='+sha+'"\n'
+version=env.GetProjectConfig().get('riscrte','version')
+content='#define RISC_BUILD_IDENTITY "RTE_SOURCE='+sha+'"\n#define RISC_BUILD_VERSION "'+version+'"\n'
 if not header.exists() or header.read_text()!=content:header.write_text(content)
 env.Append(CPPPATH=[str(build)])

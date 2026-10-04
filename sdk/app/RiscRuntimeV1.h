@@ -42,8 +42,14 @@ typedef struct {
   bool (*acquire)(const char* capability, uint32_t version, uint64_t instance_id,
                   risc_runtime_capability_v1* out);
   bool (*release)(risc_runtime_capability_v1* grant);
+  /* Optional paired-bank health acknowledgement. Only the configured default
+   * app, while executing app_main after successful initialization, may call.
+   * Call after successful startup/first frame; never on error, exit or sleep.
+   * Older runtime tables lack this suffix. Repeated calls are idempotent. */
+  bool (*confirm_boot)(void);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
+#define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }

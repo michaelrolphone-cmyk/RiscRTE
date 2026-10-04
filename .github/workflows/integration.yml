@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1]
+    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2]
   workflow_dispatch:
   workflow_call:
 permissions:
@@ -47,11 +47,40 @@ jobs:
         run: |
           bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
           bash test/run_runtime_test.sh
+          bash test/native_tls_async/run_async_fdset.sh
+          bash test/native_tls_cleanup/run_checked_cleanup.sh
+          bash test/run_http_test.sh
+          SANITIZE=1 bash test/run_http_test.sh
+          bash test/run_paired_runtime_memory_test.sh
+          SANITIZE=1 bash test/run_paired_runtime_memory_test.sh
+          bash test/run_paired_bank_test.sh
+          SANITIZE=1 bash test/run_paired_bank_test.sh
+          bash test/run_store_audit_test.sh
+          SANITIZE=1 bash test/run_store_audit_test.sh
+          bash test/run_native_bank_test.sh
+          SANITIZE=1 bash test/run_native_bank_test.sh
+          bash test/run_update_runtime_test.sh
+          SANITIZE=1 bash test/run_update_runtime_test.sh
+          python test/paired_bank_images_test.py -v
+          bash test/run_radio_test.sh
+          SANITIZE=1 bash test/run_radio_test.sh
+          bash test/run_i2s_test.sh
+          SANITIZE=1 bash test/run_i2s_test.sh
           bash test/run_light_sleep_test.sh
           bash test/run_deep_sleep_test.sh
           SANITIZE=1 bash test/run_deep_sleep_test.sh
+          bash test/run_key_value_v2_test.sh
+          SANITIZE=1 bash test/run_key_value_v2_test.sh
+          bash test/run_key_value_multi_test.sh
+          SANITIZE=1 bash test/run_key_value_multi_test.sh
           bash test/run_key_value_test.sh
           SANITIZE=1 bash test/run_key_value_test.sh
+          bash test/run_bound_key_value_test.sh
+          SANITIZE=1 bash test/run_bound_key_value_test.sh
+          bash test/run_native_registry_test.sh
+          SANITIZE=1 bash test/run_native_registry_test.sh
+          bash test/run_provider_module_lease_v2_test.sh
+          SANITIZE=1 bash test/run_provider_module_lease_v2_test.sh
           bash test/run_retained_app_test.sh
           SANITIZE=1 bash test/run_retained_app_test.sh
           bash test/run_watch_test.sh
@@ -82,9 +111,18 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-risc-tools-${{ hashFiles('platformio.ini', 'requirements-ci.txt') }}
       - name: Install pinned tools
         run: python -m pip install -r requirements-ci.txt
+      - name: Fetch frozen app SDK for Xtensa ABI proof
+        uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: aa7b03c15a59aa99b2d60ae20905edbdf62e35e6
+          path: build/watch-clock-sdk
+          sparse-checkout: sdk/app
+          persist-credentials: false
       - name: Build firmware and real default/child/provider ELFs
         run: |
           pio run -e esp32s3 -j 1
+          CC="$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" python test/verify_legacy_runtime_header.py build/watch-clock-sdk/sdk/app/RiscRuntimeV1.h
           python scripts/build_apps.py
           bash test/run_elf_test.sh
           pio run -e esp32s3 -t buildfs -j 1
@@ -111,5 +149,19 @@ jobs:
         with:
           name: riscrte-esp32s3-16mb-usb-${{ github.event.pull_request.head.sha || github.sha }}
           path: dist/esp32s3-16mb-usb/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build paired Runtime with real TLS roots and rollback guard
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-paired -j 1
+          BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
+          python scripts/paired_candidate.py --source-sha "$SOURCE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-esp32s3-16mb-paired-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/esp32s3-16mb-paired/
           if-no-files-found: error
           retention-days: 14

@@ -1,5 +1,7 @@
 #include "Runtime.h"
 #include "KeyValueGeneration.h"
+#include "runtime/update/Version.h"
+#include "runtime/resources/ScopedBufferWipe.h"
 #include <esp_dlfcn.h>
 #include <cstring>
 #ifdef ESP_PLATFORM
@@ -28,7 +30,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](const char* line){return currentRuntime && currentRuntime->diagnostic(line);},
     [](const char* path){return currentRuntime && currentRuntime->launch(path);},
     [](const char* cap,uint32_t version,uint64_t instance,risc_runtime_capability_v1* out){return currentRuntime && currentRuntime->acquire(cap,version,instance,out);},
-    [](risc_runtime_capability_v1* grant){return currentRuntime && currentRuntime->release(grant);}};
+    [](risc_runtime_capability_v1* grant){return currentRuntime && currentRuntime->release(grant);},
+    [](){return currentRuntime && currentRuntime->confirmBoot();}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 namespace RiscBoot {
@@ -52,7 +55,8 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   if (provides.size()!=1 || required.size()>16) return fail("driver capability bounds");
   JsonObjectConst p=provides[0]; int64_t api;
   if (!keys(p,{"capability","api"}) || !text(p["capability"],d.provides,sizeof(d.provides)) ||
-      !integer(p["api"],1,UINT32_MAX,api) || !strcmp(d.provides,"hardware.device")) return fail("invalid provides");
+      !integer(p["api"],1,UINT32_MAX,api) || !strcmp(d.provides,"hardware.device") ||
+      !strcmp(d.provides,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("invalid provides");
   d.api=api;
   bool needsHardware=false;
   for (JsonObjectConst req:required) {
@@ -92,7 +96,8 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
   if ((attempted_ && !registrationOpen_) || !port_.owner() || !capability || !*capability || strlen(capability)>=96 || !api || !table || platformCount_==32 ||
       (strncmp(capability,"platform.",9) && strcmp(capability,"spi.bus"))) return false;
   if (scope==Scope::Global) {
-    if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board"))) return false;
+    if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
+               strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store"))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
@@ -113,8 +118,23 @@ bool Runtime::validateGraph() {
           (d.instance && d.instance==drivers_[j].instance)) return fail("duplicate package singleton/hardware owner");
     }
     const auto* hw=d.instance?board_.device(d.instance):nullptr;
+    bool needsStorage=false;
     for(size_t r=0;r<d.count;++r) {
       auto& req=d.requirements[r]; if(!strcmp(req.capability,"hardware.device")) continue;
+      if (!strcmp(req.capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) {
+        auto& storage=providerStorage_[i];
+        if ((req.api!=RISC_BOUND_KEY_VALUE_API_V1 && req.api!=RISC_BOUND_KEY_VALUE_API_V2) || !storage.count ||
+            !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
+            port_.keyValue->maxBlobSize<(req.api==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX))
+          return fail("provider key-value policy/backend unavailable");
+        if (hw) for(size_t b=0;b<hw->bindingCount;++b)
+          if (!strcmp(hw->bindings[b].capability,req.capability))
+            return fail("provider key-value is not a hardware binding");
+        needsStorage=true;
+        storage.table.api_version=req.api;
+        req.trustedApi=&storage.table;
+        continue;
+      }
       uint64_t wanted=0;
       if(hw) for(size_t b=0;b<hw->bindingCount;++b) if(!strcmp(hw->bindings[b].capability,req.capability)) wanted=hw->bindings[b].instance;
       const Platform* platform=nullptr;
@@ -142,6 +162,7 @@ bool Runtime::validateGraph() {
       if (!strcmp(req.capability,"i2c.bus") && board_.deviceBus(d.instance)!=board_.deviceBus(drivers_[found].instance)) return fail("I2C dependency bus scope mismatch");
       edges[i][found]=true;
     }
+    if (providerStorage_[i].count && !needsStorage) return fail("undeclared provider key-value policy");
     if(hw) for(size_t b=0;b<hw->bindingCount;++b) {
       bool used=false; for(size_t r=0;r<d.count;++r) if(!strcmp(d.requirements[r].capability,hw->bindings[b].capability)) used=true;
       if(!used) return fail("unused hardware binding");
@@ -154,7 +175,7 @@ bool Runtime::validateGraph() {
 }
 bool Runtime::appPolicies(JsonVariantConst value) {
   if (value.isNull()) return true;
-  if (!value.is<JsonArrayConst>() || value.size()>8) return fail("invalid app capability policy");
+  if (!value.is<JsonArrayConst>() || value.size()>MaxAppPolicies) return fail("invalid app capability policy");
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
     auto& policy=policies_[policyCount_]; char relative[193]; JsonDocument doc;
     if (!keys(item,{"manifest","grants"}) || !text(item["manifest"],relative,sizeof(relative)) ||
@@ -173,37 +194,53 @@ bool Runtime::appPolicies(JsonVariantConst value) {
     strcat(policy.elf,filename);
     for (size_t i=0;i<policyCount_;++i) if (!strcmp(policies_[i].id,policy.id) || !strcmp(policies_[i].elf,policy.elf)) return fail("duplicate app identity/path policy");
     for (JsonObjectConst request:manifest["requires"].as<JsonArrayConst>()) {
-      auto& grant=policy.grants[policy.count]; int64_t api=0;
-      if (!keys(request,{"capability","api"}) || !text(request["capability"],grant.capability,sizeof(grant.capability)) ||
+      char requested[96];int64_t api=0;
+      if (!keys(request,{"capability","api"}) || !text(request["capability"],requested,sizeof(requested)) ||
           !integer(request["api"],1,UINT32_MAX,api)) return fail("invalid app requirement");
-      grant.api=api;
-      for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,grant.capability)) return fail("duplicate app requirement");
+      if (!strcmp(requested,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
+      // A manifest declares each capability once. The owner may independently
+      // authorize more than one positive KV namespace, still within eight
+      // total grants; no other capability's uniqueness rule is broadened.
+      const bool keyValue=!strcmp(requested,RISC_KEY_VALUE_CAPABILITY);
+      for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,requested) &&
+          (!keyValue || policy.grants[i].api==uint32_t(api))) return fail("duplicate app requirement");
       unsigned matches=0;
       for (JsonObjectConst allowed:item["grants"].as<JsonArrayConst>()) {
-        int64_t allowedApi=0, instance=0; char capability[96];
+        int64_t allowedApi=0,instance=0;char capability[96];
         if (!keys(allowed,{"capability","api","instance_id"}) || !text(allowed["capability"],capability,sizeof(capability)) ||
             !integer(allowed["api"],1,UINT32_MAX,allowedApi) || !integer(allowed["instance_id"],0,INT32_MAX,instance)) return fail("invalid app grant");
-        if (!strcmp(capability,grant.capability) && allowedApi==api) {++matches;grant.instance=instance;}
-      }
-      if (matches!=1) return fail("app requirement not uniquely authorized");
-      if (!strcmp(grant.capability,RISC_KEY_VALUE_CAPABILITY)) {
-        if (grant.api!=RISC_KEY_VALUE_API_V1 || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put) return fail("app key-value backend/namespace unavailable");
-        grant.keyValue=true;
-      } else if (!strcmp(grant.capability,"platform.clock")) {
-        for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,grant.capability) && platforms_[p].api==grant.api) {
-          if (grant.platform>=0 || grant.instance) return fail("ambiguous app platform clock");
-          grant.platform=p;
+        if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
+        if (strcmp(capability,requested) || allowedApi!=api) continue;
+        if (++matches>1 && !keyValue) return fail("app requirement not uniquely authorized");
+        if (policy.count==8) return fail("too many app grants");
+        for (size_t i=0;i<policy.count;++i) {
+          const auto& earlier=policy.grants[i];
+          if (!strcmp(earlier.capability,capability) && earlier.api==uint32_t(api) && earlier.instance==uint64_t(instance))
+            return fail("duplicate app grant");
         }
-        if (grant.platform<0) return fail("app platform clock unavailable");
-      } else {
-        if (!strncmp(grant.capability,"platform.",9) || !strcmp(grant.capability,"spi.bus") || !strcmp(grant.capability,"hardware.device")) return fail("raw platform capability denied to app");
-        for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,grant.capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
-          if (grant.driver>=0) return fail("ambiguous app provider");
-          grant.driver=d;
+        auto& grant=policy.grants[policy.count];
+        strcpy(grant.capability,capability);grant.api=api;grant.instance=instance;
+        if (keyValue) {
+          if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
+              port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
+          grant.keyValue=true;
+        } else if (!strcmp(grant.capability,"platform.clock")) {
+          for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,grant.capability) && platforms_[p].api==grant.api) {
+            if (grant.platform>=0 || grant.instance) return fail("ambiguous app platform clock");
+            grant.platform=p;
+          }
+          if (grant.platform<0) return fail("app platform clock unavailable");
+        } else {
+          if (!strncmp(grant.capability,"platform.",9) || !strcmp(grant.capability,"spi.bus") || !strcmp(grant.capability,"hardware.device")) return fail("raw platform capability denied to app");
+          for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,grant.capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
+            if (grant.driver>=0) return fail("ambiguous app provider");
+            grant.driver=d;
+          }
+          if (grant.driver<0) return fail("app provider unavailable");
         }
-        if (grant.driver<0) return fail("app provider unavailable");
+        ++policy.count;
       }
-      ++policy.count;
+      if (!matches) return fail("app requirement not uniquely authorized");
     }
     if (policy.count!=item["grants"].size()) return fail("undeclared app grant");
     ++policyCount_;
@@ -217,7 +254,12 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   for (size_t i=0;i<appPolicy_->count;++i) {
     const auto& p=appPolicy_->grants[i];
     const uint64_t selected=p.driver>=0?drivers_[p.driver].instance:p.instance;
-    if (!strcmp(p.capability,capability) && p.api==api && (!instance || selected==instance)) allowed=&p;
+    if (!strcmp(p.capability,capability) && p.api==api && (!instance || selected==instance)) {
+      // instance0 means unique, never last/first match. Explicit namespaces
+      // remain independently bound to their original owner-provisioned ID.
+      if (allowed) return false;
+      allowed=&p;
+    }
   }
   if (!allowed) return false;
   size_t slot=0;while(slot<16 && appGrants_[slot].live)++slot;
@@ -226,7 +268,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   if (allowed->keyValue) {
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
     grant.keyValueNamespace=allowed->instance;
-    grant.keyValue={RISC_KEY_VALUE_API_V1,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
+    grant.keyValue={allowed->api,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
     grant.api=&grant.keyValue;
   } else if (allowed->driver>=0) {
     const auto& driver=drivers_[allowed->driver];
@@ -250,11 +292,12 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   for (const auto& grant:r->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
   if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_KEY_VALUE_INVALID;
-  uint8_t temp[RISC_KEY_VALUE_BLOB_MAX]; uint32_t size=0;
+  const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
+  uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*r->port_.keyValue;
-  const int32_t result=backend.get(backend.context,matched->keyValueNamespace,key,temp,sizeof(temp),&size);
+  const int32_t result=backend.get(backend.context,matched->keyValueNamespace,key,temp,limit,&size);
   if (result==RISC_KEY_VALUE_NOT_FOUND) return result;
-  if (result!=RISC_KEY_VALUE_OK || !size || size>sizeof(temp)) return RISC_KEY_VALUE_IO;
+  if (result!=RISC_KEY_VALUE_OK || !size || size>limit) return RISC_KEY_VALUE_IO;
   if (capacity<size) {*outSize=size;return RISC_KEY_VALUE_BUFFER_SMALL;}
   memcpy(buffer,temp,size);*outSize=size;return RISC_KEY_VALUE_OK;
 }
@@ -264,9 +307,92 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   const AppGrant* matched=nullptr;
   for (const auto& grant:r->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
-  if (!keyValueKey(key) || !data || !size || size>RISC_KEY_VALUE_BLOB_MAX) return RISC_KEY_VALUE_INVALID;
+  const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
+  if (!keyValueKey(key) || !data || !size || size>limit) return RISC_KEY_VALUE_INVALID;
   const auto& backend=*r->port_.keyValue;
   return backend.put(backend.context,matched->keyValueNamespace,key,data,size)==RISC_KEY_VALUE_OK ? RISC_KEY_VALUE_OK : RISC_KEY_VALUE_IO;
+}
+bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage) {
+  JsonVariantConst value=selection["key_value"];
+  // An omitted optional map differs from explicit null.
+  if (value.isUnbound()) return true;
+  if (!value.is<JsonArrayConst>() || !value.size() || value.size()>8) return fail("invalid provider key-value map");
+  for (JsonObjectConst item:value.as<JsonArrayConst>()) {
+    auto& entry=storage.keys[storage.count]; int64_t nameSpace=0;
+    if (!keys(item,{"key","namespace","access"}) ||
+        !text(item["key"],entry.key,sizeof(entry.key)) || !keyValueKey(entry.key) ||
+        !integer(item["namespace"],1,INT32_MAX,nameSpace) ||
+        (!eq(item["access"],"read") && !eq(item["access"],"read-write"))) return fail("invalid provider key-value entry");
+    for (size_t i=0;i<storage.count;++i) if (!strcmp(entry.key,storage.keys[i].key)) return fail("duplicate provider key-value key");
+    entry.nameSpace=static_cast<uint32_t>(nameSpace);
+    entry.writable=eq(item["access"],"read-write");
+    ++storage.count;
+  }
+  storage.owner=this;
+  storage.table={RISC_BOUND_KEY_VALUE_API_V1,sizeof(risc_bound_key_value_v1),nullptr,boundKeyValueGet,boundKeyValuePut};
+  return true;
+}
+bool Runtime::providerStorageSafe() const {
+  if(port_.providerStorageSafe)return port_.providerStorageSafe();
+  return !port_.appExitSafe || port_.appExitSafe();
+}
+bool Runtime::beginProvider(void* context) {
+  auto* storage=static_cast<ProviderStorage*>(context);
+  Runtime* r=currentRuntime;
+  if (!storage || !r || storage->owner!=r || !storage->count || storage->live ||
+      !r->port_.owner() || r->retained_ || !r->providerStorageSafe()) return false;
+  void* token=nextKeyValueContext(keyValueGeneration);
+  if (!token) return false;
+  storage->table.context=token;
+  storage->live=true;
+  return true;
+}
+void Runtime::revokeProvider(void* context) {
+  if (context) static_cast<ProviderStorage*>(context)->live=false;
+}
+void Runtime::revokeProviders() {
+  for (auto& storage:providerStorage_) storage.live=false;
+}
+Runtime::ProviderStorage* Runtime::providerContext(void* context) {
+  Runtime* r=currentRuntime;
+  if (!r || !context || !r->port_.owner() || !r->port_.keyValue) return nullptr;
+  if (r->retained_ || !r->providerStorageSafe()) {
+    // Native retention can become observable inside app_main, before the
+    // outer appExitBarrier. Revoke without invoking any physical cleanup.
+    r->revokeProviders();
+    return nullptr;
+  }
+  for (auto& storage:r->providerStorage_)
+    if (storage.owner==r && storage.live && storage.table.context==context) return &storage;
+  return nullptr;
+}
+int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
+  if (outSize) *outSize=0;
+  const ProviderStorage* storage=providerContext(context);
+  if (!storage) return RISC_BOUND_KEY_VALUE_CONTEXT;
+  if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_BOUND_KEY_VALUE_INVALID;
+  const ProviderKey* matched=nullptr;
+  for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
+  if (!matched) return RISC_BOUND_KEY_VALUE_CONTEXT;
+  const uint32_t limit=storage->table.api_version==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX;
+  uint8_t temp[RISC_BOUND_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
+  const auto& backend=*storage->owner->port_.keyValue;
+  const int32_t result=backend.get(backend.context,matched->nameSpace,key,temp,limit,&size);
+  if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND) return result;
+  if (result!=RISC_BOUND_KEY_VALUE_OK || !size || size>limit) return RISC_BOUND_KEY_VALUE_IO;
+  if (capacity<size) {*outSize=size;return RISC_BOUND_KEY_VALUE_BUFFER_SMALL;}
+  memcpy(buffer,temp,size);*outSize=size;return RISC_BOUND_KEY_VALUE_OK;
+}
+int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data,uint32_t size) {
+  const ProviderStorage* storage=providerContext(context);
+  if (!storage) return RISC_BOUND_KEY_VALUE_CONTEXT;
+  const uint32_t limit=storage->table.api_version==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX;
+  if (!keyValueKey(key) || !data || !size || size>limit) return RISC_BOUND_KEY_VALUE_INVALID;
+  const ProviderKey* matched=nullptr;
+  for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
+  if (!matched || !matched->writable) return RISC_BOUND_KEY_VALUE_CONTEXT;
+  const auto& backend=*storage->owner->port_.keyValue;
+  return backend.put(backend.context,matched->nameSpace,key,data,size)==RISC_BOUND_KEY_VALUE_OK ? RISC_BOUND_KEY_VALUE_OK : RISC_BOUND_KEY_VALUE_IO;
 }
 bool Runtime::release(risc_runtime_capability_v1* out) {
   if (!active() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
@@ -297,10 +423,11 @@ bool Runtime::prepare(const char* root) {
   // Read all manifests and validate mappings before registering/activating modules.
   for(JsonObjectConst item:c["drivers"].as<JsonArrayConst>()) {
     Driver& d=drivers_[driverCount_]; int64_t instance=0;
-    if(!keys(item,{"manifest"},{"instance_id"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+    if(!keys(item,{"manifest"},{"instance_id","key_value"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,d.elf,sizeof(d.elf)) || (!item["instance_id"].isNull() && !integer(item["instance_id"],1,INT32_MAX,instance))) return fail("invalid driver selection");
     d.instance=instance; JsonDocument manifestDoc;
     if(!readJson(d.elf,manifestDoc) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
+    if(!providerPolicy(item,providerStorage_[driverCount_])) return false;
     ++driverCount_;
   }
   if (port_.bindPlatforms) {
@@ -314,6 +441,7 @@ bool Runtime::prepare(const char* root) {
     const Driver& d=drivers_[i];
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
     spec.hardware=d.instance?&board_.device(d.instance)->hardware:nullptr;
+    if (providerStorage_[i].count) spec.lease={&providerStorage_[i],beginProvider,revokeProvider};
     if(!graph_.addVerified(spec)) return fail("driver registration failed");
   }
   strcpy(default_,current_); prepared_=true; return true;
@@ -323,6 +451,71 @@ bool Runtime::launch(const char* relative) {
   return path(root_,relative,queued_,sizeof(queued_));
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
+bool Runtime::confirmBoot() {
+  return active() && defaultRunning_ && entryRunning_ && !queued_[0] && !retained_ &&
+    providerStorageSafe() && (!port_.confirmBoot || port_.confirmBoot());
+}
+bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& out) const {
+  out={};
+  if(!active() || !id || !bytes || !size || size>4096 || !providerStorageSafe())return false;
+  const AppPolicy* policy=nullptr;
+  for(size_t p=0;p<policyCount_;++p)if(!strcmp(id,policies_[p].id))policy=&policies_[p];
+  if(!policy)return false;
+  // One declared KV capability may have several explicit namespace grants.
+  // Compare the candidate to the unique declarations, preserving every
+  // owner-provisioned grant in the immutable boot policy independently.
+  size_t required=0;
+  for(size_t i=0;i<policy->count;++i){
+    bool seen=false;
+    for(size_t j=0;j<i;++j)if(policy->grants[j].api==policy->grants[i].api &&
+        !strcmp(policy->grants[j].capability,policy->grants[i].capability))seen=true;
+    if(!seen)++required;
+  }
+  JsonDocument doc;
+  if(!parse(static_cast<const char*>(bytes),size,doc))return false;
+  JsonObjectConst m=doc.as<JsonObjectConst>();char version[32];
+  const char* basename=strrchr(policy->elf,'/');if(!basename)return false;++basename;
+  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name"}) ||
+     !eq(m["type"],"application") || !eq(m["id"],id) || !eq(m["architecture"],"xtensa-esp32s3") ||
+     !eq(m["entry"],"app_main") || !eq(m["file_name"],basename) || !text(m["version"],version,sizeof(version)) ||
+     !RuntimePackages::safeVersion(version) || !m["requires"].is<JsonArrayConst>() ||
+     m["requires"].size()!=required)return false;
+  uint32_t candidate[3],current[3];
+  if(!RiscUpdate::parseVersion(version,candidate) || !RiscUpdate::parseVersion(policy->version,current) ||
+     RiscUpdate::compareVersion(candidate,current)<=0)return false;
+  bool matched[8]{};
+  for(JsonObjectConst req:m["requires"].as<JsonArrayConst>()) {
+    char name[96];int64_t api;
+    if(!keys(req,{"capability","api"}) || !text(req["capability"],name,sizeof(name)) || !integer(req["api"],1,UINT32_MAX,api))return false;
+    size_t g=0;for(;g<policy->count;++g)if(!strcmp(name,policy->grants[g].capability) && uint32_t(api)==policy->grants[g].api)break;
+    if(g==policy->count || matched[g])return false;
+    matched[g]=true;
+  }
+  size_t rootLength=strlen(root_);
+  if(strncmp(policy->elf,root_,rootLength) || policy->elf[rootLength]!='/' || strlen(policy->elf+rootLength+1)>=sizeof(out.elf))return false;
+  strcpy(out.elf,policy->elf+rootLength+1);
+  return appManifestPath(size_t(policy-policies_),out.manifest,sizeof(out.manifest));
+}
+bool Runtime::appManifestPath(size_t index,char* out,size_t capacity) const {
+  if(index>=policyCount_ || !out)return false;
+  // Keep per-app path storage out of scarce static internal DRAM. The immutable
+  // selected boot policy supplies this path; no caller filename is accepted.
+  char filename[256];JsonDocument boot;
+  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,boot))return false;
+  return text(boot["app_capabilities"][index]["manifest"],out,capacity);
+}
+bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* actual) const {
+  if(actual)*actual=0;
+  if(!active() || index>=policyCount_ || !output || !actual || !capacity || capacity>4096 || !providerStorageSafe())return false;
+  char relative[193],name[256];
+  if(!appManifestPath(index,relative,sizeof(relative)) || !path(root_,relative,name,sizeof(name)))return false;
+  FILE* f=fopen(name,"rb");if(!f)return false;
+  size_t n=fread(output,1,capacity,f);
+  bool ok=n && fgetc(f)==EOF && !ferror(f);
+  if(fclose(f)!=0)ok=false;
+  if(!ok){memset(output,0,n);return false;}
+  *actual=uint32_t(n);return true;
+}
 void Runtime::yield(uint32_t ms) {
   if(!active()) return;
   // Poll work is bounded separately; each app yield cooperates exactly once.
@@ -335,6 +528,7 @@ bool Runtime::appExitBarrier() {
   // Revoke app authority without calling provider release/quiesce: the boot
   // references and active invocation memory/images must remain pinned.
   retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;
+  revokeProviders();
   for(auto& grant:appGrants_)grant.live=false;
   return fail("native retention barrier; app and providers retained; restart required");
 }
@@ -364,7 +558,9 @@ bool Runtime::runOne(const char* name) {
   active_=true;
   if(ok && init) { initialized=init()==0; ok=initialized; }
   if(!appExitBarrier())return false;
+  defaultRunning_=!strcmp(name,default_);entryRunning_=ok;
   if(ok) entry();
+  entryRunning_=false;defaultRunning_=false;
   // Native RETAINED must be observed before app callbacks or freeing anything.
   // Boot-owned driver grants defer graph quiescence until after app teardown,
   // so waiting for final graph shutdown is too late.
@@ -384,7 +580,7 @@ bool Runtime::run() {
   prepared_=false; currentRuntime=this;
 #ifdef ESP_PLATFORM
   static const esp_elfsym symbols[]={{"risc_runtime_get_api",reinterpret_cast<const void*>(&risc_runtime_get_api)},ESP_ELFSYM_END};
-  if(esp_elf_register_symbol(symbols)) { currentRuntime=nullptr; return fail("runtime API registration failed"); }
+  if(esp_elf_register_symbol(symbols)) { revokeProviders(); currentRuntime=nullptr; return fail("runtime API registration failed"); }
 #endif
   bool ok=true;
   for(size_t i=0;i<driverCount_;++i) {
@@ -410,6 +606,6 @@ bool Runtime::run() {
     while(granted_) if(!graph_.release(grants_[--granted_])) { retained_=true; ok=fail("driver quiescence failed; restart required"); }
     if(!graph_.shutdown()) { retained_=true; ok=fail("driver shutdown retained; restart required"); }
   }
-  currentRuntime=nullptr; return ok;
+  revokeProviders(); currentRuntime=nullptr; return ok;
 }
 }

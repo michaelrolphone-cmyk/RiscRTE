@@ -5,6 +5,8 @@ build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
 san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
+c++ "${san[@]}" -O2 -std=c++17 -Wall -Wextra -Werror -I"$repo/src" "$repo/test/resources/scoped_buffer_wipe_test.cpp" -o "$build/wipe"
+"$build/wipe"
 flags=(-std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -I"$repo/sdk/app")
 link=(-g)
 if [[ "$(uname)" == Darwin ]]; then link=(-undefined dynamic_lookup); fi

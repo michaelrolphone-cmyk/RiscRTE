@@ -33,10 +33,19 @@ file_namedefault.elf, entryapp_main, and requires entries `{capability,api}`.
 The ELF is the manifest's safe basename beside that manifest. The loader binds
 this exact path to manifest identity/version and the intersection of declared
 requirements with authorized grants before any ELF runs. Missing, extra,
-duplicate or ambiguous grants fail boot. This is provisioning consistency for
+duplicate or ambiguous grants fail boot. The sole additive exception is multiple
+distinct, positive storage.key-value@1 namespaces for one manifest requirement;
+all are explicit owner-provisioned grants and still count toward the same eight-
+grant bound. Non-KV capability uniqueness is unchanged. ID0 acquisition rejects
+multiple matches; an app must name the intended namespace. This is provisioning consistency for
 trusted native code, not a signature scheme or memory sandbox.
 
-Limits are8 app policies,8 declared capabilities per app,16 live app grants.
+Limits are 16 app policies (`Runtime::MaxAppPolicies`), 8 declared capabilities
+and authorized grants per app, and 16 live app grants. Policy storage remains
+fixed-size; increasing the policy count does not increase either per-app bound
+or the live grant pool. Seventeen policies reject before any ELF is loaded.
+On the pinned ESP32-S3 GCC 8.4 ABI, the eight additional policy records add
+11,584 bytes to the fixed Runtime object (218,168 to 229,752 bytes).
 All grant handles have nonreused generations; stale handles, wrong API/instance,
 short output structs and calls outside the owner app are rejected. Child paths
 without their own policy get no capability grants; policy is not inherited.

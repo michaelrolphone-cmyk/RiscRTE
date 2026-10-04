@@ -109,6 +109,7 @@ bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
       (!regular && !privileged) ||
       (privilegedAdmission != privileged) ||
       spec.requirementCount > kMaxModules ||
+      !spec.lease.valid() ||
       (spec.requirementCount && !spec.requirements)) return false;
   if (privileged) {
     for (size_t i = 0; i < spec.declaredImportCount; ++i) {
@@ -229,8 +230,12 @@ bool GraphV2::activate(size_t index) {
                                  nodes_[dependency].module.capability()};
   }
   (void)node.module.setStreamHost(streamHost_);
+  (void)node.module.setLease(node.spec.lease);
   (void)node.module.setResourceIdentity(node.spec.resourceIdentity);
   (void)node.module.setPackageAdmission(node.spec.packageManifestSha256, node.spec.packageSourceStamp);
+  // The graph owns package identity, singleton admission and consumer counts.
+  // Every node needs its own mapping: software and hardware packages may share
+  // driver.elf, while ordinary dlopen intentionally rejects duplicate basenames.
   const bool loaded = node.spec.requiredOsCpuAbi
       ? node.module.loadVerifiedBytes(node.spec.verifiedElfBytes,
                                       node.spec.verifiedElfLength,
@@ -244,7 +249,7 @@ bool GraphV2::activate(size_t index) {
       : node.module.load(node.spec.verifiedElfPath, node.spec.id,
                          node.spec.provides, node.spec.api,
                          node.spec.requirementCount ? node.boundDependencies : nullptr,
-                         node.spec.requirementCount, node.spec.hardware!=nullptr);
+                         node.spec.requirementCount, true);
   if (!loaded) {
     if (node.module.lastError()[0])
       copyError(error_, node.module.lastError());

@@ -140,8 +140,13 @@ storage call. The mounted store must remain immutable while a boot session runs.
 ```sh
 bash test/run_board_test.sh
 bash test/run_runtime_test.sh
+bash test/run_radio_test.sh
+bash test/run_i2s_test.sh
 bash test/run_deep_sleep_test.sh
 bash test/run_key_value_test.sh
+bash test/run_bound_key_value_test.sh
+bash test/run_native_registry_test.sh
+bash test/run_provider_module_lease_v2_test.sh
 bash test/run_retained_app_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
@@ -185,3 +190,47 @@ normal handoff. See [deep-sleep lifecycle](docs/DEEP_SLEEP.md).
 Firmware0.1.6 adds optional bounded timed Light/Deep callbacks beside the same
 owned wake input. Existing no-timer APIs remain unchanged; schedule and alarm
 policy stay external. See [timer contract and verification](docs/TIMED_SLEEP.md).
+
+Firmware 0.1.7 adds a separate provider-only `storage.key-value.bound@1` table.
+An optional exact-key map on each selected boot driver authorizes its namespaces
+and read/read-write rights. Authority is live during admitted provider start and
+active lifetime, and revoked before diagnostics or teardown. Existing app KV,
+provider ABI, NVS backend and sleep behavior stay unchanged. See
+[provider authority and lifecycle](docs/PROVIDER_KEY_VALUE.md). This is generic
+storage plumbing; application services, scheduling, encodings and UI remain ELFs.
+
+Firmware 0.1.8 adds selected-device, bounded standard I2S TX through the existing
+raw controller ABI and raises the named app-policy capacity to sixteen without
+changing per-app authority. Output policy, waveforms, haptics and PMU rails stay
+in external providers. See [TX ownership and cleanup](docs/I2S_TX.md).
+
+Firmware 0.1.9 adds selected-device station radio through platform.radio@1 and an
+append-only bounded asynchronous scan extension. Logical idle claims survive app
+handoffs; active or failed-cleanup radio blocks Light/Deep sleep and app unload.
+Credentials are copied into RAM-only SDK storage and cleared on leave. Connection
+policy, saved credentials, UI, DHCP success handling and retry decisions stay in
+external applications. See [station ownership and cleanup](docs/RADIO_STATION.md).
+
+## Explicit multi-namespace correction
+
+Firmware0.1.10 corrects admission for apps that declare storage.key-value@1 once
+and have multiple distinct owner-provisioned namespace grants. Eight total
+per-app grants and the existing ABI/static storage/layout remain unchanged.
+The caller must choose an explicit authorized namespace when more than one is
+present; instance0 rejects ambiguity. Duplicate namespaces, undeclared grants,
+and non-KV duplicate capabilities still fail before app execution. This fixes
+Points/Wi-Fi production policies without adding or changing any app permission.
+No networking/OTA/partition behavior is added by this correction.
+
+## Graph-owned provider mappings
+
+Firmware0.1.13 gives every admitted provider graph node a fresh ELF mapping,
+including ordinary software providers. A software service whose package uses
+`driver.elf` can now start after hardware packages with the same basename.
+Software singleton identity, repeated-acquisition reference counts, explicit
+capability bindings, storage generation revocation and failed-quiescence
+retention remain graph-owned. Ordinary `dlopen` duplicate rejection is unchanged.
+See [native registry regression](test/support/native_registry/README.md).
+
+Explicit larger records are available through [key-value v2](docs/KEY_VALUE_V2.md),
+while v1 remains capped at64 bytes with its original authority and lifecycle.

@@ -2,6 +2,14 @@
 #include "CpuPort.h"
 #include "CooperativeDelay.h"
 #include "NativeSleep.h"
+#include "NativeI2s.h"
+#include "NativeRadio.h"
+#ifdef RISC_ENABLE_HTTP
+#include "NativeHttp.h"
+#endif
+#ifdef RISC_PAIRED_BANKS
+#include "NativeBankStore.h"
+#endif
 #include <driver/gpio.h>
 #include <driver/i2c.h>
 #include <driver/ledc.h>
@@ -147,12 +155,25 @@ bool spiClose(uint8_t physical){
 }
 bool deepReady(){
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
-  if(!NativeSleep::stackReady())return false;
+  if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadio::idle())return false;
+#ifdef RISC_ENABLE_HTTP
+  if(!NativeHttp::idle())return false;
+#endif
+#ifdef RISC_PAIRED_BANKS
+  if(!RiscBankStore::exitSafe())return false;
+#endif
   for(const auto& state:spi)if(state.held || state.pending)return false;
   return true;
 }
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
 bool lightSleep(uint32_t* cause){
+  if(!NativeI2s::idle() || !NativeRadio::idle())return false;
+#ifdef RISC_ENABLE_HTTP
+  if(!NativeHttp::idle())return false;
+#endif
+#ifdef RISC_PAIRED_BANKS
+  if(!RiscBankStore::exitSafe())return false;
+#endif
   for(const auto& state:spi)if(state.held || state.pending)return false;
   return NativeSleep::lightEnter(cause);
 }
@@ -160,10 +181,23 @@ bool lightSleep(uint32_t* cause){
 }
 Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
-  return {[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
+  Hardware hardware{[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
     [](uint32_t ms){vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));},gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
-    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear};
+    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
+    NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
+#ifdef RISC_ENABLE_HTTP
+  NativeHttp::configure(hardware.owner,[](){
+    uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;
+    return NativeRadio::state(&state,&rssi) && state==2 && NativeRadio::addresses(station,ap) &&
+      (station[0]||station[1]||station[2]||station[3]);
+  });
+  hardware.httpClient=NativeHttp::api();hardware.httpIdle=NativeHttp::idle;hardware.httpSafe=NativeHttp::safe;
+#endif
+#ifdef RISC_PAIRED_BANKS
+  hardware.maintenanceIdle=RiscBankStore::exitSafe;
+#endif
+  return hardware;
 }
 }
 #endif

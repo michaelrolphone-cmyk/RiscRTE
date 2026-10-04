@@ -80,9 +80,9 @@ size_t count(const char* operation) {
   });
 }
 void getResult(int32_t expected, uint32_t id = 1, const char* key = "clock",
-               uint32_t capacity = RISC_KEY_VALUE_BLOB_MAX,
+               uint32_t capacity = RISC_KEY_VALUE_V2_BLOB_MAX,
                uint32_t required = 0, const Bytes& bytes = {}) {
-  std::array<uint8_t, RISC_KEY_VALUE_BLOB_MAX + 8> output;
+  std::array<uint8_t, RISC_KEY_VALUE_V2_BLOB_MAX + 8> output;
   output.fill(0xa5);
   auto before = output;
   uint32_t actual = UINT32_MAX;
@@ -132,7 +132,7 @@ void testValidation() {
   probe(RISC_KEY_VALUE_INVALID, 0, 1);
   CHECK(RiscNvs::put(nullptr, 1, "clock", nullptr, 1) == RISC_KEY_VALUE_INVALID);
   CHECK(RiscNvs::put(nullptr, 1, "clock", &byte, 0) == RISC_KEY_VALUE_INVALID);
-  CHECK(RiscNvs::put(nullptr, 1, "clock", &byte, RISC_KEY_VALUE_BLOB_MAX + 1) == RISC_KEY_VALUE_INVALID);
+  CHECK(RiscNvs::put(nullptr, 1, "clock", &byte, RISC_KEY_VALUE_V2_BLOB_MAX + 1) == RISC_KEY_VALUE_INVALID);
   CHECK(RiscNvs::put(nullptr, 1, "clock", &byte, UINT32_MAX) == RISC_KEY_VALUE_INVALID);
   for (unsigned code = 1; code <= 255; ++code) {
     const bool allowed = (code >= 'a' && code <= 'z') || (code >= '0' && code <= '9') ||
@@ -177,7 +177,7 @@ void testNamespaceAndBounds() {
   CHECK(store.size() == 4); // Reading missing namespaces never creates them.
 
   reset("opaque minimum and maximum-size values");
-  for (const uint32_t size : {1u, RISC_KEY_VALUE_BLOB_MAX}) {
+  for (const uint32_t size : {1u, RISC_KEY_VALUE_V2_BLOB_MAX}) {
     Bytes bytes(size);
     for (uint32_t i = 0; i < size; ++i) bytes[i] = uint8_t(i * 71u);
     putResult(RISC_KEY_VALUE_OK, bytes);
@@ -204,7 +204,7 @@ void testReads() {
   observe(); probe(RISC_KEY_VALUE_IO);
   operations({"open_ro", "query", "close"});
 
-  for (const size_t size : {size_t(0), size_t(RISC_KEY_VALUE_BLOB_MAX + 1), size_t(4096)}) {
+  for (const size_t size : {size_t(0), size_t(RISC_KEY_VALUE_V2_BLOB_MAX + 1), size_t(4096)}) {
     reset("zero and oversized stored blobs are IO, including probes");
     seed(Bytes(size, 0xbb));
     getResult(RISC_KEY_VALUE_IO);
@@ -222,11 +222,11 @@ void testReads() {
     getResult(RISC_KEY_VALUE_BUFFER_SMALL, 1, "clock", capacity, oldValue.size());
     operations({"open_ro", "query", "read", "close"});
   }
-  for (const uint32_t capacity : {uint32_t(oldValue.size()), RISC_KEY_VALUE_BLOB_MAX, UINT32_MAX}) {
+  for (const uint32_t capacity : {uint32_t(oldValue.size()), RISC_KEY_VALUE_V2_BLOB_MAX, UINT32_MAX}) {
     observe();
     getResult(RISC_KEY_VALUE_OK, 1, "clock", capacity, oldValue.size(), oldValue);
     operations({"open_ro", "query", "read", "close"});
-    CHECK(events[2].size == RISC_KEY_VALUE_BLOB_MAX);
+    CHECK(events[2].size == RISC_KEY_VALUE_V2_BLOB_MAX);
   }
 }
 
@@ -248,7 +248,7 @@ void testReadFaults() {
   }
   for (const esp_err_t error : {ESP_FAIL, ESP_ERR_NVS_NOT_FOUND, ESP_ERR_NVS_TYPE_MISMATCH,
                                ESP_ERR_NVS_INVALID_STATE, ESP_ERR_NVS_INVALID_LENGTH}) {
-    for (const uint32_t capacity : {0u, 1u, RISC_KEY_VALUE_BLOB_MAX}) {
+    for (const uint32_t capacity : {0u, 1u, RISC_KEY_VALUE_V2_BLOB_MAX}) {
       reset("failed second reads cannot return partial data or BUFFER_SMALL");
       seed(); faults["read"] = {error, 2, true};
       getResult(RISC_KEY_VALUE_IO, 1, "clock", capacity);
@@ -258,7 +258,7 @@ void testReadFaults() {
       operations({"open_ro", "query", "read", "close"});
     }
   }
-  for (const int64_t actual : {int64_t(0), int64_t(3), int64_t(5), int64_t(65)}) {
+  for (const int64_t actual : {int64_t(0), int64_t(3), int64_t(5), int64_t(RISC_KEY_VALUE_V2_BLOB_MAX+1)}) {
     reset("successful second read with inconsistent length is IO");
     seed(); faults["read"].length = actual;
     getResult(RISC_KEY_VALUE_IO);
@@ -320,7 +320,7 @@ void testWriteFaults() {
   operations({"open_rw", "set", "commit", "open_ro", "query", "read", "close", "close"});
   CHECK(store.at("rte00000001").at("clock").bytes == newValue);
 
-  for (const int64_t size : {int64_t(0), int64_t(65)}) {
+  for (const int64_t size : {int64_t(0), int64_t(RISC_KEY_VALUE_V2_BLOB_MAX+1)}) {
     reset("invalid readback sizes never report a committed write as verified");
     seed(); faults["query"].length = size;
     putResult(RISC_KEY_VALUE_IO);

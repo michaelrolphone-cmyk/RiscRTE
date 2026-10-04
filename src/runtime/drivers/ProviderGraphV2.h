@@ -34,6 +34,7 @@ struct SpecV2 {
   uint8_t packageManifestSha256[32]{};
   StorageGenerationStamp packageSourceStamp{};
   const risc_hardware_device_v1* hardware = nullptr;
+  ModuleLeaseV2 lease{};
 };
 struct GrantV2 {
   uint32_t slot = 0;
