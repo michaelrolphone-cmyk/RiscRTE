@@ -156,3 +156,13 @@ bootloader/table identity, real interrupted writes, watchdog behavior and physic
 rollback still require the paired target build and separately requested hardware
 qualification. Existing published Watch full-image firmware records remain
 USB-only unless an explicitly supported Runtime OTA asset is advertised.
+
+## Paired target memory
+
+The paired target allocates the Runtime's large board/policy/graph metadata once
+in PSRAM, after native bank validation and before store/provider admission. This
+object is owner-task-only, contains no DMA buffers and remains alive until reset,
+including failed quiescence. Allocation failure rejects an unconfirmed boot;
+there is no internal-memory fallback. Existing target object placement remains
+unchanged. Native TLS still requires its explicit internal-heap guard; app and
+provider bulk workspaces retain their separate PSRAM allocation contracts.

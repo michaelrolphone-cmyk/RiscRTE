@@ -8,6 +8,7 @@
 #include "ports/esp32s3/CooperativeDelay.h"
 #ifdef RISC_PAIRED_BANKS
 #include "ports/esp32s3/NativeBankStore.h"
+#include "ports/esp32s3/NativeRuntime.h"
 #endif
 #ifndef RISC_EMBEDDED_BOOTSTORE
 #include "ports/esp32s3/NvsKeyValue.h"
@@ -53,7 +54,9 @@ bool confirmBoot(){
   return true;
 #endif
 }
-#ifdef RISC_EMBEDDED_BOOTSTORE
+#ifdef RISC_PAIRED_BANKS
+RiscBoot::Runtime* retainedRuntime=nullptr;
+#elif defined(RISC_EMBEDDED_BOOTSTORE)
 RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot});
 #else
 RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot});
@@ -72,6 +75,11 @@ void setup() {
   if(!RiscBankStore::prepareBoot(isOwner,restartSafe,providerStorageSafe)) {
     Serial.println("RTE_BOOT error=paired-bank-integrity");RiscBankStore::rejectBoot();return;
   }
+  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot});
+  if(!retainedRuntime){
+    Serial.println("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();return;
+  }
+  auto& runtime=*retainedRuntime;
 #endif
   // Minimal flash-backed module-store bootstrap. No formatting, discovery,
   // repair, partition writes, SD bus ownership or production volume capability.

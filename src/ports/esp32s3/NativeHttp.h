@@ -123,6 +123,14 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
   if(!s->budget.alive(now()))return s->error=RISC_HTTP_TIMEOUT;
   if(!networkReady || !networkReady())return s->error=RISC_HTTP_NETWORK;
   if(s->phase==Phase::Connect){
+    // Pinned IDF4.4 reuses select()'s output fd_sets across asynchronous calls.
+    // A timeout clears them. Re-arm the SDK-owned connecting socket before
+    // polling again; otherwise ordinary Internet RTTs can stall until timeout.
+    if(s->tls->conn_state==ESP_TLS_CONNECTING){
+      if(s->tls->sockfd<0)return s->error=RISC_HTTP_TRANSPORT;
+      FD_ZERO(&s->tls->rset);FD_SET(s->tls->sockfd,&s->tls->rset);
+      s->tls->wset=s->tls->rset;
+    }
     const int code=esp_tls_conn_new_async(s->host,std::strlen(s->host),443,&s->config,s->tls);
     if(!s->budget.alive(now()))return s->error=RISC_HTTP_TIMEOUT;
     if(code<0)return s->error=RISC_HTTP_TRANSPORT;

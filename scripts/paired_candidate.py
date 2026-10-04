@@ -29,6 +29,8 @@ def partitions(data):
 def native_proof(data):
  from elftools.elf.elffile import ELFFile
  e=ELFFile(io.BytesIO(data));symbols={s.name:s for s in e.get_section_by_name('.symtab').iter_symbols()}
+ dram={name:e.get_section_by_name(name)['sh_size'] for name in ('.dram0.data','.dram0.bss')}
+ require(sum(dram.values())<=128*1024,'paired target leaves insufficient static DRAM headroom')
  required=('verifyRollbackLater','esp_ota_mark_app_valid_cancel_rollback','esp_ota_mark_app_invalid_rollback_and_reboot','esp_tls_conn_new_async','esp_crt_bundle_attach','http_parser_execute','_binary_x509_crt_bundle_start','_binary_x509_crt_bundle_end')
  for name in required:require(name in symbols and symbols[name]['st_shndx']!='SHN_UNDEF','missing native feature: '+name)
  hook=symbols['verifyRollbackLater'];require(hook['st_info']['bind']=='STB_GLOBAL','rollback hook must override Arduino weak default')
@@ -40,7 +42,7 @@ def native_proof(data):
  size=end['st_value']-start['st_value'];require(1024<size<256*1024,'missing/unbounded certificate bundle bytes')
  section=e.get_section(start['st_shndx']);at=start['st_value']-section['sh_addr'];bundle=section.data()[at:at+size]
  require(len(bundle)==size and 1<=int.from_bytes(bundle[:2],'big')<=200,'invalid linked certificate bundle')
- return {'rollback_hook_hex':code.hex(),'bundle_bytes':size,'bundle_certificates':int.from_bytes(bundle[:2],'big'),'bundle_sha256':hashlib.sha256(bundle).hexdigest(),'required_symbols':list(required)}
+ return {'static_dram_sections':dram,'static_dram_bytes':sum(dram.values()),'rollback_hook_hex':code.hex(),'bundle_bytes':size,'bundle_certificates':int.from_bytes(bundle[:2],'big'),'bundle_sha256':hashlib.sha256(bundle).hexdigest(),'required_symbols':list(required)}
 
 def stage(source):
  require(re.fullmatch('[0-9a-f]{40}',source) and source==head(),'source SHA differs from checkout')

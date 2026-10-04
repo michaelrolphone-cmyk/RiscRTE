@@ -9,6 +9,7 @@
 using namespace RiscCpu;
 static uint64_t clockMs=0;
 static bool owned=true,online=true,oom=false,lowHeap=false,closeFail=false,tlsFail=false,slowConnect=false,readWait=false;
+static unsigned pendingConnect=0,connectPolls=0;static bool invalidSocket=false;
 static int live=0,opens=0,closes=0,allocations=0;
 static size_t chunk=512;
 static std::vector<std::string> responses;
@@ -25,9 +26,22 @@ void heap_caps_free(void* p){--allocations;std::free(p);}
 esp_tls_t* esp_tls_init(){if(tlsFail)return nullptr;++live;return new esp_tls_t{static_cast<unsigned>(opens++)};}
 int esp_tls_conn_destroy(esp_tls_t* p){--live;++closes;delete p;return closeFail?-1:0;}
 esp_err_t esp_crt_bundle_attach(void* p){static_cast<mbedtls_ssl_config*>(p)->f_vrfy=chain;return ESP_OK;}
-int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* cfg,esp_tls_t*){
+int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* cfg,esp_tls_t* tls){
  assert(n>0 && host[n]==0 && port==443 && cfg->non_block && !cfg->skip_common_name && cfg->timeout_ms>0);
  if(slowConnect)return 0;
+ if(pendingConnect){
+  ++connectPolls;
+  if(tls->conn_state==ESP_TLS_CONNECTING){
+   assert(FD_ISSET(tls->sockfd,&tls->rset)&&FD_ISSET(tls->sockfd,&tls->wset));
+  }
+  --pendingConnect;tls->conn_state=ESP_TLS_CONNECTING;
+  FD_ZERO(&tls->rset);FD_ZERO(&tls->wset);if(invalidSocket)tls->sockfd=-1;
+  return 0;
+ }
+ if(tls->conn_state==ESP_TLS_CONNECTING){
+  assert(FD_ISSET(tls->sockfd,&tls->rset)&&FD_ISSET(tls->sockfd,&tls->wset));
+ }
+ tls->conn_state=ESP_TLS_HANDSHAKE;
  config={};assert(cfg->crt_bundle_attach(&config)==0);assert(config.major==3&&config.minor==3);return 1;
 }
 ssize_t esp_tls_conn_write(esp_tls_t*,const void* p,size_t n){size_t k=std::min(n,chunk);sent.append(static_cast<const char*>(p),k);return k;}
@@ -40,6 +54,7 @@ static bool owner(){return owned;}static bool ready(){return online;}
 static void reset(std::vector<std::string> response={"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello"}){
  assert(NativeHttp::idle()&&live==0&&allocations==0);
  clockMs=0;owned=online=true;oom=lowHeap=closeFail=tlsFail=slowConnect=readWait=false;chainFlags=0;
+ pendingConnect=connectPolls=0;invalidSocket=false;
  responses=std::move(response);opens=closes=0;inputAt=0;sent.clear();chunk=512;NativeHttp::configure(owner,ready);
 }
 static uint64_t open(uint32_t maximum=1024,uint32_t ms=30000){
@@ -91,6 +106,10 @@ int main(){
  // evade the check merely by setting headersDone before feed returns.
  {std::string headers="HTTP/1.1 200 OK\r\n";for(unsigned i=0;i<12;++i)headers+="X-Header: "+std::string(1400,'x')+"\r\n";headers+="Content-Length: 0\r\n\r\n";
   reset({headers});auto t=open();std::string body;assert(run(t,body)==RISC_HTTP_SIZE);close(t);++cases;}
+ for(unsigned waits:{1u,5u,100u}){reset();pendingConnect=waits;auto t=open();std::string body;
+  assert(run(t,body)==RISC_HTTP_EOF&&body=="hello"&&connectPolls==waits);close(t);++cases;}
+ reset();pendingConnect=1;invalidSocket=true;{auto t=open();std::string body;
+  assert(run(t,body)==RISC_HTTP_TRANSPORT&&connectPolls==1);close(t);++cases;}
  reset();slowConnect=true;{auto t=open();std::string body;assert(run(t,body)==RISC_HTTP_TIMEOUT);close(t);++cases;}
  reset();readWait=true;{auto t=open();std::string body;assert(run(t,body)==RISC_HTTP_TIMEOUT);close(t);++cases;}
  reset();{auto t=open();online=false;std::string body;assert(run(t,body)==RISC_HTTP_NETWORK);online=true;close(t);++cases;}
