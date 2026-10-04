@@ -9,8 +9,11 @@ An app declares `{"capability":"storage.key-value","api":1}` in its manifest.
 An explicit boot policy grants that same capability with a positive
 `instance_id` in1..2147483647. This ID selects a storage namespace; it need not
 name hardware. Apps intended to share data are explicitly provisioned with the
-same ID. Different IDs are isolated. Acquire accepts that ID, or0 for the unique
-authorized selection. The application never supplies a namespace to get/put.
+same ID. Different IDs are isolated. Firmware0.1.10 permits multiple distinct
+positive namespace grants for the one declared storage.key-value@1 requirement,
+within the unchanged eight-grant total per app. Duplicate namespace grants fail
+admission. Acquire accepts an exact authorized ID; ID0 succeeds only when one
+namespace is authorized and rejects ambiguity without selecting a namespace. The application never supplies a namespace to get/put.
 Undeclared, zero-namespace, unsupported-version, unavailable-backend and extra
 boot grants fail admission before any app runs. Policyless children inherit no
 capabilities.

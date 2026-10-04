@@ -60,6 +60,7 @@ void ModuleV2::report(const char* id, const char* stage, int code) {
 }
 
 bool ModuleV2::closeMapped() {
+  revokeLease();
   risc_runtime_retention_guard();
   if (!handle_) return true;
 #ifdef ESP_PLATFORM
@@ -114,13 +115,21 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     }
   }
   trace(expectedId, "hardware-start-begin");
-  if (bound && candidate->start(deps, count)) {
+  bool admitted = bound;
+  if (admitted && lease_.begin) {
+    leaseAttempted_ = true;
+    admitted = lease_.begin(lease_.context);
+  }
+  if (admitted && candidate->start(deps, count)) {
     driver_ = candidate;
     api_ = candidate->capability;
     state_ = State::Active;
     trace(expectedId, "hardware-started");
     return true;
   }
+  // Diagnostics can reenter provider code too. Storage authority must already
+  // be dead before any failed-activation callback, including failed begin.
+  revokeLease();
   if (candidate->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
     const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(candidate);
     char detail[112]{};
@@ -211,6 +220,11 @@ void ModuleV2::revokeStreams() {
     streamsRevoked_ = true;
   }
 }
+void ModuleV2::revokeLease() {
+  if (!leaseAttempted_) return;
+  leaseAttempted_ = false;
+  lease_.revoke(lease_.context);
+}
 void ModuleV2::closeStreams() {
   if (!streamApi_.streams.context) return;
   revokeStreams();
@@ -218,8 +232,9 @@ void ModuleV2::closeStreams() {
   streamApi_ = {};
 }
 bool ModuleV2::unload() {
-  risc_runtime_retention_guard();
   if (consumers_) return false;
+  revokeLease();
+  risc_runtime_retention_guard();
   revokeStreams();
   if (state_ == State::Failed && handle_ && driver_) {
     if (!hasQuiesce(driver_) || !driver_->quiesce()) return false;

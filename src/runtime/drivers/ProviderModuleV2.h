@@ -11,6 +11,16 @@
  * pins dependencies, resolves API versions and authorizes provider execution.
  * Self-declared content hashes do not grant imports or hardware rights. */
 namespace RuntimeProviders {
+// Internal host-only lifetime hook; no provider ABI field or ELF export.
+// Its context and dependency tables must outlive every retained mapped image.
+struct ModuleLeaseV2 {
+  void* context = nullptr;
+  bool (*begin)(void*) = nullptr;
+  void (*revoke)(void*) = nullptr;
+  bool valid() const {
+    return (!context && !begin && !revoke) || (context && begin && revoke);
+  }
+};
 struct StreamHostV1 {
   bool (*open)(risc_stream_provider_v1*);
   void (*revoke)(uint64_t);
@@ -50,6 +60,10 @@ class ModuleV2 final {
     if (state_ != State::Absent || handle_) return false;
     streamHost_ = host; return true;
   }
+  bool setLease(const ModuleLeaseV2& lease) {
+    if (state_ != State::Absent || handle_ || !lease.valid()) return false;
+    lease_ = lease; return true;
+  }
   bool setResourceIdentity(const RuntimePackages::Identity& identity) {
     if (state_ != State::Absent || handle_) return false;
     resourceIdentity_ = identity; return true;
@@ -87,6 +101,7 @@ class ModuleV2 final {
                       const char* expectedCapability, uint32_t expectedApi,
                       const risc_provider_dependency_v1* dependencies, size_t count);
   bool closeMapped();
+  void revokeLease();
   void revokeStreams();
   void closeStreams();
   const StreamHostV1* streamHost_ = nullptr;
@@ -95,6 +110,8 @@ class ModuleV2 final {
   uint8_t packageManifestSha256_[32]{};
   StorageGenerationStamp packageSourceStamp_{};
   bool streamsRevoked_ = false;
+  ModuleLeaseV2 lease_{};
+  bool leaseAttempted_ = false;
   void* handle_ = nullptr;
   const risc_driver_v2* driver_ = nullptr;
   const void* api_ = nullptr;

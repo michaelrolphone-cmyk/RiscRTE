@@ -73,3 +73,55 @@ and readback plus5 heartbeats. Its software integration run37097188948 and X4
 candidate run37097188954 passed. Later `be6efce` hardware run37098107114 failed
 both jobs; X4 timed out without exact-source proof, so no firmware regression or
 hardware pass is inferred. The6a7f7821 result is strictly source-specific.
+
+## Station radio candidate, 0.1.9
+
+The local radio suite passes normal and ASan/UBSan runs, including the actual
+NativeRadio shim, CpuPort authority/cleanup, full JSON/manifest admission and
+twelve real Runtime/Graph/dlopen app-provider lifecycle cases, including
+a separate bound-storage provider polling during healthy RF and retained
+state/address/scan failures. Leak sanitizer was
+disabled for this suite because this executor rejects ptrace-based LSan; this is
+not a leak-sanitizer qualification. Existing I2S, deep/timed sleep, Runtime,
+retained-app, board and Watch host suites pass; Python custody/release checks
+pass with the existing pinned esptool 4.11.0/pyelftools 0.32 test dependencies.
+A separate provider-graph sanitizer runner forces leak detection and is blocked
+by that same ptrace restriction.
+
+The local single-job `pio run -e esp32s3 -j 1` attempt stopped during prerequisite
+installation after the pinned RISC-V toolchain download failed its checksum.
+No integrity check was bypassed. No target compilation pass is claimed here;
+exact-head CI is required to establish target-build status. No real radio,
+network association, credentials, device, flash, merge or release was used.
+
+Hosted exact-head candidate `52b085c2` subsequently passed host/version checks and
+baseline firmware/frozen-artifact generation. Its 16 MiB native-USB target failed
+linking with a 120-byte `dram0_0_seg` overflow. The scan-session allocation repair
+recovers 592 static bytes by pinned Xtensa size-only measurement; a new full
+hosted target result is required. It adds OOM/lifetime regression coverage and
+does not change SDK Wi-Fi buffer policy or claim sufficient dynamic heap.
+
+## Native module-name regression (Firmware0.1.13)
+
+The owner reported Alarm0.6.5 and Wi-Fi1.1.0 boot failures at
+`alarm-service: elf-open-failed`, before the default Clock started. The first
+software provider used the same `driver.elf` basename as the already loaded
+hardware providers. GraphV2 selected ordinary `dlopen` for software; the native
+registry rejected that basename even though its full path and package differed.
+OS-only host `dlopen` tests used different lookup semantics and missed the error.
+
+`test/run_native_registry_test.sh` now compiles the unmodified production
+`dlfcn.c` and `dlmod.c`, with host ELF relocation behind that registry. It first
+reproduces the collision and preserves ordinary duplicate rejection, then checks
+mixed hardware/software same-basename graph nodes, software singleton admission,
+repeated acquisition/reference counts, distinct state, fresh reload, revoked
+lease generations, failed relocation retry, retained failed start/dependencies,
+verified recovery, cleanup/fini and corrupt same-basename rejection. Normal and
+ASan/UBSan runs pass locally. The existing dependency-lifetime and bound-storage
+suites now inspect actual independent mappings; retained replacement uses the
+exact same paths and checks fresh contexts and rejection of old authority.
+
+The host backend executes native host fixtures, not Xtensa instructions. It does
+not establish target relocation/cache correctness or physical display behavior.
+Exact-source hosted native builds and a paired Watch store/Clock gate are still
+required for a candidate, and physical qualification remains the owner's step.
