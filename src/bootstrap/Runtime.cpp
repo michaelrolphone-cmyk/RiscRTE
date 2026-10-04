@@ -1,5 +1,6 @@
 #include "Runtime.h"
 #include "KeyValueGeneration.h"
+#include "runtime/update/Version.h"
 #include "runtime/resources/ScopedBufferWipe.h"
 #include <esp_dlfcn.h>
 #include <cstring>
@@ -29,7 +30,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](const char* line){return currentRuntime && currentRuntime->diagnostic(line);},
     [](const char* path){return currentRuntime && currentRuntime->launch(path);},
     [](const char* cap,uint32_t version,uint64_t instance,risc_runtime_capability_v1* out){return currentRuntime && currentRuntime->acquire(cap,version,instance,out);},
-    [](risc_runtime_capability_v1* grant){return currentRuntime && currentRuntime->release(grant);}};
+    [](risc_runtime_capability_v1* grant){return currentRuntime && currentRuntime->release(grant);},
+    [](){return currentRuntime && currentRuntime->confirmBoot();}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 namespace RiscBoot {
@@ -94,7 +96,8 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
   if ((attempted_ && !registrationOpen_) || !port_.owner() || !capability || !*capability || strlen(capability)>=96 || !api || !table || platformCount_==32 ||
       (strncmp(capability,"platform.",9) && strcmp(capability,"spi.bus"))) return false;
   if (scope==Scope::Global) {
-    if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board"))) return false;
+    if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
+               strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store"))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
@@ -440,6 +443,71 @@ bool Runtime::launch(const char* relative) {
   return path(root_,relative,queued_,sizeof(queued_));
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
+bool Runtime::confirmBoot() {
+  return active() && defaultRunning_ && entryRunning_ && !queued_[0] && !retained_ &&
+    providerStorageSafe() && (!port_.confirmBoot || port_.confirmBoot());
+}
+bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& out) const {
+  out={};
+  if(!active() || !id || !bytes || !size || size>4096 || !providerStorageSafe())return false;
+  const AppPolicy* policy=nullptr;
+  for(size_t p=0;p<policyCount_;++p)if(!strcmp(id,policies_[p].id))policy=&policies_[p];
+  if(!policy)return false;
+  // One declared KV capability may have several explicit namespace grants.
+  // Compare the candidate to the unique declarations, preserving every
+  // owner-provisioned grant in the immutable boot policy independently.
+  size_t required=0;
+  for(size_t i=0;i<policy->count;++i){
+    bool seen=false;
+    for(size_t j=0;j<i;++j)if(policy->grants[j].api==policy->grants[i].api &&
+        !strcmp(policy->grants[j].capability,policy->grants[i].capability))seen=true;
+    if(!seen)++required;
+  }
+  JsonDocument doc;
+  if(!parse(static_cast<const char*>(bytes),size,doc))return false;
+  JsonObjectConst m=doc.as<JsonObjectConst>();char version[32];
+  const char* basename=strrchr(policy->elf,'/');if(!basename)return false;++basename;
+  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name"}) ||
+     !eq(m["type"],"application") || !eq(m["id"],id) || !eq(m["architecture"],"xtensa-esp32s3") ||
+     !eq(m["entry"],"app_main") || !eq(m["file_name"],basename) || !text(m["version"],version,sizeof(version)) ||
+     !RuntimePackages::safeVersion(version) || !m["requires"].is<JsonArrayConst>() ||
+     m["requires"].size()!=required)return false;
+  uint32_t candidate[3],current[3];
+  if(!RiscUpdate::parseVersion(version,candidate) || !RiscUpdate::parseVersion(policy->version,current) ||
+     RiscUpdate::compareVersion(candidate,current)<=0)return false;
+  bool matched[8]{};
+  for(JsonObjectConst req:m["requires"].as<JsonArrayConst>()) {
+    char name[96];int64_t api;
+    if(!keys(req,{"capability","api"}) || !text(req["capability"],name,sizeof(name)) || !integer(req["api"],1,UINT32_MAX,api))return false;
+    size_t g=0;for(;g<policy->count;++g)if(!strcmp(name,policy->grants[g].capability) && uint32_t(api)==policy->grants[g].api)break;
+    if(g==policy->count || matched[g])return false;
+    matched[g]=true;
+  }
+  size_t rootLength=strlen(root_);
+  if(strncmp(policy->elf,root_,rootLength) || policy->elf[rootLength]!='/' || strlen(policy->elf+rootLength+1)>=sizeof(out.elf))return false;
+  strcpy(out.elf,policy->elf+rootLength+1);
+  return appManifestPath(size_t(policy-policies_),out.manifest,sizeof(out.manifest));
+}
+bool Runtime::appManifestPath(size_t index,char* out,size_t capacity) const {
+  if(index>=policyCount_ || !out)return false;
+  // Keep per-app path storage out of scarce static internal DRAM. The immutable
+  // selected boot policy supplies this path; no caller filename is accepted.
+  char filename[256];JsonDocument boot;
+  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,boot))return false;
+  return text(boot["app_capabilities"][index]["manifest"],out,capacity);
+}
+bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* actual) const {
+  if(actual)*actual=0;
+  if(!active() || index>=policyCount_ || !output || !actual || !capacity || capacity>4096 || !providerStorageSafe())return false;
+  char relative[193],name[256];
+  if(!appManifestPath(index,relative,sizeof(relative)) || !path(root_,relative,name,sizeof(name)))return false;
+  FILE* f=fopen(name,"rb");if(!f)return false;
+  size_t n=fread(output,1,capacity,f);
+  bool ok=n && fgetc(f)==EOF && !ferror(f);
+  if(fclose(f)!=0)ok=false;
+  if(!ok){memset(output,0,n);return false;}
+  *actual=uint32_t(n);return true;
+}
 void Runtime::yield(uint32_t ms) {
   if(!active()) return;
   // Poll work is bounded separately; each app yield cooperates exactly once.
@@ -482,7 +550,9 @@ bool Runtime::runOne(const char* name) {
   active_=true;
   if(ok && init) { initialized=init()==0; ok=initialized; }
   if(!appExitBarrier())return false;
+  defaultRunning_=!strcmp(name,default_);entryRunning_=ok;
   if(ok) entry();
+  entryRunning_=false;defaultRunning_=false;
   // Native RETAINED must be observed before app callbacks or freeing anything.
   // Boot-owned driver grants defer graph quiescence until after app teardown,
   // so waiting for final graph shutdown is too late.

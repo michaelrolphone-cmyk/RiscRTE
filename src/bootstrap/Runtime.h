@@ -28,6 +28,8 @@ struct Port {
   // Healthy RF may block app exit without revoking admitted provider KV.
   // If absent, retain the original appExitSafe behavior.
   bool (*providerStorageSafe)()=nullptr;
+  // Explicit default-app health acknowledgement, never inferred from exit.
+  bool (*confirmBoot)()=nullptr;
 };
 class Runtime final {
  public:
@@ -48,7 +50,14 @@ class Runtime final {
   bool release(risc_runtime_capability_v1*);
   void yield(uint32_t);
   bool diagnostic(const char*);
+  bool confirmBoot();
+  struct UpdateApp { char elf[193]{}, manifest[193]{}; };
+  // Native update authority: preserve the existing boot-policy identity/grants.
+  bool appUpdate(const char* id,const void* manifest,size_t size,UpdateApp&) const;
+  size_t appCount() const {return policyCount_;}
+  bool appInventory(size_t index,void*,size_t,uint32_t*) const;
   bool active() const { return active_ && port_.owner(); }
+  bool retained() const { return retained_; }
   const char* error() const { return error_; }
   Board& board() { return board_; }
   const Board& board() const { return board_; }
@@ -69,6 +78,7 @@ class Runtime final {
   bool revokeApp();
   bool appExitBarrier();
   bool providerStorageSafe() const;
+  bool appManifestPath(size_t,char*,size_t) const;
   static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
   static int32_t keyValuePut(void*,const char*,const void*,uint32_t);
   struct ProviderKey {
@@ -122,5 +132,6 @@ class Runtime final {
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
   bool registrationOpen_=false;
   bool prepared_=false, attempted_=false, active_=false, retained_=false;
+  bool defaultRunning_=false, entryRunning_=false;
 };
 }

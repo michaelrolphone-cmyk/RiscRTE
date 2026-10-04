@@ -3,6 +3,7 @@
 #include <GardenPlatformV1.h>
 #include <TWatchPlatformV1.h>
 #include <RiscPlatformClockV1.h>
+#include <RiscHttpClientV1.h>
 namespace RiscCpu {
 // Lowest hardware boundary. Production uses ESP-IDF; host models emulate only
 // pins, controllers and register/byte transfers, not driver/capability behavior.
@@ -44,6 +45,11 @@ struct Hardware {
   bool (*radioScanPoll)(garden_radio_scan_result_v1*)=nullptr;
   bool (*radioScanCancel)()=nullptr;
   bool (*radioIdle)()=nullptr;
+  const risc_http_client_v1* httpClient=nullptr;
+  bool (*httpIdle)()=nullptr;
+  bool (*httpSafe)()=nullptr;
+  // Generic native mutation exclusion; healthy activity need not revoke KV.
+  bool (*maintenanceIdle)()=nullptr;
 };
 class Port final {
  public:
@@ -54,6 +60,9 @@ class Port final {
   // Ordinary live provider claims may survive app handoff. Poison, sleep entry
   // or retained output holds may not outlive the invocation that owns policy.
   bool appExitSafe() const;
+  // Hardware/transport drain only. A bank owner may request its narrowly
+  // authorized restart while its own durable-selection state retains exit.
+  bool restartResourcesSafe() const;
   // Healthy station/scan activity blocks exit but does not revoke provider KV.
   // Actual native cleanup failure retains the existing storage safety barrier.
   bool providerStorageSafe() const;
@@ -69,6 +78,7 @@ class Port final {
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
   size_t gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0;
   risc_platform_clock_api_v1 clock_{};
+  risc_http_client_v1 http_{};
   bool available() const { return hw_.owner && hw_.owner() && !poisoned_ && !sleeping_; }
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
   bool reserve(int16_t,const void*); void unreserve(int16_t,const void*);
@@ -106,6 +116,10 @@ class Port final {
   static bool radioScanStart(void*,uint64_t);
   static bool radioScanPoll(void*,uint64_t,garden_radio_scan_result_v1*);
   static bool radioScanCancel(void*,uint64_t);
+  static int32_t httpOpen(void*,const risc_http_request_v1*,uint64_t*);
+  static int32_t httpRead(void*,uint64_t,void*,uint32_t,uint32_t*);
+  static int32_t httpInfo(void*,uint64_t,risc_http_response_v1*);
+  static int32_t httpClose(void*,uint64_t);
   static bool idleClocks(void*,uint64_t,uint32_t,uint16_t){return false;}
 };
 Hardware nativeHardware(bool (*owner)());

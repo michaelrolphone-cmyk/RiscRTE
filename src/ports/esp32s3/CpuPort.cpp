@@ -26,20 +26,53 @@ bool Port::reserve(int16_t pin,const void* owner){
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
 bool Port::providerStorageSafe() const {
   if(!available() || sleepRetained_ || transferring_)return false;
+  if(hw_.httpSafe && !hw_.httpSafe())return false;
   for(const auto& pin:pins_)if(pin.held)return false;
   for(const auto& c:i2ss_)if(c.token)return false;
   for(const auto& c:radios_)if(c.closing)return false;
   return true;
 }
 bool Port::appExitSafe() const {
+  if(!restartResourcesSafe())return false;
+  if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
+  return true;
+}
+bool Port::restartResourcesSafe() const {
   if(!providerStorageSafe())return false;
+  if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:radios_)if(c.active)return false;
   return true;
 }
 bool Port::quiescent() const {
+  if(hw_.httpIdle && !hw_.httpIdle())return false;
+  if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   for(const auto& c:radios_)if(c.token || c.active || c.closing)return false;
   for(const auto& p:pins_)if(p.owner)return false;
   return !poisoned_;
+}
+int32_t Port::httpOpen(void* context,const risc_http_request_v1* request,uint64_t* out){
+  if(out)*out=0;
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClient)return RISC_HTTP_CLOSED;
+  if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
+  p.transferring_=true;const auto result=p.hw_.httpClient->open(p.hw_.httpClient->context,request,out);p.transferring_=false;return result;
+}
+int32_t Port::httpRead(void* context,uint64_t token,void* out,uint32_t size,uint32_t* count){
+  if(count)*count=0;
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClient)return RISC_HTTP_CLOSED;
+  if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
+  p.transferring_=true;const auto result=p.hw_.httpClient->read(p.hw_.httpClient->context,token,out,size,count);p.transferring_=false;return result;
+}
+int32_t Port::httpInfo(void* context,uint64_t token,risc_http_response_v1* out){
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClient)return RISC_HTTP_CLOSED;
+  return p.hw_.httpClient->info(p.hw_.httpClient->context,token,out);
+}
+int32_t Port::httpClose(void* context,uint64_t token){
+  auto& p=*static_cast<Port*>(context);
+  if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClient)return RISC_HTTP_CLOSED;
+  p.transferring_=true;const auto result=p.hw_.httpClient->close(p.hw_.httpClient->context,token);p.transferring_=false;return result;
 }
 bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Device& selected,Gpio& gpio){
   gpio.port=this;gpio.instance=selected.hardware.instance_id;
@@ -64,6 +97,12 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   clock_={1,sizeof(clock_),this,[](void* c)->uint64_t{auto& p=*static_cast<Port*>(c);return p.hw_.owner()?p.hw_.now():0;},
     [](void* c,uint32_t ms){auto& p=*static_cast<Port*>(c);if(p.hw_.owner())p.hw_.sleep(ms>5000?5000:ms);}};
   if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_))return false;
+  if(hw_.httpClient){
+    const auto* h=hw_.httpClient;
+    if(!hw_.httpIdle || !hw_.httpSafe || h->api_version!=1 || h->struct_size<sizeof(*h) || !h->open || !h->read || !h->info || !h->close)return false;
+    http_={1,sizeof(http_),this,httpOpen,httpRead,httpInfo,httpClose};
+    if(!runtime.registerPlatform(RISC_HTTP_CLIENT_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&http_))return false;
+  }
   const auto& board=runtime.board();
   for(size_t n=0;n<board.deviceCount();++n){
     const auto& d=*board.deviceAt(n);const uint64_t id=d.hardware.instance_id;
@@ -177,6 +216,9 @@ bool Port::radioLeave(void* context,uint64_t token){
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
   // Retained cleanup can be retried, but a terminal sleep failure cannot.
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
+  // A live TLS socket depends on the station interface. Drain it first; a
+  // rejected out-of-order leave is not itself failed native radio cleanup.
+  if(p.hw_.httpIdle && !p.hw_.httpIdle())return false;
   if(!c.active && !c.closing)return p.hw_.radioIdle();
   c.closing=true;p.transferring_=true;const bool ok=p.hw_.radioLeave();p.transferring_=false;
   if(!ok || !p.hw_.radioIdle())return false;
@@ -276,7 +318,8 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.sleeping_ || p.transferring_)return RISC_LIGHT_SLEEP_BUSY;
+  if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+     (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;if(c.active)return RISC_LIGHT_SLEEP_BUSY;}
@@ -321,7 +364,8 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.sleeping_ || p.transferring_)return RISC_DEEP_SLEEP_BUSY;
+  if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+     (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_DEEP_SLEEP_RETAINED;if(c.active)return RISC_DEEP_SLEEP_BUSY;}
@@ -370,7 +414,8 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.sleeping_ || p.transferring_)return RISC_DEEP_SLEEP_BUSY;
+  if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+     (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(unsigned i=0;i<49;++i){
     auto& pin=p.pins_[i];
     if(!token || pin.owner!=&c || pin.token!=token || !pin.output)continue;

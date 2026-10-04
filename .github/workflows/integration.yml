@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station]
+    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces]
   workflow_dispatch:
   workflow_call:
 permissions:
@@ -47,6 +47,17 @@ jobs:
         run: |
           bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
           bash test/run_runtime_test.sh
+          bash test/run_http_test.sh
+          SANITIZE=1 bash test/run_http_test.sh
+          bash test/run_paired_bank_test.sh
+          SANITIZE=1 bash test/run_paired_bank_test.sh
+          bash test/run_store_audit_test.sh
+          SANITIZE=1 bash test/run_store_audit_test.sh
+          bash test/run_native_bank_test.sh
+          SANITIZE=1 bash test/run_native_bank_test.sh
+          bash test/run_update_runtime_test.sh
+          SANITIZE=1 bash test/run_update_runtime_test.sh
+          python test/paired_bank_images_test.py -v
           bash test/run_radio_test.sh
           SANITIZE=1 bash test/run_radio_test.sh
           bash test/run_i2s_test.sh
@@ -121,5 +132,19 @@ jobs:
         with:
           name: riscrte-esp32s3-16mb-usb-${{ github.event.pull_request.head.sha || github.sha }}
           path: dist/esp32s3-16mb-usb/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build paired Runtime with real TLS roots and rollback guard
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-paired -j 1
+          BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
+          python scripts/paired_candidate.py --source-sha "$SOURCE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-esp32s3-16mb-paired-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/esp32s3-16mb-paired/
           if-no-files-found: error
           retention-days: 14

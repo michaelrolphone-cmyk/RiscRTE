@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+build="$(mktemp -d)"
+trap 'rm -rf "$build"' EXIT
+san=()
+if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
+c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -I"$repo/src" "$repo/src/runtime/update/StoreAudit.cpp" "$repo/test/store_audit_test.cpp" -o "$build/test"
+"$build/test" "$build"

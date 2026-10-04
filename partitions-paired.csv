@@ -1,0 +1,10 @@
+# EXPLICIT NEW 16 MiB paired deployment only. Never OTA-repartition a device.
+# NVS and lower image/store capacities/offsets match legacy; upper8MiB is consumed.
+# Name,Type,SubType,Offset,Size
+nvs,data,nvs,0x9000,0x6000
+app0,app,ota_0,0x10000,0x300000
+bootfs0,data,spiffs,0x310000,0x4f0000
+app1,app,ota_1,0x800000,0x300000
+bootfs1,data,spiffs,0xb00000,0x4f0000
+otadata,data,ota,0xff0000,0x2000
+bank_state,data,0x40,0xff2000,0x2000
