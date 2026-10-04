@@ -15,6 +15,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <private/elf_types.h>
+#include <private/elf_symbol.h>
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -114,7 +115,8 @@ bool admitElf(const uint8_t* bytes,size_t n){
       const auto& sym=symbols[j];const char* name=strings+sym.name;
       if(sym.shndx==SHN_UNDEF){
         const elf32_sym_t empty{};if(!j && !memcmp(&sym,&empty,sizeof(sym)))continue;
-        if((ELF_ST_BIND(sym.info)!=STB_GLOBAL && ELF_ST_BIND(sym.info)!=STB_WEAK) || !*name || !allowedImport(name))return false;
+        if((ELF_ST_BIND(sym.info)!=STB_GLOBAL && ELF_ST_BIND(sym.info)!=STB_WEAK) || !*name ||
+           !allowedImport(name) || !elf_find_sym_default(name))return false;
         continue;
       }
       if(!exports)continue;

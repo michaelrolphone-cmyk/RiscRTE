@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+static const char* unavailableImport=nullptr;
+extern "C" uintptr_t elf_find_sym_default(const char* name){return unavailableImport && !strcmp(name,unavailableImport)?0:1;}
 static std::vector<uint8_t> flash(0x1000000,0xff);
 static uint32_t ticks=1,active=0,imageSize=8192,writes=0,rollbacks=0,confirms=0,restarts=0,delayScale=1,delays=0,unsafeAfterDelay=0;
 static bool ownerEnabled=true,rollbackPossible=true,operationEnabled=true,restartEnabled=true,selectFailure=false;
@@ -154,6 +156,7 @@ int main(int argc,char** argv){
    assert(!allowedImport("esp_partition_write") && !allowedImport("fopen") && !allowedImport("esp_restart"));
    auto goodElf=elf("memcpy");assert(admitElf(goodElf.data(),goodElf.size()));
    auto goodTables=hiddenImport("memcpy");assert(admitElf(goodTables.data(),goodTables.size()));
+   unavailableImport="memcpy";assert(!admitElf(goodElf.data(),goodElf.size()));assert(!admitElf(goodTables.data(),goodTables.size()));unavailableImport=nullptr;
    for(bool init:{false,true})for(bool fini:{false,true}){auto hooks=lifecycle(init,fini);assert(admitElf(hooks.data(),hooks.size())==(init==fini));}
    auto localHooks=lifecycle(true,true,false);assert(!admitElf(localHooks.data(),localHooks.size()));
    for(const char* import:{"esp_partition_write","fopen","xTaskCreate","esp_restart"}){

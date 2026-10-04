@@ -103,9 +103,18 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-risc-tools-${{ hashFiles('platformio.ini', 'requirements-ci.txt') }}
       - name: Install pinned tools
         run: python -m pip install -r requirements-ci.txt
+      - name: Fetch frozen app SDK for Xtensa ABI proof
+        uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: aa7b03c15a59aa99b2d60ae20905edbdf62e35e6
+          path: build/watch-clock-sdk
+          sparse-checkout: sdk/app
+          persist-credentials: false
       - name: Build firmware and real default/child/provider ELFs
         run: |
           pio run -e esp32s3 -j 1
+          CC="$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" python test/verify_legacy_runtime_header.py build/watch-clock-sdk/sdk/app/RiscRuntimeV1.h
           python scripts/build_apps.py
           bash test/run_elf_test.sh
           pio run -e esp32s3 -t buildfs -j 1

@@ -19,5 +19,8 @@ for ident,name in module.DEVICES.items():
  shutil.copy(watch/f'drivers/twatch_{name}/manifest.json',out/name/'manifest.json')
  boot['drivers'].append({'manifest':f'{name}/manifest.json','instance_id':ident})
 (out/'boot.json').write_text(json.dumps(boot))
-# The runtime header is a byte-pinned contract, never silently substituted.
-assert (watch/'sdk/app/RiscRuntimeV1.h').read_bytes()==(Path(__file__).resolve().parents[1]/'sdk/app/RiscRuntimeV1.h').read_bytes()
+# Keep the old consumer SDK bytes unchanged and prove the complete ABI prefix.
+# Runtime0.1.11 adds one optional callback; whole-file equality is no longer
+# the correct compatibility test for this frozen old-ABI regression.
+from verify_legacy_runtime_header import verify
+verify(watch/'sdk/app/RiscRuntimeV1.h')
