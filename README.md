@@ -231,3 +231,6 @@ Software singleton identity, repeated-acquisition reference counts, explicit
 capability bindings, storage generation revocation and failed-quiescence
 retention remain graph-owned. Ordinary `dlopen` duplicate rejection is unchanged.
 See [native registry regression](test/support/native_registry/README.md).
+
+Explicit larger records are available through [key-value v2](docs/KEY_VALUE_V2.md),
+while v1 remains capped at64 bytes with its original authority and lifecycle.

@@ -4,6 +4,8 @@
 #include <RiscRuntimeV1.h>
 #include <RiscKeyValueV1.h>
 #include <RiscBoundKeyValueV1.h>
+#include <RiscKeyValueV2.h>
+#include <RiscBoundKeyValueV2.h>
 namespace RiscBoot {
 class Runtime;
 // Optional compiled-in backend. Namespace comes only from validated boot policy.
@@ -13,6 +15,7 @@ struct KeyValueBackend {
   void* context;
   int32_t (*get)(void*,uint32_t,const char*,void*,uint32_t,uint32_t*);
   int32_t (*put)(void*,uint32_t,const char*,const void*,uint32_t);
+  uint32_t maxBlobSize=RISC_KEY_VALUE_BLOB_MAX;
 };
 struct Port {
   bool (*owner)();

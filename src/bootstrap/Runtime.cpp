@@ -120,13 +120,15 @@ bool Runtime::validateGraph() {
       auto& req=d.requirements[r]; if(!strcmp(req.capability,"hardware.device")) continue;
       if (!strcmp(req.capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) {
         auto& storage=providerStorage_[i];
-        if (req.api!=RISC_BOUND_KEY_VALUE_API_V1 || !storage.count ||
-            !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put)
+        if ((req.api!=RISC_BOUND_KEY_VALUE_API_V1 && req.api!=RISC_BOUND_KEY_VALUE_API_V2) || !storage.count ||
+            !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
+            port_.keyValue->maxBlobSize<(req.api==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX))
           return fail("provider key-value policy/backend unavailable");
         if (hw) for(size_t b=0;b<hw->bindingCount;++b)
           if (!strcmp(hw->bindings[b].capability,req.capability))
             return fail("provider key-value is not a hardware binding");
         needsStorage=true;
+        storage.table.api_version=req.api;
         req.trustedApi=&storage.table;
         continue;
       }
@@ -196,8 +198,9 @@ bool Runtime::appPolicies(JsonVariantConst value) {
       // A manifest declares each capability once. The owner may independently
       // authorize more than one positive KV namespace, still within eight
       // total grants; no other capability's uniqueness rule is broadened.
-      for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,requested)) return fail("duplicate app requirement");
       const bool keyValue=!strcmp(requested,RISC_KEY_VALUE_CAPABILITY);
+      for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,requested) &&
+          (!keyValue || policy.grants[i].api==uint32_t(api))) return fail("duplicate app requirement");
       unsigned matches=0;
       for (JsonObjectConst allowed:item["grants"].as<JsonArrayConst>()) {
         int64_t allowedApi=0,instance=0;char capability[96];
@@ -215,7 +218,8 @@ bool Runtime::appPolicies(JsonVariantConst value) {
         auto& grant=policy.grants[policy.count];
         strcpy(grant.capability,capability);grant.api=api;grant.instance=instance;
         if (keyValue) {
-          if (grant.api!=RISC_KEY_VALUE_API_V1 || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put) return fail("app key-value backend/namespace unavailable");
+          if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
+              port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;
         } else if (!strcmp(grant.capability,"platform.clock")) {
           for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,grant.capability) && platforms_[p].api==grant.api) {
@@ -261,7 +265,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   if (allowed->keyValue) {
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
     grant.keyValueNamespace=allowed->instance;
-    grant.keyValue={RISC_KEY_VALUE_API_V1,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
+    grant.keyValue={allowed->api,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
     grant.api=&grant.keyValue;
   } else if (allowed->driver>=0) {
     const auto& driver=drivers_[allowed->driver];
@@ -285,11 +289,12 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   for (const auto& grant:r->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
   if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_KEY_VALUE_INVALID;
-  uint8_t temp[RISC_KEY_VALUE_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
+  const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
+  uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*r->port_.keyValue;
-  const int32_t result=backend.get(backend.context,matched->keyValueNamespace,key,temp,sizeof(temp),&size);
+  const int32_t result=backend.get(backend.context,matched->keyValueNamespace,key,temp,limit,&size);
   if (result==RISC_KEY_VALUE_NOT_FOUND) return result;
-  if (result!=RISC_KEY_VALUE_OK || !size || size>sizeof(temp)) return RISC_KEY_VALUE_IO;
+  if (result!=RISC_KEY_VALUE_OK || !size || size>limit) return RISC_KEY_VALUE_IO;
   if (capacity<size) {*outSize=size;return RISC_KEY_VALUE_BUFFER_SMALL;}
   memcpy(buffer,temp,size);*outSize=size;return RISC_KEY_VALUE_OK;
 }
@@ -299,7 +304,8 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   const AppGrant* matched=nullptr;
   for (const auto& grant:r->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
-  if (!keyValueKey(key) || !data || !size || size>RISC_KEY_VALUE_BLOB_MAX) return RISC_KEY_VALUE_INVALID;
+  const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
+  if (!keyValueKey(key) || !data || !size || size>limit) return RISC_KEY_VALUE_INVALID;
   const auto& backend=*r->port_.keyValue;
   return backend.put(backend.context,matched->keyValueNamespace,key,data,size)==RISC_KEY_VALUE_OK ? RISC_KEY_VALUE_OK : RISC_KEY_VALUE_IO;
 }
@@ -365,18 +371,20 @@ int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uin
   const ProviderKey* matched=nullptr;
   for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
   if (!matched) return RISC_BOUND_KEY_VALUE_CONTEXT;
-  uint8_t temp[RISC_BOUND_KEY_VALUE_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
+  const uint32_t limit=storage->table.api_version==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX;
+  uint8_t temp[RISC_BOUND_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*storage->owner->port_.keyValue;
-  const int32_t result=backend.get(backend.context,matched->nameSpace,key,temp,sizeof(temp),&size);
+  const int32_t result=backend.get(backend.context,matched->nameSpace,key,temp,limit,&size);
   if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND) return result;
-  if (result!=RISC_BOUND_KEY_VALUE_OK || !size || size>sizeof(temp)) return RISC_BOUND_KEY_VALUE_IO;
+  if (result!=RISC_BOUND_KEY_VALUE_OK || !size || size>limit) return RISC_BOUND_KEY_VALUE_IO;
   if (capacity<size) {*outSize=size;return RISC_BOUND_KEY_VALUE_BUFFER_SMALL;}
   memcpy(buffer,temp,size);*outSize=size;return RISC_BOUND_KEY_VALUE_OK;
 }
 int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data,uint32_t size) {
   const ProviderStorage* storage=providerContext(context);
   if (!storage) return RISC_BOUND_KEY_VALUE_CONTEXT;
-  if (!keyValueKey(key) || !data || !size || size>RISC_BOUND_KEY_VALUE_BLOB_MAX) return RISC_BOUND_KEY_VALUE_INVALID;
+  const uint32_t limit=storage->table.api_version==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX;
+  if (!keyValueKey(key) || !data || !size || size>limit) return RISC_BOUND_KEY_VALUE_INVALID;
   const ProviderKey* matched=nullptr;
   for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
   if (!matched || !matched->writable) return RISC_BOUND_KEY_VALUE_CONTEXT;
