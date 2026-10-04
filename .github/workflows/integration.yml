@@ -34,11 +34,11 @@ jobs:
           else
             python scripts/check_versions.py
           fi
-      - name: Fetch latest merged Watch clock and drivers (test-only)
+      - name: Fetch pinned external clock and drivers (test-only)
         uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
-          ref: main
+          ref: aa7b03c15a59aa99b2d60ae20905edbdf62e35e6
           path: build/watch-clock-source
           persist-credentials: false
       - name: Real runtime, external drivers and clock through physical bus model
