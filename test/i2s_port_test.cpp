@@ -24,7 +24,7 @@ int main(){
  p.pins_[8].owner=&p;assert(!open(&token) && !p.pins_[7].owner);p.pins_[8]={};
  openOk=false;assert(!open(&token) && !token && p.quiescent());openOk=true;
  assert(open(&token) && token);const auto first=token;uint64_t other=0;assert(!open(&other));
- assert(!p.quiescent() && !p.appExitSafe() && !p.providerStorageSafe());
+ assert(!p.quiescent() && !p.appExitSafe() && p.providerStorageSafe());
  auto& g=p.gpios_[0];g.port=&p;p.pins_[4]={&g,90,false};risc_light_sleep_result_v1 out{sizeof(out),0};
  assert(Port::gpioLightSleep(&g,90,false,&out)==RISC_LIGHT_SLEEP_BUSY);
  assert(Port::gpioDeepSleep(&g,90,false)==RISC_DEEP_SLEEP_BUSY);p.pins_[4]={};
@@ -36,7 +36,9 @@ int main(){
  // An outstanding display transaction is independent. Cleanup must not drain it.
  p.spiBuses_[0].held=&p.spis_[0];assert(Port::i2sWrite(&c,token,samples,256,&done,40) && done==256);
  accepted=32;assert(!Port::i2sWrite(&c,token,samples,256,&done,40) && done==32);
+ assert(!p.providerStorageSafe());assert(Port::i2sClose(&c,token));assert(open(&token));
  writeOk=false;assert(!Port::i2sWrite(&c,token,samples,256,&done,40));writeOk=true;
+ assert(!p.providerStorageSafe());assert(Port::i2sClose(&c,token));assert(open(&token));
  closeOk=false;assert(!Port::i2sClose(&c,token) && c.token==token && p.pins_[7].owner==&c);
  const auto before=writes;assert(!Port::i2sWrite(&c,token,samples,256,&done,40) && writes==before);
  closeOk=true;assert(Port::i2sClose(&c,token));assert(p.spiBuses_[0].held==&p.spis_[0]);p.spiBuses_[0].held=nullptr;
