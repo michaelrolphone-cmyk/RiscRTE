@@ -181,3 +181,7 @@ fini/unload and subsequent launches. A returned native RETAINED status or unclea
 output hold pins the invocation and dependencies until restart, including when
 the active app is a non-default child. Ordinary rolled-back refusal still allows
 normal handoff. See [deep-sleep lifecycle](docs/DEEP_SLEEP.md).
+
+Firmware0.1.6 adds optional bounded timed Light/Deep callbacks beside the same
+owned wake input. Existing no-timer APIs remain unchanged; schedule and alarm
+policy stay external. See [timer contract and verification](docs/TIMED_SLEEP.md).

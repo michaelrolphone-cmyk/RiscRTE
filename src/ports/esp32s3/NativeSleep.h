@@ -4,11 +4,40 @@
  * baseline RTC_PERIPH policy is AUTO; no other wake/configuration owner exists.
  */
 #include <cstdint>
+#include <RiscTimedSleepV1.h>
 #include <driver/gpio.h>
 #include <driver/rtc_io.h>
 #include <esp_sleep.h>
 #include <soc/soc_memory_types.h>
 namespace RiscCpu { namespace NativeSleep {
+inline bool timerArm(uint32_t ms) {
+  if(!ms || ms>RISC_TIMED_SLEEP_MAX_MS)return false;
+  return esp_sleep_enable_timer_wakeup(uint64_t(ms)*UINT64_C(1000))==ESP_OK;
+}
+inline bool timerClear() {
+  const esp_err_t result=esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
+  return result==ESP_OK || result==ESP_ERR_INVALID_STATE;
+}
+inline uint32_t lightWakeCause(esp_sleep_wakeup_cause_t cause) {
+  if(cause==ESP_SLEEP_WAKEUP_GPIO)return RISC_LIGHT_SLEEP_WAKE_GPIO;
+  if(cause==ESP_SLEEP_WAKEUP_TIMER)return RISC_LIGHT_SLEEP_WAKE_TIMER;
+  return RISC_LIGHT_SLEEP_WAKE_OTHER;
+}
+inline bool lightArm(uint8_t pin,bool active) {
+  return gpio_wakeup_enable(static_cast<gpio_num_t>(pin),active?GPIO_INTR_HIGH_LEVEL:GPIO_INTR_LOW_LEVEL)==ESP_OK &&
+    esp_sleep_enable_gpio_wakeup()==ESP_OK;
+}
+inline bool lightClear(uint8_t pin) {
+  const bool pinOk=gpio_wakeup_disable(static_cast<gpio_num_t>(pin))==ESP_OK;
+  const esp_err_t cleared=esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
+  const bool sourceOk=cleared==ESP_OK || cleared==ESP_ERR_INVALID_STATE;
+  return pinOk && sourceOk;
+}
+inline bool lightEnter(uint32_t* cause) {
+  if(esp_light_sleep_start()!=ESP_OK)return false;
+  *cause=lightWakeCause(esp_sleep_get_wakeup_cause());
+  return true;
+}
 inline bool stackReady() {uint8_t probe=0;return esp_ptr_internal(&probe);}
 inline bool* failedOpens() {static bool failed[GPIO_NUM_MAX]{};return failed;}
 inline bool canClose(uint8_t pin) {return pin<GPIO_NUM_MAX && !failedOpens()[pin];}

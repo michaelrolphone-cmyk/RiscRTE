@@ -66,7 +66,7 @@ int main(){
  static_assert(GARDEN_GPIO_LIGHT_SLEEP_V1_SIZE==offsetof(garden_gpio_v1,deep_sleep));
  static_assert(GARDEN_GPIO_DEEP_SLEEP_V1_SIZE==offsetof(garden_gpio_v1,deep_sleep_hold));
  static_assert(RISC_GPIO_BANK_LIGHT_SLEEP_V1_SIZE==offsetof(risc_gpio_bank_api_v1,deep_sleep));
- static_assert(RISC_GPIO_BANK_DEEP_SLEEP_V1_SIZE==sizeof(risc_gpio_bank_api_v1));
+ static_assert(RISC_GPIO_BANK_DEEP_SLEEP_V1_SIZE==offsetof(risc_gpio_bank_api_v1,light_sleep_for));
  {Fixture f;assert(!f.p.quiescent());
   assert(Port::gpioDeepSleep(nullptr,1,false)==RISC_DEEP_SLEEP_INVALID);
   owner=false;assert(f.sleep()==RISC_DEEP_SLEEP_CONTEXT);owner=true;

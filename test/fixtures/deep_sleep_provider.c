@@ -3,12 +3,13 @@
 #include <RiscHardwareConfigV1.h>
 #include <GardenPlatformV1.h>
 #include <string.h>
+extern bool test_deep_timed(void);
 extern void test_deep_trace(const char *);
 static const garden_gpio_v1 *gpio;
 static uint64_t input,output;
 static int32_t enter(void){
  if(gpio->deep_sleep_hold(gpio->context,output,true)!=0)return RISC_DEEP_SLEEP_PLATFORM;
- const int32_t result=gpio->deep_sleep(gpio->context,input,false);
+ const int32_t result=test_deep_timed()?gpio->deep_sleep_for(gpio->context,input,false,123):gpio->deep_sleep(gpio->context,input,false);
  if(gpio->deep_sleep_hold(gpio->context,output,false)!=0)return RISC_DEEP_SLEEP_RETAINED;
  return result;
 }
@@ -19,6 +20,7 @@ static bool start(const risc_provider_dependency_v1 *d,size_t count){
   if(!strcmp(d[i].capability_id,"hardware.device"))hw=d[i].api;
  }
  if(!hw || !gpio || gpio->struct_size<GARDEN_GPIO_DEEP_SLEEP_HOLD_V1_SIZE || !gpio->deep_sleep || !gpio->deep_sleep_hold)return false;
+ if(test_deep_timed() && (gpio->struct_size<GARDEN_GPIO_DEEP_SLEEP_FOR_V1_SIZE || !gpio->deep_sleep_for))return false;
  const risc_hw_gpio_bank_v1 *c=hw->config;
  if(c->count!=2 || !gpio->claim(gpio->context,c->pins[0],false,false,true,&input) ||
     !gpio->claim(gpio->context,c->pins[1],true,false,false,&output))return false;

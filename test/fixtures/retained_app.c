@@ -95,7 +95,12 @@ __attribute__((visibility("default"))) void app_main(void) {
     return;
   }
   const int32_t result = probe->enter(test_retained_mode());
-  if (!strcmp(test_retained_mode(), "ordinary-refusal") ||
+  if (!strcmp(test_retained_mode(), "timed-light-normal")) {
+    assert(result == 0);
+    assert(rt->diagnostic("CLOCK sleep-returned"));
+  } else if (!strcmp(test_retained_mode(), "timed-light-short") ||
+      !strcmp(test_retained_mode(), "timed-deep-refusal") ||
+      !strcmp(test_retained_mode(), "ordinary-refusal") ||
       !strcmp(test_retained_mode(), "held-output")) {
     assert(result == RISC_DEEP_SLEEP_PLATFORM);
     assert(rt->diagnostic("CLOCK sleep-refused"));

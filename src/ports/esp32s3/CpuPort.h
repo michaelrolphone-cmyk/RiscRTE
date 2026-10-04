@@ -28,6 +28,8 @@ struct Hardware {
   bool (*deepWakeClear)(uint8_t,bool)=nullptr;
   void (*deepSleep)()=nullptr;
   bool (*deepHold)(uint8_t,bool)=nullptr;
+  bool (*timerArm)(uint32_t)=nullptr;
+  bool (*timerClear)()=nullptr;
 };
 class Port final {
  public:
@@ -57,6 +59,10 @@ class Port final {
   static int32_t gpioLightSleep(void*,uint64_t,bool,risc_light_sleep_result_v1*);
   static int32_t gpioDeepSleep(void*,uint64_t,bool);
   static int32_t gpioDeepSleepHold(void*,uint64_t,bool);
+  static int32_t gpioLightSleepFor(void*,uint64_t,bool,uint32_t,risc_light_sleep_result_v1*);
+  static int32_t gpioDeepSleepFor(void*,uint64_t,bool,uint32_t);
+  static int32_t lightSleepImpl(void*,uint64_t,bool,uint32_t,risc_light_sleep_result_v1*);
+  static int32_t deepSleepImpl(void*,uint64_t,bool,uint32_t);
   static bool gpioRelease(void*,uint64_t); static bool waveform(void*,uint64_t,const uint32_t*,size_t){return false;}
   static bool i2cOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*);
   static bool i2cTransfer(void*,uint64_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);
