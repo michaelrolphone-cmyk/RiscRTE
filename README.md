@@ -224,7 +224,7 @@ No networking/OTA/partition behavior is added by this correction.
 
 ## Bounded PDM input and healthy audio coexistence
 
-Firmware0.1.12 adds selected I2S0 PDM RX through the existing raw controller ABI:
+Runtime 0.1.16 adds selected I2S0 PDM RX through the existing raw controller ABI. The ESP32-S3 native port owns DMA/controller mechanics; board-specific microphone identity, pins and `audio.input` remain external driver policy:
 mono signed16, 8/16 kHz, at most256 frames and40ms per read. RX data stays input;
 cleanup preserves uncertain ownership. Healthy I2S streams may coexist with
 provider-bound storage, while every live stream still blocks sleep and app
