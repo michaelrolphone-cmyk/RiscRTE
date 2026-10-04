@@ -101,7 +101,7 @@ recovers 592 static bytes by pinned Xtensa size-only measurement; a new full
 hosted target result is required. It adds OOM/lifetime regression coverage and
 does not change SDK Wi-Fi buffer policy or claim sufficient dynamic heap.
 
-## PDM RX prerequisite, firmware0.1.12
+## PDM RX prerequisite, Runtime 0.1.16
 
 The I2S suite now includes input-only DATA cleanup faults, I2S0 mono PDM
 configuration, whole-read deadlines/partial copies, direction/owner/core
