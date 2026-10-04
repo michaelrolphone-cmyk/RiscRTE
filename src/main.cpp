@@ -6,6 +6,9 @@
 #include "bootstrap/Runtime.h"
 #include "ports/esp32s3/CpuPort.h"
 #include "ports/esp32s3/CooperativeDelay.h"
+#ifndef RISC_EMBEDDED_BOOTSTORE
+#include "ports/esp32s3/NvsKeyValue.h"
+#endif
 
 #ifndef RISC_TARGET
 #define RISC_TARGET "esp32s3-baseline"
@@ -29,11 +32,19 @@ bool diagnostic(const char* line) { Serial.println(line); return true; }
 // mappings after failed quiescence. Never destroy these while hardware is live.
 RiscCpu::Port cpu(RiscCpu::nativeHardware(isOwner));
 bool bindPlatforms(RiscBoot::Runtime& runtime){return cpu.bind(runtime);}
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms});
+bool appExitSafe(){return cpu.appExitSafe();}
+#ifdef RISC_EMBEDDED_BOOTSTORE
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe});
+#else
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe});
+#endif
 }
 void setup() {
   owner=xTaskGetCurrentTaskHandle(); Serial.begin(115200);
   Serial.println(RISC_BUILD_IDENTITY);
+#ifndef RISC_EMBEDDED_BOOTSTORE
+  if(RiscNvs::initializationStatus()!=ESP_OK) Serial.printf("RTE_STORAGE unavailable=nvs code=%d erase_recovery=disabled\n",RiscNvs::initializationStatus());
+#endif
 #ifdef RISC_BOARD_MARKER
   Serial.println(RISC_BOARD_MARKER);
 #endif

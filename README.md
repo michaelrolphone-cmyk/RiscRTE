@@ -140,6 +140,9 @@ storage call. The mounted store must remain immutable while a boot session runs.
 ```sh
 bash test/run_board_test.sh
 bash test/run_runtime_test.sh
+bash test/run_deep_sleep_test.sh
+bash test/run_key_value_test.sh
+bash test/run_retained_app_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
 python3 scripts/build_apps.py
@@ -156,3 +159,29 @@ CI runs the integration checks on pull requests. Source-versioned firmware relea
 publication runs on default-branch pushes or manual dispatch after successful
 checks; it never flashes devices. See [CI and releases](docs/CI_AND_RELEASES.md)
 for triggers, artifacts, version guards and credential scope.
+
+## Generic deep-sleep candidate
+
+Firmware0.1.3 adds explicit owned-RTC-input terminal deep entry and owned static
+output retention alongside unchanged light sleep. Wake is a fresh runtime/default
+app boot; application timing, preparation, rail policy and UI remain external.
+See [contract, source constraints and verification](docs/DEEP_SLEEP.md). No full
+product quiescence, physical wake reliability or low-current result is claimed.
+
+## Bounded app persistence
+
+Firmware0.1.4 adds optional explicit namespace grants for storage.key-value@1.
+Keys and blobs are bounded; only get/put is exposed. The backend disables Arduino
+partition erase recovery on initialization failures, with no bootfs writes. Application
+encoding, defaults, policy and UI remain external. See [contract and failure
+semantics](docs/KEY_VALUE.md). Deep/light sleep behavior is unchanged.
+
+Firmware0.1.5 additionally checks the generic native retention barrier before app
+fini/unload and subsequent launches. A returned native RETAINED status or uncleared
+output hold pins the invocation and dependencies until restart, including when
+the active app is a non-default child. Ordinary rolled-back refusal still allows
+normal handoff. See [deep-sleep lifecycle](docs/DEEP_SLEEP.md).
+
+Firmware0.1.6 adds optional bounded timed Light/Deep callbacks beside the same
+owned wake input. Existing no-timer APIs remain unchanged; schedule and alarm
+policy stay external. See [timer contract and verification](docs/TIMED_SLEEP.md).

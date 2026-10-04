@@ -18,7 +18,7 @@ enum { RISC_LIGHT_SLEEP_OK=0, RISC_LIGHT_SLEEP_INVALID=-1,
  RISC_LIGHT_SLEEP_ACTIVE_WAKE=-4, RISC_LIGHT_SLEEP_PLATFORM=-5,
  RISC_LIGHT_SLEEP_RETAINED=-6, RISC_LIGHT_SLEEP_UNSUPPORTED=-7 };
 enum { RISC_LIGHT_SLEEP_WAKE_NONE=0, RISC_LIGHT_SLEEP_WAKE_GPIO=1,
- RISC_LIGHT_SLEEP_WAKE_OTHER=2 };
+ RISC_LIGHT_SLEEP_WAKE_OTHER=2, RISC_LIGHT_SLEEP_WAKE_TIMER=3 };
 typedef struct { uint32_t struct_size, wake_cause; } risc_light_sleep_result_v1;
 typedef int32_t (*risc_gpio_light_sleep_v1)(void *context, uint64_t owned_input_token,
  bool wake_active_high, risc_light_sleep_result_v1 *result);

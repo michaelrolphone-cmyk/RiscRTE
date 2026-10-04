@@ -47,7 +47,15 @@ Ordinary selected capabilities are opaque to the runtime. The example numbers
 are deployment selections, not runtime code. `display.output@1` uses the complete
 canonical display table. `rtc.clock@2` may use a driver's existing table; a clock
 app can call only read and show TIME UNSET on invalid time, without seeding it.
-Raw platform GPIO/SPI/hardware records are not exposed to apps. The sole optional
-native app service is an explicitly granted global platform.clock; ordinary
+Raw platform GPIO/SPI/hardware records are not exposed to apps. Optional native app services are explicitly granted global platform.clock and
+namespace-bound storage.key-value@1 (see KEY_VALUE.md); ordinary
 clock apps can use health.uptime_ms and yield_ms instead. yield_ms continues the
 inherited bounded provider poll dispatcher so queued display work progresses.
+
+
+Native retention (firmware0.1.5) is checked by an optional compiled-in port
+callback before fini/unload and again after fini. A failed native barrier
+logically revokes app grants and disables owner APIs while retaining the image,
+allocations and provider references, rather than invoking cleanup or launching
+another app. This is separate from ordinary capability release and graph
+quiescence; see DEEP_SLEEP.md.
