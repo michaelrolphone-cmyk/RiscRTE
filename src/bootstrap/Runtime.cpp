@@ -1,5 +1,6 @@
 #include "Runtime.h"
 #include "KeyValueGeneration.h"
+#include "runtime/resources/ScopedBufferWipe.h"
 #include <esp_dlfcn.h>
 #include <cstring>
 #ifdef ESP_PLATFORM
@@ -267,7 +268,7 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   for (const auto& grant:r->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
   if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_KEY_VALUE_INVALID;
-  uint8_t temp[RISC_KEY_VALUE_BLOB_MAX]; uint32_t size=0;
+  uint8_t temp[RISC_KEY_VALUE_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*r->port_.keyValue;
   const int32_t result=backend.get(backend.context,matched->keyValueNamespace,key,temp,sizeof(temp),&size);
   if (result==RISC_KEY_VALUE_NOT_FOUND) return result;
@@ -305,11 +306,15 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   storage.table={RISC_BOUND_KEY_VALUE_API_V1,sizeof(risc_bound_key_value_v1),nullptr,boundKeyValueGet,boundKeyValuePut};
   return true;
 }
+bool Runtime::providerStorageSafe() const {
+  if(port_.providerStorageSafe)return port_.providerStorageSafe();
+  return !port_.appExitSafe || port_.appExitSafe();
+}
 bool Runtime::beginProvider(void* context) {
   auto* storage=static_cast<ProviderStorage*>(context);
   Runtime* r=currentRuntime;
   if (!storage || !r || storage->owner!=r || !storage->count || storage->live ||
-      !r->port_.owner() || r->retained_ || (r->port_.appExitSafe && !r->port_.appExitSafe())) return false;
+      !r->port_.owner() || r->retained_ || !r->providerStorageSafe()) return false;
   void* token=nextKeyValueContext(keyValueGeneration);
   if (!token) return false;
   storage->table.context=token;
@@ -325,7 +330,7 @@ void Runtime::revokeProviders() {
 Runtime::ProviderStorage* Runtime::providerContext(void* context) {
   Runtime* r=currentRuntime;
   if (!r || !context || !r->port_.owner() || !r->port_.keyValue) return nullptr;
-  if (r->retained_ || (r->port_.appExitSafe && !r->port_.appExitSafe())) {
+  if (r->retained_ || !r->providerStorageSafe()) {
     // Native retention can become observable inside app_main, before the
     // outer appExitBarrier. Revoke without invoking any physical cleanup.
     r->revokeProviders();
@@ -343,7 +348,7 @@ int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uin
   const ProviderKey* matched=nullptr;
   for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
   if (!matched) return RISC_BOUND_KEY_VALUE_CONTEXT;
-  uint8_t temp[RISC_BOUND_KEY_VALUE_BLOB_MAX]; uint32_t size=0;
+  uint8_t temp[RISC_BOUND_KEY_VALUE_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*storage->owner->port_.keyValue;
   const int32_t result=backend.get(backend.context,matched->nameSpace,key,temp,sizeof(temp),&size);
   if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND) return result;

@@ -24,13 +24,20 @@ bool Port::reserve(int16_t pin,const void* owner){
   pins_[pin].owner=owner;return true;
 }
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
-bool Port::appExitSafe() const {
+bool Port::providerStorageSafe() const {
   if(!available() || sleepRetained_ || transferring_)return false;
   for(const auto& pin:pins_)if(pin.held)return false;
   for(const auto& c:i2ss_)if(c.token)return false;
+  for(const auto& c:radios_)if(c.closing)return false;
+  return true;
+}
+bool Port::appExitSafe() const {
+  if(!providerStorageSafe())return false;
+  for(const auto& c:radios_)if(c.active)return false;
   return true;
 }
 bool Port::quiescent() const {
+  for(const auto& c:radios_)if(c.token || c.active || c.closing)return false;
   for(const auto& p:pins_)if(p.owner)return false;
   return !poisoned_;
 }
@@ -77,6 +84,19 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       auto& c=i2ss_[i2sCount_++];c.port=this;c.config=d.config.audio;
       c.api={1,sizeof(c.api),&c,i2sOpen,i2sWrite,i2sRead,i2sClose};
       if(!runtime.registerPlatform("platform.i2s.controller",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
+    }
+    if(runtime.uses(id,"platform.radio",1)){
+      // Only the selected integrated station radio receives this authority.
+      // AP features in the board record do not imply backend AP support.
+      if(radioCount_ || strcmp(d.type,"radio.integrated") ||
+         strcmp(d.compatible,"espressif,esp32s3-wifi") || d.config.radio.unit!=0 ||
+         !(d.config.radio.features&1u) || (d.config.radio.features&~3u) ||
+         !hw_.radioJoin || !hw_.radioState || !hw_.radioLeave || !hw_.radioAddresses ||
+         !hw_.radioScanStart || !hw_.radioScanPoll || !hw_.radioScanCancel || !hw_.radioIdle)return false;
+      auto& c=radios_[radioCount_++];c.port=this;c.config=d.config.radio;
+      c.api={1,sizeof(c.api),&c,radioClaim,radioJoin,radioState,radioLeave,radioRelease,
+             radioStartAp,radioStopAp,radioAddresses,radioScanStart,radioScanPoll,radioScanCancel};
+      if(!runtime.registerPlatform("platform.radio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
     if(runtime.uses(id,"spi.bus",1)){
       // First CPU-port slice supports generic display SPI transport only. Other
@@ -128,6 +148,89 @@ bool Port::i2sClose(void* context,uint64_t token){
   if(!ok)return false;
   p.unreserve(c.config.bclk,&c);p.unreserve(c.config.ws,&c);p.unreserve(c.config.data,&c);c.token=0;c.closing=false;return true;
 }
+// Radio ownership is logical until the first join/scan. Idle provider claims
+// may span app handoffs; native activity and failed cleanup never may.
+bool Port::radioClaim(void* context,uint64_t* out){
+  if(out)*out=0;
+  auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
+  if(!out || !p.available() || p.transferring_ || c.token || c.active || c.closing || !p.hw_.radioIdle())return false;
+  const uint64_t t=p.token();if(!t)return false;c.token=t;*out=t;return true;
+}
+bool Port::radioJoin(void* context,uint64_t token,const char* ssid,const char* password){
+  auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
+  if(!p.available() || p.transferring_ || !token || token!=c.token || c.active || c.closing || !ssid || !password)return false;
+  const size_t sn=strnlen(ssid,33),pn=strnlen(password,64);
+  if(!sn || sn>32 || pn>63 || (pn && pn<8))return false;
+  c.active=true;p.transferring_=true;const bool ok=p.hw_.radioJoin(ssid,password);p.transferring_=false;
+  if(!ok){c.closing=true;(void)radioLeave(context,token);}return ok;
+}
+bool Port::radioState(void* context,uint64_t token,uint8_t* state,int8_t* rssi){
+  if(state)*state=0;
+  if(rssi)*rssi=-127;
+  auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
+  if(!state || !rssi || !p.available() || p.transferring_ || !token || token!=c.token || c.closing)return false;
+  if(!c.active || c.scanning)return true;
+  p.transferring_=true;const bool ok=p.hw_.radioState(state,rssi);p.transferring_=false;
+  if(!ok || *state>2){c.closing=true;*state=0;*rssi=-127;return false;}return true;
+}
+bool Port::radioLeave(void* context,uint64_t token){
+  auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
+  // Retained cleanup can be retried, but a terminal sleep failure cannot.
+  if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
+  if(!c.active && !c.closing)return p.hw_.radioIdle();
+  c.closing=true;p.transferring_=true;const bool ok=p.hw_.radioLeave();p.transferring_=false;
+  if(!ok || !p.hw_.radioIdle())return false;
+  c.active=c.closing=c.scanning=false;return true;
+}
+bool Port::radioRelease(void* context,uint64_t token){
+  auto& c=*static_cast<Radio*>(context);
+  if(!radioLeave(context,token))return false;
+  c.token=0;return true;
+}
+bool Port::radioStopAp(void* context,uint64_t token){
+  auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
+  // Station-only backend can truthfully report no AP is active. Preserve old
+  // providers' stop_ap -> leave -> release cleanup sequence.
+  return p.hw_.owner && p.hw_.owner() && !p.sleeping_ && !p.sleepRetained_ && !p.transferring_ && token && token==c.token;
+}
+bool Port::radioAddresses(void* context,uint64_t token,uint8_t* station,uint8_t* ap){
+  if(station)memset(station,0,12);
+  if(ap)memset(ap,0,12);
+  auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
+  if(!station || !ap || !p.available() || p.transferring_ || !token || token!=c.token || c.closing)return false;
+  if(!c.active || c.scanning)return true;
+  p.transferring_=true;const bool ok=p.hw_.radioAddresses(station,ap);p.transferring_=false;
+  if(!ok){c.closing=true;memset(station,0,12);memset(ap,0,12);}return ok;
+}
+bool Port::radioScanStart(void* context,uint64_t token){
+  auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
+  if(!p.available() || p.transferring_ || !token || token!=c.token || c.active || c.closing)return false;
+  c.active=c.scanning=true;p.transferring_=true;const bool ok=p.hw_.radioScanStart();p.transferring_=false;
+  if(!ok){c.closing=true;(void)radioLeave(context,token);}return ok;
+}
+bool Port::radioScanPoll(void* context,uint64_t token,garden_radio_scan_result_v1* out){
+  if(!out || out->struct_size<sizeof(*out))return false;
+  *out={};out->struct_size=sizeof(*out);
+  auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
+  if(!p.available() || p.transferring_ || !token || token!=c.token || c.closing)return false;
+  if(!c.scanning)return true;
+  garden_radio_scan_result_v1 result{};result.struct_size=sizeof(result);
+  p.transferring_=true;const bool ok=p.hw_.radioScanPoll(&result);p.transferring_=false;
+  if(!ok || result.count>GARDEN_RADIO_SCAN_MAX || result.state>GARDEN_RADIO_SCAN_FAILED || result.reserved ||
+     (result.state!=GARDEN_RADIO_SCAN_DONE && result.count)){c.closing=true;return false;}
+  for(unsigned i=0;i<result.count;++i){const auto& e=result.entries[i];
+    if(strnlen(e.ssid,sizeof(e.ssid))>32 || e.reserved || (e.auth>GARDEN_RADIO_AUTH_WPA2_WPA3_PSK && e.auth!=GARDEN_RADIO_AUTH_UNSUPPORTED)){c.closing=true;return false;}
+  }
+  *out=result;out->struct_size=sizeof(*out);return true;
+}
+bool Port::radioScanCancel(void* context,uint64_t token){
+  auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
+  if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
+  if(!c.scanning)return true;
+  c.closing=true;p.transferring_=true;const bool ok=p.hw_.radioScanCancel();p.transferring_=false;
+  if(!ok || !p.hw_.radioIdle())return false;
+  c.active=c.closing=c.scanning=false;return true;
+}
 bool Port::gpioClaim(void* context,uint8_t pin,bool output,bool initial,bool pullup,uint64_t* out){
   if(out)*out=0;
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
@@ -176,6 +279,7 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   if(p.sleeping_ || p.transferring_)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
+  for(const auto& c:p.radios_){if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;if(c.active)return RISC_LIGHT_SLEEP_BUSY;}
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
   if(pin<0)return RISC_LIGHT_SLEEP_INVALID;
@@ -220,6 +324,7 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(p.sleeping_ || p.transferring_)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
+  for(const auto& c:p.radios_){if(c.closing)return RISC_DEEP_SLEEP_RETAINED;if(c.active)return RISC_DEEP_SLEEP_BUSY;}
   for(const auto& pin:p.pins_)if(pin.pwm)return RISC_DEEP_SLEEP_BUSY;
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;

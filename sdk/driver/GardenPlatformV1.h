@@ -5,6 +5,7 @@
 #include "RiscLightSleepV1.h"
 #include "RiscDeepSleepV1.h"
 #include "RiscTimedSleepV1.h"
+#include "RiscRadioScanV1.h"
 #define GARDEN_PLATFORM_API_V1 1u
 #include "RiscHardwareConfigV1.h"
 /* GPIO claims are exclusive across GPIO/PWM/SPI/I2C/waveform providers.
@@ -63,7 +64,13 @@ typedef struct {
                      const uint8_t address[4], const uint8_t gateway[4], const uint8_t netmask[4]);
     bool (*stop_ap)(void *, uint64_t token);
     bool (*addresses)(void *, uint64_t token, uint8_t station[12], uint8_t access_point[12]);
+    /* Append-only station scan; check GARDEN_RADIO_SCAN_V1_SIZE first. */
+    garden_radio_scan_start_v1 scan_start;
+    garden_radio_scan_poll_v1 scan_poll;
+    garden_radio_scan_cancel_v1 scan_cancel;
 } garden_radio_v1;
+#define GARDEN_RADIO_PREFIX_V1_SIZE offsetof(garden_radio_v1, scan_start)
+#define GARDEN_RADIO_SCAN_V1_SIZE (offsetof(garden_radio_v1, scan_cancel) + sizeof(((garden_radio_v1*)0)->scan_cancel))
 
 #define GARDEN_GPIO_LIGHT_SLEEP_FOR_V1_SIZE (offsetof(garden_gpio_v1, light_sleep_for) + sizeof(((garden_gpio_v1*)0)->light_sleep_for))
 

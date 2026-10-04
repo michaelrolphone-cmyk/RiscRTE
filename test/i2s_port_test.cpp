@@ -24,7 +24,7 @@ int main(){
  p.pins_[8].owner=&p;assert(!open(&token) && !p.pins_[7].owner);p.pins_[8]={};
  openOk=false;assert(!open(&token) && !token && p.quiescent());openOk=true;
  assert(open(&token) && token);const auto first=token;uint64_t other=0;assert(!open(&other));
- assert(!p.quiescent() && !p.appExitSafe());
+ assert(!p.quiescent() && !p.appExitSafe() && !p.providerStorageSafe());
  auto& g=p.gpios_[0];g.port=&p;p.pins_[4]={&g,90,false};risc_light_sleep_result_v1 out{sizeof(out),0};
  assert(Port::gpioLightSleep(&g,90,false,&out)==RISC_LIGHT_SLEEP_BUSY);
  assert(Port::gpioDeepSleep(&g,90,false)==RISC_DEEP_SLEEP_BUSY);p.pins_[4]={};

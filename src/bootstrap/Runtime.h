@@ -24,6 +24,10 @@ struct Port {
   // False means native resources must retain the invocation and provider graph.
   // This is a bounded non-mutating retention barrier, not provider quiescence.
   bool (*appExitSafe)()=nullptr;
+  // Optional narrower native-retention barrier for bound provider storage.
+  // Healthy RF may block app exit without revoking admitted provider KV.
+  // If absent, retain the original appExitSafe behavior.
+  bool (*providerStorageSafe)()=nullptr;
 };
 class Runtime final {
  public:
@@ -64,6 +68,7 @@ class Runtime final {
   bool appPolicies(JsonVariantConst);
   bool revokeApp();
   bool appExitBarrier();
+  bool providerStorageSafe() const;
   static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
   static int32_t keyValuePut(void*,const char*,const void*,uint32_t);
   struct ProviderKey {

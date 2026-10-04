@@ -73,3 +73,23 @@ and readback plus5 heartbeats. Its software integration run37097188948 and X4
 candidate run37097188954 passed. Later `be6efce` hardware run37098107114 failed
 both jobs; X4 timed out without exact-source proof, so no firmware regression or
 hardware pass is inferred. The6a7f7821 result is strictly source-specific.
+
+## Station radio candidate, 0.1.9
+
+The local radio suite passes normal and ASan/UBSan runs, including the actual
+NativeRadio shim, CpuPort authority/cleanup, full JSON/manifest admission and
+twelve real Runtime/Graph/dlopen app-provider lifecycle cases, including
+a separate bound-storage provider polling during healthy RF and retained
+state/address/scan failures. Leak sanitizer was
+disabled for this suite because this executor rejects ptrace-based LSan; this is
+not a leak-sanitizer qualification. Existing I2S, deep/timed sleep, Runtime,
+retained-app, board and Watch host suites pass; Python custody/release checks
+pass with the existing pinned esptool 4.11.0/pyelftools 0.32 test dependencies.
+A separate provider-graph sanitizer runner forces leak detection and is blocked
+by that same ptrace restriction.
+
+The local single-job `pio run -e esp32s3 -j 1` attempt stopped during prerequisite
+installation after the pinned RISC-V toolchain download failed its checksum.
+No integrity check was bypassed. No target compilation pass is claimed here;
+exact-head CI is required to establish target-build status. No real radio,
+network association, credentials, device, flash, merge or release was used.

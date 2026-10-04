@@ -140,6 +140,7 @@ storage call. The mounted store must remain immutable while a boot session runs.
 ```sh
 bash test/run_board_test.sh
 bash test/run_runtime_test.sh
+bash test/run_radio_test.sh
 bash test/run_i2s_test.sh
 bash test/run_deep_sleep_test.sh
 bash test/run_key_value_test.sh
@@ -201,3 +202,10 @@ Firmware 0.1.8 adds selected-device, bounded standard I2S TX through the existin
 raw controller ABI and raises the named app-policy capacity to sixteen without
 changing per-app authority. Output policy, waveforms, haptics and PMU rails stay
 in external providers. See [TX ownership and cleanup](docs/I2S_TX.md).
+
+Firmware 0.1.9 adds selected-device station radio through platform.radio@1 and an
+append-only bounded asynchronous scan extension. Logical idle claims survive app
+handoffs; active or failed-cleanup radio blocks Light/Deep sleep and app unload.
+Credentials are copied into RAM-only SDK storage and cleared on leave. Connection
+policy, saved credentials, UI, DHCP success handling and retry decisions stay in
+external applications. See [station ownership and cleanup](docs/RADIO_STATION.md).

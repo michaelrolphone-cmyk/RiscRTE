@@ -93,3 +93,12 @@ checks out that exact Watch commit in an ignored build directory and compiles
 its real five drivers, app, renderer and golden fixture without modifying them.
 These remain test inputs in their owning repository, including original license
 notices. No Watch UI is installed in this repository's default heartbeat store.
+
+Firmware 0.1.9 preserves the GardenPlatformV1.h radio prefix through `addresses`
+and appends three size-gated scan callbacks. The original import hash remains in
+SOURCE_MAP.json as source custody; it is not a hash assertion about the adapted
+file. `RiscRadioScanV1.h`, the generic NativeRadio/CpuPort code and radio host
+fixtures are new integration code. No Watch radio driver or product UI is
+installed in the default store. IDF declarations and cleanup semantics were
+checked against official v4.4.7 sources (see RADIO_STATION.md and the native shim
+README); shim declarations do not pretend to be copied full SDK headers.

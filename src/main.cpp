@@ -33,10 +33,11 @@ bool diagnostic(const char* line) { Serial.println(line); return true; }
 RiscCpu::Port cpu(RiscCpu::nativeHardware(isOwner));
 bool bindPlatforms(RiscBoot::Runtime& runtime){return cpu.bind(runtime);}
 bool appExitSafe(){return cpu.appExitSafe();}
+bool providerStorageSafe(){return cpu.providerStorageSafe();}
 #ifdef RISC_EMBEDDED_BOOTSTORE
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe});
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe});
 #endif
 }
 void setup() {

@@ -6,7 +6,9 @@ display command protocol, renderer or application. The boot profile selects chip
 compatibility and wiring; external drivers receive the unchanged typed selected
 instance. Applications use their granted display/RTC capabilities and contain no
 transport binding logic. The same boundary applies to future input, storage or
-network services; this slice does not implement those additional services.
+network services. Firmware 0.1.9 adds the generic selected station-radio
+transport described in [RADIO_STATION.md](RADIO_STATION.md); network settings
+and saved credentials remain external application policy.
 
 After manifest parsing and before graph admission, `Port::bind` creates bounded,
 firmware-owned tables without touching hardware. Only selected requirements are

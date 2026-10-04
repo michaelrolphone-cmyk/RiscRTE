@@ -3,6 +3,7 @@
 #include "CooperativeDelay.h"
 #include "NativeSleep.h"
 #include "NativeI2s.h"
+#include "NativeRadio.h"
 #include <driver/gpio.h>
 #include <driver/i2c.h>
 #include <driver/ledc.h>
@@ -148,13 +149,13 @@ bool spiClose(uint8_t physical){
 }
 bool deepReady(){
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
-  if(!NativeSleep::stackReady() || !NativeI2s::idle())return false;
+  if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadio::idle())return false;
   for(const auto& state:spi)if(state.held || state.pending)return false;
   return true;
 }
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
 bool lightSleep(uint32_t* cause){
-  if(!NativeI2s::idle())return false;
+  if(!NativeI2s::idle() || !NativeRadio::idle())return false;
   for(const auto& state:spi)if(state.held || state.pending)return false;
   return NativeSleep::lightEnter(cause);
 }
@@ -165,7 +166,8 @@ Hardware nativeHardware(bool (*owner)()){
   return {[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
     [](uint32_t ms){vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));},gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
-    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close};
+    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
+    NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
 }
 }
 #endif

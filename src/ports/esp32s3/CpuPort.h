@@ -34,6 +34,16 @@ struct Hardware {
   bool (*i2sOpen)(uint8_t,uint8_t,uint8_t,uint8_t,uint32_t)=nullptr;
   bool (*i2sWrite)(uint8_t,const int16_t*,size_t,size_t*,uint32_t)=nullptr;
   bool (*i2sClose)(uint8_t)=nullptr;
+  // Exclusive station radio, lazily initialized by join/scan. No credentials
+  // may persist outside RAM; leave must prove all native activity is stopped.
+  bool (*radioJoin)(const char*,const char*)=nullptr;
+  bool (*radioState)(uint8_t*,int8_t*)=nullptr;
+  bool (*radioLeave)()=nullptr;
+  bool (*radioAddresses)(uint8_t*,uint8_t*)=nullptr;
+  bool (*radioScanStart)()=nullptr;
+  bool (*radioScanPoll)(garden_radio_scan_result_v1*)=nullptr;
+  bool (*radioScanCancel)()=nullptr;
+  bool (*radioIdle)()=nullptr;
 };
 class Port final {
  public:
@@ -44,15 +54,20 @@ class Port final {
   // Ordinary live provider claims may survive app handoff. Poison, sleep entry
   // or retained output holds may not outlive the invocation that owns policy.
   bool appExitSafe() const;
+  // Healthy station/scan activity blocks exit but does not revoke provider KV.
+  // Actual native cleanup failure retains the existing storage safety barrier.
+  bool providerStorageSafe() const;
  private:
   struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; garden_gpio_v1 api{}; } gpios_[16];
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; garden_spi_v1 api{}; } spis_[8];
   struct SpiBus { uint64_t instance=0; unsigned refs=0; Spi* held=nullptr; } spiBuses_[2];
   struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; } i2ss_[2];
+  struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;
+    bool active=false,closing=false,scanning=false; garden_radio_v1 api{}; } radios_[1];
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false; } pins_[49];
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
-  size_t gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0;
+  size_t gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0;
   risc_platform_clock_api_v1 clock_{};
   bool available() const { return hw_.owner && hw_.owner() && !poisoned_ && !sleeping_; }
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
@@ -80,6 +95,17 @@ class Port final {
   static bool i2sWrite(void*,uint64_t,const int16_t*,size_t,size_t*,uint32_t);
   static bool i2sRead(void*,uint64_t,int16_t*,size_t,size_t* done,uint32_t){if(done)*done=0;return false;}
   static bool i2sClose(void*,uint64_t);
+  static bool radioClaim(void*,uint64_t*);
+  static bool radioJoin(void*,uint64_t,const char*,const char*);
+  static bool radioState(void*,uint64_t,uint8_t*,int8_t*);
+  static bool radioLeave(void*,uint64_t);
+  static bool radioRelease(void*,uint64_t);
+  static bool radioStartAp(void*,uint64_t,const char*,const char*,const uint8_t*,const uint8_t*,const uint8_t*){return false;}
+  static bool radioStopAp(void*,uint64_t);
+  static bool radioAddresses(void*,uint64_t,uint8_t*,uint8_t*);
+  static bool radioScanStart(void*,uint64_t);
+  static bool radioScanPoll(void*,uint64_t,garden_radio_scan_result_v1*);
+  static bool radioScanCancel(void*,uint64_t);
   static bool idleClocks(void*,uint64_t,uint32_t,uint16_t){return false;}
 };
 Hardware nativeHardware(bool (*owner)());
