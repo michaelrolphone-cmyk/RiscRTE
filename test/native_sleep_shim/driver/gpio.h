@@ -9,7 +9,7 @@ enum gpio_num_t {
 enum gpio_mode_t { GPIO_MODE_DISABLE = 0, GPIO_MODE_INPUT = 1, GPIO_MODE_OUTPUT = 2 };
 enum gpio_pullup_t { GPIO_PULLUP_DISABLE = 0, GPIO_PULLUP_ENABLE = 1 };
 enum gpio_pulldown_t { GPIO_PULLDOWN_DISABLE = 0, GPIO_PULLDOWN_ENABLE = 1 };
-enum gpio_int_type_t { GPIO_INTR_DISABLE = 0 };
+enum gpio_int_type_t { GPIO_INTR_DISABLE = 0, GPIO_INTR_LOW_LEVEL, GPIO_INTR_HIGH_LEVEL };
 enum gpio_pull_mode_t { GPIO_PULLUP_ONLY, GPIO_PULLDOWN_ONLY, GPIO_PULLUP_PULLDOWN, GPIO_FLOATING };
 struct gpio_config_t {
   uint64_t pin_bit_mask;
@@ -35,3 +35,6 @@ esp_err_t gpio_hold_dis(gpio_num_t pin);
 void gpio_deep_sleep_hold_en();
 void gpio_deep_sleep_hold_dis();
 }
+
+extern "C" esp_err_t gpio_wakeup_enable(gpio_num_t, gpio_int_type_t);
+extern "C" esp_err_t gpio_wakeup_disable(gpio_num_t);

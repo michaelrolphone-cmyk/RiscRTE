@@ -47,7 +47,7 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
           pinsFor(d,gpio.input,gpio.output,gpio.pullup);
     }
   } else pinsFor(selected,gpio.input,gpio.output,gpio.pullup);
-  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold};return true;
+  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor};return true;
 }
 bool Port::bind(RiscBoot::Runtime& runtime){
   if(bound_ || !available() || !hw_.now || !hw_.sleep || !hw_.gpioOpen || !hw_.gpioWrite || !hw_.gpioRead || !hw_.gpioPwm || !hw_.gpioClose ||
@@ -115,6 +115,13 @@ bool Port::gpioPwm(void* context,uint64_t token,uint32_t hz,uint16_t duty,uint16
   return false;
 }
 int32_t Port::gpioLightSleep(void* context,uint64_t token,bool active,risc_light_sleep_result_v1* out){
+  return lightSleepImpl(context,token,active,0,out);
+}
+int32_t Port::gpioLightSleepFor(void* context,uint64_t token,bool active,uint32_t ms,risc_light_sleep_result_v1* out){
+  if(!ms || ms>RISC_TIMED_SLEEP_MAX_MS)return RISC_LIGHT_SLEEP_INVALID;
+  return lightSleepImpl(context,token,active,ms,out);
+}
+int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t ms,risc_light_sleep_result_v1* out){
   if(!context || !out || out->struct_size<sizeof(*out))return RISC_LIGHT_SLEEP_INVALID;
   out->wake_cause=RISC_LIGHT_SLEEP_WAKE_NONE;
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
@@ -125,26 +132,40 @@ int32_t Port::gpioLightSleep(void* context,uint64_t token,bool active,risc_light
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
   if(pin<0)return RISC_LIGHT_SLEEP_INVALID;
-  if(!p.hw_.wakeValid || !p.hw_.wakeArm || !p.hw_.lightSleep || !p.hw_.wakeClear || !p.hw_.wakeValid(pin))return RISC_LIGHT_SLEEP_UNSUPPORTED;
+  if(!p.hw_.wakeValid || !p.hw_.wakeArm || !p.hw_.lightSleep || !p.hw_.wakeClear || !p.hw_.wakeValid(pin) ||
+     (ms && (!p.hw_.timerArm || !p.hw_.timerClear)))return RISC_LIGHT_SLEEP_UNSUPPORTED;
   bool level=false;
   if(!p.hw_.gpioRead(pin,&level))return RISC_LIGHT_SLEEP_PLATFORM;
   if(level==active)return RISC_LIGHT_SLEEP_ACTIVE_WAKE;
   p.sleeping_=true;
   int32_t result=RISC_LIGHT_SLEEP_PLATFORM;
-  if(p.hw_.wakeArm(pin,active)){
+  if(p.hw_.wakeArm(pin,active) && (!ms || p.hw_.timerArm(ms))){
     if(p.hw_.gpioRead(pin,&level)){
       if(level==active)result=RISC_LIGHT_SLEEP_ACTIVE_WAKE;
       else {uint32_t cause=RISC_LIGHT_SLEEP_WAKE_NONE;
-        if(p.hw_.lightSleep(&cause)){out->wake_cause=cause;result=RISC_LIGHT_SLEEP_OK;}
+        if(p.hw_.lightSleep(&cause)){
+          // Old callbacks retain their original GPIO/OTHER result vocabulary.
+          out->wake_cause=(!ms && cause==RISC_LIGHT_SLEEP_WAKE_TIMER)?uint32_t(RISC_LIGHT_SLEEP_WAKE_OTHER):cause;
+          result=RISC_LIGHT_SLEEP_OK;
+        }
       }
     }
   }
   // Even a failed arm can leave partial configuration; cleanup is mandatory.
-  if(!p.hw_.wakeClear(pin)){p.poisoned_=p.sleepRetained_=true;result=RISC_LIGHT_SLEEP_RETAINED;}
+  const bool timerClean=!ms || p.hw_.timerClear();
+  const bool inputClean=p.hw_.wakeClear(pin);
+  if(!timerClean || !inputClean){p.poisoned_=p.sleepRetained_=true;result=RISC_LIGHT_SLEEP_RETAINED;}
   p.sleeping_=false;
   return result;
 }
 int32_t Port::gpioDeepSleep(void* context,uint64_t token,bool active){
+  return deepSleepImpl(context,token,active,0);
+}
+int32_t Port::gpioDeepSleepFor(void* context,uint64_t token,bool active,uint32_t ms){
+  if(!ms || ms>RISC_TIMED_SLEEP_MAX_MS)return RISC_DEEP_SLEEP_INVALID;
+  return deepSleepImpl(context,token,active,ms);
+}
+int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms){
   if(!context)return RISC_DEEP_SLEEP_INVALID;
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
@@ -156,7 +177,8 @@ int32_t Port::gpioDeepSleep(void* context,uint64_t token,bool active){
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
   if(pin<0)return RISC_DEEP_SLEEP_INVALID;
   if(!p.hw_.deepWakeValid || !p.hw_.deepReady || !p.hw_.deepWakeArm || !p.hw_.deepWakeClear ||
-     !p.hw_.deepSleep || !p.hw_.deepWakeValid(pin))return RISC_DEEP_SLEEP_UNSUPPORTED;
+     !p.hw_.deepSleep || !p.hw_.deepWakeValid(pin) ||
+     (ms && (!p.hw_.timerArm || !p.hw_.timerClear)))return RISC_DEEP_SLEEP_UNSUPPORTED;
   if(!p.hw_.deepReady())return RISC_DEEP_SLEEP_BUSY;
   bool level=false;
   if(!p.hw_.gpioRead(pin,&level))return RISC_DEEP_SLEEP_PLATFORM;
@@ -164,7 +186,7 @@ int32_t Port::gpioDeepSleep(void* context,uint64_t token,bool active){
   const bool pullup=p.pins_[pin].pullup;
   p.sleeping_=true;
   int32_t result=RISC_DEEP_SLEEP_PLATFORM;
-  if(p.hw_.deepWakeArm(pin,active,pullup)){
+  if(p.hw_.deepWakeArm(pin,active,pullup) && (!ms || p.hw_.timerArm(ms))){
     if(p.hw_.gpioRead(pin,&level)){
       if(level==active)result=RISC_DEEP_SLEEP_ACTIVE_WAKE;
       else {
@@ -172,14 +194,19 @@ int32_t Port::gpioDeepSleep(void* context,uint64_t token,bool active){
         // app invocation, provider graph or token namespace after wake.
         p.hw_.deepSleep();
         // A returning backend violates that contract; hardware state is unknown.
-        p.poisoned_=p.sleepRetained_=true;p.sleeping_=false;
-        return RISC_DEEP_SLEEP_RETAINED;
+        p.poisoned_=p.sleepRetained_=true;
+        // Preserve the original untimed terminal-return contract. The timed
+        // suffix additionally attempts both source cleanups but stays retained.
+        if(!ms){p.sleeping_=false;return RISC_DEEP_SLEEP_RETAINED;}
+        result=RISC_DEEP_SLEEP_RETAINED;
       }
     }
   }
   // Arm may have changed pulls/domain policy before failing. Cleanup is required
   // even then. Explicit output holds belong to their callers and are not stolen.
-  if(!p.hw_.deepWakeClear(pin,pullup)){
+  const bool timerClean=!ms || p.hw_.timerClear();
+  const bool inputClean=p.hw_.deepWakeClear(pin,pullup);
+  if(!timerClean || !inputClean){
     p.poisoned_=p.sleepRetained_=true;result=RISC_DEEP_SLEEP_RETAINED;
   }
   p.sleeping_=false;

@@ -59,13 +59,13 @@ static bool deepValid(uint8_t pin) { return pin < 22; }
 static bool deepReady() { return true; }
 static bool deepArm(uint8_t pin, bool high, bool pullup) {
   assert(pin == 7 && !high && pullup);
-  const bool ok = mode == "unexpected-return" || mode == "fini-retained" || mode == "init-retained";
+  const bool ok = mode == "unexpected-return" || mode == "fini-retained" || mode == "init-retained" || mode.find("timed-") == 0;
   test_retained_trace(ok ? "CPU wake-arm" : "CPU wake-arm-failed");
   return ok;
 }
 static bool deepClear(uint8_t pin, bool pullup) {
   assert(pin == 7 && pullup);
-  const bool ok = mode != "wake-clear";
+  const bool ok = mode != "wake-clear" && mode.find("crown-clear") == std::string::npos;
   test_retained_trace(ok ? "CPU wake-clear" : "CPU wake-clear-failed");
   return ok;
 }
@@ -75,6 +75,22 @@ static bool deepHold(uint8_t pin, bool enable) {
   test_retained_trace(enable ? (ok ? "CPU hold-on" : "CPU hold-on-failed")
                             : (ok ? "CPU hold-off" : "CPU hold-off-failed"));
   return ok;
+}
+static bool lightArm(uint8_t pin,bool high) { return deepArm(pin,high,true); }
+static bool lightClear(uint8_t pin) { return deepClear(pin,true); }
+static bool timerArm(uint32_t ms) {
+  assert(ms==123);
+  const bool ok=mode.find("timed-deep-")!=0 || mode=="timed-deep-return";
+  test_retained_trace(ok ? "CPU timer-arm" : "CPU timer-arm-failed");return ok;
+}
+static bool timerClear() {
+  const bool ok=mode.find("timer-clear")==std::string::npos;
+  test_retained_trace(ok ? "CPU timer-clear" : "CPU timer-clear-failed");return ok;
+}
+static bool lightSleep(uint32_t* cause) {
+  const bool ok=mode!="timed-light-short";
+  test_retained_trace(ok ? "CPU light-return" : "CPU light-refused");
+  *cause=RISC_LIGHT_SLEEP_WAKE_TIMER;return ok;
 }
 static void deepSleep() { test_retained_trace("CPU unexpected-return"); }
 static bool bind(RiscBoot::Runtime& runtime) { return cpu->bind(runtime); }
@@ -129,10 +145,12 @@ static void child() {
   hardware.deepWakeValid = deepValid; hardware.deepReady = deepReady;
   hardware.deepWakeArm = deepArm; hardware.deepWakeClear = deepClear;
   hardware.deepSleep = deepSleep; hardware.deepHold = deepHold;
+  hardware.wakeValid=deepValid;hardware.wakeArm=lightArm;hardware.wakeClear=lightClear;hardware.lightSleep=lightSleep;
+  hardware.timerArm=timerArm;hardware.timerClear=timerClear;
   cpu = new RiscCpu::Port(hardware);
   auto* runtime = new RiscBoot::Runtime({owner, health, delay, logLine, bind, &keyValue, appExitSafe});
   assert(runtime->prepare(root.c_str()));
-  const bool ordinary = mode == "ordinary-refusal";
+  const bool ordinary = mode == "ordinary-refusal" || mode == "timed-light-normal" || mode == "timed-light-short" || mode == "timed-deep-refusal";
   assert(runtime->run() == ordinary);
   assert(cpu->appExitSafe() == ordinary);
   assert(cpu->quiescent() == ordinary);
@@ -195,7 +213,17 @@ static std::string expected(const std::string& scenario) {
       "CLOCK init-retained\nRUNTIME API-revoked\nRUNTIME rejected-restart\n";
   const std::string prefix = launchPrefix + "CLOCK main\nCLOCK queued-child\n";
   std::string attempt;
-  if (scenario == "unexpected-return" || scenario == "fini-retained")
+  if (scenario.find("timed-")==0) {
+    attempt="CPU hold-on\nCPU wake-arm\n";
+    const bool light=scenario.find("timed-light-")==0;
+    if(light) attempt+="CPU timer-arm\n" + std::string(scenario=="timed-light-short" ? "CPU light-refused\n" : "CPU light-return\n");
+    else if(scenario=="timed-deep-return") attempt+="CPU timer-arm\nCPU unexpected-return\n";
+    else attempt+="CPU timer-arm-failed\n";
+    attempt+=scenario.find("timer-clear")!=std::string::npos ? "CPU timer-clear-failed\n" : "CPU timer-clear\n";
+    attempt+=scenario.find("crown-clear")!=std::string::npos ? "CPU wake-clear-failed\n" : "CPU wake-clear\n";
+    if(scenario=="timed-light-normal" || scenario=="timed-light-short" || scenario=="timed-deep-refusal") attempt+="CPU hold-off\n";
+  }
+  else if (scenario == "unexpected-return" || scenario == "fini-retained")
     attempt = "CPU hold-on\nCPU wake-arm\nCPU unexpected-return\n";
   else if (scenario == "hold-rollback")
     attempt = "CPU hold-on-failed\nCPU hold-off-failed\n";
@@ -206,9 +234,9 @@ static std::string expected(const std::string& scenario) {
     if (scenario == "unhold") attempt += "CPU hold-off-failed\n";
     if (scenario == "ordinary-refusal") attempt += "CPU hold-off\n";
   }
-  if (scenario == "ordinary-refusal")
-    return prefix + attempt +
-      "CLOCK sleep-refused\nCLOCK fini\nCLOCK unloaded\n"
+  if (scenario == "ordinary-refusal" || scenario == "timed-light-normal" || scenario == "timed-light-short" || scenario == "timed-deep-refusal")
+    return prefix + attempt + (scenario=="timed-light-normal" ? "CLOCK sleep-returned\n" : "CLOCK sleep-refused\n") +
+      "CLOCK fini\nCLOCK unloaded\n"
       "QUEUED loaded\nQUEUED init\nQUEUED main\nQUEUED fini\nQUEUED unloaded\n"
       "DEFAULT loaded\nDEFAULT init\nDEFAULT main\nDEFAULT fini\nDEFAULT unloaded\n"
       "PROVIDER quiesce-attempt\nCPU close-output\nCPU close-input\nPROVIDER quiesced\n"
@@ -228,7 +256,9 @@ int main(int argc, char** argv) {
   file("clock.json", R"({"type":"application","id":"retained-clock","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"clock.elf","entry":"app_main","requires":[{"capability":"test.retained","api":1},{"capability":"storage.key-value","api":1}]})");
   file("boot.json", R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"retained.json","instance_id":7}],"app_capabilities":[{"manifest":"clock.json","grants":[{"capability":"test.retained","api":1,"instance_id":7},{"capability":"storage.key-value","api":1,"instance_id":1}]}]})");
   for (const char* scenario : {"unexpected-return", "hold-rollback", "unhold", "wake-clear",
-                               "held-output", "fini-retained", "init-retained", "initial-held", "ordinary-refusal"}) {
+                               "held-output", "fini-retained", "init-retained", "initial-held", "ordinary-refusal",
+                               "timed-light-timer-clear", "timed-light-crown-clear", "timed-deep-timer-clear",
+                               "timed-deep-crown-clear", "timed-deep-return", "timed-light-normal", "timed-light-short", "timed-deep-refusal"}) {
     runChild(argv[0], scenario);
     const std::string actual = readTrace(), wanted = expected(scenario);
     if (actual != wanted)

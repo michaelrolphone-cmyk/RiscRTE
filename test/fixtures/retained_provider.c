@@ -19,7 +19,16 @@ __attribute__((destructor)) static void unloaded(void) {
 static int32_t enter(const char* mode) {
   const int32_t held = gpio->deep_sleep_hold(gpio->context, output, true);
   if (held != 0) return held;
-  const int32_t result = gpio->deep_sleep(gpio->context, input, false);
+  int32_t result;
+  if (!strncmp(mode, "timed-", 6)) {
+    if (gpio->struct_size < GARDEN_GPIO_DEEP_SLEEP_FOR_V1_SIZE || !gpio->light_sleep_for || !gpio->deep_sleep_for)
+      return RISC_DEEP_SLEEP_UNSUPPORTED;
+    if (strstr(mode, "-light-")) {
+      risc_light_sleep_result_v1 wake = {sizeof(wake), RISC_LIGHT_SLEEP_WAKE_NONE};
+      result = gpio->light_sleep_for(gpio->context, input, false, 123, &wake);
+      if (result == 0) assert(wake.wake_cause == RISC_LIGHT_SLEEP_WAKE_TIMER);
+    } else result = gpio->deep_sleep_for(gpio->context, input, false, 123);
+  } else result = gpio->deep_sleep(gpio->context, input, false);
   /* A terminal failure must not trigger further hardware mutation. */
   if (result == RISC_DEEP_SLEEP_RETAINED || !strcmp(mode, "held-output"))
     return result;

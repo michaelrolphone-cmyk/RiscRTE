@@ -152,21 +152,9 @@ bool deepReady(){
   return true;
 }
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
-bool wakeArm(uint8_t pin,bool active){
-  return gpio_wakeup_enable(static_cast<gpio_num_t>(pin),active?GPIO_INTR_HIGH_LEVEL:GPIO_INTR_LOW_LEVEL)==ESP_OK &&
-    esp_sleep_enable_gpio_wakeup()==ESP_OK;
-}
 bool lightSleep(uint32_t* cause){
   for(const auto& state:spi)if(state.held || state.pending)return false;
-  if(esp_light_sleep_start()!=ESP_OK)return false;
-  *cause=esp_sleep_get_wakeup_cause()==ESP_SLEEP_WAKEUP_GPIO?RISC_LIGHT_SLEEP_WAKE_GPIO:RISC_LIGHT_SLEEP_WAKE_OTHER;
-  return true;
-}
-bool wakeClear(uint8_t pin){
-  const bool pinOk=gpio_wakeup_disable(static_cast<gpio_num_t>(pin))==ESP_OK;
-  const esp_err_t cleared=esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
-  const bool sourceOk=cleared==ESP_OK || cleared==ESP_ERR_INVALID_STATE; // already disabled
-  return pinOk && sourceOk;
+  return NativeSleep::lightEnter(cause);
 }
 
 }
@@ -174,8 +162,8 @@ Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   return {[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
     [](uint32_t ms){vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));},gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
-    spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,wakeArm,lightSleep,wakeClear,
-    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold};
+    spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
+    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear};
 }
 }
 #endif

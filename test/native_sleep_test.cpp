@@ -38,7 +38,9 @@ std::map<std::string, esp_err_t> errors;
 std::array<Pad, GPIO_NUM_MAX> pads;
 bool globalHold = false;
 bool internalStack = true;
-uint64_t wakeMask = 0;
+uint64_t wakeMask = 0, timerUs = 0;
+bool gpioSource = false;
+esp_sleep_wakeup_cause_t lightCause = ESP_SLEEP_WAKEUP_TIMER;
 esp_sleep_ext1_wakeup_mode_t wakeMode = ESP_EXT1_WAKEUP_ANY_LOW;
 esp_sleep_pd_option_t power = ESP_PD_OPTION_AUTO;
 struct DeepSleepEntered {};
@@ -46,7 +48,7 @@ struct DeepSleepEntered {};
 void reset(const char* name) {
   scenario = name;
   calls.clear(); errors.clear(); pads = {};
-  globalHold = false; internalStack = true; wakeMask = 0; power = ESP_PD_OPTION_AUTO;
+  globalHold = false; internalStack = true; wakeMask = timerUs = 0; gpioSource = false; power = ESP_PD_OPTION_AUTO;
   native_sleep_test_output_mask = native_sleep_test_gpio_mask;
 }
 esp_err_t record(const char* name, int pin = -1, uint64_t arg = 0) {
@@ -248,6 +250,55 @@ void testClear() {
   }
 }
 
+void testTimerAndLight() {
+  reset("bounded timer validates and widens before microseconds");
+  for(uint32_t ms : {0u, RISC_TIMED_SLEEP_MAX_MS+1, UINT32_MAX}) CHECK(!timerArm(ms));
+  CHECK(calls.empty());
+  for(uint32_t ms : {1u, RISC_TIMED_SLEEP_MAX_MS}) {
+    CHECK(timerArm(ms)); CHECK(timerUs == uint64_t(ms)*1000);
+    CHECK(calls.back().arg == uint64_t(ms)*1000);
+    CHECK(timerClear()); CHECK(!timerUs);
+  }
+  CHECK(timerArm(RISC_TIMED_SLEEP_MAX_MS)); CHECK(timerUs == UINT64_C(86400000000));
+  errors["enable_timer"] = ESP_FAIL; CHECK(!timerArm(123));
+  errors.clear(); CHECK(timerClear());
+  for(esp_err_t error : {ESP_OK, ESP_ERR_INVALID_STATE, ESP_FAIL}) {
+    errors["disable_timer"] = error; CHECK(timerClear() == (error != ESP_FAIL));
+  }
+  reset("timer and EXT1 coexist and independently clear");
+  CHECK(arm(21,false,true)); CHECK(timerArm(7));
+  CHECK(wakeMask == (UINT64_C(1)<<21) && timerUs == 7000);
+  CHECK(timerClear()); CHECK(!timerUs && wakeMask);
+  CHECK(timerArm(7)); CHECK(clear(21,true)); CHECK(!wakeMask && timerUs == 7000);
+  CHECK(timerClear());
+  reset("actual Light adapter GPIO plus timer; too-short refusal");
+  for(bool high : {false,true}) {
+    CHECK(lightArm(7,high)); CHECK(gpioSource);
+    CHECK(timerArm(1)); uint32_t cause = RISC_LIGHT_SLEEP_WAKE_NONE;
+    errors["light_start"] = ESP_FAIL;
+    CHECK(!lightEnter(&cause) && cause == RISC_LIGHT_SLEEP_WAKE_NONE);
+    errors.clear(); CHECK(timerClear()); CHECK(lightClear(7));
+    CHECK(!gpioSource && !timerUs);
+  }
+  for(auto cause : {ESP_SLEEP_WAKEUP_GPIO,ESP_SLEEP_WAKEUP_TIMER,ESP_SLEEP_WAKEUP_EXT1}) {
+    lightCause=cause; uint32_t result=99; CHECK(lightEnter(&result));
+    CHECK(result == (cause==ESP_SLEEP_WAKEUP_GPIO ? RISC_LIGHT_SLEEP_WAKE_GPIO :
+      cause==ESP_SLEEP_WAKEUP_TIMER ? RISC_LIGHT_SLEEP_WAKE_TIMER : RISC_LIGHT_SLEEP_WAKE_OTHER));
+  }
+  for(const char* failure : {"gpio_wake_enable","enable_gpio"}) {
+    reset("partial Light arm cleans pin and source"); errors[failure]=ESP_FAIL;
+    CHECK(!lightArm(7,false)); errors.clear(); calls.clear();
+    CHECK(timerClear()); CHECK(lightClear(7));
+    names({"disable_timer","gpio_wake_disable","disable_gpio"});
+  }
+  for(const char* failure : {"gpio_wake_disable","disable_gpio"}) {
+    reset("Light clear attempts both stages"); errors[failure]=ESP_FAIL;
+    CHECK(!lightClear(7)); names({"gpio_wake_disable","disable_gpio"});
+  }
+  reset("already-disabled Light source is safe"); errors["disable_gpio"]=ESP_ERR_INVALID_STATE;
+  CHECK(lightClear(7));
+}
+
 void testHoldsAndEntry() {
   for (bool enable : {true, false}) {
     reset("per-pin hold wrapper preserves SDK failures");
@@ -363,10 +414,28 @@ esp_err_t esp_sleep_enable_ext1_wakeup(uint64_t mask, esp_sleep_ext1_wakeup_mode
   return result;
 }
 esp_err_t esp_sleep_disable_wakeup_source(esp_sleep_source_t source) {
-  const auto result = record("disable_ext1", -1, source);
-  if (result == ESP_OK || result == ESP_ERR_INVALID_STATE) wakeMask = 0;
+  CHECK(source == ESP_SLEEP_WAKEUP_TIMER || source == ESP_SLEEP_WAKEUP_EXT1 || source == ESP_SLEEP_WAKEUP_GPIO);
+  const auto result = record(source == ESP_SLEEP_WAKEUP_TIMER ? "disable_timer" :
+    source == ESP_SLEEP_WAKEUP_GPIO ? "disable_gpio" : "disable_ext1", -1, source);
+  if (result == ESP_OK || result == ESP_ERR_INVALID_STATE) {
+    if(source == ESP_SLEEP_WAKEUP_TIMER) timerUs=0;
+    else if(source == ESP_SLEEP_WAKEUP_GPIO) gpioSource=false;
+    else wakeMask=0;
+  }
   return result;
 }
+esp_err_t esp_sleep_enable_timer_wakeup(uint64_t us) {
+  const auto result=record("enable_timer",-1,us); timerUs=us; return result;
+}
+esp_err_t gpio_wakeup_enable(gpio_num_t pin,gpio_int_type_t mode) {
+  return record("gpio_wake_enable",pin,mode);
+}
+esp_err_t gpio_wakeup_disable(gpio_num_t pin) { return record("gpio_wake_disable",pin); }
+esp_err_t esp_sleep_enable_gpio_wakeup() {
+  const auto result=record("enable_gpio"); gpioSource=true; return result;
+}
+esp_err_t esp_light_sleep_start() { return record("light_start"); }
+esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause() { return lightCause; }
 void gpio_deep_sleep_hold_en() { record("deep_hold_en"); globalHold = true; }
 void gpio_deep_sleep_hold_dis() { record("deep_hold_dis"); globalHold = false; }
 [[noreturn]] void esp_deep_sleep_start() {
@@ -377,6 +446,6 @@ void gpio_deep_sleep_hold_dis() { record("deep_hold_dis"); globalHold = false; }
 }
 
 int main() {
-  testValidity(); testOpen(); testArm(); testClear(); testStackReadiness(); testHoldsAndEntry();
-  std::puts("Native deep-sleep SDK shim: actual adapter ordering, RTC21 eligibility, GPIO45 holds, every-stage faults, cleanup, stack guard and entry PASS");
+  testValidity(); testOpen(); testArm(); testClear(); testStackReadiness(); testHoldsAndEntry(); testTimerAndLight();
+  std::puts("Native sleep SDK shim: actual timer/Light/Deep adapters, 64-bit bounds, both sources, wake causes, every-stage faults, cleanup, stack guard and entry PASS");
 }
