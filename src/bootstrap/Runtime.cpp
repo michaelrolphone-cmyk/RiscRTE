@@ -52,7 +52,8 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   if (provides.size()!=1 || required.size()>16) return fail("driver capability bounds");
   JsonObjectConst p=provides[0]; int64_t api;
   if (!keys(p,{"capability","api"}) || !text(p["capability"],d.provides,sizeof(d.provides)) ||
-      !integer(p["api"],1,UINT32_MAX,api) || !strcmp(d.provides,"hardware.device")) return fail("invalid provides");
+      !integer(p["api"],1,UINT32_MAX,api) || !strcmp(d.provides,"hardware.device") ||
+      !strcmp(d.provides,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("invalid provides");
   d.api=api;
   bool needsHardware=false;
   for (JsonObjectConst req:required) {
@@ -113,8 +114,21 @@ bool Runtime::validateGraph() {
           (d.instance && d.instance==drivers_[j].instance)) return fail("duplicate package singleton/hardware owner");
     }
     const auto* hw=d.instance?board_.device(d.instance):nullptr;
+    bool needsStorage=false;
     for(size_t r=0;r<d.count;++r) {
       auto& req=d.requirements[r]; if(!strcmp(req.capability,"hardware.device")) continue;
+      if (!strcmp(req.capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) {
+        auto& storage=providerStorage_[i];
+        if (req.api!=RISC_BOUND_KEY_VALUE_API_V1 || !storage.count ||
+            !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put)
+          return fail("provider key-value policy/backend unavailable");
+        if (hw) for(size_t b=0;b<hw->bindingCount;++b)
+          if (!strcmp(hw->bindings[b].capability,req.capability))
+            return fail("provider key-value is not a hardware binding");
+        needsStorage=true;
+        req.trustedApi=&storage.table;
+        continue;
+      }
       uint64_t wanted=0;
       if(hw) for(size_t b=0;b<hw->bindingCount;++b) if(!strcmp(hw->bindings[b].capability,req.capability)) wanted=hw->bindings[b].instance;
       const Platform* platform=nullptr;
@@ -142,6 +156,7 @@ bool Runtime::validateGraph() {
       if (!strcmp(req.capability,"i2c.bus") && board_.deviceBus(d.instance)!=board_.deviceBus(drivers_[found].instance)) return fail("I2C dependency bus scope mismatch");
       edges[i][found]=true;
     }
+    if (providerStorage_[i].count && !needsStorage) return fail("undeclared provider key-value policy");
     if(hw) for(size_t b=0;b<hw->bindingCount;++b) {
       bool used=false; for(size_t r=0;r<d.count;++r) if(!strcmp(d.requirements[r].capability,hw->bindings[b].capability)) used=true;
       if(!used) return fail("unused hardware binding");
@@ -177,12 +192,14 @@ bool Runtime::appPolicies(JsonVariantConst value) {
       if (!keys(request,{"capability","api"}) || !text(request["capability"],grant.capability,sizeof(grant.capability)) ||
           !integer(request["api"],1,UINT32_MAX,api)) return fail("invalid app requirement");
       grant.api=api;
+      if (!strcmp(grant.capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
       for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,grant.capability)) return fail("duplicate app requirement");
       unsigned matches=0;
       for (JsonObjectConst allowed:item["grants"].as<JsonArrayConst>()) {
         int64_t allowedApi=0, instance=0; char capability[96];
         if (!keys(allowed,{"capability","api","instance_id"}) || !text(allowed["capability"],capability,sizeof(capability)) ||
             !integer(allowed["api"],1,UINT32_MAX,allowedApi) || !integer(allowed["instance_id"],0,INT32_MAX,instance)) return fail("invalid app grant");
+        if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
         if (!strcmp(capability,grant.capability) && allowedApi==api) {++matches;grant.instance=instance;}
       }
       if (matches!=1) return fail("app requirement not uniquely authorized");
@@ -268,6 +285,82 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   const auto& backend=*r->port_.keyValue;
   return backend.put(backend.context,matched->keyValueNamespace,key,data,size)==RISC_KEY_VALUE_OK ? RISC_KEY_VALUE_OK : RISC_KEY_VALUE_IO;
 }
+bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage) {
+  JsonVariantConst value=selection["key_value"];
+  // An omitted optional map differs from explicit null.
+  if (value.isUnbound()) return true;
+  if (!value.is<JsonArrayConst>() || !value.size() || value.size()>8) return fail("invalid provider key-value map");
+  for (JsonObjectConst item:value.as<JsonArrayConst>()) {
+    auto& entry=storage.keys[storage.count]; int64_t nameSpace=0;
+    if (!keys(item,{"key","namespace","access"}) ||
+        !text(item["key"],entry.key,sizeof(entry.key)) || !keyValueKey(entry.key) ||
+        !integer(item["namespace"],1,INT32_MAX,nameSpace) ||
+        (!eq(item["access"],"read") && !eq(item["access"],"read-write"))) return fail("invalid provider key-value entry");
+    for (size_t i=0;i<storage.count;++i) if (!strcmp(entry.key,storage.keys[i].key)) return fail("duplicate provider key-value key");
+    entry.nameSpace=static_cast<uint32_t>(nameSpace);
+    entry.writable=eq(item["access"],"read-write");
+    ++storage.count;
+  }
+  storage.owner=this;
+  storage.table={RISC_BOUND_KEY_VALUE_API_V1,sizeof(risc_bound_key_value_v1),nullptr,boundKeyValueGet,boundKeyValuePut};
+  return true;
+}
+bool Runtime::beginProvider(void* context) {
+  auto* storage=static_cast<ProviderStorage*>(context);
+  Runtime* r=currentRuntime;
+  if (!storage || !r || storage->owner!=r || !storage->count || storage->live ||
+      !r->port_.owner() || r->retained_ || (r->port_.appExitSafe && !r->port_.appExitSafe())) return false;
+  void* token=nextKeyValueContext(keyValueGeneration);
+  if (!token) return false;
+  storage->table.context=token;
+  storage->live=true;
+  return true;
+}
+void Runtime::revokeProvider(void* context) {
+  if (context) static_cast<ProviderStorage*>(context)->live=false;
+}
+void Runtime::revokeProviders() {
+  for (auto& storage:providerStorage_) storage.live=false;
+}
+Runtime::ProviderStorage* Runtime::providerContext(void* context) {
+  Runtime* r=currentRuntime;
+  if (!r || !context || !r->port_.owner() || !r->port_.keyValue) return nullptr;
+  if (r->retained_ || (r->port_.appExitSafe && !r->port_.appExitSafe())) {
+    // Native retention can become observable inside app_main, before the
+    // outer appExitBarrier. Revoke without invoking any physical cleanup.
+    r->revokeProviders();
+    return nullptr;
+  }
+  for (auto& storage:r->providerStorage_)
+    if (storage.owner==r && storage.live && storage.table.context==context) return &storage;
+  return nullptr;
+}
+int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
+  if (outSize) *outSize=0;
+  const ProviderStorage* storage=providerContext(context);
+  if (!storage) return RISC_BOUND_KEY_VALUE_CONTEXT;
+  if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_BOUND_KEY_VALUE_INVALID;
+  const ProviderKey* matched=nullptr;
+  for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
+  if (!matched) return RISC_BOUND_KEY_VALUE_CONTEXT;
+  uint8_t temp[RISC_BOUND_KEY_VALUE_BLOB_MAX]; uint32_t size=0;
+  const auto& backend=*storage->owner->port_.keyValue;
+  const int32_t result=backend.get(backend.context,matched->nameSpace,key,temp,sizeof(temp),&size);
+  if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND) return result;
+  if (result!=RISC_BOUND_KEY_VALUE_OK || !size || size>sizeof(temp)) return RISC_BOUND_KEY_VALUE_IO;
+  if (capacity<size) {*outSize=size;return RISC_BOUND_KEY_VALUE_BUFFER_SMALL;}
+  memcpy(buffer,temp,size);*outSize=size;return RISC_BOUND_KEY_VALUE_OK;
+}
+int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data,uint32_t size) {
+  const ProviderStorage* storage=providerContext(context);
+  if (!storage) return RISC_BOUND_KEY_VALUE_CONTEXT;
+  if (!keyValueKey(key) || !data || !size || size>RISC_BOUND_KEY_VALUE_BLOB_MAX) return RISC_BOUND_KEY_VALUE_INVALID;
+  const ProviderKey* matched=nullptr;
+  for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
+  if (!matched || !matched->writable) return RISC_BOUND_KEY_VALUE_CONTEXT;
+  const auto& backend=*storage->owner->port_.keyValue;
+  return backend.put(backend.context,matched->nameSpace,key,data,size)==RISC_BOUND_KEY_VALUE_OK ? RISC_BOUND_KEY_VALUE_OK : RISC_BOUND_KEY_VALUE_IO;
+}
 bool Runtime::release(risc_runtime_capability_v1* out) {
   if (!active() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
   auto& grant=appGrants_[out->slot-1];
@@ -297,10 +390,11 @@ bool Runtime::prepare(const char* root) {
   // Read all manifests and validate mappings before registering/activating modules.
   for(JsonObjectConst item:c["drivers"].as<JsonArrayConst>()) {
     Driver& d=drivers_[driverCount_]; int64_t instance=0;
-    if(!keys(item,{"manifest"},{"instance_id"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+    if(!keys(item,{"manifest"},{"instance_id","key_value"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,d.elf,sizeof(d.elf)) || (!item["instance_id"].isNull() && !integer(item["instance_id"],1,INT32_MAX,instance))) return fail("invalid driver selection");
     d.instance=instance; JsonDocument manifestDoc;
     if(!readJson(d.elf,manifestDoc) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
+    if(!providerPolicy(item,providerStorage_[driverCount_])) return false;
     ++driverCount_;
   }
   if (port_.bindPlatforms) {
@@ -314,6 +408,7 @@ bool Runtime::prepare(const char* root) {
     const Driver& d=drivers_[i];
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
     spec.hardware=d.instance?&board_.device(d.instance)->hardware:nullptr;
+    if (providerStorage_[i].count) spec.lease={&providerStorage_[i],beginProvider,revokeProvider};
     if(!graph_.addVerified(spec)) return fail("driver registration failed");
   }
   strcpy(default_,current_); prepared_=true; return true;
@@ -335,6 +430,7 @@ bool Runtime::appExitBarrier() {
   // Revoke app authority without calling provider release/quiesce: the boot
   // references and active invocation memory/images must remain pinned.
   retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;
+  revokeProviders();
   for(auto& grant:appGrants_)grant.live=false;
   return fail("native retention barrier; app and providers retained; restart required");
 }
@@ -384,7 +480,7 @@ bool Runtime::run() {
   prepared_=false; currentRuntime=this;
 #ifdef ESP_PLATFORM
   static const esp_elfsym symbols[]={{"risc_runtime_get_api",reinterpret_cast<const void*>(&risc_runtime_get_api)},ESP_ELFSYM_END};
-  if(esp_elf_register_symbol(symbols)) { currentRuntime=nullptr; return fail("runtime API registration failed"); }
+  if(esp_elf_register_symbol(symbols)) { revokeProviders(); currentRuntime=nullptr; return fail("runtime API registration failed"); }
 #endif
   bool ok=true;
   for(size_t i=0;i<driverCount_;++i) {
@@ -410,6 +506,6 @@ bool Runtime::run() {
     while(granted_) if(!graph_.release(grants_[--granted_])) { retained_=true; ok=fail("driver quiescence failed; restart required"); }
     if(!graph_.shutdown()) { retained_=true; ok=fail("driver shutdown retained; restart required"); }
   }
-  currentRuntime=nullptr; return ok;
+  revokeProviders(); currentRuntime=nullptr; return ok;
 }
 }

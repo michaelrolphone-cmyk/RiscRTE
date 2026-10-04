@@ -142,6 +142,8 @@ bash test/run_board_test.sh
 bash test/run_runtime_test.sh
 bash test/run_deep_sleep_test.sh
 bash test/run_key_value_test.sh
+bash test/run_bound_key_value_test.sh
+bash test/run_provider_module_lease_v2_test.sh
 bash test/run_retained_app_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
@@ -185,3 +187,11 @@ normal handoff. See [deep-sleep lifecycle](docs/DEEP_SLEEP.md).
 Firmware0.1.6 adds optional bounded timed Light/Deep callbacks beside the same
 owned wake input. Existing no-timer APIs remain unchanged; schedule and alarm
 policy stay external. See [timer contract and verification](docs/TIMED_SLEEP.md).
+
+Firmware 0.1.7 adds a separate provider-only `storage.key-value.bound@1` table.
+An optional exact-key map on each selected boot driver authorizes its namespaces
+and read/read-write rights. Authority is live during admitted provider start and
+active lifetime, and revoked before diagnostics or teardown. Existing app KV,
+provider ABI, NVS backend and sleep behavior stay unchanged. See
+[provider authority and lifecycle](docs/PROVIDER_KEY_VALUE.md). This is generic
+storage plumbing; application services, scheduling, encodings and UI remain ELFs.

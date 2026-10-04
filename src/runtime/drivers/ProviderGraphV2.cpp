@@ -109,6 +109,7 @@ bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
       (!regular && !privileged) ||
       (privilegedAdmission != privileged) ||
       spec.requirementCount > kMaxModules ||
+      !spec.lease.valid() ||
       (spec.requirementCount && !spec.requirements)) return false;
   if (privileged) {
     for (size_t i = 0; i < spec.declaredImportCount; ++i) {
@@ -229,6 +230,7 @@ bool GraphV2::activate(size_t index) {
                                  nodes_[dependency].module.capability()};
   }
   (void)node.module.setStreamHost(streamHost_);
+  (void)node.module.setLease(node.spec.lease);
   (void)node.module.setResourceIdentity(node.spec.resourceIdentity);
   (void)node.module.setPackageAdmission(node.spec.packageManifestSha256, node.spec.packageSourceStamp);
   const bool loaded = node.spec.requiredOsCpuAbi
