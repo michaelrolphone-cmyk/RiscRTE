@@ -9,7 +9,7 @@
 using namespace RiscCpu;
 static uint64_t clockMs=0;
 static bool owned=true,online=true,oom=false,lowHeap=false,closeFail=false,tlsFail=false,slowConnect=false,readWait=false;
-static unsigned pendingConnect=0,connectPolls=0;static bool invalidSocket=false;
+static unsigned pendingConnect=0,connectPolls=0,socketCloses=0;static bool invalidSocket=false,socketCloseFail=false;
 static int live=0,opens=0,closes=0,allocations=0;
 static size_t chunk=512;
 static std::vector<std::string> responses;
@@ -24,10 +24,12 @@ size_t heap_caps_get_largest_free_block(unsigned){return 48*1024;}
 void* heap_caps_malloc(size_t n,unsigned caps){assert(caps==(MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));if(oom)return nullptr;++allocations;return std::malloc(n);}
 void heap_caps_free(void* p){--allocations;std::free(p);}
 esp_tls_t* esp_tls_init(){if(tlsFail)return nullptr;++live;return new esp_tls_t{static_cast<unsigned>(opens++)};}
-int esp_tls_conn_destroy(esp_tls_t* p){--live;++closes;delete p;return closeFail?-1:0;}
+extern "C" int __wrap_close(int fd){assert(fd==7);++socketCloses;return socketCloseFail?-1:0;}
+int esp_tls_conn_destroy(esp_tls_t* p){assert(p->sockfd==-1&&p->server_fd.fd==-1);--live;++closes;delete p;return closeFail?-1:0;}
 esp_err_t esp_crt_bundle_attach(void* p){static_cast<mbedtls_ssl_config*>(p)->f_vrfy=chain;return ESP_OK;}
 int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* cfg,esp_tls_t* tls){
  assert(n>0 && host[n]==0 && port==443 && cfg->non_block && !cfg->skip_common_name && cfg->timeout_ms>0);
+ if(tls->conn_state==ESP_TLS_INIT)tls->sockfd=7;
  if(slowConnect)return 0;
  if(pendingConnect){
   ++connectPolls;
@@ -41,7 +43,7 @@ int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* 
  if(tls->conn_state==ESP_TLS_CONNECTING){
   assert(FD_ISSET(tls->sockfd,&tls->rset)&&FD_ISSET(tls->sockfd,&tls->wset));
  }
- tls->conn_state=ESP_TLS_HANDSHAKE;
+ tls->conn_state=ESP_TLS_HANDSHAKE;tls->server_fd.fd=tls->sockfd;
  config={};assert(cfg->crt_bundle_attach(&config)==0);assert(config.major==3&&config.minor==3);return 1;
 }
 ssize_t esp_tls_conn_write(esp_tls_t*,const void* p,size_t n){size_t k=std::min(n,chunk);sent.append(static_cast<const char*>(p),k);return k;}
@@ -54,7 +56,7 @@ static bool owner(){return owned;}static bool ready(){return online;}
 static void reset(std::vector<std::string> response={"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello"}){
  assert(NativeHttp::idle()&&live==0&&allocations==0);
  clockMs=0;owned=online=true;oom=lowHeap=closeFail=tlsFail=slowConnect=readWait=false;chainFlags=0;
- pendingConnect=connectPolls=0;invalidSocket=false;
+ pendingConnect=connectPolls=socketCloses=0;invalidSocket=socketCloseFail=false;
  responses=std::move(response);opens=closes=0;inputAt=0;sent.clear();chunk=512;NativeHttp::configure(owner,ready);
 }
 static uint64_t open(uint32_t maximum=1024,uint32_t ms=30000){
@@ -124,6 +126,19 @@ int main(){
   cert.valid_to.year=2025;assert(config.f_vrfy(config.p_vrfy,&cert,0,&flags)==0&&(flags&MBEDTLS_X509_BADCERT_EXPIRED));
   flags=0;cert.valid_from.year=2027;assert(config.f_vrfy(config.p_vrfy,&cert,0,&flags)==0&&(flags&MBEDTLS_X509_BADCERT_FUTURE));
   flags=0;chainFlags=8;assert(config.f_vrfy(config.p_vrfy,&cert,0,&flags)==0&&(flags&8));close(t);cases+=4;
+ }
+ // A direct checked socket close observes failures that the SDK normally
+ // discards. Ambiguous ownership never closes either descriptor.
+ for(unsigned which=0;which<4;++which){
+  reset();auto t=open();std::string body;assert(run(t,body)==RISC_HTTP_EOF);
+  if(which==0)socketCloseFail=true;
+  if(which==1)NativeHttp::session->tls->server_fd.fd=8;
+  if(which==2)NativeHttp::session->tls->sockfd=-1;
+  if(which==3)NativeHttp::session->tls->sockfd=-2;
+  assert(NativeHttp::api()->close(nullptr,t)==RISC_HTTP_RETAINED&&live==0&&!NativeHttp::safe());
+  assert(socketCloses==(which==0?1u:0u));
+  assert(NativeHttp::api()->close(nullptr,t)==RISC_HTTP_RETAINED&&closes==1);
+  NativeHttp::session->~Session();heap_caps_free(NativeHttp::session);NativeHttp::session=nullptr;++cases;
  }
  // Last case intentionally retains native poison after SDK freed a socket
  // object but could not prove closure; no new requests or unsafe unload.

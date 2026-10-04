@@ -59,7 +59,7 @@ def stage(source):
  require(TARGET.encode()+b'\0' in blobs['firmware.bin'],'wrong compiled target')
  version=firmware((ROOT/'platformio.ini').read_text())
  for marker in [('RTE_SOURCE='+source).encode()+b'\0',('RISC_RUNTIME_VERSION:'+version).encode()+b'\0',b'RISC_PAIRED_STORE_ABI:1\0']:
-  require(all(marker in blobs[n] for n in ('firmware.bin','firmware.elf')),'compiled source/version/ABI mismatch')
+  require(all(marker in blobs[n] for n in ('firmware.bin','firmware.elf')),'compiled source/version/ABI mismatch: '+repr(marker))
  require(len(blobs['firmware.bin'])<=0x300000,'firmware exceeds paired slot')
  proof=native_proof(blobs['firmware.elf'])
  for name,data in blobs.items():(output/name).write_bytes(data)
