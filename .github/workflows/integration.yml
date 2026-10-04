@@ -1,0 +1,115 @@
+name: RiscRTE integration
+on:
+  pull_request:
+    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1]
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  host:
+    name: Host integration and version guards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependencies
+        run: python -m pip install esptool==4.11.0 pyelftools==0.32
+      - name: Source version guards
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            python scripts/check_versions.py --base "$BASE_SHA"
+          else
+            python scripts/check_versions.py
+          fi
+      - name: Fetch pinned external clock and drivers (test-only)
+        uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: aa7b03c15a59aa99b2d60ae20905edbdf62e35e6
+          path: build/watch-clock-source
+          persist-credentials: false
+      - name: Real runtime, external drivers and clock through physical bus model
+        run: bash test/run_clock_integration.sh build/watch-clock-source
+      - name: Real host modules, board binding and default-child-default lifecycle
+        run: |
+          bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
+          bash test/run_runtime_test.sh
+          bash test/run_light_sleep_test.sh
+          bash test/run_deep_sleep_test.sh
+          SANITIZE=1 bash test/run_deep_sleep_test.sh
+          bash test/run_key_value_test.sh
+          SANITIZE=1 bash test/run_key_value_test.sh
+          bash test/run_retained_app_test.sh
+          SANITIZE=1 bash test/run_retained_app_test.sh
+          bash test/run_watch_test.sh
+          SANITIZE=1 bash test/run_provider_graph_v2_test.sh
+          python -m unittest discover -s test -p 'test_*.py' -v
+  target:
+    name: ESP32-S3 firmware, real ELFs and candidate bundle
+    needs: host
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-${{ runner.arch }}-risc-tools-${{ hashFiles('platformio.ini', 'requirements-ci.txt') }}
+      - name: Install pinned tools
+        run: python -m pip install -r requirements-ci.txt
+      - name: Build firmware and real default/child/provider ELFs
+        run: |
+          pio run -e esp32s3 -j 1
+          python scripts/build_apps.py
+          bash test/run_elf_test.sh
+          pio run -e esp32s3 -t buildfs -j 1
+      - name: Freeze and verify candidate release assets
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/release_assets.py stage --source-sha "$SOURCE_SHA"
+          python scripts/release_assets.py verify --source-sha "$SOURCE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-firmware-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build and verify generic 16 MiB native-USB runtime
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-usb -j 1
+          python scripts/usb_candidate.py --source-sha "$SOURCE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-esp32s3-16mb-usb-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/esp32s3-16mb-usb/
+          if-no-files-found: error
+          retention-days: 14

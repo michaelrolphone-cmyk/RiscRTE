@@ -1,0 +1,28 @@
+--- a/scripts/build_clock_deployment.py
++++ b/scripts/build_clock_deployment.py
+@@ -70,6 +70,7 @@
+             else:boot['app_capabilities'].append(policy)
+         files['INSTALL.md']=(root/'docs/LAUNCHER_INSTALL.md').read_bytes()
+     selected = []
++    artifact_paths = {}
+     for device in board['devices']:
+         candidates = [m for m in manifests if any(
+             h['compatible'] == device['compatible'] and h['config_type'] == device['config_type']
+@@ -86,11 +87,15 @@
+             elf = archive.read('driver.elf')
+             if json.loads(archive.read('source-manifest.json')) != manifest:
+                 raise ValueError('Source manifest differs from packaged driver')
+-        prefix = 'store/' + devices[device['instance_id']]
++        path = artifact_paths.setdefault(manifest['id'], devices[device['instance_id']])
++        prefix = 'store/' + path
++        if prefix + '/driver.elf' in files:
++            if files[prefix + '/driver.elf'] != elf or files[prefix + '/manifest.json'] != encoded(manifest):
++                raise ValueError('Package instances disagree on artifact/manifest')
+         files[prefix + '/driver.elf'] = elf
+         files[prefix + '/manifest.json'] = encoded(manifest)
+         files['packages/' + package['archive']] = data
+-        boot['drivers'].append({'manifest': devices[device['instance_id']] + '/manifest.json',
++        boot['drivers'].append({'manifest': path + '/manifest.json',
+                                 'instance_id': device['instance_id']})
+         selected.append({**package, 'instance_id': device['instance_id']})
+     files['store/boot.json'] = encoded(boot)

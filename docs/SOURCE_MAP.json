@@ -1,0 +1,604 @@
+[
+  {
+    "destination": ".gitignore",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": ".gitignore",
+    "source_sha256": "a776a5f58edf83ce73cc2b02e89993ff21a534eab421d5787c0d864c314a6728"
+  },
+  {
+    "destination": "AGENTS.md",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "AGENTS.md",
+    "source_sha256": "3fe1a905a73720c5405bb6c456529f7b4cccae9de0260dc06070e4a987cd5d14"
+  },
+  {
+    "destination": "LICENSE",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "LICENSE",
+    "source_sha256": "7212963b5b1b5ee34ca158163356beb1e6945dd2cc5d320f1fe7573c424ea640"
+  },
+  {
+    "destination": "README.md",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "README.md",
+    "source_sha256": "04937a9fbce517812262838d468180c223ad1663bc387c4f24d596887f7177b1"
+  },
+  {
+    "destination": "lib/elf_loader/CHANGELOG.md",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/CHANGELOG.md",
+    "source_sha256": "59231c48ad41bff1ed67690b194ff5e1780d07d3cb194f9d9674d35accd1a1a4"
+  },
+  {
+    "destination": "lib/elf_loader/CMakeLists.txt",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/CMakeLists.txt",
+    "source_sha256": "0b942c88ecb16950bed4f418983014f6c9a25487fdfc621476ebefb51a3765af"
+  },
+  {
+    "destination": "lib/elf_loader/Kconfig",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/Kconfig",
+    "source_sha256": "532cea3ef8cb7e9af97694c1f3bddec60a8453de6f7aabbbbcaca855168b3ca7"
+  },
+  {
+    "destination": "lib/elf_loader/README.md",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/README.md",
+    "source_sha256": "dd33bb577b32f104f3e9f8b0650737cbb885b97b13ffab79c23b6d8057900524"
+  },
+  {
+    "destination": "lib/elf_loader/UPSTREAM.md",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/UPSTREAM.md",
+    "source_sha256": "e8b6bacaa326492b3387fd46aa477a0fed5a42e116bd94513070a18a05c9a129"
+  },
+  {
+    "destination": "lib/elf_loader/check_shared_object.cmake",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/check_shared_object.cmake",
+    "source_sha256": "f6db411fcc6bb9a02fa1f09919ddfb99374a11bc57942ac4df6f6188ef032c45"
+  },
+  {
+    "destination": "lib/elf_loader/elf_loader.cmake",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/elf_loader.cmake",
+    "source_sha256": "4e2b74ed77903be2b107dfe2c103deb5e76db4b3259179f8e17976a587dd79fa"
+  },
+  {
+    "destination": "lib/elf_loader/idf_component.yml",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/idf_component.yml",
+    "source_sha256": "259f9e135559178b85ec6710ab6a17ab9a6a88c81187966eaa3ba614a455a7a9"
+  },
+  {
+    "destination": "lib/elf_loader/include/esp_dlfcn.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/esp_dlfcn.h",
+    "source_sha256": "3406d27e7ae6b1b443d27bb69ee7e862f60238a8d8b55e3e4bea76d66d328b6f"
+  },
+  {
+    "destination": "lib/elf_loader/include/esp_elf.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/esp_elf.h",
+    "source_sha256": "f4cef04b710e4863670a159040de4435a7fc19790a293a6223d2656ee98eb006"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/elf_platform.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/elf_platform.h",
+    "source_sha256": "8b13fcd20fb8f4f783bd29b868a9a9b4a3caf58047ee851230d1f3f38bda6792"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/elf_symbol.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/elf_symbol.h",
+    "source_sha256": "288b180445016fc889a1aec0ece5693c9ba99d923f7ec82bc87b0f85b72bb719"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/elf_types.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/elf_types.h",
+    "source_sha256": "13a6aa3f2977c9da9d83ed7101a6deed9c01e96d0c614be3f84963be0c1a3eda"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/esp_dlmod.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/esp_dlmod.h",
+    "source_sha256": "1555b1e6a6db5c07150df6492d069d925f8a362a980f70956c8d731d03efde90"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/esp_elf_data_layout.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/esp_elf_data_layout.h",
+    "source_sha256": "54bbab2ca18a95c92741da93c169605752914941f61955b694e8cbb301bcfc1e"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/esp_privileged_elf.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/esp_privileged_elf.h",
+    "source_sha256": "7e6d5cc99f9ab1258b4e27d20332c2d3cda2bb6cc0bcbe7eb8adbc631063125a"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/esp_privileged_imports.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/esp_privileged_imports.h",
+    "source_sha256": "0a4a706df9a4580bb08ab8b32c294e74d4800ab8c6c5648aa243a1736cde142a"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/esp_privileged_manifest_imports.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/esp_privileged_manifest_imports.h",
+    "source_sha256": "d55d9f76d789f89ed00dac65a05b79f3e653c4a13e08a29fdcffbced1256c91a"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/esp_privileged_os_cpu.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/esp_privileged_os_cpu.h",
+    "source_sha256": "6ae9edece43fa2c33b6df101e12c99cd45113d115b18ee0db16ebaef3288a43b"
+  },
+  {
+    "destination": "lib/elf_loader/include/private/privileged_os_cpu_symbols_v1.def",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/include/private/privileged_os_cpu_symbols_v1.def",
+    "source_sha256": "77d0eb9c83ab4ea051c9b1011592049e774dc8c2e6d9ddbd14753cfedc3570e6"
+  },
+  {
+    "destination": "lib/elf_loader/library.json",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/library.json",
+    "source_sha256": "a42a8dcb15d81d987b055edfebec9e72e52af1bb9c978d42db7e6b48fbc8f5ee"
+  },
+  {
+    "destination": "lib/elf_loader/license.txt",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/license.txt",
+    "source_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  {
+    "destination": "lib/elf_loader/linker.lf",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/linker.lf",
+    "source_sha256": "26e023b07668f37c812cad1b41217ee7f31e10683acb4cb5407daf6fd8d53565"
+  },
+  {
+    "destination": "lib/elf_loader/project_include.cmake",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/project_include.cmake",
+    "source_sha256": "f2fb6d2b5559ae8239a135b557aad3f147066f9a9c0afd0b72f28159ab106af5"
+  },
+  {
+    "destination": "lib/elf_loader/src/arch/esp_elf_riscv.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/arch/esp_elf_riscv.c",
+    "source_sha256": "f342b33cab7a66eb49bafc5f711f9c9ec53ccf2d81731b4719f4efa630c695a7"
+  },
+  {
+    "destination": "lib/elf_loader/src/arch/esp_elf_xtensa.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/arch/esp_elf_xtensa.c",
+    "source_sha256": "9391c1f8c85becc8ec2d68188c7a451d83208b655ad083a61b4c51f80c067754"
+  },
+  {
+    "destination": "lib/elf_loader/src/dlso/dlfcn.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/dlso/dlfcn.c",
+    "source_sha256": "6a59bcf17214af7c46a1287c769599b4d834de6cd0d2f7e03b5a5b0ceeb76464"
+  },
+  {
+    "destination": "lib/elf_loader/src/dlso/dlmod.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/dlso/dlmod.c",
+    "source_sha256": "02c9411d7993f7b6d13bca15094fbd58979e4fdb938a9470ef845d174a7f3bca"
+  },
+  {
+    "destination": "lib/elf_loader/src/esp_all_symbol.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/esp_all_symbol.c",
+    "source_sha256": "203376641eb31d39f5691865afbb6fab1eae2e8317e36e41f0a0192be206fb69"
+  },
+  {
+    "destination": "lib/elf_loader/src/esp_elf.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/esp_elf.c",
+    "source_sha256": "8eaa5c6c31fb94f65951e5dc579a16beed9bc5c677f81eea8a165a6e22c6d1bd"
+  },
+  {
+    "destination": "lib/elf_loader/src/esp_elf_adapter.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/esp_elf_adapter.c",
+    "source_sha256": "1c60679272af6329bf003302658888414bc65e5a24f3934b753e76e57d7b66a2"
+  },
+  {
+    "destination": "lib/elf_loader/src/esp_elf_symbol.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/esp_elf_symbol.c",
+    "source_sha256": "9e7109492376d99dba5e3819409908df4bae96acb67e9c573f567e7283a922f9"
+  },
+  {
+    "destination": "lib/elf_loader/src/esp_elf_validate.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/esp_elf_validate.c",
+    "source_sha256": "b9071ae62ba5d758fda077d436cc15c350028c341d3d9b531c3e41ba3d465594"
+  },
+  {
+    "destination": "lib/elf_loader/src/esp_privileged_elf.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/esp_privileged_elf.c",
+    "source_sha256": "81c6c0699aaded1b07b5214dd49c0ff3bbea14e7ae707073ce3f4ad91f3c6bb0"
+  },
+  {
+    "destination": "lib/elf_loader/src/esp_privileged_imports.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/esp_privileged_imports.c",
+    "source_sha256": "41f23521566e586c184ef5d2415d49a20a7bba75d64f9d50e2eaab04bad69af2"
+  },
+  {
+    "destination": "lib/elf_loader/src/esp_privileged_manifest_imports.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/esp_privileged_manifest_imports.c",
+    "source_sha256": "d88466041bcc9828bb007197b0083af6570c7c8f0d8b896c6d17c234bf15f3ef"
+  },
+  {
+    "destination": "lib/elf_loader/src/esp_privileged_os_cpu.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/esp_privileged_os_cpu.c",
+    "source_sha256": "d1b79872c76be062eb0bd04f4bdb0a1eb0909fb450eb6123d3d49f8ef28ceab5"
+  },
+  {
+    "destination": "lib/elf_loader/src/soc/esp_elf_esp32s2.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/src/soc/esp_elf_esp32s2.c",
+    "source_sha256": "163857a64578cf8bfbed900ea5168cd43a1db6a51b7921b7dec1b588b989e03e"
+  },
+  {
+    "destination": "lib/elf_loader/tool/symbols.py",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/elf_loader/tool/symbols.py",
+    "source_sha256": "81398e6eeb1bd381e0a8a1cb36d81452f6ea8f2d69a577e3a9599619c5e54246"
+  },
+  {
+    "destination": "lib/hal/RuntimeFaultRetention.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/hal/RuntimeFaultRetention.h",
+    "source_sha256": "f44b9a1390a0a8d639a7183956d0bd063c213ee8054eff694c4ca26bfc921128"
+  },
+  {
+    "destination": "lib/hal/StorageGeneration.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/hal/StorageGeneration.h",
+    "source_sha256": "b0f61f618d814ac07c699fb83040d3909a7554b79b0a6d16d21e52e95c30efd5"
+  },
+  {
+    "destination": "partitions.csv",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "partitions.csv",
+    "source_sha256": "8eab8ddac3fe3b14ab1f5b3a108b8982ac7a6851d7e3e28d1848d37f9a62d2ed"
+  },
+  {
+    "destination": "platformio.ini",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "platformio.ini",
+    "source_sha256": "16a363b4315ab874c62bae93a0f26fde64c50afc3bc087a2774d8783c90bff20"
+  },
+  {
+    "destination": "sdk/driver/RiscPackageResourcesV1.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "sdk/driver/RiscPackageResourcesV1.h",
+    "source_sha256": "8aff53415cf68a46e8e492dd02d12bde802ce2a1d69629dd4f3b0aad5794e459"
+  },
+  {
+    "destination": "sdk/driver/RiscProviderV2.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "sdk/driver/RiscProviderV2.h",
+    "source_sha256": "2935d83493a411e19ee98b8c7e805b86f4adf98c6bde66fd031df7cc379bdc17"
+  },
+  {
+    "destination": "sdk/driver/RiscStreamProviderV1.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "sdk/driver/RiscStreamProviderV1.h",
+    "source_sha256": "0fe306e060321387c816bb70ec4370a501a423f4fe19a20c9be80aa1b98f3432"
+  },
+  {
+    "destination": "src/main.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/main.cpp",
+    "source_sha256": "24c427b997d43685cec41ef7c724aa105d8e14f51e2c0d4f3e9c5f11e6fbc1f8"
+  },
+  {
+    "destination": "src/native/NativeAppMemory.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/native/NativeAppMemory.cpp",
+    "source_sha256": "22cebe3f126f350a2fc9288e54dc7c8d8ad2d67844b6cf6cd0a636bca8bf3709"
+  },
+  {
+    "destination": "src/native/NativeAppMemory.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/native/NativeAppMemory.h",
+    "source_sha256": "1f76dd6bdc2b4c769aa56d1fd7526a1d25357f1819d3c059fa98cc883d71f95f"
+  },
+  {
+    "destination": "src/runtime/drivers/ProviderGraphV2.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/runtime/drivers/ProviderGraphV2.cpp",
+    "source_sha256": "d792f851e460b756663bb47f7017d86dd60eb196b4aaf495e44d6574d587bef8"
+  },
+  {
+    "destination": "src/runtime/drivers/ProviderGraphV2.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/runtime/drivers/ProviderGraphV2.h",
+    "source_sha256": "34984765353404588af4459c8f6339c758a9f9a028b58facda04dd1cc374c044"
+  },
+  {
+    "destination": "src/runtime/drivers/ProviderModuleV2.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/runtime/drivers/ProviderModuleV2.cpp",
+    "source_sha256": "3fbc79ce394900e9222e4a1e796135cf9f5100840cca6f8d89c7f6dbf76bd1e8"
+  },
+  {
+    "destination": "src/runtime/drivers/ProviderModuleV2.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/runtime/drivers/ProviderModuleV2.h",
+    "source_sha256": "55bff4e9e520736c7d15194948bccebada50431dbd1f9a0066e9bc5b08c9dd2f"
+  },
+  {
+    "destination": "src/runtime/drivers/ProviderOwnedSpecV2.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/runtime/drivers/ProviderOwnedSpecV2.h",
+    "source_sha256": "3f9e2b3802dba81a7abbb7738b294b9b25f8f57095c61ad78b0fe074100067f1"
+  },
+  {
+    "destination": "src/runtime/packages/PackageIdentity.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/runtime/packages/PackageIdentity.h",
+    "source_sha256": "b9438c33b9575f1198cbe0a32a408f6960a4c3b56724e4828e6b632e35aa8204"
+  },
+  {
+    "destination": "src/runtime/packages/PackageJsonGuard.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/runtime/packages/PackageJsonGuard.h",
+    "source_sha256": "d18d1cc02a5626f844fab2f6eeb4083ec1e07f4f16474e66140e0007271cfee3"
+  },
+  {
+    "destination": "src/runtime/resources/AppAllocationLedger.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "src/runtime/resources/AppAllocationLedger.h",
+    "source_sha256": "f6187a87b837b0a772cd7d320b194ac22594e5a0b92f343d5113487326a77d05"
+  },
+  {
+    "destination": "test/drivers/provider_dependency_lifetime_v2_test.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_dependency_lifetime_v2_test.cpp",
+    "source_sha256": "360ae51ea8ce7ca7d78bba1158c1f3b6b2f986c1b336cf7c21b264ef6f496adb"
+  },
+  {
+    "destination": "test/drivers/provider_dependency_retention_fixture.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_dependency_retention_fixture.c",
+    "source_sha256": "9b226d998e074ff241432df237afadea0edca749c12889dd531730de45151b69"
+  },
+  {
+    "destination": "test/drivers/provider_failed_start_fixture.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_failed_start_fixture.c",
+    "source_sha256": "eeafb2da416367cfef64408d600c3245c678d6e9e84df6b652add0a31e1a9460"
+  },
+  {
+    "destination": "test/drivers/provider_failed_start_recovery_v2_test.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_failed_start_recovery_v2_test.cpp",
+    "source_sha256": "554f58396840e1854c62f8719a6acc3063c615b76295984957d9fb3d89c83dc6"
+  },
+  {
+    "destination": "test/drivers/provider_failed_teardown_v2_test.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_failed_teardown_v2_test.cpp",
+    "source_sha256": "508245ece05627d084f9b446e569b308f1aadd41a2598c6dbb7a3f87555b5e35"
+  },
+  {
+    "destination": "test/drivers/provider_graph_destruction_guard_v2_test.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_graph_destruction_guard_v2_test.cpp",
+    "source_sha256": "c7db964b53d07b02566adf4c3801f288d6c19ee78b68c14f7b06c6feb71dc2ad"
+  },
+  {
+    "destination": "test/drivers/provider_graph_fixture.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_graph_fixture.c",
+    "source_sha256": "dafdb674b6d05af2ccf25875dc4be4b638bfa8be878b11c204915b1a14f8ec17"
+  },
+  {
+    "destination": "test/drivers/provider_graph_v2_test.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_graph_v2_test.cpp",
+    "source_sha256": "c87c535bef606e7c0fa3d2c0c19b92524288adbb6499ef078439f24862746337"
+  },
+  {
+    "destination": "test/drivers/provider_owned_spec_v2_test.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_owned_spec_v2_test.cpp",
+    "source_sha256": "f2b560db6b649c040a3a1f99331446f0f441107f405099aec25734423b921099"
+  },
+  {
+    "destination": "test/drivers/provider_targeted_recovery_v2_test.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/provider_targeted_recovery_v2_test.cpp",
+    "source_sha256": "f86e4aea70d5f94b363080be3487cdfc4401bc0a6767372ff27cb523a5c1119f"
+  },
+  {
+    "destination": "test/drivers/stubs/esp_dlfcn.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/drivers/stubs/esp_dlfcn.h",
+    "source_sha256": "45cc5d82bc19154165e25c2caffc954d22c841adea1ac65cca08b0dbf4cdb657"
+  },
+  {
+    "destination": "test/native_apps/stubs/sdkconfig.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/native_apps/stubs/sdkconfig.h",
+    "source_sha256": "d18f0fce9e3255f9b1f5f934c5441b0685edd310375c68745c61ec0ce275e4ae"
+  },
+  {
+    "destination": "test/native_apps/validate_test.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/native_apps/validate_test.c",
+    "source_sha256": "1fcb4274a6b8df77fd5c31dee8ee7dfb929c7fd62a634071a19cd6c9697b42a2"
+  },
+  {
+    "destination": "test/resources/app_allocation_test.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/resources/app_allocation_test.cpp",
+    "source_sha256": "9edd8124bcacd3400f2ce40ba0b1ea59e08feef32642c4a021a8d4b3c8520783"
+  },
+  {
+    "destination": "test/run_provider_graph_v2_test.sh",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "test/run_provider_graph_v2_test.sh",
+    "source_sha256": "bd184a4917b77e903124c3f3e6472c9fe5a0419eecd6a27e5f8d7b0e42f8f530"
+  },
+  {
+    "destination": "sdk/hardware/RiscHardwareConfigV1.h",
+    "repository": "michaelrolphone-cmyk/Garden-Controller",
+    "commit": "7e30afc407c86f34364cbfa2035d6f7893fdea8c",
+    "source": "riscrte/sdk/RiscHardwareConfigV1.h",
+    "source_sha256": "47fa4cd7d4f09f571a5aedc87376d2f57520ad7873f5556af0a932011633e240"
+  },
+  {
+    "destination": "docs/HARDWARE_CONTRACT.md",
+    "repository": "michaelrolphone-cmyk/Garden-Controller",
+    "commit": "7e30afc407c86f34364cbfa2035d6f7893fdea8c",
+    "source": "riscrte/hardware/CONTRACT.md",
+    "source_sha256": "6111e4b2b8b0a3733c26922eb2c7f32d17633433a781a82e371a8a2305df4662"
+  },
+  {
+    "destination": "docs/board-manifest-v1.schema.json",
+    "repository": "michaelrolphone-cmyk/Garden-Controller",
+    "commit": "7e30afc407c86f34364cbfa2035d6f7893fdea8c",
+    "source": "riscrte/hardware/board-manifest-v1.schema.json",
+    "source_sha256": "001ea82caae4277ce31a5d9f1064b97618193e84504f6b7f4f094c947c42f7cc"
+  },
+  {
+    "destination": "apps/heartbeat/main.c",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "10f8e660a2dd6fd250f02852c1039aaf523aa8d4",
+    "source": "test/hardware/heartbeat/src/main.cpp",
+    "source_sha256": "633f6f37bfeab9ed274be176f073d88b151e6ac567f29a2b0e2440b458f8942e"
+  },
+  {
+    "destination": "sdk/hardware/TWatchHardwareV1.h",
+    "repository": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+    "commit": "e48a540cdc2c4c1e642fbf20807e2743e2a679a9",
+    "source": "sdk/driver/TWatchHardwareV1.h",
+    "source_sha256": "19fdcd6999dd63b5aeede0ed22c699af5d63231760acb15e2a113c3605cc7128"
+  },
+  {
+    "destination": "src/bootstrap/EmbeddedStore.cpp",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "3d9bc4f373679f5ae8dd184db6a8d0afa5a40231",
+    "source": "lib/NativeApps/src/SdVfs.cpp",
+    "source_sha256": "fcde9c387ced10509bb7afb1077b16aaada57b03a1742140296c1561cdbfa025"
+  },
+  {
+    "destination": "test/hardware/x4/partitions.csv",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "10f8e660a2dd6fd250f02852c1039aaf523aa8d4",
+    "source": "partitions.csv",
+    "source_sha256": "8eab8ddac3fe3b14ab1f5b3a108b8982ac7a6851d7e3e28d1848d37f9a62d2ed"
+  },
+  {
+    "destination": "sdk/driver/GardenPlatformV1.h",
+    "repository": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+    "commit": "aa7b03c15a59aa99b2d60ae20905edbdf62e35e6",
+    "source": "sdk/driver/GardenPlatformV1.h",
+    "source_sha256": "5b5f806a34615feef3f736a6cbf8481854c789067f477bd19d187206a9de333d"
+  },
+  {
+    "destination": "sdk/driver/TWatchPlatformV1.h",
+    "repository": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+    "commit": "aa7b03c15a59aa99b2d60ae20905edbdf62e35e6",
+    "source": "sdk/driver/TWatchPlatformV1.h",
+    "source_sha256": "88457c6cd36a8d2550c964ede1060b4006b72be5d290cff7cd108087bacc16dd"
+  },
+  {
+    "destination": "sdk/driver/RiscPlatformClockV1.h",
+    "repository": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+    "commit": "aa7b03c15a59aa99b2d60ae20905edbdf62e35e6",
+    "source": "sdk/driver/RiscPlatformClockV1.h",
+    "source_sha256": "41a12f6529f38731ee874f8bc166e1cf89fe376a1448fe5a4dd4c9abac90e5e2"
+  }
+]

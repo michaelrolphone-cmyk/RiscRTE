@@ -1,0 +1,5 @@
+# Example NEW 8MiB board layout; never apply over an existing layout implicitly.
+# Name, Type, SubType, Offset, Size
+nvs,data,nvs,0x9000,0x6000
+factory,app,factory,0x10000,0x300000
+bootfs,data,spiffs,0x310000,0x4f0000

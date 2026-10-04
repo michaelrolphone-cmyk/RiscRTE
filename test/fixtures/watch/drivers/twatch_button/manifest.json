@@ -1,0 +1,40 @@
+{
+  "type": "driver",
+  "id": "twatch-button",
+  "version": "0.2.0",
+  "driver_abi": 2,
+  "architecture": "xtensa-esp32s3",
+  "file_name": "driver.elf",
+  "requires": [
+    {
+      "capability": "hardware.device",
+      "api": 1
+    },
+    {
+      "capability": "platform.gpio",
+      "api": 1
+    },
+    {
+      "capability": "platform.clock",
+      "api": 1
+    }
+  ],
+  "provides": [
+    {
+      "capability": "input.navigation",
+      "api": 1
+    }
+  ],
+  "status": "software-only-runtime-backfill-required",
+  "hardware_compatibility": [
+    {
+      "compatible": "generic,gpio-button-bank",
+      "revisions": [
+        "unspecified"
+      ],
+      "config_type": "gpio.bank",
+      "config_version": 1
+    }
+  ],
+  "physical_verification": "pending"
+}

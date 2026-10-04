@@ -1,0 +1,18 @@
+{
+  "repository": "https://github.com/michaelrolphone-cmyk/Garden-Controller",
+  "commit": "7e30afc407c86f34364cbfa2035d6f7893fdea8c",
+  "files": {
+    "relay6.json": {
+      "source": "riscrte/Drivers/garden_relay6/hardware.json",
+      "sha256": "8839f0cf8ea3360a1457384ce231fd60c95876a2e3978854dfcf6ad53d8490a4"
+    },
+    "crowpanel.json": {
+      "source": "riscrte/Drivers/garden_crowpanel/hardware.json",
+      "sha256": "882dd5c98fe0492203d3970fe6e7670b731b2d562063ac784d61acbb738134dd"
+    },
+    "paper.json": {
+      "source": "riscrte/Drivers/garden_paper/hardware.json",
+      "sha256": "e40b271cf00bff49878095e62b6e7adc1184dde695ad036cee8ebd9adb4131bb"
+    }
+  }
+}

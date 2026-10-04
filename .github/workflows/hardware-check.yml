@@ -1,0 +1,47 @@
+name: Exact-source runtime hardware results
+on:
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: runtime-hardware-results-${{ github.ref }}
+  cancel-in-progress: true
+# Independent from build workflows: the trusted controller consumes completed
+# build runs, so a result poll must never keep its own artifact run in progress.
+jobs:
+  cam:
+    name: ESP32-CAM actual boot, advancing heartbeat and cleanup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      statuses: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Require the trusted controller's exact-source result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/hardware_gate.py --source-sha "$SOURCE_SHA"
+  x4:
+    name: X4 actual runtime boot, advancing heartbeat and cleanup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      statuses: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Require the trusted controller's exact-source result
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/hardware_gate.py --source-sha "$SOURCE_SHA" --context "X4 hardware / runtime heartbeat cleanup"

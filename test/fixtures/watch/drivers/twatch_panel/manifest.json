@@ -1,0 +1,48 @@
+{
+  "type": "driver",
+  "id": "twatch-panel",
+  "version": "0.2.1",
+  "driver_abi": 2,
+  "architecture": "xtensa-esp32s3",
+  "file_name": "driver.elf",
+  "requires": [
+    {
+      "capability": "hardware.device",
+      "api": 1
+    },
+    {
+      "capability": "platform.gpio",
+      "api": 1
+    },
+    {
+      "capability": "spi.bus",
+      "api": 1
+    },
+    {
+      "capability": "platform.clock",
+      "api": 1
+    },
+    {
+      "capability": "board.battery",
+      "api": 1
+    }
+  ],
+  "provides": [
+    {
+      "capability": "display.output",
+      "api": 1
+    }
+  ],
+  "status": "software-only-runtime-backfill-required",
+  "hardware_compatibility": [
+    {
+      "compatible": "sitronix,st7789v3",
+      "revisions": [
+        "unspecified"
+      ],
+      "config_type": "display.spi",
+      "config_version": 1
+    }
+  ],
+  "physical_verification": "pending"
+}

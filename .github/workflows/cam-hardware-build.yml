@@ -1,0 +1,44 @@
+name: ESP32-CAM candidate and hardware heartbeat
+on:
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cam-hardware-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  candidate:
+    name: Build immutable application-only CAM candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-${{ runner.arch }}-risc-tools-${{ hashFiles('platformio.ini', 'requirements-ci.txt') }}
+      - run: python -m pip install -r requirements-ci.txt
+      - name: Build runtime and real separately linked heartbeat ELF
+        run: pio run -e cam-ci -j 1
+      - name: Verify and freeze embedded payload custody
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python scripts/cam_candidate.py --source-sha "$SOURCE_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cam-app-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/cam/
+          if-no-files-found: error
+          retention-days: 14

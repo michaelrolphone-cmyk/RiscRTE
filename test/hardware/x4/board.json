@@ -1,0 +1,8 @@
+{
+  "schema": "riscrte.board-hardware",
+  "schema_version": 1,
+  "board_id": "xteink-x4-pro-serial-ci",
+  "revision": "unspecified",
+  "buses": [],
+  "devices": []
+}
