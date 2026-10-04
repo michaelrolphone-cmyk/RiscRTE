@@ -169,7 +169,7 @@ bool Runtime::validateGraph() {
 }
 bool Runtime::appPolicies(JsonVariantConst value) {
   if (value.isNull()) return true;
-  if (!value.is<JsonArrayConst>() || value.size()>8) return fail("invalid app capability policy");
+  if (!value.is<JsonArrayConst>() || value.size()>MaxAppPolicies) return fail("invalid app capability policy");
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
     auto& policy=policies_[policyCount_]; char relative[193]; JsonDocument doc;
     if (!keys(item,{"manifest","grants"}) || !text(item["manifest"],relative,sizeof(relative)) ||

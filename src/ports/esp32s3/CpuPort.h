@@ -30,6 +30,10 @@ struct Hardware {
   bool (*deepHold)(uint8_t,bool)=nullptr;
   bool (*timerArm)(uint32_t)=nullptr;
   bool (*timerClear)()=nullptr;
+  // Additive standard signed16 stereo TX; buffers are copied before return.
+  bool (*i2sOpen)(uint8_t,uint8_t,uint8_t,uint8_t,uint32_t)=nullptr;
+  bool (*i2sWrite)(uint8_t,const int16_t*,size_t,size_t*,uint32_t)=nullptr;
+  bool (*i2sClose)(uint8_t)=nullptr;
 };
 class Port final {
  public:
@@ -45,9 +49,10 @@ class Port final {
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; garden_spi_v1 api{}; } spis_[8];
   struct SpiBus { uint64_t instance=0; unsigned refs=0; Spi* held=nullptr; } spiBuses_[2];
+  struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; } i2ss_[2];
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false; } pins_[49];
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
-  size_t gpioCount_=0,i2cCount_=0,spiCount_=0;
+  size_t gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0;
   risc_platform_clock_api_v1 clock_{};
   bool available() const { return hw_.owner && hw_.owner() && !poisoned_ && !sleeping_; }
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
@@ -71,6 +76,10 @@ class Port final {
   static bool spiBegin(void*,uint64_t,uint32_t,uint8_t,uint32_t);
   static bool spiTransfer(void*,uint64_t,const uint8_t*,uint8_t*,size_t);
   static bool spiEnd(void*,uint64_t); static bool spiRelease(void*,uint64_t);
+  static bool i2sOpen(void*,uint8_t,bool,uint8_t,int8_t,uint8_t,uint32_t,uint8_t,uint64_t*);
+  static bool i2sWrite(void*,uint64_t,const int16_t*,size_t,size_t*,uint32_t);
+  static bool i2sRead(void*,uint64_t,int16_t*,size_t,size_t* done,uint32_t){if(done)*done=0;return false;}
+  static bool i2sClose(void*,uint64_t);
   static bool idleClocks(void*,uint64_t,uint32_t,uint16_t){return false;}
 };
 Hardware nativeHardware(bool (*owner)());

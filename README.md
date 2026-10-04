@@ -140,6 +140,7 @@ storage call. The mounted store must remain immutable while a boot session runs.
 ```sh
 bash test/run_board_test.sh
 bash test/run_runtime_test.sh
+bash test/run_i2s_test.sh
 bash test/run_deep_sleep_test.sh
 bash test/run_key_value_test.sh
 bash test/run_bound_key_value_test.sh
@@ -195,3 +196,8 @@ active lifetime, and revoked before diagnostics or teardown. Existing app KV,
 provider ABI, NVS backend and sleep behavior stay unchanged. See
 [provider authority and lifecycle](docs/PROVIDER_KEY_VALUE.md). This is generic
 storage plumbing; application services, scheduling, encodings and UI remain ELFs.
+
+Firmware 0.1.8 adds selected-device, bounded standard I2S TX through the existing
+raw controller ABI and raises the named app-policy capacity to sixteen without
+changing per-app authority. Output policy, waveforms, haptics and PMU rails stay
+in external providers. See [TX ownership and cleanup](docs/I2S_TX.md).

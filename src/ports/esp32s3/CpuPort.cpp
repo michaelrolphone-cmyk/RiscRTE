@@ -27,6 +27,7 @@ void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins
 bool Port::appExitSafe() const {
   if(!available() || sleepRetained_ || transferring_)return false;
   for(const auto& pin:pins_)if(pin.held)return false;
+  for(const auto& c:i2ss_)if(c.token)return false;
   return true;
 }
 bool Port::quiescent() const {
@@ -70,6 +71,13 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       c.api={1,sizeof(c.api),&c,i2cOpen,i2cTransfer,i2cClose};
       if(!runtime.registerPlatform("platform.i2c.controller",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
+    if(runtime.uses(id,"platform.i2s.controller",1)){
+      if(i2sCount_==2 || strcmp(d.type,"audio.i2s") || d.config.audio.pdm_rx ||
+         !hw_.i2sOpen || !hw_.i2sWrite || !hw_.i2sClose)return false;
+      auto& c=i2ss_[i2sCount_++];c.port=this;c.config=d.config.audio;
+      c.api={1,sizeof(c.api),&c,i2sOpen,i2sWrite,i2sRead,i2sClose};
+      if(!runtime.registerPlatform("platform.i2s.controller",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
+    }
     if(runtime.uses(id,"spi.bus",1)){
       // First CPU-port slice supports generic display SPI transport only. Other
       // SPI protocols need their actual required operations (e.g. idle clocks).
@@ -81,6 +89,44 @@ bool Port::bind(RiscBoot::Runtime& runtime){
     }
   }
   return true;
+}
+bool Port::i2sOpen(void* context,uint8_t unit,bool rx,uint8_t clk,int8_t ws,uint8_t data,uint32_t rate,uint8_t channels,uint64_t* out){
+  if(out)*out=0;
+  auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
+  if(!out || !p.available() || p.transferring_ || c.token || rx || channels!=2 || unit!=c.config.controller ||
+     clk!=c.config.bclk || ws!=c.config.ws || data!=c.config.data ||
+     (rate!=8000 && rate!=16000 && rate!=22050 && rate!=44100))return false;
+  if(!p.reserve(clk,&c))return false;
+  if(!p.reserve(ws,&c)){p.unreserve(clk,&c);return false;}
+  if(!p.reserve(data,&c)){p.unreserve(clk,&c);p.unreserve(ws,&c);return false;}
+  const uint64_t t=p.token();
+  if(!t){p.unreserve(clk,&c);p.unreserve(ws,&c);p.unreserve(data,&c);return false;}
+  p.transferring_=true;const bool ok=p.hw_.i2sOpen(unit,clk,uint8_t(ws),data,rate);p.transferring_=false;
+  if(!ok){
+    // Preserve a cleanup token even on failure if hardware cannot prove idle.
+    p.transferring_=true;const bool clean=p.hw_.i2sClose(unit);p.transferring_=false;
+    if(clean){p.unreserve(clk,&c);p.unreserve(ws,&c);p.unreserve(data,&c);return false;}
+    p.poisoned_=true;
+  }
+  c.token=t;c.closing=!ok;*out=t;return ok;
+}
+bool Port::i2sWrite(void* context,uint64_t token,const int16_t* pcm,size_t frames,size_t* done,uint32_t ms){
+  if(done)*done=0;
+  auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
+  if(!done || !p.available() || p.transferring_ || c.closing || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
+  p.transferring_=true;const bool ok=p.hw_.i2sWrite(c.config.controller,pcm,frames,done,ms);p.transferring_=false;
+  if(*done>frames){*done=0;p.poisoned_=true;return false;}
+  return ok && *done==frames;
+}
+bool Port::i2sClose(void* context,uint64_t token){
+  auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
+  // No SPI/display drain: these separately owned controllers can stop even
+  // while unrelated display DMA is pending. Poison permits cleanup only.
+  if(!p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
+  c.closing=true;
+  p.transferring_=true;const bool ok=p.hw_.i2sClose(c.config.controller);p.transferring_=false;
+  if(!ok)return false;
+  p.unreserve(c.config.bclk,&c);p.unreserve(c.config.ws,&c);p.unreserve(c.config.data,&c);c.token=0;c.closing=false;return true;
 }
 bool Port::gpioClaim(void* context,uint8_t pin,bool output,bool initial,bool pullup,uint64_t* out){
   if(out)*out=0;
@@ -129,6 +175,7 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   if(p.poisoned_)return RISC_LIGHT_SLEEP_RETAINED;
   if(p.sleeping_ || p.transferring_)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
+  for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
   if(pin<0)return RISC_LIGHT_SLEEP_INVALID;
@@ -172,6 +219,7 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
   if(p.sleeping_ || p.transferring_)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
+  for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& pin:p.pins_)if(pin.pwm)return RISC_DEEP_SLEEP_BUSY;
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
