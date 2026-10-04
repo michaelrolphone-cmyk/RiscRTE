@@ -233,6 +233,9 @@ bool GraphV2::activate(size_t index) {
   (void)node.module.setLease(node.spec.lease);
   (void)node.module.setResourceIdentity(node.spec.resourceIdentity);
   (void)node.module.setPackageAdmission(node.spec.packageManifestSha256, node.spec.packageSourceStamp);
+  // The graph owns package identity, singleton admission and consumer counts.
+  // Every node needs its own mapping: software and hardware packages may share
+  // driver.elf, while ordinary dlopen intentionally rejects duplicate basenames.
   const bool loaded = node.spec.requiredOsCpuAbi
       ? node.module.loadVerifiedBytes(node.spec.verifiedElfBytes,
                                       node.spec.verifiedElfLength,
@@ -246,7 +249,7 @@ bool GraphV2::activate(size_t index) {
       : node.module.load(node.spec.verifiedElfPath, node.spec.id,
                          node.spec.provides, node.spec.api,
                          node.spec.requirementCount ? node.boundDependencies : nullptr,
-                         node.spec.requirementCount, node.spec.hardware!=nullptr);
+                         node.spec.requirementCount, true);
   if (!loaded) {
     if (node.module.lastError()[0])
       copyError(error_, node.module.lastError());

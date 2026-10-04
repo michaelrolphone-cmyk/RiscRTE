@@ -100,3 +100,28 @@ linking with a 120-byte `dram0_0_seg` overflow. The scan-session allocation repa
 recovers 592 static bytes by pinned Xtensa size-only measurement; a new full
 hosted target result is required. It adds OOM/lifetime regression coverage and
 does not change SDK Wi-Fi buffer policy or claim sufficient dynamic heap.
+
+## Native module-name regression (Firmware0.1.13)
+
+The owner reported Alarm0.6.5 and Wi-Fi1.1.0 boot failures at
+`alarm-service: elf-open-failed`, before the default Clock started. The first
+software provider used the same `driver.elf` basename as the already loaded
+hardware providers. GraphV2 selected ordinary `dlopen` for software; the native
+registry rejected that basename even though its full path and package differed.
+OS-only host `dlopen` tests used different lookup semantics and missed the error.
+
+`test/run_native_registry_test.sh` now compiles the unmodified production
+`dlfcn.c` and `dlmod.c`, with host ELF relocation behind that registry. It first
+reproduces the collision and preserves ordinary duplicate rejection, then checks
+mixed hardware/software same-basename graph nodes, software singleton admission,
+repeated acquisition/reference counts, distinct state, fresh reload, revoked
+lease generations, failed relocation retry, retained failed start/dependencies,
+verified recovery, cleanup/fini and corrupt same-basename rejection. Normal and
+ASan/UBSan runs pass locally. The existing dependency-lifetime and bound-storage
+suites now inspect actual independent mappings; retained replacement uses the
+exact same paths and checks fresh contexts and rejection of old authority.
+
+The host backend executes native host fixtures, not Xtensa instructions. It does
+not establish target relocation/cache correctness or physical display behavior.
+Exact-source hosted native builds and a paired Watch store/Clock gate are still
+required for a candidate, and physical qualification remains the owner's step.

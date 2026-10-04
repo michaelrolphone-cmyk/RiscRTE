@@ -5,11 +5,9 @@
 // keep the entire table, names, and dependency interfaces alive until then.
 static const risc_provider_dependency_v1* retained;
 static size_t retained_count;
-static int capability = 73;
 static bool started;
 
-__attribute__((visibility("default")))
-int retained_dependency_is_valid(void) {
+static int retained_dependency_is_valid(void) {
     return started && retained && retained_count == 1 &&
         retained[0].capability_id &&
         strcmp(retained[0].capability_id, "cap.root") == 0 &&
@@ -34,6 +32,9 @@ static void stop(void) {
     retained = 0;
     retained_count = 0;
 }
+static const struct {
+    int (*dependency_is_valid)(void);
+} capability = {retained_dependency_is_valid};
 static const risc_driver_v2 driver = {
     RISC_PROVIDER_DRIVER_ABI_V2, sizeof(risc_driver_v2),
     "fixture-retaining", "cap.retaining", 1, &capability,

@@ -145,6 +145,7 @@ bash test/run_i2s_test.sh
 bash test/run_deep_sleep_test.sh
 bash test/run_key_value_test.sh
 bash test/run_bound_key_value_test.sh
+bash test/run_native_registry_test.sh
 bash test/run_provider_module_lease_v2_test.sh
 bash test/run_retained_app_test.sh
 bash test/run_watch_test.sh
@@ -220,3 +221,13 @@ present; instance0 rejects ambiguity. Duplicate namespaces, undeclared grants,
 and non-KV duplicate capabilities still fail before app execution. This fixes
 Points/Wi-Fi production policies without adding or changing any app permission.
 No networking/OTA/partition behavior is added by this correction.
+
+## Graph-owned provider mappings
+
+Firmware0.1.13 gives every admitted provider graph node a fresh ELF mapping,
+including ordinary software providers. A software service whose package uses
+`driver.elf` can now start after hardware packages with the same basename.
+Software singleton identity, repeated-acquisition reference counts, explicit
+capability bindings, storage generation revocation and failed-quiescence
+retention remain graph-owned. Ordinary `dlopen` duplicate rejection is unchanged.
+See [native registry regression](test/support/native_registry/README.md).
