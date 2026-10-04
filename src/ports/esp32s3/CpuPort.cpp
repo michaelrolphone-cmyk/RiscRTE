@@ -28,7 +28,7 @@ bool Port::providerStorageSafe() const {
   if(!available() || sleepRetained_ || transferring_)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
   for(const auto& pin:pins_)if(pin.held)return false;
-  for(const auto& c:i2ss_)if(c.token)return false;
+  for(const auto& c:i2ss_)if(c.closing)return false;
   for(const auto& c:radios_)if(c.closing)return false;
   return true;
 }
@@ -40,6 +40,7 @@ bool Port::appExitSafe() const {
 bool Port::restartResourcesSafe() const {
   if(!providerStorageSafe())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
+  for(const auto& c:i2ss_)if(c.token)return false;
   for(const auto& c:radios_)if(c.active)return false;
   return true;
 }
@@ -118,8 +119,8 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       if(!runtime.registerPlatform("platform.i2c.controller",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
     if(runtime.uses(id,"platform.i2s.controller",1)){
-      if(i2sCount_==2 || strcmp(d.type,"audio.i2s") || d.config.audio.pdm_rx ||
-         !hw_.i2sOpen || !hw_.i2sWrite || !hw_.i2sClose)return false;
+      if(i2sCount_==2 || strcmp(d.type,"audio.i2s") || !hw_.i2sClose ||
+         (d.config.audio.pdm_rx ? (!hw_.i2sOpenRx || !hw_.i2sRead) : (!hw_.i2sOpen || !hw_.i2sWrite)))return false;
       auto& c=i2ss_[i2sCount_++];c.port=this;c.config=d.config.audio;
       c.api={1,sizeof(c.api),&c,i2sOpen,i2sWrite,i2sRead,i2sClose};
       if(!runtime.registerPlatform("platform.i2s.controller",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
@@ -152,15 +153,19 @@ bool Port::bind(RiscBoot::Runtime& runtime){
 bool Port::i2sOpen(void* context,uint8_t unit,bool rx,uint8_t clk,int8_t ws,uint8_t data,uint32_t rate,uint8_t channels,uint64_t* out){
   if(out)*out=0;
   auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
-  if(!out || !p.available() || p.transferring_ || c.token || rx || channels!=2 || unit!=c.config.controller ||
+  if(!out || !p.available() || p.transferring_ || c.token || rx!=bool(c.config.pdm_rx) || unit!=c.config.controller ||
      clk!=c.config.bclk || ws!=c.config.ws || data!=c.config.data ||
-     (rate!=8000 && rate!=16000 && rate!=22050 && rate!=44100))return false;
+     (rx ? (unit!=0 || ws!=-1 || channels!=1 || (rate!=8000 && rate!=16000) || !p.hw_.i2sOpenRx || !p.hw_.i2sRead) :
+           (channels!=2 || (rate!=8000 && rate!=16000 && rate!=22050 && rate!=44100) || !p.hw_.i2sOpen || !p.hw_.i2sWrite)) ||
+     !p.hw_.i2sClose)return false;
   if(!p.reserve(clk,&c))return false;
   if(!p.reserve(ws,&c)){p.unreserve(clk,&c);return false;}
   if(!p.reserve(data,&c)){p.unreserve(clk,&c);p.unreserve(ws,&c);return false;}
   const uint64_t t=p.token();
   if(!t){p.unreserve(clk,&c);p.unreserve(ws,&c);p.unreserve(data,&c);return false;}
-  p.transferring_=true;const bool ok=p.hw_.i2sOpen(unit,clk,uint8_t(ws),data,rate);p.transferring_=false;
+  p.transferring_=true;
+  const bool ok=rx?p.hw_.i2sOpenRx(unit,clk,data,rate):p.hw_.i2sOpen(unit,clk,uint8_t(ws),data,rate);
+  p.transferring_=false;
   if(!ok){
     // Preserve a cleanup token even on failure if hardware cannot prove idle.
     p.transferring_=true;const bool clean=p.hw_.i2sClose(unit);p.transferring_=false;
@@ -172,10 +177,20 @@ bool Port::i2sOpen(void* context,uint8_t unit,bool rx,uint8_t clk,int8_t ws,uint
 bool Port::i2sWrite(void* context,uint64_t token,const int16_t* pcm,size_t frames,size_t* done,uint32_t ms){
   if(done)*done=0;
   auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
-  if(!done || !p.available() || p.transferring_ || c.closing || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
+  if(!done || !p.available() || p.transferring_ || c.closing || c.config.pdm_rx || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
   p.transferring_=true;const bool ok=p.hw_.i2sWrite(c.config.controller,pcm,frames,done,ms);p.transferring_=false;
-  if(*done>frames){*done=0;p.poisoned_=true;return false;}
-  return ok && *done==frames;
+  if(*done>frames){*done=0;p.poisoned_=true;c.closing=true;return false;}
+  if(!ok || *done!=frames){c.closing=true;return false;}
+  return true;
+}
+bool Port::i2sRead(void* context,uint64_t token,int16_t* pcm,size_t frames,size_t* done,uint32_t ms){
+  if(done)*done=0;
+  auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
+  if(!done || !p.available() || p.transferring_ || c.closing || !c.config.pdm_rx || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
+  p.transferring_=true;const bool ok=p.hw_.i2sRead(c.config.controller,pcm,frames,done,ms);p.transferring_=false;
+  if(*done>frames){*done=0;p.poisoned_=true;c.closing=true;return false;}
+  if(!ok || *done!=frames){c.closing=true;return false;}
+  return true;
 }
 bool Port::i2sClose(void* context,uint64_t token){
   auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
@@ -321,7 +336,7 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
-  for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
+  // Failed cleanup outranks healthy activity on either selected I2S unit.\n  for(const auto& c:p.i2ss_)if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;\n  for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;if(c.active)return RISC_LIGHT_SLEEP_BUSY;}
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
@@ -367,7 +382,7 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
-  for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
+  // Failed cleanup outranks healthy activity on either selected I2S unit.\n  for(const auto& c:p.i2ss_)if(c.closing)return RISC_DEEP_SLEEP_RETAINED;\n  for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_DEEP_SLEEP_RETAINED;if(c.active)return RISC_DEEP_SLEEP_BUSY;}
   for(const auto& pin:p.pins_)if(pin.pwm)return RISC_DEEP_SLEEP_BUSY;
   int pin=-1;
