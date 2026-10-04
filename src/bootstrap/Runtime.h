@@ -2,14 +2,27 @@
 #include "Board.h"
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
+#include <RiscKeyValueV1.h>
 namespace RiscBoot {
 class Runtime;
+// Optional compiled-in backend. Namespace comes only from validated boot policy.
+// Backend must obey the public status/size contract; broker copies reads only
+// after success. No app value encoding or fallback policy belongs here.
+struct KeyValueBackend {
+  void* context;
+  int32_t (*get)(void*,uint32_t,const char*,void*,uint32_t,uint32_t*);
+  int32_t (*put)(void*,uint32_t,const char*,const void*,uint32_t);
+};
 struct Port {
   bool (*owner)();
   bool (*health)(risc_runtime_health_v1*);
   void (*delay)(uint32_t);
   bool (*log)(const char*);
   bool (*bindPlatforms)(Runtime&)=nullptr;
+  const KeyValueBackend* keyValue=nullptr;
+  // False means native resources must retain the invocation and provider graph.
+  // This is a bounded non-mutating retention barrier, not provider quiescence.
+  bool (*appExitSafe)()=nullptr;
 };
 class Runtime final {
  public:
@@ -47,9 +60,12 @@ class Runtime final {
   bool runOne(const char*);
   bool appPolicies(JsonVariantConst);
   bool revokeApp();
+  bool appExitBarrier();
+  static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
+  static int32_t keyValuePut(void*,const char*,const void*,uint32_t);
   struct AppGrantPolicy {
     char capability[96]{}; uint32_t api=0; uint64_t instance=0;
-    int driver=-1, platform=-1;
+    int driver=-1, platform=-1; bool keyValue=false;
   };
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
@@ -60,6 +76,7 @@ class Runtime final {
   struct AppGrant {
     RuntimeProviders::GrantV2 provider{}; const void* api=nullptr;
     uint32_t generation=0; bool live=false;
+    uint32_t keyValueNamespace=0; risc_key_value_v1 keyValue{};
   } appGrants_[16]{};
   uint32_t grantGeneration_=0;
   struct Platform {

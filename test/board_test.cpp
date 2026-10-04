@@ -16,6 +16,23 @@ int main(int argc,char** argv) {
     const auto* hw=board.device(7);assert(hw && hw->hardware.config_size==sizeof(risc_hw_sd_spi_v1));
     assert(hw->config.sd.bus.instance_id==1 && hw->config.sd.bus.sclk==4 && hw->config.sd.cs==7);
   }
+  // SPI authorization is typed and explicit, not a global bus-clock lift.
+  for(unsigned hz:{1u,10000000u,40000000u}) {
+    assert(parse(fixture,strlen(fixture),doc));doc["buses"][0]["frequency_hz"]=hz;
+    Board b;assert(b.load(doc.as<JsonObjectConst>()));
+    assert(b.bus(1)->frequency_hz==hz && b.device(7)->config.sd.bus.frequency_hz==hz);
+  }
+  for(unsigned hz:{0u,40000001u,UINT32_MAX}) {
+    assert(parse(fixture,strlen(fixture),doc));doc["buses"][0]["frequency_hz"]=hz;
+    Board b;assert(!b.load(doc.as<JsonObjectConst>()));
+  }
+  for(unsigned hz:{400000u,1000000u,1000001u,40000000u}) {
+    assert(parse(fixture,strlen(fixture),doc));doc["devices"].as<JsonArray>().clear();
+    auto bus=doc["buses"][0].as<JsonObject>();bus["kind"]="i2c";bus["controller"]=0;bus["frequency_hz"]=hz;
+    bus["pins"].as<JsonObject>().clear();bus["pins"]["sda"]=4;bus["pins"]["scl"]=5;
+    Board b;assert(b.load(doc.as<JsonObjectConst>())==(hz<=1000000));
+  }
+  assert(parse(fixture,strlen(fixture),doc));
   // A CS may not alias shared bus signals; missing mandatory pin stays missing.
   doc["devices"][0]["config"]["cs"]=4;
   {Board b;assert(!b.load(doc.as<JsonObjectConst>()));}

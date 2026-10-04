@@ -9,9 +9,14 @@ using namespace RiscBoot;
 static unsigned generation=0, beats=0;
 static bool heartbeatMode=false;
 static std::vector<std::string> lines;
-static bool owner(){return true;}
+static bool ownerOk=true;
+static std::vector<uint32_t> waits;
+static unsigned polls=0;
+extern "C" void test_yield_owner(bool enabled){ownerOk=enabled;}
+extern "C" void test_yield_poll(uint32_t ms){assert(ms>0 && ms<=8);++polls;}
+static bool owner(){return ownerOk;}
 static bool health(risc_runtime_health_v1* h){if(heartbeatMode){ if(beats==3)return false; h->uptime_ms=(++generation)*2000; h->free_heap=123456; h->app_address=0x10000; snprintf(h->target,sizeof(h->target),"host-test"); return true;} h->uptime_ms=++generation;return true;}
-static void delay(uint32_t){}
+static void delay(uint32_t ms){waits.push_back(ms);}
 static bool logLine(const char* s){lines.emplace_back(s);if(heartbeatMode)++beats;return true;}
 static void write(const std::string& p,const std::string& s){std::ofstream(p)<<s;}
 static const char* board=R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[{"instance_id":7,"chip":{"vendor":"test","model":"gpio","revision":"unspecified"},"compatible":"test,gpio","config_type":"gpio.bank","config_version":1,"config":{"pins":[5],"active_high":true,"pull_up":false,"debounce_us":0,"long_press_us":0,"click_min_us":0}}]})";
@@ -40,6 +45,30 @@ int main(int argc,char** argv){
   {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}
   assert(generation==3 && lines.size()==5);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7}]})");
+  // One package artifact serves independent physical instances. Preserve both
+  // records; duplicate physical owners and inconsistent package versions fail.
+  {
+    JsonDocument dual;assert(parse(board,strlen(board),dual));
+    auto extra=dual["devices"].as<JsonArray>().add<JsonObject>();
+    extra.set(dual["devices"][0]);extra["instance_id"]=8;extra["config"]["pins"][0]=6;
+    std::string encoded;serializeJson(dual,encoded);write(root+"/board.json",encoded);
+    const char* two=R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7},{"manifest":"probe.json","instance_id":8}]})";
+    write(root+"/boot.json",two);
+    {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));}
+    JsonDocument config;assert(parse(two,strlen(two),config));
+    config["drivers"][1]["instance_id"]=7;encoded.clear();serializeJson(config,encoded);write(root+"/boot.json",encoded);
+    {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+    config["drivers"][1]["instance_id"]=8;config["drivers"][1]["manifest"]="probe-other.json";
+    encoded.clear();serializeJson(config,encoded);write(root+"/boot.json",encoded);
+    JsonDocument other;assert(parse(manifest,strlen(manifest),other));other["version"]="2.0.0";
+    encoded.clear();serializeJson(other,encoded);write(root+"/probe-other.json",encoded);
+    {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+    other["version"]="1.0.0";other["file_name"]="different.elf";
+    encoded.clear();serializeJson(other,encoded);write(root+"/probe-other.json",encoded);
+    {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+    write(root+"/board.json",board);
+    write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7}]})");
+  }
   // Invalid board always rejects before any driver entry/load or default app.
   JsonDocument doc;assert(parse(board,strlen(board),doc));
   doc["devices"][0]["config"]["pins"][0]=49;std::string bad;serializeJson(doc,bad);write(root+"/board.json",bad);
@@ -82,5 +111,23 @@ int main(int argc,char** argv){
     assert(seq==i+1 && uptime==(i+1)*2000 && heap>0 && app==0x10000);
   }
   puts("Heartbeat default app: three exact-format monotonic health lines PASS");
+  heartbeatMode=false;
+  // Actual runtime + real pollable provider: no extra graph sleep, inactive and
+  // wrong-owner yields do no work. An idle graph still cooperates exactly once.
+  for(bool pollable:{false,true}) {
+    JsonDocument pm;assert(parse(manifest,strlen(manifest),pm));
+    pm["file_name"]="yield-probe.elf";std::string pmJson;serializeJson(pm,pmJson);
+    write(root+"/yield-probe.json",pmJson);
+    write(root+"/boot.json",pollable?
+      R"({"board":"board.json","default_app":"yield.elf","drivers":[{"manifest":"yield-probe.json","instance_id":7}]})":
+      R"({"board":"board.json","default_app":"yield.elf","drivers":[]})");
+    waits.clear();polls=0;
+    Runtime runtime({owner,health,delay,logLine});runtime.yield(20);assert(waits.empty());
+    assert(runtime.prepare(root.c_str()));assert(runtime.run());
+    assert((waits==(pollable?std::vector<uint32_t>{1,1,1,20,50}:std::vector<uint32_t>{1,1,20,50})));
+    assert(polls==(pollable?4u:0u));
+    runtime.yield(20);assert(waits.size()==(pollable?5u:4u));
+  }
+  puts("Runtime cooperative yield: exactly one wait, active/idle, owner guard and 1..50ms bounds PASS");
   puts("Runtime integration: mapped provider, default/child/default/missing/default, manifest/path rejection PASS");
 }

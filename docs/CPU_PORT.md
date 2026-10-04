@@ -76,3 +76,24 @@ panel orientation, PWM brightness, DMA operation, timing, or physical RTC health
 Actual Watch execution remains pending. The baseline ESP32-S3 native backend
 builds with the pinned ESP-IDF 4.4 SDK; hardware qualification must name the exact
 firmware commit, board profile, external module hashes and owner test receipt.
+
+## Cooperative scheduling and explicit bus clocks
+
+Runtime 0.1.2 dispatches providers round-robin, with at most four callbacks and
+10 ms aggregate elapsed time per app yield. Each callback receives at most 8 ms,
+clamped to the remaining turn budget before it starts. The next unvisited
+provider leads the next turn, including after a slow callback. Native providers
+must honor their budget cooperatively; a callback that fails to return cannot
+be forcibly preempted. Existing grant revocation and failed-quiescence retention
+are unchanged.
+
+The runtime polls without an internal sleep, then performs one requested wait
+clamped to 1..50 ms. Both runtime and platform.clock waits round upward to the
+next RTOS tick, with a minimum of one tick, without adding a tick to exact waits.
+SPI/I2C transfer timeout/cleanup semantics are unchanged.
+
+The board materializer and JSON schema admit an explicitly configured SPI clock
+up to 40 MHz and retain the I2C ceiling of 1 MHz. This is authorization, not a
+new default or chip-specific operating guarantee. Existing 10 MHz catalogs remain
+10 MHz. Each external driver must still enforce its chip/config limits; the CPU
+SPI provider rejects any transaction faster than that device's admitted bus.
