@@ -80,6 +80,9 @@ This is private host lifetime plumbing, not an ELF-visible setter or ABI suffix.
 7. Every call checks current Runtime, owner task, live exact context and native
    retention barrier. A native fault inside an app revokes all provider storage
    immediately on its next call, before the app returns to the outer barrier.
+   Healthy I2S activity (since0.1.12) and station radio activity do not alone
+   revoke storage; failed/closing I2S, native transfers and retained state do.
+   Every live I2S stream still blocks app exit and sleep independently.
    Retention revocation invokes no provider cleanup. All run exits revoke before
    clearing current Runtime. Destruction revokes before graph destruction.
 
