@@ -446,6 +446,19 @@ bool Runtime::prepare(const char* root) {
   }
   strcpy(default_,current_); prepared_=true; return true;
 }
+bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* context) const {
+  if(!prepared_ || active_ || retained_ || !port_.owner() || !inspect)return false;
+  if(!inspect(context,default_,false))return false;
+  for(size_t i=0;i<policyCount_;++i){
+    if(!strcmp(policies_[i].elf,default_))continue;
+    if(!port_.owner() || !inspect(context,policies_[i].elf,false))return false;
+  }
+  for(size_t i=0;i<driverCount_;++i){
+    bool duplicate=false;for(size_t j=0;j<i;++j)if(!strcmp(drivers_[j].elf,drivers_[i].elf)){duplicate=true;break;}
+    if(!duplicate && (!port_.owner() || !inspect(context,drivers_[i].elf,true)))return false;
+  }
+  return port_.owner();
+}
 bool Runtime::launch(const char* relative) {
   if(!active() || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   return path(root_,relative,queued_,sizeof(queued_));

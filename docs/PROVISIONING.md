@@ -1,4 +1,4 @@
-# Profile-driven provisioning: bounded core checkpoint (0.1.19)
+# Profile-driven provisioning: bounded core checkpoint (0.1.20)
 
 This checkpoint adds a private, CPU-neutral profile parser and boot coordinator.
 It is **not called by `setup()`** and does not register an ELF capability or change
@@ -101,7 +101,7 @@ The model is not a native flash implementation or TLS test. Its host dynamic
 module does not qualify Xtensa ELF admission. Its directory renames model a
 commit boundary but are not an atomic power-loss-safe deployment protocol.
 The native paired-store implementation below adds bounded inactive staging and
-committed identity. Production full-ELF admission, transport, fresh-boot routing
+committed identity. Transport, fresh-boot routing
 and boot-health integration still remain. SD capacity and behavior are untested. Existing paired-bank and update
 regressions continue to run. Host success does not qualify a device.
 
@@ -109,8 +109,8 @@ regressions continue to run. Host success does not qualify a device.
 
 Complete boot integration must preserve the paired-bank safety ordering and
 existing app-update authority. The native file backend below stages inventory
-and committed profile identity; its production admission hook must still connect
-complete graph/import checks before selection. No plaintext credentials are
+and committed profile identity; production admission now connects
+complete graph/import checks before selection, as described in 0.1.20 below. No plaintext credentials are
 persisted outside the explicitly supplied profile.
 Existing fixed layouts must fail closed when this cannot be done; no automatic
 partition resizing, filesystem formatting, migration or active-store mutation
@@ -159,9 +159,9 @@ PSRAM, then reuses the existing transaction's inactive clone and readback. Only
 a successfully verified clone is mounted at `/updatefs`, with formatting disabled.
 The private file backend removes only that staged inventory, streams each file
 with exact length/SHA verification, independently rereads every file, checks the
-complete inventory and invokes the compiled-in graph/ELF admission hook. Missing
-admission hooks are refused before any mutation. This hook must not execute
-providers and must validate every referenced image, not just JSON metadata.
+complete inventory and performs compiled-in graph/ELF admission. In 0.1.20 this is the mandatory
+production implementation below; callers can no longer provide an admission
+callback that bypasses it.
 
 The profile's 32-byte SHA is saved as `.provision-sha256` inside the candidate
 store, read back, and all payloads are checked again after that metadata write.
@@ -181,9 +181,56 @@ and verify old firmware/store digests are unchanged. Both suites pass normally
 and with ASan/UBSan. The model is not SPIFFS power-loss emulation or hardware
 qualification. Native compiled target CI must also pass before using the change.
 
-Still remaining: a production whole-graph/all-ELF admission hook, mapping the
+Still remaining: mapping the
 coordinator to the native stage and existing station/HTTPS transport, a genuinely
 current bootstrap UTC source, profile acquisition outside the immutable installed
 store, and `setup()` integration. Clock-unavailable boot must keep the installed
 default/offline recovery path; a persisted timestamp is not automatically current.
 The native HTTP implementation's certificate-validity checks are unchanged.
+
+## Mandatory production admission (0.1.20)
+
+`provisionBegin` accepts copied native hardware tables and the real boot owner's
+immutable KV backend, not a caller-supplied admission function. The native file
+backend now allocates a fresh CPU port and Runtime in PSRAM for candidate
+validation. It applies the same reserved pins as normal boot through a shared
+helper, binds inert native CPU/bank/KV capability metadata, and prepares the
+complete staged board, provider dependency graph and app-grant policy. It does
+not replace the running-runtime singleton or mutate the normal CPU port.
+
+The internal Runtime image inspector is available only after successful prepare
+and before execution. It enumerates the exact selected default, declared app
+images and driver images, preserving application/driver role. Repeated driver
+instances inspect their shared file once; a default app's matching policy is
+deduplicated. Every required image must be present in the pinned profile and
+read back to its exact size/SHA. Additional `.elf` files are also inspected, so
+an unselected corrupt child/provider cannot hide outside the prepared graph.
+
+Native admission uses the existing structural Xtensa ELF validator, ordinary
+import allowlist and actual native symbol registry. App images require a global
+function `app_main` and a paired optional init/fini; selected providers require
+a global function `t5_driver_get`. Extra ELF files must satisfy at least one
+supported entry role. Each ELF remains capped at the existing 2 MiB native-update
+limit; profile parser limits do not override it. Image buffers, CPU metadata and
+Runtime metadata use checked PSRAM allocation with no internal-RAM fallback.
+Owner/resource-safety and observed time bounds apply throughout reads/scans.
+
+No ELF is mapped, relocated or executed during this pass. In particular, the
+returned provider ABI table, provider initialization, driver/hardware behavior,
+actual app health and physical rollback are not qualified by static admission.
+Those retain the normal startup/health boundary after a selected pair reboots.
+A read-file `fclose` failure latches uncertain ownership: metadata is safely
+discarded (no providers were started), but native staging remains blocked; abort,
+fallback binding and restart cannot claim clean closure or retry that descriptor.
+
+The native test executes 18 graph/image scenarios: valid selected driver and KV
+policy, missing required modules/default, incorrect entry roles/architecture,
+forbidden imports including a static-symbol-table import, missing native symbol,
+reserved pins, absent CPU/KV support, invalid extra ELF, and three PSRAM allocation
+failure cuts. All reject before readiness and retain the installed pair. Accepted
+cases produce zero provider/peripheral calls. A separate close-failure injection
+proves retained cleanup, no double-close, no fallback binding and no forced reset.
+Ordinary updater regressions and pre-/post-execution image-inspector guards remain
+in the tests. Normal and ASan/UBSan runs pass; local LSan is unavailable under
+ptrace. Exact-head target CI is required before this checkpoint is considered
+software-verified.

@@ -263,3 +263,9 @@ including committed profile identity and abort-to-installed-default support.
 It remains opt-in through compiled-in boot-owner calls; automatic profile
 acquisition, trusted current time, full admission-hook integration and network
 boot routing are still pending.
+
+Runtime 0.1.20 wires mandatory production staged-graph and ELF admission using
+fresh metadata-only native CPU/Runtime instances, shared pin reservations,
+role-specific entries and ordinary import checks. Nothing executes during
+admission. Live profile acquisition, current UTC, transport and setup routing
+remain pending.

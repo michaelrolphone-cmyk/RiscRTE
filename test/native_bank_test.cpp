@@ -1,6 +1,13 @@
 // Execute the real native bank adapter against fake flash/IDF I/O. Format/hash,
 // marker, partition admission and boot-state logic remain production code.
+#include <cstdio>
+static int nativeClose(FILE*);
+static FILE* nativeOpen(const char*,const char*);
+#define fopen nativeOpen
+#define fclose nativeClose
 #include "ports/esp32s3/NativeBankStore.cpp"
+#undef fclose
+#undef fopen
 #include <cassert>
 #include <fstream>
 #include <iostream>
@@ -10,6 +17,14 @@
 #include <memory>
 static const char* unavailableImport=nullptr;
 static bool modelProvisionFiles=false;
+static FILE* nativeOpen(const char* path,const char* mode){return std::fopen(path,mode);}
+static bool failAdmissionClose=false;
+static unsigned failedAdmissionCloses=0;
+static int nativeClose(FILE* file){
+ const int result=std::fclose(file);
+ if(failAdmissionClose && RiscBankStore::candidateCpu){failAdmissionClose=false;++failedAdmissionCloses;return EOF;}
+ return result;
+}
 static std::string modelStageRoot;
 extern "C" uintptr_t elf_find_sym_default(const char* name){return unavailableImport && !strcmp(name,unavailableImport)?0:1;}
 static std::vector<uint8_t> flash(0x1000000,0xff);
@@ -59,7 +74,15 @@ esp_err_t esp_vfs_spiffs_unregister(const char*){
 esp_err_t esp_image_verify(int,const esp_partition_pos_t*,esp_image_metadata_t* out){out->image_len=imageSize;return 0;}
 static bool own(){return ownerEnabled;}static bool safe(){return operationEnabled;}
 static bool restartSafe(){return restartEnabled && operationEnabled;}
-static std::vector<uint8_t> elf(const char* imported){
+static unsigned hardwareCalls=0;
+static RiscCpu::Hardware admissionHardware(){
+ RiscCpu::Hardware h{};h.owner=own;h.now=[]()->uint64_t{return ticks;};h.sleep=[](uint32_t){++hardwareCalls;};
+ h.gpioOpen=[](uint8_t,bool,bool,bool){++hardwareCalls;return false;};h.gpioWrite=[](uint8_t,bool){++hardwareCalls;return false;};
+ h.gpioRead=[](uint8_t,bool*){++hardwareCalls;return false;};h.gpioPwm=[](uint8_t,uint32_t,uint16_t,uint16_t){++hardwareCalls;return false;};h.gpioClose=[](uint8_t){++hardwareCalls;return false;};
+ h.i2cOpen=[](uint8_t,uint8_t,uint8_t,uint32_t){++hardwareCalls;return false;};h.i2cTransfer=[](uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t){++hardwareCalls;return false;};h.i2cClose=[](uint8_t){++hardwareCalls;return false;};
+ h.spiOpen=[](uint8_t,int16_t,int16_t,int16_t){++hardwareCalls;return false;};h.spiBegin=[](uint8_t,uint8_t,uint32_t,uint8_t,uint32_t){++hardwareCalls;return false;};h.spiTransfer=[](uint8_t,const uint8_t*,uint8_t*,size_t,uint32_t){++hardwareCalls;return false;};h.spiEnd=[](uint8_t,uint8_t,uint32_t){++hardwareCalls;return false;};h.spiClose=[](uint8_t){++hardwareCalls;return false;};return h;
+}
+static std::vector<uint8_t> elf(const char* imported,const char* entry="app_main"){
  std::vector<uint8_t> data(1024);auto* h=reinterpret_cast<elf32_hdr_t*>(data.data());
  memcpy(h->ident,"\177ELF\1\1\1",7);h->type=3;h->machine=94;h->version=1;
  h->ehsize=sizeof(*h);h->shentsize=sizeof(elf32_shdr_t);h->shoff=64;h->shnum=5;h->shstrndx=1;
@@ -70,10 +93,11 @@ static std::vector<uint8_t> elf(const char* imported){
  s[2].name=11;s[2].type=SHT_PROGBITS;s[2].flags=SHF_ALLOC|SHF_EXECINSTR;s[2].addr=0x100;s[2].offset=400;s[2].size=4;
  s[3].name=17;s[3].type=SHT_SYNSYM;s[3].offset=416;s[3].size=3*sizeof(elf32_sym_t);s[3].link=4;
  s[4].name=25;s[4].type=SHT_STRTAB;s[4].offset=512;s[4].size=128;
- strcpy(reinterpret_cast<char*>(data.data()+513),"app_main");strcpy(reinterpret_cast<char*>(data.data()+522),imported);
+ const unsigned importOffset=unsigned(strlen(entry))+2;
+ strcpy(reinterpret_cast<char*>(data.data()+513),entry);strcpy(reinterpret_cast<char*>(data.data()+512+importOffset),imported);
  auto* sym=reinterpret_cast<elf32_sym_t*>(data.data()+416);
  sym[1].name=1;sym[1].value=0x100;sym[1].shndx=2;sym[1].info=(STB_GLOBAL<<4)|STT_FUNC;
- sym[2].name=10;sym[2].shndx=SHN_UNDEF;sym[2].info=(STB_GLOBAL<<4)|STT_FUNC;
+ sym[2].name=importOffset;sym[2].shndx=SHN_UNDEF;sym[2].info=(STB_GLOBAL<<4)|STT_FUNC;
  return data;
 }
 static std::vector<uint8_t> hiddenImport(const char* imported){
@@ -113,7 +137,7 @@ static void firmware(unsigned bank,const char* version,const char* abi="1"){
 int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
- const bool provisioning=mode=="provision" || mode=="provision-abort" || mode=="provision-corrupt" || mode=="provision-unknown";
+ const bool provisioning=mode=="provision" || mode=="provision-abort" || mode=="provision-corrupt" || mode=="provision-unknown" || mode=="provision-admission" || mode=="provision-close-retained";
  if(mode=="boot" || mode=="bad-store" || mode=="bad-layout" || mode=="restart" || mode=="restart-unknown" || provisioning){
    const bool restarting=mode=="restart" || mode=="restart-unknown";
    assert(argc==(provisioning?4:3));if(provisioning)otaState=ESP_OTA_IMG_VALID;std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
@@ -128,21 +152,65 @@ int main(int argc,char** argv){
    if(provisioning){
      using namespace RiscBankStore;namespace fs=std::filesystem;
      modelStageRoot=argv[3];fs::create_directories(modelStageRoot);stagingRoot=modelStageRoot.c_str();modelProvisionFiles=true;
+     if(mode=="provision-admission"){
+       using Files=std::map<std::string,std::vector<uint8_t>>;
+       auto text=[](const char* s){return std::vector<uint8_t>(s,s+strlen(s));};
+       const auto ordinaryBoot=text(R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"driver.json"}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.probe","api":1,"instance_id":0}]}]})");
+       Files base{{"board.json",text(R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})")},
+         {"boot.json",ordinaryBoot},{"default.elf",elf("memcpy")},{"driver.elf",elf("memcpy","t5_driver_get")},
+         {"driver.json",text(R"({"type":"driver","id":"provision-probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"driver.elf","requires":[{"capability":"platform.clock","api":1},{"capability":"platform.bank-store","api":1}],"provides":[{"capability":"test.probe","api":1}]})")},
+         {"app.json",text(R"({"type":"application","id":"provision-default","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.probe","api":1}]})")}};
+       static const RiscBoot::KeyValueBackend kv{nullptr,
+         [](void*,uint32_t,const char*,void*,uint32_t,uint32_t*){++hardwareCalls;return int32_t(RISC_KEY_VALUE_IO);},
+         [](void*,uint32_t,const char*,const void*,uint32_t){++hardwareCalls;return int32_t(RISC_KEY_VALUE_IO);},RISC_KEY_VALUE_V2_BLOB_MAX};
+       for(unsigned scenario=0;scenario<18;++scenario){Files files=base;bool expected=scenario==0||scenario==10||scenario==13;
+         auto hardware=admissionHardware();const RiscBoot::KeyValueBackend* backend=nullptr;
+         if(scenario==1)files.erase("driver.elf");
+         if(scenario==2)files["driver.elf"]=elf("memcpy");
+         if(scenario==3)files["default.elf"]=elf("memcpy","t5_driver_get");
+         if(scenario==4)files["driver.elf"]=elf("esp_partition_write","t5_driver_get");
+         if(scenario==5)files["default.elf"]=hiddenImport("esp_restart");
+         if(scenario==6)reinterpret_cast<elf32_hdr_t*>(files["default.elf"].data())->machine=3;
+         if(scenario==7)files["board.json"]=text(R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[{"instance_id":1,"kind":"spi","controller_namespace":"esp32.peripheral","controller":2,"frequency_hz":10000000,"mode":0,"pins":{"sclk":33,"mosi":5,"miso":6}}],"devices":[]})");
+         if(scenario==8)files["boot.json"]=text(R"({"board":"board.json","default_app":"absent.elf","drivers":[]})");
+         if(scenario==9)files["extra.elf"]={1,2,3,4};
+         if(scenario==10)files["extra.elf"]=elf("memcpy","t5_driver_get");
+         if(scenario==11)hardware.spiTransfer=nullptr;
+         if(scenario==12||scenario==13){
+           files["app.json"]=text(R"({"type":"application","id":"provision-default","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"storage.key-value","api":2}]})");
+           files["boot.json"]=text(R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"storage.key-value","api":2,"instance_id":1}]}]})");
+           if(scenario==13)backend=&kv;
+         }
+         if(scenario==14)unavailableImport="memcpy";
+         auto profile=std::make_unique<RiscProvision::Profile>();profile->count=files.size();size_t index=0;
+         for(auto& item:files){auto& file=profile->files[index++];strcpy(file.path,item.first.c_str());file.bytes=item.second.size();SHA256(item.second.data(),item.second.size(),file.sha256);}
+         uint8_t digest[32]{};digest[0]=uint8_t(scenario+1);uint64_t token=0;
+         assert(provisionBegin(*profile,digest,hardware,backend,&token)==RISC_BANK_OK);
+         risc_bank_status_v1 status{};status.struct_size=sizeof(status);
+         for(unsigned i=0;i<5000&&!transaction->stagingStore(token);++i)assert(provisionStep(token,&status)==RISC_BANK_OK);
+         assert(transaction->stagingStore(token));index=0;
+         for(auto& item:files){for(size_t at=0;at<item.second.size();){uint32_t n=std::min<size_t>(4096,item.second.size()-at);assert(provisionWrite(token,index,item.second.data()+at,n)==RISC_BANK_OK);at+=n;}++index;}
+         if(scenario>=15)risc_test_psram_fail_after=int(scenario-15);
+         const int32_t result=provisionFinish(token);risc_test_psram_fail_after=-1;
+         assert((result==RISC_BANK_OK)==expected);unavailableImport=nullptr;
+         if(expected){for(unsigned i=0;i<5000;++i){assert(transaction->status(&status));if(status.state==RISC_BANK_READY)break;assert(provisionStep(token,&status)==RISC_BANK_OK);}assert(status.state==RISC_BANK_READY);}
+         else {assert(provisionActivate(token)==RISC_BANK_STATE);RiscUpdate::Record target{};memcpy(&target,flash.data()+RiscUpdate::JournalOffset+4096,sizeof(target));assert(!RiscUpdate::validRecord(target,1));}
+         assert(provisionAbort(token)==RISC_BANK_OK && !candidateCpu && !provisionState && !provisionFiles && hardwareCalls==0);
+         uint8_t preserved[32];SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
+       }
+       std::cout<<"Production native full-graph/image admission:18 role/import/board/backend/OOM scenarios PASS; zero provider or hardware execution\n";
+       return 0;
+     }
      auto profile=std::make_unique<RiscProvision::Profile>();profile->count=3;
      const char* names[]={"boot.json","board.json","default.elf"};
      const char* json[]={R"({"board":"board.json","default_app":"default.elf","drivers":[]})",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})"};
      std::vector<uint8_t> payload[3];for(unsigned i=0;i<2;++i)payload[i].assign(json[i],json[i]+strlen(json[i]));payload[2]=elf("memcpy");
      for(unsigned i=0;i<3;++i){strcpy(profile->files[i].path,names[i]);profile->files[i].bytes=payload[i].size();SHA256(payload[i].data(),payload[i].size(),profile->files[i].sha256);}
      uint8_t digest[32]{};digest[0]=0x42;uint64_t token=0;
-     auto admission=[](const char* root,const RiscProvision::Profile& p){
-       auto rt=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,nullptr,nullptr,nullptr});if(!rt->prepare(root))return false;
-       for(size_t i=0;i<p.count;++i){const auto& f=p.files[i];size_t n=strlen(f.path);if(n<4||strcmp(f.path+n-4,".elf"))continue;
-         std::ifstream in(std::string(root)+"/"+f.path,std::ios::binary);std::vector<uint8_t> b{std::istreambuf_iterator<char>(in),{}};if(!admitElf(b.data(),b.size()))return false;}
-       return true;
-     };
-     assert(provisionBegin(*profile,digest,nullptr,&token)==RISC_BANK_UNAVAILABLE && !token && writes==0);
-     ownerEnabled=false;assert(provisionBegin(*profile,digest,admission,&token)==RISC_BANK_UNAVAILABLE && !token);ownerEnabled=true;
-     assert(provisionBegin(*profile,digest,admission,&token)==RISC_BANK_OK && token);
+     auto hardware=admissionHardware();
+     assert(provisionBegin(*profile,digest,RiscCpu::Hardware{},nullptr,&token)==RISC_BANK_UNAVAILABLE && !token && writes==0);
+     ownerEnabled=false;assert(provisionBegin(*profile,digest,hardware,nullptr,&token)==RISC_BANK_UNAVAILABLE && !token);ownerEnabled=true;
+     assert(provisionBegin(*profile,digest,hardware,nullptr,&token)==RISC_BANK_OK && token);
      RiscBoot::Runtime blocked({own,nullptr,nullptr,nullptr});assert(!bind(blocked));
      risc_bank_status_v1 status{};status.struct_size=sizeof(status);
      for(unsigned i=0;i<5000 && !transaction->stagingStore(token);++i)assert(provisionStep(token,&status)==RISC_BANK_OK);
@@ -153,6 +221,12 @@ int main(int argc,char** argv){
      if(mode=="provision-abort"){
        assert(provisionAbort(token)==RISC_BANK_OK && exitSafe());assert(!provisionFiles && !provisionProfile && !provisionToken);
        assert(provisionWrite(token,0,payload[0].data(),1)==RISC_BANK_STATE);assert(bind(blocked));
+     }else if(mode=="provision-close-retained"){
+       failAdmissionClose=true;assert(provisionFinish(token)==RISC_BANK_INTEGRITY);
+       assert(provisionReadRetained && !candidateCpu && failedAdmissionCloses==1);
+       assert(provisionAbort(token)==RISC_BANK_RETAINED && failedAdmissionCloses==1);
+       assert(!bind(blocked) && !exitSafe());assert(!provisionRestart(token) && restarts==0);
+       assert(provisionActivate(token)==RISC_BANK_STATE);
      }else{
        assert(provisionFinish(token)==RISC_BANK_OK);
        if(mode=="provision-corrupt")flash[0xb00001]^=1;
@@ -163,6 +237,7 @@ int main(int argc,char** argv){
          restartEnabled=false;assert(!provisionRestart(token) && restarts==0);restartEnabled=true;
          assert(!provisionRestart(token) && restarts==1);}
      }
+     assert(hardwareCalls==0 && !candidateCpu);
      uint8_t preserved[32];SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
      SHA256(flash.data()+0x10000,imageSize,preserved);assert(!memcmp(preserved,record.firmwareSha,32));
    }

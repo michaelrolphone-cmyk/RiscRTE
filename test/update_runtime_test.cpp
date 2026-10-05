@@ -63,7 +63,15 @@ int main(int argc,char** argv){assert(argc==2);std::string root=argv[1];
    for(const char* test:{"exit","healthy","refuse","queued","retained"}){
      mode=test;healthCalls=phase=0;storageSafe=true;
      Runtime runtime({owner,health,delay,log,nullptr,&backend,safe,safe,confirm});rt=&runtime;
-     assert(!runtime.confirmBoot());assert(runtime.prepare(root.c_str()));assert(runtime.run()!=(mode=="retained"));assert(!runtime.confirmBoot());
+     unsigned inspected=0;
+     auto inspect=[](void* context,const char* path,bool driver){assert(!driver && strstr(path,"/default.elf"));++*static_cast<unsigned*>(context);return true;};
+     assert(!runtime.inspectImages(inspect,&inspected) && inspected==0);
+     assert(!runtime.confirmBoot());assert(runtime.prepare(root.c_str()));
+     assert(runtime.inspectImages(inspect,&inspected) && inspected==1); // default and its policy share one image
+     assert(!runtime.inspectImages(nullptr,nullptr));
+     assert(!runtime.inspectImages([](void*,const char*,bool){return false;},nullptr));
+     assert(runtime.run()!=(mode=="retained"));assert(!runtime.confirmBoot());
+     assert(!runtime.inspectImages(inspect,&inspected) && inspected==1);
      assert(healthCalls==((mode=="exit" || mode=="retained")?0:1));
    }
  }

@@ -1,6 +1,7 @@
 #pragma once
 #include <RiscBankStoreV1.h>
-namespace RiscBoot { class Runtime; }
+namespace RiscBoot { class Runtime; struct KeyValueBackend; }
+namespace RiscCpu { struct Hardware; }
 namespace RiscProvision { struct Profile; }
 namespace RiscBankStore {
 // Paired target only. Boot verifies exact deployed table and selected pair before
@@ -13,10 +14,11 @@ void rejectBoot();
 bool exitSafe();
 // Private boot-owner API, deliberately absent from the provider capability.
 // Requires a verified/confirmed paired deployment, before bind()/app startup.
-// Admission must validate the complete graph and every ELF without executing.
-// Profile/admission lifetime extends through abort success or terminal restart.
-using ProvisionAdmission=bool (*)(const char*,const RiscProvision::Profile&);
-int32_t provisionBegin(const RiscProvision::Profile&,const uint8_t (&digest)[32],ProvisionAdmission,uint64_t*);
+// Uses a fresh metadata-only CPU/Runtime instance and production ELF admission.
+// Hardware tables are copied; profile and KV backend remain immutable/alive
+// through abort success or terminal restart. No caller-supplied admission hook.
+int32_t provisionBegin(const RiscProvision::Profile&,const uint8_t (&digest)[32],const RiscCpu::Hardware&,
+                       const RiscBoot::KeyValueBackend*,uint64_t*);
 int32_t provisionStep(uint64_t,risc_bank_status_v1*);
 int32_t provisionWrite(uint64_t,size_t,const void*,uint32_t);
 int32_t provisionFinish(uint64_t);

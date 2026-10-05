@@ -5,6 +5,7 @@
 #include <esp_system.h>
 #include "bootstrap/Runtime.h"
 #include "ports/esp32s3/CpuPort.h"
+#include "ports/esp32s3/NativeBoard.h"
 #include "ports/esp32s3/CooperativeDelay.h"
 #ifdef RISC_PAIRED_BANKS
 #include "ports/esp32s3/NativeBankStore.h"
@@ -99,13 +100,7 @@ void setup() {
     RiscBankStore::rejectBoot();
 #endif
     return; }
-  // GPIO22..25 do not exist on S3; octal PSRAM/flash pads and UART0 are reserved.
-  for(int p=22;p<=37;++p) runtime.board().reservePin(p);
-#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
-  runtime.board().reservePin(19); runtime.board().reservePin(20);
-#else
-  runtime.board().reservePin(43); runtime.board().reservePin(44);
-#endif
+  RiscCpu::reserveNativePins(runtime.board());
   if(!runtime.prepare("/bootfs")) { Serial.printf("RTE_BOOT error=manifest detail=%s\n",runtime.error());
 #ifdef RISC_PAIRED_BANKS
     RiscBankStore::rejectBoot();

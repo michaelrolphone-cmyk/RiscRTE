@@ -44,6 +44,10 @@ class Runtime final {
   // Tables/contexts must remain valid until successful runtime shutdown.
   bool registerPlatform(const char* capability, uint32_t api, Scope scope, uint64_t id, const void* table);
   bool prepare(const char* root);
+  // Compiled-in pre-execution admission only. Enumerates the exact prepared
+  // default, app-policy and driver image paths, with their expected entry role.
+  // No module is mapped or executed. Duplicate instances share one inspection.
+  bool inspectImages(bool (*inspect)(void*,const char* path,bool driver),void*) const;
   bool uses(uint64_t instance,const char* capability,uint32_t api) const;
   bool selected(uint64_t instance) const;
   bool run();
