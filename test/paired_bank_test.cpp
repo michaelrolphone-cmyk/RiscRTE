@@ -12,6 +12,7 @@ struct Model {
   Record records[2]{};
   unsigned selected=0,operations=0,cut=0,clock=1,validations=0;
   bool clean=true,admitted=true,firmwareValid=true,selectFailure=false;
+  unsigned storeOpens=0,storeFinishes=0;
   Model(){for(unsigned b=0;b<2;++b){bytes[b][0].resize(FirmwareBytes,0xff);bytes[b][1].resize(StoreBytes,uint8_t(b?0xff:0x5a));}
     for(unsigned i=0;i<9000;++i)bytes[0][0][i]=uint8_t(i);
     uint8_t fw[32],store[32];SHA256(bytes[0][0].data(),9000,fw);SHA256(bytes[0][1].data(),StoreBytes,store);
@@ -81,5 +82,43 @@ int main(){
    m.selectFailure=true;assert(t.activate(token)==RISC_BANK_RETAINED && m.selected==1);
    assert(state(t).state==RISC_BANK_ACTIVATION_UNKNOWN && t.activated(token));assert(t.abort(token)==RISC_BANK_STATE);
    assert(t.activate(token)==RISC_BANK_STATE && !t.exitSafe());assert(validRecord(m.records[1],1));intact(m);}
+  // Private boot-owned whole-store staging reuses paired clone/readback and
+  // selection ordering, without extending the public provider table.
+  auto storeBackend=[](Model& m){auto b=m.backend();
+    b.openStore=[](void* p,unsigned bank){auto& x=*static_cast<Model*>(p);assert(bank==1);++x.storeOpens;return x.action();};
+    b.finishStore=[](void* p,unsigned bank,uint8_t* digest){auto& x=*static_cast<Model*>(p);assert(bank==1);++x.storeFinishes;
+      if(!x.action() || !x.admitted)return false;
+      SHA256(x.bytes[bank][1].data(),StoreBytes,digest);return true;};return b;};
+  auto stage=[](Transaction& t,uint64_t token){for(unsigned i=0;i<5000;++i){if(t.stagingStore(token))return;auto s=state(t);assert(t.step(token,&s)==0);}assert(false);};
+  {Model m;Transaction t(m.backend());assert(t.initialize(0,m.records[0]));uint64_t token=9;
+   assert(t.beginStore(m.records[0].storeSha,&token)==RISC_BANK_UNAVAILABLE && token==0);intact(m);}
+  {Model m;Transaction t(storeBackend(m));assert(t.initialize(0,m.records[0]));uint64_t token=0;uint8_t stale[32]{};
+   assert(t.beginStore(stale,&token)==RISC_BANK_INVALID && !token);assert(!m.storeOpens);intact(m);}
+  {Model m;Transaction t(storeBackend(m));assert(t.initialize(0,m.records[0]));uint64_t token=0;
+   assert(t.beginStore(m.records[0].storeSha,&token)==0);assert(!t.stagingStore(token));assert(t.finishStore(token)==RISC_BANK_STATE);
+   stage(t,token);assert(m.storeOpens==1 && m.app.empty());assert(!t.stagingStore(token+1));
+   assert(t.write(token,payload.data(),1)==RISC_BANK_STATE && t.finish(token)==RISC_BANK_STATE);
+   assert(t.activate(token)==RISC_BANK_STATE);m.bytes[1][1][42]^=1;
+   assert(t.finishStore(token)==0 && !t.stagingStore(token));assert(advance(t,token)==0);
+   assert(state(t).state==RISC_BANK_READY && m.storeFinishes==1 && m.selected==0);
+   assert(t.activate(token)==0 && m.selected==1);assert(t.abort(token)==RISC_BANK_STATE);intact(m);}
+  // Clone must pass integrity before any provisioning writer can open it.
+  {Model m;Transaction t(storeBackend(m));assert(t.initialize(0,m.records[0]));uint64_t token;
+   assert(t.beginStore(m.records[0].storeSha,&token)==0);
+   while(state(t).state!=RISC_BANK_VERIFY_CLONE){auto s=state(t);assert(t.step(token,&s)==0);}
+   m.bytes[1][1][17]^=1;assert(advance(t,token)==RISC_BANK_INTEGRITY && !m.storeOpens);assert(t.abort(token)==0);intact(m);}
+  for(unsigned mode=0;mode<5;++mode){Model m;Transaction t(storeBackend(m));assert(t.initialize(0,m.records[0]));uint64_t token;
+   assert(t.beginStore(m.records[0].storeSha,&token)==0);stage(t,token);m.bytes[1][1][42]^=1;
+   if(mode==0){m.admitted=false;assert(t.finishStore(token)==RISC_BANK_INTEGRITY);}
+   if(mode==1){m.clean=false;assert(t.finishStore(token)==RISC_BANK_RETAINED);assert(t.abort(token)==RISC_BANK_RETAINED);m.clean=true;}
+   if(mode==2){m.clock=300002;assert(!t.stagingStore(token));assert(t.finishStore(token)==RISC_BANK_TIMEOUT);}
+   if(mode==3){assert(t.finishStore(token)==0);m.bytes[1][1][43]^=1;assert(advance(t,token)==RISC_BANK_INTEGRITY);}
+   if(mode==4){assert(t.finishStore(token)==0);m.bytes[1][0][43]^=1;assert(advance(t,token)==RISC_BANK_INTEGRITY);}
+   assert(m.selected==0 && !validRecord(m.records[1],1));assert(t.abort(token)==0);intact(m);
+   m.admitted=true;uint64_t next;auto ordinary=image(m);assert(t.begin(true,ordinary,&next)==0);assert(advance(t,next)==0);assert(!t.stagingStore(next));assert(feed(t,next)==0 && advance(t,next)==0);assert(t.abort(next)==0);}
+  {Model m;Transaction t(storeBackend(m));assert(t.initialize(0,m.records[0]));uint64_t token;
+   assert(t.beginStore(m.records[0].storeSha,&token)==0);stage(t,token);assert(t.finishStore(token)==0 && advance(t,token)==0);
+   m.selectFailure=true;assert(t.activate(token)==RISC_BANK_RETAINED && m.selected==1);
+   assert(state(t).state==RISC_BANK_ACTIVATION_UNKNOWN);assert(t.abort(token)==RISC_BANK_STATE);assert(!t.stagingStore(token));intact(m);}
   std::cout<<"Paired bank cloning, readback, activation ordering, fault cuts, stale handles, cleanup retention and old-pair preservation PASS\n";
 }

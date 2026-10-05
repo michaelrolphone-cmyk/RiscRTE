@@ -32,8 +32,8 @@ class ClearingAllocator final:public ArduinoJson::Allocator {
 };
 int hex(char c){return c>='0' && c<='9'?c-'0':c>='a' && c<='f'?c-'a'+10:-1;}
 bool source(const char* s){
-  // No userinfo, query credentials, redirects, fragments, ports or escaped
-  // delimiters in schema 1. Native transport must verify TLS and refuse redirects.
+  // No userinfo, query credentials, fragments, ports or escaped
+  // delimiters in schema 1. Native transport retains verified, bounded HTTPS redirects.
   if(strncmp(s,"https://",8))return false;
   const char* host=s+8;const char* slash=strchr(host,'/');
   if(!slash || slash==host || slash[1]==0)return false;

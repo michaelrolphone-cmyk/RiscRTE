@@ -40,12 +40,23 @@ struct Backend {
   bool (*cleanup)(void*);
   bool (*validateFirmware)(void*,unsigned,uint32_t);
   bool (*select)(void*,unsigned);
+  // Optional private boot-provisioning hooks. Not part of the provider ABI.
+  // openStore follows a verified inactive clone; finishStore must verify the
+  // entire expected inventory, all hashes, graph and ELFs without executing.
+  bool (*openStore)(void*,unsigned)=nullptr;
+  bool (*finishStore)(void*,unsigned,uint8_t* digest)=nullptr;
 };
 class Transaction {
  public:
   explicit Transaction(Backend b):io_(b){}
   bool initialize(unsigned active,const Record& record);
   int32_t begin(bool app,const risc_bank_image_v1&,uint64_t* token);
+  // Whole-store provisioning is compiled-in boot-owner authority only. The
+  // ordinary app/firmware APIs cannot enter this mode or write store files.
+  static constexpr uint32_t StoreStaging=11;
+  int32_t beginStore(const uint8_t (&activeDigest)[32],uint64_t* token);
+  bool stagingStore(uint64_t token) const {return live(token) && store_ && state_==StoreStaging && !timedOut();}
+  int32_t finishStore(uint64_t token);
   int32_t step(uint64_t,risc_bank_status_v1*);
   int32_t write(uint64_t,const void*,uint32_t);
   int32_t finish(uint64_t);
@@ -63,11 +74,12 @@ class Transaction {
   Backend io_;
   Record activeRecord_{}, targetRecord_{};
   risc_bank_image_v1 image_{};
+  uint8_t stagedStoreDigest_[32]{};
   uint64_t serial_=0,token_=0;
   unsigned active_=0,target_=1;
   uint32_t state_=RISC_BANK_IDLE,offset_=0,received_=0,started_=0;
   int32_t error_=0;
-  bool initialized_=false,app_=false;
+  bool initialized_=false,app_=false,store_=false;
   alignas(4) uint8_t buffer_[RISC_BANK_CHUNK_MAX]{};
 };
 }

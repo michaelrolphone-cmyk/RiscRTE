@@ -33,7 +33,7 @@ bool Transaction::status(risc_bank_status_v1* out)const{
   out->total=(state_==RISC_BANK_COPY_STORE || state_==RISC_BANK_VERIFY_STORE || state_==RISC_BANK_VERIFY_CLONE)?StoreBytes:
     state_==RISC_BANK_RECEIVING?image_.size:targetRecord_.firmwareSize;
   if(state_==RISC_BANK_READY || state_==RISC_BANK_ACTIVATED || state_==RISC_BANK_ACTIVATION_UNKNOWN)out->done=out->total=1;
-  if(state_==RISC_BANK_IDLE)out->done=out->total=0;
+  if(state_==RISC_BANK_IDLE || state_==StoreStaging)out->done=out->total=0;
   if(out->done>out->total)out->total=out->done;
   memcpy(out->active_store_sha256,activeRecord_.storeSha,32);return true;
 }
@@ -43,11 +43,33 @@ int32_t Transaction::begin(bool app,const risc_bank_image_v1& image,uint64_t* to
   if(image.struct_size<sizeof(image) || image.store_abi!=RISC_BANK_STORE_ABI || !image.size ||
     image.size>(app?RISC_BANK_APP_MAX:FirmwareBytes) || (!app && image.size<32) ||
     memcmp(image.active_store_sha256,activeRecord_.storeSha,32))return RISC_BANK_INVALID;
-  app_=app;image_=image;token_=++serial_;*token=token_;started_=io_.now(io_.context);error_=0;received_=offset_=0;
+  store_=false;app_=app;image_=image;token_=++serial_;*token=token_;started_=io_.now(io_.context);error_=0;received_=offset_=0;
   targetRecord_=activeRecord_;targetRecord_.bank=target_;if(!app)targetRecord_.firmwareSize=image.size;
   /* Invalidate only destination readiness BEFORE any target erase. */
   if(!io_.invalidate(io_.context,target_))return fail(RISC_BANK_IO);
   state_=app?RISC_BANK_COPY_FIRMWARE:RISC_BANK_COPY_STORE;return RISC_BANK_OK;
+}
+int32_t Transaction::beginStore(const uint8_t (&activeDigest)[32],uint64_t* token){
+  if(token)*token=0;
+  if(!io_.openStore || !io_.finishStore)return RISC_BANK_UNAVAILABLE;
+  // Reuse the exact paired clone/invalidate/token/deadline path. No payload is
+  // received through write(); private staging starts only after clone readback.
+  risc_bank_image_v1 image{};image.struct_size=sizeof(image);image.size=1;
+  image.store_abi=RISC_BANK_STORE_ABI;memcpy(image.active_store_sha256,activeDigest,32);
+  const int32_t result=begin(true,image,token);
+  if(result==RISC_BANK_OK)store_=true;
+  return result;
+}
+int32_t Transaction::finishStore(uint64_t token){
+  if(!live(token) || !store_ || state_!=StoreStaging)return RISC_BANK_STATE;
+  if(timedOut())return fail(RISC_BANK_TIMEOUT);
+  if(!io_.finishStore(io_.context,target_,stagedStoreDigest_))return fail(RISC_BANK_INTEGRITY);
+  // A bounded backend may yield internally; recheck elapsed time before any
+  // readiness write. Cleanup failure retains staging and denies activation.
+  if(timedOut())return fail(RISC_BANK_TIMEOUT);
+  if(!io_.cleanup(io_.context))return fail(RISC_BANK_RETAINED);
+  if(!hashStart())return fail(RISC_BANK_IO);
+  state_=RISC_BANK_VERIFY_FIRMWARE;return RISC_BANK_OK;
 }
 bool Transaction::writeRaw(unsigned region,uint32_t at,const void* ptr,uint32_t n){
   auto bytes=static_cast<const uint8_t*>(ptr);
@@ -63,7 +85,8 @@ int32_t Transaction::step(uint64_t token,risc_bank_status_v1* out){
   if(!live(token) || !out || out->struct_size<sizeof(*out))return RISC_BANK_STATE;
   if(state_==RISC_BANK_FAILED){status(out);return error_;}
   if(state_==RISC_BANK_ACTIVATION_UNKNOWN){status(out);return error_;}
-  if(state_==RISC_BANK_IDLE || state_==RISC_BANK_RECEIVING || state_==RISC_BANK_READY || state_==RISC_BANK_ACTIVATED){status(out);return RISC_BANK_OK;}
+  if(state_==StoreStaging && timedOut())return fail(RISC_BANK_TIMEOUT);
+  if(state_==RISC_BANK_IDLE || state_==StoreStaging || state_==RISC_BANK_RECEIVING || state_==RISC_BANK_READY || state_==RISC_BANK_ACTIVATED){status(out);return RISC_BANK_OK;}
   if(timedOut())return fail(RISC_BANK_TIMEOUT);
   const bool copying=state_==RISC_BANK_COPY_FIRMWARE || state_==RISC_BANK_COPY_STORE;
   const unsigned region=(state_==RISC_BANK_COPY_STORE || state_==RISC_BANK_VERIFY_STORE || state_==RISC_BANK_VERIFY_CLONE)?1:0;
@@ -82,8 +105,13 @@ int32_t Transaction::step(uint64_t token,risc_bank_status_v1* out){
       uint8_t digest[32];
       if(!io_.hashEnd(io_.context,digest))return fail(RISC_BANK_IO);
       if(memcmp(digest,activeRecord_.storeSha,32))return fail(RISC_BANK_INTEGRITY);
-      if(!io_.openApp(io_.context,target_) || !hashStart())return fail(RISC_BANK_IO);
-      state_=RISC_BANK_RECEIVING;
+      if(store_){
+        if(!io_.openStore(io_.context,target_))return fail(RISC_BANK_IO);
+        state_=StoreStaging;
+      }else{
+        if(!io_.openApp(io_.context,target_) || !hashStart())return fail(RISC_BANK_IO);
+        state_=RISC_BANK_RECEIVING;
+      }
     }else if(state_==RISC_BANK_VERIFY_FIRMWARE){
       uint8_t digest[32];if(!io_.hashEnd(io_.context,digest))return fail(RISC_BANK_IO);
       if(memcmp(digest,app_?activeRecord_.firmwareSha:image_.sha256,32))return fail(RISC_BANK_INTEGRITY);
@@ -94,6 +122,7 @@ int32_t Transaction::step(uint64_t token,risc_bank_status_v1* out){
     }else{
       if(!io_.hashEnd(io_.context,targetRecord_.storeSha))return fail(RISC_BANK_IO);
       if(!app_ && memcmp(targetRecord_.storeSha,activeRecord_.storeSha,32))return fail(RISC_BANK_INTEGRITY);
+      if(store_ && memcmp(targetRecord_.storeSha,stagedStoreDigest_,32))return fail(RISC_BANK_INTEGRITY);
       targetRecord_.crc=crc32(&targetRecord_,offsetof(Record,crc));
       if(!io_.record(io_.context,target_,targetRecord_))return fail(RISC_BANK_IO);
       state_=RISC_BANK_READY;

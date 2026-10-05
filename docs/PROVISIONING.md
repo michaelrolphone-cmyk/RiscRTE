@@ -1,4 +1,4 @@
-# Profile-driven provisioning: bounded core checkpoint (0.1.17)
+# Profile-driven provisioning: bounded core checkpoint (0.1.18)
 
 This checkpoint adds a private, CPU-neutral profile parser and boot coordinator.
 It is **not called by `setup()`**, does not register an ELF capability, and does
@@ -38,7 +38,7 @@ capacity before writing.
 SHA256 is exactly 64 lowercase hexadecimal characters. Sources must be HTTPS
 URLs with an ASCII DNS hostname and strict Runtime-style path. Schema 1 excludes
 ports, userinfo, query strings, fragments, percent escapes and signed URLs. The
-transport must verify TLS, forbid redirects and treat URLs only as download
+transport must verify TLS, retain bounded HTTPS-only redirects and treat URLs only as download
 sources. A hash pins content; it does not authenticate who authorized a profile.
 The supplied profile is a trusted owner's local boot configuration, never an
 untrusted remote instruction or authority granted to an app.
@@ -115,3 +115,28 @@ partition resizing, filesystem formatting, migration or active-store mutation
 is introduced. An SD path additionally needs independently bootstrappable,
 noncyclic storage/controller ownership. The installed firmware's `setup()` must
 only invoke provisioning once those backend invariants are actually implemented.
+
+## Private paired-store transaction prerequisite (0.1.18)
+
+`RiscUpdate::Transaction::beginStore` now reuses the existing paired-bank
+invalidation, firmware clone, store clone and clone-readback sequence. It only
+opens a private staging callback after that cloned store passes its active
+digest check. The ordinary provider table and SDK layout are unchanged; neither
+`begin_app`, `begin_firmware` nor their `write` calls can reach this authority.
+The new optional backend hooks are not supplied by `NativeBankStore` yet.
+
+A boot-owned backend may write its bounded staged inventory only while
+`stagingStore(token)` is true. This rejects stale tokens and expired operations.
+`finishStore` requires the backend's complete inventory/hash/graph/ELF validation
+and returns the expected full-partition store digest. Existing paired firmware
+and store readback then run again; any changed store byte or firmware clone
+fails before readiness. Cleanup, readiness journal and ambiguous OTA selection
+retain their existing ordering. A failed staging transaction can be aborted and
+followed by an ordinary app update without leaking its broader mode.
+
+The paired model additionally checks missing hooks, stale active digest/token,
+pre-write cloned-store corruption, whole-store validation refusal, retained
+cleanup, deadline expiry, late store/firmware corruption, successful activation
+and ambiguous selection. Normal and ASan/UBSan runs pass. This makes a native
+whole-store backend possible without misusing app-update policy; it does not
+implement that backend, network transport, or boot routing by itself.

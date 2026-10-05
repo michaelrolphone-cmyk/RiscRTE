@@ -252,3 +252,8 @@ a cooperative boot coordinator, currently exercised through a host backend.
 The existing boot path is unchanged; native flash/SD staging and fresh-boot
 routing remain to be connected. See [scope, failure handling and remaining
 integration](docs/PROVISIONING.md). This is not yet automatic device provisioning.
+
+Runtime 0.1.18 also adds a private whole-store staging mode to the existing
+paired-bank transaction, retaining clone verification, readback, cleanup and
+ambiguous-selection protection. The provider ABI is unchanged and the native
+whole-store callbacks are not yet connected.
