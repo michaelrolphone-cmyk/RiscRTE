@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+build="$(mktemp -d)";trap 'rm -rf "$build"' EXIT
+san=();if [[ "${SANITIZE:-0}" == 1 ]];then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g);fi
+incs=(-I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs")
+for name in default child;do defs=();if [[ "$name" == child ]];then defs=(-DCHILD);fi;cc "${san[@]}" -std=c11 -Wall -Wextra -Werror -Wno-unused-variable -fPIC -fvisibility=hidden -shared "${defs[@]}" -I"$repo/sdk/app" "$repo/test/fixtures/app_data_app.c" -o "$build/$name.elf";done
+c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic "${incs[@]}" \
+ "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+ "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
+ "$repo/src/runtime/storage/AppDataFiles.cpp" "$repo/test/app_data_runtime_test.cpp" -ldl -o "$build/test"
+"$build/test" "$build"

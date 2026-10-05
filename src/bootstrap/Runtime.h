@@ -1,6 +1,7 @@
 #pragma once
 #include "Board.h"
 #include "InstalledFiles.h"
+#include "AppDataBackend.h"
 #include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
@@ -35,12 +36,13 @@ struct Port {
   bool (*providerStorageSafe)()=nullptr;
   // Explicit default-app health acknowledgement, never inferred from exit.
   bool (*confirmBoot)()=nullptr;
+  const AppDataBackend* appData=nullptr;
 };
 class Runtime final {
  public:
-  static constexpr size_t MaxAppPolicies=18;
+  static constexpr size_t MaxAppPolicies=19;
   static constexpr size_t MaxAppPolicyGrants=12;
-  static constexpr size_t MaxAppRequirements=11;
+  static constexpr size_t MaxAppRequirements=12;
   explicit Runtime(Port p) : port_(p) {}
   ~Runtime() { revokeProviders(); }
   Runtime(const Runtime&)=delete;
@@ -131,6 +133,12 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
+  static constexpr PolicyIndex AppDataDriver=-2;
+  bool appDataExitSafe()const;
+  static Runtime* appDataContext(void*);
+  static int32_t appDataStat(void*,const char*,uint32_t*,uint64_t*);
+  static int32_t appDataRead(void*,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*);
+  static int32_t appDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
@@ -147,6 +155,9 @@ class Runtime final {
   std::unique_ptr<InstalledFiles> installedFiles_;
   risc_storage_volume_api_v1 installedVolume_{};
   void* installedVolumeContext_=nullptr;
+  risc_app_data_v1 appDataTable_{};
+  void* appDataContext_=nullptr;
+  uint32_t appDataNamespace_=0;
   struct Platform {
     char capability[96]{}; uint32_t api=0; Scope scope=Scope::Global;
     uint64_t id=0; const void* table=nullptr;

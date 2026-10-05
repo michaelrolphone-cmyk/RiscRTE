@@ -9,6 +9,8 @@ extern "C" {
 #endif
 #define RISC_BANK_STORE_CAPABILITY "platform.bank-store"
 #define RISC_BANK_STORE_API_V1 1u
+/* Legacy paired-layout default only, not the current layout selection.
+ * Transactions must use the trusted status.store_abi of the active layout. */
 #define RISC_BANK_STORE_ABI 1u
 #define RISC_BANK_CHUNK_MAX 4096u
 #define RISC_BANK_MANIFEST_MAX 4096u
@@ -33,8 +35,10 @@ extern "C" {
 #define RISC_BANK_FAILED 8u
 #define RISC_BANK_VERIFY_CLONE 9u
 #define RISC_BANK_ACTIVATION_UNKNOWN 10u
-/* Image digest is over exactly size bytes. Runtime mode additionally requires
- * ABI 1 and the exact current store digest, preventing a stale selection. */
+/* Image digest is over exactly size bytes. Transactions require the current
+ * status.store_abi and exact active-store digest, preventing a stale or
+ * cross-layout selection. The function-table API version remains independent
+ * of the paired storage/layout ABI (legacy1, explicit app-data layout2). */
 typedef struct {
     uint32_t struct_size, size, store_abi;
     uint8_t sha256[32], active_store_sha256[32];

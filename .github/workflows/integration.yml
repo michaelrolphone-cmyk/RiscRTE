@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume]
+    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi]
   workflow_dispatch:
   workflow_call:
 permissions:
@@ -41,12 +41,40 @@ jobs:
           ref: aa7b03c15a59aa99b2d60ae20905edbdf62e35e6
           path: build/watch-clock-source
           persist-credentials: false
+      - name: Fetch exact LittleFS dependency for offline disk proof
+        uses: actions/checkout@v4
+        with:
+          repository: joltwallet/esp_littlefs
+          ref: 41873c20fb5cdbcf28d7d6cc04e4bcb4a1305317
+          submodules: recursive
+          path: build/littlefs-source
+          persist-credentials: false
+      - name: Build initial disk2.1 image and exercise real LittleFS power cuts
+        run: |
+          python scripts/app_data_image.py --littlefs-source build/littlefs-source/src/littlefs --output build/appdata-initial
+          APP_DATA_INITIAL_IMAGE=build/appdata-initial python test/app_data_image_test.py
+          bash test/run_app_data_littlefs_test.sh build/littlefs-source build/appdata-initial/appdata.bin
+          SANITIZE=1 bash test/run_app_data_littlefs_test.sh build/littlefs-source build/appdata-initial/appdata.bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-appdata-initial-image-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/appdata-initial/
+          if-no-files-found: error
+          retention-days: 14
       - name: Real runtime, external drivers and clock through physical bus model
         run: bash test/run_clock_integration.sh build/watch-clock-source
       - name: Real host modules, board binding and default-child-default lifecycle
         run: |
           bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
           bash test/run_runtime_test.sh
+          SANITIZE=1 bash test/run_runtime_test.sh
+          bash test/run_app_data_files_test.sh
+          SANITIZE=1 bash test/run_app_data_files_test.sh
+          bash test/run_app_data_runtime_test.sh
+          SANITIZE=1 bash test/run_app_data_runtime_test.sh
+          bash test/run_app_data_layout_test.sh
+          bash test/run_native_app_data_test.sh
+          SANITIZE=1 bash test/run_native_app_data_test.sh
           bash test/run_installed_files_test.sh
           SANITIZE=1 bash test/run_installed_files_test.sh
           bash test/native_tls_async/run_async_fdset.sh
@@ -60,6 +88,7 @@ jobs:
           bash test/run_store_audit_test.sh
           SANITIZE=1 bash test/run_store_audit_test.sh
           bash test/run_native_bank_test.sh
+          APP_DATA_TEST=1 bash test/run_native_bank_test.sh
           SANITIZE=1 bash test/run_native_bank_test.sh
           bash test/run_update_runtime_test.sh
           SANITIZE=1 bash test/run_update_runtime_test.sh
@@ -169,5 +198,23 @@ jobs:
         with:
           name: riscrte-esp32s3-16mb-paired-${{ github.event.pull_request.head.sha || github.sha }}
           path: dist/esp32s3-16mb-paired/
+          if-no-files-found: error
+          retention-days: 14
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: riscrte-appdata-initial-image-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/appdata-initial
+      - name: Build opt-in app-data Runtime and verify separate layout
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-appdata -j 1
+          APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
+          python scripts/paired_candidate.py --app-data --app-data-image build/appdata-initial --source-sha "$SOURCE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-esp32s3-16mb-appdata-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/esp32s3-16mb-appdata/
           if-no-files-found: error
           retention-days: 14

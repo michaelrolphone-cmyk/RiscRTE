@@ -5,6 +5,9 @@
 #include "NativeI2s.h"
 #include "NativeRadio.h"
 #include "NativeHci.h"
+#ifdef RISC_PAIRED_APP_DATA
+#include "NativeAppData.h"
+#endif
 #ifdef RISC_ENABLE_HTTP
 #include "NativeHttp.h"
 #endif
@@ -162,6 +165,9 @@ bool deepReady(){
 #endif
 #ifdef RISC_PAIRED_BANKS
   if(!RiscBankStore::exitSafe())return false;
+#ifdef RISC_PAIRED_APP_DATA
+  if(!RiscAppData::exitSafe())return false;
+#endif
 #endif
   for(const auto& state:spi)if(state.held || state.pending)return false;
   return true;
@@ -174,6 +180,9 @@ bool lightSleep(uint32_t* cause){
 #endif
 #ifdef RISC_PAIRED_BANKS
   if(!RiscBankStore::exitSafe())return false;
+#ifdef RISC_PAIRED_APP_DATA
+  if(!RiscAppData::exitSafe())return false;
+#endif
 #endif
   for(const auto& state:spi)if(state.held || state.pending)return false;
   return NativeSleep::lightEnter(cause);
@@ -199,7 +208,11 @@ Hardware nativeHardware(bool (*owner)()){
   hardware.httpClient=NativeHttp::api();hardware.httpIdle=NativeHttp::idle;hardware.httpSafe=NativeHttp::safe;
 #endif
 #ifdef RISC_PAIRED_BANKS
-  hardware.maintenanceIdle=RiscBankStore::exitSafe;
+  hardware.maintenanceIdle=[](){return RiscBankStore::exitSafe()
+#ifdef RISC_PAIRED_APP_DATA
+    && RiscAppData::exitSafe()
+#endif
+    ;};
 #endif
   hardware.deepWakeSetValid=NativeSleep::setValid;hardware.deepWakeSetArm=NativeSleep::setArm;hardware.deepWakeSetClear=NativeSleep::setClear;
   return hardware;

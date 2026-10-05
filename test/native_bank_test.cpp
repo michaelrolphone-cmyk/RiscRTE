@@ -12,13 +12,17 @@ static uint32_t ticks=1,active=0,imageSize=8192,writes=0,rollbacks=0,confirms=0,
 static bool ownerEnabled=true,rollbackPossible=true,operationEnabled=true,restartEnabled=true,selectFailure=false;
 static esp_ota_img_states_t otaState=ESP_OTA_IMG_PENDING_VERIFY;
 static esp_partition_t table[]={
- {ESP_PARTITION_TYPE_APP,ESP_PARTITION_SUBTYPE_APP_OTA_0,0x10000,0x300000,"app0",false},
- {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,0x310000,0x4f0000,"bootfs0",false},
- {ESP_PARTITION_TYPE_APP,esp_partition_subtype_t(17),0x800000,0x300000,"app1",false},
- {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,0xb00000,0x4f0000,"bootfs1",false},
+ {ESP_PARTITION_TYPE_APP,ESP_PARTITION_SUBTYPE_APP_OTA_0,0x10000,RiscUpdate::FirmwareBytes,"app0",false},
+ {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,"bootfs0",false},
+ {ESP_PARTITION_TYPE_APP,esp_partition_subtype_t(17),0x800000,RiscUpdate::FirmwareBytes,"app1",false},
+ {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,RiscUpdate::StoreOffset[1],RiscUpdate::StoreBytes,"bootfs1",false},
  {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_OTA,0xff0000,0x2000,"otadata",false},
  {ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x40),0xff2000,0x2000,"bank_state",false},
- {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_NVS,0x9000,0x6000,"nvs",false}};
+ {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_NVS,0x9000,0x6000,"nvs",false}
+#ifdef RISC_PAIRED_APP_DATA
+ ,{ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x41),0x270000,0x80000,"appdata",false}
+#endif
+ };
 FakeEsp ESP;esp_flash_t chip;esp_flash_t* esp_flash_default_chip=&chip;
 uint32_t FakeEsp::getFlashChipSize()const{return flash.size();}
 void FakeEsp::restart(){++restarts;}
@@ -84,9 +88,9 @@ static std::vector<uint8_t> manySymbols(){
  for(unsigned i=3;i<130;++i)symbols[i]=symbols[2];
  return data;
 }
-static void firmware(unsigned bank,const char* version,const char* abi="1"){
+static void firmware(unsigned bank,const char* version,const char* abi=nullptr){
  auto* data=flash.data()+table[bank*2].address;memset(data,0,imageSize);
- std::string marker=std::string("RISC_PAIRED_STORE_ABI:")+abi;
+ std::string marker=std::string("RISC_PAIRED_STORE_ABI:")+(abi?abi:std::to_string(RiscUpdate::StoreAbi));
  memcpy(data+100,marker.c_str(),marker.size()+1);
  marker=std::string("RISC_RUNTIME_VERSION:")+version;
  // Exercise a marker split across the read chunk boundary.
@@ -96,21 +100,24 @@ static void firmware(unsigned bank,const char* version,const char* abi="1"){
 int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
+#ifdef RISC_PAIRED_APP_DATA
+ std::fill(flash.begin()+0x270000,flash.begin()+0x2f0000,0x5a);
+#endif
  if(mode=="boot" || mode=="bad-store" || mode=="bad-layout" || mode=="restart" || mode=="restart-unknown"){
    const bool restarting=mode=="restart" || mode=="restart-unknown";
    assert(argc==3);std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
    memcpy(flash.data(),boot.data(),boot.size());firmware(0,RISC_BUILD_VERSION);
-   uint8_t fw[32],store[32];SHA256(flash.data()+0x10000,imageSize,fw);SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,store);
+   uint8_t fw[32],store[32];SHA256(flash.data()+0x10000,imageSize,fw);SHA256(flash.data()+RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,store);
    auto record=RiscUpdate::makeRecord(0,imageSize,fw,store);memcpy(flash.data()+RiscUpdate::JournalOffset,&record,sizeof(record));
-   if(mode=="bad-store")flash[0x310010]^=1;
-   if(mode=="bad-layout")table[2].size-=4096;
+   if(mode=="bad-store")flash[RiscUpdate::StoreOffset[0]+16]^=1;
+   if(mode=="bad-layout")table[2].size=RiscUpdate::StoreAbi==2?0x300000:0x280000;
    assert(RiscBankStore::prepareBoot(own,restartSafe,safe)==(mode=="boot" || restarting));
    assert(writes==0 && confirms==0);
    if(mode=="boot"){assert(!strcmp(RiscBankStore::bootLabel(),"bootfs0"));assert(!RiscBankStore::confirmBoot());assert(RiscBankStore::exitSafe());}
    if(restarting){
      using namespace RiscBankStore;
      firmware(1,"0.1.12");std::vector<uint8_t> payload(flash.begin()+0x800000,flash.begin()+0x800000+imageSize);
-     risc_bank_image_v1 image{};image.struct_size=sizeof(image);image.size=payload.size();image.store_abi=1;
+     risc_bank_image_v1 image{};image.struct_size=sizeof(image);image.size=payload.size();image.store_abi=RiscUpdate::StoreAbi;
      memcpy(image.active_store_sha256,record.storeSha,32);SHA256(payload.data(),payload.size(),image.sha256);
      replacingFirmware=true;uint64_t token=0;assert(transaction->begin(false,image,&token)==RISC_BANK_OK);
      assert(!api.restart(nullptr,token) && restarts==0);
@@ -142,11 +149,13 @@ int main(int argc,char** argv){
    for(unsigned b=0;b<2;++b)for(unsigned r=0;r<2;++r)parts[b][r]=&table[b*2+r];
    firmware(1,"0.1.12");replacingFirmware=true;assert(validateFirmware(nullptr,1,imageSize));
    for(const char* v:{RISC_BUILD_VERSION,"0.1.10","00.1.12","4294967296.0.0","1.0","1.2.3-rc"}){firmware(1,v);assert(!validateFirmware(nullptr,1,imageSize));}
-   firmware(1,"0.1.12","2");assert(!validateFirmware(nullptr,1,imageSize));
+   firmware(1,"0.1.12",RiscUpdate::StoreAbi==1?"2":"1");assert(!validateFirmware(nullptr,1,imageSize));
    firmware(1,RISC_BUILD_VERSION);replacingFirmware=false;assert(validateFirmware(nullptr,1,imageSize));
    assert(!validateFirmware(nullptr,1,imageSize-1));
    uint8_t byte=0;assert(!write(nullptr,0,0,0,&byte,1));assert(!erase(nullptr,0,1,0));
    assert(!write(nullptr,1,1,RiscUpdate::StoreBytes,&byte,1));
+   assert(!write(nullptr,1,0,RiscUpdate::FirmwareBytes,&byte,1));
+   activeBank=1;assert(!write(nullptr,0,0,RiscUpdate::FirmwareBytes,&byte,1));assert(!erase(nullptr,0,0,RiscUpdate::FirmwareBytes));activeBank=0;
    ownerEnabled=false;assert(!write(nullptr,1,0,0,&byte,1));ownerEnabled=true;
    operationEnabled=false;
    assert(!write(nullptr,1,0,0,&byte,1) && !erase(nullptr,1,1,0) && !read(nullptr,1,0,0,&byte,1));
@@ -178,5 +187,8 @@ int main(int argc,char** argv){
    goodElf[0]=0;assert(!admitElf(goodElf.data(),goodElf.size()));
    delete scratch;scratch=nullptr;
  }
+#ifdef RISC_PAIRED_APP_DATA
+ for(size_t at=0x270000;at<0x2f0000;++at)assert(flash[at]==0x5a);
+#endif
  std::cout<<"Production native bank adapter: "<<mode<<" PASS\n";
 }

@@ -225,6 +225,13 @@ bool Runtime::appPolicies(JsonVariantConst value) {
           if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
               port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
+        } else if (!strcmp(capability,RISC_APP_DATA_CAPABILITY)) {
+          const auto* backend=port_.appData;
+          if(grant.api!=RISC_APP_DATA_API_V1 || !grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)return fail("app-data backend/namespace unavailable");
+          // A namespace belongs to one admitted app identity. No accidental
+          // sharing through copied policy numbers or provider-global tables.
+          for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(policies_[p].grants[g].driver==AppDataDriver && policies_[p].grants[g].instance==grant.instance)return fail("app-data namespace already owned");
+          grant.driver=AppDataDriver;grant.capability=RISC_APP_DATA_CAPABILITY;
         } else if (!strcmp(capability,"storage.installed-files")) {
           if(grant.instance || grant.api!=1)return fail("invalid installed-files authority");
           grant.installedFiles=true;grant.capability="storage.installed-files";
@@ -254,7 +261,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
   return true;
 }
 bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
-  if (!active() || !appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
+  if (!active() || !appDataExitSafe() || !appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
   out->slot=out->generation=0;out->api=nullptr;
   const AppGrantPolicy* allowed=nullptr;
   for (size_t i=0;i<appPolicy_->count;++i) {
@@ -276,6 +283,11 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.keyValueNamespace=allowed->instance;
     grant.keyValue={allowed->api,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
     grant.api=&grant.keyValue;
+  } else if (allowed->driver==AppDataDriver) {
+    if(appDataContext_ || !providerStorageSafe())return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    appDataContext_=context;appDataNamespace_=uint32_t(allowed->instance);
+    appDataTable_={RISC_APP_DATA_API_V1,sizeof(risc_app_data_v1),context,appDataStat,appDataRead,appDataReplace};grant.api=&appDataTable_;
   } else if (allowed->installedFiles) {
     if(!installedFiles_ || installedVolumeContext_ || !providerStorageSafe())return false;
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
@@ -344,6 +356,7 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   return true;
 }
 bool Runtime::providerStorageSafe() const {
+  if(!appDataExitSafe())return false;
   if(installedFiles_ && installedFiles_->retained())return false;
   if(port_.providerStorageSafe)return port_.providerStorageSafe();
   return !port_.appExitSafe || port_.appExitSafe();
@@ -407,22 +420,24 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
   return backend.put(backend.context,matched->nameSpace,key,data,size)==RISC_BOUND_KEY_VALUE_OK ? RISC_BOUND_KEY_VALUE_OK : RISC_BOUND_KEY_VALUE_IO;
 }
 bool Runtime::release(risc_runtime_capability_v1* out) {
-  if (!active() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
+  if (!active() || !appDataExitSafe() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
   auto& grant=appGrants_[out->slot-1];
   if (!grant.live || grant.generation!=out->generation || grant.api!=out->api) return false;
   if (grant.provider.slot && !graph_.release(grant.provider)) return false;
   if(grant.api==&installedVolume_){if(!installedFiles_->end())return false;installedVolumeContext_=nullptr;}
+  if(grant.api==&appDataTable_){if(!appDataExitSafe())return false;appDataContext_=nullptr;appDataNamespace_=0;}
   grant={};out->slot=out->generation=0;out->api=nullptr;return true;
 }
 bool Runtime::revokeApp() {
   bool ok=true;
   for (auto& grant:appGrants_) if (grant.live) {
     if (grant.provider.slot && !graph_.release(grant.provider)) ok=false;
-    else {if(grant.api==&installedVolume_){if(!installedFiles_->end()){ok=false;continue;}installedVolumeContext_=nullptr;}grant={};}
+    else {if(grant.api==&appDataTable_){if(!appDataExitSafe()){ok=false;continue;}appDataContext_=nullptr;appDataNamespace_=0;}if(grant.api==&installedVolume_){if(!installedFiles_->end()){ok=false;continue;}installedVolumeContext_=nullptr;}grant={};}
   }
   appPolicy_=nullptr;return ok;
 }
 #include "InstalledFilesRuntime.inc"
+#include "AppDataRuntime.inc"
 bool Runtime::prepare(const char* root) {
   if(attempted_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);
@@ -461,7 +476,7 @@ bool Runtime::prepare(const char* root) {
   strcpy(default_,current_); prepared_=true; return true;
 }
 bool Runtime::launch(const char* relative) {
-  if(!active() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
+  if(!active() || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   return path(root_,relative,queued_,sizeof(queued_));
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
@@ -533,12 +548,12 @@ bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* a
 void Runtime::yield(uint32_t ms) {
   if(!active()) return;
   // Poll work is bounded separately; each app yield cooperates exactly once.
-  graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
+  if(appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
   port_.delay(ms<1?1:ms>50?50:ms);
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }
 bool Runtime::appExitBarrier() {
-  if(!retained_ && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  if(!retained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
   // Revoke app authority without calling provider release/quiesce: the boot
   // references and active invocation memory/images must remain pinned.
   retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;

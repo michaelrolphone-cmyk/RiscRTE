@@ -69,7 +69,7 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
     assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),reason));
     assert(!runtime.run());assert(lines.size()==before);
   };
-  for(unsigned count:{9u,16u,unsigned(Runtime::MaxAppPolicies)}) {
+  for(unsigned count:{9u,16u,18u,unsigned(Runtime::MaxAppPolicies)}) {
     policies(count);generation=0;lines.clear();
     Runtime runtime({owner,health,delay,logLine});
     assert(runtime.prepare(root.c_str()));
@@ -110,14 +110,14 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   JsonDocument duplicate;duplicate.set(app);
   auto requirements=duplicate["requires"].as<JsonArray>();requirements.add(requirements[0]);
   save("app.json",duplicate);policies(Runtime::MaxAppPolicies);rejected("duplicate app requirement");
-  // Declaration bound remains eight; grant namespace capacity is independently bounded.
+  // Declaration and grant namespace capacities remain independently bounded.
   while(requirements.size()<Runtime::MaxAppRequirements+1)requirements.add(requirements[0]);
   save("app.json",duplicate);rejected("invalid app identity/declarations");
   save("app.json",app);policies(Runtime::MaxAppPolicies);
   grants=config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>();
   while(grants.size()<Runtime::MaxAppPolicyGrants+1)grants.add(grants[0]);
   rejected("invalid app identity/declarations");
-  puts("App policy capacity: 9/16/18 accepted, 19 rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
+  puts("App policy capacity: 9/16/18/19 accepted, 20 rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
 }
 int main(int argc,char** argv){
   assert(argc==2);std::string root=argv[1];
