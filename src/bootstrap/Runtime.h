@@ -97,7 +97,8 @@ class Runtime final {
   };
   struct ProviderStorage {
     Runtime* owner=nullptr;
-    ProviderKey keys[8]{};
+    static constexpr size_t MaxKeys=9;
+    ProviderKey keys[MaxKeys]{};
     size_t count=0;
     risc_bound_key_value_v1 table{};
     bool live=false;

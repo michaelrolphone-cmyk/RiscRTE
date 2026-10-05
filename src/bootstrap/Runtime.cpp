@@ -318,7 +318,7 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   JsonVariantConst value=selection["key_value"];
   // An omitted optional map differs from explicit null.
   if (value.isUnbound()) return true;
-  if (!value.is<JsonArrayConst>() || !value.size() || value.size()>8) return fail("invalid provider key-value map");
+  if (!value.is<JsonArrayConst>() || !value.size() || value.size()>ProviderStorage::MaxKeys) return fail("invalid provider key-value map");
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
     auto& entry=storage.keys[storage.count]; int64_t nameSpace=0;
     if (!keys(item,{"key","namespace","access"}) ||
