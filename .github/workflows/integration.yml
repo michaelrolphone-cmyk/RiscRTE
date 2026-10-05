@@ -65,6 +65,7 @@ jobs:
           SANITIZE=1 bash test/run_update_runtime_test.sh
           python test/paired_bank_images_test.py -v
           python test/provision_seed_test.py -v
+          python test/maintenance_plan_test.py -v
           bash test/run_radio_test.sh
           SANITIZE=1 bash test/run_radio_test.sh
           bash test/run_i2s_test.sh
@@ -182,6 +183,7 @@ jobs:
         run: |
           pio run -e esp32s3-16mb-maintenance -j 1
           python scripts/maintenance_candidate.py --source-sha "$SOURCE_SHA"
+          python test/maintenance_plan_test.py --seed dist/esp32s3-16mb-paired/seed --maintenance dist/owner-maintenance
       - uses: actions/upload-artifact@v4
         with:
           name: riscrte-owner-maintenance-${{ github.event.pull_request.head.sha || github.sha }}

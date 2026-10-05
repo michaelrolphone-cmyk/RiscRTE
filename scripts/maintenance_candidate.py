@@ -8,6 +8,7 @@ from check_versions import firmware
 def stage(source):
     require(source==head(),'maintenance source mismatch')
     image=file_bytes(ROOT/'.pio/build/esp32s3-16mb-maintenance/firmware.bin');esp_image(image)
+    require(image[3]>>4==4,'maintenance flash declaration')
     version=firmware((ROOT/'platformio.ini').read_text())
     for marker in (b'RISC_OWNER_INSTALLER:1\0',b'RTE_OWNER_MAINTENANCE=1\0',('RTE_SOURCE='+source).encode()+b'\0',('RISC_RUNTIME_VERSION:'+version).encode()+b'\0'):
         require(marker in image,'maintenance identity missing')

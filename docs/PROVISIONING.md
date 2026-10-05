@@ -578,3 +578,57 @@ another invocation. Transport tests connect the real client to the production
 framing/installer through subprocess pipes and simulated NVS only. Native target
 CI compiles the separate image, checks its source/maintenance markers and proves
 that the normal paired image lacks the maintenance endpoint. Hardware is UNRUN.
+
+
+### Offline maintenance-entry/restoration planner
+
+`scripts/maintenance_plan.py` prepares reviewable entry/restoration payloads from
+an explicit ABI1 inventory, a frozen private 16 MiB flash snapshot, and the
+verified separate maintenance artifact. It opens files only; it has no device,
+serial, reset, flash or erase implementation.
+
+```sh
+python scripts/maintenance_plan.py --inventory /owner/private/inventory.json \
+  --snapshot /owner/private/frozen-flash.bin \
+  --maintenance /owner/private/verified-maintenance-artifact \
+  --output /owner/private/new-maintenance-plan
+```
+
+Inventory schema `riscrte.maintenance-inventory`, version 1, requires exactly:
+`layout` (`riscrte-paired-16m-v1`), `flash_bytes` (16777216), integer `active_bank`
+(0 or 1), canonical `runtime_version`, `running_firmware_sha256`, exact
+`maintenance_source_sha`, and explicit `quiescent: true`. The ordinary Runtime
+must support descriptor v2 (0.1.31 or later). The planner verifies the partition
+table, pinned bootloader, confirmed OTA selection, active journal and active
+firmware/store digests against this inventory. Pending/ambiguous transitions,
+missing or incompatible inventory, unsupported near-wrap OTA sequences and
+ABI2/app-data layouts are rejected. These checks cannot establish that a live
+device still matches a stale snapshot; the owner must verify that separately.
+
+The private output directory contains only an inactive-application entry image,
+one alternate OTA page selecting it as NEW, and exact restoration copies of
+those two regions, plus a plan and hashes. No health confirmation is fabricated.
+NVS is neither read nor included in any output/restoration payload. The active
+firmware/store, bank journal and partition table are untouched. Entry stages and
+verifies the inactive image before changing the alternate OTA page; the original
+confirmed OTA page remains intact. Restoration requires deliberate ROM mode,
+verifies the expected maintenance image/sequence, restores the inactive image
+before its old OTA page, and retains newly installed NVS input. Unexpected
+ordinary provisioning invalidates the old restoration plan.
+
+The plan includes offsets and preconditions, not executable flashing commands.
+It does not install a maintenance image over running code. Keep the snapshot and
+restoration files private; no owner snapshot is published or uploaded to CI.
+Software tests use dummy snapshots and separately use freshly built artifacts,
+checking deterministic plans, NVS exclusion and incompatible/missing inventory
+refusal. All physical entry, installation, restoration and hardware checks remain
+UNRUN and are not software-readiness prerequisites.
+
+OTA selection/state handling follows the pinned IDF4.4.7
+[selection implementation](https://github.com/espressif/esp-idf/blob/v4.4.7/components/bootloader_support/src/bootloader_common_loader.c)
+and [boot transitions](https://github.com/espressif/esp-idf/blob/v4.4.7/components/bootloader_support/src/bootloader_utility.c):
+the largest eligible sequence selects `(sequence-1) % 2`; NEW becomes
+PENDING_VERIFY and an unconfirmed later boot can mark it ABORTED. The planner
+keeps the existing confirmed page and never marks maintenance VALID. It supports
+only the exact raw image/layout formats validated by the existing candidate
+helpers; it does not decrypt, sign or convert another deployment format.
