@@ -8,6 +8,8 @@
 #include <cstring>
 using namespace RiscBoot;
 static bool owned=true,safe=true,retaining=false;static unsigned phase=0,reads=0,writes=0;
+static unsigned capacity=0;
+extern "C" unsigned multi_capacity(){return capacity;}
 static risc_key_value_v1 saved{};
 static std::map<uint32_t,std::map<std::string,std::vector<unsigned char>>> values;
 extern "C" void multi_owner(int v){owned=v;}
@@ -18,10 +20,10 @@ extern "C" void multi_retain(){safe=false;}
 extern "C" void multi_keep(risc_key_value_v1 api){saved=api;}
 static bool owner(){return owned;}
 static int32_t get(void*,uint32_t ns,const char* key,void* p,uint32_t cap,uint32_t* size){
- ++reads;assert(ns==1||ns==5);auto n=values.find(ns);if(n==values.end()||!n->second.count(key))return RISC_KEY_VALUE_NOT_FOUND;
+ ++reads;assert((ns>=1&&ns<=capacity)||ns==1||ns==5);auto n=values.find(ns);if(n==values.end()||!n->second.count(key))return RISC_KEY_VALUE_NOT_FOUND;
  auto& bytes=n->second[key];*size=bytes.size();if(cap<bytes.size())return RISC_KEY_VALUE_BUFFER_SMALL;memcpy(p,bytes.data(),bytes.size());return 0;
 }
-static int32_t put(void*,uint32_t ns,const char* key,const void* p,uint32_t n){++writes;assert(ns==1||ns==5);const auto* b=static_cast<const unsigned char*>(p);values[ns][key]=std::vector<unsigned char>(b,b+n);return 0;}
+static int32_t put(void*,uint32_t ns,const char* key,const void* p,uint32_t n){++writes;assert((ns>=1&&ns<=capacity)||ns==1||ns==5);const auto* b=static_cast<const unsigned char*>(p);values[ns][key]=std::vector<unsigned char>(b,b+n);return 0;}
 static KeyValueBackend backend{nullptr,get,put};
 static bool bindClock(Runtime& runtime){
  static const risc_platform_clock_api_v1 clock{1,sizeof(clock),nullptr,[](void*)->uint64_t{return 0;},[](void*,uint32_t){}};
@@ -60,7 +62,21 @@ int main(int argc,char** argv){
  }
  check(grant(1)+","+grant(5),requirement()+","+requirement(RISC_KEY_VALUE_CAPABILITY,2),false);
  check(grant(1,RISC_BOUND_KEY_VALUE_CAPABILITY),requirement(RISC_BOUND_KEY_VALUE_CAPABILITY),false);
- std::string many;for(unsigned i=1;i<=8;++i){if(i>1)many+=",";many+=grant(i);}check(many,requirement(),true);check(many+","+grant(9),requirement(),false);
+ std::string many;
+ for(unsigned i=1;i<=Runtime::MaxAppPolicyGrants;++i){
+  if(i>1)many+=",";
+  many+=grant(i);
+  if(i==8||i==9||i==Runtime::MaxAppPolicyGrants)check(many,requirement(),true);
+ }
+ check(many+","+grant(Runtime::MaxAppPolicyGrants+1),requirement(),false);
+ check(many+","+grant(1),requirement(),false);
+ // The newly usable final slot keeps the same duplicate and type rejection.
+ std::string prefix;for(unsigned i=1;i<Runtime::MaxAppPolicyGrants;++i){if(i>1)prefix+=",";prefix+=grant(i);}
+ check(prefix+","+grant(1),requirement(),false);
+ check(prefix+","+grant(0),requirement(),false);
+ check(prefix+","+grant(12,"undeclared"),requirement(),false);
+ check(prefix+","+grant(12,RISC_BOUND_KEY_VALUE_CAPABILITY),requirement(),false);
+ check(prefix+","+grant(12,RISC_KEY_VALUE_CAPABILITY,2),requirement(),false);
  for(unsigned run=0;run<3;++run){
   stage(run&1?grant(5)+","+grant(1):grant(1)+","+grant(5),requirement());
   owned=safe=true;retaining=run==2;phase=0;values.clear();reads=writes=0;
@@ -70,5 +86,12 @@ int main(int argc,char** argv){
   assert(saved.get(saved.context,"same",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_CONTEXT&&!size);
   assert(saved.put(saved.context,"same","bad",3)==RISC_KEY_VALUE_CONTEXT);++cases;
  }
+ for(unsigned limit:{9u,12u}) {
+  capacity=limit;owned=safe=true;retaining=false;values.clear();reads=writes=0;
+  std::string declared;for(unsigned i=1;i<=limit;++i){if(i>1)declared+=",";declared+=grant(i);}
+  stage(declared,requirement());Runtime r(port());assert(r.prepare(root.c_str()));assert(r.run());
+  assert(reads==limit&&writes==limit);++cases;
+ }
+ capacity=0;
  printf("Multiple explicit KV namespaces: %u admission/lifecycle/owner/isolation/retention cases PASS\n",cases);
 }

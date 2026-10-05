@@ -2,6 +2,7 @@
 #include <RiscKeyValueV1.h>
 #include <assert.h>
 #include <string.h>
+extern unsigned multi_capacity(void);
 extern void multi_owner(int);
 extern int multi_phase(void);
 extern void multi_next(void);
@@ -18,6 +19,20 @@ __attribute__((visibility("default"))) void app_main(void){
  assert(kv->get(kv->context,"same",bytes,sizeof(bytes),&size)==0&&size==3&&!memcmp(bytes,"one",3));
  assert(rt->release(&one));multi_next();return;
 #else
+ unsigned capacity=multi_capacity();
+ if(capacity){
+  risc_runtime_capability_v1 grants[12]={0};
+  for(unsigned i=0;i<capacity;++i){
+   grants[i].struct_size=sizeof(grants[i]);assert(rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,i+1,&grants[i]));
+   const risc_key_value_v1* kv=grants[i].api;unsigned value=i+1,got=0;uint32_t n=0;
+   assert(kv->put(kv->context,"slot",&value,sizeof(value))==0);
+   assert(kv->get(kv->context,"slot",&got,sizeof(got),&n)==0&&n==sizeof(got)&&got==value);
+  }
+  assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,0,&bad));
+  assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,capacity+1,&bad));
+  for(unsigned i=0;i<capacity;++i)assert(rt->release(&grants[i]));
+  return;
+ }
  bad.slot=77;bad.generation=88;bad.api=(void*)1;
  assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,0,&bad)&&!bad.slot&&!bad.generation&&!bad.api);
  assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,2,&bad));

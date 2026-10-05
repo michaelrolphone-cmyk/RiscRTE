@@ -187,7 +187,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
         !text(manifest["version"],policy.version,sizeof(policy.version)) || !RuntimePackages::safeVersion(policy.version) ||
         !text(manifest["file_name"],filename,sizeof(filename)) || !RuntimePackages::safeArtifact(filename) || !elfPath(filename) ||
         !manifest["requires"].is<JsonArrayConst>() || manifest["requires"].size()>8 ||
-        !item["grants"].is<JsonArrayConst>() || item["grants"].size()>8) return fail("invalid app identity/declarations");
+        !item["grants"].is<JsonArrayConst>() || item["grants"].size()>MaxAppPolicyGrants) return fail("invalid app identity/declarations");
     char* slash=strrchr(policy.elf,'/'); if (!slash) return false;
     *(slash+1)=0;
     if (strlen(policy.elf)+strlen(filename)>=sizeof(policy.elf)) return fail("app path too long");
@@ -199,7 +199,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
           !integer(request["api"],1,UINT32_MAX,api)) return fail("invalid app requirement");
       if (!strcmp(requested,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
       // A manifest declares each capability once. The owner may independently
-      // authorize more than one positive KV namespace, still within eight
+      // authorize more than one positive KV namespace, still within MaxAppPolicyGrants
       // total grants; no other capability's uniqueness rule is broadened.
       const bool keyValue=!strcmp(requested,RISC_KEY_VALUE_CAPABILITY);
       for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,requested) &&
@@ -212,7 +212,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
         if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
         if (strcmp(capability,requested) || allowedApi!=api) continue;
         if (++matches>1 && !keyValue) return fail("app requirement not uniquely authorized");
-        if (policy.count==8) return fail("too many app grants");
+        if (policy.count==MaxAppPolicyGrants) return fail("too many app grants");
         for (size_t i=0;i<policy.count;++i) {
           const auto& earlier=policy.grants[i];
           if (!strcmp(earlier.capability,capability) && earlier.api==uint32_t(api) && earlier.instance==uint64_t(instance))

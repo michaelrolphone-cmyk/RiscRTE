@@ -37,6 +37,7 @@ struct Port {
 class Runtime final {
  public:
   static constexpr size_t MaxAppPolicies=16;
+  static constexpr size_t MaxAppPolicyGrants=12;
   explicit Runtime(Port p) : port_(p) {}
   ~Runtime() { revokeProviders(); }
   enum class Scope : uint8_t { Global, Device, Bus };
@@ -109,7 +110,7 @@ class Runtime final {
   };
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
-    AppGrantPolicy grants[8]{}; size_t count=0;
+    AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
   } policies_[MaxAppPolicies]{};
   size_t policyCount_=0;
   const AppPolicy* appPolicy_=nullptr;

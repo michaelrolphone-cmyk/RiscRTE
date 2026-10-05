@@ -85,14 +85,14 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   JsonDocument duplicate;duplicate.set(app);
   auto requirements=duplicate["requires"].as<JsonArray>();requirements.add(requirements[0]);
   save("app.json",duplicate);policies(16);rejected("duplicate app requirement");
-  // Policy capacity does not increase either per-app declaration/grant bound.
+  // Declaration bound remains eight; grant namespace capacity is independently bounded.
   while(requirements.size()<9)requirements.add(requirements[0]);
   save("app.json",duplicate);rejected("invalid app identity/declarations");
   save("app.json",app);policies(16);
   grants=config["app_capabilities"][15]["grants"].as<JsonArray>();
-  while(grants.size()<9)grants.add(grants[0]);
+  while(grants.size()<Runtime::MaxAppPolicyGrants+1)grants.add(grants[0]);
   rejected("invalid app identity/declarations");
-  puts("App policy capacity: 9/16 accepted, 17 rejected; last-slot identity/path, exact grants and eight-declaration bounds PASS");
+  puts("App policy capacity: 9/16 accepted, 17 rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
 }
 int main(int argc,char** argv){
   assert(argc==2);std::string root=argv[1];
