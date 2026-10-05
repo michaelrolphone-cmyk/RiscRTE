@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2]
+    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity]
   workflow_dispatch:
   workflow_call:
 permissions:
@@ -62,6 +62,8 @@ jobs:
           bash test/run_update_runtime_test.sh
           SANITIZE=1 bash test/run_update_runtime_test.sh
           python test/paired_bank_images_test.py -v
+          bash test/run_hci_test.sh
+          SANITIZE=1 bash test/run_hci_test.sh
           bash test/run_radio_test.sh
           SANITIZE=1 bash test/run_radio_test.sh
           bash test/run_i2s_test.sh

@@ -1,4 +1,5 @@
 #include "CpuPort.h"
+#include "HciBounds.h"
 #include <cstring>
 namespace RiscCpu {
 namespace {
@@ -30,10 +31,16 @@ bool Port::providerStorageSafe() const {
   for(const auto& pin:pins_)if(pin.held)return false;
   for(const auto& c:i2ss_)if(c.closing)return false;
   for(const auto& c:radios_)if(c.closing)return false;
+  if(hci_.closing || (hw_.hciSafe && !hw_.hciSafe()))return false;
   return true;
 }
 bool Port::appExitSafe() const {
-  if(!restartResourcesSafe())return false;
+  // Healthy HCI is entirely firmware/provider-owned, with no app callbacks or
+  // borrowed app storage; it survives navigation. Restart/sleep still drain it.
+  if(!providerStorageSafe())return false;
+  if(hw_.httpIdle && !hw_.httpIdle())return false;
+  for(const auto& c:i2ss_)if(c.token)return false;
+  for(const auto& c:radios_)if(c.active)return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   return true;
 }
@@ -42,12 +49,14 @@ bool Port::restartResourcesSafe() const {
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
   for(const auto& c:radios_)if(c.active)return false;
+  if(hci_.token || (hw_.hciIdle && !hw_.hciIdle()))return false;
   return true;
 }
 bool Port::quiescent() const {
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   for(const auto& c:radios_)if(c.token || c.active || c.closing)return false;
+  if(hci_.token || hci_.closing || (hw_.hciIdle && !hw_.hciIdle()))return false;
   for(const auto& p:pins_)if(p.owner)return false;
   return !poisoned_;
 }
@@ -125,6 +134,14 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       c.api={1,sizeof(c.api),&c,i2sOpen,i2sWrite,i2sRead,i2sClose};
       if(!runtime.registerPlatform("platform.i2s.controller",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
+    if(runtime.uses(id,"platform.hci.controller",1)){
+      if(hciCount_ || strcmp(d.type,"radio.integrated") ||
+         strcmp(d.compatible,"espressif,esp32s3-ble") || d.config.radio.unit!=0 || d.config.radio.features!=1 ||
+         !hw_.hciOpen || !hw_.hciSend || !hw_.hciReceive || !hw_.hciClose || !hw_.hciIdle || !hw_.hciSafe)return false;
+      ++hciCount_;hci_.port=this;
+      hci_.api={{1,sizeof(hci_.api),&hci_,hciOpen,hciSend,hciReceive,hciClose},hciStatus};
+      if(!runtime.registerPlatform("platform.hci.controller",1,RiscBoot::Runtime::Scope::Device,id,&hci_.api))return false;
+    }
     if(runtime.uses(id,"platform.radio",1)){
       // Only the selected integrated station radio receives this authority.
       // AP features in the board record do not imply backend AP support.
@@ -201,6 +218,55 @@ bool Port::i2sClose(void* context,uint64_t token){
   p.transferring_=true;const bool ok=p.hw_.i2sClose(c.config.controller);p.transferring_=false;
   if(!ok)return false;
   p.unreserve(c.config.bclk,&c);p.unreserve(c.config.ws,&c);p.unreserve(c.config.data,&c);c.token=0;c.closing=false;return true;
+}
+// HCI is opt-in at open, with a cleanup token retained on partial activation.
+bool Port::hciOpen(void* context,uint32_t unit,uint64_t* out){
+  if(out)*out=0;
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || !p.hw_.hciIdle())return false;
+  const uint64_t token=p.token();if(!token)return false;
+  p.transferring_=true;const bool ok=p.hw_.hciOpen();p.transferring_=false;
+  if(!ok){
+    p.transferring_=true;const bool clean=p.hw_.hciClose();p.transferring_=false;
+    if(clean && p.hw_.hciIdle())return false;
+  }
+  c.token=token;c.closing=!ok;*out=token;return ok;
+}
+bool Port::hciSend(void* context,uint64_t token,uint8_t type,const uint8_t* data,size_t size,uint32_t ms){
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || c.closing || !token || token!=c.token || ms>HciBounds::MaxWaitMs || !HciBounds::tx(type,data,size))return false;
+  p.transferring_=true;const bool ok=p.hw_.hciSend(type,data,size,ms);p.transferring_=false;
+  if(!ok)c.closing=true;
+  return ok;
+}
+bool Port::hciReceive(void* context,uint64_t token,uint8_t* type,uint8_t* data,size_t capacity,size_t* size,uint32_t ms){
+  if(size)*size=0;
+  if(type)*type=0;
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!type || !data || !size || capacity<HciBounds::MaxPayload || ms>HciBounds::MaxWaitMs || !p.available() || p.sleepRetained_ || p.transferring_ || c.closing || !token || token!=c.token)return false;
+  p.transferring_=true;const bool ok=p.hw_.hciReceive(type,data,HciBounds::MaxPayload,size,ms);p.transferring_=false;
+  if(!ok || (*size && !HciBounds::rx(*type,data,*size))){*size=0;*type=0;c.closing=true;return false;}
+  return true;
+}
+bool Port::hciClose(void* context,uint64_t token){
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
+  c.closing=true;p.transferring_=true;const bool ok=p.hw_.hciClose();p.transferring_=false;
+  if(!ok || !p.hw_.hciIdle())return false;
+  c.token=0;c.closing=false;return true;
+}
+bool Port::hciStatus(void* context,uint64_t token,uint8_t* state){
+  if(state)*state=RISC_HCI_CONTROLLER_RETAINED;
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!state || !p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || token!=c.token)return false;
+  if(!token){
+    if(c.closing || !p.hw_.hciIdle() || !p.hw_.hciSafe())return false;
+    *state=RISC_HCI_CONTROLLER_OFF;return true;
+  }
+  if(c.closing || !p.hw_.hciSafe() || p.hw_.hciIdle()){
+    c.closing=true;*state=RISC_HCI_CONTROLLER_RETAINED;return true;
+  }
+  *state=RISC_HCI_CONTROLLER_ON;return true;
 }
 // Radio ownership is logical until the first join/scan. Idle provider claims
 // may span app handoffs; native activity and failed cleanup never may.
@@ -340,6 +406,8 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   for(const auto& c:p.i2ss_)if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;if(c.active)return RISC_LIGHT_SLEEP_BUSY;}
+  if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_LIGHT_SLEEP_BUSY;
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
   if(pin<0)return RISC_LIGHT_SLEEP_INVALID;
@@ -388,6 +456,8 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   for(const auto& c:p.i2ss_)if(c.closing)return RISC_DEEP_SLEEP_RETAINED;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_DEEP_SLEEP_RETAINED;if(c.active)return RISC_DEEP_SLEEP_BUSY;}
+  if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_DEEP_SLEEP_RETAINED;
+  if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& pin:p.pins_)if(pin.pwm)return RISC_DEEP_SLEEP_BUSY;
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;

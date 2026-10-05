@@ -4,6 +4,7 @@
 #include "NativeSleep.h"
 #include "NativeI2s.h"
 #include "NativeRadio.h"
+#include "NativeHci.h"
 #ifdef RISC_ENABLE_HTTP
 #include "NativeHttp.h"
 #endif
@@ -155,7 +156,7 @@ bool spiClose(uint8_t physical){
 }
 bool deepReady(){
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
-  if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadio::idle())return false;
+  if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
 #ifdef RISC_ENABLE_HTTP
   if(!NativeHttp::idle())return false;
 #endif
@@ -167,7 +168,7 @@ bool deepReady(){
 }
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
 bool lightSleep(uint32_t* cause){
-  if(!NativeI2s::idle() || !NativeRadio::idle())return false;
+  if(!NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
 #ifdef RISC_ENABLE_HTTP
   if(!NativeHttp::idle())return false;
 #endif
@@ -186,6 +187,8 @@ Hardware nativeHardware(bool (*owner)()){
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
+  hardware.hciOpen=NativeHci::open;hardware.hciSend=NativeHci::send;hardware.hciReceive=NativeHci::receive;
+  hardware.hciClose=NativeHci::close;hardware.hciIdle=NativeHci::idle;hardware.hciSafe=NativeHci::safe;
   hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;
 #ifdef RISC_ENABLE_HTTP
   NativeHttp::configure(hardware.owner,[](){

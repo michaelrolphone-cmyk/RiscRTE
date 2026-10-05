@@ -102,3 +102,9 @@ fixtures are new integration code. No Watch radio driver or product UI is
 installed in the default store. IDF declarations and cleanup semantics were
 checked against official v4.4.7 sources (see RADIO_STATION.md and the native shim
 README); shim declarations do not pretend to be copied full SDK headers.
+
+Firmware 0.1.24 uses the unchanged imported `twatch_hci_controller_v1` ABI.
+`HciBounds.h`, `NativeHci.h`, CPU-port integration and host fixtures are original
+integration code; no external Bluetooth host stack or product policy is copied.
+SDK/Arduino source checks and their exact pinned upstream links are recorded in
+[the HCI contract](BLUETOOTH_HCI.md).

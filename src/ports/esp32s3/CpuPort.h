@@ -2,6 +2,7 @@
 #include "bootstrap/Runtime.h"
 #include <GardenPlatformV1.h>
 #include <TWatchPlatformV1.h>
+#include <RiscHciControllerStatusV1.h>
 #include <RiscPlatformClockV1.h>
 #include <RiscHttpClientV1.h>
 namespace RiscCpu {
@@ -53,6 +54,13 @@ struct Hardware {
   bool (*httpSafe)()=nullptr;
   // Generic native mutation exclusion; healthy activity need not revoke KV.
   bool (*maintenanceIdle)()=nullptr;
+  // Explicit integrated BLE controller lifecycle. No host stack or credentials.
+  bool (*hciOpen)()=nullptr;
+  bool (*hciSend)(uint8_t,const uint8_t*,size_t,uint32_t)=nullptr;
+  bool (*hciReceive)(uint8_t*,uint8_t*,size_t,size_t*,uint32_t)=nullptr;
+  bool (*hciClose)()=nullptr;
+  bool (*hciIdle)()=nullptr;
+  bool (*hciSafe)()=nullptr;
 };
 class Port final {
  public:
@@ -77,9 +85,10 @@ class Port final {
   struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; } i2ss_[2];
   struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;
     bool active=false,closing=false,scanning=false; garden_radio_v1 api{}; } radios_[1];
+  struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false; } pins_[49];
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
-  size_t gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0;
+  size_t gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0;
   risc_platform_clock_api_v1 clock_{};
   risc_http_client_v1 http_{};
   bool available() const { return hw_.owner && hw_.owner() && !poisoned_ && !sleeping_; }
@@ -108,6 +117,11 @@ class Port final {
   static bool i2sWrite(void*,uint64_t,const int16_t*,size_t,size_t*,uint32_t);
   static bool i2sRead(void*,uint64_t,int16_t*,size_t,size_t*,uint32_t);
   static bool i2sClose(void*,uint64_t);
+  static bool hciOpen(void*,uint32_t,uint64_t*);
+  static bool hciSend(void*,uint64_t,uint8_t,const uint8_t*,size_t,uint32_t);
+  static bool hciReceive(void*,uint64_t,uint8_t*,uint8_t*,size_t,size_t*,uint32_t);
+  static bool hciClose(void*,uint64_t);
+  static bool hciStatus(void*,uint64_t,uint8_t*);
   static bool radioClaim(void*,uint64_t*);
   static bool radioJoin(void*,uint64_t,const char*,const char*);
   static bool radioState(void*,uint64_t,uint8_t*,int8_t*);
