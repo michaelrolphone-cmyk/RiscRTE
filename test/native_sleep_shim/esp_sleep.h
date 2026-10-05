@@ -12,6 +12,7 @@ esp_err_t esp_sleep_enable_timer_wakeup(uint64_t us);
 esp_err_t esp_sleep_enable_gpio_wakeup();
 esp_err_t esp_light_sleep_start();
 esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause();
+esp_err_t esp_sleep_enable_ext0_wakeup(gpio_num_t pin, int level);
 esp_err_t esp_sleep_enable_ext1_wakeup(uint64_t mask, esp_sleep_ext1_wakeup_mode_t mode);
 esp_err_t esp_sleep_disable_wakeup_source(esp_sleep_source_t source);
 [[noreturn]] void esp_deep_sleep_start();

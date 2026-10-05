@@ -66,7 +66,7 @@ int main(int argc,char** argv){
  for(unsigned i=1;i<=Runtime::MaxAppPolicyGrants;++i){
   if(i>1)many+=",";
   many+=grant(i);
-  if(i==8||i==9||i==Runtime::MaxAppPolicyGrants)check(many,requirement(),true);
+  if(i>=8)check(many,requirement(),true);
  }
  check(many+","+grant(Runtime::MaxAppPolicyGrants+1),requirement(),false);
  check(many+","+grant(1),requirement(),false);
@@ -86,13 +86,25 @@ int main(int argc,char** argv){
   assert(saved.get(saved.context,"same",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_CONTEXT&&!size);
   assert(saved.put(saved.context,"same","bad",3)==RISC_KEY_VALUE_CONTEXT);++cases;
  }
- for(unsigned limit:{9u,10u}) {
+ for(unsigned limit:{9u,10u,11u,12u}) {
   capacity=limit;owned=safe=true;retaining=false;values.clear();reads=writes=0;
   std::string declared;for(unsigned i=1;i<=limit;++i){if(i>1)declared+=",";declared+=grant(i);}
   stage(declared,requirement());Runtime r(port());assert(r.prepare(root.c_str()));
   std::vector<std::string> parsedStorageChurn(256,std::string(4096,'X'));
   assert(!r.prepare(root.c_str()));assert(r.run());
   assert(reads==limit&&writes==limit);++cases;
+ }
+ // Independently exercise distinct requirement types at10 and reject11.
+ for(unsigned count:{10u,11u}) {
+  std::string requirements,grants,drivers;
+  for(unsigned i=0;i<count;++i){const std::string cap="test.cap"+std::to_string(i),id="cap"+std::to_string(i);
+   if(i){requirements+=",";grants+=",";drivers+=",";}
+   requirements+=requirement(cap.c_str());grants+=grant(0,cap.c_str());drivers+="{\"manifest\":\""+id+".json\"}";
+   write((id+".json").c_str(),"{\"type\":\"driver\",\"id\":\""+id+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\"default.elf\",\"driver_abi\":2,\"requires\":[],\"provides\":["+requirement(cap.c_str())+"]}");
+  }
+  write("default.json",manifest("default","default.elf",requirements));
+  write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+drivers+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]}]}");
+  Runtime r(port());const bool accepted=r.prepare(root.c_str());if(accepted!=(count==10))fprintf(stderr,"requirement capacity: %s\n",r.error());assert(accepted==(count==10));++cases;
  }
  capacity=0;
  printf("Multiple explicit KV namespaces: %u admission/lifecycle/owner/isolation/retention cases PASS\n",cases);

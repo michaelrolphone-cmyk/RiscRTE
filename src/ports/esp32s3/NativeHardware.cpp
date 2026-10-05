@@ -201,6 +201,7 @@ Hardware nativeHardware(bool (*owner)()){
 #ifdef RISC_PAIRED_BANKS
   hardware.maintenanceIdle=RiscBankStore::exitSafe;
 #endif
+  hardware.deepWakeSetValid=NativeSleep::setValid;hardware.deepWakeSetArm=NativeSleep::setArm;hardware.deepWakeSetClear=NativeSleep::setClear;
   return hardware;
 }
 }

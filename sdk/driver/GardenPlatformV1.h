@@ -5,6 +5,7 @@
 #include "RiscLightSleepV1.h"
 #include "RiscDeepSleepV1.h"
 #include "RiscTimedSleepV1.h"
+#include "RiscWakeSetV1.h"
 #include "RiscRadioScanV1.h"
 #define GARDEN_PLATFORM_API_V1 1u
 #include "RiscHardwareConfigV1.h"
@@ -31,6 +32,10 @@ typedef struct {
     /* Optional bounded timer alongside the same owned input; size-check first. */
     risc_gpio_light_sleep_for_v1 light_sleep_for;
     risc_gpio_deep_sleep_for_v1 deep_sleep_for;
+    /* Explicit owned wake-set suffix; legacy entry stays single-input. */
+    risc_gpio_wake_source_v1 wake_source;
+    risc_gpio_light_sleep_set_v1 light_sleep_set;
+    risc_gpio_deep_sleep_set_v1 deep_sleep_set;
 } garden_gpio_v1;
 #define GARDEN_GPIO_LIGHT_SLEEP_V1_SIZE (offsetof(garden_gpio_v1, light_sleep) + sizeof(((garden_gpio_v1*)0)->light_sleep))
 #define GARDEN_GPIO_DEEP_SLEEP_V1_SIZE (offsetof(garden_gpio_v1, deep_sleep) + sizeof(((garden_gpio_v1*)0)->deep_sleep))
@@ -75,3 +80,9 @@ typedef struct {
 #define GARDEN_GPIO_LIGHT_SLEEP_FOR_V1_SIZE (offsetof(garden_gpio_v1, light_sleep_for) + sizeof(((garden_gpio_v1*)0)->light_sleep_for))
 
 #define GARDEN_GPIO_DEEP_SLEEP_FOR_V1_SIZE (offsetof(garden_gpio_v1, deep_sleep_for) + sizeof(((garden_gpio_v1*)0)->deep_sleep_for))
+
+#define GARDEN_GPIO_WAKE_SOURCE_V1_SIZE (offsetof(garden_gpio_v1, wake_source) + sizeof(((garden_gpio_v1*)0)->wake_source))
+
+#define GARDEN_GPIO_LIGHT_SLEEP_SET_V1_SIZE (offsetof(garden_gpio_v1, light_sleep_set) + sizeof(((garden_gpio_v1*)0)->light_sleep_set))
+
+#define GARDEN_GPIO_DEEP_SLEEP_SET_V1_SIZE (offsetof(garden_gpio_v1, deep_sleep_set) + sizeof(((garden_gpio_v1*)0)->deep_sleep_set))

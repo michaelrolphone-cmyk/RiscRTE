@@ -3,6 +3,7 @@
 #include "RiscLightSleepV1.h"
 #include "RiscDeepSleepV1.h"
 #include "RiscTimedSleepV1.h"
+#include "RiscWakeSetV1.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,6 +31,10 @@ typedef struct {
     /* Optional bounded timer alongside the same owned input; size-check first. */
     risc_gpio_light_sleep_for_v1 light_sleep_for;
     risc_gpio_deep_sleep_for_v1 deep_sleep_for;
+    /* Explicit owned wake-set suffix; legacy entry stays single-input. */
+    risc_gpio_wake_source_v1 wake_source;
+    risc_gpio_light_sleep_set_v1 light_sleep_set;
+    risc_gpio_deep_sleep_set_v1 deep_sleep_set;
 } risc_gpio_bank_api_v1;
 #define RISC_GPIO_BANK_LIGHT_SLEEP_V1_SIZE (offsetof(risc_gpio_bank_api_v1, light_sleep) + sizeof(((risc_gpio_bank_api_v1*)0)->light_sleep))
 #ifdef __cplusplus
@@ -41,3 +46,9 @@ typedef struct {
 #define RISC_GPIO_BANK_LIGHT_SLEEP_FOR_V1_SIZE (offsetof(risc_gpio_bank_api_v1, light_sleep_for) + sizeof(((risc_gpio_bank_api_v1*)0)->light_sleep_for))
 
 #define RISC_GPIO_BANK_DEEP_SLEEP_FOR_V1_SIZE (offsetof(risc_gpio_bank_api_v1, deep_sleep_for) + sizeof(((risc_gpio_bank_api_v1*)0)->deep_sleep_for))
+
+#define RISC_GPIO_BANK_WAKE_SOURCE_V1_SIZE (offsetof(risc_gpio_bank_api_v1, wake_source) + sizeof(((risc_gpio_bank_api_v1*)0)->wake_source))
+
+#define RISC_GPIO_BANK_LIGHT_SLEEP_SET_V1_SIZE (offsetof(risc_gpio_bank_api_v1, light_sleep_set) + sizeof(((risc_gpio_bank_api_v1*)0)->light_sleep_set))
+
+#define RISC_GPIO_BANK_DEEP_SLEEP_SET_V1_SIZE (offsetof(risc_gpio_bank_api_v1, deep_sleep_set) + sizeof(((risc_gpio_bank_api_v1*)0)->deep_sleep_set))

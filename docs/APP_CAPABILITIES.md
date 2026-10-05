@@ -35,25 +35,29 @@ this exact path to manifest identity/version and the intersection of declared
 requirements with authorized grants before any ELF runs. Missing, extra,
 duplicate or ambiguous grants fail boot. The sole additive exception is multiple
 distinct, positive storage.key-value@1 namespaces for one manifest requirement;
-all are explicit owner-provisioned grants and still count toward the same 10-
+all are explicit owner-provisioned grants and still count toward the same 12-
 grant bound. Non-KV capability uniqueness is unchanged. ID0 acquisition rejects
 multiple matches; an app must name the intended namespace. This is provisioning consistency for
 trusted native code, not a signature scheme or memory sandbox.
 
-Limits are 16 app policies (`Runtime::MaxAppPolicies`), 9 declared capability
-types, 10 independently authorized grants per app (`Runtime::MaxAppPolicyGrants`),
-and 16 live app grants. The extra grant slots allow explicitly scoped KV
-namespaces without broadening capability types or the live grant pool. Policy
-storage remains fixed-size; an eleventh grant fails admission before any ELF. Seventeen policies reject before any ELF is loaded.
-On the pinned ESP32-S3 GCC 8.4 ABI, the eight additional policy records add
-11,584 bytes to the fixed Runtime object (218,168 to 229,752 bytes).
-Internal policy records reference only the already-retained immutable capability
-name in this Runtime's fixed driver/platform table, or the canonical KV literal.
-They never borrow JSON/source-parser memory. Runtime is noncopyable/nonmovable;
-preparation and platform registration cannot replace metadata after admission.
-Ten 32-byte target grant records replace eight 128-byte duplicate-name records.
-The pinned target Runtime object is 218,496 bytes, 11,264 fewer than the released
-229,760-byte baseline. Policy count and live-handle limits remain unchanged.
+Limits are 16 app policies (`Runtime::MaxAppPolicies`), 10 distinct declared
+capability types (`Runtime::MaxAppRequirements`), 12 independently authorized
+grants per app (`Runtime::MaxAppPolicyGrants`), and 16 live app grants. These are
+separate bounds: eleven requirement types, thirteen policy grants, or seventeen
+policies reject before loading any ELF. No authorization is added implicitly.
+
+Internal policy records reference only already-retained immutable capability
+names in the fixed driver/platform table, or the canonical KV literal. They never
+borrow parser memory. Runtime is noncopyable/nonmovable; preparation and platform
+registration cannot replace metadata after admission.
+
+Firmware 0.1.27 retains the 32-byte target policy-grant representation while
+expanding policy slots from ten to twelve. Measured with pinned Xtensa GCC 8.4,
+Runtime is 219,904 bytes versus 218,880 in its immediate 0.1.26 parent (+1,024).
+CpuPort is 4,648 bytes versus 4,384 (+264). Generic USB retains its existing PSRAM
+metadata allocation; paired retains its existing allocation policy. No new
+allocation or weakened validator is introduced. Policy count and live-handle
+limits remain unchanged.
 These records are never serialized or exposed through an SDK. Default/child
 reload, parsed-memory churn, rejected reprepare, failed prepare and stale-handle
 regressions run with the same exact authority checks.

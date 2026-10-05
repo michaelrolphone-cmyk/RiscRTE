@@ -21,7 +21,7 @@ __attribute__((visibility("default"))) void app_main(void){
 #else
  unsigned capacity=multi_capacity();
  if(capacity){
-  risc_runtime_capability_v1 grants[10]={0};
+  risc_runtime_capability_v1 grants[12]={0};assert(capacity<=12);
   for(unsigned i=0;i<capacity;++i){
    grants[i].struct_size=sizeof(grants[i]);assert(rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,i+1,&grants[i]));
    const risc_key_value_v1* kv=grants[i].api;unsigned value=i+1,got=0;uint32_t n=0;

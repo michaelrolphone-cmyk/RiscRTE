@@ -54,6 +54,10 @@ struct Hardware {
   bool (*httpSafe)()=nullptr;
   // Generic native mutation exclusion; healthy activity need not revoke KV.
   bool (*maintenanceIdle)()=nullptr;
+  // Generic atomic RTC input set: masks contain only validated owned inputs.
+  bool (*deepWakeSetValid)(uint64_t,uint64_t)=nullptr;
+  bool (*deepWakeSetArm)(uint64_t,uint64_t,uint64_t)=nullptr;
+  bool (*deepWakeSetClear)(uint64_t,uint64_t,uint64_t)=nullptr;
   // Explicit integrated BLE controller lifecycle. No host stack or credentials.
   bool (*hciOpen)()=nullptr;
   bool (*hciSend)(uint8_t,const uint8_t*,size_t,uint32_t)=nullptr;
@@ -86,7 +90,7 @@ class Port final {
   struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;
     bool active=false,closing=false,scanning=false; garden_radio_v1 api{}; } radios_[1];
   struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
-  struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false; } pins_[49];
+  struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false,wakeHigh=false; uint8_t wakeModes=0; } pins_[49];
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
   size_t gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0;
   risc_platform_clock_api_v1 clock_{};
@@ -105,6 +109,10 @@ class Port final {
   static int32_t gpioDeepSleepFor(void*,uint64_t,bool,uint32_t);
   static int32_t lightSleepImpl(void*,uint64_t,bool,uint32_t,risc_light_sleep_result_v1*);
   static int32_t deepSleepImpl(void*,uint64_t,bool,uint32_t);
+  static int32_t gpioWakeSource(void*,uint64_t,bool,uint32_t);
+  static int32_t gpioLightSleepSet(void*,uint64_t,bool,uint32_t,risc_light_sleep_result_v1*);
+  static int32_t gpioDeepSleepSet(void*,uint64_t,bool,uint32_t);
+  static int32_t sleepSetImpl(void*,uint64_t,bool,uint32_t,bool,risc_light_sleep_result_v1*);
   static bool gpioRelease(void*,uint64_t); static bool waveform(void*,uint64_t,const uint32_t*,size_t){return false;}
   static bool i2cOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*);
   static bool i2cTransfer(void*,uint64_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);

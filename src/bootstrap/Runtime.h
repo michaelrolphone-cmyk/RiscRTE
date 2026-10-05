@@ -37,8 +37,8 @@ struct Port {
 class Runtime final {
  public:
   static constexpr size_t MaxAppPolicies=16;
-  static constexpr size_t MaxAppPolicyGrants=10;
-  static constexpr size_t MaxAppRequirements=9;
+  static constexpr size_t MaxAppPolicyGrants=12;
+  static constexpr size_t MaxAppRequirements=10;
   explicit Runtime(Port p) : port_(p) {}
   ~Runtime() { revokeProviders(); }
   Runtime(const Runtime&)=delete;

@@ -85,6 +85,50 @@ inline bool clear(uint8_t pin,bool pullup) {
   if(esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,ESP_PD_OPTION_AUTO)!=ESP_OK)ok=false;
   return ok;
 }
+/* EXT1 has one polarity on the pinned S3 SDK. For a mixed set, use EXT0
+ * for a singleton polarity and EXT1 for the other. No peripheral identity is
+ * involved. The exclusive sleep owner never touches sources outside this plan. */
+struct WakePlan { uint64_t ext0=0,ext1=0; bool ext0High=false,ext1High=false; };
+inline bool plan(uint64_t mask,uint64_t high,WakePlan& p){
+  p={};if(!mask || (high&~mask) || (mask>>49))return false;
+  for(unsigned i=0;i<49;++i)if((mask&(UINT64_C(1)<<i)) && !valid(i))return false;
+  const uint64_t low=mask&~high;
+  if(!low || !high){p.ext1=mask;p.ext1High=high!=0;return true;}
+  if(!(low&(low-1))){p.ext0=low;p.ext1=high;p.ext1High=true;return true;}
+  if(!(high&(high-1))){p.ext0=high;p.ext0High=true;p.ext1=low;return true;}
+  return false;
+}
+inline bool setValid(uint64_t mask,uint64_t high){WakePlan p;return plan(mask,high,p);}
+inline bool setArm(uint64_t mask,uint64_t high,uint64_t pullups){
+  WakePlan p;if((pullups&~mask) || !plan(mask,high,p))return false;
+  if(esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,(pullups || p.ext0)?ESP_PD_OPTION_ON:ESP_PD_OPTION_AUTO)!=ESP_OK)return false;
+  for(unsigned i=0;i<49;++i)if(mask&(UINT64_C(1)<<i)){
+    const auto gpio=static_cast<gpio_num_t>(i);
+    if(rtc_gpio_pulldown_dis(gpio)!=ESP_OK ||
+       ((pullups&(UINT64_C(1)<<i))?rtc_gpio_pullup_en(gpio):rtc_gpio_pullup_dis(gpio))!=ESP_OK)return false;
+  }
+  if(p.ext0){unsigned pin=0;while(!(p.ext0&(UINT64_C(1)<<pin)))++pin;
+    if(esp_sleep_enable_ext0_wakeup(static_cast<gpio_num_t>(pin),p.ext0High?1:0)!=ESP_OK)return false;
+  }
+  return esp_sleep_enable_ext1_wakeup(p.ext1,p.ext1High?ESP_EXT1_WAKEUP_ANY_HIGH:ESP_EXT1_WAKEUP_ANY_LOW)==ESP_OK;
+}
+inline bool setClear(uint64_t mask,uint64_t high,uint64_t pullups){
+  WakePlan p;if((pullups&~mask) || !plan(mask,high,p))return false;
+  bool ok=true;
+  // Each planned source may have been partially armed, including a failed call.
+  // Never clear EXT0 on an EXT1-only operation, nor unrelated TIMER/GPIO/ALL.
+  if(p.ext0){const auto rc=esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_EXT0);if(rc!=ESP_OK && rc!=ESP_ERR_INVALID_STATE)ok=false;}
+  if(p.ext1){const auto rc=esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_EXT1);if(rc!=ESP_OK && rc!=ESP_ERR_INVALID_STATE)ok=false;}
+  for(unsigned i=0;i<49;++i)if(mask&(UINT64_C(1)<<i)){
+    const auto gpio=static_cast<gpio_num_t>(i);
+    if(rtc_gpio_pullup_dis(gpio)!=ESP_OK)ok=false;
+    if(rtc_gpio_pulldown_dis(gpio)!=ESP_OK)ok=false;
+    if(rtc_gpio_deinit(gpio)!=ESP_OK)ok=false;
+    if(gpio_set_pull_mode(gpio,(pullups&(UINT64_C(1)<<i))?GPIO_PULLUP_ONLY:GPIO_FLOATING)!=ESP_OK)ok=false;
+  }
+  if(esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,ESP_PD_OPTION_AUTO)!=ESP_OK)ok=false;
+  return ok;
+}
 inline bool hold(uint8_t pin,bool enable) {
   const auto gpio=static_cast<gpio_num_t>(pin);
   return (enable?gpio_hold_en(gpio):gpio_hold_dis(gpio))==ESP_OK;
