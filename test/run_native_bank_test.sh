@@ -11,11 +11,13 @@ c++ "${san[@]}" -DRISC_PAIRED_BANKS=1 -std=c++17 -Wall -Wextra -Werror -Wno-miss
  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
+ "$repo/src/runtime/provisioning/StoreFiles.cpp" "$repo/src/runtime/provisioning/Profile.cpp" \
  "$repo/src/runtime/update/PairedBank.cpp" "$repo/src/runtime/update/StoreAudit.cpp" "$repo/test/native_bank_test.cpp" "$build/validate.o" -lcrypto -ldl -o "$build/test"
 "$build/test" markers
 "$build/test" unknown-loader
 if [[ -n "${BOOTLOADER_FILE:-}" ]]; then
  for mode in boot bad-store bad-layout restart restart-unknown; do "$build/test" "$mode" "$BOOTLOADER_FILE"; done
+ for mode in provision provision-abort provision-corrupt provision-unknown; do "$build/test" "$mode" "$BOOTLOADER_FILE" "$build/$mode"; done
 else
  echo 'Bootloader-backed happy/bad-store/layout tests require BOOTLOADER_FILE from a verified paired target build.'
 fi

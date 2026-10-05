@@ -257,3 +257,9 @@ Runtime 0.1.18 also adds a private whole-store staging mode to the existing
 paired-bank transaction, retaining clone verification, readback, cleanup and
 ambiguous-selection protection. The provider ABI is unchanged and the native
 whole-store callbacks are not yet connected.
+
+Runtime 0.1.19 adds the private inactive-bank file staging/readback backend,
+including committed profile identity and abort-to-installed-default support.
+It remains opt-in through compiled-in boot-owner calls; automatic profile
+acquisition, trusted current time, full admission-hook integration and network
+boot routing are still pending.

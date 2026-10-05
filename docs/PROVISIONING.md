@@ -1,9 +1,11 @@
-# Profile-driven provisioning: bounded core checkpoint (0.1.18)
+# Profile-driven provisioning: bounded core checkpoint (0.1.19)
 
 This checkpoint adds a private, CPU-neutral profile parser and boot coordinator.
-It is **not called by `setup()`**, does not register an ELF capability, and does
-not write flash, select partitions, access a device, or change the current default
-launch. No Watch content, board pins, or product endpoint is compiled in.
+It is **not called by `setup()`** and does not register an ELF capability or change
+current default launch. Its private native staging API writes only the verified
+inactive paired bank when a compiled-in boot owner calls it. The default boot
+path does not call it. No Watch content, board pins or product endpoint is
+compiled in; no device has been accessed to test this change.
 
 ## Existing mechanisms and why there is no unsafe shortcut
 
@@ -98,18 +100,18 @@ cleanup deadlines, time wrap, uncertain selection, and fallback launch.
 The model is not a native flash implementation or TLS test. Its host dynamic
 module does not qualify Xtensa ELF admission. Its directory renames model a
 commit boundary but are not an atomic power-loss-safe deployment protocol.
-Native SPIFFS/SD capacity, durable selector/digest storage, full ELF readback,
-transport deadlines, whole-store staging, fresh-boot routing and boot-health
-rollback remain to be connected and tested. Existing paired-bank and update
+The native paired-store implementation below adds bounded inactive staging and
+committed identity. Production full-ELF admission, transport, fresh-boot routing
+and boot-health integration still remain. SD capacity and behavior are untested. Existing paired-bank and update
 regressions continue to run. Host success does not qualify a device.
 
 ## Remaining integration
 
-A native whole-store adapter must reuse the paired-bank safety ordering without
-weakening existing app-update authority. It must stage new board/driver/app
-inventory safely, preflight complete-store capacity, retain/recover both store
-and profile identity across cuts, validate graph/imports before selection, and
-persist no plaintext credentials outside the explicitly supplied profile.
+Complete boot integration must preserve the paired-bank safety ordering and
+existing app-update authority. The native file backend below stages inventory
+and committed profile identity; its production admission hook must still connect
+complete graph/import checks before selection. No plaintext credentials are
+persisted outside the explicitly supplied profile.
 Existing fixed layouts must fail closed when this cannot be done; no automatic
 partition resizing, filesystem formatting, migration or active-store mutation
 is introduced. An SD path additionally needs independently bootstrappable,
@@ -123,7 +125,8 @@ invalidation, firmware clone, store clone and clone-readback sequence. It only
 opens a private staging callback after that cloned store passes its active
 digest check. The ordinary provider table and SDK layout are unchanged; neither
 `begin_app`, `begin_firmware` nor their `write` calls can reach this authority.
-The new optional backend hooks are not supplied by `NativeBankStore` yet.
+The new optional backend hooks are supplied by the private native staging API
+in 0.1.19, described below.
 
 A boot-owned backend may write its bounded staged inventory only while
 `stagingStore(token)` is true. This rejects stale tokens and expired operations.
@@ -140,3 +143,47 @@ cleanup, deadline expiry, late store/firmware corruption, successful activation
 and ambiguous selection. Normal and ASan/UBSan runs pass. This makes a native
 whole-store backend possible without misusing app-update policy; it does not
 implement that backend, network transport, or boot routing by itself.
+
+## Native inactive-store backend (0.1.19)
+
+`NativeBankStore` now offers a separate compiled-in provisioning API before
+Runtime platform binding/application startup. It requires the existing verified
+16 MiB paired layout and a confirmed current image; a pending unconfirmed boot
+cannot begin another provisioning transaction. There is no SDK/provider-table
+expansion and no changes to partition layout, active store or active firmware.
+
+`provisionBegin` preflights path/name bounds and conservatively limits file payloads
+(including profile identity) to 75% of the fixed store capacity. Real SPIFFS
+allocation/write failures still fail closed. It allocates staging metadata from
+PSRAM, then reuses the existing transaction's inactive clone and readback. Only
+a successfully verified clone is mounted at `/updatefs`, with formatting disabled.
+The private file backend removes only that staged inventory, streams each file
+with exact length/SHA verification, independently rereads every file, checks the
+complete inventory and invokes the compiled-in graph/ELF admission hook. Missing
+admission hooks are refused before any mutation. This hook must not execute
+providers and must validate every referenced image, not just JSON metadata.
+
+The profile's 32-byte SHA is saved as `.provision-sha256` inside the candidate
+store, read back, and all payloads are checked again after that metadata write.
+This makes the identity part of the same pair's existing full-store SHA/journal;
+there is no separate mutable profile selector. The backend closes/unmounts the
+filesystem, computes its raw partition digest, and the paired transaction checks
+another full raw readback before readiness. Native cleanup, owner/resource safety,
+stale token, deadline, selection ambiguity and safe restart checks remain required.
+Abort success releases the private stage and permits the intact installed boot.
+Failed cleanup retains ownership and prevents boot handoff.
+
+Host file tests use the production `StoreFiles` implementation and real Runtime
+graph preparation. Actual `NativeBankStore` source is also tested with the pinned
+bootloader bytes, fake IDF flash and a deterministic filesystem-to-flash model.
+The tests cover success, abort/fallback, late corruption and ambiguous selection,
+and verify old firmware/store digests are unchanged. Both suites pass normally
+and with ASan/UBSan. The model is not SPIFFS power-loss emulation or hardware
+qualification. Native compiled target CI must also pass before using the change.
+
+Still remaining: a production whole-graph/all-ELF admission hook, mapping the
+coordinator to the native stage and existing station/HTTPS transport, a genuinely
+current bootstrap UTC source, profile acquisition outside the immutable installed
+store, and `setup()` integration. Clock-unavailable boot must keep the installed
+default/offline recovery path; a persisted timestamp is not automatically current.
+The native HTTP implementation's certificate-validity checks are unchanged.

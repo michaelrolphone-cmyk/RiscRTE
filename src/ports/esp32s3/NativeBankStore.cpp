@@ -4,6 +4,7 @@
 #include "runtime/update/PairedBank.h"
 #include "runtime/update/Version.h"
 #include "runtime/update/StoreAudit.h"
+#include "runtime/provisioning/StoreFiles.h"
 #include <Arduino.h>
 #include <RiscBuildIdentity.h>
 #include <esp_ota_ops.h>
@@ -52,6 +53,16 @@ struct Scratch {
 };
 Scratch* scratch=nullptr;
 Transaction* transaction=nullptr;
+RiscProvision::StoreFiles* provisionFiles=nullptr;
+const RiscProvision::Profile* provisionProfile=nullptr;
+ProvisionAdmission provisionAdmission=nullptr;
+uint8_t provisionDigest[32]{};
+uint64_t provisionToken=0;
+const char* stagingRoot="/updatefs";
+constexpr uint32_t ProvisionCapacity=(StoreBytes/4)*3;
+#ifndef CONFIG_SPIFFS_OBJ_NAME_LEN
+#define CONFIG_SPIFFS_OBJ_NAME_LEN 32
+#endif
 bool owner(){return isOwner && isOwner();}
 bool operationSafe(){return owner() && operationIsSafe && operationIsSafe();}
 uint32_t now(void*){return millis();}
@@ -70,11 +81,33 @@ bool record(void*,unsigned b,const Record& value){
 }
 bool cleanup(void*){
   if(!owner())return false;
+  if(provisionFiles && !provisionFiles->close())return false;
   if(appFile){FILE* f=appFile;appFile=nullptr;if(fclose(f)!=0)return false;}
   if(mounted){if(esp_vfs_spiffs_unregister(labels[1-activeBank])!=ESP_OK)return false;mounted=false;}
   return true;
 }
 bool absolute(char* out,size_t size,const char* relative){return RiscBoot::path("/updatefs",relative,out,size);}
+bool mountInactive(unsigned b){
+  if(!operationSafe() || b==activeBank || mounted || appFile)return false;
+  esp_vfs_spiffs_conf_t config{};config.base_path=stagingRoot;config.partition_label=labels[b];config.max_files=4;config.format_if_mount_failed=false;
+  if(esp_vfs_spiffs_register(&config)!=ESP_OK)return false;
+  mounted=true;return true;
+}
+bool openWholeStore(void*,unsigned b){
+  return provisionFiles && provisionProfile && !runtime && confirmed && !pending && mountInactive(b) &&
+    provisionFiles->begin(stagingRoot,*provisionProfile,provisionDigest,ProvisionCapacity);
+}
+bool finishWholeStore(void*,unsigned b,uint8_t* digest){
+  if(!operationSafe() || !provisionFiles || !provisionProfile || runtime || b==activeBank || !mounted ||
+     !provisionFiles->finish() || !cleanup(nullptr) || !hashBegin(nullptr))return false;
+  // Hash the closed, persisted partition after all file writes and filesystem
+  // GC. PairedBank independently compares a second raw readback before READY.
+  uint32_t started=millis();
+  for(uint32_t at=0;at<StoreBytes;){uint32_t n=std::min(4096u,StoreBytes-at);
+    if(!read(nullptr,b,1,at,scratch->buffer,n)||!hashAdd(nullptr,scratch->buffer,n))return false;
+    at+=n;vTaskDelay(1);if(!operationSafe()||uint32_t(millis()-started)>30000u)return false;}
+  return hashEnd(nullptr,digest);
+}
 bool openApp(void*,unsigned b){
   if(!operationSafe() || b==activeBank || mounted || appFile || !scratch->manifestSize)return false;
   esp_vfs_spiffs_conf_t config{};config.base_path="/updatefs";config.partition_label=labels[b];config.max_files=2;config.format_if_mount_failed=false;
@@ -273,7 +306,7 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   scratch=new(memory) Scratch;
   memory=heap_caps_malloc(sizeof(Transaction),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory){scratch->~Scratch();free(scratch);scratch=nullptr;return false;}
-  transaction=new(memory) Transaction({nullptr,now,read,erase,write,invalidate,record,hashBegin,hashAdd,hashEnd,openApp,writeApp,finishApp,cleanup,validateFirmware,select});
+  transaction=new(memory) Transaction({nullptr,now,read,erase,write,invalidate,record,hashBegin,hashAdd,hashEnd,openApp,writeApp,finishApp,cleanup,validateFirmware,select,openWholeStore,finishWholeStore});
   mbedtls_sha256_init(&scratch->hashContext);
   if(!knownBootloader())return false;
   for(unsigned b=0;b<2;++b){const char* appLabel=b?"app1":"app0";
@@ -296,7 +329,7 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   prepared=true;return true;
 }
 const char* bootLabel(){return prepared?labels[activeBank]:nullptr;}
-bool bind(RiscBoot::Runtime& rt){if(!prepared || !owner() || runtime)return false;runtime=&rt;
+bool bind(RiscBoot::Runtime& rt){if(!prepared || !owner() || runtime || provisionFiles)return false;runtime=&rt;
   return rt.registerPlatform(RISC_BANK_STORE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&api);}
 bool confirmBoot(){
   if(!prepared || !owner() || !runtime || !runtime->active())return false;
@@ -312,6 +345,49 @@ void rejectBoot(){
   if(running && esp_ota_get_state_partition(running,&state)==ESP_OK && state==ESP_OTA_IMG_PENDING_VERIFY && esp_ota_check_rollback_is_possible())
     esp_ota_mark_app_invalid_rollback_and_reboot();
 }
+bool provisionReady(uint64_t token){return prepared && confirmed && !pending && !runtime && provisionFiles &&
+  provisionProfile && token && token==provisionToken && operationSafe();}
+int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&digest)[32],ProvisionAdmission admission,uint64_t* token){
+  if(token)*token=0;
+  if(!token || !prepared || !confirmed || pending || runtime || provisionFiles || !admission || !operationSafe())return RISC_BANK_UNAVAILABLE;
+  if(profile.count<3 || profile.count>RiscProvision::MaxFiles)return RISC_BANK_INVALID;
+  uint32_t total=32;
+  for(size_t i=0;i<profile.count;++i){const auto& file=profile.files[i];
+    // IDF prefixes the relative SPIFFS name with '/'; never allow truncation.
+    char path[256];
+    if(!absolute(path,sizeof(path),file.path) || !strcmp(file.path,RiscProvision::StoreFiles::DigestFile) ||
+       strlen(file.path)+2>CONFIG_SPIFFS_OBJ_NAME_LEN || !file.bytes || file.bytes>ProvisionCapacity-total)return RISC_BANK_INVALID;
+    total+=file.bytes;}
+  risc_bank_status_v1 status{};status.struct_size=sizeof(status);
+  if(!transaction->status(&status)||status.state!=RISC_BANK_IDLE)return RISC_BANK_STATE;
+  void* memory=heap_caps_malloc(sizeof(RiscProvision::StoreFiles),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+  if(!memory)return RISC_BANK_UNAVAILABLE;
+  provisionFiles=new(memory) RiscProvision::StoreFiles({nullptr,now,[](void*){vTaskDelay(1);return operationSafe();},hashBegin,hashAdd,hashEnd,
+    [](void*,const char* root,const RiscProvision::Profile& p){return provisionAdmission && provisionAdmission(root,p);}});
+  provisionProfile=&profile;provisionAdmission=admission;memcpy(provisionDigest,digest,32);replacingFirmware=false;
+  int32_t result=transaction->beginStore(status.active_store_sha256,&provisionToken);*token=provisionToken;
+  if(result!=RISC_BANK_OK && !provisionToken){
+    provisionFiles->~StoreFiles();free(provisionFiles);provisionFiles=nullptr;provisionProfile=nullptr;
+    provisionAdmission=nullptr;memset(provisionDigest,0,sizeof(provisionDigest));
+  }
+  // Even a failed invalidation has a token and uncertain destination state.
+  // Keep ownership until explicit abort; no fallthrough to application boot.
+  return result;
+}
+int32_t provisionStep(uint64_t t,risc_bank_status_v1* status){return provisionReady(t)?transaction->step(t,status):RISC_BANK_UNAVAILABLE;}
+int32_t provisionWrite(uint64_t t,size_t file,const void* data,uint32_t n){
+  if(!provisionReady(t)||!transaction->stagingStore(t))return RISC_BANK_STATE;
+  return provisionFiles->write(file,data,n)?RISC_BANK_OK:RISC_BANK_INTEGRITY;
+}
+int32_t provisionFinish(uint64_t t){return provisionReady(t)?transaction->finishStore(t):RISC_BANK_UNAVAILABLE;}
+int32_t provisionActivate(uint64_t t){return provisionReady(t)?transaction->activate(t):RISC_BANK_UNAVAILABLE;}
+int32_t provisionAbort(uint64_t t){
+  if(!owner()||!provisionFiles||!t||t!=provisionToken||runtime)return RISC_BANK_STATE;
+  const int32_t result=transaction->abort(t);if(result!=RISC_BANK_OK)return result;
+  provisionFiles->~StoreFiles();free(provisionFiles);provisionFiles=nullptr;provisionProfile=nullptr;
+  provisionAdmission=nullptr;memset(provisionDigest,0,sizeof(provisionDigest));provisionToken=0;return RISC_BANK_OK;
+}
+bool provisionRestart(uint64_t t){return provisionReady(t) && api.restart(nullptr,t);}
 bool exitSafe(){return !prepared || (transaction->exitSafe() && !appFile && !mounted);}
 }
 #endif

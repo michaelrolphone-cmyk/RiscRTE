@@ -5,7 +5,12 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <filesystem>
+#include <map>
+#include <memory>
 static const char* unavailableImport=nullptr;
+static bool modelProvisionFiles=false;
+static std::string modelStageRoot;
 extern "C" uintptr_t elf_find_sym_default(const char* name){return unavailableImport && !strcmp(name,unavailableImport)?0:1;}
 static std::vector<uint8_t> flash(0x1000000,0xff);
 static uint32_t ticks=1,active=0,imageSize=8192,writes=0,rollbacks=0,confirms=0,restarts=0,delayScale=1,delays=0,unsafeAfterDelay=0;
@@ -38,7 +43,19 @@ esp_err_t esp_ota_mark_app_valid_cancel_rollback(){++confirms;return 0;}
 esp_err_t esp_ota_mark_app_invalid_rollback_and_reboot(){++rollbacks;return 0;}
 bool esp_ota_check_rollback_is_possible(){return rollbackPossible;}
 esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t* conf){assert(!conf->format_if_mount_failed);return 0;}
-esp_err_t esp_vfs_spiffs_unregister(const char*){return 0;}
+esp_err_t esp_vfs_spiffs_unregister(const char*){
+ if(modelProvisionFiles){
+  // Filesystem model only: serialize the closed candidate deterministically
+  // into fake inactive flash, so production raw readback sees actual file data.
+  std::map<std::string,std::vector<uint8_t>> files;
+  for(auto& e:std::filesystem::directory_iterator(modelStageRoot))if(e.is_regular_file()){
+    std::ifstream f(e.path(),std::ios::binary);files[e.path().filename().string()]={std::istreambuf_iterator<char>(f),{}};}
+  size_t at=0xb00000;memset(flash.data()+at,0xff,RiscUpdate::StoreBytes);
+  for(auto& e:files){memcpy(flash.data()+at,e.first.c_str(),e.first.size()+1);at+=e.first.size()+1;
+    memcpy(flash.data()+at,e.second.data(),e.second.size());at+=e.second.size();assert(at<0xff0000);}
+ }
+ return 0;
+}
 esp_err_t esp_image_verify(int,const esp_partition_pos_t*,esp_image_metadata_t* out){out->image_len=imageSize;return 0;}
 static bool own(){return ownerEnabled;}static bool safe(){return operationEnabled;}
 static bool restartSafe(){return restartEnabled && operationEnabled;}
@@ -96,17 +113,59 @@ static void firmware(unsigned bank,const char* version,const char* abi="1"){
 int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
- if(mode=="boot" || mode=="bad-store" || mode=="bad-layout" || mode=="restart" || mode=="restart-unknown"){
+ const bool provisioning=mode=="provision" || mode=="provision-abort" || mode=="provision-corrupt" || mode=="provision-unknown";
+ if(mode=="boot" || mode=="bad-store" || mode=="bad-layout" || mode=="restart" || mode=="restart-unknown" || provisioning){
    const bool restarting=mode=="restart" || mode=="restart-unknown";
-   assert(argc==3);std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
+   assert(argc==(provisioning?4:3));if(provisioning)otaState=ESP_OTA_IMG_VALID;std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
    memcpy(flash.data(),boot.data(),boot.size());firmware(0,RISC_BUILD_VERSION);
    uint8_t fw[32],store[32];SHA256(flash.data()+0x10000,imageSize,fw);SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,store);
    auto record=RiscUpdate::makeRecord(0,imageSize,fw,store);memcpy(flash.data()+RiscUpdate::JournalOffset,&record,sizeof(record));
    if(mode=="bad-store")flash[0x310010]^=1;
    if(mode=="bad-layout")table[2].size-=4096;
-   assert(RiscBankStore::prepareBoot(own,restartSafe,safe)==(mode=="boot" || restarting));
+   assert(RiscBankStore::prepareBoot(own,restartSafe,safe)==(mode=="boot" || restarting || provisioning));
    assert(writes==0 && confirms==0);
    if(mode=="boot"){assert(!strcmp(RiscBankStore::bootLabel(),"bootfs0"));assert(!RiscBankStore::confirmBoot());assert(RiscBankStore::exitSafe());}
+   if(provisioning){
+     using namespace RiscBankStore;namespace fs=std::filesystem;
+     modelStageRoot=argv[3];fs::create_directories(modelStageRoot);stagingRoot=modelStageRoot.c_str();modelProvisionFiles=true;
+     auto profile=std::make_unique<RiscProvision::Profile>();profile->count=3;
+     const char* names[]={"boot.json","board.json","default.elf"};
+     const char* json[]={R"({"board":"board.json","default_app":"default.elf","drivers":[]})",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})"};
+     std::vector<uint8_t> payload[3];for(unsigned i=0;i<2;++i)payload[i].assign(json[i],json[i]+strlen(json[i]));payload[2]=elf("memcpy");
+     for(unsigned i=0;i<3;++i){strcpy(profile->files[i].path,names[i]);profile->files[i].bytes=payload[i].size();SHA256(payload[i].data(),payload[i].size(),profile->files[i].sha256);}
+     uint8_t digest[32]{};digest[0]=0x42;uint64_t token=0;
+     auto admission=[](const char* root,const RiscProvision::Profile& p){
+       auto rt=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,nullptr,nullptr,nullptr});if(!rt->prepare(root))return false;
+       for(size_t i=0;i<p.count;++i){const auto& f=p.files[i];size_t n=strlen(f.path);if(n<4||strcmp(f.path+n-4,".elf"))continue;
+         std::ifstream in(std::string(root)+"/"+f.path,std::ios::binary);std::vector<uint8_t> b{std::istreambuf_iterator<char>(in),{}};if(!admitElf(b.data(),b.size()))return false;}
+       return true;
+     };
+     assert(provisionBegin(*profile,digest,nullptr,&token)==RISC_BANK_UNAVAILABLE && !token && writes==0);
+     ownerEnabled=false;assert(provisionBegin(*profile,digest,admission,&token)==RISC_BANK_UNAVAILABLE && !token);ownerEnabled=true;
+     assert(provisionBegin(*profile,digest,admission,&token)==RISC_BANK_OK && token);
+     RiscBoot::Runtime blocked({own,nullptr,nullptr,nullptr});assert(!bind(blocked));
+     risc_bank_status_v1 status{};status.struct_size=sizeof(status);
+     for(unsigned i=0;i<5000 && !transaction->stagingStore(token);++i)assert(provisionStep(token,&status)==RISC_BANK_OK);
+     assert(transaction->stagingStore(token));assert(provisionWrite(token+1,0,payload[0].data(),1)==RISC_BANK_STATE);
+     assert(provisionActivate(token)==RISC_BANK_STATE);
+     for(size_t i=0;i<3;++i)for(size_t at=0;at<payload[i].size();){size_t n=std::min<size_t>(4096,payload[i].size()-at);
+       assert(provisionWrite(token,i,payload[i].data()+at,n)==RISC_BANK_OK);at+=n;}
+     if(mode=="provision-abort"){
+       assert(provisionAbort(token)==RISC_BANK_OK && exitSafe());assert(!provisionFiles && !provisionProfile && !provisionToken);
+       assert(provisionWrite(token,0,payload[0].data(),1)==RISC_BANK_STATE);assert(bind(blocked));
+     }else{
+       assert(provisionFinish(token)==RISC_BANK_OK);
+       if(mode=="provision-corrupt")flash[0xb00001]^=1;
+       int32_t result=0;for(unsigned i=0;i<5000;++i){assert(transaction->status(&status));if(status.state==RISC_BANK_READY)break;result=provisionStep(token,&status);if(result)break;}
+       if(mode=="provision-corrupt"){assert(result==RISC_BANK_INTEGRITY);assert(provisionActivate(token)==RISC_BANK_STATE);assert(provisionAbort(token)==RISC_BANK_OK);}
+       else {assert(status.state==RISC_BANK_READY);selectFailure=mode=="provision-unknown";
+         assert(provisionActivate(token)==(selectFailure?RISC_BANK_RETAINED:RISC_BANK_OK));assert(provisionAbort(token)==RISC_BANK_STATE);
+         restartEnabled=false;assert(!provisionRestart(token) && restarts==0);restartEnabled=true;
+         assert(!provisionRestart(token) && restarts==1);}
+     }
+     uint8_t preserved[32];SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
+     SHA256(flash.data()+0x10000,imageSize,preserved);assert(!memcmp(preserved,record.firmwareSha,32));
+   }
    if(restarting){
      using namespace RiscBankStore;
      firmware(1,"0.1.12");std::vector<uint8_t> payload(flash.begin()+0x800000,flash.begin()+0x800000+imageSize);
@@ -130,7 +189,7 @@ int main(int argc,char** argv){
      operationEnabled=false;assert(!api.restart(nullptr,token) && restarts==0);operationEnabled=true;
      assert(!api.restart(nullptr,token) && restarts==1); // Fake restart returns; actual ESP restart does not.
      assert(transaction->abort(token)==RISC_BANK_STATE && confirms==0);
-   }else{
+   }else if(!provisioning){
      RiscBankStore::rejectBoot();assert(rollbacks==(mode=="bad-layout"?0u:1u) && confirms==0);
    }
  }else if(mode=="unknown-loader"){
