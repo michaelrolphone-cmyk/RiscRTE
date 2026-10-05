@@ -244,3 +244,11 @@ See [native registry regression](test/support/native_registry/README.md).
 
 Explicit larger records are available through [key-value v2](docs/KEY_VALUE_V2.md),
 while v1 remains capped at64 bytes with its original authority and lifecycle.
+
+## Profile provisioning core checkpoint
+
+Runtime 0.1.17 adds a strict owner-supplied provisioning profile parser and
+a cooperative boot coordinator, currently exercised through a host backend.
+The existing boot path is unchanged; native flash/SD staging and fresh-boot
+routing remain to be connected. See [scope, failure handling and remaining
+integration](docs/PROVISIONING.md). This is not yet automatic device provisioning.
