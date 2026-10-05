@@ -27,7 +27,7 @@ a singleton without `instance_id`; a hardware driver follows the existing exact
 hardware selection rules. No inferred package privilege or fake hardware ID is
 needed. Hardware bindings must not select this reserved storage capability.
 
-The list has 1–8 unique entries. Each entry has exactly `key`, `namespace` and
+The list has 1–9 unique entries (the ninth was added in firmware 0.1.26). Each entry has exactly `key`, `namespace` and
 `access`; namespaces are integers in 1..2147483647, and access is exactly `read`
 or `read-write`. Keys are 1–15 ASCII bytes in `[a-z0-9_.-]`. Missing/empty/null or
 non-array maps, unsupported API, duplicate requirements/keys, invalid bounds,
@@ -42,7 +42,7 @@ unchanged into its authorized namespace. Unlisted keys and writes to read-only
 keys return CONTEXT without any backend I/O. Both callbacks remain present even
 for an all-read-only table; denial is enforced by the broker. There is no alias,
 enumeration, open/close, delete, filesystem, transaction or unrestricted namespace
-API. Runtime stores at most 16 maps of eight keys each; calls allocate nothing.
+API. Runtime stores at most 16 maps of nine keys each; calls allocate nothing.
 
 The example namespaces and keys above are deployment policy, not firmware
 defaults. Existing app KV grants continue to cover their entire namespace. A
