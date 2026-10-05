@@ -1,7 +1,7 @@
 name: ESP32-CAM candidate and hardware heartbeat
 on:
   pull_request:
-    branches: [main, master]
+    branches: [main, master, feat/owned-wake-set]
   workflow_dispatch:
 permissions:
   contents: read

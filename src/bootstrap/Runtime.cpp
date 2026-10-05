@@ -176,6 +176,7 @@ bool Runtime::validateGraph() {
 bool Runtime::appPolicies(JsonVariantConst value) {
   if (value.isNull()) return true;
   if (!value.is<JsonArrayConst>() || value.size()>MaxAppPolicies) return fail("invalid app capability policy");
+  if(value.size()){policies_=metadataArray<AppPolicy>(value.size());if(!policies_)return fail("app policy allocation failed");}
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
     auto& policy=policies_[policyCount_]; char relative[193]; JsonDocument doc;
     if (!keys(item,{"manifest","grants"}) || !text(item["manifest"],relative,sizeof(relative)) ||
@@ -224,6 +225,9 @@ bool Runtime::appPolicies(JsonVariantConst value) {
           if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
               port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
+        } else if (!strcmp(capability,"storage.installed-files")) {
+          if(grant.instance || grant.api!=1)return fail("invalid installed-files authority");
+          grant.installedFiles=true;grant.capability="storage.installed-files";
         } else if (!strcmp(capability,"platform.clock")) {
           for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,capability) && platforms_[p].api==grant.api) {
             if (grant.platform>=0 || grant.instance) return fail("ambiguous app platform clock");
@@ -272,6 +276,10 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.keyValueNamespace=allowed->instance;
     grant.keyValue={allowed->api,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
     grant.api=&grant.keyValue;
+  } else if (allowed->installedFiles) {
+    if(!installedFiles_ || installedVolumeContext_ || !providerStorageSafe())return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    installedFiles_->end();installedVolumeContext_=context;installedVolume_=volumeTable(context);grant.api=&installedVolume_;
   } else if (allowed->driver>=0) {
     const auto& driver=drivers_[allowed->driver];
     grant.provider=graph_.acquireFrom(driver.id,capability,api,driver.instance);
@@ -401,16 +409,18 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   auto& grant=appGrants_[out->slot-1];
   if (!grant.live || grant.generation!=out->generation || grant.api!=out->api) return false;
   if (grant.provider.slot && !graph_.release(grant.provider)) return false;
+  if(grant.api==&installedVolume_){installedFiles_->end();installedVolumeContext_=nullptr;}
   grant={};out->slot=out->generation=0;out->api=nullptr;return true;
 }
 bool Runtime::revokeApp() {
   bool ok=true;
   for (auto& grant:appGrants_) if (grant.live) {
     if (grant.provider.slot && !graph_.release(grant.provider)) ok=false;
-    else grant={};
+    else {if(grant.api==&installedVolume_){installedFiles_->end();installedVolumeContext_=nullptr;}grant={};}
   }
   appPolicy_=nullptr;return ok;
 }
+#include "InstalledFilesRuntime.inc"
 bool Runtime::prepare(const char* root) {
   if(attempted_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);
@@ -438,7 +448,7 @@ bool Runtime::prepare(const char* root) {
     registrationOpen_=false;
     if (!bound) return fail("trusted platform binding failed");
   }
-  if(!validateGraph() || !appPolicies(c["app_capabilities"])) return false;
+  if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !configureInstalledFiles(c)) return false;
   for(size_t i=0;i<driverCount_;++i) {
     const Driver& d=drivers_[i];
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
@@ -496,7 +506,7 @@ bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& 
   size_t rootLength=strlen(root_);
   if(strncmp(policy->elf,root_,rootLength) || policy->elf[rootLength]!='/' || strlen(policy->elf+rootLength+1)>=sizeof(out.elf))return false;
   strcpy(out.elf,policy->elf+rootLength+1);
-  return appManifestPath(size_t(policy-policies_),out.manifest,sizeof(out.manifest));
+  return appManifestPath(size_t(policy-policies_.get()),out.manifest,sizeof(out.manifest));
 }
 bool Runtime::appManifestPath(size_t index,char* out,size_t capacity) const {
   if(index>=policyCount_ || !out)return false;

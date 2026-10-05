@@ -29,7 +29,7 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
     std::string encoded;serializeJson(doc,encoded);write(root+"/"+name,encoded);
   };
   // Put the executed app at the last policy slot, not in the original eight.
-  for(unsigned i=0;i<16;++i) {
+  for(unsigned i=0;i<Runtime::MaxAppPolicies;++i) {
     JsonDocument extra;extra.set(app);
     const std::string name="policy-"+std::to_string(i);
     extra["id"]=name;extra["file_name"]=name+".elf";
@@ -51,7 +51,7 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
     assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),reason));
     assert(!runtime.run());assert(lines.size()==before);
   };
-  for(unsigned count:{9u,16u}) {
+  for(unsigned count:{9u,16u,unsigned(Runtime::MaxAppPolicies)}) {
     policies(count);generation=0;lines.clear();
     Runtime runtime({owner,health,delay,logLine});
     assert(runtime.prepare(root.c_str()));
@@ -64,42 +64,42 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
     assert(runtime.run());
     assert((lines==std::vector<std::string>{"CAP granted","CAP child denied","CAP granted"}));
   }
-  policies(17);rejected("invalid app capability policy");
+  policies(Runtime::MaxAppPolicies+1);rejected("invalid app capability policy");
   config["app_capabilities"].to<JsonObject>();rejected("invalid app capability policy");
-  policies(16);config["app_capabilities"][15]["manifest"]="../app.json";
+  policies(Runtime::MaxAppPolicies);config["app_capabilities"][Runtime::MaxAppPolicies-1]["manifest"]="../app.json";
   rejected("invalid app policy manifest path");
-  policies(16);config["app_capabilities"][15]="invalid";
+  policies(Runtime::MaxAppPolicies);config["app_capabilities"][Runtime::MaxAppPolicies-1]="invalid";
   rejected("invalid app policy manifest path");
   // Duplicate identity and duplicate ELF path still reject at the new last slot.
   for(const char* field:{"id","file_name"}) {
     JsonDocument duplicate;duplicate.set(app);
     duplicate[field]=!strcmp(field,"id")?"policy-0":"policy-0.elf";
-    save("app.json",duplicate);policies(16);
+    save("app.json",duplicate);policies(Runtime::MaxAppPolicies);
     rejected("duplicate app identity/path policy");
   }
   save("app.json",app);
   for(const char* field:{"api","instance_id"}) {
-    policies(16);config["app_capabilities"][15]["grants"][0][field]=!strcmp(field,"api")?2:8;
+    policies(Runtime::MaxAppPolicies);config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"][0][field]=!strcmp(field,"api")?2:8;
     rejected(!strcmp(field,"api")?"app requirement not uniquely authorized":"app provider unavailable");
   }
-  policies(16);config["app_capabilities"][15]["grants"].as<JsonArray>().clear();
+  policies(Runtime::MaxAppPolicies);config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>().clear();
   rejected("app requirement not uniquely authorized");
-  policies(16);auto grants=config["app_capabilities"][15]["grants"].as<JsonArray>();
+  policies(Runtime::MaxAppPolicies);auto grants=config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>();
   grants.add(grants[0]);rejected("app requirement not uniquely authorized");
-  policies(16);grants=config["app_capabilities"][15]["grants"].as<JsonArray>();
+  policies(Runtime::MaxAppPolicies);grants=config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>();
   grants.add(grants[0]);grants[1]["capability"]="test.extra";
   rejected("undeclared app grant");
   JsonDocument duplicate;duplicate.set(app);
   auto requirements=duplicate["requires"].as<JsonArray>();requirements.add(requirements[0]);
-  save("app.json",duplicate);policies(16);rejected("duplicate app requirement");
+  save("app.json",duplicate);policies(Runtime::MaxAppPolicies);rejected("duplicate app requirement");
   // Declaration bound remains eight; grant namespace capacity is independently bounded.
   while(requirements.size()<Runtime::MaxAppRequirements+1)requirements.add(requirements[0]);
   save("app.json",duplicate);rejected("invalid app identity/declarations");
-  save("app.json",app);policies(16);
-  grants=config["app_capabilities"][15]["grants"].as<JsonArray>();
+  save("app.json",app);policies(Runtime::MaxAppPolicies);
+  grants=config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>();
   while(grants.size()<Runtime::MaxAppPolicyGrants+1)grants.add(grants[0]);
   rejected("invalid app identity/declarations");
-  puts("App policy capacity: 9/16 accepted, 17 rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
+  puts("App policy capacity: 9/16/18 accepted, 19 rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
 }
 int main(int argc,char** argv){
   assert(argc==2);std::string root=argv[1];

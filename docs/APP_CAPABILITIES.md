@@ -40,7 +40,7 @@ grant bound. Non-KV capability uniqueness is unchanged. ID0 acquisition rejects
 multiple matches; an app must name the intended namespace. This is provisioning consistency for
 trusted native code, not a signature scheme or memory sandbox.
 
-Limits are 16 app policies (`Runtime::MaxAppPolicies`), 10 distinct declared
+Limits are 18 app policies (`Runtime::MaxAppPolicies`), 11 distinct declared
 capability types (`Runtime::MaxAppRequirements`), 12 independently authorized
 grants per app (`Runtime::MaxAppPolicyGrants`), and 16 live app grants. These are
 separate bounds: eleven requirement types, thirteen policy grants, or seventeen
@@ -88,3 +88,5 @@ logically revokes app grants and disables owner APIs while retaining the image,
 allocations and provider references, rather than invoking cleanup or launching
 another app. This is separate from ordinary capability release and graph
 quiescence; see DEEP_SLEEP.md.
+
+Policy metadata is allocated for the actual validated count, bounded at18, with no allocation when the policy list is absent/empty. Paired and explicit metadata-PSRAM targets preserve their PSRAM-only allocation policy; allocation failure rejects prepare. Policy storage outlives the provider graph and all retained grant names.
