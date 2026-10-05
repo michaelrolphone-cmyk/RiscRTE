@@ -6,7 +6,11 @@ namespace RiscBoot {
 class Board final {
  public:
   static constexpr size_t MaxDevices=64, MaxBuses=8;
-  struct Binding { char capability[96]{}; uint64_t instance=0; };
+  // Private decoded metadata, never the serialized/shared hardware envelope.
+  // Board::load validates1..INT32_MAX before assigning this32-bit value.
+  struct Binding { char capability[96]{}; uint32_t instance=0; };
+  static_assert(sizeof(Binding)==100,"Binding metadata padding regression");
+  static_assert(sizeof(((risc_hardware_device_v1*)0)->instance_id)==8,"Shared hardware ID remains64-bit");
   struct Device {
     char compatible[96]{}, revision[96]{}, type[96]{};
     risc_hardware_device_v1 hardware{};

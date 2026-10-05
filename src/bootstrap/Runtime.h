@@ -71,6 +71,11 @@ class Runtime final {
   Board& board() { return board_; }
   const Board& board() const { return board_; }
  private:
+  static constexpr size_t MaxDrivers=16, MaxPlatforms=32;
+  using PolicyIndex=int8_t;
+  static_assert(PolicyIndex(-1)<0 && MaxDrivers-1<=INT8_MAX && MaxPlatforms-1<=INT8_MAX,
+                "Policy index must retain -1 and every driver/platform index");
+  static_assert(MaxDrivers==RuntimeProviders::GraphV2::kMaxModules,"Driver capacity must match graph");
   struct Driver {
     char id[96]{}, provides[96]{}, elf[256]{}, version[64]{};
     uint32_t api=0;
@@ -116,10 +121,10 @@ class Runtime final {
     // Runtime is nonmovable and provider metadata is immutable after prepare.
     const char* capability=nullptr;
     uint32_t api=0; uint64_t instance=0;
-    int driver=-1, platform=-1; bool keyValue=false;
+    PolicyIndex driver=-1, platform=-1; bool keyValue=false;
   };
 #if UINTPTR_MAX == UINT32_MAX
-  static_assert(sizeof(AppGrantPolicy)==32,"App policy target layout changed");
+  static_assert(sizeof(AppGrantPolicy)==24,"App policy target layout changed");
 #endif
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
@@ -136,7 +141,7 @@ class Runtime final {
   struct Platform {
     char capability[96]{}; uint32_t api=0; Scope scope=Scope::Global;
     uint64_t id=0; const void* table=nullptr;
-  } platforms_[32]{};
+  } platforms_[MaxPlatforms]{};
   size_t platformCount_=0;
   Port port_;
   Board board_;
@@ -144,7 +149,7 @@ class Runtime final {
   ProviderStorage providerStorage_[16]{};
   RuntimeProviders::GraphV2 graph_;
   RuntimeProviders::GrantV2 grants_[16]{};
-  Driver drivers_[16]{};
+  Driver drivers_[MaxDrivers]{};
   size_t driverCount_=0, granted_=0;
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
   bool registrationOpen_=false;

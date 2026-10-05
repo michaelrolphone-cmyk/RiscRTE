@@ -93,7 +93,7 @@ bool Runtime::uses(uint64_t instance,const char* capability,uint32_t api) const 
   return false;
 }
 bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,uint64_t id,const void* table) {
-  if ((attempted_ && !registrationOpen_) || !port_.owner() || !capability || !*capability || strlen(capability)>=96 || !api || !table || platformCount_==32 ||
+  if ((attempted_ && !registrationOpen_) || !port_.owner() || !capability || !*capability || strlen(capability)>=96 || !api || !table || platformCount_==MaxPlatforms ||
       (strncmp(capability,"platform.",9) && strcmp(capability,"spi.bus"))) return false;
   if (scope==Scope::Global) {
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
@@ -227,7 +227,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
         } else if (!strcmp(capability,"platform.clock")) {
           for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,capability) && platforms_[p].api==grant.api) {
             if (grant.platform>=0 || grant.instance) return fail("ambiguous app platform clock");
-            grant.platform=p;
+            grant.platform=static_cast<PolicyIndex>(p);
           }
           if (grant.platform<0) return fail("app platform clock unavailable");
           grant.capability=platforms_[grant.platform].capability;
@@ -235,7 +235,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
           if (!strncmp(capability,"platform.",9) || !strcmp(capability,"spi.bus") || !strcmp(capability,"hardware.device")) return fail("raw platform capability denied to app");
           for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
             if (grant.driver>=0) return fail("ambiguous app provider");
-            grant.driver=d;
+            grant.driver=static_cast<PolicyIndex>(d);
           }
           if (grant.driver<0) return fail("app provider unavailable");
           grant.capability=drivers_[grant.driver].provides;
@@ -421,7 +421,7 @@ bool Runtime::prepare(const char* root) {
   if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities"}) || !text(c["board"],relative,sizeof(relative)) ||
       !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
   if(!text(c["default_app"],relative,sizeof(relative)) || !elfPath(relative) || !path(root_,relative,current_,sizeof(current_))) return fail("invalid default app path");
-  if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>16) return fail("invalid driver list");
+  if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>MaxDrivers) return fail("invalid driver list");
   // Read all manifests and validate mappings before registering/activating modules.
   for(JsonObjectConst item:c["drivers"].as<JsonArrayConst>()) {
     Driver& d=drivers_[driverCount_]; int64_t instance=0;

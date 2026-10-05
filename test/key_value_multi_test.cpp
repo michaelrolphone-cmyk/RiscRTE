@@ -8,7 +8,8 @@
 #include <cstring>
 using namespace RiscBoot;
 static bool owned=true,safe=true,retaining=false;static unsigned phase=0,reads=0,writes=0;
-static unsigned capacity=0;
+static unsigned capacity=0,indexMode=0;
+extern "C" unsigned multi_index_mode(){return indexMode;}
 extern "C" unsigned multi_capacity(){return capacity;}
 static risc_key_value_v1 saved{};
 static std::map<uint32_t,std::map<std::string,std::vector<unsigned char>>> values;
@@ -29,7 +30,13 @@ static bool bindClock(Runtime& runtime){
  static const risc_platform_clock_api_v1 clock{1,sizeof(clock),nullptr,[](void*)->uint64_t{return 0;},[](void*,uint32_t){}};
  return runtime.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,&clock);
 }
-static Port port(){return {owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bindClock,&backend,[](){return safe;}};}
+static bool bindLastClock(Runtime& runtime){
+ static const risc_platform_clock_api_v1 clock{1,sizeof(clock),nullptr,[](void*)->uint64_t{return 12345;},[](void*,uint32_t){}};
+ for(unsigned i=0;i<31;i++)if(!runtime.registerPlatform("platform.index-fixture",1,Runtime::Scope::Device,i+1,&clock))return false;
+ if(!runtime.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,&clock))return false;
+ assert(!runtime.registerPlatform("platform.extra",1,Runtime::Scope::Device,99,&clock));return true;
+}
+static Port port(){return {owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},indexMode==1?bindLastClock:bindClock,&backend,[](){return safe;}};}
 static std::string grant(unsigned ns,const char* cap=RISC_KEY_VALUE_CAPABILITY,unsigned api=1){return "{\"capability\":\""+std::string(cap)+"\",\"api\":"+std::to_string(api)+",\"instance_id\":"+std::to_string(ns)+"}";}
 static std::string requirement(const char* cap=RISC_KEY_VALUE_CAPABILITY,unsigned api=1){return "{\"capability\":\""+std::string(cap)+"\",\"api\":"+std::to_string(api)+"}";}
 int main(int argc,char** argv){
@@ -106,6 +113,20 @@ int main(int argc,char** argv){
   write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+drivers+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]}]}");
   Runtime r(port());const bool accepted=r.prepare(root.c_str());if(accepted!=(count==10))fprintf(stderr,"requirement capacity: %s\n",r.error());assert(accepted==(count==10));++cases;
  }
+ capacity=0;indexMode=1;owned=safe=true;
+ stage(grant(0,"platform.clock"),requirement("platform.clock"));
+ {Runtime r(port());assert(r.prepare(root.c_str()) && r.run());++cases;}
+ indexMode=2;std::string driverList;
+ for(unsigned i=0;i<16;i++){
+  const std::string name="slot"+std::to_string(i),cap="test."+name;
+  write((name+".json").c_str(),"{\"type\":\"driver\",\"id\":\""+name+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\""+name+".elf\",\"driver_abi\":2,\"requires\":[],\"provides\":["+requirement(cap.c_str())+"]}");
+  if(i)driverList+=",";
+  driverList+="{\"manifest\":\""+name+".json\"}";
+ }
+ write("default.json",manifest("default","default.elf",requirement("test.slot15")));
+ write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+driverList+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grant(0,"test.slot15")+"]}]}");
+ {Runtime r(port());assert(r.prepare(root.c_str()) && r.run());++cases;}
+ indexMode=0;
  capacity=0;
  printf("Multiple explicit KV namespaces: %u admission/lifecycle/owner/isolation/retention cases PASS\n",cases);
 }

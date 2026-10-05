@@ -1,8 +1,10 @@
 #include <RiscRuntimeV1.h>
 #include <RiscKeyValueV1.h>
+#include <RiscPlatformClockV1.h>
 #include <assert.h>
 #include <string.h>
 extern unsigned multi_capacity(void);
+extern unsigned multi_index_mode(void);
 extern void multi_owner(int);
 extern int multi_phase(void);
 extern void multi_next(void);
@@ -19,6 +21,12 @@ __attribute__((visibility("default"))) void app_main(void){
  assert(kv->get(kv->context,"same",bytes,sizeof(bytes),&size)==0&&size==3&&!memcmp(bytes,"one",3));
  assert(rt->release(&one));multi_next();return;
 #else
+ unsigned index_mode=multi_index_mode();
+ if(index_mode){
+  if(index_mode==1){assert(rt->acquire("platform.clock",1,0,&one));const risc_platform_clock_api_v1* clock=one.api;assert(clock->monotonic_ms(clock->context)==12345);}
+  else {assert(index_mode==2 && rt->acquire("test.slot15",1,0,&one));const unsigned* value=one.api;assert(value[0]==1 && value[2]==15);}
+  assert(rt->release(&one));return;
+ }
  unsigned capacity=multi_capacity();
  if(capacity){
   risc_runtime_capability_v1 grants[12]={0};assert(capacity<=12);

@@ -51,13 +51,17 @@ names in the fixed driver/platform table, or the canonical KV literal. They neve
 borrow parser memory. Runtime is noncopyable/nonmovable; preparation and platform
 registration cannot replace metadata after admission.
 
-Firmware 0.1.27 retains the 32-byte target policy-grant representation while
-expanding policy slots from ten to twelve. Measured with pinned Xtensa GCC 8.4,
-Runtime is 219,904 bytes versus 218,880 in its immediate 0.1.26 parent (+1,024).
-CpuPort is 4,648 bytes versus 4,384 (+264). Generic USB retains its existing PSRAM
-metadata allocation; paired retains its existing allocation policy. No new
-allocation or weakened validator is introduced. Policy count and live-handle
-limits remain unchanged.
+Firmware 0.1.27 expands policy slots from ten to twelve while compacting private
+indices to signed8-bit values. Fixed16-driver/32-platform capacities are asserted
+against that index width; -1 remains the absent sentinel. Board binding IDs use
+32-bit private storage only after the unchanged1..INT32_MAX parse check. The shared
+64-bit hardware IDs and all serialized layouts remain unchanged.
+
+Pinned Xtensa GCC8.4 measures Runtime at214,272 bytes, down4,608 from its immediate
+0.1.26 parent (218,880), despite the two extra grants. CpuPort is4,648 bytes versus
+4,384 (+264), a net fixed-data saving of4,344 bytes. Generic USB and paired retain
+the existing retained-PSRAM allocator; baseline/CAM/X4 retain internal metadata.
+No target gains a new PSRAM requirement or loses capacity or validation.
 These records are never serialized or exposed through an SDK. Default/child
 reload, parsed-memory churn, rejected reprepare, failed prepare and stale-handle
 regressions run with the same exact authority checks.
