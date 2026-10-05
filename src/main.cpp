@@ -8,6 +8,8 @@
 #include "ports/esp32s3/CooperativeDelay.h"
 #ifdef RISC_PAIRED_BANKS
 #include "ports/esp32s3/NativeBankStore.h"
+#endif
+#if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 #include "ports/esp32s3/NativeRuntime.h"
 #endif
 #ifndef RISC_EMBEDDED_BOOTSTORE
@@ -54,7 +56,7 @@ bool confirmBoot(){
   return true;
 #endif
 }
-#ifdef RISC_PAIRED_BANKS
+#if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
 RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot});
@@ -75,9 +77,16 @@ void setup() {
   if(!RiscBankStore::prepareBoot(isOwner,restartSafe,providerStorageSafe)) {
     Serial.println("RTE_BOOT error=paired-bank-integrity");RiscBankStore::rejectBoot();return;
   }
+#endif
+#if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
   if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot});
   if(!retainedRuntime){
-    Serial.println("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();return;
+#ifdef RISC_PAIRED_BANKS
+    Serial.println("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();
+#else
+    Serial.println("RTE_BOOT error=runtime-metadata-psram");
+#endif
+    return;
   }
   auto& runtime=*retainedRuntime;
 #endif
