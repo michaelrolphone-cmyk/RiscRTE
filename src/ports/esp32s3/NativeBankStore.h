@@ -13,6 +13,10 @@ bool confirmBoot();
 void rejectBoot();
 bool exitSafe();
 bool provisionAvailable(); // verified confirmed pair, owner, before Runtime binding
+// Read-only inactive-journal history. SameAttempt/Unavailable keep the installed
+// boot without erasing history. All-FF legacy trailer means no tracked attempt.
+enum class ProvisionHistory {Clear,SameAttempt,Unavailable};
+ProvisionHistory provisionHistory(const uint8_t (&digest)[32]);
 // Private boot-owner API, deliberately absent from the provider capability.
 // Requires a verified/confirmed paired deployment, before bind()/app startup.
 // Uses a fresh metadata-only CPU/Runtime instance and production ELF admission.

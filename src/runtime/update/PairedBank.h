@@ -20,6 +20,22 @@ constexpr uint32_t RecordMagic=0x314b4252;
 uint32_t crc32(const void*,size_t);
 bool validRecord(const Record&,unsigned);
 Record makeRecord(unsigned,uint32_t,const uint8_t*,const uint8_t*);
+// Optional selection-attempt trailer in the SAME per-bank 4 KiB journal
+// sector. The legacy 96-byte readiness record and partition ABI are unchanged.
+// CRC detects torn/corrupt bytes; it is NOT an authenticity mechanism.
+struct ProvisionAttempt {
+  uint32_t magic,format,bank;
+  uint8_t profileSha[32],firmwareSha[32],storeSha[32],sourceFirmwareSha[32],sourceStoreSha[32];
+  uint32_t crc;
+};
+static_assert(sizeof(ProvisionAttempt)==176,"provisioning attempt format");
+constexpr uint32_t AttemptMagic=0x31545052; // RPT1, little endian
+constexpr uint32_t AttemptOffset=sizeof(Record);
+static_assert(AttemptOffset+sizeof(ProvisionAttempt)<=SectorBytes,"attempt fits existing journal sector");
+bool emptyAttempt(const ProvisionAttempt&);
+bool validAttempt(const ProvisionAttempt&,const Record&,unsigned);
+bool sameAttemptSource(const ProvisionAttempt&,const Record&);
+ProvisionAttempt makeAttempt(unsigned,const uint8_t (&profile)[32],const Record& target,const Record& source);
 /* Trusted backend. All functions are owner-task-only, never retain input
  * pointers. read/write <=4096, erase exactly one sector; region 0=app, 1=store.
  * File admission/paths are resolved by the native backend before begin(). */

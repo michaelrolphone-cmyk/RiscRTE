@@ -33,6 +33,8 @@ static std::vector<uint8_t> flash(0x1000000,0xff);
 static uint32_t ticks=1,active=0,imageSize=8192,writes=0,rollbacks=0,confirms=0,restarts=0,delayScale=1,delays=0,unsafeAfterDelay=0;
 static bool ownerEnabled=true,rollbackPossible=true,operationEnabled=true,restartEnabled=true,selectFailure=false;
 static esp_ota_img_states_t otaState=ESP_OTA_IMG_PENDING_VERIFY;
+static bool rejectedCandidate=false,attemptReadFailure=false;
+static unsigned attemptWriteFault=0,selectorCalls=0;
 static esp_partition_t table[]={
  {ESP_PARTITION_TYPE_APP,ESP_PARTITION_SUBTYPE_APP_OTA_0,0x10000,0x300000,"app0",false},
  {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,0x310000,0x4f0000,"bootfs0",false},
@@ -48,14 +50,20 @@ uint32_t millis(){return ticks;}
 void vTaskDelay(unsigned n){ticks+=n*delayScale;if(++delays==unsafeAfterDelay)operationEnabled=false;}
 esp_err_t esp_flash_read(esp_flash_t*,void* out,uint32_t off,uint32_t n){if(off+n>flash.size())return -1;memcpy(out,flash.data()+off,n);return 0;}
 const esp_partition_t* esp_partition_find_first(esp_partition_type_t t,esp_partition_subtype_t st,const char* label){for(auto& p:table)if(p.type==t && p.subtype==st && !strcmp(label,p.label))return &p;return nullptr;}
-esp_err_t esp_partition_read(const esp_partition_t* p,size_t off,void* out,size_t n){if(!p || off+n>p->size)return -1;memcpy(out,flash.data()+p->address+off,n);return 0;}
-esp_err_t esp_partition_write(const esp_partition_t* p,size_t off,const void* in,size_t n){if(!p || off+n>p->size)return -1;++writes;memcpy(flash.data()+p->address+off,in,n);return 0;}
+esp_err_t esp_partition_read(const esp_partition_t* p,size_t off,void* out,size_t n){if(!p || off+n>p->size)return -1;if(attemptReadFailure&&!strcmp(p->label,"bank_state")&&off==4096+RiscUpdate::AttemptOffset)return -1;memcpy(out,flash.data()+p->address+off,n);return 0;}
+esp_err_t esp_partition_write(const esp_partition_t* p,size_t off,const void* in,size_t n){if(!p || off+n>p->size)return -1;++writes;
+ if(attemptWriteFault&&!strcmp(p->label,"bank_state")&&off==4096+RiscUpdate::AttemptOffset){
+   if(attemptWriteFault==1)return -1;
+   if(attemptWriteFault==2){memcpy(flash.data()+p->address+off,in,n/2);return -1;}
+   memcpy(flash.data()+p->address+off,in,n);flash[p->address+off+12]^=1;return 0;
+ }
+ memcpy(flash.data()+p->address+off,in,n);return 0;}
 esp_err_t esp_partition_erase_range(const esp_partition_t* p,size_t off,size_t n){if(!p || off+n>p->size)return -1;++writes;memset(flash.data()+p->address+off,0xff,n);return 0;}
 const esp_partition_t* esp_ota_get_running_partition(){return &table[active*2];}
-esp_err_t esp_ota_get_state_partition(const esp_partition_t*,esp_ota_img_states_t* s){*s=otaState;return 0;}
+esp_err_t esp_ota_get_state_partition(const esp_partition_t* p,esp_ota_img_states_t* s){*s=(rejectedCandidate && p->address==0x800000)?ESP_OTA_IMG_ABORTED:otaState;return 0;}
 const esp_app_desc_t* esp_ota_get_app_description(){static esp_app_desc_t d{};strcpy(d.project_name,"arduino-lib-builder");return &d;}
 esp_err_t esp_ota_get_partition_description(const esp_partition_t*,esp_app_desc_t* out){*out=*esp_ota_get_app_description();return 0;}
-esp_err_t esp_ota_set_boot_partition(const esp_partition_t*){++writes;return selectFailure?-1:0;}
+esp_err_t esp_ota_set_boot_partition(const esp_partition_t*){++selectorCalls;++writes;return selectFailure?-1:0;}
 esp_err_t esp_ota_mark_app_valid_cancel_rollback(){++confirms;otaState=ESP_OTA_IMG_VALID;return 0;}
 esp_err_t esp_ota_mark_app_invalid_rollback_and_reboot(){++rollbacks;return 0;}
 bool esp_ota_check_rollback_is_possible(){return rollbackPossible;}
@@ -225,6 +233,37 @@ int main(int argc,char** argv){
          std::ofstream f(installed+"/"+RiscProvision::StoreFiles::DigestFile,std::ios::binary);f.write(reinterpret_cast<const char*>(digest),32);
          if(mode=="bootstrap-match-close-retained")failNextNativeClose=true;
        }
+       const bool hasAttemptFixture=mode=="bootstrap-rolled-back"||mode=="bootstrap-changed-profile"||mode=="bootstrap-changed-source"||mode=="bootstrap-legacy-attempt"||
+         mode=="bootstrap-attempt-malformed"||mode=="bootstrap-attempt-torn"||mode=="bootstrap-attempt-bank-mismatch"||
+         mode=="bootstrap-attempt-store-mismatch"||mode=="bootstrap-attempt-firmware-mismatch"||mode=="bootstrap-attempt-format"||mode=="bootstrap-attempt-read-fail";
+       if(hasAttemptFixture){
+         // Fresh boot after the prior desired profile failed default health.
+         // Active old pair is VALID; inactive candidate is ABORTED and retains
+         // the same desired profile identity in its verified stored contents.
+         uint8_t digest[32];SHA256(reinterpret_cast<const uint8_t*>(bootNet.profile.data()),bootNet.profile.size(),digest);
+         {std::ofstream f(modelStageRoot+"/"+RiscProvision::StoreFiles::DigestFile,std::ios::binary);f.write(reinterpret_cast<const char*>(digest),32);}
+         assert(esp_vfs_spiffs_unregister("bootfs1")==ESP_OK);firmware(1,RISC_BUILD_VERSION);
+         uint8_t candidateFirmware[32],candidateStore[32];SHA256(flash.data()+0x800000,imageSize,candidateFirmware);SHA256(flash.data()+0xb00000,RiscUpdate::StoreBytes,candidateStore);
+         auto failedRecord=RiscUpdate::makeRecord(1,imageSize,candidateFirmware,candidateStore);memcpy(flash.data()+RiscUpdate::JournalOffset+4096,&failedRecord,sizeof(failedRecord));
+         rejectedCandidate=true;
+         if(mode=="bootstrap-changed-profile"){
+           std::string prior=bootNet.profile;auto pos=prior.find("https://example.test/default.elf");assert(pos!=std::string::npos);
+           prior.replace(pos,strlen("https://example.test/default.elf"),"https://example.test/prior-default.elf");
+           SHA256(reinterpret_cast<const uint8_t*>(prior.data()),prior.size(),digest);
+         }
+         auto sourceRecord=record;
+         if(mode=="bootstrap-changed-source"){sourceRecord.storeSha[0]^=1;sourceRecord.crc=RiscUpdate::crc32(&sourceRecord,offsetof(RiscUpdate::Record,crc));}
+         auto attempt=RiscUpdate::makeAttempt(1,digest,failedRecord,sourceRecord);
+         if(mode=="bootstrap-attempt-bank-mismatch")attempt.bank=0;
+         if(mode=="bootstrap-attempt-store-mismatch")attempt.storeSha[0]^=1;
+         if(mode=="bootstrap-attempt-firmware-mismatch")attempt.firmwareSha[0]^=1;
+         if(mode=="bootstrap-attempt-format")attempt.format=2;
+         attempt.crc=RiscUpdate::crc32(&attempt,offsetof(RiscUpdate::ProvisionAttempt,crc));
+         if(mode=="bootstrap-attempt-malformed")attempt.crc^=1;
+         if(mode!="bootstrap-legacy-attempt")memcpy(flash.data()+RiscUpdate::JournalOffset+4096+RiscUpdate::AttemptOffset,&attempt,
+           mode=="bootstrap-attempt-torn"?sizeof(attempt)/2:sizeof(attempt));
+         if(mode=="bootstrap-attempt-read-fail")attemptReadFailure=true;
+       }
        auto hardware=admissionHardware();hardware.sleep=[](uint32_t n){vTaskDelay(n);};
        hardware.radioJoin=[](const char* ssid,const char* password){assert(!strcmp(ssid,"test-network")&&!strcmp(password,"test-only-password"));++bootNet.joins;bootNet.radio=true;return true;};
        hardware.radioState=[](uint8_t* state,int8_t* rssi){*state=bootNet.radio?2:0;*rssi=-30;return true;};
@@ -238,9 +277,24 @@ int main(int argc,char** argv){
        if(mode=="bootstrap-native-unsafe")operationEnabled=false;
        if(mode=="bootstrap-selection-unknown")selectFailure=true;
        if(mode=="bootstrap-time-timeout")delayScale=10000;
+       if(mode=="bootstrap-attempt-write-fail")attemptWriteFault=1;
+       if(mode=="bootstrap-attempt-write-torn")attemptWriteFault=2;
+       if(mode=="bootstrap-attempt-write-readback")attemptWriteFault=3;
        const auto result=RiscBootstrap::run(port,installed.c_str());risc_test_psram_fail_after=-1;delayScale=1;operationEnabled=true;
-       const bool selected=mode=="bootstrap-success"||mode=="bootstrap-confirmed-bank"||mode=="bootstrap-time-pending"||mode=="bootstrap-selection-unknown";
+       const bool selected=mode=="bootstrap-success"||mode=="bootstrap-confirmed-bank"||mode=="bootstrap-time-pending"||mode=="bootstrap-selection-unknown"||mode=="bootstrap-changed-profile"||mode=="bootstrap-changed-source"||mode=="bootstrap-legacy-attempt";
        const bool stopped=selected||mode=="bootstrap-http-retained"||mode=="bootstrap-radio-retained"||mode=="bootstrap-match-close-retained"||mode=="bootstrap-native-unsafe";
+       if(mode=="bootstrap-rolled-back"){
+         assert(result.reason==Reason::AttemptHeld&&!bootNet.joins&&!bootNet.opens&&!writes&&!selectorCalls);
+         const auto again=RiscBootstrap::run(port,installed.c_str());assert(again.outcome==Outcome::Installed&&again.reason==Reason::AttemptHeld&&!writes);
+       }
+       if(hasAttemptFixture&&!selected&&mode!="bootstrap-rolled-back")assert(result.reason==Reason::HistoryUnavailable&&!bootNet.joins&&!bootNet.opens&&!writes&&!selectorCalls);
+       if(attemptWriteFault){assert(result.reason==Reason::StageFailed&&!selectorCalls&&!restarts);
+         RiscUpdate::ProvisionAttempt cleared{};memcpy(&cleared,flash.data()+RiscUpdate::JournalOffset+4096+RiscUpdate::AttemptOffset,sizeof(cleared));assert(RiscUpdate::emptyAttempt(cleared));}
+       if(selected){RiscUpdate::Record selectedRecord{};RiscUpdate::ProvisionAttempt attempt{};
+         memcpy(&selectedRecord,flash.data()+RiscUpdate::JournalOffset+4096,sizeof(selectedRecord));
+         memcpy(&attempt,flash.data()+RiscUpdate::JournalOffset+4096+RiscUpdate::AttemptOffset,sizeof(attempt));
+         assert(RiscUpdate::validAttempt(attempt,selectedRecord,1)&&RiscUpdate::sameAttemptSource(attempt,record));uint8_t expected[32];SHA256(reinterpret_cast<const uint8_t*>(bootNet.profile.data()),bootNet.profile.size(),expected);assert(!memcmp(expected,attempt.profileSha,32));}
+
        assert((result.outcome==Outcome::Stopped)==stopped);assert(restarts==(selected?1u:0u));
        if(mode=="bootstrap-no-time"||mode=="bootstrap-time-unavailable"||mode=="bootstrap-time-stale"||mode=="bootstrap-time-future"||mode=="bootstrap-time-invalid"||mode=="bootstrap-time-timeout")assert(result.reason==Reason::ClockUnavailable);
        if(mode=="bootstrap-unchanged")assert(result.reason==Reason::Unchanged&&!bootNet.joins&&!bootNet.opens&&!writes);
@@ -370,6 +424,8 @@ int main(int argc,char** argv){
      assert(transaction->finish(token)==RISC_BANK_OK);advance(RISC_BANK_READY);
      selectFailure=mode=="restart-unknown";
      assert(transaction->activate(token)==(selectFailure?RISC_BANK_RETAINED:RISC_BANK_OK));
+     RiscUpdate::ProvisionAttempt ordinaryAttempt{};memcpy(&ordinaryAttempt,flash.data()+RiscUpdate::JournalOffset+4096+RiscUpdate::AttemptOffset,sizeof(ordinaryAttempt));
+     assert(RiscUpdate::emptyAttempt(ordinaryAttempt)&&selectorCalls==1); // no provisioning policy added to ordinary updates
      assert(exitSafe()!=selectFailure);assert(!api.restart(nullptr,token+1) && restarts==0);
      restartEnabled=false;assert(!api.restart(nullptr,token) && restarts==0);restartEnabled=true;
      ownerEnabled=false;assert(!api.restart(nullptr,token) && restarts==0);ownerEnabled=true;

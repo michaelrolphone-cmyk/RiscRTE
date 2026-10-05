@@ -1,4 +1,4 @@
-# Profile-driven provisioning: bounded core checkpoint (0.1.21)
+# Profile-driven provisioning: bounded core checkpoint (0.1.23)
 
 Paired `setup()` now reads bounded owner-controlled descriptor/profile input
 from existing NVS and runs the provisioning coordinator before normal Runtime
@@ -298,3 +298,55 @@ installed default normally; a separate confirmed-boot process then provisions.
 NVS tests prove read-only namespace use, size/type/torn-size refusal, exact SHA,
 scratch wiping and no erase recovery. Normal and ASan/UBSan checks pass; local
 LSan is unavailable under ptrace. Exact-head paired target CI remains required.
+
+## Bounded selection-attempt guard (0.1.23)
+
+A regression reproduced a real automatic retry gap: after a new default failed
+health and the bootloader returned to the old VALID pair, an unchanged desired
+profile was downloaded/selected again. The old code's fresh-boot model made one
+network connection, 2,535 modeled writes and another restart instead of launching
+the installed default. Preserving the old pair alone did not prevent this loop.
+
+The fix reuses each bank's existing 4 KiB journal sector. The first 96-byte
+readiness record is unchanged. An optional 176-byte `RPT1` trailer at offset 96
+records the profile SHA, destination firmware/store hashes, source firmware/store
+hashes, bank, format and CRC. CRC is corruption/torn-write detection, **not
+authenticity**. No new partition or NVS writes are added. All-FF is compatible
+legacy/untracked history; a legacy attempt can be retried and becomes tracked
+when selection is next attempted.
+
+The trailer is written and read back only after READY, immediately before
+calling the OTA selector. Earlier download/admission failures leave no attempt
+and remain retryable. If this invocation's trailer write/readback fails, the
+selector has definitely not been called: existing abort cleans its inactive
+staging and the installed default can launch without reboot. A reset during that
+write is different: a later boot cannot establish its history, so a nonempty
+malformed/unreadable trailer declines automatic mutation and still uses the
+installed default. It is not silently erased or trusted.
+
+If this boot's installed profile differs from the desired profile, and the
+inactive bank has a valid matching attempt from this exact verified source pair,
+the unchanged desired profile is held **before network or flash mutation**. This
+covers health rollback and ambiguous selection. A different desired profile may
+proceed. A changed verified source pair also makes older history inapplicable,
+so a later intentional return to an earlier successful profile is not globally
+blacklisted. This is one bounded source-to-destination attempt identity, not a
+lifetime blacklist or an authentication mechanism. Any owner byte-change to the
+profile is a different exact profile SHA; no semantic/canonicalized retry policy
+is inferred. Valid destination bank/hash binding is required before considering
+source/profile identity. Malformed history stays a safe offline hold even when
+its identity cannot be compared.
+
+The previous generic read-only NVS input, installed-default and pending-bank
+health paths remain unchanged. Ordinary app/firmware updates still use their
+existing selector and authority; they do not receive provisioning-attempt policy.
+Their existing inactive-sector invalidation naturally removes obsolete trailers.
+
+Focused tests now cover same failed profile held repeatedly with zero network,
+selector or flash calls; changed profile and changed verified source proceeding;
+legacy records; torn/malformed/unknown-format/read-failed trailers; bank and both
+destination hash mismatches; known pre-selector write/readback failures with
+ordinary abort; and unchanged ordinary updater behavior. Existing 24 bootstrap
+cases remain. All failures preserve the active firmware/store bytes and launch
+the installed host ELF when resource cleanup is safe. Physical journal faults,
+SPIFFS/power-loss behavior and actual app/hardware health remain unqualified.

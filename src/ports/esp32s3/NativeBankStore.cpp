@@ -46,6 +46,7 @@ bool replacingFirmware=false;
 unsigned activeBank=0;
 FILE* appFile=nullptr;
 struct Scratch {
+  Record verifiedActiveRecord{};
   RiscBoot::Runtime::UpdateApp appPaths{};
   char manifest[RISC_BANK_MANIFEST_MAX]{};
   uint32_t manifestSize=0,appSize=0;
@@ -286,7 +287,18 @@ bool validateFirmware(void*,unsigned b,uint32_t n){
   int comparison=RiscUpdate::compareVersion(actual,currentVersion);
   return replacingFirmware && b!=activeBank ? comparison>0 : comparison==0;
 }
+bool writeProvisionAttempt(unsigned b){
+  if(!operationSafe() || !provisionProfile || b>=2 || b==activeBank)return false;
+  Record pair{};ProvisionAttempt prior{},check{};
+  if(!journal || esp_partition_read(journal,b*SectorBytes,&pair,sizeof(pair))!=ESP_OK || !validRecord(pair,b) ||
+     esp_partition_read(journal,b*SectorBytes+AttemptOffset,&prior,sizeof(prior))!=ESP_OK || !emptyAttempt(prior))return false;
+  const auto attempt=makeAttempt(b,provisionDigest,pair,scratch->verifiedActiveRecord);
+  return esp_partition_write(journal,b*SectorBytes+AttemptOffset,&attempt,sizeof(attempt))==ESP_OK &&
+    esp_partition_read(journal,b*SectorBytes+AttemptOffset,&check,sizeof(check))==ESP_OK &&
+    !memcmp(&attempt,&check,sizeof(attempt)) && validAttempt(check,pair,b);
+}
 bool select(void*,unsigned b){return operationSafe() && b<2 && b!=activeBank && esp_ota_set_boot_partition(parts[b][0])==ESP_OK;}
+
 
 bool ready(){return prepared && operationSafe() && runtime && runtime->active() && confirmed;}
 int32_t beginFirmware(void*,const risc_bank_image_v1* image,uint64_t* token){
@@ -387,7 +399,7 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   Record value{};if(esp_partition_read(journal,activeBank*4096,&value,sizeof(value))!=ESP_OK || !validRecord(value,activeBank) ||
       !checkHash(activeBank,0,value.firmwareSize,value.firmwareSha) || !checkHash(activeBank,1,value.storeSize,value.storeSha) ||
       !validateFirmware(nullptr,activeBank,value.firmwareSize) || !transaction->initialize(activeBank,value))return false;
-  prepared=true;return true;
+  scratch->verifiedActiveRecord=value;prepared=true;return true;
 }
 const char* bootLabel(){return prepared?labels[activeBank]:nullptr;}
 bool bind(RiscBoot::Runtime& rt){if(!prepared || !owner() || runtime || provisionFiles)return false;runtime=&rt;
@@ -407,12 +419,23 @@ void rejectBoot(){
     esp_ota_mark_app_invalid_rollback_and_reboot();
 }
 bool provisionAvailable(){return prepared && confirmed && !pending && !runtime && !provisionFiles && !provisionReadRetained && operationSafe();}
+ProvisionHistory provisionHistory(const uint8_t (&digest)[32]){
+  if(!provisionAvailable() || !journal)return ProvisionHistory::Unavailable;
+  const unsigned target=1-activeBank;ProvisionAttempt attempt{};
+  if(esp_partition_read(journal,target*SectorBytes+AttemptOffset,&attempt,sizeof(attempt))!=ESP_OK)return ProvisionHistory::Unavailable;
+  if(emptyAttempt(attempt))return ProvisionHistory::Clear;
+  Record pair{};
+  if(esp_partition_read(journal,target*SectorBytes,&pair,sizeof(pair))!=ESP_OK || !validAttempt(attempt,pair,target))return ProvisionHistory::Unavailable;
+  if(!sameAttemptSource(attempt,scratch->verifiedActiveRecord))return ProvisionHistory::Clear;
+  return memcmp(attempt.profileSha,digest,32)?ProvisionHistory::Clear:ProvisionHistory::SameAttempt;
+}
 bool provisionReady(uint64_t token){return prepared && confirmed && !pending && !runtime && provisionFiles &&
   provisionProfile && token && token==provisionToken && operationSafe();}
 int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&digest)[32],const RiscCpu::Hardware& hardware,const RiscBoot::KeyValueBackend* keyValue,uint64_t* token){
   if(token)*token=0;
   if(!token || !prepared || !confirmed || pending || runtime || provisionFiles || provisionState || !hardware.owner || !hardware.owner() || !operationSafe())return RISC_BANK_UNAVAILABLE;
   if(profile.count<3 || profile.count>RiscProvision::MaxFiles)return RISC_BANK_INVALID;
+  if(provisionHistory(digest)!=ProvisionHistory::Clear)return RISC_BANK_STATE;
   uint32_t total=32;
   for(size_t i=0;i<profile.count;++i){const auto& file=profile.files[i];
     // IDF prefixes the relative SPIFFS name with '/'; never allow truncation.
@@ -443,7 +466,16 @@ int32_t provisionWrite(uint64_t t,size_t file,const void* data,uint32_t n){
   return provisionFiles->write(file,data,n)?RISC_BANK_OK:RISC_BANK_INTEGRITY;
 }
 int32_t provisionFinish(uint64_t t){return provisionReady(t)?transaction->finishStore(t):RISC_BANK_UNAVAILABLE;}
-int32_t provisionActivate(uint64_t t){return provisionReady(t)?transaction->activate(t):RISC_BANK_UNAVAILABLE;}
+int32_t provisionActivate(uint64_t t){
+  if(!provisionReady(t))return RISC_BANK_UNAVAILABLE;
+  risc_bank_status_v1 status{};status.struct_size=sizeof(status);
+  if(!transaction->status(&status)||status.state!=RISC_BANK_READY)return RISC_BANK_STATE;
+  // Pre-selection metadata failure is known NOT to have called the OTA
+  // selector. The ordinary abort path may clean this invocation's staging.
+  // Persisted nonempty malformed history on a later boot is never erased here.
+  if(!writeProvisionAttempt(1-activeBank))return RISC_BANK_IO;
+  return transaction->activate(t);
+}
 int32_t provisionAbort(uint64_t t){
   if(!owner()||!provisionFiles||!t||t!=provisionToken||runtime)return RISC_BANK_STATE;
   const int32_t result=transaction->abort(t);if(result!=RISC_BANK_OK)return result;

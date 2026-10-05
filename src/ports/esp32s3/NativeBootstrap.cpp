@@ -26,7 +26,7 @@ struct Session {
  uint8_t input[RiscProvision::ProfileInputBytes]{},digest[32]{},buffer[RISC_HTTP_CHUNK_MAX]{};
  char root[256]{};uint64_t bankToken=0,httpToken=0;
  uint32_t received=0;size_t fileIndex=0;
- bool radio=false,retained=false,finished=false;
+ bool radio=false,retained=false,finished=false,historyChecked=false;
  Reason reason=Reason::Unchanged;
  explicit Session(const Port& p):port(p){}
  ~Session(){volatile uint8_t* p=input;for(size_t i=0;i<sizeof(input);++i)p[i]=0;}
@@ -65,6 +65,10 @@ struct Session {
  }
  Step connect(){
    reason=Reason::NetworkFailed;auto& h=port.hardware;
+   if(!historyChecked){const auto history=RiscBankStore::provisionHistory(digest);
+     if(history!=RiscBankStore::ProvisionHistory::Clear){reason=history==RiscBankStore::ProvisionHistory::SameAttempt?Reason::AttemptHeld:Reason::HistoryUnavailable;return Step::Failed;}
+     historyChecked=true;
+   }
    if(!port.time.poll){reason=Reason::ClockUnavailable;return Step::Failed;}
    if(!radio){radio=true;if(!h.radioJoin(profile.ssid,profile.password)){reason=Reason::NetworkFailed;return Step::Failed;}return Step::Pending;}
    uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;
@@ -185,6 +189,7 @@ const char* reasonName(Reason reason){switch(reason){
  case Reason::DownloadFailed:return "download-failed";case Reason::StageFailed:return "stage-failed";
  case Reason::CleanupRetained:return "cleanup-retained";case Reason::NativeUnsafe:return "native-unsafe";
  case Reason::Activated:return "activation-awaits-safe-restart";case Reason::SelectionUnknown:return "selection-unknown";
+ case Reason::AttemptHeld:return "profile-attempt-held";case Reason::HistoryUnavailable:return "profile-history-unavailable";
  }return "unavailable";}
 }
 #endif

@@ -180,3 +180,15 @@ namespace, retained-resource and boot-health checks remain required.
 The target native-registry, v2 storage and paired update fault suites run together
 in CI. Host tests do not qualify hardware OTA, flash power-loss recovery, TLS or
 new flash layout migration.
+
+## Optional provisioning-attempt trailer
+
+Runtime 0.1.23 uses 176 previously erased bytes at offset96 in each existing
+4096-byte journal sector for an optional selection-attempt identity. The legacy
+96-byte readiness record, offsets, sizes, CRC and store ABI remain unchanged.
+All-FF trailers remain compatible; no factory metadata image changes are needed.
+The private provisioning path binds profile SHA to destination and verified
+source pair hashes, verifies the trailer before calling the selector, and uses
+it to avoid repeating an unchanged unconfirmed transition. Ordinary update
+authority is unchanged. CRC does not authenticate the owner or firmware. Full
+semantics and fault evidence: [provisioning](PROVISIONING.md#bounded-selection-attempt-guard-0123).

@@ -17,6 +17,25 @@ Record makeRecord(unsigned bank,uint32_t n,const uint8_t* fw,const uint8_t* stor
   r.storeAbi=RISC_BANK_STORE_ABI;memcpy(r.firmwareSha,fw,32);memcpy(r.storeSha,store,32);
   r.crc=crc32(&r,offsetof(Record,crc));return r;
 }
+bool emptyAttempt(const ProvisionAttempt& attempt){
+  const auto* bytes=reinterpret_cast<const uint8_t*>(&attempt);
+  for(size_t i=0;i<sizeof(attempt);++i)if(bytes[i]!=0xff)return false;
+  return true;
+}
+bool validAttempt(const ProvisionAttempt& attempt,const Record& record,unsigned bank){
+  return validRecord(record,bank) && attempt.magic==AttemptMagic && attempt.format==1 && attempt.bank==bank &&
+    !memcmp(attempt.firmwareSha,record.firmwareSha,32) && !memcmp(attempt.storeSha,record.storeSha,32) &&
+    attempt.crc==crc32(&attempt,offsetof(ProvisionAttempt,crc));
+}
+bool sameAttemptSource(const ProvisionAttempt& attempt,const Record& source){
+  return validRecord(source,1-attempt.bank) && !memcmp(attempt.sourceFirmwareSha,source.firmwareSha,32) && !memcmp(attempt.sourceStoreSha,source.storeSha,32);
+}
+ProvisionAttempt makeAttempt(unsigned bank,const uint8_t (&profile)[32],const Record& record,const Record& source){
+  ProvisionAttempt value{};value.magic=AttemptMagic;value.format=1;value.bank=bank;
+  memcpy(value.profileSha,profile,32);memcpy(value.firmwareSha,record.firmwareSha,32);memcpy(value.storeSha,record.storeSha,32);
+  memcpy(value.sourceFirmwareSha,source.firmwareSha,32);memcpy(value.sourceStoreSha,source.storeSha,32);
+  value.crc=crc32(&value,offsetof(ProvisionAttempt,crc));return value;
+}
 bool Transaction::initialize(unsigned active,const Record& record){
   if(initialized_ || !validRecord(record,active) || !io_.now || !io_.read || !io_.erase || !io_.write ||
      !io_.invalidate || !io_.record || !io_.hashBegin || !io_.hashAdd || !io_.hashEnd ||

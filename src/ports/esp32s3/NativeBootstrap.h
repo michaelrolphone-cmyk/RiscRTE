@@ -24,7 +24,7 @@ struct Port {
 enum class Outcome {Installed,Stopped};
 enum class Reason {NoProfile,InvalidProfile,InputUnavailable,MemoryUnavailable,PairUnavailable,
                    Unchanged,ClockUnavailable,NetworkFailed,DownloadFailed,StageFailed,
-                   CleanupRetained,NativeUnsafe,Activated,SelectionUnknown};
+                   CleanupRetained,NativeUnsafe,Activated,SelectionUnknown,AttemptHeld,HistoryUnavailable};
 struct Result {Outcome outcome;Reason reason;};
 // Paired setup only: selected store is already mounted/verified, Runtime not
 // created/bound yet. Installed means continue NORMAL manifest/ELF admission.

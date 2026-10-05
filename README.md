@@ -275,3 +275,8 @@ the provisioning coordinator using existing native station/HTTPS and staging.
 Absent/invalid input or unavailable fresh time keeps normal installed boot.
 The default fresh-time factory is unavailable: autonomous online provisioning
 still requires a real deployment time source and owner-provided profile.
+
+Runtime 0.1.23 records a bounded provisioning selection attempt in the existing
+inactive-bank journal, preventing an unchanged failed transition from repeatedly
+reprovisioning/rebooting. Changed profiles or source generations can proceed;
+malformed history preserves offline installed launch without erasing history.
