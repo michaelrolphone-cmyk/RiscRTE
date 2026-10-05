@@ -129,7 +129,7 @@ class Runtime final {
   static_assert(sizeof(AppGrantPolicy)==24,"App policy target layout changed");
 #endif
   bool configureInstalledFiles(JsonObjectConst);
-  static Runtime* volumeContext(void*);
+  static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};

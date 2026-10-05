@@ -10,8 +10,9 @@
 namespace RiscBoot {
 /* Read-only view of admitted package artifacts. Unknown root files, private
  * state, provisioning input and NVS are never enumerated or addressable. All
- * native I/O is synchronous and at most512 bytes per file-read callback; logical
- * handles retain identity/offset, not a native descriptor across callbacks. */
+ * native I/O is synchronous and at most 512 bytes per file-read callback; logical
+ * handles retain identity/offset. A failed native close latches retention;
+ * successful callbacks never retain a native descriptor. */
 class InstalledFiles final {
  public:
   static constexpr size_t PathMax=193;
@@ -27,12 +28,14 @@ class InstalledFiles final {
     root_=root;names_=std::move(copy);count_=count;configured_=true;return true;
   }
   bool configured()const{return configured_;}
-  void end(){directory_=file_=0;directoryPath_[0]=last_[0]=filePath_[0]=0;offset_=0;error_=nullptr;}
-  bool refresh(){error_=nullptr;return configured_;}
-  bool ready()const{return configured_;}
+  bool retained()const{return retained_;}
+  bool end(){if(retained_)return false;directory_=file_=0;directoryPath_[0]=last_[0]=filePath_[0]=0;offset_=0;error_=nullptr;return true;}
+  bool refresh(){if(retained_)return false;error_=nullptr;return configured_;}
+  bool ready()const{return configured_ && !retained_;}
   bool label(char*out,size_t n){return copy(out,n,"Installed files (read-only)");}
   bool error(char*out,size_t n)const{return copy(out,n,error_?error_:"");}
   bool stat(const char* path,uint64_t*size,bool*directory) {
+    if(retained_)return false;
     error_=nullptr;if(size)*size=0;if(directory)*directory=false;
     if(!size || !directory || !valid(path,true))return fail("Invalid file path");
     if(isDirectory(path)){*directory=true;return true;}
@@ -40,11 +43,13 @@ class InstalledFiles final {
     struct ::stat s{};if(!inspect(path,s))return false;*size=static_cast<uint64_t>(s.st_size);return true;
   }
   uint32_t dirOpen(const char*path) {
+    if(retained_)return false;
     error_=nullptr;if(directory_ || !valid(path,true) || !isDirectory(path) || !next_)return bad("Cannot open folder");
     if(!copy(directoryPath_,sizeof(directoryPath_),path))return bad("Path too long");
     last_[0]=0;directory_=next_++;return directory_;
   }
   bool dirNext(uint32_t handle,risc_storage_dirent_v1*out) {
+    if(retained_)return false;
     error_=nullptr;if(!handle || handle!=directory_ || !out)return fail("Folder handle expired");
     const size_t prefix=!strcmp(directoryPath_,"/")?0:strlen(directoryPath_);
     char best[RISC_STORAGE_VOLUME_NAME_MAX]{};bool folder=false;
@@ -62,30 +67,32 @@ class InstalledFiles final {
     if(!folder){char path[PathMax+1];if(snprintf(path,sizeof(path),"%s%s%s",directoryPath_,prefix?"/":"",best)>=static_cast<int>(sizeof(path)))return fail("Path too long");struct ::stat s{};if(!inspect(path,s))return false;entry.size=static_cast<uint64_t>(s.st_size);}
     strcpy(last_,best);*out=entry;return true;
   }
-  void dirClose(uint32_t handle){error_=nullptr;if(handle && handle==directory_){directory_=0;directoryPath_[0]=last_[0]=0;}else fail("Folder handle expired");}
+  void dirClose(uint32_t handle){if(retained_)return;error_=nullptr;if(handle && handle==directory_){directory_=0;directoryPath_[0]=last_[0]=0;}else fail("Folder handle expired");}
   uint32_t fileOpen(const char*path,uint64_t*size) {
+    if(retained_)return false;
     error_=nullptr;if(size)*size=0;
     if(file_ || !size || !valid(path,true) || !admitted(path) || !next_)return bad("Cannot open file");
     if(!inspect(path,identity_) || !copy(filePath_,sizeof(filePath_),path))return 0;
     offset_=0;*size=static_cast<uint64_t>(identity_.st_size);file_=next_++;return file_;
   }
   size_t fileRead(uint32_t handle,void*out,size_t capacity) {
+    if(retained_)return false;
     error_=nullptr;if(!handle || handle!=file_ || (!out && capacity))return bad("File handle expired");
     if(!capacity || offset_>=static_cast<uint64_t>(identity_.st_size))return 0;
     struct ::stat before{};if(!inspect(filePath_,before))return 0;
     if(!same(before,identity_))return bad("File changed. Reopen it.");
     char absolute[512];if(!absolutePath(filePath_,absolute,sizeof(absolute)))return 0;
     FILE*f=fopen(absolute,"rb");if(!f)return bad("Could not read installed file");
-    struct ::stat opened{};bool ok=fstat(fileno(f),&opened)==0 && same(opened,identity_) && fseek(f,static_cast<long>(offset_),SEEK_SET)==0;
+    struct ::stat opened{};bool ok=setvbuf(f,nullptr,_IONBF,0)==0 && fstat(fileno(f),&opened)==0 && same(opened,identity_) && fseek(f,static_cast<long>(offset_),SEEK_SET)==0;
     unsigned char bytes[512];size_t wanted=capacity<sizeof(bytes)?capacity:sizeof(bytes);
     uint64_t left=static_cast<uint64_t>(identity_.st_size)-offset_;if(left<wanted)wanted=static_cast<size_t>(left);
     size_t got=ok?fread(bytes,1,wanted,f):0;
     struct ::stat after{};ok=ok && got==wanted && !ferror(f) && fstat(fileno(f),&after)==0 && same(after,identity_);
-    if(fclose(f)!=0)ok=false;
+    if(fclose(f)!=0){retained_=true;return bad("Storage close failed. Restart needed.");}
     if(!ok)return bad("File changed or read failed");
     memcpy(out,bytes,got);offset_+=got;return got;
   }
-  bool fileClose(uint32_t handle){error_=nullptr;if(!handle || handle!=file_)return fail("File handle expired");file_=0;filePath_[0]=0;offset_=0;return true;}
+  bool fileClose(uint32_t handle){if(retained_)return false;error_=nullptr;if(!handle || handle!=file_)return fail("File handle expired");file_=0;filePath_[0]=0;offset_=0;return true;}
   static bool valid(const char*path,bool leading) {
     if(!path || !*path)return false;
     size_t n=strlen(path);if(n>=PathMax+static_cast<size_t>(leading) || (leading && *path!='/') || (!leading && *path=='/'))return false;
@@ -124,7 +131,7 @@ class InstalledFiles final {
 #endif
     return equal;
   }
-  const char*root_=nullptr;MetadataArray<Name>names_;size_t count_=0;bool configured_=false;
+  const char*root_=nullptr;MetadataArray<Name>names_;size_t count_=0;bool configured_=false,retained_=false;
   uint32_t next_=1,directory_=0,file_=0;uint64_t offset_=0;struct ::stat identity_{};
   char directoryPath_[PathMax+1]{},last_[RISC_STORAGE_VOLUME_NAME_MAX]{},filePath_[PathMax+1]{};
   const char*error_=nullptr;

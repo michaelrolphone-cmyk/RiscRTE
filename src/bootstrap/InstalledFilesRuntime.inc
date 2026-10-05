@@ -25,9 +25,9 @@ bool Runtime::configureInstalledFiles(JsonObjectConst boot) {
  if(!installedFiles_ || !installedFiles_->configure(root_,names.get(),count))return fail("installed volume unavailable");
  return true;
 }
-Runtime* Runtime::volumeContext(void*context) {
+Runtime* Runtime::volumeContext(void*context,bool diagnostic) {
  Runtime*r=currentRuntime;
- if(!r || !r->active() || r->retained_ || !context || r->installedVolumeContext_!=context || !r->installedFiles_ || !r->providerStorageSafe())return nullptr;
+ if(!r || !r->active() || r->retained_ || !context || r->installedVolumeContext_!=context || !r->installedFiles_ || (!diagnostic && !r->providerStorageSafe()))return nullptr;
  bool live=false;for(const auto&g:r->appGrants_)if(g.live && g.api==&r->installedVolume_)live=true;
  return live?r:nullptr;
 }
@@ -45,5 +45,5 @@ risc_storage_volume_api_v1 Runtime::volumeTable(void*context) {
  nullptr,nullptr,
  [](void*c,risc_storage_file_t h,bool){auto*r=volumeContext(c);return r && r->installedFiles_->fileClose(h);},
  nullptr,
- [](void*c,char*out,size_t n){auto*r=volumeContext(c);return r && r->installedFiles_->error(out,n);}};
+ [](void*c,char*out,size_t n){auto*r=volumeContext(c,true);return r && r->installedFiles_->error(out,n);}};
 }

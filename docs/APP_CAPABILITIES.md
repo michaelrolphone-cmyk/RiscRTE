@@ -89,4 +89,4 @@ allocations and provider references, rather than invoking cleanup or launching
 another app. This is separate from ordinary capability release and graph
 quiescence; see DEEP_SLEEP.md.
 
-Policy metadata is allocated for the actual validated count, bounded at18, with no allocation when the policy list is absent/empty. Paired and explicit metadata-PSRAM targets preserve their PSRAM-only allocation policy; allocation failure rejects prepare. Policy storage outlives the provider graph and all retained grant names.
+Policy metadata is allocated for the actual validated count, bounded at 18, with no allocation when the policy list is absent/empty. Paired and explicit metadata-PSRAM targets preserve their PSRAM-only allocation policy; allocation failure rejects prepare. Policy storage outlives the provider graph and all retained grant names.

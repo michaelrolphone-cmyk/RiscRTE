@@ -7,6 +7,9 @@
 #include <esp_heap_caps.h>
 #endif
 namespace RiscBoot {
+#ifdef RISC_METADATA_ALLOCATION_TEST
+void* metadataTestAllocate(size_t);
+#endif
 /* Preserve the existing explicit PSRAM metadata policy on those targets.
  * Other ports allocate only the admitted count from ordinary RAM. No fallback
  * from a selected PSRAM allocation into scarce internal/DMA memory. */
@@ -16,7 +19,9 @@ template<class T> struct MetadataDelete {
 template<class T>using MetadataArray=std::unique_ptr<T[],MetadataDelete<T>>;
 template<class T> MetadataArray<T> metadataArray(size_t count) {
  if(!count || count>SIZE_MAX/sizeof(T))return {};
-#if defined(ESP_PLATFORM) && (defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM))
+#if defined(RISC_METADATA_ALLOCATION_TEST)
+ void*memory=metadataTestAllocate(count*sizeof(T));
+#elif defined(ESP_PLATFORM) && (defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM))
  void*memory=heap_caps_malloc(count*sizeof(T),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
 #else
  void*memory=std::malloc(count*sizeof(T));

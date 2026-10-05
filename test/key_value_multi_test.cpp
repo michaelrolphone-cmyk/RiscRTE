@@ -101,8 +101,8 @@ int main(int argc,char** argv){
   assert(!r.prepare(root.c_str()));assert(r.run());
   assert(reads==limit&&writes==limit);++cases;
  }
- // Independently exercise distinct requirement types at10 and reject11.
- for(unsigned count:{10u,11u}) {
+ // Independently retain10, admit11 distinct types and reject12.
+ for(unsigned count:{10u,11u,12u}) {
   std::string requirements,grants,drivers;
   for(unsigned i=0;i<count;++i){const std::string cap="test.cap"+std::to_string(i),id="cap"+std::to_string(i);
    if(i){requirements+=",";grants+=",";drivers+=",";}
@@ -111,7 +111,7 @@ int main(int argc,char** argv){
   }
   write("default.json",manifest("default","default.elf",requirements));
   write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+drivers+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]}]}");
-  Runtime r(port());const bool accepted=r.prepare(root.c_str());if(accepted!=(count==10))fprintf(stderr,"requirement capacity: %s\n",r.error());assert(accepted==(count==10));++cases;
+  Runtime r(port());const bool accepted=r.prepare(root.c_str());if(accepted!=(count<=Runtime::MaxAppRequirements))fprintf(stderr,"requirement capacity: %s\n",r.error());assert(accepted==(count<=Runtime::MaxAppRequirements));++cases;
  }
  capacity=0;indexMode=1;owned=safe=true;
  stage(grant(0,"platform.clock"),requirement("platform.clock"));
