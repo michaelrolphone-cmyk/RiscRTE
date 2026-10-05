@@ -37,7 +37,7 @@ struct Port {
 class Runtime final {
  public:
   static constexpr size_t MaxAppPolicies=16;
-  static constexpr size_t MaxAppPolicyGrants=12;
+  static constexpr size_t MaxAppPolicyGrants=9;
   explicit Runtime(Port p) : port_(p) {}
   ~Runtime() { revokeProviders(); }
   enum class Scope : uint8_t { Global, Device, Bus };

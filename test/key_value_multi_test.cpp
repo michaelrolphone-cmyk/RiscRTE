@@ -86,7 +86,7 @@ int main(int argc,char** argv){
   assert(saved.get(saved.context,"same",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_CONTEXT&&!size);
   assert(saved.put(saved.context,"same","bad",3)==RISC_KEY_VALUE_CONTEXT);++cases;
  }
- for(unsigned limit:{9u,12u}) {
+ for(unsigned limit:{9u}) {
   capacity=limit;owned=safe=true;retaining=false;values.clear();reads=writes=0;
   std::string declared;for(unsigned i=1;i<=limit;++i){if(i>1)declared+=",";declared+=grant(i);}
   stage(declared,requirement());Runtime r(port());assert(r.prepare(root.c_str()));assert(r.run());
