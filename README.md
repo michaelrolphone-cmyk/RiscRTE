@@ -273,10 +273,16 @@ remain pending.
 Runtime 0.1.21 connects paired setup to bounded, read-only owner NVS input and
 the provisioning coordinator using existing native station/HTTPS and staging.
 Absent/invalid input or unavailable fresh time keeps normal installed boot.
-The default fresh-time factory is unavailable: autonomous online provisioning
-still requires a real deployment time source and owner-provided profile.
+At this checkpoint the time factory remained unavailable; see 0.1.25 below.
 
 Runtime 0.1.23 records a bounded provisioning selection attempt in the existing
 inactive-bank journal, preventing an unchanged failed transition from repeatedly
 reprovisioning/rebooting. Changed profiles or source generations can proceed;
 malformed history preserves offline installed launch without erasing history.
+
+Runtime 0.1.25 adds optional owner-configured, bounded SNTP synchronization and an
+offline descriptor/profile artifact packager. New-sync callback, timeout,
+quiescent cleanup and installed fallback are covered by software tests. SNTP is
+unauthenticated; normal HTTPS certificate verification remains enabled. Deployment
+still needs owner profile/server/trust inputs and live qualification. See
+[provisioning input workflow and limits](docs/PROVISIONING.md).

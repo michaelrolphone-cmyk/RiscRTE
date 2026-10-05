@@ -1,4 +1,4 @@
-# Profile-driven provisioning: bounded core checkpoint (0.1.23)
+# Profile-driven provisioning: bounded core checkpoint (0.1.25)
 
 Paired `setup()` now reads bounded owner-controlled descriptor/profile input
 from existing NVS and runs the provisioning coordinator before normal Runtime
@@ -7,10 +7,10 @@ normal installed-store validation and launch. Retained resources or selected /
 ambiguous activation block normal launch. No deployment credentials, package URLs
 or time-service trust roots are embedded in the firmware.
 
-**The default `configuredFreshTime()` factory returns no source. Autonomous
-network provisioning is therefore not complete.** A deployment must supply an
-actual fresh-time provider and its owner-provided profile. Current target/host
-checks do not qualify a device, Wi-Fi/TLS operation or physical interrupted writes.
+The bounded SNTP adapter now acquires a new synchronization from owner-configured
+servers. Without the optional time input it remains unavailable. Deployment still
+requires owner profile/time-server inputs and package HTTPS trust roots. Current
+target/host checks do not qualify Wi-Fi/TLS operation or physical interrupted writes.
 
 ## Existing mechanisms and why there is no unsafe shortcut
 
@@ -187,8 +187,8 @@ and with ASan/UBSan. The model is not SPIFFS power-loss emulation or hardware
 qualification. Native compiled target CI must also pass before using the change.
 
 The coordinator/native-stage/station/HTTPS/setup and read-only profile-input
-wiring described in 0.1.21 below is now implemented. Still remaining are a
-genuinely current deployment UTC source and owner-provided deployment input. Clock-unavailable boot must keep the installed
+wiring described in 0.1.21 below is now implemented. The SNTP implementation in 0.1.25 supplies the time acquisition mechanism;
+owner-provided deployment input remains required. Clock-unavailable boot must keep the installed
 default/offline recovery path; a persisted timestamp is not automatically current.
 The native HTTP implementation's certificate-validity checks are unchanged.
 
@@ -275,8 +275,8 @@ Future/stale observations, invalid UTC range and unavailable time are rejected.
 The callback contract requires genuinely current UTC; those bounds do not
 authenticate a fabricated timestamp. UTC is never accepted from the descriptor
 or profile, saved across resets, inferred from firmware age, or substituted for
-certificate verification. The default weak factory returns no provider. Tests
-inject synthetic sources; no Roughtime/NTP subsystem was added.
+certificate verification. At the 0.1.21 checkpoint the default weak factory returned
+no provider; 0.1.25 replaces it with the optional owner-configured SNTP adapter below.
 
 The connected network is closed before peak-memory staged graph/ELF admission.
 Success commits through the existing inactive paired-store transaction and only
@@ -350,3 +350,73 @@ ordinary abort; and unchanged ordinary updater behavior. Existing 24 bootstrap
 cases remain. All failures preserve the active firmware/store bytes and launch
 the installed host ELF when resource cleanup is safe. Physical journal faults,
 SPIFFS/power-loss behavior and actual app/hardware health remain unqualified.
+
+
+## Bounded SNTP and offline owner artifacts (0.1.25)
+
+The read-only `rte_bootstrap` namespace may contain a `time` blob (maximum 384
+bytes): `{"schema":"riscrte.sntp","schema_version":1,"servers":["time.example.invalid"]}`.
+The example is intentionally non-resolving; choose an actual deployment server.
+One to three ASCII hostname/IPv4 entries, each at most 63 bytes, are accepted.
+Unknown fields, static UTC and empty server lists are rejected. No server is
+embedded or selected implicitly through DHCP. Missing/invalid input leaves the
+installed default available. This configuration is separate from the exact
+profile digest; changing a server does not override a held failed profile.
+
+After station connection, the existing IDF4.4 SNTP implementation starts one
+bounded acquisition. It requires its newly registered completion callback,
+records the same-boot monotonic observation and uses the existing UTC-range and
+300-second age checks. A plausible preexisting system clock is insufficient.
+Acquisition expires after 30 seconds; timeout and invalid samples preserve the
+normal fallback. A static one-shot context lasts for the boot: cancelled or late
+callbacks cannot revive an acquisition or access a freed provisioning session.
+Existing SNTP ownership is refused, not stopped. The adapter stops after its
+first sample and again through coordinator cleanup if necessary; failed stop
+retains the session and blocks launch/restart. A retained HTTP close may retain
+its session without further cleanup, as before.
+
+Pinned SDK source declares the `esp_sntp_*` wrappers for owner-task use.
+`esp_sntp_stop` queues work; a synchronous `esp_sntp_setservername` call drains
+that TCP/IP queue before callback unregistration and disabled-state verification.
+No callback registration changes occur while this owned service is running.
+See [IDF4.4.7 SNTP implementation](https://github.com/espressif/esp-idf/blob/v4.4.7/components/lwip/apps/sntp/sntp.c)
+and [System Time](https://docs.espressif.com/projects/esp-idf/en/release-v4.4/esp32/api-reference/system/system_time.html).
+
+SNTP is **unauthenticated**. A fresh client exchange is not cryptographic proof
+of current UTC: the configured server or a network attacker can supply wrong
+time, affecting certificate-validity decisions. Normal HTTPS chain, hostname
+and validity verification stay enabled. No Roughtime, authentication keys or
+new trust service is introduced. Live network/device qualification remains open.
+
+Build the offline packager with:
+
+```sh
+bash scripts/build_provision_input_tool.sh /tmp/provision-input
+/tmp/provision-input /owner/private/profile.json /owner/private/new-bundle time.example.invalid
+```
+
+The last argument is optional and must be a real owner-selected server for actual
+use. The tool validates the supplied profile with the production C++ parser,
+preserves its exact bytes (including whitespace/profile identity), and writes
+`profile.bin`, `descriptor.bin`, optional `time.bin`, `nvs.csv`, and a final
+`COMPLETE` marker. The new output directory is owner-only; existing paths and
+symlinks are refused. Failure gives fixed diagnostics and removes only its newly
+created incomplete output. A killed process can leave a partial directory:
+consume only complete bundles and validate their contents before deployment.
+
+`nvs.csv` uses Espressif's namespace/data/hex2bin blob encoding, not NVS strings;
+see the [NVS generator format](https://docs.espressif.com/projects/esp-idf/en/v4.4.3/esp32/api-reference/storage/nvs_partition_gen.html).
+No NVS partition image, partition size, address, device connection, flash, erase,
+credential generation or credential upload is performed. Existing-device input
+installation must preserve all unrelated NVS entries; this CSV is not permission
+to replace an existing NVS partition. Profile input and output contain plaintext
+owner credentials (hex is not encryption): keep them outside Git/build artifacts,
+use a private local directory, and do not upload them to CI. Host process memory
+is not a secure credential vault. Tests only use dummy credentials/invalid domains.
+
+Software tests exercise the real parser, deterministic exact-byte artifacts,
+NVS CSV/blob correspondence, bounds, no-overwrite and fixed diagnostics. SNTP
+shim tests cover callback success, stale status, timeout, cancellation, bad UTC,
+preexisting ownership, invalid config, deferred stop, stop failure and late
+callbacks. Coordinator tests add failed time-stop retention to the existing
+fallback/selection suite. These are software models, not NTP packets or devices.

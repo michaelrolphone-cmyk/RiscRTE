@@ -26,7 +26,7 @@ struct Session {
  uint8_t input[RiscProvision::ProfileInputBytes]{},digest[32]{},buffer[RISC_HTTP_CHUNK_MAX]{};
  char root[256]{};uint64_t bankToken=0,httpToken=0;
  uint32_t received=0;size_t fileIndex=0;
- bool radio=false,retained=false,finished=false,historyChecked=false;
+ bool radio=false,retained=false,finished=false,historyChecked=false,timeStarted=false;
  Reason reason=Reason::Unchanged;
  explicit Session(const Port& p):port(p){}
  ~Session(){volatile uint8_t* p=input;for(size_t i=0;i<sizeof(input);++i)p[i]=0;}
@@ -34,6 +34,7 @@ struct Session {
  bool clock(uint64_t& utc,bool& pending){
    pending=false;TimeSample sample{};
    if(!port.time.poll){reason=Reason::ClockUnavailable;return false;}
+   timeStarted=true;
    const auto status=port.time.poll(port.time.context,&sample);
    if(status==TimeStatus::Pending){reason=Reason::ClockUnavailable;pending=true;return false;}
    const uint64_t now=port.hardware.now();
@@ -50,6 +51,10 @@ struct Session {
    httpToken=0;return true;
  }
  bool closeTransport(){
+   if(timeStarted){
+     if(port.time.stop&&!port.time.stop(port.time.context)){retained=true;reason=Reason::CleanupRetained;return false;}
+     timeStarted=false;
+   }
    if(!closeHttp())return false;
    if(radio){
      if(!port.hardware.radioLeave()||!port.hardware.radioIdle()){retained=true;reason=Reason::CleanupRetained;return false;}
@@ -153,7 +158,6 @@ Session* retainedSession=nullptr;
 bool supported(const Port& p){const auto& h=p.hardware;const auto* http=h.httpClient;return h.owner&&h.owner()&&h.now&&h.sleep&&p.operationSafe&&
  h.radioJoin&&h.radioState&&h.radioAddresses&&h.radioLeave&&h.radioIdle&&h.httpIdle&&h.httpSafe&&http&&http->api_version==1&&http->struct_size>=sizeof(*http)&&http->open&&http->read&&http->info&&http->close;}
 }
-FreshTime __attribute__((weak)) configuredFreshTime(){return {};}
 Result run(const Port& port,const char* root){
  if(retainedSession)return {Outcome::Stopped,retainedSession->reason};
  if(!port.hardware.owner||!port.hardware.owner()||!port.operationSafe||!port.operationSafe())return {Outcome::Stopped,Reason::NativeUnsafe};

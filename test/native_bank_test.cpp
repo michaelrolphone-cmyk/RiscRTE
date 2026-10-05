@@ -96,7 +96,7 @@ struct BootstrapNetwork {
  std::string mode,profile,descriptor,current;
  std::map<std::string,std::vector<uint8_t>> files;
  bool radio=false,http=false,broken=false;uint64_t token=0;size_t offset=0;
- unsigned joins=0,leaves=0,opens=0,closes=0,polls=0,reads=0,inputReads=0;
+ unsigned joins=0,leaves=0,opens=0,closes=0,polls=0,timeStops=0,reads=0,inputReads=0;
 };
 static BootstrapNetwork bootNet;
 static const risc_http_client_v1 bootstrapHttp{1,sizeof(risc_http_client_v1),nullptr,
@@ -271,7 +271,7 @@ int main(int argc,char** argv){
        hardware.radioLeave=[](){++bootNet.leaves;if(bootNet.mode=="bootstrap-radio-retained")return false;bootNet.radio=false;return true;};
        hardware.radioIdle=[](){return !bootNet.radio;};hardware.httpClient=&bootstrapHttp;
        hardware.httpIdle=[](){return !bootNet.http;};hardware.httpSafe=[](){return !bootNet.broken;};
-       RiscBootstrap::Port port{hardware,nullptr,safe,{nullptr,bootstrapInput},{nullptr,bootstrapTime}};
+       RiscBootstrap::Port port{hardware,nullptr,safe,{nullptr,bootstrapInput},{nullptr,bootstrapTime,[](void*){++bootNet.timeStops;return bootNet.mode!="bootstrap-time-retained";}}};
        if(mode=="bootstrap-no-time"||mode=="bootstrap-unchanged")port.time={};
        if(mode=="bootstrap-oom")risc_test_psram_fail_after=0;
        if(mode=="bootstrap-native-unsafe")operationEnabled=false;
@@ -282,7 +282,7 @@ int main(int argc,char** argv){
        if(mode=="bootstrap-attempt-write-readback")attemptWriteFault=3;
        const auto result=RiscBootstrap::run(port,installed.c_str());risc_test_psram_fail_after=-1;delayScale=1;operationEnabled=true;
        const bool selected=mode=="bootstrap-success"||mode=="bootstrap-confirmed-bank"||mode=="bootstrap-time-pending"||mode=="bootstrap-selection-unknown"||mode=="bootstrap-changed-profile"||mode=="bootstrap-changed-source"||mode=="bootstrap-legacy-attempt";
-       const bool stopped=selected||mode=="bootstrap-http-retained"||mode=="bootstrap-radio-retained"||mode=="bootstrap-match-close-retained"||mode=="bootstrap-native-unsafe";
+       const bool stopped=selected||mode=="bootstrap-time-retained"||mode=="bootstrap-http-retained"||mode=="bootstrap-radio-retained"||mode=="bootstrap-match-close-retained"||mode=="bootstrap-native-unsafe";
        if(mode=="bootstrap-rolled-back"){
          assert(result.reason==Reason::AttemptHeld&&!bootNet.joins&&!bootNet.opens&&!writes&&!selectorCalls);
          const auto again=RiscBootstrap::run(port,installed.c_str());assert(again.outcome==Outcome::Installed&&again.reason==Reason::AttemptHeld&&!writes);
@@ -295,6 +295,8 @@ int main(int argc,char** argv){
          memcpy(&attempt,flash.data()+RiscUpdate::JournalOffset+4096+RiscUpdate::AttemptOffset,sizeof(attempt));
          assert(RiscUpdate::validAttempt(attempt,selectedRecord,1)&&RiscUpdate::sameAttemptSource(attempt,record));uint8_t expected[32];SHA256(reinterpret_cast<const uint8_t*>(bootNet.profile.data()),bootNet.profile.size(),expected);assert(!memcmp(expected,attempt.profileSha,32));}
 
+       if(bootNet.polls&&mode!="bootstrap-http-retained")assert(bootNet.timeStops);
+       if(mode=="bootstrap-time-retained")assert(result.reason==Reason::CleanupRetained&&bootNet.radio&&!bootNet.leaves&&!restarts);
        assert((result.outcome==Outcome::Stopped)==stopped);assert(restarts==(selected?1u:0u));
        if(mode=="bootstrap-no-time"||mode=="bootstrap-time-unavailable"||mode=="bootstrap-time-stale"||mode=="bootstrap-time-future"||mode=="bootstrap-time-invalid"||mode=="bootstrap-time-timeout")assert(result.reason==Reason::ClockUnavailable);
        if(mode=="bootstrap-unchanged")assert(result.reason==Reason::Unchanged&&!bootNet.joins&&!bootNet.opens&&!writes);

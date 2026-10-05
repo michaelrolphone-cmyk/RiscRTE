@@ -11,6 +11,7 @@
 #include "ports/esp32s3/NativeBankStore.h"
 #include "ports/esp32s3/NativeRuntime.h"
 #include "ports/esp32s3/NativeBootstrap.h"
+#include "ports/esp32s3/NativeSntp.h"
 #include "ports/esp32s3/NvsBootstrapInput.h"
 #endif
 #ifndef RISC_EMBEDDED_BOOTSTORE
@@ -102,7 +103,7 @@ void setup() {
   // Read-only owner input, before any app/driver binding. No configured fresh
   // time source means offline installed boot, never a stale timestamp bypass.
   const auto provision=RiscBootstrap::run({cpu.bootstrapHardware(),RiscNvs::backend(),providerStorageSafe,
-    RiscBootstrap::nvsInput(),RiscBootstrap::configuredFreshTime()},"/bootfs");
+    RiscBootstrap::nvsInput(),RiscBootstrap::configuredFreshTime(RiscBootstrap::nvsInput(),cpu.bootstrapHardware().now)},"/bootfs");
   Serial.printf("RTE_PROVISION action=%s reason=%s\n",provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",RiscBootstrap::reasonName(provision.reason));
   if(provision.outcome==RiscBootstrap::Outcome::Stopped)return;
   if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot});

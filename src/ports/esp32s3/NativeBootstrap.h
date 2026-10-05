@@ -13,6 +13,8 @@ struct FreshTime {
  // Trusted compiled-in source must establish genuinely current UTC. Pending
  // may acquire it using the already-connected network. No profile UTC fallback.
  TimeStatus (*poll)(void*,TimeSample*)=nullptr;
+ // Must quiesce owned acquisition before radio cleanup/app launch.
+ bool (*stop)(void*)=nullptr;
 };
 struct Port {
  RiscCpu::Hardware hardware;
@@ -30,9 +32,6 @@ struct Result {Outcome outcome;Reason reason;};
 // created/bound yet. Installed means continue NORMAL manifest/ELF admission.
 // Stopped blocks app launch; selected or uncertain activation attempts only the
 // existing safe restart and never falls through if it refuses/returns.
-// Default returns no source. A compiled-in verified source may override this
-// weak factory; credentials, URLs and time trust roots remain deployment input.
-FreshTime configuredFreshTime();
 Result run(const Port&,const char* installedRoot);
 const char* reasonName(Reason);
 }

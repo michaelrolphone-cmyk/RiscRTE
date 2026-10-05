@@ -25,3 +25,6 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/runtime/provisioning/Profile.cpp" "$repo/src/runtime/provisioning/BootstrapInput.cpp" \
  "$repo/test/bootstrap_input_test.cpp" -lcrypto -o "$build/input-test"
 "$build/input-test"
+bash "$repo/scripts/build_provision_input_tool.sh" "$build/provision-input"
+python3 "$repo/test/provision_input_tool_test.py" "$build/provision-input"
+bash "$repo/test/run_native_sntp_test.sh"
