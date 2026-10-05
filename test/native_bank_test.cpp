@@ -195,10 +195,10 @@ int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
  const bool bootstrapping=mode.find("bootstrap-")==0;
- const bool provisioning=mode=="provision" || mode=="provision-abort" || mode=="provision-corrupt" || mode=="provision-unknown" || mode=="provision-admission" || mode=="provision-close-retained" || bootstrapping;
+ const bool provisioning=mode=="provision-seed" || mode=="provision" || mode=="provision-abort" || mode=="provision-corrupt" || mode=="provision-unknown" || mode=="provision-admission" || mode=="provision-close-retained" || bootstrapping;
  if(mode=="boot" || mode=="bad-store" || mode=="bad-layout" || mode=="restart" || mode=="restart-unknown" || provisioning){
    const bool restarting=mode=="restart" || mode=="restart-unknown";
-   assert(argc==(bootstrapping?5:provisioning?4:3));if(provisioning)otaState=mode=="bootstrap-pending-bank"?ESP_OTA_IMG_PENDING_VERIFY:ESP_OTA_IMG_VALID;std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
+   assert(argc==((bootstrapping||mode=="provision-seed")?5:provisioning?4:3));if(provisioning)otaState=mode=="bootstrap-pending-bank"?ESP_OTA_IMG_PENDING_VERIFY:ESP_OTA_IMG_VALID;std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
    memcpy(flash.data(),boot.data(),boot.size());firmware(0,RISC_BUILD_VERSION);
    uint8_t fw[32],store[32];SHA256(flash.data()+0x10000,imageSize,fw);SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,store);
    auto record=RiscUpdate::makeRecord(0,imageSize,fw,store);memcpy(flash.data()+RiscUpdate::JournalOffset,&record,sizeof(record));
@@ -319,6 +319,27 @@ int main(int argc,char** argv){
        uint8_t preserved[32];SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
        SHA256(flash.data()+0x10000,imageSize,preserved);assert(!memcmp(preserved,record.firmwareSha,32));
        assert(hardwareCalls==0);std::cout<<"Production bootstrap setup flow: "<<mode<<" PASS\n";return 0;
+     }
+     if(mode=="provision-seed"){
+       std::map<std::string,std::vector<uint8_t>> files;
+       for(const char* name:{"board.json","boot.json","default.elf"}){
+         std::ifstream in(std::string(argv[4])+"/"+name,std::ios::binary);assert(in);
+         files[name]=std::vector<uint8_t>((std::istreambuf_iterator<char>(in)),{});assert(!files[name].empty());
+       }
+       auto profile=std::make_unique<RiscProvision::Profile>();profile->count=files.size();size_t index=0;
+       for(auto& item:files){auto& file=profile->files[index++];strcpy(file.path,item.first.c_str());file.bytes=item.second.size();SHA256(item.second.data(),item.second.size(),file.sha256);}
+       uint8_t digest[32]{};digest[0]=99;uint64_t token=0;
+       assert(provisionBegin(*profile,digest,admissionHardware(),nullptr,&token)==RISC_BANK_OK);
+       risc_bank_status_v1 status{};status.struct_size=sizeof(status);
+       for(unsigned i=0;i<5000&&!transaction->stagingStore(token);++i)assert(provisionStep(token,&status)==RISC_BANK_OK);
+       assert(transaction->stagingStore(token));index=0;
+       for(auto& item:files){for(size_t at=0;at<item.second.size();){uint32_t n=std::min<size_t>(4096,item.second.size()-at);assert(provisionWrite(token,index,item.second.data()+at,n)==RISC_BANK_OK);at+=n;}++index;}
+       assert(provisionFinish(token)==RISC_BANK_OK);
+       for(unsigned i=0;i<5000;++i){assert(transaction->status(&status));if(status.state==RISC_BANK_READY)break;assert(provisionStep(token,&status)==RISC_BANK_OK);}
+       assert(status.state==RISC_BANK_READY&&hardwareCalls==0&&!selectorCalls&&!restarts);
+       assert(provisionAbort(token)==RISC_BANK_OK);
+       std::cout<<"Generic seed: actual graph/default ELF production native admission PASS; no execution or selection\n";
+       return 0;
      }
      if(mode=="provision-admission"){
        using Files=std::map<std::string,std::vector<uint8_t>>;

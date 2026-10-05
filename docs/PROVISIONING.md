@@ -420,3 +420,63 @@ shim tests cover callback success, stale status, timeout, cancellation, bad UTC,
 preexisting ownership, invalid config, deferred stop, stop failure and late
 callbacks. Coordinator tests add failed time-stop retention to the existing
 fallback/selection suite. These are software models, not NTP packets or devices.
+
+
+## Generic first-install seed composition
+
+The provisioning updater starts from a **verified paired baseline**.
+`prepareBoot()` verifies and mounts that baseline before reading owner inputs.
+It does not turn wholly blank/corrupt storage into an installation. A first
+installation can now compose a generic fallback seed offline, using the existing
+paired candidate and image tools:
+
+```sh
+python scripts/provision_seed.py --candidate dist/esp32s3-16mb-paired \
+  --store .pio/build/esp32s3-16mb-paired/spiffs.bin \
+  --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" \
+  --mkspiffs "$HOME/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino" \
+  --output dist/esp32s3-16mb-paired/seed --source-sha "$(git rev-parse HEAD)"
+```
+
+Run after the existing source-clean paired firmware candidate and
+`pio run -e esp32s3-16mb-paired -t buildfs -j 1` steps. The composer rechecks candidate hashes, source/version markers,
+rollback bootloader, fixed paired layout, linked TLS/rollback proof and native
+ELF shape. It always uses the repository's no-bus/no-device generic board and
+heartbeat fallback graph; no Watch/Reader/product driver bundle is required.
+The composer invokes the existing `build_apps.py` using the supplied trusted
+compiler and compares the frozen store with that newly built heartbeat ELF.
+A caller-provided ELF/version marker alone is not accepted. Markers/hashes
+are integrity and custody checks, not signatures or malicious-input authentication.
+
+The frozen SPIFFS input is read once, hashed and unpacked using the official
+packer. Extraction must reproduce exactly board.json, boot.json and the newly
+built default.elf. Composition from those fixed inputs is deterministic. Existing
+paired metadata helpers create a bank0 VALID identity bound to those exact
+firmware/store bytes and initial OTA data, with an erased attempt trailer.
+The output directory must not exist. `seed.json` records bounded fixed-layout
+segments and hashes; `SHA256SUMS` is written last. Failed composition removes
+only its newly created output. A killed process may leave incomplete output;
+do not consume a bundle missing its final checksum manifest.
+
+This is a **new-install artifact**, not an update bundle or migration action.
+It assumes the existing `riscrte-paired-16m-v1` layout and blank inactive bank1.
+No combined flash image, erase command, formatting, resizing or device operation
+is produced. NVS is deliberately omitted, so this seed cannot overwrite owner
+credentials or unrelated NVS entries. Keep private provisioning-input blobs
+separate and local; safe owner installation of those blobs remains deployment
+work. Existing devices continue to use the inactive-bank update mechanism.
+
+Host tests cover candidate digest/source rejection, deterministic metadata,
+no-overwrite and NVS omission. A real official SPIFFS pack/unpack test covers exact content and corrupted-content
+refusal. Target CI additionally composes the seed twice from the same frozen
+image and freshly built paired firmware, compares bundles, and passes its actual
+graph/default ELF through production native admission. Admission does not execute
+the target ELF. These checks do not qualify device deployment or power loss.
+
+Source-to-SPIFFS byte reproducibility is not claimed. Bundled mkspiffs0.2.3
+(SPIFFS commit f5e26c4e933189593a71c6b82cda381a7b21e41c) can leave the three-byte
+`spiffs_page_object_ix_header._align` field uninitialized: repeated identical
+inputs differed at first-index-page offset261. No bytes are normalized or ignored;
+the complete frozen image is retained and hashed. See upstream
+[layout](https://github.com/pellepl/spiffs/blob/f5e26c4e933189593a71c6b82cda381a7b21e41c/src/spiffs_nucleus.h)
+and [creation](https://github.com/pellepl/spiffs/blob/f5e26c4e933189593a71c6b82cda381a7b21e41c/src/spiffs_nucleus.c).

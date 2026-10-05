@@ -286,3 +286,8 @@ quiescent cleanup and installed fallback are covered by software tests. SNTP is
 unauthenticated; normal HTTPS certificate verification remains enabled. Deployment
 still needs owner profile/server/trust inputs and live qualification. See
 [provisioning input workflow and limits](docs/PROVISIONING.md).
+
+The offline paired seed composer (`scripts/provision_seed.py`) now combines a
+verified paired Runtime candidate with the generic no-device heartbeat fallback
+store and initial bank metadata. It is a first-install artifact with NVS omitted,
+not an update/migration or device operation. Details: [first-install seed](docs/PROVISIONING.md#generic-first-install-seed-composition).

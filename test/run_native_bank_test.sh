@@ -17,6 +17,7 @@ c++ "${san[@]}" -DRISC_PAIRED_BANKS=1 -std=c++17 -Wall -Wextra -Werror -Wno-miss
 "$build/test" markers
 "$build/test" unknown-loader
 if [[ -n "${BOOTLOADER_FILE:-}" ]]; then
+ if [[ -n "${SEED_DIRECTORY:-}" ]]; then "$build/test" provision-seed "$BOOTLOADER_FILE" "$build/seed-stage" "$SEED_DIRECTORY"; fi
  for mode in boot bad-store bad-layout restart restart-unknown; do "$build/test" "$mode" "$BOOTLOADER_FILE"; done
  for mode in provision provision-abort provision-corrupt provision-unknown provision-admission provision-close-retained; do "$build/test" "$mode" "$BOOTLOADER_FILE" "$build/$mode"; done
  cc "${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -I"$repo/sdk/app" "$repo/test/fixtures/bootstrap_fallback.c" -o "$build/installed-default.elf"
