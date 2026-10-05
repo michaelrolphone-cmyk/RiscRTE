@@ -13,6 +13,7 @@
 #include "ports/esp32s3/NativeBootstrap.h"
 #include "ports/esp32s3/NativeSntp.h"
 #include "ports/esp32s3/NvsBootstrapInput.h"
+#include "ports/esp32s3/OwnerMaintenance.h"
 #endif
 #ifndef RISC_EMBEDDED_BOOTSTORE
 #include "ports/esp32s3/NvsKeyValue.h"
@@ -71,6 +72,10 @@ void setup() {
   Serial.println(RISC_BUILD_IDENTITY);
 #ifndef RISC_EMBEDDED_BOOTSTORE
   if(RiscNvs::initializationStatus()!=ESP_OK) Serial.printf("RTE_STORAGE unavailable=nvs code=%d erase_recovery=disabled\n",RiscNvs::initializationStatus());
+#endif
+#ifdef RISC_OWNER_INSTALLER
+  Serial.println("RTE_OWNER_MAINTENANCE=1");
+  RiscBootstrap::ownerMaintenance(isOwner);return;
 #endif
 #ifdef RISC_BOARD_MARKER
   Serial.println(RISC_BOARD_MARKER);

@@ -175,3 +175,16 @@ jobs:
           path: dist/esp32s3-16mb-paired/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Build explicit owner maintenance image (no device operation)
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-maintenance -j 1
+          python scripts/maintenance_candidate.py --source-sha "$SOURCE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-owner-maintenance-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/owner-maintenance/
+          if-no-files-found: error
+          retention-days: 14

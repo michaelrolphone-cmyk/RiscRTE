@@ -480,3 +480,101 @@ inputs differed at first-index-page offset261. No bytes are normalized or ignore
 the complete frozen image is retained and hashed. See upstream
 [layout](https://github.com/pellepl/spiffs/blob/f5e26c4e933189593a71c6b82cda381a7b21e41c/src/spiffs_nucleus.h)
 and [creation](https://github.com/pellepl/spiffs/blob/f5e26c4e933189593a71c6b82cda381a7b21e41c/src/spiffs_nucleus.c).
+
+## Explicit owner installation transaction (0.1.31)
+
+The existing offline tool now has an owner-invoked simulated installation mode:
+
+```sh
+bash scripts/build_provision_input_tool.sh /tmp/provision-input
+# Use a private existing directory representing a SIMULATED NVS store.
+/tmp/provision-input --install-sim /owner/private/profile.json /owner/private/simulated-nvs time.example.invalid
+```
+
+This mode tests the installation transaction through a directory transport. It
+never finds, opens or communicates with a device. It is not a flash command or
+an existing-device serial installer. The same transaction has a compiled native
+NVS adapter, `installOwnerNvs`, for an explicit trusted maintenance caller;
+normal boot does not invoke it, and no app export or network endpoint is added.
+The separate maintenance image and explicit serial client below provide that
+software transport. Physical execution remains UNRUN.
+
+The native adapter opens only `rte_bootstrap` in read/write mode after checking
+existing NVS initialization and caller quiescence. It never initializes, erases,
+formats, resizes or replaces the NVS partition. Unrelated namespaces and keys,
+including existing legacy profile/time blobs, remain untouched. Full NVS or
+initialization failure returns an error, with no erase recovery.
+
+The installer validates the complete new profile and optional time input first.
+It reserves `installer`, `install_p0`, `install_p1`, `install_t0`, `install_t1`
+only when those reserved slots are absent, then retains an ownership marker.
+An unknown marker or collision refuses installation. It alternates owned slots,
+commits and reads back the complete profile/time pair, and writes the descriptor
+last. Descriptor schema 2 selects the profile and time keys together; an empty
+time key explicitly disables time acquisition. Legacy schema 1 stays readable.
+Only runtimes supporting descriptor schema 2 can use this new installer output;
+an older runtime falls back to its installed application if it cannot read it.
+
+Preselection failures leave the old descriptor selected. A selector write,
+commit or readback failure returns SelectionUnknown: reload the descriptor and
+compare with the intended input before retrying. Never erase on uncertainty.
+An identical selected profile/time pair is a no-write success. Old and new slots
+are retained; there is no automatic deletion of unrelated data or malformed
+history. Torn/malformed current descriptors refuse updates. The underlying NVS
+single-key persistence semantics are modeled in tests, not hardware-qualified.
+Two complete profiles plus NVS overhead must fit in the existing partition;
+the 16 KiB parser bound does not promise that two maximum-sized profiles fit.
+
+The simulator models key operations and atomic selector replacement. It does
+not emulate NVS pages, flash wear or power-fail durability of its host filesystem.
+Its incomplete temporary file is retained on failure rather than silently
+removed on a later invocation. Keep all inputs/output private: they contain
+plaintext credentials, including in hex-encoded packaging, and are not CI assets.
+
+PR15 remains the original paired ABI1 layout. Watch's separate app-data PR22
+uses `riscrte-paired-appdata-v2` and different slot/store bounds; no ABI2 image or
+empty app-data image is generated or installed by this workflow. Do not mix the
+seed artifacts or use a first-install image as ordinary OTA.
+
+X4 and ESP32-CAM hardware are unavailable for this task. Their checks are UNRUN,
+not passed, and PR15's hardware-status workflow reports that explicitly without
+polling them. All host, sanitizer, target-build and artifact checks remain in the
+software integration workflow; hardware qualification is not its prerequisite.
+
+
+### Explicit maintenance image and serial command
+
+Build `esp32s3-16mb-maintenance` only when deliberately preparing owner
+maintenance. This separate image enters its bounded serial command loop before
+paired boot, providers or app launch. Normal Runtime has no writable endpoint.
+The maintenance image omits the ordinary paired-store ABI marker, so it cannot
+be admitted as an ordinary paired firmware update. Its artifact is separate from
+both the generic seed and Runtime OTA candidates. Installing/running it on an
+actual device is not performed by this task and requires a separately selected
+owner deployment procedure; do not replace an active Runtime image blindly.
+
+After the owner has deliberately entered that image, the host entry point is:
+
+```sh
+/tmp/provision-input --install --profile /owner/private/profile.json \
+  --port /owner/explicit/serial-device --expected-source EXACT_40_HEX_SOURCE_SHA \
+  --time-server time.example.invalid
+```
+
+Use actual owner-selected paths/server and the exact maintenance artifact source.
+No port discovery, serial reset command, firmware flashing, partition operation
+or device reboot is performed by the client. It validates the profile locally
+through the existing packager before opening the explicitly named serial port.
+The maintenance handshake must match the expected source before profile bytes
+are sent. A one-use challenge, bounded lengths and SHA-256 cover framed transfer
+integrity; they do not authenticate a hostile serial peer. This is an explicit
+physically controlled maintenance interface, not a public network service.
+
+A partial/corrupt/oversized/timed-out request never invokes NVS installation.
+Input is wiped on completion/rejection/timeout; responses contain fixed status
+labels, never credentials or payloads. After any uncertain send/response, the
+client does not reconnect, retry, reset or erase. Inspect selected state before
+another invocation. Transport tests connect the real client to the production
+framing/installer through subprocess pipes and simulated NVS only. Native target
+CI compiles the separate image, checks its source/maintenance markers and proves
+that the normal paired image lacks the maintenance endpoint. Hardware is UNRUN.

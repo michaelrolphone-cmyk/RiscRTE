@@ -11,7 +11,14 @@ concurrency:
 # Independent from build workflows: the trusted controller consumes completed
 # build runs, so a result poll must never keep its own artifact run in progress.
 jobs:
+  provisioning-unrun:
+    if: github.head_ref == 'feat/profile-provisioning-core' || github.ref_name == 'feat/profile-provisioning-core'
+    name: Provisioning hardware unavailable (UNRUN)
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "X4 and ESP32-CAM hardware checks UNRUN. Software readiness is evaluated by RiscRTE integration; no device access requested." >> "$GITHUB_STEP_SUMMARY"
   cam:
+    if: github.head_ref != 'feat/profile-provisioning-core' && github.ref_name != 'feat/profile-provisioning-core'
     name: ESP32-CAM actual boot, advancing heartbeat and cleanup
     runs-on: ubuntu-24.04
     timeout-minutes: 12
@@ -29,6 +36,7 @@ jobs:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python3 scripts/hardware_gate.py --source-sha "$SOURCE_SHA"
   x4:
+    if: github.head_ref != 'feat/profile-provisioning-core' && github.ref_name != 'feat/profile-provisioning-core'
     name: X4 actual runtime boot, advancing heartbeat and cleanup
     runs-on: ubuntu-24.04
     timeout-minutes: 12

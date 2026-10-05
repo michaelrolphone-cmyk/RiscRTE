@@ -291,3 +291,9 @@ The offline paired seed composer (`scripts/provision_seed.py`) now combines a
 verified paired Runtime candidate with the generic no-device heartbeat fallback
 store and initial bank metadata. It is a first-install artifact with NVS omitted,
 not an update/migration or device operation. Details: [first-install seed](docs/PROVISIONING.md#generic-first-install-seed-composition).
+
+Runtime 0.1.31 adds an explicit owner NVS installation transaction, a native
+maintenance adapter and `provision-input --install-sim` for software testing.
+Profile/time slots are committed/read back before descriptor selection; unrelated
+NVS data is preserved. Normal boot stays read-only. Physical installation transport
+and X4/ESP32-CAM checks are UNRUN; they do not gate PR15 software readiness.

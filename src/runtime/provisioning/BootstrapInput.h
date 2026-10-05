@@ -7,6 +7,8 @@ struct Input {
  void* context=nullptr;
  InputStatus (*read)(void*,const char* key,void*,uint32_t capacity,uint32_t* size)=nullptr;
 };
+struct Descriptor {char profileKey[16]{},timeKey[16]{};unsigned version=0;};
+InputStatus loadDescriptor(Input,Descriptor&);
 // Read-only owner input. Descriptor chooses a blob key, never an arbitrary
 // filesystem, partition or app namespace. UTC is not a descriptor/profile field.
 // Caller owns bounded scratch; it is wiped on every exit, including success.

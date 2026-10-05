@@ -77,8 +77,10 @@ TimeStatus Clock::poll(TimeSample* out){
 }
 FreshTime configuredFreshTime(RiscProvision::Input input,uint64_t (*now)()){
  if(clock.configured||!input.read||!now)return {};
+ RiscProvision::Descriptor descriptor;
+ if(RiscProvision::loadDescriptor(input,descriptor)!=RiscProvision::InputStatus::Ready||!descriptor.timeKey[0])return {};
  char bytes[384]{};uint32_t size=0;
- if(input.read(input.context,"time",bytes,sizeof(bytes),&size)!=RiscProvision::InputStatus::Ready||!size||size>sizeof(bytes))return {};
+ if(input.read(input.context,descriptor.timeKey,bytes,sizeof(bytes),&size)!=RiscProvision::InputStatus::Ready||!size||size>sizeof(bytes))return {};
  JsonDocument json;if(!RiscBoot::parse(bytes,size,json))return {};
  auto root=json.as<JsonObjectConst>();int64_t version=0;
  if(!RiscBoot::keys(root,{"schema","schema_version","servers"})||!RiscBoot::eq(root["schema"],"riscrte.sntp")||!RiscBoot::integer(root["schema_version"],1,1,version))return {};

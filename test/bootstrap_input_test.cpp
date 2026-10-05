@@ -31,6 +31,11 @@ int main(){
  check(InputStatus::Missing);blobs["descriptor"]=descriptor;check(InputStatus::Missing);blobs["profile"]=profile;check(InputStatus::Ready);
  assert(p->count==3&&!strcmp(p->ssid,"test-network")&&hashes==1);uint8_t expected[32];SHA256(reinterpret_cast<const uint8_t*>(profile.data()),profile.size(),expected);assert(!memcmp(expected,digest,32));
  for(auto bad:{std::string("{}"),descriptor.substr(0,descriptor.size()-1)+",\"utc_seconds\":123}",std::string(DescriptorBytes+1,'x')}){blobs["descriptor"]=bad;check(InputStatus::Invalid);}blobs["descriptor"]=descriptor;
+ blobs["descriptor"]=R"({"schema":"riscrte.bootstrap","schema_version":2,"profile_key":"profile","time_key":""})";check(InputStatus::Ready);
+ blobs["descriptor"]=R"({"schema":"riscrte.bootstrap","schema_version":2,"profile_key":"profile","time_key":"install_t0"})";check(InputStatus::Ready);
+ blobs["descriptor"]=R"({"schema":"riscrte.bootstrap","schema_version":2,"profile_key":"profile"})";check(InputStatus::Invalid);
+ blobs["descriptor"]=R"({"schema":"riscrte.bootstrap","schema_version":1,"profile_key":"profile","time_key":null})";check(InputStatus::Invalid);
+ blobs["descriptor"]=descriptor;
  blobs["profile"]="{";check(InputStatus::Invalid);blobs["profile"]=std::string(ProfileInputBytes+1,'x');check(InputStatus::Invalid);blobs["profile"]=profile;
  changeSize=true;check(InputStatus::Invalid);changeSize=false;getError=ESP_ERR_NVS_TYPE_MISMATCH;check(InputStatus::Invalid);getError=ESP_OK;
  initStatus=ESP_ERR_NVS_NO_FREE_PAGES;unsigned before=opened;check(InputStatus::Unavailable);assert(opened==before);initStatus=ESP_OK;

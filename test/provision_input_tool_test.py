@@ -30,5 +30,18 @@ with tempfile.TemporaryDirectory() as tmp:
     source.write_bytes(raw+b' '*(16384-len(raw)));assert (run('max')/'profile.bin').stat().st_size==16384
     for bad in (b'',b' '*16385,raw.replace(b'"schema_version": 1',b'"schema_version": 2'),raw.replace(b'"wifi": {',b'"unexpected": 1, "wifi": {')):
         source.write_bytes(bad);run('bad',False);assert not (root/'bad').exists()
+    source.write_bytes(raw)
+    nvs=root/'simulated-nvs';nvs.mkdir();(nvs/'unrelated').write_bytes(b'owner-data')
+    args=[exe,'--install-sim',str(source),str(nvs),'time.example.invalid']
+    result=subprocess.run(args,capture_output=True);assert result.returncode==0,result.stderr
+    space=nvs/'rte_bootstrap';d=json.loads((space/'descriptor').read_bytes())
+    assert d['schema_version']==2 and (space/d['profile_key']).read_bytes()==raw
+    before={p.name:p.read_bytes() for p in space.iterdir()}
+    assert subprocess.run(args,capture_output=True).returncode==0
+    assert before=={p.name:p.read_bytes() for p in space.iterdir()}
+    profile['wifi']['ssid']='dummy-changed';source.write_text(json.dumps(profile))
+    assert subprocess.run(args,capture_output=True).returncode==0
+    changed=json.loads((space/'descriptor').read_bytes());assert changed['profile_key']!=d['profile_key']
+    assert (space/d['profile_key']).read_bytes()==raw and (nvs/'unrelated').read_bytes()==b'owner-data'
     source.unlink();run('missing',False)
 print('Owner input artifacts: deterministic, bounded, exact bytes, no overwrite, fixed diagnostics PASS')

@@ -28,3 +28,14 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror \
 bash "$repo/scripts/build_provision_input_tool.sh" "$build/provision-input"
 python3 "$repo/test/provision_input_tool_test.py" "$build/provision-input"
 bash "$repo/test/run_native_sntp_test.sh"
+c++ "${san[@]}" -DRISC_PAIRED_BANKS=1 -std=c++17 -Wall -Wextra -Werror \
+ -I"$repo/test/native_nvs_shim" -I"$repo/src" -I"$repo/lib/ArduinoJson/src" \
+ "$repo/src/bootstrap/Json.cpp" "$repo/src/runtime/provisioning/Profile.cpp" "$repo/src/runtime/provisioning/BootstrapInput.cpp" \
+ "$repo/src/runtime/provisioning/Installer.cpp" "$repo/test/owner_nvs_install_test.cpp" -o "$build/install-test"
+"$build/install-test"
+c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -I"$repo/src" -I"$repo/lib/ArduinoJson/src" \
+ "$repo/src/bootstrap/Json.cpp" "$repo/src/runtime/provisioning/Profile.cpp" "$repo/src/runtime/provisioning/BootstrapInput.cpp" \
+ "$repo/src/runtime/provisioning/Installer.cpp" "$repo/src/runtime/provisioning/Maintenance.cpp" \
+ "$repo/test/maintenance_test.cpp" -lcrypto -o "$build/maintenance-test"
+"$build/maintenance-test"
+python3 "$repo/test/provision_serial_test.py" "$build/maintenance-test" "$build/provision-input"

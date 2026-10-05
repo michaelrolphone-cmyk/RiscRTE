@@ -27,7 +27,11 @@
 extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
 /* This literal is inspected in staged native images. It states the generic
  * paired bootstrap-store contract, independently of product/release URLs. */
+#ifdef RISC_OWNER_INSTALLER
+extern "C" __attribute__((used)) const char risc_paired_store_abi[]="RISC_OWNER_INSTALLER:1";
+#else
 extern "C" __attribute__((used)) const char risc_paired_store_abi[]="RISC_PAIRED_STORE_ABI:1";
+#endif
 extern "C" __attribute__((used)) const char risc_runtime_update_version[]="RISC_RUNTIME_VERSION:" RISC_BUILD_VERSION;
 // Arduino's weak default confirms before setup(), which is too early.
 extern "C" bool verifyRollbackLater(void){return true;}
