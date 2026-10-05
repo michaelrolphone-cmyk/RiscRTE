@@ -10,6 +10,8 @@ void pinsFor(const RiscBoot::Board::Device& d,uint64_t& input,uint64_t& output,u
     for(unsigned i=0;i<c.power_count;++i)output|=pinBit(c.power_pins[i]);
   } else if(!strcmp(d.type,"touch.i2c")){
     const auto& c=d.config.touch;input|=pinBit(c.irq);output|=pinBit(c.reset);if(c.irq_pull_up)pullup|=pinBit(c.irq);
+  } else if(!strcmp(d.type,"radio.lora")){
+    const auto& c=d.lora();input|=pinBit(c.busy)|pinBit(c.irq);output|=pinBit(c.reset);
   } else if(!strcmp(d.type,"peripheral.i2c") || !strcmp(d.type,"power.axp2101")){
     const auto& c=!strcmp(d.type,"peripheral.i2c")?d.config.peripheral:d.config.power.device;
     input|=pinBit(c.irq);if(c.irq_pull_up)pullup|=pinBit(c.irq);
@@ -158,10 +160,13 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       if(!runtime.registerPlatform("platform.radio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
     if(runtime.uses(id,"spi.bus",1)){
-      // First CPU-port slice supports generic display SPI transport only. Other
-      // SPI protocols need their actual required operations (e.g. idle clocks).
-      if(spiCount_==8 || strcmp(d.type,"display.spi"))return false;
-      auto& c=spis_[spiCount_++];c.port=this;c.bus=d.config.display.bus;c.cs=d.config.display.cs;
+      // Only explicitly materialized transport types receive their own bus/CS.
+      // Other SPI protocols still need their actual operations (e.g. idle clocks).
+      const bool radio=!strcmp(d.type,"radio.lora");
+      if(spiCount_==8 || (!radio && strcmp(d.type,"display.spi")))return false;
+      auto& c=spis_[spiCount_++];c.port=this;
+      c.bus=radio?d.lora().bus:d.config.display.bus;
+      c.cs=radio?d.lora().cs:d.config.display.cs;
       int physical=board.physicalController(c.bus.instance_id);if(physical<2 || physical>3)return false;c.physical=physical;
       c.api={1,sizeof(c.api),&c,spiClaim,spiBegin,spiTransfer,spiEnd,idleClocks,spiRelease};
       if(!runtime.registerPlatform("spi.bus",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;

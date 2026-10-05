@@ -21,6 +21,24 @@ static bool logLine(const char* s){lines.emplace_back(s);if(heartbeatMode)++beat
 static void write(const std::string& p,const std::string& s){std::ofstream(p)<<s;}
 static const char* board=R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[{"instance_id":7,"chip":{"vendor":"test","model":"gpio","revision":"unspecified"},"compatible":"test,gpio","config_type":"gpio.bank","config_version":1,"config":{"pins":[5],"active_high":true,"pull_up":false,"debounce_us":0,"long_press_us":0,"click_min_us":0}}]})";
 static const char* manifest=R"({"type":"driver","id":"probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"probe.elf","requires":[{"capability":"hardware.device","api":1}],"provides":[{"capability":"test.probe","api":1}],"hardware_compatibility":[{"compatible":"test,gpio","revisions":["unspecified"],"config_type":"gpio.bank","config_version":1}]})";
+static void driverCapacity(const std::string& root) {
+  JsonDocument config;config["board"]="board.json";config["default_app"]="default.elf";
+  auto drivers=config["drivers"].to<JsonArray>();
+  auto save=[&](const std::string& name,const JsonDocument& value){std::string bytes;serializeJson(value,bytes);write(root+"/"+name,bytes);};
+  for(unsigned i=0;i<17;++i){
+    JsonDocument provider;provider["type"]="driver";provider["id"]="selected-"+std::to_string(i);provider["version"]="1.0.0";
+    provider["driver_abi"]=2;provider["architecture"]="xtensa-esp32s3";provider["file_name"]="probe.elf";
+    provider["requires"].to<JsonArray>();auto cap=provider["provides"].to<JsonArray>().add<JsonObject>();cap["capability"]="test.selected-"+std::to_string(i);cap["api"]=1;
+    auto name="selected-"+std::to_string(i)+".json";save(name,provider);drivers.add<JsonObject>()["manifest"]=name;
+  }
+  save("boot.json",config);
+  {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));}
+  drivers.add<JsonObject>()["manifest"]="selected-0.json";save("boot.json",config);
+  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"invalid driver list"));}
+  drivers.remove(17);drivers[16]["manifest"]="selected-0.json";save("boot.json",config);
+  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"duplicate package singleton/hardware owner"));}
+  puts("Runtime providers: 17 accepted, 18 and duplicate final slot rejected before activation PASS");
+}
 static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   JsonDocument original, app;
   assert(parse(grantBoot,strlen(grantBoot),original));
@@ -182,6 +200,7 @@ int main(int argc,char** argv){
   {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
   puts("App grants: identity/declaration/exact instance, size/version checks, stale handles, child isolation and automatic revocation PASS");
   appPolicyCapacity(root,grantBoot);
+  driverCapacity(root);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"heartbeat.elf","drivers":[]})");
   heartbeatMode=true;generation=0;lines.clear();
   {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}

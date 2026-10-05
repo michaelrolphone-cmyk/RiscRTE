@@ -73,7 +73,7 @@ class Runtime final {
   Board& board() { return board_; }
   const Board& board() const { return board_; }
  private:
-  static constexpr size_t MaxDrivers=16, MaxPlatforms=32;
+  static constexpr size_t MaxDrivers=17, MaxPlatforms=32;
   using PolicyIndex=int8_t;
   static_assert(PolicyIndex(-1)<0 && MaxDrivers-1<=INT8_MAX && MaxPlatforms-1<=INT8_MAX,
                 "Policy index must retain -1 and every driver/platform index");
@@ -82,8 +82,8 @@ class Runtime final {
     char id[96]{}, provides[96]{}, elf[256]{}, version[64]{};
     uint32_t api=0;
     uint64_t instance=0;
-    RuntimeProviders::RequirementV2 requirements[16]{};
-    char names[16][96]{};
+    RuntimeProviders::RequirementV2 requirements[RuntimeProviders::GraphV2::kMaxRequirements]{};
+    char names[RuntimeProviders::GraphV2::kMaxRequirements][96]{};
     size_t count=0;
   };
   bool fail(const char* reason) { if (reason != error_) snprintf(error_,sizeof(error_),"%s",reason); return false; }
@@ -155,9 +155,9 @@ class Runtime final {
   Port port_;
   Board board_;
   // Must outlive graph destruction, including retained-module retry/abort.
-  ProviderStorage providerStorage_[16]{};
+  ProviderStorage providerStorage_[MaxDrivers]{};
   RuntimeProviders::GraphV2 graph_;
-  RuntimeProviders::GrantV2 grants_[16]{};
+  RuntimeProviders::GrantV2 grants_[MaxDrivers]{};
   Driver drivers_[MaxDrivers]{};
   size_t driverCount_=0, granted_=0;
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};

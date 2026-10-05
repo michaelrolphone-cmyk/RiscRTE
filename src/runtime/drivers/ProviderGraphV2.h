@@ -44,7 +44,9 @@ struct GrantV2 {
 struct OwnedNodeV2;
 class GraphV2 final {
  public:
-  static constexpr size_t kMaxModules = 16;
+  static constexpr size_t kMaxModules = 17;
+  static constexpr size_t kMaxRequirements = 16;
+  static_assert(kMaxModules-1<=UINT8_MAX,"Provider index width exceeded");
   static constexpr size_t kMaxGrants = 32;
   explicit GraphV2(const StreamHostV1* streams = nullptr) : streamHost_(streams) {}
   GraphV2(const GraphV2&) = delete;
@@ -119,10 +121,10 @@ class GraphV2 final {
     OwnedNodeV2* owned = nullptr;
     ModuleV2 module;
     Visit visit = Visit::Idle;
-    uint8_t dependencies[kMaxModules]{};
+    uint8_t dependencies[kMaxRequirements]{};
     // start() may retain this table until quiesce/stop; unlike a temporary
     // activate() stack array, this remains valid while the ELF is mapped.
-    risc_provider_dependency_v1 boundDependencies[kMaxModules]{};
+    risc_provider_dependency_v1 boundDependencies[kMaxRequirements]{};
     size_t acquired = 0;
   };
   struct GrantSlot {

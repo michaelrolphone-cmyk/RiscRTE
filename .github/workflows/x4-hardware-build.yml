@@ -1,7 +1,7 @@
 name: X4 serial runtime candidate and heartbeat
 on:
   pull_request:
-    branches: [main, master, feat/owned-wake-set]
+    branches: [main, master, feat/owned-wake-set, feat/installed-file-volume]
   workflow_dispatch:
 permissions:
   contents: read

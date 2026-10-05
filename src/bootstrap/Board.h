@@ -28,8 +28,10 @@ class Board final {
       tw_hw_axp2101_v1 power;
       tw_hw_audio_v1 audio;
       tw_hw_lora_v1 lora;
+      tw_hw_lora_v2 loraSelectable;
       Config() : display{} {}
     } config;
+    const tw_hw_lora_v1& lora() const { return hardware.config_version==2?config.loraSelectable.base:config.lora; }
     Binding bindings[16]{};
     size_t bindingCount=0;
   };

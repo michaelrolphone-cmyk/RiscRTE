@@ -52,7 +52,7 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   // Same directory as the manifest, with strict normalized basename.
   char checked[256]; if (!path("",filename,checked,sizeof(checked))) return false;
   JsonArrayConst provides=m["provides"], required=m["requires"];
-  if (provides.size()!=1 || required.size()>16) return fail("driver capability bounds");
+  if (provides.size()!=1 || required.size()>RuntimeProviders::GraphV2::kMaxRequirements) return fail("driver capability bounds");
   JsonObjectConst p=provides[0]; int64_t api;
   if (!keys(p,{"capability","api"}) || !text(p["capability"],d.provides,sizeof(d.provides)) ||
       !integer(p["api"],1,UINT32_MAX,api) || !strcmp(d.provides,"hardware.device") ||
@@ -75,11 +75,11 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
     char compatible[96]{}, type[96]{};
     if (!keys(c,{"compatible","revisions","config_type","config_version"}) ||
         !text(c["compatible"],compatible,96) || !text(c["config_type"],type,96) ||
-        !integer(c["config_version"],1,1,api) || !c["revisions"].is<JsonArrayConst>()) return fail("invalid hardware compatibility");
+        !integer(c["config_version"],1,!strcmp(type,"radio.lora")?2:1,api) || !c["revisions"].is<JsonArrayConst>()) return fail("invalid hardware compatibility");
     JsonArrayConst revisions=c["revisions"]; if (!revisions.size() || revisions.size()>16) return false;
     bool revision=false;
     for (JsonVariantConst v:revisions) { char s[96]; if(!text(v,s,96) || strchr(s,'*')) return false; if(!strcmp(s,dev->revision)) revision=true; }
-    if (revision && !strcmp(compatible,dev->compatible) && !strcmp(type,dev->type)) ++matches;
+    if (revision && !strcmp(compatible,dev->compatible) && !strcmp(type,dev->type) && api==dev->hardware.config_version) ++matches;
   }
   return matches==1 || fail("incompatible/ambiguous selected hardware");
 }
@@ -109,7 +109,7 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
   p.api=api; p.scope=scope; p.id=id; p.table=table; return true;
 }
 bool Runtime::validateGraph() {
-  bool edges[16][16]{};
+  bool edges[MaxDrivers][MaxDrivers]{};
   for(size_t i=0;i<driverCount_;++i) {
     Driver& d=drivers_[i];
     for(size_t j=0;j<i;++j) {

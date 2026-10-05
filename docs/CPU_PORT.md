@@ -19,9 +19,15 @@ The typed logical controller is preserved while the explicit board namespace
 resolves physical I2C0/1 or SPI2/3. A global pad ledger prevents transport/GPIO
 collisions. Tokens do not repeat, and calls require the runtime owner task.
 
-The initial SPI service supports display.spi transactions only, with one held
+The SPI service supports `display.spi` and the existing typed `radio.lora`
+transactions, with one held
 transaction per physical bus. Transfers are limited to 512 bytes and share a
 maximum 1000 ms transaction deadline; idle clocks and GPIO waveforms fail closed.
+Radio transports receive only their declared bus and CS, reset output, and
+busy/IRQ inputs. The v1 radio record has no pull-up authority; those inputs use
+no internal pull. Chip protocols, RF bands, register commands and app policy
+remain in separately mapped drivers/apps. No board name or implicit bus/pin
+mapping grants transport access. Other SPI config types remain unsupported.
 IDF4 `spi_device_acquire_bus` requires an unbounded wait, so it is not used: the
 CPU port exclusively owns its admitted controllers and serializes devices on
 one task. SDK queued transactions use bounded waits and persistent internal DMA
@@ -99,3 +105,17 @@ up to 40 MHz and retain the I2C ceiling of 1 MHz. This is authorization, not a
 new default or chip-specific operating guarantee. Existing 10 MHz catalogs remain
 10 MHz. Each external driver must still enforce its chip/config limits; the CPU
 SPI provider rejects any transaction faster than that device's admitted bus.
+
+The current cohort admits at most 17 selected providers. Graph dependencies and
+per-provider requirements remain independently capped at 16; application grants
+retain their existing bound. Driver metadata, provider-bound storage, startup
+grants and graph cycle-validation arrays share the selected-provider constant.
+Exact-bound and one-over-bound admission tests cover the seventeenth slot.
+
+radio.lora config version2 preserves the version1 bus/pin prefix and adds an
+explicit nonzero four-bit allowed-profile mask. Other configuration types still
+require version1. Hardware compatibility admission matches the exact declared
+config version; it does not silently bind a v1-only driver to v2 data. The CPU
+port scopes the common prefix identically for both versions and performs no
+initialization while registering tables. Chip/band selection and command
+protocols remain in the ELF provider; the Runtime does not infer a chip.
