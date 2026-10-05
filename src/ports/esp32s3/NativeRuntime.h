@@ -3,7 +3,7 @@
 #include <esp_heap_caps.h>
 #include <new>
 namespace RiscCpu {
-/* Paired-target boot metadata only: ordinary owner-task reads, no ISR/DMA
+/* Explicit PSRAM-target boot metadata only: ordinary owner-task reads, no ISR/DMA
  * buffers. Caller intentionally retains this object until reset, including
  * failed quiescence. Never fall back to the scarce internal TLS/DMA heap. */
 inline RiscBoot::Runtime* createRetainedRuntime(RiscBoot::Port port) {

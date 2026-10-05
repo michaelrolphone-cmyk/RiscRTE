@@ -93,3 +93,16 @@ Bluetooth left enabled and retention before app fini after uncertainty.
 sanitizer defaults. Host shims model SDK APIs; they do not prove RF, pairing,
 physical power state, coexistence, wake reliability or current consumption.
 No hardware qualification is claimed.
+
+## Generic native-USB metadata allocation
+
+The generic `esp32s3-16mb-usb` target now explicitly selects the same retained,
+PSRAM-only Runtime metadata allocator already used by the paired target. Adding
+the controller exposed a 2464-byte internal-DRAM link overflow on generic USB;
+the baseline and separately built paired firmware had passed. Runtime metadata
+is owner-task-only configuration, not an ISR/DMA/controller packet buffer.
+This relocation preserves all manifest, capability, key and graph limits and
+retains the allocation until reset, including failed quiescence. Missing PSRAM
+or allocation failure stops before bootfs mounting or driver activation, without
+falling back to internal heap. The paired path and baseline/embedded targets keep
+their existing allocation choices. Controller packet buffers remain internal.
