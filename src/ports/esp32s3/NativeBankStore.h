@@ -12,6 +12,7 @@ bool bind(RiscBoot::Runtime&);
 bool confirmBoot();
 void rejectBoot();
 bool exitSafe();
+bool provisionAvailable(); // verified confirmed pair, owner, before Runtime binding
 // Private boot-owner API, deliberately absent from the provider capability.
 // Requires a verified/confirmed paired deployment, before bind()/app startup.
 // Uses a fresh metadata-only CPU/Runtime instance and production ELF admission.
@@ -20,6 +21,7 @@ bool exitSafe();
 int32_t provisionBegin(const RiscProvision::Profile&,const uint8_t (&digest)[32],const RiscCpu::Hardware&,
                        const RiscBoot::KeyValueBackend*,uint64_t*);
 int32_t provisionStep(uint64_t,risc_bank_status_v1*);
+bool provisionStatus(uint64_t,risc_bank_status_v1*); // read-only, including unsafe/ambiguous terminal state
 int32_t provisionWrite(uint64_t,size_t,const void*,uint32_t);
 int32_t provisionFinish(uint64_t);
 int32_t provisionActivate(uint64_t);

@@ -59,6 +59,7 @@ class Port final {
   explicit Port(Hardware hardware):hw_(hardware){}
   Port(const Port&)=delete; Port& operator=(const Port&)=delete;
   bool bind(RiscBoot::Runtime&);
+  const Hardware& bootstrapHardware() const {return hw_;} // compiled-in boot owner only
   bool quiescent() const;
   // Ordinary live provider claims may survive app handoff. Poison, sleep entry
   // or retained output holds may not outlive the invocation that owns policy.

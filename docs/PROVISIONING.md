@@ -1,11 +1,16 @@
-# Profile-driven provisioning: bounded core checkpoint (0.1.20)
+# Profile-driven provisioning: bounded core checkpoint (0.1.21)
 
-This checkpoint adds a private, CPU-neutral profile parser and boot coordinator.
-It is **not called by `setup()`** and does not register an ELF capability or change
-current default launch. Its private native staging API writes only the verified
-inactive paired bank when a compiled-in boot owner calls it. The default boot
-path does not call it. No Watch content, board pins or product endpoint is
-compiled in; no device has been accessed to test this change.
+Paired `setup()` now reads bounded owner-controlled descriptor/profile input
+from existing NVS and runs the provisioning coordinator before normal Runtime
+creation. Missing/unusable profile or unavailable fresh time continues through
+normal installed-store validation and launch. Retained resources or selected /
+ambiguous activation block normal launch. No deployment credentials, package URLs
+or time-service trust roots are embedded in the firmware.
+
+**The default `configuredFreshTime()` factory returns no source. Autonomous
+network provisioning is therefore not complete.** A deployment must supply an
+actual fresh-time provider and its owner-provided profile. Current target/host
+checks do not qualify a device, Wi-Fi/TLS operation or physical interrupted writes.
 
 ## Existing mechanisms and why there is no unsafe shortcut
 
@@ -181,10 +186,9 @@ and verify old firmware/store digests are unchanged. Both suites pass normally
 and with ASan/UBSan. The model is not SPIFFS power-loss emulation or hardware
 qualification. Native compiled target CI must also pass before using the change.
 
-Still remaining: mapping the
-coordinator to the native stage and existing station/HTTPS transport, a genuinely
-current bootstrap UTC source, profile acquisition outside the immutable installed
-store, and `setup()` integration. Clock-unavailable boot must keep the installed
+The coordinator/native-stage/station/HTTPS/setup and read-only profile-input
+wiring described in 0.1.21 below is now implemented. Still remaining are a
+genuinely current deployment UTC source and owner-provided deployment input. Clock-unavailable boot must keep the installed
 default/offline recovery path; a persisted timestamp is not automatically current.
 The native HTTP implementation's certificate-validity checks are unchanged.
 
@@ -234,3 +238,63 @@ Ordinary updater regressions and pre-/post-execution image-inspector guards rema
 in the tests. Normal and ASan/UBSan runs pass; local LSan is unavailable under
 ptrace. Exact-head target CI is required before this checkpoint is considered
 software-verified.
+
+## Bounded bootstrap input and setup flow (0.1.21)
+
+The native input adapter reads only namespace `rte_bootstrap` in the existing NVS
+partition. App KV namespaces are numeric `rteXXXXXXXX` and cannot name it. The
+fixed `descriptor` key is a blob of at most 256 bytes:
+
+```json
+{"schema":"riscrte.bootstrap","schema_version":1,"profile_key":"profile"}
+```
+
+`profile_key` names one owner-provided NVS blob, at most 16 KiB, using the profile
+format above. It is not a filesystem/partition selector or a remote URL. There
+is no default profile, credential, endpoint or assumed device identity. The
+adapter opens NVS read-only, probes bounds, verifies the returned size, hashes
+exact profile bytes and wipes owned scratch on every exit. It never calls NVS
+write, commit, initialize or erase; existing startup's no-erase recovery remains.
+Insufficient existing NVS capacity must be handled by the owner's provisioning
+tool without erasing settings or changing the layout. This change does not add
+a device-writing tool or publish any owner's credential-bearing profile.
+
+After the selected pair/store is verified and mounted, paired setup invokes the
+bootstrap coordinator before allocating/binding the normal Runtime. A pending
+unconfirmed OTA image bypasses provisioning and follows its normal installed
+validation/app-health confirmation. A later confirmed boot may provision. An
+unchanged installed `.provision-sha256` works without network or a time source.
+Missing, invalid, unavailable or oversized input preserves the installed launch
+path; its normal manifests/ELFs are still validated, never implicitly trusted.
+
+For a changed profile, the coordinator reuses the existing native station and
+HTTPS API with bounded polling, exact response lengths and explicit closure.
+Its fresh-time callback can return pending, unavailable, or a sample containing
+UTC plus a same-boot monotonic observation and a maximum age (up to 300 s).
+Future/stale observations, invalid UTC range and unavailable time are rejected.
+The callback contract requires genuinely current UTC; those bounds do not
+authenticate a fabricated timestamp. UTC is never accepted from the descriptor
+or profile, saved across resets, inferred from firmware age, or substituted for
+certificate verification. The default weak factory returns no provider. Tests
+inject synthetic sources; no Roughtime/NTP subsystem was added.
+
+The connected network is closed before peak-memory staged graph/ELF admission.
+Success commits through the existing inactive paired-store transaction and only
+then requests its safe restart. Ambiguous selection never aborts/retries. A
+refused or unexpectedly returning restart keeps the session and blocks app
+launch. HTTP/radio/file-close retention also blocks launch instead of falsely
+claiming cleanup. Ordinary download, time, input and staging failures clean up
+before continuing the normal installed default. Diagnostics contain only fixed
+action/reason labels, never profile bytes, SSIDs, passwords or URLs.
+
+The bootstrap test drives actual production coordinator/native-stage/admission
+code against fake HTTPS/radio/time and fake IDF flash. Its 24 fresh-process modes
+cover absent/invalid input, unchanged profile without time, unavailable/stale/
+future/invalid/pending/timed-out time, partial HTTP open and download/corruption/
+length failures, retained HTTP/radio/matching-file close, native safety/OOM,
+activation and ambiguous selection. Fallback modes really execute the installed
+host ELF. Pending OTA boot skips input/network/update, validates and confirms its
+installed default normally; a separate confirmed-boot process then provisions.
+NVS tests prove read-only namespace use, size/type/torn-size refusal, exact SHA,
+scratch wiping and no erase recovery. Normal and ASan/UBSan checks pass; local
+LSan is unavailable under ptrace. Exact-head paired target CI remains required.

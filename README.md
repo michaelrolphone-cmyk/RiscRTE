@@ -269,3 +269,9 @@ fresh metadata-only native CPU/Runtime instances, shared pin reservations,
 role-specific entries and ordinary import checks. Nothing executes during
 admission. Live profile acquisition, current UTC, transport and setup routing
 remain pending.
+
+Runtime 0.1.21 connects paired setup to bounded, read-only owner NVS input and
+the provisioning coordinator using existing native station/HTTPS and staging.
+Absent/invalid input or unavailable fresh time keeps normal installed boot.
+The default fresh-time factory is unavailable: autonomous online provisioning
+still requires a real deployment time source and owner-provided profile.

@@ -20,3 +20,8 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers
  "$repo/src/runtime/provisioning/Profile.cpp" "$repo/src/runtime/provisioning/StoreFiles.cpp" \
  "$repo/test/provisioning_files_test.cpp" -lcrypto -ldl -o "$build/files-test"
 "$build/files-test" "$build"
+c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror \
+ -I"$repo/test/native_nvs_shim" -I"$repo/src" -I"$repo/lib/ArduinoJson/src" \
+ "$repo/src/bootstrap/Json.cpp" "$repo/src/runtime/provisioning/Profile.cpp" "$repo/src/runtime/provisioning/BootstrapInput.cpp" \
+ "$repo/test/bootstrap_input_test.cpp" -lcrypto -o "$build/input-test"
+"$build/input-test"

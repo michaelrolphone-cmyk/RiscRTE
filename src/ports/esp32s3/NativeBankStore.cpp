@@ -406,6 +406,7 @@ void rejectBoot(){
   if(running && esp_ota_get_state_partition(running,&state)==ESP_OK && state==ESP_OTA_IMG_PENDING_VERIFY && esp_ota_check_rollback_is_possible())
     esp_ota_mark_app_invalid_rollback_and_reboot();
 }
+bool provisionAvailable(){return prepared && confirmed && !pending && !runtime && !provisionFiles && !provisionReadRetained && operationSafe();}
 bool provisionReady(uint64_t token){return prepared && confirmed && !pending && !runtime && provisionFiles &&
   provisionProfile && token && token==provisionToken && operationSafe();}
 int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&digest)[32],const RiscCpu::Hardware& hardware,const RiscBoot::KeyValueBackend* keyValue,uint64_t* token){
@@ -435,6 +436,7 @@ int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&dig
   // Keep ownership until explicit abort; no fallthrough to application boot.
   return result;
 }
+bool provisionStatus(uint64_t t,risc_bank_status_v1* status){return owner() && provisionFiles && t && t==provisionToken && transaction->status(status);}
 int32_t provisionStep(uint64_t t,risc_bank_status_v1* status){return provisionReady(t)?transaction->step(t,status):RISC_BANK_UNAVAILABLE;}
 int32_t provisionWrite(uint64_t t,size_t file,const void* data,uint32_t n){
   if(!provisionReady(t)||!transaction->stagingStore(t))return RISC_BANK_STATE;

@@ -10,6 +10,8 @@
 #ifdef RISC_PAIRED_BANKS
 #include "ports/esp32s3/NativeBankStore.h"
 #include "ports/esp32s3/NativeRuntime.h"
+#include "ports/esp32s3/NativeBootstrap.h"
+#include "ports/esp32s3/NvsBootstrapInput.h"
 #endif
 #ifndef RISC_EMBEDDED_BOOTSTORE
 #include "ports/esp32s3/NvsKeyValue.h"
@@ -76,14 +78,10 @@ void setup() {
   if(!RiscBankStore::prepareBoot(isOwner,restartSafe,providerStorageSafe)) {
     Serial.println("RTE_BOOT error=paired-bank-integrity");RiscBankStore::rejectBoot();return;
   }
-  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot});
-  if(!retainedRuntime){
-    Serial.println("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();return;
-  }
-  auto& runtime=*retainedRuntime;
 #endif
   // Minimal flash-backed module-store bootstrap. No formatting, discovery,
-  // repair, partition writes, SD bus ownership or production volume capability.
+  // repair, SD bus ownership or production volume capability. Provisioning may
+  // subsequently stage ONLY the verified inactive paired bank.
 #ifdef RISC_EMBEDDED_BOOTSTORE
   esp_err_t mounted=riscrte_mount_embedded_store();
 #else
@@ -100,6 +98,19 @@ void setup() {
     RiscBankStore::rejectBoot();
 #endif
     return; }
+#ifdef RISC_PAIRED_BANKS
+  // Read-only owner input, before any app/driver binding. No configured fresh
+  // time source means offline installed boot, never a stale timestamp bypass.
+  const auto provision=RiscBootstrap::run({cpu.bootstrapHardware(),RiscNvs::backend(),providerStorageSafe,
+    RiscBootstrap::nvsInput(),RiscBootstrap::configuredFreshTime()},"/bootfs");
+  Serial.printf("RTE_PROVISION action=%s reason=%s\n",provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",RiscBootstrap::reasonName(provision.reason));
+  if(provision.outcome==RiscBootstrap::Outcome::Stopped)return;
+  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot});
+  if(!retainedRuntime){
+    Serial.println("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();return;
+  }
+  auto& runtime=*retainedRuntime;
+#endif
   RiscCpu::reserveNativePins(runtime.board());
   if(!runtime.prepare("/bootfs")) { Serial.printf("RTE_BOOT error=manifest detail=%s\n",runtime.error());
 #ifdef RISC_PAIRED_BANKS
