@@ -186,7 +186,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
         !text(manifest["id"],policy.id,sizeof(policy.id)) || !RuntimePackages::safeId(policy.id) ||
         !text(manifest["version"],policy.version,sizeof(policy.version)) || !RuntimePackages::safeVersion(policy.version) ||
         !text(manifest["file_name"],filename,sizeof(filename)) || !RuntimePackages::safeArtifact(filename) || !elfPath(filename) ||
-        !manifest["requires"].is<JsonArrayConst>() || manifest["requires"].size()>8 ||
+        !manifest["requires"].is<JsonArrayConst>() || manifest["requires"].size()>MaxAppRequirements ||
         !item["grants"].is<JsonArrayConst>() || item["grants"].size()>MaxAppPolicyGrants) return fail("invalid app identity/declarations");
     char* slash=strrchr(policy.elf,'/'); if (!slash) return false;
     *(slash+1)=0;
@@ -219,24 +219,26 @@ bool Runtime::appPolicies(JsonVariantConst value) {
             return fail("duplicate app grant");
         }
         auto& grant=policy.grants[policy.count];
-        strcpy(grant.capability,capability);grant.api=api;grant.instance=instance;
+        grant.api=api;grant.instance=instance;
         if (keyValue) {
           if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
               port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
-          grant.keyValue=true;
-        } else if (!strcmp(grant.capability,"platform.clock")) {
-          for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,grant.capability) && platforms_[p].api==grant.api) {
+          grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
+        } else if (!strcmp(capability,"platform.clock")) {
+          for (size_t p=0;p<platformCount_;++p) if (platforms_[p].scope==Scope::Global && !strcmp(platforms_[p].capability,capability) && platforms_[p].api==grant.api) {
             if (grant.platform>=0 || grant.instance) return fail("ambiguous app platform clock");
             grant.platform=p;
           }
           if (grant.platform<0) return fail("app platform clock unavailable");
+          grant.capability=platforms_[grant.platform].capability;
         } else {
-          if (!strncmp(grant.capability,"platform.",9) || !strcmp(grant.capability,"spi.bus") || !strcmp(grant.capability,"hardware.device")) return fail("raw platform capability denied to app");
-          for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,grant.capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
+          if (!strncmp(capability,"platform.",9) || !strcmp(capability,"spi.bus") || !strcmp(capability,"hardware.device")) return fail("raw platform capability denied to app");
+          for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
             if (grant.driver>=0) return fail("ambiguous app provider");
             grant.driver=d;
           }
           if (grant.driver<0) return fail("app provider unavailable");
+          grant.capability=drivers_[grant.driver].provides;
         }
         ++policy.count;
       }
@@ -483,7 +485,7 @@ bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& 
   uint32_t candidate[3],current[3];
   if(!RiscUpdate::parseVersion(version,candidate) || !RiscUpdate::parseVersion(policy->version,current) ||
      RiscUpdate::compareVersion(candidate,current)<=0)return false;
-  bool matched[8]{};
+  bool matched[MaxAppPolicyGrants]{};
   for(JsonObjectConst req:m["requires"].as<JsonArrayConst>()) {
     char name[96];int64_t api;
     if(!keys(req,{"capability","api"}) || !text(req["capability"],name,sizeof(name)) || !integer(req["api"],1,UINT32_MAX,api))return false;

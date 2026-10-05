@@ -43,7 +43,7 @@ int main(int argc,char** argv){
   write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":[],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]},{\"manifest\":\"child.json\",\"grants\":["+grant(1)+"]}]}");
  };
  unsigned cases=0;
- auto check=[&](const std::string& grants,const std::string& req,bool expected){stage(grants,req);Runtime r(port());bool actual=r.prepare(root.c_str());if(actual!=expected)fprintf(stderr,"unexpected admission %s\n",r.error());assert(actual==expected);++cases;};
+ auto check=[&](const std::string& grants,const std::string& req,bool expected){stage(grants,req);Runtime r(port());bool actual=r.prepare(root.c_str());if(actual!=expected)fprintf(stderr,"unexpected admission %s\n",r.error());assert(actual==expected);if(!expected){assert(!r.run());stage(grant(1),requirement());assert(!r.prepare(root.c_str()));assert(!r.run());}++cases;};
  check(grant(1)+","+grant(5),requirement(),true);
  check(grant(5)+","+grant(1),requirement(),true);
  check(grant(1)+","+grant(1),requirement(),false);
@@ -86,10 +86,12 @@ int main(int argc,char** argv){
   assert(saved.get(saved.context,"same",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_CONTEXT&&!size);
   assert(saved.put(saved.context,"same","bad",3)==RISC_KEY_VALUE_CONTEXT);++cases;
  }
- for(unsigned limit:{9u}) {
+ for(unsigned limit:{9u,10u}) {
   capacity=limit;owned=safe=true;retaining=false;values.clear();reads=writes=0;
   std::string declared;for(unsigned i=1;i<=limit;++i){if(i>1)declared+=",";declared+=grant(i);}
-  stage(declared,requirement());Runtime r(port());assert(r.prepare(root.c_str()));assert(r.run());
+  stage(declared,requirement());Runtime r(port());assert(r.prepare(root.c_str()));
+  std::vector<std::string> parsedStorageChurn(256,std::string(4096,'X'));
+  assert(!r.prepare(root.c_str()));assert(r.run());
   assert(reads==limit&&writes==limit);++cases;
  }
  capacity=0;

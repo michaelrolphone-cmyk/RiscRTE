@@ -54,7 +54,14 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   for(unsigned count:{9u,16u}) {
     policies(count);generation=0;lines.clear();
     Runtime runtime({owner,health,delay,logLine});
-    assert(runtime.prepare(root.c_str()));assert(runtime.run());
+    assert(runtime.prepare(root.c_str()));
+    // Parser-owned JSON and source text are gone before app grant lookup.
+    // Churn equivalent allocations, then prove the authoritative names survive
+    // default/child/default reload and rejected prepare/registration attempts.
+    std::vector<std::string> churn(256,std::string(4096,'Z'));
+    assert(!runtime.prepare(root.c_str()));
+    assert(!runtime.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,&runtime));
+    assert(runtime.run());
     assert((lines==std::vector<std::string>{"CAP granted","CAP child denied","CAP granted"}));
   }
   policies(17);rejected("invalid app capability policy");
@@ -86,7 +93,7 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   auto requirements=duplicate["requires"].as<JsonArray>();requirements.add(requirements[0]);
   save("app.json",duplicate);policies(16);rejected("duplicate app requirement");
   // Declaration bound remains eight; grant namespace capacity is independently bounded.
-  while(requirements.size()<9)requirements.add(requirements[0]);
+  while(requirements.size()<Runtime::MaxAppRequirements+1)requirements.add(requirements[0]);
   save("app.json",duplicate);rejected("invalid app identity/declarations");
   save("app.json",app);policies(16);
   grants=config["app_capabilities"][15]["grants"].as<JsonArray>();

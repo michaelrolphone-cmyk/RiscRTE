@@ -35,20 +35,28 @@ this exact path to manifest identity/version and the intersection of declared
 requirements with authorized grants before any ELF runs. Missing, extra,
 duplicate or ambiguous grants fail boot. The sole additive exception is multiple
 distinct, positive storage.key-value@1 namespaces for one manifest requirement;
-all are explicit owner-provisioned grants and still count toward the same 9-
+all are explicit owner-provisioned grants and still count toward the same 10-
 grant bound. Non-KV capability uniqueness is unchanged. ID0 acquisition rejects
 multiple matches; an app must name the intended namespace. This is provisioning consistency for
 trusted native code, not a signature scheme or memory sandbox.
 
-Limits are 16 app policies (`Runtime::MaxAppPolicies`), 8 declared capability
-types, 9 independently authorized grants per app (`Runtime::MaxAppPolicyGrants`),
+Limits are 16 app policies (`Runtime::MaxAppPolicies`), 9 declared capability
+types, 10 independently authorized grants per app (`Runtime::MaxAppPolicyGrants`),
 and 16 live app grants. The extra grant slots allow explicitly scoped KV
 namespaces without broadening capability types or the live grant pool. Policy
-storage remains fixed-size; a tenth grant fails admission before any ELF. Seventeen policies reject before any ELF is loaded.
+storage remains fixed-size; an eleventh grant fails admission before any ELF. Seventeen policies reject before any ELF is loaded.
 On the pinned ESP32-S3 GCC 8.4 ABI, the eight additional policy records add
 11,584 bytes to the fixed Runtime object (218,168 to 229,752 bytes).
-The 8→9 per-app grant expansion adds 2,048 bytes on that target ABI
-(Runtime object 229,760→231,808 bytes at the released baseline used here).
+Internal policy records reference only the already-retained immutable capability
+name in this Runtime's fixed driver/platform table, or the canonical KV literal.
+They never borrow JSON/source-parser memory. Runtime is noncopyable/nonmovable;
+preparation and platform registration cannot replace metadata after admission.
+Ten 32-byte target grant records replace eight 128-byte duplicate-name records.
+The pinned target Runtime object is 218,496 bytes, 11,264 fewer than the released
+229,760-byte baseline. Policy count and live-handle limits remain unchanged.
+These records are never serialized or exposed through an SDK. Default/child
+reload, parsed-memory churn, rejected reprepare, failed prepare and stale-handle
+regressions run with the same exact authority checks.
 No grant is added implicitly; each new namespace must still be declared in
 the boot policy. All grant handles have nonreused generations; stale handles, wrong API/instance,
 short output structs and calls outside the owner app are rejected. Child paths

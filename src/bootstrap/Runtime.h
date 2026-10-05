@@ -37,9 +37,14 @@ struct Port {
 class Runtime final {
  public:
   static constexpr size_t MaxAppPolicies=16;
-  static constexpr size_t MaxAppPolicyGrants=9;
+  static constexpr size_t MaxAppPolicyGrants=10;
+  static constexpr size_t MaxAppRequirements=9;
   explicit Runtime(Port p) : port_(p) {}
   ~Runtime() { revokeProviders(); }
+  Runtime(const Runtime&)=delete;
+  Runtime& operator=(const Runtime&)=delete;
+  Runtime(Runtime&&)=delete;
+  Runtime& operator=(Runtime&&)=delete;
   enum class Scope : uint8_t { Global, Device, Bus };
   // Compiled-in port registration only, never exported to apps/driver ELFs.
   // Tables/contexts must remain valid until successful runtime shutdown.
@@ -105,9 +110,16 @@ class Runtime final {
   static int32_t boundKeyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
   static int32_t boundKeyValuePut(void*,const char*,const void*,uint32_t);
   struct AppGrantPolicy {
-    char capability[96]{}; uint32_t api=0; uint64_t instance=0;
+    // The names below point only to this Runtime's already validated fixed
+    // driver/platform tables, or the canonical KV literal. Never parsed JSON.
+    // Runtime is nonmovable and provider metadata is immutable after prepare.
+    const char* capability=nullptr;
+    uint32_t api=0; uint64_t instance=0;
     int driver=-1, platform=-1; bool keyValue=false;
   };
+#if UINTPTR_MAX == UINT32_MAX
+  static_assert(sizeof(AppGrantPolicy)==32,"App policy target layout changed");
+#endif
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
