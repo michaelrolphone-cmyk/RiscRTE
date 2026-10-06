@@ -140,6 +140,7 @@ storage call. The mounted store must remain immutable while a boot session runs.
 ```sh
 bash test/run_board_test.sh
 bash test/run_runtime_test.sh
+bash test/run_hci_test.sh
 bash test/run_radio_test.sh
 bash test/run_i2s_test.sh
 bash test/run_deep_sleep_test.sh
@@ -297,3 +298,57 @@ maintenance adapter and `provision-input --install-sim` for software testing.
 Profile/time slots are committed/read back before descriptor selection; unrelated
 NVS data is preserved. Normal boot stays read-only. Physical installation transport
 and X4/ESP32-CAM checks are UNRUN; they do not gate PR15 software readiness.
+## Explicit BLE controller transport
+
+Firmware 0.1.24 supplies bounded selected-device `platform.hci.controller@1`
+through the unchanged raw HCI ABI. The controller is opened and closed only by
+its external provider. Healthy controller-owned sessions survive app navigation;
+active HCI blocks sleep/restart and uncertain cleanup retains the invocation.
+There is no host stack, pairing, advertising or implicit enable policy in Runtime.
+See [ownership, bounds and verification](docs/BLUETOOTH_HCI.md).
+
+## Opt-in complete-file app data prototype
+
+The separate `esp32s3-16mb-appdata` target adds explicitly granted
+`storage.app-data@1` over a separately provisioned LittleFS partition. It
+preserves complete application files, distinguishes absence from I/O failure,
+and provides bounded atomic replacement with revision checks. Existing target
+partition tables and installed-file browsing stay unchanged. This is an
+incompatible, opt-in new layout; it does not migrate or format a device on boot.
+See [authority, geometry, provisioning and verification limits](docs/APP_DATA.md).
+
+## Data-preserving complete software cohorts
+
+Runtime 0.1.33 adds an optional full-cohort suffix to the existing provider-only
+bank-store v1 API. Owner-published native firmware and a complete immutable store
+can be validated and activated together, including new app/provider policies,
+without touching NVS or separately provisioned app-data. Existing update modes,
+paired geometries, first-frame health confirmation and rollback remain intact.
+See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-full-cohorts-runtime-0133).
+
+## Opt-in IQ resource bank
+
+Runtime 0.1.34 adds the separate `esp32s3-16mb-appdata-iq` target with a fixed
+pre-heap 64 KiB SRAM reservation and owner-bound `platform.radio.iq.resource@1`.
+Only explicitly selected providers declaring that raw dependency receive it. Leases exclude
+native radio activity and block unsafe exit/restart/sleep; failed release retains
+ownership for retry. RF capture policy stays external. See
+[resource contract, final ELF proof and hardware limits](docs/RADIO_IQ_RESOURCE.md).
+
+## Retrievable sleep/reset diagnostics
+
+Runtime 0.1.35 adds a bounded RTC journal and a read-only `diag` serial replay on
+existing hardware-USB targets. Wake normally first; USB cannot work during
+ESP32-S3 hardware sleep. The recorder never writes flash, adds a wake source or
+keeps USB awake. See [retrieval, retention, power limits and tests](docs/SLEEP_DIAGNOSTICS.md).
+
+## Complete first-install provisioning software (0.1.36)
+
+A generic verified paired Runtime plus a private provisioning JSON can install a
+complete pinned product inventory, including board.json, all driver/app ELFs and
+the default application. Compact profiles cover full Watch stores, preserve
+app-data/cohort/IQ contracts, and use real-SPIFFS-tested bounded staging/retry.
+The offline new-device composer supplies the initially bootable flash/NVS chain;
+normal boot never formats storage. See [first-install instructions](docs/FIRST_INSTALL.md),
+[current contract](docs/PROVISIONING.md), and the explicit
+[remaining Reader product packaging dependency](docs/EINK_PROVISIONING_GAP.md).

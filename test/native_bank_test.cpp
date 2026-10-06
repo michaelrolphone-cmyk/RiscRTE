@@ -31,18 +31,23 @@ static std::string modelStageRoot;
 extern "C" uintptr_t elf_find_sym_default(const char* name){return unavailableImport && !strcmp(name,unavailableImport)?0:1;}
 static std::vector<uint8_t> flash(0x1000000,0xff);
 static uint32_t ticks=1,active=0,imageSize=8192,writes=0,rollbacks=0,confirms=0,restarts=0,delayScale=1,delays=0,unsafeAfterDelay=0;
+static bool mountFailure=false,unmountFailure=false,writeFailure=false;
 static bool ownerEnabled=true,rollbackPossible=true,operationEnabled=true,restartEnabled=true,selectFailure=false;
 static esp_ota_img_states_t otaState=ESP_OTA_IMG_PENDING_VERIFY;
 static bool rejectedCandidate=false,attemptReadFailure=false;
 static unsigned attemptWriteFault=0,selectorCalls=0;
 static esp_partition_t table[]={
- {ESP_PARTITION_TYPE_APP,ESP_PARTITION_SUBTYPE_APP_OTA_0,0x10000,0x300000,"app0",false},
- {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,0x310000,0x4f0000,"bootfs0",false},
- {ESP_PARTITION_TYPE_APP,esp_partition_subtype_t(17),0x800000,0x300000,"app1",false},
- {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,0xb00000,0x4f0000,"bootfs1",false},
+ {ESP_PARTITION_TYPE_APP,ESP_PARTITION_SUBTYPE_APP_OTA_0,0x10000,RiscUpdate::FirmwareBytes,"app0",false},
+ {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,"bootfs0",false},
+ {ESP_PARTITION_TYPE_APP,esp_partition_subtype_t(17),0x800000,RiscUpdate::FirmwareBytes,"app1",false},
+ {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,RiscUpdate::StoreOffset[1],RiscUpdate::StoreBytes,"bootfs1",false},
  {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_OTA,0xff0000,0x2000,"otadata",false},
  {ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x40),0xff2000,0x2000,"bank_state",false},
- {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_NVS,0x9000,0x6000,"nvs",false}};
+ {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_NVS,0x9000,0x6000,"nvs",false}
+#ifdef RISC_PAIRED_APP_DATA
+ ,{ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x41),0x270000,0x80000,"appdata",false}
+#endif
+ };
 FakeEsp ESP;esp_flash_t chip;esp_flash_t* esp_flash_default_chip=&chip;
 uint32_t FakeEsp::getFlashChipSize()const{return flash.size();}
 void FakeEsp::restart(){++restarts;}
@@ -57,7 +62,7 @@ esp_err_t esp_partition_write(const esp_partition_t* p,size_t off,const void* in
    if(attemptWriteFault==2){memcpy(flash.data()+p->address+off,in,n/2);return -1;}
    memcpy(flash.data()+p->address+off,in,n);flash[p->address+off+12]^=1;return 0;
  }
- memcpy(flash.data()+p->address+off,in,n);return 0;}
+ memcpy(flash.data()+p->address+off,in,n);return writeFailure?-1:0;}
 esp_err_t esp_partition_erase_range(const esp_partition_t* p,size_t off,size_t n){if(!p || off+n>p->size)return -1;++writes;memset(flash.data()+p->address+off,0xff,n);return 0;}
 const esp_partition_t* esp_ota_get_running_partition(){return &table[active*2];}
 esp_err_t esp_ota_get_state_partition(const esp_partition_t* p,esp_ota_img_states_t* s){*s=(rejectedCandidate && p->address==0x800000)?ESP_OTA_IMG_ABORTED:otaState;return 0;}
@@ -67,19 +72,19 @@ esp_err_t esp_ota_set_boot_partition(const esp_partition_t*){++selectorCalls;++w
 esp_err_t esp_ota_mark_app_valid_cancel_rollback(){++confirms;otaState=ESP_OTA_IMG_VALID;return 0;}
 esp_err_t esp_ota_mark_app_invalid_rollback_and_reboot(){++rollbacks;return 0;}
 bool esp_ota_check_rollback_is_possible(){return rollbackPossible;}
-esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t* conf){assert(!conf->format_if_mount_failed);return 0;}
+esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t* conf){assert(!conf->format_if_mount_failed);return mountFailure?-1:0;}
 esp_err_t esp_vfs_spiffs_unregister(const char*){
  if(modelProvisionFiles){
   // Filesystem model only: serialize the closed candidate deterministically
   // into fake inactive flash, so production raw readback sees actual file data.
   std::map<std::string,std::vector<uint8_t>> files;
-  for(auto& e:std::filesystem::directory_iterator(modelStageRoot))if(e.is_regular_file()){
-    std::ifstream f(e.path(),std::ios::binary);files[e.path().filename().string()]={std::istreambuf_iterator<char>(f),{}};}
-  size_t at=0xb00000;memset(flash.data()+at,0xff,RiscUpdate::StoreBytes);
+  for(auto& e:std::filesystem::recursive_directory_iterator(modelStageRoot))if(e.is_regular_file()){
+    std::ifstream f(e.path(),std::ios::binary);files[std::filesystem::relative(e.path(),modelStageRoot).generic_string()]={std::istreambuf_iterator<char>(f),{}};}
+  size_t at=RiscUpdate::StoreOffset[1];memset(flash.data()+at,0xff,RiscUpdate::StoreBytes);
   for(auto& e:files){memcpy(flash.data()+at,e.first.c_str(),e.first.size()+1);at+=e.first.size()+1;
     memcpy(flash.data()+at,e.second.data(),e.second.size());at+=e.second.size();assert(at<0xff0000);}
  }
- return 0;
+ return unmountFailure?-1:0;
 }
 esp_err_t esp_image_verify(int,const esp_partition_pos_t*,esp_image_metadata_t* out){out->image_len=imageSize;return 0;}
 static bool own(){return ownerEnabled;}static bool safe(){return operationEnabled;}
@@ -182,28 +187,40 @@ static std::vector<uint8_t> manySymbols(){
  for(unsigned i=3;i<130;++i)symbols[i]=symbols[2];
  return data;
 }
-static void firmware(unsigned bank,const char* version,const char* abi="1"){
+static void firmware(unsigned bank,const char* version,const char* abi=nullptr){
  auto* data=flash.data()+table[bank*2].address;memset(data,0,imageSize);
- std::string marker=std::string("RISC_PAIRED_STORE_ABI:")+abi;
+ std::string marker=std::string("RISC_PAIRED_STORE_ABI:")+(abi?abi:std::to_string(RiscUpdate::StoreAbi));
  memcpy(data+100,marker.c_str(),marker.size()+1);
  marker=std::string("RISC_RUNTIME_VERSION:")+version;
  // Exercise a marker split across the read chunk boundary.
  memcpy(data+4087,marker.c_str(),marker.size()+1);
  const char prefix[]="RISC_RUNTIME_VERSION:";memcpy(data+900,prefix,sizeof(prefix));
 }
+#include "cohort_native.inc"
 int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
+#ifdef RISC_PAIRED_APP_DATA
+ std::fill(flash.begin()+0x270000,flash.begin()+0x2f0000,0x5a);
+#endif
+ if(mode=="cohort" || mode=="cohort-receipt" || mode=="cohort-legacy-receipt" || mode=="cohort-live-close"){assert(argc==4);cohortLiveClose=mode=="cohort-live-close";receiptMode=mode=="cohort-receipt"?1:mode=="cohort-legacy-receipt"?2:0;cohortNative(argv[2],argv[3]);return 0;}
  const bool bootstrapping=mode.find("bootstrap-")==0;
- const bool provisioning=mode=="provision-seed" || mode=="provision" || mode=="provision-abort" || mode=="provision-corrupt" || mode=="provision-unknown" || mode=="provision-admission" || mode=="provision-close-retained" || bootstrapping;
+ const bool provisioning=mode=="provision-seed" || mode=="provision-product" || mode=="provision" || mode=="provision-abort" || mode=="provision-corrupt" || mode=="provision-unknown" || mode=="provision-admission" || mode=="provision-close-retained" || bootstrapping;
  if(mode=="boot" || mode=="bad-store" || mode=="bad-layout" || mode=="restart" || mode=="restart-unknown" || provisioning){
    const bool restarting=mode=="restart" || mode=="restart-unknown";
-   assert(argc==((bootstrapping||mode=="provision-seed")?5:provisioning?4:3));if(provisioning)otaState=mode=="bootstrap-pending-bank"?ESP_OTA_IMG_PENDING_VERIFY:ESP_OTA_IMG_VALID;std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
+   if(restarting)otaState=ESP_OTA_IMG_VALID; // normal updates require a confirmed source
+   assert(argc==(mode=="provision-product"?6:(bootstrapping||mode=="provision-seed")?5:provisioning?4:3));if(provisioning)otaState=(mode=="bootstrap-pending-bank"||mode=="bootstrap-receipt-pending")?ESP_OTA_IMG_PENDING_VERIFY:ESP_OTA_IMG_VALID;std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
    memcpy(flash.data(),boot.data(),boot.size());firmware(0,RISC_BUILD_VERSION);
-   uint8_t fw[32],store[32];SHA256(flash.data()+0x10000,imageSize,fw);SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,store);
+   if(mode=="provision-product"){
+     std::ifstream firmwareInput(argv[5],std::ios::binary);assert(firmwareInput);
+     std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(firmwareInput)),{});
+     assert(bytes.size()>=32 && bytes.size()<=RiscUpdate::FirmwareBytes);imageSize=bytes.size();
+     memcpy(flash.data()+RiscUpdate::FirmwareOffset[0],bytes.data(),bytes.size());
+   }
+   uint8_t fw[32],store[32];SHA256(flash.data()+0x10000,imageSize,fw);SHA256(flash.data()+RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,store);
    auto record=RiscUpdate::makeRecord(0,imageSize,fw,store);memcpy(flash.data()+RiscUpdate::JournalOffset,&record,sizeof(record));
-   if(mode=="bad-store")flash[0x310010]^=1;
-   if(mode=="bad-layout")table[2].size-=4096;
+   if(mode=="bad-store")flash[RiscUpdate::StoreOffset[0]+16]^=1;
+   if(mode=="bad-layout")table[2].size=RiscUpdate::StoreAbi==2?0x300000:0x280000;
    assert(RiscBankStore::prepareBoot(own,restartSafe,safe)==(mode=="boot" || restarting || provisioning));
    assert(writes==0 && confirms==0);
    if(mode=="boot"){assert(!strcmp(RiscBankStore::bootLabel(),"bootfs0"));assert(!RiscBankStore::confirmBoot());assert(RiscBankStore::exitSafe());}
@@ -233,6 +250,22 @@ int main(int argc,char** argv){
          std::ofstream f(installed+"/"+RiscProvision::StoreFiles::DigestFile,std::ios::binary);f.write(reinterpret_cast<const char*>(digest),32);
          if(mode=="bootstrap-match-close-retained")failNextNativeClose=true;
        }
+       const bool activeReceiptFixture=mode.find("bootstrap-receipt-")==0;
+       if(activeReceiptFixture){
+         uint8_t digest[32];SHA256(reinterpret_cast<const uint8_t*>(bootNet.profile.data()),bootNet.profile.size(),digest);
+         if(mode=="bootstrap-receipt-changed")digest[0]^=1;
+         auto previous=record;previous.bank=1;previous.storeSha[0]^=1;previous.crc=RiscUpdate::crc32(&previous,offsetof(RiscUpdate::Record,crc));
+         auto receipt=RiscUpdate::makeAttempt(0,digest,record,previous);
+         if(mode=="bootstrap-receipt-corrupt")receipt.crc^=1;
+         memcpy(flash.data()+RiscUpdate::JournalOffset+RiscUpdate::AttemptOffset,&receipt,sizeof(receipt));
+         // The former source bank is absent/overwritten. Receipt completion
+         // binds this active Record only and must still suppress old profiles.
+         memset(flash.data()+RiscUpdate::JournalOffset+4096,0xff,4096);
+         if(mode=="bootstrap-receipt-corrupt"){
+           std::ofstream marker(installed+"/"+RiscProvision::StoreFiles::DigestFile,std::ios::binary);
+           marker.write(reinterpret_cast<const char*>(digest),32); // must not hide corrupt active trailer
+         }
+       }
        const bool hasAttemptFixture=mode=="bootstrap-rolled-back"||mode=="bootstrap-changed-profile"||mode=="bootstrap-changed-source"||mode=="bootstrap-legacy-attempt"||
          mode=="bootstrap-attempt-malformed"||mode=="bootstrap-attempt-torn"||mode=="bootstrap-attempt-bank-mismatch"||
          mode=="bootstrap-attempt-store-mismatch"||mode=="bootstrap-attempt-firmware-mismatch"||mode=="bootstrap-attempt-format"||mode=="bootstrap-attempt-read-fail";
@@ -243,7 +276,7 @@ int main(int argc,char** argv){
          uint8_t digest[32];SHA256(reinterpret_cast<const uint8_t*>(bootNet.profile.data()),bootNet.profile.size(),digest);
          {std::ofstream f(modelStageRoot+"/"+RiscProvision::StoreFiles::DigestFile,std::ios::binary);f.write(reinterpret_cast<const char*>(digest),32);}
          assert(esp_vfs_spiffs_unregister("bootfs1")==ESP_OK);firmware(1,RISC_BUILD_VERSION);
-         uint8_t candidateFirmware[32],candidateStore[32];SHA256(flash.data()+0x800000,imageSize,candidateFirmware);SHA256(flash.data()+0xb00000,RiscUpdate::StoreBytes,candidateStore);
+         uint8_t candidateFirmware[32],candidateStore[32];SHA256(flash.data()+0x800000,imageSize,candidateFirmware);SHA256(flash.data()+RiscUpdate::StoreOffset[1],RiscUpdate::StoreBytes,candidateStore);
          auto failedRecord=RiscUpdate::makeRecord(1,imageSize,candidateFirmware,candidateStore);memcpy(flash.data()+RiscUpdate::JournalOffset+4096,&failedRecord,sizeof(failedRecord));
          rejectedCandidate=true;
          if(mode=="bootstrap-changed-profile"){
@@ -273,6 +306,7 @@ int main(int argc,char** argv){
        hardware.httpIdle=[](){return !bootNet.http;};hardware.httpSafe=[](){return !bootNet.broken;};
        RiscBootstrap::Port port{hardware,nullptr,safe,{nullptr,bootstrapInput},{nullptr,bootstrapTime,[](void*){++bootNet.timeStops;return bootNet.mode!="bootstrap-time-retained";}}};
        if(mode=="bootstrap-no-time"||mode=="bootstrap-unchanged")port.time={};
+       if(mode=="bootstrap-metadata-close-retained")metadataClosePath=modelStageRoot+"/boot.json";
        if(mode=="bootstrap-oom")risc_test_psram_fail_after=0;
        if(mode=="bootstrap-native-unsafe")operationEnabled=false;
        if(mode=="bootstrap-selection-unknown")selectFailure=true;
@@ -281,8 +315,16 @@ int main(int argc,char** argv){
        if(mode=="bootstrap-attempt-write-torn")attemptWriteFault=2;
        if(mode=="bootstrap-attempt-write-readback")attemptWriteFault=3;
        const auto result=RiscBootstrap::run(port,installed.c_str());risc_test_psram_fail_after=-1;delayScale=1;operationEnabled=true;
-       const bool selected=mode=="bootstrap-success"||mode=="bootstrap-confirmed-bank"||mode=="bootstrap-time-pending"||mode=="bootstrap-selection-unknown"||mode=="bootstrap-changed-profile"||mode=="bootstrap-changed-source"||mode=="bootstrap-legacy-attempt";
-       const bool stopped=selected||mode=="bootstrap-time-retained"||mode=="bootstrap-http-retained"||mode=="bootstrap-radio-retained"||mode=="bootstrap-match-close-retained"||mode=="bootstrap-native-unsafe";
+       const bool selected=mode=="bootstrap-success"||mode=="bootstrap-confirmed-bank"||mode=="bootstrap-time-pending"||mode=="bootstrap-selection-unknown"||mode=="bootstrap-changed-profile"||mode=="bootstrap-changed-source"||mode=="bootstrap-legacy-attempt"||mode=="bootstrap-receipt-changed";
+       const bool stopped=selected||mode=="bootstrap-time-retained"||mode=="bootstrap-http-retained"||mode=="bootstrap-radio-retained"||mode=="bootstrap-match-close-retained"||mode=="bootstrap-native-unsafe"||mode=="bootstrap-metadata-close-retained";
+       if(activeReceiptFixture && mode!="bootstrap-receipt-changed"){
+         const auto expected=mode=="bootstrap-receipt-corrupt"?Reason::HistoryUnavailable:mode=="bootstrap-receipt-pending"?Reason::PairUnavailable:Reason::Unchanged;
+         assert(result.outcome==Outcome::Installed && result.reason==expected && !bootNet.joins && !bootNet.opens && !writes && !selectorCalls);
+       }
+       if(mode=="bootstrap-metadata-close-retained"){
+         assert(result.reason==Reason::CleanupRetained && provisionReadRetained && metadataFailedCloses==1 && !candidateCpu);
+         assert(!selectorCalls && !restarts && !RiscBankStore::exitSafe());
+       }
        if(mode=="bootstrap-rolled-back"){
          assert(result.reason==Reason::AttemptHeld&&!bootNet.joins&&!bootNet.opens&&!writes&&!selectorCalls);
          const auto again=RiscBootstrap::run(port,installed.c_str());assert(again.outcome==Outcome::Installed&&again.reason==Reason::AttemptHeld&&!writes);
@@ -303,7 +345,7 @@ int main(int argc,char** argv){
        if(mode=="bootstrap-absent"||mode=="bootstrap-invalid"||mode=="bootstrap-profile-invalid"||mode=="bootstrap-no-time"||mode=="bootstrap-oom")assert(!bootNet.joins&&!bootNet.opens&&!writes);
        if(!stopped){
          assert(!bootNet.radio&&!bootNet.http&&!provisionFiles&&!provisionToken&&!RiscBootstrap::retainedSession);
-         const bool pendingBank=mode=="bootstrap-pending-bank";
+         const bool pendingBank=mode=="bootstrap-pending-bank"||mode=="bootstrap-receipt-pending";
          if(pendingBank)assert(result.reason==Reason::PairUnavailable&&!bootNet.inputReads&&!bootNet.joins&&!bootNet.opens&&!writes&&confirms==0);
          RiscBoot::Port fallbackPort{own,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* line){assert(!strcmp(line,"BOOTSTRAP_INSTALLED_DEFAULT"));return true;}};
          if(pendingBank){fallbackPort.bindPlatforms=[](RiscBoot::Runtime& rt){return RiscBankStore::bind(rt);};fallbackPort.confirmBoot=RiscBankStore::confirmBoot;}
@@ -316,20 +358,50 @@ int main(int argc,char** argv){
        if(mode=="bootstrap-http-retained")assert(bootNet.radio&&bootNet.http&&bootNet.closes==1&&bootNet.leaves==0);
        if(mode=="bootstrap-radio-retained")assert(bootNet.radio&&!bootNet.http&&bootNet.leaves==1);
        if(mode=="bootstrap-match-close-retained")assert(failedAdmissionCloses==1&&!bootNet.joins&&!writes);
-       uint8_t preserved[32];SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
+       uint8_t preserved[32];SHA256(flash.data()+RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
        SHA256(flash.data()+0x10000,imageSize,preserved);assert(!memcmp(preserved,record.firmwareSha,32));
        assert(hardwareCalls==0);std::cout<<"Production bootstrap setup flow: "<<mode<<" PASS\n";return 0;
      }
-     if(mode=="provision-seed"){
+     if(mode=="provision-seed" || mode=="provision-product"){
        std::map<std::string,std::vector<uint8_t>> files;
-       for(const char* name:{"board.json","boot.json","default.elf"}){
-         std::ifstream in(std::string(argv[4])+"/"+name,std::ios::binary);assert(in);
+       for(auto& item:fs::recursive_directory_iterator(argv[4]))if(item.is_regular_file()){
+         const std::string name=fs::relative(item.path(),argv[4]).generic_string();
+         std::ifstream in(item.path(),std::ios::binary);assert(in);
          files[name]=std::vector<uint8_t>((std::istreambuf_iterator<char>(in)),{});assert(!files[name].empty());
+         fs::create_directories(fs::path(modelStageRoot)/fs::path(name).parent_path());
        }
+       assert(files.size()>=3 && files.size()<=RiscProvision::MaxFiles);
        auto profile=std::make_unique<RiscProvision::Profile>();profile->count=files.size();size_t index=0;
        for(auto& item:files){auto& file=profile->files[index++];strcpy(file.path,item.first.c_str());file.bytes=item.second.size();SHA256(item.second.data(),item.second.size(),file.sha256);}
        uint8_t digest[32]{};digest[0]=99;uint64_t token=0;
-       assert(provisionBegin(*profile,digest,admissionHardware(),nullptr,&token)==RISC_BANK_OK);
+       auto hardware=admissionHardware();
+       if(mode=="provision-product"){
+         hardware.i2sOpen=[](uint8_t,uint8_t,uint8_t,uint8_t,uint32_t){++hardwareCalls;return false;};
+         hardware.i2sWrite=[](uint8_t,const int16_t*,size_t,size_t*,uint32_t){++hardwareCalls;return false;};
+         hardware.i2sClose=[](uint8_t){++hardwareCalls;return false;};
+         hardware.i2sOpenRx=[](uint8_t,uint8_t,uint8_t,uint32_t){++hardwareCalls;return false;};
+         hardware.i2sRead=[](uint8_t,int16_t*,size_t,size_t*,uint32_t){++hardwareCalls;return false;};
+         hardware.hciOpen=[](){++hardwareCalls;return false;};
+         hardware.hciSend=[](uint8_t,const uint8_t*,size_t,uint32_t){++hardwareCalls;return false;};
+         hardware.hciReceive=[](uint8_t*,uint8_t*,size_t,size_t*,uint32_t){++hardwareCalls;return false;};
+         hardware.hciClose=hardware.hciIdle=hardware.hciSafe=[](){++hardwareCalls;return false;};
+         hardware.radioJoin=[](const char*,const char*){++hardwareCalls;return false;};
+         hardware.radioState=[](uint8_t*,int8_t*){++hardwareCalls;return false;};
+         hardware.radioLeave=hardware.radioScanStart=hardware.radioScanCancel=hardware.radioIdle=[](){++hardwareCalls;return false;};
+         hardware.radioAddresses=[](uint8_t*,uint8_t*){++hardwareCalls;return false;};
+         hardware.radioScanPoll=[](garden_radio_scan_result_v1*){++hardwareCalls;return false;};
+         hardware.radioIqReady=[](){++hardwareCalls;return false;};
+         hardware.httpClient=&bootstrapHttp;hardware.httpIdle=hardware.httpSafe=[](){++hardwareCalls;return false;};
+       }
+       static const RiscBoot::KeyValueBackend kv{nullptr,
+         [](void*,uint32_t,const char*,void*,uint32_t,uint32_t*){++hardwareCalls;return int32_t(RISC_KEY_VALUE_IO);},
+         [](void*,uint32_t,const char*,const void*,uint32_t){++hardwareCalls;return int32_t(RISC_KEY_VALUE_IO);},RISC_KEY_VALUE_V2_BLOB_MAX};
+       static const RiscBoot::AppDataBackend appData{nullptr,
+         [](void*,uint32_t,const char*,uint32_t*,uint64_t*){++hardwareCalls;return int32_t(RISC_APP_DATA_IO);},
+         [](void*,uint32_t,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*){++hardwareCalls;return int32_t(RISC_APP_DATA_IO);},
+         [](void*,uint32_t,const char*,uint64_t,const void*,uint32_t){++hardwareCalls;return int32_t(RISC_APP_DATA_IO);},
+         [](void*){++hardwareCalls;return false;}};
+       assert(provisionBegin(*profile,digest,hardware,mode=="provision-product"?&kv:nullptr,&token,mode=="provision-product"?&appData:nullptr)==RISC_BANK_OK);
        risc_bank_status_v1 status{};status.struct_size=sizeof(status);
        for(unsigned i=0;i<5000&&!transaction->stagingStore(token);++i)assert(provisionStep(token,&status)==RISC_BANK_OK);
        assert(transaction->stagingStore(token));index=0;
@@ -338,7 +410,7 @@ int main(int argc,char** argv){
        for(unsigned i=0;i<5000;++i){assert(transaction->status(&status));if(status.state==RISC_BANK_READY)break;assert(provisionStep(token,&status)==RISC_BANK_OK);}
        assert(status.state==RISC_BANK_READY&&hardwareCalls==0&&!selectorCalls&&!restarts);
        assert(provisionAbort(token)==RISC_BANK_OK);
-       std::cout<<"Generic seed: actual graph/default ELF production native admission PASS; no execution or selection\n";
+       std::cout<<"Provisioning store: "<<files.size()<<" files with actual graph/ELF production native admission PASS; no execution or selection\n";
        return 0;
      }
      if(mode=="provision-admission"){
@@ -352,8 +424,14 @@ int main(int argc,char** argv){
        static const RiscBoot::KeyValueBackend kv{nullptr,
          [](void*,uint32_t,const char*,void*,uint32_t,uint32_t*){++hardwareCalls;return int32_t(RISC_KEY_VALUE_IO);},
          [](void*,uint32_t,const char*,const void*,uint32_t){++hardwareCalls;return int32_t(RISC_KEY_VALUE_IO);},RISC_KEY_VALUE_V2_BLOB_MAX};
-       for(unsigned scenario=0;scenario<18;++scenario){Files files=base;bool expected=scenario==0||scenario==10||scenario==13;
+       for(unsigned scenario=0;scenario<24;++scenario){Files files=base;bool expected=scenario==0||scenario==10||scenario==13||scenario==19||scenario==20;
          auto hardware=admissionHardware();const RiscBoot::KeyValueBackend* backend=nullptr;
+         const RiscBoot::AppDataBackend* dataBackend=nullptr;
+         static const RiscBoot::AppDataBackend metadataAppData{nullptr,
+           [](void*,uint32_t,const char*,uint32_t*,uint64_t*){++hardwareCalls;return int32_t(RISC_APP_DATA_IO);},
+           [](void*,uint32_t,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*){++hardwareCalls;return int32_t(RISC_APP_DATA_IO);},
+           [](void*,uint32_t,const char*,uint64_t,const void*,uint32_t){++hardwareCalls;return int32_t(RISC_APP_DATA_IO);},
+           [](void*){++hardwareCalls;return false;}};
          if(scenario==1)files.erase("driver.elf");
          if(scenario==2)files["driver.elf"]=elf("memcpy");
          if(scenario==3)files["default.elf"]=elf("memcpy","t5_driver_get");
@@ -371,23 +449,36 @@ int main(int argc,char** argv){
            if(scenario==13)backend=&kv;
          }
          if(scenario==14)unavailableImport="memcpy";
+         if(scenario==18 || scenario==19){
+           files["app.json"]=text(R"({"type":"application","id":"provision-default","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"storage.app-data","api":1}]})");
+           files["boot.json"]=text(R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"storage.app-data","api":1,"instance_id":1}]}]})");
+           if(scenario==19)dataBackend=&metadataAppData;
+         }
+         if(scenario>=20){
+           JsonDocument cohort;cohort["schema"]="riscrte.cohort";cohort["schema_version"]=1;cohort["product"]="test-product";cohort["version"]="1.0.0";
+           cohort["runtime_version"]=scenario==21?"99.0.0":RISC_BUILD_VERSION;cohort["source_repo"]="owner/product";cohort["source_revision"]=std::string(40,'a');
+           cohort["layout"]=scenario==23?"wrong-layout":RiscUpdate::Layout;cohort["store_abi"]=RiscUpdate::StoreAbi;cohort["firmware_size"]=imageSize;
+           cohort["firmware_sha256"]=scenario==22?std::string(64,'0'):hexNative(record.firmwareSha);
+           std::string value;serializeJson(cohort,value);files["cohort.json"]={value.begin(),value.end()};
+         }
+
          auto profile=std::make_unique<RiscProvision::Profile>();profile->count=files.size();size_t index=0;
          for(auto& item:files){auto& file=profile->files[index++];strcpy(file.path,item.first.c_str());file.bytes=item.second.size();SHA256(item.second.data(),item.second.size(),file.sha256);}
          uint8_t digest[32]{};digest[0]=uint8_t(scenario+1);uint64_t token=0;
-         assert(provisionBegin(*profile,digest,hardware,backend,&token)==RISC_BANK_OK);
+         assert(provisionBegin(*profile,digest,hardware,backend,&token,dataBackend)==RISC_BANK_OK);
          risc_bank_status_v1 status{};status.struct_size=sizeof(status);
          for(unsigned i=0;i<5000&&!transaction->stagingStore(token);++i)assert(provisionStep(token,&status)==RISC_BANK_OK);
          assert(transaction->stagingStore(token));index=0;
          for(auto& item:files){for(size_t at=0;at<item.second.size();){uint32_t n=std::min<size_t>(4096,item.second.size()-at);assert(provisionWrite(token,index,item.second.data()+at,n)==RISC_BANK_OK);at+=n;}++index;}
-         if(scenario>=15)risc_test_psram_fail_after=int(scenario-15);
+         if(scenario>=15 && scenario<=17)risc_test_psram_fail_after=int(scenario-15);
          const int32_t result=provisionFinish(token);risc_test_psram_fail_after=-1;
          assert((result==RISC_BANK_OK)==expected);unavailableImport=nullptr;
          if(expected){for(unsigned i=0;i<5000;++i){assert(transaction->status(&status));if(status.state==RISC_BANK_READY)break;assert(provisionStep(token,&status)==RISC_BANK_OK);}assert(status.state==RISC_BANK_READY);}
          else {assert(provisionActivate(token)==RISC_BANK_STATE);RiscUpdate::Record target{};memcpy(&target,flash.data()+RiscUpdate::JournalOffset+4096,sizeof(target));assert(!RiscUpdate::validRecord(target,1));}
          assert(provisionAbort(token)==RISC_BANK_OK && !candidateCpu && !provisionState && !provisionFiles && hardwareCalls==0);
-         uint8_t preserved[32];SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
+         uint8_t preserved[32];SHA256(flash.data()+RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
        }
-       std::cout<<"Production native full-graph/image admission:18 role/import/board/backend/OOM scenarios PASS; zero provider or hardware execution\n";
+       std::cout<<"Production native full-graph/image admission:24 role/import/board/backend/OOM/cohort identity scenarios PASS; zero provider or hardware execution\n";
        return 0;
      }
      auto profile=std::make_unique<RiscProvision::Profile>();profile->count=3;
@@ -415,10 +506,10 @@ int main(int argc,char** argv){
        assert(provisionReadRetained && !candidateCpu && failedAdmissionCloses==1);
        assert(provisionAbort(token)==RISC_BANK_RETAINED && failedAdmissionCloses==1);
        assert(!bind(blocked) && !exitSafe());assert(!provisionRestart(token) && restarts==0);
-       assert(provisionActivate(token)==RISC_BANK_STATE);
+       assert(provisionActivate(token)==RISC_BANK_UNAVAILABLE);
      }else{
        assert(provisionFinish(token)==RISC_BANK_OK);
-       if(mode=="provision-corrupt")flash[0xb00001]^=1;
+       if(mode=="provision-corrupt")flash[RiscUpdate::StoreOffset[1]+1]^=1;
        int32_t result=0;for(unsigned i=0;i<5000;++i){assert(transaction->status(&status));if(status.state==RISC_BANK_READY)break;result=provisionStep(token,&status);if(result)break;}
        if(mode=="provision-corrupt"){assert(result==RISC_BANK_INTEGRITY);assert(provisionActivate(token)==RISC_BANK_STATE);assert(provisionAbort(token)==RISC_BANK_OK);}
        else {assert(status.state==RISC_BANK_READY);selectFailure=mode=="provision-unknown";
@@ -427,13 +518,13 @@ int main(int argc,char** argv){
          assert(!provisionRestart(token) && restarts==1);}
      }
      assert(hardwareCalls==0 && !candidateCpu);
-     uint8_t preserved[32];SHA256(flash.data()+0x310000,RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
+     uint8_t preserved[32];SHA256(flash.data()+RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
      SHA256(flash.data()+0x10000,imageSize,preserved);assert(!memcmp(preserved,record.firmwareSha,32));
    }
    if(restarting){
      using namespace RiscBankStore;
      firmware(1,"0.1.12");std::vector<uint8_t> payload(flash.begin()+0x800000,flash.begin()+0x800000+imageSize);
-     risc_bank_image_v1 image{};image.struct_size=sizeof(image);image.size=payload.size();image.store_abi=1;
+     risc_bank_image_v1 image{};image.struct_size=sizeof(image);image.size=payload.size();image.store_abi=RiscUpdate::StoreAbi;
      memcpy(image.active_store_sha256,record.storeSha,32);SHA256(payload.data(),payload.size(),image.sha256);
      replacingFirmware=true;uint64_t token=0;assert(transaction->begin(false,image,&token)==RISC_BANK_OK);
      assert(!api.restart(nullptr,token) && restarts==0);
@@ -467,11 +558,13 @@ int main(int argc,char** argv){
    for(unsigned b=0;b<2;++b)for(unsigned r=0;r<2;++r)parts[b][r]=&table[b*2+r];
    firmware(1,"0.1.12");replacingFirmware=true;assert(validateFirmware(nullptr,1,imageSize));
    for(const char* v:{RISC_BUILD_VERSION,"0.1.10","00.1.12","4294967296.0.0","1.0","1.2.3-rc"}){firmware(1,v);assert(!validateFirmware(nullptr,1,imageSize));}
-   firmware(1,"0.1.12","2");assert(!validateFirmware(nullptr,1,imageSize));
+   firmware(1,"0.1.12",RiscUpdate::StoreAbi==1?"2":"1");assert(!validateFirmware(nullptr,1,imageSize));
    firmware(1,RISC_BUILD_VERSION);replacingFirmware=false;assert(validateFirmware(nullptr,1,imageSize));
    assert(!validateFirmware(nullptr,1,imageSize-1));
    uint8_t byte=0;assert(!write(nullptr,0,0,0,&byte,1));assert(!erase(nullptr,0,1,0));
    assert(!write(nullptr,1,1,RiscUpdate::StoreBytes,&byte,1));
+   assert(!write(nullptr,1,0,RiscUpdate::FirmwareBytes,&byte,1));
+   activeBank=1;assert(!write(nullptr,0,0,RiscUpdate::FirmwareBytes,&byte,1));assert(!erase(nullptr,0,0,RiscUpdate::FirmwareBytes));activeBank=0;
    ownerEnabled=false;assert(!write(nullptr,1,0,0,&byte,1));ownerEnabled=true;
    operationEnabled=false;
    assert(!write(nullptr,1,0,0,&byte,1) && !erase(nullptr,1,1,0) && !read(nullptr,1,0,0,&byte,1));
@@ -503,5 +596,8 @@ int main(int argc,char** argv){
    goodElf[0]=0;assert(!admitElf(goodElf.data(),goodElf.size()));
    delete scratch;scratch=nullptr;
  }
+#ifdef RISC_PAIRED_APP_DATA
+ for(size_t at=0x270000;at<0x2f0000;++at)assert(flash[at]==0x5a);
+#endif
  std::cout<<"Production native bank adapter: "<<mode<<" PASS\n";
 }

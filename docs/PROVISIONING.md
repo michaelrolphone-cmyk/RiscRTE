@@ -1,4 +1,70 @@
-# Profile-driven provisioning: bounded core checkpoint (0.1.25)
+# Profile-driven provisioning (Runtime 0.1.36)
+
+## Current first-install workflow
+
+[First-install packaging](FIRST_INSTALL.md) is the current entry point. A verified
+public Runtime seed plus a private owner profile can be assembled offline into
+one new-device flash image. On boot, Runtime's built-in flash/NVS, ESP32 station,
+SNTP and verified HTTPS primitives fetch the complete owner-pinned inventory,
+including `board.json`, driver manifests/ELFs, app manifests/ELFs and
+`default.elf`. Network bootstrap does not depend on downloading its own Wi-Fi or
+storage driver. Product providers start only after full board/graph/ELF admission
+and selection of a verified inactive pair.
+
+Current source preserves main's app-data and full-cohort update contracts and
+Runtime 0.1.35's optional IQ resource/sleep diagnostics. ABI1 and ABI2 remain
+separate explicit layouts; current Watch needs `esp32s3-16mb-appdata-iq`. Its
+profile is generated from a complete verified product store and immutable
+published file URLs, not an app-only catalog or inferred dependency list.
+A provided `cohort.json` must match the exact cloned Runtime version, firmware
+length/hash and selected layout. App-data and unrelated NVS contents are never
+provisioning update targets. Successful profile consumption is also carried in
+the existing paired-journal trailer across ordinary app, firmware and full-cohort
+updates. A confirmed newer product therefore remains offline on the old unchanged
+owner profile, even when its immutable cohort image has no private digest file.
+Corrupt/nonempty receipts fail closed; pending boots never consume them as health
+confirmation. Receipt write/readback must succeed before readiness/selection.
+
+Metadata close failures now propagate through board/boot/driver/app/cohort reads.
+They retain native ownership, block admission/cleanup/restart and keep a live
+invocation mapped. No fallback is launched after a failed close.
+
+Schema 1 remains supported. Compact schema 2 has exact root fields `schema`,
+`schema_version`, `wifi`, `base_url`, `files`. The base is a canonical HTTPS
+directory URL ending in `/`; each file has exactly `path`, `bytes`, `sha256`.
+Its URL is the base plus the strict relative path. Both schemas allow 3–128
+files; the owner-input blob remains bounded at 16 KiB. `boot.json`, `board.json`
+and `default.elf` are required. Unknown fields, mixed URL forms, duplicate paths,
+escaped/query/userinfo URLs and bad UTF-8 remain refused. Public examples contain
+no credentials; private owner outputs must remain local and outside Git/artifact
+upload paths.
+
+Native capacity now uses pinned SPIFFS page/index/write-amplification accounting,
+including the profile digest and four reserved blocks, rather than the earlier
+75% payload approximation. Incoming chunks remain at most 4096 bytes; an 8192-byte
+PSRAM buffer coalesces short HTTP reads into unbuffered filesystem writes.
+Readback checkpoints remain at most 4096 bytes. The pinned SPIFFS host proof
+covers a real 83-file Watch store, repeated 4096/512/37/1-byte input, failed writes,
+hash/readback corruption, interrupted remount/retry and admission refusal/retry.
+Allocation/GC/I/O failure still preserves the active pair; the precheck is not a
+promise that arbitrary damaged media can be repaired.
+
+First-install composition is explicitly for a NEW device: its complete image
+contains private NVS and, for ABI2, initial empty app-data. It must never update an
+existing device. Existing devices retain the separately authorized maintenance
+input route and inactive-bank updates. A full NVS partition fails without erase;
+two maximum-sized profiles plus historical/other NVS keys are not guaranteed to
+fit. The original layout and maintenance planner remain ABI1-only.
+
+The generic e-ink profile machinery is ready for a complete admitted product
+store. The existing X4 heartbeat is not a functioning Reader. See the
+[concrete Reader product dependency plan](EINK_PROVISIONING_GAP.md).
+
+## Historical checkpoints and underlying contracts
+
+The following sections record the earlier implementation stages. Their old
+remaining-work statements describe those checkpoints; the current workflow and
+limits above take precedence.
 
 Paired `setup()` now reads bounded owner-controlled descriptor/profile input
 from existing NVS and runs the provisioning coordinator before normal Runtime

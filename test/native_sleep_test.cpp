@@ -8,6 +8,14 @@
 #include <string>
 #include <vector>
 
+#if RISC_SLEEP_DIAGNOSTICS
+namespace RiscDiagnostics {
+std::vector<std::string> traces;
+void lightEnter(){traces.push_back("light-enter");}
+void lightReturn(int32_t result,uint32_t cause){traces.push_back("light-return:"+std::to_string(result)+":"+std::to_string(cause));}
+void deepEnter(){traces.push_back("deep-enter");}
+}
+#endif
 uint64_t native_sleep_test_output_mask = native_sleep_test_gpio_mask;
 
 namespace {
@@ -40,6 +48,7 @@ bool globalHold = false;
 bool internalStack = true;
 uint64_t wakeMask = 0, timerUs = 0;
 bool gpioSource = false;
+int ext0Pin=-1,ext0Level=-1,failCall=-1;
 esp_sleep_wakeup_cause_t lightCause = ESP_SLEEP_WAKEUP_TIMER;
 esp_sleep_ext1_wakeup_mode_t wakeMode = ESP_EXT1_WAKEUP_ANY_LOW;
 esp_sleep_pd_option_t power = ESP_PD_OPTION_AUTO;
@@ -47,12 +56,16 @@ struct DeepSleepEntered {};
 
 void reset(const char* name) {
   scenario = name;
-  calls.clear(); errors.clear(); pads = {};
+#if RISC_SLEEP_DIAGNOSTICS
+  RiscDiagnostics::traces.clear();
+#endif
+  calls.clear(); errors.clear(); pads = {}; ext0Pin=ext0Level=failCall=-1;
   globalHold = false; internalStack = true; wakeMask = timerUs = 0; gpioSource = false; power = ESP_PD_OPTION_AUTO;
   native_sleep_test_output_mask = native_sleep_test_gpio_mask;
 }
 esp_err_t record(const char* name, int pin = -1, uint64_t arg = 0) {
   calls.push_back({name, pin, arg, {}});
+  if(int(calls.size())==failCall)return ESP_FAIL;
   const auto found = errors.find(name);
   return found == errors.end() ? ESP_OK : found->second;
 }
@@ -277,11 +290,18 @@ void testTimerAndLight() {
     CHECK(timerArm(1)); uint32_t cause = RISC_LIGHT_SLEEP_WAKE_NONE;
     errors["light_start"] = ESP_FAIL;
     CHECK(!lightEnter(&cause) && cause == RISC_LIGHT_SLEEP_WAKE_NONE);
+#if RISC_SLEEP_DIAGNOSTICS
+    CHECK(RiscDiagnostics::traces.back()=="light-return:"+std::to_string(ESP_FAIL)+":"+std::to_string(ESP_SLEEP_WAKEUP_UNDEFINED));
+    CHECK(RiscDiagnostics::traces[RiscDiagnostics::traces.size()-2]=="light-enter");
+#endif
     errors.clear(); CHECK(timerClear()); CHECK(lightClear(7));
     CHECK(!gpioSource && !timerUs);
   }
   for(auto cause : {ESP_SLEEP_WAKEUP_GPIO,ESP_SLEEP_WAKEUP_TIMER,ESP_SLEEP_WAKEUP_EXT1}) {
     lightCause=cause; uint32_t result=99; CHECK(lightEnter(&result));
+#if RISC_SLEEP_DIAGNOSTICS
+    CHECK(RiscDiagnostics::traces.back()=="light-return:0:"+std::to_string(cause));
+#endif
     CHECK(result == (cause==ESP_SLEEP_WAKEUP_GPIO ? RISC_LIGHT_SLEEP_WAKE_GPIO :
       cause==ESP_SLEEP_WAKEUP_TIMER ? RISC_LIGHT_SLEEP_WAKE_TIMER : RISC_LIGHT_SLEEP_WAKE_OTHER));
   }
@@ -326,10 +346,40 @@ void testHoldsAndEntry() {
   bool entered = false;
   try { enter(); } catch (const DeepSleepEntered&) { entered = true; }
   CHECK(entered && globalHold);
+#if RISC_SLEEP_DIAGNOSTICS
+  CHECK(RiscDiagnostics::traces.size()==1 && RiscDiagnostics::traces[0]=="deep-enter");
+#endif
   CHECK(pads[45].held && pads[45].level);
   names({"deep_hold_en", "deep_sleep_start"});
 }
 
+void testSets(){
+  const uint64_t both=(UINT64_C(1)<<14)|(UINT64_C(1)<<21),sensor=UINT64_C(1)<<14,crown=UINT64_C(1)<<21;
+  reset("set validation has no SDK mutations");
+  CHECK(!setValid(0,0));CHECK(!setValid(1ULL<<22,0));CHECK(!setValid(3,4));CHECK(!setValid(15,3));
+  CHECK(!setArm(3,0,4));CHECK(!setClear(3,0,4));CHECK(calls.empty());
+  for(uint64_t high:{UINT64_C(0),both,sensor,crown}){
+    reset("same and mixed polarity RTC sets");CHECK(setArm(both,high,crown));
+    if(high==0 || high==both)CHECK(ext0Pin==-1 && wakeMask==both);
+    else CHECK(ext0Pin==(high==sensor?21:14) && ext0Level==0 && wakeMask==high);
+    CHECK(power==ESP_PD_OPTION_ON && pads[21].rtcPullup && !pads[14].rtcPullup);
+    auto successful=calls;CHECK(timerArm(13));calls.clear();CHECK(setClear(both,high,crown));
+    CHECK(!wakeMask && ext0Pin==-1 && timerUs==13000 && power==ESP_PD_OPTION_AUTO);
+    CHECK(pads[21].pull==GPIO_PULLUP_ONLY && pads[14].pull==GPIO_FLOATING);
+    CHECK(!called("disable_timer") && !called("disable_gpio"));
+    const auto cleanup=calls;
+    for(size_t i=1;i<=successful.size();++i){reset("every set arm stage fault");failCall=int(i);CHECK(!setArm(both,high,crown));
+      CHECK(calls.size()==i);failCall=-1;calls.clear();CHECK(setClear(both,high,crown));CHECK(!wakeMask && ext0Pin==-1 && power==ESP_PD_OPTION_AUTO);
+    }
+    for(size_t i=1;i<=cleanup.size();++i){reset("every set cleanup stage fault attempts remaining pads");failCall=int(i);CHECK(!setClear(both,high,crown));CHECK(calls.size()==cleanup.size());
+      failCall=-1;calls.clear();CHECK(setClear(both,high,crown));CHECK(calls.size()==cleanup.size());
+    }
+  }
+  reset("singleton high routed EXT0 when low group has multiple inputs");
+  CHECK(setArm(7,1,6));CHECK(ext0Pin==0 && ext0Level==1 && wakeMask==6 && wakeMode==ESP_EXT1_WAKEUP_ANY_LOW);CHECK(setClear(7,1,6));
+  reset("EXT1-only cleanup preserves independently unowned EXT0 and timer");ext0Pin=9;ext0Level=1;timerUs=99;
+  CHECK(setClear(both,both,0));CHECK(ext0Pin==9 && timerUs==99 && !called("disable_ext0"));
+}
 void testStackReadiness() {
   reset("deep-sleep readiness checks current stack before entry");
   pads[45].held = true;
@@ -408,18 +458,22 @@ esp_err_t esp_sleep_pd_config(esp_sleep_pd_domain_t domain, esp_sleep_pd_option_
   if (result == ESP_OK) power = option;
   return result;
 }
+esp_err_t esp_sleep_enable_ext0_wakeup(gpio_num_t pin,int level){
+  const auto result=record("enable_ext0",pin,level);if(result==ESP_OK){ext0Pin=pin;ext0Level=level;}return result;
+}
 esp_err_t esp_sleep_enable_ext1_wakeup(uint64_t mask, esp_sleep_ext1_wakeup_mode_t mode) {
   const auto result = record("enable_ext1", mode, mask);
   if (result == ESP_OK) { wakeMask = mask; wakeMode = mode; }
   return result;
 }
 esp_err_t esp_sleep_disable_wakeup_source(esp_sleep_source_t source) {
-  CHECK(source == ESP_SLEEP_WAKEUP_TIMER || source == ESP_SLEEP_WAKEUP_EXT1 || source == ESP_SLEEP_WAKEUP_GPIO);
+  CHECK(source == ESP_SLEEP_WAKEUP_TIMER || source == ESP_SLEEP_WAKEUP_EXT1 || source == ESP_SLEEP_WAKEUP_EXT0 || source == ESP_SLEEP_WAKEUP_GPIO);
   const auto result = record(source == ESP_SLEEP_WAKEUP_TIMER ? "disable_timer" :
-    source == ESP_SLEEP_WAKEUP_GPIO ? "disable_gpio" : "disable_ext1", -1, source);
+    source == ESP_SLEEP_WAKEUP_GPIO ? "disable_gpio" : source == ESP_SLEEP_WAKEUP_EXT0 ? "disable_ext0" : "disable_ext1", -1, source);
   if (result == ESP_OK || result == ESP_ERR_INVALID_STATE) {
     if(source == ESP_SLEEP_WAKEUP_TIMER) timerUs=0;
     else if(source == ESP_SLEEP_WAKEUP_GPIO) gpioSource=false;
+    else if(source==ESP_SLEEP_WAKEUP_EXT0)ext0Pin=-1;
     else wakeMask=0;
   }
   return result;
@@ -446,6 +500,6 @@ void gpio_deep_sleep_hold_dis() { record("deep_hold_dis"); globalHold = false; }
 }
 
 int main() {
-  testValidity(); testOpen(); testArm(); testClear(); testStackReadiness(); testHoldsAndEntry(); testTimerAndLight();
+  testValidity(); testOpen(); testArm(); testClear(); testStackReadiness(); testHoldsAndEntry(); testTimerAndLight(); testSets();
   std::puts("Native sleep SDK shim: actual timer/Light/Deep adapters, 64-bit bounds, both sources, wake causes, every-stage faults, cleanup, stack guard and entry PASS");
 }

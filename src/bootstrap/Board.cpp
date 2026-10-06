@@ -54,7 +54,7 @@ uint64_t Board::deviceBus(uint64_t id) const {
   if (!strcmp(d->type,"display.spi")) return d->config.display.bus.instance_id;
   if (!strcmp(d->type,"touch.i2c")) return d->config.touch.bus.instance_id;
   if (!strcmp(d->type,"storage.sd-spi")) return d->config.sd.bus.instance_id;
-  if (!strcmp(d->type,"radio.lora")) return d->config.lora.bus.instance_id;
+  if (!strcmp(d->type,"radio.lora")) return d->lora().bus.instance_id;
   return 0;
 }
 bool Board::address(uint64_t busId,uint8_t value) {
@@ -147,14 +147,20 @@ bool Board::materialize(JsonObjectConst c,Device& d) {
     d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
   }
   if (!strcmp(d.type,"radio.lora")) {
-    auto& x=d.config.lora; x={}; x.struct_size=sizeof(x); x.bus=*b;
-    if (b->kind!=RISC_HW_BUS_SPI || !keys(c,{"bus_instance_id","cs","reset","busy","irq","minimum_hz","maximum_hz","tcxo_voltage","reset_active_high","busy_active_high","irq_active_high"}) ||
+    const bool selectable=d.hardware.config_version==2;
+    if(selectable)d.config.loraSelectable={};else d.config.lora={};
+    auto& x=selectable?d.config.loraSelectable.base:d.config.lora;
+    x.struct_size=selectable?sizeof(tw_hw_lora_v2):sizeof(x); x.bus=*b;
+    if(selectable){
+      if(!number(c["allowed_profiles"],1,TW_LORA_PROFILE_MASK,d.config.loraSelectable.allowed_profiles))return false;
+    } else if(!c["allowed_profiles"].isUnbound())return false;
+    if (b->kind!=RISC_HW_BUS_SPI || !keys(c,{"bus_instance_id","cs","reset","busy","irq","minimum_hz","maximum_hz","tcxo_voltage","reset_active_high","busy_active_high","irq_active_high"},{"allowed_profiles"}) ||
         !pin(c["cs"],x.cs) || !pin(c["reset"],x.reset) || !pin(c["busy"],x.busy) || !pin(c["irq"],x.irq) ||
         !claim(x.cs) || !claim(x.reset) || !claim(x.busy) || !claim(x.irq) ||
         !number(c["minimum_hz"],1,UINT32_MAX,x.minimum_hz) || !number(c["maximum_hz"],x.minimum_hz,UINT32_MAX,x.maximum_hz) ||
         !number(c["tcxo_voltage"],0,7,x.tcxo_voltage) || !flag(c["reset_active_high"],x.reset_active_high) ||
         !flag(c["busy_active_high"],x.busy_active_high) || !flag(c["irq_active_high"],x.irq_active_high)) return false;
-    d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
+    d.hardware.config=selectable?static_cast<const void*>(&d.config.loraSelectable):static_cast<const void*>(&x); d.hardware.config_size=x.struct_size; return true;
   }
   if (!strcmp(d.type,"storage.sd-spi")) {
     if (!keys(c,{"bus_instance_id","cs","detect","write_protect","detect_active_high","write_protect_active_high"}) || b->kind!=RISC_HW_BUS_SPI) return false;
@@ -247,7 +253,7 @@ bool Board::load(JsonObjectConst root) {
     if (!number(record["instance_id"],1,INT32_MAX,h.instance_id) || device(h.instance_id) ||
         !keys(chip,{"vendor","model","revision"}) || !text(chip["vendor"],vendor,sizeof(vendor)) || !text(chip["model"],model,sizeof(model)) ||
         !text(chip["revision"],d.revision,sizeof(d.revision)) || !text(record["compatible"],d.compatible,sizeof(d.compatible)) ||
-        !text(record["config_type"],d.type,sizeof(d.type)) || !number(record["config_version"],1,1,h.config_version) ||
+        !text(record["config_type"],d.type,sizeof(d.type)) || !number(record["config_version"],1,!strcmp(d.type,"radio.lora")?2:1,h.config_version) ||
         !materialize(record["config"],d)) return fail("invalid/unsupported/conflicting device config");
     if (!record["bindings"].isNull()) {
       if (!record["bindings"].is<JsonObjectConst>() || record["bindings"].size()>16) return fail("invalid bindings");

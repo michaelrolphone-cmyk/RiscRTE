@@ -8,6 +8,9 @@
 #include <cstring>
 using namespace RiscBoot;
 static bool owned=true,safe=true,retaining=false;static unsigned phase=0,reads=0,writes=0;
+static unsigned capacity=0,indexMode=0;
+extern "C" unsigned multi_index_mode(){return indexMode;}
+extern "C" unsigned multi_capacity(){return capacity;}
 static risc_key_value_v1 saved{};
 static std::map<uint32_t,std::map<std::string,std::vector<unsigned char>>> values;
 extern "C" void multi_owner(int v){owned=v;}
@@ -18,16 +21,22 @@ extern "C" void multi_retain(){safe=false;}
 extern "C" void multi_keep(risc_key_value_v1 api){saved=api;}
 static bool owner(){return owned;}
 static int32_t get(void*,uint32_t ns,const char* key,void* p,uint32_t cap,uint32_t* size){
- ++reads;assert(ns==1||ns==5);auto n=values.find(ns);if(n==values.end()||!n->second.count(key))return RISC_KEY_VALUE_NOT_FOUND;
+ ++reads;assert((ns>=1&&ns<=capacity)||ns==1||ns==5);auto n=values.find(ns);if(n==values.end()||!n->second.count(key))return RISC_KEY_VALUE_NOT_FOUND;
  auto& bytes=n->second[key];*size=bytes.size();if(cap<bytes.size())return RISC_KEY_VALUE_BUFFER_SMALL;memcpy(p,bytes.data(),bytes.size());return 0;
 }
-static int32_t put(void*,uint32_t ns,const char* key,const void* p,uint32_t n){++writes;assert(ns==1||ns==5);const auto* b=static_cast<const unsigned char*>(p);values[ns][key]=std::vector<unsigned char>(b,b+n);return 0;}
+static int32_t put(void*,uint32_t ns,const char* key,const void* p,uint32_t n){++writes;assert((ns>=1&&ns<=capacity)||ns==1||ns==5);const auto* b=static_cast<const unsigned char*>(p);values[ns][key]=std::vector<unsigned char>(b,b+n);return 0;}
 static KeyValueBackend backend{nullptr,get,put};
 static bool bindClock(Runtime& runtime){
  static const risc_platform_clock_api_v1 clock{1,sizeof(clock),nullptr,[](void*)->uint64_t{return 0;},[](void*,uint32_t){}};
  return runtime.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,&clock);
 }
-static Port port(){return {owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bindClock,&backend,[](){return safe;}};}
+static bool bindLastClock(Runtime& runtime){
+ static const risc_platform_clock_api_v1 clock{1,sizeof(clock),nullptr,[](void*)->uint64_t{return 12345;},[](void*,uint32_t){}};
+ for(unsigned i=0;i<31;i++)if(!runtime.registerPlatform("platform.index-fixture",1,Runtime::Scope::Device,i+1,&clock))return false;
+ if(!runtime.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,&clock))return false;
+ assert(!runtime.registerPlatform("platform.extra",1,Runtime::Scope::Device,99,&clock));return true;
+}
+static Port port(){return {owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},indexMode==1?bindLastClock:bindClock,&backend,[](){return safe;}};}
 static std::string grant(unsigned ns,const char* cap=RISC_KEY_VALUE_CAPABILITY,unsigned api=1){return "{\"capability\":\""+std::string(cap)+"\",\"api\":"+std::to_string(api)+",\"instance_id\":"+std::to_string(ns)+"}";}
 static std::string requirement(const char* cap=RISC_KEY_VALUE_CAPABILITY,unsigned api=1){return "{\"capability\":\""+std::string(cap)+"\",\"api\":"+std::to_string(api)+"}";}
 int main(int argc,char** argv){
@@ -41,7 +50,7 @@ int main(int argc,char** argv){
   write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":[],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]},{\"manifest\":\"child.json\",\"grants\":["+grant(1)+"]}]}");
  };
  unsigned cases=0;
- auto check=[&](const std::string& grants,const std::string& req,bool expected){stage(grants,req);Runtime r(port());bool actual=r.prepare(root.c_str());if(actual!=expected)fprintf(stderr,"unexpected admission %s\n",r.error());assert(actual==expected);++cases;};
+ auto check=[&](const std::string& grants,const std::string& req,bool expected){stage(grants,req);Runtime r(port());bool actual=r.prepare(root.c_str());if(actual!=expected)fprintf(stderr,"unexpected admission %s\n",r.error());assert(actual==expected);if(!expected){assert(!r.run());stage(grant(1),requirement());assert(!r.prepare(root.c_str()));assert(!r.run());}++cases;};
  check(grant(1)+","+grant(5),requirement(),true);
  check(grant(5)+","+grant(1),requirement(),true);
  check(grant(1)+","+grant(1),requirement(),false);
@@ -60,7 +69,21 @@ int main(int argc,char** argv){
  }
  check(grant(1)+","+grant(5),requirement()+","+requirement(RISC_KEY_VALUE_CAPABILITY,2),false);
  check(grant(1,RISC_BOUND_KEY_VALUE_CAPABILITY),requirement(RISC_BOUND_KEY_VALUE_CAPABILITY),false);
- std::string many;for(unsigned i=1;i<=8;++i){if(i>1)many+=",";many+=grant(i);}check(many,requirement(),true);check(many+","+grant(9),requirement(),false);
+ std::string many;
+ for(unsigned i=1;i<=Runtime::MaxAppPolicyGrants;++i){
+  if(i>1)many+=",";
+  many+=grant(i);
+  if(i>=8)check(many,requirement(),true);
+ }
+ check(many+","+grant(Runtime::MaxAppPolicyGrants+1),requirement(),false);
+ check(many+","+grant(1),requirement(),false);
+ // The newly usable final slot keeps the same duplicate and type rejection.
+ std::string prefix;for(unsigned i=1;i<Runtime::MaxAppPolicyGrants;++i){if(i>1)prefix+=",";prefix+=grant(i);}
+ check(prefix+","+grant(1),requirement(),false);
+ check(prefix+","+grant(0),requirement(),false);
+ check(prefix+","+grant(12,"undeclared"),requirement(),false);
+ check(prefix+","+grant(12,RISC_BOUND_KEY_VALUE_CAPABILITY),requirement(),false);
+ check(prefix+","+grant(12,RISC_KEY_VALUE_CAPABILITY,2),requirement(),false);
  for(unsigned run=0;run<3;++run){
   stage(run&1?grant(5)+","+grant(1):grant(1)+","+grant(5),requirement());
   owned=safe=true;retaining=run==2;phase=0;values.clear();reads=writes=0;
@@ -70,5 +93,44 @@ int main(int argc,char** argv){
   assert(saved.get(saved.context,"same",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_CONTEXT&&!size);
   assert(saved.put(saved.context,"same","bad",3)==RISC_KEY_VALUE_CONTEXT);++cases;
  }
+ for(unsigned limit:{9u,10u,11u,12u}) {
+  capacity=limit;owned=safe=true;retaining=false;values.clear();reads=writes=0;
+  std::string declared;for(unsigned i=1;i<=limit;++i){if(i>1)declared+=",";declared+=grant(i);}
+  stage(declared,requirement());Runtime r(port());assert(r.prepare(root.c_str()));
+  std::vector<std::string> parsedStorageChurn(256,std::string(4096,'X'));
+  assert(!r.prepare(root.c_str()));assert(r.run());
+  assert(reads==limit&&writes==limit);++cases;
+ }
+ // Preserve the twelve-grant limit; admit twelve declared types and reject a
+ // thirteenth independently (negative case still supplies only twelve grants).
+ static_assert(Runtime::MaxAppPolicyGrants==12,"App-data does not expand grant authority");
+ for(unsigned count:{10u,11u,12u,13u}) {
+  std::string requirements,grants,drivers;
+  for(unsigned i=0;i<count;++i){const std::string cap="test.cap"+std::to_string(i),id="cap"+std::to_string(i);
+   if(i){requirements+=",";drivers+=",";}
+   requirements+=requirement(cap.c_str());
+   if(i<Runtime::MaxAppPolicyGrants){if(!grants.empty())grants+=",";grants+=grant(0,cap.c_str());}
+   drivers+="{\"manifest\":\""+id+".json\"}";
+   write((id+".json").c_str(),"{\"type\":\"driver\",\"id\":\""+id+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\"default.elf\",\"driver_abi\":2,\"requires\":[],\"provides\":["+requirement(cap.c_str())+"]}");
+  }
+  write("default.json",manifest("default","default.elf",requirements));
+  write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+drivers+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]}]}");
+  Runtime r(port());const bool accepted=r.prepare(root.c_str());if(accepted!=(count<=Runtime::MaxAppRequirements))fprintf(stderr,"requirement capacity: %s\n",r.error());assert(accepted==(count<=Runtime::MaxAppRequirements));if(count>Runtime::MaxAppRequirements)assert(!strcmp(r.error(),"invalid app identity/declarations"));++cases;
+ }
+ capacity=0;indexMode=1;owned=safe=true;
+ stage(grant(0,"platform.clock"),requirement("platform.clock"));
+ {Runtime r(port());assert(r.prepare(root.c_str()) && r.run());++cases;}
+ indexMode=2;std::string driverList;
+ for(unsigned i=0;i<16;i++){
+  const std::string name="slot"+std::to_string(i),cap="test."+name;
+  write((name+".json").c_str(),"{\"type\":\"driver\",\"id\":\""+name+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\""+name+".elf\",\"driver_abi\":2,\"requires\":[],\"provides\":["+requirement(cap.c_str())+"]}");
+  if(i)driverList+=",";
+  driverList+="{\"manifest\":\""+name+".json\"}";
+ }
+ write("default.json",manifest("default","default.elf",requirement("test.slot15")));
+ write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+driverList+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grant(0,"test.slot15")+"]}]}");
+ {Runtime r(port());assert(r.prepare(root.c_str()) && r.run());++cases;}
+ indexMode=0;
+ capacity=0;
  printf("Multiple explicit KV namespaces: %u admission/lifecycle/owner/isolation/retention cases PASS\n",cases);
 }

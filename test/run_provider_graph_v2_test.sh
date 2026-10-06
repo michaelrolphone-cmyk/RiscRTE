@@ -16,7 +16,7 @@ cc "${flags[@]}" -DFIXTURE_ID='"fixture-child"' -DFIXTURE_CAPABILITY='"cap.child
 cc "${flags[@]}" -DFIXTURE_ID='"fixture-other"' -DFIXTURE_CAPABILITY='"cap.other"' \
   -DFIXTURE_REQUIRE='"cap.root"' \
   "$repo/test/drivers/provider_graph_fixture.c" -o "$build/other.so"
-c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
+c++ -std=c++17 -Wall -Wextra -Werror "${san[@]}" -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
   -I"$repo/test/drivers/stubs" -I"$repo/src" \
   "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \
@@ -40,12 +40,12 @@ c++ -std=c++17 -Wall -Wextra -Werror "${san[@]}" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \
   "$repo/test/drivers/provider_dependency_lifetime_v2_test.cpp" \
   -ldl -o "$build/dependency-lifetime-test"
-ASAN_OPTIONS=detect_stack_use_after_return=1 "$build/dependency-lifetime-test" \
+ASAN_OPTIONS="${ASAN_OPTIONS:+$ASAN_OPTIONS:}detect_stack_use_after_return=1" "$build/dependency-lifetime-test" \
   "$build/root.so" "$build/retaining.so"
 
 # Failed start retains mapped code/dependencies until quiescence retry.
 cc "${flags[@]}" "$repo/test/drivers/provider_failed_start_fixture.c" -o "$build/failed-start.so"
-c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
+c++ -std=c++17 -Wall -Wextra -Werror "${san[@]}" -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
   -I"$repo/test/drivers/stubs" -I"$repo/src" \
   "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \
@@ -56,7 +56,7 @@ c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver"
 # Recover a grantless failed activation by exact installed ID while another
 # provider sharing its dependency holds a live grant. Global graph shutdown
 # or speculative dependency release would invalidate the unrelated provider.
-c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
+c++ -std=c++17 -Wall -Wextra -Werror "${san[@]}" -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
   -I"$repo/test/drivers/stubs" -I"$repo/src" \
   "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \
@@ -68,7 +68,7 @@ c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver"
 cc "${flags[@]}" -DFIXTURE_ID='"fixture-retry"' \
   -DFIXTURE_CAPABILITY='"cap.retry"' -DFIXTURE_QUIESCE_FAIL_ONCE \
   "$repo/test/drivers/provider_graph_fixture.c" -o "$build/retry.so"
-c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
+c++ -std=c++17 -Wall -Wextra -Werror "${san[@]}" -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
   -I"$repo/test/drivers/stubs" -I"$repo/src" \
   "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \
@@ -81,7 +81,7 @@ c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver"
 cc "${flags[@]}" -DFIXTURE_ID='"fixture-stuck"' \
   -DFIXTURE_CAPABILITY='"cap.stuck"' -DFIXTURE_QUIESCE_FAIL \
   "$repo/test/drivers/provider_graph_fixture.c" -o "$build/stuck.so"
-c++ -std=c++17 -Wall -Wextra -Werror -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
+c++ -std=c++17 -Wall -Wextra -Werror "${san[@]}" -I"$repo/sdk/hardware" -I"$repo/sdk/driver" \
   -I"$repo/test/drivers/stubs" -I"$repo/src" \
   "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \

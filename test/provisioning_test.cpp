@@ -1,5 +1,7 @@
 #include "runtime/provisioning/Coordinator.h"
+#include "runtime/provisioning/SpiffsCapacity.h"
 #include "bootstrap/Runtime.h"
+#include "bootstrap/Json.h"
 #include <openssl/sha.h>
 #include <cassert>
 #include <filesystem>
@@ -61,8 +63,36 @@ int main(int argc,char** argv){assert(argc==2);fs::path base=argv[1];Host h(base
  h.server["https://example.test/default.elf"]=read(base/"default.elf");
  auto p=std::make_unique<Profile>();auto json=profile(h);uint8_t digest[32];SHA256(reinterpret_cast<const uint8_t*>(json.data()),json.size(),digest);
  assert(parseProfile(json.data(),json.size(),*p));
+ // SPIFFS estimates include write churn, metadata and four reserved blocks.
+ static_assert(SpiffsCapacity::filePages(1)==3 && SpiffsCapacity::filePages(251)==3,"first page");
+ static_assert(SpiffsCapacity::filePages(252)==4,"next data page");
+ static_assert(SpiffsCapacity::filePages(8192)==35,"coalesced flush");
+ assert(SpiffsCapacity::fits(*p,0x510000));
+ {auto oversized=std::make_unique<Profile>();oversized->count=3;
+  for(auto& f:oversized->files)f.bytes=2*1024*1024;
+  assert(!SpiffsCapacity::fits(*oversized,0x510000));
+  oversized->files[0].bytes=0;assert(!SpiffsCapacity::fits(*oversized,0x510000));}
  // Strict schema, limits, duplicate keys, path/source confusion and credentials.
  for(auto change:std::vector<std::pair<std::string,std::string>>{{"\"schema_version\":1","\"schema_version\":true"},{"\"schema_version\":1","\"schema_version\":1,\"schema_version\":1"},{"\"wifi\":","\"extra\":1,\"wifi\":"},{"test-only-password","short"},{"test-network",""},{"\"path\":\"board.json\"","\"path\":\"../board.json\""},{"https://example.test/board.json","http://example.test/board.json"},{"https://example.test/board.json","https://user@example.test/board.json"},{"https://example.test/board.json","https://example.test/board.json?token=x"},{"\"path\":\"board.json\"","\"path\":\"default.elf\""},{"\"path\":\"board.json\"","\"path\":\"default.elf/sub\""},{"\"path\":\"board.json\"","\"path\":\"other.json\""}}){auto bad=json;replace(bad,change.first,change.second);assert(!parseProfile(bad.data(),bad.size(),*p));assert(p->count==0 && p->password[0]==0);}
+ // Compact profiles admit a complete Watch-sized cohort within owner NVS.
+ {JsonDocument doc;assert(RiscBoot::parse(json.data(),json.size(),doc));
+  doc["schema_version"]=2;doc["base_url"]="https://example.test/";
+  for(auto file:doc["files"].as<JsonArray>())file.as<JsonObject>().remove("url");
+  const auto compact=[&](){std::string result;serializeJson(doc,result);return result;};
+  auto text=compact();assert(parseProfile(text.data(),text.size(),*p));
+  assert(!strcmp(p->files[0].url,"https://example.test/board.json"));
+  for(size_t i=3;i<MaxFiles;++i){auto item=doc["files"].as<JsonArray>().add<JsonObject>();
+   item["path"]="app"+std::to_string(i)+".json";item["bytes"]=1;item["sha256"]=std::string(64,'0');
+   if(i==58){text=compact();assert(text.size()<16384 && parseProfile(text.data(),text.size(),*p) && p->count==59);}}
+  text=compact();assert(parseProfile(text.data(),text.size(),*p) && p->count==MaxFiles);
+  auto extra=doc["files"].as<JsonArray>().add<JsonObject>();extra["path"]="excess.json";extra["bytes"]=1;extra["sha256"]=std::string(64,'0');
+  text=compact();assert(!parseProfile(text.data(),text.size(),*p));
+  doc["files"].as<JsonArray>().remove(MaxFiles);
+  for(const char* bad:{"https://example.test", "https://example.test/a/../", "http://example.test/", "https://user@example.test/", "https://example.test/?token=x/", "https://example.test/%2e/"}){
+   doc["base_url"]=bad;text=compact();assert(!parseProfile(text.data(),text.size(),*p));assert(!p->count&&!p->password[0]);}
+  doc["base_url"]="https://example.test/";doc["files"][0]["url"]="https://other.test/board.json";text=compact();assert(!parseProfile(text.data(),text.size(),*p));
+  doc["files"][0].as<JsonObject>().remove("url");doc["base_url"]="https://example.test/"+std::string(365,'x')+"/";text=compact();assert(!parseProfile(text.data(),text.size(),*p));
+ }
  // Numeric/hash/size limits reject before any network or storage callback.
  assert(!parseProfile(nullptr,0,*p));
  for(const char* invalid:{"0","-1","true","1.5","8388609","18446744073709551616"}){

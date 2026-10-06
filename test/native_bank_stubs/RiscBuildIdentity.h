@@ -1,1 +1,3 @@
+#ifndef RISC_BUILD_VERSION
 #define RISC_BUILD_VERSION "0.1.11"
+#endif

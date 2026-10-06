@@ -1,0 +1,13 @@
+# EXPLICIT NEW 16 MiB app-data deployment only. Never OTA-repartition a device.
+# Existing paired table is unchanged. Native banks are 0x260000, bootfs 0x510000.
+# appdata is independent of both immutable boot stores and their readiness hashes.
+# Name,Type,SubType,Offset,Size
+nvs,data,nvs,0x9000,0x6000
+app0,app,ota_0,0x10000,0x260000
+appdata,data,0x41,0x270000,0x80000
+bootfs0,data,spiffs,0x2f0000,0x510000
+app1,app,ota_1,0x800000,0x260000
+# 0xa60000..0xae0000 deliberately unassigned, not a second implicit data store.
+bootfs1,data,spiffs,0xae0000,0x510000
+otadata,data,ota,0xff0000,0x2000
+bank_state,data,0x40,0xff2000,0x2000

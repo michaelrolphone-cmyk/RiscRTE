@@ -26,7 +26,7 @@ struct Session {
  uint8_t input[RiscProvision::ProfileInputBytes]{},digest[32]{},buffer[RISC_HTTP_CHUNK_MAX]{};
  char root[256]{};uint64_t bankToken=0,httpToken=0;
  uint32_t received=0;size_t fileIndex=0;
- bool radio=false,retained=false,finished=false,historyChecked=false,timeStarted=false;
+ bool radio=false,retained=false,finished=false,historyChecked=false,timeStarted=false,identityUnavailable=false;
  Reason reason=Reason::Unchanged;
  explicit Session(const Port& p):port(p){}
  ~Session(){volatile uint8_t* p=input;for(size_t i=0;i<sizeof(input);++i)p[i]=0;}
@@ -63,12 +63,18 @@ struct Session {
    return true;
  }
  bool matches(const uint8_t* expected){
+   uint8_t identity[32];memcpy(identity,expected,32);
+   const auto receipt=RiscBankStore::provisionIdentity(identity);
+   if(receipt==RiscBankStore::ProvisionIdentity::Match)return true;
+   if(receipt==RiscBankStore::ProvisionIdentity::Different)return false;
+   if(receipt==RiscBankStore::ProvisionIdentity::Unavailable){identityUnavailable=true;reason=Reason::HistoryUnavailable;return false;}
    char path[256];if(!RiscBoot::path(root,RiscProvision::StoreFiles::DigestFile,path,sizeof(path)))return false;
    FILE* file=fopen(path,"rb");if(!file)return false;
    uint8_t actual[33];const size_t size=fread(actual,1,sizeof(actual),file);bool ok=size==32&&!ferror(file)&&!memcmp(actual,expected,32);
    if(fclose(file)!=0){retained=true;reason=Reason::CleanupRetained;ok=false;}return ok;
  }
  Step connect(){
+   if(identityUnavailable){reason=Reason::HistoryUnavailable;return Step::Failed;}
    reason=Reason::NetworkFailed;auto& h=port.hardware;
    if(!historyChecked){const auto history=RiscBankStore::provisionHistory(digest);
      if(history!=RiscBankStore::ProvisionHistory::Clear){reason=history==RiscBankStore::ProvisionHistory::SameAttempt?Reason::AttemptHeld:Reason::HistoryUnavailable;return Step::Failed;}
@@ -86,7 +92,7 @@ struct Session {
  Step begin(){
    reason=Reason::StageFailed;
    if(!bankToken){
-     if(RiscBankStore::provisionBegin(profile,digest,port.hardware,port.keyValue,&bankToken)!=RISC_BANK_OK){reason=Reason::StageFailed;return Step::Failed;}
+     if(RiscBankStore::provisionBegin(profile,digest,port.hardware,port.keyValue,&bankToken,port.appData)!=RISC_BANK_OK){reason=Reason::StageFailed;return Step::Failed;}
    }
    risc_bank_status_v1 status{};status.struct_size=sizeof(status);
    if(RiscBankStore::provisionStep(bankToken,&status)!=RISC_BANK_OK){reason=Reason::StageFailed;return Step::Failed;}

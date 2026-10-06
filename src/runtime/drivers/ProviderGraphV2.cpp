@@ -108,7 +108,7 @@ bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
       (regular && !spec.verifiedElfPath) ||
       (!regular && !privileged) ||
       (privilegedAdmission != privileged) ||
-      spec.requirementCount > kMaxModules ||
+      spec.requirementCount > kMaxRequirements ||
       !spec.lease.valid() ||
       (spec.requirementCount && !spec.requirements)) return false;
   if (privileged) {

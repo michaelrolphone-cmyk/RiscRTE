@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
+#include <cstdio>
 namespace RiscProvision {
 void Profile::clear(){volatile unsigned char* p=reinterpret_cast<volatile unsigned char*>(this);for(size_t i=0;i<sizeof(*this);++i)p[i]=0;}
 namespace {
@@ -44,9 +45,19 @@ bool decode(const char* bytes,size_t size,Profile& out){
   ClearingAllocator allocator;JsonDocument doc(&allocator);
   if(!RiscBoot::parse(bytes,size,doc))return false;
   auto root=doc.as<JsonObjectConst>();int64_t n=0;
-  if(!RiscBoot::keys(root,{"schema","schema_version","wifi","files"}) ||
-     !RiscBoot::eq(root["schema"],"riscrte.provisioning") ||
-     !RiscBoot::integer(root["schema_version"],1,1,n))return false;
+  if(!RiscBoot::eq(root["schema"],"riscrte.provisioning") ||
+     !RiscBoot::integer(root["schema_version"],1,2,n))return false;
+  const bool compact=n==2;char base[385]{};
+  if(compact){
+    if(!RiscBoot::keys(root,{"schema","schema_version","wifi","base_url","files"}) ||
+       !RiscBoot::text(root["base_url"],base,sizeof(base)))return false;
+    const size_t length=strlen(base);char probe[400];
+    // Validate a real leaf under the supplied directory, never normalize a
+    // query, escape, dot component or missing trailing delimiter.
+    if(!length || base[length-1]!='/' || length+2>sizeof(probe))return false;
+    memcpy(probe,base,length);memcpy(probe+length,"x",2);
+    if(!source(probe))return false;
+  }else if(!RiscBoot::keys(root,{"schema","schema_version","wifi","files"}))return false;
   auto wifi=root["wifi"].as<JsonObjectConst>();
   if(!RiscBoot::keys(wifi,{"ssid","password"}) || !RiscBoot::text(wifi["ssid"],out.ssid,sizeof(out.ssid)) ||
      !wifi["password"].is<const char*>())return false;
@@ -59,11 +70,16 @@ bool decode(const char* bytes,size_t size,Profile& out){
   uint32_t total=0;bool boot=false,board=false,app=false;
   for(auto value:files){
     auto object=value.as<JsonObjectConst>();auto& file=out.files[out.count];char joined[200],digest[65];
-    if(!RiscBoot::keys(object,{"path","url","bytes","sha256"}) ||
+    if(!(compact?RiscBoot::keys(object,{"path","bytes","sha256"}):RiscBoot::keys(object,{"path","url","bytes","sha256"})) ||
        !RiscBoot::text(object["path"],file.path,sizeof(file.path)) || !RiscBoot::path("",file.path,joined,sizeof(joined)) ||
-       !RiscBoot::text(object["url"],file.url,sizeof(file.url)) || !source(file.url) ||
        !RiscBoot::integer(object["bytes"],1,MaxFileBytes,n) ||
        !RiscBoot::text(object["sha256"],digest,sizeof(digest)) || strlen(digest)!=64)return false;
+    if(compact){
+      const size_t baseLength=strlen(base),pathLength=strlen(file.path);
+      if(baseLength+pathLength>=sizeof(file.url))return false;
+      memcpy(file.url,base,baseLength);memcpy(file.url+baseLength,file.path,pathLength+1);
+      if(!source(file.url))return false;
+    }else if(!RiscBoot::text(object["url"],file.url,sizeof(file.url)) || !source(file.url))return false;
     file.bytes=uint32_t(n);if(file.bytes>MaxStoreBytes-total)return false;total+=file.bytes;
     for(unsigned j=0;j<32;++j){int a=hex(digest[2*j]),b=hex(digest[2*j+1]);if(a<0||b<0)return false;file.sha256[j]=uint8_t(a*16+b);}
     for(size_t j=0;j<out.count;++j){

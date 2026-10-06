@@ -1,7 +1,10 @@
 #include <RiscRuntimeV1.h>
 #include <RiscKeyValueV1.h>
+#include <RiscPlatformClockV1.h>
 #include <assert.h>
 #include <string.h>
+extern unsigned multi_capacity(void);
+extern unsigned multi_index_mode(void);
 extern void multi_owner(int);
 extern int multi_phase(void);
 extern void multi_next(void);
@@ -18,6 +21,26 @@ __attribute__((visibility("default"))) void app_main(void){
  assert(kv->get(kv->context,"same",bytes,sizeof(bytes),&size)==0&&size==3&&!memcmp(bytes,"one",3));
  assert(rt->release(&one));multi_next();return;
 #else
+ unsigned index_mode=multi_index_mode();
+ if(index_mode){
+  if(index_mode==1){assert(rt->acquire("platform.clock",1,0,&one));const risc_platform_clock_api_v1* clock=one.api;assert(clock->monotonic_ms(clock->context)==12345);}
+  else {assert(index_mode==2 && rt->acquire("test.slot15",1,0,&one));const unsigned* value=one.api;assert(value[0]==1 && value[2]==15);}
+  assert(rt->release(&one));return;
+ }
+ unsigned capacity=multi_capacity();
+ if(capacity){
+  risc_runtime_capability_v1 grants[12]={0};assert(capacity<=12);
+  for(unsigned i=0;i<capacity;++i){
+   grants[i].struct_size=sizeof(grants[i]);assert(rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,i+1,&grants[i]));
+   const risc_key_value_v1* kv=grants[i].api;unsigned value=i+1,got=0;uint32_t n=0;
+   assert(kv->put(kv->context,"slot",&value,sizeof(value))==0);
+   assert(kv->get(kv->context,"slot",&got,sizeof(got),&n)==0&&n==sizeof(got)&&got==value);
+  }
+  assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,0,&bad));
+  assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,capacity+1,&bad));
+  for(unsigned i=0;i<capacity;++i)assert(rt->release(&grants[i]));
+  return;
+ }
  bad.slot=77;bad.generation=88;bad.api=(void*)1;
  assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,0,&bad)&&!bad.slot&&!bad.generation&&!bad.api);
  assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,2,&bad));

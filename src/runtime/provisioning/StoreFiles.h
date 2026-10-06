@@ -1,5 +1,6 @@
 #pragma once
 #include "Profile.h"
+#include "SpiffsCapacity.h"
 #include <cstdio>
 namespace RiscProvision {
 // Compiled-in inactive-volume file backend. The mount owner must establish that
@@ -28,14 +29,15 @@ class StoreFiles final {
  bool retained() const{return retained_;}
  size_t fileIndex() const{return index_;}
  static constexpr const char* DigestFile=".provision-sha256";
+ static constexpr uint32_t WriteBufferBytes=SpiffsCapacity::WriteBytes;
  private:
  bool checkpoint();
  bool filename(const char*,char (&out)[256]) const;
  bool inventory(const char*,unsigned,bool erase,size_t& count);
  bool verify(const File&);
  FileBackend io_;const Profile* profile_=nullptr;
- char root_[256]{};uint8_t digest_[32]{},buffer_[4096]{};
- uint32_t started_=0,received_=0;size_t index_=0;
+ char root_[256]{};uint8_t digest_[32]{},buffer_[WriteBufferBytes]{};
+ uint32_t started_=0,received_=0,buffered_=0;size_t index_=0;
  FILE* stream_=nullptr;bool begun_=false,failed_=false,finished_=false,retained_=false;
 };
 }

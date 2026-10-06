@@ -68,7 +68,10 @@ int main(){
  assert(Port::gpioLightSleep(&g,90,false,&out)==RISC_LIGHT_SLEEP_BUSY);
  assert(Port::gpioDeepSleep(&g,90,false)==RISC_DEEP_SLEEP_BUSY);
  p.spiBuses_[0].held=&p.spis_[0];assert(Port::i2sRead(&c,token,pcm,256,&done,40) && done==256 && pcm[255]==255);
- accepted=32;assert(!Port::i2sRead(&c,token,pcm,256,&done,40) && done==32 && !p.providerStorageSafe());
+ accepted=32;assert(Port::i2sRead(&c,token,pcm,256,&done,40) && done==32 && p.providerStorageSafe()&&!c.closing);
+ accepted=0;for(unsigned i=0;i<100;i++)assert(Port::i2sRead(&c,token,pcm,256,&done,40)&&!done&&p.providerStorageSafe()&&!c.closing);
+ accepted=256;assert(Port::i2sRead(&c,token,pcm,256,&done,40)&&done==256&&!c.closing);
+ readOk=false;accepted=32;assert(!Port::i2sRead(&c,token,pcm,256,&done,40)&&done==32&&!p.providerStorageSafe());readOk=true;
  p.spiBuses_[0].held=nullptr;
  assert(Port::gpioLightSleep(&g,90,false,&out)==RISC_LIGHT_SLEEP_RETAINED);
  assert(Port::gpioDeepSleep(&g,90,false)==RISC_DEEP_SLEEP_RETAINED);

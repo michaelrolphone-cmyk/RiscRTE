@@ -1,0 +1,8 @@
+{
+  "runtime_target": "esp32s3-16mb-appdata-iq",
+  "layout": "riscrte-paired-appdata-v2",
+  "base_url": "https://packages.example.invalid/OWNER_RELEASE/",
+  "time_server": "time.example.invalid",
+  "product_store": "OWNER_VERIFIED_COMPLETE_PRODUCT_STORE",
+  "private_directory": "OWNER_PRIVATE_DIRECTORY_OUTSIDE_GIT"
+}

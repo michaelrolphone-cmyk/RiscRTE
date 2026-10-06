@@ -21,6 +21,24 @@ static bool logLine(const char* s){lines.emplace_back(s);if(heartbeatMode)++beat
 static void write(const std::string& p,const std::string& s){std::ofstream(p)<<s;}
 static const char* board=R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[{"instance_id":7,"chip":{"vendor":"test","model":"gpio","revision":"unspecified"},"compatible":"test,gpio","config_type":"gpio.bank","config_version":1,"config":{"pins":[5],"active_high":true,"pull_up":false,"debounce_us":0,"long_press_us":0,"click_min_us":0}}]})";
 static const char* manifest=R"({"type":"driver","id":"probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"probe.elf","requires":[{"capability":"hardware.device","api":1}],"provides":[{"capability":"test.probe","api":1}],"hardware_compatibility":[{"compatible":"test,gpio","revisions":["unspecified"],"config_type":"gpio.bank","config_version":1}]})";
+static void driverCapacity(const std::string& root) {
+  JsonDocument config;config["board"]="board.json";config["default_app"]="default.elf";
+  auto drivers=config["drivers"].to<JsonArray>();
+  auto save=[&](const std::string& name,const JsonDocument& value){std::string bytes;serializeJson(value,bytes);write(root+"/"+name,bytes);};
+  for(unsigned i=0;i<RuntimeProviders::GraphV2::kMaxModules;++i){
+    JsonDocument provider;provider["type"]="driver";provider["id"]="selected-"+std::to_string(i);provider["version"]="1.0.0";
+    provider["driver_abi"]=2;provider["architecture"]="xtensa-esp32s3";provider["file_name"]="probe.elf";
+    provider["requires"].to<JsonArray>();auto cap=provider["provides"].to<JsonArray>().add<JsonObject>();cap["capability"]="test.selected-"+std::to_string(i);cap["api"]=1;
+    auto name="selected-"+std::to_string(i)+".json";save(name,provider);drivers.add<JsonObject>()["manifest"]=name;
+  }
+  save("boot.json",config);
+  {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));}
+  drivers.add<JsonObject>()["manifest"]="selected-0.json";save("boot.json",config);
+  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"invalid driver list"));}
+  drivers.remove(RuntimeProviders::GraphV2::kMaxModules);drivers[RuntimeProviders::GraphV2::kMaxModules-1]["manifest"]="selected-0.json";save("boot.json",config);
+  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"duplicate package singleton/hardware owner"));}
+  puts("Runtime providers: full selected capacity accepted, overflow and duplicate final slot rejected before activation PASS");
+}
 static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   JsonDocument original, app;
   assert(parse(grantBoot,strlen(grantBoot),original));
@@ -29,7 +47,7 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
     std::string encoded;serializeJson(doc,encoded);write(root+"/"+name,encoded);
   };
   // Put the executed app at the last policy slot, not in the original eight.
-  for(unsigned i=0;i<16;++i) {
+  for(unsigned i=0;i<Runtime::MaxAppPolicies;++i) {
     JsonDocument extra;extra.set(app);
     const std::string name="policy-"+std::to_string(i);
     extra["id"]=name;extra["file_name"]=name+".elf";
@@ -51,48 +69,55 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
     assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),reason));
     assert(!runtime.run());assert(lines.size()==before);
   };
-  for(unsigned count:{9u,16u}) {
+  for(unsigned count:{9u,16u,18u,unsigned(Runtime::MaxAppPolicies)}) {
     policies(count);generation=0;lines.clear();
     Runtime runtime({owner,health,delay,logLine});
-    assert(runtime.prepare(root.c_str()));assert(runtime.run());
+    assert(runtime.prepare(root.c_str()));
+    // Parser-owned JSON and source text are gone before app grant lookup.
+    // Churn equivalent allocations, then prove the authoritative names survive
+    // default/child/default reload and rejected prepare/registration attempts.
+    std::vector<std::string> churn(256,std::string(4096,'Z'));
+    assert(!runtime.prepare(root.c_str()));
+    assert(!runtime.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,&runtime));
+    assert(runtime.run());
     assert((lines==std::vector<std::string>{"CAP granted","CAP child denied","CAP granted"}));
   }
-  policies(17);rejected("invalid app capability policy");
+  policies(Runtime::MaxAppPolicies+1);rejected("invalid app capability policy");
   config["app_capabilities"].to<JsonObject>();rejected("invalid app capability policy");
-  policies(16);config["app_capabilities"][15]["manifest"]="../app.json";
+  policies(Runtime::MaxAppPolicies);config["app_capabilities"][Runtime::MaxAppPolicies-1]["manifest"]="../app.json";
   rejected("invalid app policy manifest path");
-  policies(16);config["app_capabilities"][15]="invalid";
+  policies(Runtime::MaxAppPolicies);config["app_capabilities"][Runtime::MaxAppPolicies-1]="invalid";
   rejected("invalid app policy manifest path");
   // Duplicate identity and duplicate ELF path still reject at the new last slot.
   for(const char* field:{"id","file_name"}) {
     JsonDocument duplicate;duplicate.set(app);
     duplicate[field]=!strcmp(field,"id")?"policy-0":"policy-0.elf";
-    save("app.json",duplicate);policies(16);
+    save("app.json",duplicate);policies(Runtime::MaxAppPolicies);
     rejected("duplicate app identity/path policy");
   }
   save("app.json",app);
   for(const char* field:{"api","instance_id"}) {
-    policies(16);config["app_capabilities"][15]["grants"][0][field]=!strcmp(field,"api")?2:8;
+    policies(Runtime::MaxAppPolicies);config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"][0][field]=!strcmp(field,"api")?2:8;
     rejected(!strcmp(field,"api")?"app requirement not uniquely authorized":"app provider unavailable");
   }
-  policies(16);config["app_capabilities"][15]["grants"].as<JsonArray>().clear();
+  policies(Runtime::MaxAppPolicies);config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>().clear();
   rejected("app requirement not uniquely authorized");
-  policies(16);auto grants=config["app_capabilities"][15]["grants"].as<JsonArray>();
+  policies(Runtime::MaxAppPolicies);auto grants=config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>();
   grants.add(grants[0]);rejected("app requirement not uniquely authorized");
-  policies(16);grants=config["app_capabilities"][15]["grants"].as<JsonArray>();
+  policies(Runtime::MaxAppPolicies);grants=config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>();
   grants.add(grants[0]);grants[1]["capability"]="test.extra";
   rejected("undeclared app grant");
   JsonDocument duplicate;duplicate.set(app);
   auto requirements=duplicate["requires"].as<JsonArray>();requirements.add(requirements[0]);
-  save("app.json",duplicate);policies(16);rejected("duplicate app requirement");
-  // Policy capacity does not increase either per-app declaration/grant bound.
-  while(requirements.size()<9)requirements.add(requirements[0]);
+  save("app.json",duplicate);policies(Runtime::MaxAppPolicies);rejected("duplicate app requirement");
+  // Declaration and grant namespace capacities remain independently bounded.
+  while(requirements.size()<Runtime::MaxAppRequirements+1)requirements.add(requirements[0]);
   save("app.json",duplicate);rejected("invalid app identity/declarations");
-  save("app.json",app);policies(16);
-  grants=config["app_capabilities"][15]["grants"].as<JsonArray>();
-  while(grants.size()<9)grants.add(grants[0]);
+  save("app.json",app);policies(Runtime::MaxAppPolicies);
+  grants=config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>();
+  while(grants.size()<Runtime::MaxAppPolicyGrants+1)grants.add(grants[0]);
   rejected("invalid app identity/declarations");
-  puts("App policy capacity: 9/16 accepted, 17 rejected; last-slot identity/path, exact grants and eight-declaration bounds PASS");
+  puts("App policy capacity: 9/16/18 and full bound accepted, overflow rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
 }
 int main(int argc,char** argv){
   assert(argc==2);std::string root=argv[1];
@@ -175,6 +200,7 @@ int main(int argc,char** argv){
   {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
   puts("App grants: identity/declaration/exact instance, size/version checks, stale handles, child isolation and automatic revocation PASS");
   appPolicyCapacity(root,grantBoot);
+  driverCapacity(root);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"heartbeat.elf","drivers":[]})");
   heartbeatMode=true;generation=0;lines.clear();
   {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}

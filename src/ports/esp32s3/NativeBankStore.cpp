@@ -7,6 +7,7 @@
 #include "runtime/provisioning/StoreFiles.h"
 #include "CpuPort.h"
 #include "NativeBoard.h"
+#include "runtime/update/Cohort.h"
 #include <Arduino.h>
 #include <RiscBuildIdentity.h>
 #include <esp_ota_ops.h>
@@ -22,6 +23,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <cerrno>
 #include <new>
 #include <esp_flash.h>
 extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
@@ -30,7 +32,7 @@ extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
 #ifdef RISC_OWNER_INSTALLER
 extern "C" __attribute__((used)) const char risc_paired_store_abi[]="RISC_OWNER_INSTALLER:1";
 #else
-extern "C" __attribute__((used)) const char risc_paired_store_abi[]="RISC_PAIRED_STORE_ABI:1";
+extern "C" __attribute__((used)) const char risc_paired_store_abi[]=RISC_PAIRED_ABI_MARKER;
 #endif
 extern "C" __attribute__((used)) const char risc_runtime_update_version[]="RISC_RUNTIME_VERSION:" RISC_BUILD_VERSION;
 // Arduino's weak default confirms before setup(), which is too early.
@@ -46,12 +48,13 @@ bool (*isOwner)()=nullptr;bool (*restartIsSafe)()=nullptr;
 bool (*operationIsSafe)()=nullptr;
 bool prepared=false,mounted=false,pending=false,confirmed=false;
 bool rollbackTrusted=false;
-bool replacingFirmware=false;
+bool replacingFirmware=false,replacingCohort=false;
 unsigned activeBank=0;
 FILE* appFile=nullptr;
 struct Scratch {
   Record verifiedActiveRecord{};
   RiscBoot::Runtime::UpdateApp appPaths{};
+  risc_bank_cohort_v1 cohort{};
   char manifest[RISC_BANK_MANIFEST_MAX]{};
   uint32_t manifestSize=0,appSize=0;
   uint8_t appDigest[32]{};
@@ -66,21 +69,30 @@ struct ProvisionState {
   RiscProvision::StoreFiles files;
   RiscCpu::Hardware hardware;
   const RiscBoot::KeyValueBackend* keyValue;
-  ProvisionState(RiscProvision::FileBackend io,const RiscCpu::Hardware& h,const RiscBoot::KeyValueBackend* k):files(io),hardware(h),keyValue(k){}
+  const RiscBoot::AppDataBackend* appData;
+  ProvisionState(RiscProvision::FileBackend io,const RiscCpu::Hardware& h,const RiscBoot::KeyValueBackend* k,const RiscBoot::AppDataBackend* a):files(io),hardware(h),keyValue(k),appData(a){}
 };
 ProvisionState* provisionState=nullptr;
 RiscCpu::Port* candidateCpu=nullptr;
 bool provisionReadRetained=false;
+enum class ReceiptState {Missing,Ready,Unavailable};
+ReceiptState sourceReceipt(uint8_t (&)[32]);
+bool persistReceipt(unsigned,const Record&,const uint8_t (&)[32]);
 bool bindProvisioningCandidate(RiscBoot::Runtime&);
 uint8_t provisionDigest[32]{};
 uint64_t provisionToken=0;
 const char* stagingRoot="/updatefs";
-constexpr uint32_t ProvisionCapacity=(StoreBytes/4)*3;
+constexpr uint32_t ProvisionCapacity=StoreBytes;
+#ifdef ESP_PLATFORM
+static_assert(CONFIG_SPIFFS_PAGE_SIZE==RiscProvision::SpiffsCapacity::PageBytes &&
+              CONFIG_SPIFFS_OBJ_NAME_LEN==32 && CONFIG_SPIFFS_META_LENGTH==4,
+              "Revalidate provisioning page accounting for changed SPIFFS geometry");
+#endif
 #ifndef CONFIG_SPIFFS_OBJ_NAME_LEN
 #define CONFIG_SPIFFS_OBJ_NAME_LEN 32
 #endif
 bool owner(){return isOwner && isOwner();}
-bool operationSafe(){return owner() && operationIsSafe && operationIsSafe();}
+bool operationSafe(){return owner() && !provisionReadRetained && (!runtime || !runtime->metadataCloseRetained()) && operationIsSafe && operationIsSafe();}
 uint32_t now(void*){return millis();}
 bool hashBegin(void*){return mbedtls_sha256_starts_ret(&scratch->hashContext,0)==0;}
 bool hashAdd(void*,const void* p,uint32_t n){return mbedtls_sha256_update_ret(&scratch->hashContext,static_cast<const uint8_t*>(p),n)==0;}
@@ -92,11 +104,18 @@ bool write(void*,unsigned b,unsigned r,uint32_t o,const void* p,uint32_t n){retu
 bool invalidate(void*,unsigned b){return operationSafe() && b<2 && b!=activeBank && journal && esp_partition_erase_range(journal,b*4096,4096)==ESP_OK;}
 bool record(void*,unsigned b,const Record& value){
   if(!operationSafe() || b==activeBank || !validRecord(value,b) || !journal)return false;
+  uint8_t inherited[32]{};ReceiptState receipt=ReceiptState::Missing;
+  if(!provisionProfile){receipt=sourceReceipt(inherited);if(receipt==ReceiptState::Unavailable)return false;}
   if(esp_partition_write(journal,b*4096,&value,sizeof(value))!=ESP_OK)return false;
-  Record check{};return esp_partition_read(journal,b*4096,&check,sizeof(check))==ESP_OK && !memcmp(&value,&check,sizeof(check));
+  Record check{};
+  if(esp_partition_read(journal,b*4096,&check,sizeof(check))!=ESP_OK || memcmp(&value,&check,sizeof(check)))return false;
+  // A full-cohort image has immutable publisher-owned bytes and no private
+  // profile marker. Carry consumption in the paired journal, before READY and
+  // selection, so a later confirmed boot cannot reapply the old owner profile.
+  return receipt!=ReceiptState::Ready || persistReceipt(b,value,inherited);
 }
 bool cleanup(void*){
-  if(!owner() || provisionReadRetained)return false;
+  if(!owner() || provisionReadRetained || (runtime && runtime->metadataCloseRetained()))return false;
   if(provisionFiles && !provisionFiles->close())return false;
   if(appFile){FILE* f=appFile;appFile=nullptr;if(fclose(f)!=0)return false;}
   if(mounted){if(esp_vfs_spiffs_unregister(labels[1-activeBank])!=ESP_OK)return false;mounted=false;}
@@ -183,7 +202,7 @@ bool admitElf(const uint8_t* bytes,size_t n,ElfRole role=ElfRole::Application){
     }
   }
   const bool application=main==1 && init==fini;
-  return role==ElfRole::Application?application:role==ElfRole::Driver?driver==1:application || driver==1;
+  return role==ElfRole::Application?application:role==ElfRole::Driver?driver==1 && !main && !init && !fini:application || (driver==1 && !main && !init && !fini);
 }
 struct AdmissionImages {const char* root;uint32_t started;bool seen[RiscProvision::MaxFiles]{};};
 bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole role){
@@ -208,15 +227,25 @@ bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole r
 }
 bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profile){
   if(!operationSafe() || !provisionState || &profile!=provisionProfile || candidateCpu || runtime || provisionReadRetained)return false;
+  // A product cohort must describe the exact Runtime firmware we cloned, not
+  // a different release whose update identity would become misleading.
+  for(size_t i=0;i<profile.count;++i)if(!strcmp(profile.files[i].path,"cohort.json")){
+    CohortIdentity cohort{};
+    if(!readCohort(root,cohort,&provisionReadRetained) || strcmp(cohort.runtimeVersion,RISC_BUILD_VERSION) ||
+       cohort.firmwareSize!=scratch->verifiedActiveRecord.firmwareSize ||
+       memcmp(cohort.firmwareSha,scratch->verifiedActiveRecord.firmwareSha,32))return false;
+  }
   void* cpuMemory=heap_caps_malloc(sizeof(RiscCpu::Port),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!cpuMemory)return false;
   void* runtimeMemory=heap_caps_malloc(sizeof(RiscBoot::Runtime),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!runtimeMemory){free(cpuMemory);return false;}
   candidateCpu=new(cpuMemory) RiscCpu::Port(provisionState->hardware);
-  auto* candidate=new(runtimeMemory) RiscBoot::Runtime({isOwner,nullptr,nullptr,nullptr,bindProvisioningCandidate,provisionState->keyValue});
+  auto* candidate=new(runtimeMemory) RiscBoot::Runtime({isOwner,nullptr,nullptr,nullptr,bindProvisioningCandidate,provisionState->keyValue,nullptr,nullptr,nullptr,provisionState->appData});
   RiscCpu::reserveNativePins(candidate->board());AdmissionImages context{root,millis(),{}};
   bool ok=candidate->prepare(root) && candidate->inspectImages([](void* c,const char* path,bool driver){
     return inspectProvisionedImage(*static_cast<AdmissionImages*>(c),path,driver?ElfRole::Driver:ElfRole::Application);},&context);
+  provisionReadRetained=provisionReadRetained || candidate->metadataCloseRetained();
+  ok=ok && !provisionReadRetained;
   // Non-policy child apps and unselected driver files are still native code;
   // every extra .elf must have a valid supported entry and ordinary imports.
   for(size_t i=0;ok && i<profile.count;++i){const char* name=profile.files[i].path;size_t n=strlen(name);
@@ -289,17 +318,76 @@ bool validateFirmware(void*,unsigned b,uint32_t n){
   uint32_t actual[3]{},currentVersion[3]{};
   if(!RiscUpdate::parseVersion(version,actual) || !RiscUpdate::parseVersion(RISC_BUILD_VERSION,currentVersion))return false;
   int comparison=RiscUpdate::compareVersion(actual,currentVersion);
+  if(replacingCohort && b!=activeBank)return comparison>=0 && !strcmp(version,scratch->cohort.runtime_version);
   return replacingFirmware && b!=activeBank ? comparison>0 : comparison==0;
 }
-bool writeProvisionAttempt(unsigned b){
-  if(!operationSafe() || !provisionProfile || b>=2 || b==activeBank)return false;
-  Record pair{};ProvisionAttempt prior{},check{};
-  if(!journal || esp_partition_read(journal,b*SectorBytes,&pair,sizeof(pair))!=ESP_OK || !validRecord(pair,b) ||
-     esp_partition_read(journal,b*SectorBytes+AttemptOffset,&prior,sizeof(prior))!=ESP_OK || !emptyAttempt(prior))return false;
-  const auto attempt=makeAttempt(b,provisionDigest,pair,scratch->verifiedActiveRecord);
+ReceiptState activeReceipt(uint8_t (&digest)[32]){
+  if(!operationSafe() || !prepared || !confirmed || pending || !journal)return ReceiptState::Unavailable;
+  ProvisionAttempt receipt{};
+  if(esp_partition_read(journal,activeBank*SectorBytes+AttemptOffset,&receipt,sizeof(receipt))!=ESP_OK)return ReceiptState::Unavailable;
+  if(emptyAttempt(receipt))return ReceiptState::Missing;
+  // The old source bank may have been overwritten by an aborted later update.
+  // Bind completion only to this active Record, not to that source's contents.
+  if(!validAttempt(receipt,scratch->verifiedActiveRecord,activeBank))return ReceiptState::Unavailable;
+  memcpy(digest,receipt.profileSha,32);return ReceiptState::Ready;
+}
+ReceiptState sourceReceipt(uint8_t (&digest)[32]){
+  const auto receipt=activeReceipt(digest);if(receipt!=ReceiptState::Missing)return receipt;
+  errno=0;FILE* file=fopen("/bootfs/.provision-sha256","rb");
+  if(!file)return errno==ENOENT?ReceiptState::Missing:ReceiptState::Unavailable;
+  uint8_t bytes[33];const size_t size=fread(bytes,1,sizeof(bytes),file);bool okay=size==32 && !ferror(file);
+  if(fclose(file)!=0){provisionReadRetained=true;okay=false;}
+  if(!okay)return ReceiptState::Unavailable;
+  memcpy(digest,bytes,32);return ReceiptState::Ready;
+}
+bool persistReceipt(unsigned b,const Record& pair,const uint8_t (&digest)[32]){
+  if(!operationSafe() || b>=2 || b==activeBank || !validRecord(pair,b) || !journal)return false;
+  ProvisionAttempt prior{},check{};
+  if(esp_partition_read(journal,b*SectorBytes+AttemptOffset,&prior,sizeof(prior))!=ESP_OK || !emptyAttempt(prior))return false;
+  const auto attempt=makeAttempt(b,digest,pair,scratch->verifiedActiveRecord);
   return esp_partition_write(journal,b*SectorBytes+AttemptOffset,&attempt,sizeof(attempt))==ESP_OK &&
     esp_partition_read(journal,b*SectorBytes+AttemptOffset,&check,sizeof(check))==ESP_OK &&
     !memcmp(&attempt,&check,sizeof(attempt)) && validAttempt(check,pair,b);
+}
+bool writeProvisionAttempt(unsigned b){
+  if(!operationSafe() || !provisionProfile || b>=2 || b==activeBank)return false;
+  Record pair{};
+  return journal && esp_partition_read(journal,b*SectorBytes,&pair,sizeof(pair))==ESP_OK &&
+    persistReceipt(b,pair,provisionDigest);
+}
+bool admitFile(void*,const char* filename,bool provider){
+  if(!operationSafe() || !filename)return false;
+  FILE* f=fopen(filename,"rb");if(!f)return false;
+  bool ok=fseek(f,0,SEEK_END)==0;long length=ok?ftell(f):-1;
+  ok=ok && length>0 && uint64_t(length)<=RISC_BANK_APP_MAX && fseek(f,0,SEEK_SET)==0;
+  auto* bytes=ok?static_cast<uint8_t*>(heap_caps_malloc(size_t(length),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT)):nullptr;
+  if(!bytes){fclose(f);return false;}
+  uint32_t offset=0,started=millis();
+  while(ok && offset<uint32_t(length)){
+    uint32_t n=std::min(4096u,uint32_t(length)-offset);
+    ok=operationSafe() && fread(bytes+offset,1,n,f)==n;offset+=n;vTaskDelay(1);
+    if(uint32_t(millis()-started)>30000u)ok=false;
+  }
+  ok=ok && fgetc(f)==EOF && !ferror(f);
+  if(fclose(f))ok=false;
+  if(ok)ok=admitElf(bytes,size_t(length),provider?ElfRole::Driver:ElfRole::Application);
+  free(bytes);return ok;
+}
+bool validateStore(void*,unsigned b){
+  if(!operationSafe() || !runtime || !replacingCohort || b==activeBank || mounted || appFile)return false;
+  esp_vfs_spiffs_conf_t config{};config.base_path="/updatefs";config.partition_label=labels[b];config.max_files=4;config.format_if_mount_failed=false;
+  if(esp_vfs_spiffs_register(&config)!=ESP_OK)return false;
+  mounted=true;
+  CohortIdentity candidate{};
+  if(!readCohort("/updatefs",candidate,&provisionReadRetained) || !cohortMatches(candidate,scratch->cohort))return false;
+  void* memory=heap_caps_malloc(sizeof(RiscBoot::Runtime),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+  if(!memory)return false;
+  auto* staged=new(memory) RiscBoot::Runtime({});
+  bool ok=runtime->validateCohort(*staged,"/updatefs",admitFile,nullptr);
+  provisionReadRetained=provisionReadRetained || staged->metadataCloseRetained();
+  ok=ok && !provisionReadRetained;
+  staged->~Runtime();free(memory);
+  return ok && operationSafe();
 }
 bool select(void*,unsigned b){return operationSafe() && b<2 && b!=activeBank && esp_ota_set_boot_partition(parts[b][0])==ESP_OK;}
 
@@ -310,7 +398,7 @@ int32_t beginFirmware(void*,const risc_bank_image_v1* image,uint64_t* token){
   if(!ready() || !image)return RISC_BANK_UNAVAILABLE;
   risc_bank_status_v1 status{};status.struct_size=sizeof(status);
   if(!transaction->status(&status) || status.state!=RISC_BANK_IDLE)return RISC_BANK_STATE;
-  scratch->manifestSize=0;replacingFirmware=true;return transaction->begin(false,*image,token);
+  scratch->manifestSize=0;replacingFirmware=true;replacingCohort=false;return transaction->begin(false,*image,token);
 }
 int32_t beginApp(void*,const char* id,const void* bytes,uint32_t n,const risc_bank_image_v1* image,uint64_t* token){
   if(token)*token=0;
@@ -319,23 +407,43 @@ int32_t beginApp(void*,const char* id,const void* bytes,uint32_t n,const risc_ba
   if(!transaction->status(&status) || status.state!=RISC_BANK_IDLE)return RISC_BANK_STATE;
   if(!runtime->appUpdate(id,bytes,n,scratch->appPaths))return RISC_BANK_INVALID;
   memcpy(scratch->manifest,bytes,n);scratch->manifestSize=n;scratch->appSize=image->size;memcpy(scratch->appDigest,image->sha256,32);
-  replacingFirmware=false;
+  replacingFirmware=false;replacingCohort=false;
   return transaction->begin(true,*image,token);
+}
+int32_t cohortStatus(void*,risc_bank_cohort_status_v1* out){
+  if(!ready() || !out || out->struct_size<sizeof(*out))return RISC_BANK_UNAVAILABLE;
+  CohortIdentity current{};if(!readCohort("/bootfs",current,&provisionReadRetained))return RISC_BANK_NOT_FOUND;
+  *out=current.product;return RISC_BANK_OK;
+}
+int32_t beginCohort(void*,const risc_bank_cohort_v1* image,uint64_t* token){
+  if(token)*token=0;
+  if(!ready() || !image)return RISC_BANK_UNAVAILABLE;
+  risc_bank_status_v1 status{};status.struct_size=sizeof(status);
+  if(!transaction->status(&status) || status.state!=RISC_BANK_IDLE)return RISC_BANK_STATE;
+  if(!validCohortRequest(*image))return RISC_BANK_INVALID;
+  CohortIdentity current{};uint32_t oldVersion[3],newVersion[3];
+  if(!readCohort("/bootfs",current,&provisionReadRetained) || strcmp(current.product.product,image->product) ||
+     strcmp(current.product.source_repo,image->source_repo) ||
+     !parseVersion(current.product.version,oldVersion) || !parseVersion(image->version,newVersion) ||
+     compareVersion(newVersion,oldVersion)<=0 || !parseVersion(RISC_BUILD_VERSION,oldVersion) ||
+     !parseVersion(image->runtime_version,newVersion) || compareVersion(newVersion,oldVersion)<0)return RISC_BANK_INVALID;
+  scratch->cohort=*image;scratch->manifestSize=0;replacingFirmware=true;replacingCohort=true;
+  return transaction->beginCohort(*image,token);
 }
 const risc_bank_store_v1 api={1,sizeof(api),nullptr,
   [](void*,risc_bank_status_v1* out){
     if(!owner() || !transaction->status(out))return false;
-    out->store_abi=RISC_BANK_STORE_ABI;out->app_count=runtime?runtime->appCount():0;
+    out->store_abi=StoreAbi;out->app_count=runtime?runtime->appCount():0;
     snprintf(out->runtime_version,sizeof(out->runtime_version),"%s",RISC_BUILD_VERSION);
-    snprintf(out->layout,sizeof(out->layout),"%s","riscrte-paired-16m-v1");return true;
+    snprintf(out->layout,sizeof(out->layout),"%s",Layout);return true;
   },beginFirmware,beginApp,
   [](void*,uint64_t t,risc_bank_status_v1* s){
     if(!ready())return RISC_BANK_UNAVAILABLE;
     int32_t result=transaction->step(t,s);
     if(s && s->struct_size>=sizeof(*s)){
-      s->store_abi=RISC_BANK_STORE_ABI;s->app_count=runtime->appCount();
+      s->store_abi=StoreAbi;s->app_count=runtime->appCount();
       snprintf(s->runtime_version,sizeof(s->runtime_version),"%s",RISC_BUILD_VERSION);
-      snprintf(s->layout,sizeof(s->layout),"%s","riscrte-paired-16m-v1");}
+      snprintf(s->layout,sizeof(s->layout),"%s",Layout);}
     return result;
   },
   [](void*,uint64_t t,const void* p,uint32_t n){return ready()?transaction->write(t,p,n):RISC_BANK_UNAVAILABLE;},
@@ -348,7 +456,7 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
     if(!ready())return RISC_BANK_UNAVAILABLE;
     if(index>=runtime->appCount())return RISC_BANK_NOT_FOUND;
     return runtime->appInventory(index,output,capacity,actual)?RISC_BANK_OK:RISC_BANK_INVALID;
-  }};
+  },cohortStatus,beginCohort};
 bool bindProvisioningCandidate(RiscBoot::Runtime& candidate){
   return candidateCpu && provisionState && prepared && confirmed && !pending && !runtime && operationSafe() &&
     candidateCpu->bind(candidate) && candidate.registerPlatform(RISC_BANK_STORE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&api);
@@ -383,7 +491,7 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   scratch=new(memory) Scratch;
   memory=heap_caps_malloc(sizeof(Transaction),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory){scratch->~Scratch();free(scratch);scratch=nullptr;return false;}
-  transaction=new(memory) Transaction({nullptr,now,read,erase,write,invalidate,record,hashBegin,hashAdd,hashEnd,openApp,writeApp,finishApp,cleanup,validateFirmware,select,openWholeStore,finishWholeStore});
+  transaction=new(memory) Transaction({nullptr,now,read,erase,write,invalidate,record,hashBegin,hashAdd,hashEnd,openApp,writeApp,finishApp,cleanup,validateFirmware,select,validateStore,openWholeStore,finishWholeStore});
   mbedtls_sha256_init(&scratch->hashContext);
   if(!knownBootloader())return false;
   for(unsigned b=0;b<2;++b){const char* appLabel=b?"app1":"app0";
@@ -393,6 +501,10 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   if(!partition(ota,ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_OTA,"otadata",0xff0000,0x2000) ||
      !partition(journal,ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x40),"bank_state",JournalOffset,0x2000) ||
      !partition(nvs,ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_NVS,"nvs",0x9000,0x6000))return false;
+#ifdef RISC_PAIRED_APP_DATA
+  const esp_partition_t* data=nullptr;
+  if(!partition(data,ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x41),"appdata",0x270000,0x80000))return false;
+#endif
   rollbackTrusted=true;
   const esp_partition_t* running=esp_ota_get_running_partition();
   if(!running || (running->address!=FirmwareOffset[0] && running->address!=FirmwareOffset[1]))return false;
@@ -423,6 +535,13 @@ void rejectBoot(){
     esp_ota_mark_app_invalid_rollback_and_reboot();
 }
 bool provisionAvailable(){return prepared && confirmed && !pending && !runtime && !provisionFiles && !provisionReadRetained && operationSafe();}
+ProvisionIdentity provisionIdentity(const uint8_t (&digest)[32]){
+  if(!provisionAvailable())return ProvisionIdentity::Unavailable;
+  uint8_t actual[32];const auto state=activeReceipt(actual);
+  if(state==ReceiptState::Missing)return ProvisionIdentity::Missing;
+  if(state==ReceiptState::Unavailable)return ProvisionIdentity::Unavailable;
+  return memcmp(actual,digest,32)?ProvisionIdentity::Different:ProvisionIdentity::Match;
+}
 ProvisionHistory provisionHistory(const uint8_t (&digest)[32]){
   if(!provisionAvailable() || !journal)return ProvisionHistory::Unavailable;
   const unsigned target=1-activeBank;ProvisionAttempt attempt{};
@@ -435,10 +554,10 @@ ProvisionHistory provisionHistory(const uint8_t (&digest)[32]){
 }
 bool provisionReady(uint64_t token){return prepared && confirmed && !pending && !runtime && provisionFiles &&
   provisionProfile && token && token==provisionToken && operationSafe();}
-int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&digest)[32],const RiscCpu::Hardware& hardware,const RiscBoot::KeyValueBackend* keyValue,uint64_t* token){
+int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&digest)[32],const RiscCpu::Hardware& hardware,const RiscBoot::KeyValueBackend* keyValue,uint64_t* token,const RiscBoot::AppDataBackend* appData){
   if(token)*token=0;
   if(!token || !prepared || !confirmed || pending || runtime || provisionFiles || provisionState || !hardware.owner || !hardware.owner() || !operationSafe())return RISC_BANK_UNAVAILABLE;
-  if(profile.count<3 || profile.count>RiscProvision::MaxFiles)return RISC_BANK_INVALID;
+  if(!RiscProvision::SpiffsCapacity::fits(profile,StoreBytes))return RISC_BANK_INVALID;
   if(provisionHistory(digest)!=ProvisionHistory::Clear)return RISC_BANK_STATE;
   uint32_t total=32;
   for(size_t i=0;i<profile.count;++i){const auto& file=profile.files[i];
@@ -452,8 +571,8 @@ int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&dig
   void* memory=heap_caps_malloc(sizeof(ProvisionState),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory)return RISC_BANK_UNAVAILABLE;
   provisionState=new(memory) ProvisionState({nullptr,now,[](void*){vTaskDelay(1);return operationSafe();},hashBegin,hashAdd,hashEnd,
-    [](void*,const char* root,const RiscProvision::Profile& p){return admitProvisionedStore(root,p);}},hardware,keyValue);
-  provisionFiles=&provisionState->files;provisionProfile=&profile;memcpy(provisionDigest,digest,32);replacingFirmware=false;
+    [](void*,const char* root,const RiscProvision::Profile& p){return admitProvisionedStore(root,p);}},hardware,keyValue,appData);
+  provisionFiles=&provisionState->files;provisionProfile=&profile;memcpy(provisionDigest,digest,32);replacingFirmware=false;replacingCohort=false;
   int32_t result=transaction->beginStore(status.active_store_sha256,&provisionToken);*token=provisionToken;
   if(result!=RISC_BANK_OK && !provisionToken){
     provisionState->~ProvisionState();free(provisionState);provisionState=nullptr;provisionFiles=nullptr;provisionProfile=nullptr;
@@ -487,6 +606,6 @@ int32_t provisionAbort(uint64_t t){
   memset(provisionDigest,0,sizeof(provisionDigest));provisionToken=0;return RISC_BANK_OK;
 }
 bool provisionRestart(uint64_t t){return provisionReady(t) && api.restart(nullptr,t);}
-bool exitSafe(){return !prepared || (transaction->exitSafe() && !appFile && !mounted);}
+bool exitSafe(){return !provisionReadRetained && (!runtime || !runtime->metadataCloseRetained()) && (!prepared || (transaction->exitSafe() && !appFile && !mounted));}
 }
 #endif

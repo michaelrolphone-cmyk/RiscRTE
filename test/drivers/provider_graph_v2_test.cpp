@@ -43,6 +43,28 @@ int main(int argc, char** argv) {
   auto again = graph.acquire("cap.child", 1);
   assert(again.slot && graph.release(again) && graph.shutdown());
 
+  // Full selected provider capacity; the last slot remains selectable and
+  // retains the same cleanup behavior. Dependency width remains sixteen.
+  {
+    GraphV2 modules;
+    char names[GraphV2::kMaxModules][32]{};
+    for(size_t i=0;i+1<GraphV2::kMaxModules;++i){
+      std::snprintf(names[i],sizeof(names[i]),"capacity-%zu",i);
+      assert(modules.addVerified({names[i],argv[1],"cap.root",1,nullptr,0}));
+    }
+    assert(modules.addVerified(root));assert(modules.moduleCount()==GraphV2::kMaxModules);
+    assert(!modules.addVerified(alternate));
+    auto last=modules.acquireFrom("fixture-root","cap.root",1);
+    assert(last.slot && modules.interfaceFor(last));assert(!modules.shutdown());
+    assert(modules.release(last));assert(modules.shutdown());
+    GraphV2 requirements;RequirementV2 many[GraphV2::kMaxRequirements+1]{};
+    char caps[GraphV2::kMaxRequirements+1][32]{};
+    for(size_t i=0;i<GraphV2::kMaxRequirements+1;++i){std::snprintf(caps[i],sizeof(caps[i]),"cap.%zu",i);many[i]={caps[i],1};}
+    assert(!requirements.addVerified({"overbound",argv[1],"cap.root",1,many,GraphV2::kMaxRequirements+1}));
+    assert(requirements.addVerified({"at-bound",argv[1],"cap.root",1,many,GraphV2::kMaxRequirements}));
+    assert(requirements.shutdown());
+  }
+
   GraphV2 capacity;
   assert(capacity.addVerified(root));
   RuntimeProviders::GrantV2 grants[GraphV2::kMaxGrants];

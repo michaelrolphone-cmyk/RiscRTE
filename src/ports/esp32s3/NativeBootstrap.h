@@ -22,6 +22,7 @@ struct Port {
  bool (*operationSafe)()=nullptr;
  RiscProvision::Input input{};
  FreshTime time{};
+ const RiscBoot::AppDataBackend* appData=nullptr;
 };
 enum class Outcome {Installed,Stopped};
 enum class Reason {NoProfile,InvalidProfile,InputUnavailable,MemoryUnavailable,PairUnavailable,

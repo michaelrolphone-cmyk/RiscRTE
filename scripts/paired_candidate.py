@@ -11,7 +11,8 @@ EXPECTED={
  'app0':(0,0x10,0x10000,0x300000),'bootfs0':(1,0x82,0x310000,0x4f0000),
  'app1':(0,0x11,0x800000,0x300000),'bootfs1':(1,0x82,0xb00000,0x4f0000),
  'otadata':(1,0,0xff0000,0x2000),'bank_state':(1,0x40,0xff2000,0x2000)}
-def partitions(data):
+APP_DATA_EXPECTED={**EXPECTED, 'app0':(0,0x10,0x10000,0x260000), 'app1':(0,0x11,0x800000,0x260000), 'appdata':(1,0x41,0x270000,0x80000), 'bootfs0':(1,0x82,0x2f0000,0x510000), 'bootfs1':(1,0x82,0xae0000,0x510000)}
+def partitions(data, expected=EXPECTED):
  require(len(data)==3072,'partition-table length')
  found={};raw=b'';verified=False
  for at in range(0,len(data),32):
@@ -23,7 +24,7 @@ def partitions(data):
   elif magic==0xebeb:
    require(row[16:]==hashlib.md5(raw).digest(),'partition MD5');verified=True;break
   else:raise ValueError('missing partition digest')
- require(verified and found==EXPECTED,'paired partition layout mismatch')
+ require(verified and found==expected,'paired partition layout mismatch')
  return found
 
 def native_proof(data):
@@ -44,30 +45,49 @@ def native_proof(data):
  require(len(bundle)==size and 1<=int.from_bytes(bundle[:2],'big')<=200,'invalid linked certificate bundle')
  return {'static_dram_sections':dram,'static_dram_bytes':sum(dram.values()),'rollback_hook_hex':code.hex(),'bundle_bytes':size,'bundle_certificates':int.from_bytes(bundle[:2],'big'),'bundle_sha256':hashlib.sha256(bundle).hexdigest(),'required_symbols':list(required)}
 
-def stage(source):
+def stage(source, app_data=False, app_data_image=None, radio_iq=False):
+ require(not radio_iq or app_data,'IQ requires the explicit app-data cohort')
+ target='esp32s3-16mb-appdata-iq' if radio_iq else ('esp32s3-16mb-appdata' if app_data else TARGET)
+ expected=APP_DATA_EXPECTED if app_data else EXPECTED
+ abi=2 if app_data else 1
+ table='partitions-paired-appdata.csv' if app_data else 'partitions-paired.csv'
+ initial=None
+ if app_data:
+  require(app_data_image is not None,'app-data candidate requires a verified initial disk2.1 image')
+  from app_data_image import verify_initial
+  initial=verify_initial(app_data_image)
+ elif app_data_image is not None:raise ValueError('legacy layout must not package app-data')
  require(re.fullmatch('[0-9a-f]{40}',source) and source==head(),'source SHA differs from checkout')
  require(subprocess.run(['git','diff','--quiet','HEAD'],cwd=ROOT).returncode==0,'dirty candidate sources')
  require(not subprocess.check_output(['git','ls-files','--others','--exclude-standard'],cwd=ROOT).strip(),'untracked candidate inputs')
- build=ROOT/'.pio/build'/TARGET;output=ROOT/'dist'/TARGET
+ build=ROOT/'.pio/build'/target;output=ROOT/'dist'/target
  if output.exists():shutil.rmtree(output)
  output.mkdir(parents=True)
  blobs={name:file_bytes(build/name) for name in ('firmware.bin','firmware.elf','bootloader.bin','partitions.bin')}
  for name in ('firmware.bin','bootloader.bin'):
   esp_image(blobs[name]);require(blobs[name][3]>>4==4,'16 MiB image flag missing')
- elf(blobs['firmware.elf']);partitions(blobs['partitions.bin'])
+ elf(blobs['firmware.elf']);partitions(blobs['partitions.bin'],expected)
  require(hashlib.sha256(blobs['bootloader.bin']).hexdigest()==BOOTLOADER_SHA256,'unreviewed bootloader binary')
- require(TARGET.encode()+b'\0' in blobs['firmware.bin'],'wrong compiled target')
+ require(target.encode()+b'\0' in blobs['firmware.bin'],'wrong compiled target')
  version=firmware((ROOT/'platformio.ini').read_text())
- for marker in [('RTE_SOURCE='+source).encode()+b'\0',('RISC_RUNTIME_VERSION:'+version).encode()+b'\0',b'RISC_PAIRED_STORE_ABI:1\0']:
+ for marker in [('RTE_SOURCE='+source).encode()+b'\0',('RISC_RUNTIME_VERSION:'+version).encode()+b'\0',('RISC_PAIRED_STORE_ABI:'+str(abi)).encode()+b'\0']:
   require(all(marker in blobs[n] for n in ('firmware.bin','firmware.elf')),'compiled source/version/ABI mismatch: '+repr(marker))
- require(len(blobs['firmware.bin'])<=0x300000,'firmware exceeds paired slot')
+ require(len(blobs['firmware.bin'])<=expected['app0'][3],'firmware exceeds paired slot')
+ if app_data:require(b'RISC_PAIRED_STORE_ABI:1\0' not in blobs['firmware.bin'],'app-data target must reject legacy OTA acceptance')
  proof=native_proof(blobs['firmware.elf'])
+ if radio_iq:
+  from radio_iq_proof import prove
+  proof['radio_iq']=prove(blobs['firmware.elf'])
+  (output/'radio-iq-proof.json').write_text(json.dumps(proof['radio_iq'],indent=2,sort_keys=True)+'\n')
  for name,data in blobs.items():(output/name).write_bytes(data)
- for name in ('platformio.ini','partitions-paired.csv','requirements-ci.txt'):(output/name).write_bytes(file_bytes(ROOT/name))
+ for name in ('platformio.ini',table,'requirements-ci.txt'):(output/name).write_bytes(file_bytes(ROOT/name))
+ if initial:
+  for name in ('appdata.bin','appdata-image.json'):(output/name).write_bytes(file_bytes(Path(app_data_image)/name))
  files={p.name:{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in sorted(output.iterdir())}
- record={'schema':1,'target':TARGET,'source_sha':source,'firmware_version':version,'layout':'riscrte-paired-16m-v1','store_abi':1,'flash_bytes':0x1000000,'partitions':EXPECTED,'native_proof':proof,'assets':files,'scope':'Development Runtime input only. Requires separately verified product store, initial bank journal and explicit user-controlled full16MiB migration. Existing factory image is not OTA compatible. No release or device operation.'}
+ record={'schema':1,'target':target,'source_sha':source,'firmware_version':version,'layout':'riscrte-paired-appdata-v2' if app_data else 'riscrte-paired-16m-v1','store_abi':abi,'flash_bytes':0x1000000,'partitions':expected,'native_proof':proof,'assets':files,'scope':'Development Runtime input only. Requires separately verified product store, initial bank journal and explicit user-controlled full16MiB migration. Existing factory image is not OTA compatible. No release or device operation.'}
+ if initial:record['initial_appdata']=initial;record['scope']='Explicit NEW app-data layout input only. Requires matching product store/journal and owner-controlled installation; not a migration or data-preserving reflash. The initial app-data image is EMPTY and must never be installed by routine OTA. No device action or hardware qualification.'
  (output/'candidate.json').write_text(json.dumps(record,indent=2,sort_keys=True)+'\n')
  (output/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in sorted(output.iterdir()) if p.name!='SHA256SUMS'))
  print('Verified paired Runtime, linked TLS roots and explicit rollback hook:',source,output)
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);stage(parser.parse_args().source_sha)
+ parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);parser.add_argument('--app-data',action='store_true');parser.add_argument('--radio-iq',action='store_true');parser.add_argument('--app-data-image',type=Path);args=parser.parse_args();stage(args.source_sha,args.app_data,args.app_data_image,args.radio_iq)

@@ -3,9 +3,21 @@
 #include <cstddef>
 #include <cstdint>
 namespace RiscUpdate {
-constexpr uint32_t FirmwareBytes=0x300000, StoreBytes=0x4f0000, SectorBytes=4096;
-constexpr uint32_t FirmwareOffset[2]={0x10000,0x800000};
+#ifdef RISC_PAIRED_APP_DATA
+constexpr uint32_t FirmwareBytes=0x260000, StoreAbi=2;
+constexpr uint32_t StoreBytes=0x510000;
+constexpr uint32_t StoreOffset[2]={0x2f0000,0xae0000};
+constexpr const char* Layout="riscrte-paired-appdata-v2";
+#define RISC_PAIRED_ABI_MARKER "RISC_PAIRED_STORE_ABI:2"
+#else
+constexpr uint32_t FirmwareBytes=0x300000, StoreAbi=1;
+constexpr uint32_t StoreBytes=0x4f0000;
 constexpr uint32_t StoreOffset[2]={0x310000,0xb00000};
+constexpr const char* Layout="riscrte-paired-16m-v1";
+#define RISC_PAIRED_ABI_MARKER "RISC_PAIRED_STORE_ABI:1"
+#endif
+constexpr uint32_t SectorBytes=4096;
+constexpr uint32_t FirmwareOffset[2]={0x10000,0x800000};
 constexpr uint32_t JournalOffset=0xff2000;
 /* Little-endian, fixed 96-byte commit record; one independent erase sector per
  * bank. CRC covers first 92 bytes. Written only after BOTH images read back.
@@ -56,6 +68,8 @@ struct Backend {
   bool (*cleanup)(void*);
   bool (*validateFirmware)(void*,unsigned,uint32_t);
   bool (*select)(void*,unsigned);
+  // Optional full-cohort admission; never needed by legacy transactions.
+  bool (*validateStore)(void*,unsigned)=nullptr;
   // Optional private boot-provisioning hooks. Not part of the provider ABI.
   // openStore follows a verified inactive clone; finishStore must verify the
   // entire expected inventory, all hashes, graph and ELFs without executing.
@@ -69,10 +83,11 @@ class Transaction {
   int32_t begin(bool app,const risc_bank_image_v1&,uint64_t* token);
   // Whole-store provisioning is compiled-in boot-owner authority only. The
   // ordinary app/firmware APIs cannot enter this mode or write store files.
-  static constexpr uint32_t StoreStaging=11;
+  static constexpr uint32_t StoreStaging=12;
   int32_t beginStore(const uint8_t (&activeDigest)[32],uint64_t* token);
   bool stagingStore(uint64_t token) const {return live(token) && store_ && state_==StoreStaging && !timedOut();}
   int32_t finishStore(uint64_t token);
+  int32_t beginCohort(const risc_bank_cohort_v1&,uint64_t* token);
   int32_t step(uint64_t,risc_bank_status_v1*);
   int32_t write(uint64_t,const void*,uint32_t);
   int32_t finish(uint64_t);
@@ -91,11 +106,12 @@ class Transaction {
   Record activeRecord_{}, targetRecord_{};
   risc_bank_image_v1 image_{};
   uint8_t stagedStoreDigest_[32]{};
+  uint8_t cohortFirmwareSha_[32]{},cohortStoreSha_[32]{};
   uint64_t serial_=0,token_=0;
   unsigned active_=0,target_=1;
   uint32_t state_=RISC_BANK_IDLE,offset_=0,received_=0,started_=0;
   int32_t error_=0;
-  bool initialized_=false,app_=false,store_=false;
+  bool initialized_=false,app_=false,cohort_=false,store_=false;
   alignas(4) uint8_t buffer_[RISC_BANK_CHUNK_MAX]{};
 };
 }
