@@ -5,6 +5,9 @@
 #include "NativeI2s.h"
 #include "NativeRadio.h"
 #include "NativeHci.h"
+#ifdef RISC_ENABLE_RADIO_IQ
+#include "NativeRadioIq.h"
+#endif
 #ifdef RISC_PAIRED_APP_DATA
 #include "NativeAppData.h"
 #endif
@@ -198,6 +201,9 @@ Hardware nativeHardware(bool (*owner)()){
     NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
   hardware.hciOpen=NativeHci::open;hardware.hciSend=NativeHci::send;hardware.hciReceive=NativeHci::receive;
   hardware.hciClose=NativeHci::close;hardware.hciIdle=NativeHci::idle;hardware.hciSafe=NativeHci::safe;
+#ifdef RISC_ENABLE_RADIO_IQ
+  hardware.radioIqReady=NativeRadioIq::ready;
+#endif
   hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;
 #ifdef RISC_ENABLE_HTTP
   NativeHttp::configure(hardware.owner,[](){

@@ -45,8 +45,9 @@ def native_proof(data):
  require(len(bundle)==size and 1<=int.from_bytes(bundle[:2],'big')<=200,'invalid linked certificate bundle')
  return {'static_dram_sections':dram,'static_dram_bytes':sum(dram.values()),'rollback_hook_hex':code.hex(),'bundle_bytes':size,'bundle_certificates':int.from_bytes(bundle[:2],'big'),'bundle_sha256':hashlib.sha256(bundle).hexdigest(),'required_symbols':list(required)}
 
-def stage(source, app_data=False, app_data_image=None):
- target='esp32s3-16mb-appdata' if app_data else TARGET
+def stage(source, app_data=False, app_data_image=None, radio_iq=False):
+ require(not radio_iq or app_data,'IQ requires the explicit app-data cohort')
+ target='esp32s3-16mb-appdata-iq' if radio_iq else ('esp32s3-16mb-appdata' if app_data else TARGET)
  expected=APP_DATA_EXPECTED if app_data else EXPECTED
  abi=2 if app_data else 1
  table='partitions-paired-appdata.csv' if app_data else 'partitions-paired.csv'
@@ -74,6 +75,10 @@ def stage(source, app_data=False, app_data_image=None):
  require(len(blobs['firmware.bin'])<=expected['app0'][3],'firmware exceeds paired slot')
  if app_data:require(b'RISC_PAIRED_STORE_ABI:1\0' not in blobs['firmware.bin'],'app-data target must reject legacy OTA acceptance')
  proof=native_proof(blobs['firmware.elf'])
+ if radio_iq:
+  from radio_iq_proof import prove
+  proof['radio_iq']=prove(blobs['firmware.elf'])
+  (output/'radio-iq-proof.json').write_text(json.dumps(proof['radio_iq'],indent=2,sort_keys=True)+'\n')
  for name,data in blobs.items():(output/name).write_bytes(data)
  for name in ('platformio.ini',table,'requirements-ci.txt'):(output/name).write_bytes(file_bytes(ROOT/name))
  if initial:
@@ -85,4 +90,4 @@ def stage(source, app_data=False, app_data_image=None):
  (output/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in sorted(output.iterdir()) if p.name!='SHA256SUMS'))
  print('Verified paired Runtime, linked TLS roots and explicit rollback hook:',source,output)
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);parser.add_argument('--app-data',action='store_true');parser.add_argument('--app-data-image',type=Path);args=parser.parse_args();stage(args.source_sha,args.app_data,args.app_data_image)
+ parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);parser.add_argument('--app-data',action='store_true');parser.add_argument('--radio-iq',action='store_true');parser.add_argument('--app-data-image',type=Path);args=parser.parse_args();stage(args.source_sha,args.app_data,args.app_data_image,args.radio_iq)

@@ -273,3 +273,12 @@ can be validated and activated together, including new app/provider policies,
 without touching NVS or separately provisioned app-data. Existing update modes,
 paired geometries, first-frame health confirmation and rollback remain intact.
 See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-full-cohorts-runtime-0133).
+
+## Opt-in IQ resource bank
+
+Runtime 0.1.34 adds the separate `esp32s3-16mb-appdata-iq` target with a fixed
+pre-heap 64 KiB SRAM reservation and owner-bound `platform.radio.iq.resource@1`.
+Only an explicitly selected integrated IQ provider receives it. Leases exclude
+native radio activity and block unsafe exit/restart/sleep; failed release retains
+ownership for retry. RF capture policy stays external. See
+[resource contract, final ELF proof and hardware limits](docs/RADIO_IQ_RESOURCE.md).

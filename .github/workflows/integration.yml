@@ -102,6 +102,8 @@ jobs:
           python test/paired_bank_images_test.py -v
           bash test/run_hci_test.sh
           SANITIZE=1 bash test/run_hci_test.sh
+          bash test/run_radio_iq_test.sh
+          SANITIZE=1 bash test/run_radio_iq_test.sh
           bash test/run_radio_test.sh
           SANITIZE=1 bash test/run_radio_test.sh
           bash test/run_i2s_test.sh
@@ -225,5 +227,19 @@ jobs:
         with:
           name: riscrte-esp32s3-16mb-appdata-${{ github.event.pull_request.head.sha || github.sha }}
           path: dist/esp32s3-16mb-appdata/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build opt-in IQ Runtime with mandatory bank reservation proof
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-appdata-iq -j 1
+          RADIO_IQ_ELF=.pio/build/esp32s3-16mb-appdata-iq/firmware.elf python -m unittest discover -s test -p 'test_radio_iq_proof.py' -v
+          python scripts/paired_candidate.py --app-data --radio-iq --app-data-image build/appdata-initial --source-sha "$SOURCE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-esp32s3-16mb-appdata-iq-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/esp32s3-16mb-appdata-iq/
           if-no-files-found: error
           retention-days: 14
