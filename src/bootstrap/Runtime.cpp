@@ -4,6 +4,9 @@
 #include "runtime/resources/ScopedBufferWipe.h"
 #include <esp_dlfcn.h>
 #include <cstring>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <cerrno>
 #ifdef ESP_PLATFORM
 #include <esp_elf.h>
 #include "native/NativeAppMemory.h"
@@ -475,6 +478,7 @@ bool Runtime::prepare(const char* root) {
   }
   strcpy(default_,current_); prepared_=true; return true;
 }
+#include "CohortRuntime.inc"
 bool Runtime::launch(const char* relative) {
   if(!active() || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   return path(root_,relative,queued_,sizeof(queued_));

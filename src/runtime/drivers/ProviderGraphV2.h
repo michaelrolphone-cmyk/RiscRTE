@@ -44,10 +44,11 @@ struct GrantV2 {
 struct OwnedNodeV2;
 class GraphV2 final {
  public:
-  static constexpr size_t kMaxModules = 17;
+  static constexpr size_t kMaxModules = 24;
   static constexpr size_t kMaxRequirements = 16;
   static_assert(kMaxModules-1<=UINT8_MAX,"Provider index width exceeded");
-  static constexpr size_t kMaxGrants = 32;
+  // One boot-session pin per provider plus all sixteen app grant slots.
+  static constexpr size_t kMaxGrants = kMaxModules + 16;
   explicit GraphV2(const StreamHostV1* streams = nullptr) : streamHost_(streams) {}
   GraphV2(const GraphV2&) = delete;
   GraphV2& operator=(const GraphV2&) = delete;

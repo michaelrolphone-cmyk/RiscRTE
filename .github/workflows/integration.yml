@@ -85,6 +85,12 @@ jobs:
           SANITIZE=1 bash test/run_paired_runtime_memory_test.sh
           bash test/run_paired_bank_test.sh
           SANITIZE=1 bash test/run_paired_bank_test.sh
+          APP_DATA_TEST=1 bash test/run_paired_bank_test.sh
+          SANITIZE=1 APP_DATA_TEST=1 bash test/run_paired_bank_test.sh
+          bash test/run_cohort_runtime_test.sh
+          SANITIZE=1 bash test/run_cohort_runtime_test.sh
+          APP_DATA_TEST=1 bash test/run_cohort_runtime_test.sh
+          SANITIZE=1 APP_DATA_TEST=1 bash test/run_cohort_runtime_test.sh
           bash test/run_store_audit_test.sh
           SANITIZE=1 bash test/run_store_audit_test.sh
           bash test/run_native_bank_test.sh
@@ -193,6 +199,7 @@ jobs:
         run: |
           pio run -e esp32s3-16mb-paired -j 1
           BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
+          SANITIZE=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
           python scripts/paired_candidate.py --source-sha "$SOURCE_SHA"
       - uses: actions/upload-artifact@v4
         with:
@@ -211,6 +218,7 @@ jobs:
         run: |
           pio run -e esp32s3-16mb-appdata -j 1
           APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
+          SANITIZE=1 APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
           python scripts/paired_candidate.py --app-data --app-data-image build/appdata-initial --source-sha "$SOURCE_SHA"
       - uses: actions/upload-artifact@v4
         with:

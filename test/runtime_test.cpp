@@ -25,7 +25,7 @@ static void driverCapacity(const std::string& root) {
   JsonDocument config;config["board"]="board.json";config["default_app"]="default.elf";
   auto drivers=config["drivers"].to<JsonArray>();
   auto save=[&](const std::string& name,const JsonDocument& value){std::string bytes;serializeJson(value,bytes);write(root+"/"+name,bytes);};
-  for(unsigned i=0;i<17;++i){
+  for(unsigned i=0;i<RuntimeProviders::GraphV2::kMaxModules;++i){
     JsonDocument provider;provider["type"]="driver";provider["id"]="selected-"+std::to_string(i);provider["version"]="1.0.0";
     provider["driver_abi"]=2;provider["architecture"]="xtensa-esp32s3";provider["file_name"]="probe.elf";
     provider["requires"].to<JsonArray>();auto cap=provider["provides"].to<JsonArray>().add<JsonObject>();cap["capability"]="test.selected-"+std::to_string(i);cap["api"]=1;
@@ -35,9 +35,9 @@ static void driverCapacity(const std::string& root) {
   {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));}
   drivers.add<JsonObject>()["manifest"]="selected-0.json";save("boot.json",config);
   {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"invalid driver list"));}
-  drivers.remove(17);drivers[16]["manifest"]="selected-0.json";save("boot.json",config);
+  drivers.remove(RuntimeProviders::GraphV2::kMaxModules);drivers[RuntimeProviders::GraphV2::kMaxModules-1]["manifest"]="selected-0.json";save("boot.json",config);
   {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"duplicate package singleton/hardware owner"));}
-  puts("Runtime providers: 17 accepted, 18 and duplicate final slot rejected before activation PASS");
+  puts("Runtime providers: full selected capacity accepted, overflow and duplicate final slot rejected before activation PASS");
 }
 static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   JsonDocument original, app;
@@ -117,7 +117,7 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   grants=config["app_capabilities"][Runtime::MaxAppPolicies-1]["grants"].as<JsonArray>();
   while(grants.size()<Runtime::MaxAppPolicyGrants+1)grants.add(grants[0]);
   rejected("invalid app identity/declarations");
-  puts("App policy capacity: 9/16/18/19 accepted, 20 rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
+  puts("App policy capacity: 9/16/18 and full bound accepted, overflow rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
 }
 int main(int argc,char** argv){
   assert(argc==2);std::string root=argv[1];

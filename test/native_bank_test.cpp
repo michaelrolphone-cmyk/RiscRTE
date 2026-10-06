@@ -9,6 +9,7 @@ static const char* unavailableImport=nullptr;
 extern "C" uintptr_t elf_find_sym_default(const char* name){return unavailableImport && !strcmp(name,unavailableImport)?0:1;}
 static std::vector<uint8_t> flash(0x1000000,0xff);
 static uint32_t ticks=1,active=0,imageSize=8192,writes=0,rollbacks=0,confirms=0,restarts=0,delayScale=1,delays=0,unsafeAfterDelay=0;
+static bool mountFailure=false,unmountFailure=false,writeFailure=false;
 static bool ownerEnabled=true,rollbackPossible=true,operationEnabled=true,restartEnabled=true,selectFailure=false;
 static esp_ota_img_states_t otaState=ESP_OTA_IMG_PENDING_VERIFY;
 static esp_partition_t table[]={
@@ -31,7 +32,7 @@ void vTaskDelay(unsigned n){ticks+=n*delayScale;if(++delays==unsafeAfterDelay)op
 esp_err_t esp_flash_read(esp_flash_t*,void* out,uint32_t off,uint32_t n){if(off+n>flash.size())return -1;memcpy(out,flash.data()+off,n);return 0;}
 const esp_partition_t* esp_partition_find_first(esp_partition_type_t t,esp_partition_subtype_t st,const char* label){for(auto& p:table)if(p.type==t && p.subtype==st && !strcmp(label,p.label))return &p;return nullptr;}
 esp_err_t esp_partition_read(const esp_partition_t* p,size_t off,void* out,size_t n){if(!p || off+n>p->size)return -1;memcpy(out,flash.data()+p->address+off,n);return 0;}
-esp_err_t esp_partition_write(const esp_partition_t* p,size_t off,const void* in,size_t n){if(!p || off+n>p->size)return -1;++writes;memcpy(flash.data()+p->address+off,in,n);return 0;}
+esp_err_t esp_partition_write(const esp_partition_t* p,size_t off,const void* in,size_t n){if(!p || off+n>p->size)return -1;++writes;memcpy(flash.data()+p->address+off,in,n);return writeFailure?-1:0;}
 esp_err_t esp_partition_erase_range(const esp_partition_t* p,size_t off,size_t n){if(!p || off+n>p->size)return -1;++writes;memset(flash.data()+p->address+off,0xff,n);return 0;}
 const esp_partition_t* esp_ota_get_running_partition(){return &table[active*2];}
 esp_err_t esp_ota_get_state_partition(const esp_partition_t*,esp_ota_img_states_t* s){*s=otaState;return 0;}
@@ -41,8 +42,8 @@ esp_err_t esp_ota_set_boot_partition(const esp_partition_t*){++writes;return sel
 esp_err_t esp_ota_mark_app_valid_cancel_rollback(){++confirms;return 0;}
 esp_err_t esp_ota_mark_app_invalid_rollback_and_reboot(){++rollbacks;return 0;}
 bool esp_ota_check_rollback_is_possible(){return rollbackPossible;}
-esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t* conf){assert(!conf->format_if_mount_failed);return 0;}
-esp_err_t esp_vfs_spiffs_unregister(const char*){return 0;}
+esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t* conf){assert(!conf->format_if_mount_failed);return mountFailure?-1:0;}
+esp_err_t esp_vfs_spiffs_unregister(const char*){return unmountFailure?-1:0;}
 esp_err_t esp_image_verify(int,const esp_partition_pos_t*,esp_image_metadata_t* out){out->image_len=imageSize;return 0;}
 static bool own(){return ownerEnabled;}static bool safe(){return operationEnabled;}
 static bool restartSafe(){return restartEnabled && operationEnabled;}
@@ -97,12 +98,14 @@ static void firmware(unsigned bank,const char* version,const char* abi=nullptr){
  memcpy(data+4087,marker.c_str(),marker.size()+1);
  const char prefix[]="RISC_RUNTIME_VERSION:";memcpy(data+900,prefix,sizeof(prefix));
 }
+#include "cohort_native.inc"
 int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
 #ifdef RISC_PAIRED_APP_DATA
  std::fill(flash.begin()+0x270000,flash.begin()+0x2f0000,0x5a);
 #endif
+ if(mode=="cohort"){assert(argc==4);cohortNative(argv[2],argv[3]);return 0;}
  if(mode=="boot" || mode=="bad-store" || mode=="bad-layout" || mode=="restart" || mode=="restart-unknown"){
    const bool restarting=mode=="restart" || mode=="restart-unknown";
    assert(argc==3);std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);

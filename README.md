@@ -264,3 +264,12 @@ and provides bounded atomic replacement with revision checks. Existing target
 partition tables and installed-file browsing stay unchanged. This is an
 incompatible, opt-in new layout; it does not migrate or format a device on boot.
 See [authority, geometry, provisioning and verification limits](docs/APP_DATA.md).
+
+## Data-preserving complete software cohorts
+
+Runtime 0.1.33 adds an optional full-cohort suffix to the existing provider-only
+bank-store v1 API. Owner-published native firmware and a complete immutable store
+can be validated and activated together, including new app/provider policies,
+without touching NVS or separately provisioned app-data. Existing update modes,
+paired geometries, first-frame health confirmation and rollback remain intact.
+See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-full-cohorts-runtime-0133).

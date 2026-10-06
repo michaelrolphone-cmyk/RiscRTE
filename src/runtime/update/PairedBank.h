@@ -52,12 +52,15 @@ struct Backend {
   bool (*cleanup)(void*);
   bool (*validateFirmware)(void*,unsigned,uint32_t);
   bool (*select)(void*,unsigned);
+  // Optional full-cohort admission; never needed by legacy transactions.
+  bool (*validateStore)(void*,unsigned)=nullptr;
 };
 class Transaction {
  public:
   explicit Transaction(Backend b):io_(b){}
   bool initialize(unsigned active,const Record& record);
   int32_t begin(bool app,const risc_bank_image_v1&,uint64_t* token);
+  int32_t beginCohort(const risc_bank_cohort_v1&,uint64_t* token);
   int32_t step(uint64_t,risc_bank_status_v1*);
   int32_t write(uint64_t,const void*,uint32_t);
   int32_t finish(uint64_t);
@@ -75,11 +78,12 @@ class Transaction {
   Backend io_;
   Record activeRecord_{}, targetRecord_{};
   risc_bank_image_v1 image_{};
+  uint8_t cohortFirmwareSha_[32]{},cohortStoreSha_[32]{};
   uint64_t serial_=0,token_=0;
   unsigned active_=0,target_=1;
   uint32_t state_=RISC_BANK_IDLE,offset_=0,received_=0,started_=0;
   int32_t error_=0;
-  bool initialized_=false,app_=false;
+  bool initialized_=false,app_=false,cohort_=false;
   alignas(4) uint8_t buffer_[RISC_BANK_CHUNK_MAX]{};
 };
 }
