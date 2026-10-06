@@ -273,3 +273,10 @@ can be validated and activated together, including new app/provider policies,
 without touching NVS or separately provisioned app-data. Existing update modes,
 paired geometries, first-frame health confirmation and rollback remain intact.
 See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-full-cohorts-runtime-0133).
+
+## Retrievable sleep/reset diagnostics
+
+Runtime 0.1.35 adds a bounded RTC journal and a read-only `diag` serial replay on
+existing hardware-USB targets. Wake normally first; USB cannot work during
+ESP32-S3 hardware sleep. The recorder never writes flash, adds a wake source or
+keeps USB awake. See [retrieval, retention, power limits and tests](docs/SLEEP_DIAGNOSTICS.md).

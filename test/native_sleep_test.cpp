@@ -8,6 +8,14 @@
 #include <string>
 #include <vector>
 
+#if RISC_SLEEP_DIAGNOSTICS
+namespace RiscDiagnostics {
+std::vector<std::string> traces;
+void lightEnter(){traces.push_back("light-enter");}
+void lightReturn(int32_t result,uint32_t cause){traces.push_back("light-return:"+std::to_string(result)+":"+std::to_string(cause));}
+void deepEnter(){traces.push_back("deep-enter");}
+}
+#endif
 uint64_t native_sleep_test_output_mask = native_sleep_test_gpio_mask;
 
 namespace {
@@ -48,6 +56,9 @@ struct DeepSleepEntered {};
 
 void reset(const char* name) {
   scenario = name;
+#if RISC_SLEEP_DIAGNOSTICS
+  RiscDiagnostics::traces.clear();
+#endif
   calls.clear(); errors.clear(); pads = {}; ext0Pin=ext0Level=failCall=-1;
   globalHold = false; internalStack = true; wakeMask = timerUs = 0; gpioSource = false; power = ESP_PD_OPTION_AUTO;
   native_sleep_test_output_mask = native_sleep_test_gpio_mask;
@@ -279,11 +290,18 @@ void testTimerAndLight() {
     CHECK(timerArm(1)); uint32_t cause = RISC_LIGHT_SLEEP_WAKE_NONE;
     errors["light_start"] = ESP_FAIL;
     CHECK(!lightEnter(&cause) && cause == RISC_LIGHT_SLEEP_WAKE_NONE);
+#if RISC_SLEEP_DIAGNOSTICS
+    CHECK(RiscDiagnostics::traces.back()=="light-return:"+std::to_string(ESP_FAIL)+":"+std::to_string(ESP_SLEEP_WAKEUP_UNDEFINED));
+    CHECK(RiscDiagnostics::traces[RiscDiagnostics::traces.size()-2]=="light-enter");
+#endif
     errors.clear(); CHECK(timerClear()); CHECK(lightClear(7));
     CHECK(!gpioSource && !timerUs);
   }
   for(auto cause : {ESP_SLEEP_WAKEUP_GPIO,ESP_SLEEP_WAKEUP_TIMER,ESP_SLEEP_WAKEUP_EXT1}) {
     lightCause=cause; uint32_t result=99; CHECK(lightEnter(&result));
+#if RISC_SLEEP_DIAGNOSTICS
+    CHECK(RiscDiagnostics::traces.back()=="light-return:0:"+std::to_string(cause));
+#endif
     CHECK(result == (cause==ESP_SLEEP_WAKEUP_GPIO ? RISC_LIGHT_SLEEP_WAKE_GPIO :
       cause==ESP_SLEEP_WAKEUP_TIMER ? RISC_LIGHT_SLEEP_WAKE_TIMER : RISC_LIGHT_SLEEP_WAKE_OTHER));
   }
@@ -328,6 +346,9 @@ void testHoldsAndEntry() {
   bool entered = false;
   try { enter(); } catch (const DeepSleepEntered&) { entered = true; }
   CHECK(entered && globalHold);
+#if RISC_SLEEP_DIAGNOSTICS
+  CHECK(RiscDiagnostics::traces.size()==1 && RiscDiagnostics::traces[0]=="deep-enter");
+#endif
   CHECK(pads[45].held && pads[45].level);
   names({"deep_hold_en", "deep_sleep_start"});
 }
