@@ -17,7 +17,8 @@ inline bool validCohortMigration(JsonVariantConst value){
      !text(from["version"],version,sizeof(version)) || !parseVersion(version,parts) ||
      !text(from["source_revision"],revision,sizeof(revision)) || !hex(revision,40) ||
      !text(to["product"],id,sizeof(id)) || !RuntimePackages::safeId(id) ||
-     !text(to["version"],version,sizeof(version)) || !parseVersion(version,parts))return false;
+     !text(to["version"],version,sizeof(version)) || !parseVersion(version,parts) ||
+     from["product"]!=to["product"])return false;
   JsonArrayConst entries=migration["shared_key_value"];
   if(entries.isNull() || !entries.size() || entries.size()>RiscLimits::Apps)return false;
   for(size_t i=0;i<entries.size();++i){JsonObjectConst entry=entries[i];

@@ -57,6 +57,7 @@ bool Runtime::validateCohort(Runtime& candidate,const char* root,
   if(!migration.isUnbound()){
     RiscUpdate::CohortIdentity currentIdentity{},nextIdentity{};
     if(!RiscUpdate::readCohort(root_,currentIdentity) || !RiscUpdate::readCohort(root,nextIdentity) ||
+       strcmp(currentIdentity.product.source_repo,nextIdentity.product.source_repo) ||
        !RiscUpdate::migrationTarget(migration["to"],nextIdentity))return false;
     migrating=RiscUpdate::migrationTarget(migration["from"],currentIdentity) &&
       eq(migration["from"]["source_revision"],currentIdentity.product.source_revision);

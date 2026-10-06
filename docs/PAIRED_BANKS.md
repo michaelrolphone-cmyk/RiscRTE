@@ -297,7 +297,8 @@ shown keys, canonical versions, a lowercase 40-hex origin revision, safe IDs,
 API 1 or 2, positive signed-32-bit namespaces, and at most `MaxAppPolicies`
 unique entries. The actual current `cohort.json` must match every `from` field;
 the actual target identity must match `to`. Both complete cohort identities are
-strictly parsed before the exception is considered.
+strictly parsed before the exception is considered. Product and source repository
+must remain unchanged, matching native full-cohort admission.
 
 For each new shared grant, the app identity must be genuinely absent from the
 running policies, and the identical KV namespace AND API must already be granted

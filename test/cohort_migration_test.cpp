@@ -100,7 +100,7 @@ int main(int argc,char** argv){
  };
  reset();check(true);
  auto good=read(next/"boot.json");auto b=good;b.remove("cohort_migration");save(next/"boot.json",b);check(false);
- for(unsigned bad=0;bad<19;++bad){b=good;auto m=b["cohort_migration"];
+ for(unsigned bad=0;bad<27;++bad){b=good;auto m=b["cohort_migration"];
   if(bad==0)m["schema"]=2;
   if(bad==1)m["from"]["product"]="wrong";
   if(bad==2)m["from"]["version"]="1.0.1";
@@ -120,6 +120,14 @@ int main(int argc,char** argv){
   if(bad==16)m["shared_key_value"][0]["application_id"]="bad/id";
   if(bad==17)m["to"]["source_revision"]=std::string(40,'b');
   if(bad==18)b["cohort_migration"]=nullptr;
+  if(bad==19)m["shared_key_value"][0]["api"]=3;
+  if(bad==20)m["shared_key_value"][0]["namespace"]=uint64_t(INT32_MAX)+1;
+  if(bad==21)m["shared_key_value"][0]["namespace"]=true;
+  if(bad==22)m["from"]["version"]="01.0.2";
+  if(bad==23)m["from"]["source_revision"]=std::string(40,'A');
+  if(bad==24)m["shared_key_value"][0]="invalid";
+  if(bad==25)m["from"]["product"]="";
+  if(bad==26){auto entries=m["shared_key_value"].to<JsonArray>();for(size_t i=0;i<=Runtime::MaxAppPolicies;++i){auto entry=entries.add<JsonObject>();entry["application_id"]="new"+std::to_string(i);entry["api"]=1;entry["namespace"]=50;}}
   save(next/"boot.json",b);check(false);
  }
  // Removed / malformed and duplicate JSON fields never become authority.
@@ -140,6 +148,9 @@ int main(int argc,char** argv){
  reset();auto board=read(next/"board.json");board["revision"]="changed";save(next/"board.json",board);check(false);
  reset();b=read(next/"cohort.json");b["version"]="1.0.4";save(next/"cohort.json",b);check(false);
  reset();b=read(old/"cohort.json");b["source_revision"]=std::string(40,'f');save(old/"cohort.json",b);check(false);
+ reset();b=read(old/"cohort.json");b["product"]="other-product";save(old/"cohort.json",b);
+ b=read(next/"boot.json");b["cohort_migration"]["from"]["product"]="other-product";save(next/"boot.json",b);check(false); // Explicit cross-product migration also denied.
+ reset();b=read(next/"cohort.json");b["source_repo"]="other/watch";save(next/"cohort.json",b);check(false);
  // Stale record may validate its identical installed target, never regrant.
  reset();fs::remove_all(old);fs::copy(next,old,fs::copy_options::recursive);bindings=0;runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(old.c_str()));check(true);
  b=read(next/"cohort.json");b["firmware_sha256"]=std::string(64,'e');save(next/"cohort.json",b);check(false);
