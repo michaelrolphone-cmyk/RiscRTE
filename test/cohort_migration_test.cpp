@@ -92,10 +92,10 @@ int main(int argc,char** argv){
   bindings=0;runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(old.c_str()) && bindings==1);
  };
  auto check=[&](bool expected){
-  apps=drivers=0;const auto before=snapshot(root);auto candidate=std::make_unique<Runtime>(Port{});
+  apps=drivers=0;const auto before=snapshot(old)+snapshot(next);auto candidate=std::make_unique<Runtime>(Port{});
   const bool accepted=runtime->validateCohort(*candidate,next.c_str(),admit,nullptr);
   if(accepted!=expected)std::cerr<<"migration expected="<<expected<<" error="<<candidate->error()<<"\n";
-  assert(accepted==expected && bindings==1 && before==snapshot(root));
+  assert(accepted==expected && bindings==1 && before==snapshot(old)+snapshot(next));
   if(accepted)assert(apps && drivers);
  };
  reset();check(true);
