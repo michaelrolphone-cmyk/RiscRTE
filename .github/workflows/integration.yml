@@ -166,6 +166,7 @@ jobs:
       - name: Build firmware and real default/child/provider ELFs
         run: |
           pio run -e esp32s3 -j 1
+          RADIO_IQ_DISABLED_ELF=.pio/build/esp32s3/firmware.elf python -m unittest discover -s test -p 'test_radio_iq_proof.py' -v
           CC="$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" python test/verify_legacy_runtime_header.py build/watch-clock-sdk/sdk/app/RiscRuntimeV1.h
           python scripts/build_apps.py
           bash test/run_elf_test.sh

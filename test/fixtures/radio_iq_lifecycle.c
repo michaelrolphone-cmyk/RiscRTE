@@ -30,7 +30,7 @@ __attribute__((destructor)) static void unloaded(void){test_iq_trace("app unload
 __attribute__((visibility("default"))) void app_main(void){
  const risc_runtime_api_v1* rt=risc_runtime_get_api(1);assert(rt);
  risc_runtime_capability_v1 grant={.struct_size=sizeof(grant)};
- assert(rt->acquire("test.iq",1,12,&grant));const probe_api* api=grant.api;
+ assert(rt->acquire("test.iq",1,0,&grant));const probe_api* api=grant.api;
  test_iq_save((const void*)app_main,grant.api);
  const char* mode=test_iq_mode();
  if(!strcmp(mode,"refused")){test_iq_dirty(true);assert(!api->claim());test_iq_dirty(false);}

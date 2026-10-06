@@ -1,6 +1,7 @@
 #include "Runtime.h"
 #include "KeyValueGeneration.h"
 #include "runtime/update/Version.h"
+#include "runtime/update/CohortMigration.h"
 #include "runtime/resources/ScopedBufferWipe.h"
 #include <esp_dlfcn.h>
 #include <cstring>
@@ -100,7 +101,8 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
       (strncmp(capability,"platform.",9) && strcmp(capability,"spi.bus"))) return false;
   if (scope==Scope::Global) {
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
-               strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store"))) return false;
+               strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
+               strcmp(capability,"platform.radio.iq.resource"))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
@@ -448,7 +450,8 @@ bool Runtime::prepare(const char* root) {
   if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,config)) return fail("boot.json unreadable/invalid");
   JsonObjectConst c=config.as<JsonObjectConst>();
   if (!c["port"].isNull() && !board_.port(c["port"])) return fail(board_.error());
-  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities"}) || !text(c["board"],relative,sizeof(relative)) ||
+  if(!RiscUpdate::validCohortMigration(c["cohort_migration"]))return fail("invalid cohort migration policy");
+  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities","cohort_migration"}) || !text(c["board"],relative,sizeof(relative)) ||
       !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
   if(!text(c["default_app"],relative,sizeof(relative)) || !elfPath(relative) || !path(root_,relative,current_,sizeof(current_))) return fail("invalid default app path");
   if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>MaxDrivers) return fail("invalid driver list");

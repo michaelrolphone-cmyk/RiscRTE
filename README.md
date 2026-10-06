@@ -278,7 +278,7 @@ See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-fu
 
 Runtime 0.1.34 adds the separate `esp32s3-16mb-appdata-iq` target with a fixed
 pre-heap 64 KiB SRAM reservation and owner-bound `platform.radio.iq.resource@1`.
-Only an explicitly selected integrated IQ provider receives it. Leases exclude
+Only explicitly selected providers declaring that raw dependency receive it. Leases exclude
 native radio activity and block unsafe exit/restart/sleep; failed release retains
 ownership for retry. RF capture policy stays external. See
 [resource contract, final ELF proof and hardware limits](docs/RADIO_IQ_RESOURCE.md).

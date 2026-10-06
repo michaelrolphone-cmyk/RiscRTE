@@ -10,6 +10,7 @@ class RadioIqTarget(unittest.TestCase):
    self.assertNotIn('RISC_ENABLE_RADIO_IQ',c[section].get('build_flags',''))
   self.assertIn('-DRISC_ENABLE_RADIO_IQ=1',c['env:esp32s3-16mb-appdata-iq']['build_flags'])
   self.assertIn('radio_iq_build.py',c['env:esp32s3-16mb-appdata-iq']['extra_scripts'])
+  self.assertEqual(c['env:esp32s3-16mb-appdata-iq']['build_flags'].count('RISC_TARGET'),1)
 @unittest.skipUnless(os.environ.get('RADIO_IQ_ELF'),'requires the actual linked IQ target ELF')
 class RadioIqElf(unittest.TestCase):
  def setUp(self):
@@ -30,6 +31,9 @@ class RadioIqElf(unittest.TestCase):
      offset=self.elf['e_phoff']+index*self.elf['e_phentsize']+8
     struct.pack_into('<I',data,offset,address)
     with self.assertRaisesRegex(ValueError,'overlaps IQ bank'):proof.prove(data)
+ def test_wrong_target(self):
+  data=self.data.replace(b'esp32s3-16mb-appdata-iq\0',b'esp32s3-16mb-appdata-xx\0')
+  with self.assertRaisesRegex(ValueError,'target identity'):proof.prove(data)
  def test_wrong_reservation(self):
   data=bytearray(self.data);needle=struct.pack('<II',*proof.BANK)
   # Match the actual table location rather than any unrelated constants.
@@ -37,6 +41,24 @@ class RadioIqElf(unittest.TestCase):
   section=next(s for s in self.elf.iter_sections() if s['sh_addr']<=start<s['sh_addr']+s['sh_size'])
   at=section['sh_offset']+start-section['sh_addr']
   position=data.index(needle,at,at+8*len(self.good['reservation_table']))
-  struct.pack_into('<I',data,position+4,proof.BANK[1]-4)
+  for changed_end in (proof.BANK[1]-4,proof.BANK[0],0):
+   struct.pack_into('<I',data,position+4,changed_end)
+   with self.assertRaisesRegex(ValueError,'pre-heap bank reservation'):proof.prove(data)
+  data=bytearray(self.data)
+  other=at if position!=at else at+8
+  data[other:other+8]=needle
   with self.assertRaisesRegex(ValueError,'pre-heap bank reservation'):proof.prove(data)
+@unittest.skipUnless(os.environ.get('RADIO_IQ_DISABLED_ELF'),'requires an actual non-IQ target ELF')
+class RadioIqDisabledElf(unittest.TestCase):
+ def test_no_reservation_in_existing_target(self):
+  data=pathlib.Path(os.environ['RADIO_IQ_DISABLED_ELF']).read_bytes()
+  elf=proof.ELFFile(io.BytesIO(data))
+  symbols={s.name:s for s in elf.get_section_by_name('.symtab').iter_symbols()}
+  self.assertFalse(any('reserved_region_risc_radio_iq' in n for n in symbols))
+  start=symbols['soc_reserved_memory_region_start']['st_value']
+  end=symbols['soc_reserved_memory_region_end']['st_value']
+  section=next(s for s in elf.iter_sections() if s['sh_addr']<=start and end<=s['sh_addr']+s['sh_size'])
+  table=section.data()[start-section['sh_addr']:end-section['sh_addr']]
+  self.assertNotIn(proof.BANK,list(struct.iter_unpack('<II',table)))
+  with self.assertRaisesRegex(ValueError,'target identity'):proof.prove(data)
 if __name__=='__main__':unittest.main()

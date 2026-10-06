@@ -50,10 +50,10 @@ static void save(const char* name,const std::string& value){std::ofstream(root+"
 static std::string read(){std::ifstream f(trace);return {std::istreambuf_iterator<char>(f),{}};}
 int main(int argc,char** argv){
  assert(argc==2 || argc==3);root=argv[1];trace=root+"/radio-trace.txt";if(argc==3){mode=argv[2];child();}
- save("board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"iq-test","revision":"unspecified","buses":[],"devices":[{"instance_id":12,"chip":{"vendor":"espressif","model":"esp32s3","revision":"unspecified"},"compatible":"espressif,esp32s3-iq","config_type":"radio.integrated","config_version":1,"config":{"unit":0,"features":1}}]})");
- save("iq.json",R"({"type":"driver","id":"iq-probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"iq.elf","requires":[{"capability":"hardware.device","api":1},{"capability":"platform.radio.iq.resource","api":1}],"provides":[{"capability":"test.iq","api":1}],"hardware_compatibility":[{"compatible":"espressif,esp32s3-iq","revisions":["unspecified"],"config_type":"radio.integrated","config_version":1}]})");
+ save("board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"iq-test","revision":"unspecified","buses":[],"devices":[]})");
+ save("iq.json",R"({"type":"driver","id":"iq-probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"iq.elf","requires":[{"capability":"platform.radio.iq.resource","api":1}],"provides":[{"capability":"test.iq","api":1}]})");
  save("app.json",R"({"type":"application","id":"iq-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.iq","api":1}]})");
- save("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"iq.json","instance_id":12}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.iq","api":1,"instance_id":12}]}]})");
+ save("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"iq.json"}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.iq","api":1,"instance_id":0}]}]})");
  for(const char* scenario:{"lazy","refused","clean","retry","retained","unreleased"}){
   save("radio-trace.txt","");pid_t pid=fork();assert(pid>=0);if(!pid){execl(argv[0],argv[0],root.c_str(),scenario,(char*)nullptr);_exit(99);}int status=0;assert(waitpid(pid,&status,0)==pid);
   const auto output=read();if(!WIFEXITED(status) || WEXITSTATUS(status))fprintf(stderr,"%s failed:%s",scenario,output.c_str());assert(WIFEXITED(status) && !WEXITSTATUS(status));

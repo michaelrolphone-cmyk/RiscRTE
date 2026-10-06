@@ -2,6 +2,7 @@
 // Resource proof only. This adapter never initializes, tunes or parks the modem.
 // ROM map / allocator provenance and hardware limits: docs/RADIO_IQ_RESOURCE.md.
 #include <esp_chip_info.h>
+#include <esp_wifi.h>
 #include <heap_memory_layout.h>
 #include <soc/soc.h>
 #include <cstdint>
@@ -39,6 +40,10 @@ inline bool reserved(){
 inline bool ready(){
   // Never touch the undocumented dump registers on an unsupported actual ROM.
   if(!supported() || !reserved())return false;
+  // Bookkeeping alone cannot prove that an out-of-band native Wi-Fi owner is
+  // absent. The read-only SDK query must report an uninitialized controller.
+  wifi_mode_t mode=WIFI_MODE_NULL;
+  if(esp_wifi_get_mode(&mode)!=ESP_ERR_WIFI_NOT_INIT)return false;
   return !(REG_READ(0x60033D5Cu)&0x80000000u) && !(REG_READ(0x600C101Cu)&0xFu);
 }
 } }

@@ -275,3 +275,52 @@ fixtures. ABI1 and ABI2 run plain and fatal ASan/UBSan variants. Native VFS fixt
 mounts are modeled directories, not execution of SPIFFS's parser; target builds
 and Watch's exact-image extraction/graph checks cover the actual artifact. Host
 power-cut models and exact loader proofs are not physical-device qualification.
+
+
+### Explicit universal shared-KV migration (Runtime 0.1.34)
+
+Full cohorts retain identical board/port declarations and all existing persisted
+owners. A candidate may optionally carry `cohort_migration` in `boot.json`:
+
+```json
+{
+  "schema": 1,
+  "from": {"product": "twatch-s3", "version": "1.0.2", "source_revision": "27876749f08deaa78910cbd16aa54345684b6bf7"},
+  "to": {"product": "twatch-s3", "version": "1.0.3"},
+  "shared_key_value": [{"application_id": "waterfall", "api": 1, "namespace": 1}]
+}
+```
+
+This is an explicit bounded exception, not permission inferred from a namespace
+number, app name, product or surrounding policy. Strict schema 1 admits only the
+shown keys, canonical versions, a lowercase 40-hex origin revision, safe IDs,
+API 1 or 2, positive signed-32-bit namespaces, and at most `MaxAppPolicies`
+unique entries. The actual current `cohort.json` must match every `from` field;
+the actual target identity must match `to`. Both complete cohort identities are
+strictly parsed before the exception is considered.
+
+For each new shared grant, the app identity must be genuinely absent from the
+running policies, and the identical KV namespace AND API must already be granted
+to every current app, with at least two current apps. The matching explicit entry
+is consumed exactly once. Duplicate, unused or missing entries fail admission.
+No entry authorizes an existing app's expansion, an API change, private namespace
+borrowing, app-data reassignment or provider key-binding changes. Existing exact
+persisted grants stay present; genuinely fresh namespaces keep the previous
+full-cohort rules. Existing same-namespace ownership now also requires the exact
+API, closing an unintended same-owner API-expansion path.
+
+The installed target can self-validate with its source-bound record unchanged
+only when both current and candidate identities match exactly (including source,
+runtime and firmware metadata) and match `to`. In that case the old record is
+inert and grants no new authority. A later target version must remove or replace
+it with a separately explicit applicable migration. The parser runs at ordinary
+prepare; migration authority is evaluated only in read-only full-cohort
+validation. There are no storage writes, native bind calls or ELF entry execution
+in that validation, and no formatting, copying or rewriting of existing NVS or
+app-data. `test/cohort_migration_test.cpp` covers these checks and snapshots all
+files before/after every case while storage callbacks are assertion failures.
+
+To introduce a previously absent CPU-owned capability from an older product,
+perform an exact-store native Runtime upgrade first, then use the new Runtime to
+validate the new full cohort. This policy is unavailable in Runtime 0.1.33 and
+must not be sent directly to it as though it already understood the exception.

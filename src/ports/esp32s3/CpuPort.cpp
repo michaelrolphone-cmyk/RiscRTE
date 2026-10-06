@@ -112,6 +112,15 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   clock_={1,sizeof(clock_),this,[](void* c)->uint64_t{auto& p=*static_cast<Port*>(c);return p.hw_.owner()?p.hw_.now():0;},
     [](void* c,uint32_t ms){auto& p=*static_cast<Port*>(c);if(p.hw_.owner())p.hw_.sleep(ms>5000?5000:ms);}};
   if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_))return false;
+  // CPU-owned opt-in resource, registered even before an IQ ELF is selected.
+  // This lets a native-first update retain an identical validated board graph.
+  // It remains provider-only; appPolicies rejects direct raw platform grants.
+  if(hw_.radioIqReady){
+    if(!hw_.radioIdle || !hw_.hciIdle || !hw_.hciSafe)return false;
+    ++iqCount_;iq_.port=this;
+    iq_.api={1,sizeof(iq_.api),&iq_,radioIqClaim,radioIqRelease,0x3FCB0000u,65536u};
+    if(!runtime.registerPlatform(RISC_RADIO_IQ_RESOURCE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&iq_.api))return false;
+  }
   if(hw_.httpClient){
     const auto* h=hw_.httpClient;
     if(!hw_.httpIdle || !hw_.httpSafe || h->api_version!=1 || h->struct_size<sizeof(*h) || !h->open || !h->read || !h->info || !h->close)return false;
@@ -146,16 +155,6 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       ++hciCount_;hci_.port=this;
       hci_.api={{1,sizeof(hci_.api),&hci_,hciOpen,hciSend,hciReceive,hciClose},hciStatus};
       if(!runtime.registerPlatform("platform.hci.controller",1,RiscBoot::Runtime::Scope::Device,id,&hci_.api))return false;
-    }
-    if(runtime.uses(id,RISC_RADIO_IQ_RESOURCE_CAPABILITY,1)){
-      // No authority from a package name or unrelated selected radio. Binding
-      // is inert: native registers/ROM identity are inspected only on claim.
-      if(iqCount_ || strcmp(d.type,"radio.integrated") ||
-         strcmp(d.compatible,"espressif,esp32s3-iq") || d.config.radio.unit!=0 || d.config.radio.features!=1 ||
-         !hw_.radioIqReady || !hw_.radioIdle || !hw_.hciIdle || !hw_.hciSafe)return false;
-      ++iqCount_;iq_.port=this;
-      iq_.api={1,sizeof(iq_.api),&iq_,radioIqClaim,radioIqRelease,0x3FCB0000u,65536u};
-      if(!runtime.registerPlatform(RISC_RADIO_IQ_RESOURCE_CAPABILITY,1,RiscBoot::Runtime::Scope::Device,id,&iq_.api))return false;
     }
     if(runtime.uses(id,"platform.radio",1)){
       // Only the selected integrated station radio receives this authority.

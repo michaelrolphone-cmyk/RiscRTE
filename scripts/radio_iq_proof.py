@@ -10,6 +10,7 @@ def require(ok,message):
 def overlap(start,size,region):
  return bool(size and start<region[1] and start+size>region[0])
 def prove(data):
+ require(b'esp32s3-16mb-appdata-iq\0' in data,'missing IQ target identity')
  e=ELFFile(io.BytesIO(data))
  require(e.elfclass==32 and e.little_endian and e['e_machine']=='EM_XTENSA','not an ELF32 LE Xtensa image')
  symbols={s.name:s for s in e.get_section_by_name('.symtab').iter_symbols()}

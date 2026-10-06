@@ -1,12 +1,14 @@
 # Opt-in receive-only IQ resource, Runtime 0.1.34
 
-`platform.radio.iq.resource@1` is a provider-only, selected-device CPU resource
+`platform.radio.iq.resource@1` is a provider-only, opt-in CPU resource
 lease. The exact SDK header is `sdk/driver/RiscRadioIqResourceV1.h`; fields are
 `api_version`, `struct_size`, `context`, `claim(context,uint64_t*)`,
-`release(context,uint64_t)`, `bank_base`, `bank_bytes`. No app import or global
-platform authority is added. Only a selected `radio.integrated@1` device with
-compatible `espressif,esp32s3-iq`, unit 0, features exactly 1 receives the table.
-Other configurations and missing native support reject before activation.
+`release(context,uint64_t)`, `bank_base`, `bank_bytes`. No app import is added. The opt-in CPU port registers one Global0 table only
+when its native `radioIqReady` proof callback exists. An explicitly selected
+software provider must declare this dependency; apps cannot directly acquire raw
+platform services. No IQ hardware/device entry is introduced. The real SoC/ROM
+and fixed-bank proof, rather than descriptive board metadata, determine admission.
+Missing native support rejects the provider before activation.
 
 The new `esp32s3-16mb-appdata-iq` environment alone sets
 `RISC_ENABLE_RADIO_IQ=1`. Existing environments retain their flags and layout.
@@ -28,7 +30,9 @@ provider storage/maintenance, app exit, restart, Light/Deep sleep, timed/set
 sleep, and output-hold transitions. The raw IQ provider stays lazily parked at
 start and owns every per-burst sequence: claim, power/configure, bounded capture
 and copy, park/restore, release. RF/tuning/calibration and capture policy stay in
-the external ELF, never Runtime. The Runtime checks only dump RUN bit 31 at
+the external ELF, never Runtime. The native proof also requires `esp_wifi_get_mode` to return
+`ESP_ERR_WIFI_NOT_INIT`, rejecting even out-of-band initialized Wi-Fi.
+The Runtime checks dump RUN bit 31 at
 `0x60033D5C` and all bank-select bits 0..3 at `0x600C101C` are clear at both claim
 and release. It writes neither register. Release with a bad token/context does
 nothing. A failed native proof retains the exact lease and marks cleanup retained;
@@ -87,11 +91,12 @@ python scripts/paired_candidate.py --app-data --radio-iq \
   --app-data-image build/appdata-initial --source-sha "$(git rev-parse HEAD)"
 ```
 
-Host coverage includes exact selected-device binding, lazy startup, refused and
+Host coverage includes opt-in global provider-only binding, lazy startup, refused and
 repeated claims, wrong task/token, native modem/HTTP/maintenance exclusion,
 all sleep variants, dump RUN and every bank-select bit, failed release/retry,
 real Runtime/Graph/dlopen retained app/provider mappings and clean finalization,
-and deliberately corrupted final ELF reservation/alias proofs. Existing radio,
+and deliberately corrupted/missing/duplicate final ELF reservation/alias/target
+proofs, plus actual baseline ELF absence of the reservation. Existing radio,
 HCI, HTTP, sleep, storage, app lifecycle and cohort suites remain required.
 
 Physical capture, IQ validity, PLL settling, RF sensitivity, coexistence after
@@ -99,3 +104,16 @@ restoration, heap stress, repeated captures, display responsiveness, power draw,
 sleep/wake, recovery after faults and exact hardware/ROM compatibility are unrun
 hardware qualification. Builds and host mocks prove none of these. No serial,
 flash, merge or release action is part of this change.
+
+## Data-preserving native-first upgrades
+
+An older running Runtime can only validate an identical hardware board and the
+native tables it already knows. Install the new native Runtime against the
+unchanged current store first. Its opt-in IQ table exists even when that current
+store selects no IQ provider. A later full cohort can add the external IQ provider
+without changing any board JSON or binding the staged graph into live hardware.
+No board-equality exception is added.
+
+The generic explicit shared-preferences policy is described in
+[full-cohort migration](PAIRED_BANKS.md#explicit-universal-shared-kv-migration-runtime-0134).
+Native-first update alone does not grant a new app access to old storage.
