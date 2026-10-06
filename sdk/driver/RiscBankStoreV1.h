@@ -35,6 +35,7 @@ extern "C" {
 #define RISC_BANK_FAILED 8u
 #define RISC_BANK_VERIFY_CLONE 9u
 #define RISC_BANK_ACTIVATION_UNKNOWN 10u
+#define RISC_BANK_REVERIFY_STORE 11u
 /* Image digest is over exactly size bytes. Transactions require the current
  * status.store_abi and exact active-store digest, preventing a stale or
  * cross-layout selection. The function-table API version remains independent
@@ -51,6 +52,17 @@ typedef struct {
     uint32_t store_abi, app_count;
     char runtime_version[32], layout[32];
 } risc_bank_status_v1;
+/* Owner-published cohort metadata is also present as /bootfs/cohort.json.
+ * No strings may be truncated; source_revision is forty lowercase hex digits. */
+typedef struct {
+    uint32_t struct_size;
+    char product[65], version[32], source_repo[128], source_revision[41];
+} risc_bank_cohort_status_v1;
+typedef struct {
+    uint32_t struct_size, store_abi, firmware_size, store_size;
+    uint8_t sha256[32], firmware_sha256[32], store_sha256[32], active_store_sha256[32];
+    char product[65], version[32], runtime_version[32], source_repo[128], source_revision[41];
+} risc_bank_cohort_v1;
 typedef struct {
     uint32_t api_version, struct_size;
     void* context;
@@ -80,7 +92,15 @@ typedef struct {
      * Copies <=4096 bytes; actual_size excludes any NUL (none is promised). */
     int32_t (*get_app)(void*, uint32_t index, void* manifest, uint32_t capacity,
                        uint32_t* actual_size);
+    /* Optional append-only suffix. The original v1 prefix ends at get_app.
+     * A cohort streams firmware_size native bytes then store_size bootfs bytes
+     * through write; finish/step/activate/abort/restart keep their v1 meanings.
+     * Native admission preserves the selected layout, hardware and all existing
+     * persistent namespace owners. No NVS/app-data byte is an update target. */
+    int32_t (*cohort_status)(void*, risc_bank_cohort_status_v1*);
+    int32_t (*begin_cohort)(void*, const risc_bank_cohort_v1*, uint64_t*);
 } risc_bank_store_v1;
+#define RISC_BANK_STORE_V1_PREFIX_SIZE offsetof(risc_bank_store_v1, cohort_status)
 #ifdef __cplusplus
 }
 #endif

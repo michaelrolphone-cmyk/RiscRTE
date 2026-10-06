@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
   auto again = graph.acquire("cap.child", 1);
   assert(again.slot && graph.release(again) && graph.shutdown());
 
-  // Seventeen selected providers; the last slot remains selectable and
+  // Full selected provider capacity; the last slot remains selectable and
   // retains the same cleanup behavior. Dependency width remains sixteen.
   {
     GraphV2 modules;
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
       std::snprintf(names[i],sizeof(names[i]),"capacity-%zu",i);
       assert(modules.addVerified({names[i],argv[1],"cap.root",1,nullptr,0}));
     }
-    assert(modules.addVerified(root));assert(modules.moduleCount()==17);
+    assert(modules.addVerified(root));assert(modules.moduleCount()==GraphV2::kMaxModules);
     assert(!modules.addVerified(alternate));
     auto last=modules.acquireFrom("fixture-root","cap.root",1);
     assert(last.slot && modules.interfaceFor(last));assert(!modules.shutdown());

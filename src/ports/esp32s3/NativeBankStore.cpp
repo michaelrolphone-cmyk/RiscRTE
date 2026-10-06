@@ -4,6 +4,7 @@
 #include "runtime/update/PairedBank.h"
 #include "runtime/update/Version.h"
 #include "runtime/update/StoreAudit.h"
+#include "runtime/update/Cohort.h"
 #include <Arduino.h>
 #include <RiscBuildIdentity.h>
 #include <esp_ota_ops.h>
@@ -39,11 +40,12 @@ bool (*isOwner)()=nullptr;bool (*restartIsSafe)()=nullptr;
 bool (*operationIsSafe)()=nullptr;
 bool prepared=false,mounted=false,pending=false,confirmed=false;
 bool rollbackTrusted=false;
-bool replacingFirmware=false;
+bool replacingFirmware=false,replacingCohort=false;
 unsigned activeBank=0;
 FILE* appFile=nullptr;
 struct Scratch {
   RiscBoot::Runtime::UpdateApp appPaths{};
+  risc_bank_cohort_v1 cohort{};
   char manifest[RISC_BANK_MANIFEST_MAX]{};
   uint32_t manifestSize=0,appSize=0;
   uint8_t appDigest[32]{};
@@ -91,7 +93,7 @@ bool allowedImport(const char* name){
   for(const char* n:names)if(!strcmp(n,name))return true;
   return false;
 }
-bool admitElf(const uint8_t* bytes,size_t n){
+bool admitElf(const uint8_t* bytes,size_t n,bool provider=false){
   if(!operationSafe() || n>RISC_BANK_APP_MAX)return false;
   const uint32_t started=millis();unsigned visited=0;
   if(!esp_elf_validate_file(bytes,n))return false;
@@ -100,7 +102,7 @@ bool admitElf(const uint8_t* bytes,size_t n){
   vTaskDelay(1);if(!operationSafe() || uint32_t(millis()-started)>30000u)return false;
   const auto* h=reinterpret_cast<const elf32_hdr_t*>(bytes);
   const auto* sections=reinterpret_cast<const elf32_shdr_t*>(bytes+h->shoff);
-  unsigned main=0,init=0,fini=0;
+  unsigned main=0,init=0,fini=0,driver=0;
   const char* sectionNames=reinterpret_cast<const char*>(bytes+sections[h->shstrndx].offset);
   // RELA may reference either symbol-table kind. Audit both, including tables
   // that have no current relocations. Entry points must be actual exports from
@@ -124,6 +126,7 @@ bool admitElf(const uint8_t* bytes,size_t n){
       if(!strcmp(name,"app_main"))entry=&main;
       if(!strcmp(name,"app_module_init"))entry=&init;
       if(!strcmp(name,"app_module_fini"))entry=&fini;
+      if(provider && !strcmp(name,"t5_driver_get"))entry=&driver;
       if(entry){
         if(ELF_ST_TYPE(sym.info)!=STT_FUNC || ELF_ST_BIND(sym.info)!=STB_GLOBAL || ++*entry!=1 || sym.shndx>=h->shnum)return false;
         const auto& text=sections[sym.shndx];
@@ -131,7 +134,7 @@ bool admitElf(const uint8_t* bytes,size_t n){
       }
     }
   }
-  return main==1 && init==fini;
+  return provider ? driver==1 && !main && !init && !fini : main==1 && init==fini;
 }
 bool finishApp(void*,unsigned b){
   if(!operationSafe() || b==activeBank || !appFile || !mounted)return false;
@@ -194,7 +197,40 @@ bool validateFirmware(void*,unsigned b,uint32_t n){
   uint32_t actual[3]{},currentVersion[3]{};
   if(!RiscUpdate::parseVersion(version,actual) || !RiscUpdate::parseVersion(RISC_BUILD_VERSION,currentVersion))return false;
   int comparison=RiscUpdate::compareVersion(actual,currentVersion);
+  if(replacingCohort && b!=activeBank)return comparison>=0 && !strcmp(version,scratch->cohort.runtime_version);
   return replacingFirmware && b!=activeBank ? comparison>0 : comparison==0;
+}
+bool admitFile(void*,const char* filename,bool provider){
+  if(!operationSafe() || !filename)return false;
+  FILE* f=fopen(filename,"rb");if(!f)return false;
+  bool ok=fseek(f,0,SEEK_END)==0;long length=ok?ftell(f):-1;
+  ok=ok && length>0 && uint64_t(length)<=RISC_BANK_APP_MAX && fseek(f,0,SEEK_SET)==0;
+  auto* bytes=ok?static_cast<uint8_t*>(heap_caps_malloc(size_t(length),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT)):nullptr;
+  if(!bytes){fclose(f);return false;}
+  uint32_t offset=0,started=millis();
+  while(ok && offset<uint32_t(length)){
+    uint32_t n=std::min(4096u,uint32_t(length)-offset);
+    ok=operationSafe() && fread(bytes+offset,1,n,f)==n;offset+=n;vTaskDelay(1);
+    if(uint32_t(millis()-started)>30000u)ok=false;
+  }
+  ok=ok && fgetc(f)==EOF && !ferror(f);
+  if(fclose(f))ok=false;
+  if(ok)ok=admitElf(bytes,size_t(length),provider);
+  free(bytes);return ok;
+}
+bool validateStore(void*,unsigned b){
+  if(!operationSafe() || !runtime || !replacingCohort || b==activeBank || mounted || appFile)return false;
+  esp_vfs_spiffs_conf_t config{};config.base_path="/updatefs";config.partition_label=labels[b];config.max_files=4;config.format_if_mount_failed=false;
+  if(esp_vfs_spiffs_register(&config)!=ESP_OK)return false;
+  mounted=true;
+  CohortIdentity candidate{};
+  if(!readCohort("/updatefs",candidate) || !cohortMatches(candidate,scratch->cohort))return false;
+  void* memory=heap_caps_malloc(sizeof(RiscBoot::Runtime),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+  if(!memory)return false;
+  auto* staged=new(memory) RiscBoot::Runtime({});
+  bool ok=runtime->validateCohort(*staged,"/updatefs",admitFile,nullptr);
+  staged->~Runtime();free(memory);
+  return ok && operationSafe();
 }
 bool select(void*,unsigned b){return operationSafe() && b<2 && b!=activeBank && esp_ota_set_boot_partition(parts[b][0])==ESP_OK;}
 
@@ -204,7 +240,7 @@ int32_t beginFirmware(void*,const risc_bank_image_v1* image,uint64_t* token){
   if(!ready() || !image)return RISC_BANK_UNAVAILABLE;
   risc_bank_status_v1 status{};status.struct_size=sizeof(status);
   if(!transaction->status(&status) || status.state!=RISC_BANK_IDLE)return RISC_BANK_STATE;
-  scratch->manifestSize=0;replacingFirmware=true;return transaction->begin(false,*image,token);
+  scratch->manifestSize=0;replacingFirmware=true;replacingCohort=false;return transaction->begin(false,*image,token);
 }
 int32_t beginApp(void*,const char* id,const void* bytes,uint32_t n,const risc_bank_image_v1* image,uint64_t* token){
   if(token)*token=0;
@@ -213,8 +249,28 @@ int32_t beginApp(void*,const char* id,const void* bytes,uint32_t n,const risc_ba
   if(!transaction->status(&status) || status.state!=RISC_BANK_IDLE)return RISC_BANK_STATE;
   if(!runtime->appUpdate(id,bytes,n,scratch->appPaths))return RISC_BANK_INVALID;
   memcpy(scratch->manifest,bytes,n);scratch->manifestSize=n;scratch->appSize=image->size;memcpy(scratch->appDigest,image->sha256,32);
-  replacingFirmware=false;
+  replacingFirmware=false;replacingCohort=false;
   return transaction->begin(true,*image,token);
+}
+int32_t cohortStatus(void*,risc_bank_cohort_status_v1* out){
+  if(!ready() || !out || out->struct_size<sizeof(*out))return RISC_BANK_UNAVAILABLE;
+  CohortIdentity current{};if(!readCohort("/bootfs",current))return RISC_BANK_NOT_FOUND;
+  *out=current.product;return RISC_BANK_OK;
+}
+int32_t beginCohort(void*,const risc_bank_cohort_v1* image,uint64_t* token){
+  if(token)*token=0;
+  if(!ready() || !image)return RISC_BANK_UNAVAILABLE;
+  risc_bank_status_v1 status{};status.struct_size=sizeof(status);
+  if(!transaction->status(&status) || status.state!=RISC_BANK_IDLE)return RISC_BANK_STATE;
+  if(!validCohortRequest(*image))return RISC_BANK_INVALID;
+  CohortIdentity current{};uint32_t oldVersion[3],newVersion[3];
+  if(!readCohort("/bootfs",current) || strcmp(current.product.product,image->product) ||
+     strcmp(current.product.source_repo,image->source_repo) ||
+     !parseVersion(current.product.version,oldVersion) || !parseVersion(image->version,newVersion) ||
+     compareVersion(newVersion,oldVersion)<=0 || !parseVersion(RISC_BUILD_VERSION,oldVersion) ||
+     !parseVersion(image->runtime_version,newVersion) || compareVersion(newVersion,oldVersion)<0)return RISC_BANK_INVALID;
+  scratch->cohort=*image;scratch->manifestSize=0;replacingFirmware=true;replacingCohort=true;
+  return transaction->beginCohort(*image,token);
 }
 const risc_bank_store_v1 api={1,sizeof(api),nullptr,
   [](void*,risc_bank_status_v1* out){
@@ -242,7 +298,7 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
     if(!ready())return RISC_BANK_UNAVAILABLE;
     if(index>=runtime->appCount())return RISC_BANK_NOT_FOUND;
     return runtime->appInventory(index,output,capacity,actual)?RISC_BANK_OK:RISC_BANK_INVALID;
-  }};
+  },cohortStatus,beginCohort};
 bool partition(const esp_partition_t*& out,esp_partition_type_t type,esp_partition_subtype_t subtype,const char* label,uint32_t offset,uint32_t size){
   out=esp_partition_find_first(type,subtype,label);return out && !out->encrypted && out->address==offset && out->size==size;
 }
@@ -273,7 +329,7 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   scratch=new(memory) Scratch;
   memory=heap_caps_malloc(sizeof(Transaction),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory){scratch->~Scratch();free(scratch);scratch=nullptr;return false;}
-  transaction=new(memory) Transaction({nullptr,now,read,erase,write,invalidate,record,hashBegin,hashAdd,hashEnd,openApp,writeApp,finishApp,cleanup,validateFirmware,select});
+  transaction=new(memory) Transaction({nullptr,now,read,erase,write,invalidate,record,hashBegin,hashAdd,hashEnd,openApp,writeApp,finishApp,cleanup,validateFirmware,select,validateStore});
   mbedtls_sha256_init(&scratch->hashContext);
   if(!knownBootloader())return false;
   for(unsigned b=0;b<2;++b){const char* appLabel=b?"app1":"app0";

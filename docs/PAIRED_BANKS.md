@@ -180,3 +180,98 @@ namespace, retained-resource and boot-health checks remain required.
 The target native-registry, v2 storage and paired update fault suites run together
 in CI. Host tests do not qualify hardware OTA, flash power-loss recovery, TLS or
 new flash layout migration.
+
+## Owner-published full cohorts (Runtime 0.1.33)
+
+The optional `cohort_status` and `begin_cohort` suffix preserves every offset in
+`platform.bank-store@1` through `get_app`. Old providers still use that original
+prefix; a new provider must size-check the suffix before use. Neither public app
+capabilities nor either paired partition/journal ABI changes. ABI2 NVS and
+LittleFS app-data remain outside every transaction write region. There is no
+repartitioning, automatic formatting, erasure or Windows installer dependency.
+
+A cohort is one exact binary: `firmware_size` native-image bytes immediately
+followed by the complete `store_size` SPIFFS image. `store_size` must equal the
+current trusted store capacity; the native image must fit the current native
+slot. The request binds SHA-256 for the concatenation, each component and the
+current active store, plus product/version, Runtime version, owner repository
+and exact forty-character lowercase source revision. The System provider accepts
+only its owner-published Watch repository/release URL. This is the existing
+trusted HTTPS publisher boundary, not a new package-signing system; native code
+and the owner's published code remain trusted, not memory-isolated.
+
+Both baseline and staged bootfs contain `cohort.json`, with exactly these keys:
+
+```json
+{
+  "schema": "riscrte.cohort",
+  "schema_version": 1,
+  "product": "twatch-s3",
+  "version": "1.0.2",
+  "runtime_version": "0.1.33",
+  "source_repo": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+  "source_revision": "<40 lowercase hex characters>",
+  "layout": "riscrte-paired-appdata-v2",
+  "store_abi": 2,
+  "firmware_size": 123456,
+  "firmware_sha256": "<64 lowercase hex characters>"
+}
+```
+
+The publisher builds native firmware first, writes this metadata and builds the
+store, then hashes/concatenates both. Candidate metadata must equal the request;
+product and repository must equal the active identity. Product version increases
+strictly. Runtime may stay equal or increase, but is compared with the actual
+running Runtime version and candidate native marker, never the historical
+runtime_version in the installed product record. A native-only update can thus
+leave the product identity intact without permitting a later Runtime downgrade.
+Legacy native-only updates still require a strictly newer Runtime and clone the
+store unchanged. Installed-app updates still preserve exact existing authority.
+
+Full-cohort admission never executes candidate code or rebinds CPU resources.
+It reuses the running board's scoped native tables only after identical decoded
+board and port declarations match. It prepares a separate PSRAM-owned Runtime,
+validates all app/provider manifests, dependencies, capability grants, hardware
+compatibility and cycles, and checks every selected ELF through structural and
+ordinary-import admission. App exports must have the existing app entry/hook
+contract; providers must export one actual global `t5_driver_get` function and
+no app entry hooks. On existing PSRAM-backed paired/USB targets, new apps/providers are supported
+within24 app policies and
+24 provider instances. Forty graph grant slots cover24 boot pins plus the
+existing16 app grant slots; per-app/per-provider policy bounds remain.
+Legacy static-metadata targets retain19 apps,17 providers and32 graph grants,
+without moving their Runtime objects or increasing internal-DRAM requirements.
+A cohort requiring a new native capability or previously unbound hardware scope
+fails closed until a native-only update supplies support in the running Runtime.
+The default app must have an admitted policy.
+
+Existing app KV/app-data namespace owners and provider key mappings must remain
+present. A newly introduced principal cannot take an existing namespace; removing
+an owner with persistent grants is rejected because no separate tombstone ledger
+exists. Fresh owner-published namespaces and explicit new app/provider grants are
+admitted normally. These restrictions preserve access to existing data as well
+as leaving the underlying NVS and app-data bytes untouched.
+
+A bounded inventory permits only boot.json, its selected board file, cohort.json
+and the exact selected app/provider manifests and ELFs. Missing, extra, duplicate,
+unselected and special files fail closed. Hardware instances may share one exact
+package file pair. No filesystem repair or mount formatting is allowed.
+
+The original destination journal is invalidated first. Sequential writes split
+at the native/store boundary without touching any other partition. Receive SHA,
+independent native/store readback, marker/metadata and graph/ELF admission must all
+pass. After unmount, a second complete store hash detects any mount/admission-time
+mutation before readiness is written/read back. Only then can the existing atomic
+OTA selection occur. Cancellation and failed download/admission invalidate the
+destination after checked cleanup. Unknown flash completion fails the transaction;
+unknown selection is still terminal ACTIVATION_UNKNOWN, preserving both pairs
+until explicit safe restart. First-boot app health confirmation and bootloader
+rollback remain the final activation boundary.
+
+Verification adds `run_cohort_runtime_test.sh` (20/18 and24/24 admission, complete
+inventory, hardware and persistent authority rejection), full-cohort transaction
+cuts/mutations/digests and the native adapter's real structural ELF/API/cleanup
+fixtures. ABI1 and ABI2 run plain and fatal ASan/UBSan variants. Native VFS fixture
+mounts are modeled directories, not execution of SPIFFS's parser; target builds
+and Watch's exact-image extraction/graph checks cover the actual artifact. Host
+power-cut models and exact loader proofs are not physical-device qualification.
