@@ -4,6 +4,7 @@
  * baseline RTC_PERIPH policy is AUTO; no other wake/configuration owner exists.
  */
 #include <cstdint>
+#include "SleepDiagnostics.h"
 #include <RiscTimedSleepV1.h>
 #include <driver/gpio.h>
 #include <driver/rtc_io.h>
@@ -34,8 +35,12 @@ inline bool lightClear(uint8_t pin) {
   return pinOk && sourceOk;
 }
 inline bool lightEnter(uint32_t* cause) {
-  if(esp_light_sleep_start()!=ESP_OK)return false;
-  *cause=lightWakeCause(esp_sleep_get_wakeup_cause());
+  RiscDiagnostics::lightEnter();
+  const esp_err_t result=esp_light_sleep_start();
+  const auto wake=result==ESP_OK?esp_sleep_get_wakeup_cause():ESP_SLEEP_WAKEUP_UNDEFINED;
+  RiscDiagnostics::lightReturn(result,uint32_t(wake));
+  if(result!=ESP_OK)return false;
+  *cause=lightWakeCause(wake);
   return true;
 }
 inline bool stackReady() {uint8_t probe=0;return esp_ptr_internal(&probe);}
@@ -136,6 +141,7 @@ inline bool hold(uint8_t pin,bool enable) {
 inline void enter() {
   // This affects digital pads only while deeply asleep, unlike force_hold_all
   // which would immediately freeze flash/UART and cannot run from flash code.
+  RiscDiagnostics::deepEnter();
   gpio_deep_sleep_hold_en();
   esp_deep_sleep_start();
 }

@@ -282,3 +282,10 @@ Only explicitly selected providers declaring that raw dependency receive it. Lea
 native radio activity and block unsafe exit/restart/sleep; failed release retains
 ownership for retry. RF capture policy stays external. See
 [resource contract, final ELF proof and hardware limits](docs/RADIO_IQ_RESOURCE.md).
+
+## Retrievable sleep/reset diagnostics
+
+Runtime 0.1.35 adds a bounded RTC journal and a read-only `diag` serial replay on
+existing hardware-USB targets. Wake normally first; USB cannot work during
+ESP32-S3 hardware sleep. The recorder never writes flash, adds a wake source or
+keeps USB awake. See [retrieval, retention, power limits and tests](docs/SLEEP_DIAGNOSTICS.md).
