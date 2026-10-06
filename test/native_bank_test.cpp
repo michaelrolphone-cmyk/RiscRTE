@@ -366,6 +366,7 @@ int main(int argc,char** argv){
        std::map<std::string,std::vector<uint8_t>> files;
        for(auto& item:fs::recursive_directory_iterator(argv[4]))if(item.is_regular_file()){
          const std::string name=fs::relative(item.path(),argv[4]).generic_string();
+         if(mode=="provision-seed" && name!="board.json" && name!="boot.json" && name!="default.elf")continue;
          std::ifstream in(item.path(),std::ios::binary);assert(in);
          files[name]=std::vector<uint8_t>((std::istreambuf_iterator<char>(in)),{});assert(!files[name].empty());
          fs::create_directories(fs::path(modelStageRoot)/fs::path(name).parent_path());

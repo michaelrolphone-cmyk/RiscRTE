@@ -26,7 +26,8 @@ store. This is not a package dependency resolver: never pass an app-only subset.
 ## 1. Prepare the public Runtime seed
 
 Use a clean, committed checkout, the pinned target toolchain, and the existing
-candidate builder. For ABI1 the existing commands remain:
+candidate builder. Set `PLATFORMIO_SETTING_ENABLE_TELEMETRY=No` for local build
+commands; the integration workflows set it explicitly too. For ABI1 the existing commands remain:
 
 ```sh
 pio run -e esp32s3-16mb-paired -j 1
