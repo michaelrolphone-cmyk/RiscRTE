@@ -40,7 +40,7 @@ struct Port {
 };
 class Runtime final {
  public:
-  static constexpr size_t MaxAppPolicies=24;
+  static constexpr size_t MaxAppPolicies=RiscLimits::Apps;
   static constexpr size_t MaxAppPolicyGrants=12;
   static constexpr size_t MaxAppRequirements=12;
   explicit Runtime(Port p) : port_(p) {}
@@ -79,7 +79,7 @@ class Runtime final {
   Board& board() { return board_; }
   const Board& board() const { return board_; }
  private:
-  static constexpr size_t MaxDrivers=24, MaxPlatforms=32;
+  static constexpr size_t MaxDrivers=RuntimeProviders::GraphV2::kMaxModules, MaxPlatforms=32;
   using PolicyIndex=int8_t;
   static_assert(PolicyIndex(-1)<0 && MaxDrivers-1<=INT8_MAX && MaxPlatforms-1<=INT8_MAX,
                 "Policy index must retain -1 and every driver/platform index");

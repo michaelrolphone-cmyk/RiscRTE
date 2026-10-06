@@ -235,9 +235,14 @@ validates all app/provider manifests, dependencies, capability grants, hardware
 compatibility and cycles, and checks every selected ELF through structural and
 ordinary-import admission. App exports must have the existing app entry/hook
 contract; providers must export one actual global `t5_driver_get` function and
-no app entry hooks. New apps/providers are supported within 24 app policies and
+no app entry hooks. On existing PSRAM-backed paired/USB targets, new apps/providers are supported
+within24 app policies and
 24 provider instances. Forty graph grant slots cover24 boot pins plus the
 existing16 app grant slots; per-app/per-provider policy bounds remain.
+Legacy static-metadata targets retain19 apps,17 providers and32 graph grants,
+without moving their Runtime objects or increasing internal-DRAM requirements.
+A cohort requiring a new native capability or previously unbound hardware scope
+fails closed until a native-only update supplies support in the running Runtime.
 The default app must have an admitted policy.
 
 Existing app KV/app-data namespace owners and provider key mappings must remain

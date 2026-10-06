@@ -81,6 +81,7 @@ jobs:
           bash test/native_tls_cleanup/run_checked_cleanup.sh
           bash test/run_http_test.sh
           SANITIZE=1 bash test/run_http_test.sh
+          bash test/run_runtime_limits_test.sh
           bash test/run_paired_runtime_memory_test.sh
           SANITIZE=1 bash test/run_paired_runtime_memory_test.sh
           bash test/run_paired_bank_test.sh
