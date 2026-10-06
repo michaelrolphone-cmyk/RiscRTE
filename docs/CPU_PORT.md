@@ -119,3 +119,11 @@ config version; it does not silently bind a v1-only driver to v2 data. The CPU
 port scopes the common prefix identically for both versions and performs no
 initialization while registering tables. Chip/band selection and command
 protocols remain in the ELF provider; the Runtime does not infer a chip.
+
+PDM RX deadlines return successful partial reads, including zero frames. The
+same stream/token remains valid for the next read, matching the pinned
+[ESP-IDF4 RX contract](https://github.com/espressif/esp-idf/blob/v4.4.7/components/driver/i2s.c#L2118).
+The 40 ms deadline and bounded copy loop remain. Invalid counts and actual
+hardware errors still fail closed; failed cleanup retains the invocation. TX
+retains its exact-write requirement. Native, CPU-port and real Runtime/ELF
+regressions cover repeated empty/partial RX, recovery, errors and cleanup.

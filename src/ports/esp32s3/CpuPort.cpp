@@ -213,7 +213,7 @@ bool Port::i2sRead(void* context,uint64_t token,int16_t* pcm,size_t frames,size_
   if(!done || !p.available() || p.transferring_ || c.closing || !c.config.pdm_rx || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
   p.transferring_=true;const bool ok=p.hw_.i2sRead(c.config.controller,pcm,frames,done,ms);p.transferring_=false;
   if(*done>frames){*done=0;p.poisoned_=true;c.closing=true;return false;}
-  if(!ok || *done!=frames){c.closing=true;return false;}
+  if(!ok){c.closing=true;return false;}
   return true;
 }
 bool Port::i2sClose(void* context,uint64_t token){

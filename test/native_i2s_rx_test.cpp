@@ -11,7 +11,7 @@ static std::vector<std::string> calls;
 static std::string failure;
 static bool installed[2]{};
 static int core=0;static int64_t now=0;
-static size_t limit=512,sourceOffset=0;static bool readError=false,badCount=false,unaligned=false;
+static size_t limit=512,sourceOffset=0,available=512;static bool readError=false,badCount=false,unaligned=false;
 static int16_t source[256];
 static esp_err_t event(const std::string& s){calls.push_back(s);return failure==s?ESP_FAIL:ESP_OK;}
 int64_t esp_timer_get_time(){return now;}
@@ -43,13 +43,13 @@ esp_err_t i2s_stop(i2s_port_t p){assert(installed[p]);return event("stop");}
 esp_err_t i2s_driver_uninstall(i2s_port_t p){assert(installed[p]);auto result=event("uninstall");if(result==ESP_OK)installed[p]=false;return result;}
 esp_err_t i2s_read(i2s_port_t p,void* b,size_t n,size_t* done,TickType_t ticks){
  assert(p==0 && installed[p] && n<=512 && !ticks);event("read");
- *done=badCount?n+2:unaligned?1:std::min(n,limit);
+ *done=badCount?n+2:unaligned?1:std::min(std::min(n,limit),available-sourceOffset);
  if(!badCount && !unaligned){assert(sourceOffset+*done<=sizeof(source));memcpy(b,reinterpret_cast<uint8_t*>(source)+sourceOffset,*done);sourceOffset+=*done;}
  return readError?ESP_FAIL:ESP_OK;
 }
 esp_err_t i2s_write(i2s_port_t,const void*,size_t,size_t*,TickType_t){assert(false);return ESP_FAIL;}
 static bool called(const char* s){return std::find(calls.begin(),calls.end(),s)!=calls.end();}
-static void reset(){failure.clear();core=0;assert(close(0));assert(close(1));calls.clear();now=0;sourceOffset=0;limit=512;readError=badCount=unaligned=false;}
+static void reset(){failure.clear();core=0;assert(close(0));assert(close(1));calls.clear();now=0;sourceOffset=0;limit=available=512;readError=badCount=unaligned=false;}
 int main(){
  for(unsigned i=0;i<256;++i)source[i]=int16_t(i*127-16000);
  assert(idle());
@@ -66,7 +66,10 @@ int main(){
  assert(!read(0,pcm,257,&done,40) && !read(0,pcm,256,&done,0) && !read(0,pcm,256,&done,41) && !read(0,nullptr,256,&done,40));
  assert(read(0,pcm,256,&done,40) && done==256 && !memcmp(pcm,source,sizeof(pcm)));sourceOffset=0;limit=64;now=0;
  assert(read(0,pcm,256,&done,40) && done==256 && now==7000 && !memcmp(pcm,source,sizeof(pcm)));
- sourceOffset=0;limit=0;now=0;assert(!read(0,pcm,256,&done,40) && !done && now==40000);
+ sourceOffset=0;limit=0;now=0;assert(read(0,pcm,256,&done,40) && !done && now==40000);
+ for(unsigned i=0;i<100;i++){int64_t begin=now;assert(read(0,pcm,256,&done,40)&&!done&&now-begin==40000);}
+ limit=64;available=64;sourceOffset=0;now=0;assert(read(0,pcm,256,&done,40)&&done==32&&now==40000&&!memcmp(pcm,source,64));
+ available=512;sourceOffset=0;limit=512;assert(read(0,pcm,256,&done,40)&&done==256&&!memcmp(pcm,source,sizeof(pcm)));
  sourceOffset=0;limit=64;readError=true;assert(!read(0,pcm,256,&done,40) && done==32);readError=false;
  badCount=true;assert(!read(0,pcm,256,&done,40) && !done);badCount=false;unaligned=true;assert(!read(0,pcm,256,&done,40) && !done);unaligned=false;
  assert(close(0) && installed[1] && !idle());assert(close(1) && idle());reset();
