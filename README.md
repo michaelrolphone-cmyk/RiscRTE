@@ -140,6 +140,7 @@ storage call. The mounted store must remain immutable while a boot session runs.
 ```sh
 bash test/run_board_test.sh
 bash test/run_runtime_test.sh
+bash test/run_hci_test.sh
 bash test/run_radio_test.sh
 bash test/run_i2s_test.sh
 bash test/run_deep_sleep_test.sh
@@ -244,3 +245,22 @@ See [native registry regression](test/support/native_registry/README.md).
 
 Explicit larger records are available through [key-value v2](docs/KEY_VALUE_V2.md),
 while v1 remains capped at64 bytes with its original authority and lifecycle.
+
+## Explicit BLE controller transport
+
+Firmware 0.1.24 supplies bounded selected-device `platform.hci.controller@1`
+through the unchanged raw HCI ABI. The controller is opened and closed only by
+its external provider. Healthy controller-owned sessions survive app navigation;
+active HCI blocks sleep/restart and uncertain cleanup retains the invocation.
+There is no host stack, pairing, advertising or implicit enable policy in Runtime.
+See [ownership, bounds and verification](docs/BLUETOOTH_HCI.md).
+
+## Opt-in complete-file app data prototype
+
+The separate `esp32s3-16mb-appdata` target adds explicitly granted
+`storage.app-data@1` over a separately provisioned LittleFS partition. It
+preserves complete application files, distinguishes absence from I/O failure,
+and provides bounded atomic replacement with revision checks. Existing target
+partition tables and installed-file browsing stay unchanged. This is an
+incompatible, opt-in new layout; it does not migrate or format a device on boot.
+See [authority, geometry, provisioning and verification limits](docs/APP_DATA.md).

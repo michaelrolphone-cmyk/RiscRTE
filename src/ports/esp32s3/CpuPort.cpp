@@ -1,4 +1,5 @@
 #include "CpuPort.h"
+#include "HciBounds.h"
 #include <cstring>
 namespace RiscCpu {
 namespace {
@@ -9,6 +10,8 @@ void pinsFor(const RiscBoot::Board::Device& d,uint64_t& input,uint64_t& output,u
     for(unsigned i=0;i<c.power_count;++i)output|=pinBit(c.power_pins[i]);
   } else if(!strcmp(d.type,"touch.i2c")){
     const auto& c=d.config.touch;input|=pinBit(c.irq);output|=pinBit(c.reset);if(c.irq_pull_up)pullup|=pinBit(c.irq);
+  } else if(!strcmp(d.type,"radio.lora")){
+    const auto& c=d.lora();input|=pinBit(c.busy)|pinBit(c.irq);output|=pinBit(c.reset);
   } else if(!strcmp(d.type,"peripheral.i2c") || !strcmp(d.type,"power.axp2101")){
     const auto& c=!strcmp(d.type,"peripheral.i2c")?d.config.peripheral:d.config.power.device;
     input|=pinBit(c.irq);if(c.irq_pull_up)pullup|=pinBit(c.irq);
@@ -30,24 +33,34 @@ bool Port::providerStorageSafe() const {
   for(const auto& pin:pins_)if(pin.held)return false;
   for(const auto& c:i2ss_)if(c.closing)return false;
   for(const auto& c:radios_)if(c.closing)return false;
+  if(hci_.closing || (hw_.hciSafe && !hw_.hciSafe()))return false;
   return true;
 }
 bool Port::appExitSafe() const {
-  if(!restartResourcesSafe())return false;
+  // Healthy HCI is entirely firmware/provider-owned, with no app callbacks or
+  // borrowed app storage; it survives navigation. Restart/sleep still drain it.
+  if(!providerStorageSafe())return false;
+  for(const auto& pin:pins_)if(pin.wakeModes)return false;
+  if(hw_.httpIdle && !hw_.httpIdle())return false;
+  for(const auto& c:i2ss_)if(c.token)return false;
+  for(const auto& c:radios_)if(c.active)return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   return true;
 }
 bool Port::restartResourcesSafe() const {
   if(!providerStorageSafe())return false;
+  for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
   for(const auto& c:radios_)if(c.active)return false;
+  if(hci_.token || (hw_.hciIdle && !hw_.hciIdle()))return false;
   return true;
 }
 bool Port::quiescent() const {
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   for(const auto& c:radios_)if(c.token || c.active || c.closing)return false;
+  if(hci_.token || hci_.closing || (hw_.hciIdle && !hw_.hciIdle()))return false;
   for(const auto& p:pins_)if(p.owner)return false;
   return !poisoned_;
 }
@@ -89,7 +102,7 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
           pinsFor(d,gpio.input,gpio.output,gpio.pullup);
     }
   } else pinsFor(selected,gpio.input,gpio.output,gpio.pullup);
-  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor};return true;
+  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet};return true;
 }
 bool Port::bind(RiscBoot::Runtime& runtime){
   if(bound_ || !available() || !hw_.now || !hw_.sleep || !hw_.gpioOpen || !hw_.gpioWrite || !hw_.gpioRead || !hw_.gpioPwm || !hw_.gpioClose ||
@@ -125,6 +138,14 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       c.api={1,sizeof(c.api),&c,i2sOpen,i2sWrite,i2sRead,i2sClose};
       if(!runtime.registerPlatform("platform.i2s.controller",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
+    if(runtime.uses(id,"platform.hci.controller",1)){
+      if(hciCount_ || strcmp(d.type,"radio.integrated") ||
+         strcmp(d.compatible,"espressif,esp32s3-ble") || d.config.radio.unit!=0 || d.config.radio.features!=1 ||
+         !hw_.hciOpen || !hw_.hciSend || !hw_.hciReceive || !hw_.hciClose || !hw_.hciIdle || !hw_.hciSafe)return false;
+      ++hciCount_;hci_.port=this;
+      hci_.api={{1,sizeof(hci_.api),&hci_,hciOpen,hciSend,hciReceive,hciClose},hciStatus};
+      if(!runtime.registerPlatform("platform.hci.controller",1,RiscBoot::Runtime::Scope::Device,id,&hci_.api))return false;
+    }
     if(runtime.uses(id,"platform.radio",1)){
       // Only the selected integrated station radio receives this authority.
       // AP features in the board record do not imply backend AP support.
@@ -139,10 +160,13 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       if(!runtime.registerPlatform("platform.radio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
     if(runtime.uses(id,"spi.bus",1)){
-      // First CPU-port slice supports generic display SPI transport only. Other
-      // SPI protocols need their actual required operations (e.g. idle clocks).
-      if(spiCount_==8 || strcmp(d.type,"display.spi"))return false;
-      auto& c=spis_[spiCount_++];c.port=this;c.bus=d.config.display.bus;c.cs=d.config.display.cs;
+      // Only explicitly materialized transport types receive their own bus/CS.
+      // Other SPI protocols still need their actual operations (e.g. idle clocks).
+      const bool radio=!strcmp(d.type,"radio.lora");
+      if(spiCount_==8 || (!radio && strcmp(d.type,"display.spi")))return false;
+      auto& c=spis_[spiCount_++];c.port=this;
+      c.bus=radio?d.lora().bus:d.config.display.bus;
+      c.cs=radio?d.lora().cs:d.config.display.cs;
       int physical=board.physicalController(c.bus.instance_id);if(physical<2 || physical>3)return false;c.physical=physical;
       c.api={1,sizeof(c.api),&c,spiClaim,spiBegin,spiTransfer,spiEnd,idleClocks,spiRelease};
       if(!runtime.registerPlatform("spi.bus",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
@@ -189,7 +213,7 @@ bool Port::i2sRead(void* context,uint64_t token,int16_t* pcm,size_t frames,size_
   if(!done || !p.available() || p.transferring_ || c.closing || !c.config.pdm_rx || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
   p.transferring_=true;const bool ok=p.hw_.i2sRead(c.config.controller,pcm,frames,done,ms);p.transferring_=false;
   if(*done>frames){*done=0;p.poisoned_=true;c.closing=true;return false;}
-  if(!ok || *done!=frames){c.closing=true;return false;}
+  if(!ok){c.closing=true;return false;}
   return true;
 }
 bool Port::i2sClose(void* context,uint64_t token){
@@ -201,6 +225,55 @@ bool Port::i2sClose(void* context,uint64_t token){
   p.transferring_=true;const bool ok=p.hw_.i2sClose(c.config.controller);p.transferring_=false;
   if(!ok)return false;
   p.unreserve(c.config.bclk,&c);p.unreserve(c.config.ws,&c);p.unreserve(c.config.data,&c);c.token=0;c.closing=false;return true;
+}
+// HCI is opt-in at open, with a cleanup token retained on partial activation.
+bool Port::hciOpen(void* context,uint32_t unit,uint64_t* out){
+  if(out)*out=0;
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || !p.hw_.hciIdle())return false;
+  const uint64_t token=p.token();if(!token)return false;
+  p.transferring_=true;const bool ok=p.hw_.hciOpen();p.transferring_=false;
+  if(!ok){
+    p.transferring_=true;const bool clean=p.hw_.hciClose();p.transferring_=false;
+    if(clean && p.hw_.hciIdle())return false;
+  }
+  c.token=token;c.closing=!ok;*out=token;return ok;
+}
+bool Port::hciSend(void* context,uint64_t token,uint8_t type,const uint8_t* data,size_t size,uint32_t ms){
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || c.closing || !token || token!=c.token || ms>HciBounds::MaxWaitMs || !HciBounds::tx(type,data,size))return false;
+  p.transferring_=true;const bool ok=p.hw_.hciSend(type,data,size,ms);p.transferring_=false;
+  if(!ok)c.closing=true;
+  return ok;
+}
+bool Port::hciReceive(void* context,uint64_t token,uint8_t* type,uint8_t* data,size_t capacity,size_t* size,uint32_t ms){
+  if(size)*size=0;
+  if(type)*type=0;
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!type || !data || !size || capacity<HciBounds::MaxPayload || ms>HciBounds::MaxWaitMs || !p.available() || p.sleepRetained_ || p.transferring_ || c.closing || !token || token!=c.token)return false;
+  p.transferring_=true;const bool ok=p.hw_.hciReceive(type,data,HciBounds::MaxPayload,size,ms);p.transferring_=false;
+  if(!ok || (*size && !HciBounds::rx(*type,data,*size))){*size=0;*type=0;c.closing=true;return false;}
+  return true;
+}
+bool Port::hciClose(void* context,uint64_t token){
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
+  c.closing=true;p.transferring_=true;const bool ok=p.hw_.hciClose();p.transferring_=false;
+  if(!ok || !p.hw_.hciIdle())return false;
+  c.token=0;c.closing=false;return true;
+}
+bool Port::hciStatus(void* context,uint64_t token,uint8_t* state){
+  if(state)*state=RISC_HCI_CONTROLLER_RETAINED;
+  auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
+  if(!state || !p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || token!=c.token)return false;
+  if(!token){
+    if(c.closing || !p.hw_.hciIdle() || !p.hw_.hciSafe())return false;
+    *state=RISC_HCI_CONTROLLER_OFF;return true;
+  }
+  if(c.closing || !p.hw_.hciSafe() || p.hw_.hciIdle()){
+    c.closing=true;*state=RISC_HCI_CONTROLLER_RETAINED;return true;
+  }
+  *state=RISC_HCI_CONTROLLER_ON;return true;
 }
 // Radio ownership is logical until the first join/scan. Idle provider claims
 // may span app handoffs; native activity and failed cleanup never may.
@@ -340,6 +413,8 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   for(const auto& c:p.i2ss_)if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;if(c.active)return RISC_LIGHT_SLEEP_BUSY;}
+  if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_LIGHT_SLEEP_BUSY;
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
   if(pin<0)return RISC_LIGHT_SLEEP_INVALID;
@@ -388,6 +463,8 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   for(const auto& c:p.i2ss_)if(c.closing)return RISC_DEEP_SLEEP_RETAINED;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& c:p.radios_){if(c.closing)return RISC_DEEP_SLEEP_RETAINED;if(c.active)return RISC_DEEP_SLEEP_BUSY;}
+  if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_DEEP_SLEEP_RETAINED;
+  if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& pin:p.pins_)if(pin.pwm)return RISC_DEEP_SLEEP_BUSY;
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
@@ -428,6 +505,83 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   p.sleeping_=false;
   return result;
 }
+int32_t Port::gpioWakeSource(void* context,uint64_t token,bool high,uint32_t modes){
+  if(!context || !token || modes&~uint32_t(RISC_WAKE_SET_LIGHT|RISC_WAKE_SET_DEEP))return RISC_LIGHT_SLEEP_INVALID;
+  auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
+  if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
+  if(p.poisoned_ || p.sleepRetained_)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.sleeping_ || p.transferring_)return RISC_LIGHT_SLEEP_BUSY;
+  unsigned count=0;for(const auto& pin:p.pins_)if(pin.wakeModes)++count;
+  for(unsigned i=0;i<49;++i){auto& pin=p.pins_[i];
+    if(pin.owner!=&c || pin.token!=token || pin.output)continue;
+    if(!modes){pin.wakeModes=0;pin.wakeHigh=false;return 0;}
+    if(pin.wakeModes)return pin.wakeModes==modes && pin.wakeHigh==high?0:RISC_LIGHT_SLEEP_INVALID;
+    if(count>=RISC_WAKE_SET_MAX)return RISC_LIGHT_SLEEP_BUSY;
+    if((modes&RISC_WAKE_SET_LIGHT) && (!p.hw_.wakeValid || !p.hw_.wakeValid(i)))return RISC_LIGHT_SLEEP_UNSUPPORTED;
+    if((modes&RISC_WAKE_SET_DEEP) && (!p.hw_.deepWakeValid || !p.hw_.deepWakeValid(i)))return RISC_LIGHT_SLEEP_UNSUPPORTED;
+    pin.wakeModes=uint8_t(modes);pin.wakeHigh=high;return 0;
+  }
+  return RISC_LIGHT_SLEEP_INVALID;
+}
+int32_t Port::gpioLightSleepSet(void* c,uint64_t t,bool high,uint32_t ms,risc_light_sleep_result_v1* out){
+  return sleepSetImpl(c,t,high,ms,false,out);
+}
+int32_t Port::gpioDeepSleepSet(void* c,uint64_t t,bool high,uint32_t ms){return sleepSetImpl(c,t,high,ms,true,nullptr);}
+int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,bool deep,risc_light_sleep_result_v1* out){
+  if(!context || !token || ms>RISC_TIMED_SLEEP_MAX_MS || (!deep && (!out || out->struct_size<sizeof(*out))))return RISC_LIGHT_SLEEP_INVALID;
+  if(out)out->wake_cause=RISC_LIGHT_SLEEP_WAKE_NONE;
+  auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
+  if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
+  if(p.poisoned_ || p.sleepRetained_)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+     (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
+  for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
+  for(const auto& i:p.i2ss_)if(i.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  for(const auto& i:p.i2ss_)if(i.token)return RISC_LIGHT_SLEEP_BUSY;
+  for(const auto& i:p.radios_){if(i.closing)return RISC_LIGHT_SLEEP_RETAINED;if(i.active)return RISC_LIGHT_SLEEP_BUSY;}
+  if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_LIGHT_SLEEP_BUSY;
+  if(deep)for(const auto& pin:p.pins_)if(pin.pwm)return RISC_LIGHT_SLEEP_BUSY;
+  int anchor=-1;for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)anchor=i;
+  if(anchor<0)return RISC_LIGHT_SLEEP_INVALID;
+  uint64_t mask=0,high=0,pulls=0;unsigned count=0;
+  const uint8_t mode=deep?RISC_WAKE_SET_DEEP:RISC_WAKE_SET_LIGHT;
+  for(unsigned i=0;i<49;++i){const auto& pin=p.pins_[i];
+    if(int(i)!=anchor && !(pin.wakeModes&mode))continue;
+    if(!pin.owner || !pin.token || pin.output)return RISC_LIGHT_SLEEP_INVALID;
+    if(int(i)==anchor && (pin.wakeModes&mode) && pin.wakeHigh!=active)return RISC_LIGHT_SLEEP_INVALID;
+    if(++count>RISC_WAKE_SET_MAX)return RISC_LIGHT_SLEEP_BUSY;
+    mask|=pinBit(i);if(int(i)==anchor?active:pin.wakeHigh)high|=pinBit(i);if(pin.pullup)pulls|=pinBit(i);
+  }
+  if(ms && (!p.hw_.timerArm || !p.hw_.timerClear))return RISC_LIGHT_SLEEP_UNSUPPORTED;
+  if(deep){
+    if(!p.hw_.deepWakeSetValid || !p.hw_.deepWakeSetArm || !p.hw_.deepWakeSetClear || !p.hw_.deepReady || !p.hw_.deepSleep ||
+       !p.hw_.deepWakeSetValid(mask,high))return RISC_LIGHT_SLEEP_UNSUPPORTED;
+    if(!p.hw_.deepReady())return RISC_LIGHT_SLEEP_BUSY;
+  }else{
+    if(!p.hw_.wakeValid || !p.hw_.wakeArm || !p.hw_.wakeClear || !p.hw_.lightSleep)return RISC_LIGHT_SLEEP_UNSUPPORTED;
+    for(unsigned i=0;i<49;++i)if((mask&pinBit(i)) && !p.hw_.wakeValid(i))return RISC_LIGHT_SLEEP_UNSUPPORTED;
+  }
+  auto quiet=[&](){for(unsigned i=0;i<49;++i)if(mask&pinBit(i)){bool level=false;
+    if(!p.hw_.gpioRead(i,&level))return int32_t(RISC_LIGHT_SLEEP_PLATFORM);
+    if(level==bool(high&pinBit(i)))return int32_t(RISC_LIGHT_SLEEP_ACTIVE_WAKE);
+  }return int32_t(0);};
+  int32_t result=quiet();if(result)return result;
+  p.sleeping_=true;uint64_t attempted=0;bool armOk=true,timerAttempted=false;
+  if(deep){attempted=mask;armOk=p.hw_.deepWakeSetArm(mask,high,pulls);}
+  else for(unsigned i=0;i<49 && armOk;++i)if(mask&pinBit(i)){attempted|=pinBit(i);armOk=p.hw_.wakeArm(i,bool(high&pinBit(i)));}
+  if(armOk && ms){timerAttempted=true;armOk=p.hw_.timerArm(ms);}
+  result=RISC_LIGHT_SLEEP_PLATFORM;
+  if(armOk){result=quiet();if(!result){
+    if(deep){p.hw_.deepSleep();p.poisoned_=p.sleepRetained_=true;result=RISC_LIGHT_SLEEP_RETAINED;}
+    else{uint32_t cause=RISC_LIGHT_SLEEP_WAKE_NONE;if(p.hw_.lightSleep(&cause)){out->wake_cause=(!ms && cause==RISC_LIGHT_SLEEP_WAKE_TIMER)?uint32_t(RISC_LIGHT_SLEEP_WAKE_OTHER):cause;}else result=RISC_LIGHT_SLEEP_PLATFORM;}
+  }}
+  bool clean=!timerAttempted || p.hw_.timerClear();
+  if(deep){if(!p.hw_.deepWakeSetClear(mask,high,pulls))clean=false;}
+  else for(unsigned i=0;i<49;++i)if((attempted&pinBit(i)) && !p.hw_.wakeClear(i))clean=false;
+  if(!clean){p.poisoned_=p.sleepRetained_=true;result=RISC_LIGHT_SLEEP_RETAINED;}
+  p.sleeping_=false;return result;
+}
 int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   if(!context)return RISC_DEEP_SLEEP_INVALID;
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
@@ -451,7 +605,7 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
 }
 bool Port::gpioRelease(void* context,uint64_t token){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.hw_.owner() || p.sleepRetained_ || p.sleeping_ || !token)return false;
-  for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token){if(p.pins_[i].held || !p.hw_.gpioClose(i))return false;p.unreserve(i,&c);return true;}
+  for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token){if(p.pins_[i].held || p.pins_[i].wakeModes || !p.hw_.gpioClose(i))return false;p.unreserve(i,&c);return true;}
   return false;
 }
 bool Port::i2cOpen(void* context,uint8_t controller,uint8_t sda,uint8_t scl,uint32_t hz,uint64_t* out){

@@ -91,11 +91,12 @@ inline bool read(uint8_t unit,int16_t* pcm,size_t frames,size_t* done,uint32_t m
     copied+=n;*done=copied/2;
     if(result!=ESP_OK)return false;
     if(copied==size)return true;
-    if(esp_timer_get_time()>=deadline)return false;
+    if(esp_timer_get_time()>=deadline)return true;
     vTaskDelay(1);
-    if(esp_timer_get_time()>=deadline)return false;
+    if(esp_timer_get_time()>=deadline)return true;
   }
-  return copied==size;
+  // A bounded RX wait succeeds with its partial count, including zero.
+  return true;
 }
 inline bool write(uint8_t unit,const int16_t* pcm,size_t frames,size_t* done,uint32_t ms){
   if(done)*done=0;

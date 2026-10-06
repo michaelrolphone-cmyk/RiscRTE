@@ -6,8 +6,13 @@
 #include "bootstrap/Runtime.h"
 #include "ports/esp32s3/CpuPort.h"
 #include "ports/esp32s3/CooperativeDelay.h"
+#ifdef RISC_PAIRED_APP_DATA
+#include "ports/esp32s3/NativeAppData.h"
+#endif
 #ifdef RISC_PAIRED_BANKS
 #include "ports/esp32s3/NativeBankStore.h"
+#endif
+#if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 #include "ports/esp32s3/NativeRuntime.h"
 #endif
 #ifndef RISC_EMBEDDED_BOOTSTORE
@@ -45,8 +50,16 @@ bool appExitSafe(){return cpu.appExitSafe()
   && RiscBankStore::exitSafe()
 #endif
   ;}
-bool providerStorageSafe(){return cpu.providerStorageSafe();}
-bool restartSafe(){return cpu.restartResourcesSafe();}
+bool providerStorageSafe(){return cpu.providerStorageSafe()
+#ifdef RISC_PAIRED_APP_DATA
+ && RiscAppData::exitSafe()
+#endif
+ ;}
+bool restartSafe(){return cpu.restartResourcesSafe()
+#ifdef RISC_PAIRED_APP_DATA
+ && RiscAppData::exitSafe()
+#endif
+ ;}
 bool confirmBoot(){
 #ifdef RISC_PAIRED_BANKS
   return cpu.providerStorageSafe() && RiscBankStore::confirmBoot();
@@ -54,7 +67,7 @@ bool confirmBoot(){
   return true;
 #endif
 }
-#ifdef RISC_PAIRED_BANKS
+#if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
 RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot});
@@ -75,9 +88,23 @@ void setup() {
   if(!RiscBankStore::prepareBoot(isOwner,restartSafe,providerStorageSafe)) {
     Serial.println("RTE_BOOT error=paired-bank-integrity");RiscBankStore::rejectBoot();return;
   }
-  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot});
+#endif
+#if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
+#ifdef RISC_PAIRED_APP_DATA
+  if(!RiscAppData::prepare(isOwner,[](){return cpu.providerStorageSafe() && RiscBankStore::exitSafe();}))Serial.println("RTE_STORAGE unavailable=appdata format_and_grow=disabled");
+#endif
+  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot
+#ifdef RISC_PAIRED_APP_DATA
+    ,RiscAppData::backend()
+#endif
+  });
   if(!retainedRuntime){
-    Serial.println("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();return;
+#ifdef RISC_PAIRED_BANKS
+    Serial.println("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();
+#else
+    Serial.println("RTE_BOOT error=runtime-metadata-psram");
+#endif
+    return;
   }
   auto& runtime=*retainedRuntime;
 #endif

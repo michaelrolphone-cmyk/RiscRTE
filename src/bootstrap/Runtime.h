@@ -1,5 +1,8 @@
 #pragma once
 #include "Board.h"
+#include "InstalledFiles.h"
+#include "AppDataBackend.h"
+#include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
 #include <RiscKeyValueV1.h>
@@ -33,12 +36,19 @@ struct Port {
   bool (*providerStorageSafe)()=nullptr;
   // Explicit default-app health acknowledgement, never inferred from exit.
   bool (*confirmBoot)()=nullptr;
+  const AppDataBackend* appData=nullptr;
 };
 class Runtime final {
  public:
-  static constexpr size_t MaxAppPolicies=16;
+  static constexpr size_t MaxAppPolicies=19;
+  static constexpr size_t MaxAppPolicyGrants=12;
+  static constexpr size_t MaxAppRequirements=12;
   explicit Runtime(Port p) : port_(p) {}
   ~Runtime() { revokeProviders(); }
+  Runtime(const Runtime&)=delete;
+  Runtime& operator=(const Runtime&)=delete;
+  Runtime(Runtime&&)=delete;
+  Runtime& operator=(Runtime&&)=delete;
   enum class Scope : uint8_t { Global, Device, Bus };
   // Compiled-in port registration only, never exported to apps/driver ELFs.
   // Tables/contexts must remain valid until successful runtime shutdown.
@@ -65,12 +75,17 @@ class Runtime final {
   Board& board() { return board_; }
   const Board& board() const { return board_; }
  private:
+  static constexpr size_t MaxDrivers=17, MaxPlatforms=32;
+  using PolicyIndex=int8_t;
+  static_assert(PolicyIndex(-1)<0 && MaxDrivers-1<=INT8_MAX && MaxPlatforms-1<=INT8_MAX,
+                "Policy index must retain -1 and every driver/platform index");
+  static_assert(MaxDrivers==RuntimeProviders::GraphV2::kMaxModules,"Driver capacity must match graph");
   struct Driver {
     char id[96]{}, provides[96]{}, elf[256]{}, version[64]{};
     uint32_t api=0;
     uint64_t instance=0;
-    RuntimeProviders::RequirementV2 requirements[16]{};
-    char names[16][96]{};
+    RuntimeProviders::RequirementV2 requirements[RuntimeProviders::GraphV2::kMaxRequirements]{};
+    char names[RuntimeProviders::GraphV2::kMaxRequirements][96]{};
     size_t count=0;
   };
   bool fail(const char* reason) { if (reason != error_) snprintf(error_,sizeof(error_),"%s",reason); return false; }
@@ -91,7 +106,8 @@ class Runtime final {
   };
   struct ProviderStorage {
     Runtime* owner=nullptr;
-    ProviderKey keys[8]{};
+    static constexpr size_t MaxKeys=9;
+    ProviderKey keys[MaxKeys]{};
     size_t count=0;
     risc_bound_key_value_v1 table{};
     bool live=false;
@@ -104,13 +120,30 @@ class Runtime final {
   static int32_t boundKeyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
   static int32_t boundKeyValuePut(void*,const char*,const void*,uint32_t);
   struct AppGrantPolicy {
-    char capability[96]{}; uint32_t api=0; uint64_t instance=0;
-    int driver=-1, platform=-1; bool keyValue=false;
+    // The names below point only to this Runtime's already validated fixed
+    // driver/platform tables, or the canonical KV literal. Never parsed JSON.
+    // Runtime is nonmovable and provider metadata is immutable after prepare.
+    const char* capability=nullptr;
+    uint32_t api=0; uint64_t instance=0;
+    PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false;
   };
+#if UINTPTR_MAX == UINT32_MAX
+  static_assert(sizeof(AppGrantPolicy)==24,"App policy target layout changed");
+#endif
+  bool configureInstalledFiles(JsonObjectConst);
+  static Runtime* volumeContext(void*,bool diagnostic=false);
+  risc_storage_volume_api_v1 volumeTable(void*);
+  static constexpr PolicyIndex AppDataDriver=-2;
+  bool appDataExitSafe()const;
+  static Runtime* appDataContext(void*);
+  static int32_t appDataStat(void*,const char*,uint32_t*,uint64_t*);
+  static int32_t appDataRead(void*,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*);
+  static int32_t appDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
-    AppGrantPolicy grants[8]{}; size_t count=0;
-  } policies_[MaxAppPolicies]{};
+    AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
+  };
+  MetadataArray<AppPolicy> policies_;
   size_t policyCount_=0;
   const AppPolicy* appPolicy_=nullptr;
   struct AppGrant {
@@ -119,18 +152,24 @@ class Runtime final {
     uint32_t keyValueNamespace=0; risc_key_value_v1 keyValue{};
   } appGrants_[16]{};
   uint32_t grantGeneration_=0;
+  std::unique_ptr<InstalledFiles> installedFiles_;
+  risc_storage_volume_api_v1 installedVolume_{};
+  void* installedVolumeContext_=nullptr;
+  risc_app_data_v1 appDataTable_{};
+  void* appDataContext_=nullptr;
+  uint32_t appDataNamespace_=0;
   struct Platform {
     char capability[96]{}; uint32_t api=0; Scope scope=Scope::Global;
     uint64_t id=0; const void* table=nullptr;
-  } platforms_[32]{};
+  } platforms_[MaxPlatforms]{};
   size_t platformCount_=0;
   Port port_;
   Board board_;
   // Must outlive graph destruction, including retained-module retry/abort.
-  ProviderStorage providerStorage_[16]{};
+  ProviderStorage providerStorage_[MaxDrivers]{};
   RuntimeProviders::GraphV2 graph_;
-  RuntimeProviders::GrantV2 grants_[16]{};
-  Driver drivers_[16]{};
+  RuntimeProviders::GrantV2 grants_[MaxDrivers]{};
+  Driver drivers_[MaxDrivers]{};
   size_t driverCount_=0, granted_=0;
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
   bool registrationOpen_=false;

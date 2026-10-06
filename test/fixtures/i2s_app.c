@@ -35,7 +35,11 @@ __attribute__((visibility("default"))) void app_main(void){
  }else{
   assert(audio->open());assert(storage->check(true));
   assert(sleep->sleep(false)==RISC_LIGHT_SLEEP_BUSY && sleep->sleep(true)==RISC_DEEP_SLEEP_BUSY);
-  if(strstr(mode,"error") || strstr(mode,"partial") || strstr(mode,"oversize")){
+  if(rx&&(strstr(mode,"partial")||strstr(mode,"empty"))){
+   for(unsigned i=0;i<100;i++){assert(audio->transfer());assert(storage->check(true));}
+   assert(sleep->sleep(false)==RISC_LIGHT_SLEEP_BUSY && sleep->sleep(true)==RISC_DEEP_SLEEP_BUSY);
+   if(!retained)assert(audio->close());
+  }else if(strstr(mode,"error") || strstr(mode,"partial") || strstr(mode,"empty") || strstr(mode,"oversize")){
    assert(!audio->transfer());broken=true;assert(storage->check(false));assert(!audio->transfer());
    assert(sleep->sleep(false)==RISC_LIGHT_SLEEP_RETAINED && sleep->sleep(true)==RISC_DEEP_SLEEP_RETAINED);
    if(!retained)assert(audio->close());

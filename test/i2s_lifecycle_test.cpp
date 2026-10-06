@@ -26,7 +26,7 @@ static bool transfer(uint8_t unit,size_t frames,size_t* done,uint32_t ms){
  assert(active[unit] && frames==256 && ms==40);++transferCalls;
  // Reentrant storage/exit checks during the native callback must fail closed.
  assert(!cpu->providerStorageSafe() && !cpu->appExitSafe());
- *done=has("oversize")?frames+1:has("partial")?32:frames;
+ *done=has("oversize")?frames+1:has("partial")?32:has("empty")?0:frames;
  return !has("error");
 }
 static const RiscBoot::KeyValueBackend keyValue{nullptr,
@@ -52,7 +52,7 @@ static void child(){
  auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,&keyValue,appExitSafe,providerStorageSafe});
  assert(runtime->prepare(root.c_str()));const bool retained=has("retained");
  assert(runtime->run()!=retained);
- if(!has("open-"))assert(transferCalls==1);else assert(!transferCalls);
+ if(!has("open-"))assert(transferCalls==((mode.find("rx-")==0&&(has("partial")||has("empty")))?100u:1u));else assert(!transferCalls);
  assert(kvCalls>=4);
  if(retained){
   assert(!cpu->appExitSafe() && !cpu->quiescent() && (active[0] || active[1]));
@@ -71,7 +71,7 @@ int main(int argc,char** argv){
  save("sleep.json",R"({"type":"driver","id":"i2s-sleep-probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"sleep.elf","requires":[{"capability":"hardware.device","api":1},{"capability":"platform.gpio","api":1}],"provides":[{"capability":"test.sleep","api":1}],"hardware_compatibility":[{"compatible":"test,gpio","revisions":["unspecified"],"config_type":"gpio.bank","config_version":1}]})");
  save("storage.json",R"({"type":"driver","id":"i2s-storage-probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"storage.elf","requires":[{"capability":"storage.key-value.bound","api":1}],"provides":[{"capability":"test.alert","api":1}]})");
  save("app.json",R"({"type":"application","id":"i2s-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.audio","api":1},{"capability":"test.sleep","api":1},{"capability":"test.alert","api":1}]})");
- for(const char* direction:{"tx-","rx-"})for(const char* suffix:{"clean","retained","open-clean","open-retained","error-clean","partial-clean","error-retained","partial-retained","oversize-retained","close-retry","close-retained"}){
+ for(const char* direction:{"tx-","rx-"})for(const char* suffix:{"clean","retained","open-clean","open-retained","error-clean","partial-clean","empty-clean","error-retained","partial-retained","empty-retained","oversize-retained","close-retry","close-retained"}){
   mode=std::string(direction)+suffix;
   save("boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"audio.json","instance_id":12},{"manifest":"audio.json","instance_id":13},{"manifest":"sleep.json","instance_id":7},{"manifest":"storage.json","key_value":[{"key":"alarm_occ","namespace":3,"access":"read-write"}]}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.audio","api":1,"instance_id":)")+(direction[0]=='r'?"13":"12")+R"(},{"capability":"test.sleep","api":1,"instance_id":7},{"capability":"test.alert","api":1,"instance_id":0}]}]})");
   save("i2s-trace.txt","");pid_t pid=fork();assert(pid>=0);if(!pid){execl(argv[0],argv[0],root.c_str(),mode.c_str(),(char*)nullptr);_exit(99);}int status=0;assert(waitpid(pid,&status,0)==pid);

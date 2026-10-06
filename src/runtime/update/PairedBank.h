@@ -3,9 +3,21 @@
 #include <cstddef>
 #include <cstdint>
 namespace RiscUpdate {
-constexpr uint32_t FirmwareBytes=0x300000, StoreBytes=0x4f0000, SectorBytes=4096;
-constexpr uint32_t FirmwareOffset[2]={0x10000,0x800000};
+#ifdef RISC_PAIRED_APP_DATA
+constexpr uint32_t FirmwareBytes=0x260000, StoreAbi=2;
+constexpr uint32_t StoreBytes=0x510000;
+constexpr uint32_t StoreOffset[2]={0x2f0000,0xae0000};
+constexpr const char* Layout="riscrte-paired-appdata-v2";
+#define RISC_PAIRED_ABI_MARKER "RISC_PAIRED_STORE_ABI:2"
+#else
+constexpr uint32_t FirmwareBytes=0x300000, StoreAbi=1;
+constexpr uint32_t StoreBytes=0x4f0000;
 constexpr uint32_t StoreOffset[2]={0x310000,0xb00000};
+constexpr const char* Layout="riscrte-paired-16m-v1";
+#define RISC_PAIRED_ABI_MARKER "RISC_PAIRED_STORE_ABI:1"
+#endif
+constexpr uint32_t SectorBytes=4096;
+constexpr uint32_t FirmwareOffset[2]={0x10000,0x800000};
 constexpr uint32_t JournalOffset=0xff2000;
 /* Little-endian, fixed 96-byte commit record; one independent erase sector per
  * bank. CRC covers first 92 bytes. Written only after BOTH images read back.

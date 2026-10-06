@@ -24,7 +24,7 @@
 extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
 /* This literal is inspected in staged native images. It states the generic
  * paired bootstrap-store contract, independently of product/release URLs. */
-extern "C" __attribute__((used)) const char risc_paired_store_abi[]="RISC_PAIRED_STORE_ABI:1";
+extern "C" __attribute__((used)) const char risc_paired_store_abi[]=RISC_PAIRED_ABI_MARKER;
 extern "C" __attribute__((used)) const char risc_runtime_update_version[]="RISC_RUNTIME_VERSION:" RISC_BUILD_VERSION;
 // Arduino's weak default confirms before setup(), which is too early.
 extern "C" bool verifyRollbackLater(void){return true;}
@@ -219,17 +219,17 @@ int32_t beginApp(void*,const char* id,const void* bytes,uint32_t n,const risc_ba
 const risc_bank_store_v1 api={1,sizeof(api),nullptr,
   [](void*,risc_bank_status_v1* out){
     if(!owner() || !transaction->status(out))return false;
-    out->store_abi=RISC_BANK_STORE_ABI;out->app_count=runtime?runtime->appCount():0;
+    out->store_abi=StoreAbi;out->app_count=runtime?runtime->appCount():0;
     snprintf(out->runtime_version,sizeof(out->runtime_version),"%s",RISC_BUILD_VERSION);
-    snprintf(out->layout,sizeof(out->layout),"%s","riscrte-paired-16m-v1");return true;
+    snprintf(out->layout,sizeof(out->layout),"%s",Layout);return true;
   },beginFirmware,beginApp,
   [](void*,uint64_t t,risc_bank_status_v1* s){
     if(!ready())return RISC_BANK_UNAVAILABLE;
     int32_t result=transaction->step(t,s);
     if(s && s->struct_size>=sizeof(*s)){
-      s->store_abi=RISC_BANK_STORE_ABI;s->app_count=runtime->appCount();
+      s->store_abi=StoreAbi;s->app_count=runtime->appCount();
       snprintf(s->runtime_version,sizeof(s->runtime_version),"%s",RISC_BUILD_VERSION);
-      snprintf(s->layout,sizeof(s->layout),"%s","riscrte-paired-16m-v1");}
+      snprintf(s->layout,sizeof(s->layout),"%s",Layout);}
     return result;
   },
   [](void*,uint64_t t,const void* p,uint32_t n){return ready()?transaction->write(t,p,n):RISC_BANK_UNAVAILABLE;},
@@ -283,6 +283,10 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   if(!partition(ota,ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_OTA,"otadata",0xff0000,0x2000) ||
      !partition(journal,ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x40),"bank_state",JournalOffset,0x2000) ||
      !partition(nvs,ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_NVS,"nvs",0x9000,0x6000))return false;
+#ifdef RISC_PAIRED_APP_DATA
+  const esp_partition_t* data=nullptr;
+  if(!partition(data,ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x41),"appdata",0x270000,0x80000))return false;
+#endif
   rollbackTrusted=true;
   const esp_partition_t* running=esp_ota_get_running_partition();
   if(!running || (running->address!=FirmwareOffset[0] && running->address!=FirmwareOffset[1]))return false;

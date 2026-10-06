@@ -43,3 +43,15 @@ typedef struct {
     uint32_t minimum_hz, maximum_hz;
     uint8_t tcxo_voltage, reset_active_high, busy_active_high, irq_active_high;
 } tw_hw_lora_v1;
+
+/* radio.lora config_version2: explicit selectable front-end profiles.
+ * Prefix is unchanged; no chip probing or implicit selection is authorized. */
+#define TW_LORA_PROFILE_433 1u
+#define TW_LORA_PROFILE_868 2u
+#define TW_LORA_PROFILE_915 3u
+#define TW_LORA_PROFILE_2400 4u
+#define TW_LORA_PROFILE_MASK 15u
+typedef struct {
+    tw_hw_lora_v1 base;
+    uint32_t allowed_profiles;
+} tw_hw_lora_v2;

@@ -10,11 +10,11 @@ uint32_t crc32(const void* ptr,size_t n){
 bool validRecord(const Record& r,unsigned bank){
   return bank<2 && r.magic==RecordMagic && r.format==1 && r.bank==bank &&
     r.firmwareSize>=32 && r.firmwareSize<=FirmwareBytes && r.storeSize==StoreBytes &&
-    r.storeAbi==RISC_BANK_STORE_ABI && !r.reserved && r.crc==crc32(&r,offsetof(Record,crc));
+    r.storeAbi==StoreAbi && !r.reserved && r.crc==crc32(&r,offsetof(Record,crc));
 }
 Record makeRecord(unsigned bank,uint32_t n,const uint8_t* fw,const uint8_t* store){
   Record r{};r.magic=RecordMagic;r.format=1;r.bank=bank;r.firmwareSize=n;r.storeSize=StoreBytes;
-  r.storeAbi=RISC_BANK_STORE_ABI;memcpy(r.firmwareSha,fw,32);memcpy(r.storeSha,store,32);
+  r.storeAbi=StoreAbi;memcpy(r.firmwareSha,fw,32);memcpy(r.storeSha,store,32);
   r.crc=crc32(&r,offsetof(Record,crc));return r;
 }
 bool Transaction::initialize(unsigned active,const Record& record){
@@ -40,7 +40,7 @@ bool Transaction::status(risc_bank_status_v1* out)const{
 int32_t Transaction::begin(bool app,const risc_bank_image_v1& image,uint64_t* token){
   if(token)*token=0;
   if(!token || !initialized_ || state_!=RISC_BANK_IDLE || serial_==UINT64_MAX)return RISC_BANK_STATE;
-  if(image.struct_size<sizeof(image) || image.store_abi!=RISC_BANK_STORE_ABI || !image.size ||
+  if(image.struct_size<sizeof(image) || image.store_abi!=StoreAbi || !image.size ||
     image.size>(app?RISC_BANK_APP_MAX:FirmwareBytes) || (!app && image.size<32) ||
     memcmp(image.active_store_sha256,activeRecord_.storeSha,32))return RISC_BANK_INVALID;
   app_=app;image_=image;token_=++serial_;*token=token_;started_=io_.now(io_.context);error_=0;received_=offset_=0;

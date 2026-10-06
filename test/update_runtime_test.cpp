@@ -1,11 +1,12 @@
 #include "bootstrap/Runtime.h"
+#include <RiscPlatformClockV1.h>
 #include <cassert>
 #include <cstring>
 #include <fstream>
 #include <string>
 using namespace RiscBoot;
 static Runtime* rt=nullptr;static std::string mode,app;static unsigned healthCalls=0,phase=0;
-static bool namespaceMode=false,storageSafe=true;
+static bool namespaceMode=false,storageSafe=true;static unsigned finalGrant=0;
 extern "C" unsigned test_update_phase(){return phase;}
 extern "C" void test_update_next(){++phase;}
 extern "C" void test_update_retain(){storageSafe=false;}
@@ -21,7 +22,20 @@ extern "C" void test_update_inspect(){
  json["file_name"]="board.json";check(false);json["file_name"]="default.elf";
  json["entry"]="driver_main";check(false);json["entry"]="app_main";
  json["grants"].to<JsonArray>();check(false);json.remove("grants");
- auto requirements=json["requires"].as<JsonArray>();requirements.clear();
+ auto requirements=json["requires"].as<JsonArray>();
+ if(finalGrant){
+   // Clock's unique requirement first matches the ninth/tenth grant after
+   // eight/nine independently authorized KV namespaces. Exercise the actual
+   // appUpdate matcher, not just boot admission, with ASan enabled by runner.
+   check(true);auto last=requirements[1];last["capability"]="platform.bank-store";check(false);
+   last["capability"]="platform.clock";check(true);requirements.remove(1);check(false);
+   auto restored=requirements.add<JsonObject>();restored["capability"]="platform.clock";restored["api"]=1;check(true);
+   for(unsigned ns=1;ns<=finalGrant;++ns){risc_runtime_capability_v1 g{};g.struct_size=sizeof(g);assert(rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,ns,&g));assert(rt->release(&g));}
+   risc_runtime_capability_v1 g{};g.struct_size=sizeof(g);assert(rt->acquire("platform.clock",1,0,&g));assert(rt->release(&g));
+   assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,0,&g));
+   return;
+ }
+ requirements.clear();
  if(namespaceMode){
    check(false); // Removing the admitted requirement cannot remove boot grants.
    auto req=requirements.add<JsonObject>();req["capability"]="storage.key-value";req["api"]=2;check(false);
@@ -50,19 +64,25 @@ static bool safe(){return storageSafe;}
 static int32_t get(void*,uint32_t,const char*,void*,uint32_t,uint32_t*){assert(false);return RISC_KEY_VALUE_IO;}
 static int32_t put(void*,uint32_t,const char*,const void*,uint32_t){assert(false);return RISC_KEY_VALUE_IO;}
 static const KeyValueBackend backend{nullptr,get,put};
+static bool bindClock(Runtime& runtime){
+ static const risc_platform_clock_api_v1 clock{1,sizeof(clock),nullptr,[](void*)->uint64_t{return 0;},[](void*,uint32_t){}};
+ return runtime.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,&clock);
+}
 int main(int argc,char** argv){assert(argc==2);std::string root=argv[1];
  std::ofstream(root+"/board.json")<<R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})";
- for(bool namespaces:{false,true}){
-   namespaceMode=namespaces;
+ for(unsigned namespaces:{0u,2u,9u,10u}){
+   namespaceMode=namespaces!=0;finalGrant=namespaces>=9?namespaces-1:0;
    app=R"({"type":"application","id":"test","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[)";
    if(namespaces)app+=R"({"capability":"storage.key-value","api":1})";
+   if(finalGrant)app+=R"(,{"capability":"platform.clock","api":1})";
    app+="]}";std::ofstream(root+"/app.json")<<app;
    std::string boot=R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[)";
-   if(namespaces)boot+=R"({"capability":"storage.key-value","api":1,"instance_id":1},{"capability":"storage.key-value","api":1,"instance_id":5})";
+   if(finalGrant){for(unsigned n=1;n<=finalGrant;++n){if(n>1)boot+=",";boot+="{\"capability\":\"storage.key-value\",\"api\":1,\"instance_id\":"+std::to_string(n)+"}";}boot+=R"(,{"capability":"platform.clock","api":1,"instance_id":0})";}
+   else if(namespaces)boot+=R"({"capability":"storage.key-value","api":1,"instance_id":1},{"capability":"storage.key-value","api":1,"instance_id":5})";
    boot+="]}]}";std::ofstream(root+"/boot.json")<<boot;
    for(const char* test:{"exit","healthy","refuse","queued","retained"}){
      mode=test;healthCalls=phase=0;storageSafe=true;
-     Runtime runtime({owner,health,delay,log,nullptr,&backend,safe,safe,confirm});rt=&runtime;
+     Runtime runtime({owner,health,delay,log,bindClock,&backend,safe,safe,confirm});rt=&runtime;
      assert(!runtime.confirmBoot());assert(runtime.prepare(root.c_str()));assert(runtime.run()!=(mode=="retained"));assert(!runtime.confirmBoot());
      assert(healthCalls==((mode=="exit" || mode=="retained")?0:1));
    }

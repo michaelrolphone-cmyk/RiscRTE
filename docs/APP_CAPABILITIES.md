@@ -35,18 +35,38 @@ this exact path to manifest identity/version and the intersection of declared
 requirements with authorized grants before any ELF runs. Missing, extra,
 duplicate or ambiguous grants fail boot. The sole additive exception is multiple
 distinct, positive storage.key-value@1 namespaces for one manifest requirement;
-all are explicit owner-provisioned grants and still count toward the same eight-
+all are explicit owner-provisioned grants and still count toward the same 12-
 grant bound. Non-KV capability uniqueness is unchanged. ID0 acquisition rejects
 multiple matches; an app must name the intended namespace. This is provisioning consistency for
 trusted native code, not a signature scheme or memory sandbox.
 
-Limits are 16 app policies (`Runtime::MaxAppPolicies`), 8 declared capabilities
-and authorized grants per app, and 16 live app grants. Policy storage remains
-fixed-size; increasing the policy count does not increase either per-app bound
-or the live grant pool. Seventeen policies reject before any ELF is loaded.
-On the pinned ESP32-S3 GCC 8.4 ABI, the eight additional policy records add
-11,584 bytes to the fixed Runtime object (218,168 to 229,752 bytes).
-All grant handles have nonreused generations; stale handles, wrong API/instance,
+Limits are 18 app policies (`Runtime::MaxAppPolicies`), 11 distinct declared
+capability types (`Runtime::MaxAppRequirements`), 12 independently authorized
+grants per app (`Runtime::MaxAppPolicyGrants`), and 16 live app grants. These are
+separate bounds: eleven requirement types, thirteen policy grants, or seventeen
+policies reject before loading any ELF. No authorization is added implicitly.
+
+Internal policy records reference only already-retained immutable capability
+names in the fixed driver/platform table, or the canonical KV literal. They never
+borrow parser memory. Runtime is noncopyable/nonmovable; preparation and platform
+registration cannot replace metadata after admission.
+
+Firmware 0.1.27 expands policy slots from ten to twelve while compacting private
+indices to signed8-bit values. Fixed16-driver/32-platform capacities are asserted
+against that index width; -1 remains the absent sentinel. Board binding IDs use
+32-bit private storage only after the unchanged1..INT32_MAX parse check. The shared
+64-bit hardware IDs and all serialized layouts remain unchanged.
+
+Pinned Xtensa GCC8.4 measures Runtime at214,272 bytes, down4,608 from its immediate
+0.1.26 parent (218,880), despite the two extra grants. CpuPort is4,648 bytes versus
+4,384 (+264), a net fixed-data saving of4,344 bytes. Generic USB and paired retain
+the existing retained-PSRAM allocator; baseline/CAM/X4 retain internal metadata.
+No target gains a new PSRAM requirement or loses capacity or validation.
+These records are never serialized or exposed through an SDK. Default/child
+reload, parsed-memory churn, rejected reprepare, failed prepare and stale-handle
+regressions run with the same exact authority checks.
+No grant is added implicitly; each new namespace must still be declared in
+the boot policy. All grant handles have nonreused generations; stale handles, wrong API/instance,
 short output structs and calls outside the owner app are rejected. Child paths
 without their own policy get no capability grants; policy is not inherited.
 Health, diagnostic, cooperative yield and launch remain available through the
@@ -68,3 +88,5 @@ logically revokes app grants and disables owner APIs while retaining the image,
 allocations and provider references, rather than invoking cleanup or launching
 another app. This is separate from ordinary capability release and graph
 quiescence; see DEEP_SLEEP.md.
+
+Policy metadata is allocated for the actual validated count, bounded at 18, with no allocation when the policy list is absent/empty. Paired and explicit metadata-PSRAM targets preserve their PSRAM-only allocation policy; allocation failure rejects prepare. Policy storage outlives the provider graph and all retained grant names.

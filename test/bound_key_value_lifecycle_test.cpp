@@ -18,7 +18,7 @@ static std::string root;
 static RiscBoot::Runtime* running;
 static bool owned = true, exitSafe = true, retaining = false, failStart = false;
 static const void* providerImages[2]{};
-static unsigned reads, writes, appRuns, starts[2], unloads[2];
+static unsigned reads, writes, appRuns, starts[2], unloads[2], platformBindings;
 static std::vector<std::string> events;
 static std::map<std::pair<uint32_t, std::string>, std::string> values;
 static risc_bound_key_value_v1 saved[2]{}, stale[2]{};
@@ -181,14 +181,17 @@ static void fixtures() {
   for (const char* name : {"default", "child", "third"}) file((std::string(name) + ".json").c_str(), app(name));
   file("boot.json", boot());
 }
-static void expectAdmission(bool accepted, const RiscBoot::KeyValueBackend* source = &backend) {
-  const size_t beforeEvents = events.size(); const unsigned before = calls();
-  RiscBoot::Runtime runtime({owner, health, delay, logLine, nullptr, source, safe});
+static bool bindAdmission(RiscBoot::Runtime&) { ++platformBindings; return true; }
+static void expectAdmission(bool accepted, const RiscBoot::KeyValueBackend* source = &backend, bool beforeBinding = false) {
+  const size_t beforeEvents = events.size(); const unsigned before = calls(), previousBindings = platformBindings;
+  RiscBoot::Runtime runtime({owner, health, delay, logLine, bindAdmission, source, safe});
   const bool result = runtime.prepare(root.c_str());
   if (result != accepted) fprintf(stderr, "Unexpected prepare=%d, expected=%d, error=%s\n", result, accepted, runtime.error());
   assert(result == accepted);
   if (!accepted) assert(!runtime.run());
   assert(events.size() == beforeEvents && calls() == before);
+  if (beforeBinding) assert(platformBindings == previousBindings);
+  if (accepted) assert(platformBindings == previousBindings + 1);
 }
 static void schema() {
   fixtures(); expectAdmission(true);
@@ -210,7 +213,10 @@ static void schema() {
       R"({"key":"mode","namespace":1,"access":null})", R"({"key":1,"namespace":1,"access":"read"})", R"({"key":"mode","namespace":1,"access":"read","extra":1})"}) invalidEntry(entry);
   auto doc = parseDoc(boot()); doc["drivers"][0].remove("key_value"); file("boot.json", encode(doc)); expectAdmission(false);
   doc = parseDoc(boot()); doc["drivers"][0]["key_value"][1]["key"] = "alert_mode"; file("boot.json", encode(doc)); expectAdmission(false);
-  doc = parseDoc(boot()); doc["drivers"][0]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"ninth","namespace":1,"access":"read"})").as<JsonVariantConst>()); file("boot.json", encode(doc)); expectAdmission(false);
+  // The ninth exact authorization is admitted; a tenth rejects before even
+  // platform binding, ELF constructors or storage/hardware backend activity.
+  doc = parseDoc(boot()); doc["drivers"][0]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"ninth","namespace":1,"access":"read"})").as<JsonVariantConst>()); file("boot.json", encode(doc)); expectAdmission(true);
+  doc["drivers"][0]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"tenth","namespace":1,"access":"read"})").as<JsonVariantConst>()); file("boot.json", encode(doc)); expectAdmission(false, &backend, true);
   fixtures(); file("first.json", driver(0, "[]")); expectAdmission(false); // Unused map.
   fixtures(); file("first.json", driver(0, R"([{"capability":"storage.key-value.bound","api":2}])")); expectAdmission(false);
   fixtures(); file("first.json", driver(0, R"([{"capability":"storage.key-value.bound","api":1},{"capability":"storage.key-value.bound","api":1}])")); expectAdmission(false);
@@ -229,7 +235,7 @@ static void schema() {
   fixtures(); doc = parseDoc(boot()); doc["drivers"][0]["key_value"][0]["key"] = "abcdefghijklmno";
   doc["drivers"][0]["key_value"][0]["namespace"] = INT32_MAX; doc["drivers"][0]["key_value"][1]["key"] = "a-._09";
   file("boot.json", encode(doc)); expectAdmission(true);
-  // Maximum bounded policy storage: 16 selected modules, eight entries each.
+  // Maximum bounded policy storage: 16 selected modules, nine entries each.
   fixtures(); doc = parseDoc(boot()); doc.remove("app_capabilities"); doc["drivers"].to<JsonArray>();
   for (unsigned i = 0; i < 16; ++i) {
     auto manifest = parseDoc(driver(0)); manifest["id"] = "bound-limit-" + std::to_string(i);
@@ -237,8 +243,11 @@ static void schema() {
     const std::string filename = "limit-" + std::to_string(i) + ".json"; file(filename.c_str(), encode(manifest));
     auto selection = doc["drivers"].as<JsonArray>().add<JsonObject>(); selection["manifest"] = filename;
     selection["key_value"].set(parseDoc(primaryMap).as<JsonVariantConst>());
+    selection["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"ninth","namespace":1,"access":"read"})").as<JsonVariantConst>());
   }
   file("boot.json", encode(doc)); expectAdmission(true);
+  doc["drivers"][15]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"tenth","namespace":1,"access":"read"})").as<JsonVariantConst>());
+  file("boot.json", encode(doc)); expectAdmission(false, &backend, true);
   // Legacy selections and omitted key_value remain accepted without backend.
   fixtures(); file("first.json", driver(0, "[]")); file("boot.json", R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"first.json"}]})"); expectAdmission(true, nullptr);
   // A reserved storage requirement cannot also be a physical binding.

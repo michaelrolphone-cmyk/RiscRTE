@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstdio>
 #include <memory>
+#include <string>
 using namespace RiscBoot;
 int main(int argc,char** argv) {
   for(int i=1;i<argc;++i) {
@@ -44,6 +45,26 @@ int main(int argc,char** argv) {
   {Board b;assert(!b.load(doc.as<JsonObjectConst>()));}
   assert(parse(fixture,strlen(fixture),doc));doc["buses"].as<JsonArray>().add(doc["buses"][0]);
   {Board b;assert(!b.load(doc.as<JsonObjectConst>()));}
+  // Decoded binding compaction must not truncate or narrow admission bounds.
+  for(uint64_t id:{UINT64_C(1),UINT64_C(2147483647)}){
+    assert(parse(fixture,strlen(fixture),doc));
+    auto other=doc["devices"].as<JsonArray>().add<JsonObject>();other.set(doc["devices"][0]);
+    // Bus uses ID1; choose a different bus so binding target1 is still valid.
+    doc["buses"][0]["instance_id"]=2;doc["devices"][0]["config"]["bus_instance_id"]=2;
+    other["instance_id"]=id;other["config"]["bus_instance_id"]=2;other["config"]["cs"]=8;
+    doc["devices"][0]["bindings"]["test.peer"]=id;
+    Board b;assert(b.load(doc.as<JsonObjectConst>()));
+    assert(b.device(7)->bindings[0].instance==id && b.device(id)->hardware.instance_id==id);
+  }
+  for(uint64_t bad:{UINT64_C(0),UINT64_C(2147483648),UINT64_C(4294967295),UINT64_C(4294967297),UINT64_MAX}){
+    assert(parse(fixture,strlen(fixture),doc));doc["devices"][0]["bindings"]["test.peer"]=bad;
+    Board b;assert(!b.load(doc.as<JsonObjectConst>()));
+  }
+  for(const char* bad:{"-1","1.5","\"7\""}){
+    assert(parse(fixture,strlen(fixture),doc));JsonDocument invalid;std::string wrapped=std::string("{\"value\":")+bad+"}";assert(parse(wrapped.data(),wrapped.size(),invalid));
+    doc["devices"][0]["bindings"]["test.peer"].set(invalid["value"]);
+    Board b;assert(!b.load(doc.as<JsonObjectConst>()));
+  }
   assert(!utf8("\xc0\x80",2));assert(!utf8("\xed\xa0\x80",3));assert(utf8("\xe2\x82\xac",3));
   puts("Board conflicts, absent pins, strict types, unsupported extensions and UTF-8 PASS");
 }
