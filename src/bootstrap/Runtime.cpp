@@ -649,8 +649,10 @@ bool Runtime::run() {
 #endif
   bool ok=true;
   for(size_t i=0;i<driverCount_;++i) {
+    char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
     grants_[granted_]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
-    if(!grants_[granted_].slot) { ok=fail(graph_.lastError()); break; }
+    if(!grants_[granted_].slot) { ok=fail(graph_.lastError());port_.log(error_);break; }
+    std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=ready",drivers_[i].id);port_.log(stage);
     ++granted_; port_.delay(1);
   }
   // One app at a time; no recursive ELF launch, directory search or fallback.
@@ -671,8 +673,14 @@ bool Runtime::run() {
     error_[0]=0; port_.delay(1);
   }
   if(!retained_) {
-    while(granted_) if(!graph_.release(grants_[--granted_])) { retained_=true; ok=fail("driver quiescence failed; restart required"); }
-    if(!graph_.shutdown()) { retained_=true; ok=fail("driver shutdown retained; restart required"); }
+    while(granted_) if(!graph_.release(grants_[--granted_])) {
+      retained_=true;port_.log("RTE_CLEANUP driver-quiescence=retained");
+      if(ok)ok=fail("driver quiescence failed; restart required");
+    }
+    if(!graph_.shutdown()) {
+      retained_=true;port_.log("RTE_CLEANUP driver-shutdown=retained");
+      if(ok)ok=fail("driver shutdown retained; restart required");
+    }
   }
   fileOpen_={};revokeProviders(); currentRuntime=nullptr; return ok;
 }
