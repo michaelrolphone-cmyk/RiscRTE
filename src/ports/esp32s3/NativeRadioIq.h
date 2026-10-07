@@ -3,6 +3,7 @@
 // ROM map / allocator provenance and hardware limits: docs/RADIO_IQ_RESOURCE.md.
 #include <esp_chip_info.h>
 #include <esp_wifi.h>
+#include <esp_phy_init.h>
 #include <heap_memory_layout.h>
 #include <soc/soc.h>
 #include <cstdint>
@@ -15,6 +16,7 @@ extern const soc_reserved_region_t soc_reserved_memory_region_end[];
 extern char _heap_start, _iram_end;
 }
 namespace RiscCpu { namespace NativeRadioIq {
+inline bool phyPrepared=false;
 constexpr uintptr_t BankBase=0x3FCB0000u, BankEnd=0x3FCC0000u;
 static_assert(SOC_I_D_OFFSET==0x6f0000u,"unreviewed S3 SRAM alias map");
 // The pinned IDF linker KEEP and startup heap subtraction consume this before
@@ -45,5 +47,20 @@ inline bool ready(){
   wifi_mode_t mode=WIFI_MODE_NULL;
   if(esp_wifi_get_mode(&mode)!=ESP_ERR_WIFI_NOT_INIT)return false;
   return !(REG_READ(0x60033D5Cu)&0x80000000u) && !(REG_READ(0x600C101Cu)&0xFu);
+}
+inline bool prepare(){
+  if(phyPrepared || !ready())return false;
+  // The external IQ driver intentionally cannot import private PHY symbols.
+  // Calibrate through IDF's native PHY owner before granting raw modem access.
+  // The driver snapshots this calibrated state and restores it before release.
+  esp_phy_enable(PHY_MODEM_WIFI);
+  phyPrepared=true;
+  return true;
+}
+inline bool cleanup(){
+  if(!phyPrepared)return ready();
+  esp_phy_disable(PHY_MODEM_WIFI);
+  phyPrepared=false;
+  return ready();
 }
 } }
