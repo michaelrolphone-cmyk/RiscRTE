@@ -357,3 +357,7 @@ The offline new-device composer supplies the initially bootable flash/NVS chain;
 normal boot never formats storage. See [first-install instructions](docs/FIRST_INSTALL.md),
 [current contract](docs/PROVISIONING.md), and the explicit
 [remaining Reader product packaging dependency](docs/EINK_PROVISIONING_GAP.md).
+
+Deployment-admitted file dispatch is available as `file.open@1` through explicit
+app grants. Only immutable installed handler metadata selects an executable; SD
+paths remain copied data arguments. See [file dispatch](docs/FILE_OPEN.md).

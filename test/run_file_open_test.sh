@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+build="$(mktemp -d)"
+trap 'rm -rf "$build"' EXIT
+san=();if [[ "${SANITIZE:-0}" == 1 ]];then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g);fi
+flags=("${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -I"$repo/sdk/app")
+link=(-g);if [[ "$(uname)" == Darwin ]];then link=(-undefined dynamic_lookup);fi
+for role in 0 1 2;do
+  cc "${flags[@]}" "${link[@]}" -DFILE_APP_ROLE="$role" "$repo/test/fixtures/file_open_app.c" -o "$build/role-$role.elf"
+done
+c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic \
+  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" \
+  -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
+  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
+  "$repo/test/file_open_test.cpp" -ldl -o "$build/test"
+"$build/test" "$build"
