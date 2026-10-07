@@ -53,13 +53,13 @@ inline bool prepare(){
   // The external IQ driver intentionally cannot import private PHY symbols.
   // Calibrate through IDF's native PHY owner before granting raw modem access.
   // The driver snapshots this calibrated state and restores it before release.
-  esp_phy_enable(PHY_MODEM_WIFI);
+  esp_phy_enable();
   phyPrepared=true;
   return true;
 }
 inline bool cleanup(){
   if(!phyPrepared)return ready();
-  esp_phy_disable(PHY_MODEM_WIFI);
+  esp_phy_disable();
   phyPrepared=false;
   return ready();
 }
