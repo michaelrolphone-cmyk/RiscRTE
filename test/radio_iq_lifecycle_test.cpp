@@ -32,6 +32,8 @@ static void child(){
  h.deepWakeValid=[](uint8_t){return true;};h.deepReady=[](){assert(!active);return true;};h.deepWakeArm=[](uint8_t,bool,bool){return false;};h.deepWakeClear=[](uint8_t,bool){return true;};h.deepSleep=[](){assert(false);};
  h.radioIdle=[](){return true;};h.hciIdle=[](){return true;};h.hciSafe=[](){return true;};
  h.radioIqReady=[](){return !active;};
+ h.radioIqPrepare=[](){return !active;};
+ h.radioIqCleanup=[](){return !active;};
  cpu=new RiscCpu::Port(h);
  auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,nullptr,appExitSafe,providerStorageSafe});
  assert(runtime->prepare(root.c_str()));
