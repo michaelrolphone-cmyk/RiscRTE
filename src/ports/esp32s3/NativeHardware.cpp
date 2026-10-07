@@ -30,7 +30,6 @@
 #include <cstring>
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
-int pwmPins[4]={-1,-1,-1,-1};
 struct I2cState { bool installed=false,configured=false;int sda=-1,scl=-1; } i2c[2];
 struct SpiState {
   bool initialized=false,held=false,pending=false;uint32_t hz=0;uint8_t mode=0;
@@ -40,13 +39,7 @@ struct SpiState {
 } spi[2];
 TickType_t ticks(uint32_t ms){return ms?pdMS_TO_TICKS(ms)+1:0;}
 spi_host_device_t host(uint8_t physical){return physical==2?SPI2_HOST:SPI3_HOST;}
-bool stopPwm(uint8_t pin){
-  for(int i=0;i<4;++i)if(pwmPins[i]==pin){
-    if(ledc_stop(LEDC_LOW_SPEED_MODE,static_cast<ledc_channel_t>(i),0)!=ESP_OK)return false;
-    esp_rom_gpio_connect_out_signal(pin,SIG_GPIO_OUT_IDX,false,false);pwmPins[i]=-1;
-  }
-  return true;
-}
+#include "NativePwmStop.inc"
 bool gpioOpen(uint8_t pin,bool output,bool initial,bool pullup){
   return pin<49 && stopPwm(pin) && NativeSleep::openPin(pin,output,initial,pullup);
 }
@@ -60,20 +53,8 @@ bool gpioClose(uint8_t pin){
   if(pin>=49 || !NativeSleep::canClose(pin))return false;
   return stopPwm(pin) && gpio_reset_pin(static_cast<gpio_num_t>(pin))==ESP_OK;
 }
-bool gpioPwm(uint8_t pin,uint32_t hz,uint16_t duty,uint16_t maximum){
-  int slot=-1;
-  for(int i=0;i<4;++i)if(pwmPins[i]==pin)slot=i;
-  if(slot<0)for(int i=0;i<4;++i)if(pwmPins[i]<0){slot=i;break;}
-  if(slot<0)return false;
-  ledc_timer_config_t timer{};timer.speed_mode=LEDC_LOW_SPEED_MODE;timer.duty_resolution=LEDC_TIMER_10_BIT;
-  timer.timer_num=static_cast<ledc_timer_t>(slot);timer.freq_hz=hz;timer.clk_cfg=LEDC_AUTO_CLK;
-  if(ledc_timer_config(&timer)!=ESP_OK)return false;
-  ledc_channel_config_t channel{};channel.gpio_num=pin;channel.speed_mode=LEDC_LOW_SPEED_MODE;
-  channel.channel=static_cast<ledc_channel_t>(slot);channel.intr_type=LEDC_INTR_DISABLE;
-  channel.timer_sel=timer.timer_num;channel.duty=uint32_t(duty)*1023/maximum;
-  pwmPins[slot]=pin; // Retain partial configuration until gpioClose can stop it.
-  return ledc_channel_config(&channel)==ESP_OK;
-}
+#include "NativePwm.inc"
+bool gpioPwm(uint8_t pin,uint32_t hz,uint16_t duty,uint16_t maximum){return pwmWrite(pin,hz,duty,maximum);}
 bool i2cOpen(uint8_t physical,uint8_t sda,uint8_t scl,uint32_t hz){
   auto& state=i2c[physical];if(state.installed)return false;
   state.sda=sda;state.scl=scl;
@@ -195,7 +176,12 @@ bool lightSleep(uint32_t* cause){
 Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   Hardware hardware{[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
-    [](uint32_t ms){vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));},gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
+    [](uint32_t ms){
+#if RISC_SLEEP_DIAGNOSTICS
+      RiscDiagnostics::poll();
+#endif
+      vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));
+    },gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};

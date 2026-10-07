@@ -600,5 +600,12 @@
     "commit": "aa7b03c15a59aa99b2d60ae20905edbdf62e35e6",
     "source": "sdk/driver/RiscPlatformClockV1.h",
     "source_sha256": "41a12f6529f38731ee874f8bc166e1cf89fe376a1448fe5a4dd4c9abac90e5e2"
+  },
+  {
+    "destination": "sdk/app/T5FileOpenApi.h",
+    "repository": "michaelrolphone-cmyk/T5S3-Reader",
+    "commit": "34d8e694d89a1e72d8854403d8592c289fae3ddc",
+    "source": "lib/NativeApps/include/T5FileOpenApi.h",
+    "source_sha256": "c1b873e364dba81ce39d8c8a62668db618735407a6291dca87b9795ce4accc30"
   }
 ]

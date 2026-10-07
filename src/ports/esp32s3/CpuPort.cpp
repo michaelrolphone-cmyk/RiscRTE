@@ -9,7 +9,8 @@ void pinsFor(const RiscBoot::Board::Device& d,uint64_t& input,uint64_t& output,u
     const auto& c=d.config.display;input|=pinBit(c.busy);output|=pinBit(c.dc)|pinBit(c.reset)|pinBit(c.backlight);
     for(unsigned i=0;i<c.power_count;++i)output|=pinBit(c.power_pins[i]);
   } else if(!strcmp(d.type,"touch.i2c")){
-    const auto& c=d.config.touch;input|=pinBit(c.irq);output|=pinBit(c.reset);if(c.irq_pull_up)pullup|=pinBit(c.irq);
+    const auto& c=d.touch();input|=pinBit(c.irq);output|=pinBit(c.reset);if(c.irq_pull_up)pullup|=pinBit(c.irq);
+    if(d.hardware.config_version==2){const auto& v=d.config.touchPowered;output|=pinBit(v.power);if(v.irq_output)output|=pinBit(c.irq);}
   } else if(!strcmp(d.type,"radio.lora")){
     const auto& c=d.lora();input|=pinBit(c.busy)|pinBit(c.irq);output|=pinBit(c.reset);
   } else if(!strcmp(d.type,"peripheral.i2c") || !strcmp(d.type,"power.axp2101")){
@@ -29,8 +30,9 @@ bool Port::reserve(int16_t pin,const void* owner){
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
 bool Port::providerStorageSafe() const {
   if(!available() || sleepRetained_ || transferring_ || iq_.token)return false;
+  for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
-  for(const auto& pin:pins_)if(pin.held)return false;
+  for(const auto& pin:pins_)if(pin.held && !pin.retiredHeld)return false;
   for(const auto& c:i2ss_)if(c.closing)return false;
   for(const auto& c:radios_)if(c.closing)return false;
   if(hci_.closing || (hw_.hciSafe && !hw_.hciSafe()))return false;
@@ -58,11 +60,12 @@ bool Port::restartResourcesSafe() const {
 }
 bool Port::quiescent() const {
   if(iq_.token || iq_.closing)return false;
+  for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.token)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   for(const auto& c:radios_)if(c.token || c.active || c.closing)return false;
   if(hci_.token || hci_.closing || (hw_.hciIdle && !hw_.hciIdle()))return false;
-  for(const auto& p:pins_)if(p.owner)return false;
+  for(const auto& p:pins_)if(p.owner && !p.retiredHeld)return false;
   return !poisoned_;
 }
 int32_t Port::httpOpen(void* context,const risc_http_request_v1* request,uint64_t* out){
@@ -102,8 +105,26 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
         if(!strcmp(d.bindings[j].capability,"gpio.bank") && d.bindings[j].instance==gpio.instance)
           pinsFor(d,gpio.input,gpio.output,gpio.pullup);
     }
-  } else pinsFor(selected,gpio.input,gpio.output,gpio.pullup);
-  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet};return true;
+  } else {
+    pinsFor(selected,gpio.input,gpio.output,gpio.pullup);
+    if(!strcmp(selected.type,"display.spi") && !runtime.uses(gpio.instance,"spi.bus",1)){
+      // Explicit platform.gpio without spi.bus selects one bit-banged owner.
+      // Preserve normal SPI scopes; reject selected peers before any I/O.
+      const auto& config=selected.config.display;
+      const auto& board=runtime.board();
+      for(size_t i=0;i<board.deviceCount();++i){
+        const auto& other=*board.deviceAt(i);
+        if(other.hardware.instance_id==gpio.instance || !runtime.selected(other.hardware.instance_id))continue;
+        const auto* bus=board.bus(board.deviceBus(other.hardware.instance_id));
+        if(bus && bus->kind==RISC_HW_BUS_SPI &&
+           (bus->instance_id==config.bus.instance_id || board.physicalController(bus->instance_id)==board.physicalController(config.bus.instance_id)))return false;
+      }
+      gpio.output|=pinBit(config.bus.sclk)|pinBit(config.bus.mosi)|pinBit(config.cs);
+      gpio.input|=pinBit(config.bus.mosi)|pinBit(config.bus.miso);
+      gpio.pullup|=pinBit(config.bus.mosi); // Owned bidirectional probe input.
+    }
+  }
+  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput};return true;
 }
 bool Port::bind(RiscBoot::Runtime& runtime){
   if(bound_ || !available() || !hw_.now || !hw_.sleep || !hw_.gpioOpen || !hw_.gpioWrite || !hw_.gpioRead || !hw_.gpioPwm || !hw_.gpioClose ||
@@ -130,6 +151,12 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   const auto& board=runtime.board();
   for(size_t n=0;n<board.deviceCount();++n){
     const auto& d=*board.deviceAt(n);const uint64_t id=d.hardware.instance_id;
+    if(runtime.uses(id,RISC_PROVIDER_SYNC_CAPABILITY,RISC_PROVIDER_SYNC_API_V1)){
+      if(syncCount_==RuntimeProviders::GraphV2::kMaxModules)return false;
+      auto& c=syncs_[syncCount_++];c.port=this;c.instance=id;
+      c.api={RISC_PROVIDER_SYNC_API_V1,sizeof(c.api),&c,syncOwner,syncCreate,syncTryLock,syncUnlock,syncDestroy};
+      if(!runtime.registerPlatform(RISC_PROVIDER_SYNC_CAPABILITY,RISC_PROVIDER_SYNC_API_V1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
+    }
     if(runtime.uses(id,"platform.gpio",1)){
       if(gpioCount_==16)return false;
       auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
@@ -414,10 +441,58 @@ bool Port::radioScanCancel(void* context,uint64_t token){
   if(!ok || !p.hw_.radioIdle())return false;
   c.active=c.closing=c.scanning=false;return true;
 }
+bool Port::syncOwner(void* context){
+  if(!context)return false;
+  const auto& c=*static_cast<Sync*>(context);
+  return c.port && c.port->available() && !c.port->sleepRetained_;
+}
+bool Port::syncCreate(void* context,uint64_t* out){
+  if(out)*out=0;
+  if(!out || !syncOwner(context))return false;
+  auto& c=*static_cast<Sync*>(context);
+  for(auto& lock:c.locks)if(!lock.token){
+    const uint64_t token=c.port->token();if(!token)return false;
+    lock={token,false};*out=token;return true;
+  }
+  return false;
+}
+bool Port::syncTryLock(void* context,uint64_t token){
+  if(!token || !syncOwner(context))return false;
+  auto& c=*static_cast<Sync*>(context);
+  for(auto& lock:c.locks)if(lock.token==token){
+    if(lock.held)return false;
+    lock.held=true;return true;
+  }
+  return false;
+}
+bool Port::syncUnlock(void* context,uint64_t token){
+  if(!context || !token)return false;
+  auto& c=*static_cast<Sync*>(context);
+  if(!c.port || !c.port->hw_.owner || !c.port->hw_.owner() || c.port->sleeping_)return false;
+  for(auto& lock:c.locks)if(lock.token==token && lock.held){lock.held=false;return true;}
+  return false;
+}
+bool Port::syncDestroy(void* context,uint64_t token){
+  if(!context || !token)return false;
+  auto& c=*static_cast<Sync*>(context);
+  if(!c.port || !c.port->hw_.owner || !c.port->hw_.owner() || c.port->sleeping_)return false;
+  for(auto& lock:c.locks)if(lock.token==token && !lock.held){lock={};return true;}
+  return false;
+}
 bool Port::gpioClaim(void* context,uint8_t pin,bool output,bool initial,bool pullup,uint64_t* out){
   if(out)*out=0;
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
-  if(!out || !p.available() || !(pinBit(pin)&(output?c.output:c.input)) || (pullup && (!(pinBit(pin)&c.pullup) || output)) || !p.reserve(pin,&c))return false;
+  if(!out || !p.available() || !(pinBit(pin)&(output?c.output:c.input)) || (pullup && (!(pinBit(pin)&c.pullup) || output)))return false;
+  if(p.pins_[pin].retiredHeld){
+    // A retired static hold remains CPU-owned. Only its original scope may
+    // replace it; the backend stages the requested level before unholding.
+    if(p.pins_[pin].owner!=&c)return false;
+    const uint64_t fresh=p.token();if(!fresh)return false;
+    if(!p.hw_.gpioOpen(pin,output,initial,pullup)){p.poisoned_=true;return false;}
+    p.pins_[pin]={};p.pins_[pin].owner=&c;p.pins_[pin].token=fresh;
+    p.pins_[pin].output=output;p.pins_[pin].pullup=pullup;*out=fresh;return true;
+  }
+  if(!p.reserve(pin,&c))return false;
   uint64_t token=p.token();
   if(!token || !p.hw_.gpioOpen(pin,output,initial,pullup)){
     if(!p.hw_.gpioClose(pin))p.poisoned_=true;else p.unreserve(pin,&c);return false;
@@ -426,11 +501,18 @@ bool Port::gpioClaim(void* context,uint8_t pin,bool output,bool initial,bool pul
 }
 bool Port::gpioWrite(void* context,uint64_t token,bool level){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.available() || !token)return false;
-  for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token && p.pins_[i].output && !p.pins_[i].held){
-    if(!p.hw_.gpioWrite(i,level))return false;
-    p.pins_[i].pwm=false;return true;
+  auto& hint=p.gpioWritePins_[token & 63u];
+  unsigned i=hint?unsigned(hint-1):49;
+  if(i==49 || p.pins_[i].owner!=&c || p.pins_[i].token!=token){
+    // A hash collision is only a miss. Opaque tokens retain their original
+    // monotonic allocation, including exhaustion and stale-token semantics.
+    for(i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token)break;
+    if(i==49)return false;
+    hint=static_cast<uint8_t>(i+1);
   }
-  return false;
+  auto& pin=p.pins_[i];
+  if(!pin.output || pin.held || !p.hw_.gpioWrite(i,level))return false;
+  pin.pwm=false;return true;
 }
 bool Port::gpioRead(void* context,uint64_t token,bool* level){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.available() || !token || !level)return false;
@@ -659,6 +741,15 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
     return RISC_DEEP_SLEEP_RETAINED;
   }
   return RISC_DEEP_SLEEP_INVALID;
+}
+bool Port::gpioRetireHeldOutput(void* context,uint64_t token){
+  if(!context || !token)return false;
+  auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
+  if(!p.available() || p.sleepRetained_ || p.transferring_)return false;
+  for(auto& pin:p.pins_)if(pin.owner==&c && pin.token==token && pin.output && pin.held && !pin.pwm && !pin.wakeModes){
+    pin.token=0;pin.retiredHeld=true;return true;
+  }
+  return false;
 }
 bool Port::gpioRelease(void* context,uint64_t token){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.hw_.owner() || p.sleepRetained_ || p.sleeping_ || !token)return false;

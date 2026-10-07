@@ -59,7 +59,10 @@ int main(int argc,char** argv){
  for(bool timer:{false,true})for(unsigned n=0;n<3;n++){
   file("deep-trace.txt","");runChild(argv[0],timer?"timed-cold":"cold",73);runChild(argv[0],timer?"timed-wake":"wake",0);
   std::ifstream f(tracePath);const std::string trace{std::istreambuf_iterator<char>(f),{}};
-  const std::string expected=std::string("PROVIDER fresh\nAPP init\nAPP fresh cold\nCPU held\nCPU armed\n")+(timer?"CPU timer-armed\n":"")+"CPU terminal-entry\nPROVIDER fresh\nAPP init\nAPP fresh wake\nAPP fini\nPROVIDER quiesced\nPROVIDER stopped\n";
+  const std::string launch="RTE_PROVIDER id=deep-probe phase=start\nPROVIDER fresh\n"
+    "RTE_PROVIDER id=deep-probe phase=ready\nAPP init\nRTE_APP phase=entry\n";
+  const std::string expected=launch+"APP fresh cold\nCPU held\nCPU armed\n"+(timer?"CPU timer-armed\n":"")+
+    "CPU terminal-entry\n"+launch+"APP fresh wake\nRTE_APP phase=returned\nAPP fini\nPROVIDER quiesced\nPROVIDER stopped\n";
   if(trace!=expected)fprintf(stderr,"Unexpected trace:\n%s",trace.c_str());
   assert(trace==expected);
  }
