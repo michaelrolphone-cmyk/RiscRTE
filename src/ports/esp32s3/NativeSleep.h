@@ -57,7 +57,11 @@ inline bool openPin(uint8_t pin,bool output,bool initial,bool pullup) {
   if(rtc_gpio_is_valid_gpio(gpio) && rtc_gpio_deinit(gpio)!=ESP_OK)return false;
   if(output && gpio_set_level(gpio,initial)!=ESP_OK)return false;
   gpio_config_t config{};config.pin_bit_mask=uint64_t(1)<<pin;
-  config.mode=output?GPIO_MODE_OUTPUT:GPIO_MODE_INPUT;
+  // The scoped GPIO read callback uses gpio_get_level, which IDF4 documents
+  // as always zero when the input path is disabled. Output claims must retain
+  // input sensing for physical HIGH/LOW readback (rails and clock guards).
+  // This grants no extra pin or drive authority; interrupts stay disabled.
+  config.mode=output?GPIO_MODE_INPUT_OUTPUT:GPIO_MODE_INPUT;
   config.pull_up_en=pullup?GPIO_PULLUP_ENABLE:GPIO_PULLUP_DISABLE;
   config.pull_down_en=GPIO_PULLDOWN_DISABLE;config.intr_type=GPIO_INTR_DISABLE;
   if(gpio_config(&config)!=ESP_OK)return false;
