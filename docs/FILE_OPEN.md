@@ -93,7 +93,12 @@ Run `bash test/run_file_open_test.sh`; `SANITIZE=1` enables ASan/UBSan. Host sha
 modules test immutable handler copies, exact global grants, stale grant rejection,
 SD path bounds and malformed inputs, copied source/ID buffers, unload-before-open,
 fresh caller/default combinations, load/init failures, one-shot/discarded results,
-and failed caller/receiver retention. These tests do not qualify hardware.
+and failed caller/receiver retention. The suite pins the canonical header hash,
+places unterminated path/ID bounds against protected pages, checks exact-capacity
+output canaries, and repeats successful and failed opens from freshly reloaded
+callers. Invalid images, missing entry points, failed init with an unreleased
+grant, automatic grant cleanup, and optional result outputs exercise the actual
+Runtime implementation. These tests do not qualify hardware.
 
 `sdk/app/T5FileOpenApi.h` is byte-exact from
 `michaelrolphone-cmyk/T5S3-Reader` commit
