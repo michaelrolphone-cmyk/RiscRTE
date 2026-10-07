@@ -97,6 +97,7 @@ class ModuleV2 final {
   uint8_t ownedImageDigest_[32]{};
   char error_[160]{};
   void report(const char* id, const char* stage, int code = 0);
+  void reportQuiescence();
   bool activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
                       const char* expectedCapability, uint32_t expectedApi,
                       const risc_provider_dependency_v1* dependencies, size_t count);
