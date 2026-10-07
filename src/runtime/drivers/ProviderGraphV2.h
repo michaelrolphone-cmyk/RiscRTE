@@ -74,6 +74,9 @@ class GraphV2 final {
   size_t liveGrants() const;
   // Read-only admission fence: never recover/regrant uncertain cleanup state.
   bool activationSafe() const;
+  // Readonly dependency calls remain valid in bounded poll callbacks. Failed
+  // modules, visiting activation and pending releases still reject all reads.
+  bool dependencyReadSafe() const;
   const char* lastError() const { return error_; }
 
   // Recover only the exact provider whose activation failed before a grant

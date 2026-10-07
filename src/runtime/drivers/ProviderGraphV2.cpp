@@ -392,7 +392,9 @@ bool GraphV2::shutdown() {
 }  // namespace RuntimeProviders
 
 bool RuntimeProviders::GraphV2::activationSafe() const {
-  if(polling_)return false;
+  return !polling_ && dependencyReadSafe();
+}
+bool RuntimeProviders::GraphV2::dependencyReadSafe() const {
   for(size_t i=0;i<count_;++i)
     if(nodes_[i].visit==Visit::Visiting || nodes_[i].module.state()==ModuleV2::State::Failed)return false;
   for(const auto& grant:grants_)if(grant.occupied && grant.pendingRelease)return false;

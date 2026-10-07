@@ -101,10 +101,14 @@ bool Runtime::uses(uint64_t instance,const char* capability,uint32_t api) const 
 bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,uint64_t id,const void* table) {
   if ((attempted_ && !registrationOpen_) || !port_.owner() || !capability || !*capability || strlen(capability)>=96 || !api || !table || platformCount_==MaxPlatforms ||
       (strncmp(capability,"platform.",9) && strcmp(capability,"spi.bus"))) return false;
+  // The provider route is always the Runtime-owned readonly broker, never an
+  // arbitrary backend/control table supplied through generic registration.
+  if (!strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
+      (api!=1 || scope!=Scope::Global || id || table!=&providerRealtimeTable_ || !realtimeBackend_)) return false;
   if (scope==Scope::Global) {
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
-               strcmp(capability,"platform.radio.iq.resource"))) return false;
+               strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
@@ -155,7 +159,16 @@ bool Runtime::validateGraph() {
         if (platform || wanted) return fail("ambiguous platform/dependency binding");
         platform=&candidate;
       }
-      if (platform) { req.trustedApi=platform->table; continue; }
+      if (platform) {
+        req.trustedApi=platform->table;
+        if (!strcmp(req.capability,RISC_PLATFORM_REALTIME_CAPABILITY)) {
+          auto& storage=providerStorage_[i];
+          storage.owner=this;storage.needsRealtime=true;
+          storage.realtime=providerRealtimeTable_;
+          req.trustedApi=&storage.realtime;
+        }
+        continue;
+      }
       // Missing native providers do not become fake devices or first-match ELFs.
       if (!strncmp(req.capability,"platform.",9) || !strcmp(req.capability,"spi.bus")) return fail("missing scoped trusted platform provider");
       if(hw && !wanted) return fail("hardware dependency requires explicit instance binding");
@@ -425,11 +438,12 @@ bool Runtime::providerStorageSafe() const {
 bool Runtime::beginProvider(void* context) {
   auto* storage=static_cast<ProviderStorage*>(context);
   Runtime* r=currentRuntime;
-  if (!storage || !r || storage->owner!=r || !storage->count || storage->live ||
+  if (!storage || !r || storage->owner!=r || (!storage->count && !storage->needsRealtime) || storage->live ||
       !r->port_.owner() || r->retained_ || !r->providerStorageSafe()) return false;
   void* token=nextKeyValueContext(keyValueGeneration);
   if (!token) return false;
   storage->table.context=token;
+  if(storage->needsRealtime)storage->realtime.context=token;
   storage->live=true;
   return true;
 }
@@ -537,18 +551,16 @@ bool Runtime::prepare(const char* root) {
     if(!providerPolicy(item,providerStorage_[driverCount_])) return false;
     ++driverCount_;
   }
-  if (port_.bindPlatforms) {
-    registrationOpen_=true;
-    const bool bound=port_.bindPlatforms(*this);
-    registrationOpen_=false;
-    if (!bound) return fail("trusted platform binding failed");
-  }
+  registrationOpen_=true;
+  const bool bound=(!port_.bindPlatforms || port_.bindPlatforms(*this)) && registerProviderRealtime();
+  registrationOpen_=false;
+  if (!bound) return fail("trusted platform binding failed");
   if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !configureInstalledFiles(c)) return false;
   for(size_t i=0;i<driverCount_;++i) {
     const Driver& d=drivers_[i];
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
     spec.hardware=d.instance?&board_.device(d.instance)->hardware:nullptr;
-    if (providerStorage_[i].count) spec.lease={&providerStorage_[i],beginProvider,revokeProvider};
+    if (providerStorage_[i].count || providerStorage_[i].needsRealtime) spec.lease={&providerStorage_[i],beginProvider,revokeProvider};
     if(!graph_.addVerified(spec)) return fail("driver registration failed");
   }
   strcpy(default_,current_); prepared_=true; return true;

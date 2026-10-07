@@ -8,6 +8,7 @@
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
 #include <RiscRealtimeV1.h>
+#include <RiscPlatformRealtimeV1.h>
 #include <RiscProviderPromotionV1.h>
 #include <RiscKeyValueV1.h>
 #include <RiscBoundKeyValueV1.h>
@@ -130,6 +131,8 @@ class Runtime final {
     ProviderKey keys[MaxKeys]{};
     size_t count=0;
     risc_bound_key_value_v1 table{};
+    risc_platform_realtime_api_v1 realtime{};
+    bool needsRealtime=false;
     bool live=false;
   };
   bool providerPolicy(JsonObjectConst,ProviderStorage&);
@@ -159,6 +162,10 @@ class Runtime final {
   void* realtimeContext_=nullptr;
   risc_realtime_control_api_v1 realtimeControlTable_{};
   void* realtimeControlContext_=nullptr;
+  risc_platform_realtime_api_v1 providerRealtimeTable_{};
+  bool registerProviderRealtime();
+  static int32_t providerRealtimeRead(void*,risc_realtime_snapshot_v1*);
+  int32_t readRealtime(risc_realtime_snapshot_v1*);
   static Runtime* realtimeContext(void*,bool control);
   static int32_t realtimeSeed(void*,int64_t,uint32_t);
   static int32_t realtimeRead(void*,risc_realtime_snapshot_v1*);

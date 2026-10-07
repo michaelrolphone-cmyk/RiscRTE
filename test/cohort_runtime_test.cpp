@@ -48,6 +48,7 @@ static void store(const fs::path& path,unsigned appCount,unsigned driverCount){
   std::string id="driver"+std::to_string(i);JsonDocument manifest;
   manifest["type"]="driver";manifest["id"]=id;manifest["version"]="1.0.0";manifest["driver_abi"]=2;manifest["architecture"]="xtensa-esp32s3";manifest["file_name"]="driver.elf";
   auto req=manifest["requires"].to<JsonArray>().add<JsonObject>();req["capability"]="storage.key-value.bound";req["api"]=1;
+  auto realtime=manifest["requires"].as<JsonArray>().add<JsonObject>();realtime["capability"]=RISC_PLATFORM_REALTIME_CAPABILITY;realtime["api"]=1;
   auto provides=manifest["provides"].to<JsonArray>().add<JsonObject>();provides["capability"]="test."+id;provides["api"]=1;
   auto selection=dr.add<JsonObject>();selection["manifest"]=id+"/manifest.json";
   auto key=selection["key_value"].to<JsonArray>().add<JsonObject>();key["key"]="state";key["namespace"]=100+i;key["access"]="read-write";
