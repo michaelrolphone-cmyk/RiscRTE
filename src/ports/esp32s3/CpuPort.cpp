@@ -121,6 +121,7 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
       }
       gpio.output|=pinBit(config.bus.sclk)|pinBit(config.bus.mosi)|pinBit(config.cs);
       gpio.input|=pinBit(config.bus.mosi)|pinBit(config.bus.miso);
+      gpio.pullup|=pinBit(config.bus.mosi); // Owned bidirectional probe input.
     }
   }
   gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput};return true;

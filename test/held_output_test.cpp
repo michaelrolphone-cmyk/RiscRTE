@@ -46,9 +46,11 @@ int main(int argc,char**argv){
   auto& a=p.gpios_[0].api;const auto bit=[](unsigned n){return uint64_t(1)<<n;};
   assert(p.gpios_[0].output==(bit(18)|bit(14)|(ordinary?0:bit(12)|bit(11)|bit(13))));
   assert(p.gpios_[0].input==(bit(6)|(ordinary?0:bit(11))));
+  assert(p.gpios_[0].pullup==(ordinary?0:bit(11)));
   uint64_t t=0;assert(!a.claim(a.context,21,true,false,false,&t) && !io);
   if(ordinary){assert(!a.claim(a.context,11,true,false,false,&t) && !io);continue;}
-  assert(a.claim(a.context,11,false,false,false,&t));assert(a.release(a.context,t));
+  assert(a.claim(a.context,11,false,false,true,&t));assert(a.release(a.context,t));
+  assert(!a.claim(a.context,6,false,false,true,&t));
   assert(a.claim(a.context,11,true,false,false,&t));assert(a.release(a.context,t));
   assert(a.claim(a.context,14,true,false,false,&t));assert(!a.retire_held_output(a.context,t));
   assert(a.pwm(a.context,t,1000,40,100));assert(!a.retire_held_output(a.context,t));
