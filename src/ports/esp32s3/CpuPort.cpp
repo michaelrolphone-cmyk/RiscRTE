@@ -116,7 +116,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   // This lets a native-first update retain an identical validated board graph.
   // It remains provider-only; appPolicies rejects direct raw platform grants.
   if(hw_.radioIqReady){
-    if(!hw_.radioIdle || !hw_.hciIdle || !hw_.hciSafe)return false;
+    if(!hw_.radioIqPrepare || !hw_.radioIqCleanup || !hw_.radioIdle || !hw_.hciIdle || !hw_.hciSafe)return false;
     ++iqCount_;iq_.port=this;
     iq_.api={1,sizeof(iq_.api),&iq_,radioIqClaim,radioIqRelease,0x3FCB0000u,65536u};
     if(!runtime.registerPlatform(RISC_RADIO_IQ_RESOURCE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&iq_.api))return false;
@@ -295,10 +295,20 @@ bool Port::radioIqClaim(void* context,uint64_t* out){
      !p.hw_.radioIdle || !p.hw_.radioIdle() || !p.hw_.hciIdle || !p.hw_.hciIdle() || p.hci_.token ||
      !p.hw_.radioIqReady)return false;
   for(const auto& bus:p.spiBuses_)if(bus.held)return false;
-  // Native proof performs no RF writes. Refusal never produces a cleanup token.
-  p.transferring_=true;const bool ready=p.hw_.radioIqReady();p.transferring_=false;
-  if(!ready)return false;
-  const uint64_t token=p.token();if(!token)return false;
+  // First prove the raw block is parked, then let the native Runtime perform
+  // the vendor PHY calibration that the ELF is deliberately not authorized to
+  // import. A refused prepare never produces a cleanup token.
+  p.transferring_=true;
+  const bool ready=p.hw_.radioIqReady();
+  const bool prepared=ready && p.hw_.radioIqPrepare && p.hw_.radioIqPrepare();
+  p.transferring_=false;
+  if(!prepared)return false;
+  const uint64_t token=p.token();
+  if(!token){
+    p.transferring_=true;const bool cleaned=p.hw_.radioIqCleanup && p.hw_.radioIqCleanup();p.transferring_=false;
+    if(!cleaned)p.poisoned_=true;
+    return false;
+  }
   c.token=token;*out=token;return true;
 }
 bool Port::radioIqRelease(void* context,uint64_t token){
@@ -307,10 +317,13 @@ bool Port::radioIqRelease(void* context,uint64_t token){
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ ||
      !token || token!=c.token)return false;
   c.closing=true;
-  // Failed verification retains the exact lease and permits a later retry.
-  // The external driver must park and restore before calling this function.
+  // Failed verification or PHY shutdown retains the exact lease and permits
+  // a later retry. The external driver must park and restore before release;
+  // native cleanup then returns the calibrated PHY to its prior disabled state.
   p.transferring_=true;
-  const bool ready=p.hw_.radioIqReady && p.hw_.radioIqReady();
+  const bool parked=p.hw_.radioIqReady && p.hw_.radioIqReady();
+  const bool cleaned=parked && p.hw_.radioIqCleanup && p.hw_.radioIqCleanup();
+  const bool ready=cleaned && p.hw_.radioIqReady && p.hw_.radioIqReady();
   p.transferring_=false;
   if(!ready)return false;
   c.token=0;c.closing=false;return true;
