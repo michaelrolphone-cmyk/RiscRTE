@@ -20,7 +20,8 @@ static Hardware hardware(){
  h.spiOpen=[](uint8_t,int16_t,int16_t,int16_t){++io;return true;};h.spiBegin=[](uint8_t,uint8_t,uint32_t,uint8_t,uint32_t){++io;return true;};h.spiTransfer=[](uint8_t,const uint8_t*,uint8_t*,size_t,uint32_t){++io;return true;};h.spiEnd=[](uint8_t,uint8_t,uint32_t){++io;return true;};h.spiClose=[](uint8_t){++io;return true;};
  h.hciOpen=[](){++io;return true;};h.hciClose=[](){++io;return true;};
  h.hciSend=[](uint8_t,const uint8_t*,size_t,uint32_t){++io;return true;};h.hciReceive=[](uint8_t*,uint8_t*,size_t,size_t*,uint32_t){++io;return true;};
- h.hciIdle=[](){return true;};h.hciSafe=[](){return true;};h.radioIdle=[](){return true;};h.radioIqReady=[](){++io;return true;};return h;
+ h.hciIdle=[](){return true;};h.hciSafe=[](){return true;};h.radioIdle=[](){return true;};h.radioIqReady=[](){++io;return true;};
+ h.radioIqPrepare=[](){++io;return true;};h.radioIqCleanup=[](){++io;return true;};return h;
 }
 int main(int argc,char**argv){
  assert(argc==2);const std::string root=argv[1];
@@ -39,7 +40,9 @@ int main(int argc,char**argv){
  boot(false);prepared(hardware(),true,1);
  auto absent=hardware();absent.radioIqReady=nullptr;prepared(absent,true,0);
  boot(true);prepared(absent,false,0);
- auto missing=hardware();missing.radioIdle=nullptr;prepared(missing,false,0);
+ auto missing=hardware();missing.radioIqPrepare=nullptr;prepared(missing,false,0);
+ missing=hardware();missing.radioIqCleanup=nullptr;prepared(missing,false,0);
+ missing=hardware();missing.radioIdle=nullptr;prepared(missing,false,0);
  missing=hardware();missing.hciIdle=nullptr;prepared(missing,false,0);
  missing=hardware();missing.hciSafe=nullptr;prepared(missing,false,0);
  save("tx.json",R"({"type":"driver","id":"bad","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"driver.elf","requires":[{"capability":"platform.radio.iq.resource","api":1},{"capability":"absent.dependency","api":1}],"provides":[{"capability":"test.output","api":1}]})");
