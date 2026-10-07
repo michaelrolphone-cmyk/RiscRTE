@@ -43,7 +43,7 @@ bool health(risc_runtime_health_v1* out) {
   return true;
 }
 void diagnosticLine(const char* line) {
-#if RISC_SLEEP_DIAGNOSTICS
+#if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::line(line);
 #else
   Serial.println(line);
@@ -54,7 +54,7 @@ void diagnosticFormat(const char* format,...) {
   diagnosticLine(line);
 }
 void cooperate(uint32_t ms) {
-#if RISC_SLEEP_DIAGNOSTICS
+#if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::poll();
 #endif
   vTaskDelay(RiscCpu::cooperativeDelayTicks(ms,configTICK_RATE_HZ));
@@ -100,7 +100,7 @@ RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,Ris
 }
 void setup() {
   owner=xTaskGetCurrentTaskHandle(); Serial.begin(115200);
-#if RISC_SLEEP_DIAGNOSTICS
+#if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::start();
 #endif
   diagnosticLine(RISC_BUILD_IDENTITY);

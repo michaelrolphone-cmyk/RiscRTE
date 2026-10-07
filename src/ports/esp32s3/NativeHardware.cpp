@@ -195,7 +195,11 @@ bool lightSleep(uint32_t* cause){
 Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   Hardware hardware{[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
-    [](uint32_t ms){vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));},gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
+    [](uint32_t ms){
+#if RISC_DIAGNOSTIC_ADAPTER
+      RiscDiagnostics::poll();
+#endif
+      vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));},gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};

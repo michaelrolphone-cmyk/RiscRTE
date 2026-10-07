@@ -4,6 +4,11 @@
 #undef private
 #include <cassert>
 #include <cstdio>
+#ifdef TEST_USB_SLEEP_RECOVERY
+#include "ports/esp32s3/SleepDiagnostics.h"
+#include "diagnostics/UsbSleepRecovery.h"
+#include <Arduino.h>
+#endif
 using namespace RiscCpu;
 static bool owner=true,level=true,armOk=true,clearOk=true,enterOk=true,reassert=false;
 static unsigned arms=0,clears=0,sleeps=0;static int32_t nested=0;
@@ -13,10 +18,21 @@ static bool read(uint8_t pin,bool*out){assert(pin==7);*out=level;return true;}
 static bool valid(uint8_t pin){return pin==7;}
 static bool arm(uint8_t pin,bool high){assert(pin==7 && !high);++arms;if(reassert)level=false;return armOk;}
 static bool clear(uint8_t pin){assert(pin==7);++clears;return clearOk;}
-static bool enter(uint32_t*out){++sleeps;risc_light_sleep_result_v1 r{sizeof(r),99};nested=Port::gpioLightSleep(ctx,claim,false,&r);*out=RISC_LIGHT_SLEEP_WAKE_GPIO;return enterOk;}
+static bool enter(uint32_t*out){
+#ifdef TEST_USB_SLEEP_RECOVERY
+ RiscDiagnostics::lightEnter();
+#endif
+ ++sleeps;risc_light_sleep_result_v1 r{sizeof(r),99};nested=Port::gpioLightSleep(ctx,claim,false,&r);*out=RISC_LIGHT_SLEEP_WAKE_GPIO;
+#ifdef TEST_USB_SLEEP_RECOVERY
+ RiscDiagnostics::lightReturn(enterOk?0:-1,enterOk?7:0);
+#endif
+ return enterOk;}
 static bool closePin(uint8_t){return true;}
 static bool transfer(uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t){risc_light_sleep_result_v1 r{sizeof(r),99};assert(Port::gpioLightSleep(ctx,claim,false,&r)==RISC_LIGHT_SLEEP_BUSY);return true;}
 int main(){
+#ifdef TEST_USB_SLEEP_RECOVERY
+ RiscDiagnostics::start();const auto startupCalls=Serial.calls;
+#endif
  Hardware h{};h.owner=owned;h.gpioRead=read;h.gpioClose=closePin;h.wakeValid=valid;h.wakeArm=arm;h.lightSleep=enter;h.wakeClear=clear;h.i2cTransfer=transfer;
  Port p(h);port=&p;auto& g=p.gpios_[0];g.port=&p;ctx=&g;claim=42;p.pins_[7]={&g,claim,false};
  risc_light_sleep_result_v1 out{sizeof(out),99};
@@ -37,5 +53,17 @@ int main(){
  assert(Port::gpioRelease(ctx,claim));assert(sleep()==RISC_LIGHT_SLEEP_INVALID);p.pins_[7]={&g,43,false};claim=43;
  clearOk=false;assert(sleep()==RISC_LIGHT_SLEEP_RETAINED);assert(p.poisoned_ && p.pins_[7].token==43 && !p.quiescent());
  assert(!Port::gpioRelease(ctx,claim));assert(sleep()==RISC_LIGHT_SLEEP_RETAINED);
+#ifdef TEST_USB_SLEEP_RECOVERY
+ // Native success requested USB recovery, but failed wake-source cleanup
+ // retains the CPU invocation. No USB call ran inside any sleep/cleanup path.
+ assert(Serial.calls==startupCalls && Serial.ends==0 && Serial.begins==0);
+ assert(p.sleepRetained_ && p.pins_[7].owner==&g && p.pins_[7].token==43);
+ RiscDiagnostics::poll();assert(Serial.ends==1 && Serial.begins==0);
+ now+=RiscDiagnostics::UsbSleepRecovery::DetachMs;RiscDiagnostics::poll();
+ assert(Serial.begins==1 && p.poisoned_ && p.sleepRetained_ && !p.quiescent());
+ assert(p.pins_[7].owner==&g && p.pins_[7].token==43 && !Port::gpioRelease(ctx,claim));
+ assert(sleep()==RISC_LIGHT_SLEEP_RETAINED);
+ puts("Actual CPU cleanup RETAINED plus deferred USB recovery: native result, claims and exit barrier preserved PASS");
+#endif
  puts("Actual CPU light sleep: repeated wake, owner/input/stale/foreign tokens, active wake, held SPI/reentrant I2C, failed arm/entry, cleanup retention PASS");
 }
