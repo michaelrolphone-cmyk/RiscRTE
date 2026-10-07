@@ -97,6 +97,12 @@ static RiscCpu::Hardware admissionHardware(){
  h.i2cOpen=[](uint8_t,uint8_t,uint8_t,uint32_t){++hardwareCalls;return false;};h.i2cTransfer=[](uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t){++hardwareCalls;return false;};h.i2cClose=[](uint8_t){++hardwareCalls;return false;};
  h.spiOpen=[](uint8_t,int16_t,int16_t,int16_t){++hardwareCalls;return false;};h.spiBegin=[](uint8_t,uint8_t,uint32_t,uint8_t,uint32_t){++hardwareCalls;return false;};h.spiTransfer=[](uint8_t,const uint8_t*,uint8_t*,size_t,uint32_t){++hardwareCalls;return false;};h.spiEnd=[](uint8_t,uint8_t,uint32_t){++hardwareCalls;return false;};h.spiClose=[](uint8_t){++hardwareCalls;return false;};return h;
 }
+static void iqAdmissionHardware(RiscCpu::Hardware& h){
+ // Registration needs the complete IQ lifecycle, even though admission must
+ // never call it. Keep all callbacks counted so such execution fails tests.
+ h.radioIqReady=h.radioIqPrepare=h.radioIqCleanup=[](){++hardwareCalls;return false;};
+ h.radioIdle=h.hciIdle=h.hciSafe=[](){++hardwareCalls;return false;};
+}
 struct BootstrapNetwork {
  std::string mode,profile,descriptor,current;
  std::map<std::string,std::vector<uint8_t>> files;
@@ -391,7 +397,7 @@ int main(int argc,char** argv){
          hardware.radioLeave=hardware.radioScanStart=hardware.radioScanCancel=hardware.radioIdle=[](){++hardwareCalls;return false;};
          hardware.radioAddresses=[](uint8_t*,uint8_t*){++hardwareCalls;return false;};
          hardware.radioScanPoll=[](garden_radio_scan_result_v1*){++hardwareCalls;return false;};
-         hardware.radioIqReady=[](){++hardwareCalls;return false;};
+         iqAdmissionHardware(hardware);
          hardware.httpClient=&bootstrapHttp;hardware.httpIdle=hardware.httpSafe=[](){++hardwareCalls;return false;};
        }
        static const RiscBoot::KeyValueBackend kv{nullptr,
@@ -425,7 +431,7 @@ int main(int argc,char** argv){
        static const RiscBoot::KeyValueBackend kv{nullptr,
          [](void*,uint32_t,const char*,void*,uint32_t,uint32_t*){++hardwareCalls;return int32_t(RISC_KEY_VALUE_IO);},
          [](void*,uint32_t,const char*,const void*,uint32_t){++hardwareCalls;return int32_t(RISC_KEY_VALUE_IO);},RISC_KEY_VALUE_V2_BLOB_MAX};
-       for(unsigned scenario=0;scenario<24;++scenario){Files files=base;bool expected=scenario==0||scenario==10||scenario==13||scenario==19||scenario==20;
+       for(unsigned scenario=0;scenario<27;++scenario){Files files=base;bool expected=scenario==0||scenario==10||scenario==13||scenario==19||scenario==20||scenario==24;
          auto hardware=admissionHardware();const RiscBoot::KeyValueBackend* backend=nullptr;
          const RiscBoot::AppDataBackend* dataBackend=nullptr;
          static const RiscBoot::AppDataBackend metadataAppData{nullptr,
@@ -462,6 +468,11 @@ int main(int argc,char** argv){
            cohort["firmware_sha256"]=scenario==22?std::string(64,'0'):hexNative(record.firmwareSha);
            std::string value;serializeJson(cohort,value);files["cohort.json"]={value.begin(),value.end()};
          }
+         if(scenario>=24){
+           iqAdmissionHardware(hardware);
+           if(scenario==25)hardware.radioIqPrepare=nullptr;
+           if(scenario==26)hardware.radioIqCleanup=nullptr;
+         }
 
          auto profile=std::make_unique<RiscProvision::Profile>();profile->count=files.size();size_t index=0;
          for(auto& item:files){auto& file=profile->files[index++];strcpy(file.path,item.first.c_str());file.bytes=item.second.size();SHA256(item.second.data(),item.second.size(),file.sha256);}
@@ -479,7 +490,7 @@ int main(int argc,char** argv){
          assert(provisionAbort(token)==RISC_BANK_OK && !candidateCpu && !provisionState && !provisionFiles && hardwareCalls==0);
          uint8_t preserved[32];SHA256(flash.data()+RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
        }
-       std::cout<<"Production native full-graph/image admission:24 role/import/board/backend/OOM/cohort identity scenarios PASS; zero provider or hardware execution\n";
+       std::cout<<"Production native full-graph/image admission:27 role/import/board/backend/OOM/cohort/IQ lifecycle scenarios PASS; zero provider or hardware execution\n";
        return 0;
      }
      auto profile=std::make_unique<RiscProvision::Profile>();profile->count=3;
