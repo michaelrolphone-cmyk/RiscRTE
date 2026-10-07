@@ -6,6 +6,7 @@
 #include "bootstrap/Runtime.h"
 #include "ports/esp32s3/CpuPort.h"
 #include "ports/esp32s3/NativeRetainedWake.h"
+#include "ports/esp32s3/NativeRealtime.h"
 #include "ports/esp32s3/NativeBoard.h"
 #include "ports/esp32s3/CooperativeDelay.h"
 #include "ports/esp32s3/SleepDiagnostics.h"
@@ -100,7 +101,7 @@ RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,Ris
 #endif
 }
 void setup() {
-  owner=xTaskGetCurrentTaskHandle(); RiscCpu::NativeRetainedWake::start(); Serial.begin(115200);
+  owner=xTaskGetCurrentTaskHandle(); RiscCpu::NativeRetainedWake::start(); RiscCpu::NativeRealtime::start(); Serial.begin(115200);
 #if RISC_SLEEP_DIAGNOSTICS
   RiscDiagnostics::start();
 #endif

@@ -133,6 +133,19 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   clock_={1,sizeof(clock_),this,[](void* c)->uint64_t{auto& p=*static_cast<Port*>(c);return p.hw_.owner()?p.hw_.now():0;},
     [](void* c,uint32_t ms){auto& p=*static_cast<Port*>(c);if(p.hw_.owner())p.hw_.sleep(ms>5000?5000:ms);}};
   if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_))return false;
+  if(hw_.realtimeRead || hw_.realtimeSeed){
+    if(!hw_.realtimeRead || !hw_.realtimeSeed)return false;
+    realtime_={1,sizeof(realtime_),this,[](void* c,risc_realtime_snapshot_v1* out)->int32_t{
+      auto& p=*static_cast<Port*>(c);
+      if(!p.available() || p.sleepRetained_ || p.transferring_)return RISC_REALTIME_CONTEXT;
+      return p.hw_.realtimeRead(out);
+    },[](void* c,int64_t seconds,uint32_t nanos)->int32_t{
+      auto& p=*static_cast<Port*>(c);
+      if(!p.available() || p.sleepRetained_ || p.transferring_)return RISC_REALTIME_CONTEXT;
+      return p.hw_.realtimeSeed(seconds,nanos);
+    }};
+    if(!runtime.registerRealtime(&realtime_))return false;
+  }
   // CPU-owned opt-in resource, registered even before an IQ ELF is selected.
   // This lets a native-first update retain an identical validated board graph.
   // It remains provider-only; appPolicies rejects direct raw platform grants.

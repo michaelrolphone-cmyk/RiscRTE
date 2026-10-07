@@ -7,6 +7,7 @@
 #include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
+#include <RiscRealtimeV1.h>
 #include <RiscKeyValueV1.h>
 #include <RiscBoundKeyValueV1.h>
 #include <RiscKeyValueV2.h>
@@ -56,6 +57,7 @@ class Runtime final {
   // Compiled-in port registration only, never exported to apps/driver ELFs.
   // Tables/contexts must remain valid until successful runtime shutdown.
   bool registerPlatform(const char* capability, uint32_t api, Scope scope, uint64_t id, const void* table);
+  bool registerRealtime(const risc_realtime_control_api_v1*); // compiled-in backend only
   bool prepare(const char* root);
   // Compiled-in pre-execution admission only. Enumerates the exact prepared
   // default, app-policy and driver image paths, with their expected entry role.
@@ -149,7 +151,15 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5;
+  const risc_realtime_control_api_v1* realtimeBackend_=nullptr;
+  risc_realtime_api_v1 realtimeTable_{};
+  void* realtimeContext_=nullptr;
+  risc_realtime_control_api_v1 realtimeControlTable_{};
+  void* realtimeControlContext_=nullptr;
+  static Runtime* realtimeContext(void*,bool control);
+  static int32_t realtimeSeed(void*,int64_t,uint32_t);
+  static int32_t realtimeRead(void*,risc_realtime_snapshot_v1*);
   static Runtime* retainedWakeContext(void*);
   static int32_t retainedWakeRead(void*,uint32_t,uint32_t,risc_retained_wake_record_v1*,uint32_t*);
   static int32_t retainedWakeStage(void*,const risc_retained_wake_record_v1*);
