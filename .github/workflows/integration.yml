@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
+    branches: [main, master, feat/profile-provisioning-core, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
   workflow_dispatch:
   workflow_call:
 env:
