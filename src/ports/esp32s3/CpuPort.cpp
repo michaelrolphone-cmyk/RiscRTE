@@ -9,7 +9,8 @@ void pinsFor(const RiscBoot::Board::Device& d,uint64_t& input,uint64_t& output,u
     const auto& c=d.config.display;input|=pinBit(c.busy);output|=pinBit(c.dc)|pinBit(c.reset)|pinBit(c.backlight);
     for(unsigned i=0;i<c.power_count;++i)output|=pinBit(c.power_pins[i]);
   } else if(!strcmp(d.type,"touch.i2c")){
-    const auto& c=d.config.touch;input|=pinBit(c.irq);output|=pinBit(c.reset);if(c.irq_pull_up)pullup|=pinBit(c.irq);
+    const auto& c=d.touch();input|=pinBit(c.irq);output|=pinBit(c.reset);if(c.irq_pull_up)pullup|=pinBit(c.irq);
+    if(d.hardware.config_version==2){const auto& v=d.config.touchPowered;output|=pinBit(v.power);if(v.irq_output)output|=pinBit(c.irq);}
   } else if(!strcmp(d.type,"radio.lora")){
     const auto& c=d.lora();input|=pinBit(c.busy)|pinBit(c.irq);output|=pinBit(c.reset);
   } else if(!strcmp(d.type,"peripheral.i2c") || !strcmp(d.type,"power.axp2101")){

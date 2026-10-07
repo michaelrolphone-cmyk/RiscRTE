@@ -11,3 +11,5 @@ sources=("$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/s
 "$build/test" "$build"
 "${CXX:-c++}" "${flags[@]}" "${san[@]}" -I"$repo/src" "$repo/test/native_pwm_test.cpp" -o "$build/pwm"
 "$build/pwm"
+"${CXX:-c++}" "${flags[@]}" "${san[@]}" -rdynamic "${includes[@]}" "${sources[@]}" "$repo/test/touch_config_test.cpp" -ldl -o "$build/touch"
+"$build/touch" "$build"
