@@ -501,11 +501,18 @@ bool Port::gpioClaim(void* context,uint8_t pin,bool output,bool initial,bool pul
 }
 bool Port::gpioWrite(void* context,uint64_t token,bool level){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.available() || !token)return false;
-  for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token && p.pins_[i].output && !p.pins_[i].held){
-    if(!p.hw_.gpioWrite(i,level))return false;
-    p.pins_[i].pwm=false;return true;
+  auto& hint=p.gpioWritePins_[token & 63u];
+  unsigned i=hint?unsigned(hint-1):49;
+  if(i==49 || p.pins_[i].owner!=&c || p.pins_[i].token!=token){
+    // A hash collision is only a miss. Opaque tokens retain their original
+    // monotonic allocation, including exhaustion and stale-token semantics.
+    for(i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token)break;
+    if(i==49)return false;
+    hint=static_cast<uint8_t>(i+1);
   }
-  return false;
+  auto& pin=p.pins_[i];
+  if(!pin.output || pin.held || !p.hw_.gpioWrite(i,level))return false;
+  pin.pwm=false;return true;
 }
 bool Port::gpioRead(void* context,uint64_t token,bool* level){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.available() || !token || !level)return false;

@@ -30,7 +30,6 @@
 #include <cstring>
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
-int pwmPins[4]={-1,-1,-1,-1};
 struct I2cState { bool installed=false,configured=false;int sda=-1,scl=-1; } i2c[2];
 struct SpiState {
   bool initialized=false,held=false,pending=false;uint32_t hz=0;uint8_t mode=0;
@@ -40,13 +39,7 @@ struct SpiState {
 } spi[2];
 TickType_t ticks(uint32_t ms){return ms?pdMS_TO_TICKS(ms)+1:0;}
 spi_host_device_t host(uint8_t physical){return physical==2?SPI2_HOST:SPI3_HOST;}
-bool stopPwm(uint8_t pin){
-  for(int i=0;i<4;++i)if(pwmPins[i]==pin){
-    if(ledc_stop(LEDC_LOW_SPEED_MODE,static_cast<ledc_channel_t>(i),0)!=ESP_OK)return false;
-    esp_rom_gpio_connect_out_signal(pin,SIG_GPIO_OUT_IDX,false,false);pwmPins[i]=-1;
-  }
-  return true;
-}
+#include "NativePwmStop.inc"
 bool gpioOpen(uint8_t pin,bool output,bool initial,bool pullup){
   return pin<49 && stopPwm(pin) && NativeSleep::openPin(pin,output,initial,pullup);
 }

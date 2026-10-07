@@ -361,3 +361,12 @@ normal boot never formats storage. See [first-install instructions](docs/FIRST_I
 Deployment-admitted file dispatch is available as `file.open@1` through explicit
 app grants. Only immutable installed handler metadata selects an executable; SD
 paths remain copied data arguments. See [file dispatch](docs/FILE_OPEN.md).
+
+## Scoped GPIO hot path
+
+Runtime 0.1.45 adds a bounded pin-index hint cache for scoped writes and a native
+per-pin PWM cleanup guard. Every write still checks the full opaque token,
+current scope, owner task, output mode and hold state. Collisions fall back to
+the original bounded lookup; failed PWM cleanup remains owned. Driver ABI,
+physical I/O count, lifecycle barriers and protocol timing are unchanged. See
+[operation counts, regression coverage and host-only timing](docs/GPIO_WRITE_HOTPATH.md).

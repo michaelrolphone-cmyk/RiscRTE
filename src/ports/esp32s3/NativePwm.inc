@@ -13,5 +13,6 @@ inline bool pwmWrite(uint8_t pin,uint32_t hz,uint16_t duty,uint16_t maximum){
   channel.channel=static_cast<ledc_channel_t>(slot);channel.intr_type=LEDC_INTR_DISABLE;
   channel.timer_sel=timer.timer_num;channel.duty=uint32_t(duty)*1024/maximum;
   pwmPins[slot]=pin; // Retain partial configuration until gpioClose can stop it.
+  pwmOwnedPins[pin]=true;
   return ledc_channel_config(&channel)==ESP_OK;
 }
