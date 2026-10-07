@@ -9,6 +9,8 @@
 static std::string root;static RiscCpu::Port* cpu;
 static bool isOwner=true,safe=true;static int mode=0,backendFailure=0;
 static risc_realtime_api_v1 savedRead{};static risc_realtime_control_api_v1 savedControl{};
+static risc_platform_realtime_api_v1 savedProvider{};
+extern "C" void test_time_provider(const risc_platform_realtime_api_v1* table){savedProvider=*table;}
 static risc_realtime_snapshot_v1 timeValue{sizeof(timeValue),0,0,0,0,111,113};
 extern "C" int test_time_mode(){return mode;}
 extern "C" void test_time_owner(int v){isOwner=v;}
@@ -50,6 +52,7 @@ static void enter(){
  risc_realtime_snapshot_v1 out{sizeof(out)};
  assert(savedRead.read(savedRead.context,&out)==RISC_REALTIME_CONTEXT);
  assert(savedControl.seed(savedControl.context,1,0)==RISC_REALTIME_CONTEXT);
+ assert(savedProvider.read(savedProvider.context,&out)==RISC_REALTIME_CONTEXT);
 } // Unexpected native return must retain/poison the port.
 static int32_t timeRead(risc_realtime_snapshot_v1* out){
  assert(out && out->struct_size==sizeof(*out));*out=timeValue;
@@ -79,13 +82,15 @@ static int run(){
  if(mode>=4 && mode<=6){assert(!rt.prepare(root.c_str()));return 0;}
  assert(rt.prepare(root.c_str()));
  assert(rt.run()==(mode!=3));test_time_old();
+ risc_realtime_snapshot_v1 providerOut{sizeof(providerOut)};
+ assert(savedProvider.read(savedProvider.context,&providerOut)==RISC_REALTIME_CONTEXT);
  if(mode==3)_exit(0); // Deliberately retained, no fake shutdown.
  return 0;
 }
 int main(int argc,char** argv){
  assert(argc==2 || argc==3);root=argv[1];if(argc==3){mode=atoi(argv[2]);int result=run();if(mode<2){timeValue={sizeof(timeValue),0,0,0,0,111,113};return run();}return result;}
  file("board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[{"instance_id":7,"chip":{"vendor":"test","model":"gpio","revision":"unspecified"},"compatible":"test,gpio","config_type":"gpio.bank","config_version":1,"config":{"pins":[7,6],"active_high":true,"pull_up":true,"debounce_us":0,"long_press_us":0,"click_min_us":0}}]})");
- file("deep.json",R"({"type":"driver","id":"deep-probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"deep.elf","requires":[{"capability":"hardware.device","api":1},{"capability":"platform.gpio","api":1}],"provides":[{"capability":"test.deep","api":1}],"hardware_compatibility":[{"compatible":"test,gpio","revisions":["unspecified"],"config_type":"gpio.bank","config_version":1}]})");
+ file("deep.json",R"({"type":"driver","id":"deep-probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"deep.elf","requires":[{"capability":"hardware.device","api":1},{"capability":"platform.gpio","api":1},{"capability":"platform.realtime","api":1}],"provides":[{"capability":"test.deep","api":1}],"hardware_compatibility":[{"compatible":"test,gpio","revisions":["unspecified"],"config_type":"gpio.bank","config_version":1}]})");
 
  for(mode=0;mode<=7;++mode){
   const char* cap=mode==0?RISC_REALTIME_CAPABILITY:mode==6?"platform.realtime":RISC_REALTIME_CONTROL_CAPABILITY;

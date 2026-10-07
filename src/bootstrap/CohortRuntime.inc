@@ -75,6 +75,9 @@ bool Runtime::validateCohort(Runtime& candidate,const char* root,
   candidate.port_=port_;candidate.port_.bindPlatforms=nullptr;
   if(realtimeBackend_ && !candidate.registerRealtime(realtimeBackend_))return false;
   for(size_t i=0;i<platformCount_;++i){const auto& p=platforms_[i];
+    // Rebuild this Runtime-owned descriptor/leases against the copied native
+    // backend; never borrow a source Runtime's mutable generation tables.
+    if(!strcmp(p.capability,RISC_PLATFORM_REALTIME_CAPABILITY))continue;
     if(!candidate.registerPlatform(p.capability,p.api,p.scope,p.id,p.table))return false;
   }
   if(!candidate.prepare(root))return false;

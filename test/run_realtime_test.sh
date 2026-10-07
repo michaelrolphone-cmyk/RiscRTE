@@ -7,7 +7,7 @@ incs=(-I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware
 link=();if [[ "$(uname)" == Darwin ]];then link=(-undefined dynamic_lookup);fi
 for fixture in realtime_app deep_sleep_provider;do
  name=default;[[ "$fixture" == deep_sleep_provider ]] && name=deep
- cc "${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared "${link[@]}" "${incs[@]}" "$repo/test/fixtures/$fixture.c" -o "$build/$name.elf"
+ cc "${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared "${link[@]}" "${incs[@]}" -DTEST_PROVIDER_REALTIME "$repo/test/fixtures/$fixture.c" -o "$build/$name.elf"
 done
 c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic "${incs[@]}" \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
