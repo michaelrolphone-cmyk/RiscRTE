@@ -21,7 +21,7 @@ extern "C" bool rtc_gpio_is_valid_gpio(gpio_num_t pin){return pin<=21;}
 extern "C" esp_err_t rtc_gpio_deinit(gpio_num_t){return event("rtc_deinit");}
 extern "C" esp_err_t gpio_hold_dis(gpio_num_t){return event("hold_dis");}
 extern "C" esp_err_t gpio_set_level(gpio_num_t p,uint32_t v){assert(p==7 || p==8 || p==9);assert(v==0);return event(("low"+std::to_string(p)).c_str());}
-extern "C" esp_err_t gpio_config(const gpio_config_t* c){assert(c->mode==GPIO_MODE_OUTPUT && c->pull_up_en==GPIO_PULLUP_DISABLE && c->pull_down_en==GPIO_PULLDOWN_DISABLE && c->intr_type==GPIO_INTR_DISABLE);return event("gpio_config");}
+extern "C" esp_err_t gpio_config(const gpio_config_t* c){assert(c->mode==GPIO_MODE_INPUT_OUTPUT && c->pull_up_en==GPIO_PULLUP_DISABLE && c->pull_down_en==GPIO_PULLDOWN_DISABLE && c->intr_type==GPIO_INTR_DISABLE);return event("gpio_config");}
 esp_err_t i2s_driver_install(i2s_port_t p,const i2s_config_t* c,int q,void* queue){
  assert(p==1 && !installed && q==0 && !queue);assert(c->mode==(I2S_MODE_MASTER|I2S_MODE_TX) && c->sample_rate==8000 && c->bits_per_sample==16 && c->channel_format==I2S_CHANNEL_FMT_RIGHT_LEFT && c->communication_format==I2S_COMM_FORMAT_STAND_I2S && c->dma_buf_len==256 && c->dma_buf_count==2 && c->tx_desc_auto_clear && !c->use_apll);
  auto result=event("install");if(result==ESP_OK)installed=true;return result;
