@@ -326,6 +326,11 @@ without touching NVS or separately provisioned app-data. Existing update modes,
 paired geometries, first-frame health confirmation and rollback remain intact.
 See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-full-cohorts-runtime-0133).
 
+## Ordinary provider synchronization
+
+Selected hardware providers may request [provider-scoped synchronization](docs/PROVIDER_SYNC.md)
+through `platform.sync@1`. The bounded owner-task guards keep lock state outside
+provider PSRAM without exposing FreeRTOS symbols or enabling privileged imports.
 ## Opt-in IQ resource bank
 
 Runtime 0.1.34 adds the separate `esp32s3-16mb-appdata-iq` target with a fixed
@@ -358,3 +363,24 @@ The offline new-device composer supplies the initially bootable flash/NVS chain;
 normal boot never formats storage. See [first-install instructions](docs/FIRST_INSTALL.md),
 [current contract](docs/PROVISIONING.md), and the explicit
 [remaining Reader product packaging dependency](docs/EINK_PROVISIONING_GAP.md).
+
+Deployment-admitted file dispatch is available as `file.open@1` through explicit
+app grants. Only immutable installed handler metadata selects an executable; SD
+paths remain copied data arguments. See [file dispatch](docs/FILE_OPEN.md).
+
+## Scoped GPIO hot path
+
+Runtime 0.1.45 adds a bounded pin-index hint cache for scoped writes and a native
+per-pin PWM cleanup guard. Every write still checks the full opaque token,
+current scope, owner task, output mode and hold state. Collisions fall back to
+the original bounded lookup; failed PWM cleanup remains owned. Driver ABI,
+physical I/O count, lifecycle barriers and protocol timing are unchanged. See
+[operation counts, regression coverage and host-only timing](docs/GPIO_WRITE_HOTPATH.md).
+
+## X4 / Watch integration checkpoint
+
+Runtime 0.1.46 combines the scoped GPIO, held-output retirement, touch v2,
+file-dispatch and GPIO hot-path changes through PR35 with the accepted Watch
+PHY/IQ modem and power ownership lifecycle fix from main. Both histories and
+their production regression suites are retained; no hardware qualification is
+implied by this software integration.

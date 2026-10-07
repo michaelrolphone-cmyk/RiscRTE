@@ -42,6 +42,7 @@ namespace RiscBoot {
 namespace {
 bool elfPath(const char* p) { size_t n=strlen(p); return n>4 && !strcmp(p+n-4,".elf"); }
 }
+#include "FileOpenRuntime.inc"
 bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   if (!keys(m,{"type","id","version","driver_abi","architecture","file_name","requires","provides"},
         {"hardware_compatibility","status","notes","description","display_name","physical_verification","part","legacy_manual_only"}) ||
@@ -79,7 +80,7 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
     char compatible[96]{}, type[96]{};
     if (!keys(c,{"compatible","revisions","config_type","config_version"}) ||
         !text(c["compatible"],compatible,96) || !text(c["config_type"],type,96) ||
-        !integer(c["config_version"],1,!strcmp(type,"radio.lora")?2:1,api) || !c["revisions"].is<JsonArrayConst>()) return fail("invalid hardware compatibility");
+        !integer(c["config_version"],1,(!strcmp(type,"radio.lora") || !strcmp(type,"touch.i2c"))?2:1,api) || !c["revisions"].is<JsonArrayConst>()) return fail("invalid hardware compatibility");
     JsonArrayConst revisions=c["revisions"]; if (!revisions.size() || revisions.size()>16) return false;
     bool revision=false;
     for (JsonVariantConst v:revisions) { char s[96]; if(!text(v,s,96) || strchr(s,'*')) return false; if(!strcmp(s,dev->revision)) revision=true; }
@@ -187,13 +188,20 @@ bool Runtime::appPolicies(JsonVariantConst value) {
     if (!keys(item,{"manifest","grants"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,policy.elf,sizeof(policy.elf)) || !readJson(policy.elf,doc,&metadataCloseRetained_)) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=doc.as<JsonObjectConst>(); char filename[128];
-    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name"}) ||
+    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types"}) ||
         !eq(manifest["type"],"application") || !eq(manifest["architecture"],"xtensa-esp32s3") || !eq(manifest["entry"],"app_main") ||
         !text(manifest["id"],policy.id,sizeof(policy.id)) || !RuntimePackages::safeId(policy.id) ||
         !text(manifest["version"],policy.version,sizeof(policy.version)) || !RuntimePackages::safeVersion(policy.version) ||
         !text(manifest["file_name"],filename,sizeof(filename)) || !RuntimePackages::safeArtifact(filename) || !elfPath(filename) ||
         !manifest["requires"].is<JsonArrayConst>() || manifest["requires"].size()>MaxAppRequirements ||
         !item["grants"].is<JsonArrayConst>() || item["grants"].size()>MaxAppPolicyGrants) return fail("invalid app identity/declarations");
+    FileOpenMetadata fileMetadata;
+    if(!fileOpenMetadata(manifest,fileMetadata))return fail("invalid app file associations");
+    if(fileMetadata.count) {
+      if(!fileHandlers_)fileHandlers_=metadataArray<FileOpenMetadata>(value.size());
+      if(!fileHandlers_)return fail("file association allocation failed");
+      fileHandlers_[policyCount_]=fileMetadata;
+    }
     char* slash=strrchr(policy.elf,'/'); if (!slash) return false;
     *(slash+1)=0;
     if (strlen(policy.elf)+strlen(filename)>=sizeof(policy.elf)) return fail("app path too long");
@@ -230,6 +238,9 @@ bool Runtime::appPolicies(JsonVariantConst value) {
           if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
               port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
+        } else if (!strcmp(capability,"file.open")) {
+          if(grant.api!=T5_FILE_OPEN_API_VERSION || grant.instance)return fail("invalid file-open authority");
+          grant.fileOpen=true;grant.capability="file.open";
         } else if (!strcmp(capability,RISC_APP_DATA_CAPABILITY)) {
           const auto* backend=port_.appData;
           if(grant.api!=RISC_APP_DATA_API_V1 || !grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)return fail("app-data backend/namespace unavailable");
@@ -288,6 +299,8 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.keyValueNamespace=allowed->instance;
     grant.keyValue={allowed->api,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
     grant.api=&grant.keyValue;
+  } else if (allowed->fileOpen) {
+    grant.api=fileOpenApi();
   } else if (allowed->driver==AppDataDriver) {
     if(appDataContext_ || !providerStorageSafe())return false;
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
@@ -496,6 +509,7 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
 }
 #include "CohortRuntime.inc"
 bool Runtime::launch(const char* relative) {
+  if(fileOpen_.phase==FileOpenState::Phase::Requested || fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
   if(!active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   return path(root_,relative,queued_,sizeof(queued_));
 }
@@ -524,11 +538,13 @@ bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& 
   if(!parse(static_cast<const char*>(bytes),size,doc))return false;
   JsonObjectConst m=doc.as<JsonObjectConst>();char version[32];
   const char* basename=strrchr(policy->elf,'/');if(!basename)return false;++basename;
-  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name"}) ||
+  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types"}) ||
      !eq(m["type"],"application") || !eq(m["id"],id) || !eq(m["architecture"],"xtensa-esp32s3") ||
      !eq(m["entry"],"app_main") || !eq(m["file_name"],basename) || !text(m["version"],version,sizeof(version)) ||
      !RuntimePackages::safeVersion(version) || !m["requires"].is<JsonArrayConst>() ||
      m["requires"].size()!=required)return false;
+  FileOpenMetadata fileMetadata;
+  if(!fileOpenMetadata(m,fileMetadata))return false;
   uint32_t candidate[3],current[3];
   if(!RiscUpdate::parseVersion(version,candidate) || !RiscUpdate::parseVersion(policy->version,current) ||
      RiscUpdate::compareVersion(candidate,current)<=0)return false;
@@ -576,7 +592,7 @@ bool Runtime::appExitBarrier() {
   if(!retained_ && !metadataCloseRetained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
   // Revoke app authority without calling provider release/quiesce: the boot
   // references and active invocation memory/images must remain pinned.
-  retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;
+  retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;fileOpen_={};
   revokeProviders();
   for(auto& grant:appGrants_)grant.live=false;
   return fail("native retention barrier; app and providers retained; restart required");
@@ -608,7 +624,11 @@ bool Runtime::runOne(const char* name) {
   if(ok && init) { initialized=init()==0; ok=initialized; }
   if(!appExitBarrier())return false;
   defaultRunning_=!strcmp(name,default_);entryRunning_=ok;
-  if(ok) entry();
+  if(ok) {
+    port_.log("RTE_APP phase=entry");
+    entry();
+    port_.log("RTE_APP phase=returned");
+  } else port_.log("RTE_APP phase=init-or-entry-rejected");
   entryRunning_=false;defaultRunning_=false;
   // Native RETAINED must be observed before app callbacks or freeing anything.
   // Boot-owned driver grants defer graph quiescence until after app teardown,
@@ -633,8 +653,10 @@ bool Runtime::run() {
 #endif
   bool ok=true;
   for(size_t i=0;i<driverCount_;++i) {
+    char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
     grants_[granted_]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
-    if(!grants_[granted_].slot) { ok=fail(graph_.lastError()); break; }
+    if(!grants_[granted_].slot) { ok=fail(graph_.lastError());port_.log(error_);break; }
+    std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=ready",drivers_[i].id);port_.log(stage);
     ++granted_; port_.delay(1);
   }
   // One app at a time; no recursive ELF launch, directory search or fallback.
@@ -643,6 +665,9 @@ bool Runtime::run() {
     const bool isDefault=!strcmp(current_,default_);
     const bool completed=runOne(current_);
     if(retained_) { ok=false; break; }
+    // A file receiver always returns to its fresh caller, including load/init
+    // failure and when the receiver happens to be the configured default.
+    if(fileOpenAfterRun(completed)) { error_[0]=0;port_.delay(1);continue; }
     if(!completed && isDefault) { ok=false; break; }
     if(!completed) port_.log("RTE_APP child=failed action=reload-default");
     if(completed && queued_[0]) strcpy(current_,queued_);
@@ -652,9 +677,16 @@ bool Runtime::run() {
     error_[0]=0; port_.delay(1);
   }
   if(!retained_) {
-    while(granted_) if(!graph_.release(grants_[--granted_])) { retained_=true; ok=fail("driver quiescence failed; restart required"); }
-    if(!graph_.shutdown()) { retained_=true; ok=fail("driver shutdown retained; restart required"); }
+    while(granted_) if(!graph_.release(grants_[--granted_])) {
+      retained_=true;
+      char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[granted_].id,graph_.lastError());port_.log(detail);
+      if(ok)ok=fail("driver quiescence failed; restart required");
+    }
+    if(!graph_.shutdown()) {
+      retained_=true;port_.log("RTE_CLEANUP driver-shutdown=retained");
+      if(ok)ok=fail("driver shutdown retained; restart required");
+    }
   }
-  revokeProviders(); currentRuntime=nullptr; return ok;
+  fileOpen_={};revokeProviders(); currentRuntime=nullptr; return ok;
 }
 }

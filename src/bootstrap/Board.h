@@ -2,6 +2,7 @@
 #include "Json.h"
 #include <RiscHardwareConfigV1.h>
 #include <TWatchHardwareV1.h>
+#include <RiscTouchI2cV2.h>
 namespace RiscBoot {
 class Board final {
  public:
@@ -20,6 +21,7 @@ class Board final {
       risc_hw_pixel_v1 pixel;
       risc_hw_spi_display_v1 display;
       risc_hw_i2c_touch_v1 touch;
+      risc_hw_i2c_touch_v2 touchPowered;
       risc_hw_sd_spi_v1 sd;
       risc_hw_radio_v1 radio;
       tw_hw_gpio_controller_v1 gpioController;
@@ -31,6 +33,7 @@ class Board final {
       tw_hw_lora_v2 loraSelectable;
       Config() : display{} {}
     } config;
+    const risc_hw_i2c_touch_v1& touch() const { return hardware.config_version==2?config.touchPowered.base:config.touch; }
     const tw_hw_lora_v1& lora() const { return hardware.config_version==2?config.loraSelectable.base:config.lora; }
     Binding bindings[16]{};
     size_t bindingCount=0;

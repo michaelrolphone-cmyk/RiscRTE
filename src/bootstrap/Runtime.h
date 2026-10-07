@@ -2,6 +2,7 @@
 #include "Board.h"
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
+#include "FileOpenState.h"
 #include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
@@ -92,6 +93,7 @@ class Runtime final {
   static_assert(PolicyIndex(-1)<0 && MaxDrivers-1<=INT8_MAX && MaxPlatforms-1<=INT8_MAX,
                 "Policy index must retain -1 and every driver/platform index");
   static_assert(MaxDrivers==RuntimeProviders::GraphV2::kMaxModules,"Driver capacity must match graph");
+  static_assert(MaxAppPolicies-1<=INT8_MAX,"File handoff indices must cover every app policy");
   struct Driver {
     char id[96]{}, provides[96]{}, elf[256]{}, version[64]{};
     uint32_t api=0;
@@ -137,7 +139,7 @@ class Runtime final {
     // Runtime is nonmovable and provider metadata is immutable after prepare.
     const char* capability=nullptr;
     uint32_t api=0; uint64_t instance=0;
-    PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false;
+    PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false;
   };
 #if UINTPTR_MAX == UINT32_MAX
   static_assert(sizeof(AppGrantPolicy)==24,"App policy target layout changed");
@@ -156,6 +158,16 @@ class Runtime final {
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
   };
   MetadataArray<AppPolicy> policies_;
+  MetadataArray<FileOpenMetadata> fileHandlers_;
+  FileOpenState fileOpen_{};
+  static const t5_file_open_api_v1* fileOpenApi();
+  bool fileOpenReady() const;
+  uint32_t fileHandlerCount(const char*) const;
+  bool fileHandlerGet(const char*,uint32_t,t5_file_handler_t*) const;
+  bool fileOpenRequest(const char*,const char*,uint64_t);
+  bool fileOpenTakeResult(int32_t*,uint64_t*);
+  bool fileSourcePathGet(char*,size_t) const;
+  bool fileOpenAfterRun(bool);
   size_t policyCount_=0;
   const AppPolicy* appPolicy_=nullptr;
   struct AppGrant {

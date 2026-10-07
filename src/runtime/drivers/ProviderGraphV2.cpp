@@ -175,7 +175,11 @@ void GraphV2::releaseDependencies(size_t index) {
 bool GraphV2::deactivateIfUnused(size_t index) {
   Node& node = nodes_[index];
   if (node.visit != Visit::Active || node.module.consumers()) return true;
-  if (!node.module.unload()) return false;
+  if (!node.module.unload()) {
+    if (node.module.lastError()[0]) copyError(error_, node.module.lastError());
+    else fail("Provider quiescence rejected", node.spec.id);
+    return false;
+  }
   node.visit = Visit::Idle;
   releaseDependencies(index);
   return true;

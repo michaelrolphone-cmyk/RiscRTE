@@ -85,7 +85,7 @@ void checkConfig(uint8_t pin, bool output, bool pullup) {
   const auto& p = pads[pin];
   CHECK(p.configured);
   CHECK(p.config.pin_bit_mask == (uint64_t(1) << pin));
-  CHECK(p.config.mode == (output ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT));
+  CHECK(p.config.mode == (output ? GPIO_MODE_INPUT_OUTPUT : GPIO_MODE_INPUT));
   CHECK(p.config.pull_up_en == (pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE));
   CHECK(p.config.pull_down_en == GPIO_PULLDOWN_DISABLE);
   CHECK(p.config.intr_type == GPIO_INTR_DISABLE);
@@ -404,6 +404,10 @@ bool esp_ptr_internal(const void* pointer) {
 }
 bool rtc_gpio_is_valid_gpio(gpio_num_t pin) { return pin >= 0 && pin <= 21; }
 bool esp_sleep_is_valid_wakeup_gpio(gpio_num_t pin) { return rtc_gpio_is_valid_gpio(pin); }
+int gpio_get_level(gpio_num_t pin) {
+  // Match the pinned IDF contract: output-only pads always read LOW.
+  const auto& pad=pads.at(pin);return (pad.config.mode & GPIO_MODE_INPUT) && pad.level;
+}
 esp_err_t gpio_set_level(gpio_num_t pin, uint32_t level) {
   const auto result = record("set_level", pin, level);
   if (result == ESP_OK) pads.at(pin).level = level != 0;
@@ -500,6 +504,13 @@ void gpio_deep_sleep_hold_dis() { record("deep_hold_dis"); globalHold = false; }
 }
 
 int main() {
+  for(const uint8_t pin:{uint8_t(1),uint8_t(41)}) {
+    reset("scoped output HIGH readback preserves input sensing");
+    CHECK(openPin(pin,true,true,false));CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==1);
+    CHECK(gpio_set_level(static_cast<gpio_num_t>(pin),0)==ESP_OK);CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==0);
+    CHECK(gpio_set_level(static_cast<gpio_num_t>(pin),1)==ESP_OK);CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==1);
+    pads[pin].config.mode=GPIO_MODE_OUTPUT;CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==0);
+  }
   testValidity(); testOpen(); testArm(); testClear(); testStackReadiness(); testHoldsAndEntry(); testTimerAndLight(); testSets();
   std::puts("Native sleep SDK shim: actual timer/Light/Deep adapters, 64-bit bounds, both sources, wake causes, every-stage faults, cleanup, stack guard and entry PASS");
 }

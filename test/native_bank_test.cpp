@@ -347,7 +347,10 @@ int main(int argc,char** argv){
          assert(!bootNet.radio&&!bootNet.http&&!provisionFiles&&!provisionToken&&!RiscBootstrap::retainedSession);
          const bool pendingBank=mode=="bootstrap-pending-bank"||mode=="bootstrap-receipt-pending";
          if(pendingBank)assert(result.reason==Reason::PairUnavailable&&!bootNet.inputReads&&!bootNet.joins&&!bootNet.opens&&!writes&&confirms==0);
-         RiscBoot::Port fallbackPort{own,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* line){assert(!strcmp(line,"BOOTSTRAP_INSTALLED_DEFAULT"));return true;}};
+         RiscBoot::Port fallbackPort{own,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* line){
+           if(!strcmp(line,"RTE_APP phase=entry") || !strcmp(line,"RTE_APP phase=returned"))return true;
+           assert(!strcmp(line,"BOOTSTRAP_INSTALLED_DEFAULT"));return true;
+         }};
          if(pendingBank){fallbackPort.bindPlatforms=[](RiscBoot::Runtime& rt){return RiscBankStore::bind(rt);};fallbackPort.confirmBoot=RiscBankStore::confirmBoot;}
          RiscBoot::Runtime fallback(fallbackPort);
          assert(fallback.prepare(installed.c_str())&&fallback.run());

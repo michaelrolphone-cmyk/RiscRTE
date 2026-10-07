@@ -231,17 +231,30 @@ void ModuleV2::closeStreams() {
   streamHost_->close(streamApi_.streams.context);
   streamApi_ = {};
 }
+void ModuleV2::reportQuiescence() {
+  if (!driver_) return;
+  if (!error_[0] && driver_->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
+    const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(driver_);
+    char detail[112]{};
+    if (diagnostics->last_error && diagnostics->last_error(detail, sizeof(detail))) {
+      detail[sizeof(detail)-1] = 0;
+      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %s", driver_->driver_id, detail);
+    }
+  }
+  report(driver_->driver_id, "hardware-quiesce-rejected");
+}
 bool ModuleV2::unload() {
   if (consumers_) return false;
   revokeLease();
   risc_runtime_retention_guard();
   revokeStreams();
   if (state_ == State::Failed && handle_ && driver_) {
-    if (!hasQuiesce(driver_) || !driver_->quiesce()) return false;
+    if (!hasQuiesce(driver_) || !driver_->quiesce()) { reportQuiescence(); return false; }
     driver_->stop();
     driver_ = nullptr;
   } else if (state_ == State::Active && driver_) {
     if (hasQuiesce(driver_) && !driver_->quiesce()) {
+      reportQuiescence();
       api_ = nullptr;
       state_ = State::Failed;
       return false;

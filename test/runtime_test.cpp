@@ -17,7 +17,12 @@ extern "C" void test_yield_poll(uint32_t ms){assert(ms>0 && ms<=8);++polls;}
 static bool owner(){return ownerOk;}
 static bool health(risc_runtime_health_v1* h){if(heartbeatMode){ if(beats==3)return false; h->uptime_ms=(++generation)*2000; h->free_heap=123456; h->app_address=0x10000; snprintf(h->target,sizeof(h->target),"host-test"); return true;} h->uptime_ms=++generation;return true;}
 static void delay(uint32_t ms){waits.push_back(ms);}
-static bool logLine(const char* s){lines.emplace_back(s);if(heartbeatMode)++beats;return true;}
+static bool logLine(const char* s){
+  // Stage diagnostics are independently asserted by startup_failure_test;
+  // they must not impersonate app heartbeat events in this lifecycle model.
+  if(!strncmp(s,"RTE_PROVIDER ",13) || !strncmp(s,"RTE_APP phase=",14))return true;
+  lines.emplace_back(s);if(heartbeatMode)++beats;return true;
+}
 static void write(const std::string& p,const std::string& s){std::ofstream(p)<<s;}
 static const char* board=R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[{"instance_id":7,"chip":{"vendor":"test","model":"gpio","revision":"unspecified"},"compatible":"test,gpio","config_type":"gpio.bank","config_version":1,"config":{"pins":[5],"active_high":true,"pull_up":false,"debounce_us":0,"long_press_us":0,"click_min_us":0}}]})";
 static const char* manifest=R"({"type":"driver","id":"probe","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"probe.elf","requires":[{"capability":"hardware.device","api":1}],"provides":[{"capability":"test.probe","api":1}],"hardware_compatibility":[{"compatible":"test,gpio","revisions":["unspecified"],"config_type":"gpio.bank","config_version":1}]})";

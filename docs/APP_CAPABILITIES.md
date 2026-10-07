@@ -90,3 +90,8 @@ another app. This is separate from ordinary capability release and graph
 quiescence; see DEEP_SLEEP.md.
 
 Policy metadata is allocated for the actual validated count, bounded at 18, with no allocation when the policy list is absent/empty. Paired and explicit metadata-PSRAM targets preserve their PSRAM-only allocation policy; allocation failure rejects prepare. Policy storage outlives the provider graph and all retained grant names.
+
+Explicit `file.open@1`, instance0, supplies bounded file associations and an
+unload-before-open handoff using the canonical Reader table. Handlers come only
+from selected boot-policy manifests; data paths never become ELF launch names.
+See [file dispatch, result and authority semantics](FILE_OPEN.md).
