@@ -31,7 +31,8 @@ last successful release quiesces/stops/unmaps a provider, then releases its
 dependencies. A later acquire loads fresh provider state. Multiple live grants
 share the active instance. App fini runs before automatic grant revocation;
 ordinary child handoff/failure still returns to a fresh default invocation.
-Providers that need boot-session service must use the eager profile.
+Providers that need boot-session service can use the eager profile or the
+explicit default-only [promotion capability](PROVIDER_PROMOTION.md) in0.1.50.
 
 Failed starts and failed quiescence retain their existing dependency custody and
 retry semantics. Failed app-grant revocation retains the invocation; native

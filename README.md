@@ -405,3 +405,10 @@ control capability](docs/REALTIME.md). Native SDK time supplies UTC epoch and
 boot-local monotonic correlation across deep sleep; read authority cannot seed
 time, and the control table includes its own snapshot operation. Product grants,
 timezone policy and the twelve-requirement app limit remain unchanged.
+
+Runtime0.1.50 reconciles demand activation and retained realtime histories and
+adds explicit default-app-only `runtime.provider-promotion@1`. It pins the
+already validated selected graph for the boot session after a safe owner call;
+no provider selector or new raw import is exposed. Declared requirements and
+policy grants increase from12 to16, with16 live app grants unchanged. See the
+[integration contract and measurements](docs/PROVIDER_PROMOTION.md).

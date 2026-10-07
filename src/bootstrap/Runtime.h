@@ -8,6 +8,7 @@
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
 #include <RiscRealtimeV1.h>
+#include <RiscProviderPromotionV1.h>
 #include <RiscKeyValueV1.h>
 #include <RiscBoundKeyValueV1.h>
 #include <RiscKeyValueV2.h>
@@ -45,8 +46,8 @@ struct Port {
 class Runtime final {
  public:
   static constexpr size_t MaxAppPolicies=RiscLimits::Apps;
-  static constexpr size_t MaxAppPolicyGrants=12;
-  static constexpr size_t MaxAppRequirements=12;
+  static constexpr size_t MaxAppPolicyGrants=16;
+  static constexpr size_t MaxAppRequirements=16;
   explicit Runtime(Port p) : port_(p) {}
   ~Runtime() { revokeProviders(); }
   Runtime(const Runtime&)=delete;
@@ -151,7 +152,7 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6;
   const risc_realtime_control_api_v1* realtimeBackend_=nullptr;
   risc_realtime_api_v1 realtimeTable_{};
   void* realtimeContext_=nullptr;
@@ -218,6 +219,11 @@ class Runtime final {
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
   bool registrationOpen_=false;
   bool demandActivation_=false;
+  bool promotionRunning_=false;
+  risc_provider_promotion_api_v1 promotionTable_{};
+  void* promotionContext_=nullptr;
+  bool promotionSafe() const;
+  static int32_t promoteProviders(void*);
   bool prepared_=false, attempted_=false, active_=false, retained_=false;
   mutable bool metadataCloseRetained_=false;
   bool defaultRunning_=false, entryRunning_=false;
