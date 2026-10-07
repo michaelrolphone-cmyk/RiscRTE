@@ -123,3 +123,22 @@ owner-authorized port mapping is required; never infer a namespace from board_id
 chip/package name or a coincidental numeric value. Garden's mapping validator
 rejects an omitted namespace. Future non-ESP32 physical namespaces require their
 own registered semantics; these strings do not authorize unrelated CPU ports.
+
+## Additive touch.i2c@2
+
+`RiscTouchI2cV2.h` preserves the complete `risc_hw_i2c_touch_v1` prefix and
+adds an explicitly versioned rail/address-strap record. The base `struct_size`
+is the whole v2 record. New required JSON fields are `power` (-1 or0..48),
+`power_active_high`, `irq_output`, and `alternate_address` (0 or8..119).
+An absent rail requires false polarity. Nonzero alternate address requires
+IRQ-output authority and must differ from the primary. Both addresses are
+reserved on the declared I2C bus during graph validation, even if a probe later
+selects only one. Reserved ABI bytes are zero and never supplied in JSON.
+
+A v2 manifest must explicitly accept config_version2. The exact rail GPIO is
+output-only, and `irq_output` permits output only on that selected IRQ pin.
+No I2C bus pins become GPIO authority. Existing v1 layouts, strict JSON keys,
+IRQ-input-only scopes and absent-reset rules remain unchanged. The loader never
+executes chip reset/probe behavior; the selected ordinary provider owns that
+bounded protocol and cleanup. Unknown versions and malformed/overlapping
+records reject before any hardware I/O.

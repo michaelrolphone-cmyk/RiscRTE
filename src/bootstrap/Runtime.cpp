@@ -79,7 +79,7 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
     char compatible[96]{}, type[96]{};
     if (!keys(c,{"compatible","revisions","config_type","config_version"}) ||
         !text(c["compatible"],compatible,96) || !text(c["config_type"],type,96) ||
-        !integer(c["config_version"],1,!strcmp(type,"radio.lora")?2:1,api) || !c["revisions"].is<JsonArrayConst>()) return fail("invalid hardware compatibility");
+        !integer(c["config_version"],1,(!strcmp(type,"radio.lora") || !strcmp(type,"touch.i2c"))?2:1,api) || !c["revisions"].is<JsonArrayConst>()) return fail("invalid hardware compatibility");
     JsonArrayConst revisions=c["revisions"]; if (!revisions.size() || revisions.size()>16) return false;
     bool revision=false;
     for (JsonVariantConst v:revisions) { char s[96]; if(!text(v,s,96) || strchr(s,'*')) return false; if(!strcmp(s,dev->revision)) revision=true; }

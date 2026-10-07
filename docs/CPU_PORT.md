@@ -127,3 +127,28 @@ The 40 ms deadline and bounded copy loop remain. Invalid counts and actual
 hardware errors still fail closed; failed cleanup retains the invocation. TX
 retains its exact-write requirement. Native, CPU-port and real Runtime/ELF
 regressions cover repeated empty/partial RX, recovery, errors and cleanup.
+
+## Exclusive GPIO display and retained static outputs
+
+Runtime 0.1.39 retains the normal `spi.bus` scope. A selected `display.spi@1`
+provider explicitly requiring `platform.gpio@1` without `spi.bus@1` receives its
+exact SCLK/MOSI/CS outputs and bidirectional MOSI (plus existing control pins).
+Admission rejects any other selected device on that bus or physical SPI
+controller before hardware I/O. This supports scoped bit-banged protocols;
+it does not expose arbitrary pins or relax app raw-capability denial.
+
+The additive `garden_gpio_v1.retire_held_output` suffix transfers only a
+successfully held static, non-PWM output into CPU boot-session custody. It
+retires the token without hardware I/O or releasing the hold. Ordinary held
+outputs still block teardown. Retired holds permit provider unload; only a new
+claim in that same CPU-owned scoped context may stage a requested safe level
+before the native backend unholds it. Failed reclaims keep the pad retained and
+poison the port. This does not transfer provider callbacks or data pointers.
+Older consumers use the unchanged table prefix; new consumers must check size
+and the function pointer. It is not a cross-boot token or a hardware guarantee.
+
+Native LEDC uses a 1024-tick ten-bit period for intermediate duty ratios;
+zero/full endpoints use static GPIO levels instead of overflowing the timer.
+The existing Watch 40/100 ratio remains 409 ticks. Tests cover all 1023 X4
+intermediate ratios, scoped claims, legacy SPI, reentry/ownership, retained
+failure, and safe configuration-before-unhold with the native sleep SDK shim.

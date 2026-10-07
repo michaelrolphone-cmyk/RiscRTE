@@ -60,20 +60,8 @@ bool gpioClose(uint8_t pin){
   if(pin>=49 || !NativeSleep::canClose(pin))return false;
   return stopPwm(pin) && gpio_reset_pin(static_cast<gpio_num_t>(pin))==ESP_OK;
 }
-bool gpioPwm(uint8_t pin,uint32_t hz,uint16_t duty,uint16_t maximum){
-  int slot=-1;
-  for(int i=0;i<4;++i)if(pwmPins[i]==pin)slot=i;
-  if(slot<0)for(int i=0;i<4;++i)if(pwmPins[i]<0){slot=i;break;}
-  if(slot<0)return false;
-  ledc_timer_config_t timer{};timer.speed_mode=LEDC_LOW_SPEED_MODE;timer.duty_resolution=LEDC_TIMER_10_BIT;
-  timer.timer_num=static_cast<ledc_timer_t>(slot);timer.freq_hz=hz;timer.clk_cfg=LEDC_AUTO_CLK;
-  if(ledc_timer_config(&timer)!=ESP_OK)return false;
-  ledc_channel_config_t channel{};channel.gpio_num=pin;channel.speed_mode=LEDC_LOW_SPEED_MODE;
-  channel.channel=static_cast<ledc_channel_t>(slot);channel.intr_type=LEDC_INTR_DISABLE;
-  channel.timer_sel=timer.timer_num;channel.duty=uint32_t(duty)*1023/maximum;
-  pwmPins[slot]=pin; // Retain partial configuration until gpioClose can stop it.
-  return ledc_channel_config(&channel)==ESP_OK;
-}
+#include "NativePwm.inc"
+bool gpioPwm(uint8_t pin,uint32_t hz,uint16_t duty,uint16_t maximum){return pwmWrite(pin,hz,duty,maximum);}
 bool i2cOpen(uint8_t physical,uint8_t sda,uint8_t scl,uint32_t hz){
   auto& state=i2c[physical];if(state.installed)return false;
   state.sda=sda;state.scl=scl;
