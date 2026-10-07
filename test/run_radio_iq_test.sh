@@ -14,6 +14,7 @@ done
 for variant in normal chip eco dram iram; do
  extra=()
  case "$variant" in
+  normal) extra=(-DIQ_PORT_LIFECYCLE -DRISC_SLEEP_DIAGNOSTICS=1 "${includes[@]}" "${sources[@]}" -ldl);;
   chip) extra=(-DIQ_ROM_CHIP=5);;
   eco) extra=(-DIQ_ROM_ECO=-1);;
   dram) extra=(-DIQ_BAD_LAYOUT -Wl,--defsym,_heap_start=0x3FCB0004);;

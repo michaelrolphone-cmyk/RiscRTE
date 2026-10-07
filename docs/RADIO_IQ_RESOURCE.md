@@ -40,6 +40,33 @@ provider suspend may park again and retry release. No force-unload or reboot is
 added. RAM/code/configuration stay alive through the existing native retention
 barrier until cleanup succeeds.
 
+## Native PHY ownership correction, Runtime 0.1.41
+
+The native adapter acquires one modem-backup reference, one Wi-Fi/BT power-domain
+reference, then one PHY-enable reference before granting a lease. Parked release
+disables PHY, powers the domain off and deinitializes modem backup, once each.
+Unparked release retains all three references for retry. Refused and duplicate
+claims acquire none; token exhaustion unwinds the completed preparation.
+
+In pinned [IDF 4.4.7 PHY source](https://github.com/espressif/esp-idf/blob/v4.4.7/components/esp_phy/src/phy_init.c#L212),
+PHY enable does not acquire domain power. The separate domain-on call resets the
+modem on its first reference, so it must precede calibration/wakeup. The
+[S3/C3 Bluetooth controller lifecycle](https://github.com/espressif/esp-idf/blob/v4.4.7/components/bt/controller/esp32c3/bt.c#L1120)
+also acquires modem backup and domain power separately; controller teardown can
+leave the domain off and backup freed. SDK APIs are synchronous and return no
+status; this correction does not add a calibration timeout or detect backup
+allocation failure.
+
+Only the first admitted capture emits seven `RTE_IQ stage=` lines through the
+existing bounded hardware-USB diagnostic journal, locating preparation/shutdown
+progress without per-burst journal churn. Diagnostics-disabled builds stay silent.
+
+The native SDK model covers cold and post-Bluetooth use, repeated actual broker
+claim/release, ownership/token rejection, unparked retention/retry, token
+exhaustion and balanced references. It rejects PHY enable while the domain is
+off. This validates lifecycle ordering, not the reported device freeze, RF
+capture quality or hardware recovery; those remain unrun.
+
 ## Memory reservation and ROM evidence
 
 The fixed physical bank is `[0x3FCB0000,0x3FCC0000)`, 65536 bytes, with IRAM alias
