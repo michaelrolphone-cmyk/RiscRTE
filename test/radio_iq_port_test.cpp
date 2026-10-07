@@ -5,12 +5,14 @@
 #include <cassert>
 #include <cstdio>
 using namespace RiscCpu;
-static bool owner=true,radio=true,hci=true,hciSafe=true,http=true,maintenance=true,proof=true;
-static unsigned checks=0,starts=0;
+static bool owner=true,radio=true,hci=true,hciSafe=true,http=true,maintenance=true,proof=true,prepare=true,cleanup=true;
+static unsigned checks=0,prepares=0,cleanups=0,starts=0;
 int main(){
  Hardware h{};h.owner=[](){return owner;};h.radioIdle=[](){return radio;};h.hciIdle=[](){return hci;};h.hciSafe=[](){return hciSafe;};
  h.httpIdle=[](){return http;};h.httpSafe=[](){return http;};h.maintenanceIdle=[](){return maintenance;};
  h.radioIqReady=[](){++checks;return proof;};
+ h.radioIqPrepare=[](){++prepares;return prepare;};
+ h.radioIqCleanup=[](){++cleanups;return cleanup;};
  h.radioJoin=[](const char*,const char*){++starts;return true;};h.radioScanStart=[](){++starts;return true;};h.hciOpen=[](){++starts;return true;};
  Port p(h);auto& c=p.iq_;c.port=&p;auto& r=p.radios_[0];r.port=&p;r.token=10;auto& b=p.hci_;b.port=&p;
  auto refused=[&](){uint64_t t=99;assert(!Port::radioIqClaim(&c,&t) && !t && !c.token);};
@@ -21,7 +23,8 @@ int main(){
  p.pins_[2].held=true;refused();p.pins_[2].held=false;p.pins_[2].wakeModes=1;refused();p.pins_[2].wakeModes=0;
  p.spiBuses_[0].held=&p.spis_[0];refused();p.spiBuses_[0].held=nullptr;
  proof=false;refused();proof=true;
- uint64_t t=0;assert(Port::radioIqClaim(&c,&t) && t && c.token==t);const auto first=t;
+ prepare=false;refused();prepare=true;
+ uint64_t t=0;assert(Port::radioIqClaim(&c,&t) && t && c.token==t && prepares);const auto first=t;
  assert(!p.appExitSafe() && !p.providerStorageSafe() && !p.restartResourcesSafe() && !p.quiescent());
  uint64_t duplicate=99;assert(!Port::radioIqClaim(&c,&duplicate) && !duplicate);
  assert(!Port::radioJoin(&r,10,"test","test-pass") && !Port::radioScanStart(&r,10));
@@ -43,7 +46,8 @@ int main(){
  sleep(RISC_LIGHT_SLEEP_RETAINED);
  assert(!p.appExitSafe() && !p.providerStorageSafe() && !p.restartResourcesSafe());
  assert(!Port::radioJoin(&r,10,"test","test-pass") && !Port::radioScanStart(&r,10));
- proof=true;assert(Port::radioIqRelease(&c,t) && !c.token && !c.closing);
+ proof=true;cleanup=false;assert(!Port::radioIqRelease(&c,t) && c.token==t && c.closing);
+ cleanup=true;assert(Port::radioIqRelease(&c,t) && !c.token && !c.closing && cleanups);
  assert(!Port::radioIqRelease(&c,t));assert(p.appExitSafe() && p.restartResourcesSafe());
  // Logical Wi-Fi owner survived; another capture receives a fresh generation.
  assert(r.token==10 && Port::radioIqClaim(&c,&t) && t>first);assert(Port::radioIqRelease(&c,t));
