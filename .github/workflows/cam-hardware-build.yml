@@ -3,6 +3,8 @@ on:
   pull_request:
     branches: [main, master, feat/owned-wake-set, feat/installed-file-volume]
   workflow_dispatch:
+env:
+  PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
 permissions:
   contents: read
 concurrency:

@@ -4,6 +4,8 @@ on:
     branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
   workflow_dispatch:
   workflow_call:
+env:
+  PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
 permissions:
   contents: read
 concurrency:
@@ -34,6 +36,14 @@ jobs:
           else
             python scripts/check_versions.py
           fi
+      - name: Fetch official pinned NVS partition generator (offline tests only)
+        uses: actions/checkout@v4
+        with:
+          repository: espressif/esp-idf
+          ref: v4.4.7
+          sparse-checkout: components/nvs_flash/nvs_partition_generator
+          path: build/idf-nvs-source
+          persist-credentials: false
       - name: Fetch pinned external clock and drivers (test-only)
         uses: actions/checkout@v4
         with:
@@ -66,6 +76,8 @@ jobs:
       - name: Real host modules, board binding and default-child-default lifecycle
         run: |
           bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
+          bash test/run_metadata_read_test.sh
+          SANITIZE=1 bash test/run_metadata_read_test.sh
           bash test/run_runtime_test.sh
           SANITIZE=1 bash test/run_runtime_test.sh
           bash test/run_app_data_files_test.sh
@@ -97,15 +109,25 @@ jobs:
           bash test/run_native_bank_test.sh
           APP_DATA_TEST=1 bash test/run_native_bank_test.sh
           SANITIZE=1 bash test/run_native_bank_test.sh
+          bash test/run_provisioning_test.sh
+          SANITIZE=1 bash test/run_provisioning_test.sh
           bash test/run_update_runtime_test.sh
           SANITIZE=1 bash test/run_update_runtime_test.sh
           python test/paired_bank_images_test.py -v
+          python test/provision_seed_test.py -v
+          python test/provision_profile_test.py -v
+          NVS_GENERATOR=build/idf-nvs-source/components/nvs_flash/nvs_partition_generator/nvs_partition_gen.py python test/provision_device_test.py -v
+          python test/maintenance_plan_test.py -v
           bash test/run_hci_test.sh
           SANITIZE=1 bash test/run_hci_test.sh
+          bash test/run_radio_iq_test.sh
+          SANITIZE=1 bash test/run_radio_iq_test.sh
           bash test/run_radio_test.sh
           SANITIZE=1 bash test/run_radio_test.sh
           bash test/run_i2s_test.sh
           SANITIZE=1 bash test/run_i2s_test.sh
+          bash test/run_diagnostic_journal_test.sh
+          SANITIZE=1 bash test/run_diagnostic_journal_test.sh
           bash test/run_light_sleep_test.sh
           bash test/run_spi_radio_test.sh
           SANITIZE=1 bash test/run_spi_radio_test.sh
@@ -164,6 +186,7 @@ jobs:
       - name: Build firmware and real default/child/provider ELFs
         run: |
           pio run -e esp32s3 -j 1
+          RADIO_IQ_DISABLED_ELF=.pio/build/esp32s3/firmware.elf python -m unittest discover -s test -p 'test_radio_iq_proof.py' -v
           CC="$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" python test/verify_legacy_runtime_header.py build/watch-clock-sdk/sdk/app/RiscRuntimeV1.h
           python scripts/build_apps.py
           bash test/run_elf_test.sh
@@ -202,6 +225,13 @@ jobs:
           BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
           SANITIZE=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
           python scripts/paired_candidate.py --source-sha "$SOURCE_SHA"
+          export MKSPIFFS="$HOME/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino"
+          python test/provision_seed_test.py -v
+          pio run -e esp32s3-16mb-paired -t buildfs -j 1
+          python scripts/provision_seed.py --candidate dist/esp32s3-16mb-paired --store .pio/build/esp32s3-16mb-paired/spiffs.bin --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" --mkspiffs "$MKSPIFFS" --output dist/esp32s3-16mb-paired/seed --source-sha "$SOURCE_SHA"
+          python scripts/provision_seed.py --candidate dist/esp32s3-16mb-paired --store .pio/build/esp32s3-16mb-paired/spiffs.bin --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" --mkspiffs "$MKSPIFFS" --output dist/provision-seed-repeat --source-sha "$SOURCE_SHA"
+          diff -r dist/esp32s3-16mb-paired/seed dist/provision-seed-repeat
+          SEED_DIRECTORY=dist/esp32s3-16mb-paired/seed BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
       - uses: actions/upload-artifact@v4
         with:
           name: riscrte-esp32s3-16mb-paired-${{ github.event.pull_request.head.sha || github.sha }}
@@ -209,10 +239,31 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Build explicit owner maintenance image (no device operation)
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-maintenance -j 1
+          python scripts/maintenance_candidate.py --source-sha "$SOURCE_SHA"
+          python test/maintenance_plan_test.py --seed dist/esp32s3-16mb-paired/seed --maintenance dist/owner-maintenance
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-owner-maintenance-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/owner-maintenance/
+          if-no-files-found: error
+          retention-days: 14
+
       - uses: actions/download-artifact@v4
         with:
           name: riscrte-appdata-initial-image-${{ github.event.pull_request.head.sha || github.sha }}
           path: build/appdata-initial
+      - name: Fetch pinned runtime SPIFFS source for streamed-install proof
+        uses: actions/checkout@v4
+        with:
+          repository: pellepl/spiffs
+          ref: 0dbb3f71c5f6fae3747a9d935372773762baf852
+          path: build/spiffs-source
+          persist-credentials: false
       - name: Build opt-in app-data Runtime and verify separate layout
         env:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -221,9 +272,35 @@ jobs:
           APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
           SANITIZE=1 APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
           python scripts/paired_candidate.py --app-data --app-data-image build/appdata-initial --source-sha "$SOURCE_SHA"
+          pio run -e esp32s3-16mb-appdata -t buildfs -j 1
+          python scripts/provision_seed.py --candidate dist/esp32s3-16mb-appdata --store .pio/build/esp32s3-16mb-appdata/spiffs.bin --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" --mkspiffs "$HOME/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino" --output dist/esp32s3-16mb-appdata/seed --source-sha "$SOURCE_SHA"
+          SEED_DIRECTORY=dist/esp32s3-16mb-appdata/seed APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
+      - name: Real SPIFFS high-fill stream, retry, interruption and error proofs
+        run: |
+          python test/provisioning_spiffs_fixture.py build/spiffs-fixtures
+          for shape in high-fill-83 boundary-3 boundary-128; do
+            bash test/run_provisioning_spiffs_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" .pio/build/esp32s3-16mb-appdata/spiffs.bin "build/spiffs-fixtures/$shape" "build/spiffs-result-$shape.bin"
+          done
+          SANITIZE=1 bash test/run_provisioning_spiffs_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" .pio/build/esp32s3-16mb-appdata/spiffs.bin build/spiffs-fixtures/high-fill-83 build/spiffs-result-high-fill-83-sanitized.bin
       - uses: actions/upload-artifact@v4
         with:
           name: riscrte-esp32s3-16mb-appdata-${{ github.event.pull_request.head.sha || github.sha }}
           path: dist/esp32s3-16mb-appdata/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build opt-in IQ Runtime with mandatory bank reservation proof
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-appdata-iq -j 1
+          RADIO_IQ_ELF=.pio/build/esp32s3-16mb-appdata-iq/firmware.elf python -m unittest discover -s test -p 'test_radio_iq_proof.py' -v
+          python scripts/paired_candidate.py --app-data --radio-iq --app-data-image build/appdata-initial --source-sha "$SOURCE_SHA"
+          pio run -e esp32s3-16mb-appdata-iq -t buildfs -j 1
+          python scripts/provision_seed.py --candidate dist/esp32s3-16mb-appdata-iq --store .pio/build/esp32s3-16mb-appdata-iq/spiffs.bin --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" --mkspiffs "$HOME/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino" --output dist/esp32s3-16mb-appdata-iq/seed --source-sha "$SOURCE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-esp32s3-16mb-appdata-iq-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/esp32s3-16mb-appdata-iq/
           if-no-files-found: error
           retention-days: 14

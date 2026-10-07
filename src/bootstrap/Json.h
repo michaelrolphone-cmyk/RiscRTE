@@ -62,5 +62,8 @@ inline bool parse(const char* bytes, size_t size, JsonDocument& doc) {
   return RuntimePackages::PackageJsonGuard(bytes,size).objectOnly() &&
          !deserializeJson(doc,bytes,size,DeserializationOption::NestingLimit(10));
 }
-bool readJson(const char* filename, JsonDocument& doc);
+// A failed close leaves native descriptor ownership uncertain. The optional
+// output is sticky: successful reads never clear an earlier retained close.
+// Callers must not retry fclose on the stream after this function returns.
+bool readJson(const char* filename, JsonDocument& doc, bool* closeRetained=nullptr);
 }

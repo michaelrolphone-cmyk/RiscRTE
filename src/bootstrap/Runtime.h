@@ -54,6 +54,10 @@ class Runtime final {
   // Tables/contexts must remain valid until successful runtime shutdown.
   bool registerPlatform(const char* capability, uint32_t api, Scope scope, uint64_t id, const void* table);
   bool prepare(const char* root);
+  // Compiled-in pre-execution admission only. Enumerates the exact prepared
+  // default, app-policy and driver image paths, with their expected entry role.
+  // No module is mapped or executed. Duplicate instances share one inspection.
+  bool inspectImages(bool (*inspect)(void*,const char* path,bool driver),void*) const;
   bool uses(uint64_t instance,const char* capability,uint32_t api) const;
   bool selected(uint64_t instance) const;
   bool run();
@@ -75,6 +79,10 @@ class Runtime final {
   bool appInventory(size_t index,void*,size_t,uint32_t*) const;
   bool active() const { return active_ && port_.owner(); }
   bool retained() const { return retained_; }
+  // Native metadata stream ownership is separate from mapped provider/app
+  // retention. Metadata-only candidates may be destroyed after this is latched
+  // by their native store owner, which must retain its mount/session.
+  bool metadataCloseRetained() const { return metadataCloseRetained_; }
   const char* error() const { return error_; }
   Board& board() { return board_; }
   const Board& board() const { return board_; }
@@ -178,6 +186,7 @@ class Runtime final {
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
   bool registrationOpen_=false;
   bool prepared_=false, attempted_=false, active_=false, retained_=false;
+  mutable bool metadataCloseRetained_=false;
   bool defaultRunning_=false, entryRunning_=false;
 };
 }

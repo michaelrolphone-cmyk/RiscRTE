@@ -32,6 +32,22 @@ constexpr uint32_t RecordMagic=0x314b4252;
 uint32_t crc32(const void*,size_t);
 bool validRecord(const Record&,unsigned);
 Record makeRecord(unsigned,uint32_t,const uint8_t*,const uint8_t*);
+// Optional selection-attempt trailer in the SAME per-bank 4 KiB journal
+// sector. The legacy 96-byte readiness record and partition ABI are unchanged.
+// CRC detects torn/corrupt bytes; it is NOT an authenticity mechanism.
+struct ProvisionAttempt {
+  uint32_t magic,format,bank;
+  uint8_t profileSha[32],firmwareSha[32],storeSha[32],sourceFirmwareSha[32],sourceStoreSha[32];
+  uint32_t crc;
+};
+static_assert(sizeof(ProvisionAttempt)==176,"provisioning attempt format");
+constexpr uint32_t AttemptMagic=0x31545052; // RPT1, little endian
+constexpr uint32_t AttemptOffset=sizeof(Record);
+static_assert(AttemptOffset+sizeof(ProvisionAttempt)<=SectorBytes,"attempt fits existing journal sector");
+bool emptyAttempt(const ProvisionAttempt&);
+bool validAttempt(const ProvisionAttempt&,const Record&,unsigned);
+bool sameAttemptSource(const ProvisionAttempt&,const Record&);
+ProvisionAttempt makeAttempt(unsigned,const uint8_t (&profile)[32],const Record& target,const Record& source);
 /* Trusted backend. All functions are owner-task-only, never retain input
  * pointers. read/write <=4096, erase exactly one sector; region 0=app, 1=store.
  * File admission/paths are resolved by the native backend before begin(). */
@@ -54,12 +70,23 @@ struct Backend {
   bool (*select)(void*,unsigned);
   // Optional full-cohort admission; never needed by legacy transactions.
   bool (*validateStore)(void*,unsigned)=nullptr;
+  // Optional private boot-provisioning hooks. Not part of the provider ABI.
+  // openStore follows a verified inactive clone; finishStore must verify the
+  // entire expected inventory, all hashes, graph and ELFs without executing.
+  bool (*openStore)(void*,unsigned)=nullptr;
+  bool (*finishStore)(void*,unsigned,uint8_t* digest)=nullptr;
 };
 class Transaction {
  public:
   explicit Transaction(Backend b):io_(b){}
   bool initialize(unsigned active,const Record& record);
   int32_t begin(bool app,const risc_bank_image_v1&,uint64_t* token);
+  // Whole-store provisioning is compiled-in boot-owner authority only. The
+  // ordinary app/firmware APIs cannot enter this mode or write store files.
+  static constexpr uint32_t StoreStaging=12;
+  int32_t beginStore(const uint8_t (&activeDigest)[32],uint64_t* token);
+  bool stagingStore(uint64_t token) const {return live(token) && store_ && state_==StoreStaging && !timedOut();}
+  int32_t finishStore(uint64_t token);
   int32_t beginCohort(const risc_bank_cohort_v1&,uint64_t* token);
   int32_t step(uint64_t,risc_bank_status_v1*);
   int32_t write(uint64_t,const void*,uint32_t);
@@ -78,12 +105,13 @@ class Transaction {
   Backend io_;
   Record activeRecord_{}, targetRecord_{};
   risc_bank_image_v1 image_{};
+  uint8_t stagedStoreDigest_[32]{};
   uint8_t cohortFirmwareSha_[32]{},cohortStoreSha_[32]{};
   uint64_t serial_=0,token_=0;
   unsigned active_=0,target_=1;
   uint32_t state_=RISC_BANK_IDLE,offset_=0,received_=0,started_=0;
   int32_t error_=0;
-  bool initialized_=false,app_=false,cohort_=false;
+  bool initialized_=false,app_=false,cohort_=false,store_=false;
   alignas(4) uint8_t buffer_[RISC_BANK_CHUNK_MAX]{};
 };
 }

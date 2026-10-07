@@ -32,11 +32,11 @@ inline bool validCohortRequest(const risc_bank_cohort_v1& c){
     parseVersion(c.runtime_version,version) && repository(c.source_repo) && hex(c.source_revision,40) &&
     c.store_abi==StoreAbi && c.store_size==StoreBytes && c.firmware_size>=32 && c.firmware_size<=FirmwareBytes;
 }
-inline bool readCohort(const char* root,CohortIdentity& out){
+inline bool readCohort(const char* root,CohortIdentity& out,bool* closeRetained=nullptr){
   using namespace RiscBoot;
   char filename[256],digest[65];JsonDocument doc;int64_t number;
   out={};out.product.struct_size=sizeof(out.product);
-  if(!path(root,"cohort.json",filename,sizeof(filename)) || !readJson(filename,doc))return false;
+  if(!path(root,"cohort.json",filename,sizeof(filename)) || !readJson(filename,doc,closeRetained))return false;
   JsonObjectConst c=doc.as<JsonObjectConst>();
   if(!keys(c,{"schema","schema_version","product","version","runtime_version","source_repo","source_revision",
              "layout","store_abi","firmware_size","firmware_sha256"}) ||

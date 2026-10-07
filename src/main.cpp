@@ -5,7 +5,10 @@
 #include <esp_system.h>
 #include "bootstrap/Runtime.h"
 #include "ports/esp32s3/CpuPort.h"
+#include "ports/esp32s3/NativeBoard.h"
 #include "ports/esp32s3/CooperativeDelay.h"
+#include "ports/esp32s3/SleepDiagnostics.h"
+#include <cstdarg>
 #ifdef RISC_PAIRED_APP_DATA
 #include "ports/esp32s3/NativeAppData.h"
 #endif
@@ -14,6 +17,10 @@
 #endif
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 #include "ports/esp32s3/NativeRuntime.h"
+#include "ports/esp32s3/NativeBootstrap.h"
+#include "ports/esp32s3/NativeSntp.h"
+#include "ports/esp32s3/NvsBootstrapInput.h"
+#include "ports/esp32s3/OwnerMaintenance.h"
 #endif
 #ifndef RISC_EMBEDDED_BOOTSTORE
 #include "ports/esp32s3/NvsKeyValue.h"
@@ -35,8 +42,24 @@ bool health(risc_runtime_health_v1* out) {
   snprintf(out->target,sizeof(out->target),"%s", RISC_TARGET);
   return true;
 }
-void cooperate(uint32_t ms) { vTaskDelay(RiscCpu::cooperativeDelayTicks(ms,configTICK_RATE_HZ)); }
-bool diagnostic(const char* line) { Serial.println(line); return true; }
+void diagnosticLine(const char* line) {
+#if RISC_SLEEP_DIAGNOSTICS
+  RiscDiagnostics::line(line);
+#else
+  Serial.println(line);
+#endif
+}
+void diagnosticFormat(const char* format,...) {
+  char line[256];va_list args;va_start(args,format);vsnprintf(line,sizeof(line),format,args);va_end(args);
+  diagnosticLine(line);
+}
+void cooperate(uint32_t ms) {
+#if RISC_SLEEP_DIAGNOSTICS
+  RiscDiagnostics::poll();
+#endif
+  vTaskDelay(RiscCpu::cooperativeDelayTicks(ms,configTICK_RATE_HZ));
+}
+bool diagnostic(const char* line) { diagnosticLine(line); return true; }
 // Static lifetime intentionally retains manifests, dependency tables and ELF
 // mappings after failed quiescence. Never destroy these while hardware is live.
 RiscCpu::Port cpu(RiscCpu::nativeHardware(isOwner));
@@ -77,39 +100,28 @@ RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,Ris
 }
 void setup() {
   owner=xTaskGetCurrentTaskHandle(); Serial.begin(115200);
-  Serial.println(RISC_BUILD_IDENTITY);
+#if RISC_SLEEP_DIAGNOSTICS
+  RiscDiagnostics::start();
+#endif
+  diagnosticLine(RISC_BUILD_IDENTITY);
 #ifndef RISC_EMBEDDED_BOOTSTORE
-  if(RiscNvs::initializationStatus()!=ESP_OK) Serial.printf("RTE_STORAGE unavailable=nvs code=%d erase_recovery=disabled\n",RiscNvs::initializationStatus());
+  if(RiscNvs::initializationStatus()!=ESP_OK) diagnosticFormat("RTE_STORAGE unavailable=nvs code=%d erase_recovery=disabled",RiscNvs::initializationStatus());
+#endif
+#ifdef RISC_OWNER_INSTALLER
+  diagnosticLine("RTE_OWNER_MAINTENANCE=1");
+  RiscBootstrap::ownerMaintenance(isOwner);return;
 #endif
 #ifdef RISC_BOARD_MARKER
-  Serial.println(RISC_BOARD_MARKER);
+  diagnosticLine(RISC_BOARD_MARKER);
 #endif
 #ifdef RISC_PAIRED_BANKS
   if(!RiscBankStore::prepareBoot(isOwner,restartSafe,providerStorageSafe)) {
-    Serial.println("RTE_BOOT error=paired-bank-integrity");RiscBankStore::rejectBoot();return;
+    diagnosticLine("RTE_BOOT error=paired-bank-integrity");RiscBankStore::rejectBoot();return;
   }
-#endif
-#if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
-#ifdef RISC_PAIRED_APP_DATA
-  if(!RiscAppData::prepare(isOwner,[](){return cpu.providerStorageSafe() && RiscBankStore::exitSafe();}))Serial.println("RTE_STORAGE unavailable=appdata format_and_grow=disabled");
-#endif
-  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot
-#ifdef RISC_PAIRED_APP_DATA
-    ,RiscAppData::backend()
-#endif
-  });
-  if(!retainedRuntime){
-#ifdef RISC_PAIRED_BANKS
-    Serial.println("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();
-#else
-    Serial.println("RTE_BOOT error=runtime-metadata-psram");
-#endif
-    return;
-  }
-  auto& runtime=*retainedRuntime;
 #endif
   // Minimal flash-backed module-store bootstrap. No formatting, discovery,
-  // repair, partition writes, SD bus ownership or production volume capability.
+  // repair, SD bus ownership or production volume capability. Provisioning may
+  // subsequently stage ONLY the verified inactive paired bank.
 #ifdef RISC_EMBEDDED_BOOTSTORE
   esp_err_t mounted=riscrte_mount_embedded_store();
 #else
@@ -121,30 +133,55 @@ void setup() {
   storage.max_files=4; storage.format_if_mount_failed=false;
   esp_err_t mounted=esp_vfs_spiffs_register(&storage);
 #endif
-  if(mounted!=ESP_OK) { Serial.printf("RTE_BOOT error=storage-mount code=%d\n",mounted);
+  if(mounted!=ESP_OK) { diagnosticFormat("RTE_BOOT error=storage-mount code=%d",mounted);
 #ifdef RISC_PAIRED_BANKS
     RiscBankStore::rejectBoot();
 #endif
     return; }
-  // GPIO22..25 do not exist on S3; octal PSRAM/flash pads and UART0 are reserved.
-  for(int p=22;p<=37;++p) runtime.board().reservePin(p);
-#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
-  runtime.board().reservePin(19); runtime.board().reservePin(20);
+#ifdef RISC_PAIRED_BANKS
+#ifdef RISC_PAIRED_APP_DATA
+  if(!RiscAppData::prepare(isOwner,[](){return cpu.providerStorageSafe() && RiscBankStore::exitSafe();}))diagnosticLine("RTE_STORAGE unavailable=appdata format_and_grow=disabled");
+#endif
+  // Read-only owner input, before any app/driver binding. No configured fresh
+  // time source means offline installed boot, never a stale timestamp bypass.
+  const auto provision=RiscBootstrap::run({cpu.bootstrapHardware(),RiscNvs::backend(),providerStorageSafe,
+    RiscBootstrap::nvsInput(),RiscBootstrap::configuredFreshTime(RiscBootstrap::nvsInput(),cpu.bootstrapHardware().now)
+#ifdef RISC_PAIRED_APP_DATA
+    ,RiscAppData::backend()
+#endif
+  },"/bootfs");
+  diagnosticFormat("RTE_PROVISION action=%s reason=%s",provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",RiscBootstrap::reasonName(provision.reason));
+  if(provision.outcome==RiscBootstrap::Outcome::Stopped)return;
+#endif
+#if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
+  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot
+#ifdef RISC_PAIRED_APP_DATA
+    ,RiscAppData::backend()
+#endif
+  });
+  if(!retainedRuntime){
+#ifdef RISC_PAIRED_BANKS
+    diagnosticLine("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();
 #else
-  runtime.board().reservePin(43); runtime.board().reservePin(44);
+    diagnosticLine("RTE_BOOT error=runtime-metadata-psram");
 #endif
-  if(!runtime.prepare("/bootfs")) { Serial.printf("RTE_BOOT error=manifest detail=%s\n",runtime.error());
+    return;
+  }
+  auto& runtime=*retainedRuntime;
+#endif
+  RiscCpu::reserveNativePins(runtime.board());
+  if(!runtime.prepare("/bootfs")) { diagnosticFormat("RTE_BOOT error=manifest detail=%s",runtime.error());
 #ifdef RISC_PAIRED_BANKS
-    RiscBankStore::rejectBoot();
+    if(!runtime.retained() && !runtime.metadataCloseRetained() && appExitSafe())RiscBankStore::rejectBoot();
 #endif
     return; }
-  Serial.println("RTE_BOOT board=validated drivers=admitted");
-  if(!runtime.run()) Serial.printf("RTE_BOOT error=runtime detail=%s\n",runtime.error());
-  else Serial.println("RTE_BOOT state=idle reason=app-returned");
+  diagnosticLine("RTE_BOOT board=validated drivers=admitted");
+  if(!runtime.run()) diagnosticFormat("RTE_BOOT error=runtime detail=%s",runtime.error());
+  else diagnosticLine("RTE_BOOT state=idle reason=app-returned");
 #ifdef RISC_PAIRED_BANKS
   // A return (including intentional default exit) is never a health signal.
   // Do not reboot retained native resources or bypass the existing barrier.
-  if(!runtime.retained() && appExitSafe())RiscBankStore::rejectBoot();
+  if(!runtime.retained() && !runtime.metadataCloseRetained() && appExitSafe())RiscBankStore::rejectBoot();
 #endif
 }
-void loop() { delay(50); }
+void loop() { cooperate(50); }

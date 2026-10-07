@@ -41,15 +41,35 @@ bool cohortInventory(const char* root,const char* relative,CohortName* names,siz
 }
 bool Runtime::validateCohort(Runtime& candidate,const char* root,
                             bool (*admit)(void*,const char*,bool),void* context) const {
-  if(&candidate==this || !attempted_ || !port_.owner() || !providerStorageSafe() || !root || !admit || candidate.attempted_)return false;
+  if(&candidate==this || !attempted_ || !port_.owner() || !providerStorageSafe() || !root || !admit || candidate.attempted_ || candidate.metadataCloseRetained_)return false;
+  // All metadata opened for this admission, including source comparisons,
+  // belongs to the candidate's native session. Keep its close failure visible
+  // even when validation stops before candidate.prepare() is reached.
   JsonDocument currentBoot,newBoot,currentBoard,newBoard;
   char filename[256],relative[193];
-  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,currentBoot) ||
-     !path(root,"boot.json",filename,sizeof(filename)) || !readJson(filename,newBoot) ||
+  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,currentBoot,&candidate.metadataCloseRetained_) ||
+     !path(root,"boot.json",filename,sizeof(filename)) || !readJson(filename,newBoot,&candidate.metadataCloseRetained_) ||
      !cohortSameJson(currentBoot["port"],newBoot["port"]))return false;
-  if(!text(currentBoot["board"],relative,sizeof(relative)) || !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,currentBoard) ||
-     !text(newBoot["board"],relative,sizeof(relative)) || !path(root,relative,filename,sizeof(filename)) || !readJson(filename,newBoard) ||
+  if(!text(currentBoot["board"],relative,sizeof(relative)) || !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,currentBoard,&candidate.metadataCloseRetained_) ||
+     !text(newBoot["board"],relative,sizeof(relative)) || !path(root,relative,filename,sizeof(filename)) || !readJson(filename,newBoard,&candidate.metadataCloseRetained_) ||
      !cohortSameJson(currentBoard.as<JsonVariantConst>(),newBoard.as<JsonVariantConst>()))return false;
+  JsonVariantConst migration=newBoot["cohort_migration"];
+  if(!RiscUpdate::validCohortMigration(migration))return false;
+  bool migrating=false;
+  JsonArrayConst shared=migration["shared_key_value"];
+  if(!migration.isUnbound()){
+    RiscUpdate::CohortIdentity currentIdentity{},nextIdentity{};
+    if(!RiscUpdate::readCohort(root_,currentIdentity,&candidate.metadataCloseRetained_) || !RiscUpdate::readCohort(root,nextIdentity,&candidate.metadataCloseRetained_) ||
+       strcmp(currentIdentity.product.source_repo,nextIdentity.product.source_repo) ||
+       !RiscUpdate::migrationTarget(migration["to"],nextIdentity))return false;
+    migrating=RiscUpdate::migrationTarget(migration["from"],currentIdentity) &&
+      eq(migration["from"]["source_revision"],currentIdentity.product.source_revision);
+    // A retained source-bound record is inert only for exact self-validation
+    // of the already installed target. It never grants authority a second time.
+    if(!migrating && !(RiscUpdate::migrationTarget(migration["to"],currentIdentity) &&
+       RiscUpdate::sameCohortIdentity(currentIdentity,nextIdentity)))return false;
+  }
+  uint32_t consumed=0;
   // Reuse the running graph's already scoped native tables with an identical
   // hardware/port declaration. Never bind the staged board into the CPU owner.
   candidate.port_=port_;candidate.port_.bindPlatforms=nullptr;
@@ -77,10 +97,26 @@ bool Runtime::validateCohort(Runtime& candidate,const char* root,
     bool used=grant.keyValue && oldKvUsed(uint32_t(grant.instance)),owned=false;
     for(size_t q=0;q<policyCount_;++q)for(size_t h=0;h<policies_[q].count;++h){const auto& previous=policies_[q].grants[h];
       if(!persistent(previous) || strcmp(previous.capability,grant.capability) || previous.instance!=grant.instance)continue;
-      used=true;if(!strcmp(policies_[q].id,candidate.policies_[p].id))owned=true;
+      used=true;if(same(previous,grant) && !strcmp(policies_[q].id,candidate.policies_[p].id))owned=true;
     }
-    if(used && !owned)return false;
+    if(used && !owned){
+      if(!migrating || !grant.keyValue || policyCount_<2)return false;
+      const char* id=candidate.policies_[p].id;
+      for(size_t q=0;q<policyCount_;++q){
+        if(!strcmp(policies_[q].id,id))return false; // Existing-app expansion is never a migration.
+        bool universal=false;
+        for(size_t h=0;h<policies_[q].count;++h)
+          if(policies_[q].grants[h].keyValue && same(policies_[q].grants[h],grant))universal=true;
+        if(!universal)return false;
+      }
+      size_t entry=0;
+      for(;entry<shared.size();++entry)if(eq(shared[entry]["application_id"],id) &&
+          shared[entry]["api"].as<uint32_t>()==grant.api && shared[entry]["namespace"].as<uint64_t>()==grant.instance)break;
+      if(entry==shared.size() || (consumed&(uint32_t(1)<<entry)))return false;
+      consumed|=uint32_t(1)<<entry;
+    }
   }
+  if(migrating && consumed!=((uint32_t(1)<<shared.size())-1))return false;
   for(size_t p=0;p<driverCount_;++p)for(size_t k=0;k<providerStorage_[p].count;++k){
     const auto& key=providerStorage_[p].keys[k];bool found=false;
     for(size_t q=0;q<candidate.driverCount_;++q)if(!strcmp(drivers_[p].id,candidate.drivers_[q].id) && drivers_[p].instance==candidate.drivers_[q].instance)

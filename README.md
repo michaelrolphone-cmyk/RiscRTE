@@ -246,6 +246,58 @@ See [native registry regression](test/support/native_registry/README.md).
 Explicit larger records are available through [key-value v2](docs/KEY_VALUE_V2.md),
 while v1 remains capped at64 bytes with its original authority and lifecycle.
 
+## Profile provisioning core checkpoint
+
+Runtime 0.1.17 adds a strict owner-supplied provisioning profile parser and
+a cooperative boot coordinator, currently exercised through a host backend.
+The existing boot path is unchanged; native flash/SD staging and fresh-boot
+routing remain to be connected. See [scope, failure handling and remaining
+integration](docs/PROVISIONING.md). This is not yet automatic device provisioning.
+
+Runtime 0.1.18 also adds a private whole-store staging mode to the existing
+paired-bank transaction, retaining clone verification, readback, cleanup and
+ambiguous-selection protection. The provider ABI is unchanged and the native
+whole-store callbacks are not yet connected.
+
+Runtime 0.1.19 adds the private inactive-bank file staging/readback backend,
+including committed profile identity and abort-to-installed-default support.
+It remains opt-in through compiled-in boot-owner calls; automatic profile
+acquisition, trusted current time, full admission-hook integration and network
+boot routing are still pending.
+
+Runtime 0.1.20 wires mandatory production staged-graph and ELF admission using
+fresh metadata-only native CPU/Runtime instances, shared pin reservations,
+role-specific entries and ordinary import checks. Nothing executes during
+admission. Live profile acquisition, current UTC, transport and setup routing
+remain pending.
+
+Runtime 0.1.21 connects paired setup to bounded, read-only owner NVS input and
+the provisioning coordinator using existing native station/HTTPS and staging.
+Absent/invalid input or unavailable fresh time keeps normal installed boot.
+At this checkpoint the time factory remained unavailable; see 0.1.25 below.
+
+Runtime 0.1.23 records a bounded provisioning selection attempt in the existing
+inactive-bank journal, preventing an unchanged failed transition from repeatedly
+reprovisioning/rebooting. Changed profiles or source generations can proceed;
+malformed history preserves offline installed launch without erasing history.
+
+Runtime 0.1.25 adds optional owner-configured, bounded SNTP synchronization and an
+offline descriptor/profile artifact packager. New-sync callback, timeout,
+quiescent cleanup and installed fallback are covered by software tests. SNTP is
+unauthenticated; normal HTTPS certificate verification remains enabled. Deployment
+still needs owner profile/server/trust inputs and live qualification. See
+[provisioning input workflow and limits](docs/PROVISIONING.md).
+
+The offline paired seed composer (`scripts/provision_seed.py`) now combines a
+verified paired Runtime candidate with the generic no-device heartbeat fallback
+store and initial bank metadata. It is a first-install artifact with NVS omitted,
+not an update/migration or device operation. Details: [first-install seed](docs/PROVISIONING.md#generic-first-install-seed-composition).
+
+Runtime 0.1.31 adds an explicit owner NVS installation transaction, a native
+maintenance adapter and `provision-input --install-sim` for software testing.
+Profile/time slots are committed/read back before descriptor selection; unrelated
+NVS data is preserved. Normal boot stays read-only. Physical installation transport
+and X4/ESP32-CAM checks are UNRUN; they do not gate PR15 software readiness.
 ## Explicit BLE controller transport
 
 Firmware 0.1.24 supplies bounded selected-device `platform.hci.controller@1`
@@ -273,3 +325,30 @@ can be validated and activated together, including new app/provider policies,
 without touching NVS or separately provisioned app-data. Existing update modes,
 paired geometries, first-frame health confirmation and rollback remain intact.
 See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-full-cohorts-runtime-0133).
+
+## Opt-in IQ resource bank
+
+Runtime 0.1.34 adds the separate `esp32s3-16mb-appdata-iq` target with a fixed
+pre-heap 64 KiB SRAM reservation and owner-bound `platform.radio.iq.resource@1`.
+Only explicitly selected providers declaring that raw dependency receive it. Leases exclude
+native radio activity and block unsafe exit/restart/sleep; failed release retains
+ownership for retry. RF capture policy stays external. See
+[resource contract, final ELF proof and hardware limits](docs/RADIO_IQ_RESOURCE.md).
+
+## Retrievable sleep/reset diagnostics
+
+Runtime 0.1.35 adds a bounded RTC journal and a read-only `diag` serial replay on
+existing hardware-USB targets. Wake normally first; USB cannot work during
+ESP32-S3 hardware sleep. The recorder never writes flash, adds a wake source or
+keeps USB awake. See [retrieval, retention, power limits and tests](docs/SLEEP_DIAGNOSTICS.md).
+
+## Complete first-install provisioning software (0.1.36)
+
+A generic verified paired Runtime plus a private provisioning JSON can install a
+complete pinned product inventory, including board.json, all driver/app ELFs and
+the default application. Compact profiles cover full Watch stores, preserve
+app-data/cohort/IQ contracts, and use real-SPIFFS-tested bounded staging/retry.
+The offline new-device composer supplies the initially bootable flash/NVS chain;
+normal boot never formats storage. See [first-install instructions](docs/FIRST_INSTALL.md),
+[current contract](docs/PROVISIONING.md), and the explicit
+[remaining Reader product packaging dependency](docs/EINK_PROVISIONING_GAP.md).

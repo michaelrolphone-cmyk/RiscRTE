@@ -28,7 +28,7 @@ bool Port::reserve(int16_t pin,const void* owner){
 }
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
 bool Port::providerStorageSafe() const {
-  if(!available() || sleepRetained_ || transferring_)return false;
+  if(!available() || sleepRetained_ || transferring_ || iq_.token)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
   for(const auto& pin:pins_)if(pin.held)return false;
   for(const auto& c:i2ss_)if(c.closing)return false;
@@ -57,6 +57,7 @@ bool Port::restartResourcesSafe() const {
   return true;
 }
 bool Port::quiescent() const {
+  if(iq_.token || iq_.closing)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   for(const auto& c:radios_)if(c.token || c.active || c.closing)return false;
@@ -111,6 +112,15 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   clock_={1,sizeof(clock_),this,[](void* c)->uint64_t{auto& p=*static_cast<Port*>(c);return p.hw_.owner()?p.hw_.now():0;},
     [](void* c,uint32_t ms){auto& p=*static_cast<Port*>(c);if(p.hw_.owner())p.hw_.sleep(ms>5000?5000:ms);}};
   if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_))return false;
+  // CPU-owned opt-in resource, registered even before an IQ ELF is selected.
+  // This lets a native-first update retain an identical validated board graph.
+  // It remains provider-only; appPolicies rejects direct raw platform grants.
+  if(hw_.radioIqReady){
+    if(!hw_.radioIqPrepare || !hw_.radioIqCleanup || !hw_.radioIdle || !hw_.hciIdle || !hw_.hciSafe)return false;
+    ++iqCount_;iq_.port=this;
+    iq_.api={1,sizeof(iq_.api),&iq_,radioIqClaim,radioIqRelease,0x3FCB0000u,65536u};
+    if(!runtime.registerPlatform(RISC_RADIO_IQ_RESOURCE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&iq_.api))return false;
+  }
   if(hw_.httpClient){
     const auto* h=hw_.httpClient;
     if(!hw_.httpIdle || !hw_.httpSafe || h->api_version!=1 || h->struct_size<sizeof(*h) || !h->open || !h->read || !h->info || !h->close)return false;
@@ -230,7 +240,7 @@ bool Port::i2sClose(void* context,uint64_t token){
 bool Port::hciOpen(void* context,uint32_t unit,uint64_t* out){
   if(out)*out=0;
   auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
-  if(!out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || !p.hw_.hciIdle())return false;
+  if(!out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || p.iq_.token || !p.hw_.hciIdle())return false;
   const uint64_t token=p.token();if(!token)return false;
   p.transferring_=true;const bool ok=p.hw_.hciOpen();p.transferring_=false;
   if(!ok){
@@ -275,6 +285,49 @@ bool Port::hciStatus(void* context,uint64_t token,uint8_t* state){
   }
   *state=RISC_HCI_CONTROLLER_ON;return true;
 }
+// The lease is synchronous and owner-task bound. An existing idle logical
+// station claim may coexist; neither native modem may start until release.
+bool Port::radioIqClaim(void* context,uint64_t* out){
+  if(out)*out=0;
+  if(!context || !out)return false;
+  auto& c=*static_cast<RadioIq*>(context);auto& p=*c.port;
+  if(c.token || c.closing || !p.providerStorageSafe() || !p.appExitSafe() ||
+     !p.hw_.radioIdle || !p.hw_.radioIdle() || !p.hw_.hciIdle || !p.hw_.hciIdle() || p.hci_.token ||
+     !p.hw_.radioIqReady)return false;
+  for(const auto& bus:p.spiBuses_)if(bus.held)return false;
+  // First prove the raw block is parked, then let the native Runtime perform
+  // the vendor PHY calibration that the ELF is deliberately not authorized to
+  // import. A refused prepare never produces a cleanup token.
+  p.transferring_=true;
+  const bool ready=p.hw_.radioIqReady();
+  const bool prepared=ready && p.hw_.radioIqPrepare && p.hw_.radioIqPrepare();
+  p.transferring_=false;
+  if(!prepared)return false;
+  const uint64_t token=p.token();
+  if(!token){
+    p.transferring_=true;const bool cleaned=p.hw_.radioIqCleanup && p.hw_.radioIqCleanup();p.transferring_=false;
+    if(!cleaned)p.poisoned_=true;
+    return false;
+  }
+  c.token=token;*out=token;return true;
+}
+bool Port::radioIqRelease(void* context,uint64_t token){
+  if(!context)return false;
+  auto& c=*static_cast<RadioIq*>(context);auto& p=*c.port;
+  if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ ||
+     !token || token!=c.token)return false;
+  c.closing=true;
+  // Failed verification or PHY shutdown retains the exact lease and permits
+  // a later retry. The external driver must park and restore before release;
+  // native cleanup then returns the calibrated PHY to its prior disabled state.
+  p.transferring_=true;
+  const bool parked=p.hw_.radioIqReady && p.hw_.radioIqReady();
+  const bool cleaned=parked && p.hw_.radioIqCleanup && p.hw_.radioIqCleanup();
+  const bool ready=cleaned && p.hw_.radioIqReady && p.hw_.radioIqReady();
+  p.transferring_=false;
+  if(!ready)return false;
+  c.token=0;c.closing=false;return true;
+}
 // Radio ownership is logical until the first join/scan. Idle provider claims
 // may span app handoffs; native activity and failed cleanup never may.
 bool Port::radioClaim(void* context,uint64_t* out){
@@ -285,7 +338,7 @@ bool Port::radioClaim(void* context,uint64_t* out){
 }
 bool Port::radioJoin(void* context,uint64_t token,const char* ssid,const char* password){
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
-  if(!p.available() || p.transferring_ || !token || token!=c.token || c.active || c.closing || !ssid || !password)return false;
+  if(!p.available() || p.transferring_ || p.iq_.token || !token || token!=c.token || c.active || c.closing || !ssid || !password)return false;
   const size_t sn=strnlen(ssid,33),pn=strnlen(password,64);
   if(!sn || sn>32 || pn>63 || (pn && pn<8))return false;
   c.active=true;p.transferring_=true;const bool ok=p.hw_.radioJoin(ssid,password);p.transferring_=false;
@@ -334,7 +387,7 @@ bool Port::radioAddresses(void* context,uint64_t token,uint8_t* station,uint8_t*
 }
 bool Port::radioScanStart(void* context,uint64_t token){
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
-  if(!p.available() || p.transferring_ || !token || token!=c.token || c.active || c.closing)return false;
+  if(!p.available() || p.transferring_ || p.iq_.token || !token || token!=c.token || c.active || c.closing)return false;
   c.active=c.scanning=true;p.transferring_=true;const bool ok=p.hw_.radioScanStart();p.transferring_=false;
   if(!ok){c.closing=true;(void)radioLeave(context,token);}return ok;
 }
@@ -406,7 +459,8 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.iq_.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
   // Failed cleanup outranks healthy activity on either selected I2S unit.
@@ -456,7 +510,8 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.iq_.closing)return RISC_DEEP_SLEEP_RETAINED;
+  if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
   // Failed cleanup outranks healthy activity on either selected I2S unit.
@@ -533,7 +588,8 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_ || p.sleepRetained_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.iq_.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& i:p.i2ss_)if(i.closing)return RISC_LIGHT_SLEEP_RETAINED;
@@ -587,7 +643,8 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.sleeping_ || p.transferring_ || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.iq_.closing)return RISC_DEEP_SLEEP_RETAINED;
+  if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(unsigned i=0;i<49;++i){
     auto& pin=p.pins_[i];

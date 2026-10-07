@@ -1,6 +1,7 @@
 #include "Runtime.h"
 #include "KeyValueGeneration.h"
 #include "runtime/update/Version.h"
+#include "runtime/update/CohortMigration.h"
 #include "runtime/resources/ScopedBufferWipe.h"
 #include <esp_dlfcn.h>
 #include <cstring>
@@ -100,7 +101,8 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
       (strncmp(capability,"platform.",9) && strcmp(capability,"spi.bus"))) return false;
   if (scope==Scope::Global) {
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
-               strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store"))) return false;
+               strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
+               strcmp(capability,"platform.radio.iq.resource"))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
@@ -183,7 +185,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
     auto& policy=policies_[policyCount_]; char relative[193]; JsonDocument doc;
     if (!keys(item,{"manifest","grants"}) || !text(item["manifest"],relative,sizeof(relative)) ||
-        !path(root_,relative,policy.elf,sizeof(policy.elf)) || !readJson(policy.elf,doc)) return fail("invalid app policy manifest path");
+        !path(root_,relative,policy.elf,sizeof(policy.elf)) || !readJson(policy.elf,doc,&metadataCloseRetained_)) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=doc.as<JsonObjectConst>(); char filename[128];
     if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name"}) ||
         !eq(manifest["type"],"application") || !eq(manifest["architecture"],"xtensa-esp32s3") || !eq(manifest["entry"],"app_main") ||
@@ -359,7 +361,7 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   return true;
 }
 bool Runtime::providerStorageSafe() const {
-  if(!appDataExitSafe())return false;
+  if(metadataCloseRetained_ || !appDataExitSafe())return false;
   if(installedFiles_ && installedFiles_->retained())return false;
   if(port_.providerStorageSafe)return port_.providerStorageSafe();
   return !port_.appExitSafe || port_.appExitSafe();
@@ -442,14 +444,15 @@ bool Runtime::revokeApp() {
 #include "InstalledFilesRuntime.inc"
 #include "AppDataRuntime.inc"
 bool Runtime::prepare(const char* root) {
-  if(attempted_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
+  if(attempted_ || metadataCloseRetained_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);
   char filename[256], relative[193]; JsonDocument config, boardDoc;
-  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,config)) return fail("boot.json unreadable/invalid");
+  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,config,&metadataCloseRetained_)) return fail("boot.json unreadable/invalid");
   JsonObjectConst c=config.as<JsonObjectConst>();
   if (!c["port"].isNull() && !board_.port(c["port"])) return fail(board_.error());
-  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities"}) || !text(c["board"],relative,sizeof(relative)) ||
-      !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
+  if(!RiscUpdate::validCohortMigration(c["cohort_migration"]))return fail("invalid cohort migration policy");
+  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities","cohort_migration"}) || !text(c["board"],relative,sizeof(relative)) ||
+      !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc,&metadataCloseRetained_) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
   if(!text(c["default_app"],relative,sizeof(relative)) || !elfPath(relative) || !path(root_,relative,current_,sizeof(current_))) return fail("invalid default app path");
   if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>MaxDrivers) return fail("invalid driver list");
   // Read all manifests and validate mappings before registering/activating modules.
@@ -458,7 +461,7 @@ bool Runtime::prepare(const char* root) {
     if(!keys(item,{"manifest"},{"instance_id","key_value"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,d.elf,sizeof(d.elf)) || (!item["instance_id"].isNull() && !integer(item["instance_id"],1,INT32_MAX,instance))) return fail("invalid driver selection");
     d.instance=instance; JsonDocument manifestDoc;
-    if(!readJson(d.elf,manifestDoc) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
+    if(!readJson(d.elf,manifestDoc,&metadataCloseRetained_) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
     if(!providerPolicy(item,providerStorage_[driverCount_])) return false;
     ++driverCount_;
   }
@@ -478,9 +481,22 @@ bool Runtime::prepare(const char* root) {
   }
   strcpy(default_,current_); prepared_=true; return true;
 }
+bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* context) const {
+  if(!prepared_ || active_ || retained_ || metadataCloseRetained_ || !port_.owner() || !inspect)return false;
+  if(!inspect(context,default_,false))return false;
+  for(size_t i=0;i<policyCount_;++i){
+    if(!strcmp(policies_[i].elf,default_))continue;
+    if(!port_.owner() || !inspect(context,policies_[i].elf,false))return false;
+  }
+  for(size_t i=0;i<driverCount_;++i){
+    bool duplicate=false;for(size_t j=0;j<i;++j)if(!strcmp(drivers_[j].elf,drivers_[i].elf)){duplicate=true;break;}
+    if(!duplicate && (!port_.owner() || !inspect(context,drivers_[i].elf,true)))return false;
+  }
+  return port_.owner();
+}
 #include "CohortRuntime.inc"
 bool Runtime::launch(const char* relative) {
-  if(!active() || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
+  if(!active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   return path(root_,relative,queued_,sizeof(queued_));
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
@@ -530,11 +546,11 @@ bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& 
   return appManifestPath(size_t(policy-policies_.get()),out.manifest,sizeof(out.manifest));
 }
 bool Runtime::appManifestPath(size_t index,char* out,size_t capacity) const {
-  if(index>=policyCount_ || !out)return false;
+  if(metadataCloseRetained_ || index>=policyCount_ || !out)return false;
   // Keep per-app path storage out of scarce static internal DRAM. The immutable
   // selected boot policy supplies this path; no caller filename is accepted.
   char filename[256];JsonDocument boot;
-  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,boot))return false;
+  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,boot,&metadataCloseRetained_))return false;
   return text(boot["app_capabilities"][index]["manifest"],out,capacity);
 }
 bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* actual) const {
@@ -545,7 +561,7 @@ bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* a
   FILE* f=fopen(name,"rb");if(!f)return false;
   size_t n=fread(output,1,capacity,f);
   bool ok=n && fgetc(f)==EOF && !ferror(f);
-  if(fclose(f)!=0)ok=false;
+  if(fclose(f)!=0){metadataCloseRetained_=true;ok=false;}
   if(!ok){memset(output,0,n);return false;}
   *actual=uint32_t(n);return true;
 }
@@ -557,7 +573,7 @@ void Runtime::yield(uint32_t ms) {
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }
 bool Runtime::appExitBarrier() {
-  if(!retained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  if(!retained_ && !metadataCloseRetained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
   // Revoke app authority without calling provider release/quiesce: the boot
   // references and active invocation memory/images must remain pinned.
   retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;
@@ -609,7 +625,7 @@ bool Runtime::runOne(const char* name) {
   return ok || fail("app entry/lifecycle invalid");
 }
 bool Runtime::run() {
-  if(!prepared_ || currentRuntime || !port_.owner() || retained_) return fail("runtime not launchable");
+  if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained_) return fail("runtime not launchable");
   prepared_=false; currentRuntime=this;
 #ifdef ESP_PLATFORM
   static const esp_elfsym symbols[]={{"risc_runtime_get_api",reinterpret_cast<const void*>(&risc_runtime_get_api)},ESP_ELFSYM_END};

@@ -4,7 +4,15 @@
 #include <filesystem>
 #include <dirent.h>
 static std::string fsRoot;
+static unsigned receiptMode=0;
+static bool cohortLiveClose=false;
+static uint8_t consumedProfile[32]{};
 extern "C" FILE* __real_fopen(const char*,const char*);
+extern "C" int __real_fclose(FILE*);
+static std::map<FILE*,std::pair<std::string,bool>> metadataStreams;
+static std::string metadataClosePath;
+static unsigned metadataFailedCloses=0;
+static bool metadataRequireCandidate=true;
 extern "C" DIR* __real_opendir(const char*);
 extern "C" int __real_stat(const char*,struct stat*);
 extern "C" int __real_lstat(const char*,struct stat*);
@@ -12,7 +20,15 @@ static std::string redirected(const char* path){
  if(!fsRoot.empty() && (!strncmp(path,"/bootfs",7) || !strncmp(path,"/updatefs",9)))return fsRoot+path;
  return path;
 }
-extern "C" FILE* __wrap_fopen(const char* path,const char* mode){auto mapped=redirected(path);return __real_fopen(mapped.c_str(),mode);}
+extern "C" FILE* __wrap_fopen(const char* path,const char* mode){auto mapped=redirected(path);FILE* file=__real_fopen(mapped.c_str(),mode);if(file)metadataStreams[file]={mapped,mode[0]=='r'};return file;}
+extern "C" int __wrap_fclose(FILE* file){
+ auto entry=metadataStreams.find(file);const bool fail=entry!=metadataStreams.end() && entry->second.second &&
+   entry->second.first==metadataClosePath && (!metadataRequireCandidate || RiscBankStore::candidateCpu);
+ if(entry!=metadataStreams.end())metadataStreams.erase(entry);
+ const int result=__real_fclose(file);
+ if(fail){metadataClosePath.clear();++metadataFailedCloses;return EOF;}
+ return result;
+}
 extern "C" DIR* __wrap_opendir(const char* path){auto mapped=redirected(path);return __real_opendir(mapped.c_str());}
 extern "C" int __wrap_stat(const char* path,struct stat* info){auto mapped=redirected(path);return __real_stat(mapped.c_str(),info);}
 extern "C" int __wrap_lstat(const char* path,struct stat* info){auto mapped=redirected(path);return __real_lstat(mapped.c_str(),info);}
@@ -76,9 +92,33 @@ extern "C" void test_cohort_update(){
   saveElf("/updatefs/new.elf",false);saveElf("/updatefs/new-driver.elf",true);
   std::filesystem::remove(fsRoot+"/updatefs/extra.json");
  }
+ if(receiptMode){
+  // A carried receipt is part of readiness: uncertain writes never select.
+  for(unsigned fault=1;fault<=3;++fault){
+   uint64_t token=0;assert(api.begin_cohort(nullptr,&cohortImage,&token)==0 && send(token)==0);
+   attemptWriteFault=fault;assert(advance(token)==RISC_BANK_IO);attemptWriteFault=0;
+   assert(!selectorCalls && !restarts && api.activate(nullptr,token)==RISC_BANK_STATE);
+   assert(api.abort(nullptr,token)==0);
+  }
+ }
  uint64_t token=0;assert(api.begin_cohort(nullptr,&cohortImage,&token)==0);assert(api.write(nullptr,token,cohortBytes.data(),123)==0);assert(api.abort(nullptr,token)==0);
  assert(api.begin_cohort(nullptr,&cohortImage,&token)==0 && send(token)==0 && advance(token)==0);
- assert(!mounted && api.activate(nullptr,token)==0);assert(!api.restart(nullptr,token) && restarts==1);
+ if(receiptMode){
+  RiscUpdate::Record selected{};RiscUpdate::ProvisionAttempt receipt{};
+  memcpy(&selected,flash.data()+RiscUpdate::JournalOffset+4096,sizeof(selected));
+  memcpy(&receipt,flash.data()+RiscUpdate::JournalOffset+4096+RiscUpdate::AttemptOffset,sizeof(receipt));
+  assert(RiscUpdate::validAttempt(receipt,selected,1) && !memcmp(receipt.profileSha,consumedProfile,32));
+  assert(!std::filesystem::exists(fsRoot+"/updatefs/.provision-sha256"));
+ }
+ assert(!mounted && api.activate(nullptr,token)==0);
+ if(cohortLiveClose){
+  metadataClosePath=fsRoot+"/bootfs/boot.json";metadataRequireCandidate=false;
+  uint8_t bytes[4096];uint32_t actual=99;
+  assert(api.get_app(nullptr,0,bytes,sizeof(bytes),&actual)!=RISC_BANK_OK && !actual);
+  assert(runtime->metadataCloseRetained() && metadataFailedCloses==1 && !exitSafe() && !cleanup(nullptr));
+  assert(!api.restart(nullptr,token) && !restarts);return;
+ }
+ assert(!api.restart(nullptr,token) && restarts==1);
  assert(api.abort(nullptr,token)==RISC_BANK_STATE);
 }
 static void cohortNative(const char* loader,const char* root){
@@ -103,14 +143,66 @@ static void cohortNative(const char* loader,const char* root){
  saveNative("/updatefs/new.json",R"({"type":"application","id":"new","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"new.elf","entry":"app_main","requires":[{"capability":"test.new","api":1}]})");
  saveNative("/updatefs/new-driver.json",R"({"type":"driver","id":"new-provider","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"new-driver.elf","requires":[],"provides":[{"capability":"test.new","api":1}]})");
  saveElf("/updatefs/default.elf",false);saveElf("/updatefs/new.elf",false);saveElf("/updatefs/new-driver.elf",true);
+ if(receiptMode){
+  bootNet.profile=R"({"schema":"riscrte.provisioning","schema_version":2,"wifi":{"ssid":"test-network","password":"test-only-password"},"base_url":"https://example.test/","files":[)";
+  bool first=true;for(const char* name:{"boot.json","board.json","default.elf"}){
+   if(!first)bootNet.profile+=",";
+   first=false;
+   bootNet.profile+="{\"path\":\""+std::string(name)+"\",\"bytes\":1,\"sha256\":\""+std::string(64,'0')+"\"}";
+  }bootNet.profile+="]}";
+  bootNet.descriptor=R"({"schema":"riscrte.bootstrap","schema_version":1,"profile_key":"profile"})";
+  SHA256(reinterpret_cast<const uint8_t*>(bootNet.profile.data()),bootNet.profile.size(),consumedProfile);
+  if(receiptMode==1){
+   auto prior=record;prior.bank=1;prior.crc=RiscUpdate::crc32(&prior,offsetof(RiscUpdate::Record,crc));
+   const auto receipt=RiscUpdate::makeAttempt(0,consumedProfile,record,prior);
+   memcpy(flash.data()+RiscUpdate::JournalOffset+RiscUpdate::AttemptOffset,&receipt,sizeof(receipt));
+  }else saveNative("/bootfs/.provision-sha256",std::string(reinterpret_cast<const char*>(consumedProfile),32));
+ }
  assert(prepareBoot(own,restartSafe,safe));
  auto instance=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,nullptr,exitSafe,safe,confirmBoot});
- assert(instance->prepare("/bootfs") && instance->run());
+ assert(instance->prepare("/bootfs"));
+ assert(instance->run()!=cohortLiveClose);
+ if(cohortLiveClose){assert(instance->retained() && instance->metadataCloseRetained());instance.release();
+  std::cout<<"Post-activation live metadata close: invocation retained, cleanup/restart refused, zero resets PASS\n";}
  for(size_t i=0x9000;i<0xf000;++i)assert(flash[i]==0xff);
 #ifdef RISC_PAIRED_APP_DATA
  for(size_t i=0x270000;i<0x2f0000;++i)assert(flash[i]==0x5a);
 #endif
  uint8_t check[32];SHA256(flash.data()+0x10000,imageSize,check);assert(!memcmp(check,fw,32));
  SHA256(flash.data()+RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,check);assert(!memcmp(check,store,32));
+ if(receiptMode){
+  instance.reset();runtime=nullptr;
+  auto reboot=[&](unsigned bank,esp_ota_img_states_t state){
+   assert(!appFile&&!mounted&&!provisionFiles&&!provisionReadRetained);
+   transaction->~Transaction();free(transaction);transaction=nullptr;
+   scratch->~Scratch();free(scratch);scratch=nullptr;
+   prepared=pending=confirmed=rollbackTrusted=false;replacingFirmware=replacingCohort=false;
+   active=bank;otaState=state;writes=selectorCalls=restarts=0;
+   assert(prepareBoot(own,restartSafe,safe));
+  };
+  auto hardware=admissionHardware();hardware.sleep=[](uint32_t n){vTaskDelay(n);};
+  hardware.radioJoin=[](const char*,const char*){++bootNet.joins;return false;};
+  hardware.radioState=[](uint8_t*,int8_t*){return false;};hardware.radioAddresses=[](uint8_t*,uint8_t*){return false;};
+  hardware.radioLeave=[](){return true;};hardware.radioIdle=[](){return true;};
+  hardware.httpClient=&bootstrapHttp;hardware.httpIdle=hardware.httpSafe=[](){return true;};
+  RiscBootstrap::Port port{hardware,nullptr,safe,{nullptr,bootstrapInput},{}};
+  reboot(1,ESP_OTA_IMG_PENDING_VERIFY);
+  auto result=RiscBootstrap::run(port,"/bootfs");
+  assert(result.outcome==RiscBootstrap::Outcome::Installed && result.reason==RiscBootstrap::Reason::PairUnavailable && !bootNet.inputReads);
+  // Model the subsequent fresh boot after normal application health confirms
+  // the selected pair. Pending-image gating is exercised above, never bypassed.
+  reboot(1,ESP_OTA_IMG_VALID);
+  result=RiscBootstrap::run(port,"/bootfs");
+  assert(result.outcome==RiscBootstrap::Outcome::Installed && result.reason==RiscBootstrap::Reason::Unchanged);
+  assert(!bootNet.joins&&!bootNet.opens&&!writes&&!selectorCalls&&!restarts);
+  // A rollback to the still-intact confirmed old pair preserves consumption.
+  reboot(0,ESP_OTA_IMG_VALID);result=RiscBootstrap::run(port,"/bootfs");
+  assert(result.reason==RiscBootstrap::Reason::Unchanged && !writes);
+  reboot(1,ESP_OTA_IMG_VALID);
+  memset(flash.data()+RiscUpdate::JournalOffset,0xff,4096); // later failed update overwrote former source
+  result=RiscBootstrap::run(port,"/bootfs");
+  assert(result.reason==RiscBootstrap::Reason::Unchanged && !writes&&!bootNet.joins&&!selectorCalls);
+  std::cout<<"Full-cohort receipt carry: legacy/current source, uncertain write/readback, pending/confirmed reboot, rollback and overwritten former source PASS\n";
+ }
  std::cout<<"Native cohort API/metadata/new-app-provider/real-ELF/mount/uncertain-write/cleanup/activation, NVS/appdata and old-pair preservation PASS\n";
 }

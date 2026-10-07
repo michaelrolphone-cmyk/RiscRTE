@@ -6,11 +6,16 @@
 #include <freertos/task.h>
 #endif
 namespace RiscBoot {
-bool readJson(const char* filename, JsonDocument& doc) {
+bool readJson(const char* filename, JsonDocument& doc, bool* closeRetained) {
   FILE* f=fopen(filename,"rb"); if (!f) return false;
+  auto close=[&](){
+    if(fclose(f)==0)return true;
+    if(closeRetained)*closeRetained=true;
+    return false;
+  };
   constexpr size_t limit=65536;
   char* data=static_cast<char*>(malloc(limit+1));
-  if (!data) { fclose(f); return false; }
+  if (!data) { close(); return false; }
   size_t n=0; bool good=true;
   const auto start=std::chrono::steady_clock::now();
   while (n<=limit) {
@@ -21,7 +26,9 @@ bool readJson(const char* filename, JsonDocument& doc) {
     if (std::chrono::steady_clock::now()-start>std::chrono::seconds(5)) { good=false; break; }
     if (!got) { good=feof(f) && !ferror(f); break; }
   }
-  fclose(f);
+  // Close exactly once, including failed/oversized/timed-out reads. Admission
+  // must never succeed or hide retained ownership after a failed close.
+  if(!close())good=false;
   good=good && n<=limit && parse(data,n,doc);
   free(data); return good;
 }
