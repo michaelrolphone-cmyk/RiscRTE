@@ -335,6 +335,12 @@ native radio activity and block unsafe exit/restart/sleep; failed release retain
 ownership for retry. RF capture policy stays external. See
 [resource contract, final ELF proof and hardware limits](docs/RADIO_IQ_RESOURCE.md).
 
+Runtime 0.1.41 corrects native IQ ownership after Bluetooth teardown: acquire
+the SDK modem and power-domain references before PHY enable, and balance them
+after parked release. The first capture emits bounded native stage diagnostics.
+SDK lifecycle regression coverage is software evidence; the reported Watch
+capture freeze and RF restoration still require physical verification.
+
 ## Retrievable sleep/reset diagnostics
 
 Runtime 0.1.35 adds a bounded RTC journal and a read-only `diag` serial replay on
