@@ -97,3 +97,8 @@ Explicit `file.open@1`, instance0, supplies bounded file associations and an
 unload-before-open handoff using the canonical Reader table. Handlers come only
 from selected boot-policy manifests; data paths never become ELF launch names.
 See [file dispatch, result and authority semantics](FILE_OPEN.md).
+
+Runtime0.1.51 adds an optional owner-only terminal `retain_invocation` suffix
+and automatic pre-fini/pre-unload fencing for failed graph state. It conveys no
+new provider authority and performs no cleanup. See [invocation retention](INVOCATION_RETENTION.md)
+for exact signal, idempotence, compatibility and cleanup-custody semantics.

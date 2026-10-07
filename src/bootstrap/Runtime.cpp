@@ -35,7 +35,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](const char* path){return currentRuntime && currentRuntime->launch(path);},
     [](const char* cap,uint32_t version,uint64_t instance,risc_runtime_capability_v1* out){return currentRuntime && currentRuntime->acquire(cap,version,instance,out);},
     [](risc_runtime_capability_v1* grant){return currentRuntime && currentRuntime->release(grant);},
-    [](){return currentRuntime && currentRuntime->confirmBoot();}};
+    [](){return currentRuntime && currentRuntime->confirmBoot();},
+    [](){return currentRuntime && currentRuntime->retainInvocation();}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 namespace RiscBoot {
@@ -646,14 +647,32 @@ void Runtime::yield(uint32_t ms) {
   port_.delay(ms<1?1:ms>50?50:ms);
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }
+bool Runtime::retainInvocation() {
+  if(currentRuntime!=this || promotionRunning_ || !port_.owner() || (!active_ && !retained_))return false;
+  retained_=true;
+  (void)appExitBarrier();
+  return true;
+}
 bool Runtime::appExitBarrier() {
-  if(!retained_ && !metadataCloseRetained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  const bool graphSafe=graph_.activationSafe();
+  if(graphSafe && !retained_ && !metadataCloseRetained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  char providerReason[192]{};
+  if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
+    "provider retention barrier; %.160s",graph_.lastError());
+  // Idempotent signaling must not replace the first retained diagnostic (for
+  // example promotion's failure) with a generic later app-stop message.
+  const char* reason=retained_ && error_[0] ? error_ :
+    retained_ ? "app invocation retained; restart required" :
+    !graphSafe ? providerReason :
+    "native retention barrier; app and providers retained; restart required";
+  // Failed starts can retain a grantless graph; failed releases can retain a
+  // pending grant. Neither may reach fini or an implicit cleanup retry here.
   // Revoke app authority without calling provider release/quiesce: the boot
   // references and active invocation memory/images must remain pinned.
   retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;fileOpen_={};
   revokeProviders();
   for(auto& grant:appGrants_)grant.live=false;
-  return fail("native retention barrier; app and providers retained; restart required");
+  return fail(reason);
 }
 bool Runtime::runOne(const char* name) {
   if(!appExitBarrier())return false;

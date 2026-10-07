@@ -71,6 +71,10 @@ extern "C" void demand_app(){
     insidePromotion=true;int status=savedPromotion.promote(savedPromotion.context);insidePromotion=false;
     if(mode=="promote-native" || mode=="promote-retained") {
       assert(status==RISC_PROVIDER_PROMOTION_RETAINED);
+      // Promotion already fenced this invocation. The explicit terminal
+      // signal is idempotent and must not trigger cleanup or regain authority.
+      assert(api->retain_invocation() && api->retain_invocation());
+      assert(!risc_runtime_get_api(1));
       assert(savedPromotion.promote(savedPromotion.context)==RISC_PROVIDER_PROMOTION_CONTEXT);return;
     }
     if(mode=="promote-retry") {
@@ -178,6 +182,8 @@ int main(int argc,char** argv){
   bool retained=mode=="promote-stop-retained" || mode=="promote-retained" || mode=="promote-native" || mode=="retained" || mode=="native-retained" || mode=="failed-start-retained";
   assert(runtime.run()!=retained);assert(runtime.retained()==retained);assert(!risc_runtime_get_api(1));
   if(promotionMode) {
+    if(mode=="promote-retained" || mode=="promote-native")
+      assert(strstr(runtime.error(), "provider promotion retained"));
     assert(count("unused:start")==unsigned(mode=="promote-retry"?2:1));
     if(mode=="promote-handoff")assert(calls==3 && finis==3 && count("leaf:start")==1);
     if(retained)assert(finis==unsigned(mode=="promote-stop-retained"));
