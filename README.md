@@ -399,3 +399,9 @@ Only terminal deep entry commits it; fresh deep wake can consume it once with
 a classified boot cause. Reset, corruption and foreign identity cannot restore
 it. Existing sleep admission and provider lifecycle remain unchanged.
 See [contract, ownership and verification](docs/RETAINED_WAKE.md).
+
+Runtime 0.1.49 adds an explicitly granted [retained realtime snapshot and separate
+control capability](docs/REALTIME.md). Native SDK time supplies UTC epoch and
+boot-local monotonic correlation across deep sleep; read authority cannot seed
+time, and the control table includes its own snapshot operation. Product grants,
+timezone policy and the twelve-requirement app limit remain unchanged.

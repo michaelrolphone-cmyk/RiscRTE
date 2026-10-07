@@ -72,6 +72,8 @@ struct Hardware {
   bool (*radioIqReady)()=nullptr;
   bool (*radioIqPrepare)()=nullptr;
   bool (*radioIqCleanup)()=nullptr;
+  int32_t (*realtimeRead)(risc_realtime_snapshot_v1*)=nullptr;
+  int32_t (*realtimeSeed)(int64_t,uint32_t)=nullptr; // separately brokered authority
 };
 class Port final {
  public:
@@ -111,6 +113,7 @@ class Port final {
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
   size_t syncCount_=0,gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0,iqCount_=0;
   risc_platform_clock_api_v1 clock_{};
+  risc_realtime_control_api_v1 realtime_{};
   risc_http_client_v1 http_{};
   bool available() const { return hw_.owner && hw_.owner() && !poisoned_ && !sleeping_; }
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
