@@ -29,6 +29,7 @@ bool Port::reserve(int16_t pin,const void* owner){
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
 bool Port::providerStorageSafe() const {
   if(!available() || sleepRetained_ || transferring_)return false;
+  for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
   for(const auto& pin:pins_)if(pin.held)return false;
   for(const auto& c:i2ss_)if(c.closing)return false;
@@ -57,6 +58,7 @@ bool Port::restartResourcesSafe() const {
   return true;
 }
 bool Port::quiescent() const {
+  for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.token)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   for(const auto& c:radios_)if(c.token || c.active || c.closing)return false;
@@ -120,6 +122,12 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   const auto& board=runtime.board();
   for(size_t n=0;n<board.deviceCount();++n){
     const auto& d=*board.deviceAt(n);const uint64_t id=d.hardware.instance_id;
+    if(runtime.uses(id,RISC_PROVIDER_SYNC_CAPABILITY,RISC_PROVIDER_SYNC_API_V1)){
+      if(syncCount_==RuntimeProviders::GraphV2::kMaxModules)return false;
+      auto& c=syncs_[syncCount_++];c.port=this;c.instance=id;
+      c.api={RISC_PROVIDER_SYNC_API_V1,sizeof(c.api),&c,syncOwner,syncCreate,syncTryLock,syncUnlock,syncDestroy};
+      if(!runtime.registerPlatform(RISC_PROVIDER_SYNC_CAPABILITY,RISC_PROVIDER_SYNC_API_V1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
+    }
     if(runtime.uses(id,"platform.gpio",1)){
       if(gpioCount_==16)return false;
       auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
@@ -360,6 +368,44 @@ bool Port::radioScanCancel(void* context,uint64_t token){
   c.closing=true;p.transferring_=true;const bool ok=p.hw_.radioScanCancel();p.transferring_=false;
   if(!ok || !p.hw_.radioIdle())return false;
   c.active=c.closing=c.scanning=false;return true;
+}
+bool Port::syncOwner(void* context){
+  if(!context)return false;
+  const auto& c=*static_cast<Sync*>(context);
+  return c.port && c.port->available() && !c.port->sleepRetained_;
+}
+bool Port::syncCreate(void* context,uint64_t* out){
+  if(out)*out=0;
+  if(!out || !syncOwner(context))return false;
+  auto& c=*static_cast<Sync*>(context);
+  for(auto& lock:c.locks)if(!lock.token){
+    const uint64_t token=c.port->token();if(!token)return false;
+    lock={token,false};*out=token;return true;
+  }
+  return false;
+}
+bool Port::syncTryLock(void* context,uint64_t token){
+  if(!token || !syncOwner(context))return false;
+  auto& c=*static_cast<Sync*>(context);
+  for(auto& lock:c.locks)if(lock.token==token){
+    if(lock.held)return false;
+    lock.held=true;return true;
+  }
+  return false;
+}
+bool Port::syncUnlock(void* context,uint64_t token){
+  if(!context || !token)return false;
+  auto& c=*static_cast<Sync*>(context);
+  if(!c.port || !c.port->hw_.owner || !c.port->hw_.owner() || c.port->sleeping_)return false;
+  for(auto& lock:c.locks)if(lock.token==token && lock.held){lock.held=false;return true;}
+  return false;
+}
+bool Port::syncDestroy(void* context,uint64_t token){
+  if(!context || !token)return false;
+  auto& c=*static_cast<Sync*>(context);
+  if(!c.port || !c.port->hw_.owner || !c.port->hw_.owner() || c.port->sleeping_)return false;
+  for(auto& lock:c.locks)if(lock.token==token && !lock.held){lock={};return true;}
+  return false;
 }
 bool Port::gpioClaim(void* context,uint8_t pin,bool output,bool initial,bool pullup,uint64_t* out){
   if(out)*out=0;

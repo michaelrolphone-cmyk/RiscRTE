@@ -4,6 +4,7 @@
 #include <TWatchPlatformV1.h>
 #include <RiscHciControllerStatusV1.h>
 #include <RiscPlatformClockV1.h>
+#include <RiscProviderSyncV1.h>
 #include <RiscHttpClientV1.h>
 namespace RiscCpu {
 // Lowest hardware boundary. Production uses ESP-IDF; host models emulate only
@@ -82,6 +83,11 @@ class Port final {
   // Actual native cleanup failure retains the existing storage safety barrier.
   bool providerStorageSafe() const;
  private:
+  struct Sync {
+    Port* port=nullptr; uint64_t instance=0;
+    struct Lock { uint64_t token=0; bool held=false; } locks[RISC_PROVIDER_SYNC_MAX_LOCKS]{};
+    risc_provider_sync_api_v1 api{};
+  } syncs_[RuntimeProviders::GraphV2::kMaxModules];
   struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; garden_gpio_v1 api{}; } gpios_[16];
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; garden_spi_v1 api{}; } spis_[8];
@@ -92,13 +98,18 @@ class Port final {
   struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false,wakeHigh=false; uint8_t wakeModes=0; } pins_[49];
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
-  size_t gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0;
+  size_t syncCount_=0,gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0;
   risc_platform_clock_api_v1 clock_{};
   risc_http_client_v1 http_{};
   bool available() const { return hw_.owner && hw_.owner() && !poisoned_ && !sleeping_; }
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
   bool reserve(int16_t,const void*); void unreserve(int16_t,const void*);
   bool gpioScope(const RiscBoot::Runtime&,const RiscBoot::Board::Device&,Gpio&);
+  static bool syncOwner(void*);
+  static bool syncCreate(void*,uint64_t*);
+  static bool syncTryLock(void*,uint64_t);
+  static bool syncUnlock(void*,uint64_t);
+  static bool syncDestroy(void*,uint64_t);
   static bool gpioClaim(void*,uint8_t,bool,bool,bool,uint64_t*);
   static bool gpioWrite(void*,uint64_t,bool); static bool gpioRead(void*,uint64_t,bool*);
   static bool gpioPwm(void*,uint64_t,uint32_t,uint16_t,uint16_t);

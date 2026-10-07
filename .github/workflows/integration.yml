@@ -100,6 +100,8 @@ jobs:
           bash test/run_update_runtime_test.sh
           SANITIZE=1 bash test/run_update_runtime_test.sh
           python test/paired_bank_images_test.py -v
+          bash test/run_provider_sync_test.sh
+          SANITIZE=1 bash test/run_provider_sync_test.sh
           bash test/run_hci_test.sh
           SANITIZE=1 bash test/run_hci_test.sh
           bash test/run_radio_test.sh
