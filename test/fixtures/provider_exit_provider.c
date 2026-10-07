@@ -64,8 +64,9 @@ static bool quiesce(void) {
   assert(dependency && dependency->api_version == 1);
   const char* mode = provider_exit_mode();
   if (!strcmp(mode, "start-retained") || !strcmp(mode, "release-retained") ||
+      !strcmp(mode, "fini-release-retained") ||
       operation_retained) return false;
-  if (!strcmp(mode, "release-retry") && ++attempts == 1) return false;
+  if ((!strcmp(mode, "release-retry") || !strcmp(mode, "release-recovered")) && ++attempts == 1) return false;
 #endif
   return true;
 }

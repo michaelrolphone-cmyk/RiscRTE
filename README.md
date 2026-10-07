@@ -412,3 +412,10 @@ already validated selected graph for the boot session after a safe owner call;
 no provider selector or new raw import is exposed. Declared requirements and
 policy grants increase from12 to16, with16 live app grants unchanged. See the
 [integration contract and measurements](docs/PROVIDER_PROMOTION.md).
+
+Runtime0.1.51 fences failed or pending provider-graph cleanup before app fini and
+unload. The existing app Runtime service also gains an optional one-way terminal
+invocation-retention callback for capability-local uncertainty. It preserves
+images and ownership without cleanup or new hardware authority; clean refusal
+and explicit in-app recovery remain distinct. See [the contract and regression
+evidence](docs/INVOCATION_RETENTION.md).

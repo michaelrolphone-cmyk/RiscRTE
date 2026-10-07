@@ -8,18 +8,25 @@
 #include <string>
 #include <vector>
 
-// Characterize exact Runtime ownership boundaries with real dlopen mappings.
-// EXPECT_PROVIDER_EXIT_FENCED=1 checks the stronger desired terminal barrier;
-// baseline mode records the 0.1.50 gaps without claiming that they are safe.
+// Production Runtime/Graph/CpuPort and actual mapped applications/providers.
+// The prior characterization commit proves the 0.1.50 failures separately.
+static_assert(offsetof(risc_runtime_api_v1, retain_invocation) == RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE,
+              "The complete legacy prefix must remain byte-for-byte intact");
 static std::vector<std::string> events;
 static std::string mode;
-static unsigned invocations;
+static unsigned invocations, delays;
+static bool owned=true;
+static risc_runtime_api_v1 savedApi{};
 static RiscCpu::Port* cpu;
 static const void* appImage;
+static const char* appAllocation;
 static const void* leafImage;
 static const void* rootImage;
 extern "C" void provider_exit_event(const char* event) { events.emplace_back(event); }
 extern "C" const char* provider_exit_mode() { return mode.c_str(); }
+extern "C" void provider_exit_save_allocation(const char* p) { appAllocation=p; }
+extern "C" void provider_exit_save_api(const risc_runtime_api_v1* api) { savedApi=*api; }
+extern "C" void provider_exit_owner(bool owner) { owned=owner; }
 extern "C" unsigned provider_exit_invocation() { return ++invocations; }
 extern "C" void provider_exit_save_app(const void* image) { appImage = image; }
 extern "C" void provider_exit_save_provider(const void* image, bool leaf) {
@@ -37,12 +44,14 @@ static void write(const std::string& root, const char* path, const std::string& 
 int main(int argc, char** argv) {
   assert(argc == 3); const std::string root = argv[1]; mode = argv[2];
   const bool cpuRetained = mode == "cpu-gpio-retained-eager";
-  const bool eager = mode == "operation-retained-eager" || cpuRetained;
+  const bool eager = mode == "operation-retained-eager" || cpuRetained || mode == "signal-child";
   const bool failedStart = mode == "start-retained";
   const bool nativeRetained = mode == "native-retained";
-  const bool releaseRetained = mode == "release-retained";
+  const bool releaseRetained = mode == "release-retained" || mode == "release-retry";
   const bool operationRetained = mode == "operation-retained-demand" || eager;
-  const bool retained = failedStart || nativeRetained || releaseRetained || operationRetained;
+  const bool finiRelease = mode == "fini-release-retained";
+  const bool signaled = mode.find("signal-") == 0 || operationRetained;
+  const bool retained = failedStart || nativeRetained || releaseRetained || finiRelease || signaled;
   write(root, "board.json", R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})");
   write(root, "root.json", R"({"type":"driver","id":"root","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"root.elf","requires":[],"provides":[{"capability":"test.root","api":1}]})");
   write(root, "leaf.json", R"({"type":"driver","id":"leaf","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"leaf.elf","requires":[{"capability":"test.root","api":1}],"provides":[{"capability":"test.leaf","api":1}]})");
@@ -67,15 +76,22 @@ int main(int argc, char** argv) {
     h.spiEnd=[](uint8_t,uint8_t,uint32_t){return true;}; h.spiClose=[](uint8_t){return true;};
     cpu=new RiscCpu::Port(h);
   }
-  RiscBoot::Port port{[](){return true;}, [](risc_runtime_health_v1*){return true;},
-    [](uint32_t){}, [](const char*){return true;}};
+  RiscBoot::Port port{[](){return owned;}, [](risc_runtime_health_v1*){return true;},
+    [](uint32_t){assert(!count("app:signaled"));++delays;}, [](const char* line){assert(strcmp(line,"forbidden"));return true;}};
   port.appExitSafe = [](){return mode != "native-retained" || !count("app:operation-false");};
   if (cpu) {
     port.bindPlatforms=[](RiscBoot::Runtime& r){return cpu->bind(r);};
     port.appExitSafe=[](){return cpu->appExitSafe();};
   }
+  if (mode == "legacy-prefix") {
+    std::ifstream source(root+"/legacy.elf",std::ios::binary);
+    std::ofstream destination(root+"/default.elf",std::ios::binary);
+    destination << source.rdbuf();
+  }
   auto* runtime = new RiscBoot::Runtime(port);
+  assert(!runtime->retainInvocation());
   assert(runtime->prepare(root.c_str()));
+  assert(!runtime->retainInvocation());
   assert(runtime->run() == !retained);
   assert(runtime->retained() == retained && !risc_runtime_get_api(1));
   if (cpu) {
@@ -87,26 +103,36 @@ int main(int argc, char** argv) {
     mode.c_str(), runtime->retained(), count("app:unloaded"), count("child:entry"),
     count("app:fini-skipped"), count("leaf:quiesce"));
   std::fflush(stdout);
-  if (std::getenv("EXPECT_PROVIDER_EXIT_FENCED") && retained) {
-    // An already-failed/retained provider must fence queued launches and pin the
-    // current invocation, including after grantless failed acquisition.
-    assert(!count("app:fini-skipped") && !count("app:unloaded") && !count("child:entry"));
-    assert(mapped(appImage) && mapped(leafImage) && mapped(rootImage));
-  } else if (nativeRetained) {
-    assert(!count("app:fini-skipped") && !count("app:unloaded") && !count("child:entry"));
-    assert(!count("leaf:quiesce") && mapped(appImage));
-  } else if (releaseRetained || mode == "operation-retained-demand") {
-    assert(count("app:fini-skipped") == 1 && !count("app:unloaded") && !count("child:entry"));
-    assert(count("leaf:quiesce") == (releaseRetained ? 2u : 1u) && mapped(appImage));
+  if (failedStart || releaseRetained || finiRelease)
+    assert(strstr(runtime->error(), "provider retention barrier") && strstr(runtime->error(), "leaf"));
+  if (nativeRetained) assert(strstr(runtime->error(), "native retention barrier"));
+  if (retained) {
+    const bool child = mode == "signal-child";
+    const bool fini = mode == "signal-fini";
+    assert(!count("app:fini-skipped"));
+    assert(count("app:unloaded") == unsigned(child));
+    assert(count("child:entry") == unsigned(child));
+    assert(count("app:fini") == unsigned(child));
+    assert(count("app:fini-signal") == unsigned(fini));
+    assert(count("app:fini-release") == unsigned(finiRelease));
+    assert(count("app:signaled") == unsigned(signaled));
+    assert(count("leaf:quiesce") == (failedStart ? 2u : (releaseRetained || finiRelease) ? 1u : 0u));
+    assert(mapped(appImage) && appAllocation && !strcmp(appAllocation,"still retained"));
+    const unsigned before = delays;
+    assert(!savedApi.retain_invocation() && !savedApi.request_launch("child.elf") && !savedApi.diagnostic("forbidden"));
+    savedApi.yield_ms(1); assert(delays == before);
+  } else if (mode == "legacy-prefix") {
+    assert(count("legacy:complete") == 1 && !count("child:entry"));
   } else {
-    assert(count("app:fini-skipped") == 1 && count("app:unloaded") == 3 && count("child:entry") == 1);
-    if (eager) assert(first("app:unloaded") < first("leaf:quiesce"));
+    const bool clean = mode == "release-recovered" || mode == "foreign-denied";
+    assert(count("app:fini-skipped") == unsigned(!clean));
+    assert(count("app:unloaded") == 3 && count("child:entry") == 1);
     assert(!mapped(appImage));
-    if (failedStart) assert(count("leaf:quiesce") == 3);
-    if (mode == "release-retry") assert(count("leaf:quiesce") == 2);
+    assert(count("leaf:quiesce") == (mode == "release-recovered" ? 2u : 1u));
+    assert(first("leaf:stop") < first("child:entry"));
   }
   if (retained) {
-    assert(mapped(leafImage) && mapped(rootImage));
+    if(mode != "signal-no-grants") assert(mapped(leafImage) && mapped(rootImage));
     assert(!runtime->run());
     // A retained graph cannot safely be destroyed. Native owners retain it
     // until restart; skip process loader destructors to preserve that evidence.

@@ -1,6 +1,9 @@
 # Provider exit characterization at Runtime 0.1.50
 
 Source base: `7e79a8f06c1ee3b71214408c2477d9aaca985834`.
+Historical characterization commit: `ef9aa35`. Run the commands below at that
+commit to reproduce the old observations; its successor changes the runner to
+assert the corrected [invocation retention contract](../docs/INVOCATION_RETENTION.md).
 `run_provider_exit_lifecycle_test.sh` loads actual host app/provider images using
 production Runtime, GraphV2 and ModuleV2. The GPIO variant also uses production
 CpuPort; only its lowest hardware callbacks are modeled. No production behavior

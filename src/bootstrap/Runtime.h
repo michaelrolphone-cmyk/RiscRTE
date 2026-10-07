@@ -74,6 +74,7 @@ class Runtime final {
   void yield(uint32_t);
   bool diagnostic(const char*);
   bool confirmBoot();
+  bool retainInvocation();
   struct UpdateApp { char elf[193]{}, manifest[193]{}; };
   // Native update authority: preserve the existing boot-policy identity/grants.
   bool appUpdate(const char* id,const void* manifest,size_t size,UpdateApp&) const;
