@@ -484,8 +484,13 @@ bool Runtime::prepare(const char* root) {
   JsonObjectConst c=config.as<JsonObjectConst>();
   if (!c["port"].isNull() && !board_.port(c["port"])) return fail(board_.error());
   if(!RiscUpdate::validCohortMigration(c["cohort_migration"]))return fail("invalid cohort migration policy");
-  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities","cohort_migration"}) || !text(c["board"],relative,sizeof(relative)) ||
+  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities","cohort_migration","provider_activation"}) || !text(c["board"],relative,sizeof(relative)) ||
       !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc,&metadataCloseRetained_) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
+  // Activation policy never filters admission, registration or image inspection.
+  const auto activation=c["provider_activation"];
+  if(!activation.isUnbound() && !eq(activation,"eager") && !eq(activation,"demand"))
+    return fail("invalid provider activation policy");
+  demandActivation_=eq(activation,"demand");
   if(!text(c["default_app"],relative,sizeof(relative)) || !elfPath(relative) || !path(root_,relative,current_,sizeof(current_))) return fail("invalid default app path");
   if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>MaxDrivers) return fail("invalid driver list");
   // Read all manifests and validate mappings before registering/activating modules.
@@ -672,7 +677,7 @@ bool Runtime::run() {
   if(esp_elf_register_symbol(symbols)) { revokeProviders(); currentRuntime=nullptr; return fail("runtime API registration failed"); }
 #endif
   bool ok=true;
-  for(size_t i=0;i<driverCount_;++i) {
+  for(size_t i=0;!demandActivation_ && i<driverCount_;++i) {
     char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
     grants_[granted_]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
     if(!grants_[granted_].slot) { ok=fail(graph_.lastError());port_.log(error_);break; }

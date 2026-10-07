@@ -66,7 +66,7 @@ manifest. A missing store leaves a diagnostic and a yielding idle loop.
    Each default reload starts fresh static/BSS state; no app pointers survive.
    A child may hand off to another child; there is no nested call stack or
    multitasking. Default return enters Idle; default failure enters Error.
-8. Drivers are boot-session dependencies, held across app handoffs. On session
+8. By default, drivers are boot-session dependencies, held across app handoffs. On session
    exit they stop in dependency-safe order. Failed quiescence retains the module,
    configuration and dependencies, revokes grants and blocks further launches;
    it never force-unmaps or silently reboots.
@@ -93,6 +93,11 @@ manifest format**:
   ]
 }
 ```
+
+The optional top-level `"provider_activation": "demand"` defers boot-owned
+provider acquisition until an authorized app acquire needs its dependency closure.
+Omission or `"eager"` preserves existing behavior. All selected metadata and staged
+image admission remain complete. See [demand activation and lifetime](docs/DEMAND_ACTIVATION.md).
 
 The shipped baseline has an empty driver list and no peripheral declarations.
 The example `probe` above refers to the non-hardware test fixture, not a bundled
