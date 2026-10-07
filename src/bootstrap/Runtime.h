@@ -207,6 +207,7 @@ class Runtime final {
   size_t driverCount_=0, granted_=0;
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
   bool registrationOpen_=false;
+  bool demandActivation_=false;
   bool prepared_=false, attempted_=false, active_=false, retained_=false;
   mutable bool metadataCloseRetained_=false;
   bool defaultRunning_=false, entryRunning_=false;
