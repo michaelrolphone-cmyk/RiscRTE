@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, integrate/x4-pr35-iq-lifecycle-0146, codex/typed-retained-wake, fix/provider-quiescence-diagnostics, fix/bitbang-probe-startup, fix/gpio-output-readback, feat/declared-file-dispatch, feat/typed-gpio-held-retirement, feat/profile-provisioning-core, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
+    branches: [main, master, codex/retained-realtime-snapshot, integrate/x4-pr35-iq-lifecycle-0146, fix/provider-quiescence-diagnostics, fix/bitbang-probe-startup, fix/gpio-output-readback, feat/declared-file-dispatch, feat/typed-gpio-held-retirement, feat/profile-provisioning-core, feat/minimal-runtime, test/watch-app-handoff, codex/typed-retained-wake, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
   workflow_dispatch:
   workflow_call:
 env:
@@ -78,6 +78,8 @@ jobs:
           bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
           bash test/run_metadata_read_test.sh
           SANITIZE=1 bash test/run_metadata_read_test.sh
+          bash test/run_demand_activation_test.sh
+          SANITIZE=1 bash test/run_demand_activation_test.sh
           bash test/run_runtime_test.sh
           SANITIZE=1 bash test/run_runtime_test.sh
           bash test/run_app_data_files_test.sh

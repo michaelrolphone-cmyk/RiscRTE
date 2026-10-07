@@ -67,7 +67,7 @@ const t5_file_open_api_v1* Runtime::fileOpenApi() {
   return &api;
 }
 bool Runtime::fileOpenReady() const {
-  if(!active() || !appPolicy_ || retained_ || !providerStorageSafe())return false;
+  if(promotionRunning_ || !active() || !appPolicy_ || retained_ || !providerStorageSafe())return false;
   for(const auto& grant:appGrants_)if(grant.live && grant.api==fileOpenApi())return true;
   return false;
 }

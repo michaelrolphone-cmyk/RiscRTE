@@ -238,6 +238,9 @@ bool Runtime::appPolicies(JsonVariantConst value) {
           if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
               port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
+        } else if (!strcmp(capability,RISC_PROVIDER_PROMOTION_CAPABILITY)) {
+          if(grant.api!=1 || grant.instance || strcmp(policy.elf,current_))return fail("invalid default provider-promotion authority");
+          grant.driver=PromotionDriver;grant.capability=RISC_PROVIDER_PROMOTION_CAPABILITY;
         } else if (!strcmp(capability,RISC_REALTIME_CAPABILITY) || !strcmp(capability,RISC_REALTIME_CONTROL_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || !realtimeBackend_)return fail("realtime backend/authority unavailable");
           const bool control=!strcmp(capability,RISC_REALTIME_CONTROL_CAPABILITY);
@@ -294,7 +297,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
   return true;
 }
 bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
-  if (!active() || !appDataExitSafe() || !appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
+  if (promotionRunning_ || !active() || !appDataExitSafe() || !appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
   out->slot=out->generation=0;out->api=nullptr;
   const AppGrantPolicy* allowed=nullptr;
   for (size_t i=0;i<appPolicy_->count;++i) {
@@ -316,6 +319,11 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.keyValueNamespace=allowed->instance;
     grant.keyValue={allowed->api,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
     grant.api=&grant.keyValue;
+  } else if (allowed->driver==PromotionDriver) {
+    if(promotionContext_ || !defaultRunning_ || !entryRunning_ || !promotionSafe())return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    promotionContext_=context;promotionTable_={1,sizeof(promotionTable_),context,promoteProviders};
+    grant.api=&promotionTable_;
   } else if (allowed->driver==RealtimeControlDriver) {
     if(realtimeControlContext_ || !entryRunning_ || retained_ || !providerStorageSafe())return false;
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
@@ -472,12 +480,13 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
   return backend.put(backend.context,matched->nameSpace,key,data,size)==RISC_BOUND_KEY_VALUE_OK ? RISC_BOUND_KEY_VALUE_OK : RISC_BOUND_KEY_VALUE_IO;
 }
 bool Runtime::release(risc_runtime_capability_v1* out) {
-  if (!active() || !appDataExitSafe() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
+  if (promotionRunning_ || !active() || !appDataExitSafe() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
   auto& grant=appGrants_[out->slot-1];
   if (!grant.live || grant.generation!=out->generation || grant.api!=out->api) return false;
   if (grant.provider.slot && !graph_.release(grant.provider)) return false;
   if(grant.api==&installedVolume_){if(!installedFiles_->end())return false;installedVolumeContext_=nullptr;}
   if(grant.api==&appDataTable_){if(!appDataExitSafe())return false;appDataContext_=nullptr;appDataNamespace_=0;}
+  if(grant.api==&promotionTable_)promotionContext_=nullptr;
   if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
   if(grant.api==&realtimeControlTable_)realtimeControlContext_=nullptr;
   if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}
@@ -488,6 +497,7 @@ bool Runtime::revokeApp() {
   for (auto& grant:appGrants_) if (grant.live) {
     if (grant.provider.slot && !graph_.release(grant.provider)) ok=false;
     else {
+      if(grant.api==&promotionTable_)promotionContext_=nullptr;
       if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
       if(grant.api==&realtimeControlTable_)realtimeControlContext_=nullptr;
       if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}if(grant.api==&appDataTable_){if(!appDataExitSafe()){ok=false;continue;}appDataContext_=nullptr;appDataNamespace_=0;}if(grant.api==&installedVolume_){if(!installedFiles_->end()){ok=false;continue;}installedVolumeContext_=nullptr;}grant={};}
@@ -498,6 +508,7 @@ bool Runtime::revokeApp() {
 #include "AppDataRuntime.inc"
 #include "RetainedWakeRuntime.inc"
 #include "RealtimeRuntime.inc"
+#include "ProviderPromotionRuntime.inc"
 bool Runtime::prepare(const char* root) {
   if(attempted_ || metadataCloseRetained_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);
@@ -506,8 +517,13 @@ bool Runtime::prepare(const char* root) {
   JsonObjectConst c=config.as<JsonObjectConst>();
   if (!c["port"].isNull() && !board_.port(c["port"])) return fail(board_.error());
   if(!RiscUpdate::validCohortMigration(c["cohort_migration"]))return fail("invalid cohort migration policy");
-  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities","cohort_migration"}) || !text(c["board"],relative,sizeof(relative)) ||
+  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities","cohort_migration","provider_activation"}) || !text(c["board"],relative,sizeof(relative)) ||
       !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc,&metadataCloseRetained_) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
+  // Activation policy never filters admission, registration or image inspection.
+  const auto activation=c["provider_activation"];
+  if(!activation.isUnbound() && !eq(activation,"eager") && !eq(activation,"demand"))
+    return fail("invalid provider activation policy");
+  demandActivation_=eq(activation,"demand");
   if(!text(c["default_app"],relative,sizeof(relative)) || !elfPath(relative) || !path(root_,relative,current_,sizeof(current_))) return fail("invalid default app path");
   if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>MaxDrivers) return fail("invalid driver list");
   // Read all manifests and validate mappings before registering/activating modules.
@@ -552,12 +568,12 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
 #include "CohortRuntime.inc"
 bool Runtime::launch(const char* relative) {
   if(fileOpen_.phase==FileOpenState::Phase::Requested || fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
-  if(!active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
+  if(promotionRunning_ || !active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   return path(root_,relative,queued_,sizeof(queued_));
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
 bool Runtime::confirmBoot() {
-  return active() && defaultRunning_ && entryRunning_ && !queued_[0] && !retained_ &&
+  return !promotionRunning_ && active() && defaultRunning_ && entryRunning_ && !queued_[0] && !retained_ &&
     providerStorageSafe() && (!port_.confirmBoot || port_.confirmBoot());
 }
 bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& out) const {
@@ -626,7 +642,7 @@ bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* a
 void Runtime::yield(uint32_t ms) {
   if(!active()) return;
   // Poll work is bounded separately; each app yield cooperates exactly once.
-  if(appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
+  if(!promotionRunning_ && appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
   port_.delay(ms<1?1:ms>50?50:ms);
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }
@@ -694,7 +710,7 @@ bool Runtime::run() {
   if(esp_elf_register_symbol(symbols)) { revokeProviders(); currentRuntime=nullptr; return fail("runtime API registration failed"); }
 #endif
   bool ok=true;
-  for(size_t i=0;i<driverCount_;++i) {
+  for(size_t i=0;!demandActivation_ && i<driverCount_;++i) {
     char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
     grants_[granted_]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
     if(!grants_[granted_].slot) { ok=fail(graph_.lastError());port_.log(error_);break; }

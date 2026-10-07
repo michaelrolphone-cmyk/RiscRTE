@@ -72,6 +72,8 @@ class GraphV2 final {
   bool hasProviderId(const char* providerId) const;
   size_t moduleCount() const { return count_; }
   size_t liveGrants() const;
+  // Read-only admission fence: never recover/regrant uncertain cleanup state.
+  bool activationSafe() const;
   const char* lastError() const { return error_; }
 
   // Recover only the exact provider whose activation failed before a grant
