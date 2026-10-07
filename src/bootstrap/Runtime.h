@@ -3,6 +3,7 @@
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
 #include "FileOpenState.h"
+#include "runtime/sleep/RetainedWake.h"
 #include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
@@ -38,6 +39,7 @@ struct Port {
   // Explicit default-app health acknowledgement, never inferred from exit.
   bool (*confirmBoot)()=nullptr;
   const AppDataBackend* appData=nullptr;
+  RiscRetainedWake::Store* retainedWake=nullptr;
 };
 class Runtime final {
  public:
@@ -147,7 +149,15 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3;
+  static Runtime* retainedWakeContext(void*);
+  static int32_t retainedWakeRead(void*,uint32_t,uint32_t,risc_retained_wake_record_v1*,uint32_t*);
+  static int32_t retainedWakeStage(void*,const risc_retained_wake_record_v1*);
+  static int32_t retainedWakeClear(void*);
+  bool retainedWakeIdentity(RiscRetainedWake::Identity&) const;
+  char retainedCohort_[512]{};
+  risc_retained_wake_api_v1 retainedWakeTable_{};
+  void* retainedWakeContext_=nullptr;
   bool appDataExitSafe()const;
   static Runtime* appDataContext(void*);
   static int32_t appDataStat(void*,const char*,uint32_t*,uint64_t*);

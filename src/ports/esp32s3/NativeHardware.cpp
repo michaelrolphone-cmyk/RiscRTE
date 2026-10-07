@@ -2,6 +2,7 @@
 #include "CpuPort.h"
 #include "CooperativeDelay.h"
 #include "NativeSleep.h"
+#include "NativeRetainedWake.h"
 #include "NativeI2s.h"
 #include "NativeRadio.h"
 #include "NativeHci.h"
@@ -183,7 +184,7 @@ Hardware nativeHardware(bool (*owner)()){
       vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));
     },gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
-    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,NativeSleep::enter,NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
+    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRetainedWake::enter(NativeSleep::enter);},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
   hardware.hciOpen=NativeHci::open;hardware.hciSend=NativeHci::send;hardware.hciReceive=NativeHci::receive;
   hardware.hciClose=NativeHci::close;hardware.hciIdle=NativeHci::idle;hardware.hciSafe=NativeHci::safe;

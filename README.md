@@ -149,6 +149,7 @@ bash test/run_bound_key_value_test.sh
 bash test/run_native_registry_test.sh
 bash test/run_provider_module_lease_v2_test.sh
 bash test/run_retained_app_test.sh
+bash test/run_retained_wake_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
 python3 scripts/build_apps.py
@@ -384,3 +385,12 @@ file-dispatch and GPIO hot-path changes through PR35 with the accepted Watch
 PHY/IQ modem and power ownership lifecycle fix from main. Both histories and
 their production regression suites are retained; no hardware qualification is
 implied by this software integration.
+
+## App-owned retained-wake checkpoint
+
+Source 0.1.47 adds explicitly granted `runtime.retained-wake@1`: one bounded,
+typed 128-byte value payload bound to the admitted app and installed cohort.
+Only terminal deep entry commits it; fresh deep wake can consume it once with
+a classified boot cause. Reset, corruption and foreign identity cannot restore
+it. Existing sleep admission and provider lifecycle remain unchanged.
+See [contract, ownership and verification](docs/RETAINED_WAKE.md).
