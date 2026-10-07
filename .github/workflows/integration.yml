@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, feat/minimal-runtime, test/watch-app-handoff, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
+    branches: [main, master, fix/provider-invocation-retention, feat/default-cohort-promotion, codex/retained-realtime-snapshot, integrate/x4-pr35-iq-lifecycle-0146, fix/provider-quiescence-diagnostics, fix/bitbang-probe-startup, fix/gpio-output-readback, feat/declared-file-dispatch, feat/typed-gpio-held-retirement, feat/profile-provisioning-core, feat/minimal-runtime, test/watch-app-handoff, codex/typed-retained-wake, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
   workflow_dispatch:
   workflow_call:
 env:
@@ -78,6 +78,10 @@ jobs:
           bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
           bash test/run_metadata_read_test.sh
           SANITIZE=1 bash test/run_metadata_read_test.sh
+          bash test/run_provider_exit_lifecycle_test.sh
+          SANITIZE=1 bash test/run_provider_exit_lifecycle_test.sh
+          bash test/run_demand_activation_test.sh
+          SANITIZE=1 bash test/run_demand_activation_test.sh
           bash test/run_runtime_test.sh
           SANITIZE=1 bash test/run_runtime_test.sh
           bash test/run_app_data_files_test.sh
@@ -114,6 +118,14 @@ jobs:
           bash test/run_update_runtime_test.sh
           SANITIZE=1 bash test/run_update_runtime_test.sh
           python test/paired_bank_images_test.py -v
+          bash test/run_startup_failure_test.sh
+          SANITIZE=1 bash test/run_startup_failure_test.sh
+          bash test/run_file_open_test.sh
+          SANITIZE=1 bash test/run_file_open_test.sh
+          bash test/run_held_output_test.sh
+          SANITIZE=1 bash test/run_held_output_test.sh
+          bash test/run_provider_sync_test.sh
+          SANITIZE=1 bash test/run_provider_sync_test.sh
           python test/provision_seed_test.py -v
           python test/provision_profile_test.py -v
           NVS_GENERATOR=build/idf-nvs-source/components/nvs_flash/nvs_partition_generator/nvs_partition_gen.py python test/provision_device_test.py -v
@@ -145,6 +157,12 @@ jobs:
           SANITIZE=1 bash test/run_native_registry_test.sh
           bash test/run_provider_module_lease_v2_test.sh
           SANITIZE=1 bash test/run_provider_module_lease_v2_test.sh
+          bash test/run_provider_realtime_test.sh
+          SANITIZE=1 bash test/run_provider_realtime_test.sh
+          bash test/run_realtime_test.sh
+          SANITIZE=1 bash test/run_realtime_test.sh
+          bash test/run_retained_wake_test.sh
+          SANITIZE=1 bash test/run_retained_wake_test.sh
           bash test/run_retained_app_test.sh
           SANITIZE=1 bash test/run_retained_app_test.sh
           bash test/run_watch_test.sh

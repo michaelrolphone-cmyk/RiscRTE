@@ -30,4 +30,6 @@ _Static_assert(legacy_api_version==RISC_RUNTIME_API_V1,"API version unchanged");
 _Static_assert(legacy_capability_end==RISC_RUNTIME_CAPABILITIES_V1_SIZE,"prefix unchanged");
 _Static_assert(sizeof(legacy_risc_runtime_api_v1)==legacy_capability_end,"frozen legacy ends at release");
 _Static_assert(offsetof(risc_runtime_api_v1,confirm_boot)==legacy_capability_end,"new callback appends only");
-_Static_assert(sizeof(risc_runtime_api_v1)==legacy_capability_end+sizeof(void(*)(void)),"single pointer suffix only");
+_Static_assert(offsetof(risc_runtime_api_v1,retain_invocation)==RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE,"retention appends after complete confirm prefix");
+_Static_assert(sizeof(risc_runtime_api_v1)==legacy_capability_end+2*sizeof(void(*)(void)),"two pointer suffixes only");
+_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_RETAIN_INVOCATION_V1_SIZE,"retention is the final suffix");

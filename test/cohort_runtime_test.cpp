@@ -11,7 +11,10 @@ using namespace RiscBoot;
 static unsigned bindings=0,apps=0,drivers=0;static bool safe=true,elfGood=true;
 static bool owner(){return true;}static bool health(risc_runtime_health_v1*){return true;}
 static bool log(const char*){return true;}static void delay(uint32_t){}
-static bool bind(Runtime& r){++bindings;static uint32_t table[]={1,8};return r.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,table);}
+static bool bind(Runtime& r){++bindings;static uint32_t table[]={1,8};static const risc_realtime_control_api_v1 realtime{1,sizeof(realtime),nullptr,
+ [](void*,risc_realtime_snapshot_v1*)->int32_t{assert(false);return -1;},
+ [](void*,int64_t,uint32_t)->int32_t{assert(false);return -1;}};
+ return r.registerRealtime(&realtime) && r.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,table);}
 static int32_t get(void*,uint32_t,const char*,void*,uint32_t,uint32_t*){assert(false);return -1;}
 static int32_t put(void*,uint32_t,const char*,const void*,uint32_t){assert(false);return -1;}
 static KeyValueBackend kv{nullptr,get,put,4096};
@@ -35,9 +38,9 @@ static void store(const fs::path& path,unsigned appCount,unsigned driverCount){
   manifest["type"]="application";manifest["id"]=id;manifest["version"]="1.0.0";manifest["architecture"]="xtensa-esp32s3";
   manifest["file_name"]=id+".elf";manifest["entry"]="app_main";
   auto requirements=manifest["requires"].to<JsonArray>();auto selection=ap.add<JsonObject>();selection["manifest"]=id+".json";auto grants=selection["grants"].to<JsonArray>();
-  for(const char* cap:{"storage.key-value","storage.app-data","platform.clock"}){
+  for(const char* cap:{"storage.key-value","storage.app-data","platform.clock",RISC_REALTIME_CONTROL_CAPABILITY}){
    auto req=requirements.add<JsonObject>();req["capability"]=cap;req["api"]=1;
-   auto grant=grants.add<JsonObject>();grant["capability"]=cap;grant["api"]=1;grant["instance_id"]=!strcmp(cap,"platform.clock")?0:i+1;
+   auto grant=grants.add<JsonObject>();grant["capability"]=cap;grant["api"]=1;grant["instance_id"]=(!strcmp(cap,"platform.clock") || !strcmp(cap,RISC_REALTIME_CONTROL_CAPABILITY))?0:i+1;
   }
   save(path/(id+".json"),manifest);save(path/(id+".elf"),std::string("app"));
  }
@@ -45,6 +48,7 @@ static void store(const fs::path& path,unsigned appCount,unsigned driverCount){
   std::string id="driver"+std::to_string(i);JsonDocument manifest;
   manifest["type"]="driver";manifest["id"]=id;manifest["version"]="1.0.0";manifest["driver_abi"]=2;manifest["architecture"]="xtensa-esp32s3";manifest["file_name"]="driver.elf";
   auto req=manifest["requires"].to<JsonArray>().add<JsonObject>();req["capability"]="storage.key-value.bound";req["api"]=1;
+  auto realtime=manifest["requires"].as<JsonArray>().add<JsonObject>();realtime["capability"]=RISC_PLATFORM_REALTIME_CAPABILITY;realtime["api"]=1;
   auto provides=manifest["provides"].to<JsonArray>().add<JsonObject>();provides["capability"]="test."+id;provides["api"]=1;
   auto selection=dr.add<JsonObject>();selection["manifest"]=id+"/manifest.json";
   auto key=selection["key_value"].to<JsonArray>().add<JsonObject>();key["key"]="state";key["namespace"]=100+i;key["access"]="read-write";

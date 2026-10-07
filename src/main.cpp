@@ -5,6 +5,8 @@
 #include <esp_system.h>
 #include "bootstrap/Runtime.h"
 #include "ports/esp32s3/CpuPort.h"
+#include "ports/esp32s3/NativeRetainedWake.h"
+#include "ports/esp32s3/NativeRealtime.h"
 #include "ports/esp32s3/NativeBoard.h"
 #include "ports/esp32s3/CooperativeDelay.h"
 #include "ports/esp32s3/SleepDiagnostics.h"
@@ -93,13 +95,13 @@ bool confirmBoot(){
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend()});
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend()});
 #endif
 }
 void setup() {
-  owner=xTaskGetCurrentTaskHandle(); Serial.begin(115200);
+  owner=xTaskGetCurrentTaskHandle(); RiscCpu::NativeRetainedWake::start(); RiscCpu::NativeRealtime::start(); Serial.begin(115200);
 #if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::start();
 #endif
@@ -157,7 +159,10 @@ void setup() {
   if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot
 #ifdef RISC_PAIRED_APP_DATA
     ,RiscAppData::backend()
+#else
+    ,nullptr
 #endif
+    ,RiscCpu::NativeRetainedWake::backend()
   });
   if(!retainedRuntime){
 #ifdef RISC_PAIRED_BANKS

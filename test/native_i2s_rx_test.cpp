@@ -23,7 +23,7 @@ extern "C" esp_err_t gpio_hold_dis(gpio_num_t pin){return event("hold"+std::to_s
 extern "C" esp_err_t gpio_set_level(gpio_num_t pin,uint32_t value){assert(pin!=11 && value==0);return event("low"+std::to_string(pin));}
 extern "C" esp_err_t gpio_config(const gpio_config_t* c){
  assert(c->pull_up_en==GPIO_PULLUP_DISABLE && c->pull_down_en==GPIO_PULLDOWN_DISABLE && c->intr_type==GPIO_INTR_DISABLE);
- const bool input=c->pin_bit_mask==(uint64_t(1)<<11);assert(c->mode==(input?GPIO_MODE_INPUT:GPIO_MODE_OUTPUT));
+ const bool input=c->pin_bit_mask==(uint64_t(1)<<11);assert(c->mode==(input?GPIO_MODE_INPUT:GPIO_MODE_INPUT_OUTPUT));
  return event(input?"input":"output");
 }
 esp_err_t i2s_driver_install(i2s_port_t p,const i2s_config_t* c,int q,void* queue){

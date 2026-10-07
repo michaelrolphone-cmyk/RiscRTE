@@ -93,7 +93,7 @@ int main(int argc,char** argv){
   assert(saved.get(saved.context,"same",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_CONTEXT&&!size);
   assert(saved.put(saved.context,"same","bad",3)==RISC_KEY_VALUE_CONTEXT);++cases;
  }
- for(unsigned limit:{9u,10u,11u,12u}) {
+ for(unsigned limit:{9u,12u,13u,14u,15u,16u}) {
   capacity=limit;owned=safe=true;retaining=false;values.clear();reads=writes=0;
   std::string declared;for(unsigned i=1;i<=limit;++i){if(i>1)declared+=",";declared+=grant(i);}
   stage(declared,requirement());Runtime r(port());assert(r.prepare(root.c_str()));
@@ -101,15 +101,15 @@ int main(int argc,char** argv){
   assert(!r.prepare(root.c_str()));assert(r.run());
   assert(reads==limit&&writes==limit);++cases;
  }
- // Preserve the twelve-grant limit; admit twelve declared types and reject a
- // thirteenth independently (negative case still supplies only twelve grants).
- static_assert(Runtime::MaxAppPolicyGrants==12,"App-data does not expand grant authority");
- for(unsigned count:{10u,11u,12u,13u}) {
+ // Admit sixteen declarations; reject a seventeenth with only sixteen grants.
+ static_assert(Runtime::MaxAppPolicyGrants==16,"Declared policy bound");
+ for(unsigned count:{12u,13u,14u,15u,16u,17u}) {
   std::string requirements,grants,drivers;
-  for(unsigned i=0;i<count;++i){const std::string cap="test.cap"+std::to_string(i),id="cap"+std::to_string(i);
-   if(i){requirements+=",";drivers+=",";}
+  for(unsigned i=0;i<count;++i){const std::string cap=i==16?"platform.clock":"test.cap"+std::to_string(i),id="cap"+std::to_string(i);
+   if(i){requirements+=",";if(i<16)drivers+=",";}
    requirements+=requirement(cap.c_str());
    if(i<Runtime::MaxAppPolicyGrants){if(!grants.empty())grants+=",";grants+=grant(0,cap.c_str());}
+   if(i==16)continue;
    drivers+="{\"manifest\":\""+id+".json\"}";
    write((id+".json").c_str(),"{\"type\":\"driver\",\"id\":\""+id+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\"default.elf\",\"driver_abi\":2,\"requires\":[],\"provides\":["+requirement(cap.c_str())+"]}");
   }

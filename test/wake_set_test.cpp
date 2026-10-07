@@ -38,7 +38,7 @@ struct Fixture{Port p;Port::Gpio &a,&b;uint64_t motion,output;risc_light_sleep_r
 int main(){
  static_assert(GARDEN_GPIO_DEEP_SLEEP_FOR_V1_SIZE==offsetof(garden_gpio_v1,wake_source));
  static_assert(RISC_GPIO_BANK_DEEP_SLEEP_FOR_V1_SIZE==offsetof(risc_gpio_bank_api_v1,wake_source));
- static_assert(RiscBoot::Runtime::MaxAppPolicyGrants==12);
+ static_assert(RiscBoot::Runtime::MaxAppPolicyGrants==16);
  {Fixture f;assert(Port::gpioWakeSource(nullptr,f.motion,true,3)==-1);assert(Port::gpioWakeSource(&f.a,f.motion,true,3)==-1);assert(Port::gpioWakeSource(&f.b,f.output,true,3)==-1);assert(Port::gpioWakeSource(&f.b,f.motion,true,4)==-1);owner=false;assert(Port::gpioWakeSource(&f.b,f.motion,true,3)==-2);owner=true;f.enroll();assert(Port::gpioWakeSource(&f.b,f.motion,true,3)==0);assert(Port::gpioWakeSource(&f.b,f.motion,false,3)==-1);assert(!Port::gpioRelease(&f.b,f.motion));f.release();f.release();assert(Port::gpioRelease(&f.b,f.motion));assert(Port::gpioWakeSource(&f.b,f.motion,true,3)==-1);}
  for(bool d:{false,true}){
   {Fixture f;f.enroll();assert(f.run(d,RISC_TIMED_SLEEP_MAX_MS+1)==-1 && !arms);levels|=1ULL<<14;assert(f.run(d)==-4 && !arms);levels=0;assert(f.run(d)==-4 && !arms);levels=1ULL<<7;failRead=14;assert(f.run(d)==-5 && !arms);failRead=-1;f.p.hci_.token=1;assert(f.run(d)==-3 && !arms);f.p.hci_.closing=true;assert(f.run(d)==-6 && !arms);}

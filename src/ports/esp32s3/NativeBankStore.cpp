@@ -7,6 +7,7 @@
 #include "runtime/provisioning/StoreFiles.h"
 #include "CpuPort.h"
 #include "NativeBoard.h"
+#include "NativeRetainedWake.h"
 #include "runtime/update/Cohort.h"
 #include <Arduino.h>
 #include <RiscBuildIdentity.h>
@@ -240,7 +241,7 @@ bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profil
   void* runtimeMemory=heap_caps_malloc(sizeof(RiscBoot::Runtime),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!runtimeMemory){free(cpuMemory);return false;}
   candidateCpu=new(cpuMemory) RiscCpu::Port(provisionState->hardware);
-  auto* candidate=new(runtimeMemory) RiscBoot::Runtime({isOwner,nullptr,nullptr,nullptr,bindProvisioningCandidate,provisionState->keyValue,nullptr,nullptr,nullptr,provisionState->appData});
+  auto* candidate=new(runtimeMemory) RiscBoot::Runtime({isOwner,nullptr,nullptr,nullptr,bindProvisioningCandidate,provisionState->keyValue,nullptr,nullptr,nullptr,provisionState->appData,RiscCpu::NativeRetainedWake::backend()});
   RiscCpu::reserveNativePins(candidate->board());AdmissionImages context{root,millis(),{}};
   bool ok=candidate->prepare(root) && candidate->inspectImages([](void* c,const char* path,bool driver){
     return inspectProvisionedImage(*static_cast<AdmissionImages*>(c),path,driver?ElfRole::Driver:ElfRole::Application);},&context);

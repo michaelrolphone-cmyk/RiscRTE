@@ -19,7 +19,11 @@ static Bytes bytes(const std::string& s){return Bytes(s.begin(),s.end());}
 static std::string hash(const Bytes& b){uint8_t d[32];SHA256(b.data(),b.size(),d);std::string result;for(auto x:d){result+="0123456789abcdef"[x>>4];result+="0123456789abcdef"[x&15];}return result;}
 static unsigned launches=0;
 static bool owner(){return true;}static bool health(risc_runtime_health_v1* h){h->uptime_ms=5;return true;}static void delay(uint32_t){}
-static bool diagnostic(const char* s){assert(!strcmp(s,"TEST default"));++launches;return true;}
+static bool diagnostic(const char* s){
+ // Runtime entry/return diagnostics are not application launch witnesses.
+ if(!strcmp(s,"RTE_APP phase=entry") || !strcmp(s,"RTE_APP phase=returned"))return true;
+ assert(!strcmp(s,"TEST default"));++launches;return true;
+}
 struct Host {
  fs::path root;std::map<std::string,Bytes> server;
  uint8_t committed[32]{};uint32_t time=0;bool active=false,safe=true,online=true,staged=false;

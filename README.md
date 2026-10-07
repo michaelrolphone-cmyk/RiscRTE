@@ -66,7 +66,7 @@ manifest. A missing store leaves a diagnostic and a yielding idle loop.
    Each default reload starts fresh static/BSS state; no app pointers survive.
    A child may hand off to another child; there is no nested call stack or
    multitasking. Default return enters Idle; default failure enters Error.
-8. Drivers are boot-session dependencies, held across app handoffs. On session
+8. By default, drivers are boot-session dependencies, held across app handoffs. On session
    exit they stop in dependency-safe order. Failed quiescence retains the module,
    configuration and dependencies, revokes grants and blocks further launches;
    it never force-unmaps or silently reboots.
@@ -93,6 +93,11 @@ manifest format**:
   ]
 }
 ```
+
+The optional top-level `"provider_activation": "demand"` defers boot-owned
+provider acquisition until an authorized app acquire needs its dependency closure.
+Omission or `"eager"` preserves existing behavior. All selected metadata and staged
+image admission remain complete. See [demand activation and lifetime](docs/DEMAND_ACTIVATION.md).
 
 The shipped baseline has an empty driver list and no peripheral declarations.
 The example `probe` above refers to the non-hardware test fixture, not a bundled
@@ -149,6 +154,7 @@ bash test/run_bound_key_value_test.sh
 bash test/run_native_registry_test.sh
 bash test/run_provider_module_lease_v2_test.sh
 bash test/run_retained_app_test.sh
+bash test/run_retained_wake_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
 python3 scripts/build_apps.py
@@ -326,6 +332,11 @@ without touching NVS or separately provisioned app-data. Existing update modes,
 paired geometries, first-frame health confirmation and rollback remain intact.
 See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-full-cohorts-runtime-0133).
 
+## Ordinary provider synchronization
+
+Selected hardware providers may request [provider-scoped synchronization](docs/PROVIDER_SYNC.md)
+through `platform.sync@1`. The bounded owner-task guards keep lock state outside
+provider PSRAM without exposing FreeRTOS symbols or enabling privileged imports.
 ## Opt-in IQ resource bank
 
 Runtime 0.1.34 adds the separate `esp32s3-16mb-appdata-iq` target with a fixed
@@ -358,3 +369,53 @@ The offline new-device composer supplies the initially bootable flash/NVS chain;
 normal boot never formats storage. See [first-install instructions](docs/FIRST_INSTALL.md),
 [current contract](docs/PROVISIONING.md), and the explicit
 [remaining Reader product packaging dependency](docs/EINK_PROVISIONING_GAP.md).
+
+Deployment-admitted file dispatch is available as `file.open@1` through explicit
+app grants. Only immutable installed handler metadata selects an executable; SD
+paths remain copied data arguments. See [file dispatch](docs/FILE_OPEN.md).
+
+## Scoped GPIO hot path
+
+Runtime 0.1.45 adds a bounded pin-index hint cache for scoped writes and a native
+per-pin PWM cleanup guard. Every write still checks the full opaque token,
+current scope, owner task, output mode and hold state. Collisions fall back to
+the original bounded lookup; failed PWM cleanup remains owned. Driver ABI,
+physical I/O count, lifecycle barriers and protocol timing are unchanged. See
+[operation counts, regression coverage and host-only timing](docs/GPIO_WRITE_HOTPATH.md).
+
+## X4 / Watch integration checkpoint
+
+Runtime 0.1.46 combines the scoped GPIO, held-output retirement, touch v2,
+file-dispatch and GPIO hot-path changes through PR35 with the accepted Watch
+PHY/IQ modem and power ownership lifecycle fix from main. Both histories and
+their production regression suites are retained; no hardware qualification is
+implied by this software integration.
+
+## App-owned retained-wake checkpoint
+
+Source 0.1.47 adds explicitly granted `runtime.retained-wake@1`: one bounded,
+typed 128-byte value payload bound to the admitted app and installed cohort.
+Only terminal deep entry commits it; fresh deep wake can consume it once with
+a classified boot cause. Reset, corruption and foreign identity cannot restore
+it. Existing sleep admission and provider lifecycle remain unchanged.
+See [contract, ownership and verification](docs/RETAINED_WAKE.md).
+
+Runtime 0.1.49 adds an explicitly granted [retained realtime snapshot and separate
+control capability](docs/REALTIME.md). Native SDK time supplies UTC epoch and
+boot-local monotonic correlation across deep sleep; read authority cannot seed
+time, and the control table includes its own snapshot operation. Product grants,
+timezone policy and the twelve-requirement app limit remain unchanged.
+
+Runtime0.1.50 reconciles demand activation and retained realtime histories and
+adds explicit default-app-only `runtime.provider-promotion@1`. It pins the
+already validated selected graph for the boot session after a safe owner call;
+no provider selector or new raw import is exposed. Declared requirements and
+policy grants increase from12 to16, with16 live app grants unchanged. See the
+[integration contract and measurements](docs/PROVIDER_PROMOTION.md).
+
+Runtime0.1.51 fences failed or pending provider-graph cleanup before app fini and
+unload. The existing app Runtime service also gains an optional one-way terminal
+invocation-retention callback for capability-local uncertainty. It preserves
+images and ownership without cleanup or new hardware authority; clean refusal
+and explicit in-app recovery remain distinct. See [the contract and regression
+evidence](docs/INVOCATION_RETENTION.md).
