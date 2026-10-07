@@ -73,6 +73,7 @@ bool Runtime::validateCohort(Runtime& candidate,const char* root,
   // Reuse the running graph's already scoped native tables with an identical
   // hardware/port declaration. Never bind the staged board into the CPU owner.
   candidate.port_=port_;candidate.port_.bindPlatforms=nullptr;
+  if(realtimeBackend_ && !candidate.registerRealtime(realtimeBackend_))return false;
   for(size_t i=0;i<platformCount_;++i){const auto& p=platforms_[i];
     if(!candidate.registerPlatform(p.capability,p.api,p.scope,p.id,p.table))return false;
   }

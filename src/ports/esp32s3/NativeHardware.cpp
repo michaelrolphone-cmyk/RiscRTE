@@ -23,6 +23,7 @@
 #include <driver/ledc.h>
 #include <driver/spi_master.h>
 #include <esp_timer.h>
+#include "NativeRealtime.h"
 #include <esp_sleep.h>
 #include <esp_rom_gpio.h>
 #include <soc/gpio_sig_map.h>
@@ -184,8 +185,9 @@ Hardware nativeHardware(bool (*owner)()){
       vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));
     },gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
-    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRetainedWake::enter(NativeSleep::enter);},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
+    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
+  NativeRealtime::configure(hardware.owner);hardware.realtimeRead=NativeRealtime::read;hardware.realtimeSeed=NativeRealtime::seed;
   hardware.hciOpen=NativeHci::open;hardware.hciSend=NativeHci::send;hardware.hciReceive=NativeHci::receive;
   hardware.hciClose=NativeHci::close;hardware.hciIdle=NativeHci::idle;hardware.hciSafe=NativeHci::safe;
 #ifdef RISC_ENABLE_RADIO_IQ

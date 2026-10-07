@@ -238,6 +238,11 @@ bool Runtime::appPolicies(JsonVariantConst value) {
           if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
               port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
+        } else if (!strcmp(capability,RISC_REALTIME_CAPABILITY) || !strcmp(capability,RISC_REALTIME_CONTROL_CAPABILITY)) {
+          if(grant.api!=1 || grant.instance || !realtimeBackend_)return fail("realtime backend/authority unavailable");
+          const bool control=!strcmp(capability,RISC_REALTIME_CONTROL_CAPABILITY);
+          grant.driver=control?RealtimeControlDriver:RealtimeDriver;
+          grant.capability=control?RISC_REALTIME_CONTROL_CAPABILITY:RISC_REALTIME_CAPABILITY;
         } else if (!strcmp(capability,RISC_RETAINED_WAKE_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || !port_.retainedWake)return fail("retained-wake backend/authority unavailable");
           if(!retainedCohort_[0]){
@@ -311,6 +316,17 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.keyValueNamespace=allowed->instance;
     grant.keyValue={allowed->api,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
     grant.api=&grant.keyValue;
+  } else if (allowed->driver==RealtimeControlDriver) {
+    if(realtimeControlContext_ || !entryRunning_ || retained_ || !providerStorageSafe())return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    realtimeControlContext_=context;
+    realtimeControlTable_={1,sizeof(realtimeControlTable_),context,realtimeRead,realtimeSeed};
+    grant.api=&realtimeControlTable_;
+  } else if (allowed->driver==RealtimeDriver) {
+    if(realtimeContext_ || !entryRunning_ || retained_ || !providerStorageSafe())return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    realtimeContext_=context;realtimeTable_={1,sizeof(realtimeTable_),context,realtimeRead};
+    grant.api=&realtimeTable_;
   } else if (allowed->driver==RetainedWakeDriver) {
     if(retainedWakeContext_ || !providerStorageSafe() || !port_.retainedWake->ready())return false;
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
@@ -462,6 +478,8 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   if (grant.provider.slot && !graph_.release(grant.provider)) return false;
   if(grant.api==&installedVolume_){if(!installedFiles_->end())return false;installedVolumeContext_=nullptr;}
   if(grant.api==&appDataTable_){if(!appDataExitSafe())return false;appDataContext_=nullptr;appDataNamespace_=0;}
+  if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
+  if(grant.api==&realtimeControlTable_)realtimeControlContext_=nullptr;
   if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}
   grant={};out->slot=out->generation=0;out->api=nullptr;return true;
 }
@@ -469,13 +487,17 @@ bool Runtime::revokeApp() {
   bool ok=true;
   for (auto& grant:appGrants_) if (grant.live) {
     if (grant.provider.slot && !graph_.release(grant.provider)) ok=false;
-    else {if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}if(grant.api==&appDataTable_){if(!appDataExitSafe()){ok=false;continue;}appDataContext_=nullptr;appDataNamespace_=0;}if(grant.api==&installedVolume_){if(!installedFiles_->end()){ok=false;continue;}installedVolumeContext_=nullptr;}grant={};}
+    else {
+      if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
+      if(grant.api==&realtimeControlTable_)realtimeControlContext_=nullptr;
+      if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}if(grant.api==&appDataTable_){if(!appDataExitSafe()){ok=false;continue;}appDataContext_=nullptr;appDataNamespace_=0;}if(grant.api==&installedVolume_){if(!installedFiles_->end()){ok=false;continue;}installedVolumeContext_=nullptr;}grant={};}
   }
   appPolicy_=nullptr;return ok;
 }
 #include "InstalledFilesRuntime.inc"
 #include "AppDataRuntime.inc"
 #include "RetainedWakeRuntime.inc"
+#include "RealtimeRuntime.inc"
 bool Runtime::prepare(const char* root) {
   if(attempted_ || metadataCloseRetained_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);
