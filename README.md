@@ -326,6 +326,11 @@ without touching NVS or separately provisioned app-data. Existing update modes,
 paired geometries, first-frame health confirmation and rollback remain intact.
 See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-full-cohorts-runtime-0133).
 
+## Ordinary provider synchronization
+
+Selected hardware providers may request [provider-scoped synchronization](docs/PROVIDER_SYNC.md)
+through `platform.sync@1`. The bounded owner-task guards keep lock state outside
+provider PSRAM without exposing FreeRTOS symbols or enabling privileged imports.
 ## Opt-in IQ resource bank
 
 Runtime 0.1.34 adds the separate `esp32s3-16mb-appdata-iq` target with a fixed

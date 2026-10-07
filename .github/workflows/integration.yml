@@ -114,6 +114,10 @@ jobs:
           bash test/run_update_runtime_test.sh
           SANITIZE=1 bash test/run_update_runtime_test.sh
           python test/paired_bank_images_test.py -v
+          bash test/run_held_output_test.sh
+          SANITIZE=1 bash test/run_held_output_test.sh
+          bash test/run_provider_sync_test.sh
+          SANITIZE=1 bash test/run_provider_sync_test.sh
           python test/provision_seed_test.py -v
           python test/provision_profile_test.py -v
           NVS_GENERATOR=build/idf-nvs-source/components/nvs_flash/nvs_partition_generator/nvs_partition_gen.py python test/provision_device_test.py -v
