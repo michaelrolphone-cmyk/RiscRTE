@@ -238,6 +238,18 @@ bool Runtime::appPolicies(JsonVariantConst value) {
           if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
               port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
+        } else if (!strcmp(capability,RISC_RETAINED_WAKE_CAPABILITY)) {
+          if(grant.api!=1 || grant.instance || !port_.retainedWake)return fail("retained-wake backend/authority unavailable");
+          if(!retainedCohort_[0]){
+            RiscUpdate::CohortIdentity identity{};
+            if(!RiscUpdate::readCohort(root_,identity,&metadataCloseRetained_))return fail("retained-wake cohort unavailable");
+            char digest[65]{};for(unsigned b=0;b<32;++b)snprintf(digest+2*b,3,"%02x",identity.firmwareSha[b]);
+            const int n=snprintf(retainedCohort_,sizeof(retainedCohort_),"%s|%s|%s|%s|%s|%s|%u|%u|%s",
+              identity.product.product,identity.product.version,identity.product.source_repo,identity.product.source_revision,
+              identity.runtimeVersion,identity.layout,unsigned(identity.storeAbi),unsigned(identity.firmwareSize),digest);
+            if(n<=0 || size_t(n)>=sizeof(retainedCohort_))return fail("retained-wake cohort too large");
+          }
+          grant.driver=RetainedWakeDriver;grant.capability=RISC_RETAINED_WAKE_CAPABILITY;
         } else if (!strcmp(capability,"file.open")) {
           if(grant.api!=T5_FILE_OPEN_API_VERSION || grant.instance)return fail("invalid file-open authority");
           grant.fileOpen=true;grant.capability="file.open";
@@ -299,6 +311,12 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.keyValueNamespace=allowed->instance;
     grant.keyValue={allowed->api,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
     grant.api=&grant.keyValue;
+  } else if (allowed->driver==RetainedWakeDriver) {
+    if(retainedWakeContext_ || !providerStorageSafe() || !port_.retainedWake->ready())return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    retainedWakeContext_=context;
+    retainedWakeTable_={1,sizeof(retainedWakeTable_),context,retainedWakeRead,retainedWakeStage,retainedWakeClear};
+    grant.api=&retainedWakeTable_;
   } else if (allowed->fileOpen) {
     grant.api=fileOpenApi();
   } else if (allowed->driver==AppDataDriver) {
@@ -444,18 +462,20 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   if (grant.provider.slot && !graph_.release(grant.provider)) return false;
   if(grant.api==&installedVolume_){if(!installedFiles_->end())return false;installedVolumeContext_=nullptr;}
   if(grant.api==&appDataTable_){if(!appDataExitSafe())return false;appDataContext_=nullptr;appDataNamespace_=0;}
+  if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}
   grant={};out->slot=out->generation=0;out->api=nullptr;return true;
 }
 bool Runtime::revokeApp() {
   bool ok=true;
   for (auto& grant:appGrants_) if (grant.live) {
     if (grant.provider.slot && !graph_.release(grant.provider)) ok=false;
-    else {if(grant.api==&appDataTable_){if(!appDataExitSafe()){ok=false;continue;}appDataContext_=nullptr;appDataNamespace_=0;}if(grant.api==&installedVolume_){if(!installedFiles_->end()){ok=false;continue;}installedVolumeContext_=nullptr;}grant={};}
+    else {if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}if(grant.api==&appDataTable_){if(!appDataExitSafe()){ok=false;continue;}appDataContext_=nullptr;appDataNamespace_=0;}if(grant.api==&installedVolume_){if(!installedFiles_->end()){ok=false;continue;}installedVolumeContext_=nullptr;}grant={};}
   }
   appPolicy_=nullptr;return ok;
 }
 #include "InstalledFilesRuntime.inc"
 #include "AppDataRuntime.inc"
+#include "RetainedWakeRuntime.inc"
 bool Runtime::prepare(const char* root) {
   if(attempted_ || metadataCloseRetained_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);

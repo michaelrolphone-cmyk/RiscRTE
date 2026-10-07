@@ -9,6 +9,11 @@ static FILE* nativeOpen(const char*,const char*);
 #include "ports/esp32s3/NativeBootstrap.cpp"
 #undef fclose
 #undef fopen
+// Metadata admission may inspect checkpoint availability but never boots or
+// consumes this detached host RTC model.
+namespace RiscCpu { namespace NativeRetainedWake {
+RiscRetainedWake::Store* backend(){static RiscRetainedWake::Image image{};static RiscRetainedWake::Store store(image);return &store;}
+}}
 #include <cassert>
 #include <fstream>
 #include <iostream>

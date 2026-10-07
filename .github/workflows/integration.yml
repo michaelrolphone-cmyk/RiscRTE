@@ -153,6 +153,8 @@ jobs:
           SANITIZE=1 bash test/run_native_registry_test.sh
           bash test/run_provider_module_lease_v2_test.sh
           SANITIZE=1 bash test/run_provider_module_lease_v2_test.sh
+          bash test/run_retained_wake_test.sh
+          SANITIZE=1 bash test/run_retained_wake_test.sh
           bash test/run_retained_app_test.sh
           SANITIZE=1 bash test/run_retained_app_test.sh
           bash test/run_watch_test.sh
