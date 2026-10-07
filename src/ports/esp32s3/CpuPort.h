@@ -66,8 +66,11 @@ struct Hardware {
   bool (*hciClose)()=nullptr;
   bool (*hciIdle)()=nullptr;
   bool (*hciSafe)()=nullptr;
-  // Opt-in read-only proof: actual supported SoC/ROM, reserved bank and parked dump.
+  // Opt-in IQ lifecycle: prove parked state, calibrate native PHY before
+  // granting raw modem access, then disable PHY after the driver restores it.
   bool (*radioIqReady)()=nullptr;
+  bool (*radioIqPrepare)()=nullptr;
+  bool (*radioIqCleanup)()=nullptr;
 };
 class Port final {
  public:
