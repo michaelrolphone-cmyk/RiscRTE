@@ -16,7 +16,7 @@ int main(int argc,char** argv){assert(argc==2);mode=unsigned(atoi(argv[1]));
  s->stage(id,r);if(mode==6)enter([](){});else s->commit(); // Model RTC left by previous boot before native start.
  start();assert(s->ready());
  assert(s->read(id,1,1,r,cause)==(mode>=2 && mode<6?RISC_RETAINED_WAKE_OK:RISC_RETAINED_WAKE_ABSENT));
- assert(cause==(mode==4?RISC_BOOT_DEEP_GPIO:mode>=5?RISC_BOOT_DEEP_OTHER:mode));
+ assert(cause==(mode==4?uint32_t(RISC_BOOT_DEEP_GPIO):mode>=5?uint32_t(RISC_BOOT_DEEP_OTHER):mode));
  s->stage(id,r);enter([](){}); // Actual adapter rollback; boot is idempotent.
  start();assert(s->read(id,1,1,r,cause)==RISC_RETAINED_WAKE_ABSENT);
  puts("Native retained-wake SDK adapter classification PASS");
