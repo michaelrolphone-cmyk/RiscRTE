@@ -624,7 +624,11 @@ bool Runtime::runOne(const char* name) {
   if(ok && init) { initialized=init()==0; ok=initialized; }
   if(!appExitBarrier())return false;
   defaultRunning_=!strcmp(name,default_);entryRunning_=ok;
-  if(ok) entry();
+  if(ok) {
+    port_.log("RTE_APP phase=entry");
+    entry();
+    port_.log("RTE_APP phase=returned");
+  } else port_.log("RTE_APP phase=init-or-entry-rejected");
   entryRunning_=false;defaultRunning_=false;
   // Native RETAINED must be observed before app callbacks or freeing anything.
   // Boot-owned driver grants defer graph quiescence until after app teardown,
@@ -674,7 +678,8 @@ bool Runtime::run() {
   }
   if(!retained_) {
     while(granted_) if(!graph_.release(grants_[--granted_])) {
-      retained_=true;port_.log("RTE_CLEANUP driver-quiescence=retained");
+      retained_=true;
+      char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[granted_].id,graph_.lastError());port_.log(detail);
       if(ok)ok=fail("driver quiescence failed; restart required");
     }
     if(!graph_.shutdown()) {

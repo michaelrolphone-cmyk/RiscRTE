@@ -1,6 +1,7 @@
 #include <RiscProviderV2.h>
 #include <string.h>
-static bool start(const risc_provider_dependency_v1*d,size_t n){(void)d;(void)n;return false;}
+extern bool test_startup_admit(void);
+static bool start(const risc_provider_dependency_v1*d,size_t n){(void)d;(void)n;return test_startup_admit();}
 extern bool test_startup_cleanup(void);
 static bool quiesce(void){return test_startup_cleanup();}
 static void stop(void){}
