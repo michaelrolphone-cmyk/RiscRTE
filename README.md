@@ -273,3 +273,9 @@ can be validated and activated together, including new app/provider policies,
 without touching NVS or separately provisioned app-data. Existing update modes,
 paired geometries, first-frame health confirmation and rollback remain intact.
 See [full-cohort contract and admission](docs/PAIRED_BANKS.md#owner-published-full-cohorts-runtime-0133).
+
+## Ordinary provider synchronization
+
+Selected hardware providers may request [provider-scoped synchronization](docs/PROVIDER_SYNC.md)
+through `platform.sync@1`. The bounded owner-task guards keep lock state outside
+provider PSRAM without exposing FreeRTOS symbols or enabling privileged imports.
