@@ -18,6 +18,8 @@ static std::vector<std::string> lines;
 static std::vector<uint32_t> waits;
 static bool startupAdmit=true;
 extern "C" bool test_startup_admit(){return startupAdmit;}
+static std::string startupDetail="primary probe pullup denied";
+extern "C" const char* test_startup_detail(){return startupDetail.c_str();}
 #if RISC_STAGE_LOGS
 namespace RiscDiagnostics {
 static uint64_t stageTicks=0;
@@ -159,6 +161,28 @@ int main(int argc,char** argv){
   findLine("provider start end id=startup-failure result=failed elapsed_us=");
   findLine("provider load end id=startup-failure result=failed elapsed_us=");
   findLine("primary probe pullup denied");
+  // The live report preserves the original callback text beyond both the old
+  // 112-byte callback buffer and the unchanged 160-byte retained error field.
+  const std::string probeReport="v=0.1.1 cause=ambiguous-controller probe=flg:00 ver:0000000000 token=0 state=0 power=0 reason=ambiguous-controller budget=0 elapsed=220 xfer=0/0ms refresh=0 busy0=0 assert=0 probe=flg:00 ver:0000000000";
+  for(const auto& detail:{probeReport,"primary probe pullup denied "+std::string(310,'z')+" suffix=retained",
+                          "primary probe pullup denied "+std::string(700,'z')+" suffix=retained"}){
+    startupDetail=detail;
+    lines.clear();
+    {
+      RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* s){lines.emplace_back(s);return true;}});
+      assert(runtime.prepare(root.c_str()) && !runtime.run());
+    }
+    std::string reported;unsigned part=0;
+    for(const auto& line:lines)if(line.find("provider detail id=startup-failure part=")==0){
+      ++part;assert(line.find("part="+std::to_string(part)+" text=")!=std::string::npos);
+      const auto text=line.find(" text=");assert(text!=std::string::npos && line.size()-text-6<=80);
+      reported+=line.substr(text+6);
+    }
+    assert(reported==startupDetail.substr(0,511));
+    if(startupDetail.size()>511)findLine("source-buffer-full=511 report-may-be-truncated");
+    else assert(reported==startupDetail);
+  }
+  startupDetail="primary probe pullup denied";
   startupAdmit=true;lines.clear();
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"driver.json"}]})");
   generation=2;

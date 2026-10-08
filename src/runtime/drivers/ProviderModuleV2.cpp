@@ -47,6 +47,23 @@ void trace(const char* id, const char* stage) {
   LOG_INF("PROV", "PROVREF id=%s stage=%s", id ? id : "?", stage);
 #endif
 }
+#if RISC_STAGE_LOGS
+constexpr size_t DetailCapacity=512;
+void logDetail(const char* id,const char* detail){
+  // Keep the provider's report independent of the shorter retained error field.
+  // Repeating the bounded ID keeps each plain statement attributable. Even a
+  // 95-byte ID plus an 80-byte part fits the 255-byte timestamped line limit.
+  const size_t length=std::strlen(detail);
+  for(size_t offset=0;offset<length;offset+=80){
+    RISC_STAGE_LOG("provider detail id=%s part=%u text=%.80s",id?id:"?",unsigned(offset/80+1),detail+offset);
+  }
+  if(length==DetailCapacity-1){
+    RISC_STAGE_LOG("provider detail id=%s source-buffer-full=511 report-may-be-truncated",id?id:"?");
+  }
+}
+#else
+constexpr size_t DetailCapacity=112;
+#endif
 } // namespace
 
 void ModuleV2::report(const char* id, const char* stage, int code) {
@@ -151,10 +168,13 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
   revokeLease();
   if (candidate->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
     const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(candidate);
-    char detail[112]{};
+    char detail[DetailCapacity]{};
     if (diagnostics->last_error && diagnostics->last_error(detail, sizeof(detail))) {
       detail[sizeof(detail) - 1] = 0;
-      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %s", expectedId, detail);
+#if RISC_STAGE_LOGS
+      logDetail(expectedId,detail);
+#endif
+      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %.111s", expectedId, detail);
     }
   }
   if (!error_[0]) report(expectedId, "start rejected; update driver for diagnostics");
@@ -254,10 +274,13 @@ void ModuleV2::reportQuiescence() {
   if (!driver_) return;
   if (!error_[0] && driver_->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
     const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(driver_);
-    char detail[112]{};
+    char detail[DetailCapacity]{};
     if (diagnostics->last_error && diagnostics->last_error(detail, sizeof(detail))) {
       detail[sizeof(detail)-1] = 0;
-      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %s", driver_->driver_id, detail);
+#if RISC_STAGE_LOGS
+      logDetail(driver_->driver_id,detail);
+#endif
+      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %.111s", driver_->driver_id, detail);
     }
   }
   report(driver_->driver_id, "hardware-quiesce-rejected");

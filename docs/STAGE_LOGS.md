@@ -44,6 +44,14 @@ start, with its reason. Actual application radio preferences and panel stages
 remain owned by their apps/providers and can use the existing diagnostic callback.
 No credential contents are added to Runtime statements.
 
+Stage builds read provider failure details into a bounded 512-byte stack buffer
+and emit the original text in numbered 80-character parts before quiescence.
+Each part repeats the provider ID. This preserves details beyond the ordinary
+112-byte callback buffer and shorter retained error string. A completely filled
+511-character payload emits `source-buffer-full=511 report-may-be-truncated`;
+the callback API cannot distinguish an exact fit from a longer truncated report.
+Ordinary builds retain their original callback bound and class layout.
+
 Elapsed times are inclusive and include the begin statement's logging cost.
 Provider load includes its nested provider start. Do not add these overlapping
 intervals. A begin without an end may mean failure, retention, reset or lost
