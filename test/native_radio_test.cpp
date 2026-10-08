@@ -43,6 +43,9 @@ static void logsRestored(){for(unsigned i=0;i<4;++i)assert(logLevels[i]==origina
 static esp_err_t call(const char* name){calls.emplace_back(name);return failure==name || failure2==name?failureResult:ESP_OK;}
 static bool called(const char* name){return std::find(calls.begin(),calls.end(),name)!=calls.end();}
 static bool zero(const void* p,size_t n){const auto* bytes=static_cast<const uint8_t*>(p);for(size_t i=0;i<n;++i)if(bytes[i])return false;return true;}
+static unsigned heapQueries;
+size_t heap_caps_get_free_size(uint32_t caps){++heapQueries;return caps&(MALLOC_CAP_SPIRAM)?2000000u:100000u;}
+size_t heap_caps_get_largest_free_block(uint32_t caps){++heapQueries;return caps&MALLOC_CAP_DMA?32000u:caps&MALLOC_CAP_SPIRAM?1000000u:50000u;}
 void* heap_caps_calloc(size_t count,size_t size,uint32_t capabilities){
  assert(count==1 && size==sizeof(garden_radio_scan_result_v1) && capabilities==MALLOC_CAP_8BIT);
  assert(!scanAllocation);++scanAllocations;
@@ -207,6 +210,8 @@ int main(){
  assert(!join("private-network", "private-password"));reset();failureResult=ESP_FAIL;
 #if RISC_STAGE_LOGS
  assert(stageHas("failure step=init code=16962"));
+ assert(stageHas("radio wifi memory stage=before-sdk-init internal_free=100000 internal_largest=50000 psram_free=2000000 psram_largest=1000000 dma_largest=32000"));
+ assert(stageHas("memory stage=sdk-init-complete")&&stageHas("memory stage=before-sdk-start")&&stageHas("memory stage=sdk-start-complete"));
  for(const char* step:{"netif-init","event-loop-create","netif-attach","default-handlers","event-register","init","storage-ram","station-mode","station-config","start","connect",
                       "disconnect","config-clear","stop","deinit","event-unregister","default-driver-clear","driver-config-clear","event-loop-delete","dhcp-stop","scan-start","scan-stop","scan-list-clear","scan-records"})
   assert(stageHas((std::string("failure step=")+step+" code=-1").c_str()));
@@ -216,7 +221,7 @@ int main(){
  assert(stageCount("radio wifi disconnect-event reason=202")==1);
  for(const char* secret:{"private-network","private-password","copied-ssid","copied-password","secret-passphrase","original-network","192."})assert(!stageHas(secret));
 #else
- assert(stageLines.empty());
+ assert(stageLines.empty() && !heapQueries);
 #endif
  assert(netifInitCount==1);assert(!state(nullptr,nullptr) && !addresses(nullptr,nullptr));
  unsigned char bytes[99];memset(bytes,0xff,sizeof(bytes));wipe(bytes,sizeof(bytes));assert(zero(bytes,sizeof(bytes)));

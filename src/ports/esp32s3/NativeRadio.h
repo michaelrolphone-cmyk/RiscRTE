@@ -41,9 +41,25 @@ struct State {
 #endif
 };
 static State s;
+inline void memoryStage(const char* stage){
+  (void)stage;
+#if RISC_STAGE_LOGS
+  // Snapshot the two allocation pools separately. ELF mappings use PSRAM;
+  // Wi-Fi SDK control resources can still exhaust/fragment internal memory.
+  // This adds no allocation, retry, ownership change or credential output.
+  constexpr uint32_t internal=MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT;
+  constexpr uint32_t external=MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT;
+  RISC_STAGE_LOG("radio wifi memory stage=%s internal_free=%lu internal_largest=%lu psram_free=%lu psram_largest=%lu dma_largest=%lu",stage,
+    static_cast<unsigned long>(heap_caps_get_free_size(internal)),
+    static_cast<unsigned long>(heap_caps_get_largest_free_block(internal)),
+    static_cast<unsigned long>(heap_caps_get_free_size(external)),
+    static_cast<unsigned long>(heap_caps_get_largest_free_block(external)),
+    static_cast<unsigned long>(heap_caps_get_largest_free_block(MALLOC_CAP_DMA|MALLOC_CAP_INTERNAL)));
+#endif
+}
 inline bool sdkFailure(const char* step,esp_err_t code){
   (void)step;(void)code;
-  RISC_STAGE_LOG("radio wifi failure step=%s code=%d",step,int(code));return false;
+  RISC_STAGE_LOG("radio wifi failure step=%s code=%d",step,int(code));memoryStage(step);return false;
 }
 inline bool sdk(const char* step,esp_err_t code){return code==ESP_OK || sdkFailure(step,code);}
 inline void linkStage(uint8_t state){
@@ -197,14 +213,16 @@ inline bool begin(Operation operation){
   const esp_err_t existing=esp_wifi_get_mode(&existingMode);
   if(existing!=ESP_ERR_WIFI_NOT_INIT)return sdkFailure("exclusive-owner-check",existing);
   s.operation=operation;
-  if(!netifInitialized){if(!sdk("netif-init",esp_netif_init())){s={};return false;}netifInitialized=true;}
+  if(!netifInitialized){memoryStage("before-netif-init");if(!sdk("netif-init",esp_netif_init())){s={};return false;}netifInitialized=true;memoryStage("netif-init-complete");}
   // INVALID_STATE means somebody else owns the loop: never adopt/delete it.
+  memoryStage("before-event-loop");
   if(!sdk("event-loop-create",esp_event_loop_create_default())){s={};return false;}
-  s.loop=true;
+  s.loop=true;memoryStage("event-loop-complete");
   if(!suppressLogs()){leave();return false;}
   esp_netif_config_t netifConfig=ESP_NETIF_DEFAULT_WIFI_STA();
+  memoryStage("before-netif-new");
   s.netif=esp_netif_new(&netifConfig);
-  if(!s.netif){RISC_STAGE_LOG("radio wifi failure step=netif-new reason=allocation-failed");leave();return false;}
+  if(!s.netif){RISC_STAGE_LOG("radio wifi failure step=netif-new reason=allocation-failed");memoryStage("netif-new-failed");leave();return false;}
   s.attachAttempted=true;
   if(!sdk("netif-attach",esp_netif_attach_wifi_station(s.netif)) || !sdk("default-handlers",esp_wifi_set_default_wifi_sta_handlers())){leave();return false;}
   const uint32_t token=++nextGeneration;
@@ -218,8 +236,9 @@ inline bool begin(Operation operation){
   wifi_init_config_t config=WIFI_INIT_CONFIG_DEFAULT();config.nvs_enable=false;
   // SDK attempts to unwind returned init failures internally; a hidden failed
   // unwind inside esp_wifi_init is not observable through the public API.
+  memoryStage("before-sdk-init");
   if(!sdk("init",esp_wifi_init(&config))){leave();return false;}
-  s.wifi=true;
+  s.wifi=true;memoryStage("sdk-init-complete");
   if(!sdk("storage-ram",esp_wifi_set_storage(WIFI_STORAGE_RAM)) || !sdk("station-mode",esp_wifi_set_mode(WIFI_MODE_STA))){leave();return false;}
   RISC_STAGE_LOG("radio wifi begin result=ready operation=%s",operation==Join?"connect":"scan");
   return true;
@@ -240,7 +259,9 @@ inline bool join(const char* ssid,const char* password){
   if(!sdk("station-config",configured)){leave();return false;}
   if(!ensureLogsSuppressed()){leave();return false;}
   s.startAttempted=true;
+  memoryStage("before-sdk-start");
   if(!sdk("start",esp_wifi_start())){leave();return false;}
+  memoryStage("sdk-start-complete");
   if(!ensureLogsSuppressed()){leave();return false;}
   s.connectAttempted=true;s.joinDeadline=esp_timer_get_time()+JoinTimeoutUs;
   if(!sdk("connect",esp_wifi_connect())){leave();return false;}
@@ -297,12 +318,14 @@ inline bool scanStart(){
   // RF/cleanup still owns it. A failed begin has not published this pointer.
   auto* result=static_cast<garden_radio_scan_result_v1*>(
     heap_caps_calloc(1,sizeof(garden_radio_scan_result_v1),MALLOC_CAP_8BIT));
-  if(!result){RISC_STAGE_LOG("radio wifi scan result=failed step=result-buffer reason=out-of-memory");return false;}
+  if(!result){RISC_STAGE_LOG("radio wifi scan result=failed step=result-buffer reason=out-of-memory");memoryStage("scan-buffer-failed");return false;}
   if(!begin(Scan)){wipe(result,sizeof(*result));heap_caps_free(result);return false;}
   s.result=result;
   if(!ensureLogsSuppressed()){leave();return false;}
   s.startAttempted=true;
+  memoryStage("before-sdk-start");
   if(!sdk("start",esp_wifi_start())){leave();return false;}
+  memoryStage("sdk-start-complete");
   wifi_scan_config_t config{};config.show_hidden=true;config.scan_type=WIFI_SCAN_TYPE_ACTIVE;
   config.scan_time.active.min=0;config.scan_time.active.max=120;
   s.result->struct_size=sizeof(*s.result);s.result->state=GARDEN_RADIO_SCAN_RUNNING;

@@ -1,5 +1,10 @@
 # RiscRTE
 
+Runtime 0.1.74 adds existing-stage-logger snapshots of internal, DMA-capable and
+PSRAM heap availability at Wi-Fi setup/failure boundaries. SDK configuration,
+cleanup and the qualified HCI queue are unchanged. See the [selected-source
+Wi-Fi investigation](docs/WIFI_STARTUP_PATHS.md).
+
 Runtime 0.1.73 uses the existing bounded HCI receive memory for actual packet
 lengths, so short advertisement bursts no longer exhaust four oversized slots.
 Packet ordering, true-overflow failure and retained cleanup remain enforced.
