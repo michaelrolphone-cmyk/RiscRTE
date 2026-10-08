@@ -197,6 +197,22 @@ class PlanTest(unittest.TestCase):
                     bad_image=image+suffix; bad=dict(meta,bytes=len(bad_image),sha256=p.sha(bad_image)); (art/'candidate.json').write_text(json.dumps(bad)); (art/'firmware.bin').write_bytes(bad_image)
                     with self.assertRaisesRegex(ValueError,'ordinary paired'): p.maintenance(art,'a'*40,bank.APP_DATA_LAYOUT)
 
+    def test_abi2_cannot_be_relabeled_as_legacy_abi1(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            art=artifact(Path(tmp),True)
+            meta=json.loads((art/'candidate.json').read_text())
+            del meta['layout']; del meta['store_abi']
+            meta['target']='esp32s3-16mb-maintenance'
+            (art/'candidate.json').write_text(json.dumps(meta))
+            with patch.object(p,'esp_image'),self.assertRaisesRegex(ValueError,'target marker'):
+                p.maintenance(art,'a'*40)
+            # Adding the expected marker must not hide a foreign marker.
+            image=(art/'firmware.bin').read_bytes()+b'RISC_OWNER_TARGET:esp32s3-16mb-maintenance\0'
+            meta.update(bytes=len(image),sha256=p.sha(image))
+            (art/'candidate.json').write_text(json.dumps(meta)); (art/'firmware.bin').write_bytes(image)
+            with patch.object(p,'esp_image'),self.assertRaisesRegex(ValueError,'target marker'):
+                p.maintenance(art,'a'*40)
+
     def test_legacy_abi1_artifact_remains_supported(self):
         with tempfile.TemporaryDirectory() as tmp:
             art=artifact(Path(tmp),False)

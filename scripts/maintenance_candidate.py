@@ -4,7 +4,7 @@ import argparse, json, hashlib, re, shutil, subprocess
 from pathlib import Path
 from release_assets import ROOT, file_bytes, esp_image, require, head
 from check_versions import firmware
-from maintenance_plan import LAYOUTS
+from maintenance_plan import LAYOUTS, owner_target
 from paired_candidate import partitions
 from paired_bank_images import BOOTLOADER_SHA256
 
@@ -21,8 +21,9 @@ def stage(source,app_data=False):
     partitions(file_bytes(build/'partitions.bin'),expected)
     require(hashlib.sha256(file_bytes(build/'bootloader.bin')).hexdigest()==BOOTLOADER_SHA256,'unverified maintenance rollback bootloader')
     version=firmware((ROOT/'platformio.ini').read_text())
-    for marker in (b'RISC_OWNER_INSTALLER:1\0',b'RTE_OWNER_MAINTENANCE=1\0',('RTE_SOURCE='+source).encode()+b'\0',('RISC_RUNTIME_VERSION:'+version).encode()+b'\0',('RISC_OWNER_TARGET:'+target).encode()+b'\0'):
+    for marker in (b'RISC_OWNER_INSTALLER:1\0',b'RTE_OWNER_MAINTENANCE=1\0',('RTE_SOURCE='+source).encode()+b'\0',('RISC_RUNTIME_VERSION:'+version).encode()+b'\0'):
         require(marker in image,'maintenance identity missing')
+    owner_target(image,target)
     require(all(('RISC_PAIRED_STORE_ABI:'+str(abi)).encode()+b'\0' not in image for abi in (1,2)),'maintenance must not be an ordinary paired OTA image')
     require(len(image)<=expected['app0'][3],'maintenance application bound')
     ordinary_build=ROOT/'.pio/build'/ordinary_target

@@ -62,6 +62,10 @@ def ota_selection(data):
     require(len(set(sequences))==len(sequences),'ambiguous OTA sequence')
     seq,page=max(valid); return (seq-1)%2,seq,page
 
+def owner_target(image,target,required=True):
+    targets=image.split(b'RISC_OWNER_TARGET:')[1:]
+    require((targets or not required) and all(b'\0' in value and value.split(b'\0',1)[0]==target.encode() for value in targets),'maintenance target marker')
+
 def maintenance(folder,source,layout='riscrte-paired-16m-v1'):
     expected,app_data,target,_=LAYOUTS[layout]
     meta=json_object(file_bytes(folder/'candidate.json')); image=file_bytes(folder/'firmware.bin')
@@ -73,8 +77,7 @@ def maintenance(folder,source,layout='riscrte-paired-16m-v1'):
     require(image[3]>>4==4,'maintenance flash declaration')
     for marker in (b'RISC_OWNER_INSTALLER:1\0', b'RTE_OWNER_MAINTENANCE=1\0', ('RTE_SOURCE='+source).encode()+b'\0'):
         require(marker in image,'maintenance markers')
-    if app_data or 'layout' in meta:
-        require(('RISC_OWNER_TARGET:'+target).encode()+b'\0' in image,'maintenance target marker')
+    owner_target(image,target,app_data or 'layout' in meta)
     require(all(('RISC_PAIRED_STORE_ABI:'+str(abi)).encode()+b'\0' not in image for abi in (1,2)),'maintenance must not be ordinary paired firmware')
     return image
 
