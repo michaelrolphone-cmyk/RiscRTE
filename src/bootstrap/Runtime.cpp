@@ -703,6 +703,7 @@ void Runtime::yield(uint32_t ms) {
   if(!active() || graph_.lifecycleBusy()) return;
   // Poll work is bounded separately; each app yield cooperates exactly once.
   if(!promotionRunning_ && appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
+  if(!graph_.activationSafe()){(void)appExitBarrier();return;}
   const uint32_t requested=ms<1?1:ms>50?50:ms;
   RiscPerf::AggregateScope wait(26,requested);
   port_.delay(requested);

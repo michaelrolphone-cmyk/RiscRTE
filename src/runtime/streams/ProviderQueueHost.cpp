@@ -13,7 +13,7 @@
 namespace RuntimeStreams {
 namespace {
 constexpr uint32_t Bytes = 1;
-constexpr uint32_t Active = 1, Revoked = 2;
+constexpr uint32_t Active = 1, Revoked = 2, Retained = 3;
 constexpr uint32_t MaxContextGeneration = UINT32_MAX >> 2;
 struct Context {
   // Generation and authority state share one lock-free word. A stale revoke
@@ -199,8 +199,16 @@ int32_t finish(uint64_t context, uint32_t endpoint, int32_t terminal) {
   Queue* q;
   const auto result = ownedQueue(context, endpoint, &q);
   if (result != RISC_STREAM_OK) return result;
-  if (q->terminal < 0) return q->terminal;
+  if (q->terminal < 0 && terminal!=RISC_STREAM_RETAINED) return q->terminal;
   q->terminal = terminal;
+  if(terminal==RISC_STREAM_RETAINED) {
+    // A terminal custody failure is visible to graph/runtime before another
+    // provider poll or app operation, even when nobody drains this endpoint.
+    auto* slot=contextSlot(context);uint32_t expected=contextGate(context,Active);
+    if(!slot->gate.compare_exchange_strong(expected,contextGate(context,Retained),std::memory_order_acq_rel) &&
+       expected==contextGate(context,Revoked))
+      (void)slot->gate.compare_exchange_strong(expected,contextGate(context,Retained),std::memory_order_acq_rel);
+  }
   return RISC_STREAM_OK;
 }
 int32_t closeEndpoint(uint64_t context, uint32_t endpoint) {
@@ -290,9 +298,10 @@ bool revokeGrantChecked(uint64_t context, uint64_t lease) {
   return revokeProviderStreamGrant(context, lease) == RISC_STREAM_OK;
 }
 void revokeGrant(uint64_t context, uint64_t lease) { (void)revokeGrantChecked(context, lease); }
+bool safe(uint64_t context) { return contextIs(context,Active) || contextIs(context,Revoked); }
 const RuntimeProviders::StreamHostV1 host = {
   &open, &revoke, &close, &grant, &revokeGrant, nullptr,
-  &revokeChecked, &closeChecked, &revokeGrantChecked
+  &revokeChecked, &closeChecked, &revokeGrantChecked, &safe
 };
 bool pairArguments(uint64_t context, uint64_t lease, uint32_t consumer,
                    uint64_t session, uint32_t rx, uint32_t tx) {

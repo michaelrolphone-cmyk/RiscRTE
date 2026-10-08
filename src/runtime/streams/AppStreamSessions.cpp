@@ -174,7 +174,8 @@ int32_t AppStreamSessions::read(uint64_t context,uint64_t token,void* data,uint3
   if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   Session* s=find(context,token,true);if(!s)return RISC_STREAM_CLOSED;
   if(s->rx!=token)return RISC_STREAM_DENIED;
-  return providerStreamRead(s->providerContext,lease(*s),consumer_,s->rxEndpoint,data,size,count);
+  const int32_t rc=providerStreamRead(s->providerContext,lease(*s),consumer_,s->rxEndpoint,data,size,count);
+  return rc==RISC_STREAM_RETAINED ? fence(*s) : rc;
 }
 int32_t AppStreamSessions::write(uint64_t context,uint64_t token,const void* data,uint32_t size,uint32_t* count) {
   if(count)*count=0;
@@ -182,12 +183,14 @@ int32_t AppStreamSessions::write(uint64_t context,uint64_t token,const void* dat
   if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   Session* s=find(context,token,true);if(!s)return RISC_STREAM_CLOSED;
   if(s->tx!=token)return RISC_STREAM_DENIED;
-  return providerStreamWrite(s->providerContext,lease(*s),consumer_,s->txEndpoint,data,size,count);
+  const int32_t rc=providerStreamWrite(s->providerContext,lease(*s),consumer_,s->txEndpoint,data,size,count);
+  return rc==RISC_STREAM_RETAINED ? fence(*s) : rc;
 }
 int32_t AppStreamSessions::info(uint64_t context,uint64_t token,risc_stream_client_info_v1* out) {
   if(!out || out->struct_size<sizeof(*out))return RISC_STREAM_INVALID;
   if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   Session* s=find(context,token,true);if(!s)return RISC_STREAM_CLOSED;
-  return providerStreamInfo(s->providerContext,lease(*s),consumer_,token==s->rx?s->rxEndpoint:s->txEndpoint,out);
+  const int32_t rc=providerStreamInfo(s->providerContext,lease(*s),consumer_,token==s->rx?s->rxEndpoint:s->txEndpoint,out);
+  return rc==RISC_STREAM_RETAINED || (rc==RISC_STREAM_OK && out->terminal==RISC_STREAM_RETAINED) ? fence(*s) : rc;
 }
 }

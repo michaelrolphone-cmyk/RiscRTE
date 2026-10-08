@@ -17,7 +17,7 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
  "$repo/test/app_stream_sessions_test.cpp" -ldl -o "$build/test"
 for activation in eager demand; do
- for mode in ${STREAM_SCENARIOS:-normal reentry lifecycle-reentry reuse copied-control two-sessions child child-init-fail release-open forgot-close fini-close unknown-tag unknown-version prefix-base prefix-diagnostics prefix-streams prefix-poll open-clean-fail grant1-fail grant2-fail open-retained-zero open-retained-token open-malformed open-duplicate open-foreign open-direction open-partial-error open-slow open-busy call-retained call-overflow call-slow close-fail close-slow close-busy revoke-busy grant-rollback-retained start-retained}; do
+ for mode in ${STREAM_SCENARIOS:-normal reentry lifecycle-reentry reuse copied-control two-sessions child child-init-fail release-open forgot-close fini-close unknown-tag unknown-version prefix-base prefix-diagnostics prefix-streams prefix-poll open-clean-fail grant1-fail grant2-fail open-retained-zero open-retained-token open-malformed open-duplicate open-foreign open-direction open-partial-error open-slow open-busy terminal-retained call-retained call-overflow call-slow close-fail close-slow close-busy revoke-busy grant-rollback-retained start-retained}; do
   "$build/test" "$build" "$mode" "$activation"
  done
 done

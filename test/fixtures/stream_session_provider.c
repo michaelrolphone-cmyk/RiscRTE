@@ -74,6 +74,7 @@ static void poll(uint32_t ms){
  (void)ms;stream_test_event("provider:poll");
  if(is("reentry"))stream_test_reenter(false);
  for(unsigned i=0;i<2;i++)if(sessions[i].id){
+  if(is("terminal-retained")){(void)host->finish(host->context,sessions[i].rx,RISC_STREAM_RETAINED);return;}
   uint8_t bytes[3];uint32_t n=0,written=0;
   if(host->consume(host->context,sessions[i].tx,bytes,sizeof(bytes),&n)==RISC_STREAM_OK && n)
    (void)host->produce(host->context,sessions[i].rx,bytes,n,&written);

@@ -33,6 +33,7 @@ struct StreamHostV1 {
   bool (*revokeChecked)(uint64_t) = nullptr;
   bool (*closeChecked)(uint64_t) = nullptr;
   bool (*revokeGrantChecked)(uint64_t, uint64_t) = nullptr;
+  bool (*safe)(uint64_t) = nullptr; // Nonmutating sticky queue-custody barrier.
 };
 class ModuleV2 final {
  public:
@@ -80,6 +81,7 @@ class ModuleV2 final {
   }
   uint64_t streamContext() const { return state_ == State::Active ? streamApi_.streams.context : 0; }
   const risc_stream_session_provider_v1* streamSessions() const { return state_ == State::Active ? streamSessions_ : nullptr; }
+  bool streamSafe() const { return !streamApi_.streams.context || !streamHost_->safe || streamHost_->safe(streamApi_.streams.context); }
   bool poll(uint32_t budgetMs);
   bool pinConsumer();
   bool unpinConsumer();

@@ -323,7 +323,7 @@ GrantV2 GraphV2::acquireIndex(size_t index) {
 }
 
 void GraphV2::poll(uint32_t (*nowMs)(), void (*yield)()) {
-  if (!nowMs || !count_ || lifecycleBusy()) return;
+  if (!nowMs || !count_ || lifecycleBusy() || !dependencyReadSafe()) return;
   RiscPerf::AggregateScope trace(27);
   polling_ = true;
   const uint32_t began = nowMs();
@@ -335,6 +335,7 @@ void GraphV2::poll(uint32_t (*nowMs)(), void (*yield)()) {
     const size_t index = nextPoll_;
     nextPoll_ = (nextPoll_ + 1) % count_;
     if (nodes_[index].module.poll(remaining < 8 ? remaining : 8)) ++calls;
+    if(!dependencyReadSafe())break;
     if (calls >= 4 || static_cast<uint32_t>(nowMs() - began) >= 10) break;
   }
   if (calls && yield) yield();
@@ -464,7 +465,7 @@ bool RuntimeProviders::GraphV2::activationSafe() const {
 bool RuntimeProviders::GraphV2::dependencyReadSafe() const {
   for(size_t i=0;i<count_;++i)
     if(nodes_[i].visit==Visit::Visiting || nodes_[i].visit==Visit::Releasing ||
-       nodes_[i].module.state()==ModuleV2::State::Failed)return false;
+       (nodes_[i].module.state()==ModuleV2::State::Failed || !nodes_[i].module.streamSafe()))return false;
   for(const auto& grant:grants_)if(grant.occupied && grant.pendingRelease)return false;
   return true;
 }

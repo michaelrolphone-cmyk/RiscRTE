@@ -42,7 +42,9 @@ is additional. Requests and replies are copied through aligned Runtime storage,
 at most 512 bytes each; no caller buffer is retained. Transfers accept at most
 512 bytes per call. Counts are zeroed even on failure; positive partial progress
 is OK, temporary empty/full is AGAIN, graceful drained receive is EOF, and
-negative terminal errors reject transfers immediately. Counter additions saturate.
+negative terminal errors reject transfers immediately. Terminal RETAINED latches
+the provider context unsafe, stops further graph polling, and fences Runtime
+before the yield returns to the app. Counter additions saturate.
 A successful write counts accepted bytes, not physical transmission or flush.
 
 There are at most 32 live endpoints, four per mapped provider, 4096 bytes per

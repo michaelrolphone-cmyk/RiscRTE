@@ -78,7 +78,7 @@ int main(int argc,char** argv){
  assert(runtime->prepare(root.c_str()));
  const bool result=runtime->run();
  if(locked){RuntimeStreams::Testing::unlockRegistry();locked=false;}
- const bool retained=mode=="start-retained" || mode=="quiesce-fail" || mode=="close-fail" || mode=="close-slow" || mode=="close-busy" || mode=="revoke-busy" || mode=="grant-rollback-retained" ||
+ const bool retained=mode=="terminal-retained" || mode=="start-retained" || mode=="quiesce-fail" || mode=="close-fail" || mode=="close-slow" || mode=="close-busy" || mode=="revoke-busy" || mode=="grant-rollback-retained" ||
   mode=="open-retained-zero" || mode=="open-retained-token" || mode=="open-malformed" || mode=="open-duplicate" || mode=="open-foreign" || mode=="open-direction" || mode=="open-partial-error" || mode=="open-slow" || mode=="open-busy" || mode.rfind("call-",0)==0;
  assert(runtime->retained()==retained);
  assert(result==(!retained && (mode!="unknown-version" || activation=="demand")));
