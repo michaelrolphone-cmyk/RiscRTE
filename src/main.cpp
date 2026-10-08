@@ -132,12 +132,18 @@ RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,Ris
 }
 void setup() {
   owner=xTaskGetCurrentTaskHandle();
+#if RISC_STAGE_LOGS
+  const auto bootUs=uint64_t(esp_timer_get_time());
+  uint64_t stageUs=0;
+#endif
   RiscPerf::configure([]()->uint64_t{return uint64_t(esp_timer_get_time());},isOwner,RISC_PERFORMANCE_TRACE);
   RiscPerf::emit(50);
   RiscCpu::NativeRetainedWake::start(); RiscCpu::NativeRealtime::start(); Serial.begin(115200);
 #if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::start();
 #endif
+  RISC_STAGE_LOG("boot begin reset=%d wake=%lu setup_start_us=%llu",int(esp_reset_reason()),
+                 (unsigned long)esp_sleep_get_wakeup_cause(),(unsigned long long)bootUs);
   diagnosticLine(RISC_BUILD_IDENTITY);
   if(risc_native_startup_error) {
     const char* failure=risc_native_startup_error();
@@ -147,6 +153,7 @@ void setup() {
   if(RiscNvs::initializationStatus()!=ESP_OK) diagnosticFormat("RTE_STORAGE unavailable=nvs code=%d erase_recovery=disabled",RiscNvs::initializationStatus());
 #endif
 #ifdef RISC_OWNER_INSTALLER
+  RISC_STAGE_LOG("boot normal-start skipped reason=owner-maintenance");
   diagnosticLine("RTE_OWNER_MAINTENANCE=1");
   RiscBootstrap::ownerMaintenance(isOwner);return;
 #endif
@@ -155,8 +162,15 @@ void setup() {
 #endif
 #ifdef RISC_PAIRED_BANKS
   bool bankReady;
+#if RISC_STAGE_LOGS
+  stageUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("boot bank-selection begin");
   {RiscPerf::Scope phase(51,52);bankReady=RiscBankStore::prepareBoot(isOwner,restartSafe,providerStorageSafe);}
+  RISC_STAGE_LOG("boot bank-selection end result=%s elapsed_us=%llu",bankReady?"ok":"failed",
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
   if(!bankReady) {
+    RISC_STAGE_LOG("boot failed reason=paired-bank-integrity");
     diagnosticLine("RTE_BOOT error=paired-bank-integrity");RiscBankStore::rejectBoot();return;
   }
 #endif
@@ -164,6 +178,10 @@ void setup() {
   // repair, SD bus ownership or production volume capability. Provisioning may
   // subsequently stage ONLY the verified inactive paired bank.
   esp_err_t mounted;
+#if RISC_STAGE_LOGS
+  stageUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("boot filesystem-mount begin");
   {RiscPerf::Scope phase(53,54);
 #ifdef RISC_EMBEDDED_BOOTSTORE
   mounted=riscrte_mount_embedded_store();
@@ -177,21 +195,36 @@ void setup() {
   mounted=esp_vfs_spiffs_register(&storage);
 #endif
   }
+  RISC_STAGE_LOG("boot filesystem-mount end result=%d elapsed_us=%llu",int(mounted),
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
   if(mounted!=ESP_OK) { diagnosticFormat("RTE_BOOT error=storage-mount code=%d",mounted);
+    RISC_STAGE_LOG("boot failed reason=storage-mount");
 #ifdef RISC_PAIRED_BANKS
     RiscBankStore::rejectBoot();
 #endif
     return; }
 #ifdef RISC_PAIRED_BANKS
 #ifdef RISC_PAIRED_APP_DATA
+  bool appDataReady;
+#if RISC_STAGE_LOGS
+  stageUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("boot app-data begin");
   {RiscPerf::Scope phase(55,56);
-  if(!RiscAppData::prepare(isOwner,[](){return cpu.providerStorageSafe() && RiscBankStore::exitSafe();}))diagnosticLine("RTE_STORAGE unavailable=appdata format_and_grow=disabled");
+  appDataReady=RiscAppData::prepare(isOwner,[](){return cpu.providerStorageSafe() && RiscBankStore::exitSafe();});
+  if(!appDataReady)diagnosticLine("RTE_STORAGE unavailable=appdata format_and_grow=disabled");
   }
+  RISC_STAGE_LOG("boot app-data end result=%s elapsed_us=%llu",appDataReady?"ok":"unavailable",
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
 #endif
   // Read-only owner input, before any app/driver binding. No configured fresh
   // time source means offline installed boot, never a stale timestamp bypass.
   RiscPerf::emit(57);
   const auto provisionStart=RiscPerf::now();
+#if RISC_STAGE_LOGS
+  stageUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("boot provisioning begin");
   const auto provision=RiscBootstrap::run({cpu.bootstrapHardware(),RiscNvs::backend(),providerStorageSafe,
     RiscBootstrap::nvsInput(),RiscBootstrap::configuredFreshTime(RiscBootstrap::nvsInput(),cpu.bootstrapHardware().now)
 #ifdef RISC_PAIRED_APP_DATA
@@ -199,6 +232,10 @@ void setup() {
 #endif
   },"/bootfs");
   RiscPerf::finish(57,58,provisionStart,uint32_t(provision.outcome));
+  RISC_STAGE_LOG("boot provisioning end action=%s reason=%s elapsed_us=%llu",
+                 provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",
+                 RiscBootstrap::reasonName(provision.reason),
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
   diagnosticFormat("RTE_PROVISION action=%s reason=%s",provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",RiscBootstrap::reasonName(provision.reason));
   if(provision.outcome==RiscBootstrap::Outcome::Stopped)return;
 #endif
@@ -212,6 +249,7 @@ void setup() {
     ,RiscCpu::NativeRetainedWake::backend()
   });
   if(!retainedRuntime){
+    RISC_STAGE_LOG("boot failed reason=runtime-metadata-psram");
 #ifdef RISC_PAIRED_BANKS
     diagnosticLine("RTE_BOOT error=paired-runtime-psram");RiscBankStore::rejectBoot();
 #else
@@ -222,14 +260,25 @@ void setup() {
   auto& runtime=*retainedRuntime;
 #endif
   RiscCpu::reserveNativePins(runtime.board());
-  if(!runtime.prepare("/bootfs")) { diagnosticFormat("RTE_BOOT error=manifest detail=%s",runtime.error());
+#if RISC_STAGE_LOGS
+  stageUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("boot manifest-prepare begin");
+  const bool prepared=runtime.prepare("/bootfs");
+  RISC_STAGE_LOG("boot manifest-prepare end result=%s elapsed_us=%llu",prepared?"ok":"failed",
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
+  if(!prepared) { diagnosticFormat("RTE_BOOT error=manifest detail=%s",runtime.error());
+    RISC_STAGE_LOG("boot failed reason=%s",runtime.error());
 #ifdef RISC_PAIRED_BANKS
     if(!runtime.retained() && !runtime.metadataCloseRetained() && appExitSafe())RiscBankStore::rejectBoot();
 #endif
     return; }
   RiscPerf::emit(59);
+  RISC_STAGE_LOG("boot metadata-ready elapsed_us=%llu",(unsigned long long)(RiscDiagnostics::monotonicUs()-bootUs));
   diagnosticLine("RTE_BOOT board=validated drivers=admitted");
-  if(!runtime.run()) diagnosticFormat("RTE_BOOT error=runtime detail=%s",runtime.error());
+  const bool ran=runtime.run();
+  RISC_STAGE_LOG("boot app-session returned result=%s reason=%s",ran?"ok":"failed",ran?"app-returned":runtime.error());
+  if(!ran) diagnosticFormat("RTE_BOOT error=runtime detail=%s",runtime.error());
   else diagnosticLine("RTE_BOOT state=idle reason=app-returned");
 #ifdef RISC_PAIRED_BANKS
   // A return (including intentional default exit) is never a health signal.

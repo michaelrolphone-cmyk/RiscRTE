@@ -11,6 +11,7 @@ cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/performance_app.c" -o "$build
 cc "${flags[@]}" "${link[@]}" -DPERFORMANCE_CHILD "$repo/test/fixtures/performance_app.c" -o "$build/child.elf"
 cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/startup_failure.c" -o "$build/driver.elf"
 c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic \
+  -DRISC_STAGE_LOGS="${STAGE_LOGS:-0}" \
   -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
   "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \

@@ -1,4 +1,5 @@
 #include "diagnostics/Performance.h"
+#include "diagnostics/StageLog.h"
 #include "ProviderModuleV2.h"
 #include "../../../lib/hal/RuntimeFaultRetention.h"
 #include <cstring>
@@ -52,6 +53,7 @@ void ModuleV2::report(const char* id, const char* stage, int code) {
   // Keep the original cause even if teardown subsequently fails.
   if (!error_[0]) std::snprintf(error_, sizeof(error_), "%s: %s rc=%d (0x%x)",
                               id ? id : "?", stage, code, static_cast<unsigned>(code));
+  RISC_STAGE_LOG("provider failed id=%s reason=%s code=%d",id?id:"?",stage,code);
   // Some ESP_PLATFORM host harnesses stub LOG_ERR to a no-op. Keep parameters
   // explicitly used in both logging-enabled and logging-disabled builds.
   (void)id; (void)stage; (void)code;
@@ -123,8 +125,19 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
   }
   bool started=false;
   if(admitted) {
+#if RISC_STAGE_LOGS
+    const auto startUs=RiscDiagnostics::monotonicUs();
+#endif
+    RISC_STAGE_LOG("provider start begin id=%s",expectedId);
     RiscPerf::Scope startTrace(24,25,RiscPerf::identity(expectedId));
     started=candidate->start(deps,count);
+    // Revoke failed-start authority before calling any diagnostic sink.
+    if(!started)revokeLease();
+    RISC_STAGE_LOG("provider start end id=%s result=%s elapsed_us=%llu",expectedId,started?"ok":"failed",
+                   (unsigned long long)(RiscDiagnostics::monotonicUs()-startUs));
+  } else {
+    revokeLease();
+    RISC_STAGE_LOG("provider start skipped id=%s reason=%s",expectedId,bound?"lease-rejected":"stream-bind-rejected");
   }
   if (started) {
     driver_ = candidate;

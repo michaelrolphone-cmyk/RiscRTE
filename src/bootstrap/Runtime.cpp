@@ -1,5 +1,6 @@
 #include "Runtime.h"
 #include "diagnostics/Performance.h"
+#include "diagnostics/StageLog.h"
 #include "KeyValueGeneration.h"
 #include "runtime/update/Version.h"
 #include "runtime/update/CohortMigration.h"
@@ -588,6 +589,7 @@ bool Runtime::launch(const char* relative) {
   if(fileOpen_.phase==FileOpenState::Phase::Requested || fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
   if(promotionRunning_ || !active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   const bool ok=path(root_,relative,queued_,sizeof(queued_));
+  RISC_STAGE_LOG("app launch-request file=%s result=%s",relative,ok?"accepted":"invalid-path");
   if(ok)RiscPerf::emit(20);
   return ok;
 }
@@ -704,8 +706,14 @@ bool Runtime::runOne(const char* name) {
 #endif
   // An app path may share a basename with a live driver; map a fresh image.
   const auto loadStart=RiscPerf::now();
+#if RISC_STAGE_LOGS
+  const auto loadUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("app load begin file=%s",name);
   RiscPerf::emit(12);
   void* module=esp_dlopen_instance(name);
+  RISC_STAGE_LOG("app load end file=%s result=%s elapsed_us=%llu",name,module?"ok":"failed",
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
   RiscPerf::finish(12,13,loadStart,module?1:0);
 #ifdef ESP_PLATFORM
   native_app_memory_relocation(false);
@@ -724,13 +732,27 @@ bool Runtime::runOne(const char* name) {
   appPolicy_=nullptr;
   for (size_t p=0;p<policyCount_;++p) if (!strcmp(policies_[p].elf,name)) appPolicy_=&policies_[p];
   active_=true;
-  if(ok && init) { const auto start=RiscPerf::now();RiscPerf::emit(14); initialized=init()==0; ok=initialized; RiscPerf::finish(14,15,start,ok?1:0); }
+  if(ok && init) {
+#if RISC_STAGE_LOGS
+    const auto initUs=RiscDiagnostics::monotonicUs();
+#endif
+    RISC_STAGE_LOG("app init begin file=%s",name);
+    const auto start=RiscPerf::now();RiscPerf::emit(14);
+    const int result=init();initialized=result==0;ok=initialized;
+    RISC_STAGE_LOG("app init end file=%s result=%d elapsed_us=%llu",name,result,
+                   (unsigned long long)(RiscDiagnostics::monotonicUs()-initUs));
+    RiscPerf::finish(14,15,start,ok?1:0);
+  } else {
+    RISC_STAGE_LOG("app init skipped file=%s reason=%s",name,ok?"no-init-hook":"entry-or-lifecycle-invalid");
+  }
   if(!appExitBarrier())return false;
   defaultRunning_=!strcmp(name,default_);entryRunning_=ok;
   if(ok) {
+    RISC_STAGE_LOG("app entry begin file=%s",name);
     port_.log("RTE_APP phase=entry");
     RiscPerf::emit(16);
     entry();
+    RISC_STAGE_LOG("app entry returned file=%s",name);
     RiscPerf::emit(17);
     port_.log("RTE_APP phase=returned");
   } else port_.log("RTE_APP phase=init-or-entry-rejected");
@@ -740,6 +762,10 @@ bool Runtime::runOne(const char* name) {
   // so waiting for final graph shutdown is too late.
   if(!appExitBarrier())return false;
   RiscPerf::Scope unloadTrace(18,19);
+#if RISC_STAGE_LOGS
+  const auto unloadUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("app unload begin file=%s",name);
   if(initialized) fini();
   if(!appExitBarrier())return false;
   active_=false;
@@ -747,7 +773,9 @@ bool Runtime::runOne(const char* name) {
 #ifdef ESP_PLATFORM
   if(!native_app_memory_end()) { retained_=true; return fail("app memory busy; image retained"); }
 #endif
-  if(dlclose(module)) { retained_=true; return fail("app unload failed; restart required"); }
+  if(dlclose(module)) { RISC_STAGE_LOG("app unload failed file=%s reason=dlclose",name);retained_=true; return fail("app unload failed; restart required"); }
+  RISC_STAGE_LOG("app unload end file=%s result=ok elapsed_us=%llu",name,
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-unloadUs));
   unloadTrace.result(1);
   return ok || fail("app entry/lifecycle invalid");
 }
@@ -759,6 +787,12 @@ bool Runtime::run() {
   if(esp_elf_register_symbol(symbols)) { revokeProviders(); currentRuntime=nullptr; return fail("runtime API registration failed"); }
 #endif
   bool ok=true;
+  RISC_STAGE_LOG("providers activation mode=%s selected=%u",demandActivation_?"demand":"eager",unsigned(driverCount_));
+#if RISC_STAGE_LOGS
+  if(demandActivation_)for(size_t i=0;i<driverCount_;++i){
+    RISC_STAGE_LOG("provider deferred id=%s reason=demand-until-acquired",drivers_[i].id);
+  }
+#endif
   for(size_t i=0;!demandActivation_ && i<driverCount_;++i) {
     char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
     grants_[granted_]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);

@@ -1,5 +1,10 @@
 # RiscRTE
 
+Runtime 0.1.60 adds [automatic plain timestamped stage logs](docs/STAGE_LOGS.md)
+in the `*-stage` diagnostic targets. Boot, named provider activation and app
+load/init/entry/unload statements print without a command or enabled recorder.
+Output remains bounded and nonblocking, with visible lost/truncated-line counts.
+
 A small, headless ESP32-S3 runtime extracted from
 [T5S3-Reader](https://github.com/michaelrolphone-cmyk/T5S3-Reader).
 It mounts a flash-backed module store, validates the shared board manifest before
