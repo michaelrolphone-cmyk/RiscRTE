@@ -26,7 +26,11 @@ def empty(blocks=8):
 
 def occupy(image, block, entry, object_id=1):
     struct.pack_into('<H', image, block * 4096 + entry * 2, object_id)
-    image[block * 4096 + (entry + 1) * 256] = 0x69
+    page = block * 4096 + (entry + 1) * 256
+    struct.pack_into('<HHB', image, page, object_id, 0, 0xf8 if object_id & 0x8000 else 0xfc)
+    if object_id & 0x8000:
+        struct.pack_into('<IB', image, page + 8, 1, 1)
+        image[page + 13:page + 16] = b'/x\0'
 
 
 def run(native, external):
@@ -50,6 +54,21 @@ def run(native, external):
     for block in range(8):
         struct.pack_into('<H', counters, block * 4096 + 254, block * 123)
     fixtures.append(counters)
+    for offset, mask in ((256, 1), (260, 1), (260, 2), (260, 4), (260, 0x40), (260, 0x80)):
+        invalid = exact.copy();invalid[offset] ^= mask;fixtures.append(invalid)
+    unterminated = exact.copy();unterminated[269:301] = b'x' * 32
+    unterminated[301] = 0;fixtures.append(unterminated)
+    last_nul = exact.copy();last_nul[269:301] = b'x' * 31 + b'\0';fixtures.append(last_nul)
+    assert capacity.inspect(last_nul)
+    for object_type in (0, 2, 255):
+        invalid = exact.copy();invalid[268] = object_type;fixtures.append(invalid)
+    for size in (0, len(exact) + 1, 0xffffffff):
+        invalid = exact.copy();struct.pack_into('<I', invalid, 264, size);fixtures.append(invalid)
+    continuation = exact.copy();struct.pack_into('<H', continuation, 258, 1)
+    continuation[264:512] = b'\xff' * 248;fixtures.append(continuation)
+    assert capacity.inspect(continuation)
+    for mask in (1, 2, 4, 0x80):
+        invalid = empty();occupy(invalid, 0, 0);invalid[260] ^= mask;fixtures.append(invalid)
     randomizer = random.Random(0x5f1ff5)
     for _ in range(100):
         blocks = randomizer.randrange(5, 30)

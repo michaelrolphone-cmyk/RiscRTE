@@ -38,7 +38,14 @@ static Source empty(uint32_t blocks=8){
 static void occupy(Source& source,uint32_t block,uint32_t entry,uint16_t id=1){
  assert(id!=0xffff && entry<15);
  word(source.bytes,block*4096+entry*2,id);
- source.bytes.at(block*4096+(entry+1)*256)=0x69;
+ const size_t page=block*4096+(entry+1)*256;
+ word(source.bytes,page,id);word(source.bytes,page+2,0);
+ source.bytes.at(page+4)=id&0x8000?0xf8:0xfc;
+ if(id&0x8000){
+  word(source.bytes,page+8,1);word(source.bytes,page+10,0);
+  source.bytes.at(page+12)=1;source.bytes.at(page+13)='/';
+  source.bytes.at(page+14)='x';source.bytes.at(page+15)=0;
+ }
 }
 static bool check(Source& source,Capacity::Counts* counts=nullptr){
  uint8_t buffer[4097]; // An unaligned caller buffer must be safe.
@@ -82,6 +89,31 @@ static void synthetic(){
  auto counters=source;for(uint32_t block=0;block<8;++block)
   word(counters.bytes,block*4096+254,uint16_t(block*123));
  assert(check(counters)); // Erase counters are metadata, not occupancy.
+ // An occupied header must be safe before SPIFFS_readdir/strcmp see it.
+ auto identity=source;identity.bytes[256]^=1;rejected(identity);
+ auto zeroObject=source;word(zeroObject.bytes,0,0x8000);word(zeroObject.bytes,256,0x8000);rejected(zeroObject);
+ for(uint8_t flag:{uint8_t(1),uint8_t(2),uint8_t(4),uint8_t(0x40),uint8_t(0x80)}){
+  auto flags=source;flags.bytes[256+4]^=flag;rejected(flags);
+ }
+ auto unterminated=source;
+ std::fill(unterminated.bytes.begin()+256+13,unterminated.bytes.begin()+256+45,'x');
+ unterminated.bytes[256+45]=0;rejected(unterminated); // Metadata NUL is too late.
+ auto lastNul=source;std::fill(lastNul.bytes.begin()+256+13,lastNul.bytes.begin()+256+44,'x');
+ lastNul.bytes[256+44]=0;assert(check(lastNul));
+ for(uint8_t type:{uint8_t(0),uint8_t(2),uint8_t(0xff)}){
+  auto invalidType=source;invalidType.bytes[256+12]=type;rejected(invalidType);
+ }
+ for(uint32_t size:{0u,uint32_t(source.bytes.size()+1),UINT32_MAX}){
+  auto invalidSize=source;word(invalidSize.bytes,256+8,uint16_t(size));
+  word(invalidSize.bytes,256+10,uint16_t(size>>16));rejected(invalidSize);
+ }
+ auto continuation=source;word(continuation.bytes,256+2,1);
+ std::fill(continuation.bytes.begin()+256+8,continuation.bytes.begin()+512,0xff);
+ assert(check(continuation)); // Continuations have indexes, not names/sizes.
+ auto data=empty();occupy(data,0,0);assert(check(data));
+ for(uint8_t flag:{uint8_t(1),uint8_t(2),uint8_t(4),uint8_t(0x80)}){
+  auto flags=data;flags.bytes[256+4]^=flag;rejected(flags);
+ }
  uint8_t buffer[4096];
  for(uint32_t size:{0u,4096u,4u*4096,8u*4096+1,0x1000000u,UINT32_MAX}){
   source.calls=0;counts={1,2,3,4};
@@ -94,7 +126,7 @@ static void synthetic(){
  assert(!Capacity::fits(uint32_t(source.bytes.size()),&source,Source::read,buffer,sizeof(buffer)-1));
  auto minimum=empty(5);assert(check(minimum));
  auto maximum=empty(4095);assert(check(maximum)); // Largest aligned 16-bit image.
- std::puts("PASS: compact-image geometry, exact budget, whole-block reserve, deleted pages, corruption and bounded read failures");
+ std::puts("PASS: compact-image geometry, exact budget, whole-block reserve, deleted pages, safe live headers and bounded read failures");
 }
 static uint32_t argument(const char* text){
  errno=0;char* end=nullptr;const unsigned long value=std::strtoul(text,&end,0);

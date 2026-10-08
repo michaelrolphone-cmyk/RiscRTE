@@ -1,7 +1,8 @@
 """Physical occupancy admission for pinned compact SPIFFS images.
 
-Mirrors src/runtime/provisioning/StoreImageCapacity.h. This is neither a file
-decoder nor filesystem/graph/hash validation. Those admissions are separate.
+Mirrors src/runtime/provisioning/StoreImageCapacity.h, including local header
+safety before native SPIFFS string access. This is neither a file decoder nor
+complete filesystem/reference/graph/hash validation. Those admissions are separate.
 
 ESP-IDF 4.4.7 pins pellepl/spiffs at
 0dbb3f71c5f6fae3747a9d935372773762baf852. Geometry/lookup/magic sources:
@@ -15,11 +16,27 @@ BLOCK_BYTES = 4096
 PAGE_BYTES = 256
 PAGES_PER_BLOCK = 15
 RESERVE_BLOCKS = 4
+MAX_FILE_BYTES = 8 * 1024 * 1024
 
 
 def _require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def _live_page_safe(page, object_id, partition_bytes):
+    ident, span, flags = struct.unpack_from('<HHB', page)
+    index = bool(object_id & 0x8000)
+    _require(object_id & 0x7fff and ident == object_id and not flags & 3
+             and flags & 0x80 and index != bool(flags & 4),
+             'SPIFFS image live lookup/header mismatch or invalid page flags')
+    if index and span == 0:
+        # Pinned spiffs_hydrogen.c:1084 uses strcpy from this 32-byte field.
+        # A NUL in the following metadata cannot make that copy safe.
+        size = struct.unpack_from('<I', page, 8)[0]
+        _require(0 in page[13:45] and flags & 0x40 and page[12] == 1
+                 and 0 < size <= min(MAX_FILE_BYTES, partition_bytes),
+                 'SPIFFS image unsafe object header name, type or size')
 
 
 def inspect_reader(partition_bytes, read):
@@ -70,6 +87,9 @@ def inspect_reader(partition_bytes, read):
                 result['occupied_pages'] += 1
                 if object_id == 0:
                     result['deleted_pages'] += 1
+                else:
+                    _live_page_safe(sector[(entry + 1) * PAGE_BYTES:(entry + 2) * PAGE_BYTES],
+                                    object_id, partition_bytes)
                 _require(result['occupied_pages'] <= budget, 'SPIFFS image occupied-page budget exceeded')
         if whole_block_free:
             result['free_blocks'] += 1

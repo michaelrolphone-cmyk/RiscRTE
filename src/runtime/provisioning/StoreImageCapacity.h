@@ -10,8 +10,9 @@ namespace RiscProvision { namespace StoreImageCapacity {
 // src/spiffs_nucleus.c:330-338 and src/spiffs_gc.c:280-283.
 // Inspect the persisted inactive image before mounting it: SPIFFS mount can
 // repair one bad-magic block by erasing it. No repair is accepted here.
-// This checks physical capacity only, not page references, file hashes,
-// exact inventory, or graph admission. Those checks remain mandatory.
+// This checks physical capacity and local page-header safety, not complete
+// page-reference relationships, file hashes, exact inventory, or graph admission.
+// Those checks remain mandatory.
 constexpr uint32_t BlockBytes=SpiffsCapacity::BlockBytes;
 constexpr uint32_t PageBytes=SpiffsCapacity::PageBytes;
 constexpr uint32_t PagesPerBlock=SpiffsCapacity::PagesPerBlock;
@@ -35,6 +36,30 @@ inline uint16_t little16(const uint8_t* bytes){
 }
 inline bool erased(const uint8_t* bytes,uint32_t size){
  for(uint32_t i=0;i<size;++i)if(bytes[i]!=0xff)return false;
+ return true;
+}
+inline uint32_t little32(const uint8_t* bytes){
+ return uint32_t(little16(bytes)) | (uint32_t(little16(bytes+2))<<16);
+}
+inline bool livePageSafe(const uint8_t* page,uint16_t id,uint32_t partitionBytes){
+ const uint8_t flags=page[4];const bool index=(id&0x8000u)!=0;
+ // Match the lookup identity; require used, finalized, undeleted pages and
+ // the index/data kind encoded by SPIFFS_PH_FLAG_INDEX (active low).
+ // Pinned spiffs_nucleus.h:334-349 validates these flags during file reads.
+ if(!(id&0x7fffu) || little16(page)!=id || (flags&3u) || !(flags&0x80u) ||
+    index==bool(flags&4u))return false;
+ if(index && little16(page+2)==0){
+  // The pinned directory visitor copies this field with strcpy before our
+  // inventory checks run (spiffs_hydrogen.c:1068-1084). A NUL outside the
+  // 32-byte name, including in mtime metadata, is not sufficient.
+  bool terminated=false;
+  for(uint32_t n=0;n<32;++n)if(page[13+n]==0){terminated=true;break;}
+  const uint32_t size=little32(page+8);
+  // Provisioning accepts only nonempty regular files. Reject deleted index
+  // headers, unsupported types and impossible/undefined file sizes up front.
+  if(!terminated || !(flags&0x40u) || page[12]!=1 || !size ||
+     size>MaxFileBytes || size>partitionBytes)return false;
+ }
  return true;
 }
 
@@ -75,6 +100,7 @@ inline bool fits(uint32_t partitionBytes,void* context,Read read,
     wholeBlockFree=false;
     ++result.occupiedPages;
     if(id==0)++result.deletedPages;
+    else if(!livePageSafe(sector+(entry+1)*PageBytes,id,partitionBytes))return false;
     if(result.occupiedPages>budget)return false;
    }
   }
