@@ -1,5 +1,6 @@
 #pragma once
 #include "Board.h"
+#include "AppPolicyLimits.h"
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
 #include "FileOpenState.h"
@@ -48,7 +49,7 @@ struct Port {
 class Runtime final {
  public:
   static constexpr size_t MaxAppPolicies=RiscLimits::Apps;
-  static constexpr size_t MaxAppPolicyGrants=16;
+  static constexpr size_t MaxAppPolicyGrants=RISC_APP_POLICY_ROWS;
   static constexpr size_t MaxAppRequirements=16;
   explicit Runtime(Port p) : port_(p) {}
   ~Runtime() { revokeProviders(); }

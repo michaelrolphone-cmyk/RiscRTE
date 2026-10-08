@@ -45,11 +45,22 @@ def native_proof(data):
  require(len(bundle)==size and 1<=int.from_bytes(bundle[:2],'big')<=200,'invalid linked certificate bundle')
  return {'static_dram_sections':dram,'static_dram_bytes':sum(dram.values()),'rollback_hook_hex':code.hex(),'bundle_bytes':size,'bundle_certificates':int.from_bytes(bundle[:2],'big'),'bundle_sha256':hashlib.sha256(bundle).hexdigest(),'required_symbols':list(required)}
 
-def stage(source, app_data=False, app_data_image=None, radio_iq=False, performance_trace=False):
+def policy_rows_proof(blobs, expected):
+ require(expected in (16,17),'app policy rows must be 16 or 17')
+ marker=('RISC_APP_POLICY_ROWS:'+str(expected)).encode()+b'\0'
+ other=('RISC_APP_POLICY_ROWS:'+str(33-expected)).encode()+b'\0'
+ for name in ('firmware.bin','firmware.elf'):
+  require(marker in blobs[name] and other not in blobs[name],'compiled app policy row mismatch: '+name)
+ return {'rows':expected,'live_app_grants':16,'manifest_requirements':16,'marker':marker[:-1].decode()}
+
+def stage(source, app_data=False, app_data_image=None, radio_iq=False, performance_trace=False, app_policy_rows=16):
+ require(app_policy_rows in (16,17),'app policy rows must be 16 or 17')
+ require(app_policy_rows==16 or app_data,'Seventeen-row candidate requires app-data layout')
  require(not radio_iq or app_data,'IQ requires the explicit app-data cohort')
  target='esp32s3-16mb-appdata-iq' if radio_iq else ('esp32s3-16mb-appdata' if app_data else TARGET)
  require(not performance_trace or app_data,'Performance candidate requires app-data layout')
  environment=target+'-perf' if performance_trace else target
+ if app_policy_rows==17:environment+='-policy17'
  expected=APP_DATA_EXPECTED if app_data else EXPECTED
  abi=2 if app_data else 1
  table='partitions-paired-appdata.csv' if app_data else 'partitions-paired.csv'
@@ -77,6 +88,7 @@ def stage(source, app_data=False, app_data_image=None, radio_iq=False, performan
  require(len(blobs['firmware.bin'])<=expected['app0'][3],'firmware exceeds paired slot')
  if app_data:require(b'RISC_PAIRED_STORE_ABI:1\0' not in blobs['firmware.bin'],'app-data target must reject legacy OTA acceptance')
  proof=native_proof(blobs['firmware.elf'])
+ proof['app_policy']=policy_rows_proof(blobs,app_policy_rows)
  if performance_trace:
   from elftools.elf.elffile import ELFFile
   symtab=ELFFile(io.BytesIO(blobs['firmware.elf'])).get_section_by_name('.symtab')
@@ -99,4 +111,4 @@ def stage(source, app_data=False, app_data_image=None, radio_iq=False, performan
  (output/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in sorted(output.iterdir()) if p.name!='SHA256SUMS'))
  print('Verified paired Runtime, linked TLS roots and explicit rollback hook:',source,output)
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);parser.add_argument('--app-data',action='store_true');parser.add_argument('--radio-iq',action='store_true');parser.add_argument('--performance-trace',action='store_true');parser.add_argument('--app-data-image',type=Path);args=parser.parse_args();stage(args.source_sha,args.app_data,args.app_data_image,args.radio_iq,args.performance_trace)
+ parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);parser.add_argument('--app-data',action='store_true');parser.add_argument('--radio-iq',action='store_true');parser.add_argument('--performance-trace',action='store_true');parser.add_argument('--app-policy-rows',type=int,choices=(16,17),default=16);parser.add_argument('--app-data-image',type=Path);args=parser.parse_args();stage(args.source_sha,args.app_data,args.app_data_image,args.radio_iq,args.performance_trace,args.app_policy_rows)

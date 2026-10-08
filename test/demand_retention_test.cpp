@@ -207,9 +207,25 @@ int main(int argc,char** argv){
   if(mode=="limits"){for(unsigned i=0;i<providerLimit;++i)(i<15?first:second).push_back("test."+ids[i]);}
   else first=second={"test.leaf","test.unused"};
   app(root,boot,"default",first,true);app(root,boot,"child",second,false);
+  if(Runtime::MaxAppPolicyGrants==17 && mode!="limits") {
+    // Full metadata with a sparse working set must not activate or touch
+    // unused namespaces/providers during timer-only, handoff or retained paths.
+    for(JsonObject policy:boot["app_capabilities"].as<JsonArray>()) {
+      const std::string name=policy["manifest"].as<const char*>();
+      std::ifstream input(root+"/"+name);JsonDocument manifest;assert(!deserializeJson(manifest,input));
+      auto requirement=manifest["requires"].add<JsonObject>();requirement["capability"]=RISC_KEY_VALUE_CAPABILITY;requirement["api"]=1;
+      auto rows=policy["grants"].as<JsonArray>();unsigned ns=name=="default.json"?1:101;
+      while(rows.size()<17){auto row=rows.add<JsonObject>();row["capability"]=RISC_KEY_VALUE_CAPABILITY;row["api"]=1;row["instance_id"]=ns++;}
+      save(root,name,manifest);
+    }
+  }
   write(root,"board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})");
   RiscBoot::Port port{[](){return owned;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};
   port.appExitSafe=[](){return nativeSafe;};
+  static const RiscBoot::KeyValueBackend unusedStorage{nullptr,
+    [](void*,uint32_t,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(false);return -1;},
+    [](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return -1;}};
+  port.keyValue=&unusedStorage;
   if(mode=="limits") {
     selected.add(selected[0]);save(root,"boot.json",boot);
     Runtime denied(port);assert(!denied.prepare(root.c_str()));assert(!loads);selected.remove(selected.size()-1);

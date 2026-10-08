@@ -4,6 +4,9 @@
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include "bootstrap/Runtime.h"
+// Retained by the boot diagnostic reference; available to native packaging
+// without exporting any new application or provider ABI.
+extern "C" const char risc_app_policy_rows[]=RISC_APP_POLICY_ROWS_MARKER;
 #include "ports/esp32s3/CpuPort.h"
 #include "ports/esp32s3/NativeRetainedWake.h"
 #include "ports/esp32s3/NativeRealtime.h"
@@ -152,6 +155,7 @@ void setup() {
   RISC_STAGE_LOG("boot begin reset=%d wake=%lu setup_start_us=%llu",int(esp_reset_reason()),
                  (unsigned long)esp_sleep_get_wakeup_cause(),(unsigned long long)bootUs);
   diagnosticLine(RISC_BUILD_IDENTITY);
+  diagnosticLine(risc_app_policy_rows);
   if(risc_native_startup_error) {
     const char* failure=risc_native_startup_error();
     if(failure) { diagnosticFormat("RTE_BOOT error=native-startup detail=%s",failure);return; }
