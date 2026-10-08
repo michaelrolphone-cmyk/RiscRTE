@@ -240,6 +240,7 @@ jobs:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           pio run -e esp32s3-16mb-paired -j 1
+          BOOT_PATH_ONLY=1 BOOT_PATH_FIRMWARE=.pio/build/esp32s3-16mb-paired/firmware.bin BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
           BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
           SANITIZE=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
           python scripts/paired_candidate.py --source-sha "$SOURCE_SHA"
@@ -287,6 +288,7 @@ jobs:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           pio run -e esp32s3-16mb-appdata -j 1
+          APP_DATA_TEST=1 BOOT_PATH_ONLY=1 BOOT_PATH_FIRMWARE=.pio/build/esp32s3-16mb-appdata/firmware.bin BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
           APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
           SANITIZE=1 APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
           python scripts/paired_candidate.py --app-data --app-data-image build/appdata-initial --source-sha "$SOURCE_SHA"

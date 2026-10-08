@@ -26,7 +26,6 @@
 #include <cstring>
 #include <cerrno>
 #include <new>
-#include <esp_flash.h>
 extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
 /* This literal is inspected in staged native images. It states the generic
  * paired bootstrap-store contract, independently of product/release URLs. */
@@ -465,23 +464,6 @@ bool bindProvisioningCandidate(RiscBoot::Runtime& candidate){
 bool partition(const esp_partition_t*& out,esp_partition_type_t type,esp_partition_subtype_t subtype,const char* label,uint32_t offset,uint32_t size){
   out=esp_partition_find_first(type,subtype,label);return out && !out->encrypted && out->address==offset && out->size==size;
 }
-bool checkHash(unsigned b,unsigned r,uint32_t n,const uint8_t* expected){
-  uint8_t* bytes=scratch->buffer;uint8_t digest[32];uint32_t start=millis();if(!hashBegin(nullptr))return false;
-  for(uint32_t at=0;at<n;){uint32_t count=std::min(4096u,n-at);if(!read(nullptr,b,r,at,bytes,count) || !hashAdd(nullptr,bytes,count))return false;
-    at+=count;vTaskDelay(1);if(uint32_t(millis()-start)>30000u)return false;}
-  return hashEnd(nullptr,digest) && !memcmp(digest,expected,32);
-}
-bool knownBootloader(){
-  // Exact Arduino 2.0.17 qio80/16MiB bootloader, whose executable segments were
-  // independently compared to the rollback-enabled upstream ELF. Different
-  // prebuilt bootloaders require a reviewed fingerprint, never an app -D flag.
-  static const uint8_t expected[32]={0x2a,0x71,0xd6,0x9b,0x47,0x1e,0x20,0xc2,0xba,0xc7,0xfb,0x46,0x9f,0x3c,0x6a,0x80,0x7b,0x3e,0xbe,0xe7,0x80,0xe3,0x48,0xe5,0x88,0x9d,0xb0,0xda,0x84,0x9c,0xa3,0x63};
-  uint8_t digest[32];if(!hashBegin(nullptr))return false;
-  for(uint32_t at=0;at<15104;){uint32_t n=std::min(4096u,15104u-at);
-    if(esp_flash_read(esp_flash_default_chip,scratch->buffer,at,n)!=ESP_OK || !hashAdd(nullptr,scratch->buffer,n))return false;
-    at+=n;vTaskDelay(1);}
-  return hashEnd(nullptr,digest) && !memcmp(digest,expected,sizeof(expected));
-}
 }
 bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   if(prepared)return false;
@@ -494,7 +476,6 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   if(!memory){scratch->~Scratch();free(scratch);scratch=nullptr;return false;}
   transaction=new(memory) Transaction({nullptr,now,read,erase,write,invalidate,record,hashBegin,hashAdd,hashEnd,openApp,writeApp,finishApp,cleanup,validateFirmware,select,validateStore,openWholeStore,finishWholeStore});
   mbedtls_sha256_init(&scratch->hashContext);
-  if(!knownBootloader())return false;
   for(unsigned b=0;b<2;++b){const char* appLabel=b?"app1":"app0";
     if(!partition(parts[b][0],ESP_PARTITION_TYPE_APP,esp_partition_subtype_t(ESP_PARTITION_SUBTYPE_APP_OTA_0+b),appLabel,FirmwareOffset[b],FirmwareBytes) ||
        !partition(parts[b][1],ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,labels[b],StoreOffset[b],StoreBytes))return false;}
@@ -513,9 +494,12 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   esp_ota_img_states_t state;if(esp_ota_get_state_partition(running,&state)!=ESP_OK)return false;
   pending=state==ESP_OTA_IMG_PENDING_VERIFY;confirmed=state==ESP_OTA_IMG_VALID;
   if(!pending && !confirmed)return false;
-  Record value{};if(esp_partition_read(journal,activeBank*4096,&value,sizeof(value))!=ESP_OK || !validRecord(value,activeBank) ||
-      !checkHash(activeBank,0,value.firmwareSize,value.firmwareSha) || !checkHash(activeBank,1,value.storeSize,value.storeSha) ||
-      !validateFirmware(nullptr,activeBank,value.firmwareSize) || !transaction->initialize(activeBank,value))return false;
+  // The installer verifies the pinned rollback bootloader and initial pair.
+  // Updates validate/read back both inactive images before committing this
+  // record, then select firmware last. Consume that existing commit here;
+  // never rescan immutable installed bytes on boot (including deep wake).
+  Record value{};if(esp_partition_read(journal,activeBank*4096,&value,sizeof(value))!=ESP_OK ||
+      !transaction->initialize(activeBank,value))return false;
   scratch->verifiedActiveRecord=value;prepared=true;return true;
 }
 const char* bootLabel(){return prepared?labels[activeBank]:nullptr;}

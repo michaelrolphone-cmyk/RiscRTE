@@ -44,8 +44,10 @@ has both executable segments byte-identical to upstream `bootloader_qio_80m.elf`
 (SHA-256 `560840d6c79821041dba7ce7a9a3a4fb98bc196b9017d66f9d4bc63f6da3a4c3`).
 Inspection of `bootloader_utility_get_selected_boot_partition` at 0x403cd9c8
 confirms NEW -> PENDING_VERIFY and, on a later reset, PENDING_VERIFY -> ABORTED.
-The paired runtime verifies the exact deployed bootloader hash before admitting
-the layout. An unknown loader/table fails closed without recovery writes.
+The offline candidate, seed and first-install tooling verifies this exact
+bootloader before producing installation metadata. Runtime 0.1.55 consumes that
+installation contract instead of hashing the bootloader again at every boot.
+The deployed partition table must still match the selected layout.
 
 Upstream sources:
 - [Arduino qio_opi configuration](https://raw.githubusercontent.com/espressif/arduino-esp32/2.0.17/tools/sdk/esp32s3/qio_opi/include/sdkconfig.h)
@@ -53,10 +55,14 @@ Upstream sources:
 - [ESP-IDF OTA selection](https://raw.githubusercontent.com/espressif/esp-idf/v4.4.7/components/bootloader_support/src/bootloader_utility.c)
 
 Arduino normally confirms an image before `setup()`. The paired target overrides
-`verifyRollbackLater()` to return true. It hashes the selected pair, validates
-its runtime marker and mounts only the matching store, with formatting disabled.
-A failed pending pair is invalidated/rebooted through IDF only after the exact
-loader/table have been established and a rollback image is available.
+`verifyRollbackLater()` to return true. Runtime reads the selected bank's existing
+96-byte commit record and checks its structure, bounds, bank, ABI and commit CRC
+through `Transaction::initialize`. It mounts only the matching store, with
+formatting disabled. The installer and inactive-bank update transaction own
+image hashes and firmware/ELF admission; boot does not repeat them or add a
+file-change/corruption scan. A failed pending boot can return through IDF only
+after the paired layout is established and a rollback image is available.
+See [boot work and transaction evidence](COMMITTED_PAIR_BOOT.md).
 
 Runtime graph preparation, provider startup, ELF loading and module initialization
 are necessary but insufficient for health. The default app explicitly calls the
@@ -144,12 +150,14 @@ its checked internal read buffer and small write bounce buffer; failures propaga
   requirement backed by two independently preserved namespace grants.
 - `test/run_native_bank_test.sh`: real production native adapter with fake IDF
   flash, marker/version/import checks, raw-write boundaries, owner/operation-safety
-  refusal and unknown loader. Supplying `BOOTLOADER_FILE` from the paired build
-  additionally checks known-loader startup, bad-store rollback and wrong-layout
-  refusal, plus activated/uncertain selection restart guards, using actual
-  bootloader bytes. Target CI must supply the just-built
+  refusal, fixed-cost boot, torn/mismatched commit records and OTA state/rollback.
+  Supplying `BOOTLOADER_FILE` from the paired build additionally checks the
+  production call-count measurement, wrong-layout refusal, provisioning and
+  activated/uncertain selection restart guards. Installed bytes are deliberately
+  not rehashed by boot. Target CI must supply the just-built
   paired target's bootloader; this proof is mandatory before freezing its artifact.
-- `test/paired_bank_images_test.py`: independent metadata CRC and corruption tests.
+- `test/paired_bank_images_test.py`: independent metadata CRC and corruption tests,
+  plus unknown-bootloader refusal by the offline installation metadata generator.
 
 These are source/host checks. Final target linking, static/heap headroom, deployed
 bootloader/table identity, real interrupted writes, watchdog behavior and physical

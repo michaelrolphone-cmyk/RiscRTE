@@ -419,3 +419,9 @@ invocation-retention callback for capability-local uncertainty. It preserves
 images and ownership without cleanup or new hardware authority; clean refusal
 and explicit in-app recovery remain distinct. See [the contract and regression
 evidence](docs/INVOCATION_RETENTION.md).
+
+Runtime 0.1.55 removes repeated installed-image hashes and firmware admission
+from paired boot, including deep timer wake. It consumes the existing committed
+bank record; installation and inactive-bank updates retain image validation and
+atomic selection. [Production call counts and lifecycle evidence](docs/COMMITTED_PAIR_BOOT.md)
+describe the change. Provider mappings and per-app loader behavior are unchanged.
