@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+build="$(mktemp -d)"
+trap 'rm -rf "$build"' EXIT
+san=(-g)
+if [[ "${SANITIZE:-0}" == 1 ]]; then
+  san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g)
+fi
+flags=("${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -I"$repo/sdk/app" -I"$repo/sdk/driver")
+link=();if [[ "$(uname)" == Darwin ]];then link=(-undefined dynamic_lookup);fi
+cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/retained_yield_provider.c" -o "$build/provider.elf"
+cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/retained_yield_app.c" -o "$build/default.elf"
+cc "${flags[@]}" "${link[@]}" -DCHILD_APP "$repo/test/fixtures/retained_yield_app.c" -o "$build/child.elf"
+c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic \
+  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" \
+  -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
+  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+  "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
+  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
+  "$repo/test/retained_yield_test.cpp" -ldl -o "$build/test"
+for mode in ${RETAINED_YIELD_SCENARIOS:-signal-main signal-init signal-fini graph-retained normal native-busy};do
+  "$build/test" "$build" "$mode"
+done
