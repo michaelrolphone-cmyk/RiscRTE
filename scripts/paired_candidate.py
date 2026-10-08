@@ -45,9 +45,11 @@ def native_proof(data):
  require(len(bundle)==size and 1<=int.from_bytes(bundle[:2],'big')<=200,'invalid linked certificate bundle')
  return {'static_dram_sections':dram,'static_dram_bytes':sum(dram.values()),'rollback_hook_hex':code.hex(),'bundle_bytes':size,'bundle_certificates':int.from_bytes(bundle[:2],'big'),'bundle_sha256':hashlib.sha256(bundle).hexdigest(),'required_symbols':list(required)}
 
-def stage(source, app_data=False, app_data_image=None, radio_iq=False):
+def stage(source, app_data=False, app_data_image=None, radio_iq=False, performance_trace=False):
  require(not radio_iq or app_data,'IQ requires the explicit app-data cohort')
  target='esp32s3-16mb-appdata-iq' if radio_iq else ('esp32s3-16mb-appdata' if app_data else TARGET)
+ require(not performance_trace or app_data,'Performance candidate requires app-data layout')
+ environment=target+'-perf' if performance_trace else target
  expected=APP_DATA_EXPECTED if app_data else EXPECTED
  abi=2 if app_data else 1
  table='partitions-paired-appdata.csv' if app_data else 'partitions-paired.csv'
@@ -60,7 +62,7 @@ def stage(source, app_data=False, app_data_image=None, radio_iq=False):
  require(re.fullmatch('[0-9a-f]{40}',source) and source==head(),'source SHA differs from checkout')
  require(subprocess.run(['git','diff','--quiet','HEAD'],cwd=ROOT).returncode==0,'dirty candidate sources')
  require(not subprocess.check_output(['git','ls-files','--others','--exclude-standard'],cwd=ROOT).strip(),'untracked candidate inputs')
- build=ROOT/'.pio/build'/target;output=ROOT/'dist'/target
+ build=ROOT/'.pio/build'/environment;output=ROOT/'dist'/environment
  if output.exists():shutil.rmtree(output)
  output.mkdir(parents=True)
  blobs={name:file_bytes(build/name) for name in ('firmware.bin','firmware.elf','bootloader.bin','partitions.bin')}
@@ -75,6 +77,13 @@ def stage(source, app_data=False, app_data_image=None, radio_iq=False):
  require(len(blobs['firmware.bin'])<=expected['app0'][3],'firmware exceeds paired slot')
  if app_data:require(b'RISC_PAIRED_STORE_ABI:1\0' not in blobs['firmware.bin'],'app-data target must reject legacy OTA acceptance')
  proof=native_proof(blobs['firmware.elf'])
+ if performance_trace:
+  from elftools.elf.elffile import ELFFile
+  symtab=ELFFile(io.BytesIO(blobs['firmware.elf'])).get_section_by_name('.symtab')
+  symbols={s.name:s for s in symtab.iter_symbols()}
+  recorder=symbols.get('_ZN8RiscPerf4dataE')
+  require(recorder is not None and recorder['st_shndx']!='SHN_UNDEF' and recorder['st_size']>=4096,'performance recorder absent from diagnostic target')
+  proof['performance_trace']={'enabled':True,'recorder_bytes':recorder['st_size'],'symbol':'_ZN8RiscPerf4dataE'}
  if radio_iq:
   from radio_iq_proof import prove
   proof['radio_iq']=prove(blobs['firmware.elf'])
@@ -84,10 +93,10 @@ def stage(source, app_data=False, app_data_image=None, radio_iq=False):
  if initial:
   for name in ('appdata.bin','appdata-image.json'):(output/name).write_bytes(file_bytes(Path(app_data_image)/name))
  files={p.name:{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in sorted(output.iterdir())}
- record={'schema':1,'target':target,'source_sha':source,'firmware_version':version,'layout':'riscrte-paired-appdata-v2' if app_data else 'riscrte-paired-16m-v1','store_abi':abi,'flash_bytes':0x1000000,'partitions':expected,'native_proof':proof,'assets':files,'scope':'Development Runtime input only. Requires separately verified product store, initial bank journal and explicit user-controlled full16MiB migration. Existing factory image is not OTA compatible. No release or device operation.'}
+ record={'schema':1,'target':target,'build_environment':environment,'performance_trace':performance_trace,'source_sha':source,'firmware_version':version,'layout':'riscrte-paired-appdata-v2' if app_data else 'riscrte-paired-16m-v1','store_abi':abi,'flash_bytes':0x1000000,'partitions':expected,'native_proof':proof,'assets':files,'scope':'Development Runtime input only. Requires separately verified product store, initial bank journal and explicit user-controlled full16MiB migration. Existing factory image is not OTA compatible. No release or device operation.'}
  if initial:record['initial_appdata']=initial;record['scope']='Explicit NEW app-data layout input only. Requires matching product store/journal and owner-controlled installation; not a migration or data-preserving reflash. The initial app-data image is EMPTY and must never be installed by routine OTA. No device action or hardware qualification.'
  (output/'candidate.json').write_text(json.dumps(record,indent=2,sort_keys=True)+'\n')
  (output/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in sorted(output.iterdir()) if p.name!='SHA256SUMS'))
  print('Verified paired Runtime, linked TLS roots and explicit rollback hook:',source,output)
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);parser.add_argument('--app-data',action='store_true');parser.add_argument('--radio-iq',action='store_true');parser.add_argument('--app-data-image',type=Path);args=parser.parse_args();stage(args.source_sha,args.app_data,args.app_data_image,args.radio_iq)
+ parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);parser.add_argument('--app-data',action='store_true');parser.add_argument('--radio-iq',action='store_true');parser.add_argument('--performance-trace',action='store_true');parser.add_argument('--app-data-image',type=Path);args=parser.parse_args();stage(args.source_sha,args.app_data,args.app_data_image,args.radio_iq,args.performance_trace)

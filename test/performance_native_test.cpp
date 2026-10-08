@@ -40,13 +40,13 @@ int main(){
   line("must-not-interleave");assert(Serial.output.empty());
   Serial.space=256;Serial.writeLimit=0;step();assert(Serial.output.empty());
   Serial.writeLimit=256;
-  for(unsigned i=0;i<500;++i)step();assert(Serial.output==expected);
+  for(unsigned i=0;i<500;++i){step();}assert(Serial.output==expected);
 #if RISC_SLEEP_DIAGNOSTICS
   // Queued diag/perf commands cannot start concurrent producers; every poll
   // obeys one shared 64-byte transport budget regardless of command order.
   for(const char* input:{"diag\nperf\n","perf\ndiag\n"}){
     Serial.output.clear();Serial.input=input;
-    for(unsigned i=0;i<500;++i)step();
+    for(unsigned i=0;i<500;++i){step();}
     if(input[0]=='d')assert(Serial.output.find("RTE_DIAG end\n")!=std::string::npos && Serial.output.find("RTE_PERF")==std::string::npos);
     else assert(Serial.output.find("RTE_PERF end\n")!=std::string::npos && Serial.output.find("RTE_DIAG")==std::string::npos);
   }
@@ -58,7 +58,7 @@ int main(){
   step();line("foreign");lightReturn(ESP_OK,0);assert(Serial.calls==calls && Serial.input=="perf\n");
   task=reinterpret_cast<void*>(1);step();
   Serial.connected=false;step();Serial.connected=true;Serial.output.clear();
-  for(unsigned i=0;i<500;++i)step();assert(Serial.output.empty());
+  for(unsigned i=0;i<500;++i){step();}assert(Serial.output.empty());
   // Disconnect clears incomplete commands as well as an active snapshot.
   Serial.input="pe";step();Serial.connected=false;step();Serial.connected=true;
   Serial.input="rf\n";step();assert(Serial.output.empty());
@@ -67,7 +67,7 @@ int main(){
   // recovery. No stale tail is replayed after reconnection.
   Serial.input="perf\n";step();lightReturn(ESP_OK,3);step();now+=20;step();
   Serial.connected=true;Serial.output.clear();
-  for(unsigned i=0;i<500;++i)step();assert(Serial.output.empty());
+  for(unsigned i=0;i<500;++i){step();}assert(Serial.output.empty());
   assert(dump("perf\n","RTE_PERF end\n")==expected);
   Serial.output.clear();Serial.input="pe";step();lightReturn(ESP_OK,3);step();now+=20;step();
   Serial.connected=true;Serial.input="rf\n";step();assert(Serial.output.empty());
