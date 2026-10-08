@@ -13,6 +13,11 @@
 #endif
 #include <Arduino.h>
 #include <esp_sleep.h>
+#include <cstdio>
+#if RISC_STAGE_LOGS
+#include <esp_timer.h>
+#include <cstdarg>
+#endif
 namespace RiscDiagnostics {
 namespace {
 #if RISC_SLEEP_DIAGNOSTICS
@@ -28,6 +33,19 @@ UsbSleepRecovery recovery;
 RiscPerf::Replay performanceReplay;
 #endif
 TaskHandle_t owner=nullptr;
+bool outputting=false,unfinishedLine=false;
+#if RISC_STAGE_LOGS
+uint32_t lostLines=0,truncatedLines=0,reportedLost=0,reportedTruncated=0;
+void noteLost(){if(lostLines!=UINT32_MAX)++lostLines;}
+void noteTruncation(){if(truncatedLines!=UINT32_MAX)++truncatedLines;}
+#else
+void noteLost(){}
+void noteTruncation(){}
+#endif
+struct OutputGuard {
+  OutputGuard(){outputting=true;}
+  ~OutputGuard(){outputting=false;}
+};
 bool ours(){return owner && owner==xTaskGetCurrentTaskHandle();}
 // Must remain the sole HWCDC ring producer: no setDebugOutput or concurrent
 // Serial writer. Pinned HWCDC can underflow a zero timeout without capacity.
@@ -47,9 +65,45 @@ struct Transport {
   }
 #endif
 } transport;
+bool finishLine(){
+  if(!unfinishedLine)return true;
+  if(!transport.writable())return false;
+  const uint8_t newline='\n';
+  if(transport.write(&newline,1)!=1)return false;
+  unfinishedLine=false;return true;
+}
+bool reportLoss(){
+#if RISC_STAGE_LOGS
+  if(lostLines==reportedLost && truncatedLines==reportedTruncated)return false;
+  const auto lost=lostLines,truncated=truncatedLines;
+  char text[64];
+  const int n=std::snprintf(text,sizeof(text),"RTE_LOG lost=%lu truncated=%lu\n",
+                          (unsigned long)lost,(unsigned long)truncated);
+  if(n<=0 || size_t(n)>=sizeof(text) || transport.writable()<size_t(n))return true;
+  size_t sent=0;
+  while(sent<size_t(n)){
+    size_t count=size_t(n)-sent;
+    const auto available=transport.writable();if(count>available)count=available;
+    if(!count)break;
+    size_t written=transport.write(reinterpret_cast<const uint8_t*>(text)+sent,count);
+    if(written>count)written=count;
+    if(!written)break;
+    sent+=written;
+  }
+  unfinishedLine=sent>0 && sent<size_t(n);
+  if(sent==size_t(n)){reportedLost=lost;reportedTruncated=truncated;}
+  return true;
+#else
+  return false;
+#endif
+}
 }
 void start(){
   owner=xTaskGetCurrentTaskHandle();Serial.setTxTimeoutMs(0);
+  outputting=unfinishedLine=false;
+#if RISC_STAGE_LOGS
+  lostLines=truncatedLines=reportedLost=reportedTruncated=0;
+#endif
 #if RISC_PERFORMANCE_TRACE
   performanceReplay.disconnect();
 #endif
@@ -65,11 +119,11 @@ void start(){
 #endif
 }
 void poll(){
-  if(!ours())return;
+  if(!ours() || outputting)return;
+  OutputGuard guard;
 #if RISC_HWCDC_SLEEP_RECOVERY
   if(!recovery.poll(transport))return;
 #endif
-#if RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE
   if(!transport.connected()){
 #if RISC_SLEEP_DIAGNOSTICS
     replay.disconnect();
@@ -79,6 +133,17 @@ void poll(){
 #endif
     return;
   }
+  // A zero write may truncate a best-effort live line. Terminate it before a
+  // command dump or another line; never retain or retry its abandoned payload.
+  if(unfinishedLine){finishLine();return;}
+#if RISC_PERFORMANCE_TRACE
+  if(!performanceReplay.active())
+#endif
+#if RISC_SLEEP_DIAGNOSTICS
+  if(!replay.active())
+#endif
+  if(reportLoss())return;
+#if RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE
   for(unsigned i=0;i<16 && Serial.available()>0;++i){
     int c=Serial.read();if(c<0)break;
 #if RISC_SLEEP_DIAGNOSTICS
@@ -110,24 +175,61 @@ void poll(){
 }
 void line(const char* text){
   if(!ours() || !text)return;
+  if(outputting){noteLost();return;}
+  OutputGuard guard;
 #if RISC_SLEEP_DIAGNOSTICS
   message(journal,millis(),text);
-  if(replay.active())return;
+  if(replay.active()){noteLost();return;}
 #endif
 #if RISC_PERFORMANCE_TRACE
-  if(performanceReplay.active())return;
+  if(performanceReplay.active()){noteLost();return;}
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
-  if(!recovery.ready())return;
+  if(!recovery.ready()){noteLost();return;}
 #endif
-  // Live output is best effort. One small owner-task write cannot wait for a
-  // missing host or fill the HWCDC TX ring. Recovery never waits for a host.
-  if(!transport.connected())return;
+  // Live output is best effort, at most 256 bytes. No wait for a missing host
+  // or unavailable capacity. Each owner write is at most 64 bytes.
+  if(!transport.connected()){noteLost();return;}
   char bytes[256];size_t n=0;
   while(n<sizeof(bytes)-1 && text[n]){bytes[n]=text[n];++n;}
+  if(n==sizeof(bytes)-1 && text[n])noteTruncation();
   bytes[n++]='\n';
-  if(transport.writable()>=n)transport.write(reinterpret_cast<const uint8_t*>(bytes),n);
+  if(!finishLine() || transport.writable()<n){noteLost();return;}
+  size_t offset=0;
+  while(offset<n){
+    size_t count=n-offset;if(count>64)count=64;
+    const size_t available=transport.writable();if(count>available)count=available;
+    if(!count){if(offset)noteTruncation();else noteLost();return;}
+    size_t written=transport.write(reinterpret_cast<const uint8_t*>(bytes)+offset,count);
+    if(written>count)written=count;
+    if(!written){if(offset)noteTruncation();else noteLost();return;}
+    offset+=written;unfinishedLine=offset<n;
+  }
 }
+#if RISC_STAGE_LOGS
+uint64_t monotonicUs(){return ours()?uint64_t(esp_timer_get_time()):0;}
+void timestamped(const char* format,...){
+  if(!ours() || !format)return;
+  if(outputting){noteLost();return;}
+  // Timestamp the actual call boundary, before formatting and best-effort USB.
+  const auto us=esp_timer_get_time();
+  char text[256];
+  const int prefix=std::snprintf(text,sizeof(text),"RTE_STAGE us=%llu ",
+                               static_cast<unsigned long long>(us));
+  if(prefix<0 || size_t(prefix)>=sizeof(text))return;
+  va_list args;va_start(args,format);
+  const int n=std::vsnprintf(text+prefix,sizeof(text)-size_t(prefix),format,args);
+  va_end(args);
+  if(n<0)return;
+  if(size_t(n)>=sizeof(text)-size_t(prefix)){
+    noteTruncation();
+    text[sizeof(text)-4]='.';text[sizeof(text)-3]='.';text[sizeof(text)-2]='.';
+  }
+  // One statement stays one line even if a diagnostic subject contains CR/LF.
+  for(char* p=text;*p;++p)if(*p=='\r' || *p=='\n')*p=' ';
+  line(text);
+}
+#endif
 void lightEnter(){
 #if RISC_SLEEP_DIAGNOSTICS
   if(ours())event(journal,millis(),LightEnter);

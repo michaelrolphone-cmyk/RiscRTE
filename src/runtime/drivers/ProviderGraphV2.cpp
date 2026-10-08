@@ -1,4 +1,5 @@
 #include "diagnostics/Performance.h"
+#include "diagnostics/StageLog.h"
 #include "ProviderGraphV2.h"
 #include "../../../lib/hal/RuntimeFaultRetention.h"
 #include "ProviderOwnedSpecV2.h"
@@ -241,6 +242,10 @@ bool GraphV2::activate(size_t index) {
   // The graph owns package identity, singleton admission and consumer counts.
   // Every node needs its own mapping: software and hardware packages may share
   // driver.elf, while ordinary dlopen intentionally rejects duplicate basenames.
+#if RISC_STAGE_LOGS
+  const auto loadUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("provider load begin id=%s",node.spec.id);
   const bool loaded = node.spec.requiredOsCpuAbi
       ? node.module.loadVerifiedBytes(node.spec.verifiedElfBytes,
                                       node.spec.verifiedElfLength,
@@ -255,10 +260,13 @@ bool GraphV2::activate(size_t index) {
                          node.spec.provides, node.spec.api,
                          node.spec.requirementCount ? node.boundDependencies : nullptr,
                          node.spec.requirementCount, true);
+  RISC_STAGE_LOG("provider load end id=%s result=%s elapsed_us=%llu",node.spec.id,loaded?"ok":"failed",
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
   if (!loaded) {
     if (node.module.lastError()[0])
       copyError(error_, node.module.lastError());
     else fail("Provider load/start failed (no diagnostic)", node.spec.id);
+    RISC_STAGE_LOG("provider load failed id=%s reason=%s",node.spec.id,error_);
     if (node.module.unload()) {
       releaseDependencies(index);
       node.visit = Visit::Idle;
