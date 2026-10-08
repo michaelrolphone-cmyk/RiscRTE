@@ -14,6 +14,8 @@ SHIM = r'''
 #include <cstring>
 #include <string>
 #include <vector>
+#include "bootstrap/AppPolicyLimits.h"
+#include "diagnostics/StageLog.h"
 extern std::vector<std::string> calls;
 inline void mark(const char* s){calls.emplace_back(s);}
 using TaskHandle_t=void*;
@@ -35,7 +37,7 @@ namespace RiscDiagnostics{inline void start(){mark("diagnostics");}inline void p
 namespace RiscPerf{inline void configure(uint64_t(*)(),bool(*)(),int){}inline void emit(unsigned,unsigned=0){}struct Scope{Scope(unsigned,unsigned){}};}
 namespace RiscBoot{
 struct Board{};class Runtime;
-struct Port{bool(*owner)();bool(*health)(risc_runtime_health_v1*);void(*delay)(uint32_t);bool(*diagnostic)(const char*);bool(*bind)(Runtime&);void*kv;bool(*exitSafe)();bool(*storageSafe)();bool(*confirm)();void*data;void*wake;};
+struct Port{bool(*owner)();bool(*health)(risc_runtime_health_v1*);void(*delay)(uint32_t);bool(*diagnostic)(const char*);bool(*bind)(Runtime&);void*kv;bool(*exitSafe)();bool(*storageSafe)();bool(*confirm)();void*data;void*wake;void(*retainedDelay)(uint32_t);};
 class Runtime{Board b;public:explicit Runtime(Port){}Board&board(){return b;}bool prepare(const char*){mark("prepare");return true;}bool run(){mark("run");return true;}const char*error(){return "test";}};
 }
 namespace RiscCpu{
@@ -64,7 +66,7 @@ return nullptr;
 extern void setup();extern void loop();
 int main(){
  setup();
- std::vector<std::string> expected={"retained-wake","realtime","serial","diagnostics","RTE_SOURCE=test"};
+ std::vector<std::string> expected={"retained-wake","realtime","serial","diagnostics","RTE_SOURCE=test",RISC_APP_POLICY_ROWS_MARKER};
 #ifdef STARTUP_HOOK
  expected.push_back("startup-status");
 #endif
@@ -92,6 +94,11 @@ class NativeStartup(unittest.TestCase):
                 path = folder/name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text('#include "shim.h"\n')
+            # Use the production constants and disabled-log macro so this
+            # fixture follows current startup declarations without replacing
+            # or evaluating diagnostic arguments.
+            for name in ('bootstrap/AppPolicyLimits.h', 'diagnostics/StageLog.h'):
+                shutil.copyfile(ROOT/'src'/name, folder/name)
             shutil.copyfile(ROOT/'src/main.cpp', folder/'main.cpp')
             (folder/'harness.cpp').write_text(HARNESS)
             for name, flags in (('no-hook', []), ('success', ['-DSTARTUP_HOOK']),
