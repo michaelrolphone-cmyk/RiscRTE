@@ -49,6 +49,13 @@ old Runtime can delay. A different Runtime object cannot borrow the active
 session. The public app/provider ABI layouts and capability policy are unchanged;
 only the private compiled-in port gains an optional callback.
 
+An invalid capability table followed by failed rollback can latch `retained_`
+while leaving app authority active until the next lifecycle barrier. Yield must
+complete that existing logical fence before its first raw delay. The regression
+uses a mapped malformed provider with failed quiescence and an existing app KV
+grant: API lookup, health, diagnostics and the cached KV context are all revoked
+before the delay callback runs, with no storage backend call.
+
 ## Native-only limitation
 
 Ordinary yield does not call the native exit barrier. `appExitSafe` can be false
@@ -67,8 +74,8 @@ because the app yields.
 
 ## Verification
 
-`bash test/run_retained_yield_test.sh` runs seven production-lifecycle cases:
-init/main/fini terminal signals, pending graph release, absent raw callback,
+`bash test/run_retained_yield_test.sh` runs eight production-lifecycle cases:
+init/main/fini terminal signals, pending graph release, invalid-interface rollback, absent raw callback,
 ordinary operation and temporary native exit-unsafety. The retained cases check
 zero new provider polls, unchanged mapped app/provider custody and allocation,
 queued-child suppression, no fini/unload/quiescence beyond the initiating failed

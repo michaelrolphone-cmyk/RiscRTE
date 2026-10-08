@@ -1,5 +1,6 @@
 /* Actual mapped invocation; retained loops use only the table cached at init. */
 #include <RiscRuntimeV1.h>
+#include <RiscKeyValueV1.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +10,7 @@ extern void retained_yield_save(const risc_runtime_api_v1*, const void*, const c
 extern void retained_yield_owner(bool);
 extern void retained_yield_check(bool, bool);
 extern void retained_yield_native_busy(bool);
+extern void retained_yield_save_key_value(const risc_key_value_v1*);
 #ifndef CHILD_APP
 static const risc_runtime_api_v1* rt;
 static risc_runtime_capability_v1 grant;
@@ -45,7 +47,13 @@ __attribute__((visibility("default"))) int app_module_init(void) {
   rt=risc_runtime_get_api(1);assert(rt);
   allocation=malloc(16);assert(allocation);strcpy(allocation,"still retained");
   retained_yield_save(rt,&witness,allocation);
-  grant.struct_size=sizeof(grant);assert(rt->acquire("test.yield",1,0,&grant));
+  grant.struct_size=sizeof(grant);
+  if(!strcmp(retained_yield_mode(),"invalid-interface")) {
+    assert(rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,1,&grant));
+    const risc_key_value_v1* kv=grant.api;uint32_t size=0;
+    assert(kv->get(kv->context,"probe",0,0,&size)==RISC_KEY_VALUE_NOT_FOUND);
+    retained_yield_save_key_value(kv);
+  }else assert(rt->acquire("test.yield",1,0,&grant));
   if(!strcmp(retained_yield_mode(),"signal-init"))retain();
 #endif
   return 0;
@@ -56,6 +64,15 @@ __attribute__((visibility("default"))) void app_main(void) {
 #else
   retained_yield_event("app:entry");
   const char* mode=retained_yield_mode();
+  if(!strcmp(mode,"invalid-interface")) {
+    assert(rt->request_launch("child.elf"));
+    risc_runtime_capability_v1 invalid={.struct_size=sizeof(invalid)};
+    assert(!rt->acquire("test.yield",1,0,&invalid));
+    assert(!invalid.slot && !invalid.api);
+    yields(true);
+    assert(!risc_runtime_get_api(1) && !rt->release(&grant) && !rt->request_launch("child.elf"));
+    return;
+  }
   yields(false);
   if(!strcmp(mode,"normal") || !strcmp(mode,"signal-fini"))return;
   if(!strcmp(mode,"native-busy")) {

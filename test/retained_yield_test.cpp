@@ -13,6 +13,9 @@ static unsigned nativeChecks=0,blockedReentries=0;
 static std::vector<std::string> events;
 static std::vector<uint32_t> ordinaryWaits,retainedWaits;
 static risc_runtime_api_v1 saved{};
+static risc_key_value_v1 savedKeyValue{};
+static unsigned keyValueCalls=0;
+extern "C" void retained_yield_save_key_value(const risc_key_value_v1* api){savedKeyValue=*api;}
 static RiscBoot::Runtime* runtime;
 static RiscBoot::Runtime* other;
 static const void* appImage;
@@ -37,6 +40,16 @@ extern "C" void retained_yield_lifecycle(){
 static void delay(uint32_t ms,bool retained){
   assert(!inDelay);inDelay=true;
   (retained?retainedWaits:ordinaryWaits).push_back(ms);
+  if(retained){
+    assert(!risc_runtime_get_api(1));
+    risc_runtime_health_v1 health{sizeof(health)};
+    assert(!saved.health(&health) && !saved.diagnostic("forbidden"));
+    if(savedKeyValue.get){
+      const unsigned before=keyValueCalls;uint32_t size=123;
+      assert(savedKeyValue.get(savedKeyValue.context,"probe",nullptr,0,&size)==RISC_KEY_VALUE_CONTEXT);
+      assert(!size && keyValueCalls==before);
+    }
+  }
   if(saved.yield_ms){
     const auto before=ordinaryWaits.size()+retainedWaits.size();
     saved.yield_ms(50);runtime->yield(50);
@@ -78,8 +91,14 @@ int main(int argc,char** argv){
   write(root,"provider.json",R"({"type":"driver","id":"yield-provider","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"provider.elf","requires":[],"provides":[{"capability":"test.yield","api":1}]})");
   write(root,"app.json",R"({"type":"application","id":"retained-yield","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.yield","api":1}]})");
   write(root,"boot.json",R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"provider.json"}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.yield","api":1,"instance_id":0}]}]})");
+  if(mode=="invalid-interface"){
+    write(root,"app.json",R"({"type":"application","id":"retained-yield","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.yield","api":1},{"capability":"storage.key-value","api":1}]})");
+    write(root,"boot.json",R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"provider.json"}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.yield","api":1,"instance_id":0},{"capability":"storage.key-value","api":1,"instance_id":1}]}]})");
+  }
+  RiscBoot::KeyValueBackend keyValue{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*){++keyValueCalls;return int32_t(RISC_KEY_VALUE_NOT_FOUND);},[](void*,uint32_t,const char*,const void*,uint32_t){++keyValueCalls;return int32_t(RISC_KEY_VALUE_OK);}};
   RiscBoot::Port port{[](){return owned;},[](risc_runtime_health_v1* h){h->uptime_ms=0;return true;},
     [](uint32_t ms){delay(ms,false);},[](const char*){return true;}};
+  port.keyValue=&keyValue;
   port.appExitSafe=[](){++nativeChecks;return !nativeBusy;};
   if(mode!="no-raw-hook")port.retainedDelay=[](uint32_t ms){delay(ms,true);};
   runtime=new RiscBoot::Runtime(port);other=new RiscBoot::Runtime(port);
@@ -96,7 +115,7 @@ int main(int argc,char** argv){
   assert(blockedReentries>0);
   if(retained){
     assert(!count("app:fini") && !count("app:unloaded") && !count("provider:unloaded") && !count("provider:stop"));
-    assert(count("provider:quiesce")==unsigned(mode=="graph-retained"));
+    assert(count("provider:quiesce")==unsigned(mode=="graph-retained" || mode=="invalid-interface"));
     assert(mapped(appImage) && mapped(providerImage) && !strcmp(appAllocation,"still retained"));
     assert(!runtime->run());
   }else{

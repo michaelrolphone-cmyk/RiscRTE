@@ -739,6 +739,9 @@ void Runtime::yield(uint32_t ms) {
   // Legacy app helpers may remain on their stack after terminal retention.
   // Keep all authority revoked and custody pinned; only the scheduler may run.
   if(retained_) {
+    // Invalid-interface rollback can latch retention before revoking the app.
+    // Preserve the old yield-time fence before permitting any raw delay.
+    if(active_)(void)appExitBarrier();
     if(port_.retainedDelay)port_.retainedDelay(requested);
     return;
   }
