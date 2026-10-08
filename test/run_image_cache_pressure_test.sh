@@ -28,7 +28,7 @@ for cache in 0 1;do
   cc -std=c11 "${common[@]}" -include "$stubs/alloc_redirect.h" \
     -Desp_elf_malloc=unused_host_elf_malloc -Desp_elf_free=unused_host_elf_free \
     -c "$repo/test/support/native_registry/backend.c" -o "$out/backend.o"
-  for src in bootstrap/Json bootstrap/Board bootstrap/Runtime runtime/drivers/ProviderGraphV2 runtime/drivers/ProviderModuleV2 native/NativeAppMemory;do
+  for src in bootstrap/Json bootstrap/Board bootstrap/Runtime runtime/streams/AppStreamSessions runtime/streams/ProviderQueueHost runtime/drivers/ProviderGraphV2 runtime/drivers/ProviderModuleV2 native/NativeAppMemory;do
     extra=();if [[ "$src" == bootstrap/Runtime || "$src" == native/NativeAppMemory ]];then extra=(-DESP_PLATFORM=1);fi
     c++ -std=c++17 "${common[@]}" "${extra[@]}" -include "$repo/test/support/native_registry/redirect.h" \
       -include "$stubs/alloc_redirect.h" -c "$repo/src/$src.cpp" -o "$out/$(basename "$src").o"

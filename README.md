@@ -1,5 +1,10 @@
 # RiscRTE
 
+Runtime 0.1.69 reconciles the independently verified stream-session, cache-pressure
+and app-policy-row histories. Image caching remains off by default; the optional
+17-row metadata selection preserves the 16 live-grant and manifest bounds. See
+[the integration record](docs/RUNTIME_0169_INTEGRATION.md).
+
 Runtime 0.1.66 adds [generic app byte-stream sessions](docs/APP_STREAMS.md),
 with an invocation-bound broker, tagged provider adapter and bounded queues.
 Physical transports and product selection remain external.

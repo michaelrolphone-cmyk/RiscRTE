@@ -35,18 +35,27 @@ this exact path to manifest identity/version and the intersection of declared
 requirements with authorized grants before any ELF runs. Missing, extra,
 duplicate or ambiguous grants fail boot. The sole additive exception is multiple
 distinct, positive storage.key-value@1 namespaces for one manifest requirement;
-all are explicit owner-provisioned grants and still count toward the same 16-
-grant bound. Non-KV capability uniqueness is unchanged. ID0 acquisition rejects
+all are explicit owner-provisioned grants and count toward the compiled policy
+row bound (16 by default). Non-KV capability uniqueness is unchanged. ID0 acquisition rejects
 multiple matches; an app must name the intended namespace. This is provisioning consistency for
 trusted native code, not a signature scheme or memory sandbox.
 
 Limits are target-dependent app policies (`Runtime::MaxAppPolicies`, unchanged),
 16 distinct declared capability types (`Runtime::MaxAppRequirements`),
-16 independently authorized grants per app (`Runtime::MaxAppPolicyGrants`), and
-16 live app grants. Requirements and policy grants independently reject at17;
+16 independently authorized policy rows per app (`Runtime::MaxAppPolicyGrants`)
+by default, and 16 live app grants. Requirements reject at17; policy rows reject
+at17 by default, or at18 under the explicit 17-row native build option;
 policy count rejects above its existing target bound. No authorization is added
 implicitly. Runtime0.1.50 raises only the declaration/policy limits from12 to16.
 See [default-only provider promotion](PROVIDER_PROMOTION.md).
+
+Runtime0.1.68 adds only `-DRISC_APP_POLICY_ROWS=17`; absence or an explicit16
+retains the prior metadata layout. Other values fail compilation. The additional
+immutable row permits, for example, sixteen unique requirements with two
+independently authorized KV namespaces for one requirement. It adds no namespace
+or permission by itself. Live-slot exhaustion/release/generation ownership and
+the sixteen-requirement bound remain unchanged. See [build selection, marker,
+memory cost and verification boundaries](APP_POLICY_ROWS.md).
 
 Internal policy records reference only already-retained immutable capability
 names in the fixed driver/platform table, or the canonical KV literal. They never
