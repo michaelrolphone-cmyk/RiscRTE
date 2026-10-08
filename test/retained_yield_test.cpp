@@ -59,7 +59,8 @@ extern "C" void retained_yield_check(bool retained,bool after){
   if(retained){
     printf("retained loop: ordinary waits=%zu raw waits=%zu provider polls=%u\n",ordinaryWaits.size()-normalBegin,retainedWaits.size()-retainedBegin,count("provider:poll")-pollBegin);fflush(stdout);
     assert(ordinaryWaits.size()==normalBegin);
-    assert((std::vector<uint32_t>(retainedWaits.begin()+retainedBegin,retainedWaits.end())==expected));
+    assert((std::vector<uint32_t>(retainedWaits.begin()+retainedBegin,retainedWaits.end())==
+      (mode=="no-raw-hook"?std::vector<uint32_t>{}:expected)));
     assert(count("provider:poll")==pollBegin);
   } else {
     assert(retainedWaits.size()==retainedBegin);
@@ -80,7 +81,7 @@ int main(int argc,char** argv){
   RiscBoot::Port port{[](){return owned;},[](risc_runtime_health_v1* h){h->uptime_ms=0;return true;},
     [](uint32_t ms){delay(ms,false);},[](const char*){return true;}};
   port.appExitSafe=[](){++nativeChecks;return !nativeBusy;};
-  // The production correction adds an explicit raw retained scheduler hook here.
+  if(mode!="no-raw-hook")port.retainedDelay=[](uint32_t ms){delay(ms,true);};
   runtime=new RiscBoot::Runtime(port);other=new RiscBoot::Runtime(port);
   runtime->yield(50);assert(ordinaryWaits.empty() && retainedWaits.empty());
   assert(runtime->prepare(root.c_str()) && other->prepare(root.c_str()));

@@ -19,6 +19,6 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers
   "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/test/retained_yield_test.cpp" -ldl -o "$build/test"
-for mode in ${RETAINED_YIELD_SCENARIOS:-signal-main signal-init signal-fini graph-retained normal native-busy};do
+for mode in ${RETAINED_YIELD_SCENARIOS:-signal-main signal-init signal-fini graph-retained no-raw-hook normal native-busy};do
   "$build/test" "$build" "$mode"
 done

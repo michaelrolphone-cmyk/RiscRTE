@@ -1,5 +1,9 @@
 # RiscRTE
 
+Runtime 0.1.71 permits bounded scheduler-only cooperation for the current
+retained invocation owner, without polling providers or restoring authority.
+See [the retained-yield contract and reproduction](docs/RETAINED_YIELD.md).
+
 Runtime 0.1.69 reconciles the independently verified stream-session, cache-pressure
 and app-policy-row histories. Image caching remains off by default; the optional
 17-row metadata selection preserves the 16 live-grant and manifest bounds. See
@@ -174,6 +178,7 @@ bash test/run_bound_key_value_test.sh
 bash test/run_native_registry_test.sh
 bash test/run_provider_module_lease_v2_test.sh
 bash test/run_retained_app_test.sh
+bash test/run_retained_yield_test.sh
 bash test/run_retained_wake_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh

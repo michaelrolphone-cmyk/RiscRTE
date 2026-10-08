@@ -26,7 +26,9 @@ typedef struct {
 typedef struct {
   uint32_t api_version, struct_size;
   bool (*health)(risc_runtime_health_v1* out);
-  void (*yield_ms)(uint32_t milliseconds); /* clamp 1..50; polls providers */
+  /* Clamp 1..50; ordinary yields poll providers. An already-retained current
+   * owner may only use the port's raw scheduler delay, with no provider work. */
+  void (*yield_ms)(uint32_t milliseconds);
   bool (*diagnostic)(const char* line); /* one-way, max 255 bytes, newline added */
   /* Copies one normalized relative .elf path under the configured boot store.
    * True queues a handoff: return from app_main immediately. Current ELF is
@@ -50,12 +52,13 @@ typedef struct {
   bool (*confirm_boot)(void);
   /* Optional terminal invocation fence for capability-local uncertain cleanup.
    * Owner task only, during active init/main/fini. True immediately revokes app
-   * APIs and provider storage authority, discards handoff, and retains current
+   * authority and provider storage access, discards handoff, and retains current
    * images, allocations and provider custody until restart, without cleanup or
    * polling. Return promptly without further provider calls or frees. This does
    * not enter sleep, restart, add authority or inspect an opaque capability.
    * Repeated owner calls for this same current retained invocation return true.
    * False means no current owner invocation or a reentrant promotion call.
+   * A cached yield_ms remains scheduler-only on ports supporting retained delay.
    * Older tables lack this suffix; check its size before reading the pointer. */
   bool (*retain_invocation)(void);
   /* Optional bounded performance tracing; see RiscPerformanceV1.h. Owner task

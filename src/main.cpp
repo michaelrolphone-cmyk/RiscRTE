@@ -88,11 +88,14 @@ void diagnosticFormat(const char* format,...) {
   char line[256];va_list args;va_start(args,format);vsnprintf(line,sizeof(line),format,args);va_end(args);
   diagnosticLine(line);
 }
+void schedulerDelay(uint32_t ms) {
+  vTaskDelay(RiscCpu::cooperativeDelayTicks(ms,configTICK_RATE_HZ));
+}
 void cooperate(uint32_t ms) {
 #if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::poll();
 #endif
-  vTaskDelay(RiscCpu::cooperativeDelayTicks(ms,configTICK_RATE_HZ));
+  schedulerDelay(ms);
 }
 bool diagnostic(const char* line) { diagnosticLine(line); return true; }
 // Static lifetime intentionally retains manifests, dependency tables and ELF
@@ -128,9 +131,9 @@ bool confirmBoot(){
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend()});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay});
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend()});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay});
 #endif
 }
 void setup() {
@@ -257,7 +260,7 @@ void setup() {
 #else
     ,nullptr
 #endif
-    ,RiscCpu::NativeRetainedWake::backend()
+    ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay
   });
   if(!retainedRuntime){
     RISC_STAGE_LOG("boot failed reason=runtime-metadata-psram");
