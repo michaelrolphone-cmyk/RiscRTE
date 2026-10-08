@@ -11,6 +11,32 @@
 #include "ports/esp32s3/CooperativeDelay.h"
 #include "ports/esp32s3/SleepDiagnostics.h"
 #include <cstdarg>
+#include <esp_timer.h>
+#include "diagnostics/Performance.h"
+#ifndef RISC_PERFORMANCE_TRACE
+#define RISC_PERFORMANCE_TRACE 0
+#endif
+extern "C" void risc_perf_loader_event(uint32_t phase,uint32_t value) {
+#if RISC_PERFORMANCE_TRACE
+  if(!RiscPerf::allowed())return;
+  // Loader is synchronous on the owner task. Pair each nested phase separately;
+  // durations are inclusive, never summed into a misleading total.
+  static uint64_t starts[3]{};
+  static bool live[3]{};
+  const unsigned slot=phase==40 || phase==41 ? 0 : phase==42 || phase==43 ? 1 : 2;
+  if(phase==40 || phase==42 || phase==45){starts[slot]=RiscPerf::now();live[slot]=true;}
+  if(phase==41 || phase==43 || phase==46 || phase==44){
+    const uint64_t now=RiscPerf::now();
+    for(unsigned i=0;i<3;++i)if(live[i] && (phase==44 || i==slot)){
+      RiscPerf::add(RiscPerf::data.durations_us[i==0?40:i==1?42:45],now>=starts[i]?now-starts[i]:0);
+      live[i]=false;
+    }
+  }
+  RiscPerf::emit(phase,value);
+#else
+  (void)phase;(void)value;
+#endif
+}
 #ifdef RISC_PAIRED_APP_DATA
 #include "ports/esp32s3/NativeAppData.h"
 #endif
@@ -101,7 +127,10 @@ RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,Ris
 #endif
 }
 void setup() {
-  owner=xTaskGetCurrentTaskHandle(); RiscCpu::NativeRetainedWake::start(); RiscCpu::NativeRealtime::start(); Serial.begin(115200);
+  owner=xTaskGetCurrentTaskHandle();
+  RiscPerf::configure([]()->uint64_t{return uint64_t(esp_timer_get_time());},isOwner,RISC_PERFORMANCE_TRACE);
+  RiscPerf::emit(50);
+  RiscCpu::NativeRetainedWake::start(); RiscCpu::NativeRealtime::start(); Serial.begin(115200);
 #if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::start();
 #endif
@@ -117,15 +146,19 @@ void setup() {
   diagnosticLine(RISC_BOARD_MARKER);
 #endif
 #ifdef RISC_PAIRED_BANKS
-  if(!RiscBankStore::prepareBoot(isOwner,restartSafe,providerStorageSafe)) {
+  bool bankReady;
+  {RiscPerf::Scope phase(51,52);bankReady=RiscBankStore::prepareBoot(isOwner,restartSafe,providerStorageSafe);}
+  if(!bankReady) {
     diagnosticLine("RTE_BOOT error=paired-bank-integrity");RiscBankStore::rejectBoot();return;
   }
 #endif
   // Minimal flash-backed module-store bootstrap. No formatting, discovery,
   // repair, SD bus ownership or production volume capability. Provisioning may
   // subsequently stage ONLY the verified inactive paired bank.
+  esp_err_t mounted;
+  {RiscPerf::Scope phase(53,54);
 #ifdef RISC_EMBEDDED_BOOTSTORE
-  esp_err_t mounted=riscrte_mount_embedded_store();
+  mounted=riscrte_mount_embedded_store();
 #else
   esp_vfs_spiffs_conf_t storage{};
   storage.base_path="/bootfs"; storage.partition_label="bootfs";
@@ -133,8 +166,9 @@ void setup() {
   storage.partition_label=RiscBankStore::bootLabel();
 #endif
   storage.max_files=4; storage.format_if_mount_failed=false;
-  esp_err_t mounted=esp_vfs_spiffs_register(&storage);
+  mounted=esp_vfs_spiffs_register(&storage);
 #endif
+  }
   if(mounted!=ESP_OK) { diagnosticFormat("RTE_BOOT error=storage-mount code=%d",mounted);
 #ifdef RISC_PAIRED_BANKS
     RiscBankStore::rejectBoot();
@@ -142,16 +176,21 @@ void setup() {
     return; }
 #ifdef RISC_PAIRED_BANKS
 #ifdef RISC_PAIRED_APP_DATA
+  {RiscPerf::Scope phase(55,56);
   if(!RiscAppData::prepare(isOwner,[](){return cpu.providerStorageSafe() && RiscBankStore::exitSafe();}))diagnosticLine("RTE_STORAGE unavailable=appdata format_and_grow=disabled");
+  }
 #endif
   // Read-only owner input, before any app/driver binding. No configured fresh
   // time source means offline installed boot, never a stale timestamp bypass.
+  RiscPerf::emit(57);
+  const auto provisionStart=RiscPerf::now();
   const auto provision=RiscBootstrap::run({cpu.bootstrapHardware(),RiscNvs::backend(),providerStorageSafe,
     RiscBootstrap::nvsInput(),RiscBootstrap::configuredFreshTime(RiscBootstrap::nvsInput(),cpu.bootstrapHardware().now)
 #ifdef RISC_PAIRED_APP_DATA
     ,RiscAppData::backend()
 #endif
   },"/bootfs");
+  RiscPerf::finish(57,58,provisionStart,uint32_t(provision.outcome));
   diagnosticFormat("RTE_PROVISION action=%s reason=%s",provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",RiscBootstrap::reasonName(provision.reason));
   if(provision.outcome==RiscBootstrap::Outcome::Stopped)return;
 #endif
@@ -180,6 +219,7 @@ void setup() {
     if(!runtime.retained() && !runtime.metadataCloseRetained() && appExitSafe())RiscBankStore::rejectBoot();
 #endif
     return; }
+  RiscPerf::emit(59);
   diagnosticLine("RTE_BOOT board=validated drivers=admitted");
   if(!runtime.run()) diagnosticFormat("RTE_BOOT error=runtime detail=%s",runtime.error());
   else diagnosticLine("RTE_BOOT state=idle reason=app-returned");

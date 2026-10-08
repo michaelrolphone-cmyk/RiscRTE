@@ -1,3 +1,4 @@
+#include "diagnostics/Performance.h"
 #ifdef ESP_PLATFORM
 #include "CpuPort.h"
 #include "CooperativeDelay.h"
@@ -179,6 +180,7 @@ Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   Hardware hardware{[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
     [](uint32_t ms){
+      RiscPerf::AggregateScope wait(32,ms);
 #if RISC_DIAGNOSTIC_ADAPTER
       RiscDiagnostics::poll();
 #endif

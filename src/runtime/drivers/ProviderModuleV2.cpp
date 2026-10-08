@@ -1,3 +1,4 @@
+#include "diagnostics/Performance.h"
 #include "ProviderModuleV2.h"
 #include "../../../lib/hal/RuntimeFaultRetention.h"
 #include <cstring>
@@ -120,7 +121,12 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     leaseAttempted_ = true;
     admitted = lease_.begin(lease_.context);
   }
-  if (admitted && candidate->start(deps, count)) {
+  bool started=false;
+  if(admitted) {
+    RiscPerf::Scope startTrace(24,25,RiscPerf::identity(expectedId));
+    started=candidate->start(deps,count);
+  }
+  if (started) {
     driver_ = candidate;
     api_ = candidate->capability;
     state_ = State::Active;

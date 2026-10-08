@@ -84,6 +84,12 @@ jobs:
           SANITIZE=1 bash test/run_demand_activation_test.sh
           bash test/run_runtime_test.sh
           SANITIZE=1 bash test/run_runtime_test.sh
+          bash test/run_performance_recorder_test.sh
+          SANITIZE=1 bash test/run_performance_recorder_test.sh
+          bash test/run_performance_runtime_test.sh
+          SANITIZE=1 bash test/run_performance_runtime_test.sh
+          bash test/run_performance_native_test.sh
+          SANITIZE=1 bash test/run_performance_native_test.sh
           bash test/run_app_data_files_test.sh
           SANITIZE=1 bash test/run_app_data_files_test.sh
           bash test/run_app_data_runtime_test.sh
@@ -207,6 +213,8 @@ jobs:
           RADIO_IQ_DISABLED_ELF=.pio/build/esp32s3/firmware.elf python -m unittest discover -s test -p 'test_radio_iq_proof.py' -v
           CC="$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" python test/verify_legacy_runtime_header.py build/watch-clock-sdk/sdk/app/RiscRuntimeV1.h
           python scripts/build_apps.py
+          bash test/run_performance_loader_test.sh
+          SANITIZE=1 bash test/run_performance_loader_test.sh
           bash test/run_elf_test.sh
           pio run -e esp32s3 -t buildfs -j 1
       - name: Freeze and verify candidate release assets
@@ -288,6 +296,7 @@ jobs:
           SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           pio run -e esp32s3-16mb-appdata -j 1
+          pio run -e esp32s3-16mb-appdata-perf -j 1
           APP_DATA_TEST=1 BOOT_PATH_ONLY=1 BOOT_PATH_FIRMWARE=.pio/build/esp32s3-16mb-appdata/firmware.bin BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
           APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
           SANITIZE=1 APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh

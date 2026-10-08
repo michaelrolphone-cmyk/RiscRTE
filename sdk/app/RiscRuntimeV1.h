@@ -57,10 +57,15 @@ typedef struct {
    * False means no current owner invocation or a reentrant promotion call.
    * Older tables lack this suffix; check its size before reading the pointer. */
   bool (*retain_invocation)(void);
+  /* Optional bounded performance tracing; see RiscPerformanceV1.h. Owner task
+   * only. Returns the accepted interaction ID, or zero if disabled/rejected or
+   * an uncorrelated phase. Check table size before reading this suffix. */
+  uint32_t (*trace)(uint32_t interaction_id, uint32_t phase, uint32_t value);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
 #define RISC_RUNTIME_RETAIN_INVOCATION_V1_SIZE (offsetof(risc_runtime_api_v1, retain_invocation) + sizeof(((risc_runtime_api_v1*)0)->retain_invocation))
+#define RISC_RUNTIME_TRACE_V1_SIZE (offsetof(risc_runtime_api_v1, trace) + sizeof(((risc_runtime_api_v1*)0)->trace))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }
