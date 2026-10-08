@@ -38,6 +38,9 @@ fi
 "$build/test" boot-records
 "$build/test" blank-record
 if [[ -n "${BOOTLOADER_FILE:-}" ]]; then
+ for mode in success odd-chunks interrupt offline-consumed corrupt length download-fail write-fail readback-fail readback-corrupt bad-board bad-elf native-mismatch bad-magic bad-name bad-capacity free-page-programmed extra-file file-mismatch mount-fail unmount-retained admission-close selection-unknown receipt-fail; do
+  "$build/test" "image-$mode" "$BOOTLOADER_FILE" "$build/image-$mode"
+ done
  "$build/test" boot-cost "$BOOTLOADER_FILE"
  if [[ -n "${SEED_DIRECTORY:-}" ]]; then "$build/test" provision-seed "$BOOTLOADER_FILE" "$build/seed-stage" "$SEED_DIRECTORY"; fi
  for mode in cohort cohort-receipt cohort-legacy-receipt cohort-live-close; do

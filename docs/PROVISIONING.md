@@ -1,5 +1,9 @@
 # Profile-driven provisioning (Runtime 0.1.36)
 
+Runtime 0.1.70 adds [compact-image provisioning](COMPACT_IMAGE_PROVISIONING.md)
+for dense stores. It preserves the schema1/2 streaming guard and adds schema3
+with a pinned immutable store image plus exact per-file admission inventory.
+
 ## Current first-install workflow
 
 [First-install packaging](FIRST_INSTALL.md) is the current entry point. A verified

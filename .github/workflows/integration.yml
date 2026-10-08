@@ -144,6 +144,9 @@ jobs:
           SANITIZE=1 bash test/run_provider_sync_test.sh
           python test/provision_seed_test.py -v
           python test/provision_profile_test.py -v
+          python test/provision_image_inventory_test.py -v
+          bash test/run_store_image_capacity_test.sh
+          SANITIZE=1 bash test/run_store_image_capacity_test.sh
           NVS_GENERATOR=build/idf-nvs-source/components/nvs_flash/nvs_partition_generator/nvs_partition_gen.py python test/provision_device_test.py -v
           python test/maintenance_plan_test.py -v
           bash test/run_hci_test.sh
@@ -336,6 +339,23 @@ jobs:
             bash test/run_provisioning_spiffs_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" .pio/build/esp32s3-16mb-appdata/spiffs.bin "build/spiffs-fixtures/$shape" "build/spiffs-result-$shape.bin"
           done
           SANITIZE=1 bash test/run_provisioning_spiffs_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" .pio/build/esp32s3-16mb-appdata/spiffs.bin build/spiffs-fixtures/high-fill-83 build/spiffs-result-high-fill-83-sanitized.bin
+      - name: Compact image read-only admission and dense-store proof
+        uses: actions/checkout@v4
+        with:
+          repository: espressif/esp-idf
+          ref: v4.4.7
+          sparse-checkout: components/spiffs
+          path: build/spiffs-image-producer
+          persist-credentials: false
+      - name: Verify compact image read-only admission and dense-store proof
+        run: |
+          bash test/run_provisioning_spiffs_image_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" .pio/build/esp32s3-16mb-appdata/spiffs.bin build/store
+          python test/provisioning_spiffs_image_fixture.py build/compact-image-fixture
+          test "$(sha256sum build/spiffs-image-producer/components/spiffs/spiffsgen.py | cut -d' ' -f1)" = 5779792a4d98a12383233267511735769a201b5c2c79b582186a40c22b7c6466
+          python build/spiffs-image-producer/components/spiffs/spiffsgen.py 0x510000 build/compact-image-fixture build/compact-image.bin --page-size 256 --block-size 4096 --obj-name-len 32 --meta-len 4
+          bash test/run_store_image_capacity_test.sh build/compact-image.bin
+          bash test/run_provisioning_spiffs_image_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" build/compact-image.bin build/compact-image-fixture
+          SANITIZE=1 bash test/run_provisioning_spiffs_image_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" build/compact-image.bin build/compact-image-fixture
       - uses: actions/upload-artifact@v4
         with:
           name: riscrte-esp32s3-16mb-appdata-${{ github.event.pull_request.head.sha || github.sha }}

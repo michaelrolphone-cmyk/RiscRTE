@@ -7,7 +7,7 @@ not an OTA update, merged flash image, migration, format or flash command.
 import argparse, hashlib, json, shutil, subprocess, tempfile, sys
 from pathlib import Path
 from release_assets import ROOT, file_bytes, require, esp_image, elf, head
-from paired_candidate import partitions, native_proof, TARGET, EXPECTED, APP_DATA_EXPECTED
+from paired_candidate import partitions, native_proof, policy_rows_proof, TARGET, EXPECTED, APP_DATA_EXPECTED
 from paired_bank_images import (BOOTLOADER_BYTES, BOOTLOADER_SHA256, STORE_BYTES,
                                initial_bank_state, initial_otadata, parse_record, APP_DATA_STORE_BYTES)
 
@@ -49,6 +49,16 @@ def candidate(folder, source):
     require(len(blobs['firmware.bin'])<=expected['app0'][3],'firmware slot bound')
     elf(blobs['firmware.elf'])
     proof=native_proof(blobs['firmware.elf'])
+    # Current candidates carry an explicit linked policy-row proof. Preserve
+    # older frozen seeds without that feature, while never inferring an absent
+    # declaration for a native that advertises it.
+    policy=record['native_proof'].get('app_policy')
+    if policy is not None:
+        require(isinstance(policy,dict) and type(policy.get('rows')) is int,'candidate app policy proof')
+        proof['app_policy']=policy_rows_proof(blobs,policy['rows'])
+    else:
+        require(all(b'RISC_APP_POLICY_ROWS:' not in blobs[name] for name in ('firmware.bin','firmware.elf')),
+                'candidate app policy proof missing')
     if radio_iq:
         from radio_iq_proof import prove
         proof['radio_iq']=json.loads(json.dumps(prove(blobs['firmware.elf'])))
