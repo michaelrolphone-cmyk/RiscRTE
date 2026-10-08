@@ -1,6 +1,7 @@
 #pragma once
 #include "../../../lib/hal/StorageGeneration.h"
 #include <RiscProviderV2.h>
+#include <RiscStreamSessionProviderV1.h>
 #include <RiscPackageResourcesV1.h>
 #include "runtime/packages/PackageIdentity.h"
 #include <cstddef>
@@ -28,6 +29,11 @@ struct StreamHostV1 {
   bool (*grant)(uint64_t, uint64_t, uint32_t, uint32_t, uint32_t);
   void (*revokeGrant)(uint64_t, uint64_t);
   bool (*openResources)(risc_stream_provider_resources_v1*, const RuntimePackages::Identity&) = nullptr;
+  // Checked lifecycle hooks preserve custody when a bounded host lock is busy.
+  bool (*revokeChecked)(uint64_t) = nullptr;
+  bool (*closeChecked)(uint64_t) = nullptr;
+  bool (*revokeGrantChecked)(uint64_t, uint64_t) = nullptr;
+  bool (*safe)(uint64_t) = nullptr; // Nonmutating sticky queue-custody barrier.
 };
 class ModuleV2 final {
  public:
@@ -74,6 +80,8 @@ class ModuleV2 final {
     packageSourceStamp_ = stamp; return true;
   }
   uint64_t streamContext() const { return state_ == State::Active ? streamApi_.streams.context : 0; }
+  const risc_stream_session_provider_v1* streamSessions() const { return state_ == State::Active ? streamSessions_ : nullptr; }
+  bool streamSafe() const { return !streamApi_.streams.context || !streamHost_->safe || streamHost_->safe(streamApi_.streams.context); }
   bool poll(uint32_t budgetMs);
   bool pinConsumer();
   bool unpinConsumer();
@@ -103,14 +111,16 @@ class ModuleV2 final {
                       const risc_provider_dependency_v1* dependencies, size_t count);
   bool closeMapped();
   void revokeLease();
-  void revokeStreams();
-  void closeStreams();
+  bool revokeStreams();
+  bool closeStreams();
+  const risc_stream_session_provider_v1* streamSessions_ = nullptr;
   const StreamHostV1* streamHost_ = nullptr;
   risc_stream_provider_resources_v1 streamApi_{};
   RuntimePackages::Identity resourceIdentity_{};
   uint8_t packageManifestSha256_[32]{};
   StorageGenerationStamp packageSourceStamp_{};
   bool streamsRevoked_ = false;
+  bool streamCleanupRetained_ = false;
   ModuleLeaseV2 lease_{};
   bool leaseAttempted_ = false;
   void* handle_ = nullptr;

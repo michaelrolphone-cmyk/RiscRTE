@@ -2,8 +2,10 @@
 
 Runtime 0.1.48 adds the optional top-level boot-profile field
 `"provider_activation": "demand"`. Omission and explicit `"eager"` preserve the
-existing boot-owned acquisition of every selected provider. Only those two exact
-strings are accepted; null, booleans, numbers, objects and other strings reject.
+existing boot-owned acquisition of every selected provider. Runtime 0.1.63 also
+accepts explicit ["demand-retained"](DEMAND_RETENTION.md), with the distinct
+promotion behavior documented there. Null, booleans, numbers, objects and other
+strings reject.
 This is owner-provisioned selection policy, never inferred from wake class.
 
 Demand mode skips only the eager boot-owned acquisitions. The existing app

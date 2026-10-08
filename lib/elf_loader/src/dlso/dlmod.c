@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -18,6 +19,95 @@
 #include "private/elf_platform.h"
 
 static const char *TAG = "DLMOD";
+
+struct esp_dl_image_cache {
+    struct {
+        char path[256];
+        elf_file_t file;
+    } entries[ESP_DL_IMAGE_CACHE_ENTRIES]; /* oldest first */
+    size_t count, bytes;
+};
+
+esp_dl_image_cache *esp_dl_image_cache_create(void)
+{
+#if defined(ESP_PLATFORM) && !CONFIG_ELF_LOADER_LOAD_PSRAM
+    return NULL; /* Do not retain image bytes in scarce internal target RAM. */
+#else
+    esp_dl_image_cache *cache = esp_elf_malloc(sizeof(*cache), false);
+    if (cache) memset(cache, 0, sizeof(*cache));
+    return cache;
+#endif
+}
+
+/* Transfer custody out before mapping, so eviction never frees in-use bytes. */
+static void cache_take(esp_dl_image_cache *cache, size_t index, elf_file_t *file)
+{
+    *file = cache->entries[index].file;
+    cache->bytes -= file->size;
+    --cache->count;
+    memmove(&cache->entries[index], &cache->entries[index + 1],
+            (cache->count - index) * sizeof(cache->entries[0]));
+    memset(&cache->entries[cache->count], 0, sizeof(cache->entries[0]));
+}
+
+static void cache_clear(esp_dl_image_cache *cache)
+{
+    while (cache && cache->count) {
+        elf_file_t file;
+        cache_take(cache, cache->count - 1, &file);
+        esp_elf_close(&file);
+    }
+}
+
+void esp_dl_image_cache_destroy(esp_dl_image_cache *cache)
+{
+    cache_clear(cache);
+    esp_elf_free(cache);
+}
+
+bool esp_dl_image_cache_reclaim(esp_dl_image_cache **cache)
+{
+    if (!cache || !*cache) return false;
+    esp_dl_image_cache *old = *cache;
+    *cache = NULL; /* Disabled for the remaining session, including overhead. */
+    esp_dl_image_cache_destroy(old);
+    return true;
+}
+
+static void *cache_alloc(esp_dl_image_cache **cache, size_t size)
+{
+    void *result = esp_elf_malloc(size, false);
+    if (!result && esp_dl_image_cache_reclaim(cache)) result = esp_elf_malloc(size, false);
+    return result;
+}
+
+static bool cache_find(esp_dl_image_cache *cache, const char *path, elf_file_t *file)
+{
+    if (!cache) return false;
+    for (size_t i = 0; i < cache->count; ++i) {
+        if (!strcmp(path, cache->entries[i].path)) {
+            cache_take(cache, i, file);
+            return true;
+        }
+    }
+    return false;
+}
+
+static void cache_keep(esp_dl_image_cache *cache, const char *path, elf_file_t *file)
+{
+    if (!cache || strlen(path) >= sizeof(cache->entries[0].path) ||
+            file->size > ESP_DL_IMAGE_CACHE_BYTES) return;
+    while (cache->count == ESP_DL_IMAGE_CACHE_ENTRIES ||
+            cache->bytes > ESP_DL_IMAGE_CACHE_BYTES - file->size) {
+        elf_file_t old;
+        cache_take(cache, 0, &old);
+        esp_elf_close(&old);
+    }
+    strcpy(cache->entries[cache->count].path, path);
+    cache->entries[cache->count++].file = *file;
+    cache->bytes += file->size;
+    memset(file, 0, sizeof(*file));
+}
 
 typedef SLIST_HEAD(dlmod_slist_head, dlmod_slist_t) dlmod_slist_head_t;
 
@@ -211,15 +301,17 @@ void dlmod_listsymbol(void)
  *
  * @return Pointer to the relocated ELF structure (esp_elf_t), NULL on relocation failure.
  */
-esp_elf_t *dlmod_relocate(const char *path)
+static esp_elf_t *relocate_image(const char *path, esp_dl_image_cache **cache)
 {
     if (!path || path[0] == '\0') {
         return NULL;
     }
 
     int ret;
-    elf_file_t file;
-    ret = esp_elf_open(&file, path);
+    elf_file_t file = {0};
+    if (cache_find(cache ? *cache : NULL, path, &file)) ret = 0;
+    else { errno = 0; ret = esp_elf_open(&file, path); }
+    if (ret < 0 && errno == ENOMEM && esp_dl_image_cache_reclaim(cache)) ret = esp_elf_open(&file, path);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to open file %s", path);
         return NULL;
@@ -227,7 +319,7 @@ esp_elf_t *dlmod_relocate(const char *path)
 
     ESP_LOGD(TAG, "Open file:%s, len=%d", path, file.size);
 
-    esp_elf_t *elf_dl = (esp_elf_t *)esp_elf_malloc(sizeof(esp_elf_t), false);
+    esp_elf_t *elf_dl = (esp_elf_t *)cache_alloc(cache, sizeof(esp_elf_t));
     if (!elf_dl) {
         ESP_LOGE(TAG, "Failed to allocate memory for ELF");
         esp_elf_close(&file);
@@ -243,6 +335,11 @@ esp_elf_t *dlmod_relocate(const char *path)
     }
 
     ret = esp_elf_relocate(elf_dl, file.payload);
+    if (ret == -ENOMEM && esp_dl_image_cache_reclaim(cache)) {
+        esp_elf_deinit(elf_dl);
+        ret = esp_elf_init(elf_dl);
+        if (!ret) ret = esp_elf_relocate(elf_dl, file.payload);
+    }
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to relocate ELF file errno=%d", ret);
         esp_elf_deinit(elf_dl);
@@ -251,9 +348,12 @@ esp_elf_t *dlmod_relocate(const char *path)
         return NULL;
     }
 
+    cache_keep(cache ? *cache : NULL, path, &file);
     esp_elf_close(&file);
     return elf_dl;
 }
+
+esp_elf_t *dlmod_relocate(const char *path) { return relocate_image(path, NULL); }
 
 /**
  * @brief Insert a new module into the global module list.
@@ -264,7 +364,8 @@ esp_elf_t *dlmod_relocate(const char *path)
  * @return Pointer to the new module entry (struct dlmod_slist_t), NULL on failure
  *         (existing entry or relocation error).
  */
-static struct dlmod_slist_t *insert_module(const char *path, const char *name, bool independent)
+static struct dlmod_slist_t *insert_module(const char *path, const char *name, bool independent,
+                                          esp_dl_image_cache **cache)
 {
     if (!path || path[0] == '\0' || !name || name[0] == '\0') {
         return NULL;
@@ -294,7 +395,7 @@ static struct dlmod_slist_t *insert_module(const char *path, const char *name, b
 
     // Module doesn't exist, create new one (without mutex - these are not list operations)
     struct dlmod_slist_t *new_node;
-    new_node = esp_elf_malloc(sizeof(struct dlmod_slist_t), false);
+    new_node = cache_alloc(cache, sizeof(struct dlmod_slist_t));
     if (!new_node) {
         ESP_LOGE(TAG, "Failed to allocate memory for new node");
         return NULL;
@@ -303,7 +404,7 @@ static struct dlmod_slist_t *insert_module(const char *path, const char *name, b
     new_node->magic = DLMOD_HANDLE_MAGIC;
     strncpy(new_node->name, name, FILE_NAME_MAX - 1);
     new_node->name[FILE_NAME_MAX - 1] = '\0';
-    new_node->elf = dlmod_relocate(path);
+    new_node->elf = relocate_image(path, cache);
     if (!new_node->elf) {
         ESP_LOGE(TAG, "Failed to relocate");
         esp_elf_free(new_node);
@@ -338,10 +439,14 @@ static struct dlmod_slist_t *insert_module(const char *path, const char *name, b
 }
 
 struct dlmod_slist_t *dlmod_insert(const char *path, const char *name) {
-    return insert_module(path,name,false);
+    return insert_module(path,name,false,NULL);
 }
 struct dlmod_slist_t *dlmod_insert_instance(const char *path, const char *name) {
-    return insert_module(path,name,true);
+    return insert_module(path,name,true,NULL);
+}
+struct dlmod_slist_t *dlmod_insert_cached_instance(const char *path, const char *name,
+                                                  esp_dl_image_cache **cache) {
+    return insert_module(path,name,true,cache);
 }
 
 /**

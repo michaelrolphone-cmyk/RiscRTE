@@ -14,7 +14,7 @@ static_assert(offsetof(risc_runtime_api_v1, retain_invocation) == RISC_RUNTIME_B
               "The complete legacy prefix must remain byte-for-byte intact");
 static std::vector<std::string> events;
 static std::string mode;
-static unsigned invocations, delays;
+static unsigned invocations, delays, retainedDelays;
 static bool owned=true;
 static risc_runtime_api_v1 savedApi{};
 static RiscCpu::Port* cpu;
@@ -79,6 +79,7 @@ int main(int argc, char** argv) {
   RiscBoot::Port port{[](){return owned;}, [](risc_runtime_health_v1*){return true;},
     [](uint32_t){assert(!count("app:signaled"));++delays;}, [](const char* line){assert(strcmp(line,"forbidden"));return true;}};
   port.appExitSafe = [](){return mode != "native-retained" || !count("app:operation-false");};
+  port.retainedDelay = [](uint32_t ms){assert(ms==1 && count("app:signaled"));++retainedDelays;};
   if (cpu) {
     port.bindPlatforms=[](RiscBoot::Runtime& r){return cpu->bind(r);};
     port.appExitSafe=[](){return cpu->appExitSafe();};
@@ -94,6 +95,7 @@ int main(int argc, char** argv) {
   assert(!runtime->retainInvocation());
   assert(runtime->run() == !retained);
   assert(runtime->retained() == retained && !risc_runtime_get_api(1));
+  assert(retainedDelays==unsigned(signaled));
   if (cpu) {
     assert(cpu->appExitSafe() && cpu->providerStorageSafe() && !cpu->quiescent());
     assert(count("cpu:write-false")==1 && !count("cpu:close"));
@@ -120,7 +122,7 @@ int main(int argc, char** argv) {
     assert(mapped(appImage) && appAllocation && !strcmp(appAllocation,"still retained"));
     const unsigned before = delays;
     assert(!savedApi.retain_invocation() && !savedApi.request_launch("child.elf") && !savedApi.diagnostic("forbidden"));
-    savedApi.yield_ms(1); assert(delays == before);
+    savedApi.yield_ms(1); assert(delays == before && retainedDelays==unsigned(signaled));
   } else if (mode == "legacy-prefix") {
     assert(count("legacy:complete") == 1 && !count("child:entry"));
   } else {

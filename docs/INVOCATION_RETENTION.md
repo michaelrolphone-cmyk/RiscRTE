@@ -59,6 +59,13 @@ provider promotion return false without mutation. A saved callback returns
 false after Runtime::run has finished. `risc_runtime_get_api(1)` returns null
 once retained, so callers should use the table they already checked.
 
+Runtime 0.1.71 also lets that cached table's `yield_ms` cooperate with the raw
+scheduler while this retained invocation is still current. It clamps to 1..50ms
+and performs no provider polling, diagnostics, cleanup or authority restoration.
+The port must register the separate raw-delay callback; the ESP32-S3 composition
+does so. This accommodates legacy retained loops, although new code should still
+return promptly. See [the exact bounds and native limitation](RETAINED_YIELD.md).
+
 `runtime.retained-wake` is copied persistence for a future classified wake and
 cannot provide this fence. Provider promotion is graph activation, not an
 alternate way to request terminal retention. An older Runtime without the
