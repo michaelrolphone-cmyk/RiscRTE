@@ -5,10 +5,12 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include "radio_stage_capture.h"
 using namespace RiscCpu::NativeRadio;
 const char* WIFI_EVENT="wifi";
 static std::vector<std::string> calls;
 static std::string failure,failure2;
+static esp_err_t failureResult=ESP_FAIL;
 static bool loop=false,wifi=false,started=false,associated=false,scanning=false,list=false,defaults=false,driver=false;
 static bool badCount=false,startEmitsDone=false,externalLoop=false,attachCalled=false;
 static bool initChangesLogs=false,configChangesLogs=false,startChangesLogs=false,blockLogRemute=false;
@@ -38,7 +40,7 @@ static const esp_log_level_t unrelatedLogLevel=ESP_LOG_VERBOSE;
 static void logsQuiet(){for(auto level:logLevels)assert(level==ESP_LOG_NONE);}
 static void logsRestored(){for(unsigned i=0;i<4;++i)assert(logLevels[i]==originalLogLevels[i]);}
 
-static esp_err_t call(const char* name){calls.emplace_back(name);return failure==name || failure2==name?ESP_FAIL:ESP_OK;}
+static esp_err_t call(const char* name){calls.emplace_back(name);return failure==name || failure2==name?failureResult:ESP_OK;}
 static bool called(const char* name){return std::find(calls.begin(),calls.end(),name)!=calls.end();}
 static bool zero(const void* p,size_t n){const auto* bytes=static_cast<const uint8_t*>(p);for(size_t i=0;i<n;++i)if(bytes[i])return false;return true;}
 void* heap_caps_calloc(size_t count,size_t size,uint32_t capabilities){
@@ -197,6 +199,25 @@ int main(){
  assert(join("timeout-failure", ""));now=JoinTimeoutUs;failure="stop";uint8_t failedStatus=99;int8_t failedRssi=99;
  assert(!state(&failedStatus,&failedRssi) && failedStatus==0 && !idle());reset();
  assert(join("no-first-poll", ""));associated=true;netif->up=true;ip.ip.addr=1;now=JoinTimeoutUs+1;assert(status()==2 && !idle());reset();
+ assert(join("private-network", "private-password"));
+ wifi_event_sta_disconnected_t disconnected{};memcpy(disconnected.ssid,"private-network",15);disconnected.reason=202;
+ emit(WIFI_EVENT_STA_DISCONNECTED,&disconnected);
+ assert(status()==0&&status()==0);reset();
+ failure="wifi_init";failureResult=0x4242;
+ assert(!join("private-network", "private-password"));reset();failureResult=ESP_FAIL;
+#if RISC_STAGE_LOGS
+ assert(stageHas("failure step=init code=16962"));
+ for(const char* step:{"netif-init","event-loop-create","netif-attach","default-handlers","event-register","init","storage-ram","station-mode","station-config","start","connect",
+                      "disconnect","config-clear","stop","deinit","event-unregister","default-driver-clear","driver-config-clear","event-loop-delete","dhcp-stop","scan-start","scan-stop","scan-list-clear","scan-records"})
+  assert(stageHas((std::string("failure step=")+step+" code=-1").c_str()));
+ assert(stageHas("radio wifi connect result=accepted")&&stageHas("radio wifi cleanup result=ok state=idle"));
+ assert(stageHas("radio wifi scan result=complete count=16")&&stageHas("radio wifi connect result=timeout"));
+ assert(stageHas("radio wifi link state=joining")&&stageHas("radio wifi link state=up")&&stageHas("radio wifi link state=down"));
+ assert(stageCount("radio wifi disconnect-event reason=202")==1);
+ for(const char* secret:{"private-network","private-password","copied-ssid","copied-password","secret-passphrase","original-network","192."})assert(!stageHas(secret));
+#else
+ assert(stageLines.empty());
+#endif
  assert(netifInitCount==1);assert(!state(nullptr,nullptr) && !addresses(nullptr,nullptr));
  unsigned char bytes[99];memset(bytes,0xff,sizeof(bytes));wipe(bytes,sizeof(bytes));assert(zero(bytes,sizeof(bytes)));
  puts("Native radio adapter: lazy station-only RAM config, copied/wiped credentials, IPv4 status/address octets, no reconnect, bounded async scans, owned queue stale-event isolation and staged cleanup fault retries PASS");
