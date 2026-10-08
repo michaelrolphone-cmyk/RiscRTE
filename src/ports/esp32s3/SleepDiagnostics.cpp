@@ -18,6 +18,11 @@
 #include <esp_timer.h>
 #include <cstdarg>
 #endif
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+// Trusted native composition hook. The borrowed line is valid only during this
+// owner-task call. It must not allocate, block, mutate Runtime or recurse.
+extern "C" void risc_native_diagnostic_observer(const char*) __attribute__((weak));
+#endif
 namespace RiscDiagnostics {
 namespace {
 #if RISC_SLEEP_DIAGNOSTICS
@@ -187,6 +192,9 @@ void line(const char* text){
   if(!ours() || !text)return;
   if(outputting){noteLost();return;}
   OutputGuard guard;
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+  if(risc_native_diagnostic_observer)risc_native_diagnostic_observer(text);
+#endif
 #if RISC_SLEEP_DIAGNOSTICS
   message(journal,millis(),text);
   if(replay.active()){noteLost();return;}

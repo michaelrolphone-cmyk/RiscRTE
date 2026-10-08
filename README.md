@@ -449,3 +449,5 @@ held static GPIO output. It preserves the retired token, hold and all older
 table layouts; fresh claim or reset ends that read authority. Failure cannot
 substitute a cached HIGH. See [ownership and software verification](docs/CPU_PORT.md#exclusive-gpio-display-and-retained-static-outputs).
 Interpretation and product policy remain external providers' responsibility.
+
+Runtime 0.1.64 adds an optional native diagnostic observer, disabled in ordinary builds. See [the bounded observer contract](docs/NATIVE_DIAGNOSTIC_OBSERVER.md).
