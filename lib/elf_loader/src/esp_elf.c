@@ -146,6 +146,7 @@ static int esp_elf_open_impl(elf_file_t *file, const char *name)
     pbuf = esp_elf_malloc(size, false);
     if (!pbuf) {
         ESP_LOGE(TAG, "Failed to malloc %" PRId64 " bytes", (int64_t)size);
+        errno = ENOMEM;
         goto errout_lseek_end;
     }
 

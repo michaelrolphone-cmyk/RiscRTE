@@ -4,7 +4,7 @@ import os, pathlib, subprocess, argparse
 root=pathlib.Path(__file__).resolve().parents[1]
 p=argparse.ArgumentParser();p.add_argument('--cc',default=os.getenv('NATIVE_APP_CC',str(pathlib.Path.home()/'.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc')));a=p.parse_args()
 out=root/'build/elf';out.mkdir(parents=True,exist_ok=True)
-for source,name in [('apps/heartbeat/main.c','default.elf'),('test/fixtures/default.c','handoff.elf'),('test/fixtures/child.c','child.elf'),('test/fixtures/provider.c','probe.elf'),('test/fixtures/bound_key_value_target.c','bound-storage.elf'),('test/fixtures/watch/drivers/twatch_i2c/i2c_main.c','twatch-i2c.elf')]:
+for source,name in [('apps/heartbeat/main.c','default.elf'),('test/fixtures/default.c','handoff.elf'),('test/fixtures/child.c','child.elf'),('test/fixtures/provider.c','probe.elf'),('test/fixtures/bound_key_value_target.c','bound-storage.elf'),('test/fixtures/watch/drivers/twatch_i2c/i2c_main.c','twatch-i2c.elf'),('test/fixtures/image_cache.c','image-cache.elf')]:
     if not (root/source).is_file(): raise SystemExit(f"Missing required source: {source}")
     subprocess.run([a.cc,'-std=c11','-Os','-fPIC','-mtext-section-literals','-mlongcalls','-fvisibility=hidden','-nostdlib','-nostartfiles','-shared','-Wl,--hash-style=sysv','-I'+str(root/'sdk/app'),'-I'+str(root/'sdk/driver'),'-I'+str(root/'sdk/hardware'),'-I'+str(root/'test/fixtures/watch/sdk/driver'),'-I'+str(root/'test/fixtures/watch/include'),str(root/source),'-o',str(out/name)],check=True)
     readelf=a.cc.replace('gcc','readelf');info=subprocess.check_output([readelf,'-h',str(out/name)],text=True)

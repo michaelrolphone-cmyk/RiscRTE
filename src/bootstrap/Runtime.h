@@ -14,6 +14,7 @@
 #include <RiscBoundKeyValueV1.h>
 #include <RiscKeyValueV2.h>
 #include <RiscBoundKeyValueV2.h>
+struct esp_dl_image_cache;
 namespace RiscBoot {
 class Runtime;
 // Optional compiled-in backend. Namespace comes only from validated boot policy.
@@ -236,5 +237,6 @@ class Runtime final {
   bool prepared_=false, attempted_=false, active_=false, retained_=false;
   mutable bool metadataCloseRetained_=false;
   bool defaultRunning_=false, entryRunning_=false;
+  esp_dl_image_cache* appImages_=nullptr;
 };
 }

@@ -10,6 +10,9 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cerrno>
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+#include <private/esp_dlcache.h>
+#endif
 #ifdef ESP_PLATFORM
 #include <esp_elf.h>
 #include "native/NativeAppMemory.h"
@@ -717,7 +720,11 @@ bool Runtime::runOne(const char* name) {
   if(!appExitBarrier())return false;
   RiscPerf::invocation(name);
 #ifdef ESP_PLATFORM
-  if(!native_app_memory_begin()) return fail("app allocation context unavailable");
+  if(!native_app_memory_begin()) {
+    if(!appImages_)return fail("app allocation context unavailable");
+    esp_dl_image_cache_destroy(appImages_);appImages_=nullptr;
+    if(!native_app_memory_begin())return fail("app allocation context unavailable");
+  }
   native_app_memory_relocation(true);
 #endif
   // An app path may share a basename with a live driver; map a fresh image.
@@ -727,7 +734,16 @@ bool Runtime::runOne(const char* name) {
 #endif
   RISC_STAGE_LOG("app load begin file=%s",name);
   RiscPerf::emit(12);
+  const AppPolicy* policy=nullptr;
+  for(size_t p=0;p<policyCount_;++p)if(!strcmp(policies_[p].elf,name))policy=&policies_[p];
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+  // Only exact prepared installed-image paths enter this session's cache.
+  // Loose child paths retain the ordinary reader and admission behavior.
+  void* module=(policy || !strcmp(name,default_)) ?
+    esp_dlopen_cached_instance(&appImages_,name) : esp_dlopen_instance(name);
+#else
   void* module=esp_dlopen_instance(name);
+#endif
   RISC_STAGE_LOG("app load end file=%s result=%s elapsed_us=%llu",name,module?"ok":"failed",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
   RiscPerf::finish(12,13,loadStart,module?1:0);
@@ -745,8 +761,7 @@ bool Runtime::runOne(const char* name) {
   auto init=reinterpret_cast<int(*)()>(dlsym(module,"app_module_init"));
   auto fini=reinterpret_cast<void(*)()>(dlsym(module,"app_module_fini"));
   bool ok=entry && bool(init)==bool(fini), initialized=false;
-  appPolicy_=nullptr;
-  for (size_t p=0;p<policyCount_;++p) if (!strcmp(policies_[p].elf,name)) appPolicy_=&policies_[p];
+  appPolicy_=policy;
   active_=true;
   if(ok && init) {
 #if RISC_STAGE_LOGS
@@ -816,6 +831,11 @@ bool Runtime::run() {
     std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=ready",drivers_[i].id);port_.log(stage);
     port_.delay(1);
   }
+  // The active store is immutable until restart. Paired updates stage another
+  // bank; a new Runtime session owns a new cache even at the same mount path.
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+  if(ok)appImages_=esp_dl_image_cache_create();
+#endif
   // One app at a time; no recursive ELF launch, directory search or fallback.
   while(ok) {
     queued_[0]=0;
@@ -844,6 +864,11 @@ bool Runtime::run() {
       if(ok)ok=fail("driver shutdown retained; restart required");
     }
   }
+  // Cached input bytes are never borrowed by a mapping. Releasing them also
+  // preserves an app/provider image retained after failed quiescence.
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+  esp_dl_image_cache_destroy(appImages_);appImages_=nullptr;
+#endif
   fileOpen_={};revokeProviders(); currentRuntime=nullptr; return ok;
 }
 }
