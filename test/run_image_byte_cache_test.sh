@@ -13,7 +13,7 @@ flags=(-std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -Wno-pointer-to-int-cast
   -I"$repo/lib/elf_loader/include")
 if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
 cc "${flags[@]}" -Dread=risc_test_read -Dopen=risc_test_open -Dlseek=risc_test_lseek \
-  -c "$repo/lib/elf_loader/src/esp_elf.c" -o "$build/loader.o"
+  -c "${ELF_READER_SOURCE:-$repo/lib/elf_loader/src/esp_elf.c}" -o "$build/loader.o"
 for source in esp_elf_validate dlso/dlfcn dlso/dlmod; do
   cc "${flags[@]}" -include "$repo/test/support/native_registry/redirect.h" \
     -c "$repo/lib/elf_loader/src/$source.c" -o "$build/$(basename "$source").o"

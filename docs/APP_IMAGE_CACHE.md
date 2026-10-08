@@ -38,7 +38,8 @@ contract for mutable stores.
 The cache holds at most four recently used entries and 1 MiB of payload in total.
 It takes ownership of an already-read buffer without copying it. New insertions
 evict the oldest entries as needed. Larger images still load normally and are
-not cached. Input reads retain the existing 8 MiB cap and 30-second deadline.
+not cached. Input reads retain the existing 8 MiB cap and 30-second deadline;
+[byte/time checkpoints](ELF_READ_CHECKPOINTS.md) bound cooperative yields.
 
 Native caching is enabled only with the loader's PSRAM allocation configuration;
 non-PSRAM targets take the uncached path without allocating a cache control block.

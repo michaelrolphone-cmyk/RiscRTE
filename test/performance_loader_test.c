@@ -18,6 +18,8 @@ static TickType_t ticks;
 static bool fail_read, fail_allocation, allow_enter = true, allow_leave = true;
 static int arch_result, publish_result;
 static unsigned delay_step = 1;
+static unsigned read_step, read_calls;
+static size_t since_yield, max_between_yields;
 #if !TEST_ABSENT_HOOK
 void risc_perf_loader_event(uint32_t phase, uint32_t value) {
     assert(event_count < 32);
@@ -27,10 +29,16 @@ void risc_perf_loader_event(uint32_t phase, uint32_t value) {
 }
 #endif
 TickType_t xTaskGetTickCount(void) { return ticks; }
-void vTaskDelay(TickType_t n) { ticks += n * delay_step; ++delays; }
+void vTaskDelay(TickType_t n) {
+    ticks += n * delay_step; ++delays;
+    if(since_yield>max_between_yields)max_between_yields=since_yield;
+    since_yield=0;
+}
 ssize_t risc_test_read(int fd, void *bytes, size_t n) {
     if (fail_read) return 0;
-    return read(fd, bytes, n);
+    const ssize_t result=read(fd, bytes, n);++read_calls;ticks+=read_step;
+    if(result>0)since_yield+=(size_t)result;
+    return result;
 }
 void *esp_elf_malloc(uint32_t n, bool exec) {
     (void)exec;
@@ -59,7 +67,10 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
 int esp_elf_arch_flush(esp_elf_t *elf) {
     (void)elf; ++publications; ticks += 3; return publish_result;
 }
-static void reset(void) { event_count = 0; ticks = 0; delays = 0; }
+static void reset(void) {
+    event_count = 0; ticks = 0; delays = 0;read_calls=0;
+    since_yield=max_between_yields=0;
+}
 static void expect(const uint32_t *phases, unsigned n) {
 #if TEST_ABSENT_HOOK
     (void)phases; (void)n; assert(event_count == 0);
@@ -86,12 +97,12 @@ static void expect_relocation(elf_file_t *file, int expected) {
     assert(allocations == 1); /* Original input file remains owned. */
 }
 int main(int argc, char **argv) {
-    assert(argc == 3);
+    assert(argc == 4);
     elf_file_t file = {0};
     reset();
     assert(esp_elf_open(&file, argv[1]) == 0);
     EXPECT(40, 41, 45, 46);
-    assert(delays == (file.size + 4095) / 4096);
+    assert(delays == file.size / (32 * 1024));
 #if !TEST_ABSENT_HOOK
     assert(events[1].value == file.size);
     assert(events[1].tick - events[0].tick == delays);
@@ -128,10 +139,14 @@ int main(int argc, char **argv) {
     EXPECT(40, 44);
     assert(allocations == 0);
     reset(); fail_read = false; delay_step = 30000;
-    assert(esp_elf_open(&file, argv[1]) == -1);
+    assert(esp_elf_open(&file, argv[3]) == -1);
     assert(errno == ETIMEDOUT);
     EXPECT(40, 44);
     assert(allocations == 0);
+    reset();delay_step=1;read_step=30000;
+    assert(esp_elf_open(&file,argv[1])==-1 && errno==ETIMEDOUT);
+    assert(read_calls==1 && allocations==0);EXPECT(40,44);
+    read_step=0;
     reset(); delay_step = 1;
     assert(esp_elf_open(&file, argv[2]) == -1);
     EXPECT(40, 41, 45, 44);
@@ -144,5 +159,23 @@ int main(int argc, char **argv) {
 #else
     puts("PASS: production loader phase order, bytes, read/yield timing, parse rejection, short read, timeout, relocation/allocation/scope/publication failures");
 #endif
+    // A 256 KiB valid image: immediate reads yield at 32 KiB; 1 ms/read
+    // yields every two chunks; slower 3 ms/read yields after each chunk.
+    for(unsigned cost=0;cost<=3;++cost){
+        if(cost==2)continue;
+        reset();read_step=cost;
+        assert(!esp_elf_open(&file,argv[3]));
+        assert(file.size==256*1024 && read_calls==64);
+        const unsigned expected=cost==0?8:cost==1?32:64;
+        assert(delays==expected && max_between_yields<=32*1024 && since_yield==0);
+        EXPECT(40,41,45,46);
+        printf("Cold 256 KiB read cost=%u ticks/chunk: reads=%u forced_yields=%u max_bytes_between_yields=%zu\n",
+               cost,read_calls,delays,max_between_yields);
+        esp_elf_close(&file);assert(!allocations);
+    }
+    reset();read_step=1;ticks=UINT32_MAX-2;
+    assert(!esp_elf_open(&file,argv[3]) && delays==32 && max_between_yields==8192);
+    esp_elf_close(&file);assert(!allocations);read_step=0;
+    puts("PASS: cold-reader byte/time checkpoints, slow-I/O/yield deadline and tick wrap");
     return 0;
 }

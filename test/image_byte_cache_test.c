@@ -13,7 +13,7 @@
 #include "private/elf_platform.h"
 #include "freertos/task.h"
 
-static unsigned opens, seeks, reads, parses, relocations, publications, allocations;
+static unsigned opens, seeks, reads, parses, relocations, publications, allocations, yields;
 static size_t bytes;
 static TickType_t ticks;
 static int fail_allocation_at=-1, arch_result;
@@ -26,7 +26,7 @@ void risc_perf_loader_event(uint32_t phase, uint32_t value) {
     if (phase == 42) ++relocations;
 }
 TickType_t xTaskGetTickCount(void) { return ticks; }
-void vTaskDelay(TickType_t n) { ticks += n; }
+void vTaskDelay(TickType_t n) { ticks += n; ++yields; }
 ssize_t risc_test_read(int fd, void *data, size_t n) {
     assert(!forbid_reads);
     const ssize_t result = read(fd, data, n);
@@ -66,15 +66,15 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
     const int result=arch_result;arch_result=0;return result;
 }
 int esp_elf_arch_flush(esp_elf_t *elf) { (void)elf; ++publications; return 0; }
-static void reset_counts(void) { opens=seeks=reads=parses=relocations=publications=0;bytes=0; }
+static void reset_counts(void) { opens=seeks=reads=parses=relocations=publications=yields=0;bytes=0; }
 static void load(esp_dl_image_cache **cache, const char *path) {
     void *module=esp_dlopen_cached_instance(cache,path);
     assert(module && dlsym(module,"app_main"));
     assert(dlclose(module)==0);
 }
 static void report(const char *mode) {
-    printf("%s default/app/default/app/default: opens=%u seeks=%u reads=%u bytes=%zu parses=%u relocations=%u publications=%u\n",
-           mode,opens,seeks,reads,bytes,parses,relocations,publications);
+    printf("%s default/app/default/app/default: opens=%u seeks=%u reads=%u bytes=%zu parses=%u relocations=%u publications=%u read_yields=%u\n",
+           mode,opens,seeks,reads,bytes,parses,relocations,publications,yields);
 }
 int main(int argc, char **argv) {
     assert(argc == 5);

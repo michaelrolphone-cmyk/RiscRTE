@@ -11,6 +11,11 @@ fi
 # Preserve the file size but break ELF magic to exercise the actual validator.
 cp "$fixture" "$build/malformed.elf"
 printf 'BAD!' | dd of="$build/malformed.elf" bs=1 count=4 conv=notrunc 2>/dev/null
+python3 - "$fixture" "$build/padded.elf" <<'PY'
+import pathlib,sys
+data=pathlib.Path(sys.argv[1]).read_bytes()
+pathlib.Path(sys.argv[2]).write_bytes(data+bytes(256*1024-len(data)))
+PY
 # Target ELF addresses remain 32-bit; the host test never executes mapped code.
 # Suppress inherited target-width/sign/unused-option warnings, keeping Werror.
 flags=(-std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -Wno-pointer-to-int-cast
@@ -31,5 +36,5 @@ for mode in enabled absent; do
   fi
   cc "${flags[@]}" "${extra[@]}" "$repo/test/performance_loader_test.c" \
     "$build/loader.o" "$build/validate.o" -o "$build/test-$mode"
-  "$build/test-$mode" "$fixture" "$build/malformed.elf"
+  "$build/test-$mode" "$fixture" "$build/malformed.elf" "$build/padded.elf"
 done

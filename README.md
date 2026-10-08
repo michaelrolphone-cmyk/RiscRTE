@@ -455,3 +455,4 @@ Runtime 0.1.64 adds an optional native diagnostic observer, disabled in ordinary
 Runtime 0.1.65 repeated prepared app launches reuse bounded immutable input bytes while
 preserving fresh relocation, globals and lifecycle callbacks. See the
 [cache ownership, replacement lifecycle and measured operation counts](docs/APP_IMAGE_CACHE.md).
+Cold reads also use [bounded byte/time yield checkpoints](docs/ELF_READ_CHECKPOINTS.md).

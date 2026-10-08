@@ -154,6 +154,9 @@ static int esp_elf_open_impl(elf_file_t *file, const char *name)
      * checkpoints bound repeated work and yield between bounded read requests. */
     const TickType_t read_started = xTaskGetTickCount();
     const TickType_t read_budget = pdMS_TO_TICKS(30000);
+    const TickType_t yield_ticks = pdMS_TO_TICKS(2) ? pdMS_TO_TICKS(2) : 1;
+    TickType_t yielded_at = read_started;
+    size_t since_yield = 0;
     size_t offset = 0, reported_offset = 0;
     TickType_t reported_at = read_started;
     while (offset < (size_t)size) {
@@ -176,7 +179,16 @@ static int esp_elf_open_impl(elf_file_t *file, const char *name)
             reported_offset = offset;
             reported_at = now;
         }
-        vTaskDelay(1);
+        /* Fast flash reads do not need a forced tick for every 4 KiB. Keep
+         * scheduler/watchdog service bounded by bytes or elapsed work, as in
+         * code publication. Synchronous reads keep their existing per-call
+         * timeout responsibility and every chunk still checks the deadline. */
+        since_yield += chunk;
+        if (since_yield >= 32 * 1024 || (TickType_t)(now - yielded_at) >= yield_ticks) {
+            vTaskDelay(1);
+            yielded_at = xTaskGetTickCount();
+            since_yield = 0;
+        }
         if ((TickType_t)(xTaskGetTickCount() - read_started) >= read_budget) {
             errno = ETIMEDOUT;
             goto errout_read_fs;
