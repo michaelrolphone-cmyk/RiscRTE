@@ -1,5 +1,8 @@
 #include "SleepDiagnostics.h"
 #if RISC_DIAGNOSTIC_ADAPTER
+#if RISC_PERFORMANCE_TRACE
+#include "diagnostics/Performance.h"
+#endif
 #if RISC_SLEEP_DIAGNOSTICS
 #include "diagnostics/Journal.h"
 #include <esp_attr.h>
@@ -20,6 +23,9 @@ Replay replay;
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
 UsbSleepRecovery recovery;
+#endif
+#if RISC_PERFORMANCE_TRACE
+RiscPerf::Replay performanceReplay;
 #endif
 TaskHandle_t owner=nullptr;
 bool ours(){return owner && owner==xTaskGetCurrentTaskHandle();}
@@ -44,6 +50,9 @@ struct Transport {
 }
 void start(){
   owner=xTaskGetCurrentTaskHandle();Serial.setTxTimeoutMs(0);
+#if RISC_PERFORMANCE_TRACE
+  performanceReplay.disconnect();
+#endif
 #if RISC_HWCDC_SLEEP_RECOVERY
   recovery.reset();
 #endif
@@ -60,10 +69,43 @@ void poll(){
 #if RISC_HWCDC_SLEEP_RECOVERY
   if(!recovery.poll(transport))return;
 #endif
+#if RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE
+  if(!transport.connected()){
 #if RISC_SLEEP_DIAGNOSTICS
-  if(!transport.connected()){replay.disconnect();return;}
-  for(unsigned i=0;i<16 && Serial.available()>0;++i){int c=Serial.read();if(c<0)break;replay.input(char(c),journal);}
+    replay.disconnect();
+#endif
+#if RISC_PERFORMANCE_TRACE
+    performanceReplay.disconnect();
+#endif
+    return;
+  }
+  for(unsigned i=0;i<16 && Serial.available()>0;++i){
+    int c=Serial.read();if(c<0)break;
+#if RISC_SLEEP_DIAGNOSTICS
+#if RISC_PERFORMANCE_TRACE
+    if(!performanceReplay.active())
+#endif
+      replay.input(char(c),journal);
+#endif
+#if RISC_PERFORMANCE_TRACE
+#if RISC_SLEEP_DIAGNOSTICS
+    if(!replay.active())
+#endif
+      performanceReplay.input(char(c));
+#endif
+#if RISC_SLEEP_DIAGNOSTICS && RISC_PERFORMANCE_TRACE
+    // The winning command's newline must also discard the other parser's
+    // prefix; otherwise the next request would concatenate two commands.
+    if(replay.active())performanceReplay.disconnect();
+    else if(performanceReplay.active())replay.disconnect();
+#endif
+  }
+#if RISC_PERFORMANCE_TRACE
+  if(performanceReplay.active()){performanceReplay.poll(transport);return;}
+#endif
+#if RISC_SLEEP_DIAGNOSTICS
   replay.poll(transport);
+#endif
 #endif
 }
 void line(const char* text){
@@ -71,6 +113,9 @@ void line(const char* text){
 #if RISC_SLEEP_DIAGNOSTICS
   message(journal,millis(),text);
   if(replay.active())return;
+#endif
+#if RISC_PERFORMANCE_TRACE
+  if(performanceReplay.active())return;
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
   if(!recovery.ready())return;
@@ -99,6 +144,9 @@ void lightReturn(int32_t result,uint32_t cause){
   if(result==ESP_OK){
 #if RISC_SLEEP_DIAGNOSTICS
     replay.disconnect();
+#endif
+#if RISC_PERFORMANCE_TRACE
+    performanceReplay.disconnect();
 #endif
     recovery.request(); // RAM only; wake-source cleanup runs before any USB I/O.
   }

@@ -21,8 +21,11 @@
 #else
 #define RISC_HWCDC_SLEEP_RECOVERY 0
 #endif
+#ifndef RISC_PERFORMANCE_TRACE
+#define RISC_PERFORMANCE_TRACE 0
+#endif
 // The adapter also supplies bounded live output when the recorder is opted out.
-#define RISC_DIAGNOSTIC_ADAPTER (RISC_SLEEP_DIAGNOSTICS || RISC_HWCDC_SLEEP_RECOVERY)
+#define RISC_DIAGNOSTIC_ADAPTER (RISC_SLEEP_DIAGNOSTICS || RISC_HWCDC_SLEEP_RECOVERY || RISC_PERFORMANCE_TRACE)
 namespace RiscDiagnostics {
 #if RISC_DIAGNOSTIC_ADAPTER
 void start();

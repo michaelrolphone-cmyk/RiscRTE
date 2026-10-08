@@ -1,4 +1,5 @@
 #include "Runtime.h"
+#include "diagnostics/Performance.h"
 #include "KeyValueGeneration.h"
 #include "runtime/update/Version.h"
 #include "runtime/update/CohortMigration.h"
@@ -36,7 +37,10 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](const char* cap,uint32_t version,uint64_t instance,risc_runtime_capability_v1* out){return currentRuntime && currentRuntime->acquire(cap,version,instance,out);},
     [](risc_runtime_capability_v1* grant){return currentRuntime && currentRuntime->release(grant);},
     [](){return currentRuntime && currentRuntime->confirmBoot();},
-    [](){return currentRuntime && currentRuntime->retainInvocation();}};
+    [](){return currentRuntime && currentRuntime->retainInvocation();},
+    [](uint32_t id,uint32_t phase,uint32_t value)->uint32_t {
+      return currentRuntime && currentRuntime->active() ? RiscPerf::interaction(id,phase,value) : 0;
+    }};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 namespace RiscBoot {
@@ -525,6 +529,7 @@ bool Runtime::revokeApp() {
 #include "RealtimeRuntime.inc"
 #include "ProviderPromotionRuntime.inc"
 bool Runtime::prepare(const char* root) {
+  RiscPerf::Scope trace(10,11);
   if(attempted_ || metadataCloseRetained_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);
   char filename[256], relative[193]; JsonDocument config, boardDoc;
@@ -582,7 +587,9 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
 bool Runtime::launch(const char* relative) {
   if(fileOpen_.phase==FileOpenState::Phase::Requested || fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
   if(promotionRunning_ || !active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
-  return path(root_,relative,queued_,sizeof(queued_));
+  const bool ok=path(root_,relative,queued_,sizeof(queued_));
+  if(ok)RiscPerf::emit(20);
+  return ok;
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
 bool Runtime::confirmBoot() {
@@ -656,7 +663,9 @@ void Runtime::yield(uint32_t ms) {
   if(!active()) return;
   // Poll work is bounded separately; each app yield cooperates exactly once.
   if(!promotionRunning_ && appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
-  port_.delay(ms<1?1:ms>50?50:ms);
+  const uint32_t requested=ms<1?1:ms>50?50:ms;
+  RiscPerf::AggregateScope wait(26,requested);
+  port_.delay(requested);
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }
 bool Runtime::retainInvocation() {
@@ -688,12 +697,16 @@ bool Runtime::appExitBarrier() {
 }
 bool Runtime::runOne(const char* name) {
   if(!appExitBarrier())return false;
+  RiscPerf::invocation(name);
 #ifdef ESP_PLATFORM
   if(!native_app_memory_begin()) return fail("app allocation context unavailable");
   native_app_memory_relocation(true);
 #endif
   // An app path may share a basename with a live driver; map a fresh image.
+  const auto loadStart=RiscPerf::now();
+  RiscPerf::emit(12);
   void* module=esp_dlopen_instance(name);
+  RiscPerf::finish(12,13,loadStart,module?1:0);
 #ifdef ESP_PLATFORM
   native_app_memory_relocation(false);
 #endif
@@ -701,6 +714,7 @@ bool Runtime::runOne(const char* name) {
 #ifdef ESP_PLATFORM
     native_app_memory_end();
 #endif
+    RiscPerf::emit(21);
     return fail("app ELF load failed");
   }
   auto entry=reinterpret_cast<void(*)()>(dlsym(module,"app_main"));
@@ -710,12 +724,14 @@ bool Runtime::runOne(const char* name) {
   appPolicy_=nullptr;
   for (size_t p=0;p<policyCount_;++p) if (!strcmp(policies_[p].elf,name)) appPolicy_=&policies_[p];
   active_=true;
-  if(ok && init) { initialized=init()==0; ok=initialized; }
+  if(ok && init) { const auto start=RiscPerf::now();RiscPerf::emit(14); initialized=init()==0; ok=initialized; RiscPerf::finish(14,15,start,ok?1:0); }
   if(!appExitBarrier())return false;
   defaultRunning_=!strcmp(name,default_);entryRunning_=ok;
   if(ok) {
     port_.log("RTE_APP phase=entry");
+    RiscPerf::emit(16);
     entry();
+    RiscPerf::emit(17);
     port_.log("RTE_APP phase=returned");
   } else port_.log("RTE_APP phase=init-or-entry-rejected");
   entryRunning_=false;defaultRunning_=false;
@@ -723,6 +739,7 @@ bool Runtime::runOne(const char* name) {
   // Boot-owned driver grants defer graph quiescence until after app teardown,
   // so waiting for final graph shutdown is too late.
   if(!appExitBarrier())return false;
+  RiscPerf::Scope unloadTrace(18,19);
   if(initialized) fini();
   if(!appExitBarrier())return false;
   active_=false;
@@ -731,6 +748,7 @@ bool Runtime::runOne(const char* name) {
   if(!native_app_memory_end()) { retained_=true; return fail("app memory busy; image retained"); }
 #endif
   if(dlclose(module)) { retained_=true; return fail("app unload failed; restart required"); }
+  unloadTrace.result(1);
   return ok || fail("app entry/lifecycle invalid");
 }
 bool Runtime::run() {

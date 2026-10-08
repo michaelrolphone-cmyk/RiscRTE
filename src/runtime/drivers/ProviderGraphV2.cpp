@@ -1,3 +1,4 @@
+#include "diagnostics/Performance.h"
 #include "ProviderGraphV2.h"
 #include "../../../lib/hal/RuntimeFaultRetention.h"
 #include "ProviderOwnedSpecV2.h"
@@ -291,6 +292,7 @@ GrantV2 GraphV2::acquireIndex(size_t index) {
 
 void GraphV2::poll(uint32_t (*nowMs)(), void (*yield)()) {
   if (!nowMs || !count_ || polling_) return;
+  RiscPerf::AggregateScope trace(27);
   polling_ = true;
   const uint32_t began = nowMs();
   unsigned calls = 0;
@@ -307,6 +309,7 @@ void GraphV2::poll(uint32_t (*nowMs)(), void (*yield)()) {
   polling_ = false;
 }
 GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
+  RiscPerf::Scope trace(22,23,RiscPerf::identity(capability));
   error_[0] = 0;
   const int target = find(capability, api);
   if (target < 0) fail("Capability missing/ambiguous", capability);
@@ -315,6 +318,7 @@ GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
 
 GrantV2 GraphV2::acquireFrom(const char* providerId, const char* capability,
                            uint32_t api, uint64_t instance) {
+  RiscPerf::Scope trace(22,23,RiscPerf::identity(providerId));
   error_[0] = 0;
   const int target = findProvider(providerId, capability, api, instance);
   if (target < 0) fail("Provider not admitted", providerId);

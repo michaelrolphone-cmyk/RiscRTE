@@ -47,6 +47,35 @@ static esp_elf_symbol_table_t *g_symbol_tables[SYMBOL_TABLES_NO];
 static symbol_resolver current_resolver = elf_find_sym_default;
 static portMUX_TYPE resolver_mux = portMUX_INITIALIZER_UNLOCKED;
 
+/* Optional bounded Runtime recorder. No serial output, allocation or clock read
+ * is performed by the loader itself. Standalone users need not define the hook.
+ * Phase IDs follow Runtime's generic performance convention; failure values are
+ * signed loader return codes represented as uint32_t. */
+#ifdef __APPLE__
+extern void risc_perf_loader_event(uint32_t phase, uint32_t value) __attribute__((weak_import));
+#else
+extern void risc_perf_loader_event(uint32_t phase, uint32_t value) __attribute__((weak));
+#endif
+
+static inline void elf_perf_event(uint32_t phase, uint32_t value)
+{
+    if (risc_perf_loader_event) risc_perf_loader_event(phase, value);
+}
+
+static int esp_elf_open_impl(elf_file_t *file, const char *name);
+
+int esp_elf_open(elf_file_t *file, const char *name)
+{
+    elf_perf_event(40, 0); /* read begin: includes open, seek, allocation and yields */
+    const int result = esp_elf_open_impl(file, name);
+    if (result) {
+        const int saved_errno = errno;
+        elf_perf_event(44, (uint32_t)result);
+        errno = saved_errno;
+    }
+    return result;
+}
+
 /**
  * @brief Open and load an ELF file into memory.
  *
@@ -70,7 +99,7 @@ __attribute__((weak)) bool esp_elf_admit_managed_app(const char *path, const uin
     return path && !(strncmp(path, "/sd/Apps/", 9) == 0 && strchr(path + 9, '/'));
 }
 
-int esp_elf_open(elf_file_t *file, const char *name)
+static int esp_elf_open_impl(elf_file_t *file, const char *name)
 {
     ssize_t ret;
     int fd = -1;
@@ -153,11 +182,15 @@ int esp_elf_open(elf_file_t *file, const char *name)
         }
     }
 
+    elf_perf_event(41, (uint32_t)size); /* read complete, bytes */
     extern bool esp_elf_validate_file(const uint8_t *, size_t);
-    if (!esp_elf_validate_file(pbuf, size)) {
+    elf_perf_event(45, 0); /* parse existing ELF structure */
+    const bool valid = esp_elf_validate_file(pbuf, size);
+    if (!valid) {
         ESP_LOGE(TAG, "Unsupported or malformed native application");
         goto errout_read_fs;
     }
+    elf_perf_event(46, 0); /* parse complete */
     const int closed = close(fd);
     fd = -1;
     if (closed != 0 || !esp_elf_admit_managed_app(file_path, pbuf, size)) {
@@ -618,9 +651,17 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf);
 
 int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
 {
-    if (!elf || !pbuf) return -EINVAL;
-    if (!esp_elf_privileged_os_cpu_relocation_enter_v1(elf)) return -EPERM;
-    int result = esp_elf_relocate_impl(elf, pbuf);
+    elf_perf_event(42, 0); /* map sections/segments, relocate, publish code */
+    int result;
+    if (!elf || !pbuf) {
+        result = -EINVAL;
+        goto perf_complete;
+    }
+    if (!esp_elf_privileged_os_cpu_relocation_enter_v1(elf)) {
+        result = -EPERM;
+        goto perf_complete;
+    }
+    result = esp_elf_relocate_impl(elf, pbuf);
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     if (result == 0) {
         // Retained by the SDK log sink for decoding dynamically loaded PCs.
@@ -633,7 +674,10 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
                  (unsigned long)elf->sec[ELF_SEC_TEXT].size);
     }
 #endif
-    if (!esp_elf_privileged_os_cpu_relocation_leave_v1(elf)) return -EIO;
+    if (!esp_elf_privileged_os_cpu_relocation_leave_v1(elf)) result = -EIO;
+perf_complete:
+    elf_perf_event(43, (uint32_t)result);
+    if (result) elf_perf_event(44, (uint32_t)result);
     return result;
 }
 

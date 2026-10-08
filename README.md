@@ -425,3 +425,10 @@ from paired boot, including deep timer wake. It consumes the existing committed
 bank record; installation and inactive-bank updates retain image validation and
 atomic selection. [Production call counts and lifecycle evidence](docs/COMMITTED_PAIR_BOOT.md)
 describe the change. Provider mappings and per-app loader behavior are unchanged.
+
+Runtime 0.1.56 adds opt-in bounded performance tracing with interaction IDs carried
+through app handoffs, nested application spans, loader/provider phases and
+aggregate scheduler waits. The optional app API suffix preserves existing
+clients. Recorders never write serial; `perf` requests a capacity-bounded snapshot
+through the existing diagnostic transport. See [the tracing contract and
+measurement limits](docs/PERFORMANCE_TRACE.md). No file validation is added.
