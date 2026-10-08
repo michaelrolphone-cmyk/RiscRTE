@@ -62,6 +62,17 @@ A zero write or exhausted capacity ends the attempt immediately. There is no
 waiting for USB, host attachment, or buffer space and no USB boot dependency.
 The pinned transport remains the single owner-task producer with zero timeout.
 
+Stage builds using hardware USB preallocate an 8192-byte TX ring through the
+pinned HWCDC driver's existing `setTxBufferSize()` before its first `begin()`.
+This absorbs a bounded startup burst without another logging queue. It costs
+7936 additional heap bytes for payload capacity over the ordinary 256-byte ring
+(plus allocator/driver overhead). Sleep recovery repeats the preallocation after
+`end()` frees the old ring. It never resizes a live ring. Allocation failure allows
+the driver's ordinary smaller-buffer fallback; the boot statement reports that
+failure. Normal targets, UART and TinyUSB keep their previous buffer behavior.
+The larger ring does not guarantee complete output when disconnected, permanently
+backpressured, or when a burst exceeds its capacity; loss counters still apply.
+
 In stage builds, `RTE_LOG lost=N truncated=N` reports cumulative counters since
 diagnostic startup when polling next has capacity. `lost` counts attempted lines
 that were not emitted (including disconnected host, insufficient capacity,

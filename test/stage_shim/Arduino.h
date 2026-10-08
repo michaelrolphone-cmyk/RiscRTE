@@ -6,6 +6,7 @@
 #undef Serial
 struct FakeSerial : BaseFakeSerial {
   size_t writeLimit=256,zeroAfter=SIZE_MAX;
+  size_t setTxBufferSize(size_t n){space=n;return n;}
   void (*onWrite)()=nullptr;
   size_t write(const uint8_t* p,size_t n){
     assert(n<=64);

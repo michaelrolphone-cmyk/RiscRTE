@@ -57,6 +57,9 @@ struct Transport {
   uint32_t nowMs(){return millis();}
   void end(){Serial.end();}
   bool begin(){
+#if RISC_STAGE_LOGS
+    prepareSerial(); // end() freed the previous diagnostic TX allocation.
+#endif
     Serial.begin(115200);Serial.setTxTimeoutMs(0);
     // Pinned begin() returns void. Missing RX queue returns -1; missing TX
     // queue/mutex returns zero. Interrupt allocation failure calls end(). A
@@ -98,6 +101,13 @@ bool reportLoss(){
 #endif
 }
 }
+#if RISC_STAGE_LOGS && RISC_HWCDC_SERIAL
+bool prepareSerial(){
+  // Reuse the pinned driver's own bounded ring for startup bursts. Allocation
+  // failure preserves begin()'s ordinary 256-byte fallback, never a host wait.
+  return Serial.setTxBufferSize(8192)==8192;
+}
+#endif
 void start(){
   owner=xTaskGetCurrentTaskHandle();Serial.setTxTimeoutMs(0);
   outputting=unfinishedLine=false;

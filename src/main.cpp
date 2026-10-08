@@ -138,9 +138,16 @@ void setup() {
 #endif
   RiscPerf::configure([]()->uint64_t{return uint64_t(esp_timer_get_time());},isOwner,RISC_PERFORMANCE_TRACE);
   RiscPerf::emit(50);
-  RiscCpu::NativeRetainedWake::start(); RiscCpu::NativeRealtime::start(); Serial.begin(115200);
+  RiscCpu::NativeRetainedWake::start(); RiscCpu::NativeRealtime::start();
+#if RISC_STAGE_LOGS && RISC_HWCDC_SERIAL
+  const bool diagnosticTxReady=RiscDiagnostics::prepareSerial();
+#endif
+  Serial.begin(115200);
 #if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::start();
+#endif
+#if RISC_STAGE_LOGS && RISC_HWCDC_SERIAL
+  RISC_STAGE_LOG("usb tx-buffer requested=8192 result=%s",diagnosticTxReady?"ready":"allocation-failed-fallback");
 #endif
   RISC_STAGE_LOG("boot begin reset=%d wake=%lu setup_start_us=%llu",int(esp_reset_reason()),
                  (unsigned long)esp_sleep_get_wakeup_cause(),(unsigned long long)bootUs);

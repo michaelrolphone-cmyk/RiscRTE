@@ -28,6 +28,11 @@
 // The adapter also supplies bounded live output when the recorder is opted out.
 #define RISC_DIAGNOSTIC_ADAPTER (RISC_SLEEP_DIAGNOSTICS || RISC_HWCDC_SLEEP_RECOVERY || RISC_PERFORMANCE_TRACE || RISC_STAGE_LOGS)
 namespace RiscDiagnostics {
+#if RISC_STAGE_LOGS && RISC_HWCDC_SERIAL
+// Only before Serial.begin(), or after Serial.end() during owner recovery.
+// HWCDC setTxBufferSize deletes its old ring; never resize a live transport.
+bool prepareSerial();
+#endif
 #if RISC_DIAGNOSTIC_ADAPTER
 void start();
 void poll();
