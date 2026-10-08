@@ -40,6 +40,7 @@ namespace Testing {
 bool lockRegistry();
 void unlockRegistry();
 size_t allocatedBytes();
+bool metadataAllocated();
 void failNextAllocation();
 // Fail exactly the nth following host grant attempt, once (0 disables).
 void failGrantNumber(unsigned n);

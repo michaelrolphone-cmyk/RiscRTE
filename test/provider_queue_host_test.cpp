@@ -43,6 +43,18 @@ risc_stream_client_info_v1 info(const risc_stream_provider_v1& p, uint32_t endpo
   assert(providerStreamInfo(p.context, Lease, Consumer, endpoint, &out) == RISC_STREAM_OK);
   return out;
 }
+void lazyMetadata() {
+  assert(!Testing::metadataAllocated() && Testing::allocatedBytes() == 0);
+  Testing::failNextAllocation();
+  risc_stream_provider_v1 rejected{};
+  assert(!host->open(&rejected) && !rejected.context);
+  assert(!Testing::metadataAllocated() && Testing::allocatedBytes() == 0);
+  auto p = openProvider();
+  assert((p.context >> 32) == 1); // Failed allocation consumed no identity.
+  assert(Testing::metadataAllocated() && Testing::allocatedBytes() == 0);
+  closeProvider(p);
+  assert(Testing::metadataAllocated() && Testing::allocatedBytes() == 0);
+}
 void transfers() {
   auto p = openProvider();
   const auto rx = publish(p, RISC_STREAM_READ), tx = publish(p, RISC_STREAM_WRITE);
@@ -331,6 +343,7 @@ void nonwrappingIds() {
 }
 }
 int main() {
+  lazyMetadata();
   transfers();
   malformedAndAuthority();
   terminalsAndCounters();

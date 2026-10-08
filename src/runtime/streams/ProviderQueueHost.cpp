@@ -36,7 +36,11 @@ struct Queue {
 struct Registry {
   std::atomic_flag mutex = ATOMIC_FLAG_INIT;
   std::array<Context, RiscLimits::Providers> contexts{};
-  std::array<Queue, ProviderQueueEndpoints> queues{};
+  // Metadata-only Runtime candidates and boot without stream providers pay no
+  // queue metadata allocation. Once needed, this fixed allocation persists for
+  // process lifetime, including every retained provider's uncertain cleanup.
+  using Queues = std::array<Queue, ProviderQueueEndpoints>;
+  std::unique_ptr<Queues> queues;
   uint32_t generation = 0, endpoint = 0;
   size_t allocated = 0;
 #ifdef RISC_STREAM_HOST_TESTING
@@ -65,7 +69,8 @@ bool contextIs(uint64_t context, uint32_t state) {
   return slot && slot->gate.load(std::memory_order_acquire) == contextGate(context, state);
 }
 Queue* queue(uint32_t endpoint) {
-  if (endpoint) for (auto& q : registry.queues) if (q.id == endpoint) return &q;
+  if (endpoint && registry.queues)
+    for (auto& q : *registry.queues) if (q.id == endpoint) return &q;
   return nullptr;
 }
 int32_t ownedQueue(uint64_t context, uint32_t endpoint, Queue** out) {
@@ -139,7 +144,7 @@ int32_t publish(uint64_t context, const risc_stream_endpoint_v1* spec, uint32_t*
   if (!contextIs(context, Active)) return RISC_STREAM_CLOSED;
   size_t owned = 0;
   Queue* available = nullptr;
-  for (auto& q : registry.queues) {
+  for (auto& q : *registry.queues) {
     if (q.id && q.context == context) ++owned;
     if (!q.id && !available) available = &q;
   }
@@ -222,6 +227,13 @@ bool open(risc_stream_provider_v1* out) {
   for (size_t i = 0; i < registry.contexts.size(); ++i) {
     auto& slot = registry.contexts[i];
     if (slot.gate.load(std::memory_order_acquire)) continue;
+    if (!registry.queues) {
+#ifdef RISC_STREAM_HOST_TESTING
+      if (registry.failAllocation) { registry.failAllocation = false; return false; }
+#endif
+      registry.queues.reset(new (std::nothrow) Registry::Queues);
+      if (!registry.queues) return false;
+    }
     const uint64_t context = (uint64_t(++registry.generation) << 32) | (i + 1);
     slot.gate.store(contextGate(context, Active), std::memory_order_release);
     *out = {RISC_STREAM_PROVIDER_API_V1, sizeof(*out), context, &publish, &produce,
@@ -241,7 +253,7 @@ bool revokeChecked(uint64_t context) {
   // registry. False makes ModuleV2 retain its exact mapping and retry no cleanup.
   Lock lock;
   if (!lock.held) return false;
-  for (auto& q : registry.queues) if (q.id && q.context == context) {
+  for (auto& q : *registry.queues) if (q.id && q.context == context) {
     clearGrant(q);
     q.reservationRevoked = true;
   }
@@ -250,7 +262,7 @@ bool revokeChecked(uint64_t context) {
 bool closeChecked(uint64_t context) {
   Lock lock;
   if (!lock.held || !contextIs(context, Revoked)) return false;
-  for (auto& q : registry.queues) if (q.id && q.context == context) destroy(q);
+  for (auto& q : *registry.queues) if (q.id && q.context == context) destroy(q);
   contextSlot(context)->gate.store(0, std::memory_order_release);
   return true;
 }
@@ -319,7 +331,7 @@ int32_t reserveEndpointPair(uint64_t context, uint64_t lease, uint32_t consumer,
   if (r->rights != RISC_STREAM_READ || t->rights != RISC_STREAM_WRITE ||
       r->terminal || t->terminal || r->closed || t->closed) return RISC_STREAM_INVALID;
   if (r->session || t->session || r->grantLease || t->grantLease) return RISC_STREAM_DENIED;
-  for (const auto& q : registry.queues)
+  for (const auto& q : *registry.queues)
     if (q.id && q.context == context && q.session == session) return RISC_STREAM_DENIED;
   for (auto* q : {r, t}) {
     q->session = session;
@@ -348,7 +360,7 @@ int32_t revokeProviderStreamGrant(uint64_t context, uint64_t lease) {
   Lock lock;
   if (!lock.held) return RISC_STREAM_BUSY;
   if (!contextIs(context, Active) && !contextIs(context, Revoked)) return RISC_STREAM_CLOSED;
-  for (auto& q : registry.queues) if (q.id && q.context == context) {
+  for (auto& q : *registry.queues) if (q.id && q.context == context) {
     if (q.grantLease == lease) clearGrant(q);
     if (q.reservedLease == lease) q.reservationRevoked = true;
   }
@@ -381,6 +393,7 @@ namespace Testing {
 bool lockRegistry() { return !registry.mutex.test_and_set(std::memory_order_acquire); }
 void unlockRegistry() { registry.mutex.clear(std::memory_order_release); }
 size_t allocatedBytes() { Lock lock; return lock.held ? registry.allocated : SIZE_MAX; }
+bool metadataAllocated() { Lock lock; return lock.held && bool(registry.queues); }
 void failNextAllocation() { Lock lock; if (lock.held) registry.failAllocation = true; }
 void failGrantNumber(unsigned n) { Lock lock; if (lock.held) registry.failGrant = n; }
 bool advanceIssuers(uint32_t contextGeneration, uint32_t endpoint) {
