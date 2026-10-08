@@ -199,7 +199,17 @@ void line(const char* text){
 #endif
   // Live output is best effort, at most 256 bytes. No wait for a missing host
   // or unavailable capacity. Each owner write is at most 64 bytes.
-  if(!transport.connected()){noteLost();return;}
+  // HWCDC can accept bytes into its preallocated ring before the host opens
+  // CDC. Keep driving its connection probe, but do not discard stage-build
+  // startup text just because that handshake has not completed. The full-line
+  // and per-write capacity checks below prevent HWCDC's disconnected FIFO
+  // path from evicting older bytes. No additional queue or host wait is used.
+  const bool connected=transport.connected();
+#if !(RISC_STAGE_LOGS && RISC_HWCDC_SERIAL)
+  if(!connected){noteLost();return;}
+#else
+  (void)connected;
+#endif
   char bytes[256];size_t n=0;
   while(n<sizeof(bytes)-1 && text[n]){bytes[n]=text[n];++n;}
   if(n==sizeof(bytes)-1 && text[n])noteTruncation();

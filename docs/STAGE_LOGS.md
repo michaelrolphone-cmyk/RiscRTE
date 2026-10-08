@@ -70,12 +70,18 @@ This absorbs a bounded startup burst without another logging queue. It costs
 `end()` frees the old ring. It never resizes a live ring. Allocation failure allows
 the driver's ordinary smaller-buffer fallback; the boot statement reports that
 failure. Normal targets, UART and TinyUSB keep their previous buffer behavior.
-The larger ring does not guarantee complete output when disconnected, permanently
-backpressured, or when a burst exceeds its capacity; loss counters still apply.
+Stage/HWCDC statements are admitted to this existing ring even while CDC is not
+ready. The original timestamped text is sent automatically when the host starts
+reading. Whole-line capacity is checked before admission and again for each
+write, preventing the driver's disconnected FIFO policy from evicting earlier
+startup bytes. No extra queue, wait, command or recorder is involved. A ring that
+fills while disconnected drops later statements and counts the loss. Pending
+bytes remain volatile: reset or the existing sleep-recovery `Serial.end()` can
+discard them. The ring does not guarantee host delivery or retention across sleep.
 
 In stage builds, `RTE_LOG lost=N truncated=N` reports cumulative counters since
 diagnostic startup when polling next has capacity. `lost` counts attempted lines
-that were not emitted (including disconnected host, insufficient capacity,
+that were not accepted (including insufficient capacity,
 active explicit dump, and reentry). `truncated` counts formatting truncations or
 partially emitted lines. These are separate loss events, not necessarily unique
 statement counts: one oversized statement may also be dropped by transport.
@@ -85,8 +91,8 @@ An interrupted loss report is retried with current cumulative counts.
 
 Existing explicit `diag`/`perf` dumps remain framed and are not interleaved with
 live statements or loss notices. Live attempts during a dump count as lost;
-the notice follows the dump. Missing-host statements are counted, not buffered
-for later replay. A capture with loss/truncation is incomplete, and even zero
+the notice follows the dump. UART/TinyUSB and non-stage builds retain their
+existing disconnected-host behavior. A capture with loss/truncation is incomplete, and even zero
 reported loss cannot prove the host captured every byte.
 
 ## Software verification

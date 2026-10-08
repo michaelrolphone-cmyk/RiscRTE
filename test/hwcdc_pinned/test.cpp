@@ -22,7 +22,9 @@ int main(){
   assert(Stub::pinModeValue[19]==OUTPUT_OPEN_DRAIN&&Stub::pinModeValue[20]==OUTPUT_OPEN_DRAIN);
   assert(Stub::pinLevel[19]==LOW&&Stub::pinLevel[20]==LOW);
  }
- clean();Serial.begin(115200);start();host(true);line("before sleep");serviceTx();
+ clean();Serial.begin(115200);start();host(false);line("ordinary absent host");
+ assert(tx_ring_buf && tx_ring_buf->data.empty() && Serial.availableForWrite()==256);
+ host(true);line("before sleep");serviceTx();
  // Adapter failure recovery must have no busy retries even with actual driver.
  for(auto f:{Stub::None,Stub::Mutex,Stub::Rx,Stub::Tx,Stub::Interrupt}){
   Stub::failure=f;auto allocs=Stub::allocationCalls,frees=Stub::interruptFrees;
