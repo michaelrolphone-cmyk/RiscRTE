@@ -15,7 +15,8 @@ jobs:
   host:
     name: Host integration and version guards
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # The integrated source/ASan/UBSan suites exceed the old fifteen-minute cap.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
