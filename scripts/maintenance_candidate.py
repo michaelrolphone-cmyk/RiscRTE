@@ -30,7 +30,7 @@ def stage(source,app_data=False):
     partitions(file_bytes(ordinary_build/'partitions.bin'),expected)
     for marker in (('RTE_SOURCE='+source).encode()+b'\0',('RISC_RUNTIME_VERSION:'+version).encode()+b'\0',ordinary_target.encode()+b'\0',('RISC_PAIRED_STORE_ABI:'+str(2 if app_data else 1)).encode()+b'\0'):
         require(marker in ordinary,'normal Runtime source/target identity missing')
-    require(all(marker not in ordinary for marker in (b'RISC_OWNER_INSTALLER:1\0',b'RTE_OWNER_MAINTENANCE=1\0',b'RTE_MAINTENANCE_V1')),'normal Runtime unexpectedly exposes maintenance endpoint')
+    require(all(marker not in ordinary for marker in (b'RISC_OWNER_INSTALLER:1\0',b'RISC_OWNER_TARGET:',b'RTE_OWNER_MAINTENANCE=1\0',b'RTE_MAINTENANCE_V1')),'normal Runtime unexpectedly exposes maintenance endpoint')
     out=ROOT/'dist'/('owner-maintenance-appdata' if app_data else 'owner-maintenance')
     out.mkdir(parents=True,exist_ok=False)
     try:

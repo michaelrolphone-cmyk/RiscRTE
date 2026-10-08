@@ -197,6 +197,17 @@ class PlanTest(unittest.TestCase):
                     bad_image=image+suffix; bad=dict(meta,bytes=len(bad_image),sha256=p.sha(bad_image)); (art/'candidate.json').write_text(json.dumps(bad)); (art/'firmware.bin').write_bytes(bad_image)
                     with self.assertRaisesRegex(ValueError,'ordinary paired'): p.maintenance(art,'a'*40,bank.APP_DATA_LAYOUT)
 
+    def test_legacy_abi1_artifact_remains_supported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            art=artifact(Path(tmp),False)
+            meta=json.loads((art/'candidate.json').read_text())
+            del meta['layout']; del meta['store_abi']
+            image=(art/'firmware.bin').read_bytes().replace(b'RISC_OWNER_TARGET:esp32s3-16mb-maintenance\0',b'')
+            meta.update(bytes=len(image),sha256=p.sha(image))
+            (art/'candidate.json').write_text(json.dumps(meta)); (art/'firmware.bin').write_bytes(image)
+            with patch.object(p,'esp_image'):
+                self.assertEqual(p.maintenance(art,'a'*40),image)
+
     def test_no_nvs_read(self):
         for offset,size in ((0x9000,1),(0x8fff,2),(0xefff,2)):
             with self.assertRaisesRegex(ValueError,'NVS read forbidden'): p.read_range(Path('/not-opened'),offset,size)
