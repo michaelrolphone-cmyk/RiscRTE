@@ -47,6 +47,10 @@ struct Port {
   bool (*confirmBoot)()=nullptr;
   const AppDataBackend* appData=nullptr;
   RiscRetainedWake::Store* retainedWake=nullptr;
+  // Optional raw scheduler delay for an already-retained invocation owner.
+  // Must not poll diagnostics/providers, inspect storage, or perform cleanup.
+  // No fallback to delay: that callback may perform ordinary cooperative work.
+  void (*retainedDelay)(uint32_t)=nullptr;
 };
 class Runtime final {
  public:
@@ -247,6 +251,7 @@ class Runtime final {
   bool promotionSafe() const;
   static int32_t promoteProviders(void*);
   bool prepared_=false, attempted_=false, active_=false, retained_=false;
+  bool yielding_=false;
   mutable bool metadataCloseRetained_=false;
   bool defaultRunning_=false, entryRunning_=false;
   esp_dl_image_cache* appImages_=nullptr;

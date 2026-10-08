@@ -726,11 +726,25 @@ bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* a
   *actual=uint32_t(n);return true;
 }
 void Runtime::yield(uint32_t ms) {
-  if(!active() || graph_.lifecycleBusy()) return;
-  // Poll work is bounded separately; each app yield cooperates exactly once.
-  if(!promotionRunning_ && appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
-  if(!graph_.activationSafe()){(void)appExitBarrier();return;}
+  if(currentRuntime!=this || !port_.owner() || yielding_ || promotionRunning_ ||
+     streams_.busy() || graph_.lifecycleBusy() || (!active_ && !retained_))return;
+  yielding_=true;
+  struct Guard { bool& flag; ~Guard(){flag=false;} } guard{yielding_};
+  if(!retained_) {
+    // Poll work is bounded separately; each admitted yield cooperates once.
+    if(appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
+    if(!graph_.activationSafe())(void)appExitBarrier();
+  }
   const uint32_t requested=ms<1?1:ms>50?50:ms;
+  // Legacy app helpers may remain on their stack after terminal retention.
+  // Keep all authority revoked and custody pinned; only the scheduler may run.
+  if(retained_) {
+    // Invalid-interface rollback can latch retention before revoking the app.
+    // Preserve the old yield-time fence before permitting any raw delay.
+    if(active_)(void)appExitBarrier();
+    if(port_.retainedDelay)port_.retainedDelay(requested);
+    return;
+  }
   RiscPerf::AggregateScope wait(26,requested);
   port_.delay(requested);
 }
