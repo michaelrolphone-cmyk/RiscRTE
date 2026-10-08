@@ -12,6 +12,7 @@
 #include <sys/queue.h>
 
 #include "private/elf_types.h"
+#include "private/esp_dlcache.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,6 +70,8 @@ esp_elf_t *dlmod_relocate(const char *path);
  *         (existing entry or relocation error).
  */
 struct dlmod_slist_t *dlmod_insert_instance(const char *path, const char *name);
+struct dlmod_slist_t *dlmod_insert_cached_instance(const char *path, const char *name,
+                                                  esp_dl_image_cache **cache);
 struct dlmod_slist_t *dlmod_insert(const char *path, const char *name);
 
 /**

@@ -87,6 +87,61 @@ class Profiles(unittest.TestCase):
             self.build('bad')
         self.assertFalse((self.root / 'bad').exists())
 
+    def test_image_profile_native_parser_and_private_bundle(self):
+        record = self.pin(91)
+        record['schema_version'] = 2
+        record['image'] = {'url': BASE + 'image.bin', 'bytes': p.LAYOUTS[LAYOUT], 'sha256': '1' * 64}
+        for item in record['files']:
+            del item['url']
+        self.inventory.write_bytes(p.encode(record))
+        result = self.build(base=None)
+        profile = p.decode((self.root / 'owner/profile.json').read_bytes())
+        self.assertEqual(profile['schema_version'], 3)
+        self.assertEqual(profile['image'], record['image'])
+        self.assertEqual(profile['files'], record['files'])
+        self.assertEqual(result['file_count'], 91)
+        self.assertLess(result['profile_bytes'], 16384)
+        self.assertRaisesRegex(ValueError, 'one pinned URL', self.build, 'wrong-base', BASE)
+
+    def test_image_metadata_does_not_relax_file_inventory_guard(self):
+        record = self.pin()
+        record['files'][0]['bytes'] = 4700000
+        self.assertRaisesRegex(ValueError, 'store capacity', p.validate_inventory, record)
+        record['schema_version'] = 2
+        record['image'] = {'url': BASE + 'image.bin', 'bytes': p.LAYOUTS[LAYOUT], 'sha256': '1' * 64}
+        for item in record['files']:
+            del item['url']
+        p.validate_inventory(record)
+        for change in ({'bytes': True}, {'bytes': 4096}, {'bytes': 0x510001},
+                       {'sha256': 'A' * 64}, {'url': 'http://example.invalid/image.bin'},
+                       {'url': BASE + 'image.bin?private=yes'}, {'path': 'image.bin'}):
+            bad = json.loads(json.dumps(record));bad['image'].update(change)
+            self.assertRaises(ValueError, p.validate_inventory, bad)
+        bad = json.loads(json.dumps(record));bad['files'][0]['url'] = BASE + 'default.elf'
+        self.assertRaises(ValueError, p.validate_inventory, bad)
+        bad = json.loads(json.dumps(record));bad['files'][0]['bytes'] = 4900000
+        self.assertRaisesRegex(ValueError, 'image capacity', p.validate_inventory, bad)
+
+    def test_image_native_parser_rejects_mixed_schema_and_bad_image(self):
+        record = self.pin()
+        record['schema_version'] = 2
+        record['image'] = {'url': BASE + 'image.bin', 'bytes': p.LAYOUTS[LAYOUT], 'sha256': '1' * 64}
+        for item in record['files']:
+            del item['url']
+        profile = p.decode(p.profile_bytes(record, {'ssid': 'dummy', 'password': ''}))
+        cases = []
+        for change in ({'bytes': 0}, {'bytes': True}, {'bytes': 0x510001}, {'sha256': 'A' * 64},
+                       {'url': 'http://example.invalid/image.bin'}, {'extra': 1}):
+            bad = json.loads(json.dumps(profile));bad['image'].update(change);cases.append(bad)
+        bad = json.loads(json.dumps(profile));bad['base_url'] = BASE;cases.append(bad)
+        bad = json.loads(json.dumps(profile));bad['files'][0]['url'] = BASE + 'board.json';cases.append(bad)
+        for number, bad in enumerate(cases):
+            path = self.root / 'bad.json';path.write_bytes(p.encode(bad))
+            result = subprocess.run([str(self.validator), str(path), str(self.root / str(number)),
+                                     'time.example.invalid'], capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse((self.root / str(number)).exists())
+
     def test_mismatch_missing_unexpected_and_symlink(self):
         self.pin()
         (self.store / 'default.elf').write_bytes(b'changed')

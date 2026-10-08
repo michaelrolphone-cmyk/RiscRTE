@@ -21,7 +21,7 @@ cc "${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared 
 c++ -rdynamic -Wl,--wrap=fopen,--wrap=fclose,--wrap=opendir,--wrap=stat,--wrap=lstat "${san[@]}" "${extra[@]}" -DRISC_PAIRED_BANKS=1 -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers \
  -I"$repo/test/native_bank_stubs" -I"$repo/test/drivers/stubs" -I"$repo/lib/elf_loader/include" \
  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" \
- "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+ "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
  "$repo/src/runtime/provisioning/BootstrapInput.cpp" "$repo/src/runtime/provisioning/Coordinator.cpp" \
  "$repo/src/runtime/provisioning/StoreFiles.cpp" "$repo/src/runtime/provisioning/Profile.cpp" \
@@ -38,6 +38,9 @@ fi
 "$build/test" boot-records
 "$build/test" blank-record
 if [[ -n "${BOOTLOADER_FILE:-}" ]]; then
+ for mode in success odd-chunks interrupt offline-consumed corrupt length download-fail write-fail readback-fail readback-corrupt bad-board bad-elf native-mismatch bad-magic bad-name bad-capacity free-page-programmed extra-file file-mismatch mount-fail unmount-retained admission-close selection-unknown receipt-fail; do
+  "$build/test" "image-$mode" "$BOOTLOADER_FILE" "$build/image-$mode"
+ done
  "$build/test" boot-cost "$BOOTLOADER_FILE"
  if [[ -n "${SEED_DIRECTORY:-}" ]]; then "$build/test" provision-seed "$BOOTLOADER_FILE" "$build/seed-stage" "$SEED_DIRECTORY"; fi
  for mode in cohort cohort-receipt cohort-legacy-receipt cohort-live-close; do

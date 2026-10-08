@@ -41,6 +41,8 @@ extern "C" uintptr_t elf_find_sym_default(const char* name){return unavailableIm
 static std::vector<uint8_t> flash(0x1000000,0xff);
 static uint32_t ticks=1,active=0,imageSize=8192,writes=0,rollbacks=0,confirms=0,restarts=0,delayScale=1,delays=0,unsafeAfterDelay=0;
 static bool mountFailure=false,unmountFailure=false,writeFailure=false;
+static bool compactReadFailure=false;
+static unsigned compactMountCalls=0;
 static bool ownerEnabled=true,rollbackPossible=true,operationEnabled=true,restartEnabled=true,selectFailure=false;
 static esp_ota_img_states_t otaState=ESP_OTA_IMG_PENDING_VERIFY;
 static bool rejectedCandidate=false,attemptReadFailure=false;
@@ -71,6 +73,7 @@ esp_err_t esp_partition_read(const esp_partition_t* p,size_t off,void* out,size_
  ++nativePartitionReads;nativePartitionBytes+=n;
  if(p && p->type==ESP_PARTITION_TYPE_APP && nativeImageVerifications){++nativeFirmwareScanReads;nativeFirmwareScanBytes+=n;}
  if(!p || off+n>p->size)return -1;
+ if(compactReadFailure&&!strcmp(p->label,"bootfs1"))return -1;
  if(attemptReadFailure&&!strcmp(p->label,"bank_state")&&off==4096+RiscUpdate::AttemptOffset)return -1;
  memcpy(out,flash.data()+p->address+off,n);return 0;
 }
@@ -90,7 +93,7 @@ esp_err_t esp_ota_set_boot_partition(const esp_partition_t*){++selectorCalls;++w
 esp_err_t esp_ota_mark_app_valid_cancel_rollback(){++confirms;otaState=ESP_OTA_IMG_VALID;return 0;}
 esp_err_t esp_ota_mark_app_invalid_rollback_and_reboot(){++rollbacks;return 0;}
 bool esp_ota_check_rollback_is_possible(){return rollbackPossible;}
-esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t* conf){assert(!conf->format_if_mount_failed);return mountFailure?-1:0;}
+esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t* conf){++compactMountCalls;assert(!conf->format_if_mount_failed);return mountFailure?-1:0;}
 esp_err_t esp_vfs_spiffs_unregister(const char*){
  if(modelProvisionFiles){
   // Filesystem model only: serialize the closed candidate deterministically
@@ -139,8 +142,10 @@ static const risc_http_client_v1 bootstrapHttp{1,sizeof(risc_http_client_v1),nul
  [](void*,uint64_t token,void* out,uint32_t capacity,uint32_t* count)->int32_t{
    assert(bootNet.http&&token==bootNet.token&&capacity<=512);*count=0;++bootNet.reads;
    if(bootNet.mode=="bootstrap-download-fail")return RISC_HTTP_TRANSPORT;
+   if(bootNet.mode=="image-interrupt"&&bootNet.offset>=8192)return RISC_HTTP_TRANSPORT;
+   if(bootNet.mode=="image-write-fail"&&bootNet.offset>=4096)writeFailure=true;
    const auto& data=bootNet.files[bootNet.current];if(bootNet.offset==data.size())return RISC_HTTP_EOF;
-   const size_t n=std::min<size_t>(capacity,data.size()-bootNet.offset);memcpy(out,data.data()+bootNet.offset,n);
+   const size_t n=std::min<size_t>(bootNet.mode=="image-odd-chunks"?37:capacity,data.size()-bootNet.offset);memcpy(out,data.data()+bootNet.offset,n);
    if(bootNet.mode=="bootstrap-corrupt"&&bootNet.offset==0)static_cast<uint8_t*>(out)[0]^=1;
    bootNet.offset+=n;*count=uint32_t(n);return RISC_HTTP_OK;
  },
@@ -148,6 +153,8 @@ static const risc_http_client_v1 bootstrapHttp{1,sizeof(risc_http_client_v1),nul
    info->received_bytes=bootNet.offset;info->content_length=bootNet.files[bootNet.current].size()+(bootNet.mode=="bootstrap-length-mismatch"?1:0);return RISC_HTTP_OK;},
  [](void*,uint64_t token)->int32_t{assert(bootNet.http&&token==bootNet.token);++bootNet.closes;
    if(bootNet.mode=="bootstrap-http-retained"){bootNet.broken=true;return RISC_HTTP_RETAINED;}
+   if(bootNet.mode=="image-readback-fail")compactReadFailure=true;
+   if(bootNet.mode=="image-readback-corrupt")flash[RiscUpdate::StoreOffset[1]+257]^=1;
    bootNet.http=false;return RISC_HTTP_OK;}
 };
 static RiscBootstrap::TimeStatus bootstrapTime(void*,RiscBootstrap::TimeSample* sample){
@@ -222,9 +229,11 @@ static void firmware(unsigned bank,const char* version,const char* abi=nullptr){
 }
 #include "cohort_native.inc"
 #include "boot_path_native.inc"
+#include "compact_image_native.inc"
 int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
+ if(mode.find("image-")==0){assert(argc==4);compactNative(mode,argv[2],argv[3]);return 0;}
  if(mode=="boot-cost"){assert(argc==3 || argc==4);bootCost(argv[2],argc==4?argv[3]:nullptr);return 0;}
  if(mode=="boot-records"){assert(argc==2);bootRecords();return 0;}
 #ifdef RISC_PAIRED_APP_DATA

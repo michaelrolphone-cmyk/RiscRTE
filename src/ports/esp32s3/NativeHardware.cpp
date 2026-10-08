@@ -1,3 +1,4 @@
+#include "diagnostics/Performance.h"
 #ifdef ESP_PLATFORM
 #include "CpuPort.h"
 #include "CooperativeDelay.h"
@@ -33,12 +34,6 @@
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
 struct I2cState { bool installed=false,configured=false;int sda=-1,scl=-1; } i2c[2];
-struct SpiState {
-  bool initialized=false,held=false,pending=false;uint32_t hz=0;uint8_t mode=0;
-  int sclk=-1,mosi=-1,miso=-1;spi_device_handle_t device=nullptr;
-  spi_transaction_t transaction{};
-  alignas(4) uint8_t tx[512]{},rx[512]{};
-} spi[2];
 TickType_t ticks(uint32_t ms){return ms?pdMS_TO_TICKS(ms)+1:0;}
 spi_host_device_t host(uint8_t physical){return physical==2?SPI2_HOST:SPI3_HOST;}
 #include "NativePwmStop.inc"
@@ -87,62 +82,7 @@ bool i2cClose(uint8_t physical){
   if(state.scl>=0 && !gpioClose(state.scl))return false;
   state={};return true;
 }
-bool drain(SpiState& state,uint32_t ms){
-  if(!state.pending)return true;
-  spi_transaction_t* completed=nullptr;
-  if(spi_device_get_trans_result(state.device,&completed,ticks(ms))!=ESP_OK)return false;
-  if(completed!=&state.transaction)return false;
-  state.pending=false;return true;
-}
-bool spiOpen(uint8_t physical,int16_t sclk,int16_t mosi,int16_t miso){
-  auto& state=spi[physical-2];if(state.initialized)return false;
-  state.sclk=sclk;state.mosi=mosi;state.miso=miso;
-  spi_bus_config_t config{};config.sclk_io_num=sclk;config.mosi_io_num=mosi;config.miso_io_num=miso;
-  config.quadwp_io_num=-1;config.quadhd_io_num=-1;config.max_transfer_sz=512;
-  if(spi_bus_initialize(host(physical),&config,SPI_DMA_CH_AUTO)!=ESP_OK)return false;
-  state.initialized=true;return true;
-}
-bool spiBegin(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,uint32_t){
-  auto& state=spi[physical-2];if(!state.initialized || state.held || state.pending)return false;
-  if(state.device && (state.hz!=hz || state.mode!=mode)){
-    if(spi_bus_remove_device(state.device)!=ESP_OK)return false;
-    state.device=nullptr;
-  }
-  if(!state.device){
-    spi_device_interface_config_t config{};config.clock_speed_hz=hz;config.mode=mode;config.spics_io_num=-1;config.queue_size=1;
-    if(spi_bus_add_device(host(physical),&config,&state.device)!=ESP_OK)return false;
-    state.hz=hz;state.mode=mode;
-  }
-  // IDF4 acquire_bus accepts only an unbounded wait. The CPU port owns this
-  // controller exclusively and serializes every device on its owner task, so
-  // no SDK bus acquisition is needed. Queued transfers retain bounded waits.
-  if(!gpioWrite(cs,false))return false;
-  state.held=true;return true;
-}
-bool spiTransfer(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t count,uint32_t ms){
-  auto& state=spi[physical-2];if(!state.held || state.pending || count>sizeof(state.tx))return false;
-  if(tx)memcpy(state.tx,tx,count);else memset(state.tx,0xff,count);
-  state.transaction={};state.transaction.length=count*8;state.transaction.tx_buffer=state.tx;state.transaction.rx_buffer=state.rx;
-  const int64_t start=esp_timer_get_time();
-  if(spi_device_queue_trans(state.device,&state.transaction,ticks(ms))!=ESP_OK)return false;
-  state.pending=true;
-  const uint32_t elapsed=uint32_t((esp_timer_get_time()-start)/1000);
-  if(!drain(state,elapsed<ms?ms-elapsed:0))return false;
-  if(rx)memcpy(rx,state.rx,count);
-  return true;
-}
-bool spiEnd(uint8_t physical,uint8_t cs,uint32_t ms){
-  auto& state=spi[physical-2];if(!state.held || !drain(state,ms) || !gpioWrite(cs,true))return false;
-  state.held=false;return true;
-}
-bool spiClose(uint8_t physical){
-  auto& state=spi[physical-2];if(state.held || state.pending)return false;
-  if(state.device){if(spi_bus_remove_device(state.device)!=ESP_OK)return false;
-    state.device=nullptr;}
-  if(state.initialized){if(spi_bus_free(host(physical))!=ESP_OK)return false;state.initialized=false;}
-  for(int pin:{state.sclk,state.mosi,state.miso})if(pin>=0 && !gpioClose(pin))return false;
-  state={};return true;
-}
+#include "NativeSpi.inc"
 bool deepReady(){
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
   if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
@@ -179,6 +119,7 @@ Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   Hardware hardware{[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
     [](uint32_t ms){
+      RiscPerf::AggregateScope wait(32,ms);
 #if RISC_DIAGNOSTIC_ADAPTER
       RiscDiagnostics::poll();
 #endif
@@ -187,6 +128,7 @@ Hardware nativeHardware(bool (*owner)()){
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
+  hardware.spiBeginThreeWire=spiBeginThreeWire;
   NativeRealtime::configure(hardware.owner);hardware.realtimeRead=NativeRealtime::read;hardware.realtimeSeed=NativeRealtime::seed;
   hardware.hciOpen=NativeHci::open;hardware.hciSend=NativeHci::send;hardware.hciReceive=NativeHci::receive;
   hardware.hciClose=NativeHci::close;hardware.hciIdle=NativeHci::idle;hardware.hciSafe=NativeHci::safe;

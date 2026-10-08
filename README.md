@@ -1,5 +1,43 @@
 # RiscRTE
 
+Runtime 0.1.76 adds a separate owner-maintenance image for ABI2 and an offline
+entry/restoration verifier that preserves app-data and excludes NVS. Ordinary
+Runtime has no maintenance endpoint. This does not migrate native policy rows
+or product cohorts. See [owner maintenance](docs/PROVISIONING.md#offline-maintenance-entryrestoration-planner).
+
+Runtime 0.1.75 makes a valid retained stream notification fence its provider
+even when the queue lock is busy. Exact endpoint/generation ownership and
+cleanup custody remain checked; the public ABI is unchanged. See the
+[contention repair and concurrency contract](docs/STREAM_RETENTION_FENCE.md).
+
+Runtime 0.1.74 adds existing-stage-logger snapshots of internal, DMA-capable and
+PSRAM heap availability at Wi-Fi setup/failure boundaries. SDK configuration,
+cleanup and the qualified HCI queue are unchanged. See the [selected-source
+Wi-Fi investigation](docs/WIFI_STARTUP_PATHS.md).
+
+Runtime 0.1.73 uses the existing bounded HCI receive memory for actual packet
+lengths, so short advertisement bursts no longer exhaust four oversized slots.
+Packet ordering, true-overflow failure and retained cleanup remain enforced.
+See [the exact-source reproducer and limits](docs/HCI_RX_BURSTS.md).
+
+Runtime 0.1.71 permits bounded scheduler-only cooperation for the current
+retained invocation owner, without polling providers or restoring authority.
+See [the retained-yield contract and reproduction](docs/RETAINED_YIELD.md).
+
+Runtime 0.1.69 reconciles the independently verified stream-session, cache-pressure
+and app-policy-row histories. Image caching remains off by default; the optional
+17-row metadata selection preserves the 16 live-grant and manifest bounds. See
+[the integration record](docs/RUNTIME_0169_INTEGRATION.md).
+
+Runtime 0.1.66 adds [generic app byte-stream sessions](docs/APP_STREAMS.md),
+with an invocation-bound broker, tagged provider adapter and bounded queues.
+Physical transports and product selection remain external.
+
+Runtime 0.1.60 adds [automatic plain timestamped stage logs](docs/STAGE_LOGS.md)
+in the `*-stage` diagnostic targets. Boot, named provider activation and app
+load/init/entry/unload statements print without a command or enabled recorder.
+Output remains bounded and nonblocking, with visible lost/truncated-line counts.
+
 A small, headless ESP32-S3 runtime extracted from
 [T5S3-Reader](https://github.com/michaelrolphone-cmyk/T5S3-Reader).
 It mounts a flash-backed module store, validates the shared board manifest before
@@ -99,6 +137,12 @@ provider acquisition until an authorized app acquire needs its dependency closur
 Omission or `"eager"` preserves existing behavior. All selected metadata and staged
 image admission remain complete. See [demand activation and lifetime](docs/DEMAND_ACTIVATION.md).
 
+Runtime 0.1.63 adds explicit `"provider_activation": "demand-retained"`. The
+default app's existing promotion call arms session retention without activating
+unused providers. Later real acquisitions start only their authorized dependency
+closure, which stays mapped across app handoffs. Unpromoted paths remain ordinary
+demand lifetime. See [the policy and measured counts](docs/DEMAND_RETENTION.md).
+
 The shipped baseline has an empty driver list and no peripheral declarations.
 The example `probe` above refers to the non-hardware test fixture, not a bundled
 physical driver. An ordinary software provider omits `instance_id`; a hardware
@@ -132,9 +176,9 @@ storage call. The mounted store must remain immutable while a boot session runs.
   tables. Package identity stays unchanged; selection includes instance ID.
   Identical `driver.elf` paths/basenames do not alias a singleton module.
 - This slice loads ordinary ABI-2 providers only. Privileged OS/CPU package
-  admission, normal storage-volume providers, app capability brokering, package
-  installation and stream services are not enabled. Stream-dependent drivers fail
-  admission without a host table. No alternate storage ABI was introduced.
+  admission, normal storage-volume providers, package installation are not enabled. Explicit app capabilities and generic
+  byte-stream sessions are brokered by Runtime; providers still require valid
+  graph admission and checked quiescence. No alternate storage ABI was introduced.
 - Only flash-backed bootstrap is supplied. An attached-storage bootstrap port
   requires its own explicit noncyclic board/pin ownership and timeout design.
 - No production peripheral driver is bundled. The real Watch I2C test driver and tiny dynamic providers under
@@ -154,6 +198,7 @@ bash test/run_bound_key_value_test.sh
 bash test/run_native_registry_test.sh
 bash test/run_provider_module_lease_v2_test.sh
 bash test/run_retained_app_test.sh
+bash test/run_retained_yield_test.sh
 bash test/run_retained_wake_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
@@ -425,3 +470,25 @@ from paired boot, including deep timer wake. It consumes the existing committed
 bank record; installation and inactive-bank updates retain image validation and
 atomic selection. [Production call counts and lifecycle evidence](docs/COMMITTED_PAIR_BOOT.md)
 describe the change. Provider mappings and per-app loader behavior are unchanged.
+
+Runtime 0.1.56 adds opt-in bounded performance tracing with interaction IDs carried
+through app handoffs, nested application spans, loader/provider phases and
+aggregate scheduler waits. The optional app API suffix preserves existing
+clients. Recorders never write serial; `perf` requests a capacity-bounded snapshot
+through the existing diagnostic transport. See [the tracing contract and
+measurement limits](docs/PERFORMANCE_TRACE.md). No file validation is added.
+
+Runtime 0.1.57 appends optional physical readback for an exact scoped CPU-retired
+held static GPIO output. It preserves the retired token, hold and all older
+table layouts; fresh claim or reset ends that read authority. Failure cannot
+substitute a cached HIGH. See [ownership and software verification](docs/CPU_PORT.md#exclusive-gpio-display-and-retained-static-outputs).
+Interpretation and product policy remain external providers' responsibility.
+
+Runtime 0.1.64 adds an optional native diagnostic observer, disabled in ordinary builds. See [the bounded observer contract](docs/NATIVE_DIAGNOSTIC_OBSERVER.md).
+
+Runtime 0.1.65 introduced bounded immutable input reuse for prepared apps while
+preserving fresh relocation, globals and lifecycle callbacks. Runtime 0.1.67
+makes it an explicit, default-off composition option and adds owner-scoped
+allocation-pressure reclamation. See the
+[cache ownership, replacement lifecycle and measured operation counts](docs/APP_IMAGE_CACHE.md).
+Cold reads also use [bounded byte/time yield checkpoints](docs/ELF_READ_CHECKPOINTS.md).

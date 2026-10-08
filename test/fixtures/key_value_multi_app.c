@@ -29,17 +29,36 @@ __attribute__((visibility("default"))) void app_main(void){
  }
  unsigned capacity=multi_capacity();
  if(capacity){
-  risc_runtime_capability_v1 grants[16]={0};assert(capacity<=16);
-  for(unsigned i=0;i<capacity;++i){
+  risc_runtime_capability_v1 grants[16]={0};assert(capacity<=17);
+  unsigned live=capacity<16?capacity:16;
+  for(unsigned i=0;i<live;++i){
    grants[i].struct_size=sizeof(grants[i]);assert(rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,i+1,&grants[i]));
    const risc_key_value_v1* kv=grants[i].api;unsigned value=i+1,got=0;uint32_t n=0;
    assert(kv->put(kv->context,"slot",&value,sizeof(value))==0);
    assert(kv->get(kv->context,"slot",&got,sizeof(got),&n)==0&&n==sizeof(got)&&got==value);
   }
-  if(capacity==16)assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,1,&bad));
+  if(live==16)assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,1,&bad));
+  if(capacity==17){
+   // Row 17 is authorized metadata, but no seventeenth live slot exists.
+   assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,17,&bad));
+   risc_runtime_capability_v1 old=grants[7];
+   risc_key_value_v1 stale=*(const risc_key_value_v1*)old.api;
+   assert(rt->release(&grants[7]));
+   assert(rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,17,&grants[7]));
+   assert(grants[7].slot==old.slot && grants[7].generation!=old.generation);
+   assert(!rt->release(&old));
+   unsigned value=17,got=0;uint32_t n=99;
+   assert(stale.get(stale.context,"slot",&got,sizeof(got),&n)==RISC_KEY_VALUE_CONTEXT && !n);
+   assert(stale.put(stale.context,"slot",&value,sizeof(value))==RISC_KEY_VALUE_CONTEXT);
+   const risc_key_value_v1* kv=grants[7].api;
+   assert(kv->put(kv->context,"slot",&value,sizeof(value))==0);
+   assert(kv->get(kv->context,"slot",&got,sizeof(got),&n)==0 && n==sizeof(got) && got==17);
+   assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,8,&bad));
+   multi_keep(*kv);
+  }
   assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,0,&bad));
   assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,capacity+1,&bad));
-  for(unsigned i=0;i<capacity;++i)assert(rt->release(&grants[i]));
+  for(unsigned i=0;i<live;++i)assert(rt->release(&grants[i]));
   return;
  }
  bad.slot=77;bad.generation=88;bad.api=(void*)1;
