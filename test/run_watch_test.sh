@@ -10,6 +10,6 @@ c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers "${incs[@]}
  "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/test/watch_instances_test.cpp" -ldl -o "$build/instances"
 "$build/instances" "$build/driver.elf"
 c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers "${incs[@]}" \
- "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+ "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/test/watch_board_test.cpp" -ldl -o "$build/boards"
 "$build/boards" "$watch" "$build"

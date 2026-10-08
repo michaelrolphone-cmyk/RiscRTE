@@ -44,6 +44,7 @@ int main(int argc,char**argv){
   const bool valid=r.prepare(root.c_str());if(valid!=(ordinary || !peer))fprintf(stderr,"ordinary=%d peer=%d error=%s\n",ordinary,peer,r.error());assert(valid==(ordinary || !peer));assert(!io);
   if(!ordinary && peer)continue;
   auto& a=p.gpios_[0].api;const auto bit=[](unsigned n){return uint64_t(1)<<n;};
+  assert(a.struct_size>=GARDEN_GPIO_READ_RETIRED_OUTPUT_V1_SIZE && a.read_retired_output);
   assert(p.gpios_[0].output==(bit(18)|bit(14)|(ordinary?0:bit(12)|bit(11)|bit(13))));
   assert(p.gpios_[0].input==(bit(6)|(ordinary?0:bit(11))));
   assert(p.gpios_[0].pullup==(ordinary?0:bit(11)));
@@ -63,8 +64,9 @@ int main(int argc,char**argv){
   Port::Gpio other=p.gpios_[0];assert(!Port::gpioRetireHeldOutput(&other,t));
   assert(!a.retire_held_output(nullptr,t));assert(!a.retire_held_output(a.context,0));
   assert(a.retire_held_output(a.context,t));assert(io==before && p.quiescent() && p.providerStorageSafe());
+  bool level=true;assert(a.read_retired_output(a.context,14,&level) && !level);const auto readIo=io;
   assert(!a.retire_held_output(a.context,t) && !a.release(a.context,t) && !a.write(a.context,t,true));
-  assert(!Port::gpioClaim(&other,14,true,true,false,&t));assert(io==before);
+  assert(!Port::gpioClaim(&other,14,true,true,false,&t));assert(io==readIo);
   uint64_t fresh=0;checking=&p;assert(a.claim(a.context,14,true,false,false,&fresh));checking=nullptr;
   assert(fresh && !p.pins_[14].held && !p.pins_[14].retiredHeld && !p.quiescent());
   assert(a.deep_sleep_hold(a.context,fresh,true)==0 && a.retire_held_output(a.context,fresh));
