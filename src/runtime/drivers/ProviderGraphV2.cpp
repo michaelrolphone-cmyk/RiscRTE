@@ -137,7 +137,7 @@ bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
   for (size_t i = 0; i < count_; ++i) {
     if ((std::strcmp(nodes_[i].spec.id, spec.id) == 0 &&
          (!spec.hardware || !nodes_[i].spec.hardware || spec.hardware->instance_id==nodes_[i].spec.hardware->instance_id)) ||
-        nodes_[i].visit == Visit::Visiting ||
+        nodes_[i].visit == Visit::Visiting || nodes_[i].visit == Visit::Releasing ||
         nodes_[i].module.state() == ModuleV2::State::Failed) return false;
   }
   for (size_t i = 0; i < spec.requirementCount; ++i) {
@@ -168,28 +168,42 @@ bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
   return true;
 }
 
-void GraphV2::releaseDependencies(size_t index) {
+bool GraphV2::releaseDependencies(size_t index) {
   Node& node = nodes_[index];
   while (node.acquired) {
-    size_t dependency = node.dependencies[--node.acquired];
-    (void)nodes_[dependency].module.unpinConsumer();
-    (void)deactivateIfUnused(dependency);
+    const size_t dependency = node.dependencies[node.acquired - 1];
+    if (!node.dependencyReleasePending) {
+      if (!nodes_[dependency].module.unpinConsumer())
+        return fail("Dependency unpin rejected", nodes_[dependency].spec.id);
+      node.dependencyReleasePending = true;
+    }
+    // Do not touch an earlier dependency once one has retained custody. The
+    // exact edge remains recorded even though its consumer was already unpinned.
+    if (!deactivateIfUnused(dependency)) return false;
+    --node.acquired;
+    node.dependencyReleasePending = false;
   }
   // Never invalidate this table before the provider has safely unloaded.
   for (size_t i = 0; i < node.spec.requirementCount; ++i)
     node.boundDependencies[i] = {};
+  return true;
 }
 
 bool GraphV2::deactivateIfUnused(size_t index) {
   Node& node = nodes_[index];
-  if (node.visit != Visit::Active || node.module.consumers()) return true;
-  if (!node.module.unload()) {
-    if (node.module.lastError()[0]) copyError(error_, node.module.lastError());
-    else fail("Provider quiescence rejected", node.spec.id);
-    return false;
+  if (node.module.consumers()) return true;
+  if (node.visit == Visit::Active) {
+    if (!node.module.unload()) {
+      if (node.module.lastError()[0]) copyError(error_, node.module.lastError());
+      else fail("Provider quiescence rejected", node.spec.id);
+      return false;
+    }
+    node.visit = Visit::Releasing;
   }
-  node.visit = Visit::Idle;
-  releaseDependencies(index);
+  if (node.visit == Visit::Releasing) {
+    if (!releaseDependencies(index)) return false;
+    node.visit = Visit::Idle;
+  }
   return true;
 }
 
@@ -201,6 +215,7 @@ bool GraphV2::fail(const char* stage, const char* identity) {
 bool GraphV2::activate(size_t index) {
   Node& node = nodes_[index];
   if (node.visit == Visit::Visiting) return fail("Dependency cycle", node.spec.id);
+  if (node.visit == Visit::Releasing) return fail("Provider dependency cleanup pending", node.spec.id);
   if (node.module.state() == ModuleV2::State::Failed) {
     if (node.module.lastError()[0]) {
       copyError(error_, node.module.lastError());
@@ -215,8 +230,10 @@ bool GraphV2::activate(size_t index) {
     const RequirementV2& requirement = node.spec.requirements[i];
     if (!std::strcmp(requirement.capability,"hardware.device")) {
       if (!node.spec.hardware || requirement.api!=1) {
-        releaseDependencies(index); node.visit=Visit::Idle;
-        return fail("Missing selected hardware",node.spec.id);
+        fail("Missing selected hardware",node.spec.id);
+        node.visit=Visit::Releasing;
+        (void)deactivateIfUnused(index);
+        return false;
       }
       node.boundDependencies[i]={requirement.capability,1,node.spec.hardware};
       continue;
@@ -233,8 +250,8 @@ bool GraphV2::activate(size_t index) {
         !nodes_[dependency].module.pinConsumer()) {
       if (dependency < 0) fail("Dependency missing/ambiguous", requirement.capability);
       else if (!error_[0]) fail("Dependency pin failed", requirement.capability);
-      releaseDependencies(index);
-      node.visit = Visit::Idle;
+      node.visit = Visit::Releasing;
+      (void)deactivateIfUnused(index);
       return false;
     }
     node.dependencies[node.acquired++] = static_cast<uint8_t>(dependency);
@@ -274,8 +291,8 @@ bool GraphV2::activate(size_t index) {
     else fail("Provider load/start failed (no diagnostic)", node.spec.id);
     RISC_STAGE_LOG("provider load failed id=%s reason=%s",node.spec.id,error_);
     if (node.module.unload()) {
-      releaseDependencies(index);
-      node.visit = Visit::Idle;
+      node.visit = Visit::Releasing;
+      (void)deactivateIfUnused(index);
     } else {
       // A failed start may own live DMA/interrupt state. Never drop the
       // dependencies, clear the interface pointers or regrant the node.
@@ -413,12 +430,14 @@ bool GraphV2::shutdown() {
     for (size_t i = 0; i < count_; ++i) {
       Node& node = nodes_[i];
       if (node.module.consumers()) continue;
-      if (node.visit == Visit::Active ||
+      if (node.visit == Visit::Active || node.visit == Visit::Releasing ||
           (node.visit == Visit::Idle &&
            node.module.state() == ModuleV2::State::Failed)) {
-        if (!node.module.unload()) return false;
-        node.visit = Visit::Idle;
-        releaseDependencies(i);
+        if (node.visit == Visit::Idle) {
+          if (!node.module.unload()) return false;
+          node.visit = Visit::Releasing;
+        }
+        if (!deactivateIfUnused(i)) return false;
         progress = true;
       }
     }
@@ -437,7 +456,8 @@ bool RuntimeProviders::GraphV2::activationSafe() const {
 }
 bool RuntimeProviders::GraphV2::dependencyReadSafe() const {
   for(size_t i=0;i<count_;++i)
-    if(nodes_[i].visit==Visit::Visiting || nodes_[i].module.state()==ModuleV2::State::Failed)return false;
+    if(nodes_[i].visit==Visit::Visiting || nodes_[i].visit==Visit::Releasing ||
+       nodes_[i].module.state()==ModuleV2::State::Failed)return false;
   for(const auto& grant:grants_)if(grant.occupied && grant.pendingRelease)return false;
   return true;
 }

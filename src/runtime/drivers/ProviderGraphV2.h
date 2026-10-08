@@ -102,11 +102,11 @@ class GraphV2 final {
       if (grant.occupied && grant.node == index) return false;
     if (node.visit == Visit::Idle && node.module.state() == ModuleV2::State::Absent)
       return true; // Failed before mapping, or already recovered.
+    if (node.visit == Visit::Releasing) return deactivateIfUnused(index);
     if (node.module.state() != ModuleV2::State::Failed ||
         !node.module.unload()) return false;
-    node.visit = Visit::Idle;
-    releaseDependencies(index); // Only after verified physical quiescence.
-    return true;
+    node.visit = Visit::Releasing;
+    return deactivateIfUnused(index); // Only after verified physical quiescence.
   }
 
   // Enumerate only independently admitted package identities. Enumeration
@@ -130,7 +130,7 @@ class GraphV2 final {
   bool addManagerValidatedPrivileged(const SpecV2& spec);
   bool addChecked(const SpecV2& spec, bool privilegedAdmission);
 
-  enum class Visit : uint8_t { Idle, Visiting, Active };
+  enum class Visit : uint8_t { Idle, Visiting, Active, Releasing };
   struct Node {
     SpecV2 spec{};
     OwnedNodeV2* owned = nullptr;
@@ -141,6 +141,9 @@ class GraphV2 final {
     // activate() stack array, this remains valid while the ELF is mapped.
     risc_provider_dependency_v1 boundDependencies[kMaxRequirements]{};
     size_t acquired = 0;
+    // The last dependency can be unpinned but still awaiting checked cleanup.
+    // Keep it in acquired until cleanup succeeds, so retry never unpins twice.
+    bool dependencyReleasePending = false;
   };
   struct GrantSlot {
     uint32_t generation = 0;
@@ -165,7 +168,7 @@ class GraphV2 final {
   int findProvider(const char* id, const char* capability, uint32_t api, uint64_t instance = 0) const;
   GrantV2 acquireIndex(size_t index);
   bool activate(size_t index);
-  void releaseDependencies(size_t index);
+  bool releaseDependencies(size_t index);
   bool deactivateIfUnused(size_t index);
 };
 }  // namespace RuntimeProviders
