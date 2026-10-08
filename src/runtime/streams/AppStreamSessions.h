@@ -1,5 +1,7 @@
 #pragma once
 #include <RiscStreamClientV1.h>
+#include <array>
+#include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
 namespace RuntimeStreams {
 // Private app capability binding, copied from Runtime's authenticated ledger.
@@ -18,6 +20,7 @@ class AppStreamSessions final {
     void (*yield)(void*);
   };
   AppStreamSessions(RuntimeProviders::GraphV2& graph,Host host):graph_(graph),host_(host){}
+  ~AppStreamSessions();
   bool beginInvocation();
   void endInvocation() { context_=0; consumer_=0; }
   uint64_t context() const { return context_; }
@@ -41,7 +44,9 @@ class AppStreamSessions final {
     uint64_t providerContext=0,providerSession=0,session=0,rx=0,tx=0;
     uint32_t rxEndpoint=0,txEndpoint=0;
     const risc_stream_session_provider_v1* adapter=nullptr;
-  } sessions_[16]{};
+  };
+  using Sessions=std::array<Session,16>;
+  std::unique_ptr<Sessions> sessions_;
   RuntimeProviders::GraphV2& graph_;
   Host host_;
   uint64_t context_=0;

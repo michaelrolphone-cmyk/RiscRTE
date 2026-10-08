@@ -96,6 +96,7 @@ bool GraphV2::addManagerValidatedPrivileged(const SpecV2& spec) {
 }
 
 bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
+  if (lifecycleBusy()) return false;
   bool emptyDigest = true;
   for (uint8_t byte : spec.contentSha256)
     if (byte) { emptyDigest = false; break; }
@@ -322,7 +323,7 @@ GrantV2 GraphV2::acquireIndex(size_t index) {
 }
 
 void GraphV2::poll(uint32_t (*nowMs)(), void (*yield)()) {
-  if (!nowMs || !count_ || polling_ || streamCallback_) return;
+  if (!nowMs || !count_ || lifecycleBusy()) return;
   RiscPerf::AggregateScope trace(27);
   polling_ = true;
   const uint32_t began = nowMs();
@@ -340,6 +341,8 @@ void GraphV2::poll(uint32_t (*nowMs)(), void (*yield)()) {
   polling_ = false;
 }
 GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
+  if(lifecycleBusy())return {};
+  LifecycleScope scope(lifecycle_);
   RiscPerf::Scope trace(22,23,RiscPerf::identity(capability));
   error_[0] = 0;
   const int target = find(capability, api);
@@ -349,6 +352,8 @@ GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
 
 GrantV2 GraphV2::acquireFrom(const char* providerId, const char* capability,
                            uint32_t api, uint64_t instance) {
+  if(lifecycleBusy())return {};
+  LifecycleScope scope(lifecycle_);
   RiscPerf::Scope trace(22,23,RiscPerf::identity(providerId));
   error_[0] = 0;
   const int target = findProvider(providerId, capability, api, instance);
@@ -365,7 +370,7 @@ const void* GraphV2::interfaceFor(GrantV2 grant) const {
 }
 
 bool GraphV2::grantStream(GrantV2 grant, uint32_t consumer, uint32_t endpoint, uint32_t rights) {
-  if (streamCallback_ || polling_ || !interfaceFor(grant) || !streamHost_ || !streamHost_->grant || !streamHost_->revokeGrant)
+  if (lifecycleBusy() || !interfaceFor(grant) || !streamHost_ || !streamHost_->grant || !streamHost_->revokeGrant)
     return false;
   const uint64_t context = nodes_[grants_[grant.slot - 1].node].module.streamContext();
   const uint64_t lease = (uint64_t(grant.generation) << 32) | grant.slot;
@@ -379,7 +384,7 @@ const risc_stream_session_provider_v1* GraphV2::streamSessionsFor(GrantV2 grant,
   return *context ? module.streamSessions() : nullptr;
 }
 bool GraphV2::revokeStreamGrants(GrantV2 grant) {
-  if (streamCallback_ || polling_ || !interfaceFor(grant)) return false;
+  if (lifecycleBusy() || !interfaceFor(grant)) return false;
   const uint64_t context=nodes_[grants_[grant.slot-1].node].module.streamContext();
   if (!context) return true;
   if (!streamHost_ || !streamHost_->revokeGrant) return false;
@@ -388,7 +393,8 @@ bool GraphV2::revokeStreamGrants(GrantV2 grant) {
   streamHost_->revokeGrant(context,lease); return true;
 }
 bool GraphV2::release(GrantV2 grant) {
-  if (streamCallback_ || polling_) return false;
+  if (lifecycleBusy()) return false;
+  LifecycleScope scope(lifecycle_);
   if (!grant.slot || grant.slot > kMaxGrants || !grant.generation) return false;
   GrantSlot& slot = grants_[grant.slot - 1];
   if (!slot.occupied || slot.generation != grant.generation) return false;
@@ -423,7 +429,8 @@ size_t GraphV2::liveGrants() const {
 }
 
 bool GraphV2::shutdown() {
-  if (streamCallback_ || polling_) return false;
+  if (lifecycleBusy()) return false;
+  LifecycleScope scope(lifecycle_);
   if (liveGrants()) return false;
   for (size_t pass = 0; pass <= count_; ++pass) {
     bool progress = false;
@@ -452,7 +459,7 @@ bool GraphV2::shutdown() {
 }  // namespace RuntimeProviders
 
 bool RuntimeProviders::GraphV2::activationSafe() const {
-  return !polling_ && !streamCallback_ && dependencyReadSafe();
+  return !lifecycleBusy() && dependencyReadSafe();
 }
 bool RuntimeProviders::GraphV2::dependencyReadSafe() const {
   for(size_t i=0;i<count_;++i)

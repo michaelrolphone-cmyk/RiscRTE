@@ -6,6 +6,7 @@ trap 'rm -rf "$build"' EXIT
 san=(-g); if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer); fi
 flags=("${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -I"$repo/sdk/app" -I"$repo/sdk/driver")
 link=();if [[ "$(uname)" == Darwin ]];then link=(-undefined dynamic_lookup);fi
+cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/stream_session_root.c" -o "$build/root.elf"
 cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/stream_session_provider.c" -o "$build/stream.elf"
 cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/stream_session_app.c" -o "$build/default.elf"
 cc "${flags[@]}" "${link[@]}" -DSTREAM_CHILD "$repo/test/fixtures/stream_session_app.c" -o "$build/child.elf"
@@ -16,7 +17,7 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
  "$repo/test/app_stream_sessions_test.cpp" -ldl -o "$build/test"
 for activation in eager demand; do
- for mode in ${STREAM_SCENARIOS:-normal child child-init-fail release-open forgot-close fini-close unknown-tag unknown-version prefix-base prefix-diagnostics prefix-streams prefix-poll open-clean-fail grant1-fail grant2-fail open-retained-zero open-retained-token open-malformed open-duplicate open-foreign open-direction open-partial-error open-slow open-busy call-retained call-overflow call-slow close-fail close-slow close-busy revoke-busy grant-rollback-retained start-retained}; do
+ for mode in ${STREAM_SCENARIOS:-normal reentry lifecycle-reentry reuse copied-control two-sessions child child-init-fail release-open forgot-close fini-close unknown-tag unknown-version prefix-base prefix-diagnostics prefix-streams prefix-poll open-clean-fail grant1-fail grant2-fail open-retained-zero open-retained-token open-malformed open-duplicate open-foreign open-direction open-partial-error open-slow open-busy call-retained call-overflow call-slow close-fail close-slow close-busy revoke-busy grant-rollback-retained start-retained}; do
   "$build/test" "$build" "$mode" "$activation"
  done
 done

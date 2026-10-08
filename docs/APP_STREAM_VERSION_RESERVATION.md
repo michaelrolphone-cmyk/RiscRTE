@@ -11,5 +11,5 @@ Coordinator approval and live verification: 2026-10-08 11:56 UTC.
 
 This reservation is not publication, a release, a product selection, or hardware
 qualification. Earlier blocked Runtime publication actions remain blocked.
-Version stamping follows software verification; future cache-pressure work uses
+Version 0.1.66 is stamped for this local software candidate; future cache-pressure work uses
 a separately coordinated later version.

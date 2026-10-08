@@ -102,3 +102,7 @@ Runtime0.1.51 adds an optional owner-only terminal `retain_invocation` suffix
 and automatic pre-fini/pre-unload fencing for failed graph state. It conveys no
 new provider authority and performs no cleanup. See [invocation retention](INVOCATION_RETENTION.md)
 for exact signal, idempotence, compatibility and cleanup-custody semantics.
+
+Runtime 0.1.66 appends a copied, invocation-bound generic stream client. Opening
+a stream still requires the exact existing capability grant; no raw provider
+session/endpoint can be supplied by an app. See [byte streams](APP_STREAMS.md).

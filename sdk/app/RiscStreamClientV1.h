@@ -21,6 +21,13 @@ typedef struct {
   int32_t terminal;
   uint64_t bytes_read, bytes_written;
 } risc_stream_client_info_v1;
+/* All methods are owner-task/invocation bound. Open also requires the exact
+ * live capability grant; session/stream handles are Runtime-issued opaque IDs.
+ * Control budgets are 1..1000 ms; requests/replies are copied and <=512 bytes.
+ * Read/write initialize count to zero and transfer at most min(request,512).
+ * Partial progress is OK; empty/full is AGAIN; drained graceful RX is EOF.
+ * Writes count accepted queue bytes, never a physical flush guarantee.
+ * RETAINED requires prompt return without cleanup, polling, frees or retries. */
 typedef struct risc_stream_client_v1 {
   uint32_t api_version, struct_size;
   uint64_t context; /* Runtime-minted, unique current invocation, never an owner input. */

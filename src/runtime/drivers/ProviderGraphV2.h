@@ -65,6 +65,7 @@ class GraphV2 final {
   const risc_stream_session_provider_v1* streamSessionsFor(GrantV2, uint64_t* context) const;
   bool revokeStreamGrants(GrantV2);
   // Serialized native session callbacks cannot reenter graph lifecycle/polling.
+  bool lifecycleBusy() const { return polling_ || streamCallback_ || lifecycle_; }
   bool beginStreamCallback() { if (streamCallback_ || !activationSafe()) return false; streamCallback_=true; return true; }
   void endStreamCallback() { streamCallback_=false; }
   bool shutdown();
@@ -92,7 +93,8 @@ class GraphV2 final {
   // A failed quiesce keeps the mapped ELF and dependency pointers intact for
   // a later checked retry; this is NOT a global graph shutdown.
   bool recoverFailedFrom(const char* providerId, const char* capability, uint32_t api) {
-    if (streamCallback_ || polling_) return false;
+    if (lifecycleBusy()) return false;
+    LifecycleScope scope(lifecycle_);
     const int target = findProvider(providerId, capability, api);
     if (target < 0) return false;
     const size_t index = static_cast<size_t>(target);
@@ -163,6 +165,12 @@ class GraphV2 final {
   size_t nextPoll_ = 0;
   bool polling_ = false;
   bool streamCallback_ = false;
+  bool lifecycle_ = false;
+  struct LifecycleScope {
+    bool& state;
+    explicit LifecycleScope(bool& flag):state(flag){state=true;}
+    ~LifecycleScope(){state=false;}
+  };
 
   int find(const char* capability, uint32_t api) const;
   int findProvider(const char* id, const char* capability, uint32_t api, uint64_t instance = 0) const;

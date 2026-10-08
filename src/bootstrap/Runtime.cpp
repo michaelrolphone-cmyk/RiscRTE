@@ -320,7 +320,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
   return true;
 }
 bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
-  if (promotionRunning_ || !active() || !appDataExitSafe() || !appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
+  if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !appDataExitSafe() || !appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
   out->slot=out->generation=0;out->api=nullptr;
   const AppGrantPolicy* allowed=nullptr;
   for (size_t i=0;i<appPolicy_->count;++i) {
@@ -519,7 +519,7 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
   return backend.put(backend.context,matched->nameSpace,key,data,size)==RISC_BOUND_KEY_VALUE_OK ? RISC_BOUND_KEY_VALUE_OK : RISC_BOUND_KEY_VALUE_IO;
 }
 bool Runtime::release(risc_runtime_capability_v1* out) {
-  if (promotionRunning_ || !active() || !appDataExitSafe() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
+  if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !appDataExitSafe() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
   auto& grant=appGrants_[out->slot-1];
   if (!grant.live || grant.generation!=out->generation || grant.api!=out->api || grant.invocation!=streams_.context()) return false;
   RuntimeStreams::AppStreamBinding binding{grant.invocation,out->slot,grant.generation,grant.api,grant.provider};
@@ -540,18 +540,25 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
 }
 bool Runtime::revokeApp() {
   if(!streams_.closeAll())return false;
-  bool ok=true;
   for (auto& grant:appGrants_) if (grant.live) {
     if (grant.provider.slot && !graph_.release(grant.provider)) {
       retained_=true;(void)appExitBarrier();return false;
     }
-    else {
-      if(grant.api==&promotionTable_)promotionContext_=nullptr;
-      if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
-      if(grant.api==&realtimeControlTable_)realtimeControlContext_=nullptr;
-      if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}if(grant.api==&appDataTable_){if(!appDataExitSafe()){ok=false;continue;}appDataContext_=nullptr;appDataNamespace_=0;}if(grant.api==&installedVolume_){if(!installedFiles_->end()){ok=false;continue;}installedVolumeContext_=nullptr;}grant={};}
+    if(grant.api==&appDataTable_) {
+      if(!appDataExitSafe()){retained_=true;(void)appExitBarrier();return false;}
+      appDataContext_=nullptr;appDataNamespace_=0;
+    }
+    if(grant.api==&installedVolume_) {
+      if(!installedFiles_->end()){retained_=true;(void)appExitBarrier();return false;}
+      installedVolumeContext_=nullptr;
+    }
+    if(grant.api==&promotionTable_)promotionContext_=nullptr;
+    if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
+    if(grant.api==&realtimeControlTable_)realtimeControlContext_=nullptr;
+    if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}
+    grant={};
   }
-  appPolicy_=nullptr;return ok;
+  appPolicy_=nullptr;return true;
 }
 #include "AppStreamsRuntime.inc"
 #include "InstalledFilesRuntime.inc"
@@ -618,7 +625,7 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
 #include "CohortRuntime.inc"
 bool Runtime::launch(const char* relative) {
   if(fileOpen_.phase==FileOpenState::Phase::Requested || fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
-  if(promotionRunning_ || !active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
+  if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   const bool ok=path(root_,relative,queued_,sizeof(queued_));
   RISC_STAGE_LOG("app launch-request file=%s result=%s",relative,ok?"accepted":"invalid-path");
   if(ok)RiscPerf::emit(20);
@@ -693,7 +700,7 @@ bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* a
   *actual=uint32_t(n);return true;
 }
 void Runtime::yield(uint32_t ms) {
-  if(!active()) return;
+  if(!active() || graph_.lifecycleBusy()) return;
   // Poll work is bounded separately; each app yield cooperates exactly once.
   if(!promotionRunning_ && appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
   const uint32_t requested=ms<1?1:ms>50?50:ms;
@@ -702,7 +709,7 @@ void Runtime::yield(uint32_t ms) {
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }
 bool Runtime::retainInvocation() {
-  if(currentRuntime!=this || promotionRunning_ || streams_.busy() || !port_.owner() || (!active_ && !retained_))return false;
+  if(currentRuntime!=this || promotionRunning_ || streams_.busy() || graph_.lifecycleBusy() || !port_.owner() || (!active_ && !retained_))return false;
   retained_=true;
   (void)appExitBarrier();
   return true;
@@ -843,7 +850,16 @@ bool Runtime::run() {
   for(size_t i=0;!demandActivation_ && i<driverCount_;++i) {
     char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
     grants_[i]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
-    if(!grants_[i].slot) { ok=fail(graph_.lastError());port_.log(error_);break; }
+    if(!grants_[i].slot) {
+      ok=fail(graph_.lastError());port_.log(error_);
+      // A grantless failed start can retain code and dependency custody too.
+      // Do not run the final boot cleanup/retry path after that barrier.
+      if(!graph_.activationSafe()) {
+        retained_=true;revokeProviders();
+        port_.log("RTE_CLEANUP provider-activation=retained");
+      }
+      break;
+    }
     std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=ready",drivers_[i].id);port_.log(stage);
     port_.delay(1);
   }
@@ -874,8 +890,9 @@ bool Runtime::run() {
       retained_=true;
       char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[i].id,graph_.lastError());port_.log(detail);
       if(ok)ok=fail("driver quiescence failed; restart required");
+      break;
     }
-    if(!graph_.shutdown()) {
+    if(!retained_ && !graph_.shutdown()) {
       retained_=true;port_.log("RTE_CLEANUP driver-shutdown=retained");
       if(ok)ok=fail("driver shutdown retained; restart required");
     }

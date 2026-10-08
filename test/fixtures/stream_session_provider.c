@@ -6,21 +6,26 @@ extern void stream_test_slow(void);
 extern void stream_test_provider(const void*);
 extern void stream_test_grant_failure(unsigned);
 extern void stream_test_lock(void);
+extern void stream_test_reenter(bool);
 static const risc_stream_provider_v1* host;
+static const uint32_t* dependency;
 static uint64_t sequence;
 static struct {uint64_t id;uint32_t rx,tx;} sessions[2];
 static int is(const char* s){return !strcmp(stream_test_mode(),s);}
 static bool bind(const risc_stream_provider_v1* h){host=h;return true;}
 static bool start(const risc_provider_dependency_v1* deps,size_t count){
- (void)deps;if(count)return false;stream_test_event("provider:start");stream_test_provider(&sessions);
+ if(count!=1 || !deps || strcmp(deps[0].capability_id,"test.root") || deps[0].api_version!=1)return false;
+ if(is("lifecycle-reentry"))stream_test_reenter(false);
+ dependency=deps[0].api;if(!dependency || dependency[0]!=1 || dependency[1]!=8)return false;stream_test_event("provider:start");stream_test_provider(&sessions);
  if(is("start-retained")){uint32_t endpoint=0;risc_stream_endpoint_v1 e={sizeof(e),1,1,16,0,0,0};
   (void)host->publish(host->context,&e,&endpoint);return false;}
  return true;
 }
-static bool quiesce(void){stream_test_event("provider:quiesce");return !is("quiesce-fail") && !is("start-retained");}
+static bool quiesce(void){stream_test_event("provider:quiesce");if(is("lifecycle-reentry"))stream_test_reenter(false);return dependency && dependency[0]==1 && !is("quiesce-fail") && !is("start-retained");}
 static void stop(void){stream_test_event("provider:stop");}
 static int32_t open_session(const void* request,uint32_t size,uint32_t ms,risc_provider_stream_session_v1* out){
  stream_test_event("provider:open");
+ if(is("reentry"))stream_test_reenter(true);
  if(!request || size!=4 || !ms || *(const uint32_t*)request!=42)return RISC_STREAM_INVALID;
  if(is("open-clean-fail"))return RISC_STREAM_IO;
  if(is("open-retained-zero"))return RISC_STREAM_RETAINED;
@@ -47,6 +52,7 @@ static int32_t call_session(uint64_t id,const void* request,uint32_t size,uint32
  (void)request;(void)size;(void)ms;(void)reply;(void)cap;*count=0;
  stream_test_event("provider:call");
  if(!id)return RISC_STREAM_INVALID;
+ if(is("copied-control")){if(size>cap)return RISC_STREAM_INVALID;memcpy(reply,request,size);*count=size;return RISC_STREAM_OK;}
  if(is("call-retained"))return RISC_STREAM_RETAINED;
  if(is("call-overflow"))*count=cap+1;
  if(is("call-slow"))stream_test_slow();
@@ -54,6 +60,7 @@ static int32_t call_session(uint64_t id,const void* request,uint32_t size,uint32
 }
 static int32_t close_session(uint64_t id,uint32_t ms){
  (void)ms;stream_test_event("provider:close");
+ if(is("reentry"))stream_test_reenter(true);
  if(is("close-fail") || is("grant-rollback-retained"))return RISC_STREAM_IO;
  if(is("close-busy")){stream_test_lock();return RISC_STREAM_OK;}
  if(is("close-slow"))stream_test_slow();
@@ -65,6 +72,7 @@ static int32_t close_session(uint64_t id,uint32_t ms){
 }
 static void poll(uint32_t ms){
  (void)ms;stream_test_event("provider:poll");
+ if(is("reentry"))stream_test_reenter(false);
  for(unsigned i=0;i<2;i++)if(sessions[i].id){
   uint8_t bytes[3];uint32_t n=0,written=0;
   if(host->consume(host->context,sessions[i].tx,bytes,sizeof(bytes),&n)==RISC_STREAM_OK && n)

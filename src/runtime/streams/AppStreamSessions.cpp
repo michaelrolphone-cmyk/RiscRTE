@@ -1,6 +1,8 @@
 #include "AppStreamSessions.h"
 #include "ProviderQueueHost.h"
 #include <cstring>
+#include <cstdlib>
+#include <new>
 #ifdef ESP_PLATFORM
 #include <esp_timer.h>
 #else
@@ -27,14 +29,18 @@ bool same(const AppStreamBinding& a,const AppStreamBinding& b) {
     a.api==b.api && a.graph.slot==b.graph.slot && a.graph.generation==b.graph.generation;
 }
 }
+AppStreamSessions::~AppStreamSessions() {
+  // A retained Runtime cannot destroy custody before its graph abort guard.
+  if(sessions_)for(const auto& s:*sessions_)if(s.state!=State::Free)std::abort();
+}
 bool AppStreamSessions::beginInvocation() {
   if(context_ || busy_ || nextConsumer==UINT32_MAX) return false;
-  for(const auto& s:sessions_) if(s.state!=State::Free) return false;
+  if(sessions_)for(const auto& s:*sessions_) if(s.state!=State::Free) return false;
   context_=issue(); if(!context_)return false;
   consumer_=++nextConsumer; return true;
 }
 bool AppStreamSessions::retained() const {
-  for(const auto& s:sessions_)if(s.state==State::Retained)return true;
+  if(sessions_)for(const auto& s:*sessions_)if(s.state==State::Retained)return true;
   return false;
 }
 bool AppStreamSessions::valid(const Session& s,bool active) const {
@@ -45,7 +51,7 @@ bool AppStreamSessions::valid(const Session& s,bool active) const {
 }
 AppStreamSessions::Session* AppStreamSessions::find(uint64_t context,uint64_t token,bool stream) {
   if(!context || context!=context_ || !token)return nullptr;
-  for(auto& s:sessions_)if(s.state==State::Open && s.authority &&
+  if(sessions_)for(auto& s:*sessions_)if(s.state==State::Open && s.authority &&
       (stream ? s.rx==token || s.tx==token : s.session==token) && valid(s))return &s;
   return nullptr;
 }
@@ -56,7 +62,7 @@ int32_t AppStreamSessions::fence(Session& s) {
   return RISC_STREAM_RETAINED;
 }
 void AppStreamSessions::revokeAuthority() {
-  for(auto& s:sessions_)if(s.state!=State::Free) {
+  if(sessions_)for(auto& s:*sessions_)if(s.state!=State::Free) {
     s.authority=false;
     // Never enter provider code. Failure preserves software custody and is
     // covered by the invocation fence, which rejects every copied client.
@@ -67,18 +73,20 @@ int32_t AppStreamSessions::open(const AppStreamBinding& binding,const void* requ
   if(!out || out->struct_size<sizeof(*out))return RISC_STREAM_INVALID;
   *out={};out->struct_size=sizeof(*out);
   if((!request && size) || size>RISC_STREAM_CHUNK_V1 || !budget(ms))return RISC_STREAM_INVALID;
-  if(busy_)return RISC_STREAM_BUSY;
+  if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   if(!context_ || binding.invocation!=context_ || !host_.valid(host_.context,binding,true) ||
       !binding.graph.slot || graph_.interfaceFor(binding.graph)!=binding.api)return RISC_STREAM_DENIED;
+  uint64_t providerContext=0;
+  const auto* adapter=graph_.streamSessionsFor(binding.graph,&providerContext);
+  if(!adapter || !providerContext)return RISC_STREAM_UNSUPPORTED;
+  if(!sessions_)sessions_.reset(new(std::nothrow) Sessions{});
+  if(!sessions_)return RISC_STREAM_LIMIT;
   Session* slot=nullptr;
-  for(auto& s:sessions_) {
+  if(sessions_)for(auto& s:*sessions_) {
     if(s.state!=State::Free && same(s.binding,binding))return RISC_STREAM_BUSY;
     if(s.state==State::Free && !slot)slot=&s;
   }
   if(!slot || nextToken>UINT64_MAX-3)return RISC_STREAM_LIMIT;
-  uint64_t providerContext=0;
-  const auto* adapter=graph_.streamSessionsFor(binding.graph,&providerContext);
-  if(!adapter || !providerContext)return RISC_STREAM_UNSUPPORTED;
   Session& s=*slot;s.state=State::Reserved;s.binding=binding;s.adapter=adapter;s.providerContext=providerContext;
   s.session=issue();s.rx=issue();s.tx=issue();
   alignas(max_align_t) uint8_t copied[RISC_STREAM_CHUNK_V1]{};if(size)std::memcpy(copied,request,size);
@@ -96,7 +104,7 @@ int32_t AppStreamSessions::open(const AppStreamBinding& binding,const void* requ
   }
   if(opened.struct_size!=sizeof(opened) || opened.reserved || !opened.session || !opened.rx_endpoint ||
       !opened.tx_endpoint || opened.rx_endpoint==opened.tx_endpoint)return fence(s);
-  for(const auto& other:sessions_)if(&other!=&s && other.state!=State::Free &&
+  for(const auto& other:*sessions_)if(&other!=&s && other.state!=State::Free &&
       other.providerContext==s.providerContext && other.providerSession==s.providerSession)return fence(s);
   const int32_t reserved=reserveEndpointPair(s.providerContext,lease(s),consumer_,s.session,s.rxEndpoint,s.txEndpoint);
   // Unvalidated output can point into somebody else's session. Never close it.
@@ -114,7 +122,7 @@ int32_t AppStreamSessions::open(const AppStreamBinding& binding,const void* requ
   return RISC_STREAM_OK;
 }
 int32_t AppStreamSessions::close(Session& s,uint32_t ms,bool active) {
-  if(busy_)return RISC_STREAM_BUSY;
+  if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   if(s.state==State::Retained)return RISC_STREAM_RETAINED;
   if(!valid(s,active))return fence(s);
   s.state=State::Closing;s.authority=false;
@@ -128,16 +136,16 @@ int32_t AppStreamSessions::close(Session& s,uint32_t ms,bool active) {
 }
 int32_t AppStreamSessions::close(uint64_t context,uint64_t token,uint32_t ms) {
   if(!budget(ms))return RISC_STREAM_INVALID;
-  if(busy_)return RISC_STREAM_BUSY;
+  if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   Session* s=find(context,token);return s?close(*s,ms,true):RISC_STREAM_CLOSED;
 }
 bool AppStreamSessions::closeGrant(const AppStreamBinding& binding) {
-  for(auto& s:sessions_)if(s.state!=State::Free && same(s.binding,binding))return close(s,RISC_STREAM_CONTROL_MAX_MS_V1,false)==RISC_STREAM_OK;
+  if(sessions_)for(auto& s:*sessions_)if(s.state!=State::Free && same(s.binding,binding))return close(s,RISC_STREAM_CONTROL_MAX_MS_V1,false)==RISC_STREAM_OK;
   return true;
 }
 bool AppStreamSessions::closeAll() {
   revokeAuthority();
-  for(auto& s:sessions_)if(s.state!=State::Free) {
+  if(sessions_)for(auto& s:*sessions_)if(s.state!=State::Free) {
     if(close(s,RISC_STREAM_CONTROL_MAX_MS_V1,false)!=RISC_STREAM_OK)return false;
     host_.yield(host_.context);
   }
@@ -146,7 +154,7 @@ bool AppStreamSessions::closeAll() {
 int32_t AppStreamSessions::call(uint64_t context,uint64_t token,const void* request,uint32_t size,uint32_t ms,void* reply,uint32_t capacity,uint32_t* actual) {
   if(actual)*actual=0;
   if(!actual || (!request && size) || size>RISC_STREAM_CHUNK_V1 || (!reply && capacity) || capacity>RISC_STREAM_CHUNK_V1 || !budget(ms))return RISC_STREAM_INVALID;
-  if(busy_)return RISC_STREAM_BUSY;
+  if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   Session* s=find(context,token);if(!s)return RISC_STREAM_CLOSED;
   alignas(max_align_t) uint8_t copied[RISC_STREAM_CHUNK_V1]{},response[RISC_STREAM_CHUNK_V1]{};
   if(size)std::memcpy(copied,request,size);
@@ -163,7 +171,7 @@ int32_t AppStreamSessions::call(uint64_t context,uint64_t token,const void* requ
 int32_t AppStreamSessions::read(uint64_t context,uint64_t token,void* data,uint32_t size,uint32_t* count) {
   if(count)*count=0;
   if(!count || (!data && size))return RISC_STREAM_INVALID;
-  if(busy_)return RISC_STREAM_BUSY;
+  if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   Session* s=find(context,token,true);if(!s)return RISC_STREAM_CLOSED;
   if(s->rx!=token)return RISC_STREAM_DENIED;
   return providerStreamRead(s->providerContext,lease(*s),consumer_,s->rxEndpoint,data,size,count);
@@ -171,14 +179,14 @@ int32_t AppStreamSessions::read(uint64_t context,uint64_t token,void* data,uint3
 int32_t AppStreamSessions::write(uint64_t context,uint64_t token,const void* data,uint32_t size,uint32_t* count) {
   if(count)*count=0;
   if(!count || (!data && size))return RISC_STREAM_INVALID;
-  if(busy_)return RISC_STREAM_BUSY;
+  if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   Session* s=find(context,token,true);if(!s)return RISC_STREAM_CLOSED;
   if(s->tx!=token)return RISC_STREAM_DENIED;
   return providerStreamWrite(s->providerContext,lease(*s),consumer_,s->txEndpoint,data,size,count);
 }
 int32_t AppStreamSessions::info(uint64_t context,uint64_t token,risc_stream_client_info_v1* out) {
   if(!out || out->struct_size<sizeof(*out))return RISC_STREAM_INVALID;
-  if(busy_)return RISC_STREAM_BUSY;
+  if(busy_ || graph_.lifecycleBusy())return RISC_STREAM_BUSY;
   Session* s=find(context,token,true);if(!s)return RISC_STREAM_CLOSED;
   return providerStreamInfo(s->providerContext,lease(*s),consumer_,token==s->rx?s->rxEndpoint:s->txEndpoint,out);
 }

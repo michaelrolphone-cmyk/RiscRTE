@@ -1,5 +1,9 @@
 # RiscRTE
 
+Runtime 0.1.66 adds [generic app byte-stream sessions](docs/APP_STREAMS.md),
+with an invocation-bound broker, tagged provider adapter and bounded queues.
+Physical transports and product selection remain external.
+
 Runtime 0.1.60 adds [automatic plain timestamped stage logs](docs/STAGE_LOGS.md)
 in the `*-stage` diagnostic targets. Boot, named provider activation and app
 load/init/entry/unload statements print without a command or enabled recorder.
@@ -143,9 +147,9 @@ storage call. The mounted store must remain immutable while a boot session runs.
   tables. Package identity stays unchanged; selection includes instance ID.
   Identical `driver.elf` paths/basenames do not alias a singleton module.
 - This slice loads ordinary ABI-2 providers only. Privileged OS/CPU package
-  admission, normal storage-volume providers, app capability brokering, package
-  installation and stream services are not enabled. Stream-dependent drivers fail
-  admission without a host table. No alternate storage ABI was introduced.
+  admission, normal storage-volume providers, package installation are not enabled. Explicit app capabilities and generic
+  byte-stream sessions are brokered by Runtime; providers still require valid
+  graph admission and checked quiescence. No alternate storage ABI was introduced.
 - Only flash-backed bootstrap is supplied. An attached-storage bootstrap port
   requires its own explicit noncyclic board/pin ownership and timeout design.
 - No production peripheral driver is bundled. The real Watch I2C test driver and tiny dynamic providers under
