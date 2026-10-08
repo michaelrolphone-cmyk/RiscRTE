@@ -28,12 +28,12 @@ bool spiOpen(uint8_t physical,int16_t sclk,int16_t mosi,int16_t miso){
 }
 bool spiMosiDirection(uint8_t physical,SpiState& state,bool output){
   if(gpio_set_direction(static_cast<gpio_num_t>(state.mosi),output?GPIO_MODE_INPUT_OUTPUT:GPIO_MODE_INPUT)!=ESP_OK)return false;
-  // IDF4 gpio_set_direction(output) replaces the matrix output with GPIO.
-  // Restore the SPI signal for TX. RX selects the disabled GPIO output so
-  // a previous peripheral output-enable cannot drive the shared data pad;
-  // the SPI input route established by bus initialization stays connected.
-  const uint32_t signal=output?(physical==2?FSPID_OUT_IDX:SPI3_D_OUT_IDX):SIG_GPIO_OUT_IDX;
-  esp_rom_gpio_connect_out_signal(state.mosi,signal,false,false);
+  // Pinned S3 gpio_ll_output_disable both disables the pad and disconnects
+  // its matrix output. Do not reconnect SIG_GPIO_OUT_IDX on RX: the ROM
+  // routing function enables output again, driving the GPIO latch onto MOSI.
+  // Its input route (spid_in) from bus initialization remains connected.
+  // Output direction setup selects GPIO, so only TX restores SPI routing.
+  if(output)esp_rom_gpio_connect_out_signal(state.mosi,physical==2?FSPID_OUT_IDX:SPI3_D_OUT_IDX,false,false);
   return true;
 }
 bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool threeWire){

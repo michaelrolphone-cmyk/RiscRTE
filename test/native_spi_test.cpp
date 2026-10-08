@@ -66,7 +66,7 @@ int main(int argc,char** argv){
     model.owner=false;assert(!a.begin(a.context,t,2000000,0,1000));model.owner=true;assert(model.calls==before);
     assert(a.begin(a.context,t,2000000,0,1000));
     assert(model.device.config.flags==(NativeShim::SPI_DEVICE_3WIRE|NativeShim::SPI_DEVICE_HALFDUPLEX));
-    assert(model.pullup[5] && model.direction[5]==NativeShim::GPIO_MODE_INPUT && !model.level[7]);
+    assert(model.pullup[5] && !model.outputEnabled[5] && model.direction[5]==NativeShim::GPIO_MODE_INPUT && !model.level[7]);
     assert(!b.begin(b.context,u,2000000,0,20));assert(!b.end(b.context,t));assert(!b.release(b.context,u));
     uint8_t tx[513]{0x71,0x19},rx[513]{};
     assert(!a.exchange(a.context,t,tx,rx,1));assert(!a.exchange(a.context,t,nullptr,nullptr,1));
@@ -87,6 +87,29 @@ int main(int argc,char** argv){
     const uint64_t stale=t;assert(a.release(a.context,t));assert(!a.begin(a.context,stale,2000000,0,20));
     assert(a.claim_three_wire(a.context,4,5,7,&t) && t!=stale);assert(!a.end(a.context,stale));assert(!a.release(a.context,stale));
     assert(a.release(a.context,t));assert(b.release(b.context,u));assert(g.release(g.context,dc));
+  }
+  // Same held-CS direction/turnaround as FLG/VER probing: repeat the two
+  // register replies, with a low GPIO latch and real ROM output-enable side
+  // effect. Each RX must leave MOSI released, input-routed and pulled up.
+  for(unsigned physical:{2u,3u}){
+    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& g=f.p.gpios_[0].api;
+    uint64_t token=0,dc=0;assert(a.claim_three_wire(a.context,4,5,7,&token));
+    assert(g.claim(g.context,8,true,false,false,&dc));assert(!model.level[5]);
+    for(unsigned pass=0;pass<2;++pass){
+      for(uint8_t command:{uint8_t(0x71),uint8_t(0x70)}){
+        assert(g.write(g.context,dc,false));assert(a.begin(a.context,token,100000,0,8));
+        assert(a.exchange(a.context,token,&command,nullptr,1));
+        assert(g.write(g.context,dc,true) && !model.level[7]);
+        model.rxData=command==0x71?std::vector<uint8_t>{0x13}:std::vector<uint8_t>{1,2,0x68,4,5};
+        uint8_t reply[5]{};assert(a.exchange(a.context,token,nullptr,reply,model.rxData.size()));
+        assert(!model.outputEnabled[5] && model.direction[5]==NativeShim::GPIO_MODE_INPUT);
+        assert(model.signal[5]==NativeShim::SIG_GPIO_OUT_IDX && model.pullup[5]);
+        assert(model.inputSignal[5]==(physical==2?NativeShim::FSPID_OUT_IDX:NativeShim::SPI3_D_OUT_IDX));
+        assert(std::memcmp(reply,model.rxData.data(),model.rxData.size())==0 && !model.level[7]);
+        assert(a.end(a.context,token));
+      }
+    }
+    model.rxData.clear();assert(a.release(a.context,token));assert(g.release(g.context,dc));
   }
   for(bool supported:{true,false}){
     Fixture f(root,supported?6:-1,supported);auto& a=f.p.spis_[0].api;uint64_t t=99;

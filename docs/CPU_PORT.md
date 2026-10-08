@@ -198,3 +198,16 @@ zero/full endpoints use static GPIO levels instead of overflowing the timer.
 The existing Watch 40/100 ratio remains 409 ticks. Tests cover all 1023 X4
 intermediate ratios, scoped claims, legacy SPI, reentry/ownership, retained
 failure, and safe configuration-before-unhold with the native sleep SDK shim.
+
+
+## Shared-data SPI receive turnaround (0.1.61)
+
+RX now keeps the input-only state established by ESP32-S3 gpio_set_direction.
+Its low-level output-disable path already disconnects the output matrix. A
+subsequent ROM output-routing call was re-enabling the pad and could drive a low
+GPIO latch over the peripheral's reply. Removing that redundant RX call leaves
+MOSI pulled up and connected to the existing SPID input route. TX routing,
+clock selection, scoped ownership, deadlines and cleanup retention stay intact.
+The corrected native shim reproduces the old failure and verifies repeated
+held-CS TX/DC/RX phases, both physical controllers and legacy clients. Physical
+confirmation of the repaired probe remains separate.

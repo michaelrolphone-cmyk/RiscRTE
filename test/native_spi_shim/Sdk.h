@@ -21,18 +21,21 @@ enum class Fault {None,Initialize,Add,Remove,Pullup,Pulldown,Direction,Queue,Dra
 inline struct Model {
   Fault fault=Fault::None;int faultPin=-1;unsigned calls=0,opens=0,adds=0,removes=0,queues=0,drains=0,frees=0;
   int64_t us=0;uint32_t queueDelay=0;TickType_t queueWait=0,drainWait=0;
-  bool owner=true,initialized=false,level[49]{},pullup[49]{};
-  int direction[49]{},signal[49]{};Device device{};spi_transaction_t* pending=nullptr;
-  spi_bus_config_t bus{};std::vector<std::string> events;
+  bool owner=true,initialized=false,level[49]{},pullup[49]{},outputEnabled[49]{};
+  int direction[49]{},signal[49]{},inputSignal[49]{};Device device{};spi_transaction_t* pending=nullptr;
+  spi_bus_config_t bus{};std::vector<std::string> events;std::vector<uint8_t> rxData;
 } model;
 inline bool fails(Fault fault){++model.calls;return model.fault==fault;}
 inline TickType_t ticks(uint32_t ms){return ms?ms+1:0;} // Native helper with a modeled 1 ms RTOS tick.
 inline spi_host_device_t host(uint8_t physical){return physical==2?SPI2_HOST:SPI3_HOST;}
 inline int64_t esp_timer_get_time(){return model.us;}
-inline int spi_bus_initialize(spi_host_device_t,const spi_bus_config_t* config,int dma){
+inline int spi_bus_initialize(spi_host_device_t physical,const spi_bus_config_t* config,int dma){
   assert(!model.initialized && dma==SPI_DMA_CH_AUTO);++model.opens;model.bus=*config;
   if(fails(Fault::Initialize))return ESP_FAIL;
-  model.initialized=true;model.direction[config->mosi_io_num]=GPIO_MODE_INPUT_OUTPUT;return ESP_OK;
+  model.initialized=true;model.direction[config->mosi_io_num]=GPIO_MODE_INPUT_OUTPUT;
+  model.outputEnabled[config->mosi_io_num]=true;
+  model.inputSignal[config->mosi_io_num]=physical==SPI2_HOST?FSPID_OUT_IDX:SPI3_D_OUT_IDX;
+  return ESP_OK;
 }
 inline int spi_bus_add_device(spi_host_device_t,const spi_device_interface_config_t* config,spi_device_handle_t* out){
   assert(model.initialized && !model.device.live && config->spics_io_num==-1 && config->queue_size==1);++model.adds;
@@ -46,10 +49,16 @@ inline int spi_bus_remove_device(spi_device_handle_t device){
 }
 inline int gpio_set_direction(gpio_num_t pin,int mode){
   if(fails(Fault::Direction))return ESP_FAIL;
-  model.direction[pin]=mode;if(mode==GPIO_MODE_INPUT_OUTPUT)model.signal[pin]=SIG_GPIO_OUT_IDX;return ESP_OK;
+  model.direction[pin]=mode;model.outputEnabled[pin]=(mode==GPIO_MODE_INPUT_OUTPUT);
+  // Pinned S3 gpio_ll_output_disable disconnects the output matrix too.
+  // gpio_output_enable also connects SIG_GPIO_OUT_IDX before native TX routing.
+  model.signal[pin]=SIG_GPIO_OUT_IDX;return ESP_OK;
 }
 inline void esp_rom_gpio_connect_out_signal(uint32_t pin,uint32_t signal,bool inverted,bool oeInverted){
   ++model.calls;assert(!inverted && !oeInverted);model.signal[pin]=signal;
+  // ROM routing also enables the pad output. Omitting this effect hid the
+  // original receive-direction bug, which drove the GPIO latch during RX.
+  model.outputEnabled[pin]=true;model.direction[pin]|=2;
 }
 inline int gpio_pulldown_dis(gpio_num_t){return fails(Fault::Pulldown)?ESP_FAIL:ESP_OK;}
 inline int gpio_pullup_en(gpio_num_t pin){if(fails(Fault::Pullup))return ESP_FAIL;model.pullup[pin]=true;return ESP_OK;}
@@ -67,11 +76,12 @@ inline int spi_device_queue_trans(spi_device_handle_t device,spi_transaction_t* 
     assert(bool(transaction->tx_buffer)!=bool(transaction->rx_buffer));
     if(transaction->tx_buffer){
       assert(transaction->length>0 && transaction->rxlength==0);
-      assert(model.direction[model.bus.mosi_io_num]==GPIO_MODE_INPUT_OUTPUT);
+      assert(model.direction[model.bus.mosi_io_num]==GPIO_MODE_INPUT_OUTPUT && model.outputEnabled[model.bus.mosi_io_num]);
       assert(model.signal[model.bus.mosi_io_num]==FSPID_OUT_IDX || model.signal[model.bus.mosi_io_num]==SPI3_D_OUT_IDX);
     } else {
       assert(transaction->length==0 && transaction->rxlength>0);
-      assert(model.direction[model.bus.mosi_io_num]==GPIO_MODE_INPUT && model.pullup[model.bus.mosi_io_num]);
+      assert(model.direction[model.bus.mosi_io_num]==GPIO_MODE_INPUT && !model.outputEnabled[model.bus.mosi_io_num] && model.pullup[model.bus.mosi_io_num]);
+      assert(model.inputSignal[model.bus.mosi_io_num]==FSPID_OUT_IDX || model.inputSignal[model.bus.mosi_io_num]==SPI3_D_OUT_IDX);
       assert(model.signal[model.bus.mosi_io_num]==SIG_GPIO_OUT_IDX);
     }
   } else assert(transaction->tx_buffer && transaction->rx_buffer && transaction->length>0);
@@ -81,7 +91,10 @@ inline int spi_device_get_trans_result(spi_device_handle_t device,spi_transactio
   assert(device==&model.device && device->live && model.pending);++model.drains;model.drainWait=wait;
   if(fails(Fault::Drain))return ESP_FAIL;
   auto* t=model.pending;
-  if(t->rx_buffer){const size_t n=(t->rxlength?t->rxlength:t->length)/8;std::memset(t->rx_buffer,0xa5,n);}
+  if(t->rx_buffer){const size_t n=(t->rxlength?t->rxlength:t->length)/8;
+    if(model.rxData.empty())std::memset(t->rx_buffer,0xa5,n);
+    else {assert(n<=model.rxData.size());std::memcpy(t->rx_buffer,model.rxData.data(),n);}
+  }
   *result=t;model.pending=nullptr;model.events.push_back("drain");return ESP_OK;
 }
 inline int spi_bus_free(spi_host_device_t){
