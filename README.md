@@ -1,5 +1,10 @@
 # RiscRTE
 
+Runtime 0.1.76 adds a separate owner-maintenance image for ABI2 and an offline
+entry/restoration verifier that preserves app-data and excludes NVS. Ordinary
+Runtime has no maintenance endpoint. This does not migrate native policy rows
+or product cohorts. See [owner maintenance](docs/PROVISIONING.md#offline-maintenance-entryrestoration-planner).
+
 Runtime 0.1.75 makes a valid retained stream notification fence its provider
 even when the queue lock is busy. Exact endpoint/generation ownership and
 cleanup custody remain checked; the public ABI is unchanged. See the

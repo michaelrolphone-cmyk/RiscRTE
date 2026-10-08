@@ -354,6 +354,20 @@ jobs:
           pio run -e esp32s3-16mb-appdata -t buildfs -j 1
           python scripts/provision_seed.py --candidate dist/esp32s3-16mb-appdata --store .pio/build/esp32s3-16mb-appdata/spiffs.bin --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" --mkspiffs "$HOME/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino" --output dist/esp32s3-16mb-appdata/seed --source-sha "$SOURCE_SHA"
           SEED_DIRECTORY=dist/esp32s3-16mb-appdata/seed APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
+      - name: Verify ABI2 owner maintenance and restoration (no device operation)
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pio run -e esp32s3-16mb-appdata-maintenance -j 1
+          python scripts/maintenance_candidate.py --app-data --source-sha "$SOURCE_SHA"
+          python test/maintenance_plan_test.py --seed dist/esp32s3-16mb-appdata/seed --maintenance dist/owner-maintenance-appdata
+      - uses: actions/upload-artifact@v4
+        with:
+          name: riscrte-owner-maintenance-appdata-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/owner-maintenance-appdata/
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Real SPIFFS high-fill stream, retry, interruption and error proofs
         run: |
           python test/provisioning_spiffs_fixture.py build/spiffs-fixtures
