@@ -13,7 +13,7 @@ cc "${flags[@]}" -DIMAGE_CACHE_CHILD -DIMAGE_REVISION=2 "$repo/test/fixtures/ima
 cp "$build/child.elf" "$build/loose.elf"
 bash "$repo/test/support/native_registry/build.sh" "$build"
 c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic -pthread \
-  -DRISC_APP_IMAGE_CACHE_TEST=1 -include "$repo/test/support/native_registry/redirect.h" \
+  -DRISC_APP_IMAGE_CACHE_TEST=1 -DRISC_APP_IMAGE_CACHE=1 -include "$repo/test/support/native_registry/redirect.h" \
   -I"$repo/src" -I"$repo/test" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" \
   -I"$repo/lib/ArduinoJson/src" -I"$repo/test/support/native_registry/stubs" -I"$repo/lib/elf_loader/include" \
   "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \

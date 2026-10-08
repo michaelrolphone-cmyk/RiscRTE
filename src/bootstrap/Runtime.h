@@ -80,6 +80,8 @@ class Runtime final {
   bool confirmBoot();
   bool retainInvocation();
   bool streamClient(risc_stream_client_v1*);
+  // Compiled-in allocation-pressure path only; no app import or grant.
+  bool reclaimAppImages();
   struct UpdateApp { char elf[193]{}, manifest[193]{}; };
   // Native update authority: preserve the existing boot-policy identity/grants.
   bool appUpdate(const char* id,const void* manifest,size_t size,UpdateApp&) const;
@@ -247,5 +249,6 @@ class Runtime final {
   mutable bool metadataCloseRetained_=false;
   bool defaultRunning_=false, entryRunning_=false;
   esp_dl_image_cache* appImages_=nullptr;
+  bool reclaimingAppImages_=false;
 };
 }
