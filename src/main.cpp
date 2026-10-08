@@ -60,6 +60,10 @@ extern "C" void risc_perf_loader_event(uint32_t phase,uint32_t value) {
 #ifdef RISC_EMBEDDED_BOOTSTORE
 extern esp_err_t riscrte_mount_embedded_store();
 #endif
+// Optional native-platform startup status; no product policy or pin mapping.
+// A composed platform can report an earlier initVariant failure. No hook keeps
+// the existing generic/Watch boot sequence.
+extern "C" const char* risc_native_startup_error(void) __attribute__((weak));
 namespace {
 TaskHandle_t owner=nullptr;
 bool isOwner() { return xTaskGetCurrentTaskHandle()==owner; }
@@ -135,6 +139,10 @@ void setup() {
   RiscDiagnostics::start();
 #endif
   diagnosticLine(RISC_BUILD_IDENTITY);
+  if(risc_native_startup_error) {
+    const char* failure=risc_native_startup_error();
+    if(failure) { diagnosticFormat("RTE_BOOT error=native-startup detail=%s",failure);return; }
+  }
 #ifndef RISC_EMBEDDED_BOOTSTORE
   if(RiscNvs::initializationStatus()!=ESP_OK) diagnosticFormat("RTE_STORAGE unavailable=nvs code=%d erase_recovery=disabled",RiscNvs::initializationStatus());
 #endif
