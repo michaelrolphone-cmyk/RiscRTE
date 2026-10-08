@@ -17,7 +17,7 @@ int main(){
   assert(Stub::interruptAllocations==allocs+1);
   assert(Stub::interruptFrees==frees+(f==Stub::Interrupt?1:0));
   assert(Stub::live<=4);
-  if(f==Stub::None){assert(USB_SERIAL_JTAG.conf0.pad_pull_override==0&&USB_SERIAL_JTAG.conf0.usb_pad_enable==1);}
+  if(f==Stub::None){assert(tx_ring_buf && tx_ring_buf->capacity==256);assert(USB_SERIAL_JTAG.conf0.pad_pull_override==0&&USB_SERIAL_JTAG.conf0.usb_pad_enable==1);}
   Serial.end();assert(Stub::live==0&&Stub::intrMask==0);
   assert(Stub::pinModeValue[19]==OUTPUT_OPEN_DRAIN&&Stub::pinModeValue[20]==OUTPUT_OPEN_DRAIN);
   assert(Stub::pinLevel[19]==LOW&&Stub::pinLevel[20]==LOW);
