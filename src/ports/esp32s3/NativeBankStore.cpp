@@ -32,6 +32,9 @@ extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
  * paired bootstrap-store contract, independently of product/release URLs. */
 #ifdef RISC_OWNER_INSTALLER
 extern "C" __attribute__((used)) const char risc_paired_store_abi[]="RISC_OWNER_INSTALLER:1";
+// Normal boot is skipped, so its target literal is otherwise dead-stripped.
+// Retain a separate identity for offline entry/layout admission only.
+extern "C" __attribute__((used)) const char risc_owner_maintenance_target[]="RISC_OWNER_TARGET:" RISC_TARGET;
 #else
 extern "C" __attribute__((used)) const char risc_paired_store_abi[]=RISC_PAIRED_ABI_MARKER;
 #endif

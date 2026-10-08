@@ -619,7 +619,8 @@ Build `esp32s3-16mb-maintenance` for ABI1 or
 `esp32s3-16mb-appdata-maintenance` for ABI2 only when deliberately preparing owner
 maintenance. Stage the latter with `maintenance_candidate.py --app-data`; its
 artifact is `dist/owner-maintenance-appdata`. Both candidates require a clean
-exact-source build and verify the matching ordinary target excludes the endpoint. This separate image enters its bounded serial command loop before
+exact-source build, a retained owner-target marker and matching partition table,
+and verify the matching ordinary target excludes the endpoint. This separate image enters its bounded serial command loop before
 paired boot, providers or app launch. Normal Runtime has no writable endpoint.
 The maintenance image omits the ordinary paired-store ABI marker, so it cannot
 be admitted as an ordinary paired firmware update. Its artifact is separate from
@@ -726,7 +727,8 @@ Software tests use dummy snapshots and separately use freshly built artifacts,
 checking both banks and layouts, deterministic plans, all five phase boundaries,
 NVS exclusion, app-data preservation and incompatible/missing inventory refusal.
 This installs owner input only. It does not replace the running native Runtime,
-bridge 16 to 17 policy rows, change a product cohort or populate an update feed. All physical entry, installation, restoration and hardware checks remain
+bridge 16 to 17 policy rows, change a product cohort or populate an update feed. All physical entry, installation, restoration and
+hardware checks remain
 UNRUN and are not software-readiness prerequisites.
 
 OTA selection/state handling follows the pinned IDF4.4.7

@@ -37,7 +37,7 @@ def synthetic_firmware(app_data):
 def artifact(root,app_data,source='a'*40):
     layout=bank.APP_DATA_LAYOUT if app_data else bank.LAYOUT
     target=p.LAYOUTS[layout][2]
-    image=b'\xe9\x00\x00\x40RISC_OWNER_INSTALLER:1\0RTE_OWNER_MAINTENANCE=1\0RTE_SOURCE='+source.encode()+b'\0'+target.encode()+b'\0RISC_RUNTIME_VERSION:0.1.76\0'
+    image=b'\xe9\x00\x00\x40RISC_OWNER_INSTALLER:1\0RTE_OWNER_MAINTENANCE=1\0RTE_SOURCE='+source.encode()+b'\0'+('RISC_OWNER_TARGET:'+target).encode()+b'\0RISC_RUNTIME_VERSION:0.1.76\0'
     path=root/'artifact'; path.mkdir()
     (path/'firmware.bin').write_bytes(image)
     (path/'candidate.json').write_text(json.dumps({'schema':1,'target':target,'source_sha':source,'layout':layout,'store_abi':2 if app_data else 1,'bytes':len(image),'sha256':p.sha(image)}))

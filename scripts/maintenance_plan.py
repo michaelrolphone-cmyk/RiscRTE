@@ -71,8 +71,10 @@ def maintenance(folder,source,layout='riscrte-paired-16m-v1'):
     require(meta.get('bytes')==len(image) and meta.get('sha256')==sha(image),'maintenance digest')
     require(len(image)<=expected['app0'][3],'maintenance slot bound'); esp_image(image)
     require(image[3]>>4==4,'maintenance flash declaration')
-    for marker in (b'RISC_OWNER_INSTALLER:1\0', b'RTE_OWNER_MAINTENANCE=1\0', ('RTE_SOURCE='+source).encode()+b'\0', target.encode()+b'\0'):
+    for marker in (b'RISC_OWNER_INSTALLER:1\0', b'RTE_OWNER_MAINTENANCE=1\0', ('RTE_SOURCE='+source).encode()+b'\0'):
         require(marker in image,'maintenance markers')
+    if app_data or 'layout' in meta:
+        require(('RISC_OWNER_TARGET:'+target).encode()+b'\0' in image,'maintenance target marker')
     require(all(('RISC_PAIRED_STORE_ABI:'+str(abi)).encode()+b'\0' not in image for abi in (1,2)),'maintenance must not be ordinary paired firmware')
     return image
 
