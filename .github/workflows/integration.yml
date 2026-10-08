@@ -167,6 +167,7 @@ jobs:
           SANITIZE=1 bash test/run_store_image_capacity_test.sh
           NVS_GENERATOR=build/idf-nvs-source/components/nvs_flash/nvs_partition_generator/nvs_partition_gen.py python test/provision_device_test.py -v
           python test/maintenance_plan_test.py -v
+          python test/paired_entry_plan_test.py -v
           bash test/run_hci_test.sh
           SANITIZE=1 bash test/run_hci_test.sh
           python test/run_hci_scanner_burst_test.py --watch build/ble-watch-source --drivers build/ble-driver-source --output build/ble-scanner-normal

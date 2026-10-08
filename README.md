@@ -492,3 +492,9 @@ makes it an explicit, default-off composition option and adds owner-scoped
 allocation-pressure reclamation. See the
 [cache ownership, replacement lifecycle and measured operation counts](docs/APP_IMAGE_CACHE.md).
 Cold reads also use [bounded byte/time yield checkpoints](docs/ELF_READ_CHECKPOINTS.md).
+
+The separate [offline paired-entry planner](docs/OFFLINE_PAIRED_ENTRY.md) prepares
+private inactive-bank writes and verifies owner-supplied snapshots through
+readiness, pending confirmation and rollback. It requires trusted product
+admission, preserves NVS/app-data and never opens or writes a device. Ordinary
+native OTA policy remains unchanged.
