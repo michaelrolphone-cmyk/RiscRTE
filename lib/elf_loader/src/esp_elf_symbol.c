@@ -51,6 +51,7 @@ static const char * const s_picolibc_ctype_tbl = _ctype_b + _CTYPE_OFFSET;
 
 #include "esp_log.h"
 #include "esp_elf.h"
+#include "../../hal/RuntimeImagePressure.h"
 
 #if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
 #include "private/esp_dlmod.h"
@@ -109,9 +110,15 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
 
     /* stdlib.h */
 
+#if RISC_APP_IMAGE_CACHE
+    {"malloc", (const void *)&risc_image_malloc},
+    {"calloc", (const void *)&risc_image_calloc},
+    {"realloc", (const void *)&risc_image_realloc},
+#else
     ESP_ELFSYM_EXPORT(malloc),
     ESP_ELFSYM_EXPORT(calloc),
     ESP_ELFSYM_EXPORT(realloc),
+#endif
     ESP_ELFSYM_EXPORT(free),
 
     /* time.h */
