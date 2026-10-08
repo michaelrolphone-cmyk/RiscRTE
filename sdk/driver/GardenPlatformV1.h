@@ -41,8 +41,14 @@ typedef struct {
      * Only a fresh claim in this same scoped context may stage configuration
      * then unhold. False leaves the token/hold intact. No hardware I/O. */
     bool (*retire_held_output)(void *, uint64_t token);
+    /* Optional physical read of this exact scoped CPU-retired static output.
+     * Check GARDEN_GPIO_READ_RETIRED_OUTPUT_V1_SIZE and the callback first.
+     * No claim, configuration, hold change or token revival. Fresh claim/reset
+     * ends read authority. False clears *level when non-null; LOW is valid. */
+    bool (*read_retired_output)(void *, uint8_t pin, bool *level);
 } garden_gpio_v1;
 #define GARDEN_GPIO_RETIRE_HELD_OUTPUT_V1_SIZE (offsetof(garden_gpio_v1, retire_held_output) + sizeof(((garden_gpio_v1*)0)->retire_held_output))
+#define GARDEN_GPIO_READ_RETIRED_OUTPUT_V1_SIZE (offsetof(garden_gpio_v1, read_retired_output) + sizeof(((garden_gpio_v1*)0)->read_retired_output))
 #define GARDEN_GPIO_LIGHT_SLEEP_V1_SIZE (offsetof(garden_gpio_v1, light_sleep) + sizeof(((garden_gpio_v1*)0)->light_sleep))
 #define GARDEN_GPIO_DEEP_SLEEP_V1_SIZE (offsetof(garden_gpio_v1, deep_sleep) + sizeof(((garden_gpio_v1*)0)->deep_sleep))
 #define GARDEN_GPIO_DEEP_SLEEP_HOLD_V1_SIZE (offsetof(garden_gpio_v1, deep_sleep_hold) + sizeof(((garden_gpio_v1*)0)->deep_sleep_hold))

@@ -432,3 +432,9 @@ aggregate scheduler waits. The optional app API suffix preserves existing
 clients. Recorders never write serial; `perf` requests a capacity-bounded snapshot
 through the existing diagnostic transport. See [the tracing contract and
 measurement limits](docs/PERFORMANCE_TRACE.md). No file validation is added.
+
+Runtime 0.1.57 appends optional physical readback for an exact scoped CPU-retired
+held static GPIO output. It preserves the retired token, hold and all older
+table layouts; fresh claim or reset ends that read authority. Failure cannot
+substitute a cached HIGH. See [ownership and software verification](docs/CPU_PORT.md#exclusive-gpio-display-and-retained-static-outputs).
+Interpretation and product policy remain external providers' responsibility.

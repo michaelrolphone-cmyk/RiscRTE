@@ -147,6 +147,31 @@ poison the port. This does not transfer provider callbacks or data pointers.
 Older consumers use the unchanged table prefix; new consumers must check size
 and the function pointer. It is not a cross-boot token or a hardware guarantee.
 
+Runtime 0.1.57 appends `read_retired_output(context, pin, level)`. Consumers must
+check API version1, `GARDEN_GPIO_READ_RETIRED_OUTPUT_V1_SIZE`, and the callback.
+It samples the physical pad only when that exact pin remains a CPU-retired,
+held static output of the same registered GPIO scope. It rejects active claims,
+inputs, PWM, wake registrations, copied/foreign contexts, and pins outside the
+scope. Owner-task, poison, sleep, transfer and retained-state gates apply before
+I/O. A successful read returns the sampled HIGH or LOW; rejection or backend
+failure returns false and clears the caller's non-null level value. No cached
+level substitutes for the hardware result.
+
+The read does not claim/configure/write/unhold the pad, allocate a token, revive
+the retired token or add pin authority. A temporary callback guard prevents
+reentrant claims or hold changes during the physical sample. Fresh claim ends
+read authority; failed reclaim keeps custody but poisons the port and blocks
+reads. A new boot has no retired metadata, even if a physical hold survived reset.
+Repeated reads retain the existing teardown/storage safety behavior. Generic
+readback supplies evidence only; external providers own interpretation and policy.
+
+`test/run_held_output_test.sh` covers HIGH/LOW/backend failure, exact pin/scope,
+null and forged inputs, token revocation, lifecycle gates, reentry, fresh/failed
+claim and reset. Its C11/C++17 ABI checks compare the frozen Watch prefix and all
+previous suffix offsets, including exact-size old tables under ASan/UBSan.
+The native sleep shim verifies held output sensing and no hold/configuration
+changes while sampling. These are software checks, not hardware qualification.
+
 Native LEDC uses a 1024-tick ten-bit period for intermediate duty ratios;
 zero/full endpoints use static GPIO levels instead of overflowing the timer.
 The existing Watch 40/100 ratio remains 409 ticks. Tests cover all 1023 X4

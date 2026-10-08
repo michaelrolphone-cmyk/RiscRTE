@@ -139,6 +139,7 @@ class Port final {
   static int32_t gpioDeepSleepSet(void*,uint64_t,bool,uint32_t);
   static int32_t sleepSetImpl(void*,uint64_t,bool,uint32_t,bool,risc_light_sleep_result_v1*);
   static bool gpioRetireHeldOutput(void*,uint64_t);
+  static bool gpioReadRetiredOutput(void*,uint8_t,bool*);
   static bool gpioRelease(void*,uint64_t); static bool waveform(void*,uint64_t,const uint32_t*,size_t){return false;}
   static bool i2cOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*);
   static bool i2cTransfer(void*,uint64_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);

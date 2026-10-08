@@ -124,7 +124,7 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
       gpio.pullup|=pinBit(config.bus.mosi); // Owned bidirectional probe input.
     }
   }
-  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput};return true;
+  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput,gpioReadRetiredOutput};return true;
 }
 bool Port::bind(RiscBoot::Runtime& runtime){
   if(bound_ || !available() || !hw_.now || !hw_.sleep || !hw_.gpioOpen || !hw_.gpioWrite || !hw_.gpioRead || !hw_.gpioPwm || !hw_.gpioClose ||
@@ -763,6 +763,25 @@ bool Port::gpioRetireHeldOutput(void* context,uint64_t token){
     pin.token=0;pin.retiredHeld=true;return true;
   }
   return false;
+}
+bool Port::gpioReadRetiredOutput(void* context,uint8_t pin,bool* level){
+  if(level)*level=false;
+  if(!context || !level || pin>48)return false;
+  auto& c=*static_cast<Gpio*>(context);if(!c.port)return false;
+  auto& p=*c.port;
+  // A copied/forged scope cannot acquire read authority by copying its masks.
+  bool scoped=false;for(size_t i=0;i<p.gpioCount_;++i)if(&p.gpios_[i]==&c){scoped=true;break;}
+  if(!scoped || !p.available() || p.sleepRetained_ || p.transferring_ ||
+     !(c.output&pinBit(pin)) || !p.hw_.gpioRead)return false;
+  const auto& held=p.pins_[pin];
+  if(held.owner!=&c || held.token || !held.output || !held.held ||
+     !held.retiredHeld || held.pwm || held.wakeModes)return false;
+  // Fence reentry across the physical read. In particular, a nested fresh
+  // claim must not unhold/reconfigure the pad while it is being sampled.
+  p.sleeping_=true;bool sampled=false;
+  const bool ok=p.hw_.gpioRead(pin,&sampled);p.sleeping_=false;
+  if(ok)*level=sampled;
+  return ok;
 }
 bool Port::gpioRelease(void* context,uint64_t token){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.hw_.owner() || p.sleepRetained_ || p.sleeping_ || !token)return false;
