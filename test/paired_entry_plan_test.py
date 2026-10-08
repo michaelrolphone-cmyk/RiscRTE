@@ -25,7 +25,8 @@ def admission(old_fw,old_store,new_fw,new_store):
     return {'schema':'test.synthetic-admission','schema_version':1,'layout':p.LAYOUT,
             **{name+'_sha256':p.sha(raw) for name,raw in
                [('source_firmware',old_fw),('source_store',old_store),('target_firmware',new_fw),('target_store',new_store)]},
-            'admissions':{'scope':'Synthetic transaction fixture, no real product/ELF admission'}}
+            'admissions':{name:{'scope':'Synthetic transaction fixture, no real product/ELF admission'}
+                          for name in ('source_self','receiving_transition','target_self')}}
 
 
 class Plans(unittest.TestCase):
@@ -91,6 +92,9 @@ class Plans(unittest.TestCase):
         def wrong(*args):
             result=admission(*args);result['target_firmware_sha256']='0'*64;return result
         with self.assertRaisesRegex(ValueError,'byte identity'):self.plan(wrong)
+        def incomplete(*args):
+            result=admission(*args);del result['admissions']['receiving_transition'];return result
+        with self.assertRaisesRegex(ValueError,'complete product'):self.plan(incomplete)
         self.assertFalse(self.output.exists())
 
     def test_torn_out_of_order_and_changed_preserved_regions(self):

@@ -123,6 +123,8 @@ def prepare(inventory_path,original,firmware_path,store_path,admission):
     require(isinstance(proof,dict) and required<=set(proof) and type(proof['schema_version']) is int and proof['schema_version']==1 and
             isinstance(proof['schema'],str) and re.fullmatch('[A-Za-z0-9_.-]{1,96}',proof['schema']) and
             proof['layout']==LAYOUT and isinstance(proof['admissions'],dict) and len(encoded(proof))<=256*1024,'product admission receipt contract')
+    require(set(proof['admissions'])=={'source_self','receiving_transition','target_self'} and
+            all(isinstance(value,dict) and value for value in proof['admissions'].values()),'complete product admission phases required')
     for key,data in (('source_firmware',old_firmware),('source_store',old_store),('target_firmware',firmware),('target_store',store)):
         require(proof[key+'_sha256']==sha(data),'product admission byte identity')
     target=1-active;app=APP_DATA_EXPECTED['app'+str(target)];bootfs=APP_DATA_EXPECTED['bootfs'+str(target)]
@@ -201,7 +203,7 @@ def verify_phase(inventory,original,firmware,store,output,current,phase,admissio
             normalized=bytearray(actual);struct.pack_into('<I',normalized,24,0);actual=bytes(normalized)
         require(actual==expected,'write order or phase bytes differ: '+kind)
     return {'phase':phase,'verified':True,'hardware_status':'UNRUN','source_bank':report['active_bank'],'target_bank':report['target_bank'],
-            'native_confirmation_seen':phase=='confirmed','rollback_seen':phase=='rolled-back',
+            'confirmed_selector_seen':phase=='confirmed','rollback_seen':phase=='rolled-back',
             'scope':'Offline snapshot proof only; live ROM state and native health confirmation are not inferred.'}
 
 

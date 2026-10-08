@@ -35,6 +35,8 @@ the separately qualified product route.
 Return a bounded JSON object containing `schema`, integer `schema_version: 1`,
 `layout`, `source_firmware_sha256`, `source_store_sha256`,
 `target_firmware_sha256`, `target_store_sha256`, and an `admissions` object.
+The latter contains exactly three nonempty receipt objects: `source_self`,
+`receiving_transition`, and `target_self`.
 The generic layer compares all four hashes to its frozen byte inputs. Additional
 source, cohort and policy proof fields are preserved; include the committed
 `validator_source`. The entire receipt is limited to 256 KiB. The callback gets
