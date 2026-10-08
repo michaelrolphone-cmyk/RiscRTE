@@ -59,6 +59,20 @@ jobs:
           submodules: recursive
           path: build/littlefs-source
           persist-credentials: false
+      - name: Fetch exact Bluetooth transport provider for burst regression
+        uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: 4966acee548e6cc3997289db206e996ed4c15cda
+          path: build/ble-watch-source
+          persist-credentials: false
+      - name: Fetch exact Bluetooth scanner provider for burst regression
+        uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-Drivers
+          ref: aa5ce0140102bf4d1039e5f208588a6793d06b28
+          path: build/ble-driver-source
+          persist-credentials: false
       - name: Build initial disk2.1 image and exercise real LittleFS power cuts
         run: |
           python scripts/app_data_image.py --littlefs-source build/littlefs-source/src/littlefs --output build/appdata-initial
@@ -154,6 +168,8 @@ jobs:
           python test/maintenance_plan_test.py -v
           bash test/run_hci_test.sh
           SANITIZE=1 bash test/run_hci_test.sh
+          python test/run_hci_scanner_burst_test.py --watch build/ble-watch-source --drivers build/ble-driver-source --output build/ble-scanner-normal
+          SANITIZE=1 python test/run_hci_scanner_burst_test.py --watch build/ble-watch-source --drivers build/ble-driver-source --output build/ble-scanner-sanitized
           bash test/run_radio_iq_test.sh
           SANITIZE=1 bash test/run_radio_iq_test.sh
           bash test/run_radio_test.sh
