@@ -145,6 +145,7 @@ jobs:
           bash test/run_provider_sync_test.sh
           SANITIZE=1 bash test/run_provider_sync_test.sh
           python test/provision_seed_test.py -v
+          python test/provision_seed_extension_test.py -v
           python test/provision_profile_test.py -v
           python test/provision_image_inventory_test.py -v
           bash test/run_store_image_capacity_test.sh
