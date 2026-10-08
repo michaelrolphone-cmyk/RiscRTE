@@ -178,6 +178,10 @@ jobs:
           SANITIZE=1 bash test/run_image_cache_runtime_test.sh
           bash test/run_image_cache_pressure_test.sh
           SANITIZE=1 bash test/run_image_cache_pressure_test.sh
+          RISC_APP_POLICY_ROWS=17 bash test/run_image_cache_pressure_test.sh
+          bash test/run_app_stream_sessions_test.sh
+          SANITIZE=1 bash test/run_app_stream_sessions_test.sh
+          RISC_APP_POLICY_ROWS=17 bash test/run_app_stream_sessions_test.sh
           bash test/run_provider_module_lease_v2_test.sh
           SANITIZE=1 bash test/run_provider_module_lease_v2_test.sh
           bash test/run_provider_realtime_test.sh

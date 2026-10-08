@@ -3,6 +3,7 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
+policy=();if [[ -n "${RISC_APP_POLICY_ROWS:-}" ]];then policy=(-DRISC_APP_POLICY_ROWS="$RISC_APP_POLICY_ROWS");fi
 san=(-g); if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-g -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer); fi
 flags=("${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -I"$repo/sdk/app" -I"$repo/sdk/driver")
 link=();if [[ "$(uname)" == Darwin ]];then link=(-undefined dynamic_lookup);fi
@@ -10,7 +11,7 @@ cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/stream_session_root.c" -o "$b
 cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/stream_session_provider.c" -o "$build/stream.elf"
 cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/stream_session_app.c" -o "$build/default.elf"
 cc "${flags[@]}" "${link[@]}" -DSTREAM_CHILD "$repo/test/fixtures/stream_session_app.c" -o "$build/child.elf"
-c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic -DRISC_STREAM_HOST_TESTING \
+c++ "${san[@]}" "${policy[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic -DRISC_STREAM_HOST_TESTING \
  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
  "$repo/src/runtime/streams/ProviderQueueHost.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" \

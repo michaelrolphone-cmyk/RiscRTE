@@ -4,6 +4,7 @@ repo="$(cd "$(dirname "$0")/.." && pwd)"
 system="${SERIAL_SYSTEM_SOURCE:?Set SERIAL_SYSTEM_SOURCE to the matching System client checkout}"
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
+policy=();if [[ -n "${RISC_APP_POLICY_ROWS:-}" ]];then policy=(-DRISC_APP_POLICY_ROWS="$RISC_APP_POLICY_ROWS");fi
 mkdir -p "$build/sdk"
 cp -R "$system/lib/PortableApps/include/." "$build/sdk/"
 cp "$repo/sdk/app/RiscRuntimeV1.h" "$repo/sdk/app/RiscStreamClientV1.h" "$repo/sdk/app/RiscSerialStreamSessionV1.h" "$repo/sdk/driver/RiscStreamResultV1.h" "$repo/sdk/driver/RiscStreamSessionProviderV1.h" "$repo/sdk/driver/RiscProviderV2.h" "$repo/sdk/driver/RiscStreamProviderV1.h" "$build/sdk/"
@@ -12,7 +13,7 @@ flags=("${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -sha
 link=();if [[ "$(uname)" == Darwin ]];then link=(-undefined dynamic_lookup);fi
 cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/serial_stream_witness.c" -o "$build/serial.elf"
 cc "${flags[@]}" "${link[@]}" -DPORTABLE_SERIAL_STREAMS "$repo/test/fixtures/serial_stream_client_app.c" "$system/lib/PortableApps/src/PortableSerialClient.c" -o "$build/default.elf"
-c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic -DRISC_STREAM_HOST_TESTING \
+c++ "${san[@]}" "${policy[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic -DRISC_STREAM_HOST_TESTING \
  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
  "$repo/src/runtime/streams/ProviderQueueHost.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" \

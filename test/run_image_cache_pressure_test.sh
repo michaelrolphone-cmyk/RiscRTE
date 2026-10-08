@@ -3,6 +3,7 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
+policy=();if [[ -n "${RISC_APP_POLICY_ROWS:-}" ]];then policy=(-DRISC_APP_POLICY_ROWS="$RISC_APP_POLICY_ROWS");fi
 stubs="$repo/test/image_pressure_stubs"
 san=(-g)
 if [[ "${SANITIZE:-0}" == 1 ]];then san+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer);fi
@@ -16,7 +17,7 @@ p=pathlib.Path(sys.argv[1]);data=p.read_bytes();assert len(data)<512*1024;p.writ
 PY
 for cache in 0 1;do
   out="$build/$cache";mkdir -p "$out"
-  common=("${san[@]}" -D_GNU_SOURCE -DRISC_APP_IMAGE_CACHE="$cache" -DRISC_PAIRED_BANKS=1 -DRISC_PERFORMANCE_TRACE=1
+  common=("${san[@]}" "${policy[@]}" -D_GNU_SOURCE -DRISC_APP_IMAGE_CACHE="$cache" -DRISC_PAIRED_BANKS=1 -DRISC_PERFORMANCE_TRACE=1
     -Wall -Wextra -Werror -Wno-sign-compare -Wno-unused-parameter -Wno-missing-field-initializers -pthread
     -DCONFIG_ELF_LOADER_LOAD_PSRAM=1 -DCONFIG_ELF_LOADER_LIBC_SYMBOLS=1
     -I"$stubs" -I"$repo/test/support/native_registry/stubs" -I"$repo/lib/elf_loader/include"
