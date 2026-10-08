@@ -25,6 +25,14 @@ production broker/queue implementation as Runtime. The additional 17-row runs
 exercise the combined metadata shape, without raising live grant or manifest
 requirement bounds.
 
+A production fixture reproduced an inherited descriptor-boundary defect: a
+recognized stream tag with a truncated version was accepted as a legacy
+provider. Admission now reads the tag when that field alone is complete, and
+rejects a recognized descriptor shorter than its complete tagged layout before
+reading the version or pointer. Tag-only, partial-version and partial-pointer
+fixtures must reject before provider start; unrelated tags and legacy prefixes
+retain their existing behavior.
+
 ## Selection and boundaries
 
 `RISC_APP_IMAGE_CACHE` defaults to zero; opt-in remains `=1` with the documented

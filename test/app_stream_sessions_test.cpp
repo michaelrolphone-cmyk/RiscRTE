@@ -81,7 +81,8 @@ int main(int argc,char** argv){
  const bool retained=mode=="terminal-retained" || mode=="start-retained" || mode=="quiesce-fail" || mode=="close-fail" || mode=="close-slow" || mode=="close-busy" || mode=="revoke-busy" || mode=="grant-rollback-retained" ||
   mode=="open-retained-zero" || mode=="open-retained-token" || mode=="open-malformed" || mode=="open-duplicate" || mode=="open-foreign" || mode=="open-direction" || mode=="open-partial-error" || mode=="open-slow" || mode=="open-busy" || mode.rfind("call-",0)==0;
  assert(runtime->retained()==retained);
- assert(result==(!retained && (mode!="unknown-version" || activation=="demand")));
+ const bool malformedExtension=mode=="unknown-version" || mode.rfind("truncated-",0)==0;
+ assert(result==(!retained && (!malformedExtension || activation=="demand")));
  if(retained){
   assert(mapped(providerImage) && mapped(rootImage) && !count("root:stop"));
   if(mode!="start-retained")assert(mapped(appImage) && !count("app:fini"));
@@ -98,7 +99,7 @@ int main(int argc,char** argv){
  }
  if(mode=="child" || mode=="child-init-fail" || promote){assert(invocations==3);assert(count("app:fini")==unsigned(mode=="child-init-fail"?2:3));}
  if(mode=="release-open" || mode=="forgot-close" || mode=="fini-close" || mode=="grant1-fail" || mode=="grant2-fail")assert(count("provider:close")==1);
- if(mode=="unknown-version")assert(!count("provider:start"));
+ if(malformedExtension)assert(!count("provider:start"));
  delete runtime;
  assert(RuntimeStreams::Testing::allocatedBytes()==0);
  printf("%s/%s: checked cleanup and stale invocation isolation PASS\n",mode.c_str(),activation.c_str());

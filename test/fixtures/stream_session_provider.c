@@ -87,6 +87,9 @@ __attribute__((visibility("default"))) const risc_driver_v2* t5_driver_get(uint3
  if(abi!=2)return 0;
  if(is("unknown-tag")){driver.extension_tag=123;driver.stream_sessions=(const void*)1;}
  if(is("unknown-version")){driver.extension_version=99;driver.stream_sessions=(const void*)1;}
+ if(is("truncated-tag"))driver.poll.streams.driver.struct_size=offsetof(risc_driver_stream_sessions_v2,extension_version);
+ if(is("truncated-version"))driver.poll.streams.driver.struct_size=offsetof(risc_driver_stream_sessions_v2,extension_version)+sizeof(driver.extension_version)-1;
+ if(is("truncated-pointer"))driver.poll.streams.driver.struct_size=sizeof(driver)-1;
  if(is("prefix-base"))driver.poll.streams.driver.struct_size=sizeof(risc_driver_v2);
  if(is("prefix-diagnostics"))driver.poll.streams.driver.struct_size=sizeof(risc_driver_diagnostics_v2);
  if(is("prefix-streams"))driver.poll.streams.driver.struct_size=sizeof(risc_driver_streams_v2);

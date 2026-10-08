@@ -119,13 +119,13 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     return false;
   }
   const risc_stream_session_provider_v1* sessions = nullptr;
-  if (candidate->struct_size >= offsetof(risc_driver_stream_sessions_v2,stream_sessions)) {
+  if (candidate->struct_size >= offsetof(risc_driver_stream_sessions_v2,extension_tag) + sizeof(uint32_t)) {
     const auto* extended = reinterpret_cast<const risc_driver_stream_sessions_v2*>(candidate);
     // Unrelated larger descriptors do not authorize reading their suffix as a
     // pointer. Inspect the explicit tag/version before touching adapter memory.
     if (extended->extension_tag == RISC_DRIVER_STREAM_SESSIONS_TAG_V1) {
-      if (extended->extension_version != RISC_DRIVER_STREAM_SESSIONS_VERSION_V1 ||
-          candidate->struct_size < sizeof(*extended)) {
+      if (candidate->struct_size < sizeof(*extended) ||
+          extended->extension_version != RISC_DRIVER_STREAM_SESSIONS_VERSION_V1) {
         report(expectedId, "stream-session-extension-invalid"); return false;
       }
       sessions = extended->stream_sessions;

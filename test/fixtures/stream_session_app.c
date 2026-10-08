@@ -35,7 +35,7 @@ __attribute__((visibility("default"))) void app_main(void){
   const risc_provider_promotion_api_v1* p=promotion.api;assert(p->promote(p->context)==RISC_PROVIDER_PROMOTION_OK);
   assert(runtime->release(&promotion));
  }
- if(is("unknown-version") || is("start-retained")){
+ if(is("unknown-version") || !strncmp(stream_test_mode(),"truncated-",10) || is("start-retained")){
   grant=(risc_runtime_capability_v1){.struct_size=sizeof(grant)};assert(!runtime->acquire("test.stream",1,0,&grant));return;
  }
  acquire();
