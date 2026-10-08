@@ -13,6 +13,8 @@ for name in port binding; do
 done
 "${CXX:-c++}" "${flags[@]}" "${san[@]}" -I"$repo/test/native_hci_shim" "${includes[@]}" "$repo/test/native_hci_test.cpp" -o "$build/native"
 "$build/native"
+"${CXX:-c++}" "${flags[@]}" "${san[@]}" -I"$repo/test/native_hci_shim" "${includes[@]}" "$repo/test/native_hci_burst_test.cpp" -o "$build/burst"
+"$build/burst"
 cflags=(-std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared)
 for fixture in hci app child; do
  source="$repo/test/fixtures/hci_provider.c";extra=();out="$fixture"

@@ -1,5 +1,10 @@
 # RiscRTE
 
+Runtime 0.1.73 uses the existing bounded HCI receive memory for actual packet
+lengths, so short advertisement bursts no longer exhaust four oversized slots.
+Packet ordering, true-overflow failure and retained cleanup remain enforced.
+See [the exact-source reproducer and limits](docs/HCI_RX_BURSTS.md).
+
 Runtime 0.1.71 permits bounded scheduler-only cooperation for the current
 retained invocation owner, without polling providers or restoring authority.
 See [the retained-yield contract and reproduction](docs/RETAINED_YIELD.md).

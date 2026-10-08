@@ -52,7 +52,8 @@ int main(){
  for(const char* phase:{"disable","deinit"}){failure=phase;assert(!NativeHci::close() && !NativeHci::idle());clean();assert(NativeHci::open());}
  // A malformed event or queue loss is terminal for this stream, not silent loss.
  assert(cb->notify_host_recv(nullptr,0)==-1 && !NativeHci::safe());assert(!NativeHci::receive(&type,out,sizeof(out),&n,0));clean();
- assert(NativeHci::open());for(unsigned i=0;i<4;++i)assert(cb->notify_host_recv(event,sizeof(event))==0);
+ uint8_t acl[1029]={2,1,0,0,4};
+ assert(NativeHci::open());for(unsigned i=0;i<4;++i)assert(cb->notify_host_recv(acl,sizeof(acl))==0);
  assert(cb->notify_host_recv(event,sizeof(event))==-1 && !NativeHci::safe());clean();
  assert(NativeHci::open());failure="send-fault";assert(!NativeHci::send(1,command,3,0));clean();
  assert(NativeHci::open());status=ESP_BT_CONTROLLER_STATUS_IDLE;assert(!NativeHci::safe() && !NativeHci::close());status=ESP_BT_CONTROLLER_STATUS_ENABLED;clean();
