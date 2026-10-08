@@ -153,6 +153,15 @@ class Plans(unittest.TestCase):
         raw=bytearray(self.original.read_bytes());struct.pack_into('<I',raw,0xff0000+24,1);self.original.write_bytes(raw)
         with self.assertRaisesRegex(ValueError,'unconfirmed'):p.prepare(self.inventory,self.original,self.firmware,self.nextstore,admission)
 
+    def test_terminal_source_sequence_cannot_emit_unusable_confirmed_state(self):
+        self.reverse();raw=bytearray(self.original.read_bytes());offset=0xff1000
+        struct.pack_into('<I',raw,offset,0xffffffee)
+        struct.pack_into('<I',raw,offset+28,zlib.crc32(raw[offset:offset+4],0xffffffff)&0xffffffff)
+        self.original.write_bytes(raw)
+        self.assertEqual(p.maintenance.ota_selection(raw[0xff0000:0xff2000])[0],1)
+        with self.assertRaisesRegex(ValueError,'next selector sequence'):self.plan()
+        self.assertFalse(self.output.exists())
+
     def test_production_record_and_receipt_parity(self):
         source=bank.record(0,self.fw,self.store,True)
         new_fw=self.firmware.read_bytes();new_store=self.nextstore.read_bytes();target=bank.record(1,new_fw,new_store,True);digest=b'P'*32

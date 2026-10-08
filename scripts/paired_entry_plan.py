@@ -130,7 +130,9 @@ def prepare(inventory_path,original,firmware_path,store_path,admission):
     target=1-active;app=APP_DATA_EXPECTED['app'+str(target)];bootfs=APP_DATA_EXPECTED['bootfs'+str(target)]
     digest=consumed_profile(journal,active,old_store)
     next_journal=target_journal(target,firmware,store,records[active],digest)
-    next_seq=sequence+1;require((next_seq-1)%2==target,'selector parity')
+    next_seq=sequence+1
+    require(next_seq<0xffffffef,'next selector sequence is outside supported range')
+    require((next_seq-1)%2==target,'selector parity')
     sequence_bytes=struct.pack('<I',next_seq)
     next_ota=sequence_bytes+b'\xff'*20+struct.pack('<II',0,zlib.crc32(sequence_bytes,0xffffffff)&0xffffffff)+b'\xff'*(4096-32)
     writes={'application':(app[2],firmware+b'\xff'*(app[3]-len(firmware))),
