@@ -374,6 +374,21 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     installedVolumeContext_=context;installedVolume_=volumeTable(context);grant.api=&installedVolume_;
   } else if (allowed->driver>=0) {
     const auto& driver=drivers_[allowed->driver];
+    if(demandRetention_ && !demandActivation_ && !grants_[allowed->driver].slot) {
+      // Only the first real acquisition after promotion creates session custody.
+      // Keep the normal loader/dependency ordering and serialize start callbacks.
+      if(!promotionSafe())return false;
+      promotionRunning_=true;
+      auto& pin=grants_[allowed->driver];
+      pin=graph_.acquireFrom(driver.id,capability,api,driver.instance);
+      const bool safe=promotionSafe();
+      promotionRunning_=false;
+      if(!safe) {
+        retained_=true;active_=false;
+        return fail("provider activation retained; restart required");
+      }
+      if(!pin.slot)return fail(graph_.lastError());
+    }
     grant.provider=graph_.acquireFrom(driver.id,capability,api,driver.instance);
     if (!grant.provider.slot) return false;
     grant.api=graph_.interfaceFor(grant.provider);
@@ -542,9 +557,10 @@ bool Runtime::prepare(const char* root) {
       !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc,&metadataCloseRetained_) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
   // Activation policy never filters admission, registration or image inspection.
   const auto activation=c["provider_activation"];
-  if(!activation.isUnbound() && !eq(activation,"eager") && !eq(activation,"demand"))
+  if(!activation.isUnbound() && !eq(activation,"eager") && !eq(activation,"demand") && !eq(activation,"demand-retained"))
     return fail("invalid provider activation policy");
-  demandActivation_=eq(activation,"demand");
+  demandRetention_=eq(activation,"demand-retained");
+  demandActivation_=eq(activation,"demand") || demandRetention_;
   if(!text(c["default_app"],relative,sizeof(relative)) || !elfPath(relative) || !path(root_,relative,current_,sizeof(current_))) return fail("invalid default app path");
   if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>MaxDrivers) return fail("invalid driver list");
   // Read all manifests and validate mappings before registering/activating modules.
@@ -787,7 +803,7 @@ bool Runtime::run() {
   if(esp_elf_register_symbol(symbols)) { revokeProviders(); currentRuntime=nullptr; return fail("runtime API registration failed"); }
 #endif
   bool ok=true;
-  RISC_STAGE_LOG("providers activation mode=%s selected=%u",demandActivation_?"demand":"eager",unsigned(driverCount_));
+  RISC_STAGE_LOG("providers activation mode=%s selected=%u",demandRetention_?"demand-retained":demandActivation_?"demand":"eager",unsigned(driverCount_));
 #if RISC_STAGE_LOGS
   if(demandActivation_)for(size_t i=0;i<driverCount_;++i){
     RISC_STAGE_LOG("provider deferred id=%s reason=demand-until-acquired",drivers_[i].id);
@@ -795,10 +811,10 @@ bool Runtime::run() {
 #endif
   for(size_t i=0;!demandActivation_ && i<driverCount_;++i) {
     char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
-    grants_[granted_]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
-    if(!grants_[granted_].slot) { ok=fail(graph_.lastError());port_.log(error_);break; }
+    grants_[i]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
+    if(!grants_[i].slot) { ok=fail(graph_.lastError());port_.log(error_);break; }
     std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=ready",drivers_[i].id);port_.log(stage);
-    ++granted_; port_.delay(1);
+    port_.delay(1);
   }
   // One app at a time; no recursive ELF launch, directory search or fallback.
   while(ok) {
@@ -818,9 +834,9 @@ bool Runtime::run() {
     error_[0]=0; port_.delay(1);
   }
   if(!retained_) {
-    while(granted_) if(!graph_.release(grants_[--granted_])) {
+    for(size_t i=driverCount_;i--;) if(grants_[i].slot && !graph_.release(grants_[i])) {
       retained_=true;
-      char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[granted_].id,graph_.lastError());port_.log(detail);
+      char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[i].id,graph_.lastError());port_.log(detail);
       if(ok)ok=fail("driver quiescence failed; restart required");
     }
     if(!graph_.shutdown()) {

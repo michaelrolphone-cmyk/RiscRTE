@@ -79,6 +79,12 @@ bool GraphV2::hasProviderId(const char* providerId) const {
   return false;
 }
 
+bool GraphV2::activeFrom(const char* id,const char* capability,uint32_t api,uint64_t instance) const {
+  const int index=findProvider(id,capability,api,instance);
+  return index>=0 && nodes_[index].visit==Visit::Active &&
+    nodes_[index].module.state()==ModuleV2::State::Active;
+}
+
 bool GraphV2::addVerified(const SpecV2& spec) {
   return addChecked(spec, false);
 }

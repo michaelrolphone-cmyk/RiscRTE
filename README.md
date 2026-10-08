@@ -104,6 +104,12 @@ provider acquisition until an authorized app acquire needs its dependency closur
 Omission or `"eager"` preserves existing behavior. All selected metadata and staged
 image admission remain complete. See [demand activation and lifetime](docs/DEMAND_ACTIVATION.md).
 
+Runtime 0.1.63 adds explicit `"provider_activation": "demand-retained"`. The
+default app's existing promotion call arms session retention without activating
+unused providers. Later real acquisitions start only their authorized dependency
+closure, which stays mapped across app handoffs. Unpromoted paths remain ordinary
+demand lifetime. See [the policy and measured counts](docs/DEMAND_RETENTION.md).
+
 The shipped baseline has an empty driver list and no peripheral declarations.
 The example `probe` above refers to the non-hardware test fixture, not a bundled
 physical driver. An ordinary software provider omits `instance_id`; a hardware

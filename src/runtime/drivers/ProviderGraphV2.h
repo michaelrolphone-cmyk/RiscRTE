@@ -69,6 +69,8 @@ class GraphV2 final {
   // Optional scheduler yield runs once after work; omit when caller yields.
   void poll(uint32_t (*nowMs)(), void (*yield)());
   bool hasProvider(const char* providerId, const char* capability, uint32_t api) const;
+  // Stored lifecycle state only. Does not load, validate or acquire a provider.
+  bool activeFrom(const char* providerId, const char* capability, uint32_t api, uint64_t instance=0) const;
   bool hasProviderId(const char* providerId) const;
   size_t moduleCount() const { return count_; }
   size_t liveGrants() const;

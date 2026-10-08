@@ -223,10 +223,11 @@ class Runtime final {
   RuntimeProviders::GraphV2 graph_;
   RuntimeProviders::GrantV2 grants_[MaxDrivers]{};
   Driver drivers_[MaxDrivers]{};
-  size_t driverCount_=0, granted_=0;
+  size_t driverCount_=0;
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
   bool registrationOpen_=false;
   bool demandActivation_=false;
+  bool demandRetention_=false;
   bool promotionRunning_=false;
   risc_provider_promotion_api_v1 promotionTable_{};
   void* promotionContext_=nullptr;
