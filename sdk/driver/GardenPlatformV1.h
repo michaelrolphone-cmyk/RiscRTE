@@ -54,7 +54,8 @@ typedef struct {
 #define GARDEN_GPIO_DEEP_SLEEP_HOLD_V1_SIZE (offsetof(garden_gpio_v1, deep_sleep_hold) + sizeof(((garden_gpio_v1*)0)->deep_sleep_hold))
 /* SPI bus owner claims controller/pins and arbitrates complete transactions.
  * begin/end hold CS across multiple exchanges; begin has total timeout budget.
- * exchange NULL tx sends 0xff; NULL rx discards; max 512 bytes per exchange.
+ * Legacy claim: exchange NULL tx sends 0xff; NULL rx discards.
+ * All modes: max 512 bytes per exchange.
  * idle_clocks runs with all chip selects HIGH (SD initialization).
  * GPIO DC is controlled by its separate claim while SPI is held.
  * Native bus provider must reserve SCLK/MOSI/MISO centrally. */
@@ -66,7 +67,19 @@ typedef struct {
     bool (*end)(void *, uint64_t token);
     bool (*idle_clocks)(void *, uint64_t token, uint32_t hz, uint16_t clocks);
     bool (*release)(void *, uint64_t token);
+    /* Optional append-only, size-check GARDEN_SPI_THREE_WIRE_V1_SIZE first.
+     * Requires the scoped typed bus to have miso=-1. MOSI is shared data with
+     * a native pull-up during RX. exchange must have exactly one non-NULL
+     * buffer: TX-only or RX-only, under the same held CS until end.
+     * A valid begin reaching this backend retains ownership even on failure;
+     * call end before retry/release. Backend begin/exchange failure permits
+     * cleanup only. Backend release failure permits release retry only.
+     * Each exchange and end wait is capped at 8ms and the remaining begin
+     * budget. Failed exchange may retain pending DMA; end drains before CS
+     * goes HIGH. Failed end/release retains ownership for retry. */
+    bool (*claim_three_wire)(void *, uint8_t sclk, uint8_t mosi, uint8_t cs, uint64_t *token);
 } garden_spi_v1;
+#define GARDEN_SPI_THREE_WIRE_V1_SIZE (offsetof(garden_spi_v1, claim_three_wire) + sizeof(((garden_spi_v1*)0)->claim_three_wire))
 /* CPU-port radio service. Station and AP may coexist. Strings copied on join; completion is queried
  * with state, never inferred from join acceptance. Credentials max 63 bytes.
  * Exclusive token arbitrates the radio; leave drains operations within 100ms. */

@@ -218,7 +218,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       c.bus=radio?d.lora().bus:d.config.display.bus;
       c.cs=radio?d.lora().cs:d.config.display.cs;
       int physical=board.physicalController(c.bus.instance_id);if(physical<2 || physical>3)return false;c.physical=physical;
-      c.api={1,sizeof(c.api),&c,spiClaim,spiBegin,spiTransfer,spiEnd,idleClocks,spiRelease};
+      c.api={1,sizeof(c.api),&c,spiClaim,spiBegin,spiTransfer,spiEnd,idleClocks,spiRelease,spiClaimThreeWire};
       if(!runtime.registerPlatform("spi.bus",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
   }
@@ -811,10 +811,16 @@ bool Port::i2cClose(void* context,uint64_t token){
   p.unreserve(c.bus.sda,&c);p.unreserve(c.bus.scl,&c);c.token=0;return true;
 }
 bool Port::spiClaim(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t cs,uint64_t* out){
+  return spiClaimImpl(context,sclk,mosi,miso,cs,out,false);
+}
+bool Port::spiClaimThreeWire(void* context,uint8_t sclk,uint8_t mosi,uint8_t cs,uint64_t* out){
+  return spiClaimImpl(context,sclk,mosi,-1,cs,out,true);
+}
+bool Port::spiClaimImpl(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t cs,uint64_t* out,bool threeWire){
   if(out)*out=0;
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
-  if(!out || !p.available() || c.token || sclk!=c.bus.sclk || mosi!=c.bus.mosi || miso!=c.bus.miso || cs!=c.cs ||
-     (bus.refs && bus.instance!=c.bus.instance_id) || !p.reserve(cs,&c))return false;
+  if(!out || !p.available() || c.token || bus.closing || sclk!=c.bus.sclk || mosi!=c.bus.mosi || miso!=c.bus.miso || cs!=c.cs ||
+     (threeWire && !p.hw_.spiBeginThreeWire) || (bus.refs && bus.instance!=c.bus.instance_id) || !p.reserve(cs,&c))return false;
   uint64_t token=p.token();
   if(!token || !p.hw_.gpioOpen(cs,true,true,false)){if(!p.hw_.gpioClose(cs))p.poisoned_=true;else p.unreserve(cs,&c);return false;}
   if(!bus.refs){
@@ -826,35 +832,50 @@ bool Port::spiClaim(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t 
     }
     bus.instance=c.bus.instance_id;
   }
-  ++bus.refs;c.token=token;*out=token;return true;
+  ++bus.refs;c.threeWire=threeWire;c.ready=false;c.closing=false;c.token=token;*out=token;return true;
 }
 bool Port::spiBegin(void* context,uint64_t token,uint32_t hz,uint8_t mode,uint32_t ms){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
-  if(!p.available() || !token || c.token!=token || bus.held || !hz || hz>c.bus.frequency_hz || mode!=c.bus.mode || !ms || ms>1000)return false;
+  if(!p.available() || !token || c.token!=token || c.closing || bus.closing || bus.held || !hz || hz>c.bus.frequency_hz || mode!=c.bus.mode || !ms || ms>1000)return false;
   c.deadline=p.hw_.now()+ms;
+  if(c.threeWire){
+    // Backend mode/pad changes are fallible. Retain the whole transaction
+    // before entering it, so even a failed begin has an explicit end path.
+    bus.held=&c;c.ready=false;
+    c.ready=p.hw_.spiBeginThreeWire(c.physical,c.cs,hz,mode,ms);
+    return c.ready;
+  }
   if(!p.hw_.spiBegin(c.physical,c.cs,hz,mode,ms))return false;
-  bus.held=&c;return true;
+  bus.held=&c;c.ready=true;return true;
 }
 bool Port::spiTransfer(void* context,uint64_t token,const uint8_t* tx,uint8_t* rx,size_t count){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
   uint64_t now=p.hw_.now();
   if(!p.available() || !token || c.token!=token || bus.held!=&c || !count || count>512 || now>=c.deadline)return false;
-  return p.hw_.spiTransfer(c.physical,tx,rx,count,uint32_t(c.deadline-now));
+  if(c.threeWire && (!c.ready || bool(tx)==bool(rx)))return false;
+  uint32_t remaining=uint32_t(c.deadline-now);
+  if(c.threeWire && remaining>8)remaining=8;
+  const bool result=p.hw_.spiTransfer(c.physical,tx,rx,count,remaining);
+  if(c.threeWire && !result)c.ready=false;
+  return result;
 }
 bool Port::spiEnd(void* context,uint64_t token){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
   if(!p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || !token || c.token!=token || bus.held!=&c)return false;
   uint64_t now=p.hw_.now();uint32_t remaining=now<c.deadline?uint32_t(c.deadline-now):0;
+  if(c.threeWire){c.ready=false;if(remaining>8)remaining=8;}
   if(!p.hw_.spiEnd(c.physical,c.cs,remaining))return false;
-  bus.held=nullptr;c.deadline=0;return true;
+  bus.held=nullptr;c.deadline=0;c.ready=false;return true;
 }
 bool Port::spiRelease(void* context,uint64_t token){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
-  if(!p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || !token || c.token!=token || bus.held)return false;
+  if(!p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || !token || c.token!=token || bus.held || (bus.closing && bus.closing!=&c))return false;
+  if(c.threeWire){c.closing=true;bus.closing=&c;}
   if(bus.refs==1 && !p.hw_.spiClose(c.physical))return false;
   if(!p.hw_.gpioClose(c.cs))return false;
   p.unreserve(c.cs,&c);
   if(--bus.refs==0){p.unreserve(c.bus.sclk,&bus);p.unreserve(c.bus.mosi,&bus);p.unreserve(c.bus.miso,&bus);bus.instance=0;}
-  c.token=0;return true;
+  if(bus.closing==&c)bus.closing=nullptr;
+  c.token=0;c.threeWire=false;c.ready=false;c.closing=false;return true;
 }
 }

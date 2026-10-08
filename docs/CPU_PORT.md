@@ -35,6 +35,27 @@ buffers/descriptors. Failed completion retains those buffers and the bus until
 successful drain/end; shutdown does not free outstanding DMA storage. This port
 must not share its controllers with independently initialized Arduino/IDF stacks.
 
+
+The append-only `garden_spi_v1.claim_three_wire` suffix, guarded by
+`GARDEN_SPI_THREE_WIRE_V1_SIZE`, explicitly opts into shared-MOSI half duplex.
+It requires the selected typed bus to declare `miso=-1` and a supporting native
+callback. Legacy `claim` and its null-buffer/full-duplex behavior remain intact.
+The new mode accepts TX-only or RX-only phases, preserving CS across phases and
+separately authorized DC GPIO writes. No bus pin becomes ordinary GPIO authority.
+Native mode uses `SPI_DEVICE_3WIRE | SPI_DEVICE_HALFDUPLEX`, pull-up/input setup
+for shared-data reads, and restores the peripheral output route for writes.
+
+A valid new-mode begin reaching the backend owns the transaction even if mode,
+pull-up, direction, or CS setup fails; only end can establish clean closure.
+Backend exchange errors are also cleanup-only. End drains pending native DMA
+storage before CS rises. Failed end preserves the transaction; failed release
+preserves its token/pins and fences the bus against new claims or transactions
+until release succeeds. Both new-mode exchange and end waits are capped at the
+smaller of 8 ms and the remaining begin budget (maximum 1000 ms); after expiry,
+end can poll completion with no wait. Kernel tick rounding and synchronous SDK
+control calls prevent claiming a strict 8 ms wall-clock bound. See the
+[production-adapter regression and SDK evidence](../test/native_spi_shim/README.md).
+
 I2C transfers are bounded to 512 bytes per direction and 1000 ms, preserving repeated
 start for combined register reads. GPIO PWM uses at most four independent LEDC
 timers, 10 bit duty and at most 40 kHz. GPIO initial output levels precede direction
