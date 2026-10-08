@@ -147,6 +147,8 @@ jobs:
           bash test/run_diagnostic_journal_test.sh
           SANITIZE=1 bash test/run_diagnostic_journal_test.sh
           bash test/run_light_sleep_test.sh
+          bash test/run_native_spi_test.sh
+          SANITIZE=1 bash test/run_native_spi_test.sh
           bash test/run_spi_radio_test.sh
           SANITIZE=1 bash test/run_spi_radio_test.sh
           bash test/run_deep_sleep_test.sh
