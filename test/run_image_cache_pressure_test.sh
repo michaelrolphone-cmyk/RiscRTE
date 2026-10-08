@@ -11,13 +11,18 @@ shared=("${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -sh
 if [[ "$(uname -s)" == Darwin ]];then shared+=(-Wl,-undefined,dynamic_lookup);fi
 cc "${shared[@]}" "$repo/test/fixtures/image_pressure_app.c" -o "$build/default.elf"
 cc "${shared[@]}" "$repo/test/fixtures/image_pressure_provider.c" -o "$build/provider.elf"
-python3 - "$build/default.elf" <<'PY'
+cc "${shared[@]}" "$repo/test/fixtures/image_pressure_stream_app.c" -o "$build/custody.elf"
+cc "${shared[@]}" -DPRESSURE_CHILD "$repo/test/fixtures/image_pressure_stream_app.c" -o "$build/child.elf"
+cc "${shared[@]}" "$repo/test/fixtures/image_pressure_stream_provider.c" -o "$build/stream.elf"
+cc "${shared[@]}" "$repo/test/fixtures/stream_session_root.c" -o "$build/root.elf"
+python3 - "$build/default.elf" "$build/custody.elf" <<'PY'
 import pathlib,sys
-p=pathlib.Path(sys.argv[1]);data=p.read_bytes();assert len(data)<512*1024;p.write_bytes(data+bytes(512*1024-len(data)))
+for name in sys.argv[1:]:
+ p=pathlib.Path(name);data=p.read_bytes();assert len(data)<512*1024;p.write_bytes(data+bytes(512*1024-len(data)))
 PY
 for cache in 0 1;do
   out="$build/$cache";mkdir -p "$out"
-  common=("${san[@]}" "${policy[@]}" -D_GNU_SOURCE -DRISC_APP_IMAGE_CACHE="$cache" -DRISC_PAIRED_BANKS=1 -DRISC_PERFORMANCE_TRACE=1
+  common=("${san[@]}" "${policy[@]}" -D_GNU_SOURCE -DRISC_APP_IMAGE_CACHE="$cache" -DRISC_PAIRED_BANKS=1 -DRISC_PERFORMANCE_TRACE=1 -DRISC_STREAM_HOST_TESTING
     -Wall -Wextra -Werror -Wno-sign-compare -Wno-unused-parameter -Wno-missing-field-initializers -pthread
     -DCONFIG_ELF_LOADER_LOAD_PSRAM=1 -DCONFIG_ELF_LOADER_LIBC_SYMBOLS=1
     -I"$stubs" -I"$repo/test/support/native_registry/stubs" -I"$repo/lib/elf_loader/include"
@@ -36,7 +41,7 @@ for cache in 0 1;do
   done
   c++ -std=c++17 "${common[@]}" -rdynamic -include "$repo/test/support/native_registry/redirect.h" \
     "$repo/test/image_cache_pressure_test.cpp" "$out"/*.o -ldl -o "$out/test"
-  for mode in provider-mapping provider-start provider-retained malloc calloc realloc caps failed-retry foreign app-retained cache-hit ledger-init;do
+  for mode in ${PRESSURE_SCENARIOS:-provider-mapping provider-start provider-retained malloc calloc realloc caps failed-retry foreign app-retained cache-hit ledger-init ledger-final custody-app custody-provider custody-app-retained custody-provider-retained};do
     "$out/test" "$build" "$mode"
   done
 done

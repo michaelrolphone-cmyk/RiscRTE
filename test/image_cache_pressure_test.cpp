@@ -24,6 +24,9 @@ extern "C" bool risc_runtime_reclaim_app_images();
 extern "C" void native_app_memory_relocation(bool);
 static thread_local bool isOwner=true;
 static bool probeRecursion=false,providerRetained=false,failMapping=false,failLedger=false,probeDetached=false;
+static unsigned failLedgerCount,ledgerAttempts;
+static bool custodyPressure=false;
+static void checkCustodyPressure();
 static unsigned failures,recursiveCalls,providerStarts,providerStops,providerOutlivedApp,invocations,detachedChecks;
 static size_t live,limit=SIZE_MAX,allocCount;
 static struct {void* p;size_t n;} allocations[16384];
@@ -39,6 +42,7 @@ extern "C" void* pressure_malloc(size_t n){
 }
 extern "C" void pressure_free(void*p){
   if(!p)return;
+  if(custodyPressure)checkCustodyPressure();
   const size_t i=indexOf(p);
   if(i<allocCount){
     if(probeDetached){
@@ -69,6 +73,8 @@ extern "C" void* heap_caps_malloc(size_t size,uint32_t){
   return pressure_malloc(size);
 }
 extern "C" void* heap_caps_calloc(size_t n,size_t size,uint32_t){
+  ++ledgerAttempts;
+  if(failLedgerCount){--failLedgerCount;++failures;errno=ENOMEM;return nullptr;}
   if(failLedger){failLedger=false;++failures;errno=ENOMEM;return nullptr;}
   return pressure_calloc(n,size);
 }
@@ -193,8 +199,10 @@ extern "C" void image_pressure_app(const risc_runtime_api_v1* api){
   limit=SIZE_MAX;probeRecursion=false;
 }
 static void write(const std::string&path,const char*data){std::ofstream(path)<<data;}
+#include "image_cache_custody.inc"
 int main(int argc,char**argv){
   assert(argc==3);const std::string root=argv[1];mode=argv[2];
+  if(mode=="ledger-final" || mode.rfind("custody-",0)==0)return runCustody(root);
   assert(!risc_runtime_reclaim_app_images());
   assert(!elf_find_sym_default("risc_runtime_reclaim_app_images"));
   assert(!elf_find_sym_default("esp_dlopen_cached_instance"));
