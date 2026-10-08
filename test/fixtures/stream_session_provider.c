@@ -1,11 +1,13 @@
 #include <RiscStreamSessionProviderV1.h>
 #include <string.h>
+#include <assert.h>
 extern const char* stream_test_mode(void);
 extern void stream_test_event(const char*);
 extern void stream_test_slow(void);
 extern void stream_test_provider(const void*);
 extern void stream_test_grant_failure(unsigned);
 extern void stream_test_lock(void);
+extern void stream_test_unlock(void);
 extern void stream_test_reenter(bool);
 static const risc_stream_provider_v1* host;
 static const uint32_t* dependency;
@@ -78,6 +80,12 @@ static void poll(uint32_t ms){
   uint8_t bytes[3];uint32_t n=0,written=0;
   if(host->consume(host->context,sessions[i].tx,bytes,sizeof(bytes),&n)==RISC_STREAM_OK && n)
    (void)host->produce(host->context,sessions[i].rx,bytes,n,&written);
+  if(is("terminal-retained-busy")){
+   stream_test_lock();
+   assert(host->finish(host->context,sessions[i].rx,RISC_STREAM_RETAINED)==RISC_STREAM_BUSY);
+   assert(host->finish(host->context,sessions[i].tx,RISC_STREAM_RETAINED)==RISC_STREAM_BUSY);
+   stream_test_unlock();return;
+  }
  }
 }
 static const uint32_t api[2]={1,sizeof(api)};

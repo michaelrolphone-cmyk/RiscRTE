@@ -44,7 +44,9 @@ at most 512 bytes each; no caller buffer is retained. Transfers accept at most
 is OK, temporary empty/full is AGAIN, graceful drained receive is EOF, and
 negative terminal errors reject transfers immediately. Terminal RETAINED latches
 the provider context unsafe, stops further graph polling, and fences Runtime
-before the yield returns to the app. Counter additions saturate.
+before the yield returns to the app. Runtime 0.1.75 establishes this fence even
+when terminal queue metadata returns BUSY; see the [ownership mirror and
+in-flight operation contract](STREAM_RETENTION_FENCE.md). Counter additions saturate.
 A successful write counts accepted bytes, not physical transmission or flush.
 
 There are at most 32 live endpoints, four per mapped provider, 4096 bytes per

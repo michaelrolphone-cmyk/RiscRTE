@@ -29,6 +29,7 @@ extern "C" void stream_test_root(const void* p){rootImage=p;}
 extern "C" void stream_test_app(const void* p){appImage=p;}
 extern "C" void stream_test_grant_failure(unsigned n){RuntimeStreams::Testing::failGrantNumber(n);}
 extern "C" void stream_test_lock(){assert(!locked);assert(RuntimeStreams::Testing::lockRegistry());locked=true;}
+extern "C" void stream_test_unlock(){assert(locked);RuntimeStreams::Testing::unlockRegistry();locked=false;}
 extern "C" void stream_test_owner(bool b){owner=b;}
 extern "C" unsigned stream_test_invocation(){return ++invocations;}
 extern "C" void stream_test_save(const risc_stream_client_v1* c,const risc_stream_opened_v1* o,const risc_runtime_capability_v1* g){oldClient=*c;oldOpened=*o;oldGrant=*g;}
@@ -78,7 +79,7 @@ int main(int argc,char** argv){
  assert(runtime->prepare(root.c_str()));
  const bool result=runtime->run();
  if(locked){RuntimeStreams::Testing::unlockRegistry();locked=false;}
- const bool retained=mode=="terminal-retained" || mode=="start-retained" || mode=="quiesce-fail" || mode=="close-fail" || mode=="close-slow" || mode=="close-busy" || mode=="revoke-busy" || mode=="grant-rollback-retained" ||
+ const bool retained=mode=="terminal-retained" || mode=="terminal-retained-busy" || mode=="start-retained" || mode=="quiesce-fail" || mode=="close-fail" || mode=="close-slow" || mode=="close-busy" || mode=="revoke-busy" || mode=="grant-rollback-retained" ||
   mode=="open-retained-zero" || mode=="open-retained-token" || mode=="open-malformed" || mode=="open-duplicate" || mode=="open-foreign" || mode=="open-direction" || mode=="open-partial-error" || mode=="open-slow" || mode=="open-busy" || mode.rfind("call-",0)==0;
  assert(runtime->retained()==retained);
  const bool malformedExtension=mode=="unknown-version" || mode.rfind("truncated-",0)==0;

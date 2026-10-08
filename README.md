@@ -1,5 +1,10 @@
 # RiscRTE
 
+Runtime 0.1.75 makes a valid retained stream notification fence its provider
+even when the queue lock is busy. Exact endpoint/generation ownership and
+cleanup custody remain checked; the public ABI is unchanged. See the
+[contention repair and concurrency contract](docs/STREAM_RETENTION_FENCE.md).
+
 Runtime 0.1.74 adds existing-stage-logger snapshots of internal, DMA-capable and
 PSRAM heap availability at Wi-Fi setup/failure boundaries. SDK configuration,
 cleanup and the qualified HCI queue are unchanged. See the [selected-source

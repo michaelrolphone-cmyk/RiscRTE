@@ -37,6 +37,13 @@ int32_t providerStreamInfo(uint64_t context, uint64_t lease, uint32_t consumer,
 
 #ifdef RISC_STREAM_HOST_TESTING
 namespace Testing {
+// Deterministic test-only interleavings; absent from production callbacks/ABI.
+enum class FenceCheckpoint { NotificationStarted, NotificationObserved, NotificationOwned, PublishAllocated, PublishAdmitted,
+  TransferAdmitted, CloseAdmitted, EndpointWithdrawn, ContextWithdrawn, ContextRetiring, PairWithdrawn };
+void setFenceHook(void (*)(FenceCheckpoint, uint64_t context, uint32_t endpoint));
+size_t contextMetadataBytes();
+size_t queueMetadataBytes();
+bool queueSnapshot(uint64_t context, uint32_t endpoint, risc_stream_client_info_v1*, bool* closed);
 bool lockRegistry();
 void unlockRegistry();
 size_t allocatedBytes();

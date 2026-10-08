@@ -74,7 +74,7 @@ __attribute__((visibility("default"))) void app_main(void){
  assert(client.write(client.context,opened.tx,"abcdefghij",10,&count)==RISC_STREAM_OK && count==7);
  assert(client.write(client.context,opened.tx,"x",1,&count)==RISC_STREAM_AGAIN && !count);
  runtime->yield_ms(1);
- if(is("terminal-retained")){assert(!risc_runtime_get_api(1));assert(client.read(client.context,opened.rx,bytes,sizeof(bytes),&count)==RISC_STREAM_CLOSED && !count);stream_test_event("app:fenced");return;}
+ if(is("terminal-retained") || is("terminal-retained-busy")){assert(!risc_runtime_get_api(1));assert(client.read(client.context,opened.rx,bytes,sizeof(bytes),&count)==RISC_STREAM_CLOSED && !count);assert(client.write(client.context,opened.tx,"x",1,&count)==RISC_STREAM_CLOSED && !count);stream_test_event("app:fenced");return;}
  assert(client.read(client.context,opened.rx,bytes,sizeof(bytes),&count)==RISC_STREAM_OK && count==3 && !memcmp(bytes,"abc",3));
  risc_stream_client_info_v1 info={.struct_size=sizeof(info)};assert(client.info(client.context,opened.tx,&info)==RISC_STREAM_OK && info.bytes_written==7);
  if(is("copied-control")){

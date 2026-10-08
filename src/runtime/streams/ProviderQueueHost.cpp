@@ -13,15 +13,20 @@
 namespace RuntimeStreams {
 namespace {
 constexpr uint32_t Bytes = 1;
-constexpr uint32_t Active = 1, Revoked = 2, Retained = 3;
+constexpr uint32_t Retiring = 0, Active = 1, Revoked = 2, Retained = 3;
+// Retiring has a nonzero generation; only the all-zero word is a free slot.
 constexpr uint32_t MaxContextGeneration = UINT32_MAX >> 2;
 struct Context {
   // Generation and authority state share one lock-free word. A stale revoke
   // cannot fence a later occupant between checking its ID and clearing access.
   std::atomic<uint32_t> gate{0};
+  // Zero is already an invalid endpoint, not a newly reserved token. A valid
+  // retained notification and endpoint closure compete to withdraw the same
+  // monotonic ID. Metadata-only lookup followed by CAS would race closure.
+  std::array<std::atomic<uint32_t>, ProviderQueuesPerContext> endpoints{};
 };
 struct Queue {
-  uint32_t id = 0;
+  uint32_t id = 0, ownershipSlot = 0;
   uint64_t context = 0;
   uint32_t rights = 0, capacity = 0, head = 0, used = 0, high = 0;
   int32_t terminal = 0;
@@ -46,6 +51,7 @@ struct Registry {
 #ifdef RISC_STREAM_HOST_TESTING
   bool failAllocation = false;
   unsigned failGrant = 0;
+  void (*fenceHook)(Testing::FenceCheckpoint, uint64_t, uint32_t) = nullptr;
 #endif
 };
 Registry registry;
@@ -67,6 +73,45 @@ uint32_t contextGate(uint64_t context, uint32_t state) {
 bool contextIs(uint64_t context, uint32_t state) {
   const auto* slot = contextSlot(context);
   return slot && slot->gate.load(std::memory_order_acquire) == contextGate(context, state);
+}
+#ifdef RISC_STREAM_HOST_TESTING
+void checkpoint(Testing::FenceCheckpoint point, uint64_t context, uint32_t endpoint) {
+  if (registry.fenceHook) registry.fenceHook(point, context, endpoint);
+}
+#define FENCE_CHECKPOINT(point, context, endpoint) checkpoint(Testing::FenceCheckpoint::point, context, endpoint)
+#else
+#define FENCE_CHECKPOINT(point, context, endpoint) ((void)0)
+#endif
+bool retainContext(uint64_t context) {
+  auto* slot = contextSlot(context);
+  if (!slot) return false;
+  uint32_t expected = contextGate(context, Active);
+  if (slot->gate.compare_exchange_strong(expected, contextGate(context, Retained), std::memory_order_acq_rel)) return true;
+  if (expected == contextGate(context, Revoked)) {
+    if (slot->gate.compare_exchange_strong(expected, contextGate(context, Retained), std::memory_order_acq_rel)) return true;
+  }
+  return expected == contextGate(context, Retained);
+}
+bool claimRetainedEndpoint(uint64_t context, uint32_t endpoint) {
+  auto* slot = contextSlot(context);
+  if (!slot || !endpoint || !contextIs(context, Active)) return false;
+  FENCE_CHECKPOINT(NotificationStarted, context, endpoint);
+  for (auto& id : slot->endpoints) {
+    if (id.load(std::memory_order_acquire) != endpoint) continue;
+    FENCE_CHECKPOINT(NotificationObserved, context, endpoint);
+    // Authenticate AFTER observing the ID. A new generation publishes its gate
+    // before its endpoint's release-store, so a stale caller cannot withdraw a
+    // later occupant's mirror entry. IDs never repeat if close wins afterward.
+    if (!contextIs(context, Active)) return false;
+    uint32_t expected = endpoint;
+    if (id.compare_exchange_strong(expected, 0, std::memory_order_acq_rel)) {
+      FENCE_CHECKPOINT(NotificationOwned, context, endpoint);
+      // The matching generation CAS cannot fence a later occupant. Close/reuse
+      // cannot pass a missing live mirror entry until this claim is fenced.
+      return retainContext(context);
+    }
+  }
+  return false;
 }
 Queue* queue(uint32_t endpoint) {
   if (endpoint && registry.queues)
@@ -127,6 +172,19 @@ void clearGrant(Queue& q) {
   q.grantLease = 0;
   q.grantConsumer = q.grantRights = 0;
 }
+bool withdrawEndpoint(Queue& q) {
+  if (q.closed) return true; // A reserved closed queue keeps bytes, not authority.
+  auto* slot = contextSlot(q.context);
+  uint32_t expected = q.id;
+  if (!slot || !slot->endpoints[q.ownershipSlot].compare_exchange_strong(expected, 0, std::memory_order_acq_rel)) {
+    // A notifier won the ID but may not have executed its context CAS yet.
+    // Validated, registry-locked ownership permits helping that same fence.
+    (void)retainContext(q.context);
+    return false;
+  }
+  q.closed = true;
+  return true;
+}
 void destroy(Queue& q) {
   registry.allocated -= q.capacity;
   q = Queue{};
@@ -143,9 +201,10 @@ int32_t publish(uint64_t context, const risc_stream_endpoint_v1* spec, uint32_t*
   if (!lock.held) return RISC_STREAM_BUSY;
   if (!contextIs(context, Active)) return RISC_STREAM_CLOSED;
   size_t owned = 0;
+  std::array<bool, ProviderQueuesPerContext> occupied{};
   Queue* available = nullptr;
   for (auto& q : *registry.queues) {
-    if (q.id && q.context == context) ++owned;
+    if (q.id && q.context == context) { ++owned; occupied[q.ownershipSlot] = true; }
     if (!q.id && !available) available = &q;
   }
   if (owned >= ProviderQueuesPerContext || !available || registry.endpoint == UINT32_MAX ||
@@ -155,15 +214,19 @@ int32_t publish(uint64_t context, const risc_stream_endpoint_v1* spec, uint32_t*
 #endif
   std::unique_ptr<uint8_t[]> bytes(new (std::nothrow) uint8_t[spec->byte_capacity]);
   if (!bytes) return RISC_STREAM_LIMIT;
+  FENCE_CHECKPOINT(PublishAllocated, context, 0);
   // Revoke is lock-free and may have arrived during allocation.
   if (!contextIs(context, Active)) return RISC_STREAM_CLOSED;
+  FENCE_CHECKPOINT(PublishAdmitted, context, 0);
   auto& q = *available;
+  while (occupied[q.ownershipSlot]) ++q.ownershipSlot; // At most four; owned < limit.
   q.id = ++registry.endpoint;
   q.context = context;
   q.rights = spec->rights;
   q.capacity = spec->byte_capacity;
   q.bytes = std::move(bytes);
   registry.allocated += q.capacity;
+  contextSlot(context)->endpoints[q.ownershipSlot].store(q.id, std::memory_order_release);
   *out = q.id;
   return RISC_STREAM_OK;
 }
@@ -178,6 +241,7 @@ int32_t providerTransfer(uint64_t context, uint32_t endpoint, void* data,
   if (result != RISC_STREAM_OK) return result;
   // The provider produces the consumer's READ queue and drains its WRITE queue.
   if (!(q->rights & (reading ? RISC_STREAM_WRITE : RISC_STREAM_READ))) return RISC_STREAM_DENIED;
+  FENCE_CHECKPOINT(TransferAdmitted, context, endpoint);
   return transfer(*q, reading, data, size, count);
 }
 int32_t produce(uint64_t context, uint32_t endpoint, const void* data, uint32_t size, uint32_t* count) {
@@ -194,21 +258,22 @@ int32_t consumeRecord(uint64_t, uint32_t, void*, uint32_t, uint32_t* count) {
 int32_t finish(uint64_t context, uint32_t endpoint, int32_t terminal) {
   if (terminal != RISC_STREAM_EOF && (terminal >= 0 || terminal < RISC_STREAM_RETAINED))
     return RISC_STREAM_INVALID;
+  // Only a live endpoint in this exact generation can create the pre-lock
+  // fence. Invalid, foreign and stale endpoints retain normal finish errors.
+  const bool fenced = terminal == RISC_STREAM_RETAINED && claimRetainedEndpoint(context, endpoint);
   Lock lock;
-  if (!lock.held) return RISC_STREAM_BUSY;
-  Queue* q;
-  const auto result = ownedQueue(context, endpoint, &q);
-  if (result != RISC_STREAM_OK) return result;
-  if (q->terminal < 0 && terminal!=RISC_STREAM_RETAINED) return q->terminal;
-  q->terminal = terminal;
-  if(terminal==RISC_STREAM_RETAINED) {
-    // A terminal custody failure is visible to graph/runtime before another
-    // provider poll or app operation, even when nobody drains this endpoint.
-    auto* slot=contextSlot(context);uint32_t expected=contextGate(context,Active);
-    if(!slot->gate.compare_exchange_strong(expected,contextGate(context,Retained),std::memory_order_acq_rel) &&
-       expected==contextGate(context,Revoked))
-      (void)slot->gate.compare_exchange_strong(expected,contextGate(context,Retained),std::memory_order_acq_rel);
+  if (!lock.held) return RISC_STREAM_BUSY; // The valid fence is already sticky.
+  Queue* q = nullptr;
+  if (fenced) {
+    q = queue(endpoint);
+    if (!q || q->context != context || q->closed) return RISC_STREAM_CLOSED;
+  } else {
+    const auto result = ownedQueue(context, endpoint, &q);
+    if (result != RISC_STREAM_OK) return result;
   }
+  if (q->terminal < 0 && terminal != RISC_STREAM_RETAINED) return q->terminal;
+  q->terminal = terminal;
+  if (terminal == RISC_STREAM_RETAINED) (void)retainContext(context);
   return RISC_STREAM_OK;
 }
 int32_t closeEndpoint(uint64_t context, uint32_t endpoint) {
@@ -217,6 +282,9 @@ int32_t closeEndpoint(uint64_t context, uint32_t endpoint) {
   Queue* q;
   const auto result = ownedQueue(context, endpoint, &q);
   if (result != RISC_STREAM_OK) return result;
+  FENCE_CHECKPOINT(CloseAdmitted, context, endpoint);
+  if (!withdrawEndpoint(*q)) return RISC_STREAM_RETAINED;
+  FENCE_CHECKPOINT(EndpointWithdrawn, context, endpoint);
   if (q->session) {
     // The adapter may still fail physical close. Keep the original bytes and
     // slot until Runtime confirms that close or Module confirms quiescence.
@@ -270,9 +338,17 @@ bool revokeChecked(uint64_t context) {
 bool closeChecked(uint64_t context) {
   Lock lock;
   if (!lock.held || !contextIs(context, Revoked)) return false;
+  for (auto& q : *registry.queues) if (q.id && q.context == context && !withdrawEndpoint(q)) return false;
+  FENCE_CHECKPOINT(ContextWithdrawn, context, 0);
+  auto* slot = contextSlot(context);
+  uint32_t expected = contextGate(context, Revoked);
+  if (!slot->gate.compare_exchange_strong(expected, contextGate(context, Retiring), std::memory_order_acq_rel)) return false;
+  // All live endpoint IDs were withdrawn and no notifier won one. No new
+  // retained notification can authenticate against this retiring generation.
+  FENCE_CHECKPOINT(ContextRetiring, context, 0);
   for (auto& q : *registry.queues) if (q.id && q.context == context) destroy(q);
-  contextSlot(context)->gate.store(0, std::memory_order_release);
-  return true;
+  expected = contextGate(context, Retiring);
+  return slot->gate.compare_exchange_strong(expected, 0, std::memory_order_acq_rel);
 }
 void revoke(uint64_t context) { (void)revokeChecked(context); }
 void close(uint64_t context) { (void)closeChecked(context); }
@@ -321,7 +397,9 @@ int32_t clientTransfer(uint64_t context, uint64_t lease, uint32_t consumer, uint
   Queue* q = nullptr;
   const auto result = grantedQueue(context, lease, consumer, endpoint,
                                    reading ? RISC_STREAM_READ : RISC_STREAM_WRITE, &q);
-  return result == RISC_STREAM_OK ? transfer(*q, reading, data, size, count) : result;
+  if (result != RISC_STREAM_OK) return result;
+  FENCE_CHECKPOINT(TransferAdmitted, context, endpoint);
+  return transfer(*q, reading, data, size, count);
 }
 }  // namespace
 
@@ -361,6 +439,9 @@ int32_t releaseEndpointPair(uint64_t context, uint64_t lease, uint32_t consumer,
   for (auto* q : {r, t}) if (q && !reservationMatches(*q, context, lease, consumer, session))
     return RISC_STREAM_DENIED;
   for (auto* q : {r, t}) if (q && q->grantLease) return RISC_STREAM_BUSY;
+  for (auto* q : {r, t}) if (q && !withdrawEndpoint(*q)) return RISC_STREAM_RETAINED;
+  FENCE_CHECKPOINT(PairWithdrawn, context, rx);
+  if (!contextIs(context, Active) && !contextIs(context, Revoked)) return RISC_STREAM_CLOSED;
   for (auto* q : {r, t}) if (q) destroy(*q);
   return RISC_STREAM_OK;
 }
@@ -399,6 +480,18 @@ int32_t providerStreamInfo(uint64_t context, uint64_t lease, uint32_t consumer,
 }
 #ifdef RISC_STREAM_HOST_TESTING
 namespace Testing {
+void setFenceHook(void (*hook)(FenceCheckpoint, uint64_t, uint32_t)) { registry.fenceHook = hook; }
+size_t contextMetadataBytes() { return sizeof(registry.contexts); }
+size_t queueMetadataBytes() { return sizeof(Registry::Queues); }
+bool queueSnapshot(uint64_t context, uint32_t endpoint, risc_stream_client_info_v1* out, bool* closed) {
+  Lock lock;
+  if (!lock.held || !out || !closed) return false;
+  const auto* q = queue(endpoint);
+  if (!q || q->context != context) return false;
+  *out = {sizeof(*out), q->rights, q->capacity, q->used, q->high, q->terminal, q->read, q->written};
+  *closed = q->closed;
+  return true;
+}
 bool lockRegistry() { return !registry.mutex.test_and_set(std::memory_order_acquire); }
 void unlockRegistry() { registry.mutex.clear(std::memory_order_release); }
 size_t allocatedBytes() { Lock lock; return lock.held ? registry.allocated : SIZE_MAX; }
