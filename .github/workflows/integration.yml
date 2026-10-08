@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, fix/provider-invocation-retention, feat/default-cohort-promotion, codex/retained-realtime-snapshot, integrate/x4-pr35-iq-lifecycle-0146, fix/provider-quiescence-diagnostics, fix/bitbang-probe-startup, fix/gpio-output-readback, feat/declared-file-dispatch, feat/typed-gpio-held-retirement, feat/profile-provisioning-core, feat/minimal-runtime, test/watch-app-handoff, codex/typed-retained-wake, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
+    branches: [main, master, fix/watch-native-usb-sleep, perf/committed-pair-boot-0155, fix/provider-invocation-retention, feat/default-cohort-promotion, codex/retained-realtime-snapshot, integrate/x4-pr35-iq-lifecycle-0146, fix/provider-quiescence-diagnostics, fix/bitbang-probe-startup, fix/gpio-output-readback, feat/declared-file-dispatch, feat/typed-gpio-held-retirement, feat/profile-provisioning-core, feat/minimal-runtime, test/watch-app-handoff, codex/typed-retained-wake, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
   workflow_dispatch:
   workflow_call:
 env:
