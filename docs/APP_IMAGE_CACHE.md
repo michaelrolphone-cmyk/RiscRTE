@@ -1,7 +1,11 @@
 # Immutable installed app image bytes
 
-Runtime 0.1.65 keeps a bounded byte cache for the configured default and exact app
-policy paths during one `Runtime::run()` session. Repeated launches reuse their
+Runtime 0.1.65 introduced a bounded byte cache for the configured default and exact
+app policy paths during one `Runtime::run()` session. Runtime 0.1.67 requires an
+explicit firmware composition flag, `RISC_APP_IMAGE_CACHE=1`; its default is zero.
+Unselected/tight cohorts preserve ordinary allocation behavior without retained
+input buffers. No existing target enables it automatically. When selected,
+repeated launches reuse their
 immutable file bytes and the successful structural parse already performed on
 those bytes. There are no file-stat, digest, unchanged-file or corruption probes.
 Installation/update admission is unchanged. The first read on a cache miss still
@@ -41,18 +45,37 @@ evict the oldest entries as needed. Larger images still load normally and are
 not cached. Input reads retain the existing 8 MiB cap and 30-second deadline;
 [byte/time checkpoints](ELF_READ_CHECKPOINTS.md) bound cooperative yields.
 
-Native caching is enabled only with the loader's PSRAM allocation configuration;
+Native caching additionally requires the loader's PSRAM allocation configuration;
 non-PSRAM targets take the uncached path without allocating a cache control block.
-The ESP32-S3 control block is 1,064 bytes in PSRAM, plus a four-byte Runtime owner
-pointer. Payload and mapping allocations remain separate. A cache allocation
-failure leaves ordinary loading available. A loader allocation failure releases
-all cached payloads and the control block, clears the owner pointer, and retries
-that failed allocation once. Relocation retries only an allocation failure after
-freeing its partial mapping; other failures are returned without retry. Failure
-to allocate the next app's allocation ledger similarly discards the cache before
-one retry. That session stays uncached after reclamation. This is a bounded
-optimization, not a general-purpose memory manager or a guarantee that an app's
-working set will fit.
+The ESP32-S3 control block is 1,064 bytes in PSRAM. The owner binding uses two
+pointer-sized atomics and a Runtime cache pointer/reentrancy guard, with no
+dynamic allocation; the atomic binding is compiled out when the flag is zero.
+Payload and mapping allocations remain separate. A cache allocation
+failure leaves ordinary loading available. The private owner-task pressure path
+now covers loader allocations (including later provider mappings), app-owned
+malloc/calloc/realloc and heap-capability allocations, the next app's allocation
+ledger, and providers' existing libc malloc/calloc/realloc imports. It runs only
+after an actual allocation failure and retries that exact allocation once after
+reclaiming the cache. It never retries successful zero-size realloc disposal or
+calloc overflow, and a failed realloc retry preserves the original allocation.
+Provider allocations remain outside the app allocation ledger.
+
+Before freeing, reclamation detaches the atomic owner callback binding and the
+cache owner pointer. Foreign tasks reject before dereferencing a Runtime pointer;
+reentrant calls cannot reclaim twice. The input currently being mapped has
+already transferred out of the cache and survives its destruction. The Runtime
+session stays uncached after reclamation, and every session exit detaches the
+binding before cleanup, including retained failures. No mappings, live app values,
+provider state, grants or dependencies are released by this hook.
+
+The opt-in does **not** interpose all firmware/SDK allocators. Native-service
+allocations outside these paths cannot reclaim cached inputs automatically, and
+foreign tasks cannot reclaim them. There is no heap polling, SDK global failed-
+allocation callback or global allocator wrapping. Ports must qualify those
+remaining working sets before selecting the flag. Default-off is required for
+unqualified/tight cohorts; this is not a promise that every opted-in workload
+will fit. [Pressure regression evidence](APP_IMAGE_CACHE_PRESSURE.md) distinguishes
+covered failures from that limit.
 
 ## Deterministic evidence
 

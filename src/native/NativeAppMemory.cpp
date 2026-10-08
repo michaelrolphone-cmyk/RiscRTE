@@ -1,5 +1,6 @@
 #include "NativeAppMemory.h"
 #include "runtime/resources/AppAllocationLedger.h"
+#include "../../lib/hal/RuntimeImagePressure.h"
 #include <cstdlib>
 #include <cstring>
 #include <new>
@@ -24,10 +25,16 @@ struct Lock {
   explicit operator bool() const { return acquired; }
 };
 void* allocate(size_t bytes,uint32_t caps) {
-  return caps ? heap_caps_malloc(bytes,caps) : std::malloc(bytes);
+  if(!caps)return risc_image_malloc(bytes);
+  void* result=heap_caps_malloc(bytes,caps);
+  if(!result && bytes && risc_image_pressure_reclaim())result=heap_caps_malloc(bytes,caps);
+  return result;
 }
 void* resize(void* ptr,size_t bytes,uint32_t caps) {
-  return caps ? heap_caps_realloc(ptr,bytes,caps) : std::realloc(ptr,bytes);
+  if(!caps)return risc_image_realloc(ptr,bytes);
+  void* result=heap_caps_realloc(ptr,bytes,caps);
+  if(!result && bytes && risc_image_pressure_reclaim())result=heap_caps_realloc(ptr,bytes,caps);
+  return result;
 }
 void cooperate() { vTaskDelay(1); }
 void* appMalloc(size_t bytes) {
@@ -60,6 +67,8 @@ extern "C" bool native_app_memory_begin() {
   if(!lock) return false;
   if(entries) return false;
   entries=static_cast<Ledger::Entry*>(heap_caps_calloc(kCapacity,sizeof(*entries),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
+  if(!entries && risc_image_pressure_reclaim())
+    entries=static_cast<Ledger::Entry*>(heap_caps_calloc(kCapacity,sizeof(*entries),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
   if(!entries) return false;
   ledger.begin(entries,kCapacity,{allocate,resize,heap_caps_free,cooperate});
   return true;

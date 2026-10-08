@@ -10,6 +10,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cerrno>
+#include <atomic>
+#include "../../lib/hal/RuntimeImageCacheConfig.h"
 #if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
 #include <private/esp_dlcache.h>
 #endif
@@ -20,6 +22,18 @@ extern "C" void native_app_memory_relocation(bool);
 #endif
 namespace {
 RiscBoot::Runtime* currentRuntime=nullptr;
+#if RISC_APP_IMAGE_CACHE
+std::atomic<RiscBoot::Runtime*> imagePressureRuntime{nullptr};
+std::atomic<bool(*)()> imagePressureOwner{nullptr};
+#endif
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+void detachImagePressure() {
+#if RISC_APP_IMAGE_CACHE
+  imagePressureOwner.store(nullptr,std::memory_order_release);
+  imagePressureRuntime.store(nullptr,std::memory_order_release);
+#endif
+}
+#endif
 // Pointer-sized opaque integers are never dereferenced; unlike a reusable slot
 // pointer, a copied context cannot silently become a new grant after release.
 uintptr_t keyValueGeneration=0;
@@ -46,6 +60,18 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
       return currentRuntime && currentRuntime->active() ? RiscPerf::interaction(id,phase,value) : 0;
     }};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
+}
+extern "C" bool risc_runtime_reclaim_app_images() {
+#if RISC_APP_IMAGE_CACHE
+  // Foreign tasks reject before reading/dereferencing a Runtime pointer. The
+  // owner function is compiled-in and outlives the session it guards.
+  const auto owner=imagePressureOwner.load(std::memory_order_acquire);
+  if(!owner || !owner())return false;
+  auto* runtime=imagePressureRuntime.load(std::memory_order_acquire);
+  return runtime && runtime->reclaimAppImages();
+#else
+  return false;
+#endif
 }
 namespace RiscBoot {
 namespace {
@@ -720,11 +746,7 @@ bool Runtime::runOne(const char* name) {
   if(!appExitBarrier())return false;
   RiscPerf::invocation(name);
 #ifdef ESP_PLATFORM
-  if(!native_app_memory_begin()) {
-    if(!appImages_)return fail("app allocation context unavailable");
-    esp_dl_image_cache_destroy(appImages_);appImages_=nullptr;
-    if(!native_app_memory_begin())return fail("app allocation context unavailable");
-  }
+  if(!native_app_memory_begin())return fail("app allocation context unavailable");
   native_app_memory_relocation(true);
 #endif
   // An app path may share a basename with a live driver; map a fresh image.
@@ -810,6 +832,18 @@ bool Runtime::runOne(const char* name) {
   unloadTrace.result(1);
   return ok || fail("app entry/lifecycle invalid");
 }
+bool Runtime::reclaimAppImages() {
+#if RISC_APP_IMAGE_CACHE && (defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST))
+  if(!port_.owner() || reclaimingAppImages_ || !appImages_)return false;
+  detachImagePressure(); // Detach callback before freeing its inputs.
+  reclaimingAppImages_=true;
+  const bool reclaimed=esp_dl_image_cache_reclaim(&appImages_);
+  reclaimingAppImages_=false;
+  return reclaimed;
+#else
+  return false;
+#endif
+}
 bool Runtime::run() {
   if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained_) return fail("runtime not launchable");
   prepared_=false; currentRuntime=this;
@@ -833,8 +867,14 @@ bool Runtime::run() {
   }
   // The active store is immutable until restart. Paired updates stage another
   // bank; a new Runtime session owns a new cache even at the same mount path.
-#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
-  if(ok)appImages_=esp_dl_image_cache_create();
+#if RISC_APP_IMAGE_CACHE && (defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST))
+  if(ok){
+    appImages_=esp_dl_image_cache_create();
+    if(appImages_){
+      imagePressureRuntime.store(this,std::memory_order_release);
+      imagePressureOwner.store(port_.owner,std::memory_order_release);
+    }
+  }
 #endif
   // One app at a time; no recursive ELF launch, directory search or fallback.
   while(ok) {
@@ -867,7 +907,7 @@ bool Runtime::run() {
   // Cached input bytes are never borrowed by a mapping. Releasing them also
   // preserves an app/provider image retained after failed quiescence.
 #if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
-  esp_dl_image_cache_destroy(appImages_);appImages_=nullptr;
+  detachImagePressure();esp_dl_image_cache_reclaim(&appImages_);
 #endif
   fileOpen_={};revokeProviders(); currentRuntime=nullptr; return ok;
 }

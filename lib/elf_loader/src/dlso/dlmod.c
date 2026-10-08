@@ -65,18 +65,19 @@ void esp_dl_image_cache_destroy(esp_dl_image_cache *cache)
     esp_elf_free(cache);
 }
 
-static bool cache_pressure(esp_dl_image_cache **cache)
+bool esp_dl_image_cache_reclaim(esp_dl_image_cache **cache)
 {
     if (!cache || !*cache) return false;
-    esp_dl_image_cache_destroy(*cache);
+    esp_dl_image_cache *old = *cache;
     *cache = NULL; /* Disabled for the remaining session, including overhead. */
+    esp_dl_image_cache_destroy(old);
     return true;
 }
 
 static void *cache_alloc(esp_dl_image_cache **cache, size_t size)
 {
     void *result = esp_elf_malloc(size, false);
-    if (!result && cache_pressure(cache)) result = esp_elf_malloc(size, false);
+    if (!result && esp_dl_image_cache_reclaim(cache)) result = esp_elf_malloc(size, false);
     return result;
 }
 
@@ -310,7 +311,7 @@ static esp_elf_t *relocate_image(const char *path, esp_dl_image_cache **cache)
     elf_file_t file = {0};
     if (cache_find(cache ? *cache : NULL, path, &file)) ret = 0;
     else { errno = 0; ret = esp_elf_open(&file, path); }
-    if (ret < 0 && errno == ENOMEM && cache_pressure(cache)) ret = esp_elf_open(&file, path);
+    if (ret < 0 && errno == ENOMEM && esp_dl_image_cache_reclaim(cache)) ret = esp_elf_open(&file, path);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to open file %s", path);
         return NULL;
@@ -334,7 +335,7 @@ static esp_elf_t *relocate_image(const char *path, esp_dl_image_cache **cache)
     }
 
     ret = esp_elf_relocate(elf_dl, file.payload);
-    if (ret == -ENOMEM && cache_pressure(cache)) {
+    if (ret == -ENOMEM && esp_dl_image_cache_reclaim(cache)) {
         esp_elf_deinit(elf_dl);
         ret = esp_elf_init(elf_dl);
         if (!ret) ret = esp_elf_relocate(elf_dl, file.payload);

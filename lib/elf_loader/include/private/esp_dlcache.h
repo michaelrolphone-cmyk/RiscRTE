@@ -1,6 +1,7 @@
 /* Runtime-owned immutable installed-image bytes. Not an ELF import/API. */
 #pragma once
 #include <stddef.h>
+#include <stdbool.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,6 +19,9 @@ typedef struct esp_dl_image_cache esp_dl_image_cache;
  * destroying this cache is safe even when a failed app must remain mapped. */
 esp_dl_image_cache *esp_dl_image_cache_create(void);
 void esp_dl_image_cache_destroy(esp_dl_image_cache *cache);
+/* Detach first, then free. Does not touch an in-progress detached file or any
+ * mapping; owner-only callers serialize this with cached opens. */
+bool esp_dl_image_cache_reclaim(esp_dl_image_cache **cache);
 void *esp_dlopen_cached_instance(esp_dl_image_cache **cache, const char *path);
 
 #ifdef __cplusplus
