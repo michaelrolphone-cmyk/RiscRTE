@@ -31,7 +31,8 @@ _Static_assert(legacy_capability_end==RISC_RUNTIME_CAPABILITIES_V1_SIZE,"prefix 
 _Static_assert(sizeof(legacy_risc_runtime_api_v1)==legacy_capability_end,"frozen legacy ends at release");
 _Static_assert(offsetof(risc_runtime_api_v1,confirm_boot)==legacy_capability_end,"new callback appends only");
 _Static_assert(offsetof(risc_runtime_api_v1,retain_invocation)==RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE,"retention appends after complete confirm prefix");
-_Static_assert(sizeof(risc_runtime_api_v1)==legacy_capability_end+3*sizeof(void(*)(void)),"three pointer suffixes only");
+_Static_assert(sizeof(risc_runtime_api_v1)==legacy_capability_end+4*sizeof(void(*)(void)),"four pointer suffixes only");
 _Static_assert(offsetof(risc_runtime_api_v1,trace)==RISC_RUNTIME_RETAIN_INVOCATION_V1_SIZE,"trace follows complete retention prefix");
 
-_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_TRACE_V1_SIZE,"trace is final suffix");
+_Static_assert(offsetof(risc_runtime_api_v1,stream_client)==RISC_RUNTIME_TRACE_V1_SIZE,"stream client follows complete trace prefix");
+_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_STREAM_CLIENT_V1_SIZE,"stream client is final suffix");

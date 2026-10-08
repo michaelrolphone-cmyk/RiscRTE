@@ -44,7 +44,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](){return currentRuntime && currentRuntime->retainInvocation();},
     [](uint32_t id,uint32_t phase,uint32_t value)->uint32_t {
       return currentRuntime && currentRuntime->active() ? RiscPerf::interaction(id,phase,value) : 0;
-    }};
+    },
+    [](risc_stream_client_v1* out){return currentRuntime && currentRuntime->streamClient(out);}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 namespace RiscBoot {
@@ -401,7 +402,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     if (grant.provider.slot && !graph_.release(grant.provider)) {retained_=true;return fail("invalid app interface retained");}
     grant={}; return false;
   }
-  grant.live=true;grant.generation=++grantGeneration_;
+  grant.live=true;grant.generation=++grantGeneration_;grant.invocation=streams_.context();
   out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
 }
 int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
@@ -520,8 +521,15 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
 bool Runtime::release(risc_runtime_capability_v1* out) {
   if (promotionRunning_ || !active() || !appDataExitSafe() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
   auto& grant=appGrants_[out->slot-1];
-  if (!grant.live || grant.generation!=out->generation || grant.api!=out->api) return false;
-  if (grant.provider.slot && !graph_.release(grant.provider)) return false;
+  if (!grant.live || grant.generation!=out->generation || grant.api!=out->api || grant.invocation!=streams_.context()) return false;
+  RuntimeStreams::AppStreamBinding binding{grant.invocation,out->slot,grant.generation,grant.api,grant.provider};
+  uint64_t providerContext=0;
+  const bool streamProvider=grant.provider.slot && graph_.streamSessionsFor(grant.provider,&providerContext);
+  if (!streams_.closeGrant(binding)) return false;
+  if (grant.provider.slot && !graph_.release(grant.provider)) {
+    if(streamProvider)streamRetain(this);
+    return false;
+  }
   if(grant.api==&installedVolume_){if(!installedFiles_->end())return false;installedVolumeContext_=nullptr;}
   if(grant.api==&appDataTable_){if(!appDataExitSafe())return false;appDataContext_=nullptr;appDataNamespace_=0;}
   if(grant.api==&promotionTable_)promotionContext_=nullptr;
@@ -531,9 +539,12 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   grant={};out->slot=out->generation=0;out->api=nullptr;return true;
 }
 bool Runtime::revokeApp() {
+  if(!streams_.closeAll())return false;
   bool ok=true;
   for (auto& grant:appGrants_) if (grant.live) {
-    if (grant.provider.slot && !graph_.release(grant.provider)) ok=false;
+    if (grant.provider.slot && !graph_.release(grant.provider)) {
+      retained_=true;(void)appExitBarrier();return false;
+    }
     else {
       if(grant.api==&promotionTable_)promotionContext_=nullptr;
       if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
@@ -542,6 +553,7 @@ bool Runtime::revokeApp() {
   }
   appPolicy_=nullptr;return ok;
 }
+#include "AppStreamsRuntime.inc"
 #include "InstalledFilesRuntime.inc"
 #include "AppDataRuntime.inc"
 #include "RetainedWakeRuntime.inc"
@@ -690,14 +702,14 @@ void Runtime::yield(uint32_t ms) {
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }
 bool Runtime::retainInvocation() {
-  if(currentRuntime!=this || promotionRunning_ || !port_.owner() || (!active_ && !retained_))return false;
+  if(currentRuntime!=this || promotionRunning_ || streams_.busy() || !port_.owner() || (!active_ && !retained_))return false;
   retained_=true;
   (void)appExitBarrier();
   return true;
 }
 bool Runtime::appExitBarrier() {
   const bool graphSafe=graph_.activationSafe();
-  if(graphSafe && !retained_ && !metadataCloseRetained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  if(graphSafe && !retained_ && !streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());
@@ -711,6 +723,7 @@ bool Runtime::appExitBarrier() {
   // pending grant. Neither may reach fini or an implicit cleanup retry here.
   // Revoke app authority without calling provider release/quiesce: the boot
   // references and active invocation memory/images must remain pinned.
+  streams_.revokeAuthority();
   retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;fileOpen_={};
   revokeProviders();
   for(auto& grant:appGrants_)grant.live=false;
@@ -718,12 +731,13 @@ bool Runtime::appExitBarrier() {
 }
 bool Runtime::runOne(const char* name) {
   if(!appExitBarrier())return false;
+  if(!streams_.beginInvocation())return fail("stream invocation unavailable");
   RiscPerf::invocation(name);
 #ifdef ESP_PLATFORM
   if(!native_app_memory_begin()) {
-    if(!appImages_)return fail("app allocation context unavailable");
+    if(!appImages_){streams_.endInvocation();return fail("app allocation context unavailable");}
     esp_dl_image_cache_destroy(appImages_);appImages_=nullptr;
-    if(!native_app_memory_begin())return fail("app allocation context unavailable");
+    if(!native_app_memory_begin()){streams_.endInvocation();return fail("app allocation context unavailable");}
   }
   native_app_memory_relocation(true);
 #endif
@@ -755,6 +769,7 @@ bool Runtime::runOne(const char* name) {
     native_app_memory_end();
 #endif
     RiscPerf::emit(21);
+    streams_.endInvocation();
     return fail("app ELF load failed");
   }
   auto entry=reinterpret_cast<void(*)()>(dlsym(module,"app_main"));
@@ -807,6 +822,7 @@ bool Runtime::runOne(const char* name) {
   if(dlclose(module)) { RISC_STAGE_LOG("app unload failed file=%s reason=dlclose",name);retained_=true; return fail("app unload failed; restart required"); }
   RISC_STAGE_LOG("app unload end file=%s result=ok elapsed_us=%llu",name,
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-unloadUs));
+  streams_.endInvocation();
   unloadTrace.result(1);
   return ok || fail("app entry/lifecycle invalid");
 }

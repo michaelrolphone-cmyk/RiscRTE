@@ -118,6 +118,24 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     report(expectedId, "elf-interface-or-identity");
     return false;
   }
+  const risc_stream_session_provider_v1* sessions = nullptr;
+  if (candidate->struct_size >= offsetof(risc_driver_stream_sessions_v2,stream_sessions)) {
+    const auto* extended = reinterpret_cast<const risc_driver_stream_sessions_v2*>(candidate);
+    // Unrelated larger descriptors do not authorize reading their suffix as a
+    // pointer. Inspect the explicit tag/version before touching adapter memory.
+    if (extended->extension_tag == RISC_DRIVER_STREAM_SESSIONS_TAG_V1) {
+      if (extended->extension_version != RISC_DRIVER_STREAM_SESSIONS_VERSION_V1 ||
+          candidate->struct_size < sizeof(*extended)) {
+        report(expectedId, "stream-session-extension-invalid"); return false;
+      }
+      sessions = extended->stream_sessions;
+      if (!sessions || sessions->api_version != RISC_STREAM_SESSION_PROVIDER_API_V1 ||
+          sessions->struct_size < sizeof(*sessions) || !sessions->open || !sessions->call ||
+          !sessions->close || !extended->poll.streams.bind_streams || !hasQuiesce(candidate)) {
+        report(expectedId, "stream-session-interface-invalid"); return false;
+      }
+    }
+  }
   bool bound = true;
   if (candidate->struct_size >= sizeof(risc_driver_streams_v2)) {
     const auto* extended = reinterpret_cast<const risc_driver_streams_v2*>(candidate);
@@ -158,6 +176,7 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
   }
   if (started) {
     driver_ = candidate;
+    streamSessions_ = sessions;
     api_ = candidate->capability;
     state_ = State::Active;
     trace(expectedId, "hardware-started");
@@ -178,7 +197,7 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     }
   }
   if (!error_[0]) report(expectedId, "start rejected; update driver for diagnostics");
-  revokeStreams();
+  if (!revokeStreams()) { driver_ = candidate; report(expectedId, "stream-revoke-retained"); return false; }
   // A rejected start may still own DMA, tasks, IRQs or a lower provider.
   if (hasQuiesce(candidate) && !candidate->quiesce()) {
     driver_ = candidate;
@@ -186,7 +205,7 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     return false;
   }
   candidate->stop();
-  closeStreams();
+  if (!closeStreams()) { report(expectedId, "stream-close-retained"); return false; }
   return false;
 }
 
@@ -210,7 +229,7 @@ bool ModuleV2::load(const char* path, const char* expectedId,
   if (error || !get) report(expectedId, "elf-entry-symbol-missing");
   if (!error && activateMapped(get, expectedId, expectedCapability,
                                expectedApi, deps, count)) return true;
-  if (driver_) return false;
+  if (driver_ || streamCleanupRetained_) return false;
   (void)closeMapped();
   return false;
 }
@@ -253,22 +272,28 @@ bool ModuleV2::unpinConsumer() {
   return true;
 }
 
-void ModuleV2::revokeStreams() {
+bool ModuleV2::revokeStreams() {
   if (streamApi_.streams.context && !streamsRevoked_) {
-    streamHost_->revoke(streamApi_.streams.context);
+    if (streamHost_->revokeChecked) {
+      if (!streamHost_->revokeChecked(streamApi_.streams.context)) { streamCleanupRetained_=true; return false; }
+    } else streamHost_->revoke(streamApi_.streams.context);
     streamsRevoked_ = true;
   }
+  return true;
 }
 void ModuleV2::revokeLease() {
   if (!leaseAttempted_) return;
   leaseAttempted_ = false;
   lease_.revoke(lease_.context);
 }
-void ModuleV2::closeStreams() {
-  if (!streamApi_.streams.context) return;
-  revokeStreams();
-  streamHost_->close(streamApi_.streams.context);
+bool ModuleV2::closeStreams() {
+  if (!streamApi_.streams.context) return true;
+  if (!revokeStreams()) return false;
+  if (streamHost_->closeChecked) {
+    if (!streamHost_->closeChecked(streamApi_.streams.context)) { streamCleanupRetained_=true; return false; }
+  } else streamHost_->close(streamApi_.streams.context);
   streamApi_ = {};
+  return true;
 }
 void ModuleV2::reportQuiescence() {
   if (!driver_) return;
@@ -286,10 +311,10 @@ void ModuleV2::reportQuiescence() {
   report(driver_->driver_id, "hardware-quiesce-rejected");
 }
 bool ModuleV2::unload() {
-  if (consumers_) return false;
+  if (consumers_ || streamCleanupRetained_) return false;
   revokeLease();
   risc_runtime_retention_guard();
-  revokeStreams();
+  if (!revokeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
   if (state_ == State::Failed && handle_ && driver_) {
     if (!hasQuiesce(driver_) || !driver_->quiesce()) { reportQuiescence(); return false; }
     driver_->stop();
@@ -304,7 +329,8 @@ bool ModuleV2::unload() {
     driver_->stop();
     driver_ = nullptr;
   }
-  closeStreams();
+  if (!closeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
+  streamSessions_ = nullptr;
   api_ = nullptr;
   if (!closeMapped()) {
     state_ = State::Failed;

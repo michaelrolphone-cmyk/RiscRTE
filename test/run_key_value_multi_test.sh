@@ -11,5 +11,5 @@ done
 for slot in $(seq 0 15); do
  cc -std=c11 -Wall -Wextra -Werror -fPIC -shared -fvisibility=hidden "${san[@]}" -DSLOT="$slot" -I"$repo/sdk/driver" "$repo/test/fixtures/policy_index_provider.c" -o "$build/slot$slot.elf"
 done
-c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic "${san[@]}" -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/test/key_value_multi_test.cpp" -ldl -o "$build/test"
+c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic "${san[@]}" -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/test/key_value_multi_test.cpp" -ldl -o "$build/test"
 "$build/test" "$build"

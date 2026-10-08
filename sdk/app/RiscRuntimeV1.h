@@ -6,6 +6,7 @@
 extern "C" {
 #endif
 #define RISC_RUNTIME_API_V1 1u
+struct risc_stream_client_v1;
 /* Minimal headless runtime service. Append-only. Available only on the active
  * app owner task, from module init through fini. Native apps are trusted code.
  * No pointers/callbacks/tasks may outlive app_main/fini. */
@@ -61,11 +62,15 @@ typedef struct {
    * only. Returns the accepted interaction ID, or zero if disabled/rejected or
    * an uncorrelated phase. Check table size before reading this suffix. */
   uint32_t (*trace)(uint32_t interaction_id, uint32_t phase, uint32_t value);
+  /* Copies a generic stream client for the current owner invocation. The
+   * existing explicit capability grant is still required to open a session. */
+  bool (*stream_client)(struct risc_stream_client_v1* out);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
 #define RISC_RUNTIME_RETAIN_INVOCATION_V1_SIZE (offsetof(risc_runtime_api_v1, retain_invocation) + sizeof(((risc_runtime_api_v1*)0)->retain_invocation))
 #define RISC_RUNTIME_TRACE_V1_SIZE (offsetof(risc_runtime_api_v1, trace) + sizeof(((risc_runtime_api_v1*)0)->trace))
+#define RISC_RUNTIME_STREAM_CLIENT_V1_SIZE (offsetof(risc_runtime_api_v1, stream_client) + sizeof(((risc_runtime_api_v1*)0)->stream_client))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }

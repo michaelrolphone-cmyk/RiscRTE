@@ -17,7 +17,7 @@ cp "$build/default.elf" "$build/child.elf"
 compile=("${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic -DRISC_STAGE_LOGS=1
   -I"$source/src" -I"$source/sdk/app" -I"$source/sdk/driver" -I"$source/sdk/hardware" \
   -I"$source/lib/ArduinoJson/src" -I"$source/test/drivers/stubs" \
-  "$source/src/bootstrap/Json.cpp" "$source/src/bootstrap/Board.cpp" "$source/src/bootstrap/Runtime.cpp" \
+  "$source/src/bootstrap/Json.cpp" "$source/src/bootstrap/Board.cpp" "$source/src/bootstrap/Runtime.cpp" "$source/src/runtime/streams/AppStreamSessions.cpp" "$source/src/runtime/streams/ProviderQueueHost.cpp" \
   "$source/src/runtime/drivers/ProviderGraphV2.cpp" "$source/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/test/demand_retention_test.cpp" -ldl)
 c++ "${compile[@]}" -o "$build/test"

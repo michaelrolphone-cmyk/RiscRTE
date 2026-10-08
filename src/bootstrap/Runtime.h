@@ -6,6 +6,8 @@
 #include "runtime/sleep/RetainedWake.h"
 #include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
+#include "runtime/streams/ProviderQueueHost.h"
+#include "runtime/streams/AppStreamSessions.h"
 #include <RiscRuntimeV1.h>
 #include <RiscRealtimeV1.h>
 #include <RiscPlatformRealtimeV1.h>
@@ -50,7 +52,7 @@ class Runtime final {
   static constexpr size_t MaxAppPolicies=RiscLimits::Apps;
   static constexpr size_t MaxAppPolicyGrants=16;
   static constexpr size_t MaxAppRequirements=16;
-  explicit Runtime(Port p) : port_(p) {}
+  explicit Runtime(Port p) : port_(p), streams_(graph_,{this,streamBindingValid,streamRetain,streamYield}) {}
   ~Runtime() { revokeProviders(); }
   Runtime(const Runtime&)=delete;
   Runtime& operator=(const Runtime&)=delete;
@@ -77,6 +79,7 @@ class Runtime final {
   bool diagnostic(const char*);
   bool confirmBoot();
   bool retainInvocation();
+  bool streamClient(risc_stream_client_v1*);
   struct UpdateApp { char elf[193]{}, manifest[193]{}; };
   // Native update authority: preserve the existing boot-policy identity/grants.
   bool appUpdate(const char* id,const void* manifest,size_t size,UpdateApp&) const;
@@ -86,7 +89,7 @@ class Runtime final {
   bool validateCohort(Runtime& candidate,const char* root,
                       bool (*admit)(void*,const char*,bool provider),void* context) const;
   bool appInventory(size_t index,void*,size_t,uint32_t*) const;
-  bool active() const { return active_ && port_.owner(); }
+  bool active() const { return active_ && !streams_.busy() && port_.owner(); }
   bool retained() const { return retained_; }
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
@@ -117,6 +120,10 @@ class Runtime final {
   bool appPolicies(JsonVariantConst);
   bool revokeApp();
   bool appExitBarrier();
+  bool streamBinding(const risc_runtime_capability_v1*,RuntimeStreams::AppStreamBinding&) const;
+  static bool streamBindingValid(void*,const RuntimeStreams::AppStreamBinding&,bool);
+  static void streamRetain(void*);
+  static void streamYield(void*);
   bool providerStorageSafe() const;
   bool appManifestPath(size_t,char*,size_t) const;
   static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
@@ -202,6 +209,7 @@ class Runtime final {
   const AppPolicy* appPolicy_=nullptr;
   struct AppGrant {
     RuntimeProviders::GrantV2 provider{}; const void* api=nullptr;
+    uint64_t invocation=0;
     uint32_t generation=0; bool live=false;
     uint32_t keyValueNamespace=0; risc_key_value_v1 keyValue{};
   } appGrants_[16]{};
@@ -221,7 +229,8 @@ class Runtime final {
   Board board_;
   // Must outlive graph destruction, including retained-module retry/abort.
   ProviderStorage providerStorage_[MaxDrivers]{};
-  RuntimeProviders::GraphV2 graph_;
+  RuntimeProviders::GraphV2 graph_{RuntimeStreams::runtimeProviderStreamHost()};
+  RuntimeStreams::AppStreamSessions streams_;
   RuntimeProviders::GrantV2 grants_[MaxDrivers]{};
   Driver drivers_[MaxDrivers]{};
   size_t driverCount_=0;
