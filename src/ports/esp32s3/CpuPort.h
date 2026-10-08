@@ -4,6 +4,7 @@
 #include <TWatchPlatformV1.h>
 #include <RiscHciControllerStatusV1.h>
 #include <RiscPlatformClockV1.h>
+#include <RiscProviderSyncV1.h>
 #include <RiscHttpClientV1.h>
 #include <RiscRadioIqResourceV1.h>
 namespace RiscCpu {
@@ -71,6 +72,8 @@ struct Hardware {
   bool (*radioIqReady)()=nullptr;
   bool (*radioIqPrepare)()=nullptr;
   bool (*radioIqCleanup)()=nullptr;
+  int32_t (*realtimeRead)(risc_realtime_snapshot_v1*)=nullptr;
+  int32_t (*realtimeSeed)(int64_t,uint32_t)=nullptr; // separately brokered authority
 };
 class Port final {
  public:
@@ -89,6 +92,11 @@ class Port final {
   // Actual native cleanup failure retains the existing storage safety barrier.
   bool providerStorageSafe() const;
  private:
+  struct Sync {
+    Port* port=nullptr; uint64_t instance=0;
+    struct Lock { uint64_t token=0; bool held=false; } locks[RISC_PROVIDER_SYNC_MAX_LOCKS]{};
+    risc_provider_sync_api_v1 api{};
+  } syncs_[RuntimeProviders::GraphV2::kMaxModules];
   struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; garden_gpio_v1 api{}; } gpios_[16];
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; garden_spi_v1 api{}; } spis_[8];
@@ -98,15 +106,24 @@ class Port final {
     bool active=false,closing=false,scanning=false; garden_radio_v1 api{}; } radios_[1];
   struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
   struct RadioIq { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_radio_iq_resource_v1 api{}; } iq_;
-  struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false,wakeHigh=false; uint8_t wakeModes=0; } pins_[49];
+  struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false,wakeHigh=false; uint8_t wakeModes=0; bool retiredHeld=false; } pins_[49];
+  // Pin-index hints only, never authority. Collisions/stale hints are checked
+  // against the current full token and scope before any write. Zero is empty.
+  uint8_t gpioWritePins_[64]{};
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
-  size_t gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0,iqCount_=0;
+  size_t syncCount_=0,gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0,iqCount_=0;
   risc_platform_clock_api_v1 clock_{};
+  risc_realtime_control_api_v1 realtime_{};
   risc_http_client_v1 http_{};
   bool available() const { return hw_.owner && hw_.owner() && !poisoned_ && !sleeping_; }
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
   bool reserve(int16_t,const void*); void unreserve(int16_t,const void*);
   bool gpioScope(const RiscBoot::Runtime&,const RiscBoot::Board::Device&,Gpio&);
+  static bool syncOwner(void*);
+  static bool syncCreate(void*,uint64_t*);
+  static bool syncTryLock(void*,uint64_t);
+  static bool syncUnlock(void*,uint64_t);
+  static bool syncDestroy(void*,uint64_t);
   static bool gpioClaim(void*,uint8_t,bool,bool,bool,uint64_t*);
   static bool gpioWrite(void*,uint64_t,bool); static bool gpioRead(void*,uint64_t,bool*);
   static bool gpioPwm(void*,uint64_t,uint32_t,uint16_t,uint16_t);
@@ -121,6 +138,7 @@ class Port final {
   static int32_t gpioLightSleepSet(void*,uint64_t,bool,uint32_t,risc_light_sleep_result_v1*);
   static int32_t gpioDeepSleepSet(void*,uint64_t,bool,uint32_t);
   static int32_t sleepSetImpl(void*,uint64_t,bool,uint32_t,bool,risc_light_sleep_result_v1*);
+  static bool gpioRetireHeldOutput(void*,uint64_t);
   static bool gpioRelease(void*,uint64_t); static bool waveform(void*,uint64_t,const uint32_t*,size_t){return false;}
   static bool i2cOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*);
   static bool i2cTransfer(void*,uint64_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);

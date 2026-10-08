@@ -52,7 +52,7 @@ uint64_t Board::deviceBus(uint64_t id) const {
   if (!strcmp(d->type,"peripheral.i2c")) return d->config.peripheral.bus.instance_id;
   if (!strcmp(d->type,"power.axp2101")) return d->config.power.device.bus.instance_id;
   if (!strcmp(d->type,"display.spi")) return d->config.display.bus.instance_id;
-  if (!strcmp(d->type,"touch.i2c")) return d->config.touch.bus.instance_id;
+  if (!strcmp(d->type,"touch.i2c")) return d->touch().bus.instance_id;
   if (!strcmp(d->type,"storage.sd-spi")) return d->config.sd.bus.instance_id;
   if (!strcmp(d->type,"radio.lora")) return d->lora().bus.instance_id;
   return 0;
@@ -171,14 +171,30 @@ bool Board::materialize(JsonObjectConst c,Device& d) {
     d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
   }
   if (!strcmp(d.type,"touch.i2c")) {
-    if (!keys(c,{"bus_instance_id","width","height","address","reset_active_high","irq_active_high","irq_pull_up","reset","irq","reset_assert_ms","reset_recovery_ms"}) || b->kind!=RISC_HW_BUS_I2C) return false;
-    auto& x=d.config.touch; x={}; x.struct_size=sizeof(x); x.bus=*b;
+    const bool extended=d.hardware.config_version==2;
+    if (b->kind!=RISC_HW_BUS_I2C) return false;
+    if (extended) {
+      if (!keys(c,{"bus_instance_id","width","height","address","reset_active_high","irq_active_high","irq_pull_up","reset","irq","reset_assert_ms","reset_recovery_ms","power","power_active_high","irq_output","alternate_address"})) return false;
+      d.config.touchPowered={};
+    } else {
+      if (!keys(c,{"bus_instance_id","width","height","address","reset_active_high","irq_active_high","irq_pull_up","reset","irq","reset_assert_ms","reset_recovery_ms"})) return false;
+      d.config.touch={};
+    }
+    auto& x=extended?d.config.touchPowered.base:d.config.touch;
+    x.struct_size=extended?sizeof(d.config.touchPowered):sizeof(x); x.bus=*b;
     if (!number(c["width"],1,4096,x.width) || !number(c["height"],1,4096,x.height) || !number(c["address"],8,119,x.address) ||
         !pin(c["reset"],x.reset,true) || !pin(c["irq"],x.irq) || !claim(x.reset,true) || !claim(x.irq) ||
         !flag(c["reset_active_high"],x.reset_active_high) || !flag(c["irq_active_high"],x.irq_active_high) || !flag(c["irq_pull_up"],x.irq_pull_up) ||
         !number(c["reset_assert_ms"],x.reset<0?0:1,x.reset<0?0:500,x.reset_assert_ms) || !number(c["reset_recovery_ms"],x.reset<0?0:1,x.reset<0?0:500,x.reset_recovery_ms)) return false;
     if (!address(busId,x.address)) return false;
-    d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
+    if (extended) {
+      auto& v=d.config.touchPowered;
+      if (!pin(c["power"],v.power,true) || !claim(v.power,true) || !flag(c["power_active_high"],v.power_active_high) ||
+          (v.power<0 && v.power_active_high) || !flag(c["irq_output"],v.irq_output) || !number(c["alternate_address"],0,119,v.alternate_address)) return false;
+      if (v.alternate_address && (v.alternate_address<8 || !v.irq_output || !address(busId,v.alternate_address))) return false;
+      d.hardware.config=&v;d.hardware.config_size=sizeof(v);
+    } else { d.hardware.config=&x;d.hardware.config_size=sizeof(x); }
+    return true;
   }
   if (!strcmp(d.type,"display.spi")) {
     if (!keys(c,{"bus_instance_id","width","height","offset_x","offset_y","rotation","cs","dc","reset","backlight","busy","reset_active_high","busy_active_high","backlight_active_high","power_pins","power_active_high","reset_assert_ms","reset_recovery_ms"}) || b->kind!=RISC_HW_BUS_SPI) return false;
@@ -253,7 +269,7 @@ bool Board::load(JsonObjectConst root) {
     if (!number(record["instance_id"],1,INT32_MAX,h.instance_id) || device(h.instance_id) ||
         !keys(chip,{"vendor","model","revision"}) || !text(chip["vendor"],vendor,sizeof(vendor)) || !text(chip["model"],model,sizeof(model)) ||
         !text(chip["revision"],d.revision,sizeof(d.revision)) || !text(record["compatible"],d.compatible,sizeof(d.compatible)) ||
-        !text(record["config_type"],d.type,sizeof(d.type)) || !number(record["config_version"],1,!strcmp(d.type,"radio.lora")?2:1,h.config_version) ||
+        !text(record["config_type"],d.type,sizeof(d.type)) || !number(record["config_version"],1,(!strcmp(d.type,"radio.lora") || !strcmp(d.type,"touch.i2c"))?2:1,h.config_version) ||
         !materialize(record["config"],d)) return fail("invalid/unsupported/conflicting device config");
     if (!record["bindings"].isNull()) {
       if (!record["bindings"].is<JsonObjectConst>() || record["bindings"].size()>16) return fail("invalid bindings");

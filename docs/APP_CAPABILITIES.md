@@ -35,16 +35,18 @@ this exact path to manifest identity/version and the intersection of declared
 requirements with authorized grants before any ELF runs. Missing, extra,
 duplicate or ambiguous grants fail boot. The sole additive exception is multiple
 distinct, positive storage.key-value@1 namespaces for one manifest requirement;
-all are explicit owner-provisioned grants and still count toward the same 12-
+all are explicit owner-provisioned grants and still count toward the same 16-
 grant bound. Non-KV capability uniqueness is unchanged. ID0 acquisition rejects
 multiple matches; an app must name the intended namespace. This is provisioning consistency for
 trusted native code, not a signature scheme or memory sandbox.
 
-Limits are 18 app policies (`Runtime::MaxAppPolicies`), 11 distinct declared
-capability types (`Runtime::MaxAppRequirements`), 12 independently authorized
-grants per app (`Runtime::MaxAppPolicyGrants`), and 16 live app grants. These are
-separate bounds: eleven requirement types, thirteen policy grants, or seventeen
-policies reject before loading any ELF. No authorization is added implicitly.
+Limits are target-dependent app policies (`Runtime::MaxAppPolicies`, unchanged),
+16 distinct declared capability types (`Runtime::MaxAppRequirements`),
+16 independently authorized grants per app (`Runtime::MaxAppPolicyGrants`), and
+16 live app grants. Requirements and policy grants independently reject at17;
+policy count rejects above its existing target bound. No authorization is added
+implicitly. Runtime0.1.50 raises only the declaration/policy limits from12 to16.
+See [default-only provider promotion](PROVIDER_PROMOTION.md).
 
 Internal policy records reference only already-retained immutable capability
 names in the fixed driver/platform table, or the canonical KV literal. They never
@@ -90,3 +92,13 @@ another app. This is separate from ordinary capability release and graph
 quiescence; see DEEP_SLEEP.md.
 
 Policy metadata is allocated for the actual validated count, bounded at 18, with no allocation when the policy list is absent/empty. Paired and explicit metadata-PSRAM targets preserve their PSRAM-only allocation policy; allocation failure rejects prepare. Policy storage outlives the provider graph and all retained grant names.
+
+Explicit `file.open@1`, instance0, supplies bounded file associations and an
+unload-before-open handoff using the canonical Reader table. Handlers come only
+from selected boot-policy manifests; data paths never become ELF launch names.
+See [file dispatch, result and authority semantics](FILE_OPEN.md).
+
+Runtime0.1.51 adds an optional owner-only terminal `retain_invocation` suffix
+and automatic pre-fini/pre-unload fencing for failed graph state. It conveys no
+new provider authority and performs no cleanup. See [invocation retention](INVOCATION_RETENTION.md)
+for exact signal, idempotence, compatibility and cleanup-custody semantics.

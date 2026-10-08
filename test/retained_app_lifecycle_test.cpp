@@ -202,16 +202,18 @@ static void runChild(const char* executable, const char* scenario) {
   }
 }
 static std::string expected(const std::string& scenario) {
-  const std::string provider = "PROVIDER loaded\nPROVIDER started\n";
+  const std::string provider = "RTE_PROVIDER id=retained-probe phase=start\nPROVIDER loaded\nPROVIDER started\n";
+  const std::string ready = "RTE_PROVIDER id=retained-probe phase=ready\n";
   if (scenario == "initial-held")
-    return provider + "CPU hold-on\nRUNTIME API-revoked\nRUNTIME rejected-restart\n";
-  const std::string launchPrefix = provider +
-    "DEFAULT loaded\nDEFAULT init\nDEFAULT main\nDEFAULT queued-clock\nDEFAULT fini\nDEFAULT unloaded\n"
+    return provider + "CPU hold-on\n" + ready + "RUNTIME API-revoked\nRUNTIME rejected-restart\n";
+  const std::string launchPrefix = provider + ready +
+    "DEFAULT loaded\nDEFAULT init\nRTE_APP phase=entry\nDEFAULT main\nDEFAULT queued-clock\n"
+    "RTE_APP phase=returned\nDEFAULT fini\nDEFAULT unloaded\n"
     "CLOCK loaded\nCLOCK init\n";
   if (scenario == "init-retained")
     return launchPrefix + "CLOCK queued-child\nCPU hold-on\nCPU wake-arm\nCPU unexpected-return\n"
       "CLOCK init-retained\nRUNTIME API-revoked\nRUNTIME rejected-restart\n";
-  const std::string prefix = launchPrefix + "CLOCK main\nCLOCK queued-child\n";
+  const std::string prefix = launchPrefix + "RTE_APP phase=entry\nCLOCK main\nCLOCK queued-child\n";
   std::string attempt;
   if (scenario.find("timed-")==0) {
     attempt="CPU hold-on\nCPU wake-arm\n";
@@ -236,16 +238,16 @@ static std::string expected(const std::string& scenario) {
   }
   if (scenario == "ordinary-refusal" || scenario == "timed-light-normal" || scenario == "timed-light-short" || scenario == "timed-deep-refusal")
     return prefix + attempt + (scenario=="timed-light-normal" ? "CLOCK sleep-returned\n" : "CLOCK sleep-refused\n") +
-      "CLOCK fini\nCLOCK unloaded\n"
-      "QUEUED loaded\nQUEUED init\nQUEUED main\nQUEUED fini\nQUEUED unloaded\n"
-      "DEFAULT loaded\nDEFAULT init\nDEFAULT main\nDEFAULT fini\nDEFAULT unloaded\n"
+      "RTE_APP phase=returned\nCLOCK fini\nCLOCK unloaded\n"
+      "QUEUED loaded\nQUEUED init\nRTE_APP phase=entry\nQUEUED main\nRTE_APP phase=returned\nQUEUED fini\nQUEUED unloaded\n"
+      "DEFAULT loaded\nDEFAULT init\nRTE_APP phase=entry\nDEFAULT main\nRTE_APP phase=returned\nDEFAULT fini\nDEFAULT unloaded\n"
       "PROVIDER quiesce-attempt\nCPU close-output\nCPU close-input\nPROVIDER quiesced\n"
       "PROVIDER stopped\nPROVIDER unloaded\nRUNTIME API-revoked\nRUNTIME ordinary-complete\n";
   if (scenario == "fini-retained")
-    return prefix + "CLOCK defer-sleep-to-fini\nCLOCK fini\n" + attempt +
+    return prefix + "CLOCK defer-sleep-to-fini\nRTE_APP phase=returned\nCLOCK fini\n" + attempt +
       "CLOCK fini-retained\nRUNTIME API-revoked\nRUNTIME rejected-restart\n";
   return prefix + attempt + (scenario == "held-output" ? "CLOCK sleep-refused\n" : "CLOCK sleep-retained\n") +
-    "RUNTIME API-revoked\nRUNTIME rejected-restart\n";
+    "RTE_APP phase=returned\nRUNTIME API-revoked\nRUNTIME rejected-restart\n";
 }
 int main(int argc, char** argv) {
   assert(argc == 2 || argc == 3);

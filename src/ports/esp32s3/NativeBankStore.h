@@ -4,8 +4,9 @@ namespace RiscBoot { class Runtime; struct KeyValueBackend; struct AppDataBacken
 namespace RiscCpu { struct Hardware; }
 namespace RiscProvision { struct Profile; }
 namespace RiscBankStore {
-// Paired target only. Boot verifies exact deployed table and selected pair before
-// any mount/driver load. False never formats storage; pending failures rollback.
+// Paired target only. Boot resolves the deployed table and selected pair's
+// existing commit record, without rehashing installed images. Install/update
+// owns image validation. False never formats storage; pending failures rollback.
 bool prepareBoot(bool (*owner)(),bool (*restartSafe)(),bool (*operationSafe)());
 const char* bootLabel();
 bool bind(RiscBoot::Runtime&);

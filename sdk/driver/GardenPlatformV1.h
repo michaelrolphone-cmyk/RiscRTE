@@ -36,7 +36,13 @@ typedef struct {
     risc_gpio_wake_source_v1 wake_source;
     risc_gpio_light_sleep_set_v1 light_sleep_set;
     risc_gpio_deep_sleep_set_v1 deep_sleep_set;
+    /* Explicit transfer of a successfully held, static non-PWM output to CPU
+     * boot custody. On success the token retires without unholding the pad.
+     * Only a fresh claim in this same scoped context may stage configuration
+     * then unhold. False leaves the token/hold intact. No hardware I/O. */
+    bool (*retire_held_output)(void *, uint64_t token);
 } garden_gpio_v1;
+#define GARDEN_GPIO_RETIRE_HELD_OUTPUT_V1_SIZE (offsetof(garden_gpio_v1, retire_held_output) + sizeof(((garden_gpio_v1*)0)->retire_held_output))
 #define GARDEN_GPIO_LIGHT_SLEEP_V1_SIZE (offsetof(garden_gpio_v1, light_sleep) + sizeof(((garden_gpio_v1*)0)->light_sleep))
 #define GARDEN_GPIO_DEEP_SLEEP_V1_SIZE (offsetof(garden_gpio_v1, deep_sleep) + sizeof(((garden_gpio_v1*)0)->deep_sleep))
 #define GARDEN_GPIO_DEEP_SLEEP_HOLD_V1_SIZE (offsetof(garden_gpio_v1, deep_sleep_hold) + sizeof(((garden_gpio_v1*)0)->deep_sleep_hold))

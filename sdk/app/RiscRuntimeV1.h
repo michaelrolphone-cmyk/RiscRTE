@@ -47,9 +47,20 @@ typedef struct {
    * Call after successful startup/first frame; never on error, exit or sleep.
    * Older runtime tables lack this suffix. Repeated calls are idempotent. */
   bool (*confirm_boot)(void);
+  /* Optional terminal invocation fence for capability-local uncertain cleanup.
+   * Owner task only, during active init/main/fini. True immediately revokes app
+   * APIs and provider storage authority, discards handoff, and retains current
+   * images, allocations and provider custody until restart, without cleanup or
+   * polling. Return promptly without further provider calls or frees. This does
+   * not enter sleep, restart, add authority or inspect an opaque capability.
+   * Repeated owner calls for this same current retained invocation return true.
+   * False means no current owner invocation or a reentrant promotion call.
+   * Older tables lack this suffix; check its size before reading the pointer. */
+  bool (*retain_invocation)(void);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
+#define RISC_RUNTIME_RETAIN_INVOCATION_V1_SIZE (offsetof(risc_runtime_api_v1, retain_invocation) + sizeof(((risc_runtime_api_v1*)0)->retain_invocation))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }

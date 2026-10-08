@@ -108,3 +108,13 @@ Firmware 0.1.24 uses the unchanged imported `twatch_hci_controller_v1` ABI.
 integration code; no external Bluetooth host stack or product policy is copied.
 SDK/Arduino source checks and their exact pinned upstream links are recorded in
 [the HCI contract](BLUETOOTH_HCI.md).
+
+The USB recovery regression vendors unmodified Arduino ESP32 2.0.17
+`HWCDC.cpp` and `HWCDC.h` from commit
+`5e19e086c43d0fa5e5a596497ff8f11a0a43f6c2` under
+`test/hwcdc_pinned/vendor/`. Their Apache-2.0 notices and full license are retained;
+`SHA256SUMS` is checked offline before each test build. The fixture README records
+immutable source URLs, Git blob IDs and SHA-256 digests. These files are host-only
+test inputs, never firmware or replacement framework sources. The SDK/RTOS shim
+and runtime adapter tests are integration code, not copied full SDK headers and
+not hardware qualification.

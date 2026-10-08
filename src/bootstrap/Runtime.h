@@ -2,9 +2,14 @@
 #include "Board.h"
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
+#include "FileOpenState.h"
+#include "runtime/sleep/RetainedWake.h"
 #include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
 #include <RiscRuntimeV1.h>
+#include <RiscRealtimeV1.h>
+#include <RiscPlatformRealtimeV1.h>
+#include <RiscProviderPromotionV1.h>
 #include <RiscKeyValueV1.h>
 #include <RiscBoundKeyValueV1.h>
 #include <RiscKeyValueV2.h>
@@ -37,12 +42,13 @@ struct Port {
   // Explicit default-app health acknowledgement, never inferred from exit.
   bool (*confirmBoot)()=nullptr;
   const AppDataBackend* appData=nullptr;
+  RiscRetainedWake::Store* retainedWake=nullptr;
 };
 class Runtime final {
  public:
   static constexpr size_t MaxAppPolicies=RiscLimits::Apps;
-  static constexpr size_t MaxAppPolicyGrants=12;
-  static constexpr size_t MaxAppRequirements=12;
+  static constexpr size_t MaxAppPolicyGrants=16;
+  static constexpr size_t MaxAppRequirements=16;
   explicit Runtime(Port p) : port_(p) {}
   ~Runtime() { revokeProviders(); }
   Runtime(const Runtime&)=delete;
@@ -53,6 +59,7 @@ class Runtime final {
   // Compiled-in port registration only, never exported to apps/driver ELFs.
   // Tables/contexts must remain valid until successful runtime shutdown.
   bool registerPlatform(const char* capability, uint32_t api, Scope scope, uint64_t id, const void* table);
+  bool registerRealtime(const risc_realtime_control_api_v1*); // compiled-in backend only
   bool prepare(const char* root);
   // Compiled-in pre-execution admission only. Enumerates the exact prepared
   // default, app-policy and driver image paths, with their expected entry role.
@@ -68,6 +75,7 @@ class Runtime final {
   void yield(uint32_t);
   bool diagnostic(const char*);
   bool confirmBoot();
+  bool retainInvocation();
   struct UpdateApp { char elf[193]{}, manifest[193]{}; };
   // Native update authority: preserve the existing boot-policy identity/grants.
   bool appUpdate(const char* id,const void* manifest,size_t size,UpdateApp&) const;
@@ -92,6 +100,7 @@ class Runtime final {
   static_assert(PolicyIndex(-1)<0 && MaxDrivers-1<=INT8_MAX && MaxPlatforms-1<=INT8_MAX,
                 "Policy index must retain -1 and every driver/platform index");
   static_assert(MaxDrivers==RuntimeProviders::GraphV2::kMaxModules,"Driver capacity must match graph");
+  static_assert(MaxAppPolicies-1<=INT8_MAX,"File handoff indices must cover every app policy");
   struct Driver {
     char id[96]{}, provides[96]{}, elf[256]{}, version[64]{};
     uint32_t api=0;
@@ -122,6 +131,8 @@ class Runtime final {
     ProviderKey keys[MaxKeys]{};
     size_t count=0;
     risc_bound_key_value_v1 table{};
+    risc_platform_realtime_api_v1 realtime{};
+    bool needsRealtime=false;
     bool live=false;
   };
   bool providerPolicy(JsonObjectConst,ProviderStorage&);
@@ -137,7 +148,7 @@ class Runtime final {
     // Runtime is nonmovable and provider metadata is immutable after prepare.
     const char* capability=nullptr;
     uint32_t api=0; uint64_t instance=0;
-    PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false;
+    PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false;
   };
 #if UINTPTR_MAX == UINT32_MAX
   static_assert(sizeof(AppGrantPolicy)==24,"App policy target layout changed");
@@ -145,7 +156,27 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6;
+  const risc_realtime_control_api_v1* realtimeBackend_=nullptr;
+  risc_realtime_api_v1 realtimeTable_{};
+  void* realtimeContext_=nullptr;
+  risc_realtime_control_api_v1 realtimeControlTable_{};
+  void* realtimeControlContext_=nullptr;
+  risc_platform_realtime_api_v1 providerRealtimeTable_{};
+  bool registerProviderRealtime();
+  static int32_t providerRealtimeRead(void*,risc_realtime_snapshot_v1*);
+  int32_t readRealtime(risc_realtime_snapshot_v1*);
+  static Runtime* realtimeContext(void*,bool control);
+  static int32_t realtimeSeed(void*,int64_t,uint32_t);
+  static int32_t realtimeRead(void*,risc_realtime_snapshot_v1*);
+  static Runtime* retainedWakeContext(void*);
+  static int32_t retainedWakeRead(void*,uint32_t,uint32_t,risc_retained_wake_record_v1*,uint32_t*);
+  static int32_t retainedWakeStage(void*,const risc_retained_wake_record_v1*);
+  static int32_t retainedWakeClear(void*);
+  bool retainedWakeIdentity(RiscRetainedWake::Identity&) const;
+  char retainedCohort_[512]{};
+  risc_retained_wake_api_v1 retainedWakeTable_{};
+  void* retainedWakeContext_=nullptr;
   bool appDataExitSafe()const;
   static Runtime* appDataContext(void*);
   static int32_t appDataStat(void*,const char*,uint32_t*,uint64_t*);
@@ -156,6 +187,16 @@ class Runtime final {
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
   };
   MetadataArray<AppPolicy> policies_;
+  MetadataArray<FileOpenMetadata> fileHandlers_;
+  FileOpenState fileOpen_{};
+  static const t5_file_open_api_v1* fileOpenApi();
+  bool fileOpenReady() const;
+  uint32_t fileHandlerCount(const char*) const;
+  bool fileHandlerGet(const char*,uint32_t,t5_file_handler_t*) const;
+  bool fileOpenRequest(const char*,const char*,uint64_t);
+  bool fileOpenTakeResult(int32_t*,uint64_t*);
+  bool fileSourcePathGet(char*,size_t) const;
+  bool fileOpenAfterRun(bool);
   size_t policyCount_=0;
   const AppPolicy* appPolicy_=nullptr;
   struct AppGrant {
@@ -185,6 +226,12 @@ class Runtime final {
   size_t driverCount_=0, granted_=0;
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
   bool registrationOpen_=false;
+  bool demandActivation_=false;
+  bool promotionRunning_=false;
+  risc_provider_promotion_api_v1 promotionTable_{};
+  void* promotionContext_=nullptr;
+  bool promotionSafe() const;
+  static int32_t promoteProviders(void*);
   bool prepared_=false, attempted_=false, active_=false, retained_=false;
   mutable bool metadataCloseRetained_=false;
   bool defaultRunning_=false, entryRunning_=false;

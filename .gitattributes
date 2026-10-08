@@ -1,0 +1,4 @@
+
+# Byte-exact licensed upstream fixtures preserve their original whitespace.
+test/hwcdc_pinned/vendor/HWCDC.cpp -whitespace
+test/hwcdc_pinned/vendor/HWCDC.h -whitespace

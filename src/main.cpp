@@ -5,6 +5,8 @@
 #include <esp_system.h>
 #include "bootstrap/Runtime.h"
 #include "ports/esp32s3/CpuPort.h"
+#include "ports/esp32s3/NativeRetainedWake.h"
+#include "ports/esp32s3/NativeRealtime.h"
 #include "ports/esp32s3/NativeBoard.h"
 #include "ports/esp32s3/CooperativeDelay.h"
 #include "ports/esp32s3/SleepDiagnostics.h"
@@ -43,7 +45,7 @@ bool health(risc_runtime_health_v1* out) {
   return true;
 }
 void diagnosticLine(const char* line) {
-#if RISC_SLEEP_DIAGNOSTICS
+#if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::line(line);
 #else
   Serial.println(line);
@@ -54,7 +56,7 @@ void diagnosticFormat(const char* format,...) {
   diagnosticLine(line);
 }
 void cooperate(uint32_t ms) {
-#if RISC_SLEEP_DIAGNOSTICS
+#if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::poll();
 #endif
   vTaskDelay(RiscCpu::cooperativeDelayTicks(ms,configTICK_RATE_HZ));
@@ -93,14 +95,14 @@ bool confirmBoot(){
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend()});
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend()});
 #endif
 }
 void setup() {
-  owner=xTaskGetCurrentTaskHandle(); Serial.begin(115200);
-#if RISC_SLEEP_DIAGNOSTICS
+  owner=xTaskGetCurrentTaskHandle(); RiscCpu::NativeRetainedWake::start(); RiscCpu::NativeRealtime::start(); Serial.begin(115200);
+#if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::start();
 #endif
   diagnosticLine(RISC_BUILD_IDENTITY);
@@ -157,7 +159,10 @@ void setup() {
   if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot
 #ifdef RISC_PAIRED_APP_DATA
     ,RiscAppData::backend()
+#else
+    ,nullptr
 #endif
+    ,RiscCpu::NativeRetainedWake::backend()
   });
   if(!retainedRuntime){
 #ifdef RISC_PAIRED_BANKS

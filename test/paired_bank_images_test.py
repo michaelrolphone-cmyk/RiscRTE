@@ -3,6 +3,8 @@ import importlib.util
 from pathlib import Path
 import struct
 import unittest
+import tempfile
+from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('paired_bank_images',Path(__file__).resolve().parents[1]/'scripts/paired_bank_images.py')
 p=importlib.util.module_from_spec(spec);spec.loader.exec_module(p)
 
@@ -34,5 +36,13 @@ class MetadataTest(unittest.TestCase):
     def test_bounds(self):
         for bank,fw,store in ((2,b'x'*256,b'y'*p.STORE_BYTES),(0,b'x'*31,b'y'*p.STORE_BYTES),(0,b'x'*256,b'y'*64)):
             with self.assertRaises(ValueError):p.record(bank,fw,store)
+    def test_installer_rejects_unknown_bootloader_before_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);loader=root/'bootloader.bin';loader.write_bytes(b'\xff'*p.BOOTLOADER_BYTES)
+            output=root/'metadata'
+            with patch('sys.argv',['paired_bank_images','--firmware',str(root/'firmware.bin'),
+                                   '--store',str(root/'store.bin'),'--bootloader',str(loader),'--output',str(output)]):
+                with self.assertRaisesRegex(ValueError,'unverified rollback bootloader'):p.main()
+            self.assertFalse(output.exists())
 
 if __name__=='__main__':unittest.main()

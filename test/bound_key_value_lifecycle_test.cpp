@@ -16,7 +16,7 @@
 // backend and owner/native-retention state are modeled. No hardware claim.
 static std::string root;
 static RiscBoot::Runtime* running;
-static bool owned = true, exitSafe = true, retaining = false, failStart = false;
+static bool owned = true, exitSafe = true, retaining = false, failStart = false, signaling = false;
 static const void* providerImages[2]{};
 static unsigned reads, writes, appRuns, starts[2], unloads[2], platformBindings;
 static std::vector<std::string> events;
@@ -141,6 +141,14 @@ extern "C" int test_bound_retention() {
   if (!retaining) return 0;
   assert(running->active() && appRuns == 1);
   const size_t previousEvents = events.size(); const unsigned before = calls();
+  if (signaling) {
+    const auto* api = risc_runtime_get_api(1);
+    assert(api && api->retain_invocation() && api->retain_invocation());
+    assert(!risc_runtime_get_api(1));
+    deny(saved[0]); deny(saved[1]); // Immediately revoked, before app_main returns.
+    assert(calls() == before && events.size() == previousEvents);
+    return 1;
+  }
   exitSafe = false;
   deny(saved[0]); deny(saved[1]); // Still inside app_main, before appExitBarrier.
   exitSafe = true;
@@ -283,16 +291,16 @@ static void failedStart() {
   deny(saved[0]); failStart = false; running = nullptr;
   puts("Runtime failed-start storage revocation before real provider diagnostics/quiesce/stop PASS");
 }
-static void retained() {
-  resetRun(); retaining = true;
+static void retained(bool explicitSignal) {
+  resetRun(); retaining = true; signaling = explicitSignal;
   auto* runtime = new RiscBoot::Runtime({owner, health, delay, logLine, nullptr, &backend, safe}); running = runtime;
   assert(runtime->prepare(root.c_str()) && !runtime->run());
-  assert(strstr(runtime->error(), "native retention barrier") && appRuns == 1);
+  assert(strstr(runtime->error(), signaling ? "app invocation retained" : "native retention barrier") && appRuns == 1);
   assert(unloads[0] == 0 && unloads[1] == 0);
   for (const void* image : providerImages) { Dl_info info{}; assert(image && dladdr(image, &info)); }
   for (const auto& event : events) assert(event.find("quiesce") == std::string::npos && event.find("stop") == std::string::npos);
   assert(!runtime->run()); deny(saved[0]); deny(saved[1]);
-  retaining = false; exitSafe = true;
+  retaining = signaling = false; exitSafe = true;
   // Reload the same artifact paths while their old instances stay retained.
   // Fresh mappings must not overwrite retained provider state or revive old
   // storage tokens. The retained invocation/graph receive no cleanup callbacks.
@@ -314,9 +322,11 @@ int main(int argc, char** argv) {
   assert(RiscBoot::nextKeyValueContext(generation) && generation == UINTPTR_MAX);
   assert(!RiscBoot::nextKeyValueContext(generation) && generation == UINTPTR_MAX);
   schema(); normal(); failedStart();
-  const pid_t child = fork(); assert(child >= 0);
-  if (!child) retained();
-  int status = 0; assert(waitpid(child, &status, 0) == child);
-  assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
-  puts("Native retention denies provider storage, retains images across same-path reloads, and never revives copied contexts PASS");
+  for (bool explicitSignal : {false, true}) {
+    const pid_t child = fork(); assert(child >= 0);
+    if (!child) retained(explicitSignal);
+    int status = 0; assert(waitpid(child, &status, 0) == child);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+  }
+  puts("Native and explicit invocation retention deny provider storage, retain images across same-path reloads, and never revives copied contexts PASS");
 }
