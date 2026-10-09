@@ -1,0 +1,79 @@
+name: Apply tested SDMMC integration
+on:
+  push:
+    branches: [perf/scoped-gpio-read-0188]
+    paths: ['.delivery/sdmmc-existing.patch', '.github/workflows/apply-sdmmc-fix.yml']
+permissions:
+  contents: write
+jobs:
+  integrate:
+    if: github.repository == 'michaelrolphone-cmyk/RiscRTE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Apply narrow existing-file patch
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/perf/scoped-gpio-read-0188 | cut -f1)" = "$GITHUB_SHA"
+          git apply --check .delivery/sdmmc-existing.patch
+          git apply .delivery/sdmmc-existing.patch
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('platformio.ini');s=p.read_text()
+          assert s.count('version = 0.1.88') == 1
+          p.write_text(s.replace('version = 0.1.88','version = 0.1.97',1))
+          # These existing GPIO cache fixtures inspect the private wrapper.
+          for name in ('scoped_gpio_read_test.cpp','scoped_gpio_read_benchmark.cpp'):
+              p=Path('test')/name
+              s=p.read_text()
+              s=re.sub(r'(gpios_\[[^\]]+\]\.api)(?!\.base)',r'\1.base',s)
+              p.write_text(s)
+          PY
+          git diff --check
+      - name: Normal and sanitized hardware-interface regressions
+        run: |
+          set -euo pipefail
+          for mode in 0 1; do
+            SANITIZE=$mode bash test/run_sdmmc_port_test.sh
+            SANITIZE=$mode bash test/run_native_sdmmc_test.sh
+            SANITIZE=$mode bash test/run_scoped_gpio_read_test.sh
+            SANITIZE=$mode bash test/run_native_spi_test.sh
+          done
+          bash test/run_held_output_test.sh
+      - name: Commit tested integration to the existing branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add platformio.ini src/ports/esp32s3/CpuPort.cpp src/ports/esp32s3/CpuPort.h src/ports/esp32s3/NativeHardware.cpp test/
+          git rm .delivery/sdmmc-existing.patch
+          git commit -m 'feat(sdmmc): integrate hardware one-bit host and preserve scoped GPIO performance (0.1.97)'
+          git push origin HEAD:refs/heads/perf/scoped-gpio-read-0188
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install platformio==6.1.19 pyelftools==0.32
+      - name: Compile ESP32-S3 native SDMMC target
+        run: pio run -e esp32s3-16mb-appdata-iq-stage-sdmmc -j2
+      - name: Verify native hardware marker
+        run: |
+          python3 - <<'PY'
+          from elftools.elf.elffile import ELFFile
+          import struct
+          p='.pio/build/esp32s3-16mb-appdata-iq-stage-sdmmc/firmware.elf'
+          with open(p,'rb') as f:
+              e=ELFFile(f);symbols=e.get_section_by_name('.symtab').get_symbol_by_name('risc_sdmmc_host_abi')
+              assert symbols and len(symbols)==1
+              s=symbols[0];section=e.get_section(s['st_shndx']);offset=s['st_value']-section['sh_addr']
+              assert struct.unpack('<I',section.data()[offset:offset+4])[0]==1
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdmmc-native-validation-${{ github.sha }}
+          path: .pio/build/esp32s3-16mb-appdata-iq-stage-sdmmc/firmware.elf
+          if-no-files-found: ignore

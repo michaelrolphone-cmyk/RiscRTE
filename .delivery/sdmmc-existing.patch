@@ -1,0 +1,149 @@
+diff --git a/platformio.ini b/platformio.ini
+index 2966ede..6d3e7c1 100644
+--- a/platformio.ini
++++ b/platformio.ini
+@@ -232 +232,9 @@ build_flags =
+   -DRISC_APP_POLICY_ROWS=17
++
++# Hardware SDMMC binding only; SD/FAT/export and board pins stay in providers.
++[env:esp32s3-16mb-appdata-iq-stage-sdmmc]
++extends = env:esp32s3-16mb-appdata-iq-stage
++build_flags =
++  ${env:esp32s3-16mb-appdata-iq-stage.build_flags}
++  -DRISC_ENABLE_SDMMC=1
++  -Wl,-u,risc_sdmmc_host_abi
+diff --git a/src/ports/esp32s3/CpuPort.cpp b/src/ports/esp32s3/CpuPort.cpp
+index 405c192..2d6175d 100644
+--- a/src/ports/esp32s3/CpuPort.cpp
++++ b/src/ports/esp32s3/CpuPort.cpp
+@@ -30,3 +30,5 @@ bool Port::reserve(int16_t pin,const void* owner){
+ void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
++#include "CpuSdmmc.inc"
+ bool Port::providerStorageSafe() const {
++  if(sdmmc_.closing)return false;
+   if(!available() || sleepRetained_ || transferring_ || iq_.token)return false;
+@@ -52,2 +54,3 @@ bool Port::appExitSafe() const {
+ bool Port::restartResourcesSafe() const {
++  if(sdmmc_.token || sdmmc_.closing)return false;
+   if(!providerStorageSafe() || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
+@@ -61,2 +64,3 @@ bool Port::restartResourcesSafe() const {
+ bool Port::quiescent() const {
++  if(sdmmc_.token || sdmmc_.closing)return false;
+   if(usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
+@@ -127,3 +131,9 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
+   }
+-  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput,gpioReadRetiredOutput};return true;
++  gpio.api.base={1,sizeof(garden_gpio_v1),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput,gpioReadRetiredOutput};
++  if(!strcmp(selected.type,"gpio.bank") && hw_.sdmmcOpen){
++    if(!hw_.sdmmcRead || !hw_.sdmmcWrite || !hw_.sdmmcSync || !hw_.sdmmcClose)return false;
++    gpio.api.base.struct_size=sizeof(gpio.api);gpio.api.sdmmc_tag=RISC_GPIO_SDMMC_TAG_V1;gpio.api.sdmmc_version=1;
++    gpio.api.sdmmc={1,sizeof(gpio.api.sdmmc),&gpio,sdmmcOpen,sdmmcRead,sdmmcWrite,sdmmcSync,sdmmcRelease};
++  }
++  return true;
+ }
+@@ -181,3 +191,3 @@ bool Port::bind(RiscBoot::Runtime& runtime){
+       if(gpioCount_==16)return false;
+-      auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
++      auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api.base))return false;
+     }
+diff --git a/src/ports/esp32s3/CpuPort.h b/src/ports/esp32s3/CpuPort.h
+index e51b7ce..ec3221e 100644
+--- a/src/ports/esp32s3/CpuPort.h
++++ b/src/ports/esp32s3/CpuPort.h
+@@ -3,2 +3,3 @@
+ #include <GardenPlatformV1.h>
++#include <RiscGpioSdmmcV1.h>
+ #include <TWatchPlatformV1.h>
+@@ -84,2 +85,8 @@ struct Hardware {
+   bool (*usbPhyResume)()=nullptr;
++  // Optional hardware-backed native one-bit SD; no filesystem or board policy.
++  bool (*sdmmcOpen)(uint8_t,uint8_t,uint8_t,uint32_t,risc_sdmmc_card_info_v1*)=nullptr;
++  bool (*sdmmcRead)(uint64_t,uint32_t,void*)=nullptr;
++  bool (*sdmmcWrite)(uint64_t,uint32_t,const void*)=nullptr;
++  bool (*sdmmcSync)()=nullptr;
++  bool (*sdmmcClose)()=nullptr;
+ };
+@@ -107,3 +114,4 @@ class Port final {
+   } syncs_[RuntimeProviders::GraphV2::kMaxModules];
+-  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; garden_gpio_v1 api{}; } gpios_[16];
++  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{}; } gpios_[16];
++  struct Sdmmc { Gpio* owner=nullptr; uint64_t token=0,sectors=0; uint8_t clk=0,cmd=0,dat0=0; bool closing=false; } sdmmc_;
+   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
+@@ -130,2 +138,8 @@ class Port final {
+   bool gpioScope(const RiscBoot::Runtime&,const RiscBoot::Board::Device&,Gpio&);
++  static bool sdmmcOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*,risc_sdmmc_card_info_v1*);
++  static bool sdmmcTransfer(void*,uint64_t,uint64_t,uint32_t,void*,const void*);
++  static bool sdmmcRead(void*,uint64_t,uint64_t,uint32_t,void*);
++  static bool sdmmcWrite(void*,uint64_t,uint64_t,uint32_t,const void*);
++  static bool sdmmcSync(void*,uint64_t);
++  static bool sdmmcRelease(void*,uint64_t);
+   static bool usbPhyOwner(void*);
+diff --git a/src/ports/esp32s3/NativeHardware.cpp b/src/ports/esp32s3/NativeHardware.cpp
+index 2debf46..59f0dca 100644
+--- a/src/ports/esp32s3/NativeHardware.cpp
++++ b/src/ports/esp32s3/NativeHardware.cpp
+@@ -39,2 +39,6 @@ extern "C" const uint32_t risc_usb_phy_resource_enabled=1;
+ #endif
++#if RISC_ENABLE_SDMMC
++#include "NativeSdmmc.h"
++extern "C" __attribute__((used)) const uint32_t risc_sdmmc_host_abi=1;
++#endif
+ namespace RiscCpu { namespace {
+@@ -92,2 +96,5 @@ bool i2cClose(uint8_t physical){
+ bool deepReady(){
++#if RISC_ENABLE_SDMMC
++  if(!NativeSdmmc::closed())return false;
++#endif
+   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
+@@ -108,2 +115,5 @@ bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
+ bool lightSleep(uint32_t* cause){
++#if RISC_ENABLE_SDMMC
++  if(!NativeSdmmc::idle())return false;
++#endif
+   if(!NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
+@@ -137,2 +147,8 @@ Hardware nativeHardware(bool (*owner)()){
+   hardware.spiBeginThreeWire=spiBeginThreeWire;
++#if RISC_ENABLE_SDMMC
++  NativeSdmmc::configure(hardware.owner);
++  hardware.sdmmcOpen=NativeSdmmc::open;hardware.sdmmcRead=NativeSdmmc::read;
++  hardware.sdmmcWrite=NativeSdmmc::write;hardware.sdmmcSync=NativeSdmmc::sync;
++  hardware.sdmmcClose=NativeSdmmc::close;
++#endif
+ #if RISC_ENABLE_USB_PHY
+diff --git a/test/held_output_test.cpp b/test/held_output_test.cpp
+index 6b48cd0..7d4c09a 100644
+--- a/test/held_output_test.cpp
++++ b/test/held_output_test.cpp
+@@ -45,3 +45,3 @@ int main(int argc,char**argv){
+   if(!ordinary && peer)continue;
+-  auto& a=p.gpios_[0].api;const auto bit=[](unsigned n){return uint64_t(1)<<n;};
++  auto& a=p.gpios_[0].api.base;const auto bit=[](unsigned n){return uint64_t(1)<<n;};
+   assert(a.struct_size>=GARDEN_GPIO_READ_RETIRED_OUTPUT_V1_SIZE && a.read_retired_output);
+diff --git a/test/native_spi_test.cpp b/test/native_spi_test.cpp
+index f5028fe..08d74d3 100644
+--- a/test/native_spi_test.cpp
++++ b/test/native_spi_test.cpp
+@@ -49,3 +49,3 @@ int main(int argc,char** argv){
+   for(unsigned physical:{2u,3u}){
+-    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& b=f.p.spis_[1].api;auto& g=f.p.gpios_[0].api;
++    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& b=f.p.spis_[1].api;auto& g=f.p.gpios_[0].api.base;
+     assert(a.api_version==1 && a.struct_size>=GARDEN_SPI_THREE_WIRE_V1_SIZE && a.claim_three_wire);
+@@ -94,3 +94,3 @@ int main(int argc,char** argv){
+   for(unsigned physical:{2u,3u}){
+-    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& g=f.p.gpios_[0].api;
++    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& g=f.p.gpios_[0].api.base;
+     uint64_t token=0,dc=0;assert(a.claim_three_wire(a.context,4,5,7,&token));
+@@ -117,3 +117,3 @@ int main(int argc,char** argv){
+     if(supported){
+-      uint8_t tx=0x42,rx=0;auto& g=f.p.gpios_[0].api;
++      uint8_t tx=0x42,rx=0;auto& g=f.p.gpios_[0].api.base;
+       assert(!g.claim(g.context,6,false,false,false,&t) && !model.calls);
+diff --git a/test/touch_config_test.cpp b/test/touch_config_test.cpp
+index f3cf23c..b38ae4a 100644
+--- a/test/touch_config_test.cpp
++++ b/test/touch_config_test.cpp
+@@ -62,3 +62,3 @@ int main(int argc,char**argv){
+   else assert(base.struct_size==sizeof(risc_hw_i2c_touch_v1) && device.hardware.config_size==sizeof(risc_hw_i2c_touch_v1));
+-  uint64_t token=0;auto& api=p.gpios_[0].api;assert(!api.claim(api.context,39,true,false,false,&token) && !token && !io);
++  uint64_t token=0;auto& api=p.gpios_[0].api.base;assert(!api.claim(api.context,39,true,false,false,&token) && !token && !io);
+   assert(api.claim(api.context,10,false,false,scenario==12,&token));assert(api.release(api.context,token));
