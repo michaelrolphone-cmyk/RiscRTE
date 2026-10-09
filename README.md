@@ -1,5 +1,12 @@
 # RiscRTE
 
+Runtime 0.1.78 adds an optional provider-only copied native diagnostic source
+and a post-output native drain for persistent product diagnostics. Both depend
+on the existing default-off native observer selection; storage ownership and
+product log policy remain external. See [the source and drain contract](docs/NATIVE_DIAGNOSTIC_OBSERVER.md).
+This branch is based on canonical 0.1.76; 0.1.77 remains separately reserved for
+the unqualified request_default change and is not included here.
+
 Runtime 0.1.76 adds a separate owner-maintenance image for ABI2 and an offline
 entry/restoration verifier that preserves app-data and excludes NVS. Ordinary
 Runtime has no maintenance endpoint. This does not migrate native policy rows
