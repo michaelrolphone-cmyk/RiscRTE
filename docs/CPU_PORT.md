@@ -35,6 +35,27 @@ buffers/descriptors. Failed completion retains those buffers and the bus until
 successful drain/end; shutdown does not free outstanding DMA storage. This port
 must not share its controllers with independently initialized Arduino/IDF stacks.
 
+
+The append-only `garden_spi_v1.claim_three_wire` suffix, guarded by
+`GARDEN_SPI_THREE_WIRE_V1_SIZE`, explicitly opts into shared-MOSI half duplex.
+It requires the selected typed bus to declare `miso=-1` and a supporting native
+callback. Legacy `claim` and its null-buffer/full-duplex behavior remain intact.
+The new mode accepts TX-only or RX-only phases, preserving CS across phases and
+separately authorized DC GPIO writes. No bus pin becomes ordinary GPIO authority.
+Native mode uses `SPI_DEVICE_3WIRE | SPI_DEVICE_HALFDUPLEX`, pull-up/input setup
+for shared-data reads, and restores the peripheral output route for writes.
+
+A valid new-mode begin reaching the backend owns the transaction even if mode,
+pull-up, direction, or CS setup fails; only end can establish clean closure.
+Backend exchange errors are also cleanup-only. End drains pending native DMA
+storage before CS rises. Failed end preserves the transaction; failed release
+preserves its token/pins and fences the bus against new claims or transactions
+until release succeeds. Both new-mode exchange and end waits are capped at the
+smaller of 8 ms and the remaining begin budget (maximum 1000 ms); after expiry,
+end can poll completion with no wait. Kernel tick rounding and synchronous SDK
+control calls prevent claiming a strict 8 ms wall-clock bound. See the
+[production-adapter regression and SDK evidence](../test/native_spi_shim/README.md).
+
 I2C transfers are bounded to 512 bytes per direction and 1000 ms, preserving repeated
 start for combined register reads. GPIO PWM uses at most four independent LEDC
 timers, 10 bit duty and at most 40 kHz. GPIO initial output levels precede direction
@@ -147,8 +168,46 @@ poison the port. This does not transfer provider callbacks or data pointers.
 Older consumers use the unchanged table prefix; new consumers must check size
 and the function pointer. It is not a cross-boot token or a hardware guarantee.
 
+Runtime 0.1.57 appends `read_retired_output(context, pin, level)`. Consumers must
+check API version1, `GARDEN_GPIO_READ_RETIRED_OUTPUT_V1_SIZE`, and the callback.
+It samples the physical pad only when that exact pin remains a CPU-retired,
+held static output of the same registered GPIO scope. It rejects active claims,
+inputs, PWM, wake registrations, copied/foreign contexts, and pins outside the
+scope. Owner-task, poison, sleep, transfer and retained-state gates apply before
+I/O. A successful read returns the sampled HIGH or LOW; rejection or backend
+failure returns false and clears the caller's non-null level value. No cached
+level substitutes for the hardware result.
+
+The read does not claim/configure/write/unhold the pad, allocate a token, revive
+the retired token or add pin authority. A temporary callback guard prevents
+reentrant claims or hold changes during the physical sample. Fresh claim ends
+read authority; failed reclaim keeps custody but poisons the port and blocks
+reads. A new boot has no retired metadata, even if a physical hold survived reset.
+Repeated reads retain the existing teardown/storage safety behavior. Generic
+readback supplies evidence only; external providers own interpretation and policy.
+
+`test/run_held_output_test.sh` covers HIGH/LOW/backend failure, exact pin/scope,
+null and forged inputs, token revocation, lifecycle gates, reentry, fresh/failed
+claim and reset. Its C11/C++17 ABI checks compare the frozen Watch prefix and all
+previous suffix offsets, including exact-size old tables under ASan/UBSan.
+The native sleep shim verifies held output sensing and no hold/configuration
+changes while sampling. These are software checks, not hardware qualification.
+
 Native LEDC uses a 1024-tick ten-bit period for intermediate duty ratios;
 zero/full endpoints use static GPIO levels instead of overflowing the timer.
 The existing Watch 40/100 ratio remains 409 ticks. Tests cover all 1023 X4
 intermediate ratios, scoped claims, legacy SPI, reentry/ownership, retained
 failure, and safe configuration-before-unhold with the native sleep SDK shim.
+
+
+## Shared-data SPI receive turnaround (0.1.61)
+
+RX now keeps the input-only state established by ESP32-S3 gpio_set_direction.
+Its low-level output-disable path already disconnects the output matrix. A
+subsequent ROM output-routing call was re-enabling the pad and could drive a low
+GPIO latch over the peripheral's reply. Removing that redundant RX call leaves
+MOSI pulled up and connected to the existing SPID input route. TX routing,
+clock selection, scoped ownership, deadlines and cleanup retention stay intact.
+The corrected native shim reproduces the old failure and verifies repeated
+held-CS TX/DC/RX phases, both physical controllers and legacy clients. Physical
+confirmation of the repaired probe remains separate.

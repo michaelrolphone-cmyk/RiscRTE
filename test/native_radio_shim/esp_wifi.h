@@ -14,6 +14,7 @@ union wifi_config_t { wifi_sta_config_t sta; };
 struct wifi_scan_config_t { uint8_t* ssid;uint8_t* bssid;uint8_t channel;bool show_hidden;wifi_scan_type_t scan_type;struct { struct {uint32_t min,max;} active; uint32_t passive;} scan_time; };
 struct wifi_ap_record_t { uint8_t bssid[6],ssid[33],primary;int8_t rssi;wifi_auth_mode_t authmode; };
 struct wifi_event_sta_scan_done_t { uint32_t status;uint8_t number,scan_id; };
+struct wifi_event_sta_disconnected_t { uint8_t ssid[32],ssid_len,bssid[6],reason; };
 esp_err_t esp_wifi_get_mode(wifi_mode_t*);
 esp_err_t esp_wifi_init(const wifi_init_config_t*);
 esp_err_t esp_wifi_deinit();
