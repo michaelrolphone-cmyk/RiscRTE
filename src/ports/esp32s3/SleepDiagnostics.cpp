@@ -22,6 +22,11 @@
 // Trusted native composition hook. The borrowed line is valid only during this
 // owner-task call. It must not allocate, block, mutate Runtime or recurse.
 extern "C" void risc_native_diagnostic_observer(const char*) __attribute__((weak));
+#include <cstring>
+extern "C" int32_t risc_native_diagnostic_read(uint32_t,char*,uint32_t,uint32_t*,uint64_t*,uint32_t*) __attribute__((weak));
+// Runs after output has released its guard, even when USB drops the line.
+// Bounded native-only storage work; no Runtime, provider or diagnostic calls.
+extern "C" void risc_native_diagnostic_drain(void) __attribute__((weak));
 #endif
 namespace RiscDiagnostics {
 namespace {
@@ -52,6 +57,36 @@ struct OutputGuard {
   ~OutputGuard(){outputting=false;}
 };
 bool ours(){return owner && owner==xTaskGetCurrentTaskHandle();}
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+bool draining=false;
+char sourceContext;
+struct NativeStorageDrain {
+  ~NativeStorageDrain(){
+    if(!risc_native_diagnostic_drain)return;
+    draining=true;risc_native_diagnostic_drain();draining=false;
+  }
+};
+int32_t readSource(void* context,uint32_t slot,char* out,uint32_t capacity,
+                   uint32_t* written,uint64_t* sequence,uint32_t* revision){
+  const auto clear=[&](){
+    if(out && capacity)std::memset(out,0,capacity<=RISC_DIAGNOSTIC_SOURCE_TEXT_MAX?capacity:1);
+    if(written)*written=0;
+    if(sequence)*sequence=0;
+    if(revision)*revision=0;
+  };
+  clear();
+  if(!ours() || outputting || context!=&sourceContext || !out || !capacity ||
+     capacity>RISC_DIAGNOSTIC_SOURCE_TEXT_MAX || !written || !sequence || !revision ||
+     slot>=RISC_DIAGNOSTIC_SOURCE_MAX_SLOTS || !risc_native_diagnostic_read)
+    return RISC_DIAGNOSTIC_SOURCE_INVALID;
+  OutputGuard guard;
+  const int32_t status=risc_native_diagnostic_read(slot,out,capacity,written,sequence,revision);
+  if(status==RISC_DIAGNOSTIC_SOURCE_RECORD && *written<capacity && *revision &&
+     out[*written]=='\0' && std::strlen(out)==*written)return status;
+  clear();
+  return status==RISC_DIAGNOSTIC_SOURCE_ABSENT?status:RISC_DIAGNOSTIC_SOURCE_INVALID;
+}
+#endif
 // Must remain the sole HWCDC ring producer: no setDebugOutput or concurrent
 // Serial writer. Pinned HWCDC can underflow a zero timeout without capacity.
 struct Transport {
@@ -106,6 +141,12 @@ bool reportLoss(){
 #endif
 }
 }
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+const risc_diagnostic_source_api_v1* nativeSource(){
+  static const risc_diagnostic_source_api_v1 source={RISC_DIAGNOSTIC_SOURCE_API_V1,sizeof(source),&sourceContext,readSource};
+  return risc_native_diagnostic_read?&source:nullptr;
+}
+#endif
 #if RISC_STAGE_LOGS && RISC_HWCDC_SERIAL
 bool prepareSerial(){
   // Reuse the pinned driver's own bounded ring for startup bursts. Allocation
@@ -190,7 +231,13 @@ void poll(){
 }
 void line(const char* text){
   if(!ours() || !text)return;
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+  if(draining){noteLost();return;}
+#endif
   if(outputting){noteLost();return;}
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+  NativeStorageDrain drain;
+#endif
   OutputGuard guard;
 #if RISC_NATIVE_DIAGNOSTIC_OBSERVER
   if(risc_native_diagnostic_observer)risc_native_diagnostic_observer(text);
@@ -265,6 +312,9 @@ void lightEnter(){
 }
 void lightReturn(int32_t result,uint32_t cause){
   if(!ours())return;
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER && !RISC_SLEEP_DIAGNOSTICS && !RISC_HWCDC_SLEEP_RECOVERY
+  (void)result;
+#endif
 #if RISC_SLEEP_DIAGNOSTICS
   event(journal,millis(),LightReturn,result,cause);
 #else

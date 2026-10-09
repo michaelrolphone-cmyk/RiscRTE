@@ -113,6 +113,8 @@ jobs:
           SANITIZE=1 bash test/run_performance_native_test.sh
           bash test/run_native_diagnostic_observer_test.sh
           SANITIZE=1 bash test/run_native_diagnostic_observer_test.sh
+          bash test/run_diagnostic_source_binding_test.sh
+          SANITIZE=1 bash test/run_diagnostic_source_binding_test.sh
           bash test/run_stage_log_test.sh
           SANITIZE=1 bash test/run_stage_log_test.sh
           STAGE_LOGS=1 bash test/run_performance_runtime_test.sh

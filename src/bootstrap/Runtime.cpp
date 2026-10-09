@@ -5,6 +5,7 @@
 #include "runtime/update/Version.h"
 #include "runtime/update/CohortMigration.h"
 #include "runtime/resources/ScopedBufferWipe.h"
+#include <RiscDiagnosticSourceV1.h>
 #include <esp_dlfcn.h>
 #include <cstring>
 #include <dirent.h>
@@ -140,13 +141,19 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
   // arbitrary backend/control table supplied through generic registration.
   if (!strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
       (api!=1 || scope!=Scope::Global || id || table!=&providerRealtimeTable_ || !realtimeBackend_)) return false;
+  if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
+      (api!=RISC_DIAGNOSTIC_SOURCE_API_V1 || scope!=Scope::Global || id)) return false;
   if (scope==Scope::Global) {
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
-               strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY))) return false;
+               strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
+               strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
+  if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
+      (header[1]<sizeof(risc_diagnostic_source_api_v1) ||
+       !static_cast<const risc_diagnostic_source_api_v1*>(table)->read)) return false;
   for (size_t i=0;i<platformCount_;++i) {
     const auto& p=platforms_[i];
     if (!strcmp(p.capability,capability) && p.api==api && p.scope==scope && p.id==id) return false;

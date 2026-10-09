@@ -25,12 +25,19 @@
 #ifndef RISC_NATIVE_DIAGNOSTIC_OBSERVER
 #define RISC_NATIVE_DIAGNOSTIC_OBSERVER 0
 #endif
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+#include <RiscDiagnosticSourceV1.h>
+#endif
 #ifndef RISC_PERFORMANCE_TRACE
 #define RISC_PERFORMANCE_TRACE 0
 #endif
 // The adapter also supplies bounded live output when the recorder is opted out.
-#define RISC_DIAGNOSTIC_ADAPTER (RISC_SLEEP_DIAGNOSTICS || RISC_HWCDC_SLEEP_RECOVERY || RISC_PERFORMANCE_TRACE || RISC_STAGE_LOGS)
+#define RISC_DIAGNOSTIC_ADAPTER (RISC_SLEEP_DIAGNOSTICS || RISC_HWCDC_SLEEP_RECOVERY || RISC_PERFORMANCE_TRACE || RISC_STAGE_LOGS || RISC_NATIVE_DIAGNOSTIC_OBSERVER)
 namespace RiscDiagnostics {
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+// Native composition only. Null when the optional read hook is absent.
+const risc_diagnostic_source_api_v1* nativeSource();
+#endif
 #if RISC_STAGE_LOGS && RISC_HWCDC_SERIAL
 // Only before Serial.begin(), or after Serial.end() during owner recovery.
 // HWCDC setTxBufferSize deletes its old ring; never resize a live transport.

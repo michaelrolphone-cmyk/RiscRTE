@@ -101,11 +101,19 @@ bool diagnostic(const char* line) { diagnosticLine(line); return true; }
 // Static lifetime intentionally retains manifests, dependency tables and ELF
 // mappings after failed quiescence. Never destroy these while hardware is live.
 RiscCpu::Port cpu(RiscCpu::nativeHardware(isOwner));
-bool bindPlatforms(RiscBoot::Runtime& runtime){return cpu.bind(runtime)
+bool bindPlatforms(RiscBoot::Runtime& runtime){
+  if(!(cpu.bind(runtime)
 #ifdef RISC_PAIRED_BANKS
   && RiscBankStore::bind(runtime)
 #endif
-  ;}
+  ))return false;
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+  if(const auto* source=RiscDiagnostics::nativeSource())
+    return runtime.registerPlatform(RISC_DIAGNOSTIC_SOURCE_CAPABILITY,RISC_DIAGNOSTIC_SOURCE_API_V1,
+                                    RiscBoot::Runtime::Scope::Global,0,source);
+#endif
+  return true;
+}
 bool appExitSafe(){return cpu.appExitSafe()
 #ifdef RISC_PAIRED_BANKS
   && RiscBankStore::exitSafe()
