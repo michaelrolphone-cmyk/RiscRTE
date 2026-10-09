@@ -24,6 +24,7 @@
 extern "C" void risc_native_diagnostic_observer(const char*) __attribute__((weak));
 #include <cstring>
 extern "C" int32_t risc_native_diagnostic_read(uint32_t,char*,uint32_t,uint32_t*,uint64_t*,uint32_t*) __attribute__((weak));
+extern "C" int32_t risc_native_diagnostic_read_after(uint64_t,char*,uint32_t,uint32_t*,uint64_t*) __attribute__((weak));
 // Runs after output has released its guard, even when USB drops the line.
 // Bounded native-only storage work; no Runtime, provider or diagnostic calls.
 extern "C" void risc_native_diagnostic_drain(void) __attribute__((weak));
@@ -92,6 +93,25 @@ int32_t readSource(void* context,uint32_t slot,char* out,uint32_t capacity,
   clear();
   return status==RISC_DIAGNOSTIC_SOURCE_ABSENT?status:RISC_DIAGNOSTIC_SOURCE_INVALID;
 }
+int32_t readAfter(void* context,uint64_t after,char* out,uint32_t capacity,
+                  uint32_t* written,uint64_t* next){
+  const auto clear=[&](){
+    if(out && capacity)std::memset(out,0,capacity<=RISC_DIAGNOSTIC_SOURCE_TEXT_MAX?capacity:1);
+    if(written)*written=0;
+    if(next)*next=0;
+  };
+  clear();
+  if(!ours() || outputting || context!=&sourceContext || !out || !capacity ||
+     capacity>RISC_DIAGNOSTIC_SOURCE_TEXT_MAX || !written || !next ||
+     !risc_native_diagnostic_read_after)return RISC_DIAGNOSTIC_SOURCE_INVALID;
+  OutputGuard guard;
+  const int32_t status=risc_native_diagnostic_read_after(after,out,capacity,written,next);
+  if(status==RISC_DIAGNOSTIC_SOURCE_RECORD && *written && *written<capacity &&
+     *next>after && *next-after==*written && out[*written]=='\0' &&
+     out[*written-1]=='\n' && std::strlen(out)==*written)return status;
+  clear();
+  return status==RISC_DIAGNOSTIC_SOURCE_ABSENT?status:RISC_DIAGNOSTIC_SOURCE_INVALID;
+}
 #endif
 // Must remain the sole HWCDC ring producer: no setDebugOutput or concurrent
 // Serial writer. Pinned HWCDC can underflow a zero timeout without capacity.
@@ -150,7 +170,9 @@ bool reportLoss(){
 #if RISC_NATIVE_DIAGNOSTIC_OBSERVER
 const risc_diagnostic_source_api_v1* nativeSource(){
   static const risc_diagnostic_source_api_v1 source={RISC_DIAGNOSTIC_SOURCE_API_V1,sizeof(source),&sourceContext,readSource};
-  return risc_native_diagnostic_read?&source:nullptr;
+  static const risc_diagnostic_source_api_v1_trace trace={
+    {RISC_DIAGNOSTIC_SOURCE_API_V1,sizeof(trace),&sourceContext,readSource},readAfter};
+  return risc_native_diagnostic_read?(risc_native_diagnostic_read_after?&trace.base:&source):nullptr;
 }
 #endif
 #if RISC_STAGE_LOGS && RISC_HWCDC_SERIAL

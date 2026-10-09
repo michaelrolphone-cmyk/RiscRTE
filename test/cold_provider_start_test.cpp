@@ -12,6 +12,7 @@ static std::string mode,root;
 static std::vector<std::string> events,lines;
 static bool owned=true,nativeSafe=true,cold=true;
 static unsigned classified=0,calls=0,finis=0;
+static bool servicing=false;
 static unsigned count(const char* event){return std::count(events.begin(),events.end(),event);}
 static bool partial(){return mode=="partial-failed" || mode=="partial-retained";}
 static bool promote(){return mode=="promotion" || mode=="deep-promotion";}
@@ -24,6 +25,14 @@ void timestamped(const char* format,...){char line[512];va_list args;va_start(ar
 }
 extern "C" bool demand_event(const char* id,const char* event){
  events.emplace_back(std::string(id)+":"+event);
+ if(!strcmp(event,"service")){
+  assert(owned && nativeSafe && !servicing);servicing=true;
+  if(const auto* api=risc_runtime_get_api(1)){
+   risc_runtime_capability_v1 grant{sizeof(grant)};
+   assert(!api->acquire("test.leaf",1,0,&grant));api->yield_ms(1);
+  }
+  servicing=false;
+ }
  if(!strcmp(event,"start")){
   // No app API or app acquire becomes live during native boot activation.
   assert(bool(risc_runtime_get_api(1))==(mode=="deep-acquire"));
@@ -45,6 +54,7 @@ extern "C" void demand_app(){
  ++calls;events.emplace_back("app:entry");const auto* api=risc_runtime_get_api(1);assert(api);
  const bool started=mode=="eager" || (cold && mode!="no-option");
  assert(count("leaf:start")==unsigned(started));
+ if(started)assert(count("leaf:service")>0);
  if(promote()){
   risc_runtime_capability_v1 control{sizeof(control)};
   assert(api->acquire(RISC_PROVIDER_PROMOTION_CAPABILITY,1,0,&control));

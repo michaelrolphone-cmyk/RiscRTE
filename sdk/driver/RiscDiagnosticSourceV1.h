@@ -32,6 +32,18 @@ typedef struct {
     int32_t (*read)(void *context, uint32_t slot, char *out, uint32_t capacity,
                     uint32_t *written, uint64_t *sequence, uint32_t *revision);
 } risc_diagnostic_source_api_v1;
+/* Optional append-only full-text tail. The base remains byte-identical.
+ * after=0 starts an ordered immutable-prefix text stream. Each record copies
+ * complete newline-terminated lines; next is its exclusive byte cursor. A
+ * repeated cursor returns the same bytes, so a consumer advances only after
+ * its own checked durable close. Native text is immutable until restart.
+ * ABSENT means no further text yet. No I/O, allocation or acknowledgement. */
+typedef struct {
+    risc_diagnostic_source_api_v1 base;
+    int32_t (*read_after)(void *context, uint64_t after, char *out, uint32_t capacity,
+                         uint32_t *written, uint64_t *next);
+} risc_diagnostic_source_api_v1_trace;
+#define RISC_DIAGNOSTIC_SOURCE_TRACE_V1_SIZE sizeof(risc_diagnostic_source_api_v1_trace)
 #ifdef __cplusplus
 }
 #endif

@@ -51,6 +51,27 @@ extern "C" int32_t risc_native_diagnostic_read(uint32_t slot,char* out,uint32_t 
 #endif
 }
 #endif
+#if !defined(TEST_ABSENT_TRACE) && !defined(TEST_ABSENT_READ)
+extern "C" int32_t risc_native_diagnostic_read_after(uint64_t after,char* out,uint32_t capacity,
+                                                    uint32_t* written,uint64_t* next){
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+ ++reads;
+ if(after==12)return 0;
+ if(after || capacity<13)return -1;
+ std::memcpy(out,"first\nother\n",13);*written=12;*next=12;
+ if(nativeFault==1)return 0;
+ if(nativeFault==2)*next=0;
+ if(nativeFault==3)*written=capacity;
+ if(nativeFault==4)out[12]='x';
+ if(nativeFault==5)out[11]='x';
+ if(nativeFault==6)out[0]=0;
+ if(nativeFault==7)*next=11;
+ return 1;
+#else
+ (void)after;(void)out;(void)capacity;(void)written;(void)next;return 0;
+#endif
+}
+#endif
 #ifndef TEST_ABSENT_DRAIN
 extern "C" void risc_native_diagnostic_drain(void){
  ++drained;
@@ -82,7 +103,23 @@ static void check(unsigned admitted){
 #if RISC_NATIVE_DIAGNOSTIC_OBSERVER
 static void sourceChecks(){
  if(!source)return;
- assert(source->api_version==1 && source->struct_size==sizeof(*source) && source->context && source->read);
+ assert(source->api_version==1 && source->struct_size>=sizeof(*source) && source->context && source->read);
+#ifndef TEST_ABSENT_TRACE
+ const auto* trace=reinterpret_cast<const risc_diagnostic_source_api_v1_trace*>(source);
+ assert(source->struct_size==sizeof(*trace) && trace->read_after);
+ char text[32];uint32_t copiedCount;uint64_t next;
+ auto copy=[&](void* context,uint64_t after,uint32_t capacity){return trace->read_after(context,after,text,capacity,&copiedCount,&next);};
+ assert(copy(source->context,0,sizeof(text))==1 && copiedCount==12 && next==12 && !strcmp(text,"first\nother\n"));
+ assert(copy(source->context,12,sizeof(text))==0 && !copiedCount && !next && !text[0]);
+ assert(copy(source->context,1,sizeof(text))==-1 && !copiedCount && !next && !text[0]);
+ assert(copy(nullptr,0,sizeof(text))==-1);
+ task=reinterpret_cast<void*>(2);assert(copy(source->context,0,sizeof(text))==-1);task=reinterpret_cast<void*>(1);
+ for(uint32_t capacity:{0u,2u,RISC_DIAGNOSTIC_SOURCE_TEXT_MAX+1,UINT32_MAX})assert(copy(source->context,0,capacity)==-1);
+ for(nativeFault=1;nativeFault<=7;++nativeFault){assert(copy(source->context,0,sizeof(text))==(nativeFault==1?0:-1));assert(!copiedCount && !next && !text[0]);}
+ nativeFault=0;
+#else
+ assert(source->struct_size==sizeof(*source));
+#endif
  const auto serialCalls=Serial.calls;
  char out[RISC_DIAGNOSTIC_SOURCE_TEXT_MAX];uint32_t written,revision;uint64_t sequence;
  auto read=[&](uint32_t slot,uint32_t capacity){return source->read(source->context,slot,out,capacity,&written,&sequence,&revision);};
