@@ -1,0 +1,26 @@
+name: Scoped GPIO read ownership and cost
+on:
+  push:
+    branches: [perf/scoped-gpio-read-0188]
+  pull_request:
+    paths:
+      - src/ports/esp32s3/CpuPort.cpp
+      - src/ports/esp32s3/CpuPort.h
+      - test/*scoped_gpio_read*
+      - .github/workflows/scoped-gpio-read.yml
+permissions:
+  contents: read
+jobs:
+  gpio-read:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate full-token ownership and fallback
+        env:
+          SANITIZE: ${{ matrix.sanitize }}
+        run: bash test/run_scoped_gpio_read_test.sh

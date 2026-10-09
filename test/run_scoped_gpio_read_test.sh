@@ -11,8 +11,15 @@ for fixture in scoped_gpio_read_test scoped_gpio_write_test;do
  ASAN_OPTIONS=detect_leaks=0 "$build/$fixture"
 done
 if [[ "${SANITIZE:-0}" == 1 ]];then exit;fi
+# Original and canonical public .81 pins have exactly this tree. The public
+# commit is used by CI; local original-history checkouts need no network fetch.
+base="${GPIO_READ_BASE:-faa8f62936a5889c65cce3f271758d9d95f21d7b}"
+if ! git -C "$repo" cat-file -e "$base^{commit}" 2>/dev/null;then
+ base=aaa77ad11fc66b42430254ab7065590d33fd1fca
+fi
+[[ "$(git -C "$repo" rev-parse "$base^{tree}")" == 54c364ab87f6b465ce1ea0a43c0aae82e82ce0f5 ]]
 mkdir -p "$build/baseline/ports/esp32s3"
-for file in CpuPort.cpp CpuPort.h;do git -C "$repo" show "faa8f62936a5889c65cce3f271758d9d95f21d7b:src/ports/esp32s3/$file" > "$build/baseline/ports/esp32s3/$file";done
+for file in CpuPort.cpp CpuPort.h;do git -C "$repo" show "$base:src/ports/esp32s3/$file" > "$build/baseline/ports/esp32s3/$file";done
 for variant in baseline current;do
  extra=();source="$repo/src/ports/esp32s3/CpuPort.cpp"
  if [[ "$variant" == baseline ]];then extra=(-I"$build/baseline");source="$build/baseline/ports/esp32s3/CpuPort.cpp";fi
