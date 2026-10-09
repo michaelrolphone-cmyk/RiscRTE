@@ -81,6 +81,7 @@ void ModuleV2::report(const char* id, const char* stage, int code) {
 }
 
 bool ModuleV2::closeMapped() {
+  if(!leaseSafe())return false;
   revokeLease();
   risc_runtime_retention_guard();
   if (!handle_) return true;
@@ -103,8 +104,9 @@ bool ModuleV2::closeMapped() {
 bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
                               const char* expectedCapability, uint32_t expectedApi,
                               const risc_provider_dependency_v1* deps, size_t count) {
-  if (risc_runtime_retention_required()) return false;
+  if (risc_runtime_retention_required() || !leaseSafe()) return false;
   const risc_driver_v2* candidate = get ? get(RISC_PROVIDER_DRIVER_ABI_V2) : nullptr;
+  if(!leaseSafe())return false;
   bool hardwareMapped=false;
   for (size_t i=0;i<count;++i) if (!std::strcmp(deps[i].capability_id,"hardware.device")) hardwareMapped=true;
   const bool valid = candidate && candidate->abi_version == RISC_PROVIDER_DRIVER_ABI_V2 &&
@@ -184,6 +186,12 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     revokeLease();
     RISC_STAGE_LOG("provider start skipped id=%s reason=%s",expectedId,bound?"lease-rejected":"stream-bind-rejected");
   }
+  if(!leaseSafe()) {
+    // Native retained storage may be reported during start itself. Preserve
+    // code/dependencies without entering diagnostics, quiesce, stop or dlclose.
+    revokeLease();driver_=candidate;api_=nullptr;state_=State::Failed;
+    report(expectedId,"host-lease-retained");return false;
+  }
   if (started) {
     driver_ = candidate;
     streamSessions_ = sessions;
@@ -206,6 +214,7 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
       if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %.111s", expectedId, detail);
     }
   }
+  if(!leaseSafe()){driver_=candidate;return false;}
   if (!error_[0]) report(expectedId, "start rejected; update driver for diagnostics");
   if (!revokeStreams()) { driver_ = candidate; report(expectedId, "stream-revoke-retained"); return false; }
   // A rejected start may still own DMA, tasks, IRQs or a lower provider.
@@ -214,7 +223,9 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     report(expectedId, "hardware-quiesce-rejected");
     return false;
   }
+  if(!leaseSafe()){driver_=candidate;return false;}
   candidate->stop();
+  if(!leaseSafe()){driver_=candidate;return false;}
   if (!closeStreams()) { report(expectedId, "stream-close-retained"); return false; }
   return false;
 }
@@ -262,7 +273,7 @@ bool ModuleV2::loadVerifiedBytes(const uint8_t* candidateBytes, size_t length,
 }
 
 bool ModuleV2::poll(uint32_t budgetMs) {
-  if (!budgetMs || state_ != State::Active || !streamSafe() || !driver_ || !consumers_ ||
+  if (!budgetMs || state_ != State::Active || !leaseSafe() || !streamSafe() || !driver_ || !consumers_ ||
       driver_->struct_size < sizeof(risc_driver_poll_v2)) return false;
   const auto* extended = reinterpret_cast<const risc_driver_poll_v2*>(driver_);
   if (!extended->poll) return false;
@@ -271,7 +282,7 @@ bool ModuleV2::poll(uint32_t budgetMs) {
 }
 bool ModuleV2::service(uint32_t budgetMs) {
   if (!budgetMs || budgetMs>RISC_DRIVER_SERVICE_MAX_MS || state_ != State::Active ||
-      !streamSafe() || !driver_ || !consumers_ || driver_->struct_size < sizeof(risc_driver_service_v2))return false;
+      !leaseSafe() || !streamSafe() || !driver_ || !consumers_ || driver_->struct_size < sizeof(risc_driver_service_v2))return false;
   const auto* extended=reinterpret_cast<const risc_driver_service_v2*>(driver_);
   if(extended->extension_tag!=RISC_DRIVER_SERVICE_TAG_V1 ||
      extended->extension_version!=RISC_DRIVER_SERVICE_VERSION_V1 || !extended->service)return false;
@@ -314,7 +325,7 @@ bool ModuleV2::closeStreams() {
   return true;
 }
 void ModuleV2::reportQuiescence() {
-  if (!driver_) return;
+  if (!driver_ || !leaseSafe()) return;
   if (!error_[0] && driver_->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
     const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(driver_);
     char detail[DetailCapacity]{};
@@ -329,13 +340,19 @@ void ModuleV2::reportQuiescence() {
   report(driver_->driver_id, "hardware-quiesce-rejected");
 }
 bool ModuleV2::unload() {
-  if (consumers_ || streamCleanupRetained_) return false;
+  if (consumers_ || streamCleanupRetained_ || !leaseSafe()) return false;
+  auto hostSafe=[&](){
+    if(leaseSafe())return true;
+    api_=nullptr;state_=State::Failed;return false;
+  };
   revokeLease();
   risc_runtime_retention_guard();
   if (!revokeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
   if (state_ == State::Failed && handle_ && driver_) {
     if (!hasQuiesce(driver_) || !driver_->quiesce()) { reportQuiescence(); return false; }
+    if(!hostSafe())return false;
     driver_->stop();
+    if(!hostSafe())return false;
     driver_ = nullptr;
   } else if (state_ == State::Active && driver_) {
     if (hasQuiesce(driver_) && !driver_->quiesce()) {
@@ -344,7 +361,9 @@ bool ModuleV2::unload() {
       state_ = State::Failed;
       return false;
     }
+    if(!hostSafe())return false;
     driver_->stop();
+    if(!hostSafe())return false;
     driver_ = nullptr;
   }
   if (!closeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }

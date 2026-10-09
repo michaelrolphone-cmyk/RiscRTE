@@ -17,6 +17,7 @@
 #include <RiscBoundKeyValueV1.h>
 #include <RiscKeyValueV2.h>
 #include <RiscBoundKeyValueV2.h>
+#include <RiscBoundAppDataV1.h>
 struct esp_dl_image_cache;
 namespace RiscBoot {
 class Runtime;
@@ -146,18 +147,33 @@ class Runtime final {
     uint32_t nameSpace=0;
     bool writable=false;
   };
+  struct ProviderFile {
+    char name[RISC_APP_DATA_NAME_MAX+1]{};
+    uint32_t nameSpace=0;
+    bool writable=false;
+  };
   struct ProviderStorage {
     Runtime* owner=nullptr;
-    static constexpr size_t MaxKeys=9;
+    static constexpr size_t MaxKeys=10;
     ProviderKey keys[MaxKeys]{};
     size_t count=0;
     risc_bound_key_value_v1 table{};
+    MetadataArray<ProviderFile> files;
+    size_t fileCount=0;
+    risc_bound_app_data_v1 fileTable{};
     risc_platform_realtime_api_v1 realtime{};
     bool needsRealtime=false;
     bool live=false;
   };
   bool providerPolicy(JsonObjectConst,ProviderStorage&);
+  bool providerFilePolicy(JsonObjectConst,ProviderStorage&);
   void revokeProviders();
+  static bool providerFileSafe(void*);
+  static ProviderStorage* providerFileContext(void*,int32_t&);
+  static int32_t boundAppDataStat(void*,const char*,uint32_t*,uint64_t*);
+  static int32_t boundAppDataRead(void*,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*);
+  static int32_t boundAppDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
+  int32_t providerFileResult(int32_t);
   static bool beginProvider(void*);
   static void revokeProvider(void*);
   static ProviderStorage* providerContext(void*);
@@ -233,6 +249,7 @@ class Runtime final {
   risc_app_data_v1 appDataTable_{};
   void* appDataContext_=nullptr;
   uint32_t appDataNamespace_=0;
+  bool providerFileRetained_=false;
   struct Platform {
     char capability[96]{}; uint32_t api=0; Scope scope=Scope::Global;
     uint64_t id=0; const void* table=nullptr;

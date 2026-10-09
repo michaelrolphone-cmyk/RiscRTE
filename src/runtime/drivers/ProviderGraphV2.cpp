@@ -476,7 +476,7 @@ bool RuntimeProviders::GraphV2::activationSafe() const {
 bool RuntimeProviders::GraphV2::dependencyReadSafe() const {
   for(size_t i=0;i<count_;++i)
     if(nodes_[i].visit==Visit::Visiting || nodes_[i].visit==Visit::Releasing ||
-       (nodes_[i].module.state()==ModuleV2::State::Failed || !nodes_[i].module.streamSafe()))return false;
+       (nodes_[i].module.state()==ModuleV2::State::Failed || !nodes_[i].module.leaseSafe() || !nodes_[i].module.streamSafe()))return false;
   for(const auto& grant:grants_)if(grant.occupied && grant.pendingRelease)return false;
   return true;
 }

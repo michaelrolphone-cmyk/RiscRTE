@@ -100,7 +100,7 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   JsonObjectConst p=provides[0]; int64_t api;
   if (!keys(p,{"capability","api"}) || !text(p["capability"],d.provides,sizeof(d.provides)) ||
       !integer(p["api"],1,UINT32_MAX,api) || !strcmp(d.provides,"hardware.device") ||
-      !strcmp(d.provides,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("invalid provides");
+      !strcmp(d.provides,RISC_BOUND_KEY_VALUE_CAPABILITY) || !strcmp(d.provides,RISC_BOUND_APP_DATA_CAPABILITY)) return fail("invalid provides");
   d.api=api;
   bool needsHardware=false;
   for (JsonObjectConst req:required) {
@@ -179,7 +179,7 @@ bool Runtime::validateGraph() {
           (d.instance && d.instance==drivers_[j].instance)) return fail("duplicate package singleton/hardware owner");
     }
     const auto* hw=d.instance?board_.device(d.instance):nullptr;
-    bool needsStorage=false;
+    bool needsStorage=false,needsFiles=false;
     for(size_t r=0;r<d.count;++r) {
       auto& req=d.requirements[r]; if(!strcmp(req.capability,"hardware.device")) continue;
       if (!strcmp(req.capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) {
@@ -194,6 +194,18 @@ bool Runtime::validateGraph() {
         needsStorage=true;
         storage.table.api_version=req.api;
         req.trustedApi=&storage.table;
+        continue;
+      }
+      if (!strcmp(req.capability,RISC_BOUND_APP_DATA_CAPABILITY)) {
+        auto& storage=providerStorage_[i];
+        const auto* backend=port_.appData;
+        if(req.api!=RISC_BOUND_APP_DATA_API_V1 || !storage.fileCount || !backend ||
+           !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)
+          return fail("provider app-data policy/backend unavailable");
+        if(hw)for(size_t b=0;b<hw->bindingCount;++b)
+          if(!strcmp(hw->bindings[b].capability,req.capability))
+            return fail("provider app-data is not a hardware binding");
+        needsFiles=true;req.trustedApi=&storage.fileTable;
         continue;
       }
       uint64_t wanted=0;
@@ -233,6 +245,7 @@ bool Runtime::validateGraph() {
       edges[i][found]=true;
     }
     if (providerStorage_[i].count && !needsStorage) return fail("undeclared provider key-value policy");
+    if (providerStorage_[i].fileCount && !needsFiles) return fail("undeclared provider app-data policy");
     if(hw) for(size_t b=0;b<hw->bindingCount;++b) {
       bool used=false; for(size_t r=0;r<d.count;++r) if(!strcmp(d.requirements[r].capability,hw->bindings[b].capability)) used=true;
       if(!used) return fail("unused hardware binding");
@@ -288,6 +301,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
         if (!keys(allowed,{"capability","api","instance_id"}) || !text(allowed["capability"],capability,sizeof(capability)) ||
             !integer(allowed["api"],1,UINT32_MAX,allowedApi) || !integer(allowed["instance_id"],0,INT32_MAX,instance)) return fail("invalid app grant");
         if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
+        if (!strcmp(capability,RISC_BOUND_APP_DATA_CAPABILITY)) return fail("provider app-data denied to app");
         if (strcmp(capability,requested) || allowedApi!=api) continue;
         if (++matches>1 && !keyValue) return fail("app requirement not uniquely authorized");
         if (policy.count==MaxAppPolicyGrants) return fail("too many app grants");
@@ -507,11 +521,15 @@ bool Runtime::providerStorageSafe() const {
 bool Runtime::beginProvider(void* context) {
   auto* storage=static_cast<ProviderStorage*>(context);
   Runtime* r=currentRuntime;
-  if (!storage || !r || storage->owner!=r || (!storage->count && !storage->needsRealtime) || storage->live ||
+  if (!storage || !r || storage->owner!=r || storage->live ||
       !r->port_.owner() || r->retained_ || !r->providerStorageSafe()) return false;
+  // A graph-wide retained-storage fence also covers providers that access files
+  // indirectly through another provider. They need no callable storage token.
+  if(!storage->count && !storage->fileCount && !storage->needsRealtime){storage->live=true;return true;}
   void* token=nextKeyValueContext(keyValueGeneration);
   if (!token) return false;
   storage->table.context=token;
+  if(storage->fileCount)storage->fileTable.context=token;
   if(storage->needsRealtime)storage->realtime.context=token;
   storage->live=true;
   return true;
@@ -608,6 +626,7 @@ bool Runtime::revokeApp() {
 #include "AppStreamsRuntime.inc"
 #include "InstalledFilesRuntime.inc"
 #include "AppDataRuntime.inc"
+#include "BoundAppDataRuntime.inc"
 #include "RetainedWakeRuntime.inc"
 #include "RealtimeRuntime.inc"
 #include "ProviderPromotionRuntime.inc"
@@ -633,7 +652,7 @@ bool Runtime::prepare(const char* root) {
   // Read all manifests and validate mappings before registering/activating modules.
   for(JsonObjectConst item:c["drivers"].as<JsonArrayConst>()) {
     Driver& d=drivers_[driverCount_]; int64_t instance=0;
-    if(!keys(item,{"manifest"},{"instance_id","key_value","boot_start"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+    if(!keys(item,{"manifest"},{"instance_id","key_value","app_data","boot_start"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,d.elf,sizeof(d.elf)) || (!item["instance_id"].isNull() && !integer(item["instance_id"],1,INT32_MAX,instance))) return fail("invalid driver selection");
     if(!item["boot_start"].isUnbound()) {
       if(!demandActivation_ || !eq(item["boot_start"],"cold"))return fail("invalid driver boot start policy");
@@ -641,7 +660,8 @@ bool Runtime::prepare(const char* root) {
     }
     d.instance=instance; JsonDocument manifestDoc;
     if(!readJson(d.elf,manifestDoc,&metadataCloseRetained_) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
-    if(!providerPolicy(item,providerStorage_[driverCount_])) return false;
+    if(!providerPolicy(item,providerStorage_[driverCount_]) ||
+       !providerFilePolicy(item,providerStorage_[driverCount_])) return false;
     ++driverCount_;
   }
   registrationOpen_=true;
@@ -649,11 +669,16 @@ bool Runtime::prepare(const char* root) {
   registrationOpen_=false;
   if (!bound) return fail("trusted platform binding failed");
   if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !configureInstalledFiles(c)) return false;
+  bool hasProviderFiles=false;
+  for(size_t i=0;i<driverCount_;++i)hasProviderFiles=hasProviderFiles || providerStorage_[i].fileCount;
   for(size_t i=0;i<driverCount_;++i) {
     const Driver& d=drivers_[i];
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
     spec.hardware=d.instance?&board_.device(d.instance)->hardware:nullptr;
-    if (providerStorage_[i].count || providerStorage_[i].needsRealtime) spec.lease={&providerStorage_[i],beginProvider,revokeProvider};
+    if (providerStorage_[i].count || providerStorage_[i].needsRealtime || hasProviderFiles){
+      providerStorage_[i].owner=this;
+      spec.lease={&providerStorage_[i],beginProvider,revokeProvider,hasProviderFiles?providerFileSafe:nullptr};
+    }
     if(!graph_.addVerified(spec)) return fail("driver registration failed");
   }
   strcpy(default_,current_); prepared_=true; return true;

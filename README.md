@@ -1,5 +1,9 @@
 # RiscRTE
 
+Runtime 0.1.83 adds provider-bound `storage.app-data.bound@1` with exact filename/namespace/access
+maps over the existing backend with copied complete-file APIs and sticky native
+retention. See [provider file authority](docs/PROVIDER_APP_DATA.md).
+
 Runtime 0.1.81 keeps synchronous provider services out of cooperative app yield.
 Display and input polling retain bounded provider polling and scheduler fairness;
 storage services remain at explicit acquisition and app-entry boundaries.

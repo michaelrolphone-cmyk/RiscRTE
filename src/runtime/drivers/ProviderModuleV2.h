@@ -18,8 +18,10 @@ struct ModuleLeaseV2 {
   void* context = nullptr;
   bool (*begin)(void*) = nullptr;
   void (*revoke)(void*) = nullptr;
+  // Optional sticky host-retention barrier; never calls provider code.
+  bool (*safe)(void*) = nullptr;
   bool valid() const {
-    return (!context && !begin && !revoke) || (context && begin && revoke);
+    return (!context && !begin && !revoke && !safe) || (context && begin && revoke);
   }
 };
 struct StreamHostV1 {
@@ -81,6 +83,7 @@ class ModuleV2 final {
   }
   uint64_t streamContext() const { return state_ == State::Active ? streamApi_.streams.context : 0; }
   const risc_stream_session_provider_v1* streamSessions() const { return state_ == State::Active ? streamSessions_ : nullptr; }
+  bool leaseSafe() const { return !lease_.safe || lease_.safe(lease_.context); }
   bool streamSafe() const { return !streamApi_.streams.context || !streamHost_->safe || streamHost_->safe(streamApi_.streams.context); }
   bool poll(uint32_t budgetMs);
   bool service(uint32_t budgetMs);
