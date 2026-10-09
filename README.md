@@ -1,5 +1,11 @@
 # RiscRTE
 
+Runtime 0.2.0 is the optional declarative-scene prototype SDK increment. It adds
+transport-neutral scene/checkpoint contracts, not a native UI. An explicitly
+selected provider-capacity override supports larger product compositions; all
+default graph bounds and headless behavior remain unchanged. See
+[optional scenes and capacity](docs/OPTIONAL_SCENES.md).
+
 Runtime 0.1.83 adds provider-bound `storage.app-data.bound@1` with exact filename/namespace/access
 maps over the existing backend with copied complete-file APIs and sticky native
 retention. See [provider file authority](docs/PROVIDER_APP_DATA.md).
