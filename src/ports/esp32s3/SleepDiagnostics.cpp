@@ -22,6 +22,7 @@
 // Trusted native composition hook. The borrowed line is valid only during this
 // owner-task call. It must not allocate, block, mutate Runtime or recurse.
 extern "C" void risc_native_diagnostic_observer(const char*) __attribute__((weak));
+extern "C" void risc_native_diagnostic_drain(void) __attribute__((weak));
 #endif
 namespace RiscDiagnostics {
 namespace {
@@ -50,6 +51,15 @@ void noteTruncation(){}
 struct OutputGuard {
   OutputGuard(){outputting=true;}
   ~OutputGuard(){outputting=false;}
+};
+struct NativeStorageDrain {
+  ~NativeStorageDrain() {
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+    // Called after OutputGuard destruction, even when no USB host is present.
+    // Native implementation must not call Runtime/providers/diagnostics here.
+    if(risc_native_diagnostic_drain)risc_native_diagnostic_drain();
+#endif
+  }
 };
 bool ours(){return owner && owner==xTaskGetCurrentTaskHandle();}
 // Must remain the sole HWCDC ring producer: no setDebugOutput or concurrent
@@ -191,6 +201,7 @@ void poll(){
 void line(const char* text){
   if(!ours() || !text)return;
   if(outputting){noteLost();return;}
+  NativeStorageDrain drain;
   OutputGuard guard;
 #if RISC_NATIVE_DIAGNOSTIC_OBSERVER
   if(risc_native_diagnostic_observer)risc_native_diagnostic_observer(text);
