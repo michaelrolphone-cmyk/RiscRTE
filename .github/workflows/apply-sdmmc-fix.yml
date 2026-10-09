@@ -26,7 +26,6 @@ jobs:
           p=Path('platformio.ini');s=p.read_text()
           assert s.count('version = 0.1.88') == 1
           p.write_text(s.replace('version = 0.1.88','version = 0.1.97',1))
-          # These existing GPIO cache fixtures inspect the private wrapper.
           for name in ('scoped_gpio_read_test.cpp','scoped_gpio_read_benchmark.cpp'):
               p=Path('test')/name
               s=p.read_text()
@@ -34,6 +33,7 @@ jobs:
               p.write_text(s)
           PY
           git diff --check
+          git fetch --no-tags --depth=1 origin aaa77ad11fc66b42430254ab7065590d33fd1fca
       - name: Normal and sanitized hardware-interface regressions
         run: |
           set -euo pipefail
