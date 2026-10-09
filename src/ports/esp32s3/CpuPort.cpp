@@ -569,8 +569,16 @@ bool Port::gpioWrite(void* context,uint64_t token,bool level){
 }
 bool Port::gpioRead(void* context,uint64_t token,bool* level){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.available() || !token || !level)return false;
-  for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token)return p.hw_.gpioRead(i,level);
-  return false;
+  auto& hint=p.gpioWritePins_[token & 63u];
+  unsigned i=hint?unsigned(hint-1):49;
+  if(i==49 || p.pins_[i].owner!=&c || p.pins_[i].token!=token){
+    // Share the validated pin hint with writes. Full owner/token checks on
+    // every hit preserve release, scope, generation and retired-pad rules.
+    for(i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token)break;
+    if(i==49)return false;
+    hint=static_cast<uint8_t>(i+1);
+  }
+  return p.hw_.gpioRead(i,level);
 }
 bool Port::gpioPwm(void* context,uint64_t token,uint32_t hz,uint16_t duty,uint16_t maximum){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.available() || !token || !hz || hz>40000 || !maximum || duty>maximum)return false;

@@ -117,7 +117,7 @@ class Port final {
   struct UsbPhy { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_usb_phy_resource_api_v1 api{}; } usb_;
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false,wakeHigh=false; uint8_t wakeModes=0; bool retiredHeld=false; } pins_[49];
   // Pin-index hints only, never authority. Collisions/stale hints are checked
-  // against the current full token and scope before any write. Zero is empty.
+  // against the current full token and scope before any read/write. Zero is empty.
   uint8_t gpioWritePins_[64]{};
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
   size_t syncCount_=0,gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0,iqCount_=0;
