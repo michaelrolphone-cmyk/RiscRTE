@@ -48,10 +48,12 @@ static void store(const fs::path& path,unsigned appCount,unsigned driverCount){
   std::string id="driver"+std::to_string(i);JsonDocument manifest;
   manifest["type"]="driver";manifest["id"]=id;manifest["version"]="1.0.0";manifest["driver_abi"]=2;manifest["architecture"]="xtensa-esp32s3";manifest["file_name"]="driver.elf";
   auto req=manifest["requires"].to<JsonArray>().add<JsonObject>();req["capability"]="storage.key-value.bound";req["api"]=1;
+  auto fileReq=manifest["requires"].as<JsonArray>().add<JsonObject>();fileReq["capability"]=RISC_BOUND_APP_DATA_CAPABILITY;fileReq["api"]=1;
   auto realtime=manifest["requires"].as<JsonArray>().add<JsonObject>();realtime["capability"]=RISC_PLATFORM_REALTIME_CAPABILITY;realtime["api"]=1;
   auto provides=manifest["provides"].to<JsonArray>().add<JsonObject>();provides["capability"]="test."+id;provides["api"]=1;
   auto selection=dr.add<JsonObject>();selection["manifest"]=id+"/manifest.json";
   auto key=selection["key_value"].to<JsonArray>().add<JsonObject>();key["key"]="state";key["namespace"]=100+i;key["access"]="read-write";
+  auto data=selection["app_data"].to<JsonArray>().add<JsonObject>();data["name"]="state.bin";data["namespace"]=200+i;data["access"]="read-write";
   save(path/id/"manifest.json",manifest);save(path/id/"driver.elf",std::string("provider"));
  }
  save(path/"boot.json",boot);
@@ -78,7 +80,7 @@ int main(int argc,char** argv){
  store(next,24,24);check(true);assert(apps==24 && drivers==24);
  store(next,25,24);check(false);store(next,24,25);check(false);
  store(next,20,18);auto original=read(next/"boot.json");
- for(unsigned bad=0;bad<8;++bad){auto boot=original;
+ for(unsigned bad=0;bad<16;++bad){auto boot=original;
   if(bad==0)boot["app_capabilities"][0]["grants"][1]["instance_id"]=50;
   if(bad==1)boot["app_capabilities"][19]["grants"][0]["instance_id"]=1;
   if(bad==2)boot["drivers"][17]["key_value"][0]["namespace"]=100;
@@ -87,9 +89,22 @@ int main(int argc,char** argv){
   if(bad==5)boot["default_app"]="unlisted.elf";
   if(bad==6)boot["app_capabilities"].as<JsonArray>().remove(0);
   if(bad==7)boot["port"].to<JsonObject>()["unrecognized"]=1;
+  if(bad==8)boot["drivers"][17]["app_data"][0]["namespace"]=200; // New provider cannot take provider namespace.
+  if(bad==9)boot["drivers"][17]["app_data"][0]["namespace"]=1; // Or an app namespace.
+  if(bad==10)boot["drivers"][0]["app_data"][0]["namespace"]=500;
+  if(bad==11)boot["drivers"][0]["app_data"][0]["access"]="read";
+  if(bad==12)boot["drivers"][0]["app_data"][0]["name"]="replacement.bin";
+  if(bad==13)boot["app_capabilities"][19]["grants"][1]["instance_id"]=200; // New app cannot take provider namespace.
+  if(bad==14)boot["drivers"][0]["app_data"][0]["namespace"]=2;
+  if(bad==15)boot["app_capabilities"][0]["grants"][1]["instance_id"]=200; // Existing app identity cannot change.
   save(next/"boot.json",boot);check(false);
  }
  save(next/"boot.json",original);check(true);
+ // An existing provider may gain another exact filename in its own namespace.
+ auto expanded=original;auto extra=expanded["drivers"][0]["app_data"].as<JsonArray>().add<JsonObject>();
+ extra["name"]="extra.bin";extra["namespace"]=200;extra["access"]="read";
+ save(next/"boot.json",expanded);check(true);save(next/"boot.json",original);
+
  auto board=read(next/"board.json");board["revision"]="rev2";save(next/"board.json",board);check(false);board["revision"]="rev1";save(next/"board.json",board);
  save(next/"unselected.elf",std::string("app"));check(false);fs::remove(next/"unselected.elf");
  fs::remove(next/"app19.elf");check(false);save(next/"app19.elf",std::string("app"));

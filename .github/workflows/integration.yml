@@ -201,6 +201,8 @@ jobs:
           python3 -m unittest discover -s test -p 'test_app_policy_rows.py'
           bash test/run_key_value_test.sh
           SANITIZE=1 bash test/run_key_value_test.sh
+          bash test/run_bound_app_data_test.sh
+          SANITIZE=1 bash test/run_bound_app_data_test.sh
           bash test/run_bound_key_value_test.sh
           SANITIZE=1 bash test/run_bound_key_value_test.sh
           bash test/run_native_registry_test.sh
