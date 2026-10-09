@@ -1,6 +1,7 @@
 #pragma once
 #include "bootstrap/Runtime.h"
 #include <GardenPlatformV1.h>
+#include <RiscGpioSdmmcV1.h>
 #include <TWatchPlatformV1.h>
 #include <RiscHciControllerStatusV1.h>
 #include <RiscPlatformClockV1.h>
@@ -82,6 +83,12 @@ struct Hardware {
   bool (*usbPhyIdle)()=nullptr;
   bool (*usbPhySuspend)()=nullptr;
   bool (*usbPhyResume)()=nullptr;
+  // Optional hardware-backed native one-bit SD; no filesystem or board policy.
+  bool (*sdmmcOpen)(uint8_t,uint8_t,uint8_t,uint32_t,risc_sdmmc_card_info_v1*)=nullptr;
+  bool (*sdmmcRead)(uint64_t,uint32_t,void*)=nullptr;
+  bool (*sdmmcWrite)(uint64_t,uint32_t,const void*)=nullptr;
+  bool (*sdmmcSync)()=nullptr;
+  bool (*sdmmcClose)()=nullptr;
 };
 class Port final {
  public:
@@ -105,7 +112,8 @@ class Port final {
     struct Lock { uint64_t token=0; bool held=false; } locks[RISC_PROVIDER_SYNC_MAX_LOCKS]{};
     risc_provider_sync_api_v1 api{};
   } syncs_[RuntimeProviders::GraphV2::kMaxModules];
-  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; garden_gpio_v1 api{}; } gpios_[16];
+  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{}; } gpios_[16];
+  struct Sdmmc { Gpio* owner=nullptr; uint64_t token=0,sectors=0; uint8_t clk=0,cmd=0,dat0=0; bool closing=false; } sdmmc_;
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; bool threeWire=false,ready=false,closing=false; garden_spi_v1 api{}; } spis_[8];
   struct SpiBus { uint64_t instance=0; unsigned refs=0; Spi* held=nullptr; Spi* closing=nullptr; } spiBuses_[2];
@@ -128,6 +136,12 @@ class Port final {
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
   bool reserve(int16_t,const void*); void unreserve(int16_t,const void*);
   bool gpioScope(const RiscBoot::Runtime&,const RiscBoot::Board::Device&,Gpio&);
+  static bool sdmmcOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*,risc_sdmmc_card_info_v1*);
+  static bool sdmmcTransfer(void*,uint64_t,uint64_t,uint32_t,void*,const void*);
+  static bool sdmmcRead(void*,uint64_t,uint64_t,uint32_t,void*);
+  static bool sdmmcWrite(void*,uint64_t,uint64_t,uint32_t,const void*);
+  static bool sdmmcSync(void*,uint64_t);
+  static bool sdmmcRelease(void*,uint64_t);
   static bool usbPhyOwner(void*);
   static bool usbPhyClaim(void*,uint64_t*);
   static bool usbPhyRelease(void*,uint64_t);

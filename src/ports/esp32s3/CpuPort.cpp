@@ -28,7 +28,9 @@ bool Port::reserve(int16_t pin,const void* owner){
   pins_[pin].owner=owner;return true;
 }
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
+#include "CpuSdmmc.inc"
 bool Port::providerStorageSafe() const {
+  if(sdmmc_.closing)return false;
   if(!available() || sleepRetained_ || transferring_ || iq_.token)return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
@@ -50,6 +52,7 @@ bool Port::appExitSafe() const {
   return true;
 }
 bool Port::restartResourcesSafe() const {
+  if(sdmmc_.token || sdmmc_.closing)return false;
   if(!providerStorageSafe() || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
@@ -59,6 +62,7 @@ bool Port::restartResourcesSafe() const {
   return true;
 }
 bool Port::quiescent() const {
+  if(sdmmc_.token || sdmmc_.closing)return false;
   if(usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   if(iq_.token || iq_.closing)return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.token)return false;
@@ -125,7 +129,13 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
       gpio.pullup|=pinBit(config.bus.mosi); // Owned bidirectional probe input.
     }
   }
-  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput,gpioReadRetiredOutput};return true;
+  gpio.api.base={1,sizeof(garden_gpio_v1),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput,gpioReadRetiredOutput};
+  if(!strcmp(selected.type,"gpio.bank") && hw_.sdmmcOpen){
+    if(!hw_.sdmmcRead || !hw_.sdmmcWrite || !hw_.sdmmcSync || !hw_.sdmmcClose)return false;
+    gpio.api.base.struct_size=sizeof(gpio.api);gpio.api.sdmmc_tag=RISC_GPIO_SDMMC_TAG_V1;gpio.api.sdmmc_version=1;
+    gpio.api.sdmmc={1,sizeof(gpio.api.sdmmc),&gpio,sdmmcOpen,sdmmcRead,sdmmcWrite,sdmmcSync,sdmmcRelease};
+  }
+  return true;
 }
 bool Port::bind(RiscBoot::Runtime& runtime){
   if(bound_ || !available() || !hw_.now || !hw_.sleep || !hw_.gpioOpen || !hw_.gpioWrite || !hw_.gpioRead || !hw_.gpioPwm || !hw_.gpioClose ||
@@ -179,7 +189,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
     }
     if(runtime.uses(id,"platform.gpio",1)){
       if(gpioCount_==16)return false;
-      auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
+      auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api.base))return false;
     }
     if(runtime.uses(id,"platform.i2c.controller",1)){
       if(i2cCount_==2 || strcmp(d.type,"controller.i2c"))return false;
