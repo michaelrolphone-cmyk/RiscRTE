@@ -37,13 +37,13 @@ namespace RiscDiagnostics{inline void start(){mark("diagnostics");}inline void p
 namespace RiscPerf{inline void configure(uint64_t(*)(),bool(*)(),int){}inline void emit(unsigned,unsigned=0){}struct Scope{Scope(unsigned,unsigned){}};}
 namespace RiscBoot{
 struct Board{};class Runtime;
-struct Port{bool(*owner)();bool(*health)(risc_runtime_health_v1*);void(*delay)(uint32_t);bool(*diagnostic)(const char*);bool(*bind)(Runtime&);void*kv;bool(*exitSafe)();bool(*storageSafe)();bool(*confirm)();void*data;void*wake;void(*retainedDelay)(uint32_t);};
+struct Port{bool(*owner)();bool(*health)(risc_runtime_health_v1*);void(*delay)(uint32_t);bool(*diagnostic)(const char*);bool(*bind)(Runtime&);void*kv;bool(*exitSafe)();bool(*storageSafe)();bool(*confirm)();void*data;void*wake;void(*retainedDelay)(uint32_t);bool(*coldBoot)();};
 class Runtime{Board b;public:explicit Runtime(Port){}Board&board(){return b;}bool prepare(const char*){mark("prepare");return true;}bool run(){mark("run");return true;}const char*error(){return "test";}};
 }
 namespace RiscCpu{
 inline int nativeHardware(bool(*)()){return 0;}
 class Port{public:explicit Port(int){}bool bind(RiscBoot::Runtime&){return true;}bool appExitSafe(){return true;}bool providerStorageSafe(){return true;}bool restartResourcesSafe(){return true;}};
-namespace NativeRetainedWake{inline void start(){mark("retained-wake");}inline void*backend(){return nullptr;}}
+namespace NativeRetainedWake{inline void start(){mark("retained-wake");}inline void*backend(){return nullptr;}inline bool coldBoot(){return true;}}
 namespace NativeRealtime{inline void start(){mark("realtime");}}
 inline uint32_t cooperativeDelayTicks(uint32_t n,uint32_t){return n;}
 inline void reserveNativePins(RiscBoot::Board&){mark("reserve");}
@@ -97,7 +97,8 @@ class NativeStartup(unittest.TestCase):
             # Use the production constants and disabled-log macro so this
             # fixture follows current startup declarations without replacing
             # or evaluating diagnostic arguments.
-            for name in ('bootstrap/AppPolicyLimits.h', 'diagnostics/StageLog.h'):
+            for name in ('bootstrap/AppPolicyLimits.h', 'diagnostics/StageLog.h',
+                         'ports/esp32s3/NativeDiagnosticBinding.h'):
                 shutil.copyfile(ROOT/'src'/name, folder/name)
             shutil.copyfile(ROOT/'src/main.cpp', folder/'main.cpp')
             (folder/'harness.cpp').write_text(HARNESS)
