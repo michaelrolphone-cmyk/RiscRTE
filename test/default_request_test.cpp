@@ -10,6 +10,9 @@ std::string root,mode;
 bool ownerOk=true,exitSafe=true;
 unsigned visits[3]{},inits[3]{},finis[3]{},quiesces=0;
 const risc_runtime_api_v1* cached=nullptr;
+// A retained native owner remains live until process exit. Keep the fixture
+// owner reachable, just as the firmware does, without disabling leak checks.
+Runtime* volatile retainedRuntime=nullptr;
 risc_runtime_capability_v1 abandoned{};
 bool owner(){return ownerOk;}
 bool health(risc_runtime_health_v1*){return true;}
@@ -104,6 +107,7 @@ int main(int argc,char** argv){
  if(mode=="entry-retained" || mode=="explicit-retained")assert(finis[1]==0);
  if(mode=="fini-retained" || mode=="provider-retained")assert(finis[1]==1);
  if(mode=="provider-retained")assert(quiesces==1);
- if(!retained())delete runtime; // Deliberately retained test images live to process exit.
+ if(retained())retainedRuntime=runtime;
+ else delete runtime;
  printf("Explicit default: %s PASS\n",mode.c_str());
 }
