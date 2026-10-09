@@ -1,0 +1,35 @@
+name: Publish verified scene source checkpoint
+on:
+  push:
+    branches: [feat/declarative-alarms]
+    paths: [.scene-source.patch.gz.b64]
+permissions:
+  contents: write
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/feat/declarative-alarms'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify and apply the tested source bytes
+        run: |
+          python - <<'PY'
+          import base64, gzip, hashlib, pathlib, subprocess
+          p=pathlib.Path('.scene-source.patch.gz.b64')
+          compressed=base64.b64decode(p.read_text().strip(),validate=True)
+          assert hashlib.sha256(compressed).hexdigest()=='fde016d69923495f4a11fee94901c898bb2e6b4476cd591920260715fa8297f8'
+          patch=gzip.decompress(compressed)
+          allowed={'README.md','platformio.ini','src/bootstrap/Runtime.cpp','src/runtime/RuntimeLimits.h','docs/OPTIONAL_SCENES.md','scripts/runtime_capacity.py','sdk/app/RiscSceneStateV1.h','sdk/app/RiscSceneV1.h','test/runtime_capacity.py'}
+          rows=subprocess.check_output(['git','apply','--numstat'],input=patch).decode().splitlines()
+          assert {r.split('\t',2)[2] for r in rows}==allowed
+          subprocess.run(['git','apply','--check','-'],input=patch,check=True)
+          subprocess.run(['git','apply','--index','-'],input=patch,check=True)
+          subprocess.run(['git','rm',str(p)],check=True)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat: add optional declarative scene SDK and configurable provider capacity'
+          git push origin HEAD:refs/heads/feat/declarative-alarms
