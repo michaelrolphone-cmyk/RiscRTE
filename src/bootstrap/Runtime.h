@@ -1,11 +1,14 @@
 #pragma once
 #include "Board.h"
+#include "AppPolicyLimits.h"
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
 #include "FileOpenState.h"
 #include "runtime/sleep/RetainedWake.h"
 #include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
+#include "runtime/streams/ProviderQueueHost.h"
+#include "runtime/streams/AppStreamSessions.h"
 #include <RiscRuntimeV1.h>
 #include <RiscRealtimeV1.h>
 #include <RiscPlatformRealtimeV1.h>
@@ -14,6 +17,7 @@
 #include <RiscBoundKeyValueV1.h>
 #include <RiscKeyValueV2.h>
 #include <RiscBoundKeyValueV2.h>
+struct esp_dl_image_cache;
 namespace RiscBoot {
 class Runtime;
 // Optional compiled-in backend. Namespace comes only from validated boot policy.
@@ -43,13 +47,17 @@ struct Port {
   bool (*confirmBoot)()=nullptr;
   const AppDataBackend* appData=nullptr;
   RiscRetainedWake::Store* retainedWake=nullptr;
+  // Optional raw scheduler delay for an already-retained invocation owner.
+  // Must not poll diagnostics/providers, inspect storage, or perform cleanup.
+  // No fallback to delay: that callback may perform ordinary cooperative work.
+  void (*retainedDelay)(uint32_t)=nullptr;
 };
 class Runtime final {
  public:
   static constexpr size_t MaxAppPolicies=RiscLimits::Apps;
-  static constexpr size_t MaxAppPolicyGrants=16;
+  static constexpr size_t MaxAppPolicyGrants=RISC_APP_POLICY_ROWS;
   static constexpr size_t MaxAppRequirements=16;
-  explicit Runtime(Port p) : port_(p) {}
+  explicit Runtime(Port p) : port_(p), streams_(graph_,{this,streamBindingValid,streamRetain,streamYield}) {}
   ~Runtime() { revokeProviders(); }
   Runtime(const Runtime&)=delete;
   Runtime& operator=(const Runtime&)=delete;
@@ -69,6 +77,7 @@ class Runtime final {
   bool selected(uint64_t instance) const;
   bool run();
   bool launch(const char* relative);
+  bool launchDefault();
   bool health(risc_runtime_health_v1*);
   bool acquire(const char*,uint32_t,uint64_t,risc_runtime_capability_v1*);
   bool release(risc_runtime_capability_v1*);
@@ -76,6 +85,9 @@ class Runtime final {
   bool diagnostic(const char*);
   bool confirmBoot();
   bool retainInvocation();
+  bool streamClient(risc_stream_client_v1*);
+  // Compiled-in allocation-pressure path only; no app import or grant.
+  bool reclaimAppImages();
   struct UpdateApp { char elf[193]{}, manifest[193]{}; };
   // Native update authority: preserve the existing boot-policy identity/grants.
   bool appUpdate(const char* id,const void* manifest,size_t size,UpdateApp&) const;
@@ -85,7 +97,7 @@ class Runtime final {
   bool validateCohort(Runtime& candidate,const char* root,
                       bool (*admit)(void*,const char*,bool provider),void* context) const;
   bool appInventory(size_t index,void*,size_t,uint32_t*) const;
-  bool active() const { return active_ && port_.owner(); }
+  bool active() const { return active_ && !streams_.busy() && port_.owner(); }
   bool retained() const { return retained_; }
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
@@ -116,6 +128,10 @@ class Runtime final {
   bool appPolicies(JsonVariantConst);
   bool revokeApp();
   bool appExitBarrier();
+  bool streamBinding(const risc_runtime_capability_v1*,RuntimeStreams::AppStreamBinding&) const;
+  static bool streamBindingValid(void*,const RuntimeStreams::AppStreamBinding&,bool);
+  static void streamRetain(void*);
+  static void streamYield(void*);
   bool providerStorageSafe() const;
   bool appManifestPath(size_t,char*,size_t) const;
   static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
@@ -201,6 +217,7 @@ class Runtime final {
   const AppPolicy* appPolicy_=nullptr;
   struct AppGrant {
     RuntimeProviders::GrantV2 provider{}; const void* api=nullptr;
+    uint64_t invocation=0;
     uint32_t generation=0; bool live=false;
     uint32_t keyValueNamespace=0; risc_key_value_v1 keyValue{};
   } appGrants_[16]{};
@@ -220,20 +237,25 @@ class Runtime final {
   Board board_;
   // Must outlive graph destruction, including retained-module retry/abort.
   ProviderStorage providerStorage_[MaxDrivers]{};
-  RuntimeProviders::GraphV2 graph_;
+  RuntimeProviders::GraphV2 graph_{RuntimeStreams::runtimeProviderStreamHost()};
+  RuntimeStreams::AppStreamSessions streams_;
   RuntimeProviders::GrantV2 grants_[MaxDrivers]{};
   Driver drivers_[MaxDrivers]{};
-  size_t driverCount_=0, granted_=0;
+  size_t driverCount_=0;
   char root_[256]{}, default_[256]{}, current_[256]{}, queued_[256]{}, error_[192]{};
   bool registrationOpen_=false;
   bool demandActivation_=false;
+  bool demandRetention_=false;
   bool promotionRunning_=false;
   risc_provider_promotion_api_v1 promotionTable_{};
   void* promotionContext_=nullptr;
   bool promotionSafe() const;
   static int32_t promoteProviders(void*);
   bool prepared_=false, attempted_=false, active_=false, retained_=false;
+  bool yielding_=false;
   mutable bool metadataCloseRetained_=false;
   bool defaultRunning_=false, entryRunning_=false;
+  esp_dl_image_cache* appImages_=nullptr;
+  bool reclaimingAppImages_=false;
 };
 }

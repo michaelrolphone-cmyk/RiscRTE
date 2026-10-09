@@ -1,4 +1,5 @@
 #pragma once
+#include "diagnostics/Performance.h"
 #include <ArduinoJson.h>
 #include "runtime/packages/PackageJsonGuard.h"
 #include <cstdio>
@@ -59,6 +60,7 @@ inline bool path(const char* root, const char* relative, char* out, size_t cap) 
   int n=snprintf(out,cap,"%s/%s",root,relative); return n>0 && static_cast<size_t>(n)<cap;
 }
 inline bool parse(const char* bytes, size_t size, JsonDocument& doc) {
+  RiscPerf::Scope trace(30,31,static_cast<uint32_t>(size));
   return RuntimePackages::PackageJsonGuard(bytes,size).objectOnly() &&
          !deserializeJson(doc,bytes,size,DeserializationOption::NestingLimit(10));
 }

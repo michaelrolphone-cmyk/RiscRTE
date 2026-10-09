@@ -1,5 +1,13 @@
 # Offline first-install packaging
 
+Runtime 0.1.70 also supports [compact-image profiles](COMPACT_IMAGE_PROVISIONING.md)
+for dense complete stores. They use the same private owner and new-device
+composition workflow, with one pinned image and an exact per-file inventory.
+
+Products with composed native startup also preserve their
+[product-owned seed evidence](PROVISIONING_SEED_EXTENSIONS.md) through an explicit
+trusted wrapper during seed creation and private first-install composition.
+
 This workflow prepares a new 16 MiB ESP32-S3 device image plus the exact private
 provisioning JSON it will consume. It does not connect to a device or execute a
 flash command. A separate owner-controlled hardware installation is required.

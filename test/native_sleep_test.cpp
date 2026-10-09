@@ -509,6 +509,12 @@ int main() {
     CHECK(openPin(pin,true,true,false));CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==1);
     CHECK(gpio_set_level(static_cast<gpio_num_t>(pin),0)==ESP_OK);CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==0);
     CHECK(gpio_set_level(static_cast<gpio_num_t>(pin),1)==ESP_OK);CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==1);
+    CHECK(hold(pin,true));CHECK(pads[pin].held);
+    const auto heldCalls=calls.size();
+    CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==1);
+    pads[pin].level=false;CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==0);
+    CHECK(calls.size()==heldCalls && pads[pin].held); // Physical LOW remains visible without unholding.
+    pads[pin].level=true;
     pads[pin].config.mode=GPIO_MODE_OUTPUT;CHECK(gpio_get_level(static_cast<gpio_num_t>(pin))==0);
   }
   testValidity(); testOpen(); testArm(); testClear(); testStackReadiness(); testHoldsAndEntry(); testTimerAndLight(); testSets();

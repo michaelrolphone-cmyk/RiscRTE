@@ -14,10 +14,14 @@ int32_t Runtime::promoteProviders(void* context) {
   if(!r->promotionSafe())return RISC_PROVIDER_PROMOTION_CONTEXT;
   if(!r->demandActivation_)return RISC_PROVIDER_PROMOTION_ALREADY_READY;
   r->promotionRunning_=true;
-  while(r->granted_<r->driverCount_) {
-    const auto& d=r->drivers_[r->granted_];
+  size_t active=0;
+  for(size_t i=0;i<r->driverCount_;++i) {
+    const auto& d=r->drivers_[i];
+    if(r->demandRetention_ && !r->graph_.activeFrom(d.id,d.provides,d.api,d.instance))continue;
+    ++active;
+    if(r->grants_[i].slot)continue;
     auto grant=r->graph_.acquireFrom(d.id,d.provides,d.api,d.instance);
-    if(grant.slot)r->grants_[r->granted_++]=grant;
+    if(grant.slot)r->grants_[i]=grant;
     // start/cleanup can expose native uncertainty even without a graph grant.
     if(!r->promotionSafe()) {
       r->retained_=true;r->active_=false;r->promotionRunning_=false;
@@ -30,5 +34,8 @@ int32_t Runtime::promoteProviders(void* context) {
     }
   }
   r->demandActivation_=false;r->promotionRunning_=false;
+  if(r->demandRetention_) {
+    RISC_STAGE_LOG("providers retention armed active=%u deferred=%u",unsigned(active),unsigned(r->driverCount_-active));
+  }
   return RISC_PROVIDER_PROMOTION_OK;
 }
