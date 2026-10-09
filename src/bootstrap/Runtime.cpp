@@ -668,6 +668,7 @@ bool Runtime::launchDefault() {
      (fileOpen_.receiver<0 || size_t(fileOpen_.receiver)>=policyCount_ ||
       appPolicy_!=&policies_[fileOpen_.receiver]))return false;
   strcpy(queued_,default_);
+  RISC_STAGE_LOG("app default-request file=%s result=accepted",default_);
   RiscPerf::emit(20);
   return true;
 }
