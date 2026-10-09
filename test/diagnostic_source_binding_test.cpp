@@ -1,5 +1,5 @@
 #include "bootstrap/Runtime.h"
-#include "ports/esp32s3/SleepDiagnostics.h"
+#include "ports/esp32s3/NativeDiagnosticBinding.h"
 #include <RiscDiagnosticSourceV1.h>
 #include <Arduino.h>
 #include <cassert>
@@ -21,15 +21,7 @@ extern "C" int32_t risc_native_diagnostic_read(uint32_t slot,char* out,uint32_t 
  std::memcpy(out,"boot snapshot",14);*written=13;*sequence=0;*revision=3;return 1;
 }
 #endif
-static bool bind(Runtime& runtime){
-#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
- if(const auto* source=RiscDiagnostics::nativeSource())
-  return runtime.registerPlatform(RISC_DIAGNOSTIC_SOURCE_CAPABILITY,1,Runtime::Scope::Global,0,source);
-#else
- (void)runtime;
-#endif
- return true;
-}
+static bool bind(Runtime& runtime){return RiscDiagnostics::bindNativeSource(runtime);}
 static int32_t unusedRead(void*,uint32_t,char*,uint32_t,uint32_t*,uint64_t*,uint32_t*){assert(false);return -1;}
 static void registration(){
  const risc_diagnostic_source_api_v1 table={1,sizeof(table),nullptr,unusedRead};

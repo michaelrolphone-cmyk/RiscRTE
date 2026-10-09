@@ -13,6 +13,11 @@ Demand mode skips only the eager boot-owned acquisitions. The existing app
 dependencies first. Merely selecting or authorizing a provider does not start it.
 The policy grants no new capability, instance, import or package authority.
 
+An explicitly selected driver may additionally request
+[`"boot_start": "cold"`](COLD_PROVIDER_START.md) for one session-owned startup
+grant on a non-deep boot. The rest of the graph retains its selected demand
+policy, and deep wakes do not receive that startup grant.
+
 ## Validation boundaries
 
 `Runtime::prepare` still validates the complete board, typed configurations,

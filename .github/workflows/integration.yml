@@ -99,6 +99,8 @@ jobs:
           SANITIZE=1 bash test/run_retained_yield_test.sh
           bash test/run_demand_activation_test.sh
           SANITIZE=1 bash test/run_demand_activation_test.sh
+          bash test/run_cold_provider_start_test.sh
+          SANITIZE=1 bash test/run_cold_provider_start_test.sh
           bash test/run_demand_retention_test.sh
           SANITIZE=1 bash test/run_demand_retention_test.sh
           RISC_APP_POLICY_ROWS=17 bash test/run_demand_retention_test.sh
@@ -146,6 +148,8 @@ jobs:
           bash test/run_store_audit_test.sh
           SANITIZE=1 bash test/run_store_audit_test.sh
           bash test/run_native_bank_test.sh
+          NATIVE_DIAGNOSTIC_OBSERVER=1 bash test/run_native_bank_test.sh
+          SANITIZE=1 NATIVE_DIAGNOSTIC_OBSERVER=1 bash test/run_native_bank_test.sh
           APP_DATA_TEST=1 bash test/run_native_bank_test.sh
           SANITIZE=1 bash test/run_native_bank_test.sh
           bash test/run_provisioning_test.sh

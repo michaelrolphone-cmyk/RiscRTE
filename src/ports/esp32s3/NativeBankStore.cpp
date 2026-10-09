@@ -9,6 +9,7 @@
 #include "CpuPort.h"
 #include "NativeBoard.h"
 #include "NativeRetainedWake.h"
+#include "NativeDiagnosticBinding.h"
 #include "runtime/update/Cohort.h"
 #include <Arduino.h>
 #include <RiscBuildIdentity.h>
@@ -487,7 +488,8 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
   },cohortStatus,beginCohort};
 bool bindProvisioningCandidate(RiscBoot::Runtime& candidate){
   return candidateCpu && provisionState && prepared && confirmed && !pending && !runtime && operationSafe() &&
-    candidateCpu->bind(candidate) && candidate.registerPlatform(RISC_BANK_STORE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&api);
+    candidateCpu->bind(candidate) && candidate.registerPlatform(RISC_BANK_STORE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&api) &&
+    RiscDiagnostics::bindNativeSource(candidate);
 }
 bool partition(const esp_partition_t*& out,esp_partition_type_t type,esp_partition_subtype_t subtype,const char* label,uint32_t offset,uint32_t size){
   out=esp_partition_find_first(type,subtype,label);return out && !out->encrypted && out->address==offset && out->size==size;

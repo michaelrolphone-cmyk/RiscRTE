@@ -5,6 +5,11 @@ Runtime 0.1.63 accepts the exact top-level boot-profile value
 `"demand"` behavior are unchanged. The new value is owner-provisioned policy;
 neither wake class nor package identity selects it automatically.
 
+The separate per-driver [`"boot_start": "cold"`](COLD_PROVIDER_START.md) opt-in
+can start and pin one selected closure before app entry on non-deep boots.
+Promotion reuses that existing slot. Other providers and all deep-wake startup
+paths keep the demand-retained behavior below.
+
 Before promotion, the new policy has ordinary demand lifetime. An authorized
 acquire activates only its exact provider and dependency closure. Releasing the
 last consumer can stop/unmap them. A later acquire before promotion can therefore

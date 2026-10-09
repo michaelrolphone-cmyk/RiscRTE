@@ -23,7 +23,7 @@ static AppDataBackend data{nullptr,
  [](void*,uint32_t,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*){assert(false);return -1;},
  [](void*,uint32_t,const char*,uint64_t,const void*,uint32_t){assert(false);return -1;},
  [](void*){return safe;}};
-static Port port(){Port p{owner,health,delay,log,bind,&kv};p.appData=&data;return p;}
+static Port port(){Port p{owner,health,delay,log,bind,&kv};p.appData=&data;p.coldBoot=[](){assert(false);return false;};return p;}
 static void save(const fs::path& path,const std::string& value){fs::create_directories(path.parent_path());std::ofstream file(path);file<<value;assert(file.good());}
 static void save(const fs::path& path,const JsonDocument& doc){std::string s;serializeJson(doc,s);save(path,s);}
 static JsonDocument read(const fs::path& path){JsonDocument result;assert(readJson(path.c_str(),result));return result;}
@@ -69,6 +69,11 @@ int main(int argc,char** argv){
   if(accepted!=expected)std::cerr<<"candidate error: "<<candidate->error()<<"\n";
   assert(accepted==expected && bindings==1);
  };
+ check(true);assert(apps==20 && drivers==18);
+ // A staged cold-start selection is admitted and fully inspected without
+ // sampling the running boot class, consuming RTC state or activating code.
+ auto cold=read(next/"boot.json");cold["provider_activation"]="demand-retained";
+ cold["drivers"][0]["boot_start"]="cold";save(next/"boot.json",cold);
  check(true);assert(apps==20 && drivers==18);
  store(next,24,24);check(true);assert(apps==24 && drivers==24);
  store(next,25,24);check(false);store(next,24,25);check(false);

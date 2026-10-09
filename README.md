@@ -4,6 +4,8 @@ Runtime 0.1.78 adds an optional provider-only copied native diagnostic source
 and a post-output native drain for persistent product diagnostics. Both depend
 on the existing default-off native observer selection; storage ownership and
 product log policy remain external. See [the source and drain contract](docs/NATIVE_DIAGNOSTIC_OBSERVER.md).
+An explicit per-driver [cold-boot start](docs/COLD_PROVIDER_START.md) can activate
+one admitted closure before app entry while leaving deep wakes demand-only.
 This branch is based on canonical 0.1.76; 0.1.77 remains separately reserved for
 the unqualified request_default change and is not included here.
 

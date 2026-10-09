@@ -25,6 +25,20 @@ RiscRetainedWake::Store* backend(){static RiscRetainedWake::Image image{};static
 #include <map>
 #include <memory>
 #include <esp_flash.h>
+static bool diagnosticSourceAvailable=true;
+static unsigned diagnosticSourceLookups=0,diagnosticSourceReads=0;
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+namespace RiscDiagnostics {
+// Binding test double only. Production source copying/owner guards are covered
+// by native_diagnostic_observer_test and diagnostic_source_binding_test.
+const risc_diagnostic_source_api_v1* nativeSource(){
+ ++diagnosticSourceLookups;
+ static const risc_diagnostic_source_api_v1 source={1,sizeof(source),nullptr,
+  [](void*,uint32_t,char*,uint32_t,uint32_t*,uint64_t*,uint32_t*)->int32_t{++diagnosticSourceReads;assert(false);return -1;}};
+ return diagnosticSourceAvailable?&source:nullptr;
+}
+}
+#endif
 static const char* unavailableImport=nullptr;
 static bool modelProvisionFiles=false;
 static FILE* nativeOpen(const char* path,const char* mode){return std::fopen(path,mode);}
@@ -233,6 +247,34 @@ static void firmware(unsigned bank,const char* version,const char* abi=nullptr){
 int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
+ if(mode=="diagnostic-candidate" || mode=="diagnostic-candidate-absent"){
+   assert(argc==3);using namespace RiscBankStore;
+   const std::string root=argv[2];std::filesystem::create_directories(root);
+   const auto file=[&](const char* name,const char* text){std::ofstream(root+"/"+name)<<text;};
+   file("board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})");
+   file("boot.json",R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand-retained","drivers":[{"manifest":"driver.json","boot_start":"cold"}]})");
+   file("driver.json",R"({"type":"driver","id":"diagnostic-consumer","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"driver.elf","requires":[{"capability":"platform.clock","api":1},{"capability":"platform.bank-store","api":1},{"capability":"platform.diagnostic-source","api":1}],"provides":[{"capability":"test.diagnostic-consumer","api":1}]})");
+   diagnosticSourceAvailable=mode=="diagnostic-candidate";
+   isOwner=own;operationIsSafe=safe;prepared=confirmed=true;
+   auto hardware=admissionHardware();RiscCpu::Port metadataCpu(hardware);
+   ProvisionState state({},hardware,nullptr,nullptr);provisionState=&state;candidateCpu=&metadataCpu;
+   auto* wake=RiscCpu::NativeRetainedWake::backend();assert(!wake->ready());
+   RiscBoot::Port port{own,nullptr,nullptr,nullptr,bindProvisioningCandidate};
+   port.retainedWake=wake;port.coldBoot=[](){assert(false);return false;};
+   RiscBoot::Runtime candidate(port);
+   const bool expected=RISC_NATIVE_DIAGNOSTIC_OBSERVER && diagnosticSourceAvailable;
+   assert(candidate.prepare(root.c_str())==expected);
+   if(expected){
+     unsigned images=0;
+     assert(candidate.inspectImages([](void* context,const char*,bool){++*static_cast<unsigned*>(context);return true;},&images));
+     assert(images==2);
+   }else assert(!strcmp(candidate.error(),"missing scoped trusted platform provider"));
+   assert(diagnosticSourceLookups==unsigned(bool(RISC_NATIVE_DIAGNOSTIC_OBSERVER)) && !diagnosticSourceReads);
+   assert(!wake->ready() && !hardwareCalls && !writes && !selectorCalls && !restarts);
+   candidateCpu=nullptr;provisionState=nullptr;
+   std::cout<<"Production provisioning candidate diagnostic binding: "<<mode<<" flag="<<RISC_NATIVE_DIAGNOSTIC_OBSERVER<<" metadata-only PASS\n";
+   return 0;
+ }
  if(mode.find("image-")==0){assert(argc==4);compactNative(mode,argv[2],argv[3]);return 0;}
  if(mode=="boot-cost"){assert(argc==3 || argc==4);bootCost(argv[2],argc==4?argv[3]:nullptr);return 0;}
  if(mode=="boot-records"){assert(argc==2);bootRecords();return 0;}

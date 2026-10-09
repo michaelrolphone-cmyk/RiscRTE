@@ -15,4 +15,4 @@ c++ "${san[@]}" "${policy[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-fie
 "$build/test" "$build"
 c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror "${incs[@]}" -I"$repo/test/retained_wake_shim" -I"$repo/test/native_sleep_shim" \
  "$repo/src/ports/esp32s3/NativeRetainedWake.cpp" "$repo/test/native_retained_wake_test.cpp" -o "$build/native"
-for mode in 0 1 2 3 4 5 6;do "$build/native" "$mode";done
+for mode in {0..18};do "$build/native" "$mode";done

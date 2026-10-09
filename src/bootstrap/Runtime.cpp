@@ -621,8 +621,12 @@ bool Runtime::prepare(const char* root) {
   // Read all manifests and validate mappings before registering/activating modules.
   for(JsonObjectConst item:c["drivers"].as<JsonArrayConst>()) {
     Driver& d=drivers_[driverCount_]; int64_t instance=0;
-    if(!keys(item,{"manifest"},{"instance_id","key_value"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+    if(!keys(item,{"manifest"},{"instance_id","key_value","boot_start"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,d.elf,sizeof(d.elf)) || (!item["instance_id"].isNull() && !integer(item["instance_id"],1,INT32_MAX,instance))) return fail("invalid driver selection");
+    if(!item["boot_start"].isUnbound()) {
+      if(!demandActivation_ || !eq(item["boot_start"],"cold"))return fail("invalid driver boot start policy");
+      d.coldBootStart=true;
+    }
     d.instance=instance; JsonDocument manifestDoc;
     if(!readJson(d.elf,manifestDoc,&metadataCloseRetained_) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
     if(!providerPolicy(item,providerStorage_[driverCount_])) return false;
@@ -895,6 +899,13 @@ bool Runtime::reclaimAppImages() {
 bool Runtime::run() {
   if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained_) return fail("runtime not launchable");
   prepared_=false; currentRuntime=this;
+  bool coldBoot=false;
+  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].coldBootStart) {
+    if(!port_.coldBoot){currentRuntime=nullptr;return fail("cold provider boot classification unavailable");}
+    coldBoot=port_.coldBoot();
+    if(!port_.owner()){currentRuntime=nullptr;return fail("cold provider boot owner unavailable");}
+    break;
+  }
 #ifdef ESP_PLATFORM
   static const esp_elfsym symbols[]={{"risc_runtime_get_api",reinterpret_cast<const void*>(&risc_runtime_get_api)},ESP_ELFSYM_END};
   if(esp_elf_register_symbol(symbols)) { revokeProviders(); currentRuntime=nullptr; return fail("runtime API registration failed"); }
@@ -903,17 +914,22 @@ bool Runtime::run() {
   RISC_STAGE_LOG("providers activation mode=%s selected=%u",demandRetention_?"demand-retained":demandActivation_?"demand":"eager",unsigned(driverCount_));
 #if RISC_STAGE_LOGS
   if(demandActivation_)for(size_t i=0;i<driverCount_;++i){
-    RISC_STAGE_LOG("provider deferred id=%s reason=demand-until-acquired",drivers_[i].id);
+    if(coldBoot && drivers_[i].coldBootStart)continue;
+    RISC_STAGE_LOG("provider deferred id=%s reason=%s",drivers_[i].id,
+                   drivers_[i].coldBootStart?"non-cold-boot":"demand-until-acquired");
   }
 #endif
-  for(size_t i=0;!demandActivation_ && i<driverCount_;++i) {
+  for(size_t i=0;i<driverCount_;++i) {
+    const bool coldStart=demandActivation_ && coldBoot && drivers_[i].coldBootStart;
+    if(demandActivation_ && !coldStart)continue;
     char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
     grants_[i]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
-    if(!grants_[i].slot) {
-      ok=fail(graph_.lastError());port_.log(error_);
+    const bool coldSafe=!coldStart || promotionSafe();
+    if(!grants_[i].slot || !coldSafe) {
+      ok=fail(coldSafe?graph_.lastError():"cold provider activation retained; restart required");port_.log(error_);
       // A grantless failed start can retain code and dependency custody too.
       // Do not run the final boot cleanup/retry path after that barrier.
-      if(!graph_.activationSafe()) {
+      if(!coldSafe || !graph_.activationSafe()) {
         retained_=true;revokeProviders();
         port_.log("RTE_CLEANUP provider-activation=retained");
       }

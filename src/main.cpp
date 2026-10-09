@@ -13,6 +13,7 @@ extern "C" const char risc_app_policy_rows[]=RISC_APP_POLICY_ROWS_MARKER;
 #include "ports/esp32s3/NativeBoard.h"
 #include "ports/esp32s3/CooperativeDelay.h"
 #include "ports/esp32s3/SleepDiagnostics.h"
+#include "ports/esp32s3/NativeDiagnosticBinding.h"
 #include <cstdarg>
 #include <esp_timer.h>
 #include "diagnostics/Performance.h"
@@ -107,12 +108,7 @@ bool bindPlatforms(RiscBoot::Runtime& runtime){
   && RiscBankStore::bind(runtime)
 #endif
   ))return false;
-#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
-  if(const auto* source=RiscDiagnostics::nativeSource())
-    return runtime.registerPlatform(RISC_DIAGNOSTIC_SOURCE_CAPABILITY,RISC_DIAGNOSTIC_SOURCE_API_V1,
-                                    RiscBoot::Runtime::Scope::Global,0,source);
-#endif
-  return true;
+  return RiscDiagnostics::bindNativeSource(runtime);
 }
 bool appExitSafe(){return cpu.appExitSafe()
 #ifdef RISC_PAIRED_BANKS
@@ -139,9 +135,9 @@ bool confirmBoot(){
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot});
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot});
 #endif
 }
 void setup() {
@@ -268,7 +264,7 @@ void setup() {
 #else
     ,nullptr
 #endif
-    ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay
+    ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot
   });
   if(!retainedRuntime){
     RISC_STAGE_LOG("boot failed reason=runtime-metadata-psram");

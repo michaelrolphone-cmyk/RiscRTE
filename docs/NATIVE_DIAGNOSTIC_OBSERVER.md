@@ -18,13 +18,16 @@ int32_t risc_native_diagnostic_read(uint32_t slot, char *out, uint32_t capacity,
 
 When this hook is present, `RiscDiagnostics::nativeSource()` returns the versioned
 `risc_diagnostic_source_api_v1` table from `sdk/driver/RiscDiagnosticSourceV1.h`.
-`main.cpp` registers it as the global, provider-only dependency
+Live boot and fresh provisioning admission use the same optional binding helper
+to register it as the global, provider-only dependency
 `platform.diagnostic-source@1`. Absent hooks return no table and add no platform.
 The global allowlist accepts only version 1 with global scope, instance zero,
 the complete table prefix and a read callback. Providers declare the dependency
 normally; missing sources fail graph validation before module activation. An app
 cannot acquire this capability, including through an explicit declaration/grant.
 There is no native hook ELF import or new app authority.
+Metadata-only binding never reads a record, starts a provider or consumes wake
+state. Flag-off and absent-hook candidates receive no source table.
 
 The table has only `api_version`, `struct_size`, `context` and `read`. A read
 requires the diagnostic owner, its exact context and no active output/read.
@@ -69,6 +72,11 @@ outputs, copied-buffer independence, zero sequence and unchanged connected
 output. `test/run_diagnostic_source_binding_test.sh` loads real host provider/app
 fixtures to check dependency binding, absent/off rejection, exact global v1
 registration and explicit/live app denial. Both support ASan/UBSan. Existing
+`run_native_bank_test.sh` coverage invokes the production provisioning-candidate
+binder with source-present, source-absent and flag-off compositions. It validates
+the required source and cold-start metadata without native reads, hardware I/O,
+provider execution or wake-state consumption. Use
+`NATIVE_DIAGNOSTIC_OBSERVER=1` for its opted-in composition. Existing
 four-mode stage diagnostics remain separate regression coverage. Product
 composition validates its own target call linkage and retained memory placement.
 No device qualification is implied.

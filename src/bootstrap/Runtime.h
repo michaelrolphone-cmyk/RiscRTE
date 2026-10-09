@@ -51,6 +51,9 @@ struct Port {
   // Must not poll diagnostics/providers, inspect storage, or perform cleanup.
   // No fallback to delay: that callback may perform ordinary cooperative work.
   void (*retainedDelay)(uint32_t)=nullptr;
+  // Optional native boot classification; read-only and independent of app RTC
+  // records. Required at run() only for an explicit boot_start="cold" policy.
+  bool (*coldBoot)()=nullptr;
 };
 class Runtime final {
  public:
@@ -119,6 +122,7 @@ class Runtime final {
     RuntimeProviders::RequirementV2 requirements[RuntimeProviders::GraphV2::kMaxRequirements]{};
     char names[RuntimeProviders::GraphV2::kMaxRequirements][96]{};
     size_t count=0;
+    bool coldBootStart=false;
   };
   bool fail(const char* reason) { if (reason != error_) snprintf(error_,sizeof(error_),"%s",reason); return false; }
   bool manifest(JsonObjectConst, Driver&);
