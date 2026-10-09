@@ -124,6 +124,11 @@ bool Runtime::fileOpenAfterRun(bool completed) {
     if(completed && !strcmp(queued_,policies_[fileOpen_.receiver].elf))fileOpen_.phase=FileOpenState::Phase::Receiving;
     else fileOpen_={};
   }else if(fileOpen_.phase==FileOpenState::Phase::Receiving) {
+    // Only explicit Home can queue during Receiving. runOne has already
+    // finalized/unmapped the receiver and revoked every grant successfully.
+    if(completed && queued_[0] && !strcmp(queued_,default_)) {
+      fileOpen_={};return false;
+    }
     fileOpen_.result=completed?0:-1; // ESP_OK / ESP_FAIL: invocation, not content parsing.
     memset(fileOpen_.source,0,sizeof(fileOpen_.source));
     fileOpen_.phase=FileOpenState::Phase::Result;

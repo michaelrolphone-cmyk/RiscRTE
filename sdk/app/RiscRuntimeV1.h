@@ -68,12 +68,20 @@ typedef struct {
   /* Copies a generic stream client for the current owner invocation. The
    * existing explicit capability grant is still required to open a session. */
   bool (*stream_client)(struct risc_stream_client_v1* out);
+  /* Optional explicit Home handoff. Owner task, app_main only, clean custody,
+   * and no pending request. Queues the configured default without a path or
+   * additional capability authority. Return immediately after true. A file
+   * receiver may use this to leave its caller; only successful entry/fini and
+   * complete grant cleanup suppress that normal return. Older tables lack
+   * this suffix. Check struct_size before reading the pointer. */
+  bool (*request_default)(void);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
 #define RISC_RUNTIME_RETAIN_INVOCATION_V1_SIZE (offsetof(risc_runtime_api_v1, retain_invocation) + sizeof(((risc_runtime_api_v1*)0)->retain_invocation))
 #define RISC_RUNTIME_TRACE_V1_SIZE (offsetof(risc_runtime_api_v1, trace) + sizeof(((risc_runtime_api_v1*)0)->trace))
 #define RISC_RUNTIME_STREAM_CLIENT_V1_SIZE (offsetof(risc_runtime_api_v1, stream_client) + sizeof(((risc_runtime_api_v1*)0)->stream_client))
+#define RISC_RUNTIME_DEFAULT_REQUEST_V1_SIZE (offsetof(risc_runtime_api_v1, request_default) + sizeof(((risc_runtime_api_v1*)0)->request_default))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }

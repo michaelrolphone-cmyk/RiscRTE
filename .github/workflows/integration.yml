@@ -153,6 +153,8 @@ jobs:
           python test/paired_bank_images_test.py -v
           bash test/run_startup_failure_test.sh
           SANITIZE=1 bash test/run_startup_failure_test.sh
+          bash test/run_default_request_test.sh
+          SANITIZE=1 bash test/run_default_request_test.sh
           bash test/run_file_open_test.sh
           SANITIZE=1 bash test/run_file_open_test.sh
           bash test/run_held_output_test.sh

@@ -77,6 +77,7 @@ class Runtime final {
   bool selected(uint64_t instance) const;
   bool run();
   bool launch(const char* relative);
+  bool launchDefault();
   bool health(risc_runtime_health_v1*);
   bool acquire(const char*,uint32_t,uint64_t,risc_runtime_capability_v1*);
   bool release(risc_runtime_capability_v1*);

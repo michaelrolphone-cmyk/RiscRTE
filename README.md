@@ -1,5 +1,10 @@
 # RiscRTE
 
+Runtime 0.1.77 appends an explicit configured-default handoff for app Home
+actions, including file receivers. It preserves clean teardown, owner-task
+gates and the existing file-open caller return on failure. See
+[explicit Home](docs/EXPLICIT_DEFAULT.md).
+
 Runtime 0.1.76 adds a separate owner-maintenance image for ABI2 and an offline
 entry/restoration verifier that preserves app-data and excludes NVS. Ordinary
 Runtime has no maintenance endpoint. This does not migrate native policy rows
