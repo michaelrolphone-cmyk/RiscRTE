@@ -2,7 +2,7 @@ name: Apply tested SDMMC integration
 on:
   push:
     branches: [perf/scoped-gpio-read-0188]
-    paths: ['.delivery/sdmmc-existing.patch', '.github/workflows/apply-sdmmc-fix.yml']
+    paths: ['.delivery/sdmmc-existing.patch', '.github/workflows/apply-sdmmc-fix.yml', 'test/run_scoped_gpio_read_test.sh']
 permissions:
   contents: write
 jobs:
