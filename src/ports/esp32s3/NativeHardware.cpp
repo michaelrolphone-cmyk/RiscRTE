@@ -7,6 +7,7 @@
 #include "NativeI2s.h"
 #include "NativeRadio.h"
 #include "NativeHci.h"
+#include "SleepDiagnostics.h"
 #ifdef RISC_ENABLE_RADIO_IQ
 #include "NativeRadioIq.h"
 #endif
@@ -31,6 +32,11 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <cstring>
+#if RISC_ENABLE_USB_PHY
+// Readonly, linked opt-in evidence for native candidate validation. The
+// volatile read below keeps this exact marker in the enabled target ELF.
+extern "C" const uint32_t risc_usb_phy_resource_enabled=1;
+#endif
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
 struct I2cState { bool installed=false,configured=false;int sda=-1,scl=-1; } i2c[2];
@@ -129,6 +135,13 @@ Hardware nativeHardware(bool (*owner)()){
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
+#if RISC_ENABLE_USB_PHY
+  if(*static_cast<volatile const uint32_t*>(&risc_usb_phy_resource_enabled)==1){
+    hardware.usbPhyIdle=RiscDiagnostics::usbPhyIdle;
+    hardware.usbPhySuspend=RiscDiagnostics::suspendUsbPhy;
+    hardware.usbPhyResume=RiscDiagnostics::resumeUsbPhy;
+  }
+#endif
   NativeRealtime::configure(hardware.owner);hardware.realtimeRead=NativeRealtime::read;hardware.realtimeSeed=NativeRealtime::seed;
   hardware.hciOpen=NativeHci::open;hardware.hciSend=NativeHci::send;hardware.hciReceive=NativeHci::receive;
   hardware.hciClose=NativeHci::close;hardware.hciIdle=NativeHci::idle;hardware.hciSafe=NativeHci::safe;

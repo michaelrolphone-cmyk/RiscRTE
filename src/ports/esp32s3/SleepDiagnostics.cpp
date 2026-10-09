@@ -44,6 +44,9 @@ RiscPerf::Replay performanceReplay;
 #endif
 TaskHandle_t owner=nullptr;
 bool outputting=false,unfinishedLine=false;
+#if RISC_ENABLE_USB_PHY
+bool usbFenced=false;
+#endif
 #if RISC_STAGE_LOGS
 uint32_t lostLines=0,truncatedLines=0,reportedLost=0,reportedTruncated=0;
 void noteLost(){if(lostLines!=UINT32_MAX)++lostLines;}
@@ -63,6 +66,9 @@ char sourceContext;
 struct NativeStorageDrain {
   ~NativeStorageDrain(){
     if(!risc_native_diagnostic_drain)return;
+#if RISC_ENABLE_USB_PHY
+    if(usbFenced)return;
+#endif
     draining=true;risc_native_diagnostic_drain();draining=false;
   }
 };
@@ -174,8 +180,50 @@ void start(){
   begin(journal,retain,millis(),int32_t(reset),uint32_t(esp_sleep_get_wakeup_cause()));
 #endif
 }
+#if RISC_ENABLE_USB_PHY
+bool usbPhyIdle(){return ours() && !usbFenced;}
+bool suspendUsbPhy(){
+  if(!ours() || outputting || usbFenced)return false;
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+  if(draining)return false;
+#endif
+  // Fence recovery, live output and native storage drains before HWCDC end.
+  // The pinned end disables/clears its IRQ and removes RX/TX resources.
+  usbFenced=true;OutputGuard guard;
+  Serial.end();
+  unfinishedLine=false;
+#if RISC_SLEEP_DIAGNOSTICS
+  replay.disconnect();
+#endif
+#if RISC_PERFORMANCE_TRACE
+  performanceReplay.disconnect();
+#endif
+  return ours() && Serial.available()<0 && Serial.availableForWrite()==0;
+}
+bool resumeUsbPhy(){
+  if(!ours() || outputting || !usbFenced)return false;
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+  if(draining)return false;
+#endif
+  OutputGuard guard;
+  // Provider has already stopped every endpoint/callback and restored routing.
+  // Keep the fence through a bounded raw detach delay and checked re-creation.
+  Serial.end();
+  if(!ours() || Serial.available()>=0 || Serial.availableForWrite()!=0)return false;
+  delay(20);
+  if(!ours() || !transport.begin())return false;
+#if RISC_HWCDC_SLEEP_RECOVERY
+  recovery.reset();
+#endif
+  if(!ours())return false;
+  unfinishedLine=false;usbFenced=false;return true;
+}
+#endif
 void poll(){
   if(!ours() || outputting)return;
+#if RISC_ENABLE_USB_PHY
+  if(usbFenced)return;
+#endif
   OutputGuard guard;
 #if RISC_HWCDC_SLEEP_RECOVERY
   if(!recovery.poll(transport))return;
@@ -248,6 +296,9 @@ void line(const char* text){
 #endif
 #if RISC_PERFORMANCE_TRACE
   if(performanceReplay.active()){noteLost();return;}
+#endif
+#if RISC_ENABLE_USB_PHY
+  if(usbFenced){noteLost();return;}
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
   if(!recovery.ready()){noteLost();return;}

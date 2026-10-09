@@ -7,6 +7,7 @@
 #include <RiscProviderSyncV1.h>
 #include <RiscHttpClientV1.h>
 #include <RiscRadioIqResourceV1.h>
+#include <RiscUsbPhyResourceV1.h>
 namespace RiscCpu {
 // Lowest hardware boundary. Production uses ESP-IDF; host models emulate only
 // pins, controllers and register/byte transfers, not driver/capability behavior.
@@ -77,6 +78,10 @@ struct Hardware {
   // Optional explicit shared-MOSI half-duplex mode. On attempted begin failure,
   // spiEnd must remain available to prove cleanup before the claim can release.
   bool (*spiBeginThreeWire)(uint8_t,uint8_t,uint32_t,uint8_t,uint32_t)=nullptr;
+  // Optional exclusive internal USB PHY handoff; no USB protocol/SD logic.
+  bool (*usbPhyIdle)()=nullptr;
+  bool (*usbPhySuspend)()=nullptr;
+  bool (*usbPhyResume)()=nullptr;
 };
 class Port final {
  public:
@@ -109,6 +114,7 @@ class Port final {
     bool active=false,closing=false,scanning=false; garden_radio_v1 api{}; } radios_[1];
   struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
   struct RadioIq { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_radio_iq_resource_v1 api{}; } iq_;
+  struct UsbPhy { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_usb_phy_resource_api_v1 api{}; } usb_;
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false,wakeHigh=false; uint8_t wakeModes=0; bool retiredHeld=false; } pins_[49];
   // Pin-index hints only, never authority. Collisions/stale hints are checked
   // against the current full token and scope before any write. Zero is empty.
@@ -122,6 +128,9 @@ class Port final {
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
   bool reserve(int16_t,const void*); void unreserve(int16_t,const void*);
   bool gpioScope(const RiscBoot::Runtime&,const RiscBoot::Board::Device&,Gpio&);
+  static bool usbPhyOwner(void*);
+  static bool usbPhyClaim(void*,uint64_t*);
+  static bool usbPhyRelease(void*,uint64_t);
   static bool syncOwner(void*);
   static bool syncCreate(void*,uint64_t*);
   static bool syncTryLock(void*,uint64_t);

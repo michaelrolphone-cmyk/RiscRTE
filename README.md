@@ -1,5 +1,11 @@
 # RiscRTE
 
+Runtime 0.1.80 adds an opt-in, provider-only internal USB PHY ownership lease.
+It fences the native HWCDC console and exit/sleep/restart while an ordinary USB
+provider owns the controller, preserving owner SD/SPI access and retained
+cleanup. USB descriptors, endpoints, SCSI and SD export remain in providers.
+Existing targets keep the capability disabled. See [USB PHY ownership](docs/USB_PHY_RESOURCE.md).
+
 Runtime 0.1.79 combines the explicit configured-default Home handoff from
 0.1.77 with the optional provider diagnostic source and cold-start policy from
 0.1.78. Home actions preserve clean teardown, owner-task gates and file-open

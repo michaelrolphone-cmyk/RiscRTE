@@ -1,4 +1,5 @@
 #include "Runtime.h"
+#include <RiscUsbPhyResourceV1.h>
 #include "diagnostics/Performance.h"
 #include "diagnostics/StageLog.h"
 #include "KeyValueGeneration.h"
@@ -148,13 +149,19 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
-               strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY))) return false;
+               strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
+               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
   if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
       (header[1]<sizeof(risc_diagnostic_source_api_v1) ||
        !static_cast<const risc_diagnostic_source_api_v1*>(table)->read)) return false;
+  if (!strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY)) {
+    if(api!=RISC_USB_PHY_RESOURCE_API_V1 || scope!=Scope::Global || id || header[1]<sizeof(risc_usb_phy_resource_api_v1))return false;
+    const auto* usb=static_cast<const risc_usb_phy_resource_api_v1*>(table);
+    if(usb->controller_kind!=RISC_USB_PHY_ESP32S3_OTG || usb->reserved || !usb->is_owner || !usb->claim || !usb->release)return false;
+  }
   for (size_t i=0;i<platformCount_;++i) {
     const auto& p=platforms_[i];
     if (!strcmp(p.capability,capability) && p.api==api && p.scope==scope && p.id==id) return false;
