@@ -1,13 +1,13 @@
 # RiscRTE
 
-Runtime 0.1.78 adds an optional provider-only copied native diagnostic source
-and a post-output native drain for persistent product diagnostics. Both depend
-on the existing default-off native observer selection; storage ownership and
-product log policy remain external. See [the source and drain contract](docs/NATIVE_DIAGNOSTIC_OBSERVER.md).
-An explicit per-driver [cold-boot start](docs/COLD_PROVIDER_START.md) can activate
-one admitted closure before app entry while leaving deep wakes demand-only.
-This branch is based on canonical 0.1.76; 0.1.77 remains separately reserved for
-the unqualified request_default change and is not included here.
+Runtime 0.1.79 combines the explicit configured-default Home handoff from
+0.1.77 with the optional provider diagnostic source and cold-start policy from
+0.1.78. Home actions preserve clean teardown, owner-task gates and file-open
+caller return on failure. Diagnostic storage and log policy remain product-owned.
+See [explicit Home](docs/EXPLICIT_DEFAULT.md),
+[native diagnostics](docs/NATIVE_DIAGNOSTIC_OBSERVER.md), and
+[cold-boot provider start](docs/COLD_PROVIDER_START.md).
+
 
 Runtime 0.1.76 adds a separate owner-maintenance image for ABI2 and an offline
 entry/restoration verifier that preserves app-data and excludes NVS. Ordinary

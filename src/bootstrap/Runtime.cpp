@@ -60,7 +60,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](uint32_t id,uint32_t phase,uint32_t value)->uint32_t {
       return currentRuntime && currentRuntime->active() ? RiscPerf::interaction(id,phase,value) : 0;
     },
-    [](risc_stream_client_v1* out){return currentRuntime && currentRuntime->streamClient(out);}};
+    [](risc_stream_client_v1* out){return currentRuntime && currentRuntime->streamClient(out);},
+    [](){return currentRuntime && currentRuntime->launchDefault();}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -669,6 +670,19 @@ bool Runtime::launch(const char* relative) {
   return ok;
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
+bool Runtime::launchDefault() {
+  if(promotionRunning_ || graph_.lifecycleBusy() || !active() || !entryRunning_ ||
+     retained_ || !graph_.activationSafe() || !providerStorageSafe() || queued_[0] ||
+     (port_.appExitSafe && !port_.appExitSafe()) ||
+     fileOpen_.phase==FileOpenState::Phase::Requested)return false;
+  if(fileOpen_.phase==FileOpenState::Phase::Receiving &&
+     (fileOpen_.receiver<0 || size_t(fileOpen_.receiver)>=policyCount_ ||
+      appPolicy_!=&policies_[fileOpen_.receiver]))return false;
+  strcpy(queued_,default_);
+  RISC_STAGE_LOG("app default-request file=%s result=accepted",default_);
+  RiscPerf::emit(20);
+  return true;
+}
 bool Runtime::confirmBoot() {
   return !promotionRunning_ && active() && defaultRunning_ && entryRunning_ && !queued_[0] && !retained_ &&
     providerStorageSafe() && (!port_.confirmBoot || port_.confirmBoot());

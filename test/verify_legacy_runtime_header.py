@@ -12,4 +12,4 @@ def verify(header):
     str(ROOT/'test/legacy_runtime_header_abi.c'),'-o',str(Path(temporary)/'probe.o')],check=True)
 if __name__=='__main__':
  import sys
- verify(sys.argv[1]);print('Frozen legacy Runtime header and every field/size plus four append-only callback suffixes verified')
+ verify(sys.argv[1]);print('Frozen legacy Runtime header and every field/size plus five append-only callback suffixes verified')
