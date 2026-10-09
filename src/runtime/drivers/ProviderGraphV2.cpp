@@ -341,6 +341,17 @@ void GraphV2::poll(uint32_t (*nowMs)(), void (*yield)()) {
   if (calls && yield) yield();
   polling_ = false;
 }
+void GraphV2::service(uint32_t budgetMs) {
+  if(!budgetMs || budgetMs>RISC_DRIVER_SERVICE_MAX_MS || !count_ ||
+     lifecycleBusy() || !dependencyReadSafe())return;
+  polling_=true; // Existing guard fences graph/lifecycle and recursive service.
+  for(size_t visited=0;visited<count_;++visited) {
+    const size_t index=nextService_;nextService_=(nextService_+1)%count_;
+    if(nodes_[index].module.service(budgetMs) || !dependencyReadSafe())break;
+  }
+  polling_=false;
+}
+
 GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
   if(lifecycleBusy())return {};
   LifecycleScope scope(lifecycle_);

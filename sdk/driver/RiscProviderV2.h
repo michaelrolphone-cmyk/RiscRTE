@@ -65,6 +65,22 @@ typedef struct {
     bool (*last_error)(char *destination, size_t capacity);
 } risc_driver_diagnostics_v2;
 
+/* Optional synchronous service, separate from cooperative poll. Runtime calls
+ * at explicit owner safe points outside graph/stream callbacks. One call has
+ * a total deadline <=1000 ms; check it before each bounded I/O operation. An
+ * already in-flight bounded operation may finish after the deadline. Never
+ * recurse into lifecycle, retain caller pointers, or continue after revocation.
+ * No pending work must return without hardware/storage I/O. This tagged suffix
+ * cannot be confused with the unrelated stream-session extension. */
+#define RISC_DRIVER_SERVICE_TAG_V1 UINT32_C(0x53525631)
+#define RISC_DRIVER_SERVICE_VERSION_V1 1u
+#define RISC_DRIVER_SERVICE_MAX_MS 1000u
+typedef struct {
+    risc_driver_poll_v2 poll;
+    uint32_t extension_tag, extension_version;
+    void (*service)(uint32_t budget_ms);
+} risc_driver_service_v2;
+
 /* Minimum accepted ABI-v2 struct ends before the optional quiesce pointer. */
 #define RISC_DRIVER_V2_BASE_SIZE offsetof(risc_driver_v2, quiesce)
 

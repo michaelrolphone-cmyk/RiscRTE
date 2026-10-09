@@ -410,6 +410,8 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     if(!installedFiles_->end())return false;
     installedVolumeContext_=context;installedVolume_=volumeTable(context);grant.api=&installedVolume_;
   } else if (allowed->driver>=0) {
+    serviceProviders();
+    if(!appExitBarrier())return false;
     const auto& driver=drivers_[allowed->driver];
     if(demandRetention_ && !demandActivation_ && !grants_[allowed->driver].slot) {
       // Only the first real acquisition after promotion creates session custody.
@@ -427,7 +429,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
       if(!pin.slot)return fail(graph_.lastError());
     }
     grant.provider=graph_.acquireFrom(driver.id,capability,api,driver.instance);
-    if (!grant.provider.slot) return false;
+    if (!grant.provider.slot) {serviceProviders();(void)appExitBarrier();return false;}
     grant.api=graph_.interfaceFor(grant.provider);
   } else grant.api=platforms_[allowed->platform].table;
   const auto* header=static_cast<const uint32_t*>(grant.api);
@@ -436,6 +438,8 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant={}; return false;
   }
   grant.live=true;grant.generation=++grantGeneration_;grant.invocation=streams_.context();
+  serviceProviders();
+  if(!appExitBarrier())return false;
   out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
 }
 int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
@@ -736,6 +740,12 @@ bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* a
   if(!ok){memset(output,0,n);return false;}
   *actual=uint32_t(n);return true;
 }
+void Runtime::serviceProviders() {
+  if(currentRuntime!=this || !port_.owner() || retained_ || promotionRunning_ ||
+     streams_.busy() || graph_.lifecycleBusy() || !appDataExitSafe() ||
+     !providerStorageSafe())return;
+  graph_.service(RISC_DRIVER_SERVICE_MAX_MS);
+}
 void Runtime::yield(uint32_t ms) {
   if(currentRuntime!=this || !port_.owner() || yielding_ || promotionRunning_ ||
      streams_.busy() || graph_.lifecycleBusy() || (!active_ && !retained_))return;
@@ -744,6 +754,7 @@ void Runtime::yield(uint32_t ms) {
   if(!retained_) {
     // Poll work is bounded separately; each admitted yield cooperates once.
     if(appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
+    serviceProviders();
     if(!graph_.activationSafe())(void)appExitBarrier();
   }
   const uint32_t requested=ms<1?1:ms>50?50:ms;
@@ -853,6 +864,8 @@ bool Runtime::runOne(const char* name) {
   defaultRunning_=!strcmp(name,default_);entryRunning_=ok;
   if(ok) {
     RISC_STAGE_LOG("app entry begin file=%s",name);
+    serviceProviders();
+    if(!appExitBarrier())return false;
     port_.log("RTE_APP phase=entry");
     RiscPerf::emit(16);
     entry();
@@ -923,6 +936,7 @@ bool Runtime::run() {
     const bool coldStart=demandActivation_ && coldBoot && drivers_[i].coldBootStart;
     if(demandActivation_ && !coldStart)continue;
     char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
+    serviceProviders();
     grants_[i]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
     const bool coldSafe=!coldStart || promotionSafe();
     if(!grants_[i].slot || !coldSafe) {
@@ -936,6 +950,8 @@ bool Runtime::run() {
       break;
     }
     std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=ready",drivers_[i].id);port_.log(stage);
+    serviceProviders();
+    if(!graph_.activationSafe()){ok=fail("provider service retained; restart required");retained_=true;revokeProviders();break;}
     port_.delay(1);
   }
   // The active store is immutable until restart. Paired updates stage another

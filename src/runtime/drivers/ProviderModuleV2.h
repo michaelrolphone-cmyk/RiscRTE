@@ -83,6 +83,7 @@ class ModuleV2 final {
   const risc_stream_session_provider_v1* streamSessions() const { return state_ == State::Active ? streamSessions_ : nullptr; }
   bool streamSafe() const { return !streamApi_.streams.context || !streamHost_->safe || streamHost_->safe(streamApi_.streams.context); }
   bool poll(uint32_t budgetMs);
+  bool service(uint32_t budgetMs);
   bool pinConsumer();
   bool unpinConsumer();
   bool unload();

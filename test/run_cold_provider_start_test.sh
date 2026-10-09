@@ -7,7 +7,7 @@ incs=(-I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware
 flags=("${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared "${incs[@]}")
 link=();if [[ "$(uname)" == Darwin ]];then link=(-undefined dynamic_lookup);fi
 for id in root leaf unused;do
- extra=();if [[ $id == leaf ]];then extra=(-DLEAF);fi
+ extra=();if [[ $id == leaf ]];then extra=(-DLEAF -DSYNCHRONOUS_SERVICE);fi
  cc "${flags[@]}" "${link[@]}" "${extra[@]}" -DPROVIDER_ID=\"$id\" "$repo/test/fixtures/demand_provider.c" -o "$build/$id.elf"
 done
 cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/demand_app.c" -o "$build/default.elf"

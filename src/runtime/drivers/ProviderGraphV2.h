@@ -74,6 +74,7 @@ class GraphV2 final {
   // return cooperatively; an overrun cannot be preempted. No graph lock.
   // Optional scheduler yield runs once after work; omit when caller yields.
   void poll(uint32_t (*nowMs)(), void (*yield)());
+  void service(uint32_t budgetMs);
   bool hasProvider(const char* providerId, const char* capability, uint32_t api) const;
   // Stored lifecycle state only. Does not load, validate or acquire a provider.
   bool activeFrom(const char* providerId, const char* capability, uint32_t api, uint64_t instance=0) const;
@@ -164,6 +165,7 @@ class GraphV2 final {
   uint32_t nextGeneration_ = 0;
   size_t nextPoll_ = 0;
   bool polling_ = false;
+  size_t nextService_ = 0;
   bool streamCallback_ = false;
   bool lifecycle_ = false;
   struct LifecycleScope {

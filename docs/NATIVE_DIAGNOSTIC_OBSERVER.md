@@ -62,7 +62,7 @@ path, rotation, record selection or persistence policy. A platform that supplies
 this hook owns any native storage work and its lifetime/error rules. A missing
 hook is harmless, and disabling the option removes all three hook call sites.
 
-The X4 platform uses its own retained boot record to copy only named boot/provider/app milestones and the first completed display frame. Runtime does not own that record, select those events, write flash/NVS or infer why hardware failed. Retained evidence cannot prove survival across battery removal, brownout or external reset.
+The X4 platform owns its full text capture, persistence, and small retained crash summary. Runtime does not select product events, write flash/NVS, or infer why hardware failed. Retained RAM evidence cannot prove survival across battery removal, brownout, or external reset.
 
 Validation: `test/run_native_diagnostic_observer_test.sh` compiles the production
 diagnostic source with present/absent/disabled hooks, independently absent read
@@ -80,3 +80,21 @@ provider execution or wake-state consumption. Use
 four-mode stage diagnostics remain separate regression coverage. Product
 composition validates its own target call linkage and retained memory placement.
 No device qualification is implied.
+
+## Optional ordered text source
+
+A table whose `struct_size` covers `risc_diagnostic_source_api_v1_trace` adds
+`read_after(context, after, out, capacity, written, next)`. The v1 snapshot prefix
+is unchanged. `after=0` starts an immutable-prefix byte stream; each copied
+chunk contains complete newline-terminated lines and `next=after+written`.
+A consumer advances only after its own durable close. Retrying a cursor is
+idempotent. ABSENT means no more text yet. No acknowledgements, allocation,
+I/O, provider calls or borrowed storage pointers occur in this callback.
+The wrapper rejects foreign tasks, recursion, invalid context, partial lines,
+invalid cursors/results and all prior snapshot bounds. An absent native tail
+keeps the original table size. The hook is
+`risc_native_diagnostic_read_after(uint64_t,char*,uint32_t,uint32_t*,uint64_t*)`.
+
+Copied text alone does not authorize storage. A product's admitted provider can
+use the separately bounded [synchronous service](PROVIDER_SERVICE.md) to persist
+it at owner safe points, with its own ordinary synchronization and custody.

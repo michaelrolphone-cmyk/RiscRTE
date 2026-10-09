@@ -7,11 +7,12 @@ flags=(-std=c++17 -O1 -Wall -Wextra -Werror -pedantic)
 if [[ "${SANITIZE:-0}" == 1 ]]; then
  flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -fno-pie -no-pie -g)
 fi
-for profile in present absent absent-read absent-drain observer-only disabled; do
+for profile in present absent absent-read absent-drain absent-trace observer-only disabled; do
  define=(-DRISC_NATIVE_DIAGNOSTIC_OBSERVER=1)
  stage=1;usb=1
  if [[ $profile == absent ]]; then define+=(-DTEST_ABSENT_OBSERVER=1 -DTEST_ABSENT_READ=1 -DTEST_ABSENT_DRAIN=1); fi
  if [[ $profile == absent-read ]]; then define+=(-DTEST_ABSENT_READ=1); fi
+ if [[ $profile == absent-trace ]]; then define+=(-DTEST_ABSENT_TRACE=1); fi
  if [[ $profile == absent-drain ]]; then define+=(-DTEST_ABSENT_DRAIN=1); fi
  if [[ $profile == observer-only ]]; then stage=0;usb=0; fi
  if [[ $profile == disabled ]]; then define=(-DRISC_NATIVE_DIAGNOSTIC_OBSERVER=0); fi

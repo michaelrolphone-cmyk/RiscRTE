@@ -127,6 +127,7 @@ class Runtime final {
   bool fail(const char* reason) { if (reason != error_) snprintf(error_,sizeof(error_),"%s",reason); return false; }
   bool manifest(JsonObjectConst, Driver&);
   bool validateGraph();
+  void serviceProviders();
   bool runOne(const char*);
   bool appPolicies(JsonVariantConst);
   bool revokeApp();

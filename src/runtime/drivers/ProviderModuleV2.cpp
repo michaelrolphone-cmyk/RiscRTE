@@ -42,6 +42,7 @@ bool validRequest(const char* expectedId, const char* expectedCapability,
          expectedCapability[0] && expectedApi && validDependencies(deps, count);
 }
 void trace(const char* id, const char* stage) {
+  RISC_STAGE_LOG("provider reference id=%s stage=%s",id?id:"?",stage);
   (void)id; (void)stage;
 #ifdef ESP_PLATFORM
   LOG_INF("PROV", "PROVREF id=%s stage=%s", id ? id : "?", stage);
@@ -134,6 +135,15 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
           !sessions->close || !extended->poll.streams.bind_streams || !hasQuiesce(candidate)) {
         report(expectedId, "stream-session-interface-invalid"); return false;
       }
+    }
+  }
+  if (candidate->struct_size >= offsetof(risc_driver_service_v2,extension_tag)+sizeof(uint32_t)) {
+    const auto* service = reinterpret_cast<const risc_driver_service_v2*>(candidate);
+    if (service->extension_tag == RISC_DRIVER_SERVICE_TAG_V1 &&
+        (candidate->struct_size < sizeof(*service) ||
+         service->extension_version != RISC_DRIVER_SERVICE_VERSION_V1 ||
+         !service->service || !hasQuiesce(candidate))) {
+      report(expectedId, "service-extension-invalid"); return false;
     }
   }
   bool bound = true;
@@ -258,6 +268,14 @@ bool ModuleV2::poll(uint32_t budgetMs) {
   if (!extended->poll) return false;
   extended->poll(budgetMs);
   return true;
+}
+bool ModuleV2::service(uint32_t budgetMs) {
+  if (!budgetMs || budgetMs>RISC_DRIVER_SERVICE_MAX_MS || state_ != State::Active ||
+      !streamSafe() || !driver_ || !consumers_ || driver_->struct_size < sizeof(risc_driver_service_v2))return false;
+  const auto* extended=reinterpret_cast<const risc_driver_service_v2*>(driver_);
+  if(extended->extension_tag!=RISC_DRIVER_SERVICE_TAG_V1 ||
+     extended->extension_version!=RISC_DRIVER_SERVICE_VERSION_V1 || !extended->service)return false;
+  extended->service(budgetMs);return true;
 }
 bool ModuleV2::pinConsumer() {
   if (state_ != State::Active || consumers_ == std::numeric_limits<uint32_t>::max())
