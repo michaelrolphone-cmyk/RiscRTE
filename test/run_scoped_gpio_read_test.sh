@@ -22,7 +22,9 @@ mkdir -p "$build/baseline/ports/esp32s3"
 for file in CpuPort.cpp CpuPort.h;do git -C "$repo" show "$base:src/ports/esp32s3/$file" > "$build/baseline/ports/esp32s3/$file";done
 for variant in baseline current;do
  extra=();source="$repo/src/ports/esp32s3/CpuPort.cpp"
- if [[ "$variant" == baseline ]];then extra=(-I"$build/baseline");source="$build/baseline/ports/esp32s3/CpuPort.cpp";fi
+ # The instrumented copy lives outside the original source directory. Both
+ # qualified and unqualified header includes must resolve to its own layout.
+ if [[ "$variant" == baseline ]];then extra=(-I"$build/baseline" -I"$build/baseline/ports/esp32s3");source="$build/baseline/ports/esp32s3/CpuPort.cpp";fi
  "${CXX:-c++}" "${flags[@]}" "${extra[@]}" "${incs[@]}" "$source" "$repo/test/scoped_gpio_read_benchmark.cpp" -Wl,--gc-sections -o "$build/$variant-benchmark"
  for mode in payload cold mixed collision;do printf '%s: ' "$variant";"$build/$variant-benchmark" "$mode";done
  # A separate, untimed instrumented copy counts executed search predicates;
