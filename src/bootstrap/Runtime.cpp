@@ -775,7 +775,9 @@ void Runtime::yield(uint32_t ms) {
   if(!retained_) {
     // Poll work is bounded separately; each admitted yield cooperates once.
     if(appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
-    serviceProviders();
+    // Yield is a display/input polling path. Synchronous provider services may
+    // touch storage for up to a second, so run them only at explicit lifecycle
+    // boundaries, never between a panel refresh command and its BUSY sample.
     if(!graph_.activationSafe())(void)appExitBarrier();
   }
   const uint32_t requested=ms<1?1:ms>50?50:ms;

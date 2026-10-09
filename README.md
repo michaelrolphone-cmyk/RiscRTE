@@ -1,5 +1,9 @@
 # RiscRTE
 
+Runtime 0.1.81 keeps synchronous provider services out of cooperative app yield.
+Display and input polling retain bounded provider polling and scheduler fairness;
+storage services remain at explicit acquisition and app-entry boundaries.
+
 Runtime 0.1.80 adds an opt-in, provider-only internal USB PHY ownership lease.
 It fences the native HWCDC console and exit/sleep/restart while an ordinary USB
 provider owns the controller, preserving owner SD/SPI access and retained

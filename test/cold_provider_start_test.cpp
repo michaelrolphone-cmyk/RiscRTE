@@ -70,7 +70,11 @@ extern "C" void demand_app(){
   if(started){assert(!count("leaf:stop") && !count("root:stop"));}
   else assert(count("leaf:stop")==1 && count("root:stop")==1);
  }else assert(!api->acquire("test.leaf",1,0,&grant));
- for(unsigned i=0;i<10;++i)api->yield_ms(1);
+ // Display/input loops must cooperate without invoking synchronous storage.
+ // The same loaded provider is serviced at explicit lifecycle boundaries.
+ const unsigned servicesBeforeYield=count("leaf:service");
+ for(unsigned i=0;i<235;++i)api->yield_ms(1);
+ assert(count("leaf:service")==servicesBeforeYield);
  if(mode=="handoff" && calls==1)assert(api->request_launch("child.elf"));
 }
 static void file(const char* path,const std::string& value){std::ofstream(root+"/"+path)<<value;}
