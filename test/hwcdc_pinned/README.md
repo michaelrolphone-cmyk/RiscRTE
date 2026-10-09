@@ -45,5 +45,10 @@ creation/deletion or concurrent external users is outside this adapter's scope.
 The fixture does not become firmware code and never runs on a serial device.
 
 Run `bash run.sh /path/to/runtime`; add `SANITIZE=1` for ASan/UBSan.
+The stage-build cases also execute the unmodified pinned driver with 8192-byte
+preallocation, an undrained roughly 6 KiB startup burst, a completely full ring,
+missing host, allocation fallback and recovery-capacity restoration. Ordinary
+cases assert the original 256-byte capacity. These tests observe bounded ring
+capacity and zero waits; they do not promise delivery of arbitrary-sized bursts.
 Under process tracing, use `ASAN_OPTIONS=detect_leaks=0` if LeakSanitizer cannot
 run. This test explicitly counts stub resource allocation/deallocation too.

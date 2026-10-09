@@ -1,3 +1,5 @@
+#include "diagnostics/Performance.h"
+#include "diagnostics/StageLog.h"
 #include "ProviderModuleV2.h"
 #include "../../../lib/hal/RuntimeFaultRetention.h"
 #include <cstring>
@@ -40,17 +42,36 @@ bool validRequest(const char* expectedId, const char* expectedCapability,
          expectedCapability[0] && expectedApi && validDependencies(deps, count);
 }
 void trace(const char* id, const char* stage) {
+  RISC_STAGE_LOG("provider reference id=%s stage=%s",id?id:"?",stage);
   (void)id; (void)stage;
 #ifdef ESP_PLATFORM
   LOG_INF("PROV", "PROVREF id=%s stage=%s", id ? id : "?", stage);
 #endif
 }
+#if RISC_STAGE_LOGS
+constexpr size_t DetailCapacity=512;
+void logDetail(const char* id,const char* detail){
+  // Keep the provider's report independent of the shorter retained error field.
+  // Repeating the bounded ID keeps each plain statement attributable. Even a
+  // 95-byte ID plus an 80-byte part fits the 255-byte timestamped line limit.
+  const size_t length=std::strlen(detail);
+  for(size_t offset=0;offset<length;offset+=80){
+    RISC_STAGE_LOG("provider detail id=%s part=%u text=%.80s",id?id:"?",unsigned(offset/80+1),detail+offset);
+  }
+  if(length==DetailCapacity-1){
+    RISC_STAGE_LOG("provider detail id=%s source-buffer-full=511 report-may-be-truncated",id?id:"?");
+  }
+}
+#else
+constexpr size_t DetailCapacity=112;
+#endif
 } // namespace
 
 void ModuleV2::report(const char* id, const char* stage, int code) {
   // Keep the original cause even if teardown subsequently fails.
   if (!error_[0]) std::snprintf(error_, sizeof(error_), "%s: %s rc=%d (0x%x)",
                               id ? id : "?", stage, code, static_cast<unsigned>(code));
+  RISC_STAGE_LOG("provider failed id=%s reason=%s code=%d",id?id:"?",stage,code);
   // Some ESP_PLATFORM host harnesses stub LOG_ERR to a no-op. Keep parameters
   // explicitly used in both logging-enabled and logging-disabled builds.
   (void)id; (void)stage; (void)code;
@@ -98,6 +119,33 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     report(expectedId, "elf-interface-or-identity");
     return false;
   }
+  const risc_stream_session_provider_v1* sessions = nullptr;
+  if (candidate->struct_size >= offsetof(risc_driver_stream_sessions_v2,extension_tag) + sizeof(uint32_t)) {
+    const auto* extended = reinterpret_cast<const risc_driver_stream_sessions_v2*>(candidate);
+    // Unrelated larger descriptors do not authorize reading their suffix as a
+    // pointer. Inspect the explicit tag/version before touching adapter memory.
+    if (extended->extension_tag == RISC_DRIVER_STREAM_SESSIONS_TAG_V1) {
+      if (candidate->struct_size < sizeof(*extended) ||
+          extended->extension_version != RISC_DRIVER_STREAM_SESSIONS_VERSION_V1) {
+        report(expectedId, "stream-session-extension-invalid"); return false;
+      }
+      sessions = extended->stream_sessions;
+      if (!sessions || sessions->api_version != RISC_STREAM_SESSION_PROVIDER_API_V1 ||
+          sessions->struct_size < sizeof(*sessions) || !sessions->open || !sessions->call ||
+          !sessions->close || !extended->poll.streams.bind_streams || !hasQuiesce(candidate)) {
+        report(expectedId, "stream-session-interface-invalid"); return false;
+      }
+    }
+  }
+  if (candidate->struct_size >= offsetof(risc_driver_service_v2,extension_tag)+sizeof(uint32_t)) {
+    const auto* service = reinterpret_cast<const risc_driver_service_v2*>(candidate);
+    if (service->extension_tag == RISC_DRIVER_SERVICE_TAG_V1 &&
+        (candidate->struct_size < sizeof(*service) ||
+         service->extension_version != RISC_DRIVER_SERVICE_VERSION_V1 ||
+         !service->service || !hasQuiesce(candidate))) {
+      report(expectedId, "service-extension-invalid"); return false;
+    }
+  }
   bool bound = true;
   if (candidate->struct_size >= sizeof(risc_driver_streams_v2)) {
     const auto* extended = reinterpret_cast<const risc_driver_streams_v2*>(candidate);
@@ -120,8 +168,25 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     leaseAttempted_ = true;
     admitted = lease_.begin(lease_.context);
   }
-  if (admitted && candidate->start(deps, count)) {
+  bool started=false;
+  if(admitted) {
+#if RISC_STAGE_LOGS
+    const auto startUs=RiscDiagnostics::monotonicUs();
+#endif
+    RISC_STAGE_LOG("provider start begin id=%s",expectedId);
+    RiscPerf::Scope startTrace(24,25,RiscPerf::identity(expectedId));
+    started=candidate->start(deps,count);
+    // Revoke failed-start authority before calling any diagnostic sink.
+    if(!started)revokeLease();
+    RISC_STAGE_LOG("provider start end id=%s result=%s elapsed_us=%llu",expectedId,started?"ok":"failed",
+                   (unsigned long long)(RiscDiagnostics::monotonicUs()-startUs));
+  } else {
+    revokeLease();
+    RISC_STAGE_LOG("provider start skipped id=%s reason=%s",expectedId,bound?"lease-rejected":"stream-bind-rejected");
+  }
+  if (started) {
     driver_ = candidate;
+    streamSessions_ = sessions;
     api_ = candidate->capability;
     state_ = State::Active;
     trace(expectedId, "hardware-started");
@@ -132,14 +197,17 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
   revokeLease();
   if (candidate->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
     const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(candidate);
-    char detail[112]{};
+    char detail[DetailCapacity]{};
     if (diagnostics->last_error && diagnostics->last_error(detail, sizeof(detail))) {
       detail[sizeof(detail) - 1] = 0;
-      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %s", expectedId, detail);
+#if RISC_STAGE_LOGS
+      logDetail(expectedId,detail);
+#endif
+      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %.111s", expectedId, detail);
     }
   }
   if (!error_[0]) report(expectedId, "start rejected; update driver for diagnostics");
-  revokeStreams();
+  if (!revokeStreams()) { driver_ = candidate; report(expectedId, "stream-revoke-retained"); return false; }
   // A rejected start may still own DMA, tasks, IRQs or a lower provider.
   if (hasQuiesce(candidate) && !candidate->quiesce()) {
     driver_ = candidate;
@@ -147,7 +215,7 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     return false;
   }
   candidate->stop();
-  closeStreams();
+  if (!closeStreams()) { report(expectedId, "stream-close-retained"); return false; }
   return false;
 }
 
@@ -171,7 +239,7 @@ bool ModuleV2::load(const char* path, const char* expectedId,
   if (error || !get) report(expectedId, "elf-entry-symbol-missing");
   if (!error && activateMapped(get, expectedId, expectedCapability,
                                expectedApi, deps, count)) return true;
-  if (driver_) return false;
+  if (driver_ || streamCleanupRetained_) return false;
   (void)closeMapped();
   return false;
 }
@@ -194,12 +262,20 @@ bool ModuleV2::loadVerifiedBytes(const uint8_t* candidateBytes, size_t length,
 }
 
 bool ModuleV2::poll(uint32_t budgetMs) {
-  if (!budgetMs || state_ != State::Active || !driver_ || !consumers_ ||
+  if (!budgetMs || state_ != State::Active || !streamSafe() || !driver_ || !consumers_ ||
       driver_->struct_size < sizeof(risc_driver_poll_v2)) return false;
   const auto* extended = reinterpret_cast<const risc_driver_poll_v2*>(driver_);
   if (!extended->poll) return false;
   extended->poll(budgetMs);
   return true;
+}
+bool ModuleV2::service(uint32_t budgetMs) {
+  if (!budgetMs || budgetMs>RISC_DRIVER_SERVICE_MAX_MS || state_ != State::Active ||
+      !streamSafe() || !driver_ || !consumers_ || driver_->struct_size < sizeof(risc_driver_service_v2))return false;
+  const auto* extended=reinterpret_cast<const risc_driver_service_v2*>(driver_);
+  if(extended->extension_tag!=RISC_DRIVER_SERVICE_TAG_V1 ||
+     extended->extension_version!=RISC_DRIVER_SERVICE_VERSION_V1 || !extended->service)return false;
+  extended->service(budgetMs);return true;
 }
 bool ModuleV2::pinConsumer() {
   if (state_ != State::Active || consumers_ == std::numeric_limits<uint32_t>::max())
@@ -214,40 +290,49 @@ bool ModuleV2::unpinConsumer() {
   return true;
 }
 
-void ModuleV2::revokeStreams() {
+bool ModuleV2::revokeStreams() {
   if (streamApi_.streams.context && !streamsRevoked_) {
-    streamHost_->revoke(streamApi_.streams.context);
+    if (streamHost_->revokeChecked) {
+      if (!streamHost_->revokeChecked(streamApi_.streams.context)) { streamCleanupRetained_=true; return false; }
+    } else streamHost_->revoke(streamApi_.streams.context);
     streamsRevoked_ = true;
   }
+  return true;
 }
 void ModuleV2::revokeLease() {
   if (!leaseAttempted_) return;
   leaseAttempted_ = false;
   lease_.revoke(lease_.context);
 }
-void ModuleV2::closeStreams() {
-  if (!streamApi_.streams.context) return;
-  revokeStreams();
-  streamHost_->close(streamApi_.streams.context);
+bool ModuleV2::closeStreams() {
+  if (!streamApi_.streams.context) return true;
+  if (!revokeStreams()) return false;
+  if (streamHost_->closeChecked) {
+    if (!streamHost_->closeChecked(streamApi_.streams.context)) { streamCleanupRetained_=true; return false; }
+  } else streamHost_->close(streamApi_.streams.context);
   streamApi_ = {};
+  return true;
 }
 void ModuleV2::reportQuiescence() {
   if (!driver_) return;
   if (!error_[0] && driver_->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
     const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(driver_);
-    char detail[112]{};
+    char detail[DetailCapacity]{};
     if (diagnostics->last_error && diagnostics->last_error(detail, sizeof(detail))) {
       detail[sizeof(detail)-1] = 0;
-      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %s", driver_->driver_id, detail);
+#if RISC_STAGE_LOGS
+      logDetail(driver_->driver_id,detail);
+#endif
+      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %.111s", driver_->driver_id, detail);
     }
   }
   report(driver_->driver_id, "hardware-quiesce-rejected");
 }
 bool ModuleV2::unload() {
-  if (consumers_) return false;
+  if (consumers_ || streamCleanupRetained_) return false;
   revokeLease();
   risc_runtime_retention_guard();
-  revokeStreams();
+  if (!revokeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
   if (state_ == State::Failed && handle_ && driver_) {
     if (!hasQuiesce(driver_) || !driver_->quiesce()) { reportQuiescence(); return false; }
     driver_->stop();
@@ -262,7 +347,8 @@ bool ModuleV2::unload() {
     driver_->stop();
     driver_ = nullptr;
   }
-  closeStreams();
+  if (!closeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
+  streamSessions_ = nullptr;
   api_ = nullptr;
   if (!closeMapped()) {
     state_ = State::Failed;

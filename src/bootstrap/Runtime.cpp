@@ -1,13 +1,22 @@
 #include "Runtime.h"
+#include <RiscUsbPhyResourceV1.h>
+#include "diagnostics/Performance.h"
+#include "diagnostics/StageLog.h"
 #include "KeyValueGeneration.h"
 #include "runtime/update/Version.h"
 #include "runtime/update/CohortMigration.h"
 #include "runtime/resources/ScopedBufferWipe.h"
+#include <RiscDiagnosticSourceV1.h>
 #include <esp_dlfcn.h>
 #include <cstring>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cerrno>
+#include <atomic>
+#include "../../lib/hal/RuntimeImageCacheConfig.h"
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+#include <private/esp_dlcache.h>
+#endif
 #ifdef ESP_PLATFORM
 #include <esp_elf.h>
 #include "native/NativeAppMemory.h"
@@ -15,6 +24,18 @@ extern "C" void native_app_memory_relocation(bool);
 #endif
 namespace {
 RiscBoot::Runtime* currentRuntime=nullptr;
+#if RISC_APP_IMAGE_CACHE
+std::atomic<RiscBoot::Runtime*> imagePressureRuntime{nullptr};
+std::atomic<bool(*)()> imagePressureOwner{nullptr};
+#endif
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+void detachImagePressure() {
+#if RISC_APP_IMAGE_CACHE
+  imagePressureOwner.store(nullptr,std::memory_order_release);
+  imagePressureRuntime.store(nullptr,std::memory_order_release);
+#endif
+}
+#endif
 // Pointer-sized opaque integers are never dereferenced; unlike a reusable slot
 // pointer, a copied context cannot silently become a new grant after release.
 uintptr_t keyValueGeneration=0;
@@ -36,8 +57,25 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](const char* cap,uint32_t version,uint64_t instance,risc_runtime_capability_v1* out){return currentRuntime && currentRuntime->acquire(cap,version,instance,out);},
     [](risc_runtime_capability_v1* grant){return currentRuntime && currentRuntime->release(grant);},
     [](){return currentRuntime && currentRuntime->confirmBoot();},
-    [](){return currentRuntime && currentRuntime->retainInvocation();}};
+    [](){return currentRuntime && currentRuntime->retainInvocation();},
+    [](uint32_t id,uint32_t phase,uint32_t value)->uint32_t {
+      return currentRuntime && currentRuntime->active() ? RiscPerf::interaction(id,phase,value) : 0;
+    },
+    [](risc_stream_client_v1* out){return currentRuntime && currentRuntime->streamClient(out);},
+    [](){return currentRuntime && currentRuntime->launchDefault();}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
+}
+extern "C" bool risc_runtime_reclaim_app_images() {
+#if RISC_APP_IMAGE_CACHE
+  // Foreign tasks reject before reading/dereferencing a Runtime pointer. The
+  // owner function is compiled-in and outlives the session it guards.
+  const auto owner=imagePressureOwner.load(std::memory_order_acquire);
+  if(!owner || !owner())return false;
+  auto* runtime=imagePressureRuntime.load(std::memory_order_acquire);
+  return runtime && runtime->reclaimAppImages();
+#else
+  return false;
+#endif
 }
 namespace RiscBoot {
 namespace {
@@ -105,13 +143,25 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
   // arbitrary backend/control table supplied through generic registration.
   if (!strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
       (api!=1 || scope!=Scope::Global || id || table!=&providerRealtimeTable_ || !realtimeBackend_)) return false;
+  if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
+      (api!=RISC_DIAGNOSTIC_SOURCE_API_V1 || scope!=Scope::Global || id)) return false;
   if (scope==Scope::Global) {
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
-               strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY))) return false;
+               strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
+               strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
+               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
+  if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
+      (header[1]<sizeof(risc_diagnostic_source_api_v1) ||
+       !static_cast<const risc_diagnostic_source_api_v1*>(table)->read)) return false;
+  if (!strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY)) {
+    if(api!=RISC_USB_PHY_RESOURCE_API_V1 || scope!=Scope::Global || id || header[1]<sizeof(risc_usb_phy_resource_api_v1))return false;
+    const auto* usb=static_cast<const risc_usb_phy_resource_api_v1*>(table);
+    if(usb->controller_kind!=RISC_USB_PHY_ESP32S3_OTG || usb->reserved || !usb->is_owner || !usb->claim || !usb->release)return false;
+  }
   for (size_t i=0;i<platformCount_;++i) {
     const auto& p=platforms_[i];
     if (!strcmp(p.capability,capability) && p.api==api && p.scope==scope && p.id==id) return false;
@@ -311,7 +361,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
   return true;
 }
 bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
-  if (promotionRunning_ || !active() || !appDataExitSafe() || !appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
+  if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !appDataExitSafe() || !appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
   out->slot=out->generation=0;out->api=nullptr;
   const AppGrantPolicy* allowed=nullptr;
   for (size_t i=0;i<appPolicy_->count;++i) {
@@ -368,9 +418,26 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     if(!installedFiles_->end())return false;
     installedVolumeContext_=context;installedVolume_=volumeTable(context);grant.api=&installedVolume_;
   } else if (allowed->driver>=0) {
+    serviceProviders();
+    if(!appExitBarrier())return false;
     const auto& driver=drivers_[allowed->driver];
+    if(demandRetention_ && !demandActivation_ && !grants_[allowed->driver].slot) {
+      // Only the first real acquisition after promotion creates session custody.
+      // Keep the normal loader/dependency ordering and serialize start callbacks.
+      if(!promotionSafe())return false;
+      promotionRunning_=true;
+      auto& pin=grants_[allowed->driver];
+      pin=graph_.acquireFrom(driver.id,capability,api,driver.instance);
+      const bool safe=promotionSafe();
+      promotionRunning_=false;
+      if(!safe) {
+        retained_=true;active_=false;
+        return fail("provider activation retained; restart required");
+      }
+      if(!pin.slot)return fail(graph_.lastError());
+    }
     grant.provider=graph_.acquireFrom(driver.id,capability,api,driver.instance);
-    if (!grant.provider.slot) return false;
+    if (!grant.provider.slot) {serviceProviders();(void)appExitBarrier();return false;}
     grant.api=graph_.interfaceFor(grant.provider);
   } else grant.api=platforms_[allowed->platform].table;
   const auto* header=static_cast<const uint32_t*>(grant.api);
@@ -378,7 +445,9 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     if (grant.provider.slot && !graph_.release(grant.provider)) {retained_=true;return fail("invalid app interface retained");}
     grant={}; return false;
   }
-  grant.live=true;grant.generation=++grantGeneration_;
+  grant.live=true;grant.generation=++grantGeneration_;grant.invocation=streams_.context();
+  serviceProviders();
+  if(!appExitBarrier())return false;
   out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
 }
 int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
@@ -495,10 +564,17 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
   return backend.put(backend.context,matched->nameSpace,key,data,size)==RISC_BOUND_KEY_VALUE_OK ? RISC_BOUND_KEY_VALUE_OK : RISC_BOUND_KEY_VALUE_IO;
 }
 bool Runtime::release(risc_runtime_capability_v1* out) {
-  if (promotionRunning_ || !active() || !appDataExitSafe() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
+  if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !appDataExitSafe() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
   auto& grant=appGrants_[out->slot-1];
-  if (!grant.live || grant.generation!=out->generation || grant.api!=out->api) return false;
-  if (grant.provider.slot && !graph_.release(grant.provider)) return false;
+  if (!grant.live || grant.generation!=out->generation || grant.api!=out->api || grant.invocation!=streams_.context()) return false;
+  RuntimeStreams::AppStreamBinding binding{grant.invocation,out->slot,grant.generation,grant.api,grant.provider};
+  uint64_t providerContext=0;
+  const bool streamProvider=grant.provider.slot && graph_.streamSessionsFor(grant.provider,&providerContext);
+  if (!streams_.closeGrant(binding)) return false;
+  if (grant.provider.slot && !graph_.release(grant.provider)) {
+    if(streamProvider)streamRetain(this);
+    return false;
+  }
   if(grant.api==&installedVolume_){if(!installedFiles_->end())return false;installedVolumeContext_=nullptr;}
   if(grant.api==&appDataTable_){if(!appDataExitSafe())return false;appDataContext_=nullptr;appDataNamespace_=0;}
   if(grant.api==&promotionTable_)promotionContext_=nullptr;
@@ -508,23 +584,35 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   grant={};out->slot=out->generation=0;out->api=nullptr;return true;
 }
 bool Runtime::revokeApp() {
-  bool ok=true;
+  if(!streams_.closeAll())return false;
   for (auto& grant:appGrants_) if (grant.live) {
-    if (grant.provider.slot && !graph_.release(grant.provider)) ok=false;
-    else {
-      if(grant.api==&promotionTable_)promotionContext_=nullptr;
-      if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
-      if(grant.api==&realtimeControlTable_)realtimeControlContext_=nullptr;
-      if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}if(grant.api==&appDataTable_){if(!appDataExitSafe()){ok=false;continue;}appDataContext_=nullptr;appDataNamespace_=0;}if(grant.api==&installedVolume_){if(!installedFiles_->end()){ok=false;continue;}installedVolumeContext_=nullptr;}grant={};}
+    if (grant.provider.slot && !graph_.release(grant.provider)) {
+      retained_=true;(void)appExitBarrier();return false;
+    }
+    if(grant.api==&appDataTable_) {
+      if(!appDataExitSafe()){retained_=true;(void)appExitBarrier();return false;}
+      appDataContext_=nullptr;appDataNamespace_=0;
+    }
+    if(grant.api==&installedVolume_) {
+      if(!installedFiles_->end()){retained_=true;(void)appExitBarrier();return false;}
+      installedVolumeContext_=nullptr;
+    }
+    if(grant.api==&promotionTable_)promotionContext_=nullptr;
+    if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
+    if(grant.api==&realtimeControlTable_)realtimeControlContext_=nullptr;
+    if(grant.api==&retainedWakeTable_){port_.retainedWake->cancel();retainedWakeContext_=nullptr;}
+    grant={};
   }
-  appPolicy_=nullptr;return ok;
+  appPolicy_=nullptr;return true;
 }
+#include "AppStreamsRuntime.inc"
 #include "InstalledFilesRuntime.inc"
 #include "AppDataRuntime.inc"
 #include "RetainedWakeRuntime.inc"
 #include "RealtimeRuntime.inc"
 #include "ProviderPromotionRuntime.inc"
 bool Runtime::prepare(const char* root) {
+  RiscPerf::Scope trace(10,11);
   if(attempted_ || metadataCloseRetained_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);
   char filename[256], relative[193]; JsonDocument config, boardDoc;
@@ -536,16 +624,21 @@ bool Runtime::prepare(const char* root) {
       !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc,&metadataCloseRetained_) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
   // Activation policy never filters admission, registration or image inspection.
   const auto activation=c["provider_activation"];
-  if(!activation.isUnbound() && !eq(activation,"eager") && !eq(activation,"demand"))
+  if(!activation.isUnbound() && !eq(activation,"eager") && !eq(activation,"demand") && !eq(activation,"demand-retained"))
     return fail("invalid provider activation policy");
-  demandActivation_=eq(activation,"demand");
+  demandRetention_=eq(activation,"demand-retained");
+  demandActivation_=eq(activation,"demand") || demandRetention_;
   if(!text(c["default_app"],relative,sizeof(relative)) || !elfPath(relative) || !path(root_,relative,current_,sizeof(current_))) return fail("invalid default app path");
   if(!c["drivers"].is<JsonArrayConst>() || c["drivers"].size()>MaxDrivers) return fail("invalid driver list");
   // Read all manifests and validate mappings before registering/activating modules.
   for(JsonObjectConst item:c["drivers"].as<JsonArrayConst>()) {
     Driver& d=drivers_[driverCount_]; int64_t instance=0;
-    if(!keys(item,{"manifest"},{"instance_id","key_value"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+    if(!keys(item,{"manifest"},{"instance_id","key_value","boot_start"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,d.elf,sizeof(d.elf)) || (!item["instance_id"].isNull() && !integer(item["instance_id"],1,INT32_MAX,instance))) return fail("invalid driver selection");
+    if(!item["boot_start"].isUnbound()) {
+      if(!demandActivation_ || !eq(item["boot_start"],"cold"))return fail("invalid driver boot start policy");
+      d.coldBootStart=true;
+    }
     d.instance=instance; JsonDocument manifestDoc;
     if(!readJson(d.elf,manifestDoc,&metadataCloseRetained_) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
     if(!providerPolicy(item,providerStorage_[driverCount_])) return false;
@@ -581,10 +674,26 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
 #include "CohortRuntime.inc"
 bool Runtime::launch(const char* relative) {
   if(fileOpen_.phase==FileOpenState::Phase::Requested || fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
-  if(promotionRunning_ || !active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
-  return path(root_,relative,queued_,sizeof(queued_));
+  if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained_ || !appDataExitSafe() || (installedFiles_ && installedFiles_->retained()) || queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
+  const bool ok=path(root_,relative,queued_,sizeof(queued_));
+  RISC_STAGE_LOG("app launch-request file=%s result=%s",relative,ok?"accepted":"invalid-path");
+  if(ok)RiscPerf::emit(20);
+  return ok;
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
+bool Runtime::launchDefault() {
+  if(promotionRunning_ || graph_.lifecycleBusy() || !active() || !entryRunning_ ||
+     retained_ || !graph_.activationSafe() || !providerStorageSafe() || queued_[0] ||
+     (port_.appExitSafe && !port_.appExitSafe()) ||
+     fileOpen_.phase==FileOpenState::Phase::Requested)return false;
+  if(fileOpen_.phase==FileOpenState::Phase::Receiving &&
+     (fileOpen_.receiver<0 || size_t(fileOpen_.receiver)>=policyCount_ ||
+      appPolicy_!=&policies_[fileOpen_.receiver]))return false;
+  strcpy(queued_,default_);
+  RISC_STAGE_LOG("app default-request file=%s result=accepted",default_);
+  RiscPerf::emit(20);
+  return true;
+}
 bool Runtime::confirmBoot() {
   return !promotionRunning_ && active() && defaultRunning_ && entryRunning_ && !queued_[0] && !retained_ &&
     providerStorageSafe() && (!port_.confirmBoot || port_.confirmBoot());
@@ -652,22 +761,48 @@ bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* a
   if(!ok){memset(output,0,n);return false;}
   *actual=uint32_t(n);return true;
 }
+void Runtime::serviceProviders() {
+  if(currentRuntime!=this || !port_.owner() || retained_ || promotionRunning_ ||
+     streams_.busy() || graph_.lifecycleBusy() || !appDataExitSafe() ||
+     !providerStorageSafe())return;
+  graph_.service(RISC_DRIVER_SERVICE_MAX_MS);
+}
 void Runtime::yield(uint32_t ms) {
-  if(!active()) return;
-  // Poll work is bounded separately; each app yield cooperates exactly once.
-  if(!promotionRunning_ && appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
-  port_.delay(ms<1?1:ms>50?50:ms);
+  if(currentRuntime!=this || !port_.owner() || yielding_ || promotionRunning_ ||
+     streams_.busy() || graph_.lifecycleBusy() || (!active_ && !retained_))return;
+  yielding_=true;
+  struct Guard { bool& flag; ~Guard(){flag=false;} } guard{yielding_};
+  if(!retained_) {
+    // Poll work is bounded separately; each admitted yield cooperates once.
+    if(appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
+    // Yield is a display/input polling path. Synchronous provider services may
+    // touch storage for up to a second, so run them only at explicit lifecycle
+    // boundaries, never between a panel refresh command and its BUSY sample.
+    if(!graph_.activationSafe())(void)appExitBarrier();
+  }
+  const uint32_t requested=ms<1?1:ms>50?50:ms;
+  // Legacy app helpers may remain on their stack after terminal retention.
+  // Keep all authority revoked and custody pinned; only the scheduler may run.
+  if(retained_) {
+    // Invalid-interface rollback can latch retention before revoking the app.
+    // Preserve the old yield-time fence before permitting any raw delay.
+    if(active_)(void)appExitBarrier();
+    if(port_.retainedDelay)port_.retainedDelay(requested);
+    return;
+  }
+  RiscPerf::AggregateScope wait(26,requested);
+  port_.delay(requested);
 }
 bool Runtime::diagnostic(const char* line) { return active() && line && strnlen(line,256)<256 && !strchr(line,'\n') && !strchr(line,'\r') && port_.log(line); }
 bool Runtime::retainInvocation() {
-  if(currentRuntime!=this || promotionRunning_ || !port_.owner() || (!active_ && !retained_))return false;
+  if(currentRuntime!=this || promotionRunning_ || streams_.busy() || graph_.lifecycleBusy() || !port_.owner() || (!active_ && !retained_))return false;
   retained_=true;
   (void)appExitBarrier();
   return true;
 }
 bool Runtime::appExitBarrier() {
   const bool graphSafe=graph_.activationSafe();
-  if(graphSafe && !retained_ && !metadataCloseRetained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  if(graphSafe && !retained_ && !streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!installedFiles_ || !installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());
@@ -681,6 +816,7 @@ bool Runtime::appExitBarrier() {
   // pending grant. Neither may reach fini or an implicit cleanup retry here.
   // Revoke app authority without calling provider release/quiesce: the boot
   // references and active invocation memory/images must remain pinned.
+  streams_.revokeAuthority();
   retained_=true;active_=false;queued_[0]=0;appPolicy_=nullptr;fileOpen_={};
   revokeProviders();
   for(auto& grant:appGrants_)grant.live=false;
@@ -688,12 +824,35 @@ bool Runtime::appExitBarrier() {
 }
 bool Runtime::runOne(const char* name) {
   if(!appExitBarrier())return false;
+  if(!streams_.beginInvocation())return fail("stream invocation unavailable");
+  RiscPerf::invocation(name);
 #ifdef ESP_PLATFORM
-  if(!native_app_memory_begin()) return fail("app allocation context unavailable");
+  if(!native_app_memory_begin()) {
+    streams_.endInvocation();
+    return fail("app allocation context unavailable");
+  }
   native_app_memory_relocation(true);
 #endif
   // An app path may share a basename with a live driver; map a fresh image.
+  const auto loadStart=RiscPerf::now();
+#if RISC_STAGE_LOGS
+  const auto loadUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("app load begin file=%s",name);
+  RiscPerf::emit(12);
+  const AppPolicy* policy=nullptr;
+  for(size_t p=0;p<policyCount_;++p)if(!strcmp(policies_[p].elf,name))policy=&policies_[p];
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+  // Only exact prepared installed-image paths enter this session's cache.
+  // Loose child paths retain the ordinary reader and admission behavior.
+  void* module=(policy || !strcmp(name,default_)) ?
+    esp_dlopen_cached_instance(&appImages_,name) : esp_dlopen_instance(name);
+#else
   void* module=esp_dlopen_instance(name);
+#endif
+  RISC_STAGE_LOG("app load end file=%s result=%s elapsed_us=%llu",name,module?"ok":"failed",
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
+  RiscPerf::finish(12,13,loadStart,module?1:0);
 #ifdef ESP_PLATFORM
   native_app_memory_relocation(false);
 #endif
@@ -701,21 +860,40 @@ bool Runtime::runOne(const char* name) {
 #ifdef ESP_PLATFORM
     native_app_memory_end();
 #endif
+    RiscPerf::emit(21);
+    streams_.endInvocation();
     return fail("app ELF load failed");
   }
   auto entry=reinterpret_cast<void(*)()>(dlsym(module,"app_main"));
   auto init=reinterpret_cast<int(*)()>(dlsym(module,"app_module_init"));
   auto fini=reinterpret_cast<void(*)()>(dlsym(module,"app_module_fini"));
   bool ok=entry && bool(init)==bool(fini), initialized=false;
-  appPolicy_=nullptr;
-  for (size_t p=0;p<policyCount_;++p) if (!strcmp(policies_[p].elf,name)) appPolicy_=&policies_[p];
+  appPolicy_=policy;
   active_=true;
-  if(ok && init) { initialized=init()==0; ok=initialized; }
+  if(ok && init) {
+#if RISC_STAGE_LOGS
+    const auto initUs=RiscDiagnostics::monotonicUs();
+#endif
+    RISC_STAGE_LOG("app init begin file=%s",name);
+    const auto start=RiscPerf::now();RiscPerf::emit(14);
+    const int result=init();initialized=result==0;ok=initialized;
+    RISC_STAGE_LOG("app init end file=%s result=%d elapsed_us=%llu",name,result,
+                   (unsigned long long)(RiscDiagnostics::monotonicUs()-initUs));
+    RiscPerf::finish(14,15,start,ok?1:0);
+  } else {
+    RISC_STAGE_LOG("app init skipped file=%s reason=%s",name,ok?"no-init-hook":"entry-or-lifecycle-invalid");
+  }
   if(!appExitBarrier())return false;
   defaultRunning_=!strcmp(name,default_);entryRunning_=ok;
   if(ok) {
+    RISC_STAGE_LOG("app entry begin file=%s",name);
+    serviceProviders();
+    if(!appExitBarrier())return false;
     port_.log("RTE_APP phase=entry");
+    RiscPerf::emit(16);
     entry();
+    RISC_STAGE_LOG("app entry returned file=%s",name);
+    RiscPerf::emit(17);
     port_.log("RTE_APP phase=returned");
   } else port_.log("RTE_APP phase=init-or-entry-rejected");
   entryRunning_=false;defaultRunning_=false;
@@ -723,6 +901,11 @@ bool Runtime::runOne(const char* name) {
   // Boot-owned driver grants defer graph quiescence until after app teardown,
   // so waiting for final graph shutdown is too late.
   if(!appExitBarrier())return false;
+  RiscPerf::Scope unloadTrace(18,19);
+#if RISC_STAGE_LOGS
+  const auto unloadUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("app unload begin file=%s",name);
   if(initialized) fini();
   if(!appExitBarrier())return false;
   active_=false;
@@ -730,24 +913,81 @@ bool Runtime::runOne(const char* name) {
 #ifdef ESP_PLATFORM
   if(!native_app_memory_end()) { retained_=true; return fail("app memory busy; image retained"); }
 #endif
-  if(dlclose(module)) { retained_=true; return fail("app unload failed; restart required"); }
+  if(dlclose(module)) { RISC_STAGE_LOG("app unload failed file=%s reason=dlclose",name);retained_=true; return fail("app unload failed; restart required"); }
+  RISC_STAGE_LOG("app unload end file=%s result=ok elapsed_us=%llu",name,
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-unloadUs));
+  streams_.endInvocation();
+  unloadTrace.result(1);
   return ok || fail("app entry/lifecycle invalid");
+}
+bool Runtime::reclaimAppImages() {
+#if RISC_APP_IMAGE_CACHE && (defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST))
+  if(!port_.owner() || reclaimingAppImages_ || !appImages_)return false;
+  detachImagePressure(); // Detach callback before freeing its inputs.
+  reclaimingAppImages_=true;
+  const bool reclaimed=esp_dl_image_cache_reclaim(&appImages_);
+  reclaimingAppImages_=false;
+  return reclaimed;
+#else
+  return false;
+#endif
 }
 bool Runtime::run() {
   if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained_) return fail("runtime not launchable");
   prepared_=false; currentRuntime=this;
+  bool coldBoot=false;
+  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].coldBootStart) {
+    if(!port_.coldBoot){currentRuntime=nullptr;return fail("cold provider boot classification unavailable");}
+    coldBoot=port_.coldBoot();
+    if(!port_.owner()){currentRuntime=nullptr;return fail("cold provider boot owner unavailable");}
+    break;
+  }
 #ifdef ESP_PLATFORM
   static const esp_elfsym symbols[]={{"risc_runtime_get_api",reinterpret_cast<const void*>(&risc_runtime_get_api)},ESP_ELFSYM_END};
   if(esp_elf_register_symbol(symbols)) { revokeProviders(); currentRuntime=nullptr; return fail("runtime API registration failed"); }
 #endif
   bool ok=true;
-  for(size_t i=0;!demandActivation_ && i<driverCount_;++i) {
-    char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
-    grants_[granted_]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
-    if(!grants_[granted_].slot) { ok=fail(graph_.lastError());port_.log(error_);break; }
-    std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=ready",drivers_[i].id);port_.log(stage);
-    ++granted_; port_.delay(1);
+  RISC_STAGE_LOG("providers activation mode=%s selected=%u",demandRetention_?"demand-retained":demandActivation_?"demand":"eager",unsigned(driverCount_));
+#if RISC_STAGE_LOGS
+  if(demandActivation_)for(size_t i=0;i<driverCount_;++i){
+    if(coldBoot && drivers_[i].coldBootStart)continue;
+    RISC_STAGE_LOG("provider deferred id=%s reason=%s",drivers_[i].id,
+                   drivers_[i].coldBootStart?"non-cold-boot":"demand-until-acquired");
   }
+#endif
+  for(size_t i=0;i<driverCount_;++i) {
+    const bool coldStart=demandActivation_ && coldBoot && drivers_[i].coldBootStart;
+    if(demandActivation_ && !coldStart)continue;
+    char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
+    serviceProviders();
+    grants_[i]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
+    const bool coldSafe=!coldStart || promotionSafe();
+    if(!grants_[i].slot || !coldSafe) {
+      ok=fail(coldSafe?graph_.lastError():"cold provider activation retained; restart required");port_.log(error_);
+      // A grantless failed start can retain code and dependency custody too.
+      // Do not run the final boot cleanup/retry path after that barrier.
+      if(!coldSafe || !graph_.activationSafe()) {
+        retained_=true;revokeProviders();
+        port_.log("RTE_CLEANUP provider-activation=retained");
+      }
+      break;
+    }
+    std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=ready",drivers_[i].id);port_.log(stage);
+    serviceProviders();
+    if(!graph_.activationSafe()){ok=fail("provider service retained; restart required");retained_=true;revokeProviders();break;}
+    port_.delay(1);
+  }
+  // The active store is immutable until restart. Paired updates stage another
+  // bank; a new Runtime session owns a new cache even at the same mount path.
+#if RISC_APP_IMAGE_CACHE && (defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST))
+  if(ok){
+    appImages_=esp_dl_image_cache_create();
+    if(appImages_){
+      imagePressureRuntime.store(this,std::memory_order_release);
+      imagePressureOwner.store(port_.owner,std::memory_order_release);
+    }
+  }
+#endif
   // One app at a time; no recursive ELF launch, directory search or fallback.
   while(ok) {
     queued_[0]=0;
@@ -766,16 +1006,22 @@ bool Runtime::run() {
     error_[0]=0; port_.delay(1);
   }
   if(!retained_) {
-    while(granted_) if(!graph_.release(grants_[--granted_])) {
+    for(size_t i=driverCount_;i--;) if(grants_[i].slot && !graph_.release(grants_[i])) {
       retained_=true;
-      char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[granted_].id,graph_.lastError());port_.log(detail);
+      char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[i].id,graph_.lastError());port_.log(detail);
       if(ok)ok=fail("driver quiescence failed; restart required");
+      break;
     }
-    if(!graph_.shutdown()) {
+    if(!retained_ && !graph_.shutdown()) {
       retained_=true;port_.log("RTE_CLEANUP driver-shutdown=retained");
       if(ok)ok=fail("driver shutdown retained; restart required");
     }
   }
+  // Cached input bytes are never borrowed by a mapping. Releasing them also
+  // preserves an app/provider image retained after failed quiescence.
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+  detachImagePressure();esp_dl_image_cache_reclaim(&appImages_);
+#endif
   fileOpen_={};revokeProviders(); currentRuntime=nullptr; return ok;
 }
 }
