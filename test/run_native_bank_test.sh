@@ -3,6 +3,10 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
+capacity=()
+if [[ -n "${RISC_COHORT_PROVIDER_CAPACITY:-}" ]];then
+ capacity=(-DRISC_COHORT_PROVIDER_CAPACITY="$RISC_COHORT_PROVIDER_CAPACITY")
+fi
 san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
 cc "${san[@]}" -std=c11 -I"$repo/test/native_bank_stubs" -I"$repo/lib/elf_loader/include" -c "$repo/lib/elf_loader/src/esp_elf_validate.c" -o "$build/validate.o"
@@ -32,7 +36,7 @@ elif [[ -n "${PRODUCT_STORE:-}${BOOT_PATH_FIRMWARE:-}" ]];then
  extra+=("-DRISC_BUILD_VERSION=\"$version\"")
 fi
 cc "${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared "$repo/test/fixtures/cohort_native_app.c" -o "$build/cohort-native.elf"
-c++ -rdynamic -Wl,--wrap=fopen,--wrap=fclose,--wrap=opendir,--wrap=stat,--wrap=lstat "${san[@]}" "${extra[@]}" -DRISC_PAIRED_BANKS=1 -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers \
+c++ "${capacity[@]}" -rdynamic -Wl,--wrap=fopen,--wrap=fclose,--wrap=opendir,--wrap=stat,--wrap=lstat "${san[@]}" "${extra[@]}" -DRISC_PAIRED_BANKS=1 -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers \
  -I"$repo/test" -I"$repo/test/native_bank_stubs" -I"$repo/test/drivers/stubs" -I"$repo/lib/elf_loader/include" \
  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" \
  "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \

@@ -127,6 +127,30 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
    assert(admitProvisionedStore(provisionRoot.c_str(),*profile)==(selected && scenario==0));
    assert(!candidateCpu && !provisionReadRetained);provisionState=nullptr;provisionProfile=nullptr;unavailableImport=nullptr;
  }
+ // The real provisioning admission path must inspect every selected provider
+ // at the compiled bound and reject an additional provider before activation.
+ // These ordinary images require no optional native policy.
+ for(unsigned count:{unsigned(RiscLimits::Providers),unsigned(RiscLimits::Providers+1)}){
+   auto files=base;files.erase("driver.json");files.erase("driver.elf");
+   JsonDocument boot;assert(!deserializeJson(boot,files["boot.json"].data(),files["boot.json"].size()));
+   auto providers=boot["drivers"].to<JsonArray>();
+   for(unsigned i=0;i<count;++i){
+     const std::string id="capacity-"+std::to_string(i);JsonDocument manifest;
+     assert(!deserializeJson(manifest,base.at("driver.json").data(),base.at("driver.json").size()));
+     manifest["id"]=id;manifest["file_name"]=id+".elf";manifest["provides"][0]["capability"]="test."+id;
+     std::string value;serializeJson(manifest,value);files[id+".json"]={value.begin(),value.end()};
+     files[id+".elf"]=elf("memcpy","t5_driver_get");providers.add<JsonObject>()["manifest"]=id+".json";
+   }
+   std::string value;serializeJson(boot,value);files["boot.json"]={value.begin(),value.end()};
+   save(provisionRoot,files);auto profile=std::make_unique<RiscProvision::Profile>();
+   for(const auto& item:files){auto& f=profile->files[profile->count++];strcpy(f.path,item.first.c_str());f.bytes=item.second.size();SHA256(item.second.data(),item.second.size(),f.sha256);}
+   ProvisionState state({},admissionHardware(),nullptr,nullptr);provisionState=&state;provisionProfile=profile.get();
+   assert(admitProvisionedStore(provisionRoot.c_str(),*profile)==(count==RiscLimits::Providers));
+   assert(!candidateCpu && !provisionReadRetained && !hardwareCalls && !writes && !selectorCalls && !restarts);
+   provisionState=nullptr;provisionProfile=nullptr;
+ }
+ std::cout<<"Production provider capacity: "<<RiscLimits::Providers<<" admitted; "
+   <<RiscLimits::Providers+1<<" rejected, zero mapping/hardware/selection PASS\n";
  // The graph owns the admitted selection, including requirement metadata.
  // Caller changes after prepare cannot replace that authority, and a changed
  // on-disk file still fails the production staged-file callback afterward.

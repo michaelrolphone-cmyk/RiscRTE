@@ -20,3 +20,19 @@ for flag in '-DRISC_PAIRED_BANKS=1' '-DRISC_RUNTIME_METADATA_PSRAM=1';do
 done
 c++ "${base[@]}" "${cohort[@]}";"$build/test"
 echo 'Legacy static19/17/32 and PSRAM cohort24/26/42 capacities PASS'
+expanded=(-DEXPECTED_APPS=24 -DEXPECTED_PROVIDERS=29 -DEXPECTED_GRANTS=45)
+for flag in '-DRISC_PAIRED_BANKS=1' '-DRISC_RUNTIME_METADATA_PSRAM=1';do
+ c++ "${base[@]}" -DESP_PLATFORM=1 "$flag" -DRISC_COHORT_PROVIDER_CAPACITY=29 "${expanded[@]}";"$build/test"
+done
+c++ "${base[@]}" -DRISC_COHORT_PROVIDER_CAPACITY=29 "${expanded[@]}";"$build/test"
+for capacity in 0 17 25 27 28 30 256;do
+ if c++ "${base[@]}" -DRISC_COHORT_PROVIDER_CAPACITY="$capacity" "${cohort[@]}" >"$build/rejected" 2>&1;then
+  echo "Unsupported capacity $capacity compiled";exit 1
+ fi
+ grep -q 'RISC_COHORT_PROVIDER_CAPACITY must be 26 or 29' "$build/rejected"
+done
+if c++ "${base[@]}" -DESP_PLATFORM=1 -DRISC_COHORT_PROVIDER_CAPACITY=29 "${legacy[@]}" >"$build/rejected" 2>&1;then
+ echo 'Expanded legacy capacity compiled';exit 1
+fi
+grep -q 'Expanded cohort capacity requires PSRAM Runtime metadata' "$build/rejected"
+echo 'Explicit PSRAM cohort24/29/45 accepted; unsupported and legacy opt-ins rejected PASS'

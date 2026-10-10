@@ -58,7 +58,9 @@ def policy_rows_proof(blobs, expected, manifest_requirements=16):
  if manifest_requirements==17:proof['requirement_marker']=requirement_marker[:-1].decode()
  return proof
 
-def stage(source, app_data=False, app_data_image=None, radio_iq=False, performance_trace=False, app_policy_rows=16):
+def stage(source, app_data=False, app_data_image=None, radio_iq=False, performance_trace=False, app_policy_rows=16, cohort_provider_capacity=26):
+ require(cohort_provider_capacity in (26,29),'cohort provider capacity must be 26 or 29')
+ require(cohort_provider_capacity==26 or (radio_iq and not performance_trace and app_policy_rows==16),'capacity29 candidate requires the dedicated IQ target')
  require(app_policy_rows in (16,17),'app policy rows must be 16 or 17')
  require(app_policy_rows==16 or app_data,'Seventeen-row candidate requires app-data layout')
  require(not radio_iq or app_data,'IQ requires the explicit app-data cohort')
@@ -66,6 +68,7 @@ def stage(source, app_data=False, app_data_image=None, radio_iq=False, performan
  require(not performance_trace or app_data,'Performance candidate requires app-data layout')
  environment=target+'-perf' if performance_trace else target
  if app_policy_rows==17:environment+='-policy17'
+ if cohort_provider_capacity==29:environment+='-capacity29'
  expected=APP_DATA_EXPECTED if app_data else EXPECTED
  abi=2 if app_data else 1
  table='partitions-paired-appdata.csv' if app_data else 'partitions-paired.csv'
@@ -94,6 +97,8 @@ def stage(source, app_data=False, app_data_image=None, radio_iq=False, performan
  if app_data:require(b'RISC_PAIRED_STORE_ABI:1\0' not in blobs['firmware.bin'],'app-data target must reject legacy OTA acceptance')
  proof=native_proof(blobs['firmware.elf'])
  proof['app_policy']=policy_rows_proof(blobs,app_policy_rows)
+ from runtime_capacity_proof import prove as capacity_proof
+ proof['runtime_capacity']=capacity_proof(blobs,cohort_provider_capacity)
  if performance_trace:
   from elftools.elf.elffile import ELFFile
   symtab=ELFFile(io.BytesIO(blobs['firmware.elf'])).get_section_by_name('.symtab')
@@ -116,4 +121,4 @@ def stage(source, app_data=False, app_data_image=None, radio_iq=False, performan
  (output/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in sorted(output.iterdir()) if p.name!='SHA256SUMS'))
  print('Verified paired Runtime, linked TLS roots and explicit rollback hook:',source,output)
 if __name__=='__main__':
- parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);parser.add_argument('--app-data',action='store_true');parser.add_argument('--radio-iq',action='store_true');parser.add_argument('--performance-trace',action='store_true');parser.add_argument('--app-policy-rows',type=int,choices=(16,17),default=16);parser.add_argument('--app-data-image',type=Path);args=parser.parse_args();stage(args.source_sha,args.app_data,args.app_data_image,args.radio_iq,args.performance_trace,args.app_policy_rows)
+ parser=argparse.ArgumentParser();parser.add_argument('--source-sha',required=True);parser.add_argument('--app-data',action='store_true');parser.add_argument('--radio-iq',action='store_true');parser.add_argument('--performance-trace',action='store_true');parser.add_argument('--app-policy-rows',type=int,choices=(16,17),default=16);parser.add_argument('--cohort-provider-capacity',type=int,choices=(26,29),default=26);parser.add_argument('--app-data-image',type=Path);args=parser.parse_args();stage(args.source_sha,args.app_data,args.app_data_image,args.radio_iq,args.performance_trace,args.app_policy_rows,args.cohort_provider_capacity)

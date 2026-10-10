@@ -3,11 +3,15 @@ set -euo pipefail
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
+capacity=()
+if [[ -n "${RISC_COHORT_PROVIDER_CAPACITY:-}" ]];then
+ capacity=(-DRISC_COHORT_PROVIDER_CAPACITY="$RISC_COHORT_PROVIDER_CAPACITY")
+fi
 san=(-g)
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   san+=(-fsanitize=address,undefined -fno-omit-frame-pointer)
 fi
-"${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror "${san[@]}" \
+"${CXX:-c++}" "${capacity[@]}" -std=c++17 -Wall -Wextra -Werror "${san[@]}" \
   -DRISC_STREAM_HOST_TESTING \
   -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/src" \
   "$repo/src/runtime/streams/ProviderQueueHost.cpp" \

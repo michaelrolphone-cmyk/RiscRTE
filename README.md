@@ -1,5 +1,9 @@
 # RiscRTE
 
+Runtime 0.2.4 adds an explicit 29-provider / 45-grant PSRAM cohort selection
+with exact linked capacity proof. Ordinary 26/42 and legacy 17/32 bounds remain
+unchanged. See [the opt-in capacity contract](docs/COHORT_CAPACITY_024.md).
+
 An explicit, default-off [native TCP listener](docs/TCP_LISTENER.md) supplies
 bounded provider transport for external applications. Ordinary targets open no
 listener; protocol, file and product policy stay outside Runtime.

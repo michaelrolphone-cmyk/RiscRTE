@@ -8,8 +8,10 @@ mkdir "$build/baseline"
 git -C "$repo" archive "$baseline" | tar -x -C "$build/baseline"
 for version in baseline current;do
   source="$repo";if [[ "$version" == baseline ]];then source="$build/baseline";fi
-  for profile in cohort legacy;do
+  for profile in cohort legacy expanded;do
+    if [[ "$version" == baseline && "$profile" == expanded ]];then continue;fi
     override=()
+    if [[ "$profile" == expanded ]];then override=(-DRISC_COHORT_PROVIDER_CAPACITY=29);fi
     if [[ "$profile" == legacy ]];then
       mkdir -p "$build/legacy/runtime"
       sed 's/^#if defined(ESP_PLATFORM).*$/#if 1/' "$source/src/runtime/RuntimeLimits.h" > "$build/legacy/runtime/RuntimeLimits.h"

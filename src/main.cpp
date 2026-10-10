@@ -8,6 +8,7 @@
 // Retained by the boot diagnostic reference; available to native packaging
 // without exporting any new application or provider ABI.
 extern "C" const char risc_app_policy_rows[]=RISC_APP_POLICY_ROWS_MARKER;
+extern "C" const char risc_runtime_capacity[]=RISC_RUNTIME_CAPACITY_MARKER;
 #if RISC_APP_REQUIREMENT_ROWS == 17
 extern "C" const char risc_app_requirement_rows[]=RISC_APP_REQUIREMENT_ROWS_MARKER;
 #endif
@@ -185,6 +186,7 @@ void setup() {
                  (unsigned long)esp_sleep_get_wakeup_cause(),(unsigned long long)bootUs);
   diagnosticLine(RISC_BUILD_IDENTITY);
   diagnosticLine(risc_app_policy_rows);
+  diagnosticLine(risc_runtime_capacity);
 #if RISC_APP_REQUIREMENT_ROWS == 17
   diagnosticLine(risc_app_requirement_rows);
 #endif

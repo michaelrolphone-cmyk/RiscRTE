@@ -88,6 +88,10 @@ jobs:
           retention-days: 14
       - name: Real runtime, external drivers and clock through physical bus model
         run: bash test/run_clock_integration.sh build/watch-clock-source
+      - name: Explicit 29-provider cohort and linked capacity proof
+        run: |
+          bash test/run_cohort_capacity_test.sh
+          SANITIZE=1 bash test/run_cohort_capacity_test.sh
       - name: Real host modules, board binding and default-child-default lifecycle
         run: |
           bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json

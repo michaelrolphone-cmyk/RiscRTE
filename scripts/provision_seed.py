@@ -95,6 +95,9 @@ def candidate(folder, source, extension_validator=None):
     require(len(blobs['firmware.bin'])<=expected['app0'][3],'firmware slot bound')
     elf(blobs['firmware.elf'])
     proof=native_proof(blobs['firmware.elf'])
+    from runtime_capacity_proof import verify_candidate as verify_capacity
+    capacity=verify_capacity(blobs,record)
+    if capacity is not None:proof['runtime_capacity']=capacity
     # Current candidates carry an explicit linked policy-row proof. Preserve
     # older frozen seeds without that feature, while never inferring an absent
     # declaration for a native that advertises it.
