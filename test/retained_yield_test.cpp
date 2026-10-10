@@ -44,6 +44,7 @@ static void delay(uint32_t ms,bool retained){
     assert(!risc_runtime_get_api(1));
     risc_runtime_health_v1 health{sizeof(health)};
     assert(!saved.health(&health) && !saved.diagnostic("forbidden"));
+    uint32_t now=0;assert(!saved.monotonic_ms(&now));
     if(savedKeyValue.get){
       const unsigned before=keyValueCalls;uint32_t size=123;
       assert(savedKeyValue.get(savedKeyValue.context,"probe",nullptr,0,&size)==RISC_KEY_VALUE_CONTEXT);

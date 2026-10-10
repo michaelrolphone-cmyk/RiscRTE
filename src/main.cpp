@@ -8,7 +8,7 @@
 // Retained by the boot diagnostic reference; available to native packaging
 // without exporting any new application or provider ABI.
 extern "C" const char risc_app_policy_rows[]=RISC_APP_POLICY_ROWS_MARKER;
-#if RISC_APP_REQUIREMENT_ROWS == 17
+#if RISC_APP_REQUIREMENT_ROWS > 16
 extern "C" const char risc_app_requirement_rows[]=RISC_APP_REQUIREMENT_ROWS_MARKER;
 #endif
 #include "ports/esp32s3/CpuPort.h"
@@ -82,6 +82,7 @@ extern "C" const char* risc_native_startup_error(void) __attribute__((weak));
 namespace {
 TaskHandle_t owner=nullptr;
 bool isOwner() { return xTaskGetCurrentTaskHandle()==owner; }
+bool monotonicMillis(uint32_t* out) { *out=millis();return true; }
 bool health(risc_runtime_health_v1* out) {
   out->uptime_ms=millis(); out->free_heap=ESP.getFreeHeap();
   const auto* app=esp_ota_get_running_partition(); out->app_address=app?app->address:0;
@@ -156,9 +157,9 @@ bool priorFailure(risc_resident_failure_v1* out){
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis});
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis});
 #endif
 }
 void setup() {
@@ -185,7 +186,7 @@ void setup() {
                  (unsigned long)esp_sleep_get_wakeup_cause(),(unsigned long long)bootUs);
   diagnosticLine(RISC_BUILD_IDENTITY);
   diagnosticLine(risc_app_policy_rows);
-#if RISC_APP_REQUIREMENT_ROWS == 17
+#if RISC_APP_REQUIREMENT_ROWS > 16
   diagnosticLine(risc_app_requirement_rows);
 #endif
   if(risc_native_startup_error) {
@@ -289,7 +290,7 @@ void setup() {
 #else
     ,nullptr
 #endif
-    ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd
+    ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis
   });
   if(!retainedRuntime){
     RISC_STAGE_LOG("boot failed reason=runtime-metadata-psram");

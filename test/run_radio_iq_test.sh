@@ -20,7 +20,7 @@ for variant in normal chip eco dram iram; do
   dram) extra=(-DIQ_BAD_LAYOUT -Wl,--defsym,_heap_start=0x3FCB0004);;
   iram) extra=(-DIQ_BAD_LAYOUT -Wl,--defsym,_iram_end=0x403A0004);;
  esac
- "${CXX:-c++}" "${flags[@]}" "${san[@]}" -fno-pie -no-pie "${extra[@]}" -I"$repo/test/native_iq_shim" -I"$repo/src" "$repo/test/native_iq_test.cpp" -Wl,-T,"$repo/test/native_iq_shim/memory.ld" -o "$build/native-$variant"
+ "${CXX:-c++}" "${flags[@]}" "${san[@]}" -fno-pie -no-pie "${extra[@]}" -I"$repo/test/native_iq_shim" -I"$repo/sdk/driver" -I"$repo/src" "$repo/test/native_iq_test.cpp" -Wl,-T,"$repo/test/native_iq_shim/memory.ld" -o "$build/native-$variant"
  "$build/native-$variant"
 done
 

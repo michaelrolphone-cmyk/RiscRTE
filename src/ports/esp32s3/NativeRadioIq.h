@@ -9,6 +9,11 @@
 #include <soc/soc.h>
 #include <cstdint>
 #include "SleepDiagnostics.h"
+#include <esp_timer.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
+#include <RiscRadioIqResourceV1.h>
 
 extern "C" {
 extern const uint32_t _rom_chip_id;
@@ -78,10 +83,51 @@ inline bool prepare(){
   trace("RTE_IQ stage=prepared");
   return true;
 }
+// The timer only wakes a dedicated task. Slow captures are skipped, never
+// queued as invented evenly spaced observations. Actual timestamps travel with
+// every record. stop joins; no task deletion while provider code is executing.
+inline TaskHandle_t workerTask=nullptr;
+inline portMUX_TYPE workerMux=portMUX_INITIALIZER_UNLOCKED;
+inline SemaphoreHandle_t workerDone=nullptr;
+inline esp_timer_handle_t workerTimer=nullptr;
+inline bool workerStopping=false;
+inline risc_radio_iq_tick_v1 workerTick=nullptr;
+inline void* workerArgument=nullptr;
+inline uint64_t nowUs(){return static_cast<uint64_t>(esp_timer_get_time());}
+inline void workerWake(void*){portENTER_CRITICAL(&workerMux);if(workerTask)xTaskNotifyGive(workerTask);portEXIT_CRITICAL(&workerMux);}
+inline void workerRun(void*){
+  for(;;){ulTaskNotifyTake(pdTRUE,portMAX_DELAY);if(__atomic_load_n(&workerStopping,__ATOMIC_ACQUIRE))break;workerTick(workerArgument,nowUs());}
+  xSemaphoreGive(workerDone);for(;;)vTaskSuspend(nullptr);
+}
+inline bool workerStop(){
+  if(!workerTask)return true;
+  __atomic_store_n(&workerStopping,true,__ATOMIC_RELEASE);
+  if(workerTimer)esp_timer_stop(workerTimer);
+  workerWake(nullptr);
+  if(xSemaphoreTake(workerDone,pdMS_TO_TICKS(100))!=pdTRUE)return false;
+  portENTER_CRITICAL(&workerMux);TaskHandle_t done=workerTask;workerTask=nullptr;portEXIT_CRITICAL(&workerMux);
+  vTaskDelete(done);
+  if(workerTimer){esp_timer_delete(workerTimer);workerTimer=nullptr;}
+  vSemaphoreDelete(workerDone);workerDone=nullptr;workerTick=nullptr;workerArgument=nullptr;return true;
+}
+inline bool workerStart(uint32_t interval,risc_radio_iq_tick_v1 tick,void*argument){
+  if(!phyPrepared||workerTask||!tick||interval<1000||interval>100000)return false;
+  workerDone=xSemaphoreCreateBinary();if(!workerDone)return false;
+  esp_timer_create_args_t config{};config.callback=workerWake;config.name="iq-period";
+  if(esp_timer_create(&config,&workerTimer)!=ESP_OK){vSemaphoreDelete(workerDone);workerDone=nullptr;return false;}
+  workerTick=tick;workerArgument=argument;__atomic_store_n(&workerStopping,false,__ATOMIC_RELEASE);
+  if(xTaskCreatePinnedToCore(workerRun,"iq-envelope",4096,nullptr,3,&workerTask,0)!=pdPASS){esp_timer_delete(workerTimer);workerTimer=nullptr;vSemaphoreDelete(workerDone);workerDone=nullptr;workerTask=nullptr;return false;}
+  if(esp_timer_start_periodic(workerTimer,interval)!=ESP_OK){
+    // A failed join still owns callback code and its lease. Report ownership so
+    // provider stop/quiesce must retry the join before releasing/unmapping.
+    return !workerStop();
+  }
+  return true;
+}
 inline bool cleanup(){
   // Retain every SDK reference while capture is unparked. The provider restores
   // the calibrated state before release; native cleanup must not reset it early.
-  if(!ready())return false;
+  if(workerTask||!ready())return false;
   if(!phyPrepared)return true;
   trace("RTE_IQ stage=phy-disable");
   esp_phy_disable();

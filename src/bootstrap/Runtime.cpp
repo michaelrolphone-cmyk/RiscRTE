@@ -76,7 +76,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](){return currentRuntime && currentRuntime->launchDefault();},
     [](risc_resident_client_v1* out){return currentRuntime && currentRuntime->residentClient(out);},
     [](risc_failure_evidence_client_v1* out){return currentRuntime && currentRuntime->failureEvidenceClient(out);},
-    [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && currentRuntime->diagnosticCheckpointClient(out);}};
+    [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && currentRuntime->diagnosticCheckpointClient(out);},
+    [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -322,17 +323,19 @@ bool Runtime::appPolicies(JsonVariantConst value) {
       // authorize more than one positive KV namespace, still within MaxAppPolicyGrants
       // total grants; no other capability's uniqueness rule is broadened.
       const bool keyValue=!strcmp(requested,RISC_KEY_VALUE_CAPABILITY);
+      const bool sharedData=!strcmp(requested,RISC_SHARED_DATA_CAPABILITY);
       for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,requested) &&
           (!keyValue || policy.grants[i].api==uint32_t(api))) return fail("duplicate app requirement");
       unsigned matches=0;
       for (JsonObjectConst allowed:item["grants"].as<JsonArrayConst>()) {
         int64_t allowedApi=0,instance=0;char capability[96];
-        if (!keys(allowed,{"capability","api","instance_id"}) || !text(allowed["capability"],capability,sizeof(capability)) ||
+        if (!text(allowed["capability"],capability,sizeof(capability)) ||
+            !(strcmp(capability,RISC_SHARED_DATA_CAPABILITY)?keys(allowed,{"capability","api","instance_id"}):keys(allowed,{"capability","api","instance_id","file"})) ||
             !integer(allowed["api"],1,UINT32_MAX,allowedApi) || !integer(allowed["instance_id"],0,INT32_MAX,instance)) return fail("invalid app grant");
         if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
         if (!strcmp(capability,RISC_BOUND_APP_DATA_CAPABILITY)) return fail("provider app-data denied to app");
         if (strcmp(capability,requested) || allowedApi!=api) continue;
-        if (++matches>1 && !keyValue) return fail("app requirement not uniquely authorized");
+        if (++matches>1 && !keyValue && !sharedData) return fail("app requirement not uniquely authorized");
         if (policy.count==MaxAppPolicyGrants) return fail("too many app grants");
         for (size_t i=0;i<policy.count;++i) {
           const auto& earlier=policy.grants[i];
@@ -373,6 +376,12 @@ bool Runtime::appPolicies(JsonVariantConst value) {
           if(grant.api!=RISC_APP_DATA_EXPORT_API_V1 || grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)
             return fail("app-data export backend/authority unavailable");
           grant.driver=AppDataExportDriver;grant.capability=RISC_APP_DATA_EXPORT_CAPABILITY;
+        } else if (sharedData) {
+          const auto* backend=port_.appData;
+          if(grant.api!=RISC_APP_DATA_API_V1 || !grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe ||
+             !text(allowed["file"],grant.sharedFile,sizeof(grant.sharedFile)))return fail("shared-data backend/file unavailable");
+          for(size_t n=0;grant.sharedFile[n];++n){const unsigned char c=grant.sharedFile[n];const bool alpha=(c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9');if(!alpha&&(!n||(c!='.'&&c!='_'&&c!='-')))return fail("invalid shared-data file");}
+          grant.driver=SharedDataDriver;grant.capability=RISC_SHARED_DATA_CAPABILITY;
         } else if (!strcmp(capability,RISC_APP_DATA_CAPABILITY)) {
           const auto* backend=port_.appData;
           if(grant.api!=RISC_APP_DATA_API_V1 || !grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)return fail("app-data backend/namespace unavailable");
@@ -469,10 +478,10 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
       return false;
     }
     grant.api=&invocation_->appDataExportTable_;
-  } else if (allowed->driver==AppDataDriver) {
+  } else if (allowed->driver==AppDataDriver || allowed->driver==SharedDataDriver) {
     if(invocation_->appDataContext_ || !providerStorageSafe())return false;
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
-    invocation_->appDataContext_=context;invocation_->appDataNamespace_=uint32_t(allowed->instance);
+    invocation_->appDataContext_=context;invocation_->appDataNamespace_=uint32_t(allowed->instance);invocation_->appDataSharedFile_=allowed->driver==SharedDataDriver?allowed->sharedFile:nullptr;
     invocation_->appDataTable_={RISC_APP_DATA_API_V1,sizeof(risc_app_data_v1),context,appDataStat,appDataRead,appDataReplace};grant.api=&invocation_->appDataTable_;
   } else if (allowed->installedFiles) {
     if(!invocation_->installedFiles_ || invocation_->installedVolumeContext_ || !providerStorageSafe())return false;
@@ -659,7 +668,7 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
     retained_=true;fail("app-data export cleanup retained");(void)appExitBarrier();return false;
   }
   if(grant.api==&invocation_->installedVolume_){if(!invocation_->installedFiles_->end()){if(residentEnabled_)(void)appExitBarrier();return false;}invocation_->installedVolumeContext_=nullptr;}
-  if(grant.api==&invocation_->appDataTable_){if(!appDataExitSafe()){if(residentEnabled_)(void)appExitBarrier();return false;}invocation_->appDataContext_=nullptr;invocation_->appDataNamespace_=0;}
+  if(grant.api==&invocation_->appDataTable_){if(!appDataExitSafe()){if(residentEnabled_)(void)appExitBarrier();return false;}invocation_->appDataContext_=nullptr;invocation_->appDataNamespace_=0;invocation_->appDataSharedFile_=nullptr;}
   if(grant.api==&invocation_->promotionTable_)invocation_->promotionContext_=nullptr;
   if(grant.api==&invocation_->realtimeTable_)invocation_->realtimeContext_=nullptr;
   if(grant.api==&invocation_->realtimeControlTable_)invocation_->realtimeControlContext_=nullptr;
@@ -677,7 +686,7 @@ bool Runtime::revokeApp() {
     }
     if(grant.api==&invocation_->appDataTable_) {
       if(!appDataExitSafe()){retained_=true;(void)appExitBarrier();return false;}
-      invocation_->appDataContext_=nullptr;invocation_->appDataNamespace_=0;
+      invocation_->appDataContext_=nullptr;invocation_->appDataNamespace_=0;invocation_->appDataSharedFile_=nullptr;
     }
     if(grant.api==&invocation_->installedVolume_) {
       if(!invocation_->installedFiles_->end()){retained_=true;(void)appExitBarrier();return false;}
@@ -879,6 +888,13 @@ bool Runtime::launch(const char* relative) {
   return ok;
 }
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
+bool Runtime::monotonicMs(uint32_t* out) {
+  if(!active() || !out)return false;
+  if(port_.monotonicMs)return port_.monotonicMs(out);
+  risc_runtime_health_v1 h{};h.struct_size=sizeof(h);
+  if(!port_.health(&h))return false;
+  *out=h.uptime_ms;return true;
+}
 bool Runtime::launchDefault() {
   if(residentEnabled_ && invocation_->role!=RISC_RESIDENT_ROLE_FOREGROUND &&
      !(invocation_==&mainInvocation_ && !invocation_->role && residentLegacyAllowed(invocation_->current_)))return false;
@@ -993,7 +1009,7 @@ void Runtime::yield(uint32_t ms) {
   struct Guard { bool& flag; ~Guard(){flag=false;} } guard{yielding_};
   if(!retained_) {
     // Poll work is bounded separately; each admitted yield cooperates once.
-    if(appDataExitSafe())graph_.poll([](){risc_runtime_health_v1 h{}; h.struct_size=sizeof(h); return currentRuntime->health(&h)?h.uptime_ms:0;},nullptr);
+    if(appDataExitSafe())graph_.poll([](){uint32_t now=0;return currentRuntime->monotonicMs(&now)?now:0;},nullptr);
     // Yield is a display/input polling path. Synchronous provider services may
     // touch storage for up to a second, so run them only at explicit lifecycle
     // boundaries, never between a panel refresh command and its BUSY sample.

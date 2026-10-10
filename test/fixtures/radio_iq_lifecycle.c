@@ -16,7 +16,7 @@ static bool release(void){if(!lease)return true;if(!raw->release(raw->context,le
 static const probe_api api={1,sizeof(api),claim,release};
 static bool start(const risc_provider_dependency_v1* deps,size_t count){
  for(size_t i=0;i<count;++i)if(!strcmp(deps[i].capability_id,RISC_RADIO_IQ_RESOURCE_CAPABILITY))raw=deps[i].api;
- test_iq_trace("provider start");return raw && raw->api_version==1 && raw->struct_size==sizeof(*raw);
+ test_iq_trace("provider start");return raw && raw->api_version==1 && raw->struct_size>=sizeof(*raw);
 }
 static bool quiesce(void){if(!release())return false;test_iq_trace("provider quiesce");return true;}
 static void stop(void){test_iq_trace("provider stop");raw=0;}

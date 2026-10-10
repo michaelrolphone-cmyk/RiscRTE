@@ -90,6 +90,10 @@ typedef struct {
   /* Optional copied, invocation-scoped RAM diagnostic checkpoint.
    * Check table size before reading; see RiscDiagnosticCheckpointV1.h. */
   bool (*diagnostic_checkpoint_client)(struct risc_diagnostic_checkpoint_client_v1* out);
+  /* Optional inexpensive boot-local clock, wrapping modulo 2^32 milliseconds.
+   * Active owner only, including init/fini. No heap query, hardware identity,
+   * provider polling or I/O. Check struct_size before reading this suffix. */
+  bool (*monotonic_ms)(uint32_t* out);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
@@ -100,6 +104,7 @@ typedef struct {
 #define RISC_RUNTIME_RESIDENT_SHELL_V1_SIZE (offsetof(risc_runtime_api_v1, resident_shell) + sizeof(((risc_runtime_api_v1*)0)->resident_shell))
 #define RISC_RUNTIME_FAILURE_EVIDENCE_V1_SIZE (offsetof(risc_runtime_api_v1, failure_evidence) + sizeof(((risc_runtime_api_v1*)0)->failure_evidence))
 #define RISC_RUNTIME_DIAGNOSTIC_CHECKPOINT_V1_SIZE (offsetof(risc_runtime_api_v1, diagnostic_checkpoint_client) + sizeof(((risc_runtime_api_v1*)0)->diagnostic_checkpoint_client))
+#define RISC_RUNTIME_MONOTONIC_V1_SIZE (offsetof(risc_runtime_api_v1, monotonic_ms) + sizeof(((risc_runtime_api_v1*)0)->monotonic_ms))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }

@@ -186,6 +186,9 @@ Hardware nativeHardware(bool (*owner)()){
   hardware.radioIqReady=NativeRadioIq::ready;
   hardware.radioIqPrepare=NativeRadioIq::prepare;
   hardware.radioIqCleanup=NativeRadioIq::cleanup;
+  hardware.radioIqWorkerStart=NativeRadioIq::workerStart;
+  hardware.radioIqWorkerStop=NativeRadioIq::workerStop;
+  hardware.radioIqNowUs=NativeRadioIq::nowUs;
 #endif
 #if RISC_NATIVE_TCP_LISTENER
   NativeTcpListener::configure(hardware.owner,[](){
