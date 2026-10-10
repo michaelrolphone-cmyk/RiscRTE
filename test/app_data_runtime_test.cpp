@@ -4,9 +4,10 @@
 #include <fstream>
 #include <string>
 #include <sys/stat.h>
-static bool owned=true,retained=false,fault_mode=false;static int phase=0;static risc_app_data_v1 saved{};
+static bool owned=true,retained=false,fault_mode=false,shared_mode=false;static int phase=0;static risc_app_data_v1 saved{};
 extern "C" void app_data_test_owner(int n){owned=n;}
 extern "C" int app_data_test_phase(){return phase;}
+extern "C" int app_data_test_shared_mode(){return shared_mode;}
 extern "C" int app_data_test_fault_mode(){return fault_mode;}
 extern "C" void app_data_test_fault(){retained=true;}
 extern "C" void app_data_test_next(){phase++;}
@@ -35,6 +36,15 @@ int main(int argc,char**argv){assert(argc==2);std::string root=argv[1];
  std::string child=manifest;child.replace(child.find("\"files\""),7,"\"child\"");child.replace(child.find("default.elf"),11,"child.elf");write(root+"/child.json",child);
  write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"storage.app-data","api":1,"instance_id":1},{"capability":"platform.clock","api":1,"instance_id":0}]},{"manifest":"child.json","grants":[{"capability":"storage.app-data","api":1,"instance_id":1}]}]})");
  {RiscBoot::Runtime r(port);assert(!r.prepare(root.c_str()) && strstr(r.error(),"already owned"));}
+ // Explicit shared single-file grants admit the same namespace without
+ // making private names available or weakening ordinary namespace uniqueness.
+ std::string shared=manifest;shared.replace(shared.find("storage.app-data"),16,"storage.shared-data");write(root+"/app.json",shared);
+ std::string guest=shared;guest.replace(guest.find("\"files\""),7,"\"child\"");guest.replace(guest.find("default.elf"),11,"child.elf");write(root+"/child.json",guest);
+ auto sharedBoot=[&](const std::string&file){write(root+"/boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"storage.shared-data","api":1,"instance_id":1,"file":")")+file+R"("},{"capability":"platform.clock","api":1,"instance_id":0}]},{"manifest":"child.json","grants":[{"capability":"storage.shared-data","api":1,"instance_id":1,"file":"state.json"},{"capability":"platform.clock","api":1,"instance_id":0}]}]})");};
+ sharedBoot("../state.json");{RiscBoot::Runtime r(port);assert(!r.prepare(root.c_str()));}
+ sharedBoot("");{RiscBoot::Runtime r(port);assert(!r.prepare(root.c_str()));}
+ sharedBoot("state.json");shared_mode=true;phase=0;{RiscBoot::Runtime r(port);assert(r.prepare(root.c_str()));assert(r.run());assert(phase==2);}shared_mode=false;
+ write(root+"/app.json",manifest);write(root+"/child.json",child);
  boot(1,1);fault_mode=true;{RiscBoot::Runtime r(port);assert(r.prepare(root.c_str()));assert(!r.run() && r.retained());assert(strstr(r.error(),"retention barrier"));app_data_test_revoked();}
- puts("App-data Runtime/actual ELF authority, owner, namespace uniqueness, lifetime/reacquire, handoff and pre-fini retention PASS");
+ puts("App-data Runtime/actual ELF authority, owner, namespace uniqueness, explicit shared-file scope, lifetime/reacquire, handoff and pre-fini retention PASS");
 }

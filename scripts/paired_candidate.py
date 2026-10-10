@@ -46,11 +46,11 @@ def native_proof(data):
  return {'static_dram_sections':dram,'static_dram_bytes':sum(dram.values()),'rollback_hook_hex':code.hex(),'bundle_bytes':size,'bundle_certificates':int.from_bytes(bundle[:2],'big'),'bundle_sha256':hashlib.sha256(bundle).hexdigest(),'required_symbols':list(required)}
 
 def policy_rows_proof(blobs, expected):
- require(expected in (16,17),'app policy rows must be 16 or 17')
+ require(expected in (16,17,24),'app policy rows must be 16 or 17')
  marker=('RISC_APP_POLICY_ROWS:'+str(expected)).encode()+b'\0'
- other=('RISC_APP_POLICY_ROWS:'+str(33-expected)).encode()+b'\0'
+ others=[('RISC_APP_POLICY_ROWS:'+str(n)).encode()+b'\0' for n in (16,17,24) if n!=expected]
  for name in ('firmware.bin','firmware.elf'):
-  require(marker in blobs[name] and other not in blobs[name],'compiled app policy row mismatch: '+name)
+  require(marker in blobs[name] and not any(other in blobs[name] for other in others),'compiled app policy row mismatch: '+name)
  return {'rows':expected,'live_app_grants':16,'manifest_requirements':16,'marker':marker[:-1].decode()}
 
 def stage(source, app_data=False, app_data_image=None, radio_iq=False, performance_trace=False, app_policy_rows=16):

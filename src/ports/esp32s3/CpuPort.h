@@ -73,6 +73,9 @@ struct Hardware {
   bool (*radioIqReady)()=nullptr;
   bool (*radioIqPrepare)()=nullptr;
   bool (*radioIqCleanup)()=nullptr;
+  bool (*radioIqWorkerStart)(uint32_t,risc_radio_iq_tick_v1,void*)=nullptr;
+  bool (*radioIqWorkerStop)()=nullptr;
+  uint64_t (*radioIqNowUs)()=nullptr;
   int32_t (*realtimeRead)(risc_realtime_snapshot_v1*)=nullptr;
   int32_t (*realtimeSeed)(int64_t,uint32_t)=nullptr; // separately brokered authority
   // Optional explicit shared-MOSI half-duplex mode. On attempted begin failure,
@@ -113,7 +116,7 @@ class Port final {
   struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;
     bool active=false,closing=false,scanning=false; garden_radio_v1 api{}; } radios_[1];
   struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
-  struct RadioIq { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_radio_iq_resource_v1 api{}; } iq_;
+  struct RadioIq { Port* port=nullptr; uint64_t token=0; bool closing=false,worker=false; risc_radio_iq_worker_resource_v1 api{}; } iq_;
   struct UsbPhy { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_usb_phy_resource_api_v1 api{}; } usb_;
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false,wakeHigh=false; uint8_t wakeModes=0; bool retiredHeld=false; } pins_[49];
   // Pin-index hints only, never authority. Collisions/stale hints are checked
@@ -173,6 +176,9 @@ class Port final {
   static bool hciStatus(void*,uint64_t,uint8_t*);
   static bool radioIqClaim(void*,uint64_t*);
   static bool radioIqRelease(void*,uint64_t);
+  static bool radioIqWorkerStart(void*,uint64_t,uint32_t,risc_radio_iq_tick_v1,void*);
+  static bool radioIqWorkerStop(void*,uint64_t);
+  static uint64_t radioIqNowUs(void*);
   static bool radioClaim(void*,uint64_t*);
   static bool radioJoin(void*,uint64_t,const char*,const char*);
   static bool radioState(void*,uint64_t,uint8_t*,int8_t*);

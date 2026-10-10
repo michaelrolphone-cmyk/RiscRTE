@@ -29,7 +29,7 @@ bool Port::reserve(int16_t pin,const void* owner){
 }
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
 bool Port::providerStorageSafe() const {
-  if(!available() || sleepRetained_ || transferring_ || iq_.token)return false;
+  if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
   for(const auto& pin:pins_)if(pin.held && !pin.retiredHeld)return false;
@@ -41,7 +41,7 @@ bool Port::providerStorageSafe() const {
 bool Port::appExitSafe() const {
   // Healthy HCI is entirely firmware/provider-owned, with no app callbacks or
   // borrowed app storage; it survives navigation. Restart/sleep still drain it.
-  if(!providerStorageSafe() || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
+  if(!providerStorageSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
@@ -50,7 +50,7 @@ bool Port::appExitSafe() const {
   return true;
 }
 bool Port::restartResourcesSafe() const {
-  if(!providerStorageSafe() || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
+  if(!providerStorageSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
@@ -159,7 +159,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   if(hw_.radioIqReady){
     if(!hw_.radioIqPrepare || !hw_.radioIqCleanup || !hw_.radioIdle || !hw_.hciIdle || !hw_.hciSafe)return false;
     ++iqCount_;iq_.port=this;
-    iq_.api={1,sizeof(iq_.api),&iq_,radioIqClaim,radioIqRelease,0x3FCB0000u,65536u};
+    iq_.api={{1,sizeof(iq_.api),&iq_,radioIqClaim,radioIqRelease,0x3FCB0000u,65536u},RISC_RADIO_IQ_WORKER_ABI,radioIqWorkerStart,radioIqWorkerStop,radioIqNowUs};
     if(!runtime.registerPlatform(RISC_RADIO_IQ_RESOURCE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&iq_.api))return false;
   }
   if(hw_.httpClient){
@@ -371,9 +371,14 @@ bool Port::radioIqClaim(void* context,uint64_t* out){
   if(out)*out=0;
   if(!context || !out)return false;
   auto& c=*static_cast<RadioIq*>(context);auto& p=*c.port;
-  if(c.token || c.closing || !p.providerStorageSafe() || !p.appExitSafe() ||
+  if(c.token || c.closing || !p.providerStorageSafe() || p.usb_.token || p.usb_.closing ||
+     (p.hw_.usbPhyIdle&&!p.hw_.usbPhyIdle()) || (p.hw_.httpIdle&&!p.hw_.httpIdle()) ||
+     (p.hw_.maintenanceIdle&&!p.hw_.maintenanceIdle()) ||
      !p.hw_.radioIdle || !p.hw_.radioIdle() || !p.hw_.hciIdle || !p.hw_.hciIdle() || p.hci_.token ||
      !p.hw_.radioIqReady)return false;
+  for(const auto& radio:p.radios_)if(radio.active)return false;
+  for(const auto& input:p.i2ss_)if(input.token&&!input.config.pdm_rx)return false;
+  for(const auto& pin:p.pins_)if(pin.wakeModes)return false;
   for(const auto& bus:p.spiBuses_)if(bus.held)return false;
   // First prove the raw block is parked, then let the native Runtime perform
   // the vendor PHY calibration that the ELF is deliberately not authorized to
@@ -395,7 +400,7 @@ bool Port::radioIqRelease(void* context,uint64_t token){
   if(!context)return false;
   auto& c=*static_cast<RadioIq*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ ||
-     !token || token!=c.token)return false;
+     !token || token!=c.token || c.worker)return false;
   c.closing=true;
   // Failed verification or PHY shutdown retains the exact lease and permits
   // a later retry. The external driver must park and restore before release;
@@ -407,6 +412,26 @@ bool Port::radioIqRelease(void* context,uint64_t token){
   p.transferring_=false;
   if(!ready)return false;
   c.token=0;c.closing=false;return true;
+}
+bool Port::radioIqWorkerStart(void*context,uint64_t token,uint32_t interval,risc_radio_iq_tick_v1 tick,void*argument){
+  if(!context || !tick || interval<1000 || interval>100000)return false;
+  auto& c=*static_cast<RadioIq*>(context);auto& p=*c.port;
+  if(!p.hw_.owner || !p.hw_.owner() || !token || token!=c.token || c.worker || c.closing ||
+     !p.hw_.radioIqWorkerStart || !p.hw_.radioIqWorkerStop || !p.hw_.radioIqNowUs)return false;
+  c.worker=p.hw_.radioIqWorkerStart(interval,tick,argument);return c.worker;
+}
+bool Port::radioIqWorkerStop(void*context,uint64_t token){
+  if(!context)return false;
+  auto& c=*static_cast<RadioIq*>(context);auto& p=*c.port;
+  if(!p.hw_.owner || !p.hw_.owner() || !token || token!=c.token)return false;
+  if(!c.worker)return true;
+  if(!p.hw_.radioIqWorkerStop || !p.hw_.radioIqWorkerStop()){c.closing=true;return false;}
+  c.worker=false;return true;
+}
+uint64_t Port::radioIqNowUs(void*context){
+  if(!context)return 0;
+  auto& c=*static_cast<RadioIq*>(context);
+  return c.token&&c.port->hw_.radioIqNowUs?c.port->hw_.radioIqNowUs():0;
 }
 // Radio ownership is logical until the first join/scan. Idle provider claims
 // may span app handoffs; native activity and failed cleanup never may.

@@ -60,7 +60,7 @@ class Runtime final {
  public:
   static constexpr size_t MaxAppPolicies=RiscLimits::Apps;
   static constexpr size_t MaxAppPolicyGrants=RISC_APP_POLICY_ROWS;
-  static constexpr size_t MaxAppRequirements=16;
+  static constexpr size_t MaxAppRequirements=RISC_APP_POLICY_ROWS;
   explicit Runtime(Port p) : port_(p), streams_(graph_,{this,streamBindingValid,streamRetain,streamYield}) {}
   ~Runtime() { revokeProviders(); }
   Runtime(const Runtime&)=delete;
@@ -186,14 +186,15 @@ class Runtime final {
     const char* capability=nullptr;
     uint32_t api=0; uint64_t instance=0;
     PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false;
+    char sharedFile[RISC_APP_DATA_NAME_MAX+1]{};
   };
 #if UINTPTR_MAX == UINT32_MAX
-  static_assert(sizeof(AppGrantPolicy)==24,"App policy target layout changed");
+  static_assert(sizeof(AppGrantPolicy)==72,"App policy target layout changed");
 #endif
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, SharedDataDriver=-7;
   const risc_realtime_control_api_v1* realtimeBackend_=nullptr;
   risc_realtime_api_v1 realtimeTable_{};
   void* realtimeContext_=nullptr;
@@ -249,6 +250,7 @@ class Runtime final {
   risc_app_data_v1 appDataTable_{};
   void* appDataContext_=nullptr;
   uint32_t appDataNamespace_=0;
+    const char* appDataSharedFile_=nullptr;
   bool providerFileRetained_=false;
   struct Platform {
     char capability[96]{}; uint32_t api=0; Scope scope=Scope::Global;

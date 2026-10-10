@@ -6,6 +6,7 @@
 #include <cstdio>
 using namespace RiscCpu;
 static bool owner=true,radio=true,hci=true,hciSafe=true,http=true,maintenance=true,proof=true,prepare=true,cleanup=true;
+static bool workerStops=true;
 static unsigned checks=0,prepares=0,cleanups=0,starts=0;
 int main(){
  Hardware h{};h.owner=[](){return owner;};h.radioIdle=[](){return radio;};h.hciIdle=[](){return hci;};h.hciSafe=[](){return hciSafe;};
@@ -14,6 +15,7 @@ int main(){
  h.radioIqPrepare=[](){++prepares;return prepare;};
  h.radioIqCleanup=[](){++cleanups;return cleanup;};
  h.radioJoin=[](const char*,const char*){++starts;return true;};h.radioScanStart=[](){++starts;return true;};h.hciOpen=[](){++starts;return true;};
+ h.radioIqWorkerStart=[](uint32_t,risc_radio_iq_tick_v1,void*){return true;};h.radioIqWorkerStop=[](){return workerStops;};h.radioIqNowUs=[](){return uint64_t(1234);};
  Port p(h);auto& c=p.iq_;c.port=&p;auto& r=p.radios_[0];r.port=&p;r.token=10;auto& b=p.hci_;b.port=&p;
  auto refused=[&](){uint64_t t=99;assert(!Port::radioIqClaim(&c,&t) && !t && !c.token);};
  assert(!Port::radioIqClaim(nullptr,nullptr));
@@ -50,7 +52,15 @@ int main(){
  cleanup=true;assert(Port::radioIqRelease(&c,t) && !c.token && !c.closing && cleanups);
  assert(!Port::radioIqRelease(&c,t));assert(p.appExitSafe() && p.restartResourcesSafe());
  // Logical Wi-Fi owner survived; another capture receives a fresh generation.
- assert(r.token==10 && Port::radioIqClaim(&c,&t) && t>first);assert(Port::radioIqRelease(&c,t));
+ assert(r.token==10 && Port::radioIqClaim(&c,&t) && t>first);
+ assert(!Port::radioIqWorkerStart(&c,t+1,1000,[](void*,uint64_t){},nullptr));
+ assert(Port::radioIqWorkerStart(&c,t,1000,[](void*,uint64_t){},nullptr));
+ assert(p.providerStorageSafe()&&!p.appExitSafe()&&!p.restartResourcesSafe());
+ assert(!Port::radioIqRelease(&c,t)&&c.token==t);
+ workerStops=false;assert(!Port::radioIqWorkerStop(&c,t)&&c.worker&&c.closing&&!p.providerStorageSafe());
+ workerStops=true;assert(Port::radioIqWorkerStop(&c,t)&&!c.worker);
+ assert(Port::radioIqRelease(&c,t));
+ p.i2ss_[0].token=3;p.i2ss_[0].config.pdm_rx=true;assert(Port::radioIqClaim(&c,&t));assert(Port::radioIqRelease(&c,t));p.i2ss_[0].token=0;
  p.serial_=UINT64_MAX;refused();assert(!starts && checks>=5);
  puts("IQ resource: fail-closed proof, owner/context, idle station coexistence, modem exclusion, exit/restart/all sleep forms, retained cleanup retry PASS");
 }

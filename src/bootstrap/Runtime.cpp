@@ -300,17 +300,19 @@ bool Runtime::appPolicies(JsonVariantConst value) {
       // authorize more than one positive KV namespace, still within MaxAppPolicyGrants
       // total grants; no other capability's uniqueness rule is broadened.
       const bool keyValue=!strcmp(requested,RISC_KEY_VALUE_CAPABILITY);
+      const bool sharedData=!strcmp(requested,RISC_SHARED_DATA_CAPABILITY);
       for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,requested) &&
           (!keyValue || policy.grants[i].api==uint32_t(api))) return fail("duplicate app requirement");
       unsigned matches=0;
       for (JsonObjectConst allowed:item["grants"].as<JsonArrayConst>()) {
         int64_t allowedApi=0,instance=0;char capability[96];
-        if (!keys(allowed,{"capability","api","instance_id"}) || !text(allowed["capability"],capability,sizeof(capability)) ||
+        if (!text(allowed["capability"],capability,sizeof(capability)) ||
+            !(strcmp(capability,RISC_SHARED_DATA_CAPABILITY)?keys(allowed,{"capability","api","instance_id"}):keys(allowed,{"capability","api","instance_id","file"})) ||
             !integer(allowed["api"],1,UINT32_MAX,allowedApi) || !integer(allowed["instance_id"],0,INT32_MAX,instance)) return fail("invalid app grant");
         if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
         if (!strcmp(capability,RISC_BOUND_APP_DATA_CAPABILITY)) return fail("provider app-data denied to app");
         if (strcmp(capability,requested) || allowedApi!=api) continue;
-        if (++matches>1 && !keyValue) return fail("app requirement not uniquely authorized");
+        if (++matches>1 && !keyValue && !sharedData) return fail("app requirement not uniquely authorized");
         if (policy.count==MaxAppPolicyGrants) return fail("too many app grants");
         for (size_t i=0;i<policy.count;++i) {
           const auto& earlier=policy.grants[i];
@@ -346,6 +348,12 @@ bool Runtime::appPolicies(JsonVariantConst value) {
         } else if (!strcmp(capability,"file.open")) {
           if(grant.api!=T5_FILE_OPEN_API_VERSION || grant.instance)return fail("invalid file-open authority");
           grant.fileOpen=true;grant.capability="file.open";
+        } else if (sharedData) {
+          const auto* backend=port_.appData;
+          if(grant.api!=RISC_APP_DATA_API_V1 || !grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe ||
+             !text(allowed["file"],grant.sharedFile,sizeof(grant.sharedFile)))return fail("shared-data backend/file unavailable");
+          for(size_t n=0;grant.sharedFile[n];++n){const unsigned char c=grant.sharedFile[n];const bool alpha=(c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9');if(!alpha&&(!n||(c!='.'&&c!='_'&&c!='-')))return fail("invalid shared-data file");}
+          grant.driver=SharedDataDriver;grant.capability=RISC_SHARED_DATA_CAPABILITY;
         } else if (!strcmp(capability,RISC_APP_DATA_CAPABILITY)) {
           const auto* backend=port_.appData;
           if(grant.api!=RISC_APP_DATA_API_V1 || !grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)return fail("app-data backend/namespace unavailable");
@@ -428,10 +436,10 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.api=&retainedWakeTable_;
   } else if (allowed->fileOpen) {
     grant.api=fileOpenApi();
-  } else if (allowed->driver==AppDataDriver) {
+  } else if (allowed->driver==AppDataDriver || allowed->driver==SharedDataDriver) {
     if(appDataContext_ || !providerStorageSafe())return false;
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
-    appDataContext_=context;appDataNamespace_=uint32_t(allowed->instance);
+    appDataContext_=context;appDataNamespace_=uint32_t(allowed->instance);appDataSharedFile_=allowed->driver==SharedDataDriver?allowed->sharedFile:nullptr;
     appDataTable_={RISC_APP_DATA_API_V1,sizeof(risc_app_data_v1),context,appDataStat,appDataRead,appDataReplace};grant.api=&appDataTable_;
   } else if (allowed->installedFiles) {
     if(!installedFiles_ || installedVolumeContext_ || !providerStorageSafe())return false;
@@ -601,7 +609,7 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
     return false;
   }
   if(grant.api==&installedVolume_){if(!installedFiles_->end())return false;installedVolumeContext_=nullptr;}
-  if(grant.api==&appDataTable_){if(!appDataExitSafe())return false;appDataContext_=nullptr;appDataNamespace_=0;}
+  if(grant.api==&appDataTable_){if(!appDataExitSafe())return false;appDataContext_=nullptr;appDataNamespace_=0;appDataSharedFile_=nullptr;}
   if(grant.api==&promotionTable_)promotionContext_=nullptr;
   if(grant.api==&realtimeTable_)realtimeContext_=nullptr;
   if(grant.api==&realtimeControlTable_)realtimeControlContext_=nullptr;
@@ -616,7 +624,7 @@ bool Runtime::revokeApp() {
     }
     if(grant.api==&appDataTable_) {
       if(!appDataExitSafe()){retained_=true;(void)appExitBarrier();return false;}
-      appDataContext_=nullptr;appDataNamespace_=0;
+      appDataContext_=nullptr;appDataNamespace_=0;appDataSharedFile_=nullptr;
     }
     if(grant.api==&installedVolume_) {
       if(!installedFiles_->end()){retained_=true;(void)appExitBarrier();return false;}

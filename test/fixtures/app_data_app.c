@@ -6,12 +6,34 @@ extern void app_data_test_owner(int);
 extern void app_data_test_keep(risc_app_data_v1);
 extern void app_data_test_revoked(void);
 extern int app_data_test_phase(void);
+extern int app_data_test_shared_mode(void);
 extern int app_data_test_fault_mode(void);
 extern void app_data_test_fault(void);
 extern void app_data_test_next(void);
 __attribute__((visibility("default"))) void app_main(void){
  const risc_runtime_api_v1*rt=risc_runtime_get_api(1);assert(rt);app_data_test_revoked();
  risc_runtime_capability_v1 g={.struct_size=sizeof(g)};uint32_t size=0;uint64_t revision=0;
+ if(app_data_test_shared_mode()){
+  assert(!rt->acquire(RISC_APP_DATA_CAPABILITY,1,1,&g));
+  assert(rt->acquire(RISC_SHARED_DATA_CAPABILITY,1,1,&g));const risc_app_data_v1*v=g.api;
+  char buf[32]={0};size=99;revision=99;
+  assert(v->stat(v->context,"private.bin",&size,&revision)==RISC_APP_DATA_CONTEXT&&size==0&&revision==0);
+  assert(v->read(v->context,"private.bin",0,buf,sizeof(buf),&size,&revision)==RISC_APP_DATA_CONTEXT);
+  assert(v->replace(v->context,"private.bin",0,"bad",3)==RISC_APP_DATA_CONTEXT);
+  assert(v->stat(v->context,"state.json",&size,&revision)==0);
+#ifdef CHILD
+  assert(v->read(v->context,"state.json",revision,buf,sizeof(buf),&size,&revision)==0&&size==6&&!memcmp(buf,"shared",6));
+  app_data_test_next();
+#else
+  assert(v->replace(v->context,"state.json",revision,"shared",6)==0);
+#endif
+  risc_app_data_v1 old=*v;assert(rt->release(&g));assert(old.stat(old.context,"state.json",&size,&revision)==RISC_APP_DATA_CONTEXT);
+#ifndef CHILD
+  if(!app_data_test_phase()){app_data_test_next();assert(rt->request_launch("child.elf"));}
+#endif
+  return;
+ }
+
 #ifdef CHILD
  assert(!rt->acquire(RISC_APP_DATA_CAPABILITY,1,1,&g));app_data_test_next();return;
 #else

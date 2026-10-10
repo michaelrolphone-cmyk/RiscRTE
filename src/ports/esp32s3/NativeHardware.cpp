@@ -149,6 +149,9 @@ Hardware nativeHardware(bool (*owner)()){
   hardware.radioIqReady=NativeRadioIq::ready;
   hardware.radioIqPrepare=NativeRadioIq::prepare;
   hardware.radioIqCleanup=NativeRadioIq::cleanup;
+  hardware.radioIqWorkerStart=NativeRadioIq::workerStart;
+  hardware.radioIqWorkerStop=NativeRadioIq::workerStop;
+  hardware.radioIqNowUs=NativeRadioIq::nowUs;
 #endif
   hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;
 #ifdef RISC_ENABLE_HTTP
