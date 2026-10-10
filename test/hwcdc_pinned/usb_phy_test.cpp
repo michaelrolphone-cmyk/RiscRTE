@@ -3,8 +3,16 @@
 #include <iostream>
 using namespace RiscDiagnostics;
 static unsigned observed,drained;
-extern "C" void risc_native_diagnostic_observer(const char*){++observed;}
-extern "C" void risc_native_diagnostic_drain(){++drained;}
+extern "C" void risc_native_diagnostic_observer(const char*){++observed;
+#if RISC_SLEEP_DIAGNOSTICS
+ assert(checkpoint("observer.elf",1,"denied",6)==-1);
+#endif
+}
+extern "C" void risc_native_diagnostic_drain(){++drained;
+#if RISC_SLEEP_DIAGNOSTICS
+ assert(checkpoint("drain.elf",1,"denied",6)==-1);
+#endif
+}
 static bool serialRoute(){
  return SYSTEM.perip_clk_en1.usb_device_clk_en && !SYSTEM.perip_rst_en1.usb_device_rst &&
   RTCCNTL.usb_conf.sw_hw_usb_phy_sel && !RTCCNTL.usb_conf.sw_usb_phy_sel &&
@@ -28,6 +36,10 @@ int main(){
  assert(Stub::intrMask==0&&!Stub::isr&&Stub::live==0);
  auto allocations=Stub::allocationCalls,pins=Stub::pinChanges,frees=Stub::interruptFrees;
  auto storage=drained,text=observed;
+#if RISC_SLEEP_DIAGNOSTICS
+ assert(checkpoint("transfer.elf",77,"final USB summary",17)==0);
+ assert(drained==storage&&observed==text);
+#endif
  for(unsigned n=0;n<1000;++n){poll();line("trace during USB export");++Stub::tick;}
  assert(Stub::allocationCalls==allocations&&Stub::pinChanges==pins&&Stub::interruptFrees==frees);
  assert(drained==storage&&observed==text+1000);
@@ -70,6 +82,15 @@ int main(){
   assert(Stub::detachedDelays==detached+1);
   connectHost();
  }
+#if RISC_SLEEP_DIAGNOSTICS
+ Stub::hostTx.clear();
+ for(char c:std::string("diag\n"))Stub::hostRx.push_back(c);
+ Stub::intrStatus|=USB_SERIAL_JTAG_INTR_SERIAL_OUT_RECV_PKT;Stub::isr(nullptr);
+ for(unsigned i=0;i<1000;++i){poll();Stub::intrStatus|=USB_SERIAL_JTAG_INTR_SERIAL_IN_EMPTY;Stub::isr(nullptr);}
+ assert(Stub::hostTx.find("text=transfer.elf")!=std::string::npos);
+ assert(Stub::hostTx.find("text=final USB summary")!=std::string::npos);
+ assert(Stub::hostTx.find("RTE_DIAG end\n")!=std::string::npos);
+#endif
  Serial.end();assert(Stub::live==0);
  std::cout<<"Actual pinned HWCDC: checked clock/reset/PHY/pads, repeated absent-host resume with RX/TX, retained allocation/register failures, lease fences and retry PASS\n";
 }

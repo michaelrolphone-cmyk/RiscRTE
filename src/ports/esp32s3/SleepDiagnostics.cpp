@@ -40,6 +40,7 @@ namespace {
 // every boot validates it. Cold/brownout/external/unknown reset discards it.
 RTC_NOINIT_ATTR Journal journal;
 Replay replay;
+Checkpoint lastCheckpoint;
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
 UsbSleepRecovery recovery;
@@ -186,6 +187,17 @@ bool prepareSerial(){
   return Serial.setTxBufferSize(8192)==8192;
 }
 #endif
+#if RISC_SLEEP_DIAGNOSTICS
+int32_t checkpoint(const char* app,uint64_t invocation,const char* text,uint32_t length){
+  if(!ours() || xPortInIsrContext() || outputting)return -1;
+#if RISC_NATIVE_DIAGNOSTIC_OBSERVER
+  if(draining)return -1;
+#endif
+  // Intentionally permitted while console/PHY is fenced. RAM copy only; no
+  // native observer/drain, Serial access, allocation or provider callbacks.
+  return captureCheckpoint(lastCheckpoint,journal.boot,millis(),app,invocation,text,length);
+}
+#endif
 void start(){
   owner=xTaskGetCurrentTaskHandle();Serial.setTxTimeoutMs(0);
   outputting=unfinishedLine=false;
@@ -199,7 +211,7 @@ void start(){
   recovery.reset();
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
-  replay.disconnect();
+  replay.disconnect();lastCheckpoint={};
   const auto reset=esp_reset_reason();
   const bool retain=reset==ESP_RST_SW || reset==ESP_RST_DEEPSLEEP || reset==ESP_RST_PANIC ||
     reset==ESP_RST_INT_WDT || reset==ESP_RST_TASK_WDT || reset==ESP_RST_WDT;
@@ -303,7 +315,7 @@ void poll(){
 #if RISC_PERFORMANCE_TRACE
     if(!performanceReplay.active())
 #endif
-      replay.input(char(c),journal);
+      replay.input(char(c),journal,&lastCheckpoint);
 #endif
 #if RISC_PERFORMANCE_TRACE
 #if RISC_SLEEP_DIAGNOSTICS

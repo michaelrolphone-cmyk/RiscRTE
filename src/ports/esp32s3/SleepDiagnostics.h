@@ -40,6 +40,9 @@
 // The adapter also supplies bounded live output when the recorder is opted out.
 #define RISC_DIAGNOSTIC_ADAPTER (RISC_SLEEP_DIAGNOSTICS || RISC_HWCDC_SLEEP_RECOVERY || RISC_PERFORMANCE_TRACE || RISC_STAGE_LOGS || RISC_NATIVE_DIAGNOSTIC_OBSERVER || RISC_ENABLE_USB_PHY)
 namespace RiscDiagnostics {
+#if RISC_SLEEP_DIAGNOSTICS
+int32_t checkpoint(const char* application,uint64_t invocation,const char* text,uint32_t length);
+#endif
 #if RISC_ENABLE_USB_PHY
 bool usbPhyIdle();
 bool suspendUsbPhy();

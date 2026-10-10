@@ -12,6 +12,7 @@
 #include "runtime/streams/ProviderQueueHost.h"
 #include "runtime/streams/AppStreamSessions.h"
 #include <RiscRuntimeV1.h>
+#include <RiscDiagnosticCheckpointV1.h>
 #include <RiscResidentShellV1.h>
 #include <RiscRealtimeV1.h>
 #include <RiscPlatformRealtimeV1.h>
@@ -64,6 +65,8 @@ struct Port {
   // Trusted firmware selection only. Boot/manifest metadata cannot populate it.
   RuntimeProviders::NativeProviderPolicySetV1 nativeProviders{};
   const FailureEvidenceBackend* failureEvidence=nullptr;
+  // Optional owner-only RAM copy. Must not allocate, call providers, or do I/O.
+  int32_t (*diagnosticCheckpoint)(const char*,uint64_t,const char*,uint32_t)=nullptr;
 };
 class Runtime final {
  public:
@@ -102,6 +105,8 @@ class Runtime final {
   bool retainInvocation();
   bool streamClient(risc_stream_client_v1*);
   bool residentClient(risc_resident_client_v1*);
+  bool diagnosticCheckpointClient(risc_diagnostic_checkpoint_client_v1*);
+  int32_t diagnosticCheckpointWrite(uint64_t,const char*,uint32_t);
   bool failureEvidenceClient(risc_failure_evidence_client_v1*);
   int32_t failureEvidenceRead(uint64_t,risc_failure_evidence_v1*);
   int32_t failureEvidenceAcknowledge(uint64_t,uint32_t,uint32_t);
@@ -140,6 +145,7 @@ class Runtime final {
   Board& board() { return board_; }
   const Board& board() const { return board_; }
  private:
+  bool diagnosticCheckpointToken(uint64_t) const;
   bool failureEvidenceToken(uint64_t,bool healthy) const;
   void failureBreadcrumb(uint32_t phase,const char* application=nullptr);
   struct Invocation;

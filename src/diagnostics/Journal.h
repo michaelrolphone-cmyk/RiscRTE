@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include "Checkpoint.h"
 
 // Owner-task-only, allocation-free flight recorder. Sleep events and recent app
 // text have separate rings, so heartbeat chatter cannot evict sleep evidence.
@@ -70,11 +71,12 @@ inline const char* kindName(uint32_t kind){
 class Replay {
  public:
   void disconnect(){used_=0;discard_=false;cr_=false;active_=false;pending_=offset_=index_=0;}
-  void input(char ch,const Journal& current){
+  void input(char ch,const Journal& current,const Checkpoint* checkpoint=nullptr){
     if(ch=='\r'){if(cr_)discard_=true;cr_=true;return;}
     if(ch=='\n'){
       if(!discard_ && used_==4 && std::memcmp(command_,"diag",4)==0 && !active_ && valid(current)){
-        snapshot_=current;active_=true;index_=pending_=offset_=0;
+        snapshot_=current;checkpoint_=checkpoint?*checkpoint:Checkpoint{};
+        active_=true;index_=pending_=offset_=0;
       }
       used_=0;discard_=false;cr_=false;return;
     }
@@ -97,9 +99,12 @@ class Replay {
     size_t written=out.write(reinterpret_cast<const uint8_t*>(line_)+offset_,count);
     if(written>count)written=count;
     offset_+=written;
-    if(offset_==pending_){pending_=offset_=0;++index_;if(index_>snapshot_.eventCount+snapshot_.messageCount+1)active_=false;}
+    if(offset_==pending_){pending_=offset_=0;++index_;if(index_>snapshot_.eventCount+snapshot_.messageCount+checkpointLines()+1)active_=false;}
   }
  private:
+  size_t checkpointLines() const {
+    return checkpoint_.sequence?1+(checkpoint_.applicationLength+95)/96+(checkpoint_.length+95)/96:0;
+  }
   void prepare(){
     int length=0;
     if(index_==0)length=std::snprintf(line_,sizeof(line_),"RTE_DIAG begin schema=1 events=%u messages=%u event_lost=%lu message_lost=%lu\n",
@@ -112,11 +117,27 @@ class Replay {
       const auto& m=snapshot_.messages[(snapshot_.messageHead+MessageCapacity-snapshot_.messageCount+index_-snapshot_.eventCount-1)%MessageCapacity];
       length=std::snprintf(line_,sizeof(line_),"RTE_DIAG seq=%lu boot=%lu ms=%lu text=%.*s\n",
         (unsigned long)m.sequence,(unsigned long)m.boot,(unsigned long)m.ms,int(TextSize),m.text);
+    }else if(index_<=snapshot_.eventCount+snapshot_.messageCount+checkpointLines()){
+      const size_t part=index_-snapshot_.eventCount-snapshot_.messageCount-1;
+      const size_t appParts=(checkpoint_.applicationLength+95)/96;
+      if(!part)length=std::snprintf(line_,sizeof(line_),
+        "RTE_DIAG checkpoint seq=%lu boot=%lu ms=%lu invocation=%llu length=%lu truncated=%u\n",
+        (unsigned long)checkpoint_.sequence,(unsigned long)checkpoint_.boot,(unsigned long)checkpoint_.ms,
+        (unsigned long long)checkpoint_.invocation,(unsigned long)checkpoint_.length,unsigned(checkpoint_.truncated));
+      else {
+        const bool app=part<=appParts;
+        const size_t offset=(app?part-1:part-appParts-1)*96;
+        size_t count=(app?checkpoint_.applicationLength:checkpoint_.length)-offset;
+        if(count>96)count=96;
+        length=std::snprintf(line_,sizeof(line_),"RTE_DIAG checkpoint %s offset=%lu text=%.*s\n",
+          app?"application":"data",(unsigned long)offset,int(count),(app?checkpoint_.application:checkpoint_.text)+offset);
+      }
     }else length=std::snprintf(line_,sizeof(line_),"RTE_DIAG end\n");
     if(length>0 && size_t(length)<sizeof(line_))pending_=size_t(length);
     else disconnect();
   }
   Journal snapshot_{};
+  Checkpoint checkpoint_{};
   char command_[4]{},line_[192]{};
   size_t used_=0,pending_=0,offset_=0,index_=0;
   bool discard_=false,active_=false,cr_=false;

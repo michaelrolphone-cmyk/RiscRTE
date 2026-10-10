@@ -9,6 +9,7 @@ extern "C" {
 struct risc_stream_client_v1;
 struct risc_resident_client_v1;
 struct risc_failure_evidence_client_v1;
+struct risc_diagnostic_checkpoint_client_v1;
 /* Minimal headless runtime service. Append-only. Available only on the active
  * app owner task, from module init through fini. Native apps are trusted code.
  * No pointers/callbacks/tasks may outlive app_main/fini. */
@@ -86,6 +87,9 @@ typedef struct {
    * No storage or hardware authority. Reading never acknowledges presentation.
    * Older tables lack this suffix. See RiscFailureEvidenceV1.h. */
   bool (*failure_evidence)(struct risc_failure_evidence_client_v1* out);
+  /* Optional copied, invocation-scoped RAM diagnostic checkpoint.
+   * Check table size before reading; see RiscDiagnosticCheckpointV1.h. */
+  bool (*diagnostic_checkpoint_client)(struct risc_diagnostic_checkpoint_client_v1* out);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
@@ -95,6 +99,7 @@ typedef struct {
 #define RISC_RUNTIME_DEFAULT_REQUEST_V1_SIZE (offsetof(risc_runtime_api_v1, request_default) + sizeof(((risc_runtime_api_v1*)0)->request_default))
 #define RISC_RUNTIME_RESIDENT_SHELL_V1_SIZE (offsetof(risc_runtime_api_v1, resident_shell) + sizeof(((risc_runtime_api_v1*)0)->resident_shell))
 #define RISC_RUNTIME_FAILURE_EVIDENCE_V1_SIZE (offsetof(risc_runtime_api_v1, failure_evidence) + sizeof(((risc_runtime_api_v1*)0)->failure_evidence))
+#define RISC_RUNTIME_DIAGNOSTIC_CHECKPOINT_V1_SIZE (offsetof(risc_runtime_api_v1, diagnostic_checkpoint_client) + sizeof(((risc_runtime_api_v1*)0)->diagnostic_checkpoint_client))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }

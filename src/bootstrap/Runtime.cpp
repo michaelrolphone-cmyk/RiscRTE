@@ -74,7 +74,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](risc_stream_client_v1* out){return currentRuntime && currentRuntime->streamClient(out);},
     [](){return currentRuntime && currentRuntime->launchDefault();},
     [](risc_resident_client_v1* out){return currentRuntime && currentRuntime->residentClient(out);},
-    [](risc_failure_evidence_client_v1* out){return currentRuntime && currentRuntime->failureEvidenceClient(out);}};
+    [](risc_failure_evidence_client_v1* out){return currentRuntime && currentRuntime->failureEvidenceClient(out);},
+    [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && currentRuntime->diagnosticCheckpointClient(out);}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -91,6 +92,7 @@ extern "C" bool risc_runtime_reclaim_app_images() {
 }
 namespace RiscBoot {
 #include "FailureEvidenceRuntime.inc"
+#include "DiagnosticCheckpointRuntime.inc"
 Runtime::~Runtime() {
   // Native owners retain the entire metadata candidate after lost I/O custody.
   // As with GraphV2, destruction is a caller contract violation, never cleanup.
