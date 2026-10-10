@@ -1,5 +1,10 @@
 # RiscRTE
 
+Runtime 0.2.5 holds the native shared-resource lease across HCI lifecycle and
+rollback, allowing BLE setup alongside owned Wi-Fi between SDK iterations.
+Queued, starting, stopping and uncertain cleanup remain excluded. See
+[HCI/Wi-Fi coexistence](docs/HCI_WIFI_COEXISTENCE_025.md).
+
 Runtime 0.2.4 adds an explicit 29-provider / 45-grant PSRAM cohort selection
 with exact linked capacity proof. Ordinary 26/42 and legacy 17/32 bounds remain
 unchanged. See [the opt-in capacity contract](docs/COHORT_CAPACITY_024.md).

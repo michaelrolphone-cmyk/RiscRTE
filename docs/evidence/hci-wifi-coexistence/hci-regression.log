@@ -1,0 +1,10 @@
+CPU HCI: owner/scoped tokens, bounds, healthy handoff, sleep barriers, failed-open token and retained cleanup PASS
+Actual JSON/manifest HCI admission: exact selected config, no unselected table, unavailable backend and malformed graph reject before hardware I/O PASS
+Native HCI: exact SDK lifecycle, bounded copied RX/TX, deadline, overflow, stale callback and retained uncertainty PASS
+Native HCI burst: 32 short reports, mixed FIFO wraparound, maximum ACL, malformed lengths and retained true overflow PASS
+Real Runtime/Graph/CpuPort/dlopen HCI lifecycle: handoff PASS
+Real Runtime/Graph/CpuPort/dlopen HCI lifecycle: open-clean PASS
+Real Runtime/Graph/CpuPort/dlopen HCI lifecycle: open-retained PASS
+Real Runtime/Graph/CpuPort/dlopen HCI lifecycle: cleanup-retained PASS
+Real Runtime/Graph/CpuPort/dlopen HCI lifecycle: cleanup-retry PASS
+Real Runtime/Graph/CpuPort/dlopen HCI lifecycle: poll-retained PASS

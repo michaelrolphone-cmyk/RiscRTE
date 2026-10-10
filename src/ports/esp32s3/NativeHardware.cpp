@@ -178,6 +178,8 @@ Hardware nativeHardware(bool (*owner)()){
   hardware.spiBeginThreeWire=spiBeginThreeWire;
   static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
   radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
+  // Under a nested owner lease, test the phase without refusing our own lease.
+  radioAsync.sharedReady=nativeRadioResourceReady;
   hardware.radioAsync=&radioAsync;hardware.radioAsyncPrepare=NativeRadioAsync::provision;
 #if RISC_NATIVE_ENTROPY
   NativeEntropy::configure(hardware.owner,[](){

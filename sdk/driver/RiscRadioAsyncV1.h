@@ -44,7 +44,10 @@ typedef struct {
 } risc_radio_progress_v1;
 /* Fixed size/tag native table. provision() occurs before admission is exposed,
  * never inside begin/poll/cancel. sharedReady is a copied readiness predicate
- * for PHY-sensitive lifecycle changes and entropy, not a storage-context gate. */
+ * for PHY-sensitive lifecycle changes and entropy, not a storage-context gate.
+ * Native owner adapters also report phase readiness while their reentrant
+ * tryShared lease is held. Callers must acquire that lease before relying on
+ * readiness for SDK lifecycle calls, and end it on every return path. */
 typedef struct {
     uint32_t struct_size, tag, version;
     int32_t (*begin)(const risc_radio_request_v1*,uint32_t*);

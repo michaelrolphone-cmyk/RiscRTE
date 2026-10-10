@@ -70,7 +70,7 @@ int main(int argc,char** argv){
  h.radioJoin=Async::join;h.radioState=Async::state;h.radioLeave=Async::leave;
  h.radioAddresses=Async::addresses;h.radioScanStart=Async::scanStart;h.radioScanPoll=Async::scanPoll;h.radioScanCancel=Async::scanCancel;h.radioIdle=Async::idle;
  assert(Async::allocateBuffers() && Async::provisioned());resourceOwner.configure(h.owner,Async::tryShared,Async::endShared,Async::sharedPhaseReady,Async::sharedReady);
- auto nativeTable=*Async::api();nativeTable.tryShared=[](){return resourceOwner.enter();};nativeTable.endShared=[](){resourceOwner.leave();};h.radioAsync=&nativeTable;
+ auto nativeTable=*Async::api();nativeTable.tryShared=[](){return resourceOwner.enter();};nativeTable.endShared=[](){resourceOwner.leave();};nativeTable.sharedReady=[](){return resourceOwner.ready();};h.radioAsync=&nativeTable;
  h.hciSafe=[](){return true;};h.hciIdle=[](){return true;};h.hciOpen=[](){assert(false);return false;};h.hciClose=[](){assert(false);return false;};
  h.radioIqReady=[](){return true;};h.radioIqPrepare=[](){return true;};h.radioIqCleanup=[](){return true;};
  Port port(h);auto& c=port.radios_[0];c.port=&port;port.iq_.port=&port;port.hci_.port=&port;

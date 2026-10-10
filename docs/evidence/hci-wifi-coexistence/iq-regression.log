@@ -1,0 +1,13 @@
+IQ resource: fail-closed proof, owner/context, idle station coexistence, modem exclusion, exit/restart/all sleep forms, retained cleanup retry PASS
+IQ global CPU resource: opt-in registration, no selected hardware or bind-time I/O, native-first graph continuity and unavailable backend refusal PASS
+Native IQ: SDK modem/power/PHY balance, cold and post-Bluetooth claims, rejection and retained cleanup retry, bounded trace PASS
+Native IQ: unsupported actual ROM rejected before MMIO PASS
+Native IQ: unsupported actual ROM rejected before MMIO PASS
+Native IQ: static bank overlap rejected before MMIO PASS
+Native IQ: static bank overlap rejected before MMIO PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: lazy PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: refused PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: clean PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: retry PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: retained PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: unreleased PASS

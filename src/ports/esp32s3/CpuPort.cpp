@@ -3,6 +3,17 @@
 #include <cstring>
 namespace RiscCpu {
 namespace {
+// A readiness snapshot cannot exclude the native worker. Hold its existing
+// owner-reentrant lease across the complete HCI SDK lifecycle and rollback.
+struct HciRadioLease {
+  const risc_native_radio_async_v1* api;
+  bool held;
+  explicit HciRadioLease(const risc_native_radio_async_v1* value):api(value),
+    held(!api || (api->tryShared && api->endShared && api->tryShared())){}
+  ~HciRadioLease(){if(api && held)api->endShared();}
+  HciRadioLease(const HciRadioLease&)=delete;
+  HciRadioLease& operator=(const HciRadioLease&)=delete;
+};
 uint64_t pinBit(int pin){return pin>=0 && pin<=48?uint64_t(1)<<pin:0;}
 void pinsFor(const RiscBoot::Board::Device& d,uint64_t& input,uint64_t& output,uint64_t& pullup){
   if(!strcmp(d.type,"display.spi")){
@@ -369,8 +380,9 @@ bool Port::i2sClose(void* context,uint64_t token){
 bool Port::hciOpen(void* context,uint32_t unit,uint64_t* out){
   if(out)*out=0;
   auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
-  for(const auto& radio:p.radios_)if(radio.operation)return false;
-  if(!p.radioSharedReady() || !out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || p.iq_.token || !p.hw_.hciIdle())return false;
+  if(!out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || p.iq_.token)return false;
+  HciRadioLease lease(p.hw_.radioAsync);
+  if(!lease.held || !p.radioSharedReady() || !p.hw_.hciIdle())return false;
   const uint64_t token=p.token();if(!token)return false;
   p.transferring_=true;const bool ok=p.hw_.hciOpen();p.transferring_=false;
   if(!ok){
@@ -398,8 +410,8 @@ bool Port::hciReceive(void* context,uint64_t token,uint8_t* type,uint8_t* data,s
 bool Port::hciClose(void* context,uint64_t token){
   auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
-  for(const auto& radio:p.radios_)if(radio.operation)return false;
-  if(!p.radioSharedReady())return false;
+  HciRadioLease lease(p.hw_.radioAsync);
+  if(!lease.held || !p.radioSharedReady())return false;
   c.closing=true;p.transferring_=true;const bool ok=p.hw_.hciClose();p.transferring_=false;
   if(!ok || !p.hw_.hciIdle())return false;
   c.token=0;c.closing=false;return true;

@@ -1,0 +1,24 @@
+{
+  "base_source": "32bf33b9e7b29da1f084b81431b63c7ea91da391",
+  "version": "0.2.5",
+  "new_native_coexistence_scenarios": 23,
+  "new_suite_modes": [
+    "normal",
+    "asan-ubsan",
+    "tsan",
+    "stage-logs-disabled"
+  ],
+  "existing_async_provider_scenarios": 57,
+  "existing_async_modes": [
+    "normal",
+    "asan-ubsan",
+    "tsan"
+  ],
+  "existing_normal_suites": [
+    "HCI port/binding/native/burst/Runtime lifecycle",
+    "IQ port/binding/native/Runtime lifecycle"
+  ],
+  "leak_sanitizer": "Unavailable under ptrace; ASAN_OPTIONS=detect_leaks=0 for local ASan/UBSan execution",
+  "target_receipts": "Created separately after the source checkpoint; the initial exploratory dirty-source build is not a deliverable.",
+  "physical_hardware_qualified": false
+}

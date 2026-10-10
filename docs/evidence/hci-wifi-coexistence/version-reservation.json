@@ -1,0 +1,478 @@
+{
+  "checked_at": "2026-10-10T17:02:30Z",
+  "repository": "michaelrolphone-cmyk/RiscRTE",
+  "proposed_version": "0.2.5",
+  "base": "32bf33b9e7b29da1f084b81431b63c7ea91da391",
+  "branches": [
+    {
+      "ref": "refs/heads/checkpoint/native-diagnostic-0106-reconstruction",
+      "sha": "274bc66f193cbe29018d2a85c9400cb0dce8aacc"
+    },
+    {
+      "ref": "refs/heads/codex/bounded-performance-tracing",
+      "sha": "15b1dc0695cedad5279244ac15f8d8113b9a61e9"
+    },
+    {
+      "ref": "refs/heads/codex/opt-in-demand-activation",
+      "sha": "0c6ceef38d1d972febd959e8f2da46c5a4a398ac"
+    },
+    {
+      "ref": "refs/heads/codex/pr30-file-dispatch-regressions",
+      "sha": "d843bda408331b800d8fb94fba98e59bcff2cd73"
+    },
+    {
+      "ref": "refs/heads/codex/retained-realtime-snapshot",
+      "sha": "341e6e38ce00b7c57d5daaf5f8c829c3575db931"
+    },
+    {
+      "ref": "refs/heads/codex/typed-retained-wake",
+      "sha": "3c39aa7ac50ecd7f6da0296a62a2d7af066f82d1"
+    },
+    {
+      "ref": "refs/heads/feat/abi2-owner-maintenance-0176",
+      "sha": "a9887b1074128444a7f5b98663d29d7feb460561"
+    },
+    {
+      "ref": "refs/heads/feat/alarm-i2s-output",
+      "sha": "8688f92069b99547f0d25ecbd12cfcad3bb52c53"
+    },
+    {
+      "ref": "refs/heads/feat/app-data-volume",
+      "sha": "1d9bcb204a0b12ac6483511f32ba56da47699404"
+    },
+    {
+      "ref": "refs/heads/feat/app-policy-capacity",
+      "sha": "6b75e5aa01e848e73782b18d925810e014dbc7ba"
+    },
+    {
+      "ref": "refs/heads/feat/bounded-audio-input",
+      "sha": "8313237ae993899c1d4bc68c693bc07a90da1dae"
+    },
+    {
+      "ref": "refs/heads/feat/bounded-hci-controller",
+      "sha": "33cafe940d5dde42f8c0ae0af832b185b0c8a670"
+    },
+    {
+      "ref": "refs/heads/feat/bounded-kv-v2",
+      "sha": "bd87c9d74384a88fe11a221f9588ded5afed5ee8"
+    },
+    {
+      "ref": "refs/heads/feat/declarative-alarms",
+      "sha": "b70cb87bdead507b9bc826f445935c5ad2b08bad"
+    },
+    {
+      "ref": "refs/heads/feat/declared-file-dispatch",
+      "sha": "d843bda408331b800d8fb94fba98e59bcff2cd73"
+    },
+    {
+      "ref": "refs/heads/feat/default-cohort-promotion",
+      "sha": "7e79a8f06c1ee3b71214408c2477d9aaca985834"
+    },
+    {
+      "ref": "refs/heads/feat/explicit-default-0177",
+      "sha": "e5907413ad30b32479a1902b7a80b94868826a8a"
+    },
+    {
+      "ref": "refs/heads/feat/full-cohort-updates",
+      "sha": "e08609b465d9368d4e6efc45e377adbdbbb706a1"
+    },
+    {
+      "ref": "refs/heads/feat/installed-file-volume",
+      "sha": "3392ad7f2e165ba2f1f2f666596cd946d14252a4"
+    },
+    {
+      "ref": "refs/heads/feat/minimal-runtime",
+      "sha": "df276904b9d26c028e64c0c7bd9c65116613e1d4"
+    },
+    {
+      "ref": "refs/heads/feat/offline-paired-entry",
+      "sha": "eb8f07f259eabb181e5f786994a6dc5271c04a74"
+    },
+    {
+      "ref": "refs/heads/feat/owned-deep-sleep-b1",
+      "sha": "fd79f39fd660565206da0e44bbcd0d2bfd5055eb"
+    },
+    {
+      "ref": "refs/heads/feat/owned-timer-wake",
+      "sha": "5ed1fec881ed45c0ec210c466914052147d48019"
+    },
+    {
+      "ref": "refs/heads/feat/owned-wake-set",
+      "sha": "2510758a6fbffdb49688ed6f0a181f93ff10cfa9"
+    },
+    {
+      "ref": "refs/heads/feat/paired-update-banks",
+      "sha": "47576084c8f25b1648b79205f8d68f5e5d3feaea"
+    },
+    {
+      "ref": "refs/heads/feat/platform-radio-station",
+      "sha": "e972f0ff951ca96ca0999ee728dbad3a92434c4f"
+    },
+    {
+      "ref": "refs/heads/feat/profile-provisioning-core",
+      "sha": "7cb3047f6049093e2309cab94ddbde993ee47544"
+    },
+    {
+      "ref": "refs/heads/feat/provider-appdata-files-0183",
+      "sha": "3fcbba6a04626f8484a523e7da59fb44c82e6e49"
+    },
+    {
+      "ref": "refs/heads/feat/provider-bound-storage",
+      "sha": "e20b00574a3344e7340f90c4c314812e1588d546"
+    },
+    {
+      "ref": "refs/heads/feat/provider-key-capacity",
+      "sha": "511f08d4a0a20c3a1e8672e99296dc525a1cd8af"
+    },
+    {
+      "ref": "refs/heads/feat/provider-readonly-realtime",
+      "sha": "30dcec5ce6ce33223f2b203a2399283e1f758567"
+    },
+    {
+      "ref": "refs/heads/feat/provider-scoped-sync",
+      "sha": "1aa2c931becde7528dc1f2462ea8c74fdda39993"
+    },
+    {
+      "ref": "refs/heads/feat/retrievable-sleep-diagnostics",
+      "sha": "a27bf228ecd99f2896638a30b55802560701180d"
+    },
+    {
+      "ref": "refs/heads/feat/scoped-radio-spi",
+      "sha": "b160e907ac6da3d3611517e7c8511276c67b47ea"
+    },
+    {
+      "ref": "refs/heads/feat/spectrum-rx-deadline",
+      "sha": "da92aef5174b9279de1bad0ec05f7234ba587169"
+    },
+    {
+      "ref": "refs/heads/feat/temporal-contexts-integration-20261010",
+      "sha": "7bc78be05fb0869a35f75eff87b056120ad4b657"
+    },
+    {
+      "ref": "refs/heads/feat/typed-gpio-held-retirement",
+      "sha": "e63913f4a1d1451a61f18b86f8ca883a7f94f8c4"
+    },
+    {
+      "ref": "refs/heads/feat/watch-runtime-iq-sleep-035",
+      "sha": "146ee7fed8ba97e4de5bfafb1ad745f1eee48158"
+    },
+    {
+      "ref": "refs/heads/feat/watch-sdr-iq-resource",
+      "sha": "0a4f3d18c5d830d32678092fa99284810334b485"
+    },
+    {
+      "ref": "refs/heads/fix/bitbang-probe-startup",
+      "sha": "ef7bc637eda020519a0b74b6467210ebe457adfe"
+    },
+    {
+      "ref": "refs/heads/fix/explicit-kv-namespaces",
+      "sha": "abef681d6c9c2b58729909a9961118ea20feee5e"
+    },
+    {
+      "ref": "refs/heads/fix/gpio-output-readback",
+      "sha": "b16782e1711b6ca921327ab89ebed8f8c7fc3035"
+    },
+    {
+      "ref": "refs/heads/fix/graph-provider-instance-loading",
+      "sha": "47576084c8f25b1648b79205f8d68f5e5d3feaea"
+    },
+    {
+      "ref": "refs/heads/fix/iq-phy-power-lifecycle",
+      "sha": "4a0891fc0ec10dcd100c6248768cabecaafec888"
+    },
+    {
+      "ref": "refs/heads/fix/native-diagnostic-drain-0176",
+      "sha": "dc41f90795d7580abea335f082e1132936bffe50"
+    },
+    {
+      "ref": "refs/heads/fix/provider-invocation-retention",
+      "sha": "602ae9bd618e13407b5b94bcad86cdabc23c99ea"
+    },
+    {
+      "ref": "refs/heads/fix/provider-quiescence-diagnostics",
+      "sha": "63d607b18c635533e97098235c30e845b249533d"
+    },
+    {
+      "ref": "refs/heads/fix/runtime-stream-retained-fence-0175",
+      "sha": "317b74e363877cb6e5a90198211f897744e4a6d3"
+    },
+    {
+      "ref": "refs/heads/fix/watch-native-usb-sleep",
+      "sha": "5426ade43dbe74a45e85577d087035099a1abf1b"
+    },
+    {
+      "ref": "refs/heads/integrate/diagnostic-usb-yield-0181",
+      "sha": "686d44be18342c5894b2b01b5a4b14d49e7c4f7c"
+    },
+    {
+      "ref": "refs/heads/integrate/wifi-setup-diagnostics-0174",
+      "sha": "858ec7160212e0e0f3e891c0b70dfe61272cb2bf"
+    },
+    {
+      "ref": "refs/heads/integrate/x4-pr35-iq-lifecycle-0146",
+      "sha": "2317b4fca374bb2b9cfe8dd204aa22244d1db609"
+    },
+    {
+      "ref": "refs/heads/integrate/x4-runtime-0172",
+      "sha": "4180417791ddb7c6c571f7e62d90aff746c0232d"
+    },
+    {
+      "ref": "refs/heads/integration/x4-temporal-current-20261010",
+      "sha": "a9587bec00015ad56c302192a8359b6d70cde01a"
+    },
+    {
+      "ref": "refs/heads/main",
+      "sha": "ff34f976f1209fba85e455e21c9e2d5429d5b800"
+    },
+    {
+      "ref": "refs/heads/perf/committed-pair-boot-0155",
+      "sha": "36d334c7dab94f59eb825ecd49b35c0f7ffce14e"
+    },
+    {
+      "ref": "refs/heads/perf/scoped-gpio-read-0188",
+      "sha": "8204b58b18816a571f59fc06fb277de0877ec9d3"
+    },
+    {
+      "ref": "refs/heads/perf/scoped-gpio-write-cache",
+      "sha": "a768245998ba334ef54da92f6573ae01b2320a4e"
+    },
+    {
+      "ref": "refs/heads/release/watch-112-canonical-provenance",
+      "sha": "e1fb2362a1ef3447ba8c61037470403ff37a84e4"
+    },
+    {
+      "ref": "refs/heads/release/watch-112-source-snapshot",
+      "sha": "4b98e6a7f271b1834ad9fc58426ea2ddfcf9a8e6"
+    },
+    {
+      "ref": "refs/heads/test/provision-product-iq-lifecycle",
+      "sha": "b514a540acb404913a704be38ce4901d57d43ca2"
+    },
+    {
+      "ref": "refs/heads/test/watch-app-handoff",
+      "sha": "ffd4df2bea0214d1ea98181e3ec36d6ab7b9788d"
+    },
+    {
+      "ref": "refs/heads/work/native-home-spool-capacity-0105-20261010",
+      "sha": "040aa9381c370d51110d62e04b17e61daf231995"
+    },
+    {
+      "ref": "refs/heads/work/runtime-0.2.2-native-union-20261010",
+      "sha": "b25b1d467a557e8d693211cff2eff959eb9c79de"
+    },
+    {
+      "ref": "refs/heads/work/runtime-0.2.3-entropy",
+      "sha": "67e0dbe1a5f519fd96d8f88797ff91b9e1a3096c"
+    }
+  ],
+  "tags": [
+    {
+      "ref": "refs/tags/firmware-v0.1.15",
+      "sha": "899ad7c0d01a5e1a1299a1bd1644724c6504c939"
+    },
+    {
+      "ref": "refs/tags/firmware-v0.1.16",
+      "sha": "0fa8c576f547817b8124ed10686d80a6351bb634"
+    },
+    {
+      "ref": "refs/tags/firmware-v0.1.32",
+      "sha": "fee44cf40a1889e1f6080fd85e8ce92300e2cd93"
+    },
+    {
+      "ref": "refs/tags/firmware-v0.1.33",
+      "sha": "7386ae1c683740ee110829231671e9d716854b77"
+    },
+    {
+      "ref": "refs/tags/firmware-v0.1.37",
+      "sha": "33b85b42fcfc928faed17ad258c551226283e372"
+    },
+    {
+      "ref": "refs/tags/firmware-v0.1.41",
+      "sha": "4a3493a2f76a4e83d28782c644713830baaa346e"
+    },
+    {
+      "ref": "refs/tags/firmware-v0.1.55",
+      "sha": "937333cd2271160545dac8cf016f90cf3a90a999"
+    },
+    {
+      "ref": "refs/tags/firmware-v0.1.6",
+      "sha": "be74e9408577b9a58d86bfae4e6050c8a7fb88ab"
+    }
+  ],
+  "open_prs": [
+    {
+      "number": 62,
+      "title": "Integrate temporal acquisition and shared files into current X4 native",
+      "head": "integration/x4-temporal-current-20261010",
+      "sha": "a9587bec00015ad56c302192a8359b6d70cde01a"
+    },
+    {
+      "number": 61,
+      "title": "Add IQ worker and file-scoped shared storage for temporal Contexts",
+      "head": "feat/temporal-contexts-integration-20261010",
+      "sha": "7bc78be05fb0869a35f75eff87b056120ad4b657"
+    },
+    {
+      "number": 60,
+      "title": "Prototype optional declarative scenes and restorable Alarms lifecycle",
+      "head": "feat/declarative-alarms",
+      "sha": "b70cb87bdead507b9bc826f445935c5ad2b08bad"
+    },
+    {
+      "number": 59,
+      "title": "Hardware one-bit SDMMC host and scoped GPIO performance (Runtime 0.1.97)",
+      "head": "perf/scoped-gpio-read-0188",
+      "sha": "8204b58b18816a571f59fc06fb277de0877ec9d3"
+    },
+    {
+      "number": 58,
+      "title": "Runtime 0.1.83: exact provider-bound files for storage-scaled Points",
+      "head": "feat/provider-appdata-files-0183",
+      "sha": "3fcbba6a04626f8484a523e7da59fb44c82e6e49"
+    },
+    {
+      "number": 57,
+      "title": "Runtime 0.1.81: integrate diagnostics, USB PHY ownership, and safe cooperative yield",
+      "head": "integrate/diagnostic-usb-yield-0181",
+      "sha": "686d44be18342c5894b2b01b5a4b14d49e7c4f7c"
+    },
+    {
+      "number": 56,
+      "title": "Add explicit configured-default Home handoff for apps and file receivers",
+      "head": "feat/explicit-default-0177",
+      "sha": "e5907413ad30b32479a1902b7a80b94868826a8a"
+    },
+    {
+      "number": 54,
+      "title": "Runtime 0.1.76: USB-independent native diagnostic storage drain",
+      "head": "fix/native-diagnostic-drain-0176",
+      "sha": "dc41f90795d7580abea335f082e1132936bffe50"
+    },
+    {
+      "number": 53,
+      "title": "Plan snapshot-bound offline entry for qualified paired cohorts",
+      "head": "feat/offline-paired-entry",
+      "sha": "eb8f07f259eabb181e5f786994a6dc5271c04a74"
+    },
+    {
+      "number": 52,
+      "title": "Add source-bound owner maintenance for the paired app-data layout",
+      "head": "feat/abi2-owner-maintenance-0176",
+      "sha": "a9887b1074128444a7f5b98663d29d7feb460561"
+    },
+    {
+      "number": 51,
+      "title": "Fence retained stream authority when terminal notifications contend",
+      "head": "fix/runtime-stream-retained-fence-0175",
+      "sha": "317b74e363877cb6e5a90198211f897744e4a6d3"
+    },
+    {
+      "number": 50,
+      "title": "Expose Wi-Fi SDK setup memory at Runtime 0.1.74",
+      "head": "integrate/wifi-setup-diagnostics-0174",
+      "sha": "858ec7160212e0e0f3e891c0b70dfe61272cb2bf"
+    },
+    {
+      "number": 49,
+      "title": "Integrate native lifecycle, Bluetooth burst and provisioning fixes at 0.1.73",
+      "head": "integrate/x4-runtime-0172",
+      "sha": "4180417791ddb7c6c571f7e62d90aff746c0232d"
+    },
+    {
+      "number": 46,
+      "title": "Runtime 0.1.56: bounded interaction and lifecycle performance tracing",
+      "head": "codex/bounded-performance-tracing",
+      "sha": "15b1dc0695cedad5279244ac15f8d8113b9a61e9"
+    },
+    {
+      "number": 44,
+      "title": "Repair complete IQ lifecycle in provisioning admission fixtures",
+      "head": "test/provision-product-iq-lifecycle",
+      "sha": "b514a540acb404913a704be38ce4901d57d43ca2"
+    },
+    {
+      "number": 42,
+      "title": "Runtime 0.1.52: readonly provider realtime dependency",
+      "head": "feat/provider-readonly-realtime",
+      "sha": "30dcec5ce6ce33223f2b203a2399283e1f758567"
+    },
+    {
+      "number": 41,
+      "title": "Runtime 0.1.51: preserve invocations across provider-local retention",
+      "head": "fix/provider-invocation-retention",
+      "sha": "602ae9bd618e13407b5b94bcad86cdabc23c99ea"
+    },
+    {
+      "number": 40,
+      "title": "Runtime 0.1.50: default-only selected-provider promotion",
+      "head": "feat/default-cohort-promotion",
+      "sha": "7e79a8f06c1ee3b71214408c2477d9aaca985834"
+    },
+    {
+      "number": 39,
+      "title": "Runtime 0.1.49: retained realtime snapshots with separate control authority",
+      "head": "codex/retained-realtime-snapshot",
+      "sha": "341e6e38ce00b7c57d5daaf5f8c829c3575db931"
+    },
+    {
+      "number": 38,
+      "title": "Runtime 0.1.48: opt-in provider demand activation",
+      "head": "codex/opt-in-demand-activation",
+      "sha": "0c6ceef38d1d972febd959e8f2da46c5a4a398ac"
+    },
+    {
+      "number": 37,
+      "title": "Add typed app-owned retained wake records",
+      "head": "codex/typed-retained-wake",
+      "sha": "3c39aa7ac50ecd7f6da0296a62a2d7af066f82d1"
+    },
+    {
+      "number": 36,
+      "title": "Runtime 0.1.46: integrate scoped GPIO stack with Watch IQ lifecycle",
+      "head": "integrate/x4-pr35-iq-lifecycle-0146",
+      "sha": "2317b4fca374bb2b9cfe8dd204aa22244d1db609"
+    },
+    {
+      "number": 35,
+      "title": "Runtime 0.1.45: scoped GPIO hot-path checkpoint",
+      "head": "perf/scoped-gpio-write-cache",
+      "sha": "a768245998ba334ef54da92f6573ae01b2320a4e"
+    },
+    {
+      "number": 34,
+      "title": "Runtime 0.1.44: identify retained provider teardown and app entry stages",
+      "head": "fix/provider-quiescence-diagnostics",
+      "sha": "63d607b18c635533e97098235c30e845b249533d"
+    },
+    {
+      "number": 33,
+      "title": "Runtime 0.1.43: fix owned panel-probe pullup and preserve boot errors",
+      "head": "fix/bitbang-probe-startup",
+      "sha": "ef7bc637eda020519a0b74b6467210ebe457adfe"
+    },
+    {
+      "number": 32,
+      "title": "Runtime 0.1.42: fix physical readback of scoped GPIO outputs",
+      "head": "fix/gpio-output-readback",
+      "sha": "b16782e1711b6ca921327ab89ebed8f8c7fc3035"
+    },
+    {
+      "number": 30,
+      "title": "Runtime 0.1.40: deployment-admitted file handler dispatch",
+      "head": "feat/declared-file-dispatch",
+      "sha": "d843bda408331b800d8fb94fba98e59bcff2cd73"
+    },
+    {
+      "number": 29,
+      "title": "Runtime 0.1.39: scoped GPIO display and held-output retirement",
+      "head": "feat/typed-gpio-held-retirement",
+      "sha": "e63913f4a1d1451a61f18b86f8ca883a7f94f8c4"
+    },
+    {
+      "number": 28,
+      "title": "Runtime 0.1.38: owner-scoped provider synchronization",
+      "head": "feat/provider-scoped-sync",
+      "sha": "1aa2c931becde7528dc1f2462ea8c74fdda39993"
+    }
+  ]
+}
