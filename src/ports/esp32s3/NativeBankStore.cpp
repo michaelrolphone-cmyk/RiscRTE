@@ -8,6 +8,7 @@
 #include "runtime/provisioning/StoreImageCapacity.h"
 #include "CpuPort.h"
 #include "NativeBoard.h"
+#include "NativeCompute.h"
 #include "NativeRetainedWake.h"
 #include "NativeDiagnosticBinding.h"
 #include "runtime/update/Cohort.h"
@@ -203,7 +204,7 @@ bool writeApp(void*,const void* data,uint32_t n){return operationSafe() && appFi
 // An updater cannot smuggle firmware/peripheral imports through a native ELF.
 // This is the ordinary loader's side-effect-free public libc + runtime surface.
 bool allowedImport(const char* name){
-  static const char* const names[]={"risc_runtime_get_api","strerror","memset","memcpy","memmove","memcmp","memchr","strlen","strcpy","strncpy","strcmp","strncmp","strchr","strrchr","strstr","strtod","strtol","strcspn","strncat","snprintf","malloc","calloc","realloc","free","clock_gettime","strftime","__errno","__getreent","__locale_ctype_ptr","_ctype_","__ltdf2","__fixunsdfsi","__gtdf2","__floatunsidf","__divdf3","getopt_long","optind","opterr","optarg","optopt"};
+  static const char* const names[]={"risc_runtime_get_api","strerror","memset","memcpy","memmove","memcmp","memchr","strlen","strcpy","strncpy","strcmp","strncmp","strchr","strrchr","strstr","strtod","strtol","strtof","strtoul","strcat","strncasecmp","strcasecmp","strnlen","tolower","isalpha","qsort","vsnprintf","setjmp","longjmp","strcspn","strncat","snprintf","malloc","calloc","realloc","free","clock_gettime","strftime","__errno","__getreent","__locale_ctype_ptr","_ctype_","__ltdf2","__fixunsdfsi","__gtdf2","__floatunsidf","__divdf3","getopt_long","optind","opterr","optarg","optopt"};
   for(const char* n:names)if(!strcmp(n,name))return true;
   return false;
 }
@@ -301,6 +302,7 @@ bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profil
   candidateCpu=new(cpuMemory) RiscCpu::Port(provisionState->hardware);
   RiscBoot::Port port{isOwner,nullptr,nullptr,nullptr,bindProvisioningCandidate,provisionState->keyValue,nullptr,nullptr,nullptr,provisionState->appData,RiscCpu::NativeRetainedWake::backend()};
   port.nativeProviders=RuntimeProviders::selectedNativeProviderPoliciesV1();
+  port.memoryHeap=RiscCpu::memoryHeap;port.randomBytes=RiscCpu::randomBytes;
   auto* candidate=new(runtimeMemory) RiscBoot::Runtime(port);
   RiscCpu::reserveNativePins(candidate->board());AdmissionImages context{root,millis(),candidate,{}};
   bool ok=candidate->prepare(root) && candidate->inspectImages([](void* c,const char* path,bool driver){

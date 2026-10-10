@@ -99,6 +99,9 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
 
     assert(elf && rela);
 
+    if (ELF_R_TYPE(rela->info) == R_XTENSA_NONE)
+        return (!rela->info && !rela->offset && !rela->addend) ? 0 : -EINVAL;
+
     where = (uint32_t *)esp_elf_map_sym(elf, rela->offset);
 
     ESP_LOGD(TAG, "type: %d, where=%p addr=0x%x offset=0x%x\n",

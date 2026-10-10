@@ -1,4 +1,6 @@
 #pragma once
+#include "RiscMemoryHeapV1.h"
+#include "RiscRandomV1.h"
 #include "Board.h"
 #include "AppPolicyLimits.h"
 #include "AppRequirementLimits.h"
@@ -76,6 +78,8 @@ struct Port {
   void (*providerServiceEnd)()=nullptr;
   // Optional cheap owner clock; older ports retain the health fallback.
   bool (*monotonicMs)(uint32_t*)=nullptr;
+  int32_t (*memoryHeap)(risc_memory_heap_snapshot_v1*)=nullptr;
+  int32_t (*randomBytes)(void*,uint32_t)=nullptr;
 };
 class Runtime final {
  public:
@@ -285,7 +289,9 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7, SharedDataDriver=-8;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7, SharedDataDriver=-8, MemoryHeapDriver=-9,RandomDriver=-10;
+  static int32_t randomFill(void*,void*,uint32_t);
+  static int32_t memoryHeapSnapshot(void*,risc_memory_heap_snapshot_v1*);
   const risc_realtime_control_api_v1* realtimeBackend_=nullptr;
   risc_platform_realtime_api_v1 providerRealtimeTable_{};
   bool registerProviderRealtime();
@@ -342,6 +348,7 @@ class Runtime final {
     uint64_t invocation=0;
     uint32_t generation=0; bool live=false;
     uint32_t keyValueNamespace=0; risc_key_value_v1 keyValue{};
+    risc_memory_heap_api_v1 memoryHeap{};risc_random_api_v1 random{};
   };
   uint32_t grantGeneration_=0;
   bool providerFileRetained_=false;
