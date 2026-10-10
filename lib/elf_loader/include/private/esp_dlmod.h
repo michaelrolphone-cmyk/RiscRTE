@@ -40,6 +40,7 @@ struct dlmod_slist_t {
  *
  * @return Pointer to the filename buffer on success, NULL on invalid parameters or truncation.
  */
+struct dlmod_slist_t *dlmod_insert_reader_instance(const char*,const char*,esp_dl_image_reader,void*);
 char *dlmod_getname(const char *path, char *filename, size_t len);
 
 /**

@@ -15,7 +15,7 @@ bool Runtime::configureInstalledFiles(JsonObjectConst boot) {
  // enumerate the filesystem root or infer that a .json file is public.
  for(size_t i=0;i<policyCount_;i++) {
   const char*manifest=boot["app_capabilities"][i]["manifest"];
-  if(!manifest || !add(manifest) || !add(policies_[i].elf+prefix))return fail("invalid installed app inventory");
+  if(!manifest || !add(manifest) || (policies_[i].sourceDriver<0 && !add(policies_[i].elf+prefix)))return fail("invalid installed app inventory");
  }
  for(size_t i=0;i<driverCount_;i++) {
   const char*manifest=boot["drivers"][i]["manifest"];

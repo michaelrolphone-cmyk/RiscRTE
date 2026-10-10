@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+build="$(mktemp -d)"
+trap 'rm -rf "$build"' EXIT
+flags=(-g)
+if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
+for name in default revision1 revision2; do
+  extra=();if [[ "$name" == default ]]; then extra=(-DREMOVABLE_DEFAULT); elif [[ "$name" == revision2 ]]; then extra=(-DIMAGE_REVISION=2); fi
+  cc "${flags[@]}" -std=c11 -shared -fPIC -fvisibility=hidden -I"$repo/sdk/app" "${extra[@]}" "$repo/test/fixtures/removable_app.c" -o "$build/$name.elf"
+done
+cc "${flags[@]}" -std=c11 -shared -fPIC -fvisibility=hidden -I"$repo/sdk/app" -I"$repo/sdk/driver" "$repo/test/fixtures/removable_provider.c" -o "$build/sd.elf"
+c++ "${flags[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic -DRISC_REMOVABLE_APP_TEST=1 \
+  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" \
+  -I"$repo/test/drivers/stubs" -I"$repo/test/support/native_registry/stubs" -I"$repo/lib/elf_loader/include" \
+  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+  "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
+  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
+  "$repo/test/removable_runtime_test.cpp" -ldl -o "$build/test"
+for mode in normal replacement absent missing busy removed malformed close-retained invalid-path default-external; do
+  "$build/test" "$build" "$mode"
+done

@@ -76,6 +76,9 @@ static void report(const char *mode) {
     printf("%s default/app/default/app/default: opens=%u seeks=%u reads=%u bytes=%zu parses=%u relocations=%u publications=%u read_yields=%u\n",
            mode,opens,seeks,reads,bytes,parses,relocations,publications,yields);
 }
+static int snapshot_reader(void* source,const char* logical,elf_file_t* out) {
+    (void)logical;return esp_elf_open(out,(const char*)source);
+}
 int main(int argc, char **argv) {
     assert(argc == 5);
     const char *paths[] = {argv[1], argv[2], argv[1], argv[2], argv[1]};
@@ -176,5 +179,16 @@ int main(int argc, char **argv) {
     assert(opens==1 && cache && allocations==2); /* No stale-errno retry/eviction. */
     assert(!esp_dlopen_cached_instance(&cache,"/nonexistent/image.elf"));
     esp_dl_image_cache_destroy(cache);assert(!allocations && !live_bytes);
+    // The same logical app gets newly read, validated, independently mapped
+    // snapshots. Reader failures never populate the immutable path cache.
+    reset_counts();
+    for(unsigned i=0;i<2;++i) {
+        void* module=esp_dlopen_reader_instance("/bootfs/external.elf",snapshot_reader,(void*)argv[1+i]);
+        assert(module && dlsym(module,"app_main") && !dlclose(module));
+        assert(!allocations && !live_bytes);
+    }
+    assert(opens==2 && parses==2 && relocations==2);
+    assert(!esp_dlopen_reader_instance("/bootfs/external.elf",snapshot_reader,(void*)"/nonexistent/app.elf"));
+    assert(!allocations && !live_bytes);
     puts("PASS: exact-path/session custody, independent mappings, allocation fallback, failed relocation, bounded LRU entries/bytes, malformed/missing and oversized images");
 }

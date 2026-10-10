@@ -2,6 +2,7 @@
 #pragma once
 #include <stddef.h>
 #include <stdbool.h>
+#include "esp_elf.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,6 +23,13 @@ void esp_dl_image_cache_destroy(esp_dl_image_cache *cache);
 /* Detach first, then free. Does not touch an in-progress detached file or any
  * mapping; owner-only callers serialize this with cached opens. */
 bool esp_dl_image_cache_reclaim(esp_dl_image_cache **cache);
+/* Trusted native snapshot reader only, never exported to ELFs. The callback
+ * must return canonical structurally validated bytes allocated with
+ * esp_elf_malloc, with all media handles closed. The loader takes ownership on
+ * success and relocates fresh sections; these mutable-source bytes are never
+ * cached. The callback owns all cleanup on failure. */
+typedef int (*esp_dl_image_reader)(void*,const char*,elf_file_t*);
+void *esp_dlopen_reader_instance(const char*,esp_dl_image_reader,void*);
 void *esp_dlopen_cached_instance(esp_dl_image_cache **cache, const char *path);
 
 #ifdef __cplusplus

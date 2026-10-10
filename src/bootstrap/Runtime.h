@@ -326,12 +326,15 @@ class Runtime final {
   static int32_t appDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
+    char sourcePath[193]{}; PolicyIndex sourceDriver=-1;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
     const RiscStorage::AppDataExport::Entry* exports=nullptr;
     size_t exportCount=0;
     char exportLabel[64]{};
   };
   MetadataArray<AppPolicy> policies_;
+  void* loadRemovableApp(const AppPolicy&);
+  RuntimeProviders::GrantV2 retainedAppSource_{};
   MetadataArray<RiscStorage::AppDataExport::Entry> exportEntries_[MaxAppPolicies];
   MetadataArray<FileOpenMetadata> fileHandlers_;
   static const t5_file_open_api_v1* fileOpenApi();

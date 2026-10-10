@@ -301,7 +301,7 @@ void dlmod_listsymbol(void)
  *
  * @return Pointer to the relocated ELF structure (esp_elf_t), NULL on relocation failure.
  */
-static esp_elf_t *relocate_image(const char *path, esp_dl_image_cache **cache)
+static esp_elf_t *relocate_image(const char *path, esp_dl_image_cache **cache, esp_dl_image_reader reader, void *context)
 {
     if (!path || path[0] == '\0') {
         return NULL;
@@ -309,9 +309,10 @@ static esp_elf_t *relocate_image(const char *path, esp_dl_image_cache **cache)
 
     int ret;
     elf_file_t file = {0};
-    if (cache_find(cache ? *cache : NULL, path, &file)) ret = 0;
+    if (reader) ret = reader(context,path,&file);
+    else if (cache_find(cache ? *cache : NULL, path, &file)) ret = 0;
     else { errno = 0; ret = esp_elf_open(&file, path); }
-    if (ret < 0 && errno == ENOMEM && esp_dl_image_cache_reclaim(cache)) ret = esp_elf_open(&file, path);
+    if (!reader && ret < 0 && errno == ENOMEM && esp_dl_image_cache_reclaim(cache)) ret = esp_elf_open(&file, path);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to open file %s", path);
         return NULL;
@@ -353,7 +354,7 @@ static esp_elf_t *relocate_image(const char *path, esp_dl_image_cache **cache)
     return elf_dl;
 }
 
-esp_elf_t *dlmod_relocate(const char *path) { return relocate_image(path, NULL); }
+esp_elf_t *dlmod_relocate(const char *path) { return relocate_image(path, NULL, NULL, NULL); }
 
 /**
  * @brief Insert a new module into the global module list.
@@ -365,7 +366,7 @@ esp_elf_t *dlmod_relocate(const char *path) { return relocate_image(path, NULL);
  *         (existing entry or relocation error).
  */
 static struct dlmod_slist_t *insert_module(const char *path, const char *name, bool independent,
-                                          esp_dl_image_cache **cache)
+                                          esp_dl_image_cache **cache, esp_dl_image_reader reader, void *context)
 {
     if (!path || path[0] == '\0' || !name || name[0] == '\0') {
         return NULL;
@@ -404,7 +405,7 @@ static struct dlmod_slist_t *insert_module(const char *path, const char *name, b
     new_node->magic = DLMOD_HANDLE_MAGIC;
     strncpy(new_node->name, name, FILE_NAME_MAX - 1);
     new_node->name[FILE_NAME_MAX - 1] = '\0';
-    new_node->elf = relocate_image(path, cache);
+    new_node->elf = relocate_image(path, cache, reader, context);
     if (!new_node->elf) {
         ESP_LOGE(TAG, "Failed to relocate");
         esp_elf_free(new_node);
@@ -438,15 +439,19 @@ static struct dlmod_slist_t *insert_module(const char *path, const char *name, b
     return new_node;
 }
 
+struct dlmod_slist_t *dlmod_insert_reader_instance(const char *path,const char *name,
+                                                 esp_dl_image_reader reader,void *context) {
+    return reader ? insert_module(path,name,true,NULL,reader,context) : NULL;
+}
 struct dlmod_slist_t *dlmod_insert(const char *path, const char *name) {
-    return insert_module(path,name,false,NULL);
+    return insert_module(path,name,false,NULL,NULL,NULL);
 }
 struct dlmod_slist_t *dlmod_insert_instance(const char *path, const char *name) {
-    return insert_module(path,name,true,NULL);
+    return insert_module(path,name,true,NULL,NULL,NULL);
 }
 struct dlmod_slist_t *dlmod_insert_cached_instance(const char *path, const char *name,
                                                   esp_dl_image_cache **cache) {
-    return insert_module(path,name,true,cache);
+    return insert_module(path,name,true,cache,NULL,NULL);
 }
 
 /**
