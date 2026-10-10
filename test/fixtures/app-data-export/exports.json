@@ -1,0 +1,75 @@
+{
+  "label": "Watch saved files",
+  "files": [
+    {
+      "owner": "timecard",
+      "namespace": 1,
+      "name": "timecard.json",
+      "path": "/timecard/timecard.json",
+      "access": "read-write"
+    },
+    {
+      "owner": "audio_spectrum",
+      "namespace": 2,
+      "name": "spectrum-events-a.sqt",
+      "path": "/audio_spectrum/spectrum-events-a.sqt",
+      "access": "read-write"
+    },
+    {
+      "owner": "audio_spectrum",
+      "namespace": 2,
+      "name": "spectrum-events-b.sqt",
+      "path": "/audio_spectrum/spectrum-events-b.sqt",
+      "access": "read-write"
+    },
+    {
+      "owner": "audio_spectrum",
+      "namespace": 2,
+      "name": "spectrum-neural.snn",
+      "path": "/audio_spectrum/spectrum-neural.snn",
+      "access": "read-write"
+    },
+    {
+      "owner": "waterfall",
+      "namespace": 3,
+      "name": "rf-events-a.rft",
+      "path": "/waterfall/rf-events-a.rft",
+      "access": "read-write"
+    },
+    {
+      "owner": "waterfall",
+      "namespace": 3,
+      "name": "rf-events-b.rft",
+      "path": "/waterfall/rf-events-b.rft",
+      "access": "read-write"
+    },
+    {
+      "owner": "waterfall",
+      "namespace": 3,
+      "name": "rf-neural.rnn",
+      "path": "/waterfall/rf-neural.rnn",
+      "access": "read-write"
+    },
+    {
+      "owner": "points_in_time",
+      "namespace": 5,
+      "name": "points.catalog",
+      "path": "/points_in_time/points.catalog",
+      "access": "read-write"
+    },
+    {
+      "owner": "points_in_time",
+      "namespace": 5,
+      "name": "points.ledger",
+      "path": "/points_in_time/points.ledger",
+      "access": "read"
+    },
+    {
+      "owner": "timecard",
+      "namespace": 1,
+      "name": "timecard-copy.json",
+      "path": "/timecard/timecard-copy.json",
+      "access": "read-write"
+    }
+  ]
+}

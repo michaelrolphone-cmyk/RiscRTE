@@ -5,8 +5,14 @@
 #include "NativeSleep.h"
 #include "NativeRetainedWake.h"
 #include "NativeI2s.h"
-#include "NativeRadio.h"
+#include "NativeRadioAsyncTask.h"
+#include "NativeRadioResources.h"
+#include "NativeRadioResourceOwner.h"
 #include "NativeHci.h"
+#if RISC_NATIVE_TCP_LISTENER
+#include "NativeTcpListener.h"
+extern "C" __attribute__((used)) const uint32_t risc_tcp_listener_abi=1;
+#endif
 #include "SleepDiagnostics.h"
 #ifdef RISC_ENABLE_RADIO_IQ
 #include "NativeRadioIq.h"
@@ -98,7 +104,10 @@ bool deepReady(){
   if(!NativeSdmmc::closed())return false;
 #endif
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
-  if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
+  if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
+#if RISC_NATIVE_TCP_LISTENER
+  if(!NativeTcpListener::idle(nullptr,0))return false;
+#endif
 #ifdef RISC_ENABLE_HTTP
   if(!NativeHttp::idle())return false;
 #endif
@@ -116,7 +125,10 @@ bool lightSleep(uint32_t* cause){
 #if RISC_ENABLE_SDMMC
   if(!NativeSdmmc::idle())return false;
 #endif
-  if(!NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
+  if(!NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
+#if RISC_NATIVE_TCP_LISTENER
+  if(!NativeTcpListener::idle(nullptr,0))return false;
+#endif
 #ifdef RISC_ENABLE_HTTP
   if(!NativeHttp::idle())return false;
 #endif
@@ -131,8 +143,14 @@ bool lightSleep(uint32_t* cause){
 }
 
 }
+static NativeRadioResourceOwner resourceOwner;
+bool nativeRadioResourceTry(){return resourceOwner.enter();}
+void nativeRadioResourceEnd(){resourceOwner.leave();}
+bool nativeRadioResourceReady(){return resourceOwner.ready();}
+bool nativeRadioResourceHeldReady(){return resourceOwner.heldReady();}
 Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
+  resourceOwner.configure([](){return !xPortInIsrContext() && ownerTask && ownerTask();},NativeRadioAsync::tryShared,NativeRadioAsync::endShared,NativeRadioAsync::sharedPhaseReady,NativeRadioAsync::sharedReady);
   Hardware hardware{[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
     [](uint32_t ms){
       RiscPerf::AggregateScope wait(32,ms);
@@ -143,8 +161,11 @@ Hardware nativeHardware(bool (*owner)()){
     },gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
-    NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
+    NativeRadioAsync::join,NativeRadioAsync::state,NativeRadioAsync::leave,NativeRadioAsync::addresses,NativeRadioAsync::scanStart,NativeRadioAsync::scanPoll,NativeRadioAsync::scanCancel,NativeRadioAsync::idle};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
+  static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
+  radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
+  hardware.radioAsync=&radioAsync;hardware.radioAsyncPrepare=NativeRadioAsync::provision;
 #if RISC_ENABLE_SDMMC
   NativeSdmmc::configure(hardware.owner);
   hardware.sdmmcOpen=NativeSdmmc::open;hardware.sdmmcRead=NativeSdmmc::read;
@@ -166,11 +187,19 @@ Hardware nativeHardware(bool (*owner)()){
   hardware.radioIqPrepare=NativeRadioIq::prepare;
   hardware.radioIqCleanup=NativeRadioIq::cleanup;
 #endif
+#if RISC_NATIVE_TCP_LISTENER
+  NativeTcpListener::configure(hardware.owner,[](){
+    uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;
+    return NativeRadioAsync::state(&state,&rssi) && state==2 && NativeRadioAsync::addresses(station,ap) &&
+      (station[0]||station[1]||station[2]||station[3]);
+  });
+  hardware.tcpListener=NativeTcpListener::backend();
+#endif
   hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;
 #ifdef RISC_ENABLE_HTTP
   NativeHttp::configure(hardware.owner,[](){
     uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;
-    return NativeRadio::state(&state,&rssi) && state==2 && NativeRadio::addresses(station,ap) &&
+    return NativeRadioAsync::state(&state,&rssi) && state==2 && NativeRadioAsync::addresses(station,ap) &&
       (station[0]||station[1]||station[2]||station[3]);
   });
   hardware.httpClient=NativeHttp::api();hardware.httpIdle=NativeHttp::idle;hardware.httpSafe=NativeHttp::safe;

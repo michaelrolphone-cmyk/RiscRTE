@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "watch_version": "1.0.25",
+  "watch_recipe_revision": "af1f9f92c243bcf5c62f5dc2c737fc32ca22a904",
+  "watch_local_checkpoint": "265f6e6f55cbe5beb134f29393c2be0a68d27149",
+  "fixture_source": "watch25-scanner-cleanup-build/files",
+  "sha256": {
+    "timecard.json": "5abdab25c4623d9ffb773a00068871965b0d8a439468ff1cdd3312ddbe58ebb4",
+    "audio_spectrum.json": "0f056e118c0a550de1cb7058280c5681b462e8f4d311240c87a15b53e03f90ee",
+    "waterfall.json": "e518de67aef7467133cb5078bf1a06d34e3c8d8b3377d0f38a9d598705207cbb",
+    "points_in_time.json": "ce6b58cf309e18be82941acc583468b8592d0e80991ad0ee8e10e4944de39957",
+    "boot.json": "74fc1fab3ab3330423268930b831902f608147af07384f369ab7a5ef1487706a"
+  },
+  "export_map": "Test-only explicit export declaration over exact source-owned namespaces. The copy destination is an additional explicitly named test file, not a product permission change.",
+  "persisted_fixtures": "Synthetic owner-compatible records constructed through production Timecard facade and Spectrum/RF encoders; no device data."
+}

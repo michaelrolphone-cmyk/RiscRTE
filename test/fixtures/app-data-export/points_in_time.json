@@ -1,0 +1,58 @@
+{
+  "architecture": "xtensa-esp32s3",
+  "entry": "app_main",
+  "file_name": "points_in_time.elf",
+  "id": "points_in_time",
+  "requires": [
+    {
+      "api": 1,
+      "capability": "display.output"
+    },
+    {
+      "api": 1,
+      "capability": "input.touch.raw"
+    },
+    {
+      "api": 2,
+      "capability": "rtc.clock"
+    },
+    {
+      "api": 1,
+      "capability": "board.battery"
+    },
+    {
+      "api": 1,
+      "capability": "storage.key-value"
+    },
+    {
+      "api": 1,
+      "capability": "alarm.service"
+    },
+    {
+      "api": 1,
+      "capability": "net.wifi"
+    },
+    {
+      "api": 1,
+      "capability": "bluetooth.hci"
+    },
+    {
+      "api": 1,
+      "capability": "motion.accel"
+    },
+    {
+      "api": 1,
+      "capability": "telemetry.broadcast"
+    },
+    {
+      "api": 1,
+      "capability": "contexts.service"
+    },
+    {
+      "api": 1,
+      "capability": "storage.app-data"
+    }
+  ],
+  "type": "application",
+  "version": "0.6.9"
+}

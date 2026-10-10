@@ -29,8 +29,15 @@ bool Port::reserve(int16_t pin,const void* owner){
 }
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
 #include "CpuSdmmc.inc"
+#include "CpuTcpListener.inc"
+bool Port::radioSharedReady() const {
+  for(const auto& c:radios_)if(c.closing)return false;
+  if(hw_.radioAsync)return hw_.radioAsync->sharedReady && hw_.radioAsync->sharedReady();
+  return !hw_.radioIdle || hw_.radioIdle();
+}
 bool Port::providerStorageSafe() const {
-  if(sdmmc_.closing)return false;
+  if(sdmmc_.closing || !tcpSafe())return false;
+  if(hw_.radioAsync && hw_.radioAsync->custodySafe && !hw_.radioAsync->custodySafe())return false;
   if(!available() || sleepRetained_ || transferring_ || iq_.token)return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
@@ -45,9 +52,10 @@ bool Port::appExitSafe() const {
   // borrowed app storage; it survives navigation. Restart/sleep still drain it.
   if(!providerStorageSafe() || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
+  if(!tcpIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
-  for(const auto& c:radios_)if(c.active)return false;
+  for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   return true;
 }
@@ -56,9 +64,10 @@ bool Port::restartResourcesSafe() const {
   if(sdmmc_.token || sdmmc_.closing)return false;
   if(!providerStorageSafe() || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
+  if(!tcpIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
-  for(const auto& c:radios_)if(c.active)return false;
+  for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
   if(hci_.token || (hw_.hciIdle && !hw_.hciIdle()))return false;
   return true;
 }
@@ -67,9 +76,10 @@ bool Port::quiescent() const {
   if(usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   if(iq_.token || iq_.closing)return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.token)return false;
+  if(!tcpIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
-  for(const auto& c:radios_)if(c.token || c.active || c.closing)return false;
+  for(const auto& c:radios_)if(c.token || c.active || c.closing || c.serviceLease)return false;
   if(hci_.token || hci_.closing || (hw_.hciIdle && !hw_.hciIdle()))return false;
   for(const auto& p:pins_)if(p.owner && !p.retiredHeld)return false;
   return !poisoned_;
@@ -173,6 +183,14 @@ bool Port::bind(RiscBoot::Runtime& runtime){
     iq_.api={1,sizeof(iq_.api),&iq_,radioIqClaim,radioIqRelease,0x3FCB0000u,65536u};
     if(!runtime.registerPlatform(RISC_RADIO_IQ_RESOURCE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&iq_.api))return false;
   }
+  if(hw_.tcpListener){
+    const auto* b=hw_.tcpListener;
+    if(!b->listen || !b->accept || !b->read || !b->write || !b->close || !b->idle || !b->safe)return false;
+    tcp_={this,tcpListen,tcpAccept,tcpRead,tcpWrite,tcpClose,
+      [](void* c,uint64_t owner){return static_cast<Port*>(c)->tcpIdle(owner);},
+      [](void* c){return static_cast<Port*>(c)->tcpSafe();}};
+    if(!runtime.registerTcpListener(&tcp_))return false;
+  }
   if(hw_.httpClient){
     const auto* h=hw_.httpClient;
     if(!hw_.httpIdle || !hw_.httpSafe || h->api_version!=1 || h->struct_size<sizeof(*h) || !h->open || !h->read || !h->info || !h->close)return false;
@@ -223,8 +241,19 @@ bool Port::bind(RiscBoot::Runtime& runtime){
          !hw_.radioJoin || !hw_.radioState || !hw_.radioLeave || !hw_.radioAddresses ||
          !hw_.radioScanStart || !hw_.radioScanPoll || !hw_.radioScanCancel || !hw_.radioIdle)return false;
       auto& c=radios_[radioCount_++];c.port=this;c.config=d.config.radio;
-      c.api={1,sizeof(c.api),&c,radioClaim,radioJoin,radioState,radioLeave,radioRelease,
+      c.api.base={1,sizeof(c.api.base),&c,radioClaim,radioJoin,radioState,radioLeave,radioRelease,
              radioStartAp,radioStopAp,radioAddresses,radioScanStart,radioScanPoll,radioScanCancel};
+      const auto* async=hw_.radioAsync;
+      if(async && async->struct_size>=sizeof(*async) && async->tag==RISC_RADIO_ASYNC_TAG && async->version==RISC_RADIO_ASYNC_VERSION &&
+         async->begin && async->poll && async->cancel && async->sharedReady && async->custodySafe && async->tryShared && async->endShared){
+        // A new native backend that could not allocate its worker must remain
+        // explicitly asynchronous/unavailable. Hiding the suffix here would
+        // invite new clients to fall back to the blocking legacy entrypoints.
+        c.asyncUnavailable=hw_.radioAsyncPrepare && !hw_.radioAsyncPrepare();
+        c.api.base.struct_size=sizeof(c.api);c.api.async_tag=RISC_RADIO_ASYNC_TAG;c.api.async_version=RISC_RADIO_ASYNC_VERSION;
+        c.api.begin=radioAsyncBegin;c.api.poll=radioAsyncPoll;c.api.cancel=radioAsyncCancel;
+        c.api.service_begin=radioServiceBegin;c.api.service_end=radioServiceEnd;
+      }else hw_.radioAsync=nullptr;
       if(!runtime.registerPlatform("platform.radio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
     if(runtime.uses(id,"spi.bus",1)){
@@ -331,7 +360,8 @@ bool Port::i2sClose(void* context,uint64_t token){
 bool Port::hciOpen(void* context,uint32_t unit,uint64_t* out){
   if(out)*out=0;
   auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
-  if(!out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || p.iq_.token || !p.hw_.hciIdle())return false;
+  for(const auto& radio:p.radios_)if(radio.operation)return false;
+  if(!p.radioSharedReady() || !out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || p.iq_.token || !p.hw_.hciIdle())return false;
   const uint64_t token=p.token();if(!token)return false;
   p.transferring_=true;const bool ok=p.hw_.hciOpen();p.transferring_=false;
   if(!ok){
@@ -359,6 +389,8 @@ bool Port::hciReceive(void* context,uint64_t token,uint8_t* type,uint8_t* data,s
 bool Port::hciClose(void* context,uint64_t token){
   auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
+  for(const auto& radio:p.radios_)if(radio.operation)return false;
+  if(!p.radioSharedReady())return false;
   c.closing=true;p.transferring_=true;const bool ok=p.hw_.hciClose();p.transferring_=false;
   if(!ok || !p.hw_.hciIdle())return false;
   c.token=0;c.closing=false;return true;
@@ -440,6 +472,10 @@ bool Port::radioState(void* context,uint64_t token,uint8_t* state,int8_t* rssi){
   if(rssi)*rssi=-127;
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
   if(!state || !rssi || !p.available() || p.transferring_ || !token || token!=c.token || c.closing)return false;
+  if(c.operation){risc_radio_progress_v1 next{};next.struct_size=sizeof(next);
+    const auto result=radioAsyncPoll(context,token,c.operation,&next);
+    if(result<0 || result==RISC_RADIO_AGAIN)return false;
+    *state=next.station_state;*rssi=next.rssi;return true;}
   if(!c.active || c.scanning)return true;
   p.transferring_=true;const bool ok=p.hw_.radioState(state,rssi);p.transferring_=false;
   if(!ok || *state>2){c.closing=true;*state=0;*rssi=-127;return false;}return true;
@@ -448,9 +484,12 @@ bool Port::radioLeave(void* context,uint64_t token){
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
   // Retained cleanup can be retried, but a terminal sleep failure cannot.
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
-  // A live TLS socket depends on the station interface. Drain it first; a
+  // Live TCP/TLS sockets depend on the station interface. Drain them first; a
   // rejected out-of-order leave is not itself failed native radio cleanup.
+  if(!p.tcpIdle())return false;
   if(p.hw_.httpIdle && !p.hw_.httpIdle())return false;
+  if(c.serviceLease)return false;
+  if(c.operation)return radioAsyncCancel(context,token,c.operation)==RISC_RADIO_QUIESCENT;
   if(!c.active && !c.closing)return p.hw_.radioIdle();
   c.closing=true;p.transferring_=true;const bool ok=p.hw_.radioLeave();p.transferring_=false;
   if(!ok || !p.hw_.radioIdle())return false;
@@ -472,6 +511,10 @@ bool Port::radioAddresses(void* context,uint64_t token,uint8_t* station,uint8_t*
   if(ap)memset(ap,0,12);
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
   if(!station || !ap || !p.available() || p.transferring_ || !token || token!=c.token || c.closing)return false;
+  if(c.operation){risc_radio_progress_v1 next{};next.struct_size=sizeof(next);
+    const auto result=radioAsyncPoll(context,token,c.operation,&next);
+    if(result<0 || result==RISC_RADIO_AGAIN)return false;
+    memcpy(station,next.station,12);return true;}
   if(!c.active || c.scanning)return true;
   p.transferring_=true;const bool ok=p.hw_.radioAddresses(station,ap);p.transferring_=false;
   if(!ok){c.closing=true;memset(station,0,12);memset(ap,0,12);}return ok;
@@ -487,6 +530,7 @@ bool Port::radioScanPoll(void* context,uint64_t token,garden_radio_scan_result_v
   *out={};out->struct_size=sizeof(*out);
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
   if(!p.available() || p.transferring_ || !token || token!=c.token || c.closing)return false;
+  if(c.operation)return false;
   if(!c.scanning)return true;
   garden_radio_scan_result_v1 result{};result.struct_size=sizeof(result);
   p.transferring_=true;const bool ok=p.hw_.radioScanPoll(&result);p.transferring_=false;
@@ -500,11 +544,14 @@ bool Port::radioScanPoll(void* context,uint64_t token,garden_radio_scan_result_v
 bool Port::radioScanCancel(void* context,uint64_t token){
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
+  if(c.serviceLease)return false;
+  if(c.operation)return radioAsyncCancel(context,token,c.operation)==RISC_RADIO_QUIESCENT;
   if(!c.scanning)return true;
   c.closing=true;p.transferring_=true;const bool ok=p.hw_.radioScanCancel();p.transferring_=false;
   if(!ok || !p.hw_.radioIdle())return false;
   c.active=c.closing=c.scanning=false;return true;
 }
+#include "CpuRadioAsync.inc"
 bool Port::syncOwner(void* context){
   if(!context)return false;
   const auto& c=*static_cast<Sync*>(context);
@@ -613,7 +660,8 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.iq_.closing || p.usb_.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_LIGHT_SLEEP_RETAINED;
+  if(!p.tcpIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
@@ -621,7 +669,7 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   // Failed cleanup outranks healthy activity on either selected I2S unit.
   for(const auto& c:p.i2ss_)if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_LIGHT_SLEEP_BUSY;
-  for(const auto& c:p.radios_){if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;if(c.active)return RISC_LIGHT_SLEEP_BUSY;}
+  for(const auto& c:p.radios_){if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;if(c.active || c.serviceLease)return RISC_LIGHT_SLEEP_BUSY;}
   if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_LIGHT_SLEEP_RETAINED;
   if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_LIGHT_SLEEP_BUSY;
   int pin=-1;
@@ -665,7 +713,8 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.iq_.closing || p.usb_.closing)return RISC_DEEP_SLEEP_RETAINED;
+  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_DEEP_SLEEP_RETAINED;
+  if(!p.tcpIdle())return RISC_DEEP_SLEEP_BUSY;
   if(p.runtime_ && !p.runtime_->residentResetSafe())return RISC_DEEP_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
   if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
@@ -674,7 +723,7 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   // Failed cleanup outranks healthy activity on either selected I2S unit.
   for(const auto& c:p.i2ss_)if(c.closing)return RISC_DEEP_SLEEP_RETAINED;
   for(const auto& c:p.i2ss_)if(c.token)return RISC_DEEP_SLEEP_BUSY;
-  for(const auto& c:p.radios_){if(c.closing)return RISC_DEEP_SLEEP_RETAINED;if(c.active)return RISC_DEEP_SLEEP_BUSY;}
+  for(const auto& c:p.radios_){if(c.closing)return RISC_DEEP_SLEEP_RETAINED;if(c.active || c.serviceLease)return RISC_DEEP_SLEEP_BUSY;}
   if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_DEEP_SLEEP_RETAINED;
   if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& pin:p.pins_)if(pin.pwm)return RISC_DEEP_SLEEP_BUSY;
@@ -745,7 +794,8 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_ || p.sleepRetained_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.iq_.closing || p.usb_.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_LIGHT_SLEEP_RETAINED;
+  if(!p.tcpIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(deep && p.runtime_ && !p.runtime_->residentResetSafe())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
@@ -753,7 +803,7 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& i:p.i2ss_)if(i.closing)return RISC_LIGHT_SLEEP_RETAINED;
   for(const auto& i:p.i2ss_)if(i.token)return RISC_LIGHT_SLEEP_BUSY;
-  for(const auto& i:p.radios_){if(i.closing)return RISC_LIGHT_SLEEP_RETAINED;if(i.active)return RISC_LIGHT_SLEEP_BUSY;}
+  for(const auto& i:p.radios_){if(i.closing)return RISC_LIGHT_SLEEP_RETAINED;if(i.active || i.serviceLease)return RISC_LIGHT_SLEEP_BUSY;}
   if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_LIGHT_SLEEP_RETAINED;
   if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(deep)for(const auto& pin:p.pins_)if(pin.pwm)return RISC_LIGHT_SLEEP_BUSY;
@@ -802,7 +852,8 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.iq_.closing || p.usb_.closing)return RISC_DEEP_SLEEP_RETAINED;
+  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_DEEP_SLEEP_RETAINED;
+  if(!p.tcpIdle())return RISC_DEEP_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
   if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;

@@ -11,6 +11,7 @@
 #include "NativeRetainedWake.h"
 #include "NativeDiagnosticBinding.h"
 #include "runtime/update/Cohort.h"
+#include "runtime/update/SelectedNativeAppDataExportPolicyV1.h"
 #include "runtime/drivers/SelectedNativeProviderPolicyV1.h"
 #include "runtime/drivers/NativeProviderPolicyValidationV1.h"
 #include <Arduino.h>
@@ -442,6 +443,15 @@ bool admitFile(void* context,const char* filename,bool provider){
   if(ok)ok=admitElf(bytes,size_t(length),provider?ElfRole::Driver:ElfRole::Application,policy);
   free(bytes);return ok;
 }
+// Kept as a linked, inspectable native witness of the selected coordinates,
+// delegation count and exact const maps. It is never an app/provider import.
+extern "C" {
+extern constexpr RiscUpdate::NativeAppDataExportPolicyV1 risc_native_app_data_export_policy_v1_record=
+  RiscUpdate::selectedNativeAppDataExportPolicyV1();
+}
+extern "C" __attribute__((used,noinline)) const RiscUpdate::NativeAppDataExportPolicyV1* risc_native_app_data_export_policy_v1(){
+  return &risc_native_app_data_export_policy_v1_record;
+}
 bool validateStore(void*,unsigned b){
   if(!operationSafe() || !runtime || !replacingCohort || b==activeBank || mounted || appFile)return false;
   esp_vfs_spiffs_conf_t config{};config.base_path="/updatefs";config.partition_label=labels[b];config.max_files=4;config.format_if_mount_failed=false;
@@ -452,7 +462,7 @@ bool validateStore(void*,unsigned b){
   void* memory=heap_caps_malloc(sizeof(RiscBoot::Runtime),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory)return false;
   auto* staged=new(memory) RiscBoot::Runtime({});
-  bool ok=runtime->validateCohort(*staged,"/updatefs",admitFile,staged);
+  bool ok=runtime->validateNativeCohort(*staged,"/updatefs",admitFile,staged,*risc_native_app_data_export_policy_v1());
   provisionReadRetained=provisionReadRetained || staged->metadataCloseRetained();
   if(staged->nativeProviderReadRetained() || retainedAdmissionRuntime==staged){
     retainedAdmissionRuntime=staged;

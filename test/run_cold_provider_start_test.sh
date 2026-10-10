@@ -17,6 +17,6 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers
  "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
  "$repo/test/cold_provider_start_test.cpp" -ldl -o "$build/test"
-for mode in cold cold-demand deep deep-acquire deep-promotion no-option eager missing-classifier wrong-owner classifier-owner handoff promotion reuse failed-start failed-start-retained failed-release-retained native-retained partial-failed partial-retained;do
+for mode in service-defer cold cold-demand deep deep-acquire deep-promotion no-option eager missing-classifier wrong-owner classifier-owner handoff promotion reuse failed-start failed-start-retained failed-release-retained native-retained partial-failed partial-retained;do
  "$build/test" "$build" "$mode"
 done

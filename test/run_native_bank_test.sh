@@ -17,6 +17,9 @@ if [[ -z "${BOOT_BASELINE_REF:-}" ]];then
  if [[ "${NATIVE_PROVIDER_TEST_SELECTION:-0}" == 1 ]];then
   extra+=(-DRISC_NATIVE_BANK_TEST_SELECT_POLICY=1 '-DRISC_NATIVE_PROVIDER_POLICY_HEADER="native_bank_provider_selection.h"')
  fi
+ if [[ "${NATIVE_EXPORT_TEST_SELECTION:-0}" == 1 ]];then
+  extra+=(-DRISC_NATIVE_BANK_TEST_SELECT_EXPORT_POLICY=1 '-DRISC_NATIVE_APP_DATA_EXPORT_POLICY_HEADER="native_bank_app_data_export_selection.h"')
+ fi
 fi
 if [[ -n "${BOOT_BASELINE_REF:-}" ]];then
  git -C "$repo" show "$BOOT_BASELINE_REF:src/ports/esp32s3/NativeBankStore.cpp" > "$build/NativeBankStore.cpp"
@@ -37,6 +40,13 @@ c++ -rdynamic -Wl,--wrap=fopen,--wrap=fclose,--wrap=opendir,--wrap=stat,--wrap=l
  "$repo/src/runtime/provisioning/BootstrapInput.cpp" "$repo/src/runtime/provisioning/Coordinator.cpp" \
  "$repo/src/runtime/provisioning/StoreFiles.cpp" "$repo/src/runtime/provisioning/Profile.cpp" \
  "$repo/src/runtime/update/PairedBank.cpp" "$repo/src/runtime/update/StoreAudit.cpp" "$repo/test/native_bank_test.cpp" "$build/validate.o" "${native_objects[@]}" -lcrypto -ldl -o "$build/test"
+if [[ "${NATIVE_EXPORT_ADMISSION_ONLY:-0}" == 1 ]];then
+ "$build/test" native-export-admission "$build/export-admission"
+ if [[ "${NATIVE_EXPORT_TEST_SELECTION:-0}" == 1 ]];then
+  "$build/test" native-export-close "$build/export-close"
+ fi
+ exit 0
+fi
 if [[ "${NATIVE_PROVIDER_ADMISSION_ONLY:-0}" == 1 ]];then
  "$build/test" native-provider-admission "$build/provider-admission"
  "$build/test" native-provider-custody-owner "$build/provider-custody-owner"

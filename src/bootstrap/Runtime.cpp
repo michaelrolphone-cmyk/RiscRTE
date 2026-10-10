@@ -10,6 +10,7 @@
 #include "KeyValueGeneration.h"
 #include "runtime/update/Version.h"
 #include "runtime/update/CohortMigration.h"
+#include "runtime/update/NativeAppDataExportPolicyV1.h"
 #include "runtime/resources/ScopedBufferWipe.h"
 #include <RiscDiagnosticSourceV1.h>
 #include <esp_dlfcn.h>
@@ -165,13 +166,15 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
   // arbitrary backend/control table supplied through generic registration.
   if (!strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
       (api!=1 || scope!=Scope::Global || id || table!=&providerRealtimeTable_ || !realtimeBackend_)) return false;
+  if (!strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) &&
+      (api!=1 || scope!=Scope::Global || id || table!=&providerTcpTable_ || !tcpBackend_))return false;
   if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
       (api!=RISC_DIAGNOSTIC_SOURCE_API_V1 || scope!=Scope::Global || id)) return false;
   if (scope==Scope::Global) {
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
-               strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
+               strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
                strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
@@ -245,6 +248,10 @@ bool Runtime::validateGraph() {
       }
       if (platform) {
         req.trustedApi=platform->table;
+        if (!strcmp(req.capability,RISC_TCP_LISTENER_CAPABILITY)) {
+          auto& storage=providerStorage_[i];storage.owner=this;storage.needsTcp=true;
+          storage.tcp=providerTcpTable_;req.trustedApi=&storage.tcp;
+        }
         if (!strcmp(req.capability,RISC_PLATFORM_REALTIME_CAPABILITY)) {
           auto& storage=providerStorage_[i];
           storage.owner=this;storage.needsRealtime=true;
@@ -284,7 +291,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
   if(value.size()){policies_=metadataArray<AppPolicy>(value.size());if(!policies_)return fail("app policy allocation failed");}
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
     auto& policy=policies_[policyCount_]; char relative[193]; JsonDocument doc;
-    if (!keys(item,{"manifest","grants"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+    if (!keys(item,{"manifest","grants"},{"app_data_export"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,policy.elf,sizeof(policy.elf)) || !readJson(policy.elf,doc,&metadataCloseRetained_)) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=doc.as<JsonObjectConst>(); char filename[128];
     if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types"}) ||
@@ -361,6 +368,11 @@ bool Runtime::appPolicies(JsonVariantConst value) {
         } else if (!strcmp(capability,"file.open")) {
           if(grant.api!=T5_FILE_OPEN_API_VERSION || grant.instance)return fail("invalid file-open authority");
           grant.fileOpen=true;grant.capability="file.open";
+        } else if (!strcmp(capability,RISC_APP_DATA_EXPORT_CAPABILITY)) {
+          const auto* backend=port_.appData;
+          if(grant.api!=RISC_APP_DATA_EXPORT_API_V1 || grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)
+            return fail("app-data export backend/authority unavailable");
+          grant.driver=AppDataExportDriver;grant.capability=RISC_APP_DATA_EXPORT_CAPABILITY;
         } else if (!strcmp(capability,RISC_APP_DATA_CAPABILITY)) {
           const auto* backend=port_.appData;
           if(grant.api!=RISC_APP_DATA_API_V1 || !grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)return fail("app-data backend/namespace unavailable");
@@ -397,8 +409,9 @@ bool Runtime::appPolicies(JsonVariantConst value) {
   return true;
 }
 bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
-  if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !appDataExitSafe() || !invocation_->appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
+  if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !invocation_->appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
   out->slot=out->generation=0;out->api=nullptr;
+  if(!appDataExitSafe()){(void)appExitBarrier();return false;}
   const AppGrantPolicy* allowed=nullptr;
   for (size_t i=0;i<invocation_->appPolicy_->count;++i) {
     const auto& p=invocation_->appPolicy_->grants[i];
@@ -448,6 +461,14 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.api=&invocation_->retainedWakeTable_;
   } else if (allowed->fileOpen) {
     grant.api=fileOpenApi();
+  } else if (allowed->driver==AppDataExportDriver) {
+    if(!acquireAppDataExport()) {
+      if(invocation_->appDataExport_ && invocation_->appDataExport_->retained()) {
+        retained_=true;fail("app-data export admission retained");(void)appExitBarrier();
+      }
+      return false;
+    }
+    grant.api=&invocation_->appDataExportTable_;
   } else if (allowed->driver==AppDataDriver) {
     if(invocation_->appDataContext_ || !providerStorageSafe())return false;
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
@@ -506,7 +527,7 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*r->port_.keyValue;
   const int32_t result=backend.get(backend.context,matched->keyValueNamespace,key,temp,limit,&size);
-  if (result==RISC_KEY_VALUE_NOT_FOUND) return result;
+  if (result==RISC_KEY_VALUE_NOT_FOUND || result==RISC_KEY_VALUE_BUSY) return result;
   if (result!=RISC_KEY_VALUE_OK || !size || size>limit) return RISC_KEY_VALUE_IO;
   if (capacity<size) {*outSize=size;return RISC_KEY_VALUE_BUFFER_SMALL;}
   memcpy(buffer,temp,size);*outSize=size;return RISC_KEY_VALUE_OK;
@@ -520,7 +541,8 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
   if (!keyValueKey(key) || !data || !size || size>limit) return RISC_KEY_VALUE_INVALID;
   const auto& backend=*r->port_.keyValue;
-  return backend.put(backend.context,matched->keyValueNamespace,key,data,size)==RISC_KEY_VALUE_OK ? RISC_KEY_VALUE_OK : RISC_KEY_VALUE_IO;
+  const int32_t result=backend.put(backend.context,matched->keyValueNamespace,key,data,size);
+  return result==RISC_KEY_VALUE_OK || result==RISC_KEY_VALUE_BUSY ? result : RISC_KEY_VALUE_IO;
 }
 bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage) {
   JsonVariantConst value=selection["key_value"];
@@ -543,7 +565,7 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   return true;
 }
 bool Runtime::providerStorageSafe() const {
-  if(metadataCloseRetained_ || !appDataExitSafe())return false;
+  if(tcpRetained_ || metadataCloseRetained_ || !appDataExitSafe())return false;
   if(invocation_->installedFiles_ && invocation_->installedFiles_->retained())return false;
   if(port_.providerStorageSafe)return port_.providerStorageSafe();
   return !port_.appExitSafe || port_.appExitSafe();
@@ -555,20 +577,27 @@ bool Runtime::beginProvider(void* context) {
       !r->port_.owner() || r->retained_ || !r->providerStorageSafe()) return false;
   // A graph-wide retained-storage fence also covers providers that access files
   // indirectly through another provider. They need no callable storage token.
-  if(!storage->count && !storage->fileCount && !storage->needsRealtime){storage->live=true;return true;}
+  if(!storage->count && !storage->fileCount && !storage->needsRealtime && !storage->needsTcp){storage->live=true;return true;}
   void* token=nextKeyValueContext(keyValueGeneration);
   if (!token) return false;
   storage->table.context=token;
   if(storage->fileCount)storage->fileTable.context=token;
   if(storage->needsRealtime)storage->realtime.context=token;
+  if(storage->needsTcp)storage->tcp.context=token;
   storage->live=true;
   return true;
 }
 void Runtime::revokeProvider(void* context) {
-  if (context) static_cast<ProviderStorage*>(context)->live=false;
+  if(context){
+    auto* storage=static_cast<ProviderStorage*>(context);
+    storage->live=false;
+    if(storage->needsTcp && storage->tcp.context && storage->owner->tcpBackend_ &&
+       !storage->owner->tcpBackend_->idle(storage->owner->tcpBackend_->context,reinterpret_cast<uintptr_t>(storage->tcp.context)))
+      storage->owner->tcpRetained_=true;
+  }
 }
 void Runtime::revokeProviders() {
-  for (auto& storage:providerStorage_) storage.live=false;
+  for (auto& storage:providerStorage_) revokeProvider(&storage);
 }
 Runtime::ProviderStorage* Runtime::providerContext(void* context) {
   Runtime* r=currentRuntime;
@@ -595,7 +624,7 @@ int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uin
   uint8_t temp[RISC_BOUND_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*storage->owner->port_.keyValue;
   const int32_t result=backend.get(backend.context,matched->nameSpace,key,temp,limit,&size);
-  if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND) return result;
+  if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND || result==RISC_BOUND_KEY_VALUE_BUSY) return result;
   if (result!=RISC_BOUND_KEY_VALUE_OK || !size || size>limit) return RISC_BOUND_KEY_VALUE_IO;
   if (capacity<size) {*outSize=size;return RISC_BOUND_KEY_VALUE_BUFFER_SMALL;}
   memcpy(buffer,temp,size);*outSize=size;return RISC_BOUND_KEY_VALUE_OK;
@@ -609,10 +638,12 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
   for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
   if (!matched || !matched->writable) return RISC_BOUND_KEY_VALUE_CONTEXT;
   const auto& backend=*storage->owner->port_.keyValue;
-  return backend.put(backend.context,matched->nameSpace,key,data,size)==RISC_BOUND_KEY_VALUE_OK ? RISC_BOUND_KEY_VALUE_OK : RISC_BOUND_KEY_VALUE_IO;
+  const int32_t result=backend.put(backend.context,matched->nameSpace,key,data,size);
+  return result==RISC_BOUND_KEY_VALUE_OK || result==RISC_BOUND_KEY_VALUE_BUSY ? result : RISC_BOUND_KEY_VALUE_IO;
 }
 bool Runtime::release(risc_runtime_capability_v1* out) {
-  if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !appDataExitSafe() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
+  if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
+  if(!appDataExitSafe()){(void)appExitBarrier();return false;}
   auto& grant=invocation_->appGrants_[out->slot-1];
   if (!grant.live || grant.generation!=out->generation || grant.api!=out->api || grant.invocation!=invocation_->streams_.context()) return false;
   RuntimeStreams::AppStreamBinding binding{grant.invocation,out->slot,grant.generation,grant.api,grant.provider};
@@ -623,6 +654,9 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
     if(streamProvider)streamRetain(this);
     else if(residentEnabled_)(void)appExitBarrier();
     return false;
+  }
+  if(grant.api==&invocation_->appDataExportTable_ && !endAppDataExport()) {
+    retained_=true;fail("app-data export cleanup retained");(void)appExitBarrier();return false;
   }
   if(grant.api==&invocation_->installedVolume_){if(!invocation_->installedFiles_->end()){if(residentEnabled_)(void)appExitBarrier();return false;}invocation_->installedVolumeContext_=nullptr;}
   if(grant.api==&invocation_->appDataTable_){if(!appDataExitSafe()){if(residentEnabled_)(void)appExitBarrier();return false;}invocation_->appDataContext_=nullptr;invocation_->appDataNamespace_=0;}
@@ -637,6 +671,9 @@ bool Runtime::revokeApp() {
   for (auto& grant:invocation_->appGrants_) if (grant.live) {
     if (grant.provider.slot && !graph_.release(grant.provider)) {
       retained_=true;(void)appExitBarrier();return false;
+    }
+    if(grant.api==&invocation_->appDataExportTable_ && !endAppDataExport()) {
+      retained_=true;fail("app-data export cleanup retained");(void)appExitBarrier();return false;
     }
     if(grant.api==&invocation_->appDataTable_) {
       if(!appDataExitSafe()){retained_=true;(void)appExitBarrier();return false;}
@@ -657,9 +694,11 @@ bool Runtime::revokeApp() {
 #include "AppStreamsRuntime.inc"
 #include "InstalledFilesRuntime.inc"
 #include "AppDataRuntime.inc"
+#include "AppDataExportRuntime.inc"
 #include "BoundAppDataRuntime.inc"
 #include "RetainedWakeRuntime.inc"
 #include "RealtimeRuntime.inc"
+#include "TcpListenerRuntime.inc"
 #include "ProviderPromotionRuntime.inc"
 #include "ResidentShellRuntime.inc"
 bool Runtime::prepare(const char* root) {
@@ -706,16 +745,16 @@ bool Runtime::prepare(const char* root) {
   const bool bound=(!port_.bindPlatforms || port_.bindPlatforms(*this)) && registerProviderRealtime();
   registrationOpen_=false;
   if (!bound) return fail("trusted platform binding failed");
-  if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !residentPolicy(c["resident_shell"]) || !configureInstalledFiles(c)) return false;
+  if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !configureAppDataExports(c["app_capabilities"]) || !residentPolicy(c["resident_shell"]) || !configureInstalledFiles(c)) return false;
   bool hasProviderFiles=false;
   for(size_t i=0;i<driverCount_;++i)hasProviderFiles=hasProviderFiles || providerStorage_[i].fileCount;
   for(size_t i=0;i<driverCount_;++i) {
     const Driver& d=drivers_[i];
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
     spec.hardware=d.instance?&board_.device(d.instance)->hardware:nullptr;
-    if (providerStorage_[i].count || providerStorage_[i].needsRealtime || hasProviderFiles){
+    if (providerStorage_[i].count || providerStorage_[i].needsRealtime || providerStorage_[i].needsTcp || hasProviderFiles){
       providerStorage_[i].owner=this;
-      spec.lease={&providerStorage_[i],beginProvider,revokeProvider,hasProviderFiles?providerFileSafe:nullptr};
+      spec.lease={&providerStorage_[i],beginProvider,revokeProvider,(hasProviderFiles || providerStorage_[i].needsTcp)?providerResourcesSafe:nullptr};
     }
     const RuntimeProviders::NativeProviderPolicyV1* selected=nullptr;
     for(size_t p=0;p<port_.nativeProviders.count;++p) {
@@ -939,9 +978,12 @@ Runtime::GrantUsage Runtime::grantUsage() const {
   return out;
 }
 void Runtime::serviceProviders() {
+  if(port_.providerServicesReady && !port_.providerServicesReady())return;
   if(currentRuntime!=this || !port_.owner() || retained_ || promotionRunning_ ||
      invocation_->streams_.busy() || graph_.lifecycleBusy() || !appDataExitSafe() ||
      !providerStorageSafe())return;
+  if(port_.providerServiceBegin && (!port_.providerServiceEnd || !port_.providerServiceBegin()))return;
+  struct ServiceLease {void (*end)();~ServiceLease(){if(end)end();}} lease{port_.providerServiceBegin?port_.providerServiceEnd:nullptr};
   graph_.service(RISC_DRIVER_SERVICE_MAX_MS);
 }
 void Runtime::yield(uint32_t ms) {
@@ -955,7 +997,7 @@ void Runtime::yield(uint32_t ms) {
     // Yield is a display/input polling path. Synchronous provider services may
     // touch storage for up to a second, so run them only at explicit lifecycle
     // boundaries, never between a panel refresh command and its BUSY sample.
-    if(!graph_.activationSafe())(void)appExitBarrier();
+    if(!graph_.activationSafe() || !appDataExitSafe())(void)appExitBarrier();
   }
   const uint32_t requested=ms<1?1:ms>50?50:ms;
   // Legacy app helpers may remain on their stack after terminal retention.
@@ -981,7 +1023,7 @@ bool Runtime::appExitBarrier() {
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if(graphSafe && otherSafe && hostSafe && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());

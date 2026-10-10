@@ -10,6 +10,11 @@
 #include <vector>
 
 extern "C" esp_err_t __wrap_nvs_flash_init();
+namespace RiscCpu {
+static bool resourceAvailable=true,resourceHeld=false;
+bool nativeRadioResourceTry(){if(!resourceAvailable || resourceHeld)return false;resourceHeld=true;return true;}
+void nativeRadioResourceEnd(){resourceHeld=false;}
+}
 
 namespace {
 const char* scenario = "initialization";
@@ -488,6 +493,12 @@ void nvs_close(nvs_handle_t handle) {
 } // extern "C"
 
 int main(int argc, char** argv) {
+  RiscCpu::resourceAvailable=false;
+  uint32_t deferredSize=77;uint8_t deferredBuffer=99;
+  CHECK(RiscNvs::get(nullptr,1,"clock",&deferredBuffer,1,&deferredSize)==RISC_KEY_VALUE_BUSY);
+  CHECK(!deferredSize && deferredBuffer==99 && events.empty());
+  CHECK(RiscNvs::put(nullptr,1,"clock",&deferredBuffer,1)==RISC_KEY_VALUE_BUSY && events.empty());
+  RiscCpu::resourceAvailable=true;
   CHECK(argc == 2);
   const auto result = selectedResult(argv[1]);
   testInitialization(result);

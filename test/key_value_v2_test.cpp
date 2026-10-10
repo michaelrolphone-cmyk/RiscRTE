@@ -6,10 +6,11 @@
 #include <vector>
 #include <cstring>
 using namespace RiscBoot;
-static bool owned=true,safe=true;static unsigned calls=0,writesCount=0,gets=0;
+static bool owned=true,safe=true,backendBusy=false;static unsigned calls=0,writesCount=0,gets=0;
 static risc_bound_key_value_v2 bound{},staleBound{};static risc_key_value_v2 staleApp{};
 static std::map<std::pair<uint32_t,std::string>,std::vector<uint8_t>> values;
 static int32_t get(void*,uint32_t ns,const char* key,void* data,uint32_t cap,uint32_t* size){
+ if(backendBusy)return RISC_KEY_VALUE_BUSY;
  ++calls;++gets;*size=0;assert(cap==64||cap==2048);
  if(!strcmp(key,"partial")){memset(data,0,cap);*size=17;return -5;}
  if(!strcmp(key,"oversize")){*size=cap+1;return 0;}
@@ -18,6 +19,7 @@ static int32_t get(void*,uint32_t ns,const char* key,void* data,uint32_t cap,uin
  memcpy(data,it->second.data(),*size);return 0;
 }
 static int32_t put(void*,uint32_t ns,const char* key,const void* data,uint32_t n){
+ if(backendBusy)return RISC_KEY_VALUE_BUSY;
  ++calls;++writesCount;assert(n&&n<=2048);auto p=static_cast<const uint8_t*>(data);values[{ns,key}]={p,p+n};return !strcmp(key,"uncertain")?-5:0;
 }
 static KeyValueBackend backend{nullptr,get,put,2048};
@@ -37,6 +39,13 @@ extern "C" void test_kv2_app(){
  assert(!rt->acquire(RISC_KEY_VALUE_CAPABILITY,1,5,&bad));
  const auto* small=static_cast<const risc_key_value_v1*>(a.api);
  const auto* large=static_cast<const risc_key_value_v2*>(b.api);assert(small->api_version==1&&large->api_version==2&&bound.api_version==2);
+ backendBusy=true;uint8_t untouched=0x55;uint32_t busySize=99;const unsigned busyCalls=calls;
+ assert(small->get(small->context,"value",&untouched,1,&busySize)==RISC_KEY_VALUE_BUSY && !busySize && untouched==0x55);
+ assert(large->get(large->context,"value",&untouched,1,&busySize)==RISC_KEY_VALUE_BUSY && !busySize);
+ assert(bound.get(bound.context,"value",&untouched,1,&busySize)==RISC_BOUND_KEY_VALUE_BUSY && !busySize);
+ assert(small->put(small->context,"value",&untouched,1)==RISC_KEY_VALUE_BUSY);
+ assert(large->put(large->context,"value",&untouched,1)==RISC_KEY_VALUE_BUSY);
+ assert(bound.put(bound.context,"value",&untouched,1)==RISC_BOUND_KEY_VALUE_BUSY && calls==busyCalls);backendBusy=false;
  std::vector<uint8_t> bytes(2049),out(2052,0xa5);for(unsigned i=0;i<bytes.size();++i)bytes[i]=uint8_t(i*37);
  for(uint32_t length:{1u,64u,65u,160u,1296u,2048u}){
   for(unsigned which=0;which<2;++which){

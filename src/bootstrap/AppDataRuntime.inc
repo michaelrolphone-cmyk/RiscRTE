@@ -1,4 +1,4 @@
-bool Runtime::appDataExitSafe()const{return !providerFileRetained_ && (!port_.appData || (port_.appData->exitSafe && port_.appData->exitSafe(port_.appData->context)));}
+bool Runtime::appDataExitSafe()const{return !providerFileRetained_ && (!mainInvocation_.appDataExport_ || !mainInvocation_.appDataExport_->retained()) && (!foreground_ || !foreground_->appDataExport_ || !foreground_->appDataExport_->retained()) && (!port_.appData || (port_.appData->exitSafe && port_.appData->exitSafe(port_.appData->context)));}
 Runtime* Runtime::appDataContext(void*context){
  Runtime*r=currentRuntime;
  if(!r || !r->active() || r->retained_ || !context || context!=r->invocation_->appDataContext_ || !r->port_.appData)return nullptr;

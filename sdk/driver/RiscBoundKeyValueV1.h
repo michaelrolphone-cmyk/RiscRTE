@@ -14,6 +14,7 @@ extern "C" {
 #define RISC_BOUND_KEY_VALUE_INVALID (-3)
 #define RISC_BOUND_KEY_VALUE_CONTEXT (-4)
 #define RISC_BOUND_KEY_VALUE_IO (-5)
+#define RISC_BOUND_KEY_VALUE_BUSY (-6) /* No I/O began; preserve cached data and retry later. */
 /* Provider-only storage.key-value.bound@1. The exact boot driver selection
  * authorizes 1..8 distinct keys, each with a namespace and read/read-write
  * access. Callers supply the same key, never a namespace. Keys are 1..15 ASCII

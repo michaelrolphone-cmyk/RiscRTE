@@ -257,11 +257,13 @@ static void firmware(unsigned bank,const char* version,const char* abi=nullptr){
 #include "compact_image_native.inc"
 #ifdef RISC_NATIVE_BANK_PROVIDER_TEST
 #include "native_bank_provider_admission.inc"
+#include "native_bank_app_data_export_admission.inc"
 #endif
 int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
 #ifdef RISC_NATIVE_BANK_PROVIDER_TEST
+ if(mode=="native-export-admission" || mode=="native-export-close"){assert(argc==3);nativeAppDataExportAdmission(argv[2],mode=="native-export-close");return 0;}
  if(mode=="native-provider-admission"){assert(argc==3);nativeProviderAdmission(argv[2]);return 0;}
  if(mode=="native-provider-custody-owner"){assert(argc==3);nativeProviderAdmission(argv[2],1);return 0;}
  if(mode=="native-provider-custody-storage"){assert(argc==3);nativeProviderAdmission(argv[2],2);return 0;}

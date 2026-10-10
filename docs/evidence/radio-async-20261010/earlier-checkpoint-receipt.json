@@ -1,0 +1,77 @@
+{
+  "date_utc": "2026-10-10",
+  "native_production_commit": "e668402",
+  "native_fixture_commit": "075cd4a",
+  "provider_public_commit": "a304597bf26491483bb0a567569f0ca0267cdf9c",
+  "host_cpp_compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+  "leak_sanitizer": "disabled: ptrace environment",
+  "device_actions": false,
+  "target_config_override": "Only tool-esptoolpy resolved to installed official-PyPI 4.11 wrapper; repository pins unchanged",
+  "logs": [
+    {
+      "name": "wifi-final-san.log",
+      "sha256": "0a23e894f93961c354603d7ad33501344550b74c09a771083ef568842790476d",
+      "pass_lines": 55
+    },
+    {
+      "name": "wifi-final-tsan.log",
+      "sha256": "0a23e894f93961c354603d7ad33501344550b74c09a771083ef568842790476d",
+      "pass_lines": 55
+    },
+    {
+      "name": "wifi-final-off.log",
+      "sha256": "0a23e894f93961c354603d7ad33501344550b74c09a771083ef568842790476d",
+      "pass_lines": 55
+    },
+    {
+      "name": "wifi-final-target.log",
+      "sha256": "ae8b4766807dd968a51e927a34ac15fef1aa0769f4d7e05980ed147a458fd81b",
+      "pass_lines": 0
+    },
+    {
+      "name": "wifi-final-legacy.log",
+      "sha256": "0a92c759e74c6ad6ffa7fc65c1e8bf380b60d683104f09ed569532f2bca3a091",
+      "pass_lines": 71
+    },
+    {
+      "name": "wifi-final-app-normal.log",
+      "sha256": "0944e8c0fab2b9aa24ce6f16d1f7825943b1b8286a16f8ebfcbf2bb5b03022df",
+      "pass_lines": 56
+    },
+    {
+      "name": "wifi-final-app-san.log",
+      "sha256": "0944e8c0fab2b9aa24ce6f16d1f7825943b1b8286a16f8ebfcbf2bb5b03022df",
+      "pass_lines": 56
+    },
+    {
+      "name": "wifi-final-app-tsan.log",
+      "sha256": "0944e8c0fab2b9aa24ce6f16d1f7825943b1b8286a16f8ebfcbf2bb5b03022df",
+      "pass_lines": 56
+    },
+    {
+      "name": "wifi-final-app-2f6cc9b-normal.log",
+      "sha256": "0944e8c0fab2b9aa24ce6f16d1f7825943b1b8286a16f8ebfcbf2bb5b03022df",
+      "pass_lines": 56
+    },
+    {
+      "name": "wifi-final-app-2f6cc9b-san.log",
+      "sha256": "0944e8c0fab2b9aa24ce6f16d1f7825943b1b8286a16f8ebfcbf2bb5b03022df",
+      "pass_lines": 56
+    },
+    {
+      "name": "wifi-final-app-2f6cc9b-tsan.log",
+      "sha256": "0944e8c0fab2b9aa24ce6f16d1f7825943b1b8286a16f8ebfcbf2bb5b03022df",
+      "pass_lines": 56
+    }
+  ],
+  "system_app_commit": "2f6cc9bdef7c8d2deddda42f995dab8ebf26d447",
+  "system_app_tree": "1e095f2db6393198154fda5f2848ce1e5fb168f4",
+  "system_seam_source_sha256": "92ff04d4b62db30807b7631e996df115f49e318a1574fbbac7d5632c9288a44f",
+  "final_app_seam_modes": [
+    "normal",
+    "ASan+UBSan (detect_leaks=0)",
+    "ThreadSanitizer"
+  ],
+  "final_app_seam_cases_per_mode": 56,
+  "superseded_final_candidate": true
+}

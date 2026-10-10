@@ -4,6 +4,8 @@
 #include "AppRequirementLimits.h"
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
+#include "TcpListenerBackend.h"
+#include "runtime/storage/AppDataExport.h"
 #include "FileOpenState.h"
 #include "FailureEvidenceBackend.h"
 #include "runtime/sleep/RetainedWake.h"
@@ -24,6 +26,7 @@
 #include <RiscBoundAppDataV1.h>
 struct esp_dl_image_cache;
 namespace RuntimeProviders { struct NativeProviderPolicySnapshotV1; }
+namespace RiscUpdate { struct NativeAppDataExportPolicyV1; }
 namespace RiscBoot {
 class Runtime;
 // Optional compiled-in backend. Namespace comes only from validated boot policy.
@@ -67,6 +70,10 @@ struct Port {
   const FailureEvidenceBackend* failureEvidence=nullptr;
   // Optional owner-only RAM copy. Must not allocate, call providers, or do I/O.
   int32_t (*diagnosticCheckpoint)(const char*,uint64_t,const char*,uint32_t)=nullptr;
+  // Temporary native-resource exclusion, never retention or context revocation.
+  bool (*providerServicesReady)()=nullptr;
+  bool (*providerServiceBegin)()=nullptr;
+  void (*providerServiceEnd)()=nullptr;
 };
 class Runtime final {
  public:
@@ -83,6 +90,7 @@ class Runtime final {
   // Compiled-in port registration only, never exported to apps/driver ELFs.
   // Tables/contexts must remain valid until successful runtime shutdown.
   bool registerPlatform(const char* capability, uint32_t api, Scope scope, uint64_t id, const void* table);
+  bool registerTcpListener(const TcpListenerBackend*); // compiled-in opt-in only
   bool registerRealtime(const risc_realtime_control_api_v1*); // compiled-in backend only
   bool prepare(const char* root);
   // Compiled-in pre-execution admission only. Enumerates the exact prepared
@@ -126,14 +134,30 @@ class Runtime final {
   GrantUsage grantUsage() const;
   // Native-only, side-effect-free admission of a full staged cohort. Candidate
   // code is inspected, never loaded or invoked. Caller owns candidate lifetime.
+  struct AppDataExportDelegation {
+    const char* consumer=nullptr;
+    const char* label=nullptr;
+    const RiscStorage::AppDataExport::Entry* entries=nullptr;
+    size_t count=0;
+  };
+  // Optional trusted native-only initial delegation. Exact consumed maps only;
+  // ordinary updates cannot add, widen, remove or reassign export authority.
+  // Boot/manifest data never creates this authority for an existing cohort.
   bool validateCohort(Runtime& candidate,const char* root,
-                      bool (*admit)(void*,const char*,bool provider),void* context) const;
+                      bool (*admit)(void*,const char*,bool provider),void* context,
+                      const AppDataExportDelegation* delegations=nullptr,
+                      size_t delegationCount=0) const;
+  // Production native-only entry: exact build-owned source/target coordinates
+  // may introduce the selected first export. Preserving updates use no grant.
+  bool validateNativeCohort(Runtime& candidate,const char* root,
+                            bool (*admit)(void*,const char*,bool provider),void* context,
+                            const RiscUpdate::NativeAppDataExportPolicyV1&) const;
   bool appInventory(size_t index,void*,size_t,uint32_t*) const;
   bool active() const { return invocation_->active_ && !invocation_->streams_.busy() && port_.owner(); }
   bool retained() const { return retained_; }
   // Compiled-in reset/deep-sleep admission. A suspended native stack has no
   // durable checkpoint; the foreground must finish before RAM can be lost.
-  bool residentResetSafe() const {return !residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_);}
+  bool residentResetSafe() const {return appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
   // by their native store owner, which must retain its mount/session.
@@ -214,8 +238,21 @@ class Runtime final {
     risc_bound_app_data_v1 fileTable{};
     risc_platform_realtime_api_v1 realtime{};
     bool needsRealtime=false;
+    risc_tcp_listener_v1 tcp{};
+    bool needsTcp=false;
     bool live=false;
   };
+  const TcpListenerBackend* tcpBackend_=nullptr;
+  risc_tcp_listener_v1 providerTcpTable_{};
+  bool tcpRetained_=false;
+  static ProviderStorage* tcpContext(void*,bool closing=false);
+  static bool providerResourcesSafe(void*);
+  static int32_t tcpListen(void*,const risc_tcp_listen_v1*,uint64_t*);
+  static int32_t tcpAccept(void*,uint64_t,uint64_t*);
+  static int32_t tcpRead(void*,uint64_t,void*,uint32_t,uint32_t*);
+  static int32_t tcpWrite(void*,uint64_t,const void*,uint32_t,uint32_t*);
+  static int32_t tcpClose(void*,uint64_t);
+  int32_t tcpResult(int32_t);
   bool providerPolicy(JsonObjectConst,ProviderStorage&);
   bool providerFilePolicy(JsonObjectConst,ProviderStorage&);
   void revokeProviders();
@@ -244,7 +281,7 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7;
   const risc_realtime_control_api_v1* realtimeBackend_=nullptr;
   risc_platform_realtime_api_v1 providerRealtimeTable_{};
   bool registerProviderRealtime();
@@ -261,6 +298,17 @@ class Runtime final {
   static int32_t retainedWakeClear(void*);
   bool retainedWakeIdentity(RiscRetainedWake::Identity&) const;
   char retainedCohort_[512]{};
+  bool configureAppDataExports(JsonVariantConst);
+  bool appDataExportExitSafe() const;
+  bool acquireAppDataExport();
+  bool endAppDataExport();
+  static bool appDataExportOwner(void*);
+  static bool appDataExportSafe(void*);
+  bool validateAppDataExportCohort(const Runtime&,const AppDataExportDelegation*,size_t) const;
+  bool validateCohortImpl(Runtime&,const char*,bool (*)(void*,const char*,bool),void*,
+                         const AppDataExportDelegation*,size_t,
+                         const RiscUpdate::NativeAppDataExportPolicyV1*) const;
+  bool needsAppDataExportDelegation(const Runtime&) const;
   bool appDataExitSafe()const;
   static Runtime* appDataContext(void*);
   static int32_t appDataStat(void*,const char*,uint32_t*,uint64_t*);
@@ -269,8 +317,12 @@ class Runtime final {
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
+    const RiscStorage::AppDataExport::Entry* exports=nullptr;
+    size_t exportCount=0;
+    char exportLabel[64]{};
   };
   MetadataArray<AppPolicy> policies_;
+  MetadataArray<RiscStorage::AppDataExport::Entry> exportEntries_[MaxAppPolicies];
   MetadataArray<FileOpenMetadata> fileHandlers_;
   static const t5_file_open_api_v1* fileOpenApi();
   bool fileOpenReady() const;
@@ -302,6 +354,11 @@ class Runtime final {
   // Must outlive graph destruction, including retained-module retry/abort.
   ProviderStorage providerStorage_[MaxDrivers]{};
   RuntimeProviders::GraphV2 graph_{RuntimeStreams::runtimeProviderStreamHost()};
+  struct AppDataExportDelete {
+    void operator()(RiscStorage::AppDataExport* value) const {
+      value->~AppDataExport();std::free(value);
+    }
+  };
   // A live record is never moved: returned API table addresses remain stable.
   // Exactly one record has ordinary callback authority on the owner task.
   struct Invocation {
@@ -315,6 +372,9 @@ class Runtime final {
     risc_app_data_v1 appDataTable_{};
     void* appDataContext_=nullptr;
     uint32_t appDataNamespace_=0;
+    std::unique_ptr<RiscStorage::AppDataExport,AppDataExportDelete> appDataExport_;
+    risc_app_data_export_v1 appDataExportTable_{};
+    bool appDataExportEnding_=false;
     risc_realtime_api_v1 realtimeTable_{};
     void* realtimeContext_=nullptr;
     risc_realtime_control_api_v1 realtimeControlTable_{};

@@ -1,6 +1,7 @@
 #pragma once
 #include "bootstrap/Runtime.h"
 #include <GardenPlatformV1.h>
+#include <GardenRadioAsyncV1.h>
 #include <RiscGpioSdmmcV1.h>
 #include <TWatchPlatformV1.h>
 #include <RiscHciControllerStatusV1.h>
@@ -89,6 +90,9 @@ struct Hardware {
   bool (*sdmmcWrite)(uint64_t,uint32_t,const void*)=nullptr;
   bool (*sdmmcSync)()=nullptr;
   bool (*sdmmcClose)()=nullptr;
+  const RiscBoot::TcpListenerBackend* tcpListener=nullptr; // explicit native opt-in
+  const risc_native_radio_async_v1* radioAsync=nullptr; // additive, native-owned lifecycle
+  bool (*radioAsyncPrepare)()=nullptr; // owner bind, before exposing admission
 };
 class Port final {
  public:
@@ -106,6 +110,7 @@ class Port final {
   // Healthy I2S/station/scan activity blocks exit but does not revoke provider KV.
   // Actual native cleanup failure retains the existing storage safety barrier.
   bool providerStorageSafe() const;
+  bool radioSharedReady() const;
  private:
   const RiscBoot::Runtime* runtime_=nullptr;
   struct Sync {
@@ -120,7 +125,7 @@ class Port final {
   struct SpiBus { uint64_t instance=0; unsigned refs=0; Spi* held=nullptr; Spi* closing=nullptr; } spiBuses_[2];
   struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; } i2ss_[2];
   struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;
-    bool active=false,closing=false,scanning=false; garden_radio_v1 api{}; } radios_[1];
+    bool active=false,closing=false,scanning=false,asyncUnavailable=false; uint32_t operation=0,completed=0,serviceLease=0,nextServiceLease=0; garden_radio_async_v1 api{}; } radios_[1];
   struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
   struct RadioIq { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_radio_iq_resource_v1 api{}; } iq_;
   struct UsbPhy { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_usb_phy_resource_api_v1 api{}; } usb_;
@@ -133,6 +138,14 @@ class Port final {
   risc_platform_clock_api_v1 clock_{};
   risc_realtime_control_api_v1 realtime_{};
   risc_http_client_v1 http_{};
+  RiscBoot::TcpListenerBackend tcp_{};
+  static int32_t tcpListen(void*,uint64_t,const risc_tcp_listen_v1*,uint64_t*);
+  static int32_t tcpAccept(void*,uint64_t,uint64_t,uint64_t*);
+  static int32_t tcpRead(void*,uint64_t,uint64_t,void*,uint32_t,uint32_t*);
+  static int32_t tcpWrite(void*,uint64_t,uint64_t,const void*,uint32_t,uint32_t*);
+  static int32_t tcpClose(void*,uint64_t,uint64_t);
+  bool tcpIdle(uint64_t owner=0) const;
+  bool tcpSafe() const;
   bool available() const { return hw_.owner && hw_.owner() && !poisoned_ && !sleeping_; }
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
   bool reserve(int16_t,const void*); void unreserve(int16_t,const void*);
@@ -189,6 +202,11 @@ class Port final {
   static bool radioIqClaim(void*,uint64_t*);
   static bool radioIqRelease(void*,uint64_t);
   static bool radioClaim(void*,uint64_t*);
+  static int32_t radioAsyncBegin(void*,uint64_t,const risc_radio_request_v1*,uint32_t*);
+  static int32_t radioAsyncPoll(void*,uint64_t,uint32_t,risc_radio_progress_v1*);
+  static int32_t radioAsyncCancel(void*,uint64_t,uint32_t);
+  static int32_t radioServiceBegin(void*,uint64_t,uint32_t*);
+  static int32_t radioServiceEnd(void*,uint64_t,uint32_t);
   static bool radioJoin(void*,uint64_t,const char*,const char*);
   static bool radioState(void*,uint64_t,uint8_t*,int8_t*);
   static bool radioLeave(void*,uint64_t);

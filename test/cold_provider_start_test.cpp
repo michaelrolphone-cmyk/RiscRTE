@@ -12,11 +12,11 @@ static std::string mode,root;
 static std::vector<std::string> events,lines;
 static bool owned=true,nativeSafe=true,cold=true;
 static unsigned classified=0,calls=0,finis=0;
-static bool servicing=false;
+static bool servicing=false,serviceReady=true,serviceLeaseAllowed=true,serviceHeld=false;
 static unsigned count(const char* event){return std::count(events.begin(),events.end(),event);}
 static bool partial(){return mode=="partial-failed" || mode=="partial-retained";}
 static bool promote(){return mode=="promotion" || mode=="deep-promotion";}
-static bool appGrant(){return mode=="reuse" || mode=="deep-acquire";}
+static bool appGrant(){return mode=="reuse" || mode=="deep-acquire" || mode=="service-defer";}
 static bool owner(){return owned;}
 static bool coldBoot(){++classified;if(mode=="classifier-owner")owned=false;return cold;}
 namespace RiscDiagnostics {
@@ -26,7 +26,7 @@ void timestamped(const char* format,...){char line[512];va_list args;va_start(ar
 extern "C" bool demand_event(const char* id,const char* event){
  events.emplace_back(std::string(id)+":"+event);
  if(!strcmp(event,"service")){
-  assert(owned && nativeSafe && !servicing);servicing=true;
+  assert(owned && nativeSafe && !servicing);if(mode=="service-defer")assert(serviceHeld);servicing=true;
   if(const auto* api=risc_runtime_get_api(1)){
    risc_runtime_capability_v1 grant{sizeof(grant)};
    assert(!api->acquire("test.leaf",1,0,&grant));api->yield_ms(1);
@@ -54,7 +54,12 @@ extern "C" void demand_app(){
  ++calls;events.emplace_back("app:entry");const auto* api=risc_runtime_get_api(1);assert(api);
  const bool started=mode=="eager" || (cold && mode!="no-option");
  assert(count("leaf:start")==unsigned(started));
- if(started)assert(count("leaf:service")>0);
+ if(started && mode!="service-defer")assert(count("leaf:service")>0);
+ if(mode=="service-defer"){
+  assert(!count("leaf:service"));risc_runtime_capability_v1 trial{sizeof(trial)};
+  serviceReady=true;serviceLeaseAllowed=false;assert(api->acquire("test.leaf",1,0,&trial));assert(!count("leaf:service"));assert(api->release(&trial));
+  serviceLeaseAllowed=true;assert(api->acquire("test.leaf",1,0,&trial));assert(count("leaf:service")>0 && !serviceHeld);assert(api->release(&trial));
+ }
  if(promote()){
   risc_runtime_capability_v1 control{sizeof(control)};
   assert(api->acquire(RISC_PROVIDER_PROMOTION_CAPABILITY,1,0,&control));
@@ -128,6 +133,11 @@ int main(int argc,char** argv){
  assert(argc==3);root=argv[1];mode=argv[2];cold=mode.find("deep")!=0;
  RiscBoot::Port port{owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};
  port.appExitSafe=[](){return nativeSafe;};port.coldBoot=coldBoot;
+ if(mode=="service-defer"){
+  serviceReady=false;port.providerServicesReady=[](){return serviceReady;};
+  port.providerServiceBegin=[](){assert(!serviceHeld);if(!serviceLeaseAllowed)return false;serviceHeld=true;return true;};
+  port.providerServiceEnd=[](){assert(serviceHeld);serviceHeld=false;};
+ }
  if(mode=="missing-classifier")port.coldBoot=nullptr;
  stage();admission(port);
  Runtime runtime(port);assert(runtime.prepare(root.c_str()));

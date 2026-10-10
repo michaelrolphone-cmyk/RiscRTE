@@ -40,7 +40,19 @@ bool cohortInventory(const char* root,const char* relative,CohortName* names,siz
 }
 }
 bool Runtime::validateCohort(Runtime& candidate,const char* root,
-                            bool (*admit)(void*,const char*,bool),void* context) const {
+                            bool (*admit)(void*,const char*,bool),void* context,
+                            const AppDataExportDelegation* delegations,size_t delegationCount) const {
+  return validateCohortImpl(candidate,root,admit,context,delegations,delegationCount,nullptr);
+}
+bool Runtime::validateNativeCohort(Runtime& candidate,const char* root,
+                                  bool (*admit)(void*,const char*,bool),void* context,
+                                  const RiscUpdate::NativeAppDataExportPolicyV1& policy) const {
+  return validateCohortImpl(candidate,root,admit,context,nullptr,0,&policy);
+}
+bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
+                                bool (*admit)(void*,const char*,bool),void* context,
+                                const AppDataExportDelegation* delegations,size_t delegationCount,
+                                const RiscUpdate::NativeAppDataExportPolicyV1* nativePolicy) const {
   if(&candidate==this || !attempted_ || !port_.owner() || !providerStorageSafe() || !root || !admit || candidate.attempted_ || candidate.metadataCloseRetained_)return false;
   // All metadata opened for this admission, including source comparisons,
   // belongs to the candidate's native session. Keep its close failure visible
@@ -74,13 +86,37 @@ bool Runtime::validateCohort(Runtime& candidate,const char* root,
   // hardware/port declaration. Never bind the staged board into the CPU owner.
   candidate.port_=port_;candidate.port_.bindPlatforms=nullptr;
   if(realtimeBackend_ && !candidate.registerRealtime(realtimeBackend_))return false;
+  if(tcpBackend_ && !candidate.registerTcpListener(tcpBackend_))return false;
   for(size_t i=0;i<platformCount_;++i){const auto& p=platforms_[i];
     // Rebuild this Runtime-owned descriptor/leases against the copied native
     // backend; never borrow a source Runtime's mutable generation tables.
-    if(!strcmp(p.capability,RISC_PLATFORM_REALTIME_CAPABILITY))continue;
+    if(!strcmp(p.capability,RISC_PLATFORM_REALTIME_CAPABILITY) || !strcmp(p.capability,RISC_TCP_LISTENER_CAPABILITY))continue;
     if(!candidate.registerPlatform(p.capability,p.api,p.scope,p.id,p.table))return false;
   }
   if(!candidate.prepare(root))return false;
+  // A native-first bridge and later preserving cohorts do not consume an
+  // unused delegation, even while the selected native image remains installed.
+  // First introduction alone can select this source-bound authority.
+  if(nativePolicy && needsAppDataExportDelegation(candidate)) {
+    if(!nativePolicy->delegations || !nativePolicy->count || nativePolicy->count>MaxAppPolicies)return false;
+    auto matches=[](const RiscUpdate::NativeAppDataExportCohortV1& selected,
+                    const RiscUpdate::CohortIdentity& actual) {
+      auto exact=[](const char* value,const char* expected,size_t bound) {
+        return value && strnlen(value,bound)<bound && !strcmp(value,expected);
+      };
+      return exact(selected.product,actual.product.product,sizeof(actual.product.product)) &&
+        exact(selected.version,actual.product.version,sizeof(actual.product.version)) &&
+        exact(selected.sourceRepo,actual.product.source_repo,sizeof(actual.product.source_repo)) &&
+        exact(selected.sourceRevision,actual.product.source_revision,sizeof(actual.product.source_revision)) &&
+        exact(selected.runtimeVersion,actual.runtimeVersion,sizeof(actual.runtimeVersion));
+    };
+    RiscUpdate::CohortIdentity currentIdentity{},nextIdentity{};
+    if(!RiscUpdate::readCohort(root_,currentIdentity,&candidate.metadataCloseRetained_) ||
+       !RiscUpdate::readCohort(root,nextIdentity,&candidate.metadataCloseRetained_) ||
+       !matches(nativePolicy->from,currentIdentity) || !matches(nativePolicy->to,nextIdentity))return false;
+    delegations=nativePolicy->delegations;delegationCount=nativePolicy->count;
+  }
+  if(!validateAppDataExportCohort(candidate,delegations,delegationCount))return false;
   auto persistent=[](const AppGrantPolicy& g){return g.keyValue || g.driver==AppDataDriver;};
   auto same=[](const AppGrantPolicy& a,const AppGrantPolicy& b){return a.api==b.api && a.instance==b.instance && !strcmp(a.capability,b.capability);};
   // Keep every existing persisted app namespace attached to the same identity.

@@ -12,6 +12,7 @@ extern "C" const char risc_app_policy_rows[]=RISC_APP_POLICY_ROWS_MARKER;
 extern "C" const char risc_app_requirement_rows[]=RISC_APP_REQUIREMENT_ROWS_MARKER;
 #endif
 #include "ports/esp32s3/CpuPort.h"
+#include "ports/esp32s3/NativeRadioResources.h"
 #include "ports/esp32s3/NativeRetainedWake.h"
 #include "ports/esp32s3/NativeRealtime.h"
 #include "ports/esp32s3/NativeBoard.h"
@@ -155,9 +156,9 @@ bool priorFailure(risc_resident_failure_v1* out){
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd});
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd});
 #endif
 }
 void setup() {
@@ -288,7 +289,7 @@ void setup() {
 #else
     ,nullptr
 #endif
-    ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND
+    ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd
   });
   if(!retainedRuntime){
     RISC_STAGE_LOG("boot failed reason=runtime-metadata-psram");

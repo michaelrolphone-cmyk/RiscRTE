@@ -1,5 +1,6 @@
 #if defined(ESP_PLATFORM) && defined(RISC_PAIRED_APP_DATA)
 #include "NativeAppData.h"
+#include "NativeRadioResources.h"
 #include "runtime/storage/AppDataFiles.h"
 #include <esp_littlefs.h>
 #include <esp_partition.h>
@@ -14,9 +15,9 @@ RiscStorage::AppDataFiles files({nullptr,[](void*){return uint32_t(esp_timer_get
  [](void*){vTaskDelay(1);return safe();},
  [](size_t size)->void*{return heap_caps_malloc(size,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);},free});
 const RiscBoot::AppDataBackend api={nullptr,
- [](void*,uint32_t n,const char*p,uint32_t*s,uint64_t*r)->int32_t{if(s)*s=0;if(r)*r=0;return safe()?files.stat(n,p,s,r):RISC_APP_DATA_UNAVAILABLE;},
- [](void*,uint32_t n,const char*p,uint64_t v,void*b,uint32_t c,uint32_t*s,uint64_t*r)->int32_t{if(s)*s=0;if(r)*r=0;return safe()?files.read(n,p,v,b,c,s,r):RISC_APP_DATA_UNAVAILABLE;},
- [](void*,uint32_t n,const char*p,uint64_t v,const void*b,uint32_t s)->int32_t{return safe()?files.replace(n,p,v,b,s):RISC_APP_DATA_UNAVAILABLE;},
+ [](void*,uint32_t n,const char*p,uint32_t*s,uint64_t*r)->int32_t{if(s)*s=0;if(r)*r=0;if(!safe())return RISC_APP_DATA_UNAVAILABLE;RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_APP_DATA_BUSY;return files.stat(n,p,s,r);},
+ [](void*,uint32_t n,const char*p,uint64_t v,void*b,uint32_t c,uint32_t*s,uint64_t*r)->int32_t{if(s)*s=0;if(r)*r=0;if(!safe())return RISC_APP_DATA_UNAVAILABLE;RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_APP_DATA_BUSY;return files.read(n,p,v,b,c,s,r);},
+ [](void*,uint32_t n,const char*p,uint64_t v,const void*b,uint32_t s)->int32_t{if(!safe())return RISC_APP_DATA_UNAVAILABLE;RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_APP_DATA_BUSY;return files.replace(n,p,v,b,s);},
  [](void*){return files.exitSafe();}};
 }
 bool prepare(bool (*owner)(),bool (*operationSafe)()){

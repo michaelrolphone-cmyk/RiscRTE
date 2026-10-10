@@ -21,6 +21,7 @@ extern "C" {
 #define RISC_APP_DATA_COMMIT_UNKNOWN (-8)
 #define RISC_APP_DATA_RETAINED (-9)
 #define RISC_APP_DATA_STALE (-10)
+#define RISC_APP_DATA_BUSY (-11) /* No I/O began; retry at a later settled tick. */
 /* Complete ordinary files, independent of the immutable installed store and NVS.
  * Explicit positive boot-grant instance_id binds one namespace. Callers cannot
  * supply a namespace, native path, partition, executable or format operation.

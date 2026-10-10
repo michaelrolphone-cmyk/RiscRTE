@@ -1,5 +1,9 @@
 # RiscRTE
 
+An explicit, default-off [native TCP listener](docs/TCP_LISTENER.md) supplies
+bounded provider transport for external applications. Ordinary targets open no
+listener; protocol, file and product policy stay outside Runtime.
+
 This local, unreleased successor adds a 26-provider / 42-grant PSRAM cohort
 capacity and native-only grant occupancy snapshots. Legacy static capacities
 remain unchanged. See [capacity qualification](docs/COHORT_CAPACITY.md).
@@ -8,6 +12,10 @@ This source checkpoint forward-ports checked native USB serial restoration into
 the complete recovered Runtime 0.1.99. It preserves the SDMMC and resident-loading
 source and does not replace a delivered firmware image. See the
 [repair provenance and host verification](docs/USB_SERIAL_RESTORATION_0199.md).
+An isolated, opt-in [existing app-data export](docs/APP_DATA_EXPORT.md) connects
+explicit owner/file maps to the shared browser while preserving the existing
+app-data backend, revisions, quotas and update admission. No product enables it
+automatically.
 
 Runtime 0.1.96 repairs bounded data-object exports for resident descriptors in
 the selected ELF section loader. Cached and uncached mappings use their exact

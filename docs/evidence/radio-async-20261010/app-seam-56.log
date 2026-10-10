@@ -1,0 +1,56 @@
+Native worker startup failure/single lifetime allocation PASS
+Legacy fallback rejects malformed async suffix PASS
+Legacy fallback rejects malformed async suffix PASS
+Legacy fallback rejects malformed async suffix PASS
+Legacy fallback rejects malformed async suffix PASS
+Legacy fallback rejects malformed async suffix PASS
+Production provider + CpuPort + native async worker: invalid PASS
+Production provider + CpuPort + native async worker: before-dequeue PASS
+Production provider + CpuPort + native async worker: repeated PASS
+Production provider + CpuPort + native async worker: concurrent PASS
+Production provider + CpuPort + native async worker: terminal-contention PASS
+Production provider + CpuPort + native async worker: service-lease PASS
+Production provider + CpuPort + native async worker: resource-lease PASS
+Production provider + CpuPort + native async worker: legacy PASS
+Production provider + CpuPort + native async worker: copied PASS
+Production provider + CpuPort + native async worker: contention PASS
+Production provider + CpuPort + native async worker: allocation PASS
+Production provider + CpuPort + native async worker: complete-cancel PASS
+Production provider + CpuPort + native async worker: setup:get_mode PASS
+Production provider + CpuPort + native async worker: setup:netif_init PASS
+Production provider + CpuPort + native async worker: setup:loop_create PASS
+Production provider + CpuPort + native async worker: setup:netif_new PASS
+Production provider + CpuPort + native async worker: setup:attach PASS
+Production provider + CpuPort + native async worker: setup:defaults PASS
+Production provider + CpuPort + native async worker: setup:register PASS
+Production provider + CpuPort + native async worker: setup:wifi_init PASS
+Production provider + CpuPort + native async worker: setup:storage_ram PASS
+Production provider + CpuPort + native async worker: setup:station_mode PASS
+Production provider + CpuPort + native async worker: setup:credentials_copy PASS
+Production provider + CpuPort + native async worker: setup:start PASS
+Production provider + CpuPort + native async worker: setup:connect PASS
+Production provider + CpuPort + native async worker: setup:scan_start PASS
+Production provider + CpuPort + native async worker: setup:records PASS
+Production provider + CpuPort + native async worker: cleanup:scan_stop PASS
+Production provider + CpuPort + native async worker: cleanup:list_clear PASS
+Production provider + CpuPort + native async worker: cleanup:disconnect PASS
+Production provider + CpuPort + native async worker: cleanup:credentials_clear PASS
+Production provider + CpuPort + native async worker: cleanup:stop PASS
+Production provider + CpuPort + native async worker: cleanup:deinit PASS
+Production provider + CpuPort + native async worker: cleanup:unregister PASS
+Production provider + CpuPort + native async worker: cleanup:driver_clear PASS
+Production provider + CpuPort + native async worker: cleanup:loop_delete PASS
+Production provider + CpuPort + native async worker: cleanup:dhcp_stop PASS
+Production provider + CpuPort + native async worker: cleanup:netif_stop PASS
+Production provider + CpuPort + native async worker: cleanup:netif_destroy PASS
+Production provider + CpuPort + native async worker: failure:scan_stop PASS
+Production provider + CpuPort + native async worker: failure:list_clear PASS
+Production provider + CpuPort + native async worker: failure:disconnect PASS
+Production provider + CpuPort + native async worker: failure:credentials_clear PASS
+Production provider + CpuPort + native async worker: failure:stop PASS
+Production provider + CpuPort + native async worker: failure:deinit PASS
+Production provider + CpuPort + native async worker: failure:unregister PASS
+Production provider + CpuPort + native async worker: failure:driver_clear PASS
+Production provider + CpuPort + native async worker: failure:loop_delete PASS
+Production provider + CpuPort + native async worker: failure:dhcp_stop PASS
+Production provider + CpuPort + native async worker: app-workflow PASS
