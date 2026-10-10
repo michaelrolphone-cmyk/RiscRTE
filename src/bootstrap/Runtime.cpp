@@ -22,6 +22,13 @@
 #include "native/NativeAppMemory.h"
 extern "C" void native_app_memory_relocation(bool);
 #endif
+#ifdef RISC_RUNTIME_PROVIDER_CAPACITY
+// Explicit-capacity builds retain this symbol with
+// -Wl,-u,risc_runtime_provider_capacity. Offline composition reads its actual
+// ELF contents instead of treating a build-option string as native proof.
+extern "C" __attribute__((used)) const uint32_t risc_runtime_provider_capacity[4]={
+  0x31504352u,1u,uint32_t(RiscLimits::Providers),uint32_t(RiscLimits::Grants)};
+#endif
 namespace {
 RiscBoot::Runtime* currentRuntime=nullptr;
 #if RISC_APP_IMAGE_CACHE

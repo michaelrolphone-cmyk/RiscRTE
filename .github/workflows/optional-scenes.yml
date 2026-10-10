@@ -1,0 +1,60 @@
+name: Optional scene Runtime
+on:
+  push:
+    branches: [feat/declarative-alarms]
+  pull_request:
+    paths: ['sdk/app/RiscScene*.h', 'src/runtime/RuntimeLimits.h', 'src/bootstrap/Runtime.cpp', 'scripts/runtime_capacity.py', 'test/runtime_capacity.py', '.github/workflows/optional-scenes.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capacity-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          python test/runtime_capacity.py
+          bash test/run_runtime_limits_test.sh
+          python scripts/check_versions.py
+  native-headless-capacity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install platformio==6.1.19
+      - name: Build generic native capacity proof, not a Watch or X4 product image
+        run: |
+          cat >> platformio.ini <<'EOF'
+
+          [env:scene-capacity-proof]
+          extends = env:esp32s3-16mb-appdata
+          build_flags =
+            ${env:esp32s3-16mb-appdata.build_flags}
+            -DRISC_RUNTIME_PROVIDER_CAPACITY=28
+            -Wl,-u,risc_runtime_provider_capacity
+          EOF
+          pio run -e scene-capacity-proof -j 1
+          python scripts/runtime_capacity.py .pio/build/scene-capacity-proof/firmware.elf > capacity.json
+          python - <<'PY'
+          import json
+          value=json.load(open('capacity.json'))
+          assert (value['elf_class'],value['providers'],value['grants'])==(32,28,44), value
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generic-headless-native-capacity-${{ github.sha }}
+          path: |
+            capacity.json
+            .pio/build/scene-capacity-proof/firmware.elf
+          if-no-files-found: error
