@@ -1,0 +1,80 @@
+name: Current native SDMMC integration
+on:
+  push:
+    branches: [perf/scoped-gpio-read-0188]
+    paths: [.github/workflows/current-native-sdmmc-import.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  current-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Apply verified current-native implementation
+        id: source
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, lzma, pathlib
+          parts=sorted(pathlib.Path('.integration/current-native').glob('*.b64'))
+          assert [p.name for p in parts] == [f'{n:02d}.b64' for n in range(15)]
+          patch=lzma.decompress(base64.b64decode(''.join(p.read_text() for p in parts), validate=True))
+          assert hashlib.sha256(patch).hexdigest()=='2fdd58949051dca905ab53378c6863d4b3d0fc38594633b4a939b457440e6cc4'
+          pathlib.Path('/tmp/current-native.patch').write_bytes(patch)
+          PY
+          git apply --check /tmp/current-native.patch
+          git apply /tmp/current-native.patch
+          git rm -r .integration/current-native
+          git add src sdk lib test scripts platformio.ini
+          git -c user.name='michaelrolphone-cmyk' -c user.email='michael.rol.phone@gmail.com' commit -m 'Integrate current resident Runtime 0.1.99 and required SDMMC support' -m 'Preserves recovered resident shell, native lifecycle, failure recorder, USB and delivered 0.1.98 loading-callback behavior. Adds hardware one-bit SDMMC, bounded copied DMA transfers, internal DMA allocation outside the SDR IQ bank, and production regression coverage. Locally compiled and tested source: 11b16cf60c5d3bd9b6a202f25b7b86a2ff05ca21. Full original 0.1.98 source identity is not claimed.'
+          git push origin HEAD:refs/heads/perf/scoped-gpio-read-0188
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          mkdir -p output
+          git archive HEAD | gzip -n > output/current-native-source.tar.gz
+          git cat-file commit HEAD > output/current-native-commit.txt
+          git rev-parse HEAD > output/current-native-source.txt
+          git ls-files src sdk lib test scripts platformio.ini | xargs sha256sum > output/current-native-files.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: current-native-integrated-source
+          path: output/
+          if-no-files-found: error
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install platformio==6.1.19 pyelftools==0.32
+      - name: Actual native and resident lifecycle regressions
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+        run: |
+          for mode in 0 1; do
+            for test in sdmmc_port native_sdmmc held_output native_spi resident_shell resident_legacy resident_memory resident_native_contexts resident_policy failure_evidence_store failure_backtrace failure_evidence_lifecycle; do
+              SANITIZE=$mode bash test/run_${test}_test.sh
+            done
+          done
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiskRTE-XTEINK-X4-PRO
+          ref: eb5a6eaa47133b288cf41f838a5c248542fd8dbf
+          path: .x4
+          persist-credentials: false
+      - name: Build exact current X4 native composition
+        env:
+          PLATFORMIO_SETTING_ENABLE_TELEMETRY: 'No'
+        run: |
+          python .x4/minimal/scripts/prepare_native_runtime.py prepare --runtime "$GITHUB_WORKSPACE" --runtime-commit '${{ steps.source.outputs.sha }}' --output /tmp/x4-current-native --environment esp32s3-16mb-appdata-iq-stage --app-policy-rows 17 --app-image-cache --boot-flash-dio --usb-phy --retained-wake-bytes 512 --failure-evidence --sdmmc
+          cd /tmp/x4-current-native
+          pio run -e esp32s3-16mb-appdata-iq-stage -j 1
+          mkdir -p "$GITHUB_WORKSPACE/output/native"
+          cp .pio/build/esp32s3-16mb-appdata-iq-stage/{firmware.bin,firmware.elf,bootloader.bin,partitions.bin} "$GITHUB_WORKSPACE/output/native/"
+          find . -maxdepth 2 -type f -iname '*composition*.json' -exec cp '{}' "$GITHUB_WORKSPACE/output/native/" \;
+      - uses: actions/upload-artifact@v4
+        with:
+          name: current-native-sdmmc-compiled
+          path: output/
+          if-no-files-found: error
+          retention-days: 14

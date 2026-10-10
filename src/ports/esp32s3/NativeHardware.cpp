@@ -37,6 +37,10 @@
 // volatile read below keeps this exact marker in the enabled target ELF.
 extern "C" const uint32_t risc_usb_phy_resource_enabled=1;
 #endif
+#if RISC_ENABLE_SDMMC
+#include "NativeSdmmc.h"
+extern "C" __attribute__((used)) const uint32_t risc_sdmmc_host_abi=1;
+#endif
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
 struct I2cState { bool installed=false,configured=false;int sda=-1,scl=-1; } i2c[2];
@@ -90,6 +94,9 @@ bool i2cClose(uint8_t physical){
 }
 #include "NativeSpi.inc"
 bool deepReady(){
+#if RISC_ENABLE_SDMMC
+  if(!NativeSdmmc::closed())return false;
+#endif
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
   if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
 #ifdef RISC_ENABLE_HTTP
@@ -106,6 +113,9 @@ bool deepReady(){
 }
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
 bool lightSleep(uint32_t* cause){
+#if RISC_ENABLE_SDMMC
+  if(!NativeSdmmc::idle())return false;
+#endif
   if(!NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
 #ifdef RISC_ENABLE_HTTP
   if(!NativeHttp::idle())return false;
@@ -135,6 +145,12 @@ Hardware nativeHardware(bool (*owner)()){
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
+#if RISC_ENABLE_SDMMC
+  NativeSdmmc::configure(hardware.owner);
+  hardware.sdmmcOpen=NativeSdmmc::open;hardware.sdmmcRead=NativeSdmmc::read;
+  hardware.sdmmcWrite=NativeSdmmc::write;hardware.sdmmcSync=NativeSdmmc::sync;
+  hardware.sdmmcClose=NativeSdmmc::close;
+#endif
 #if RISC_ENABLE_USB_PHY
   if(*static_cast<volatile const uint32_t*>(&risc_usb_phy_resource_enabled)==1){
     hardware.usbPhyIdle=RiscDiagnostics::usbPhyIdle;

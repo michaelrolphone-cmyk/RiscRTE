@@ -47,7 +47,7 @@ static_assert(GARDEN_SPI_THREE_WIRE_V1_SIZE==sizeof(garden_spi_v1),"Suffix size 
 int main(int argc,char** argv){
   assert(argc==2);std::string root=argv[1];
   for(unsigned physical:{2u,3u}){
-    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& b=f.p.spis_[1].api;auto& g=f.p.gpios_[0].api;
+    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& b=f.p.spis_[1].api;auto& g=f.p.gpios_[0].api.base;
     assert(a.api_version==1 && a.struct_size>=GARDEN_SPI_THREE_WIRE_V1_SIZE && a.claim_three_wire);
     uint64_t t=99,u=0,dc=0;
     for(uint8_t pin:{4,5,7,11,12})assert(!g.claim(g.context,pin,true,false,false,&t) && !t && !model.calls);
@@ -92,7 +92,7 @@ int main(int argc,char** argv){
   // register replies, with a low GPIO latch and real ROM output-enable side
   // effect. Each RX must leave MOSI released, input-routed and pulled up.
   for(unsigned physical:{2u,3u}){
-    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& g=f.p.gpios_[0].api;
+    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& g=f.p.gpios_[0].api.base;
     uint64_t token=0,dc=0;assert(a.claim_three_wire(a.context,4,5,7,&token));
     assert(g.claim(g.context,8,true,false,false,&dc));assert(!model.level[5]);
     for(unsigned pass=0;pass<2;++pass){
@@ -115,7 +115,7 @@ int main(int argc,char** argv){
     Fixture f(root,supported?6:-1,supported);auto& a=f.p.spis_[0].api;uint64_t t=99;
     assert(!a.claim_three_wire(a.context,4,5,7,&t) && !t && !model.calls);
     if(supported){
-      uint8_t tx=0x42,rx=0;auto& g=f.p.gpios_[0].api;
+      uint8_t tx=0x42,rx=0;auto& g=f.p.gpios_[0].api.base;
       assert(!g.claim(g.context,6,false,false,false,&t) && !model.calls);
       assert(a.claim(a.context,4,5,6,7,&t) && model.bus.flags==0);
       assert(a.begin(a.context,t,2000000,0,20) && model.device.config.flags==0);

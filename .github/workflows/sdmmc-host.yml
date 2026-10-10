@@ -1,0 +1,69 @@
+name: Hardware SDMMC host
+on:
+  push:
+    branches: [perf/scoped-gpio-read-0188]
+    paths: ['src/ports/esp32s3/**', 'sdk/**', 'test/**', 'platformio.ini', '.github/workflows/sdmmc-host.yml']
+  pull_request:
+    paths: ['src/ports/esp32s3/**', 'sdk/**', 'test/**', 'platformio.ini', '.github/workflows/sdmmc-host.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Fetch immutable GPIO benchmark baseline
+        run: git fetch --no-tags --depth=1 origin aaa77ad11fc66b42430254ab7065590d33fd1fca
+      - name: Production interface and native binding tests
+        run: |
+          for mode in 0 1; do
+            SANITIZE=$mode bash test/run_sdmmc_port_test.sh
+            SANITIZE=$mode bash test/run_native_sdmmc_test.sh
+            SANITIZE=$mode bash test/run_scoped_gpio_read_test.sh
+            SANITIZE=$mode bash test/run_native_spi_test.sh
+          done
+          bash test/run_held_output_test.sh
+  native-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install platformio==6.1.19 pyelftools==0.32
+      - name: Compile ESP32-S3 hardware SDMMC target
+        run: pio run -e esp32s3-16mb-appdata-iq-stage-sdmmc -j2
+      - name: Verify linked hardware feature
+        run: |
+          python3 - <<'PY'
+          from elftools.elf.elffile import ELFFile
+          from pathlib import Path
+          import struct, subprocess
+          p=Path('.pio/build/esp32s3-16mb-appdata-iq-stage-sdmmc/firmware.elf')
+          with p.open('rb') as f:
+              e=ELFFile(f);symbols=e.get_section_by_name('.symtab').get_symbol_by_name('risc_sdmmc_host_abi')
+              assert symbols and len(symbols)==1
+              s=symbols[0];assert s['st_info']['bind']=='STB_GLOBAL'
+              section=e.get_section(s['st_shndx']);offset=s['st_value']-section['sh_addr']
+              assert struct.unpack('<I',section.data()[offset:offset+4])[0]==1
+          (p.parent/'source-sha.txt').write_text(subprocess.check_output(['git','rev-parse','HEAD'],text=True))
+          (p.parent/'BUILD-NOTES.txt').write_text('Native feature validation ELF, not a complete X4 product image. Preserve the complete resident runtime source and product pins when integrating this feature.\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdmmc-native-validation-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            .pio/build/esp32s3-16mb-appdata-iq-stage-sdmmc/firmware.elf
+            .pio/build/esp32s3-16mb-appdata-iq-stage-sdmmc/source-sha.txt
+            .pio/build/esp32s3-16mb-appdata-iq-stage-sdmmc/BUILD-NOTES.txt
+          if-no-files-found: error
+          retention-days: 14

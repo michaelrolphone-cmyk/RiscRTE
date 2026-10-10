@@ -43,7 +43,7 @@ int main(int argc,char**argv){
   RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
   const bool valid=r.prepare(root.c_str());if(valid!=(ordinary || !peer))fprintf(stderr,"ordinary=%d peer=%d error=%s\n",ordinary,peer,r.error());assert(valid==(ordinary || !peer));assert(!io);
   if(!ordinary && peer)continue;
-  auto& a=p.gpios_[0].api;const auto bit=[](unsigned n){return uint64_t(1)<<n;};
+  auto& a=p.gpios_[0].api.base;const auto bit=[](unsigned n){return uint64_t(1)<<n;};
   assert(a.struct_size>=GARDEN_GPIO_READ_RETIRED_OUTPUT_V1_SIZE && a.read_retired_output);
   assert(p.gpios_[0].output==(bit(18)|bit(14)|(ordinary?0:bit(12)|bit(11)|bit(13))));
   assert(p.gpios_[0].input==(bit(6)|(ordinary?0:bit(11))));
