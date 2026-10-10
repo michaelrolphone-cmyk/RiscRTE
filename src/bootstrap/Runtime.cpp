@@ -1,4 +1,5 @@
 #include "Runtime.h"
+#include "RemovableAppImage.h"
 #include "runtime/drivers/DeviceProviderExecutorV2.h"
 #include "runtime/drivers/NativeProviderPolicySnapshotV1.h"
 #include <chrono>
@@ -20,11 +21,15 @@
 #include <cerrno>
 #include <atomic>
 #include "../../lib/hal/RuntimeImageCacheConfig.h"
-#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST) || defined(RISC_REMOVABLE_APP_TEST)
 #include <private/esp_dlcache.h>
 #endif
-#ifdef ESP_PLATFORM
+#if defined(ESP_PLATFORM) || defined(RISC_REMOVABLE_APP_TEST)
 #include <esp_elf.h>
+#include <private/elf_platform.h>
+extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
+#endif
+#ifdef ESP_PLATFORM
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -292,7 +297,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
   if(value.size()){policies_=metadataArray<AppPolicy>(value.size());if(!policies_)return fail("app policy allocation failed");}
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
     auto& policy=policies_[policyCount_]; char relative[193]; JsonDocument doc;
-    if (!keys(item,{"manifest","grants"},{"app_data_export"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+    if (!keys(item,{"manifest","grants"},{"app_data_export","image_source"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,policy.elf,sizeof(policy.elf)) || !readJson(policy.elf,doc,&metadataCloseRetained_)) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=doc.as<JsonObjectConst>(); char filename[128];
     if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types"}) ||
@@ -314,6 +319,19 @@ bool Runtime::appPolicies(JsonVariantConst value) {
     if (strlen(policy.elf)+strlen(filename)>=sizeof(policy.elf)) return fail("app path too long");
     strcat(policy.elf,filename);
     for (size_t i=0;i<policyCount_;++i) if (!strcmp(policies_[i].id,policy.id) || !strcmp(policies_[i].elf,policy.elf)) return fail("duplicate app identity/path policy");
+    if(!item["image_source"].isNull()) {
+      auto source=item["image_source"].as<JsonObjectConst>();int64_t instance=0;char relativeImage[192];
+      if(!keys(source,{"volume_instance","path"}) || !integer(source["volume_instance"],1,INT32_MAX,instance) ||
+         !text(source["path"],relativeImage,sizeof(relativeImage)) || !InstalledFiles::valid(relativeImage,false) ||
+         !elfPath(relativeImage) || !strcmp(policy.elf,invocation_->current_))return fail("invalid removable app source");
+      for(size_t d=0;d<driverCount_;++d)if(drivers_[d].instance==uint64_t(instance) &&
+          !strcmp(drivers_[d].provides,"storage.volume") && drivers_[d].api==1) {
+        if(policy.sourceDriver>=0)return fail("ambiguous removable app volume");
+        policy.sourceDriver=static_cast<PolicyIndex>(d);
+      }
+      if(policy.sourceDriver<0)return fail("removable app volume unavailable");
+      snprintf(policy.sourcePath,sizeof(policy.sourcePath),"/%s",relativeImage);
+    }
     for (JsonObjectConst request:manifest["requires"].as<JsonArrayConst>()) {
       char requested[96];int64_t api=0;
       if (!keys(request,{"capability","api"}) || !text(request["capability"],requested,sizeof(requested)) ||
@@ -735,6 +753,7 @@ bool Runtime::revokeApp() {
 }
 #include "AppStreamsRuntime.inc"
 #include "InstalledFilesRuntime.inc"
+#include "RemovableAppsRuntime.inc"
 #include "AppDataRuntime.inc"
 #include "AppDataExportRuntime.inc"
 #include "BoundAppDataRuntime.inc"
@@ -895,7 +914,7 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
   if(!prepared_ || invocation_->active_ || retained_ || metadataCloseRetained_ || !port_.owner() || !inspect)return false;
   if(!inspect(context,default_,false))return false;
   for(size_t i=0;i<policyCount_;++i){
-    if(!strcmp(policies_[i].elf,default_))continue;
+    if(policies_[i].sourceDriver>=0 || !strcmp(policies_[i].elf,default_))continue;
     if(!port_.owner() || !inspect(context,policies_[i].elf,false))return false;
   }
   for(size_t i=0;i<driverCount_;++i){
@@ -952,7 +971,7 @@ bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& 
   if(!active() || !id || !bytes || !size || size>4096 || !providerStorageSafe())return false;
   const AppPolicy* policy=nullptr;
   for(size_t p=0;p<policyCount_;++p)if(!strcmp(id,policies_[p].id))policy=&policies_[p];
-  if(!policy)return false;
+  if(!policy || policy->sourceDriver>=0)return false;
   // One declared KV capability may have several explicit namespace grants.
   // Compare the candidate to the unique declarations, preserving every
   // owner-provisioned grant in the immutable boot policy independently.
@@ -1135,10 +1154,10 @@ bool Runtime::runOne(const char* name) {
 #if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
   // Only exact prepared installed-image paths enter this session's cache.
   // Loose child paths retain the ordinary reader and admission behavior.
-  void* module=(policy || !strcmp(name,default_)) ?
+  void* module=policy && policy->sourceDriver>=0 ? loadRemovableApp(*policy) : (policy || !strcmp(name,default_)) ?
     esp_dlopen_cached_instance(&appImages_,name) : esp_dlopen_instance(name);
 #else
-  void* module=esp_dlopen_instance(name);
+  void* module=policy && policy->sourceDriver>=0 ? loadRemovableApp(*policy) : esp_dlopen_instance(name);
 #endif
   RISC_STAGE_LOG("app load end file=%s result=%s elapsed_us=%llu",name,module?"ok":"failed",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
@@ -1147,13 +1166,14 @@ bool Runtime::runOne(const char* name) {
   native_app_memory_relocation(false);
 #endif
   if(!module) {
+    if(retained_){(void)appExitBarrier();return false;}
 #if defined(ESP_PLATFORM) || defined(RISC_NATIVE_APP_MEMORY_TEST)
     if(!native_app_memory_end()){retained_=true;fail("failed app load allocation cleanup retained");(void)appExitBarrier();return false;}
 #endif
     RiscPerf::emit(21);
     invocation_->streams_.endInvocation();
     invocation_->failureKind=RISC_RESIDENT_FAILURE_LOAD;invocation_->status=RISC_RESIDENT_FAILED;
-    return fail("app ELF load failed");
+    return policy && policy->sourceDriver>=0 && error_[0] ? false : fail("app ELF load failed");
   }
   auto entry=reinterpret_cast<void(*)()>(dlsym(module,"app_main"));
   auto init=reinterpret_cast<int(*)()>(dlsym(module,"app_module_init"));
