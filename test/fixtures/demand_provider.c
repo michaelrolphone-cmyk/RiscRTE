@@ -23,5 +23,12 @@ static bool quiesce(void) {
   return demand_event(PROVIDER_ID,"quiesce");
 }
 static void stop(void){demand_event(PROVIDER_ID,"stop");dependency=0;}
+#ifdef SYNCHRONOUS_SERVICE
+static void service(uint32_t budget){if(budget==RISC_DRIVER_SERVICE_MAX_MS)demand_event(PROVIDER_ID,"service");}
+static const risc_driver_service_v2 driver={{{{2,sizeof(driver),PROVIDER_ID,"test." PROVIDER_ID,1,api,start,stop,quiesce},0,0},0},RISC_DRIVER_SERVICE_TAG_V1,RISC_DRIVER_SERVICE_VERSION_V1,service};
+__attribute__((visibility("default")))const risc_driver_v2* t5_driver_get(uint32_t version){return version==2?&driver.poll.streams.driver:0;}
+#else
 static const risc_driver_v2 driver={2,sizeof(driver),PROVIDER_ID,"test." PROVIDER_ID,1,api,start,stop,quiesce};
 __attribute__((visibility("default"))) const risc_driver_v2* t5_driver_get(uint32_t version){return version==2?&driver:0;}
+
+#endif

@@ -118,7 +118,7 @@ static void admission(){
  for(unsigned version:{0u,2u}){stage();file("first.json",driver(0,RISC_PLATFORM_REALTIME_CAPABILITY,version));Runtime r(port());assert(!r.prepare(root.c_str()));}
  for(const char* cap:{RISC_REALTIME_CAPABILITY,RISC_REALTIME_CONTROL_CAPABILITY}){stage();file("first.json",driver(0,cap));Runtime r(port());assert(!r.prepare(root.c_str()));}
  stage(RISC_PLATFORM_REALTIME_CAPABILITY);{Runtime r(port());assert(!r.prepare(root.c_str()));}
- stage();boundKeys(10);{Runtime r(port());assert(!r.prepare(root.c_str()));}
+ stage();boundKeys(11);{Runtime r(port());assert(!r.prepare(root.c_str()));}
  stage();{Runtime r(port());assert(r.registerRealtime(&backend));assert(!r.registerRealtime(&backend));assert(!r.registerPlatform(RISC_PLATFORM_REALTIME_CAPABILITY,1,Runtime::Scope::Global,0,&backend));}
  uintptr_t end=UINTPTR_MAX;assert(!RiscBoot::nextKeyValueContext(end) && end==UINTPTR_MAX);
  assert(reads+seeds==before);stage();
@@ -126,7 +126,7 @@ static void admission(){
 int main(int argc,char** argv){
  assert(argc==2 || argc==3);root=argv[1];
  if(argc==2){
-  admission();for(scenario=0;scenario<=7;++scenario){stage();if(scenario==7)boundKeys(9);const auto child=fork();assert(child>=0);if(!child){const auto arg=std::to_string(scenario);execl(argv[0],argv[0],root.c_str(),arg.c_str(),static_cast<char*>(nullptr));_exit(99);}int status;assert(waitpid(child,&status,0)==child);if(status)fprintf(stderr,"provider realtime scenario %d status %d\n",scenario,status);assert(WIFEXITED(status) && WEXITSTATUS(status)==0);}
+  admission();for(scenario=0;scenario<=7;++scenario){stage();if(scenario==7)boundKeys(10);const auto child=fork();assert(child>=0);if(!child){const auto arg=std::to_string(scenario);execl(argv[0],argv[0],root.c_str(),arg.c_str(),static_cast<char*>(nullptr));_exit(99);}int status;assert(waitpid(child,&status,0)==child);if(status)fprintf(stderr,"provider realtime scenario %d status %d\n",scenario,status);assert(WIFEXITED(status) && WEXITSTATUS(status)==0);}
   puts("Provider realtime: admission/owner/entry/poll, canonical validation, no seed, generations/reused Runtime, failed graph, retained native/invocation/shutdown PASS");return 0;
  }
  scenario=atoi(argv[2]);

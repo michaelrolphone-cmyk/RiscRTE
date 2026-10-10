@@ -1,5 +1,119 @@
 # RiscRTE
 
+This local, unreleased successor adds a 26-provider / 42-grant PSRAM cohort
+capacity and native-only grant occupancy snapshots. Legacy static capacities
+remain unchanged. See [capacity qualification](docs/COHORT_CAPACITY.md).
+
+This source checkpoint forward-ports checked native USB serial restoration into
+the complete recovered Runtime 0.1.99. It preserves the SDMMC and resident-loading
+source and does not replace a delivered firmware image. See the
+[repair provenance and host verification](docs/USB_SERIAL_RESTORATION_0199.md).
+
+Runtime 0.1.96 repairs bounded data-object exports for resident descriptors in
+the selected ELF section loader. Cached and uncached mappings use their exact
+loaded data section, without an executable-address alias. Pre-init stage logs
+identify rejected entry, lifecycle, policy and descriptor fields. This isolated
+0.1.93 follow-up preserves existing lifecycle authority and product inputs.
+
+Runtime 0.1.93 adds opt-in bounded native crash/retention evidence and a copied
+read/explicit-acknowledgement API. Ordinary targets remain disabled. The selected
+ESP32-S3 recorder preserves the pinned SDK panic handler and uses RTC memory,
+without a partition, product UI, power policy or device change. See
+[failure evidence](docs/FAILURE_EVIDENCE.md).
+
+Runtime 0.1.92 adds a separately selected bounded diagnostic ABI for trusted
+native providers. Only an exact native policy with diagnostic ABI 1 can bind
+`printf`, `puts` and `putchar` to the owner-task diagnostic sink. Default/ordinary
+lookup remains unchanged. See [the diagnostic contract](docs/PROVIDER_DIAGNOSTICS.md).
+
+Runtime 0.1.91 adds default-off, exact per-provider native import admission from
+a trusted firmware policy. Graph, copied-image relocation and staged bank
+validation share the same owned authority; ordinary imports and retained
+cleanup remain unchanged. No product selects a native provider. See
+[scoped native providers](docs/SCOPED_NATIVE_PROVIDERS.md).
+
+Runtime 0.1.89 adds bounded activity/inhibition flags to resident POLL and an
+invocation-bound request for a separate settled POLICY checkpoint. Runtime
+keeps the existing cleanup and terminal-sleep barriers; applications own input,
+capture preparation and reversible policy work. See
+[resident policy checkpoints](docs/RESIDENT_DEFAULT.md#poll-and-settled-policy-checkpoints).
+
+Runtime 0.1.86 adds an explicitly admitted legacy handoff for resident-default
+profiles. The host fully unloads before a legacy ELF starts; legacy return or
+Home starts a fresh host. Copied foreground and file-open continuations resume
+only through that new host. Ordinary profiles and all existing API layouts are
+unchanged. See [resident compatibility](docs/RESIDENT_DEFAULT.md#explicit-legacy-compatibility).
+
+Runtime 0.1.85 composes the independently qualified resident-default lifecycle, provider-bound files and optional larger retained values. Existing feature selection defaults remain unchanged.
+
+Runtime 0.1.82 adds an explicitly selected resident-default lifecycle. One
+default ELF can host one cooperative foreground invocation and dispatch shared
+controls at settled checkpoints. Each invocation has independent grants,
+streams, allocation ownership and native contexts. Existing profiles retain
+their unload/child/fresh-default lifecycle. UI and hardware arbitration stay in
+applications/providers. See [resident default](docs/RESIDENT_DEFAULT.md).
+
+Runtime 0.1.83 adds provider-bound `storage.app-data.bound@1` with exact filename/namespace/access
+maps over the existing backend with copied complete-file APIs and sticky native
+retention. See [provider file authority](docs/PROVIDER_APP_DATA.md).
+
+Runtime 0.1.81 keeps synchronous provider services out of cooperative app yield.
+Display and input polling retain bounded provider polling and scheduler fairness;
+storage services remain at explicit acquisition and app-entry boundaries.
+
+Runtime 0.1.80 adds an opt-in, provider-only internal USB PHY ownership lease.
+It fences the native HWCDC console and exit/sleep/restart while an ordinary USB
+provider owns the controller, preserving owner SD/SPI access and retained
+cleanup. USB descriptors, endpoints, SCSI and SD export remain in providers.
+Existing targets keep the capability disabled. See [USB PHY ownership](docs/USB_PHY_RESOURCE.md).
+
+Runtime 0.1.79 combines the explicit configured-default Home handoff from
+0.1.77 with the optional provider diagnostic source and cold-start policy from
+0.1.78. Home actions preserve clean teardown, owner-task gates and file-open
+caller return on failure. Diagnostic storage and log policy remain product-owned.
+See [explicit Home](docs/EXPLICIT_DEFAULT.md),
+[native diagnostics](docs/NATIVE_DIAGNOSTIC_OBSERVER.md), and
+[cold-boot provider start](docs/COLD_PROVIDER_START.md).
+
+
+Runtime 0.1.76 adds a separate owner-maintenance image for ABI2 and an offline
+entry/restoration verifier that preserves app-data and excludes NVS. Ordinary
+Runtime has no maintenance endpoint. This does not migrate native policy rows
+or product cohorts. See [owner maintenance](docs/PROVISIONING.md#offline-maintenance-entryrestoration-planner).
+
+Runtime 0.1.75 makes a valid retained stream notification fence its provider
+even when the queue lock is busy. Exact endpoint/generation ownership and
+cleanup custody remain checked; the public ABI is unchanged. See the
+[contention repair and concurrency contract](docs/STREAM_RETENTION_FENCE.md).
+
+Runtime 0.1.74 adds existing-stage-logger snapshots of internal, DMA-capable and
+PSRAM heap availability at Wi-Fi setup/failure boundaries. SDK configuration,
+cleanup and the qualified HCI queue are unchanged. See the [selected-source
+Wi-Fi investigation](docs/WIFI_STARTUP_PATHS.md).
+
+Runtime 0.1.73 uses the existing bounded HCI receive memory for actual packet
+lengths, so short advertisement bursts no longer exhaust four oversized slots.
+Packet ordering, true-overflow failure and retained cleanup remain enforced.
+See [the exact-source reproducer and limits](docs/HCI_RX_BURSTS.md).
+
+Runtime 0.1.71 permits bounded scheduler-only cooperation for the current
+retained invocation owner, without polling providers or restoring authority.
+See [the retained-yield contract and reproduction](docs/RETAINED_YIELD.md).
+
+Runtime 0.1.69 reconciles the independently verified stream-session, cache-pressure
+and app-policy-row histories. Image caching remains off by default; the optional
+17-row metadata selection preserves the 16 live-grant and manifest bounds. See
+[the integration record](docs/RUNTIME_0169_INTEGRATION.md).
+
+Runtime 0.1.66 adds [generic app byte-stream sessions](docs/APP_STREAMS.md),
+with an invocation-bound broker, tagged provider adapter and bounded queues.
+Physical transports and product selection remain external.
+
+Runtime 0.1.60 adds [automatic plain timestamped stage logs](docs/STAGE_LOGS.md)
+in the `*-stage` diagnostic targets. Boot, named provider activation and app
+load/init/entry/unload statements print without a command or enabled recorder.
+Output remains bounded and nonblocking, with visible lost/truncated-line counts.
+
 A small, headless ESP32-S3 runtime extracted from
 [T5S3-Reader](https://github.com/michaelrolphone-cmyk/T5S3-Reader).
 It mounts a flash-backed module store, validates the shared board manifest before
@@ -99,6 +213,12 @@ provider acquisition until an authorized app acquire needs its dependency closur
 Omission or `"eager"` preserves existing behavior. All selected metadata and staged
 image admission remain complete. See [demand activation and lifetime](docs/DEMAND_ACTIVATION.md).
 
+Runtime 0.1.63 adds explicit `"provider_activation": "demand-retained"`. The
+default app's existing promotion call arms session retention without activating
+unused providers. Later real acquisitions start only their authorized dependency
+closure, which stays mapped across app handoffs. Unpromoted paths remain ordinary
+demand lifetime. See [the policy and measured counts](docs/DEMAND_RETENTION.md).
+
 The shipped baseline has an empty driver list and no peripheral declarations.
 The example `probe` above refers to the non-hardware test fixture, not a bundled
 physical driver. An ordinary software provider omits `instance_id`; a hardware
@@ -115,8 +235,12 @@ boot config, invalid board, rejected dependency or failed driver activation
 prevents app launch. A missing/corrupt initial default ELF is an error; a missing
 child returns to the intact configured default path.
 
-Limits: 64 KiB per JSON file, 8 buses, 64 physical declarations, 16 selected driver
-modules, 16 requirements per module, 32 generation-tagged grants, 8 MiB ELF images.
+Limits: 64 KiB per JSON file, 8 buses, 64 physical declarations, 16 requirements
+per module, 8 MiB ELF images. Legacy static targets allow 19 app policies, 17
+selected providers and 32 generation-tagged graph grants; host and PSRAM cohort
+targets allow 24 policies, 26 providers and 42 graph grants. The resident host
+and foreground share the graph pool; sixteen live grants per invocation do not
+guarantee thirty-two simultaneous provider grants beyond retained boot pins.
 JSON reads use 512-byte chunks and a five-second operation deadline. The inherited
 ELF reader uses 4 KiB chunks, scheduler yields and a 30-second read deadline.
 SPIFFS calls are synchronous; deadlines do not interrupt a stuck underlying
@@ -131,10 +255,12 @@ storage call. The mounted store must remain immutable while a boot session runs.
 - Multiple hardware instances use independent ELF data/BSS and scoped dependency
   tables. Package identity stays unchanged; selection includes instance ID.
   Identical `driver.elf` paths/basenames do not alias a singleton module.
-- This slice loads ordinary ABI-2 providers only. Privileged OS/CPU package
-  admission, normal storage-volume providers, app capability brokering, package
-  installation and stream services are not enabled. Stream-dependent drivers fail
-  admission without a host table. No alternate storage ABI was introduced.
+- Ordinary builds load ordinary ABI-2 providers only. A separate, default-off
+  [trusted per-provider native policy](docs/SCOPED_NATIVE_PROVIDERS.md) can admit
+  exact owned images without widening ordinary imports. No product selects it.
+  Normal storage-volume providers and package installation are not enabled. Explicit app capabilities and generic
+  byte-stream sessions are brokered by Runtime; providers still require valid
+  graph admission and checked quiescence. No alternate storage ABI was introduced.
 - Only flash-backed bootstrap is supplied. An attached-storage bootstrap port
   requires its own explicit noncyclic board/pin ownership and timeout design.
 - No production peripheral driver is bundled. The real Watch I2C test driver and tiny dynamic providers under
@@ -154,6 +280,7 @@ bash test/run_bound_key_value_test.sh
 bash test/run_native_registry_test.sh
 bash test/run_provider_module_lease_v2_test.sh
 bash test/run_retained_app_test.sh
+bash test/run_retained_yield_test.sh
 bash test/run_retained_wake_test.sh
 bash test/run_watch_test.sh
 bash test/run_provider_graph_v2_test.sh
@@ -425,3 +552,25 @@ from paired boot, including deep timer wake. It consumes the existing committed
 bank record; installation and inactive-bank updates retain image validation and
 atomic selection. [Production call counts and lifecycle evidence](docs/COMMITTED_PAIR_BOOT.md)
 describe the change. Provider mappings and per-app loader behavior are unchanged.
+
+Runtime 0.1.56 adds opt-in bounded performance tracing with interaction IDs carried
+through app handoffs, nested application spans, loader/provider phases and
+aggregate scheduler waits. The optional app API suffix preserves existing
+clients. Recorders never write serial; `perf` requests a capacity-bounded snapshot
+through the existing diagnostic transport. See [the tracing contract and
+measurement limits](docs/PERFORMANCE_TRACE.md). No file validation is added.
+
+Runtime 0.1.57 appends optional physical readback for an exact scoped CPU-retired
+held static GPIO output. It preserves the retired token, hold and all older
+table layouts; fresh claim or reset ends that read authority. Failure cannot
+substitute a cached HIGH. See [ownership and software verification](docs/CPU_PORT.md#exclusive-gpio-display-and-retained-static-outputs).
+Interpretation and product policy remain external providers' responsibility.
+
+Runtime 0.1.64 adds an optional native diagnostic observer, disabled in ordinary builds. See [the bounded observer contract](docs/NATIVE_DIAGNOSTIC_OBSERVER.md).
+
+Runtime 0.1.65 introduced bounded immutable input reuse for prepared apps while
+preserving fresh relocation, globals and lifecycle callbacks. Runtime 0.1.67
+makes it an explicit, default-off composition option and adds owner-scoped
+allocation-pressure reclamation. See the
+[cache ownership, replacement lifecycle and measured operation counts](docs/APP_IMAGE_CACHE.md).
+Cold reads also use [bounded byte/time yield checkpoints](docs/ELF_READ_CHECKPOINTS.md).

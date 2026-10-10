@@ -1,0 +1,7 @@
+GPIO ABI: frozen Watch and all previous field offsets, C/C++ suffix sizing and safe old-table rejection PASS
+GPIO ABI: frozen Watch and all previous field offsets, C/C++ suffix sizing and safe old-table rejection PASS
+Retired output readback: physical HIGH/LOW/failure, exact scope, revoked tokens, lifecycle gates, reentry, reclaim, reset and no mutation PASS
+Scoped bitbang GPIO and held-output retirement: exact pins, peer rejection, legacy SPI, ownership, fresh claim and retained failure PASS
+Scoped GPIO write cache: collisions, full tokens, foreign/stale/input/held/retired/owner rejection, reacquire, PWM failure and exhaustion PASS
+Native PWM: all 1023 intermediate ratios, exact static endpoints, Watch ratio and failure retention PASS
+Typed touch v2: unchanged v1 prefix/scope, explicit rail/IRQ authority, alternate address reservation, invalid configs and no preflight I/O PASS

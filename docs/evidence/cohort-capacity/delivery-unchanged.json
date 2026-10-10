@@ -1,0 +1,14 @@
+{
+  "image": {
+    "path": "/workspace/shared/x4-home-image-050/assembled/X4-0.1.50-Home-SDMMC-full-0x0.bin",
+    "bytes": 16777216,
+    "sha256": "35d25bae784b1a3f090ca4460ef2c0ba7f9ddbe2dd7792d3dec624f39a02d505",
+    "matches_delivery_receipt": true
+  },
+  "native": {
+    "path": "/workspace/shared/x4-home-image-050/native-firmware.bin",
+    "bytes": 1353520,
+    "sha256": "d54ba2cec882d1afd56b4e78fff8c4a7545ec0416a4b786dfdc9594d20bc4900",
+    "matches_delivery_receipt": true
+  }
+}

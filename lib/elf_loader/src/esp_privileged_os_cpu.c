@@ -7,13 +7,26 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "private/esp_privileged_os_cpu.h"
+#include "private/esp_privileged_elf.h"
 
-/* The firmware logger supplies generic printf/puts sinks for privileged
- * provider diagnostics. Weak linkage keeps the OS/CPU host test harness
- * independent of Arduino logging; firmware links strong Logging.cpp symbols.
- * These are relocation-only substitutions, never process-global hooks. */
+/* Optional native diagnostics never become global libc hooks. Availability
+ * requires all three substitutions and the exact linked diagnostic ABI. */
+extern const uint32_t risc_provider_diagnostic_build_abi_v1 __attribute__((weak));
+extern uint32_t risc_provider_diagnostic_abi_v1(void) __attribute__((weak));
 extern int risc_provider_diagnostic_printf(const char *format, ...) __attribute__((weak));
 extern int risc_provider_diagnostic_puts(const char *message) __attribute__((weak));
+extern int risc_provider_diagnostic_putchar(int character) __attribute__((weak));
+
+bool esp_elf_privileged_diagnostic_abi_supported_v1(uint32_t abi)
+{
+    if (abi == 0) return true;
+    return abi == RISC_PROVIDER_DIAGNOSTIC_ABI_V1 &&
+        &risc_provider_diagnostic_build_abi_v1 &&
+        risc_provider_diagnostic_build_abi_v1 == abi &&
+        risc_provider_diagnostic_abi_v1 && risc_provider_diagnostic_printf &&
+        risc_provider_diagnostic_puts && risc_provider_diagnostic_putchar &&
+        risc_provider_diagnostic_abi_v1() == abi;
+}
 
 /* Strong links intentionally fail firmware builds when the port ABI is absent.
  * The table contains addresses, not forwarding hardware driver functions. */
@@ -43,8 +56,11 @@ static TaskHandle_t s_scope_owner = NULL;
 static const void *s_scope_module = NULL;
 static bool s_relocation_active = false;
 static bool s_relocation_consumed = false;
+static const char *const *s_selected_imports = NULL;
+static size_t s_selected_count = 0;
+static uint32_t s_diagnostic_abi = 0;
 
-bool esp_elf_privileged_os_cpu_begin_v1(void)
+static bool begin_scope(const char *const *imports, size_t count, uint32_t diagnostic_abi)
 {
     TaskHandle_t caller = xTaskGetCurrentTaskHandle();
     if (caller == NULL) return false;
@@ -54,11 +70,39 @@ bool esp_elf_privileged_os_cpu_begin_v1(void)
         s_scope_module = NULL;
         s_relocation_active = false;
         s_relocation_consumed = false;
+        s_selected_imports = imports;
+        s_selected_count = count;
+        s_diagnostic_abi = diagnostic_abi;
         s_scope_owner = caller;
         acquired = true;
     }
     taskEXIT_CRITICAL(&s_scope_lock);
     return acquired;
+}
+
+bool esp_elf_privileged_os_cpu_begin_v1(void)
+{
+    return begin_scope(NULL, 0, 0);
+}
+
+bool esp_elf_privileged_os_cpu_begin_selected_v1(
+    const char *const *imports, size_t count)
+{
+    return esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(imports, count, 0);
+}
+
+bool esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(
+    const char *const *imports, size_t count, uint32_t diagnostic_abi)
+{
+    if (!imports || count > 128 ||
+        !esp_elf_privileged_diagnostic_abi_supported_v1(diagnostic_abi)) return false;
+    for (size_t i = 0; i < count; ++i) {
+        if (!imports[i] || !imports[i][0] || strnlen(imports[i], 128) > 127 ||
+            (i && strcmp(imports[i - 1], imports[i]) >= 0) ||
+            !esp_elf_privileged_selected_import_supported_with_diagnostics_v1(imports[i], diagnostic_abi))
+            return false;
+    }
+    return begin_scope(imports, count, diagnostic_abi);
 }
 
 bool esp_elf_privileged_os_cpu_end_v1(void)
@@ -69,6 +113,9 @@ bool esp_elf_privileged_os_cpu_end_v1(void)
     if (caller != NULL && s_scope_owner == caller && !s_relocation_active) {
         s_scope_module = NULL;
         s_relocation_consumed = false;
+        s_selected_imports = NULL;
+        s_selected_count = 0;
+        s_diagnostic_abi = 0;
         s_scope_owner = NULL;
         released = true;
     }
@@ -84,6 +131,27 @@ bool esp_elf_privileged_os_cpu_scope_owned_v1(void)
     const bool owned = s_scope_owner == caller;
     taskEXIT_CRITICAL(&s_scope_lock);
     return owned;
+}
+
+bool esp_elf_privileged_os_cpu_import_allowed_v1(const char *symbol)
+{
+    if (!symbol || !symbol[0]) return false;
+    TaskHandle_t caller = xTaskGetCurrentTaskHandle();
+    bool allowed = false;
+    taskENTER_CRITICAL(&s_scope_lock);
+    if (caller != NULL && caller == s_scope_owner) {
+        if (s_selected_imports == NULL) allowed = true;
+        else if (s_relocation_active) {
+            for (size_t i = 0; i < s_selected_count; ++i) {
+                if (strcmp(symbol, s_selected_imports[i]) == 0) {
+                    allowed = true;
+                    break;
+                }
+            }
+        }
+    }
+    taskEXIT_CRITICAL(&s_scope_lock);
+    return allowed;
 }
 
 bool esp_elf_privileged_os_cpu_authorize_relocation_v1(const void *module)
@@ -145,14 +213,14 @@ bool esp_elf_privileged_os_cpu_relocation_leave_v1(const void *module)
 uintptr_t esp_elf_privileged_os_cpu_lookup_v1(const char *symbol)
 {
     if (symbol == NULL || symbol[0] == '\0' ||
-        !esp_elf_privileged_os_cpu_scope_owned_v1()) return 0;
-    /* Provider printf imports can be folded into puts by the compiler.
-     * Only privileged relocations bind either to bounded diagnostic sinks;
-     * ordinary app symbols and provider hardware APIs remain unchanged. */
-    if (strcmp(symbol, "printf") == 0 && risc_provider_diagnostic_printf)
-        return (uintptr_t)&risc_provider_diagnostic_printf;
-    if (strcmp(symbol, "puts") == 0 && risc_provider_diagnostic_puts)
-        return (uintptr_t)&risc_provider_diagnostic_puts;
+        !esp_elf_privileged_os_cpu_import_allowed_v1(symbol)) return 0;
+    /* Legacy fixed-inventory scopes and unqualified selections stay denied.
+     * The owner is the only writer, so its active scope pins this ABI value. */
+    if (s_selected_imports && s_relocation_active && s_diagnostic_abi == 1) {
+        if (strcmp(symbol, "printf") == 0) return (uintptr_t)&risc_provider_diagnostic_printf;
+        if (strcmp(symbol, "puts") == 0) return (uintptr_t)&risc_provider_diagnostic_puts;
+        if (strcmp(symbol, "putchar") == 0) return (uintptr_t)&risc_provider_diagnostic_putchar;
+    }
     for (size_t i = 0; i < sizeof(s_privileged_symbols_v1) /
                            sizeof(s_privileged_symbols_v1[0]); ++i) {
         if (strcmp(symbol, s_privileged_symbols_v1[i].name) == 0)

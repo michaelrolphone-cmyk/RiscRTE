@@ -47,6 +47,35 @@ static esp_elf_symbol_table_t *g_symbol_tables[SYMBOL_TABLES_NO];
 static symbol_resolver current_resolver = elf_find_sym_default;
 static portMUX_TYPE resolver_mux = portMUX_INITIALIZER_UNLOCKED;
 
+/* Optional bounded Runtime recorder. No serial output, allocation or clock read
+ * is performed by the loader itself. Standalone users need not define the hook.
+ * Phase IDs follow Runtime's generic performance convention; failure values are
+ * signed loader return codes represented as uint32_t. */
+#ifdef __APPLE__
+extern void risc_perf_loader_event(uint32_t phase, uint32_t value) __attribute__((weak_import));
+#else
+extern void risc_perf_loader_event(uint32_t phase, uint32_t value) __attribute__((weak));
+#endif
+
+static inline void elf_perf_event(uint32_t phase, uint32_t value)
+{
+    if (risc_perf_loader_event) risc_perf_loader_event(phase, value);
+}
+
+static int esp_elf_open_impl(elf_file_t *file, const char *name);
+
+int esp_elf_open(elf_file_t *file, const char *name)
+{
+    elf_perf_event(40, 0); /* read begin: includes open, seek, allocation and yields */
+    const int result = esp_elf_open_impl(file, name);
+    if (result) {
+        const int saved_errno = errno;
+        elf_perf_event(44, (uint32_t)result);
+        errno = saved_errno;
+    }
+    return result;
+}
+
 /**
  * @brief Open and load an ELF file into memory.
  *
@@ -70,7 +99,7 @@ __attribute__((weak)) bool esp_elf_admit_managed_app(const char *path, const uin
     return path && !(strncmp(path, "/sd/Apps/", 9) == 0 && strchr(path + 9, '/'));
 }
 
-int esp_elf_open(elf_file_t *file, const char *name)
+static int esp_elf_open_impl(elf_file_t *file, const char *name)
 {
     ssize_t ret;
     int fd = -1;
@@ -117,6 +146,7 @@ int esp_elf_open(elf_file_t *file, const char *name)
     pbuf = esp_elf_malloc(size, false);
     if (!pbuf) {
         ESP_LOGE(TAG, "Failed to malloc %" PRId64 " bytes", (int64_t)size);
+        errno = ENOMEM;
         goto errout_lseek_end;
     }
 
@@ -124,6 +154,9 @@ int esp_elf_open(elf_file_t *file, const char *name)
      * checkpoints bound repeated work and yield between bounded read requests. */
     const TickType_t read_started = xTaskGetTickCount();
     const TickType_t read_budget = pdMS_TO_TICKS(30000);
+    const TickType_t yield_ticks = pdMS_TO_TICKS(2) ? pdMS_TO_TICKS(2) : 1;
+    TickType_t yielded_at = read_started;
+    size_t since_yield = 0;
     size_t offset = 0, reported_offset = 0;
     TickType_t reported_at = read_started;
     while (offset < (size_t)size) {
@@ -146,18 +179,31 @@ int esp_elf_open(elf_file_t *file, const char *name)
             reported_offset = offset;
             reported_at = now;
         }
-        vTaskDelay(1);
+        /* Fast flash reads do not need a forced tick for every 4 KiB. Keep
+         * scheduler/watchdog service bounded by bytes or elapsed work, as in
+         * code publication. Synchronous reads keep their existing per-call
+         * timeout responsibility and every chunk still checks the deadline. */
+        since_yield += chunk;
+        if (since_yield >= 32 * 1024 || (TickType_t)(now - yielded_at) >= yield_ticks) {
+            vTaskDelay(1);
+            yielded_at = xTaskGetTickCount();
+            since_yield = 0;
+        }
         if ((TickType_t)(xTaskGetTickCount() - read_started) >= read_budget) {
             errno = ETIMEDOUT;
             goto errout_read_fs;
         }
     }
 
+    elf_perf_event(41, (uint32_t)size); /* read complete, bytes */
     extern bool esp_elf_validate_file(const uint8_t *, size_t);
-    if (!esp_elf_validate_file(pbuf, size)) {
+    elf_perf_event(45, 0); /* parse existing ELF structure */
+    const bool valid = esp_elf_validate_file(pbuf, size);
+    if (!valid) {
         ESP_LOGE(TAG, "Unsupported or malformed native application");
         goto errout_read_fs;
     }
+    elf_perf_event(46, 0); /* parse complete */
     const int closed = close(fd);
     fd = -1;
     if (closed != 0 || !esp_elf_admit_managed_app(file_path, pbuf, size)) {
@@ -618,9 +664,17 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf);
 
 int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
 {
-    if (!elf || !pbuf) return -EINVAL;
-    if (!esp_elf_privileged_os_cpu_relocation_enter_v1(elf)) return -EPERM;
-    int result = esp_elf_relocate_impl(elf, pbuf);
+    elf_perf_event(42, 0); /* map sections/segments, relocate, publish code */
+    int result;
+    if (!elf || !pbuf) {
+        result = -EINVAL;
+        goto perf_complete;
+    }
+    if (!esp_elf_privileged_os_cpu_relocation_enter_v1(elf)) {
+        result = -EPERM;
+        goto perf_complete;
+    }
+    result = esp_elf_relocate_impl(elf, pbuf);
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     if (result == 0) {
         // Retained by the SDK log sink for decoding dynamically loaded PCs.
@@ -633,9 +687,51 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
                  (unsigned long)elf->sec[ELF_SEC_TEXT].size);
     }
 #endif
-    if (!esp_elf_privileged_os_cpu_relocation_leave_v1(elf)) return -EIO;
+    if (!esp_elf_privileged_os_cpu_relocation_leave_v1(elf)) result = -EIO;
+perf_complete:
+    elf_perf_event(43, (uint32_t)result);
+    if (result) elf_perf_event(44, (uint32_t)result);
     return result;
 }
+
+/* Object exports are data addresses in an exact loaded section. A matching
+ * virtual address in a different/unloaded section is not proof of ownership.
+ * Never apply the executable I-bus alias used for function exports. */
+#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+static uintptr_t elf_object_export_addr(const esp_elf_t *elf,
+                                        const elf32_sym_t *symbol,
+                                        const elf32_shdr_t *sections,
+                                        uint16_t section_count,
+                                        const char *section_names)
+{
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+    if (ELF_ST_TYPE(symbol->info) != STT_OBJECT || !symbol->size ||
+            symbol->shndx == SHN_UNDEF || symbol->shndx >= section_count) return 0;
+    const elf32_shdr_t *section = &sections[symbol->shndx];
+    if (!(section->flags & SHF_ALLOC) || (section->flags & SHF_EXECINSTR) ||
+            symbol->value < section->addr || symbol->value - section->addr >= section->size ||
+            symbol->size > section->size - (symbol->value - section->addr)) return 0;
+    const char *name = section_names + section->name;
+    unsigned slot;
+    if (section->type == SHT_PROGBITS && !strcmp(name, ELF_DATA) && (section->flags & SHF_WRITE)) slot = ELF_SEC_DATA;
+    else if (section->type == SHT_PROGBITS && !strcmp(name, ELF_RODATA)) slot = ELF_SEC_RODATA;
+    else if (section->type == SHT_PROGBITS && !strcmp(name, ELF_DATA_REL_RO)) slot = ELF_SEC_DRLRO;
+    else if (section->type == SHT_NOBITS && !strcmp(name, ELF_BSS) && (section->flags & SHF_WRITE)) slot = ELF_SEC_BSS;
+    else return 0;
+    if (!elf->sec[slot].addr || elf->sec[slot].v_addr != section->addr ||
+            elf->sec[slot].size != section->size || elf->sec[slot].offset != section->offset) return 0;
+    const uintptr_t offset = symbol->value - section->addr;
+    if (offset > UINTPTR_MAX - elf->sec[slot].addr ||
+            symbol->size > UINTPTR_MAX - (elf->sec[slot].addr + offset)) return 0;
+    return elf->sec[slot].addr + offset;
+#else
+    /* The selected Runtime uses section loading. Other ports retain their
+     * existing function-only export behavior until they supply section proof. */
+    (void)elf; (void)symbol; (void)sections; (void)section_count; (void)section_names;
+    return 0;
+#endif
+}
+#endif
 
 static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
 {
@@ -755,7 +851,8 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
                 strtab   = (const char *)(pbuf + shdr[shdr[i].link].offset);
                 for (j = 0; j < shdr[i].size / sizeof(elf32_sym_t); j++) {
                     if ((ELF_ST_BIND(symtab[j].info) == STB_GLOBAL) &&
-                            (ELF_ST_TYPE(symtab[j].info) == STT_FUNC) &&
+                            (ELF_ST_TYPE(symtab[j].info) == STT_FUNC ||
+                             elf_object_export_addr(elf, &symtab[j], shdr, ehdr->shnum, shstrab)) &&
                             symtab[j].shndx != SHN_UNDEF) {
                         elf->num++;
                     }
@@ -773,9 +870,14 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
 
                 for (j = 0; j < shdr[i].size / sizeof(elf32_sym_t); j++) {
                     if ((ELF_ST_BIND(symtab[j].info) == STB_GLOBAL) &&
-                            (ELF_ST_TYPE(symtab[j].info) == STT_FUNC) &&
+                            (ELF_ST_TYPE(symtab[j].info) == STT_FUNC ||
+                             elf_object_export_addr(elf, &symtab[j], shdr, ehdr->shnum, shstrab)) &&
                             symtab[j].shndx != SHN_UNDEF) {
                         len = strlen((const char *)(strtab + symtab[j].name)) + 1;
+                        if (ELF_ST_TYPE(symtab[j].info) == STT_OBJECT) {
+                            elf->symtab[num].addr = (void *)elf_object_export_addr(
+                                elf, &symtab[j], shdr, ehdr->shnum, shstrab);
+                        } else {
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
                         elf->symtab[num].addr =
                             (void *)(elf->ptext + symtab[j].value - elf->sec[ELF_SEC_TEXT].v_addr);
@@ -788,6 +890,7 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
                         elf->symtab[num].addr = (void *)elf_remap_text(
                             elf, (uintptr_t)elf->symtab[num].addr);
 #endif
+                        }
                         elf->symtab[num].name = esp_elf_malloc(len, false);
                         if (!elf->symtab[num].name) {
                             ESP_LOGE(TAG, "Failed to malloc for symbol table name");
@@ -797,7 +900,7 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
 
                         memset((void *)elf->symtab[num].name, 0, len);
                         memcpy((void *)elf->symtab[num].name, strtab + symtab[j].name, len);
-                        ESP_LOGI(TAG, "elf->symtab[%d], func: %s", num, strtab + symtab[j].name);
+                        ESP_LOGI(TAG, "elf->symtab[%d], export: %s", num, strtab + symtab[j].name);
                         num++;
                     }
                 }

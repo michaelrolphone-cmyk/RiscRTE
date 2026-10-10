@@ -1,0 +1,4 @@
+baseline cohort {"pointer_bytes":8,"apps":24,"providers":24,"grants":40,"runtime_bytes":254600,"graph_bytes":37784,"cpu_port_bytes":10504,"stream_registry_bytes":512,"owned_node_bytes":4888,"graph_matrix_bytes":576}
+baseline legacy {"pointer_bytes":8,"apps":19,"providers":17,"grants":32,"runtime_bytes":221936,"graph_bytes":26856,"cpu_port_bytes":9776,"stream_registry_bytes":368,"owned_node_bytes":4888,"graph_matrix_bytes":289}
+current cohort {"pointer_bytes":8,"apps":24,"providers":26,"grants":42,"runtime_bytes":263936,"graph_bytes":40912,"cpu_port_bytes":10712,"stream_registry_bytes":552,"owned_node_bytes":4888,"graph_matrix_bytes":676}
+current legacy {"pointer_bytes":8,"apps":19,"providers":17,"grants":32,"runtime_bytes":221944,"graph_bytes":26864,"cpu_port_bytes":9776,"stream_registry_bytes":368,"owned_node_bytes":4888,"graph_matrix_bytes":289}

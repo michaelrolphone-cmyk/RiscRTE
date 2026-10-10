@@ -103,6 +103,23 @@ bool StoreFiles::verify(const File& f){
  uint8_t hash[32];ok=ok&&fgetc(stream_)==EOF&&!ferror(stream_)&&io_.hashEnd(io_.context,hash)&&!memcmp(hash,f.sha256,32);
  return close()&&ok;
 }
+bool StoreFiles::verifyImage(const char* root,const Profile& p,uint32_t capacity){
+ if(begun_||failed_||!p.imageMode()||!root||root[0]!='/'||strlen(root)>=sizeof(root_)||p.count<3||p.count>MaxFiles ||
+    !io_.now||!io_.checkpoint||!io_.hashBegin||!io_.hashAdd||!io_.hashEnd||!io_.admit)return false;
+ started_=io_.now(io_.context);strcpy(root_,root);profile_=&p;
+ uint32_t total=0;
+ for(size_t i=0;i<p.count;++i){char full[256];const auto& f=p.files[i];
+  if(!filename(f.path,full)||!strcmp(f.path,DigestFile)||!f.bytes||f.bytes>MaxFileBytes||total>capacity||f.bytes>capacity-total){failed_=true;return false;}
+  total+=f.bytes;
+ }
+ // Leave begun_ false while reading so close() cannot confuse a readback with
+ // an incomplete download. This path never opens a file for writing/removal.
+ size_t count=0;bool ok=checkpoint()&&inventory("",0,false,count)&&count==p.count;
+ for(size_t i=0;ok&&i<p.count;++i)ok=verify(p.files[i]);
+ if(ok)ok=io_.admit(io_.context,root_,p)&&checkpoint();
+ count=0;ok=ok&&inventory("",0,false,count)&&count==p.count&&checkpoint();
+ begun_=true;finished_=ok;failed_=!ok;index_=p.count;return ok;
+}
 bool StoreFiles::finish(){
  if(!begun_||failed_||finished_||stream_||index_!=profile_->count||!checkpoint())return false;
  size_t count=0;bool ok=inventory("",0,false,count)&&count==profile_->count;

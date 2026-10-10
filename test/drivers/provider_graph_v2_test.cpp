@@ -24,6 +24,9 @@ int main(int argc, char** argv) {
   assert(!graph.acquire("cap.child", 2).slot);
   auto childGrant = graph.acquire("cap.child", 1);
   assert(childGrant.slot && graph.interfaceFor(childGrant));
+  assert(graph.holdsGrant(childGrant));
+  assert(!graph.holdsGrant({}) && !graph.holdsGrant({childGrant.slot,0}));
+  assert(!graph.holdsGrant({uint32_t(GraphV2::kMaxGrants+1),childGrant.generation}));
   assert(*static_cast<const int*>(graph.interfaceFor(childGrant)) == 42);
   // Lazy installed-provider admission must be append-only and safe while the
   // already loaded dependency chain and its consumer grant remain live.
@@ -36,12 +39,15 @@ int main(int argc, char** argv) {
   assert(!graph.release(childGrant) && !graph.interfaceFor(childGrant));
   auto replacement = graph.acquire("cap.child", 1);
   assert(replacement.slot && replacement.generation != childGrant.generation);
+  assert(replacement.slot==childGrant.slot && graph.holdsGrant(replacement) && !graph.holdsGrant(childGrant));
   assert(!graph.interfaceFor(childGrant));
   assert(graph.release(otherGrant) && graph.interfaceFor(replacement));
   assert(graph.release(replacement) && graph.shutdown());
   assert(graph.liveGrants() == 0);
+  const auto peak=graph.peakLiveGrants();assert(peak==2);
   auto again = graph.acquire("cap.child", 1);
   assert(again.slot && graph.release(again) && graph.shutdown());
+  assert(graph.peakLiveGrants()==peak && !graph.holdsGrant(again));
 
   // Full selected provider capacity; the last slot remains selectable and
   // retains the same cleanup behavior. Dependency width remains sixteen.
@@ -67,14 +73,18 @@ int main(int argc, char** argv) {
 
   GraphV2 capacity;
   assert(capacity.addVerified(root));
+  assert(capacity.liveGrants()==0 && capacity.peakLiveGrants()==0);
   RuntimeProviders::GrantV2 grants[GraphV2::kMaxGrants];
   for (size_t i = 0; i < GraphV2::kMaxGrants; ++i) {
     grants[i] = capacity.acquire("cap.root", 1);
     assert(grants[i].slot);
+    assert(capacity.liveGrants()==i+1 && capacity.peakLiveGrants()==i+1);
   }
   assert(!capacity.acquire("cap.root", 1).slot);
   assert(std::strstr(capacity.lastError(), "Grant table full"));
+  assert(capacity.liveGrants()==GraphV2::kMaxGrants && capacity.peakLiveGrants()==GraphV2::kMaxGrants);
   for (auto grant : grants) assert(capacity.release(grant));
+  assert(capacity.liveGrants()==0 && capacity.peakLiveGrants()==GraphV2::kMaxGrants);
   assert(capacity.shutdown());
 
   // Multiple providers of the same capability MUST NOT be rejected at

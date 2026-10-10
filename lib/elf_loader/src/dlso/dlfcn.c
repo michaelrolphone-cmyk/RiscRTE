@@ -157,6 +157,16 @@ void *esp_dlopen_instance(const char *file) {
     return handle;
 }
 
+void *esp_dlopen_cached_instance(esp_dl_image_cache **cache, const char *file) {
+    char name[FILE_NAME_MAX]={0};
+    if (!file || !dlmod_getname(file,name,sizeof(name))) {
+        dlerror_set("Invalid instance path"); return NULL;
+    }
+    void *handle=dlmod_insert_cached_instance(file,name,cache);
+    dlerror_set(handle ? NULL : "Independent relocation failed");
+    return handle;
+}
+
 /**
  * @brief Dynamic loader compatibility interface - Close a module handle.
  *

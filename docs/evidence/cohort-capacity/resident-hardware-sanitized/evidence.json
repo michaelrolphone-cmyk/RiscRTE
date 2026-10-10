@@ -1,0 +1,530 @@
+{
+  "activation": "demand",
+  "ble_entrypoint_scope": "Selected BLE source contains the restored X4 paper frontend. This fixture initializes paper presentation but exercises controller entrypoints; successful complete BLE app_main execution and renderer behavior are not qualified here.",
+  "ble_full_entrypoint_integrated": false,
+  "ble_paper_source_selected": true,
+  "checkpoint_scope": "capacity-only",
+  "client_build_defines": {
+    "ble": [
+      "-DPORTABLE_NOVA_UI",
+      "-DPORTABLE_ALARM_CLIENT",
+      "-DPORTABLE_DISPLAY_ROTATION=90",
+      "-DPORTABLE_INPUT_NAVIGATION",
+      "-DPORTABLE_HOME_APP=\"default.elf\"",
+      "-DPORTABLE_APP_OWNS_TOUCH_CHROME",
+      "-DPORTABLE_RADIO_SESSION",
+      "-DPORTABLE_RETURN_APP=\"springboard.elf\"",
+      "-DPORTABLE_STAGE_LOGS",
+      "-DALARM_SERVICE_TAGGED_V2",
+      "-DPORTABLE_NATIVE_CUSTODY_FENCE",
+      "-DPORTABLE_NATIVE_TIME_TOOLBAR",
+      "-DPORTABLE_BLE_BROADCAST",
+      "-DPORTABLE_BLE_BROADCAST_DEFAULT_OFF",
+      "-DPORTABLE_PAPER_PREFERENCES",
+      "-DPORTABLE_UNPADDED_HOURS",
+      "-DPORTABLE_BLE_FOREGROUND",
+      "-DPORTABLE_RESIDENT_SHELL_CLIENT",
+      "-DPORTABLE_ALARM_TERMINAL_RETENTION",
+      "-DPORTABLE_RESIDENT_POLICY",
+      "-DPORTABLE_TEXT_INPUT_CLIENT",
+      "-DPORTABLE_APP_LAUNCH_GUARD"
+    ],
+    "points": [
+      "-DPORTABLE_STAGE_LOGS",
+      "-DPORTABLE_NOVA_UI",
+      "-DPORTABLE_ALARM_CLIENT",
+      "-DALARM_SERVICE_TAGGED_V2",
+      "-DPORTABLE_NATIVE_CUSTODY_FENCE",
+      "-DPORTABLE_NATIVE_TIME_TOOLBAR",
+      "-DPORTABLE_INPUT_NAVIGATION",
+      "-DPORTABLE_DISPLAY_ROTATION=90",
+      "-DPORTABLE_HOME_APP=\"default.elf\"",
+      "-DPORTABLE_APP_LAUNCH_GUARD",
+      "-DPORTABLE_BLE_BROADCAST",
+      "-DPORTABLE_BLE_BROADCAST_DEFAULT_OFF",
+      "-DPORTABLE_PAPER_PREFERENCES",
+      "-DPORTABLE_UNPADDED_HOURS",
+      "-DALARM_NATIVE_UTC",
+      "-DPOINTS_RETURN_APP=\"springboard.elf\"",
+      "-DPORTABLE_RESIDENT_SHELL_CLIENT",
+      "-DPORTABLE_ALARM_TERMINAL_RETENTION",
+      "-DPORTABLE_RESIDENT_POLICY",
+      "-DPORTABLE_TEXT_INPUT_CLIENT"
+    ]
+  },
+  "failures": [],
+  "full_pin_stress": true,
+  "hardware_tested": false,
+  "home_build_defines": [
+    "-DPORTABLE_APP_OWNS_TOUCH_CHROME",
+    "-DPORTABLE_RTC_WALL_TIME",
+    "-DPORTABLE_DISPLAY_ROTATION=90",
+    "-DPAPER_CLOCK_LAUNCHER=\"springboard.elf\"",
+    "-DPORTABLE_PAPER_CROSSFADE",
+    "-DPORTABLE_BLE_BROADCAST",
+    "-DPORTABLE_BLE_BROADCAST_DEFAULT_OFF",
+    "-DPORTABLE_DESK_POINTS_FACE",
+    "-DPORTABLE_DESK_POINTS_SNAPSHOT",
+    "-DPORTABLE_DESK_LOCK_HOME",
+    "-DPORTABLE_INPUT_NAVIGATION",
+    "-DPORTABLE_APP_SLEEP_LOCAL",
+    "-DPORTABLE_CROWN_SLEEP_LOCAL",
+    "-DPORTABLE_DESK_CLOCK",
+    "-DPORTABLE_DESK_CLOCK_SPARSE_START",
+    "-DPORTABLE_CONTEXTS_CLIENT",
+    "-DPORTABLE_CONTEXTS_CLOCK_RF_ONLY",
+    "-DPORTABLE_DESK_WAKE_LIGHT",
+    "-DPORTABLE_ALARM_CLIENT",
+    "-DALARM_SERVICE_TAGGED_V2",
+    "-DPORTABLE_HOME_POINTS_NATIVE_UTC",
+    "-DALARM_NATIVE_UTC",
+    "-DPORTABLE_RESIDENT_SHELL_HOST",
+    "-DPORTABLE_ALARM_TERMINAL_RETENTION",
+    "-DPORTABLE_RESIDENT_POLICY",
+    "-DPORTABLE_RESIDENT_LEGACY_HANDOFF",
+    "-DPORTABLE_PAPER_TRANSITIONS",
+    "-DPORTABLE_QUICK_USB_TRANSFER",
+    "-DPORTABLE_QUICK_ACTIONS",
+    "-DPORTABLE_QUICK_RADIOS",
+    "-DPORTABLE_X4_IDLE_POLICY",
+    "-DPORTABLE_LOW_BATTERY",
+    "-DPORTABLE_APP_SLEEP_LOCAL",
+    "-DPORTABLE_RESIDENT_LOADING",
+    "-DPORTABLE_STAGE_LOGS"
+  ],
+  "input": "hardware",
+  "input_evidence": {
+    "build_configuration": {
+      "cc": "cc",
+      "client_build_defines": {
+        "ble": [
+          "-DPORTABLE_NOVA_UI",
+          "-DPORTABLE_ALARM_CLIENT",
+          "-DPORTABLE_DISPLAY_ROTATION=90",
+          "-DPORTABLE_INPUT_NAVIGATION",
+          "-DPORTABLE_HOME_APP=\"default.elf\"",
+          "-DPORTABLE_APP_OWNS_TOUCH_CHROME",
+          "-DPORTABLE_RADIO_SESSION",
+          "-DPORTABLE_RETURN_APP=\"springboard.elf\"",
+          "-DPORTABLE_STAGE_LOGS",
+          "-DALARM_SERVICE_TAGGED_V2",
+          "-DPORTABLE_NATIVE_CUSTODY_FENCE",
+          "-DPORTABLE_NATIVE_TIME_TOOLBAR",
+          "-DPORTABLE_BLE_BROADCAST",
+          "-DPORTABLE_BLE_BROADCAST_DEFAULT_OFF",
+          "-DPORTABLE_PAPER_PREFERENCES",
+          "-DPORTABLE_UNPADDED_HOURS",
+          "-DPORTABLE_BLE_FOREGROUND",
+          "-DPORTABLE_RESIDENT_SHELL_CLIENT",
+          "-DPORTABLE_ALARM_TERMINAL_RETENTION",
+          "-DPORTABLE_RESIDENT_POLICY",
+          "-DPORTABLE_TEXT_INPUT_CLIENT",
+          "-DPORTABLE_APP_LAUNCH_GUARD"
+        ],
+        "points": [
+          "-DPORTABLE_STAGE_LOGS",
+          "-DPORTABLE_NOVA_UI",
+          "-DPORTABLE_ALARM_CLIENT",
+          "-DALARM_SERVICE_TAGGED_V2",
+          "-DPORTABLE_NATIVE_CUSTODY_FENCE",
+          "-DPORTABLE_NATIVE_TIME_TOOLBAR",
+          "-DPORTABLE_INPUT_NAVIGATION",
+          "-DPORTABLE_DISPLAY_ROTATION=90",
+          "-DPORTABLE_HOME_APP=\"default.elf\"",
+          "-DPORTABLE_APP_LAUNCH_GUARD",
+          "-DPORTABLE_BLE_BROADCAST",
+          "-DPORTABLE_BLE_BROADCAST_DEFAULT_OFF",
+          "-DPORTABLE_PAPER_PREFERENCES",
+          "-DPORTABLE_UNPADDED_HOURS",
+          "-DALARM_NATIVE_UTC",
+          "-DPOINTS_RETURN_APP=\"springboard.elf\"",
+          "-DPORTABLE_RESIDENT_SHELL_CLIENT",
+          "-DPORTABLE_ALARM_TERMINAL_RETENTION",
+          "-DPORTABLE_RESIDENT_POLICY",
+          "-DPORTABLE_TEXT_INPUT_CLIENT"
+        ]
+      },
+      "cxx": "c++",
+      "home_build_defines": [
+        "-DPORTABLE_APP_OWNS_TOUCH_CHROME",
+        "-DPORTABLE_RTC_WALL_TIME",
+        "-DPORTABLE_DISPLAY_ROTATION=90",
+        "-DPAPER_CLOCK_LAUNCHER=\"springboard.elf\"",
+        "-DPORTABLE_PAPER_CROSSFADE",
+        "-DPORTABLE_BLE_BROADCAST",
+        "-DPORTABLE_BLE_BROADCAST_DEFAULT_OFF",
+        "-DPORTABLE_DESK_POINTS_FACE",
+        "-DPORTABLE_DESK_POINTS_SNAPSHOT",
+        "-DPORTABLE_DESK_LOCK_HOME",
+        "-DPORTABLE_INPUT_NAVIGATION",
+        "-DPORTABLE_APP_SLEEP_LOCAL",
+        "-DPORTABLE_CROWN_SLEEP_LOCAL",
+        "-DPORTABLE_DESK_CLOCK",
+        "-DPORTABLE_DESK_CLOCK_SPARSE_START",
+        "-DPORTABLE_CONTEXTS_CLIENT",
+        "-DPORTABLE_CONTEXTS_CLOCK_RF_ONLY",
+        "-DPORTABLE_DESK_WAKE_LIGHT",
+        "-DPORTABLE_ALARM_CLIENT",
+        "-DALARM_SERVICE_TAGGED_V2",
+        "-DPORTABLE_HOME_POINTS_NATIVE_UTC",
+        "-DALARM_NATIVE_UTC",
+        "-DPORTABLE_RESIDENT_SHELL_HOST",
+        "-DPORTABLE_ALARM_TERMINAL_RETENTION",
+        "-DPORTABLE_RESIDENT_POLICY",
+        "-DPORTABLE_RESIDENT_LEGACY_HANDOFF",
+        "-DPORTABLE_PAPER_TRANSITIONS",
+        "-DPORTABLE_QUICK_USB_TRANSFER",
+        "-DPORTABLE_QUICK_ACTIONS",
+        "-DPORTABLE_QUICK_RADIOS",
+        "-DPORTABLE_X4_IDLE_POLICY",
+        "-DPORTABLE_LOW_BATTERY",
+        "-DPORTABLE_APP_SLEEP_LOCAL",
+        "-DPORTABLE_RESIDENT_LOADING",
+        "-DPORTABLE_STAGE_LOGS"
+      ],
+      "roots": {
+        "ble": "/workspace/shared/x4-ble-shared-text-preserve",
+        "ble_build_receipt": "/workspace/shared/x4-fast-utilities-build-047/ble_scanner/x4-native-app.json",
+        "home_build": "/workspace/shared/x4-home-image-050/home-target",
+        "idle_source": "/workspace/shared/x4-host-sleep-overlay/minimal/apps/portable_idle_sleep.c",
+        "points": "/workspace/shared/points-shared-text-input",
+        "points_build_receipt": "/workspace/shared/x4-fast-productivity-build-047/cohort-receipt.json",
+        "product_store": "/workspace/shared/x4-home-image-050/assembled/store",
+        "runtime": "/workspace/shared/runtime-shared-keyboard-capacity",
+        "sleep_source": "/workspace/shared/x4-fast-native-source-047/minimal/apps/portable_sleep.c",
+        "system": "/workspace/shared/system-shared-text-host-current-20261010",
+        "utilities": "/workspace/shared/points-catalog-storage-custody",
+        "x4_physical_sdk": "/workspace/shared/x4-provider-sdk-recovered"
+      },
+      "sanitize": true,
+      "source_macros": {
+        "CAPACITY_BLE_SOURCE": "/workspace/shared/x4-ble-shared-text-preserve/Apps/ble_scanner.c",
+        "CAPACITY_HOME_SOURCE": "/workspace/shared/system-shared-text-host-current-20261010/Apps/paper_clock.c",
+        "CAPACITY_POINTS_SOURCE": "/workspace/shared/points-shared-text-input/Apps/points_catalog_app.c",
+        "CAPACITY_SYSTEM_SOURCE": "/workspace/shared/system-shared-text-host-current-20261010/lib/PortableApps/src/adapter.c"
+      }
+    },
+    "compiled_inputs_sha256": "32572478ff5d8ff48a0dfdad87f979c81df416de6f5989dc69b07478c7002ae2",
+    "current_git": {
+      "ble": {
+        "available": true,
+        "branch": "x4-ble-shared-text-preserve",
+        "dirty": true,
+        "revision": "e962715ac0f900d1d380dc29333ecf2e259465f3",
+        "root": "/workspace/shared/x4-ble-shared-text-preserve",
+        "status_porcelain": "M Apps/ble_scanner.c\n M scripts/build_ble_apps.py\n M scripts/test_ble_cleanup_retry.py\n M scripts/test_ble_renderer.py\n M scripts/test_ble_scanner.py\n M tests/test_ble_inventory.py\n?? Apps/ble_scanner_paper.inc\n?? scripts/test_ble_paper_renderer.py\n?? test/native_apps/ble_paper_renderer_test.c"
+      },
+      "ble_build_receipt": {
+        "available": false,
+        "reason": "Input is not in an accessible git checkout"
+      },
+      "home_build": {
+        "available": false,
+        "reason": "Input is not in an accessible git checkout"
+      },
+      "idle_source": {
+        "available": true,
+        "branch": "feature/host-sleep-overlay",
+        "dirty": false,
+        "revision": "3ac5d91e901d67bcdc671607e74c535d69e90ca2",
+        "root": "/workspace/shared/x4-host-sleep-overlay",
+        "status_porcelain": ""
+      },
+      "points": {
+        "available": true,
+        "branch": "points-shared-text-input",
+        "dirty": false,
+        "revision": "1d293fda8f19698b697464f98ba89940210985b8",
+        "root": "/workspace/shared/points-shared-text-input",
+        "status_porcelain": ""
+      },
+      "points_build_receipt": {
+        "available": false,
+        "reason": "Input is not in an accessible git checkout"
+      },
+      "product_store": {
+        "available": false,
+        "reason": "Input is not in an accessible git checkout"
+      },
+      "runtime": {
+        "available": true,
+        "branch": "shared-keyboard-cohort-capacity",
+        "dirty": true,
+        "revision": "5a5c14de2dbcf189d1ca4912dfde1773a4d9813d",
+        "root": "/workspace/shared/runtime-shared-keyboard-capacity",
+        "status_porcelain": "M .github/workflows/integration.yml\n M README.md\n M docs/APP_STREAMS.md\n M docs/DEMAND_RETENTION.md\n M src/bootstrap/Runtime.cpp\n M src/bootstrap/Runtime.h\n M src/runtime/RuntimeLimits.h\n M src/runtime/drivers/ProviderGraphV2.cpp\n M src/runtime/drivers/ProviderGraphV2.h\n M test/cohort_runtime_test.cpp\n M test/demand_retention_test.cpp\n M test/drivers/provider_failed_teardown_v2_test.cpp\n M test/drivers/provider_graph_v2_test.cpp\n M test/provider_sync_port_test.cpp\n M test/run_demand_retention_test.sh\n M test/run_runtime_limits_test.sh\n?? docs/COHORT_CAPACITY.md\n?? docs/evidence/cohort-capacity/delivery-unchanged.json\n?? docs/evidence/cohort-capacity/final-regressions.json\n?? docs/evidence/cohort-capacity/full-product-metadata-lsan-blocked.stderr\n?? docs/evidence/cohort-capacity/full-product-metadata-normal.stdout\n?? docs/evidence/cohort-capacity/full-product-metadata-sanitized.stdout\n?? docs/evidence/cohort-capacity/full-product-metadata-summary.json\n?? docs/evidence/cohort-capacity/full-product-original-capacity.stdout\n?? docs/evidence/cohort-capacity/memory-layout.log\n?? docs/evidence/cohort-capacity/preserved-native-sdk.json\n?? docs/evidence/cohort-capacity/runtime-limits.log\n?? test/cohort_capacity_memory_test.cpp\n?? test/fixtures/x4_shared_ui_metadata.json\n?? test/full_product_metadata_capacity_test.cpp\n?? test/full_product_metadata_capacity_test.py\n?? test/run_cohort_capacity_memory_test.sh\n?? test/run_full_product_metadata_capacity_test.sh\n?? test/run_shared_keyboard_resident.py\n?? test/shared_keyboard_ble_client.c\n?? test/shared_keyboard_handoff_client.c\n?? test/shared_keyboard_home_adapter.c\n?? test/shared_keyboard_home_client.c\n?? test/shared_keyboard_peripherals.c\n?? test/shared_keyboard_points_client.c\n?? test/shared_keyboard_provider.c\n?? test/shared_keyboard_resident_README.md\n?? test/shared_keyboard_resident_test.cpp"
+      },
+      "sleep_source": {
+        "available": true,
+        "branch": "HEAD",
+        "dirty": false,
+        "revision": "636efe877aedc6f6110514f7ac53826167de475d",
+        "root": "/workspace/shared/x4-fast-native-source-047",
+        "status_porcelain": ""
+      },
+      "system": {
+        "available": true,
+        "branch": "feat/shared-text-host-current",
+        "dirty": true,
+        "revision": "6bc3692f5569e81ef9f8b519f7254f4f77056097",
+        "root": "/workspace/shared/system-shared-text-host-current-20261010",
+        "status_porcelain": "M Services/scene_profile/portrait-monochrome.json\n M scripts/build_scene_services.py\n M scripts/test_scene_host.py\n M test/scene/keyboard_test.c"
+      },
+      "utilities": {
+        "available": true,
+        "branch": "fix/points-catalog-storage-custody",
+        "dirty": false,
+        "revision": "9bd572791a8304194ceb2b7542fc9cbd124e911b",
+        "root": "/workspace/shared/points-catalog-storage-custody",
+        "status_porcelain": ""
+      },
+      "x4_physical_sdk": {
+        "available": false,
+        "reason": "Input is not in an accessible git checkout"
+      }
+    },
+    "path": "build-inputs.json",
+    "reused_verified_build": true,
+    "sha256": "eb706d00bfcbcd0652e3a5e3ac4a0113b5d4d3adc02726ce7e07d338d41dec7b",
+    "source_trees_sha256": "15ceede286154972dd271638f1a550327a945cb05b213543ba5f831e6bd86a27"
+  },
+  "limitations": [
+    "CAPACITY-ONLY CHECKPOINT: Selected BLE source contains the restored X4 paper frontend. This fixture initializes paper presentation but exercises controller entrypoints; successful complete BLE app_main execution and renderer behavior are not qualified here.",
+    "The image .50 BLE artifact has baseline-047-build-custody provenance from x4-fast-utility-clients-047/Apps/ble_scanner.c and ble_scanner_paper.inc; this fixture compiles the explicitly selected BLE source root instead and does not claim it reproduces that product artifact.",
+    "Host-only production Runtime/ProviderGraph and selected production app/adapter/service sources; no device, hardware, target-memory, latency, power, or RF qualification.",
+    "Controller test entrypoints call real production static startup/naming/handoff/cleanup functions; user input and peripheral completions are scripted.",
+    "Provider count padded to 26 with 9 inert synthetic provider pins; peripheral, alarm, RF, and storage tables are synthetic.",
+    "Product board instance IDs, compatibility and configuration are preserved; device dependency bindings are removed for synthetic peripheral manifests. This is not the complete production hardware dependency graph.",
+    "BLE starts with one copied completed device; RF discovery is outside occupancy scope. Points uses an empty/default catalog plus a type draft: dataStat returns NOT_FOUND, and file read/replace are forbidden. Reported memory peaks are workload peaks, not full-catalog/full-scan worst-case application bounds.",
+    "The handoff destination is a zero-grant synthetic springboard entrypoint, qualifying launcher handoff lifecycle rather than the production launcher footprint.",
+    "Runtime graphPeak is the exact graph grant high-water mark. Host/foreground grant and provider peaks are sampled maxima at fixture observation points and may miss intermediate peaks.",
+    "Allocation numbers are requested-live app/provider bytes and blocks observed through wrapped malloc/calloc/realloc/free. They exclude allocator bookkeeping/rounding, transient old-plus-new realloc copies, Runtime metadata, loader/linker allocations, app/provider static data and BSS, stacks, and static fake panel storage.",
+    "Input digests include broad source trees plus compiler-reported transitive source/header dependencies, including host toolchain headers. Toolchain executables are fingerprinted; the complete host OS, dynamic linker, compiler support executables and linked system libraries are not vendored or fully hashed."
+  ],
+  "removed_board_dependency_bindings": [
+    {
+      "bindings": {
+        "board.power.ready": 1
+      },
+      "instance_id": 2
+    },
+    {
+      "bindings": {
+        "board.power.ready": 1,
+        "display.frontlight": 5
+      },
+      "instance_id": 3
+    },
+    {
+      "bindings": {
+        "board.power.ready": 1,
+        "i2c.bus": 2
+      },
+      "instance_id": 4
+    },
+    {
+      "bindings": {
+        "x4.power": 17
+      },
+      "instance_id": 6
+    },
+    {
+      "bindings": {
+        "board.power.ready": 1
+      },
+      "instance_id": 17
+    },
+    {
+      "bindings": {
+        "i2c.bus": 2
+      },
+      "instance_id": 7
+    },
+    {
+      "bindings": {
+        "i2c.bus": 2
+      },
+      "instance_id": 8
+    },
+    {
+      "bindings": {
+        "board.power.ready": 1
+      },
+      "instance_id": 9
+    }
+  ],
+  "required_boot_pins_at_host_and_modal": 26,
+  "runs": [
+    {
+      "client": "points",
+      "log": "points-accepted.log",
+      "log_sha256": "70401b487973b1fcf33cadadc4e731bb5b4358eda46745f594d7c21e85a06247",
+      "mode": "accepted",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-initialized graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-open graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-handoff-fenced graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-edited graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-closed graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-cleanup graph=35 peak=37 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192588 allocations=7 frees=3\nPHASE home-after-handoff graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE home-restored graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE runtime-stopped graph=0 peak=37 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192588 allocations=7 frees=7\nperipherals frames=6 touch=0 keyboard=0 retained=0\nRESULT client=points mode=accepted graph_peak=37 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=11 host_provider_sampled_peak=7 foreground_provider_sampled_peak=7 owned_peak_bytes=192588 owned_peak_blocks=7 owned_allocations=7 owned_frees=7 retained_owned_bytes=0\n",
+      "timed_out": false
+    },
+    {
+      "client": "points",
+      "log": "points-cancelled.log",
+      "log_sha256": "7dd028ae30201b76908073c73ed7deed579827a2714046c77278b2d50fbe366d",
+      "mode": "cancelled",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-initialized graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-open graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-handoff-fenced graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-edited graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-closed graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-cleanup graph=35 peak=37 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192588 allocations=7 frees=3\nPHASE home-after-handoff graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE home-restored graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE runtime-stopped graph=0 peak=37 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192588 allocations=7 frees=7\nperipherals frames=6 touch=0 keyboard=0 retained=0\nRESULT client=points mode=cancelled graph_peak=37 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=11 host_provider_sampled_peak=7 foreground_provider_sampled_peak=7 owned_peak_bytes=192588 owned_peak_blocks=7 owned_allocations=7 owned_frees=7 retained_owned_bytes=0\n",
+      "timed_out": false
+    },
+    {
+      "client": "points",
+      "log": "points-back.log",
+      "log_sha256": "a4c9d96e4025b60ff01f2c39a8f16ce479ed61adc0466f5c6e1cebce00a9616e",
+      "mode": "back",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-initialized graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-open graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-handoff-fenced graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-edited graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-closed graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-cleanup graph=35 peak=37 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192588 allocations=7 frees=3\nPHASE home-after-handoff graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE home-restored graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE runtime-stopped graph=0 peak=37 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192588 allocations=7 frees=7\nperipherals frames=5 touch=0 keyboard=0 retained=0\nRESULT client=points mode=back graph_peak=37 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=11 host_provider_sampled_peak=7 foreground_provider_sampled_peak=7 owned_peak_bytes=192588 owned_peak_blocks=7 owned_allocations=7 owned_frees=7 retained_owned_bytes=0\n",
+      "timed_out": false
+    },
+    {
+      "client": "points",
+      "log": "points-pending-close.log",
+      "log_sha256": "15f30b2c64602a72d3d381af3d9523e2ee0c950c442b3ee588662ed1a437d010",
+      "mode": "pending-close",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-initialized graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-open graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-handoff-fenced graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-edited graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-close-pending graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-closed graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-cleanup graph=35 peak=37 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192588 allocations=7 frees=3\nPHASE home-after-handoff graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE home-restored graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE runtime-stopped graph=0 peak=37 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192588 allocations=7 frees=7\nperipherals frames=5 touch=0 keyboard=0 retained=0\nRESULT client=points mode=pending-close graph_peak=37 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=11 host_provider_sampled_peak=7 foreground_provider_sampled_peak=7 owned_peak_bytes=192588 owned_peak_blocks=7 owned_allocations=7 owned_frees=7 retained_owned_bytes=0\n",
+      "timed_out": false
+    },
+    {
+      "client": "points",
+      "log": "points-retained-close.log",
+      "log_sha256": "75f21b703ab69496325aebb08f3b3e7372742153b9416852d0c0c1880cef5b13",
+      "mode": "retained-close",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nAPP t_ms=140 stage=app-retain reason=uncertain-capability-custody\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-initialized graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-open graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-handoff-fenced graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-edited graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-retained graph=36 peak=37 boot=26 host=0/4 foreground=0/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE home-after-handoff graph=36 peak=37 boot=26 host=0/4 foreground=0/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE runtime-stopped graph=36 peak=37 boot=26 host=0/4 foreground=0/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nperipherals frames=6 touch=4 keyboard=0 retained=1\nRESULT client=points mode=retained-close graph_peak=37 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=10 host_provider_sampled_peak=7 foreground_provider_sampled_peak=7 owned_peak_bytes=192588 owned_peak_blocks=7 owned_allocations=7 owned_frees=0 retained_owned_bytes=192588\n",
+      "timed_out": false
+    },
+    {
+      "client": "points",
+      "log": "points-handoff.log",
+      "log_sha256": "c2a6e5a2e5fb5078aa1403e1eadfe4ca7d77211f477816b5b59fd08bc0d25e11",
+      "mode": "handoff",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=returned\nAPP t_ms=170 stage=draw-begin \nAPP t_ms=170 stage=draw-end \nAPP t_ms=170 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=170 stage=display-submit-end result=accepted\nAPP t_ms=170 stage=display-complete result=complete\nRTE_APP phase=entry\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-initialized graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-open graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-handoff-fenced graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-edited graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE display-submit graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-modal-closed graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-handoff-requested graph=36 peak=37 boot=26 host=4/4 foreground=9/6 bytes=192588 blocks=7 peak_bytes=192588 allocations=7 frees=0\nPHASE points-cleanup graph=35 peak=37 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192588 allocations=7 frees=3\nPHASE display-submit graph=30 peak=37 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE launcher-handoff graph=30 peak=37 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE home-after-handoff graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE home-restored graph=31 peak=37 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192588 allocations=7 frees=5\nPHASE runtime-stopped graph=0 peak=37 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192588 allocations=7 frees=7\nperipherals frames=7 touch=0 keyboard=0 retained=0\nRESULT client=points mode=handoff graph_peak=37 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=11 host_provider_sampled_peak=7 foreground_provider_sampled_peak=7 owned_peak_bytes=192588 owned_peak_blocks=7 owned_allocations=7 owned_frees=7 retained_owned_bytes=0\n",
+      "timed_out": false
+    },
+    {
+      "client": "ble",
+      "log": "ble-accepted.log",
+      "log_sha256": "44ed8f7fc445736dd332a59d56ab668f3ade704c593deeb22d3f41b5ac08c818",
+      "mode": "accepted",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE ble-initialized graph=35 peak=35 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-open graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-edited graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-closed graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-cleanup graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE home-after-handoff graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE home-restored graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE runtime-stopped graph=0 peak=36 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192000 allocations=4 frees=4\nperipherals frames=5 touch=0 keyboard=0 retained=0\nRESULT client=ble mode=accepted graph_peak=36 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=6 host_provider_sampled_peak=7 foreground_provider_sampled_peak=6 owned_peak_bytes=192000 owned_peak_blocks=4 owned_allocations=4 owned_frees=4 retained_owned_bytes=0\n",
+      "timed_out": false
+    },
+    {
+      "client": "ble",
+      "log": "ble-cancelled.log",
+      "log_sha256": "931e946592549cf751b6d75f12c97bed844757cc98e93436b8c016d59846c80d",
+      "mode": "cancelled",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE ble-initialized graph=35 peak=35 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-open graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-edited graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-closed graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-cleanup graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE home-after-handoff graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE home-restored graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE runtime-stopped graph=0 peak=36 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192000 allocations=4 frees=4\nperipherals frames=5 touch=0 keyboard=0 retained=0\nRESULT client=ble mode=cancelled graph_peak=36 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=6 host_provider_sampled_peak=7 foreground_provider_sampled_peak=6 owned_peak_bytes=192000 owned_peak_blocks=4 owned_allocations=4 owned_frees=4 retained_owned_bytes=0\n",
+      "timed_out": false
+    },
+    {
+      "client": "ble",
+      "log": "ble-back.log",
+      "log_sha256": "a9390cb5d8c953d9db80fb2bda4655d166a707cd782907537d563e7ec8baa2ee",
+      "mode": "back",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE ble-initialized graph=35 peak=35 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-open graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-edited graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-closed graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-cleanup graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE home-after-handoff graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE home-restored graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE runtime-stopped graph=0 peak=36 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192000 allocations=4 frees=4\nperipherals frames=4 touch=0 keyboard=0 retained=0\nRESULT client=ble mode=back graph_peak=36 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=6 host_provider_sampled_peak=7 foreground_provider_sampled_peak=6 owned_peak_bytes=192000 owned_peak_blocks=4 owned_allocations=4 owned_frees=4 retained_owned_bytes=0\n",
+      "timed_out": false
+    },
+    {
+      "client": "ble",
+      "log": "ble-pending-close.log",
+      "log_sha256": "9896c4ead15147b7c011850b3ebd19fec4fcc440667c5b3507d929846389418e",
+      "mode": "pending-close",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE ble-initialized graph=35 peak=35 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-open graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-edited graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-close-pending graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-closed graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-cleanup graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE home-after-handoff graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE home-restored graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE runtime-stopped graph=0 peak=36 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192000 allocations=4 frees=4\nperipherals frames=4 touch=0 keyboard=0 retained=0\nRESULT client=ble mode=pending-close graph_peak=36 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=6 host_provider_sampled_peak=7 foreground_provider_sampled_peak=6 owned_peak_bytes=192000 owned_peak_blocks=4 owned_allocations=4 owned_frees=4 retained_owned_bytes=0\n",
+      "timed_out": false
+    },
+    {
+      "client": "ble",
+      "log": "ble-retained-close.log",
+      "log_sha256": "78eef710369e5f2f304e6bb0a65904c2bfcee73e27a3b53df7276e61c30978f3",
+      "mode": "retained-close",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nAPP t_ms=51 stage=app-retain reason=uncertain-capability-custody\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE ble-initialized graph=35 peak=35 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-open graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-edited graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-retained graph=35 peak=36 boot=26 host=0/4 foreground=0/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE home-after-handoff graph=35 peak=36 boot=26 host=0/4 foreground=0/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE runtime-stopped graph=35 peak=36 boot=26 host=0/4 foreground=0/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nperipherals frames=5 touch=4 keyboard=0 retained=1\nRESULT client=ble mode=retained-close graph_peak=36 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=6 host_provider_sampled_peak=7 foreground_provider_sampled_peak=6 owned_peak_bytes=192000 owned_peak_blocks=4 owned_allocations=4 owned_frees=0 retained_owned_bytes=192000\n",
+      "timed_out": false
+    },
+    {
+      "client": "ble",
+      "log": "ble-handoff.log",
+      "log_sha256": "bc047c5cdae831290563713c502ead92fdd7dfde8827a9e9e76a2457c17d26cb",
+      "mode": "handoff",
+      "passed": true,
+      "returncode": 0,
+      "stderr": "RTE_APP phase=entry\nSPARSE_CLOCK stage=classification status=0 elapsed_ms=0\nSPARSE_CLOCK stage=promotion status=0 elapsed_ms=0\nAPP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off\nAPP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested\nAPP t_ms=0 stage=bluetooth-request enabled=no\nAPP t_ms=0 stage=bluetooth-result state=off\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nSPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0\nadapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0\nhome started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0\nAPP t_ms=0 stage=draw-begin \nAPP t_ms=0 stage=draw-end \nAPP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=0 stage=display-submit-end result=accepted\nAPP t_ms=0 stage=display-complete result=complete\nRTE_APP phase=entry\nRTE_APP phase=returned\nAPP t_ms=51 stage=draw-begin \nAPP t_ms=51 stage=draw-end \nAPP t_ms=51 stage=display-submit-begin intent=low-latency damage=0,0,800,480\nAPP t_ms=51 stage=display-submit-end result=accepted\nAPP t_ms=51 stage=display-complete result=complete\nRTE_APP phase=entry\nRTE_APP phase=returned\nRTE_APP phase=returned\n",
+      "stdout": "PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0\nPHASE ble-initialized graph=35 peak=35 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-open graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-edited graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-handoff-fenced graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-modal-closed graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-handoff-requested graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE ble-cleanup graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0\nPHASE display-submit graph=30 peak=36 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE launcher-handoff graph=30 peak=36 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE home-after-handoff graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE home-restored graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2\nPHASE runtime-stopped graph=0 peak=36 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192000 allocations=4 frees=4\nperipherals frames=5 touch=0 keyboard=0 retained=0\nRESULT client=ble mode=handoff graph_peak=36 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=6 host_provider_sampled_peak=7 foreground_provider_sampled_peak=6 owned_peak_bytes=192000 owned_peak_blocks=4 owned_allocations=4 owned_frees=4 retained_owned_bytes=0\n",
+      "timed_out": false
+    }
+  ],
+  "runtime_metadata_sha256": {
+    "alarm.json": "17a31058a68faa78773d629ed87cc5187648c1e94c2cbf49de85c9e204a08a0e",
+    "battery.json": "3fb8fd617c34ce70afd33869eb2a128d1362a8a2988251185e65e3832e08fd8f",
+    "ble.json": "ec5a1c42c25e959b1aecf5a56f474107c1b9f1b89d6337f01797afc9fd227052",
+    "bluetooth.json": "f0edf57e20dbf02bd0d094c8cbd2bb493bde128f1be2bc5428c8dac1a1275bb6",
+    "board.json": "6ef4bdbddc5f902f8f30cc7598ec56b9b9c81fbaa01d93e470272878748db2c8",
+    "boot.json": "f527a3028c5e50d32dae4664aff851805a863ae990a72f0484065289f454b629",
+    "broadcast.json": "4efa2c6ea5a3bf4c30f5f06a24f3e38f294306397d50ebb430e0c21c68eee7ca",
+    "cohort.json": "0a1f675fbddb5bb0d786276eb8be219550be34d542c2ed41d7484c2d2834e189",
+    "contexts.json": "a24a3f538a95e734185d2498008366b326e983be74e371433e42cfab22caab8e",
+    "default.json": "74d6c23d36289279a756b98c3dd888ccbb86d8a43a95897dc24f65a2eedcf013",
+    "display.json": "783132947ee77ca4c1288022d431a78663e1bc632e1aeb01ef6b2538229b36e3",
+    "keyboard.json": "dbd61e5ebf437b5e8991f9ecdc75c57e5b82340b528c2ffa804b5184eb467597",
+    "navigation.json": "5162e1ffebf565cf81af36422dcd92a91b22560c35165649999682dd21418ba6",
+    "padding0.json": "378012028890b9b1436155bbe21e13cb4017449dd7d05575626cf621ddcb2794",
+    "padding1.json": "0366215ea880202b37086a4dfa76f1104391ce094b5baaf0dc462c2af1e2eb28",
+    "padding2.json": "26cec9d77a68de7717b0b063d2dfc002dff006378540feee0ea36a8d9a6bb047",
+    "padding3.json": "fb190dd1573ba228f561deab306b3ea56f846519379c50bbcd6069755799a1f0",
+    "padding4.json": "3a869918eca5d49681d9742bbcd6157a5e7209c844201248357bbfd02f82d4e2",
+    "padding5.json": "062b12e9c410fcc852302d6b773b1ccf80724b4b97741aee7ab71893874b30c2",
+    "padding6.json": "4ffb63ed918ec758424c6e41bd4fb9b69e908179aa4a5064559c92708c52b765",
+    "padding7.json": "51b94dd0a6bf8cfca38bf9785d51596462f5907b748112f701279aacdcf5569e",
+    "padding8.json": "bf9fcf450504e123ed4904e9ed6e3403fab09479ae91cbd886ada9a0c14d9fab",
+    "points.json": "a3201e51f269446c7e1971dff13db775b8a59611ce06cd38a40ef6896258c8c9",
+    "power.json": "4c1c325d286b97ed543df4a207d8bc813bc4e84647dc73c02ba17657cdf454d5",
+    "profile.json": "8c8f20700ce78fe462b093b828720557b2da5c0042a74d6bda4a77f8835d550a",
+    "rtc.json": "1e064b2afec95bc729703349d9917c026765fb9ac15e6db19bade42a22e967ac",
+    "scene.json": "20fa6d772a7bc759e8328d3592203b22ccf91d2b9b37326d29a7bfeaa40eb196",
+    "sensors.json": "d7f7904004d731f7caf31347f885fb8ee24e9b77547829e6f6c15c987e7307c7",
+    "springboard.json": "2a6345c693790e16bcf82ffa80973f4d817dc6436a8a0f05eaf4ce6148938325",
+    "storage.json": "6b306329aaa7f9c237e9af78999837f79edbc29d913c1a2292d3a879235bbd64",
+    "text.json": "1735d9c7bf18f780a908a78c96b0013d76dad7b1d06475c2625ca6550eab6aef",
+    "touch.json": "29874434c791cdbb633b3068f68f65f13d31c72dc66938987598e531a2ff4938",
+    "wifi.json": "223b7289ebf030652bdce499752df3ea10eb4293c13c4e9b194e638367f7997c"
+  },
+  "runtime_mocked": false,
+  "sanitize": true,
+  "selected_providers": 26,
+  "status": "passed"
+}

@@ -55,7 +55,10 @@ makes the matching session cleanup-only. Older providers keep the exact prefix.
 
 ## Packet bounds
 
-- One session, four copied receive packets, no unbounded background queue.
+- One session, 4,124 receive bytes including a three-byte header per packet.
+  Four maximum-size ACL packets fit, as do larger bursts of short events.
+  FIFO ordering and packet boundaries are preserved; true byte exhaustion
+  faults the session. See [the 0.1.73 burst regression](HCI_RX_BURSTS.md).
 - H4 packet type is separate from the public payload. TX accepts command type 1
   (3–258 bytes) or ACL type 2 (4–1028 bytes); RX accepts event type 4 (2–257 bytes)
   or ACL type 2. Every standard HCI length field must exactly match the payload.

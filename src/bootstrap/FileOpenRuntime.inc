@@ -67,8 +67,8 @@ const t5_file_open_api_v1* Runtime::fileOpenApi() {
   return &api;
 }
 bool Runtime::fileOpenReady() const {
-  if(promotionRunning_ || !active() || !appPolicy_ || retained_ || !providerStorageSafe())return false;
-  for(const auto& grant:appGrants_)if(grant.live && grant.api==fileOpenApi())return true;
+  if(promotionRunning_ || !active() || !invocation_->appPolicy_ || retained_ || !providerStorageSafe())return false;
+  for(const auto& grant:invocation_->appGrants_)if(grant.live && grant.api==fileOpenApi())return true;
   return false;
 }
 uint32_t Runtime::fileHandlerCount(const char* source) const {
@@ -89,49 +89,57 @@ bool Runtime::fileHandlerGet(const char* source,uint32_t index,t5_file_handler_t
 }
 bool Runtime::fileOpenRequest(const char* source,const char* id,uint64_t cookie) {
   char extension[FileOpenMetadata::TypeBytes];
-  if(!fileOpenReady() || !entryRunning_ || queued_[0] || fileOpen_.phase!=FileOpenState::Phase::Idle ||
+  if(residentEnabled_ && invocation_->role!=RISC_RESIDENT_ROLE_FOREGROUND &&
+     !(invocation_==&mainInvocation_ && !invocation_->role && residentLegacyAllowed(invocation_->current_)))return false;
+  if(!fileOpenReady() || !invocation_->entryRunning_ || invocation_->queued_[0] || invocation_->fileOpen_.phase!=FileOpenState::Phase::Idle ||
      !fileHandlers_ || !id || !*id || strnlen(id,T5_FILE_HANDLER_ID_MAX)>=T5_FILE_HANDLER_ID_MAX ||
      !fileOpenExtension(source,extension) || (port_.appExitSafe && !port_.appExitSafe()))return false;
   for(size_t i=0;i<policyCount_;++i) {
-    if(strcmp(policies_[i].id,id) || &policies_[i]==appPolicy_ || !fileOpenMatches(fileHandlers_[i],extension))continue;
+    if(strcmp(policies_[i].id,id) || &policies_[i]==invocation_->appPolicy_ || !fileOpenMatches(fileHandlers_[i],extension))continue;
+    if(residentEnabled_ && !residentAllowed(policies_[i].elf) && !residentLegacyAllowed(policies_[i].elf))return false;
     // These indices refer only to immutable deployment-admitted policy records.
     // The SD path is data, never a launch path. Caller and receiver map afresh.
-    fileOpen_.caller=static_cast<int8_t>(appPolicy_-policies_.get());
-    fileOpen_.receiver=static_cast<int8_t>(i);
-    fileOpen_.cookie=cookie;
-    strcpy(fileOpen_.source,source);
-    strcpy(queued_,policies_[i].elf);
-    fileOpen_.phase=FileOpenState::Phase::Requested;
+    invocation_->fileOpen_.caller=static_cast<int8_t>(invocation_->appPolicy_-policies_.get());
+    invocation_->fileOpen_.receiver=static_cast<int8_t>(i);
+    invocation_->fileOpen_.cookie=cookie;
+    strcpy(invocation_->fileOpen_.source,source);
+    strcpy(invocation_->queued_,policies_[i].elf);
+    invocation_->fileOpen_.phase=FileOpenState::Phase::Requested;
     return true;
   }
   return false;
 }
 bool Runtime::fileOpenTakeResult(int32_t* error,uint64_t* cookie) {
-  if(!fileOpenReady() || fileOpen_.phase!=FileOpenState::Phase::Result ||
-     appPolicy_!=&policies_[fileOpen_.caller])return false;
-  if(error)*error=fileOpen_.result;
-  if(cookie)*cookie=fileOpen_.cookie;
-  fileOpen_={};return true;
+  if(!fileOpenReady() || invocation_->fileOpen_.phase!=FileOpenState::Phase::Result ||
+     invocation_->appPolicy_!=&policies_[invocation_->fileOpen_.caller])return false;
+  if(error)*error=invocation_->fileOpen_.result;
+  if(cookie)*cookie=invocation_->fileOpen_.cookie;
+  invocation_->fileOpen_={};return true;
 }
 bool Runtime::fileSourcePathGet(char* out,size_t capacity) const {
   if(out && capacity)*out=0;
-  if(!out || !capacity || !fileOpenReady() || fileOpen_.phase!=FileOpenState::Phase::Receiving ||
-     appPolicy_!=&policies_[fileOpen_.receiver] || strlen(fileOpen_.source)>=capacity)return false;
-  strcpy(out,fileOpen_.source);return true;
+  if(!out || !capacity || !fileOpenReady() || invocation_->fileOpen_.phase!=FileOpenState::Phase::Receiving ||
+     invocation_->appPolicy_!=&policies_[invocation_->fileOpen_.receiver] || strlen(invocation_->fileOpen_.source)>=capacity)return false;
+  strcpy(out,invocation_->fileOpen_.source);return true;
 }
 bool Runtime::fileOpenAfterRun(bool completed) {
-  if(fileOpen_.phase==FileOpenState::Phase::Requested) {
-    if(completed && !strcmp(queued_,policies_[fileOpen_.receiver].elf))fileOpen_.phase=FileOpenState::Phase::Receiving;
-    else fileOpen_={};
-  }else if(fileOpen_.phase==FileOpenState::Phase::Receiving) {
-    fileOpen_.result=completed?0:-1; // ESP_OK / ESP_FAIL: invocation, not content parsing.
-    memset(fileOpen_.source,0,sizeof(fileOpen_.source));
-    fileOpen_.phase=FileOpenState::Phase::Result;
-    strcpy(current_,policies_[fileOpen_.caller].elf);
-    queued_[0]=0;return true;
-  }else if(fileOpen_.phase==FileOpenState::Phase::Result) {
+  if(invocation_->fileOpen_.phase==FileOpenState::Phase::Requested) {
+    if(completed && !strcmp(invocation_->queued_,policies_[invocation_->fileOpen_.receiver].elf))invocation_->fileOpen_.phase=FileOpenState::Phase::Receiving;
+    else invocation_->fileOpen_={};
+  }else if(invocation_->fileOpen_.phase==FileOpenState::Phase::Receiving) {
+    // Only explicit Home can queue during Receiving. runOne has already
+    // finalized/unmapped the receiver and revoked every grant successfully.
+    if(completed && invocation_->queued_[0] && !strcmp(invocation_->queued_,default_)) {
+      invocation_->fileOpen_={};return false;
+    }
+    invocation_->fileOpen_.result=completed?0:-1; // ESP_OK / ESP_FAIL: invocation, not content parsing.
+    memset(invocation_->fileOpen_.source,0,sizeof(invocation_->fileOpen_.source));
+    invocation_->fileOpen_.phase=FileOpenState::Phase::Result;
+    strcpy(invocation_->current_,policies_[invocation_->fileOpen_.caller].elf);
+    invocation_->queued_[0]=0;return true;
+  }else if(invocation_->fileOpen_.phase==FileOpenState::Phase::Result) {
     // An unconsumed result cannot leak to another invocation or default app.
-    fileOpen_={};
+    invocation_->fileOpen_={};
   }
   return false;
 }

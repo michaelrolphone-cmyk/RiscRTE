@@ -11,7 +11,10 @@ enum { RISC_PROVIDER_PROMOTION_OK=0, RISC_PROVIDER_PROMOTION_ALREADY_READY=1,
 /* Explicit instance-zero grant to the configured default app only. Calls require
  * owner task, app_main, a live grant and safe native/graph custody. promote pins
  * every already validated selected provider for this boot session, in dependency
- * order. No selector, import, reload, policy change or demotion is available.
+ * order. With explicit boot policy provider_activation="demand-retained", it
+ * instead pins only active providers and arms session pins for later authorized
+ * first acquisitions. Absent providers stay untouched. No selector, import,
+ * reload, policy change or demotion is available.
  * FAILED preserves successful prefix pins; retry resumes there. RETAINED fences
  * further calls and app teardown until restart. Copy the table, never retain the
  * borrowed table pointer after release; copied stale contexts always reject. */

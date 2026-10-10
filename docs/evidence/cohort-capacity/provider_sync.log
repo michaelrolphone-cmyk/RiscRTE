@@ -1,0 +1,3 @@
+Provider sync: fixed capacity, owner-only, nonrecursive, scoped/stale tokens, retained cleanup and lifecycle barriers PASS
+Provider sync: exact selected instance binding, distinct contexts, unavailable API and zero hardware I/O PASS
+Real Runtime/Graph/dlopen sync: clean teardown and held-lock app/provider retention PASS

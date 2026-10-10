@@ -1,0 +1,113 @@
+{
+  "schema": "runtime.cohort-capacity.host-qualification.v1",
+  "scope": "Unreleased source-only capacity checkpoint; no target build, publication or hardware action. Full product client/coordinate and target-memory qualification is separate.",
+  "base_commit": "5a5c14de2dbcf189d1ca4912dfde1773a4d9813d",
+  "capacity": {
+    "cohort": {
+      "apps": 24,
+      "providers": 26,
+      "grants": 42
+    },
+    "legacy": {
+      "apps": 19,
+      "providers": 17,
+      "grants": 32
+    }
+  },
+  "production_source_sha256": {
+    "src/bootstrap/Runtime.cpp": "88323e41cca4c3866d08ca8e52eb26c5e592364b65005450ebb76d65a2483775",
+    "src/bootstrap/Runtime.h": "78a341a922d963c11e534d2cea67293da35e3b65ca0f133b3cd632e49df2f729",
+    "src/runtime/RuntimeLimits.h": "9935a9ad0249229e5d684f9fda4331012e623e2f481328e1235a5df4b92e7828",
+    "src/runtime/drivers/ProviderGraphV2.cpp": "259e6fa3423f367dfa0e7ed2e7ada358872e9900dcd3c16e6bedb923c3adafee",
+    "src/runtime/drivers/ProviderGraphV2.h": "c2fff6f83202c43c41986fc0a0bd4c8a8925eff4432ffc016e313c1cbcd70caa"
+  },
+  "regressions": {
+    "suite_configurations": 27,
+    "normal_and_sanitized_invocations": 54,
+    "final_result": "passed",
+    "receipt": "final-regressions.json",
+    "lsan": "unavailable under ptrace; detect_leaks=0; explicit workload allocation ledgers checked"
+  },
+  "full_metadata": {
+    "current_cases_normal": 14,
+    "current_cases_asan_ubsan": 14,
+    "baseline_reproduced": true,
+    "providers": 26,
+    "apps": 21,
+    "overflow_rejected": 27,
+    "ui_profile_version": "0.1.1",
+    "unchanged_delivered_files": 91
+  },
+  "resident_replays": [
+    {
+      "mode": "normal",
+      "cases": 12,
+      "result": "passed",
+      "evidence": "docs/evidence/cohort-capacity/resident-normal/evidence.json"
+    },
+    {
+      "mode": "sanitized",
+      "cases": 12,
+      "result": "passed",
+      "evidence": "docs/evidence/cohort-capacity/resident-sanitized/evidence.json"
+    },
+    {
+      "mode": "demand-retained",
+      "cases": 12,
+      "result": "passed",
+      "evidence": "docs/evidence/cohort-capacity/resident-demand-retained/evidence.json"
+    },
+    {
+      "mode": "demand-retained-sanitized",
+      "cases": 12,
+      "result": "passed",
+      "evidence": "docs/evidence/cohort-capacity/resident-demand-retained-sanitized/evidence.json"
+    },
+    {
+      "mode": "hardware",
+      "cases": 12,
+      "result": "passed",
+      "evidence": "docs/evidence/cohort-capacity/resident-hardware/evidence.json"
+    },
+    {
+      "mode": "hardware-sanitized",
+      "cases": 12,
+      "result": "passed",
+      "evidence": "docs/evidence/cohort-capacity/resident-hardware-sanitized/evidence.json"
+    }
+  ],
+  "resident_full_pin_graph_peaks": {
+    "points": 37,
+    "ble_controller": 36,
+    "capacity": 42
+  },
+  "requested_live_heap_workload_peaks": {
+    "points": {
+      "bytes": 192588,
+      "blocks": 7
+    },
+    "ble_controller": {
+      "bytes": 192000,
+      "blocks": 4
+    },
+    "excluded": [
+      "Runtime/loader metadata",
+      "app/provider BSS and stack",
+      "allocator overhead/realloc transient copies",
+      "target placement",
+      "full-catalog/full-scan workloads"
+    ]
+  },
+  "coordinate_scope": "Synthetic profile90/logical touch; installed display270/touch0 qualification belongs to separate System/frontend work.",
+  "client_scope": "Real Home and client controllers/adapters via scripted entrypoints. Restored X4 BLE paper source selected; complete production app_main/render behavior remains separate.",
+  "review": "Read-only independent production/instrumentation and controller-fixture reviews; source/header/artifact/log fingerprints checked; no remaining blocker for this scope.",
+  "preserved_native_sdk_receipt": "preserved-native-sdk.json",
+  "preserved_delivery_receipt": "delivery-unchanged.json",
+  "version_assignment": "None; unchanged native0.1.99 source value is not a released successor version.",
+  "shared_ui_source": {
+    "commit": "52cac98887d5823302abb997c0fcb2e70f8c25f0",
+    "tree": "d5e2a4b9e210524ef70bfae11028b2ec08058769",
+    "portrait_profile": "0.1.1",
+    "note": "Final metadata snapshot matches this stable successor. Resident receipt compile-time git status may precede its commit; compiled byte hashes remain authoritative."
+  }
+}
