@@ -164,9 +164,16 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   if(bound_ || !available() || !hw_.now || !hw_.sleep || !hw_.gpioOpen || !hw_.gpioWrite || !hw_.gpioRead || !hw_.gpioPwm || !hw_.gpioClose ||
      !hw_.i2cOpen || !hw_.i2cTransfer || !hw_.i2cClose || !hw_.spiOpen || !hw_.spiBegin || !hw_.spiTransfer || !hw_.spiEnd || !hw_.spiClose)return false;
   bound_=true;runtime_=&runtime;
-  clock_={1,sizeof(clock_),this,[](void* c)->uint64_t{auto& p=*static_cast<Port*>(c);return p.hw_.owner()?p.hw_.now():0;},
+  clock_.base={1,sizeof(clock_.base),this,[](void* c)->uint64_t{auto& p=*static_cast<Port*>(c);return p.hw_.owner()?p.hw_.now():0;},
     [](void* c,uint32_t ms){auto& p=*static_cast<Port*>(c);if(p.hw_.owner())p.hw_.sleep(ms>5000?5000:ms);}};
-  if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_))return false;
+  if(hw_.schedulerWait){
+    clock_.base.struct_size=sizeof(clock_);clock_.wait_tag=RISC_PLATFORM_CLOCK_WAIT_TAG_V1;clock_.wait_version=RISC_PLATFORM_CLOCK_WAIT_VERSION_V1;
+    clock_.scheduler_wait_ms=[](void* c,uint32_t ms){
+      auto& p=*static_cast<Port*>(c);
+      return p.hw_.owner && p.hw_.owner() && ms && ms<=RISC_PLATFORM_CLOCK_WAIT_MAX_MS && p.hw_.schedulerWait && p.hw_.schedulerWait(ms);
+    };
+  }
+  if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_.base))return false;
   if(hw_.usbPhyIdle || hw_.usbPhySuspend || hw_.usbPhyResume){
     if(!hw_.usbPhyIdle || !hw_.usbPhySuspend || !hw_.usbPhyResume)return false;
     usb_.port=this;

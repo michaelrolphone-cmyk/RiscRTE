@@ -5,7 +5,7 @@
 #include <RiscGpioSdmmcV1.h>
 #include <TWatchPlatformV1.h>
 #include <RiscHciControllerStatusV1.h>
-#include <RiscPlatformClockV1.h>
+#include <RiscPlatformClockWaitV1.h>
 #include <RiscProviderSyncV1.h>
 #include <RiscHttpClientV1.h>
 #include <RiscRadioIqResourceV1.h>
@@ -94,6 +94,7 @@ struct Hardware {
   const risc_native_radio_async_v1* radioAsync=nullptr; // additive, native-owned lifecycle
   bool (*radioAsyncPrepare)()=nullptr; // owner bind, before exposing admission
   const RiscBoot::EntropyBackend* entropy=nullptr; // explicit native opt-in
+  bool (*schedulerWait)(uint32_t)=nullptr; // owner-only, bounded, scheduler only
 };
 class Port final {
  public:
@@ -136,7 +137,7 @@ class Port final {
   uint8_t gpioWritePins_[64]{};
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
   size_t syncCount_=0,gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0,iqCount_=0;
-  risc_platform_clock_api_v1 clock_{};
+  risc_platform_clock_wait_v1 clock_{};
   risc_realtime_control_api_v1 realtime_{};
   risc_http_client_v1 http_{};
   RiscBoot::EntropyBackend entropy_{};

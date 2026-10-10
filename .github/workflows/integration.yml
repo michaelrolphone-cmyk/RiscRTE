@@ -212,6 +212,9 @@ jobs:
           bash test/run_hci_radio_coexistence_test.sh
           SANITIZE=1 bash test/run_hci_radio_coexistence_test.sh
           TSAN=1 bash test/run_hci_radio_coexistence_test.sh
+          bash test/run_clock_scheduler_wait_test.sh
+          SANITIZE=1 bash test/run_clock_scheduler_wait_test.sh
+          TSAN=1 bash test/run_clock_scheduler_wait_test.sh
           python test/run_hci_scanner_burst_test.py --watch build/ble-watch-source --drivers build/ble-driver-source --output build/ble-scanner-normal
           SANITIZE=1 python test/run_hci_scanner_burst_test.py --watch build/ble-watch-source --drivers build/ble-driver-source --output build/ble-scanner-sanitized
           bash test/run_radio_iq_test.sh

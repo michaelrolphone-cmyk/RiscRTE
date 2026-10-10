@@ -56,6 +56,7 @@ extern "C" __attribute__((used)) const uint32_t risc_sdmmc_host_abi=1;
 #endif
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
+#include "NativeSchedulerWait.inc"
 struct I2cState { bool installed=false,configured=false;int sda=-1,scl=-1; } i2c[2];
 TickType_t ticks(uint32_t ms){return ms?pdMS_TO_TICKS(ms)+1:0;}
 spi_host_device_t host(uint8_t physical){return physical==2?SPI2_HOST:SPI3_HOST;}
@@ -176,6 +177,7 @@ Hardware nativeHardware(bool (*owner)()){
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadioAsync::join,NativeRadioAsync::state,NativeRadioAsync::leave,NativeRadioAsync::addresses,NativeRadioAsync::scanStart,NativeRadioAsync::scanPoll,NativeRadioAsync::scanCancel,NativeRadioAsync::idle};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
+  configureSchedulerWait(hardware);
   static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
   radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
   // Under a nested owner lease, test the phase without refusing our own lease.
