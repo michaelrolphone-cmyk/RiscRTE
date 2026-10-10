@@ -9,6 +9,7 @@ int32_t Runtime::appDataStat(void*context,const char*name,uint32_t*size,uint64_t
  if(size)*size=0;
  if(revision)*revision=0;
  Runtime*r=appDataContext(context);if(!r)return RISC_APP_DATA_CONTEXT;
+ if(r->invocation_->appDataSharedFile_&&(!name||strcmp(name,r->invocation_->appDataSharedFile_)))return RISC_APP_DATA_CONTEXT;
  if(!r->appDataExitSafe())return RISC_APP_DATA_RETAINED;
  if(!r->providerStorageSafe())return RISC_APP_DATA_UNAVAILABLE;
  const auto&b=*r->port_.appData;return b.stat(b.context,r->invocation_->appDataNamespace_,name,size,revision);
@@ -17,12 +18,14 @@ int32_t Runtime::appDataRead(void*context,const char*name,uint64_t expected,void
  if(size)*size=0;
  if(revision)*revision=0;
  Runtime*r=appDataContext(context);if(!r)return RISC_APP_DATA_CONTEXT;
+ if(r->invocation_->appDataSharedFile_&&(!name||strcmp(name,r->invocation_->appDataSharedFile_)))return RISC_APP_DATA_CONTEXT;
  if(!r->appDataExitSafe())return RISC_APP_DATA_RETAINED;
  if(!r->providerStorageSafe())return RISC_APP_DATA_UNAVAILABLE;
  const auto&b=*r->port_.appData;return b.read(b.context,r->invocation_->appDataNamespace_,name,expected,bytes,capacity,size,revision);
 }
 int32_t Runtime::appDataReplace(void*context,const char*name,uint64_t expected,const void*bytes,uint32_t size){
  Runtime*r=appDataContext(context);if(!r)return RISC_APP_DATA_CONTEXT;
+ if(r->invocation_->appDataSharedFile_&&(!name||strcmp(name,r->invocation_->appDataSharedFile_)))return RISC_APP_DATA_CONTEXT;
  if(!r->appDataExitSafe())return RISC_APP_DATA_RETAINED;
  if(!r->providerStorageSafe())return RISC_APP_DATA_UNAVAILABLE;
  const auto&b=*r->port_.appData;return b.replace(b.context,r->invocation_->appDataNamespace_,name,expected,bytes,size);

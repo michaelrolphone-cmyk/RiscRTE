@@ -74,6 +74,8 @@ struct Port {
   bool (*providerServicesReady)()=nullptr;
   bool (*providerServiceBegin)()=nullptr;
   void (*providerServiceEnd)()=nullptr;
+  // Optional cheap owner clock; older ports retain the health fallback.
+  bool (*monotonicMs)(uint32_t*)=nullptr;
 };
 class Runtime final {
  public:
@@ -105,6 +107,7 @@ class Runtime final {
   bool launch(const char* relative);
   bool launchDefault();
   bool health(risc_runtime_health_v1*);
+  bool monotonicMs(uint32_t*);
   bool acquire(const char*,uint32_t,uint64_t,risc_runtime_capability_v1*);
   bool release(risc_runtime_capability_v1*);
   void yield(uint32_t);
@@ -274,14 +277,15 @@ class Runtime final {
     const char* capability=nullptr;
     uint32_t api=0; uint64_t instance=0;
     PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false;
+    char sharedFile[RISC_APP_DATA_NAME_MAX+1]{};
   };
 #if UINTPTR_MAX == UINT32_MAX
-  static_assert(sizeof(AppGrantPolicy)==24,"App policy target layout changed");
+  static_assert(sizeof(AppGrantPolicy)==72,"App policy target layout changed");
 #endif
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7, SharedDataDriver=-8;
   const risc_realtime_control_api_v1* realtimeBackend_=nullptr;
   risc_platform_realtime_api_v1 providerRealtimeTable_{};
   bool registerProviderRealtime();
@@ -372,6 +376,7 @@ class Runtime final {
     risc_app_data_v1 appDataTable_{};
     void* appDataContext_=nullptr;
     uint32_t appDataNamespace_=0;
+    const char* appDataSharedFile_=nullptr;
     std::unique_ptr<RiscStorage::AppDataExport,AppDataExportDelete> appDataExport_;
     risc_app_data_export_v1 appDataExportTable_{};
     bool appDataExportEnding_=false;

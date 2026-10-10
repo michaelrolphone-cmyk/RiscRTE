@@ -6,6 +6,8 @@
 #include <cstdio>
 using namespace RiscCpu;
 static bool owner=true,radio=true,hci=true,hciSafe=true,http=true,maintenance=true,proof=true,prepare=true,cleanup=true;
+static bool workerStartOk=true,workerStopOk=true;
+static unsigned workerStarts=0,workerStops=0;
 static unsigned checks=0,prepares=0,cleanups=0,starts=0;
 int main(){
  Hardware h{};h.owner=[](){return owner;};h.radioIdle=[](){return radio;};h.hciIdle=[](){return hci;};h.hciSafe=[](){return hciSafe;};
@@ -14,6 +16,9 @@ int main(){
  h.radioIqPrepare=[](){++prepares;return prepare;};
  h.radioIqCleanup=[](){++cleanups;return cleanup;};
  h.radioJoin=[](const char*,const char*){++starts;return true;};h.radioScanStart=[](){++starts;return true;};h.hciOpen=[](){++starts;return true;};
+ h.radioIqWorkerStart=[](uint32_t,risc_radio_iq_tick_v1,void*){++workerStarts;return workerStartOk;};
+ h.radioIqWorkerStop=[](){++workerStops;return workerStopOk;};
+ h.radioIqNowUs=[](){return uint64_t(1234567);};
  Port p(h);auto& c=p.iq_;c.port=&p;auto& r=p.radios_[0];r.port=&p;r.token=10;auto& b=p.hci_;b.port=&p;
  auto refused=[&](){uint64_t t=99;assert(!Port::radioIqClaim(&c,&t) && !t && !c.token);};
  assert(!Port::radioIqClaim(nullptr,nullptr));
@@ -51,6 +56,22 @@ int main(){
  assert(!Port::radioIqRelease(&c,t));assert(p.appExitSafe() && p.restartResourcesSafe());
  // Logical Wi-Fi owner survived; another capture receives a fresh generation.
  assert(r.token==10 && Port::radioIqClaim(&c,&t) && t>first);assert(Port::radioIqRelease(&c,t));
+ // Timestamp worker custody: background file access is allowed only while a
+ // confirmed worker owns the receiver; every exit and other RF user stays out.
+ assert(Port::radioIqClaim(&c,&t));
+ auto tick=+[](void*,uint64_t){};
+ assert(!Port::radioIqWorkerStart(&c,t+1,1000,tick,nullptr));
+ assert(!Port::radioIqWorkerStart(&c,t,999,tick,nullptr) && !workerStarts);
+ workerStartOk=false;assert(!Port::radioIqWorkerStart(&c,t,1000,tick,nullptr) && !c.worker);
+ workerStartOk=true;assert(Port::radioIqWorkerStart(&c,t,1000,tick,nullptr) && c.worker);
+ assert(Port::radioIqNowUs(&c)==1234567 && p.providerStorageSafe());
+ assert(!p.appExitSafe() && !p.restartResourcesSafe() && !Port::radioIqRelease(&c,t));
+ sleep(RISC_LIGHT_SLEEP_BUSY);
+ workerStopOk=false;assert(!Port::radioIqWorkerStop(&c,t) && c.worker && c.closing);
+ assert(!p.providerStorageSafe() && !Port::radioIqRelease(&c,t));
+ sleep(RISC_LIGHT_SLEEP_RETAINED);
+ workerStopOk=true;assert(Port::radioIqWorkerStop(&c,t) && !c.worker && workerStops==2);
+ assert(Port::radioIqRelease(&c,t) && !c.closing && Port::radioIqNowUs(&c)==0);
  p.serial_=UINT64_MAX;refused();assert(!starts && checks>=5);
  puts("IQ resource: fail-closed proof, owner/context, idle station coexistence, modem exclusion, exit/restart/all sleep forms, retained cleanup retry PASS");
 }

@@ -46,16 +46,16 @@ def native_proof(data):
  return {'static_dram_sections':dram,'static_dram_bytes':sum(dram.values()),'rollback_hook_hex':code.hex(),'bundle_bytes':size,'bundle_certificates':int.from_bytes(bundle[:2],'big'),'bundle_sha256':hashlib.sha256(bundle).hexdigest(),'required_symbols':list(required)}
 
 def policy_rows_proof(blobs, expected, manifest_requirements=16):
- require(expected in (16,17,18),'app policy rows must be 16, 17 or 18')
- require(manifest_requirements in (16,17),'app requirement rows must be 16 or 17')
+ require(expected in (16,17,18,24),'app policy rows must be 16, 17, 18 or 24')
+ require(manifest_requirements in (16,17,24),'app requirement rows must be 16, 17 or 24')
  marker=('RISC_APP_POLICY_ROWS:'+str(expected)).encode()+b'\0'
- requirement_marker=b'RISC_APP_REQUIREMENT_ROWS:17\0'
+ requirement_marker=('RISC_APP_REQUIREMENT_ROWS:'+str(manifest_requirements)).encode()+b'\0'
  for name in ('firmware.bin','firmware.elf'):
   blob=blobs.get(name,b'')
-  require(marker in blob and all(('RISC_APP_POLICY_ROWS:'+str(n)).encode()+b'\0' not in blob for n in (16,17,18) if n!=expected),'compiled app policy row mismatch: '+name)
-  require((requirement_marker in blob)==(manifest_requirements==17),'compiled app requirement row mismatch: '+name)
+  require(marker in blob and all(('RISC_APP_POLICY_ROWS:'+str(n)).encode()+b'\0' not in blob for n in (16,17,18,24) if n!=expected),'compiled app policy row mismatch: '+name)
+  require((requirement_marker in blob)==(manifest_requirements>16),'compiled app requirement row mismatch: '+name)
  proof={'rows':expected,'live_app_grants':16,'manifest_requirements':manifest_requirements,'marker':marker[:-1].decode()}
- if manifest_requirements==17:proof['requirement_marker']=requirement_marker[:-1].decode()
+ if manifest_requirements>16:proof['requirement_marker']=requirement_marker[:-1].decode()
  return proof
 
 def stage(source, app_data=False, app_data_image=None, radio_iq=False, performance_trace=False, app_policy_rows=16):
