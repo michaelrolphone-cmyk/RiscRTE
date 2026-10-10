@@ -1,12 +1,14 @@
 #pragma once
 #include "bootstrap/Runtime.h"
 #include <GardenPlatformV1.h>
+#include <RiscGpioSdmmcV1.h>
 #include <TWatchPlatformV1.h>
 #include <RiscHciControllerStatusV1.h>
 #include <RiscPlatformClockV1.h>
 #include <RiscProviderSyncV1.h>
 #include <RiscHttpClientV1.h>
 #include <RiscRadioIqResourceV1.h>
+#include <RiscUsbPhyResourceV1.h>
 namespace RiscCpu {
 // Lowest hardware boundary. Production uses ESP-IDF; host models emulate only
 // pins, controllers and register/byte transfers, not driver/capability behavior.
@@ -74,6 +76,19 @@ struct Hardware {
   bool (*radioIqCleanup)()=nullptr;
   int32_t (*realtimeRead)(risc_realtime_snapshot_v1*)=nullptr;
   int32_t (*realtimeSeed)(int64_t,uint32_t)=nullptr; // separately brokered authority
+  // Optional explicit shared-MOSI half-duplex mode. On attempted begin failure,
+  // spiEnd must remain available to prove cleanup before the claim can release.
+  bool (*spiBeginThreeWire)(uint8_t,uint8_t,uint32_t,uint8_t,uint32_t)=nullptr;
+  // Optional exclusive internal USB PHY handoff; no USB protocol/SD logic.
+  bool (*usbPhyIdle)()=nullptr;
+  bool (*usbPhySuspend)()=nullptr;
+  bool (*usbPhyResume)()=nullptr;
+  // Optional hardware-backed native one-bit SD; no filesystem or board policy.
+  bool (*sdmmcOpen)(uint8_t,uint8_t,uint8_t,uint32_t,risc_sdmmc_card_info_v1*)=nullptr;
+  bool (*sdmmcRead)(uint64_t,uint32_t,void*)=nullptr;
+  bool (*sdmmcWrite)(uint64_t,uint32_t,const void*)=nullptr;
+  bool (*sdmmcSync)()=nullptr;
+  bool (*sdmmcClose)()=nullptr;
 };
 class Port final {
  public:
@@ -92,23 +107,26 @@ class Port final {
   // Actual native cleanup failure retains the existing storage safety barrier.
   bool providerStorageSafe() const;
  private:
+  const RiscBoot::Runtime* runtime_=nullptr;
   struct Sync {
     Port* port=nullptr; uint64_t instance=0;
     struct Lock { uint64_t token=0; bool held=false; } locks[RISC_PROVIDER_SYNC_MAX_LOCKS]{};
     risc_provider_sync_api_v1 api{};
   } syncs_[RuntimeProviders::GraphV2::kMaxModules];
-  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; garden_gpio_v1 api{}; } gpios_[16];
+  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{}; } gpios_[16];
+  struct Sdmmc { Gpio* owner=nullptr; uint64_t token=0,sectors=0; uint8_t clk=0,cmd=0,dat0=0; bool closing=false; } sdmmc_;
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
-  struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; garden_spi_v1 api{}; } spis_[8];
-  struct SpiBus { uint64_t instance=0; unsigned refs=0; Spi* held=nullptr; } spiBuses_[2];
+  struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; bool threeWire=false,ready=false,closing=false; garden_spi_v1 api{}; } spis_[8];
+  struct SpiBus { uint64_t instance=0; unsigned refs=0; Spi* held=nullptr; Spi* closing=nullptr; } spiBuses_[2];
   struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; } i2ss_[2];
   struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;
     bool active=false,closing=false,scanning=false; garden_radio_v1 api{}; } radios_[1];
   struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
   struct RadioIq { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_radio_iq_resource_v1 api{}; } iq_;
+  struct UsbPhy { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_usb_phy_resource_api_v1 api{}; } usb_;
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false,wakeHigh=false; uint8_t wakeModes=0; bool retiredHeld=false; } pins_[49];
   // Pin-index hints only, never authority. Collisions/stale hints are checked
-  // against the current full token and scope before any write. Zero is empty.
+  // against the current full token and scope before any read/write. Zero is empty.
   uint8_t gpioWritePins_[64]{};
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
   size_t syncCount_=0,gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0,iqCount_=0;
@@ -119,6 +137,15 @@ class Port final {
   uint64_t token(){return serial_==UINT64_MAX?0:++serial_;}
   bool reserve(int16_t,const void*); void unreserve(int16_t,const void*);
   bool gpioScope(const RiscBoot::Runtime&,const RiscBoot::Board::Device&,Gpio&);
+  static bool sdmmcOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*,risc_sdmmc_card_info_v1*);
+  static bool sdmmcTransfer(void*,uint64_t,uint64_t,uint32_t,void*,const void*);
+  static bool sdmmcRead(void*,uint64_t,uint64_t,uint32_t,void*);
+  static bool sdmmcWrite(void*,uint64_t,uint64_t,uint32_t,const void*);
+  static bool sdmmcSync(void*,uint64_t);
+  static bool sdmmcRelease(void*,uint64_t);
+  static bool usbPhyOwner(void*);
+  static bool usbPhyClaim(void*,uint64_t*);
+  static bool usbPhyRelease(void*,uint64_t);
   static bool syncOwner(void*);
   static bool syncCreate(void*,uint64_t*);
   static bool syncTryLock(void*,uint64_t);
@@ -139,11 +166,14 @@ class Port final {
   static int32_t gpioDeepSleepSet(void*,uint64_t,bool,uint32_t);
   static int32_t sleepSetImpl(void*,uint64_t,bool,uint32_t,bool,risc_light_sleep_result_v1*);
   static bool gpioRetireHeldOutput(void*,uint64_t);
+  static bool gpioReadRetiredOutput(void*,uint8_t,bool*);
   static bool gpioRelease(void*,uint64_t); static bool waveform(void*,uint64_t,const uint32_t*,size_t){return false;}
   static bool i2cOpen(void*,uint8_t,uint8_t,uint8_t,uint32_t,uint64_t*);
   static bool i2cTransfer(void*,uint64_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);
   static bool i2cClose(void*,uint64_t);
   static bool spiClaim(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*);
+  static bool spiClaimThreeWire(void*,uint8_t,uint8_t,uint8_t,uint64_t*);
+  static bool spiClaimImpl(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*,bool);
   static bool spiBegin(void*,uint64_t,uint32_t,uint8_t,uint32_t);
   static bool spiTransfer(void*,uint64_t,const uint8_t*,uint8_t*,size_t);
   static bool spiEnd(void*,uint64_t); static bool spiRelease(void*,uint64_t);

@@ -1,0 +1,6 @@
+App grants: identity/declaration/exact instance, size/version checks, stale handles, child isolation and automatic revocation PASS
+App policy capacity: 9/16/18 and full bound accepted, overflow rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS
+Runtime providers: full selected capacity accepted, overflow and duplicate final slot rejected before activation PASS
+Heartbeat default app: three exact-format monotonic health lines PASS
+Runtime cooperative yield: exactly one wait, active/idle, owner guard and 1..50ms bounds PASS
+Runtime integration: mapped provider, default/child/default/missing/default, manifest/path rejection PASS

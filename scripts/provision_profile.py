@@ -175,29 +175,46 @@ def spiffs_charge(byte_lengths, partition_bytes):
 
 
 def validate_inventory(record):
-    require(isinstance(record, dict) and set(record) == {'schema', 'schema_version', 'layout', 'runtime_target', 'files'},
+    image = isinstance(record, dict) and record.get('schema_version') == 2
+    fields = {'schema', 'schema_version', 'layout', 'runtime_target', 'files'} | ({'image'} if image else set())
+    require(isinstance(record, dict) and set(record) == fields,
             'inventory fields')
     require(record['schema'] == 'riscrte.provisioning-inventory' and
-            type(record['schema_version']) is int and record['schema_version'] == 1 and
+            type(record['schema_version']) is int and record['schema_version'] in (1, 2) and
             record['layout'] in LAYOUTS and
             TARGET_LAYOUTS.get(record['runtime_target']) == record['layout'], 'inventory identity')
+    if image:
+        item = record['image']
+        require(isinstance(item, dict) and set(item) == {'url', 'bytes', 'sha256'}, 'inventory image fields')
+        source(item['url'])
+        require(type(item['bytes']) is int and item['bytes'] == LAYOUTS[record['layout']], 'image partition bounds')
+        require(isinstance(item['sha256'], str) and re.fullmatch('[0-9a-f]{64}', item['sha256']), 'image digest')
     entries = record['files']
     require(isinstance(entries, list) and 3 <= len(entries) <= MAX_FILES, 'inventory count')
     names = set()
     total = 32  # Committed exact-profile SHA stored by native backend.
     for item in entries:
-        require(isinstance(item, dict) and set(item) == {'path', 'url', 'bytes', 'sha256'}, 'inventory file fields')
+        require(isinstance(item, dict) and set(item) == ({'path', 'bytes', 'sha256'} if image else {'path', 'url', 'bytes', 'sha256'}), 'inventory file fields')
         name = relative(item['path'])
         require(name not in names and not any(name.startswith(old + '/') or old.startswith(name + '/')
                                              for old in names), 'duplicate or overlapping store path')
-        source(item['url'])
+        if not image:
+            source(item['url'])
         require(type(item['bytes']) is int and 1 <= item['bytes'] <= 8 * 1024 * 1024, 'file byte bounds')
         require(isinstance(item['sha256'], str) and re.fullmatch('[0-9a-f]{64}', item['sha256']), 'file digest')
         total += item['bytes']
         names.add(name)
     require(REQUIRED <= names, 'complete boot.json, board.json and default.elf required')
-    charged, available = spiffs_charge([item['bytes'] for item in entries], LAYOUTS[record['layout']])
-    require(total <= 16 * 1024 * 1024 and charged <= available, 'native store capacity exceeded')
+    if image:
+        # Necessary metadata bound only. The actual image's occupied/deleted
+        # pages and completely erased blocks must also pass image admission.
+        pages = sum((item['bytes'] + 250) // 251 + 1 +
+                    (max(0, (item['bytes'] + 250) // 251 - 103) + 123) // 124 for item in entries)
+        require(total <= LAYOUTS[record['layout']] and
+                pages <= (LAYOUTS[record['layout']] // 4096 - 4) * 15, 'native image capacity exceeded')
+    else:
+        charged, available = spiffs_charge([item['bytes'] for item in entries], LAYOUTS[record['layout']])
+        require(total <= 16 * 1024 * 1024 and charged <= available, 'native store capacity exceeded')
     return record
 
 
@@ -250,6 +267,37 @@ def build_inventory(store, layout, output, base_url=None, sources=None, target=N
     return record
 
 
+def build_image_inventory(store, image, layout, target, image_url, output):
+    """Freeze one exact prepacked image and its full readback inventory."""
+    from spiffs_image import read_image
+    from store_image_capacity import inspect_image
+    output = destination(output)
+    files = store_files(store)
+    raw = read(image, 8 * 1024 * 1024)
+    require(layout in LAYOUTS, 'image layout')
+    inspect_image(raw, LAYOUTS[layout])
+    decoded = read_image(raw, LAYOUTS[layout])
+    require(decoded == files, 'image and complete product store differ')
+    record = {'schema': 'riscrte.provisioning-inventory', 'schema_version': 2,
+              'layout': layout, 'runtime_target': target,
+              'image': {'url': source(image_url), 'bytes': len(raw), 'sha256': sha(raw)},
+              'files': [{'path': name, 'bytes': len(data), 'sha256': sha(data)}
+                        for name, data in sorted(files.items())]}
+    verify_inventory(record, files)
+    output.mkdir()
+    try:
+        write(output / 'image.bin', raw)
+        write(output / 'inventory.json', encode(record))
+        require(read(output / 'image.bin') == raw, 'image output readback mismatch')
+        write(output / 'SHA256SUMS', ''.join(
+            f'{sha(read(path))}  {path.name}\n' for path in sorted(output.iterdir())).encode())
+        write(output / 'COMPLETE', b'riscrte.provisioning-inventory.v2\n')
+    except BaseException:
+        shutil.rmtree(output)
+        raise
+    return record
+
+
 def profile_bytes(record, wifi, base_url=None):
     validate_inventory(record)
     require(isinstance(wifi, dict) and set(wifi) == {'ssid', 'password'}, 'wifi file fields')
@@ -259,7 +307,10 @@ def profile_bytes(record, wifi, base_url=None):
             (wifi['password'] == '' or 8 <= len(wifi['password'].encode('utf-8')) <= 63), 'wifi length bounds')
     profile = {'schema': 'riscrte.provisioning', 'schema_version': 1,
                'wifi': wifi, 'files': sorted(record['files'], key=lambda entry: entry['path'])}
-    if base_url is not None:
+    if record['schema_version'] == 2:
+        require(base_url is None, 'image inventory has one pinned URL')
+        profile.update(schema_version=3, image=record['image'])
+    elif base_url is not None:
         source(base_url, True)
         require(all(entry['url'] == base_url + entry['path'] for entry in profile['files']),
                 'base URL differs from pinned inventory sources')
@@ -337,6 +388,12 @@ def main():
     origin.add_argument('--base-url')
     origin.add_argument('--sources', type=Path, help='JSON map of each complete store path to its explicit HTTPS URL')
     pin.add_argument('--output', type=Path, required=True, help='New distribution directory: files/, inventory.json, checksums and completion marker')
+    image = commands.add_parser('image-inventory', help='Pin an admitted compact image and its exact complete store')
+    for key in ('store', 'image', 'output'):
+        image.add_argument('--' + key, type=Path, required=True)
+    image.add_argument('--layout', choices=LAYOUTS, required=True)
+    image.add_argument('--target', choices=TARGET_LAYOUTS, required=True)
+    image.add_argument('--image-url', required=True)
     owner = commands.add_parser('profile', help='Create a private exact-profile and NVS-input bundle')
     for key in ('inventory', 'wifi-file', 'validator', 'output'):
         owner.add_argument('--' + key, type=Path, required=True)
@@ -349,6 +406,9 @@ def main():
             build_inventory(args.store, args.layout, args.output, args.base_url,
                             decode(read(args.sources, 128 * 1024)) if args.sources else None, args.target)
             print('Pinned complete local store; URLs supplied by owner; no downloads or device access.')
+        elif args.command == 'image-inventory':
+            build_image_inventory(args.store, args.image, args.layout, args.target, args.image_url, args.output)
+            print('Pinned complete compact image and exact store; no downloads or device access.')
         else:
             build_profile(args.inventory, args.store, args.wifi_file, args.validator,
                           args.time_server, args.output, args.base_url)

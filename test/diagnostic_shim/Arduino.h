@@ -7,6 +7,8 @@
 using TaskHandle_t=void*;
 inline TaskHandle_t task=reinterpret_cast<void*>(1);
 inline uint32_t now=1;
+inline bool diagnosticIsr=false;
+inline bool xPortInIsrContext(){return diagnosticIsr;}
 inline TaskHandle_t xTaskGetCurrentTaskHandle(){return task;}
 inline uint32_t millis(){return now;}
 struct FakeSerial {

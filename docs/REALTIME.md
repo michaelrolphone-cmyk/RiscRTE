@@ -27,6 +27,14 @@ nor infer validity from a plausible date. Reserved output is zero. Callers suppl
 exact `struct_size`; errors leave output unchanged. The broker validates backend
 output before copying it to the app.
 
+Runtime 0.1.59 obtains UNSET snapshots without reading the untrusted SDK wall
+clock. A stale negative/range-invalid SDK value or failed SDK wall read could
+previously return IO while validity was already UNSET. Clients which recover
+only UNSET, including the X4 Clock, then never reached their external RTC or
+explicit seed. UNSET still requires a valid monotonic bracket; seeded and
+retained VALID snapshots keep all SDK I/O, range and fractional checks.
+No automatic seed, error retry, preference repair or RTC write is introduced.
+
 The separate control grant can change the **device-wide** SDK wall clock, including
 time observed by TLS and other apps. `seed` accepts seconds 0..2147483647 and
 nanoseconds 0..999999999 divisible by 1000. The 2038 bound matches this pinned
@@ -99,6 +107,19 @@ Native coverage includes epoch-zero validity, boundary precision, cold invalidit
 all reset classes, seeded time, fresh-process deep restart with SDK-advanced time,
 boot-local correlation reset, returning entry rollback, every bit of the RTC
 stamp, SDK read/set failures and unchanged outputs on errors.
+
+The 0.1.59 regression checks cold/software-reset UNSET with negative and
+overflowing raw wall seconds, invalid fractions and SDK wall-read failure;
+the same corrupt values remain IO after an explicit valid seed. The companion
+System Apps `scripts/test_sparse_clock_native_boot.py` pins the delivered X4
+Minimal0.1.10 Clock, deployment sleep client and actual alarm provider, linking
+both delivered and fixed production NativeRealtime against SDK boundary doubles.
+It covers delayed sync/async logo presentation and real poll-descriptor
+eligibility, empty preferences, reset, a previous retained validity stamp,
+recovery failures, actual error-frame pixels and cleanup/retention custody.
+These injected raw SDK faults reproduce a software failure mode. They do not
+establish the physical cause of an intermittent device report without its
+diagnostic log or hardware reproduction.
 
 Normal and UBSan focused tests pass locally. macOS ASan execution stalled without
 diagnostics and was stopped; no local ASan pass is claimed. Hosted CI runs the

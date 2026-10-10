@@ -28,7 +28,9 @@ bool Port::reserve(int16_t pin,const void* owner){
   pins_[pin].owner=owner;return true;
 }
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
+#include "CpuSdmmc.inc"
 bool Port::providerStorageSafe() const {
+  if(sdmmc_.closing)return false;
   if(!available() || sleepRetained_ || transferring_ || iq_.token)return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
@@ -41,7 +43,7 @@ bool Port::providerStorageSafe() const {
 bool Port::appExitSafe() const {
   // Healthy HCI is entirely firmware/provider-owned, with no app callbacks or
   // borrowed app storage; it survives navigation. Restart/sleep still drain it.
-  if(!providerStorageSafe())return false;
+  if(!providerStorageSafe() || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
@@ -50,7 +52,9 @@ bool Port::appExitSafe() const {
   return true;
 }
 bool Port::restartResourcesSafe() const {
-  if(!providerStorageSafe())return false;
+  if(runtime_ && !runtime_->residentResetSafe())return false;
+  if(sdmmc_.token || sdmmc_.closing)return false;
+  if(!providerStorageSafe() || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
@@ -59,6 +63,8 @@ bool Port::restartResourcesSafe() const {
   return true;
 }
 bool Port::quiescent() const {
+  if(sdmmc_.token || sdmmc_.closing)return false;
+  if(usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   if(iq_.token || iq_.closing)return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.token)return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
@@ -124,15 +130,27 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
       gpio.pullup|=pinBit(config.bus.mosi); // Owned bidirectional probe input.
     }
   }
-  gpio.api={1,sizeof(gpio.api),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput};return true;
+  gpio.api.base={1,sizeof(garden_gpio_v1),&gpio,gpioClaim,gpioWrite,gpioRead,gpioPwm,gpioRelease,waveform,gpioLightSleep,gpioDeepSleep,gpioDeepSleepHold,gpioLightSleepFor,gpioDeepSleepFor,gpioWakeSource,gpioLightSleepSet,gpioDeepSleepSet,gpioRetireHeldOutput,gpioReadRetiredOutput};
+  if(!strcmp(selected.type,"gpio.bank") && hw_.sdmmcOpen){
+    if(!hw_.sdmmcRead || !hw_.sdmmcWrite || !hw_.sdmmcSync || !hw_.sdmmcClose)return false;
+    gpio.api.base.struct_size=sizeof(gpio.api);gpio.api.sdmmc_tag=RISC_GPIO_SDMMC_TAG_V1;gpio.api.sdmmc_version=1;
+    gpio.api.sdmmc={1,sizeof(gpio.api.sdmmc),&gpio,sdmmcOpen,sdmmcRead,sdmmcWrite,sdmmcSync,sdmmcRelease};
+  }
+  return true;
 }
 bool Port::bind(RiscBoot::Runtime& runtime){
   if(bound_ || !available() || !hw_.now || !hw_.sleep || !hw_.gpioOpen || !hw_.gpioWrite || !hw_.gpioRead || !hw_.gpioPwm || !hw_.gpioClose ||
      !hw_.i2cOpen || !hw_.i2cTransfer || !hw_.i2cClose || !hw_.spiOpen || !hw_.spiBegin || !hw_.spiTransfer || !hw_.spiEnd || !hw_.spiClose)return false;
-  bound_=true;
+  bound_=true;runtime_=&runtime;
   clock_={1,sizeof(clock_),this,[](void* c)->uint64_t{auto& p=*static_cast<Port*>(c);return p.hw_.owner()?p.hw_.now():0;},
     [](void* c,uint32_t ms){auto& p=*static_cast<Port*>(c);if(p.hw_.owner())p.hw_.sleep(ms>5000?5000:ms);}};
   if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_))return false;
+  if(hw_.usbPhyIdle || hw_.usbPhySuspend || hw_.usbPhyResume){
+    if(!hw_.usbPhyIdle || !hw_.usbPhySuspend || !hw_.usbPhyResume)return false;
+    usb_.port=this;
+    usb_.api={1,sizeof(usb_.api),&usb_,RISC_USB_PHY_ESP32S3_OTG,0,usbPhyOwner,usbPhyClaim,usbPhyRelease};
+    if(!runtime.registerPlatform(RISC_USB_PHY_RESOURCE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&usb_.api))return false;
+  }
   if(hw_.realtimeRead || hw_.realtimeSeed){
     if(!hw_.realtimeRead || !hw_.realtimeSeed)return false;
     realtime_={1,sizeof(realtime_),this,[](void* c,risc_realtime_snapshot_v1* out)->int32_t{
@@ -172,7 +190,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
     }
     if(runtime.uses(id,"platform.gpio",1)){
       if(gpioCount_==16)return false;
-      auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
+      auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api.base))return false;
     }
     if(runtime.uses(id,"platform.i2c.controller",1)){
       if(i2cCount_==2 || strcmp(d.type,"controller.i2c"))return false;
@@ -218,11 +236,44 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       c.bus=radio?d.lora().bus:d.config.display.bus;
       c.cs=radio?d.lora().cs:d.config.display.cs;
       int physical=board.physicalController(c.bus.instance_id);if(physical<2 || physical>3)return false;c.physical=physical;
-      c.api={1,sizeof(c.api),&c,spiClaim,spiBegin,spiTransfer,spiEnd,idleClocks,spiRelease};
+      c.api={1,sizeof(c.api),&c,spiClaim,spiBegin,spiTransfer,spiEnd,idleClocks,spiRelease,spiClaimThreeWire};
       if(!runtime.registerPlatform("spi.bus",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
   }
   return true;
+}
+bool Port::usbPhyOwner(void* context){
+  if(!context)return false;
+  const auto& c=*static_cast<UsbPhy*>(context);
+  return c.port && c.port->available() && !c.port->sleepRetained_;
+}
+bool Port::usbPhyClaim(void* context,uint64_t* out){
+  if(out)*out=0;
+  if(!context || !out)return false;
+  auto& c=*static_cast<UsbPhy*>(context);if(!c.port)return false;auto& p=*c.port;
+  if(!usbPhyOwner(context) || p.transferring_ || c.token || c.closing ||
+     !p.hw_.usbPhyIdle || !p.hw_.usbPhySuspend || !p.hw_.usbPhyResume || !p.hw_.usbPhyIdle() ||
+     p.pins_[19].owner || p.pins_[20].owner || p.serial_==UINT64_MAX)return false;
+  // CPU pin ownership excludes ordinary GPIO/bus clients for the lease.
+  // The provider retains SD/SPI access; this is not the storage safety fence.
+  if(!p.reserve(19,&c))return false;
+  if(!p.reserve(20,&c)){p.unreserve(19,&c);return false;}
+  c.token=p.token();*out=c.token;
+  p.transferring_=true;const bool ok=p.hw_.usbPhySuspend();p.transferring_=false;
+  if(!ok && usbPhyOwner(context) && p.hw_.usbPhyIdle()){
+    p.unreserve(19,&c);p.unreserve(20,&c);c.token=0;*out=0;return false;
+  }
+  c.closing=!ok || !usbPhyOwner(context) || p.hw_.usbPhyIdle();
+  return !c.closing;
+}
+bool Port::usbPhyRelease(void* context,uint64_t token){
+  if(!context || !token)return false;
+  auto& c=*static_cast<UsbPhy*>(context);if(!c.port)return false;auto& p=*c.port;
+  if(!usbPhyOwner(context) || p.transferring_ || c.token!=token || !p.hw_.usbPhyResume || !p.hw_.usbPhyIdle)return false;
+  c.closing=true;
+  p.transferring_=true;const bool ok=p.hw_.usbPhyResume();p.transferring_=false;
+  if(!ok || !usbPhyOwner(context) || !p.hw_.usbPhyIdle())return false;
+  p.unreserve(19,&c);p.unreserve(20,&c);c.token=0;c.closing=false;return true;
 }
 bool Port::i2sOpen(void* context,uint8_t unit,bool rx,uint8_t clk,int8_t ws,uint8_t data,uint32_t rate,uint8_t channels,uint64_t* out){
   if(out)*out=0;
@@ -529,8 +580,16 @@ bool Port::gpioWrite(void* context,uint64_t token,bool level){
 }
 bool Port::gpioRead(void* context,uint64_t token,bool* level){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.available() || !token || !level)return false;
-  for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token)return p.hw_.gpioRead(i,level);
-  return false;
+  auto& hint=p.gpioWritePins_[token & 63u];
+  unsigned i=hint?unsigned(hint-1):49;
+  if(i==49 || p.pins_[i].owner!=&c || p.pins_[i].token!=token){
+    // Share the validated pin hint with writes. Full owner/token checks on
+    // every hit preserve release, scope, generation and retired-pad rules.
+    for(i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token)break;
+    if(i==49)return false;
+    hint=static_cast<uint8_t>(i+1);
+  }
+  return p.hw_.gpioRead(i,level);
 }
 bool Port::gpioPwm(void* context,uint64_t token,uint32_t hz,uint16_t duty,uint16_t maximum){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.available() || !token || !hz || hz>40000 || !maximum || duty>maximum)return false;
@@ -554,7 +613,8 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.iq_.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.iq_.closing || p.usb_.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
@@ -605,7 +665,9 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.iq_.closing)return RISC_DEEP_SLEEP_RETAINED;
+  if(p.iq_.closing || p.usb_.closing)return RISC_DEEP_SLEEP_RETAINED;
+  if(p.runtime_ && !p.runtime_->residentResetSafe())return RISC_DEEP_SLEEP_BUSY;
+  if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
   if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
@@ -683,7 +745,9 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_ || p.sleepRetained_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.iq_.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  if(p.iq_.closing || p.usb_.closing)return RISC_LIGHT_SLEEP_RETAINED;
+  if(deep && p.runtime_ && !p.runtime_->residentResetSafe())return RISC_LIGHT_SLEEP_BUSY;
+  if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
@@ -738,7 +802,8 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.iq_.closing)return RISC_DEEP_SLEEP_RETAINED;
+  if(p.iq_.closing || p.usb_.closing)return RISC_DEEP_SLEEP_RETAINED;
+  if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
   if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(unsigned i=0;i<49;++i){
@@ -763,6 +828,25 @@ bool Port::gpioRetireHeldOutput(void* context,uint64_t token){
     pin.token=0;pin.retiredHeld=true;return true;
   }
   return false;
+}
+bool Port::gpioReadRetiredOutput(void* context,uint8_t pin,bool* level){
+  if(level)*level=false;
+  if(!context || !level || pin>48)return false;
+  auto& c=*static_cast<Gpio*>(context);if(!c.port)return false;
+  auto& p=*c.port;
+  // A copied/forged scope cannot acquire read authority by copying its masks.
+  bool scoped=false;for(size_t i=0;i<p.gpioCount_;++i)if(&p.gpios_[i]==&c){scoped=true;break;}
+  if(!scoped || !p.available() || p.sleepRetained_ || p.transferring_ ||
+     !(c.output&pinBit(pin)) || !p.hw_.gpioRead)return false;
+  const auto& held=p.pins_[pin];
+  if(held.owner!=&c || held.token || !held.output || !held.held ||
+     !held.retiredHeld || held.pwm || held.wakeModes)return false;
+  // Fence reentry across the physical read. In particular, a nested fresh
+  // claim must not unhold/reconfigure the pad while it is being sampled.
+  p.sleeping_=true;bool sampled=false;
+  const bool ok=p.hw_.gpioRead(pin,&sampled);p.sleeping_=false;
+  if(ok)*level=sampled;
+  return ok;
 }
 bool Port::gpioRelease(void* context,uint64_t token){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;if(!p.hw_.owner() || p.sleepRetained_ || p.sleeping_ || !token)return false;
@@ -792,10 +876,16 @@ bool Port::i2cClose(void* context,uint64_t token){
   p.unreserve(c.bus.sda,&c);p.unreserve(c.bus.scl,&c);c.token=0;return true;
 }
 bool Port::spiClaim(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t cs,uint64_t* out){
+  return spiClaimImpl(context,sclk,mosi,miso,cs,out,false);
+}
+bool Port::spiClaimThreeWire(void* context,uint8_t sclk,uint8_t mosi,uint8_t cs,uint64_t* out){
+  return spiClaimImpl(context,sclk,mosi,-1,cs,out,true);
+}
+bool Port::spiClaimImpl(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t cs,uint64_t* out,bool threeWire){
   if(out)*out=0;
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
-  if(!out || !p.available() || c.token || sclk!=c.bus.sclk || mosi!=c.bus.mosi || miso!=c.bus.miso || cs!=c.cs ||
-     (bus.refs && bus.instance!=c.bus.instance_id) || !p.reserve(cs,&c))return false;
+  if(!out || !p.available() || c.token || bus.closing || sclk!=c.bus.sclk || mosi!=c.bus.mosi || miso!=c.bus.miso || cs!=c.cs ||
+     (threeWire && !p.hw_.spiBeginThreeWire) || (bus.refs && bus.instance!=c.bus.instance_id) || !p.reserve(cs,&c))return false;
   uint64_t token=p.token();
   if(!token || !p.hw_.gpioOpen(cs,true,true,false)){if(!p.hw_.gpioClose(cs))p.poisoned_=true;else p.unreserve(cs,&c);return false;}
   if(!bus.refs){
@@ -807,35 +897,50 @@ bool Port::spiClaim(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t 
     }
     bus.instance=c.bus.instance_id;
   }
-  ++bus.refs;c.token=token;*out=token;return true;
+  ++bus.refs;c.threeWire=threeWire;c.ready=false;c.closing=false;c.token=token;*out=token;return true;
 }
 bool Port::spiBegin(void* context,uint64_t token,uint32_t hz,uint8_t mode,uint32_t ms){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
-  if(!p.available() || !token || c.token!=token || bus.held || !hz || hz>c.bus.frequency_hz || mode!=c.bus.mode || !ms || ms>1000)return false;
+  if(!p.available() || !token || c.token!=token || c.closing || bus.closing || bus.held || !hz || hz>c.bus.frequency_hz || mode!=c.bus.mode || !ms || ms>1000)return false;
   c.deadline=p.hw_.now()+ms;
+  if(c.threeWire){
+    // Backend mode/pad changes are fallible. Retain the whole transaction
+    // before entering it, so even a failed begin has an explicit end path.
+    bus.held=&c;c.ready=false;
+    c.ready=p.hw_.spiBeginThreeWire(c.physical,c.cs,hz,mode,ms);
+    return c.ready;
+  }
   if(!p.hw_.spiBegin(c.physical,c.cs,hz,mode,ms))return false;
-  bus.held=&c;return true;
+  bus.held=&c;c.ready=true;return true;
 }
 bool Port::spiTransfer(void* context,uint64_t token,const uint8_t* tx,uint8_t* rx,size_t count){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
   uint64_t now=p.hw_.now();
   if(!p.available() || !token || c.token!=token || bus.held!=&c || !count || count>512 || now>=c.deadline)return false;
-  return p.hw_.spiTransfer(c.physical,tx,rx,count,uint32_t(c.deadline-now));
+  if(c.threeWire && (!c.ready || bool(tx)==bool(rx)))return false;
+  uint32_t remaining=uint32_t(c.deadline-now);
+  if(c.threeWire && remaining>8)remaining=8;
+  const bool result=p.hw_.spiTransfer(c.physical,tx,rx,count,remaining);
+  if(c.threeWire && !result)c.ready=false;
+  return result;
 }
 bool Port::spiEnd(void* context,uint64_t token){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
   if(!p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || !token || c.token!=token || bus.held!=&c)return false;
   uint64_t now=p.hw_.now();uint32_t remaining=now<c.deadline?uint32_t(c.deadline-now):0;
+  if(c.threeWire){c.ready=false;if(remaining>8)remaining=8;}
   if(!p.hw_.spiEnd(c.physical,c.cs,remaining))return false;
-  bus.held=nullptr;c.deadline=0;return true;
+  bus.held=nullptr;c.deadline=0;c.ready=false;return true;
 }
 bool Port::spiRelease(void* context,uint64_t token){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
-  if(!p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || !token || c.token!=token || bus.held)return false;
+  if(!p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || !token || c.token!=token || bus.held || (bus.closing && bus.closing!=&c))return false;
+  if(c.threeWire){c.closing=true;bus.closing=&c;}
   if(bus.refs==1 && !p.hw_.spiClose(c.physical))return false;
   if(!p.hw_.gpioClose(c.cs))return false;
   p.unreserve(c.cs,&c);
   if(--bus.refs==0){p.unreserve(c.bus.sclk,&bus);p.unreserve(c.bus.mosi,&bus);p.unreserve(c.bus.miso,&bus);bus.instance=0;}
-  c.token=0;return true;
+  if(bus.closing==&c)bus.closing=nullptr;
+  c.token=0;c.threeWire=false;c.ready=false;c.closing=false;return true;
 }
 }

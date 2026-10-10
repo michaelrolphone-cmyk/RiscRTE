@@ -1,0 +1,637 @@
+[
+  {
+    "suite": "runtime",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_runtime_test.sh"
+    ],
+    "exit": 0,
+    "log": "runtime.log",
+    "log_sha256": "9ba5bfa5b2aa699d5577ba4476c7d5717d1275f4fea3edb2c7546479ddf8f1c8"
+  },
+  {
+    "suite": "runtime",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_runtime_test.sh"
+    ],
+    "exit": 0,
+    "log": "runtime-san.log",
+    "log_sha256": "9ba5bfa5b2aa699d5577ba4476c7d5717d1275f4fea3edb2c7546479ddf8f1c8"
+  },
+  {
+    "suite": "provider_graph_v2",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_graph_v2_test.sh"
+    ],
+    "exit": 0,
+    "log": "provider-graph-final.log",
+    "supersedes": "added observer invalid/reused-token and high-water persistence assertions",
+    "log_sha256": "93cab9800e8cc43e0d96900a0bf70292cec0d8667864f91e6a8216b4f6607658"
+  },
+  {
+    "suite": "provider_graph_v2",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_graph_v2_test.sh"
+    ],
+    "exit": 0,
+    "log": "provider-graph-final-san.log",
+    "supersedes": "added observer invalid/reused-token and high-water persistence assertions",
+    "log_sha256": "93cab9800e8cc43e0d96900a0bf70292cec0d8667864f91e6a8216b4f6607658"
+  },
+  {
+    "suite": "demand_activation",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_demand_activation_test.sh"
+    ],
+    "exit": 0,
+    "log": "demand_activation.log",
+    "log_sha256": "2d3d6f86c009ff28767bb17ccd6a5c3ce97ea538b1e6fb86e8e0e724aa94f52d"
+  },
+  {
+    "suite": "demand_activation",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_demand_activation_test.sh"
+    ],
+    "exit": 0,
+    "log": "demand_activation-san.log",
+    "log_sha256": "2d3d6f86c009ff28767bb17ccd6a5c3ce97ea538b1e6fb86e8e0e724aa94f52d"
+  },
+  {
+    "suite": "demand_retention",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_demand_retention_test.sh"
+    ],
+    "exit": 0,
+    "log": "demand_retention.log",
+    "log_sha256": "d68631e62e4aaccbed09f571152866a7849d6e66b08b52c638989b26b5fc8cc2"
+  },
+  {
+    "suite": "demand_retention",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_demand_retention_test.sh"
+    ],
+    "exit": 0,
+    "log": "demand_retention-san.log",
+    "log_sha256": "d68631e62e4aaccbed09f571152866a7849d6e66b08b52c638989b26b5fc8cc2"
+  },
+  {
+    "suite": "provider_queue_host",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_queue_host_test.sh"
+    ],
+    "exit": 0,
+    "log": "provider_queue_host.log",
+    "log_sha256": "e618eedf8086cd808ea9c45031c3944193ad7ad92cf6953a7c46c4d318bd1370"
+  },
+  {
+    "suite": "provider_queue_host",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_queue_host_test.sh"
+    ],
+    "exit": 0,
+    "log": "provider_queue_host-san.log",
+    "log_sha256": "e618eedf8086cd808ea9c45031c3944193ad7ad92cf6953a7c46c4d318bd1370"
+  },
+  {
+    "suite": "provider_queue_retained_fence",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_queue_retained_fence_test.sh"
+    ],
+    "exit": 0,
+    "log": "provider_queue_retained_fence.log",
+    "log_sha256": "bada39aacb70c27114f5115fe168edd3913931bb20c8c38ffa7c51c485f1e114"
+  },
+  {
+    "suite": "provider_queue_retained_fence",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_queue_retained_fence_test.sh"
+    ],
+    "exit": 0,
+    "log": "provider_queue_retained_fence-san.log",
+    "log_sha256": "bada39aacb70c27114f5115fe168edd3913931bb20c8c38ffa7c51c485f1e114"
+  },
+  {
+    "suite": "app_stream_sessions",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_app_stream_sessions_test.sh"
+    ],
+    "exit": 0,
+    "log": "app_stream_sessions.log",
+    "log_sha256": "9772ca8d66f05841070365967c4c2890034cd2b86db022090cb5851bf72b32d7"
+  },
+  {
+    "suite": "app_stream_sessions",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_app_stream_sessions_test.sh"
+    ],
+    "exit": 0,
+    "log": "app_stream_sessions-san.log",
+    "log_sha256": "9772ca8d66f05841070365967c4c2890034cd2b86db022090cb5851bf72b32d7"
+  },
+  {
+    "suite": "resident_shell",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_shell_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_shell.log",
+    "log_sha256": "6643e9540dd1de2a877bc560f519a2da14ac3f867efc1ab1a4054ef57e078e45"
+  },
+  {
+    "suite": "resident_shell",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_shell_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_shell-san.log",
+    "log_sha256": "6643e9540dd1de2a877bc560f519a2da14ac3f867efc1ab1a4054ef57e078e45"
+  },
+  {
+    "suite": "resident_loading",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_loading_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_loading.log",
+    "log_sha256": "019d01c2c278fcb82e7224880a305f66a19096d4ed10aee38041771379146424"
+  },
+  {
+    "suite": "resident_loading",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_loading_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_loading-san.log",
+    "log_sha256": "019d01c2c278fcb82e7224880a305f66a19096d4ed10aee38041771379146424"
+  },
+  {
+    "suite": "resident_legacy",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_legacy_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_legacy.log",
+    "log_sha256": "f25336a41e3088e7f04ed799216911a8b8212e3919cf2e2e133e85f080ab136e"
+  },
+  {
+    "suite": "resident_legacy",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_legacy_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_legacy-san.log",
+    "log_sha256": "f25336a41e3088e7f04ed799216911a8b8212e3919cf2e2e133e85f080ab136e"
+  },
+  {
+    "suite": "resident_policy",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_policy_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_policy.log",
+    "log_sha256": "b7a1f0229d998d9f94e582996cfc1d082615037f0421b85a7ef01657d755bc25"
+  },
+  {
+    "suite": "resident_policy",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_policy_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_policy-san.log",
+    "log_sha256": "b7a1f0229d998d9f94e582996cfc1d082615037f0421b85a7ef01657d755bc25"
+  },
+  {
+    "suite": "resident_native_contexts",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_native_contexts_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_native_contexts.log",
+    "log_sha256": "b01d165c4a163637e0e6dd77d885c1fb52cbe94c108ad9e00049f4242b90c034"
+  },
+  {
+    "suite": "resident_native_contexts",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_native_contexts_test.sh"
+    ],
+    "exit": 0,
+    "log": "resident_native_contexts-san.log",
+    "log_sha256": "b01d165c4a163637e0e6dd77d885c1fb52cbe94c108ad9e00049f4242b90c034"
+  },
+  {
+    "suite": "cohort_runtime",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_cohort_runtime_test.sh"
+    ],
+    "exit": 0,
+    "log": "cohort-runtime-fixed.log",
+    "supersedes": "previous fixed25-provider expectation",
+    "log_sha256": "44b7f069e1a087f944a3853b5b313bbf99d3d80dd7f35703e035df92bbf5678c"
+  },
+  {
+    "suite": "cohort_runtime",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_cohort_runtime_test.sh"
+    ],
+    "exit": 0,
+    "log": "cohort-runtime-fixed-san.log",
+    "supersedes": "previous fixed25-provider expectation",
+    "log_sha256": "44b7f069e1a087f944a3853b5b313bbf99d3d80dd7f35703e035df92bbf5678c"
+  },
+  {
+    "suite": "update_runtime",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_update_runtime_test.sh"
+    ],
+    "exit": 0,
+    "log": "update_runtime.log",
+    "log_sha256": "6c61fde749bd621b430a08d400c3fd67d07ec70180e955516c78583779a126b1"
+  },
+  {
+    "suite": "update_runtime",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_update_runtime_test.sh"
+    ],
+    "exit": 0,
+    "log": "update_runtime-san.log",
+    "log_sha256": "6c61fde749bd621b430a08d400c3fd67d07ec70180e955516c78583779a126b1"
+  },
+  {
+    "suite": "paired_runtime_memory",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_paired_runtime_memory_test.sh"
+    ],
+    "exit": 0,
+    "log": "paired_runtime_memory.log",
+    "log_sha256": "fd2be4daf7f9e1f7431163f9ba3b43d5fe2c042a78ea79e3941319006ecbafe2"
+  },
+  {
+    "suite": "paired_runtime_memory",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_paired_runtime_memory_test.sh"
+    ],
+    "exit": 0,
+    "log": "paired_runtime_memory-san.log",
+    "log_sha256": "fd2be4daf7f9e1f7431163f9ba3b43d5fe2c042a78ea79e3941319006ecbafe2"
+  },
+  {
+    "suite": "provider_sync",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_sync_test.sh"
+    ],
+    "exit": 0,
+    "log": "provider_sync.log",
+    "log_sha256": "fb8c478cc6c6e447ed2ca542bbd44c76de9e6cddb1bae2b52953408708dd40c5"
+  },
+  {
+    "suite": "provider_sync",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_sync_test.sh"
+    ],
+    "exit": 0,
+    "log": "provider_sync-san.log",
+    "log_sha256": "fb8c478cc6c6e447ed2ca542bbd44c76de9e6cddb1bae2b52953408708dd40c5"
+  },
+  {
+    "suite": "native_sdmmc",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_native_sdmmc_test.sh"
+    ],
+    "exit": 0,
+    "log": "native_sdmmc.log",
+    "log_sha256": "e5705f6a2db95a3d66d0ddfd7a3d4eca9327ce7ae1e7e25cdf3edeb7b28b90e1"
+  },
+  {
+    "suite": "native_sdmmc",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_native_sdmmc_test.sh"
+    ],
+    "exit": 0,
+    "log": "native_sdmmc-san.log",
+    "log_sha256": "e5705f6a2db95a3d66d0ddfd7a3d4eca9327ce7ae1e7e25cdf3edeb7b28b90e1"
+  },
+  {
+    "suite": "sdmmc_port",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_sdmmc_port_test.sh"
+    ],
+    "exit": 0,
+    "log": "sdmmc_port.log",
+    "log_sha256": "727821af6c7b40424da2dbeac31eb934f7545e02ec0530810efe25b430d80e41"
+  },
+  {
+    "suite": "sdmmc_port",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_sdmmc_port_test.sh"
+    ],
+    "exit": 0,
+    "log": "sdmmc_port-san.log",
+    "log_sha256": "727821af6c7b40424da2dbeac31eb934f7545e02ec0530810efe25b430d80e41"
+  },
+  {
+    "suite": "usb_phy",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_usb_phy_test.sh"
+    ],
+    "exit": 0,
+    "log": "usb_phy.log",
+    "log_sha256": "3bd206b71f5860ad662e05906f2dd51af1d592919c22cedea9d81f20b8f7bcef"
+  },
+  {
+    "suite": "usb_phy",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_usb_phy_test.sh"
+    ],
+    "exit": 0,
+    "log": "usb_phy-san.log",
+    "log_sha256": "3bd206b71f5860ad662e05906f2dd51af1d592919c22cedea9d81f20b8f7bcef"
+  },
+  {
+    "suite": "cohort_runtime_appdata",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_cohort_runtime_test.sh"
+    ],
+    "environment": {
+      "APP_DATA_TEST": "1"
+    },
+    "exit": 0,
+    "log": "cohort_runtime_appdata.log",
+    "log_sha256": "44b7f069e1a087f944a3853b5b313bbf99d3d80dd7f35703e035df92bbf5678c"
+  },
+  {
+    "suite": "cohort_runtime_appdata",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_cohort_runtime_test.sh"
+    ],
+    "environment": {
+      "APP_DATA_TEST": "1"
+    },
+    "exit": 0,
+    "log": "cohort_runtime_appdata-san.log",
+    "log_sha256": "44b7f069e1a087f944a3853b5b313bbf99d3d80dd7f35703e035df92bbf5678c"
+  },
+  {
+    "suite": "demand_retention_policy17",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_demand_retention_test.sh"
+    ],
+    "environment": {
+      "RISC_APP_POLICY_ROWS": "17"
+    },
+    "exit": 0,
+    "log": "demand_retention_policy17.log",
+    "log_sha256": "d68631e62e4aaccbed09f571152866a7849d6e66b08b52c638989b26b5fc8cc2"
+  },
+  {
+    "suite": "demand_retention_policy17",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_demand_retention_test.sh"
+    ],
+    "environment": {
+      "RISC_APP_POLICY_ROWS": "17"
+    },
+    "exit": 0,
+    "log": "demand_retention_policy17-san.log",
+    "log_sha256": "d68631e62e4aaccbed09f571152866a7849d6e66b08b52c638989b26b5fc8cc2"
+  },
+  {
+    "suite": "resident_loading_memory",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_resident_loading_test.sh"
+    ],
+    "environment": {
+      "RESIDENT_NATIVE_MEMORY": "1"
+    },
+    "exit": 0,
+    "log": "resident_loading_memory.log",
+    "log_sha256": "019d01c2c278fcb82e7224880a305f66a19096d4ed10aee38041771379146424"
+  },
+  {
+    "suite": "resident_loading_memory",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_resident_loading_test.sh"
+    ],
+    "environment": {
+      "RESIDENT_NATIVE_MEMORY": "1"
+    },
+    "exit": 0,
+    "log": "resident_loading_memory-san.log",
+    "log_sha256": "019d01c2c278fcb82e7224880a305f66a19096d4ed10aee38041771379146424"
+  },
+  {
+    "suite": "hwcdc_pinned",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/hwcdc_pinned/run.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "log": "hwcdc_pinned.log",
+    "log_sha256": "35e285eaca1c0cf6030e701f16fce07c519aaec413fb1d3e2d36fe26030297ff"
+  },
+  {
+    "suite": "hwcdc_pinned",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/hwcdc_pinned/run.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "log": "hwcdc_pinned-san.log",
+    "log_sha256": "35e285eaca1c0cf6030e701f16fce07c519aaec413fb1d3e2d36fe26030297ff"
+  },
+  {
+    "suite": "board",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_board_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "log": "board.log",
+    "log_sha256": "8853be95af0d8ce8f28c4e77a741d7591ebc56dc41fe03fbb47330f2925a435e"
+  },
+  {
+    "suite": "board",
+    "sanitizer_requested": true,
+    "command": [
+      "c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g -Isrc -Isdk/hardware -Ilib/ArduinoJson/src src/bootstrap/Board.cpp src/bootstrap/Json.cpp test/board_test.cpp -o TEMP/test",
+      "ASAN_OPTIONS=detect_leaks=0 TEMP/test"
+    ],
+    "environment": {},
+    "exit": 0,
+    "log": "board-explicit-san.log",
+    "supersedes": "board runner ignores SANITIZE; explicit instrumented compile executed",
+    "log_sha256": "8853be95af0d8ce8f28c4e77a741d7591ebc56dc41fe03fbb47330f2925a435e"
+  },
+  {
+    "suite": "provider_dependency_cleanup",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_provider_dependency_cleanup_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "log": "provider_dependency_cleanup.log",
+    "log_sha256": "3bc5bf75a1b62ed311083e0c11f248e2c0e990d619029cea9ba31a0e56d837cf"
+  },
+  {
+    "suite": "provider_dependency_cleanup",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_provider_dependency_cleanup_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "log": "provider_dependency_cleanup-san.log",
+    "log_sha256": "3bc5bf75a1b62ed311083e0c11f248e2c0e990d619029cea9ba31a0e56d837cf"
+  },
+  {
+    "suite": "resident_object_export",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_resident_object_export_test.sh"
+    ],
+    "environment": {
+      "ELF_PYTHON": "/workspace/shared/provisioning-python/bin/python",
+      "RESIDENT_STORE": "/workspace/shared/x4-home-image-050/assembled/store"
+    },
+    "exit": 0,
+    "log": "resident-object-final.log",
+    "supersedes": "initial missing required source-store input, then missing pyelftools in default interpreter",
+    "log_sha256": "81d6858c96a64fdf8f8196ad123611b5dab4a71521ade8e34f20424148019304"
+  },
+  {
+    "suite": "resident_object_export",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_resident_object_export_test.sh"
+    ],
+    "environment": {
+      "ELF_PYTHON": "/workspace/shared/provisioning-python/bin/python",
+      "RESIDENT_STORE": "/workspace/shared/x4-home-image-050/assembled/store"
+    },
+    "exit": 0,
+    "log": "resident-object-final-san.log",
+    "supersedes": "initial missing required source-store input, then missing pyelftools in default interpreter",
+    "log_sha256": "da5258af7e86c65a792e731a43d1630cb4c5549e1e5e195c691503b49a8f6ce2"
+  },
+  {
+    "suite": "native_bank",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_native_bank_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "log": "native_bank.log",
+    "log_sha256": "78a073a0fc25a658e4d3ee0471ea95af52334f8741b9bd44446e6b3b5270f4f1"
+  },
+  {
+    "suite": "native_bank",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_native_bank_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "log": "native_bank-san.log",
+    "log_sha256": "78a073a0fc25a658e4d3ee0471ea95af52334f8741b9bd44446e6b3b5270f4f1"
+  }
+]

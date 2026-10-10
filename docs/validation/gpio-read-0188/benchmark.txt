@@ -1,0 +1,26 @@
+GPIO read: scope/full-token collisions, invalidation, retained release, held/retired pads, hardware refusal and exhaustion PASS
+Scoped GPIO write cache: collisions, full tokens, foreign/stale/input/held/retired/owner rejection, reacquire, PWM failure and exhaustion PASS
+baseline: mode=payload 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 32.466 ms (31.343..35.745); host scope/lookup overhead only
+baseline: mode=cold 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 32.240 ms (31.677..33.444); host scope/lookup overhead only
+baseline: mode=mixed 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 32.068 ms (31.273..33.431); host scope/lookup overhead only
+baseline: mode=collision 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 32.867 ms (30.813..34.883); host scope/lookup overhead only
+baseline counted: mode=payload 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 107.667 ms (107.145..112.999); host scope/lookup overhead only
+actual linear-search predicate evaluations=458752000 across 11010048 native reads
+baseline counted: mode=cold 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 117.347 ms (104.141..122.441); host scope/lookup overhead only
+actual linear-search predicate evaluations=458752000 across 11010048 native reads
+baseline counted: mode=mixed 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 108.047 ms (106.527..118.071); host scope/lookup overhead only
+actual linear-search predicate evaluations=462422016 across 11010048 native reads
+baseline counted: mode=collision 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 111.103 ms (107.077..115.992); host scope/lookup overhead only
+actual linear-search predicate evaluations=462422016 across 11010048 native reads
+current: mode=payload 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 12.273 ms (10.835..12.762); host scope/lookup overhead only
+current: mode=cold 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 11.569 ms (11.108..11.957); host scope/lookup overhead only
+current: mode=mixed 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 11.781 ms (11.539..13.370); host scope/lookup overhead only
+current: mode=collision 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 19.201 ms (18.405..19.685); host scope/lookup overhead only
+current counted: mode=payload 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 12.192 ms (11.206..12.699); host scope/lookup overhead only
+actual linear-search predicate evaluations=41 across 11010048 native reads
+current counted: mode=cold 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 11.669 ms (10.865..12.391); host scope/lookup overhead only
+actual linear-search predicate evaluations=36736 across 11010048 native reads
+current counted: mode=mixed 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 11.916 ms (11.654..15.960); host scope/lookup overhead only
+actual linear-search predicate evaluations=84 across 11010048 native reads
+current counted: mode=collision 65536 modeled bytes; 1572864 GPIO reads, 1048576 writes/trial; median 45.500 ms (43.998..46.603); host scope/lookup overhead only
+actual linear-search predicate evaluations=154140672 across 11010048 native reads

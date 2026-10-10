@@ -1,4 +1,7 @@
+#include "diagnostics/Performance.h"
+#include "diagnostics/StageLog.h"
 #include "ProviderModuleV2.h"
+#include "NativeProviderPolicyValidationV1.h"
 #include "../../../lib/hal/RuntimeFaultRetention.h"
 #include <cstring>
 #include <cstdio>
@@ -40,17 +43,36 @@ bool validRequest(const char* expectedId, const char* expectedCapability,
          expectedCapability[0] && expectedApi && validDependencies(deps, count);
 }
 void trace(const char* id, const char* stage) {
+  RISC_STAGE_LOG("provider reference id=%s stage=%s",id?id:"?",stage);
   (void)id; (void)stage;
 #ifdef ESP_PLATFORM
   LOG_INF("PROV", "PROVREF id=%s stage=%s", id ? id : "?", stage);
 #endif
 }
+#if RISC_STAGE_LOGS
+constexpr size_t DetailCapacity=512;
+void logDetail(const char* id,const char* detail){
+  // Keep the provider's report independent of the shorter retained error field.
+  // Repeating the bounded ID keeps each plain statement attributable. Even a
+  // 95-byte ID plus an 80-byte part fits the 255-byte timestamped line limit.
+  const size_t length=std::strlen(detail);
+  for(size_t offset=0;offset<length;offset+=80){
+    RISC_STAGE_LOG("provider detail id=%s part=%u text=%.80s",id?id:"?",unsigned(offset/80+1),detail+offset);
+  }
+  if(length==DetailCapacity-1){
+    RISC_STAGE_LOG("provider detail id=%s source-buffer-full=511 report-may-be-truncated",id?id:"?");
+  }
+}
+#else
+constexpr size_t DetailCapacity=112;
+#endif
 } // namespace
 
 void ModuleV2::report(const char* id, const char* stage, int code) {
   // Keep the original cause even if teardown subsequently fails.
   if (!error_[0]) std::snprintf(error_, sizeof(error_), "%s: %s rc=%d (0x%x)",
                               id ? id : "?", stage, code, static_cast<unsigned>(code));
+  RISC_STAGE_LOG("provider failed id=%s reason=%s code=%d",id?id:"?",stage,code);
   // Some ESP_PLATFORM host harnesses stub LOG_ERR to a no-op. Keep parameters
   // explicitly used in both logging-enabled and logging-disabled builds.
   (void)id; (void)stage; (void)code;
@@ -60,6 +82,7 @@ void ModuleV2::report(const char* id, const char* stage, int code) {
 }
 
 bool ModuleV2::closeMapped() {
+  if(!leaseSafe())return false;
   revokeLease();
   risc_runtime_retention_guard();
   if (!handle_) return true;
@@ -82,8 +105,9 @@ bool ModuleV2::closeMapped() {
 bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
                               const char* expectedCapability, uint32_t expectedApi,
                               const risc_provider_dependency_v1* deps, size_t count) {
-  if (risc_runtime_retention_required()) return false;
+  if (risc_runtime_retention_required() || !leaseSafe()) return false;
   const risc_driver_v2* candidate = get ? get(RISC_PROVIDER_DRIVER_ABI_V2) : nullptr;
+  if(!leaseSafe())return false;
   bool hardwareMapped=false;
   for (size_t i=0;i<count;++i) if (!std::strcmp(deps[i].capability_id,"hardware.device")) hardwareMapped=true;
   const bool valid = candidate && candidate->abi_version == RISC_PROVIDER_DRIVER_ABI_V2 &&
@@ -97,6 +121,33 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
   if (!valid) {
     report(expectedId, "elf-interface-or-identity");
     return false;
+  }
+  const risc_stream_session_provider_v1* sessions = nullptr;
+  if (candidate->struct_size >= offsetof(risc_driver_stream_sessions_v2,extension_tag) + sizeof(uint32_t)) {
+    const auto* extended = reinterpret_cast<const risc_driver_stream_sessions_v2*>(candidate);
+    // Unrelated larger descriptors do not authorize reading their suffix as a
+    // pointer. Inspect the explicit tag/version before touching adapter memory.
+    if (extended->extension_tag == RISC_DRIVER_STREAM_SESSIONS_TAG_V1) {
+      if (candidate->struct_size < sizeof(*extended) ||
+          extended->extension_version != RISC_DRIVER_STREAM_SESSIONS_VERSION_V1) {
+        report(expectedId, "stream-session-extension-invalid"); return false;
+      }
+      sessions = extended->stream_sessions;
+      if (!sessions || sessions->api_version != RISC_STREAM_SESSION_PROVIDER_API_V1 ||
+          sessions->struct_size < sizeof(*sessions) || !sessions->open || !sessions->call ||
+          !sessions->close || !extended->poll.streams.bind_streams || !hasQuiesce(candidate)) {
+        report(expectedId, "stream-session-interface-invalid"); return false;
+      }
+    }
+  }
+  if (candidate->struct_size >= offsetof(risc_driver_service_v2,extension_tag)+sizeof(uint32_t)) {
+    const auto* service = reinterpret_cast<const risc_driver_service_v2*>(candidate);
+    if (service->extension_tag == RISC_DRIVER_SERVICE_TAG_V1 &&
+        (candidate->struct_size < sizeof(*service) ||
+         service->extension_version != RISC_DRIVER_SERVICE_VERSION_V1 ||
+         !service->service || !hasQuiesce(candidate))) {
+      report(expectedId, "service-extension-invalid"); return false;
+    }
   }
   bool bound = true;
   if (candidate->struct_size >= sizeof(risc_driver_streams_v2)) {
@@ -120,8 +171,31 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     leaseAttempted_ = true;
     admitted = lease_.begin(lease_.context);
   }
-  if (admitted && candidate->start(deps, count)) {
+  bool started=false;
+  if(admitted) {
+#if RISC_STAGE_LOGS
+    const auto startUs=RiscDiagnostics::monotonicUs();
+#endif
+    RISC_STAGE_LOG("provider start begin id=%s",expectedId);
+    RiscPerf::Scope startTrace(24,25,RiscPerf::identity(expectedId));
+    started=candidate->start(deps,count);
+    // Revoke failed-start authority before calling any diagnostic sink.
+    if(!started)revokeLease();
+    RISC_STAGE_LOG("provider start end id=%s result=%s elapsed_us=%llu",expectedId,started?"ok":"failed",
+                   (unsigned long long)(RiscDiagnostics::monotonicUs()-startUs));
+  } else {
+    revokeLease();
+    RISC_STAGE_LOG("provider start skipped id=%s reason=%s",expectedId,bound?"lease-rejected":"stream-bind-rejected");
+  }
+  if(!leaseSafe()) {
+    // Native retained storage may be reported during start itself. Preserve
+    // code/dependencies without entering diagnostics, quiesce, stop or dlclose.
+    revokeLease();driver_=candidate;api_=nullptr;state_=State::Failed;
+    report(expectedId,"host-lease-retained");return false;
+  }
+  if (started) {
     driver_ = candidate;
+    streamSessions_ = sessions;
     api_ = candidate->capability;
     state_ = State::Active;
     trace(expectedId, "hardware-started");
@@ -132,22 +206,28 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
   revokeLease();
   if (candidate->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
     const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(candidate);
-    char detail[112]{};
+    char detail[DetailCapacity]{};
     if (diagnostics->last_error && diagnostics->last_error(detail, sizeof(detail))) {
       detail[sizeof(detail) - 1] = 0;
-      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %s", expectedId, detail);
+#if RISC_STAGE_LOGS
+      logDetail(expectedId,detail);
+#endif
+      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %.111s", expectedId, detail);
     }
   }
+  if(!leaseSafe()){driver_=candidate;return false;}
   if (!error_[0]) report(expectedId, "start rejected; update driver for diagnostics");
-  revokeStreams();
+  if (!revokeStreams()) { driver_ = candidate; report(expectedId, "stream-revoke-retained"); return false; }
   // A rejected start may still own DMA, tasks, IRQs or a lower provider.
   if (hasQuiesce(candidate) && !candidate->quiesce()) {
     driver_ = candidate;
     report(expectedId, "hardware-quiesce-rejected");
     return false;
   }
+  if(!leaseSafe()){driver_=candidate;return false;}
   candidate->stop();
-  closeStreams();
+  if(!leaseSafe()){driver_=candidate;return false;}
+  if (!closeStreams()) { report(expectedId, "stream-close-retained"); return false; }
   return false;
 }
 
@@ -171,7 +251,7 @@ bool ModuleV2::load(const char* path, const char* expectedId,
   if (error || !get) report(expectedId, "elf-entry-symbol-missing");
   if (!error && activateMapped(get, expectedId, expectedCapability,
                                expectedApi, deps, count)) return true;
-  if (driver_) return false;
+  if (driver_ || streamCleanupRetained_) return false;
   (void)closeMapped();
   return false;
 }
@@ -186,20 +266,94 @@ bool ModuleV2::loadVerifiedBytes(const uint8_t* candidateBytes, size_t length,
                                  const risc_provider_dependency_v1* deps,
                                  size_t count) {
   if (!handle_) error_[0] = 0;
+#ifdef ESP_PLATFORM
+  if (handle_ || !ownedPolicy_ || candidateBytes != ownedImage_ ||
+      !candidateBytes || length != ownedImageBytes_ ||
+      !validRequest(expectedId, expectedCapability, expectedApi, deps, count) ||
+      !nativePolicyMatchesModule(*ownedPolicy_, candidateBytes, length,
+          contentSha256, declaredImports, declaredImportCount, expectedId,
+          expectedCapability, expectedApi)) {
+    report(expectedId, "native-policy-or-image-not-bound");
+    return false;
+  }
+  state_ = State::Failed;
+  if (risc_runtime_retention_required() || !leaseSafe()) {
+    report(expectedId, "host-lease-retained");
+    return false;
+  }
+  auto* snapshot = static_cast<uint8_t*>(
+      heap_caps_malloc(length, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+  if (!snapshot) snapshot = static_cast<uint8_t*>(
+      heap_caps_malloc(length, MALLOC_CAP_8BIT));
+  if (!snapshot) {
+    report(expectedId, "elf-snapshot-oom", static_cast<int>(length));
+    return false;
+  }
+  std::memcpy(snapshot, candidateBytes, length);
+  // Verify the copy consumed by relocation, even after a prior clean unload.
+  // Neither a cached digest nor changing the public load arguments is proof.
+  if (!nativeProviderImageValid(*ownedPolicy_, snapshot, length)) {
+    heap_caps_free(snapshot);
+    report(expectedId, "native-policy-snapshot-integrity");
+    return false;
+  }
+  auto* image = static_cast<esp_elf_t*>(std::malloc(sizeof(esp_elf_t)));
+  if (!image) {
+    heap_caps_free(snapshot);
+    report(expectedId, "elf-handle-oom");
+    return false;
+  }
+  trace(expectedId, "elf-relocate-begin");
+  const int result = esp_elf_relocate_privileged_selected_diagnostics_v1(
+      image, snapshot, length, ownedPolicy_->imports, ownedPolicy_->importCount,
+      ownedPolicy_->diagnosticAbi);
+  heap_caps_free(snapshot);
+  if (result != 0) {
+    std::free(image);
+    report(expectedId, "elf-relocation-failed", result);
+    return false;
+  }
+  handle_ = image;
+  privileged_image_ = true;
+  risc_driver_get_v2_fn get = nullptr;
+  for (uint16_t i = 0; i < image->num; ++i) {
+    if (image->symtab[i].name &&
+        std::strcmp(image->symtab[i].name, "t5_driver_get") == 0) {
+      get = reinterpret_cast<risc_driver_get_v2_fn>(image->symtab[i].addr);
+      break;
+    }
+  }
+  if (!get) report(expectedId, "elf-entry-symbol-missing");
+  else trace(expectedId, "elf-relocated");
+  if (activateMapped(get, expectedId, expectedCapability, expectedApi, deps, count))
+    return true;
+  if (driver_ || streamCleanupRetained_) return false;
+  (void)closeMapped();
+  return false;
+#else
   (void)candidateBytes; (void)length; (void)contentSha256;
   (void)declaredImports; (void)declaredImportCount;
   (void)expectedId; (void)expectedCapability; (void)expectedApi;
   (void)deps; (void)count;
   return false;
+#endif
 }
 
 bool ModuleV2::poll(uint32_t budgetMs) {
-  if (!budgetMs || state_ != State::Active || !driver_ || !consumers_ ||
+  if (!budgetMs || state_ != State::Active || !leaseSafe() || !streamSafe() || !driver_ || !consumers_ ||
       driver_->struct_size < sizeof(risc_driver_poll_v2)) return false;
   const auto* extended = reinterpret_cast<const risc_driver_poll_v2*>(driver_);
   if (!extended->poll) return false;
   extended->poll(budgetMs);
   return true;
+}
+bool ModuleV2::service(uint32_t budgetMs) {
+  if (!budgetMs || budgetMs>RISC_DRIVER_SERVICE_MAX_MS || state_ != State::Active ||
+      !leaseSafe() || !streamSafe() || !driver_ || !consumers_ || driver_->struct_size < sizeof(risc_driver_service_v2))return false;
+  const auto* extended=reinterpret_cast<const risc_driver_service_v2*>(driver_);
+  if(extended->extension_tag!=RISC_DRIVER_SERVICE_TAG_V1 ||
+     extended->extension_version!=RISC_DRIVER_SERVICE_VERSION_V1 || !extended->service)return false;
+  extended->service(budgetMs);return true;
 }
 bool ModuleV2::pinConsumer() {
   if (state_ != State::Active || consumers_ == std::numeric_limits<uint32_t>::max())
@@ -214,43 +368,58 @@ bool ModuleV2::unpinConsumer() {
   return true;
 }
 
-void ModuleV2::revokeStreams() {
+bool ModuleV2::revokeStreams() {
   if (streamApi_.streams.context && !streamsRevoked_) {
-    streamHost_->revoke(streamApi_.streams.context);
+    if (streamHost_->revokeChecked) {
+      if (!streamHost_->revokeChecked(streamApi_.streams.context)) { streamCleanupRetained_=true; return false; }
+    } else streamHost_->revoke(streamApi_.streams.context);
     streamsRevoked_ = true;
   }
+  return true;
 }
 void ModuleV2::revokeLease() {
   if (!leaseAttempted_) return;
   leaseAttempted_ = false;
   lease_.revoke(lease_.context);
 }
-void ModuleV2::closeStreams() {
-  if (!streamApi_.streams.context) return;
-  revokeStreams();
-  streamHost_->close(streamApi_.streams.context);
+bool ModuleV2::closeStreams() {
+  if (!streamApi_.streams.context) return true;
+  if (!revokeStreams()) return false;
+  if (streamHost_->closeChecked) {
+    if (!streamHost_->closeChecked(streamApi_.streams.context)) { streamCleanupRetained_=true; return false; }
+  } else streamHost_->close(streamApi_.streams.context);
   streamApi_ = {};
+  return true;
 }
 void ModuleV2::reportQuiescence() {
-  if (!driver_) return;
+  if (!driver_ || !leaseSafe()) return;
   if (!error_[0] && driver_->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
     const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(driver_);
-    char detail[112]{};
+    char detail[DetailCapacity]{};
     if (diagnostics->last_error && diagnostics->last_error(detail, sizeof(detail))) {
       detail[sizeof(detail)-1] = 0;
-      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %s", driver_->driver_id, detail);
+#if RISC_STAGE_LOGS
+      logDetail(driver_->driver_id,detail);
+#endif
+      if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %.111s", driver_->driver_id, detail);
     }
   }
   report(driver_->driver_id, "hardware-quiesce-rejected");
 }
 bool ModuleV2::unload() {
-  if (consumers_) return false;
+  if (consumers_ || streamCleanupRetained_ || !leaseSafe()) return false;
+  auto hostSafe=[&](){
+    if(leaseSafe())return true;
+    api_=nullptr;state_=State::Failed;return false;
+  };
   revokeLease();
   risc_runtime_retention_guard();
-  revokeStreams();
+  if (!revokeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
   if (state_ == State::Failed && handle_ && driver_) {
     if (!hasQuiesce(driver_) || !driver_->quiesce()) { reportQuiescence(); return false; }
+    if(!hostSafe())return false;
     driver_->stop();
+    if(!hostSafe())return false;
     driver_ = nullptr;
   } else if (state_ == State::Active && driver_) {
     if (hasQuiesce(driver_) && !driver_->quiesce()) {
@@ -259,10 +428,13 @@ bool ModuleV2::unload() {
       state_ = State::Failed;
       return false;
     }
+    if(!hostSafe())return false;
     driver_->stop();
+    if(!hostSafe())return false;
     driver_ = nullptr;
   }
-  closeStreams();
+  if (!closeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
+  streamSessions_ = nullptr;
   api_ = nullptr;
   if (!closeMapped()) {
     state_ = State::Failed;

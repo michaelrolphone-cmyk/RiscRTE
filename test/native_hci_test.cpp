@@ -4,10 +4,13 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#define RADIO_STAGE_SAFE() assert(!RiscCpu::NativeHci::mux)
+#include "radio_stage_capture.h"
 using namespace RiscCpu;
 static esp_bt_controller_status_t status=ESP_BT_CONTROLLER_STATUS_IDLE;
 static const esp_vhci_host_callback_t* cb=nullptr;
 static std::string failure;
+static esp_err_t failureResult=ESP_FAIL;
 static unsigned allocations=0,frees=0,initializations=0,enables=0,disables=0,deinitializations=0,sends=0;
 static int64_t now=0;
 static bool ready=true;
@@ -21,7 +24,7 @@ int64_t esp_timer_get_time(){return now;}
 void vTaskDelay(unsigned n){assert(n==1 && !NativeHci::mux);now+=1000;}
 esp_bt_controller_status_t esp_bt_controller_get_status(){return status;}
 esp_err_t esp_bt_controller_init(esp_bt_controller_config_t* c){assert(status==ESP_BT_CONTROLLER_STATUS_IDLE && c->bluetooth_mode==ESP_BT_MODE_BLE && c->sleep_mode==ESP_BT_SLEEP_MODE_NONE);++initializations;if(failure=="init")return ESP_FAIL;status=ESP_BT_CONTROLLER_STATUS_INITED;return ESP_OK;}
-esp_err_t esp_bt_controller_enable(esp_bt_mode_t m){assert(status==ESP_BT_CONTROLLER_STATUS_INITED && m==ESP_BT_MODE_BLE);++enables;if(failure=="enable")return ESP_FAIL;status=ESP_BT_CONTROLLER_STATUS_ENABLED;return ESP_OK;}
+esp_err_t esp_bt_controller_enable(esp_bt_mode_t m){assert(status==ESP_BT_CONTROLLER_STATUS_INITED && m==ESP_BT_MODE_BLE);++enables;if(failure=="enable")return failureResult;status=ESP_BT_CONTROLLER_STATUS_ENABLED;return ESP_OK;}
 esp_err_t esp_bt_controller_disable(){assert(status==ESP_BT_CONTROLLER_STATUS_ENABLED && !NativeHci::mux);++disables;if(cb)assert(cb->notify_host_recv(event,sizeof(event))==-1);if(failure=="disable")return ESP_FAIL;status=ESP_BT_CONTROLLER_STATUS_INITED;return ESP_OK;}
 esp_err_t esp_bt_controller_deinit(){assert(status==ESP_BT_CONTROLLER_STATUS_INITED && !NativeHci::mux);++deinitializations;if(failure=="deinit")return ESP_FAIL;status=ESP_BT_CONTROLLER_STATUS_IDLE;return ESP_OK;}
 esp_err_t esp_vhci_host_register_callback(const esp_vhci_host_callback_t* c){assert(status==ESP_BT_CONTROLLER_STATUS_ENABLED && c);cb=c;return failure=="register"?ESP_FAIL:ESP_OK;}
@@ -49,13 +52,27 @@ int main(){
  for(const char* phase:{"disable","deinit"}){failure=phase;assert(!NativeHci::close() && !NativeHci::idle());clean();assert(NativeHci::open());}
  // A malformed event or queue loss is terminal for this stream, not silent loss.
  assert(cb->notify_host_recv(nullptr,0)==-1 && !NativeHci::safe());assert(!NativeHci::receive(&type,out,sizeof(out),&n,0));clean();
- assert(NativeHci::open());for(unsigned i=0;i<4;++i)assert(cb->notify_host_recv(event,sizeof(event))==0);
+ uint8_t acl[1029]={2,1,0,0,4};
+ assert(NativeHci::open());for(unsigned i=0;i<4;++i)assert(cb->notify_host_recv(acl,sizeof(acl))==0);
  assert(cb->notify_host_recv(event,sizeof(event))==-1 && !NativeHci::safe());clean();
  assert(NativeHci::open());failure="send-fault";assert(!NativeHci::send(1,command,3,0));clean();
  assert(NativeHci::open());status=ESP_BT_CONTROLLER_STATUS_IDLE;assert(!NativeHci::safe() && !NativeHci::close());status=ESP_BT_CONTROLLER_STATUS_ENABLED;clean();
+ failure="enable";failureResult=0x3131;assert(!NativeHci::open());clean();failureResult=ESP_FAIL;
  // SDK early-init failures can own PHY resources even while reporting IDLE.
  failure="init";assert(!NativeHci::open() && status==ESP_BT_CONTROLLER_STATUS_IDLE && !NativeHci::idle() && !NativeHci::safe());
  failure.clear();assert(!NativeHci::close() && NativeHci::buffers && !NativeHci::open());
+#if RISC_STAGE_LOGS
+ assert(stageHas("failure step=controller-enable code=12593"));
+ for(const char* step:{"controller-init","controller-enable","register-callback","controller-disable","controller-deinit"})
+  assert(stageHas((std::string("failure step=")+step+" code=-1").c_str()));
+ assert(stageHas("radio bluetooth open result=ok state=on"));
+ assert(stageHas("radio bluetooth close result=ok state=off"));
+ assert(stageHas("reason=out-of-memory")&&stageHas("reason=receive-queue-full")&&stageHas("reason=malformed-packet"));
+ assert(stageHas("result=retained reason=uncertain-init"));
+ assert(stageCount("reason=receive-queue-full")==1);
+#else
+ assert(stageLines.empty());
+#endif
  // Test process ends; real firmware retains this last allocation until reset.
  puts("Native HCI: exact SDK lifecycle, bounded copied RX/TX, deadline, overflow, stale callback and retained uncertainty PASS");
 }

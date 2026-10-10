@@ -46,8 +46,18 @@ bool decode(const char* bytes,size_t size,Profile& out){
   if(!RiscBoot::parse(bytes,size,doc))return false;
   auto root=doc.as<JsonObjectConst>();int64_t n=0;
   if(!RiscBoot::eq(root["schema"],"riscrte.provisioning") ||
-     !RiscBoot::integer(root["schema_version"],1,2,n))return false;
-  const bool compact=n==2;char base[385]{};
+     !RiscBoot::integer(root["schema_version"],1,3,n))return false;
+  const bool compact=n==2,image=n==3;char base[385]{};
+  if(image){
+    if(!RiscBoot::keys(root,{"schema","schema_version","wifi","image","files"}))return false;
+    auto object=root["image"].as<JsonObjectConst>();char digest[65];
+    if(!RiscBoot::keys(object,{"url","bytes","sha256"}) ||
+       !RiscBoot::text(object["url"],out.image.url,sizeof(out.image.url)) || !source(out.image.url) ||
+       !RiscBoot::integer(object["bytes"],1,MaxFileBytes,n) || n%4096 ||
+       !RiscBoot::text(object["sha256"],digest,sizeof(digest)) || strlen(digest)!=64)return false;
+    out.image.bytes=uint32_t(n);
+    for(unsigned j=0;j<32;++j){int a=hex(digest[2*j]),b=hex(digest[2*j+1]);if(a<0||b<0)return false;out.image.sha256[j]=uint8_t(a*16+b);}
+  }
   if(compact){
     if(!RiscBoot::keys(root,{"schema","schema_version","wifi","base_url","files"}) ||
        !RiscBoot::text(root["base_url"],base,sizeof(base)))return false;
@@ -57,7 +67,7 @@ bool decode(const char* bytes,size_t size,Profile& out){
     if(!length || base[length-1]!='/' || length+2>sizeof(probe))return false;
     memcpy(probe,base,length);memcpy(probe+length,"x",2);
     if(!source(probe))return false;
-  }else if(!RiscBoot::keys(root,{"schema","schema_version","wifi","files"}))return false;
+  }else if(!image && !RiscBoot::keys(root,{"schema","schema_version","wifi","files"}))return false;
   auto wifi=root["wifi"].as<JsonObjectConst>();
   if(!RiscBoot::keys(wifi,{"ssid","password"}) || !RiscBoot::text(wifi["ssid"],out.ssid,sizeof(out.ssid)) ||
      !wifi["password"].is<const char*>())return false;
@@ -70,7 +80,7 @@ bool decode(const char* bytes,size_t size,Profile& out){
   uint32_t total=0;bool boot=false,board=false,app=false;
   for(auto value:files){
     auto object=value.as<JsonObjectConst>();auto& file=out.files[out.count];char joined[200],digest[65];
-    if(!(compact?RiscBoot::keys(object,{"path","bytes","sha256"}):RiscBoot::keys(object,{"path","url","bytes","sha256"})) ||
+    if(!((compact||image)?RiscBoot::keys(object,{"path","bytes","sha256"}):RiscBoot::keys(object,{"path","url","bytes","sha256"})) ||
        !RiscBoot::text(object["path"],file.path,sizeof(file.path)) || !RiscBoot::path("",file.path,joined,sizeof(joined)) ||
        !RiscBoot::integer(object["bytes"],1,MaxFileBytes,n) ||
        !RiscBoot::text(object["sha256"],digest,sizeof(digest)) || strlen(digest)!=64)return false;
@@ -79,7 +89,7 @@ bool decode(const char* bytes,size_t size,Profile& out){
       if(baseLength+pathLength>=sizeof(file.url))return false;
       memcpy(file.url,base,baseLength);memcpy(file.url+baseLength,file.path,pathLength+1);
       if(!source(file.url))return false;
-    }else if(!RiscBoot::text(object["url"],file.url,sizeof(file.url)) || !source(file.url))return false;
+    }else if(!image && (!RiscBoot::text(object["url"],file.url,sizeof(file.url)) || !source(file.url)))return false;
     file.bytes=uint32_t(n);if(file.bytes>MaxStoreBytes-total)return false;total+=file.bytes;
     for(unsigned j=0;j<32;++j){int a=hex(digest[2*j]),b=hex(digest[2*j+1]);if(a<0||b<0)return false;file.sha256[j]=uint8_t(a*16+b);}
     for(size_t j=0;j<out.count;++j){

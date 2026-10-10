@@ -1,0 +1,40 @@
+PHASE display-submit graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0
+PHASE home-started graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0
+PHASE home-before-handoff graph=31 peak=33 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0
+PHASE display-submit graph=30 peak=33 boot=26 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0
+PHASE ble-initialized graph=35 peak=35 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE ble-modal-open graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE ble-modal-edited graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE display-submit graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE ble-close-pending graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE ble-modal-closed graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE ble-cleanup graph=35 peak=36 boot=26 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE home-after-handoff graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2
+PHASE home-restored graph=31 peak=36 boot=26 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=192000 allocations=4 frees=2
+PHASE runtime-stopped graph=0 peak=36 boot=0 host=0/0 foreground=0/0 bytes=0 blocks=0 peak_bytes=192000 allocations=4 frees=4
+peripherals frames=4 touch=0 keyboard=0 retained=0
+RESULT client=ble mode=pending-close graph_peak=36 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=6 host_provider_sampled_peak=7 foreground_provider_sampled_peak=6 owned_peak_bytes=192000 owned_peak_blocks=4 owned_allocations=4 owned_frees=4 retained_owned_bytes=0
+RTE_APP phase=entry
+SPARSE_CLOCK stage=classification status=0 elapsed_ms=0
+SPARSE_CLOCK stage=promotion status=0 elapsed_ms=0
+APP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off
+APP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested
+APP t_ms=0 stage=bluetooth-request enabled=no
+APP t_ms=0 stage=bluetooth-result state=off
+APP t_ms=0 stage=draw-begin 
+APP t_ms=0 stage=draw-end 
+APP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480
+APP t_ms=0 stage=display-submit-end result=accepted
+APP t_ms=0 stage=display-complete result=complete
+SPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0
+adapter phase=4 failed=0 touch_api=0x49ec60 sub=1 api_size=56 need=56 nav=1 retained=0
+home started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0
+APP t_ms=0 stage=draw-begin 
+APP t_ms=0 stage=draw-end 
+APP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480
+APP t_ms=0 stage=display-submit-end result=accepted
+APP t_ms=0 stage=display-complete result=complete
+RTE_APP phase=entry
+RTE_APP phase=returned
+RTE_APP phase=returned

@@ -15,7 +15,7 @@ bool Runtime::registerProviderRealtime(){
 }
 int32_t Runtime::providerRealtimeRead(void* context,risc_realtime_snapshot_v1* out){
  auto* r=currentRuntime;
- if(!r || !context || !r->active() || !r->entryRunning_ || r->retained_)return RISC_REALTIME_CONTEXT;
+ if(!r || !context || !r->active() || !r->invocation_->entryRunning_ || r->retained_)return RISC_REALTIME_CONTEXT;
  if(!r->graph_.dependencyReadSafe())return RISC_REALTIME_CONTEXT;
  if(!r->providerStorageSafe()) {
   // A copied token cannot revive if a transient safety barrier later clears.
@@ -29,12 +29,12 @@ int32_t Runtime::providerRealtimeRead(void* context,risc_realtime_snapshot_v1* o
 }
 Runtime* Runtime::realtimeContext(void* context,bool control){
  auto* r=currentRuntime;
- if(!r || !context || !r->active() || !r->entryRunning_ || r->retained_ ||
-    !r->appPolicy_ || !r->appDataExitSafe() || !r->providerStorageSafe())return nullptr;
+ if(!r || !context || !r->active() || !r->invocation_->entryRunning_ || r->retained_ ||
+    !r->invocation_->appPolicy_ || !r->appDataExitSafe() || !r->providerStorageSafe())return nullptr;
  const void* table=nullptr;
- if(context==r->realtimeControlContext_)table=&r->realtimeControlTable_;
- else if(!control && context==r->realtimeContext_)table=&r->realtimeTable_;
- if(table)for(const auto& grant:r->appGrants_)if(grant.live && grant.api==table)return r;
+ if(context==r->invocation_->realtimeControlContext_)table=&r->invocation_->realtimeControlTable_;
+ else if(!control && context==r->invocation_->realtimeContext_)table=&r->invocation_->realtimeTable_;
+ if(table)for(const auto& grant:r->invocation_->appGrants_)if(grant.live && grant.api==table)return r;
  return nullptr;
 }
 int32_t Runtime::realtimeSeed(void* context,int64_t seconds,uint32_t nanos){

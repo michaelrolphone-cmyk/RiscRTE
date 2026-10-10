@@ -28,6 +28,9 @@ class InstalledFiles final {
     root_=root;names_=std::move(copy);count_=count;configured_=true;return true;
   }
   bool configured()const{return configured_;}
+  bool cloneConfiguration(const InstalledFiles& source) {
+    return source.configured_ && configure(source.root_,source.names_.get(),source.count_);
+  }
   bool retained()const{return retained_;}
   bool end(){if(retained_)return false;directory_=file_=0;directoryPath_[0]=last_[0]=filePath_[0]=0;offset_=0;error_=nullptr;return true;}
   bool refresh(){if(retained_)return false;error_=nullptr;return configured_;}
