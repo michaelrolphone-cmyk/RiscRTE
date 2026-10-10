@@ -5,6 +5,7 @@
  */
 
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -84,6 +85,19 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
      */
 
     ESP_ELFSYM_EXPORT(strerror),
+    ESP_ELFSYM_EXPORT(strtof),
+    ESP_ELFSYM_EXPORT(strtoul),
+    ESP_ELFSYM_EXPORT(strcat),
+    ESP_ELFSYM_EXPORT(strncasecmp),
+    ESP_ELFSYM_EXPORT(strcasecmp),
+    ESP_ELFSYM_EXPORT(strnlen),
+    ESP_ELFSYM_EXPORT(tolower),
+    ESP_ELFSYM_EXPORT(isalpha),
+    ESP_ELFSYM_EXPORT(qsort),
+    ESP_ELFSYM_EXPORT(vsnprintf),
+    ESP_ELFSYM_EXPORT(setjmp),
+    ESP_ELFSYM_EXPORT(longjmp),
+
     ESP_ELFSYM_EXPORT(memset),
     ESP_ELFSYM_EXPORT(memcpy),
     ESP_ELFSYM_EXPORT(memmove),

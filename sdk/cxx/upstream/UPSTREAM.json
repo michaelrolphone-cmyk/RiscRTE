@@ -1,0 +1,22 @@
+{
+  "repository": "https://github.com/gcc-mirror/gcc",
+  "revision": "releases/gcc-8.4.0",
+  "files": {
+    "tree.cc": {
+      "path": "libstdc++-v3/src/c++98/tree.cc",
+      "sha256": "3a0369fbfbd6017416d2df87eab68eaa9b4c0640f2bf70f3344f05e67c198572"
+    },
+    "hash_bytes.cc": {
+      "path": "libstdc++-v3/libsupc++/hash_bytes.cc",
+      "sha256": "165512c7d4bbfc1fc519fd44ef17a808dacf744fd7bbd188dee140c543dafe40"
+    },
+    "COPYING3": {
+      "path": "COPYING3",
+      "sha256": "0ae0485a5bd37a63e63603596417e4eb0e653334fa6c7f932ca3a0e85d4af227"
+    },
+    "COPYING.RUNTIME": {
+      "path": "COPYING.RUNTIME",
+      "sha256": "e9e847889787f1c0a2f735a0d7571163e4ca2ea64cf0a1a519d26c2afdac96bc"
+    }
+  }
+}

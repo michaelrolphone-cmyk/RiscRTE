@@ -69,6 +69,10 @@ bool esp_elf_validate_file(const uint8_t *buf, size_t length) {
             const elf32_rela_t *rel = (const elf32_rela_t *)(buf + s[i].offset);
             for (unsigned j = 0; j < s[i].size / sizeof(*rel); ++j) {
                 const unsigned type = ELF_R_TYPE(rel[j].info);
+                if (!type) {
+                    if (rel[j].info || rel[j].offset || rel[j].addend) return false;
+                    continue; /* Canonical R_XTENSA_NONE padding, no memory access. */
+                }
                 if (ELF_R_SYM(rel[j].info) >= s[s[i].link].size / sizeof(elf32_sym_t) ||
                     (type != 2 && type != 3 && type != 4 && type != 5) ||
                     (rel[j].offset % 4) || !mapped(s, h->shnum, rel[j].offset, 4)) return false;

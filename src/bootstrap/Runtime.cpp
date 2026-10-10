@@ -368,6 +368,12 @@ bool Runtime::appPolicies(JsonVariantConst value) {
             if(n<=0 || size_t(n)>=sizeof(retainedCohort_))return fail("retained-wake cohort too large");
           }
           grant.driver=RetainedWakeDriver;grant.capability=RISC_RETAINED_WAKE_CAPABILITY;
+        } else if (!strcmp(capability,RISC_RANDOM_CAPABILITY)) {
+          if(grant.api!=1 || grant.instance || !port_.randomBytes)return fail("random bytes capability unavailable");
+          grant.driver=RandomDriver;grant.capability=RISC_RANDOM_CAPABILITY;
+        } else if (!strcmp(capability,RISC_MEMORY_HEAP_CAPABILITY)) {
+          if(grant.api!=1 || grant.instance || !port_.memoryHeap)return fail("memory heap capability unavailable");
+          grant.driver=MemoryHeapDriver;grant.capability=RISC_MEMORY_HEAP_CAPABILITY;
         } else if (!strcmp(capability,"file.open")) {
           if(grant.api!=T5_FILE_OPEN_API_VERSION || grant.instance)return fail("invalid file-open authority");
           grant.fileOpen=true;grant.capability="file.open";
@@ -436,7 +442,13 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   size_t slot=0;while(slot<16 && invocation_->appGrants_[slot].live)++slot;
   if (slot==16) return false;
   auto& grant=invocation_->appGrants_[slot];
-  if (allowed->keyValue) {
+  if(allowed->driver==RandomDriver){
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    grant.random={1,sizeof(grant.random),context,randomFill};grant.api=&grant.random;
+  } else if(allowed->driver==MemoryHeapDriver){
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    grant.memoryHeap={1,sizeof(grant.memoryHeap),context,memoryHeapSnapshot};grant.api=&grant.memoryHeap;
+  } else if (allowed->keyValue) {
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
     grant.keyValueNamespace=allowed->instance;
     grant.keyValue={allowed->api,sizeof(risc_key_value_v1),context,keyValueGet,keyValuePut};
@@ -523,6 +535,27 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   serviceProviders();
   if(!appExitBarrier())return false;
   out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
+}
+int32_t Runtime::randomFill(void* context,void* bytes,uint32_t length){
+ Runtime* r=currentRuntime;if(!r||!r->active()||r->retained_||!context||!r->port_.randomBytes)return RISC_RANDOM_CONTEXT;
+ bool found=false;for(const auto& g:r->invocation_->appGrants_)if(g.live&&g.invocation==r->invocation_->streams_.context()&&g.api==&g.random&&g.random.context==context)found=true;
+ if(!found)return RISC_RANDOM_CONTEXT;
+ if(!bytes||!length||length>RISC_RANDOM_MAX_BYTES)return RISC_RANDOM_INVALID;
+ return r->port_.randomBytes(bytes,length)==RISC_RANDOM_OK?RISC_RANDOM_OK:RISC_RANDOM_UNAVAILABLE;
+}
+int32_t Runtime::memoryHeapSnapshot(void* context,risc_memory_heap_snapshot_v1* out) {
+  Runtime* r=currentRuntime;
+  if(!r || !r->active() || r->retained_ || !context || !r->port_.memoryHeap)return RISC_MEMORY_CONTEXT;
+  bool found=false;
+  for(const auto& grant:r->invocation_->appGrants_)
+    if(grant.live && grant.invocation==r->invocation_->streams_.context() && grant.api==&grant.memoryHeap && grant.memoryHeap.context==context)found=true;
+  if(!found)return RISC_MEMORY_CONTEXT;
+  if(!out || out->struct_size<sizeof(*out) || out->memory_class>RISC_MEMORY_DMA)return RISC_MEMORY_INVALID;
+  risc_memory_heap_snapshot_v1 value{};value.struct_size=sizeof(value);value.memory_class=out->memory_class;
+  const int32_t rc=r->port_.memoryHeap(&value);
+  if(rc!=RISC_MEMORY_OK)return rc==RISC_MEMORY_UNSUPPORTED?rc:RISC_MEMORY_INVALID;
+  if(value.largest_block>value.free_bytes || value.free_bytes>value.total_bytes)return RISC_MEMORY_INVALID;
+  *out=value;return RISC_MEMORY_OK;
 }
 int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
   if (outSize) *outSize=0;

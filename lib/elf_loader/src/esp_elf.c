@@ -790,6 +790,10 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
                 const elf32_sym_t *sym = &symtab[ELF_R_SYM(rela_buf.info)];
 
                 type = ELF_R_TYPE(rela_buf.info);
+                if (!type) {
+                    if (rela_buf.info || rela_buf.offset || rela_buf.addend) return -EINVAL;
+                    continue; /* GNU ld may emit zero relocation padding. */
+                }
                 if (type == STT_COMMON || type == STT_OBJECT || type == STT_SECTION) {
                     const char *comm_name = strtab + sym->name;
 
