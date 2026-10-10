@@ -7,6 +7,13 @@
 #include "NativeI2s.h"
 #include "NativeRadioAsyncTask.h"
 #include "NativeRadioResources.h"
+#ifndef RISC_NATIVE_ENTROPY
+#define RISC_NATIVE_ENTROPY 0
+#endif
+#if RISC_NATIVE_ENTROPY
+#include "NativeEntropy.h"
+extern "C" __attribute__((used)) const uint32_t risc_entropy_abi=1;
+#endif
 #include "NativeRadioResourceOwner.h"
 #include "NativeHci.h"
 #if RISC_NATIVE_TCP_LISTENER
@@ -105,6 +112,9 @@ bool deepReady(){
 #endif
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
   if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
+#if RISC_NATIVE_ENTROPY
+  if(!NativeEntropy::idle(nullptr,0))return false;
+#endif
 #if RISC_NATIVE_TCP_LISTENER
   if(!NativeTcpListener::idle(nullptr,0))return false;
 #endif
@@ -126,6 +136,9 @@ bool lightSleep(uint32_t* cause){
   if(!NativeSdmmc::idle())return false;
 #endif
   if(!NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
+#if RISC_NATIVE_ENTROPY
+  if(!NativeEntropy::idle(nullptr,0))return false;
+#endif
 #if RISC_NATIVE_TCP_LISTENER
   if(!NativeTcpListener::idle(nullptr,0))return false;
 #endif
@@ -166,6 +179,17 @@ Hardware nativeHardware(bool (*owner)()){
   static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
   radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
   hardware.radioAsync=&radioAsync;hardware.radioAsyncPrepare=NativeRadioAsync::provision;
+#if RISC_NATIVE_ENTROPY
+  NativeEntropy::configure(hardware.owner,[](){
+    // Read only while the shared native lease excludes worker SDK changes.
+    // This generation reached a healthy link and has not stopped/deinitialized.
+    // IDF guarantees RNG entropy while Wi-Fi is enabled, including normal
+    // modem power management; association/reachability is checked by TCP.
+    return nativeRadioResourceHeldReady() && NativeRadio::s.established &&
+      NativeRadio::s.wifi && NativeRadio::s.startAttempted && !NativeRadio::s.closing;
+  },nativeRadioResourceTry,nativeRadioResourceEnd);
+  hardware.entropy=NativeEntropy::backend();
+#endif
 #if RISC_ENABLE_SDMMC
   NativeSdmmc::configure(hardware.owner);
   hardware.sdmmcOpen=NativeSdmmc::open;hardware.sdmmcRead=NativeSdmmc::read;

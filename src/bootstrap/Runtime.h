@@ -5,6 +5,7 @@
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
 #include "TcpListenerBackend.h"
+#include "EntropyBackend.h"
 #include "runtime/storage/AppDataExport.h"
 #include "FileOpenState.h"
 #include "FailureEvidenceBackend.h"
@@ -90,6 +91,7 @@ class Runtime final {
   // Compiled-in port registration only, never exported to apps/driver ELFs.
   // Tables/contexts must remain valid until successful runtime shutdown.
   bool registerPlatform(const char* capability, uint32_t api, Scope scope, uint64_t id, const void* table);
+  bool registerEntropy(const EntropyBackend*); // provider-only, no generation during admission
   bool registerTcpListener(const TcpListenerBackend*); // compiled-in opt-in only
   bool registerRealtime(const risc_realtime_control_api_v1*); // compiled-in backend only
   bool prepare(const char* root);
@@ -240,8 +242,14 @@ class Runtime final {
     bool needsRealtime=false;
     risc_tcp_listener_v1 tcp{};
     bool needsTcp=false;
+    risc_entropy_v1 entropy{};
+    bool needsEntropy=false;
     bool live=false;
   };
+  const EntropyBackend* entropyBackend_=nullptr;
+  risc_entropy_v1 providerEntropyTable_{};
+  bool entropyRetained_=false,entropyBusy_=false;
+  static int32_t entropyFill(void*,void*,uint32_t);
   const TcpListenerBackend* tcpBackend_=nullptr;
   risc_tcp_listener_v1 providerTcpTable_{};
   bool tcpRetained_=false;

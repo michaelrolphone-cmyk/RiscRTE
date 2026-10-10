@@ -10,7 +10,7 @@ bool Runtime::providerResourcesSafe(void* context){
  const auto* storage=static_cast<const ProviderStorage*>(context);
  if(!providerFileSafe(context) || !storage || !storage->owner)return false;
  const auto* r=storage->owner;
- return !r->tcpRetained_ && (!r->tcpBackend_ || r->tcpBackend_->safe(r->tcpBackend_->context));
+ return !r->entropyRetained_ && (!r->entropyBackend_ || r->entropyBackend_->safe(r->entropyBackend_->context)) && !r->tcpRetained_ && (!r->tcpBackend_ || r->tcpBackend_->safe(r->tcpBackend_->context));
 }
 Runtime::ProviderStorage* Runtime::tcpContext(void* context,bool closing){
  auto* r=currentRuntime;

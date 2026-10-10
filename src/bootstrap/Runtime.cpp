@@ -166,6 +166,8 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
   // arbitrary backend/control table supplied through generic registration.
   if (!strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
       (api!=1 || scope!=Scope::Global || id || table!=&providerRealtimeTable_ || !realtimeBackend_)) return false;
+  if (!strcmp(capability,RISC_ENTROPY_CAPABILITY) &&
+      (api!=1 || scope!=Scope::Global || id || table!=&providerEntropyTable_ || !entropyBackend_))return false;
   if (!strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) &&
       (api!=1 || scope!=Scope::Global || id || table!=&providerTcpTable_ || !tcpBackend_))return false;
   if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
@@ -174,7 +176,7 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
     if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
-               strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
+               strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_ENTROPY_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
                strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
@@ -248,6 +250,10 @@ bool Runtime::validateGraph() {
       }
       if (platform) {
         req.trustedApi=platform->table;
+        if (!strcmp(req.capability,RISC_ENTROPY_CAPABILITY)) {
+          auto& storage=providerStorage_[i];storage.owner=this;storage.needsEntropy=true;
+          storage.entropy=providerEntropyTable_;req.trustedApi=&storage.entropy;
+        }
         if (!strcmp(req.capability,RISC_TCP_LISTENER_CAPABILITY)) {
           auto& storage=providerStorage_[i];storage.owner=this;storage.needsTcp=true;
           storage.tcp=providerTcpTable_;req.trustedApi=&storage.tcp;
@@ -565,7 +571,7 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   return true;
 }
 bool Runtime::providerStorageSafe() const {
-  if(tcpRetained_ || metadataCloseRetained_ || !appDataExitSafe())return false;
+  if(entropyRetained_ || tcpRetained_ || metadataCloseRetained_ || !appDataExitSafe())return false;
   if(invocation_->installedFiles_ && invocation_->installedFiles_->retained())return false;
   if(port_.providerStorageSafe)return port_.providerStorageSafe();
   return !port_.appExitSafe || port_.appExitSafe();
@@ -577,13 +583,14 @@ bool Runtime::beginProvider(void* context) {
       !r->port_.owner() || r->retained_ || !r->providerStorageSafe()) return false;
   // A graph-wide retained-storage fence also covers providers that access files
   // indirectly through another provider. They need no callable storage token.
-  if(!storage->count && !storage->fileCount && !storage->needsRealtime && !storage->needsTcp){storage->live=true;return true;}
+  if(!storage->count && !storage->fileCount && !storage->needsRealtime && !storage->needsTcp && !storage->needsEntropy){storage->live=true;return true;}
   void* token=nextKeyValueContext(keyValueGeneration);
   if (!token) return false;
   storage->table.context=token;
   if(storage->fileCount)storage->fileTable.context=token;
   if(storage->needsRealtime)storage->realtime.context=token;
   if(storage->needsTcp)storage->tcp.context=token;
+  if(storage->needsEntropy)storage->entropy.context=token;
   storage->live=true;
   return true;
 }
@@ -591,6 +598,9 @@ void Runtime::revokeProvider(void* context) {
   if(context){
     auto* storage=static_cast<ProviderStorage*>(context);
     storage->live=false;
+    if(storage->needsEntropy && storage->entropy.context && storage->owner->entropyBackend_ &&
+       !storage->owner->entropyBackend_->idle(storage->owner->entropyBackend_->context,reinterpret_cast<uintptr_t>(storage->entropy.context)))
+      storage->owner->entropyRetained_=true;
     if(storage->needsTcp && storage->tcp.context && storage->owner->tcpBackend_ &&
        !storage->owner->tcpBackend_->idle(storage->owner->tcpBackend_->context,reinterpret_cast<uintptr_t>(storage->tcp.context)))
       storage->owner->tcpRetained_=true;
@@ -699,6 +709,7 @@ bool Runtime::revokeApp() {
 #include "RetainedWakeRuntime.inc"
 #include "RealtimeRuntime.inc"
 #include "TcpListenerRuntime.inc"
+#include "EntropyRuntime.inc"
 #include "ProviderPromotionRuntime.inc"
 #include "ResidentShellRuntime.inc"
 bool Runtime::prepare(const char* root) {
@@ -752,9 +763,9 @@ bool Runtime::prepare(const char* root) {
     const Driver& d=drivers_[i];
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
     spec.hardware=d.instance?&board_.device(d.instance)->hardware:nullptr;
-    if (providerStorage_[i].count || providerStorage_[i].needsRealtime || providerStorage_[i].needsTcp || hasProviderFiles){
+    if (providerStorage_[i].count || providerStorage_[i].needsRealtime || providerStorage_[i].needsTcp || providerStorage_[i].needsEntropy || hasProviderFiles){
       providerStorage_[i].owner=this;
-      spec.lease={&providerStorage_[i],beginProvider,revokeProvider,(hasProviderFiles || providerStorage_[i].needsTcp)?providerResourcesSafe:nullptr};
+      spec.lease={&providerStorage_[i],beginProvider,revokeProvider,(hasProviderFiles || providerStorage_[i].needsTcp || providerStorage_[i].needsEntropy)?providerResourcesSafe:nullptr};
     }
     const RuntimeProviders::NativeProviderPolicyV1* selected=nullptr;
     for(size_t p=0;p<port_.nativeProviders.count;++p) {

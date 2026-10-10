@@ -93,6 +93,7 @@ struct Hardware {
   const RiscBoot::TcpListenerBackend* tcpListener=nullptr; // explicit native opt-in
   const risc_native_radio_async_v1* radioAsync=nullptr; // additive, native-owned lifecycle
   bool (*radioAsyncPrepare)()=nullptr; // owner bind, before exposing admission
+  const RiscBoot::EntropyBackend* entropy=nullptr; // explicit native opt-in
 };
 class Port final {
  public:
@@ -138,6 +139,10 @@ class Port final {
   risc_platform_clock_api_v1 clock_{};
   risc_realtime_control_api_v1 realtime_{};
   risc_http_client_v1 http_{};
+  RiscBoot::EntropyBackend entropy_{};
+  static int32_t entropyFill(void*,uint64_t,void*,uint32_t);
+  bool entropyIdle(uint64_t owner=0) const;
+  bool entropySafe() const;
   RiscBoot::TcpListenerBackend tcp_{};
   static int32_t tcpListen(void*,uint64_t,const risc_tcp_listen_v1*,uint64_t*);
   static int32_t tcpAccept(void*,uint64_t,uint64_t,uint64_t*);
