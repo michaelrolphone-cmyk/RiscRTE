@@ -8,7 +8,9 @@ namespace RiscLimits {
 constexpr size_t Apps=19,Providers=17,Grants=32;
 static_assert(Grants>=Providers+12,"Legacy boot pins must leave room for app grants");
 #else
-constexpr size_t Apps=24,Providers=28,Grants=44;
+// Watch now has 25 apps including Lists and Model Viewer. Only immutable
+// policy metadata grows; simultaneous grants remain bounded as before.
+constexpr size_t Apps=28,Providers=28,Grants=44;
 // Preserve the cohort's sixteen shared non-boot graph slots. Resident host
 // and foreground grants share this reserve; their combined use is bounded by
 // Grants, not by the independent sixteen-slot invocation ledgers.
