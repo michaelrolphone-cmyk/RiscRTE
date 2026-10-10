@@ -25,9 +25,10 @@ using BaseType_t=int; using UBaseType_t=unsigned; using portBASE_TYPE=int;
 constexpr int pdTRUE=1,pdPASS=1,portTICK_PERIOD_MS=1,tskNO_AFFINITY=-1;
 using esp_err_t=int; constexpr int ESP_OK=0,ESP_FAIL=-1;
 namespace Stub {
- enum Failure {None,Mutex,Rx,Tx,Interrupt};
+ enum Failure {None,Mutex,Rx,Tx,Interrupt,UsbClock,UsbReset,UsbRoute,UsbPad};
  inline Failure failure=None;
  inline unsigned allocationCalls=0,live=0,delays=0,interruptAllocations=0,interruptFrees=0,freeNull=0,flushes=0,pinChanges=0,positiveWaits=0;
+ inline unsigned usbResets=0,detachedDelays=0;
  inline uint32_t tick=1,intrMask=0,intrStatus=0;
  inline void (*isr)(void*)=nullptr;
  inline std::deque<uint8_t> hostRx;
@@ -41,15 +42,25 @@ using TaskHandle_t=void*;
 inline TaskHandle_t currentTask=reinterpret_cast<void*>(1);
 inline TaskHandle_t xTaskGetCurrentTaskHandle(){return currentTask;}
 inline uint32_t millis(){return Stub::tick;}
-inline void delay(unsigned n){++Stub::delays;Stub::tick+=n;}
 constexpr unsigned USB_DM_GPIO_NUM=19,USB_DP_GPIO_NUM=20,OUTPUT_OPEN_DRAIN=3,LOW=0;
 struct UsbRegisters {struct{unsigned phy_sel=0,pad_pull_override=0,dp_pullup=0,usb_pad_enable=0;}conf0;struct{unsigned sof_int_raw=0;}int_raw;};
 inline UsbRegisters USB_SERIAL_JTAG;
+struct UsbRouteRegister {
+ unsigned value=0;
+ operator unsigned()const{return value;}
+ UsbRouteRegister& operator=(unsigned next){value=Stub::failure==Stub::UsbRoute?1:next;return *this;}
+};
+struct RtcRegisters {struct{unsigned sw_hw_usb_phy_sel=0;UsbRouteRegister sw_usb_phy_sel;}usb_conf;};
+inline RtcRegisters RTCCNTL;
+struct SystemRegisters {struct{unsigned usb_device_clk_en=1;}perip_clk_en1;struct{unsigned usb_device_rst=0;}perip_rst_en1;};
+inline SystemRegisters SYSTEM;
+inline void delay(unsigned n){++Stub::delays;Stub::tick+=n;if(!USB_SERIAL_JTAG.conf0.usb_pad_enable)++Stub::detachedDelays;}
 inline void pinMode(unsigned p,unsigned mode){++Stub::pinChanges;Stub::pinModeValue[p]=mode;USB_SERIAL_JTAG.conf0.pad_pull_override=1;USB_SERIAL_JTAG.conf0.usb_pad_enable=0;}
 inline void digitalWrite(unsigned p,unsigned level){++Stub::pinChanges;Stub::pinLevel[p]=level;}
 inline void uartSetDebug(void*){}
 inline void ets_install_putc2(void(*)(char)){}
-inline bool xPortInIsrContext(){return false;}
+inline bool diagnosticIsr=false;
+inline bool xPortInIsrContext(){return diagnosticIsr;}
 inline void esp_register_freertos_tick_hook(void(*)()){}
 struct Mutex {bool locked=false;}; using xSemaphoreHandle=Mutex*;
 inline Mutex* xSemaphoreCreateMutex(){if(Stub::fail(Stub::Mutex))return nullptr;++Stub::live;return new Mutex;}

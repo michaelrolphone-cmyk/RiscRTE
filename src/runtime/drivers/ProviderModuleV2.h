@@ -1,6 +1,7 @@
 #pragma once
 #include "../../../lib/hal/StorageGeneration.h"
 #include <RiscProviderV2.h>
+#include <RiscStreamSessionProviderV1.h>
 #include <RiscPackageResourcesV1.h>
 #include "runtime/packages/PackageIdentity.h"
 #include <cstddef>
@@ -11,14 +12,17 @@
  * pins dependencies, resolves API versions and authorizes provider execution.
  * Self-declared content hashes do not grant imports or hardware rights. */
 namespace RuntimeProviders {
+struct NativeProviderPolicyV1;
 // Internal host-only lifetime hook; no provider ABI field or ELF export.
 // Its context and dependency tables must outlive every retained mapped image.
 struct ModuleLeaseV2 {
   void* context = nullptr;
   bool (*begin)(void*) = nullptr;
   void (*revoke)(void*) = nullptr;
+  // Optional sticky host-retention barrier; never calls provider code.
+  bool (*safe)(void*) = nullptr;
   bool valid() const {
-    return (!context && !begin && !revoke) || (context && begin && revoke);
+    return (!context && !begin && !revoke && !safe) || (context && begin && revoke);
   }
 };
 struct StreamHostV1 {
@@ -28,6 +32,11 @@ struct StreamHostV1 {
   bool (*grant)(uint64_t, uint64_t, uint32_t, uint32_t, uint32_t);
   void (*revokeGrant)(uint64_t, uint64_t);
   bool (*openResources)(risc_stream_provider_resources_v1*, const RuntimePackages::Identity&) = nullptr;
+  // Checked lifecycle hooks preserve custody when a bounded host lock is busy.
+  bool (*revokeChecked)(uint64_t) = nullptr;
+  bool (*closeChecked)(uint64_t) = nullptr;
+  bool (*revokeGrantChecked)(uint64_t, uint64_t) = nullptr;
+  bool (*safe)(uint64_t) = nullptr; // Nonmutating sticky queue-custody barrier.
 };
 class ModuleV2 final {
  public:
@@ -43,10 +52,9 @@ class ModuleV2 final {
   bool load(const char* validatedElf, const char* expectedId,
             const char* expectedCapability, uint32_t expectedApi,
             const risc_provider_dependency_v1* dependencies, size_t count, bool independent = false);
-  /* PRIVATE firmware admission path. Installation checks all payload bytes.
-   * Runtime loading verifies its owned ELF snapshot at cold/uncertain boundaries;
-   * unchanged quiescent generation proof avoids repeated executable hashing.
-   * ABI, exact allowed imports and relocation checks remain mandatory.
+  /* PRIVATE firmware admission path. Requires GraphV2's owned image AND copied
+   * approved native policy; public arguments cannot grant execution. The exact
+   * mapping snapshot is hashed and checked against the policy on every load.
    * Host builds deny this path; ownership requires separate capability grants
    * and successful quiescence before unmapping. */
   bool loadVerifiedBytes(const uint8_t* candidateBytes, size_t length,
@@ -74,7 +82,11 @@ class ModuleV2 final {
     packageSourceStamp_ = stamp; return true;
   }
   uint64_t streamContext() const { return state_ == State::Active ? streamApi_.streams.context : 0; }
+  const risc_stream_session_provider_v1* streamSessions() const { return state_ == State::Active ? streamSessions_ : nullptr; }
+  bool leaseSafe() const { return !lease_.safe || lease_.safe(lease_.context); }
+  bool streamSafe() const { return !streamApi_.streams.context || !streamHost_->safe || streamHost_->safe(streamApi_.streams.context); }
   bool poll(uint32_t budgetMs);
+  bool service(uint32_t budgetMs);
   bool pinConsumer();
   bool unpinConsumer();
   bool unload();
@@ -86,15 +98,13 @@ class ModuleV2 final {
   friend class GraphV2;
   // Graph owns this private immutable allocation until after module shutdown.
   // Public loadVerifiedBytes callers cannot opt themselves into this proof.
-  void bindGraphOwnedImage(const uint8_t* bytes, size_t size) {
-    if (ownedImage_ != bytes || ownedImageBytes_ != size) {
-      ownedImage_ = bytes; ownedImageBytes_ = size; ownedImageVerified_ = false;
-    }
+  void bindGraphOwnedImage(const uint8_t* bytes, size_t size,
+                           const NativeProviderPolicyV1* policy = nullptr) {
+    ownedImage_ = bytes; ownedImageBytes_ = size; ownedPolicy_ = policy;
   }
   const uint8_t* ownedImage_ = nullptr;
   size_t ownedImageBytes_ = 0;
-  bool ownedImageVerified_ = false;
-  uint8_t ownedImageDigest_[32]{};
+  const NativeProviderPolicyV1* ownedPolicy_ = nullptr;
   char error_[160]{};
   void report(const char* id, const char* stage, int code = 0);
   void reportQuiescence();
@@ -103,14 +113,16 @@ class ModuleV2 final {
                       const risc_provider_dependency_v1* dependencies, size_t count);
   bool closeMapped();
   void revokeLease();
-  void revokeStreams();
-  void closeStreams();
+  bool revokeStreams();
+  bool closeStreams();
+  const risc_stream_session_provider_v1* streamSessions_ = nullptr;
   const StreamHostV1* streamHost_ = nullptr;
   risc_stream_provider_resources_v1 streamApi_{};
   RuntimePackages::Identity resourceIdentity_{};
   uint8_t packageManifestSha256_[32]{};
   StorageGenerationStamp packageSourceStamp_{};
   bool streamsRevoked_ = false;
+  bool streamCleanupRetained_ = false;
   ModuleLeaseV2 lease_{};
   bool leaseAttempted_ = false;
   void* handle_ = nullptr;

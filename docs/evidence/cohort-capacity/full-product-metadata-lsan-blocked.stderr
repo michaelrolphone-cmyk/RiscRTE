@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/workspace/shared/runtime-shared-keyboard-capacity/test/full_product_metadata_capacity_test.py", line 241, in <module>
+    main()
+  File "/workspace/shared/runtime-shared-keyboard-capacity/test/full_product_metadata_capacity_test.py", line 182, in main
+    check(args.executable, baseline, expanded, "26-provider-full-product",
+  File "/workspace/shared/runtime-shared-keyboard-capacity/test/full_product_metadata_capacity_test.py", line 136, in check
+    assert process.returncode == 0, (case, process.returncode, process.stdout, process.stderr)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('26-provider-full-product', 1, '', '==32==LeakSanitizer has encountered a fatal error.\n==32==HINT: For debugging, try setting environment variable LSAN_OPTIONS=verbosity=1:log_threads=1\n==32==HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)\n')

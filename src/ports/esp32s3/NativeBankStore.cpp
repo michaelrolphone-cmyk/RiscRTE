@@ -5,10 +5,14 @@
 #include "runtime/update/Version.h"
 #include "runtime/update/StoreAudit.h"
 #include "runtime/provisioning/StoreFiles.h"
+#include "runtime/provisioning/StoreImageCapacity.h"
 #include "CpuPort.h"
 #include "NativeBoard.h"
 #include "NativeRetainedWake.h"
+#include "NativeDiagnosticBinding.h"
 #include "runtime/update/Cohort.h"
+#include "runtime/drivers/SelectedNativeProviderPolicyV1.h"
+#include "runtime/drivers/NativeProviderPolicyValidationV1.h"
 #include <Arduino.h>
 #include <RiscBuildIdentity.h>
 #include <esp_ota_ops.h>
@@ -31,10 +35,14 @@ extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
  * paired bootstrap-store contract, independently of product/release URLs. */
 #ifdef RISC_OWNER_INSTALLER
 extern "C" __attribute__((used)) const char risc_paired_store_abi[]="RISC_OWNER_INSTALLER:1";
+// Normal boot is skipped, so its target literal is otherwise dead-stripped.
+// Retain a separate identity for offline entry/layout admission only.
+extern "C" __attribute__((used)) const char risc_owner_maintenance_target[]="RISC_OWNER_TARGET:" RISC_TARGET;
 #else
 extern "C" __attribute__((used)) const char risc_paired_store_abi[]=RISC_PAIRED_ABI_MARKER;
 #endif
 extern "C" __attribute__((used)) const char risc_runtime_update_version[]="RISC_RUNTIME_VERSION:" RISC_BUILD_VERSION;
+extern "C" __attribute__((used)) const char risc_provision_image[]="RISC_PROVISION_IMAGE:1";
 // Arduino's weak default confirms before setup(), which is too early.
 extern "C" bool verifyRollbackLater(void){return true;}
 namespace RiscBankStore {
@@ -70,10 +78,15 @@ struct ProvisionState {
   RiscCpu::Hardware hardware;
   const RiscBoot::KeyValueBackend* keyValue;
   const RiscBoot::AppDataBackend* appData;
+  uint32_t imageReceived=0;
+  bool imageFailed=false;
   ProvisionState(RiscProvision::FileBackend io,const RiscCpu::Hardware& h,const RiscBoot::KeyValueBackend* k,const RiscBoot::AppDataBackend* a):files(io),hardware(h),keyValue(k),appData(a){}
 };
 ProvisionState* provisionState=nullptr;
 RiscCpu::Port* candidateCpu=nullptr;
+RiscBoot::Runtime* retainedAdmissionRuntime=nullptr;
+FILE* retainedAdmissionFile=nullptr;
+uint8_t* retainedAdmissionBytes=nullptr;
 bool provisionReadRetained=false;
 enum class ReceiptState {Missing,Ready,Unavailable};
 ReceiptState sourceReceipt(uint8_t (&)[32]);
@@ -92,7 +105,20 @@ static_assert(CONFIG_SPIFFS_PAGE_SIZE==RiscProvision::SpiffsCapacity::PageBytes 
 #define CONFIG_SPIFFS_OBJ_NAME_LEN 32
 #endif
 bool owner(){return isOwner && isOwner();}
-bool operationSafe(){return owner() && !provisionReadRetained && (!runtime || !runtime->metadataCloseRetained()) && operationIsSafe && operationIsSafe();}
+bool operationSafe(){return owner() && !retainedAdmissionRuntime && !retainedAdmissionFile && !retainedAdmissionBytes &&
+  !provisionReadRetained && (!runtime || !runtime->metadataCloseRetained()) && operationIsSafe && operationIsSafe();}
+bool retainAdmissionRead(RiscBoot::Runtime* candidate,FILE* file,uint8_t* bytes){
+  retainedAdmissionRuntime=candidate;retainedAdmissionFile=file;retainedAdmissionBytes=bytes;
+  provisionReadRetained=true;return false;
+}
+bool closeAdmissionRead(RiscBoot::Runtime* candidate,FILE* file,uint8_t* bytes){
+  if(!operationSafe())return retainAdmissionRead(candidate,file,bytes);
+  // Establish custody before close, because its failure leaves ownership
+  // uncertain. Never reuse that FILE or release its read buffer afterward.
+  retainedAdmissionRuntime=candidate;retainedAdmissionFile=file;retainedAdmissionBytes=bytes;
+  if(fclose(file)!=0){provisionReadRetained=true;return false;}
+  retainedAdmissionRuntime=nullptr;retainedAdmissionFile=nullptr;retainedAdmissionBytes=nullptr;return true;
+}
 uint32_t now(void*){return millis();}
 bool hashBegin(void*){return mbedtls_sha256_starts_ret(&scratch->hashContext,0)==0;}
 bool hashAdd(void*,const void* p,uint32_t n){return mbedtls_sha256_update_ret(&scratch->hashContext,static_cast<const uint8_t*>(p),n)==0;}
@@ -129,19 +155,40 @@ bool mountInactive(unsigned b){
   mounted=true;return true;
 }
 bool openWholeStore(void*,unsigned b){
-  return provisionFiles && provisionProfile && !runtime && confirmed && !pending && mountInactive(b) &&
-    provisionFiles->begin(stagingRoot,*provisionProfile,provisionDigest,ProvisionCapacity);
+  if(!provisionFiles || !provisionProfile || !provisionState || runtime || !confirmed || pending || b==activeBank)return false;
+  if(provisionProfile->imageMode())return !mounted && !appFile && hashBegin(nullptr);
+  return mountInactive(b) && provisionFiles->begin(stagingRoot,*provisionProfile,provisionDigest,ProvisionCapacity);
+}
+bool verifyCompactImage(unsigned b){
+  if(!provisionState || !provisionProfile || provisionState->imageFailed ||
+     provisionState->imageReceived!=StoreBytes || mounted || appFile)return false;
+  uint8_t actual[32];
+  if(!hashEnd(nullptr,actual) || memcmp(actual,provisionProfile->image.sha256,32) || !hashBegin(nullptr))return false;
+  // Independently read back the complete image before trusting its filesystem.
+  const uint32_t started=millis();
+  for(uint32_t at=0;at<StoreBytes;at+=4096){
+    if(!read(nullptr,b,1,at,scratch->buffer,4096)||!hashAdd(nullptr,scratch->buffer,4096))return false;
+    vTaskDelay(1);if(!operationSafe()||uint32_t(millis()-started)>30000u)return false;
+  }
+  if(!hashEnd(nullptr,actual)||memcmp(actual,provisionProfile->image.sha256,32))return false;
+  if(!RiscProvision::StoreImageCapacity::fits(StoreBytes,&b,
+      [](void* context,uint32_t offset,void* bytes,uint32_t size)->uint32_t{
+        vTaskDelay(1);return read(nullptr,*static_cast<unsigned*>(context),1,offset,bytes,size)?size:0;
+      },scratch->buffer,sizeof(scratch->buffer)))return false;
+  return operationSafe() && uint32_t(millis()-started)<=30000u && mountInactive(b) &&
+    provisionFiles->verifyImage(stagingRoot,*provisionProfile,ProvisionCapacity);
 }
 bool finishWholeStore(void*,unsigned b,uint8_t* digest){
-  if(!operationSafe() || !provisionFiles || !provisionProfile || runtime || b==activeBank || !mounted ||
-     !provisionFiles->finish() || !cleanup(nullptr) || !hashBegin(nullptr))return false;
+  if(!operationSafe() || !provisionFiles || !provisionProfile || runtime || b==activeBank)return false;
+  const bool verified=provisionProfile->imageMode()?verifyCompactImage(b):(mounted&&provisionFiles->finish());
+  if(!verified || !cleanup(nullptr) || !hashBegin(nullptr))return false;
   // Hash the closed, persisted partition after all file writes and filesystem
   // GC. PairedBank independently compares a second raw readback before READY.
   uint32_t started=millis();
   for(uint32_t at=0;at<StoreBytes;){uint32_t n=std::min(4096u,StoreBytes-at);
     if(!read(nullptr,b,1,at,scratch->buffer,n)||!hashAdd(nullptr,scratch->buffer,n))return false;
     at+=n;vTaskDelay(1);if(!operationSafe()||uint32_t(millis()-started)>30000u)return false;}
-  return hashEnd(nullptr,digest);
+  return hashEnd(nullptr,digest) && (!provisionProfile->imageMode() || !memcmp(digest,provisionProfile->image.sha256,32));
 }
 bool openApp(void*,unsigned b){
   if(!operationSafe() || b==activeBank || mounted || appFile || !scratch->manifestSize)return false;
@@ -160,9 +207,14 @@ bool allowedImport(const char* name){
   return false;
 }
 enum class ElfRole {Application,Driver,Either};
-bool admitElf(const uint8_t* bytes,size_t n,ElfRole role=ElfRole::Application){
+bool admitElf(const uint8_t* bytes,size_t n,ElfRole role=ElfRole::Application,
+              const RuntimeProviders::NativeProviderPolicyV1* policy=nullptr){
   if(!operationSafe() || n>RISC_BANK_APP_MAX)return false;
   const uint32_t started=millis();unsigned visited=0;
+  // Only the exact prepared driver selection can carry native authority. A
+  // matching image in an application or unselected-file slot stays ordinary.
+  if(role!=ElfRole::Driver)policy=nullptr;
+  if(policy && !RuntimeProviders::nativeProviderImageValid(*policy,bytes,n))return false;
   if(!esp_elf_validate_file(bytes,n))return false;
   // Structural validation is the existing synchronous loader check. Bound its
   // observed duration, then cooperate throughout the additional policy scan.
@@ -185,7 +237,7 @@ bool admitElf(const uint8_t* bytes,size_t n,ElfRole role=ElfRole::Application){
       if(sym.shndx==SHN_UNDEF){
         const elf32_sym_t empty{};if(!j && !memcmp(&sym,&empty,sizeof(sym)))continue;
         if((ELF_ST_BIND(sym.info)!=STB_GLOBAL && ELF_ST_BIND(sym.info)!=STB_WEAK) || !*name ||
-           !allowedImport(name) || !elf_find_sym_default(name))return false;
+           (!policy && (!allowedImport(name) || !elf_find_sym_default(name))))return false;
         continue;
       }
       if(!exports)continue;
@@ -204,7 +256,7 @@ bool admitElf(const uint8_t* bytes,size_t n,ElfRole role=ElfRole::Application){
   const bool application=main==1 && init==fini;
   return role==ElfRole::Application?application:role==ElfRole::Driver?driver==1 && !main && !init && !fini:application || (driver==1 && !main && !init && !fini);
 }
-struct AdmissionImages {const char* root;uint32_t started;bool seen[RiscProvision::MaxFiles]{};};
+struct AdmissionImages {const char* root;uint32_t started;RiscBoot::Runtime* candidate;bool seen[RiscProvision::MaxFiles]{};};
 bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole role){
   if(!operationSafe() || !provisionState || !provisionProfile || uint32_t(millis()-context.started)>=30000u)return false;
   const size_t rootBytes=strlen(context.root);
@@ -214,15 +266,21 @@ bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole r
   if(index==provisionProfile->count)return false;
   const auto& file=provisionProfile->files[index];
   if(!file.bytes || file.bytes>RISC_BANK_APP_MAX)return false;
+  const auto* policy=role==ElfRole::Driver && context.candidate?context.candidate->nativeProviderPolicyForImage(path):nullptr;
   auto* bytes=static_cast<uint8_t*>(heap_caps_malloc(file.bytes,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
   if(!bytes)return false;
-  FILE* input=fopen(path,"rb");bool ok=input && hashBegin(nullptr);uint32_t at=0;
+  if(!operationSafe()){free(bytes);return false;}
+  FILE* input=fopen(path,"rb");bool ok=input && (!policy || operationSafe()) && hashBegin(nullptr);uint32_t at=0;
   while(ok && at<file.bytes){uint32_t n=std::min(4096u,file.bytes-at);
-    ok=operationSafe() && fread(bytes+at,1,n,input)==n && hashAdd(nullptr,bytes+at,n);at+=n;
+    ok=operationSafe() && fread(bytes+at,1,n,input)==n && (!policy || operationSafe()) && hashAdd(nullptr,bytes+at,n);at+=n;
     vTaskDelay(1);if(uint32_t(millis()-context.started)>=30000u)ok=false;}
-  uint8_t digest[32];ok=ok && fgetc(input)==EOF && !ferror(input) && hashEnd(nullptr,digest) && !memcmp(digest,file.sha256,32);
-  if(input && fclose(input)!=0){provisionReadRetained=true;ok=false;}
-  ok=ok && admitElf(bytes,file.bytes,role) && operationSafe() && uint32_t(millis()-context.started)<30000u;
+  uint8_t digest[32];ok=ok && (!policy || operationSafe()) && fgetc(input)==EOF &&
+    (!policy || operationSafe()) && !ferror(input) && hashEnd(nullptr,digest) && !memcmp(digest,file.sha256,32);
+  if(input){
+    if(policy){if(!closeAdmissionRead(context.candidate,input,bytes))return false;}
+    else if(fclose(input)!=0){provisionReadRetained=true;ok=false;}
+  }
+  ok=ok && admitElf(bytes,file.bytes,role,policy) && operationSafe() && uint32_t(millis()-context.started)<30000u;
   free(bytes);if(ok)context.seen[index]=true;return ok;
 }
 bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profile){
@@ -240,11 +298,17 @@ bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profil
   void* runtimeMemory=heap_caps_malloc(sizeof(RiscBoot::Runtime),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!runtimeMemory){free(cpuMemory);return false;}
   candidateCpu=new(cpuMemory) RiscCpu::Port(provisionState->hardware);
-  auto* candidate=new(runtimeMemory) RiscBoot::Runtime({isOwner,nullptr,nullptr,nullptr,bindProvisioningCandidate,provisionState->keyValue,nullptr,nullptr,nullptr,provisionState->appData,RiscCpu::NativeRetainedWake::backend()});
-  RiscCpu::reserveNativePins(candidate->board());AdmissionImages context{root,millis(),{}};
+  RiscBoot::Port port{isOwner,nullptr,nullptr,nullptr,bindProvisioningCandidate,provisionState->keyValue,nullptr,nullptr,nullptr,provisionState->appData,RiscCpu::NativeRetainedWake::backend()};
+  port.nativeProviders=RuntimeProviders::selectedNativeProviderPoliciesV1();
+  auto* candidate=new(runtimeMemory) RiscBoot::Runtime(port);
+  RiscCpu::reserveNativePins(candidate->board());AdmissionImages context{root,millis(),candidate,{}};
   bool ok=candidate->prepare(root) && candidate->inspectImages([](void* c,const char* path,bool driver){
     return inspectProvisionedImage(*static_cast<AdmissionImages*>(c),path,driver?ElfRole::Driver:ElfRole::Application);},&context);
   provisionReadRetained=provisionReadRetained || candidate->metadataCloseRetained();
+  if(candidate->nativeProviderReadRetained() || retainedAdmissionRuntime==candidate){
+    retainedAdmissionRuntime=candidate;
+    return false; // Preserve the native read buffer, FILE and provisioning CPU.
+  }
   ok=ok && !provisionReadRetained;
   // Non-policy child apps and unselected driver files are still native code;
   // every extra .elf must have a valid supported entry and ordinary imports.
@@ -355,22 +419,27 @@ bool writeProvisionAttempt(unsigned b){
   return journal && esp_partition_read(journal,b*SectorBytes,&pair,sizeof(pair))==ESP_OK &&
     persistReceipt(b,pair,provisionDigest);
 }
-bool admitFile(void*,const char* filename,bool provider){
+bool admitFile(void* context,const char* filename,bool provider){
   if(!operationSafe() || !filename)return false;
+  auto* candidate=static_cast<RiscBoot::Runtime*>(context);
+  const auto* policy=provider && candidate?candidate->nativeProviderPolicyForImage(filename):nullptr;
+  if(!operationSafe())return false;
   FILE* f=fopen(filename,"rb");if(!f)return false;
-  bool ok=fseek(f,0,SEEK_END)==0;long length=ok?ftell(f):-1;
-  ok=ok && length>0 && uint64_t(length)<=RISC_BANK_APP_MAX && fseek(f,0,SEEK_SET)==0;
+  bool ok=(!policy || operationSafe()) && fseek(f,0,SEEK_END)==0;
+  long length=ok && (!policy || operationSafe())?ftell(f):-1;
+  ok=ok && length>0 && uint64_t(length)<=RISC_BANK_APP_MAX && (!policy || operationSafe()) && fseek(f,0,SEEK_SET)==0;
   auto* bytes=ok?static_cast<uint8_t*>(heap_caps_malloc(size_t(length),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT)):nullptr;
-  if(!bytes){fclose(f);return false;}
+  if(!bytes){if(policy)closeAdmissionRead(candidate,f,nullptr);else fclose(f);return false;}
   uint32_t offset=0,started=millis();
   while(ok && offset<uint32_t(length)){
     uint32_t n=std::min(4096u,uint32_t(length)-offset);
     ok=operationSafe() && fread(bytes+offset,1,n,f)==n;offset+=n;vTaskDelay(1);
     if(uint32_t(millis()-started)>30000u)ok=false;
   }
-  ok=ok && fgetc(f)==EOF && !ferror(f);
-  if(fclose(f))ok=false;
-  if(ok)ok=admitElf(bytes,size_t(length),provider?ElfRole::Driver:ElfRole::Application);
+  ok=ok && (!policy || operationSafe()) && fgetc(f)==EOF && (!policy || operationSafe()) && !ferror(f);
+  if(policy){if(!closeAdmissionRead(candidate,f,bytes))return false;}
+  else if(fclose(f))ok=false;
+  if(ok)ok=admitElf(bytes,size_t(length),provider?ElfRole::Driver:ElfRole::Application,policy);
   free(bytes);return ok;
 }
 bool validateStore(void*,unsigned b){
@@ -383,8 +452,12 @@ bool validateStore(void*,unsigned b){
   void* memory=heap_caps_malloc(sizeof(RiscBoot::Runtime),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory)return false;
   auto* staged=new(memory) RiscBoot::Runtime({});
-  bool ok=runtime->validateCohort(*staged,"/updatefs",admitFile,nullptr);
+  bool ok=runtime->validateCohort(*staged,"/updatefs",admitFile,staged);
   provisionReadRetained=provisionReadRetained || staged->metadataCloseRetained();
+  if(staged->nativeProviderReadRetained() || retainedAdmissionRuntime==staged){
+    retainedAdmissionRuntime=staged;
+    return false; // Terminal native custody cannot destroy its admission owner.
+  }
   ok=ok && !provisionReadRetained;
   staged->~Runtime();free(memory);
   return ok && operationSafe();
@@ -459,7 +532,8 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
   },cohortStatus,beginCohort};
 bool bindProvisioningCandidate(RiscBoot::Runtime& candidate){
   return candidateCpu && provisionState && prepared && confirmed && !pending && !runtime && operationSafe() &&
-    candidateCpu->bind(candidate) && candidate.registerPlatform(RISC_BANK_STORE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&api);
+    candidateCpu->bind(candidate) && candidate.registerPlatform(RISC_BANK_STORE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&api) &&
+    RiscDiagnostics::bindNativeSource(candidate);
 }
 bool partition(const esp_partition_t*& out,esp_partition_type_t type,esp_partition_subtype_t subtype,const char* label,uint32_t offset,uint32_t size){
   out=esp_partition_find_first(type,subtype,label);return out && !out->encrypted && out->address==offset && out->size==size;
@@ -519,7 +593,12 @@ void rejectBoot(){
   if(running && esp_ota_get_state_partition(running,&state)==ESP_OK && state==ESP_OTA_IMG_PENDING_VERIFY && esp_ota_check_rollback_is_possible())
     esp_ota_mark_app_invalid_rollback_and_reboot();
 }
-bool provisionAvailable(){return prepared && confirmed && !pending && !runtime && !provisionFiles && !provisionReadRetained && operationSafe();}
+bool provisionAvailable(){
+  // Keep the capability marker in the linked native image for offline seed
+  // compatibility checks, even when the linker discards unused data sections.
+  asm volatile("" : : "r"(risc_provision_image));
+  return prepared && confirmed && !pending && !runtime && !provisionFiles && !provisionReadRetained && operationSafe();
+}
 ProvisionIdentity provisionIdentity(const uint8_t (&digest)[32]){
   if(!provisionAvailable())return ProvisionIdentity::Unavailable;
   uint8_t actual[32];const auto state=activeReceipt(actual);
@@ -542,7 +621,9 @@ bool provisionReady(uint64_t token){return prepared && confirmed && !pending && 
 int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&digest)[32],const RiscCpu::Hardware& hardware,const RiscBoot::KeyValueBackend* keyValue,uint64_t* token,const RiscBoot::AppDataBackend* appData){
   if(token)*token=0;
   if(!token || !prepared || !confirmed || pending || runtime || provisionFiles || provisionState || !hardware.owner || !hardware.owner() || !operationSafe())return RISC_BANK_UNAVAILABLE;
-  if(!RiscProvision::SpiffsCapacity::fits(profile,StoreBytes))return RISC_BANK_INVALID;
+  if(profile.imageMode()){
+    if(profile.image.bytes!=StoreBytes || profile.count<3 || profile.count>RiscProvision::MaxFiles)return RISC_BANK_INVALID;
+  }else if(!RiscProvision::SpiffsCapacity::fits(profile,StoreBytes))return RISC_BANK_INVALID;
   if(provisionHistory(digest)!=ProvisionHistory::Clear)return RISC_BANK_STATE;
   uint32_t total=32;
   for(size_t i=0;i<profile.count;++i){const auto& file=profile.files[i];
@@ -571,6 +652,21 @@ bool provisionStatus(uint64_t t,risc_bank_status_v1* status){return owner() && p
 int32_t provisionStep(uint64_t t,risc_bank_status_v1* status){return provisionReady(t)?transaction->step(t,status):RISC_BANK_UNAVAILABLE;}
 int32_t provisionWrite(uint64_t t,size_t file,const void* data,uint32_t n){
   if(!provisionReady(t)||!transaction->stagingStore(t))return RISC_BANK_STATE;
+  if(provisionProfile->imageMode()){
+    auto& state=*provisionState;
+    if(state.imageFailed || file || !data || !n || n>4096 || state.imageReceived>StoreBytes || n>StoreBytes-state.imageReceived)return RISC_BANK_INVALID;
+    const unsigned destination=1-activeBank;const auto* input=static_cast<const uint8_t*>(data);
+    uint32_t at=state.imageReceived,left=n;
+    while(left){
+      const uint32_t within=at%4096,amount=std::min(left,4096-within);
+      if((!within&&!erase(nullptr,destination,1,at)) || !write(nullptr,destination,1,at,input,amount)){
+        state.imageFailed=true;return RISC_BANK_IO;
+      }
+      at+=amount;input+=amount;left-=amount;
+    }
+    if(!hashAdd(nullptr,data,n)){state.imageFailed=true;return RISC_BANK_IO;}
+    state.imageReceived+=n;return RISC_BANK_OK;
+  }
   return provisionFiles->write(file,data,n)?RISC_BANK_OK:RISC_BANK_INTEGRITY;
 }
 int32_t provisionFinish(uint64_t t){return provisionReady(t)?transaction->finishStore(t):RISC_BANK_UNAVAILABLE;}

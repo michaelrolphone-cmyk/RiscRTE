@@ -19,7 +19,7 @@ cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/provider_exit_legacy_app.c" -
 c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic \
   -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" \
   -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
-  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/test/provider_exit_lifecycle_test.cpp" -ldl -o "$build/test"
 for mode in ${PROVIDER_EXIT_SCENARIOS:-operation-refused start-rolled-back release-retry native-retained release-retained operation-retained-demand start-retained operation-retained-eager cpu-gpio-retained-eager release-recovered signal-main signal-init signal-fini signal-child signal-no-grants foreign-denied fini-release-retained legacy-prefix}; do

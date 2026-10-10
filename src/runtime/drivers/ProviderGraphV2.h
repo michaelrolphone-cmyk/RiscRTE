@@ -1,5 +1,6 @@
 #pragma once
 #include "ProviderModuleV2.h"
+#include "NativeProviderPolicyV1.h"
 #include "runtime/RuntimeLimits.h"
 #include <RiscHardwareConfigV1.h>
 #include <cstddef>
@@ -10,6 +11,7 @@
  * tables. Privileged admission belongs only to the trusted executor;
  * a caller-supplied digest/import set must never confer OS/CPU rights. */
 namespace RuntimePackages { class DeviceProviderExecutorV2; }
+namespace RiscBoot { class Runtime; }
 namespace RuntimeProviders {
 struct RequirementV2 {
   const char* capability;
@@ -62,16 +64,29 @@ class GraphV2 final {
   // Trusted capability broker only; consumer is an authenticated context ID.
   bool grantStream(GrantV2, uint32_t consumer, uint32_t endpoint, uint32_t rights);
   const void* interfaceFor(GrantV2 grant) const;
+  const risc_stream_session_provider_v1* streamSessionsFor(GrantV2, uint64_t* context) const;
+  bool revokeStreamGrants(GrantV2);
+  // Serialized native session callbacks cannot reenter graph lifecycle/polling.
+  bool lifecycleBusy() const { return polling_ || streamCallback_ || lifecycle_; }
+  bool beginStreamCallback() { if (streamCallback_ || !activationSafe()) return false; streamCallback_=true; return true; }
+  void endStreamCallback() { streamCallback_=false; }
   bool shutdown();
   // Serialized round-robin dispatcher: <=4 callbacks, <=8ms each, 10ms total.
   // Each budget is clamped to remaining time before dispatch. Providers must
   // return cooperatively; an overrun cannot be preempted. No graph lock.
   // Optional scheduler yield runs once after work; omit when caller yields.
   void poll(uint32_t (*nowMs)(), void (*yield)());
+  void service(uint32_t budgetMs);
   bool hasProvider(const char* providerId, const char* capability, uint32_t api) const;
+  // Stored lifecycle state only. Does not load, validate or acquire a provider.
+  bool activeFrom(const char* providerId, const char* capability, uint32_t api, uint64_t instance=0) const;
   bool hasProviderId(const char* providerId) const;
   size_t moduleCount() const { return count_; }
   size_t liveGrants() const;
+  bool holdsGrant(GrantV2 grant) const;
+  // Native-only occupancy evidence, including revoked slots awaiting checked
+  // cleanup. High water is lifetime-monotonic and never changes grant custody.
+  size_t peakLiveGrants() const { return peakLiveGrants_; }
   // Read-only admission fence: never recover/regrant uncertain cleanup state.
   bool activationSafe() const;
   // Readonly dependency calls remain valid in bounded poll callbacks. Failed
@@ -85,6 +100,8 @@ class GraphV2 final {
   // A failed quiesce keeps the mapped ELF and dependency pointers intact for
   // a later checked retry; this is NOT a global graph shutdown.
   bool recoverFailedFrom(const char* providerId, const char* capability, uint32_t api) {
+    if (lifecycleBusy()) return false;
+    LifecycleScope scope(lifecycle_);
     const int target = findProvider(providerId, capability, api);
     if (target < 0) return false;
     const size_t index = static_cast<size_t>(target);
@@ -94,11 +111,11 @@ class GraphV2 final {
       if (grant.occupied && grant.node == index) return false;
     if (node.visit == Visit::Idle && node.module.state() == ModuleV2::State::Absent)
       return true; // Failed before mapping, or already recovered.
+    if (node.visit == Visit::Releasing) return deactivateIfUnused(index);
     if (node.module.state() != ModuleV2::State::Failed ||
         !node.module.unload()) return false;
-    node.visit = Visit::Idle;
-    releaseDependencies(index); // Only after verified physical quiescence.
-    return true;
+    node.visit = Visit::Releasing;
+    return deactivateIfUnused(index); // Only after verified physical quiescence.
   }
 
   // Enumerate only independently admitted package identities. Enumeration
@@ -119,10 +136,12 @@ class GraphV2 final {
   // digest and import declarations BEFORE entering this API.
   // Friendship is an API boundary, not a memory-isolation guarantee.
   friend class ::RuntimePackages::DeviceProviderExecutorV2;
-  bool addManagerValidatedPrivileged(const SpecV2& spec);
-  bool addChecked(const SpecV2& spec, bool privilegedAdmission);
+  friend class ::RiscBoot::Runtime;
+  bool addManagerValidatedPrivileged(const SpecV2& spec, const NativeProviderPolicyV1&);
+  const NativeProviderPolicyV1* nativePolicyFor(const char* id, const char* capability, uint32_t api, uint64_t instance) const;
+  bool addChecked(const SpecV2& spec, const NativeProviderPolicyV1*);
 
-  enum class Visit : uint8_t { Idle, Visiting, Active };
+  enum class Visit : uint8_t { Idle, Visiting, Active, Releasing };
   struct Node {
     SpecV2 spec{};
     OwnedNodeV2* owned = nullptr;
@@ -133,6 +152,9 @@ class GraphV2 final {
     // activate() stack array, this remains valid while the ELF is mapped.
     risc_provider_dependency_v1 boundDependencies[kMaxRequirements]{};
     size_t acquired = 0;
+    // The last dependency can be unpinned but still awaiting checked cleanup.
+    // Keep it in acquired until cleanup succeeds, so retry never unpins twice.
+    bool dependencyReleasePending = false;
   };
   struct GrantSlot {
     uint32_t generation = 0;
@@ -148,15 +170,24 @@ class GraphV2 final {
   GrantSlot grants_[kMaxGrants]{};
   const StreamHostV1* streamHost_ = nullptr;
   size_t count_ = 0;
+  size_t peakLiveGrants_ = 0;
   uint32_t nextGeneration_ = 0;
   size_t nextPoll_ = 0;
   bool polling_ = false;
+  size_t nextService_ = 0;
+  bool streamCallback_ = false;
+  bool lifecycle_ = false;
+  struct LifecycleScope {
+    bool& state;
+    explicit LifecycleScope(bool& flag):state(flag){state=true;}
+    ~LifecycleScope(){state=false;}
+  };
 
   int find(const char* capability, uint32_t api) const;
   int findProvider(const char* id, const char* capability, uint32_t api, uint64_t instance = 0) const;
   GrantV2 acquireIndex(size_t index);
   bool activate(size_t index);
-  void releaseDependencies(size_t index);
+  bool releaseDependencies(size_t index);
   bool deactivateIfUnused(size_t index);
 };
 }  // namespace RuntimeProviders

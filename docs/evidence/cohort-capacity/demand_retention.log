@@ -1,0 +1,21 @@
+Demand retention baseline-eager       loads=3 starts=3 acquires=7 calls=3 fini=3 retained=0 PASS
+Demand retention baseline-demand      loads=3 starts=3 acquires=7 calls=3 fini=3 retained=0 PASS
+Demand retention timer                loads=0 starts=0 acquires=0 calls=1 fini=1 retained=0 PASS
+Demand retention armed-empty          loads=0 starts=0 acquires=0 calls=1 fini=1 retained=0 PASS
+Demand retention armed-first          loads=2 starts=2 acquires=3 calls=1 fini=1 retained=0 PASS
+Demand retention handoff              loads=2 starts=2 acquires=6 calls=3 fini=3 retained=0 PASS
+Demand retention late                 loads=3 starts=3 acquires=9 calls=3 fini=3 retained=0 PASS
+Demand retention before-release       loads=4 starts=4 acquires=3 calls=1 fini=1 retained=0 PASS
+Demand retention pending              loads=4 starts=4 acquires=3 calls=1 fini=1 retained=0 PASS
+Demand retention retry                loads=4 starts=4 acquires=4 calls=1 fini=1 retained=0 PASS
+Demand retention partial-retry        loads=5 starts=5 acquires=6 calls=1 fini=1 retained=0 PASS
+Demand retention failed-retained      loads=2 starts=2 acquires=1 calls=1 fini=0 retained=1 PASS
+Demand retention partial-retained     loads=3 starts=3 acquires=3 calls=1 fini=0 retained=1 PASS
+Demand retention native-retained      loads=2 starts=2 acquires=1 calls=1 fini=0 retained=1 PASS
+Demand retention pre-failed-retained  loads=2 starts=2 acquires=1 calls=1 fini=0 retained=1 PASS
+Demand retention shutdown-retained    loads=2 starts=2 acquires=3 calls=1 fini=1 retained=1 PASS
+Demand retention queued               loads=2 starts=2 acquires=3 calls=3 fini=3 retained=0 PASS
+Grant occupancy providers=26 peak=42 capacity=42 clean_final=0 PASS
+Demand retention limits               loads=26 starts=26 acquires=69 calls=3 fini=3 retained=0 PASS
+Grant occupancy providers=17 peak=32 capacity=32 clean_final=0 PASS
+Demand retention limits               loads=17 starts=17 acquires=67 calls=3 fini=3 retained=0 PASS

@@ -45,5 +45,20 @@ int main(){
  assert(p.quiescent() && p.appExitSafe());
  p.serial_=UINT64_MAX;overflow=99;
  assert(!Port::syncCreate(&a,&overflow) && !overflow && p.quiescent());
+ // Every inherited provider slot is reachable, including the new last slot.
+ // Tokens remain scoped to their exact table; the last lock fences the port.
+ Port full(hw);full.syncCount_=RuntimeProviders::GraphV2::kMaxModules;
+ uint64_t tokens[RuntimeProviders::GraphV2::kMaxModules]{};
+ for(size_t i=0;i<full.syncCount_;++i) {
+  auto& sync=full.syncs_[i];sync.port=&full;sync.instance=i+1;
+  assert(Port::syncCreate(&sync,&tokens[i]) && tokens[i]);
+ }
+ auto& last=full.syncs_[full.syncCount_-1];
+ assert(!Port::syncTryLock(&last,tokens[0]));
+ assert(Port::syncTryLock(&last,tokens[full.syncCount_-1]));
+ assert(!full.appExitSafe() && !full.providerStorageSafe());
+ assert(Port::syncUnlock(&last,tokens[full.syncCount_-1]));
+ for(size_t i=0;i<full.syncCount_;++i)assert(Port::syncDestroy(&full.syncs_[i],tokens[i]));
+ assert(full.quiescent() && full.appExitSafe());
  puts("Provider sync: fixed capacity, owner-only, nonrecursive, scoped/stale tokens, retained cleanup and lifecycle barriers PASS");
 }

@@ -96,9 +96,16 @@ bool Runtime::validateCohort(Runtime& candidate,const char* root,
     for(size_t p=0;p<driverCount_;++p)for(size_t g=0;g<providerStorage_[p].count;++g)if(providerStorage_[p].keys[g].nameSpace==ns)return true;
     return false;
   };
+  auto oldFilesUsed=[&](uint32_t ns){
+    for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)
+      if(policies_[p].grants[g].driver==AppDataDriver && policies_[p].grants[g].instance==ns)return true;
+    for(size_t p=0;p<driverCount_;++p)for(size_t g=0;g<providerStorage_[p].fileCount;++g)
+      if(providerStorage_[p].files[g].nameSpace==ns)return true;
+    return false;
+  };
   for(size_t p=0;p<candidate.policyCount_;++p)for(size_t g=0;g<candidate.policies_[p].count;++g){
     const auto& grant=candidate.policies_[p].grants[g];if(!persistent(grant))continue;
-    bool used=grant.keyValue && oldKvUsed(uint32_t(grant.instance)),owned=false;
+    bool used=grant.keyValue?oldKvUsed(uint32_t(grant.instance)):oldFilesUsed(uint32_t(grant.instance)),owned=false;
     for(size_t q=0;q<policyCount_;++q)for(size_t h=0;h<policies_[q].count;++h){const auto& previous=policies_[q].grants[h];
       if(!persistent(previous) || strcmp(previous.capability,grant.capability) || previous.instance!=grant.instance)continue;
       used=true;if(same(previous,grant) && !strcmp(policies_[q].id,candidate.policies_[p].id))owned=true;
@@ -134,6 +141,27 @@ bool Runtime::validateCohort(Runtime& candidate,const char* root,
     bool owned=false;
     for(size_t q=0;q<driverCount_;++q)if(!strcmp(candidate.drivers_[p].id,drivers_[q].id) && candidate.drivers_[p].instance==drivers_[q].instance)
       for(size_t h=0;h<providerStorage_[q].count;++h)if(providerStorage_[q].keys[h].nameSpace==key.nameSpace)owned=true;
+    if(!owned)return false;
+  }
+  // Exact file grants carry persistent identity just like app namespaces and
+  // provider keys. Fresh deployments may explicitly share app/provider access;
+  // a staged update cannot borrow an already owned namespace for a new principal.
+  for(size_t p=0;p<driverCount_;++p)for(size_t f=0;f<providerStorage_[p].fileCount;++f){
+    const auto& file=providerStorage_[p].files[f];bool found=false;
+    for(size_t q=0;q<candidate.driverCount_;++q)
+      if(!strcmp(drivers_[p].id,candidate.drivers_[q].id) && drivers_[p].instance==candidate.drivers_[q].instance)
+        for(size_t h=0;h<candidate.providerStorage_[q].fileCount;++h){const auto& next=candidate.providerStorage_[q].files[h];
+          if(!strcmp(file.name,next.name) && file.nameSpace==next.nameSpace && file.writable==next.writable)found=true;
+        }
+    if(!found)return false;
+  }
+  for(size_t p=0;p<candidate.driverCount_;++p)for(size_t f=0;f<candidate.providerStorage_[p].fileCount;++f){
+    const auto& file=candidate.providerStorage_[p].files[f];if(!oldFilesUsed(file.nameSpace))continue;
+    bool owned=false;
+    for(size_t q=0;q<driverCount_;++q)
+      if(!strcmp(candidate.drivers_[p].id,drivers_[q].id) && candidate.drivers_[p].instance==drivers_[q].instance)
+        for(size_t h=0;h<providerStorage_[q].fileCount;++h)
+          if(providerStorage_[q].files[h].nameSpace==file.nameSpace)owned=true;
     if(!owned)return false;
   }
   constexpr size_t maximum=2*MaxAppPolicies+2*MaxDrivers+3;

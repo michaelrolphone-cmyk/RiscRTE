@@ -1,0 +1,1 @@
+SDMMC CPU port: legacy ABI, selected bank, pin conflicts, bounded copied API, owner/token checks, stale tokens, failed-open/read/write/sync cleanup and retained-release retry PASS
