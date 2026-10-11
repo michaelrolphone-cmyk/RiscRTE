@@ -27,14 +27,17 @@ inline int32_t write(uint32_t ns,const char*prefix,const char*k,const void*data,
  if(nvs_set_blob(h.value,k,data,size)!=ESP_OK||nvs_commit(h.value)!=ESP_OK)return RISC_KEY_VALUE_IO;
  Handle check;if(open(check,ns,prefix,NVS_READONLY)!=ESP_OK)return RISC_KEY_VALUE_IO;
  uint8_t bytes[Maximum];RiscRuntime::ScopedBufferWipe wipe(bytes);uint32_t n=0;
- if(readRaw(check.value,k,bytes,sizeof bytes,&n)||n!=size||std::memcmp(bytes,data,size))return RISC_KEY_VALUE_IO;return 0;
+ if(readRaw(check.value,k,bytes,sizeof bytes,&n)||n!=size||std::memcmp(bytes,data,size))return RISC_KEY_VALUE_IO;
+ return 0;
 }
 inline int32_t next(void*,uint32_t ns,bool delta,const char*after,char key[16],void*out,uint32_t cap,uint32_t*n){
- if(!after||!key||!n||!out||!valid(ns,"probe"))return RISC_KEY_VALUE_INVALID;*n=0;key[0]=0;
+ if(!after||!key||!n||!out||!valid(ns,"probe"))return RISC_KEY_VALUE_INVALID;
+ *n=0;key[0]=0;
  RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_KEY_VALUE_BUSY;
  if(initializationStatus()!=ESP_OK)return RISC_KEY_VALUE_IO;
  const char*prefix=delta?"kvd":"rte";Handle h;auto rc=open(h,ns,prefix,NVS_READONLY);
- if(rc==ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_NOT_FOUND;if(rc!=ESP_OK)return RISC_KEY_VALUE_IO;
+ if(rc==ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_NOT_FOUND;
+ if(rc!=ESP_OK)return RISC_KEY_VALUE_IO;
  char name[12];std::snprintf(name,sizeof name,"%s%08x",prefix,unsigned(ns));
  size_t used=0;if(nvs_get_used_entry_count(h.value,&used)!=ESP_OK)return RISC_KEY_VALUE_IO;
  auto it=nvs_entry_find("nvs",name,NVS_TYPE_ANY);if(!it&&used)return RISC_KEY_VALUE_IO;
@@ -45,7 +48,8 @@ inline int32_t next(void*,uint32_t ns,bool delta,const char*after,char key[16],v
   }
   it=nvs_entry_next(it);
  }
- if(!key[0])return RISC_KEY_VALUE_NOT_FOUND;return readRaw(h.value,key,out,cap,n);
+ if(!key[0])return RISC_KEY_VALUE_NOT_FOUND;
+ return readRaw(h.value,key,out,cap,n);
 }
 inline int32_t erase(void*,uint32_t ns,const char*k){
  if(!valid(ns,k))return RISC_KEY_VALUE_INVALID;

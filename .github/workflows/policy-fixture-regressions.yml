@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - 'src/bootstrap/AppPolicyLimits.h'
+      - 'src/ports/esp32s3/NvsScalableSettings.h'
+      - 'test/native_nvs*'
       - 'test/run_key_value_multi_test.sh'
       - '.github/workflows/policy-fixture-regressions.yml'
 permissions:
@@ -23,3 +25,16 @@ jobs:
           bash test/run_key_value_multi_test.sh
           SANITIZE=1 bash test/run_key_value_multi_test.sh
           python3 -m unittest discover -s test -p 'test_app_policy_rows.py'
+  native_nvs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Strict native NVS host isolation
+        run: |
+          bash test/native_nvs_shim/run_test.sh
+          SANITIZE=1 bash test/native_nvs_shim/run_test.sh
+

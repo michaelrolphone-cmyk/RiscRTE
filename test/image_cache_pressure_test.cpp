@@ -87,6 +87,9 @@ extern "C" void vTaskDelay(TickType_t){}
 extern "C" void spi_flash_disable_interrupts_caches_and_other_cpu(){}
 extern "C" void spi_flash_enable_interrupts_caches_and_other_cpu(){}
 extern "C" void esp_spiram_writeback_cache(){}
+// This fixture never admits removable images. ESP_PLATFORM still links those
+// Runtime paths; fail loudly if this host-mapping fixture enters one of them.
+extern "C" bool esp_elf_validate_file(const uint8_t*,size_t){std::abort();}
 extern "C" bool esp_elf_privileged_diagnostic_abi_supported_v1(uint32_t abi){return abi==0;}
 extern "C" bool esp_elf_privileged_os_cpu_scope_owned_v1(){return false;}
 extern "C" bool esp_elf_privileged_os_cpu_import_allowed_v1(const char*){return false;}
