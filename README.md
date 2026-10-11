@@ -1,5 +1,10 @@
 # RiscRTE
 
+This feature branch develops Runtime 0.2.7: provider-scoped installed-app
+admission and copied asynchronous storage work. It is not a hardware-qualified
+release. Existing boot profiles do not select the storage worker implicitly.
+See [installed-package integration](docs/INSTALLED_PACKAGES.md).
+
 An explicit, default-off [native TCP listener](docs/TCP_LISTENER.md) supplies
 bounded provider transport for external applications. Ordinary targets open no
 listener; protocol, file and product policy stay outside Runtime.

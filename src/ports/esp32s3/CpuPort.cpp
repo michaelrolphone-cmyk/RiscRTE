@@ -211,7 +211,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
     if(runtime.uses(id,"platform.gpio",1)||runtime.uses(id,RISC_STORAGE_WORKER_CAPABILITY,1)){
       if(gpioCount_==16)return false;
       auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api.base))return false;
-      if(runtime.uses(id,RISC_STORAGE_WORKER_CAPABILITY,1) && (!configureStorageWork(c)||!runtime.registerPlatform(RISC_STORAGE_WORKER_CAPABILITY,1,RiscBoot::Runtime::Scope::Device,id,&c.work)))return false;
+      if(runtime.uses(id,RISC_STORAGE_WORKER_CAPABILITY,1) && (!configureStorageWork(c)||!runtime.registerPlatform(RISC_STORAGE_WORKER_CAPABILITY,1,RiscBoot::Runtime::Scope::Device,id,&storageWork_.api)))return false;
     }
     if(runtime.uses(id,"platform.i2c.controller",1)){
       if(i2cCount_==2 || strcmp(d.type,"controller.i2c"))return false;

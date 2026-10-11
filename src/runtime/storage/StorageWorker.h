@@ -70,6 +70,6 @@ class Worker final {
   risc_storage_work_execute_v1 callback_=nullptr;void*context_=nullptr;
   uint64_t serial_=0,token_=0;bool cancelled_=false;
   uint32_t requestSize_=0,resultSize_=0;int32_t status_=0;
-  alignas(4) unsigned char request_[RISC_STORAGE_WORKER_BYTES]{},result_[RISC_STORAGE_WORKER_BYTES]{};
+  alignas(8) unsigned char request_[RISC_STORAGE_WORKER_BYTES]{},result_[RISC_STORAGE_WORKER_BYTES]{};
 };
 }

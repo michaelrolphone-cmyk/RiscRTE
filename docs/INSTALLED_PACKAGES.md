@@ -187,3 +187,9 @@ owner races, independent global transfer state and retained-close recovery.
 Existing synchronous SDMMC port regression still passes. This checkpoint is
 being integrated into the SD provider's optional asynchronous volume suffix;
 these tests alone do not yet qualify the complete X4 behavior.
+
+The asynchronous worker/volume implementation is now present; see
+[STORAGE_ASYNC.md](STORAGE_ASYNC.md). The earlier "required next boundary" notes
+record the prior checkpoint, not a justification to leave integration unfinished.
+The current service uses the nonblocking coordinator; Springboard/App Store and
+asynchronous cache writes are still being integrated.

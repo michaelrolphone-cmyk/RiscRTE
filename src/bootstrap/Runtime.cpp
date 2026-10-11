@@ -1455,3 +1455,7 @@ bool RiscBoot::Runtime::admitInstalledApp(const char* policyJson,const char* man
 }
 
 #include "InstallationRuntime.inc"
+
+#ifdef RISC_INSTALLED_APP_CAPACITY
+extern "C" __attribute__((used)) const uint32_t risc_installed_app_capacity=RiscLimits::Apps;
+#endif

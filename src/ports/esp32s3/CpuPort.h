@@ -127,9 +127,9 @@ class Port final {
     struct Lock { uint64_t token=0; bool held=false; } locks[RISC_PROVIDER_SYNC_MAX_LOCKS]{};
     risc_provider_sync_api_v1 api{};
   } syncs_[RuntimeProviders::GraphV2::kMaxModules];
-  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{};risc_storage_worker_v1 work{}; } gpios_[16];
+  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{}; } gpios_[16];
   struct StorageWork {Gpio*gpio=nullptr;risc_storage_work_scope_v1 scope{};
-    risc_storage_work_io_v1 io{};uint64_t sectors=0;bool opened=false,fault=false,powerClaimed=false;} storageWork_;
+    risc_storage_work_io_v1 io{};risc_storage_worker_v1 api{};uint64_t sectors=0;bool opened=false,fault=false,powerClaimed=false;} storageWork_;
   bool storageWorkBusy()const {return hw_.storageWork&&hw_.storageWork->mailbox&&!hw_.storageWork->mailbox->idle();}
   bool configureStorageWork(Gpio&);
   static bool workIoAllowed(void*);

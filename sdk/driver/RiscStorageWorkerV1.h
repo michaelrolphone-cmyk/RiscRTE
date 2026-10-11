@@ -12,7 +12,7 @@ extern "C" {
 enum {RISC_STORAGE_WORK_OK=0,RISC_STORAGE_WORK_PENDING=1,RISC_STORAGE_WORK_CANCELLED=2,
  RISC_STORAGE_WORK_INVALID=-1,RISC_STORAGE_WORK_BUSY=-2,RISC_STORAGE_WORK_CONTEXT=-3,
  RISC_STORAGE_WORK_RETAINED=-4};
-/* Native task calls only this provider callback. Request/result buffers belong
+/* Native task calls only this provider callback. Request/result buffers are at least 8-byte aligned and belong
  * to native storage, not the requesting app. The provider and its dependencies
  * remain pinned until unbind succeeds. Completion is observed on the owner task.
  * Native workers receive only separately scoped storage I/O, never owner-task
@@ -24,6 +24,8 @@ typedef struct {
 } risc_storage_work_scope_v1;
 typedef struct {
  void*context;
+ bool (*on_worker)(void*);
+ uint64_t (*now_ms)(void*);
  bool (*power)(void*,bool level);
  void (*delay_ms)(void*,uint32_t);
  bool (*open)(void*,risc_sdmmc_card_info_v1*);

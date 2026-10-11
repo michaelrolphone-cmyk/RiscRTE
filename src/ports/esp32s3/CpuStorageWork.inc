@@ -2,9 +2,9 @@
 // worker mutates only its storage state and hardware, never Port token/pin maps.
 bool Port::workIoAllowed(void*ctx){
  auto&g=*static_cast<Gpio*>(ctx);auto&p=*g.port;
- if(!p.hw_.storageWork||p.storageWork_.gpio!=&g)return false;
- if(p.hw_.storageWork->isWorker())return true;
- return p.available()&&!p.sleepRetained_&&!p.storageWorkBusy();
+ if(!p.hw_.storageWork)return false;
+ if(p.hw_.storageWork->isWorker())return p.storageWork_.gpio==&g;
+ return p.available()&&!p.sleepRetained_&&p.storageWork_.gpio==&g&&!p.storageWorkBusy();
 }
 int32_t Port::workClaim(void*ctx,const risc_storage_work_scope_v1*scope){
  auto&g=*static_cast<Gpio*>(ctx);auto&p=*g.port;auto&w=p.storageWork_;
@@ -31,7 +31,7 @@ int32_t Port::workRelease(void*ctx){
  if(w.powerClaimed&&!p.hw_.gpioClose(w.scope.power))return RISC_STORAGE_WORK_RETAINED;
  const uint8_t pins[]={w.scope.power,w.scope.clk,w.scope.cmd,w.scope.dat0};
  for(uint8_t pin:pins)p.unreserve(pin,&w);
- auto io=w.io;w={};w.io=io;return RISC_STORAGE_WORK_OK;
+ auto io=w.io;auto api=w.api;w={};w.io=io;w.api=api;return RISC_STORAGE_WORK_OK;
 }
 int32_t Port::workBind(void*ctx,risc_storage_work_execute_v1 fn,void*provider){
  auto&g=*static_cast<Gpio*>(ctx);auto&p=*g.port;
@@ -64,6 +64,8 @@ bool Port::configureStorageWork(Gpio&g){
  if(!hw_.storageWork||!hw_.storageWork->prepare||!hw_.storageWork->isWorker||!hw_.storageWork->delayMs||storageWork_.io.context)return false;
  if(!hw_.storageWork->prepare()||!hw_.storageWork->mailbox)return false;
  storageWork_.io={&g,
+  [](void*c){auto&g=*static_cast<Gpio*>(c);auto&p=*g.port;return p.hw_.storageWork&&p.hw_.storageWork->isWorker()&&p.storageWork_.gpio==&g;},
+  [](void*c)->uint64_t{auto&g=*static_cast<Gpio*>(c);return workIoAllowed(c)&&g.port->hw_.now?g.port->hw_.now():0;},
   [](void*c,bool level){auto&g=*static_cast<Gpio*>(c);auto&p=*g.port;if(!workIoAllowed(c))return false;const bool ok=p.hw_.gpioWrite(p.storageWork_.scope.power,level);if(!ok)p.storageWork_.fault=true;return ok;},
   [](void*c,uint32_t ms){auto&g=*static_cast<Gpio*>(c);if(workIoAllowed(c)&&ms<=5000)g.port->hw_.storageWork->delayMs(ms);},
   [](void*c,risc_sdmmc_card_info_v1*out){if(out)*out={};auto&g=*static_cast<Gpio*>(c);auto&p=*g.port;auto&w=p.storageWork_;
@@ -88,5 +90,5 @@ bool Port::configureStorageWork(Gpio&g){
    if(!w.opened)return !w.fault;
    if(!p.hw_.sdmmcClose()){w.fault=true;return false;}
    w.opened=w.fault=false;return true;}};
- g.work={1,sizeof(g.work),&g,workBind,workSubmit,workCollect,workCancel,workUnbind,workClaim,workRelease,&storageWork_.io};return true;
+ storageWork_.api={1,sizeof(storageWork_.api),&g,workBind,workSubmit,workCollect,workCancel,workUnbind,workClaim,workRelease,&storageWork_.io};return true;
 }
