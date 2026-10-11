@@ -1,0 +1,57 @@
+name: Generic PSRAM metadata qualification
+on:
+  pull_request:
+    paths:
+      - 'platformio.ini'
+      - 'src/main.cpp'
+      - 'src/ports/esp32s3/NativeRuntime.h'
+      - 'test/test_metadata_targets.py'
+      - 'test/test_native_startup.py'
+      - 'test/paired_runtime_memory_test.cpp'
+      - 'test/run_paired_runtime_memory_test.sh'
+      - '.github/workflows/generic-metadata-regressions.yml'
+permissions:
+  contents: read
+env:
+  PLATFORMIO_SETTING_ENABLE_TELEMETRY: 'No'
+jobs:
+  metadata:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fail-closed allocation, retained lifetime and boot routes
+        run: |
+          bash test/run_paired_runtime_memory_test.sh
+          SANITIZE=1 bash test/run_paired_runtime_memory_test.sh
+          python3 -m unittest discover -s test -p 'test_metadata_targets.py' -v
+          python3 -m unittest discover -s test -p 'test_native_startup.py' -v
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-${{ runner.arch }}-risc-tools-${{ hashFiles('platformio.ini', 'requirements-ci.txt') }}
+      - name: Install pinned tools and link the generic target
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 -m pip install -r requirements-ci.txt
+          pio run -e esp32s3 -j 1
+          python3 - <<'PY'
+          import os, pathlib, subprocess
+          elf = pathlib.Path('.pio/build/esp32s3/firmware.elf')
+          assert ('RTE_SOURCE=' + os.environ['SOURCE_SHA']).encode() in elf.read_bytes()
+          nm = pathlib.Path.home() / '.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-nm'
+          symbols = subprocess.check_output([str(nm), '-C', str(elf)], text=True).splitlines()
+          assert any(line.endswith(' (anonymous namespace)::retainedRuntime') for line in symbols)
+          assert not any(line.endswith(' (anonymous namespace)::runtime') for line in symbols)
+          print('Exact-source generic target: retained metadata pointer; no static Runtime object PASS')
+          PY

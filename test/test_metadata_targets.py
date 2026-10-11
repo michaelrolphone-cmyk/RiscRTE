@@ -4,7 +4,9 @@ class MetadataTargets(unittest.TestCase):
  def test_explicit_psram_metadata_preserves_embedded_store(self):
   c=configparser.ConfigParser(interpolation=None);c.read(ROOT/'platformio.ini')
   base=c['env:esp32s3'];self.assertEqual(base['board_build.arduino.memory_type'],'qio_opi')
-  self.assertIn('-DBOARD_HAS_PSRAM',base['build_flags']);self.assertNotIn('-DRISC_RUNTIME_METADATA_PSRAM=1',base['build_flags'])
+  self.assertIn('-DBOARD_HAS_PSRAM',base['build_flags']);self.assertIn('-DRISC_RUNTIME_METADATA_PSRAM=1',base['build_flags'])
+  self.assertEqual(base['board_build.filesystem'],'spiffs');self.assertEqual(base['board_build.partitions'],'partitions.csv')
+  self.assertNotIn('-DRISC_EMBEDDED_BOOTSTORE',base['build_flags']);self.assertNotIn('-DRISC_PAIRED_BANKS',base['build_flags'])
   for target in ('cam-ci','x4-ci'):
    e=c['env:'+target];self.assertIn('-DRISC_RUNTIME_METADATA_PSRAM=1',e['build_flags']);self.assertIn('-DRISC_EMBEDDED_BOOTSTORE=1',e['build_flags']);self.assertIn('-Wl,--wrap=nvs_flash_init',e['build_flags'])
   self.assertIn('-DRISC_RUNTIME_METADATA_PSRAM=1',c['env:esp32s3-16mb-usb']['build_flags'])
