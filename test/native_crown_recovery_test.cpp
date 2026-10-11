@@ -13,6 +13,7 @@ std::timed_mutex busLock;
 std::atomic<uint32_t> ms{0},reboots{0};
 std::atomic<bool> done{false};
 void(*worker)(void*)=nullptr;
+bool refuseLock=false;
 bool failTask=false,wrongId=false,busError=false,released=false;
 uint32_t releaseAt=0;
 uint8_t status=0,irqMask=0x80;
@@ -32,7 +33,7 @@ bool raw(uint8_t port,uint8_t address,const uint8_t* tx,size_t tn,uint8_t* rx,si
 }
 }
 SemaphoreHandle_t xSemaphoreCreateMutex(){return &busLock;}
-int xSemaphoreTake(SemaphoreHandle_t p,TickType_t){return static_cast<std::timed_mutex*>(p)->try_lock()?pdTRUE:0;}
+int xSemaphoreTake(SemaphoreHandle_t p,TickType_t){return !refuseLock&&static_cast<std::timed_mutex*>(p)->try_lock()?pdTRUE:0;}
 void xSemaphoreGive(SemaphoreHandle_t p){static_cast<std::timed_mutex*>(p)->unlock();}
 int xTaskCreatePinnedToCore(void(*entry)(void*),const char* name,uint32_t stack,void*,unsigned priority,TaskHandle_t* handle,int core){
   assert(!strcmp(name,"core-crown") && stack>=3072 && priority==configMAX_PRIORITIES-2 && core==0);
@@ -46,6 +47,7 @@ esp_reset_reason_t esp_reset_reason(){return resetReason;}
 [[noreturn]] void esp_restart_noos(){++reboots;throw Reboot{};}
 int main(int argc,char**argv){
   assert(argc==2);using namespace RiscCpu::NativeCrownRecovery;
+  const bool exitBus=!strcmp(argv[1],"exit-bus-stuck");
   const bool exitTimeout=!strcmp(argv[1],"exit-timeout"),homeShort=!strcmp(argv[1],"home-short"),cleanExit=!strcmp(argv[1],"clean-exit");
   const bool release=!strcmp(argv[1],"release"),failure=!strcmp(argv[1],"bus-error"),sleep=!strcmp(argv[1],"sleep");
   failTask=!strcmp(argv[1],"task-failure");wrongId=!strcmp(argv[1],"wrong-chip");
@@ -59,20 +61,21 @@ int main(int argc,char**argv){
   assert(transact(0,0x34,&reg,1,&value,1,40,raw));assert(value==8&&status==0&&shortSequence()==1);
   uint8_t ack[]={0x49,15};assert(transact(0,0x34,ack,2,nullptr,0,40,raw));
   assert(shortSequence()==1);assert(transact(0,0x34,&reg,1,&value,1,40,raw)&&value==0);
-  beginInvocation(exitTimeout||cleanExit);
-  status=(exitTimeout||homeShort||cleanExit)?8:!strcmp(argv[1],"held-at-boot")?4:2;
+  beginInvocation(exitTimeout||exitBus||cleanExit);
+  status=(exitTimeout||exitBus||homeShort||cleanExit)?8:!strcmp(argv[1],"held-at-boot")?4:2;
   if(cleanExit){assert(transact(0,0x34,&reg,1,&value,1,40,raw));assert(exitRequested());
     assert(transact(0,0x34,ack,2,nullptr,0,40,raw)&&exitRequested());
     endInvocation();assert(!exitRequested());}
+  if(exitBus){assert(transact(0,0x34,&reg,1,&value,1,40,raw)&&exitRequested());refuseLock=true;}
   if(release)releaseAt=4990;
   busError=failure;
   if(sleep)assert(pause());
-  std::thread supervisor([&]{try{worker(nullptr);}catch(const Reboot&){if(!exitTimeout)busLock.unlock();}catch(const Stop&){}done=true;});
+  std::thread supervisor([&]{try{worker(nullptr);}catch(const Reboot&){if(!exitTimeout&&!exitBus)busLock.unlock();}catch(const Stop&){}done=true;});
   // This foreground app never yields or calls any runtime/key API.
   uint64_t busyWork=0;while(!done.load(std::memory_order_acquire))++busyWork;
   supervisor.join();assert(busyWork>0 && watchdogRegistered && watchdogFeeds>0);
   if(release||failure||sleep||homeShort||cleanExit){assert(!reboots);assert(!previousEmergency());}
-  else {const unsigned threshold=exitTimeout?3000:5000;assert(reboots==1&&ms>=threshold&&ms<threshold+30);resetReason=ESP_RST_SW;assert(previousReason()==(exitTimeout?2u:1u));assert(!previousEmergency());}
+  else {const unsigned threshold=(exitTimeout||exitBus)?3000:5000;assert(reboots==1&&ms>=threshold&&ms<threshold+30);resetReason=ESP_RST_SW;assert(previousReason()==((exitTimeout||exitBus)?2u:1u));assert(!previousEmergency());}
   if(sleep){status=0;resume();assert(transact(0,0x34,&reg,1,&value,1,40,raw)&&!value);assert(!reboots);}
-  assert(closing(0));puts("Native crown task: non-yielding foreground, legacy ACK isolation, threshold/release/fault, sleep and reset diagnostics PASS");
+  refuseLock=false;assert(closing(0));puts("Native crown task: non-yielding foreground, legacy ACK isolation, threshold/release/fault, sleep and reset diagnostics PASS");
 }

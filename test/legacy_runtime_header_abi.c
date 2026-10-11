@@ -31,7 +31,7 @@ _Static_assert(legacy_capability_end==RISC_RUNTIME_CAPABILITIES_V1_SIZE,"prefix 
 _Static_assert(sizeof(legacy_risc_runtime_api_v1)==legacy_capability_end,"frozen legacy ends at release");
 _Static_assert(offsetof(risc_runtime_api_v1,confirm_boot)==legacy_capability_end,"new callback appends only");
 _Static_assert(offsetof(risc_runtime_api_v1,retain_invocation)==RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE,"retention appends after complete confirm prefix");
-_Static_assert(sizeof(risc_runtime_api_v1)==legacy_capability_end+9*sizeof(void(*)(void)),"nine pointer suffixes only");
+_Static_assert(sizeof(risc_runtime_api_v1)==legacy_capability_end+10*sizeof(void(*)(void)),"ten pointer suffixes only");
 _Static_assert(offsetof(risc_runtime_api_v1,trace)==RISC_RUNTIME_RETAIN_INVOCATION_V1_SIZE,"trace follows complete retention prefix");
 
 _Static_assert(offsetof(risc_runtime_api_v1,stream_client)==RISC_RUNTIME_TRACE_V1_SIZE,"stream client follows complete trace prefix");
@@ -40,4 +40,5 @@ _Static_assert(offsetof(risc_runtime_api_v1,resident_shell)==RISC_RUNTIME_DEFAUL
 _Static_assert(offsetof(risc_runtime_api_v1,failure_evidence)==RISC_RUNTIME_RESIDENT_SHELL_V1_SIZE,"evidence follows resident");
 _Static_assert(offsetof(risc_runtime_api_v1,diagnostic_checkpoint_client)==RISC_RUNTIME_FAILURE_EVIDENCE_V1_SIZE,"checkpoint follows evidence");
 _Static_assert(offsetof(risc_runtime_api_v1,monotonic_ms)==RISC_RUNTIME_DIAGNOSTIC_CHECKPOINT_V1_SIZE,"clock follows checkpoint");
-_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_MONOTONIC_V1_SIZE,"clock is final suffix");
+_Static_assert(offsetof(risc_runtime_api_v1,exit_requested)==RISC_RUNTIME_MONOTONIC_V1_SIZE,"host control follows clock");
+_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_EXIT_REQUESTED_V1_SIZE,"host control is final suffix");
