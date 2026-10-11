@@ -381,7 +381,11 @@ class Runtime final {
   };
   MetadataArray<InstallationState> installation_;
   MetadataArray<RiscStorage::SdFirstKeyValue::State> installedSettings_;
-  RiscStorage::ScalableSettings::Collection scalableSettings_;
+  RiscStorage::ScalableSettings::Collection scalableSettings_, sharedSettings_;
+  MetadataArray<uint32_t> sharedSettingsNamespaces_;
+  RiscStorage::ScalableSettings::State* scalableSettingsState(uint32_t)const;
+  uint32_t settingsNamespace(uint32_t slot)const;
+  static uint32_t installationSharedSettingsNamespace(void*,uint32_t);
   MetadataArray<RiscStorage::SdFirstKeyValue::Workspace> installedSettingsWorkspace_;
   RiscStorage::SdFirstKeyValue::Journal settingsJournal();
   static uint32_t installationSettingsStatus(void*,uint32_t);

@@ -624,8 +624,9 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   }
   uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*r->port_.keyValue;
-  const int32_t result=(r->scalableSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount)
-    ?RiscStorage::ScalableSettings::get(r->scalableSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],key,temp,limit,&size)
+  auto*state=r->scalableSettingsState(matched->keyValueNamespace);
+  const int32_t result=state
+    ?RiscStorage::ScalableSettings::get(*state,key,temp,limit,&size)
     :backend.get(backend.context,matched->keyValueNamespace,key,temp,limit,&size);
   if (result==RISC_KEY_VALUE_NOT_FOUND || result==RISC_KEY_VALUE_BUSY) return result;
   if (result!=RISC_KEY_VALUE_OK || !size || size>limit) return RISC_KEY_VALUE_IO;
@@ -641,8 +642,8 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
   if (!keyValueKey(key) || !data || !size || size>limit) return RISC_KEY_VALUE_INVALID;
   const auto& backend=*r->port_.keyValue;
-  if(r->scalableSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount)
-    return RiscStorage::ScalableSettings::put(r->scalableSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],*r->port_.keyValue->scalableSettings,matched->keyValueNamespace,key,data,size);
+  if(auto*state=r->scalableSettingsState(matched->keyValueNamespace))
+    return RiscStorage::ScalableSettings::put(*state,*r->port_.keyValue->scalableSettings,matched->keyValueNamespace,key,data,size);
   if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount&&r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
     auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::put(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,data,size);
   }
@@ -732,7 +733,8 @@ int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uin
   const uint32_t limit=storage->table.api_version==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX;
   uint8_t temp[RISC_BOUND_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*storage->owner->port_.keyValue;
-  const int32_t result=backend.get(backend.context,matched->nameSpace,key,temp,limit,&size);
+  auto*state=storage->owner->scalableSettingsState(matched->nameSpace);
+  const int32_t result=state?RiscStorage::ScalableSettings::get(*state,key,temp,limit,&size):backend.get(backend.context,matched->nameSpace,key,temp,limit,&size);
   if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND || result==RISC_BOUND_KEY_VALUE_BUSY) return result;
   if (result!=RISC_BOUND_KEY_VALUE_OK || !size || size>limit) return RISC_BOUND_KEY_VALUE_IO;
   if (capacity<size) {*outSize=size;return RISC_BOUND_KEY_VALUE_BUFFER_SMALL;}
@@ -747,7 +749,8 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
   for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
   if (!matched || !matched->writable) return RISC_BOUND_KEY_VALUE_CONTEXT;
   const auto& backend=*storage->owner->port_.keyValue;
-  const int32_t result=backend.put(backend.context,matched->nameSpace,key,data,size);
+  auto*state=storage->owner->scalableSettingsState(matched->nameSpace);
+  const int32_t result=state?RiscStorage::ScalableSettings::put(*state,*backend.scalableSettings,matched->nameSpace,key,data,size):backend.put(backend.context,matched->nameSpace,key,data,size);
   return result==RISC_BOUND_KEY_VALUE_OK || result==RISC_BOUND_KEY_VALUE_BUSY ? result : RISC_BOUND_KEY_VALUE_IO;
 }
 bool Runtime::release(risc_runtime_capability_v1* out) {
@@ -997,6 +1000,10 @@ bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity
   auto ready=[&](size_t index){
     if(!installedSettings_&&!scalableSettings_)return true;
     const auto&policy=policies_[index];for(size_t g=0;g<policy.count;++g){const auto&grant=policy.grants[g];
+      if(grant.keyValue){
+        const auto*state=scalableSettingsState(uint32_t(grant.instance));
+        if(state&&state->status!=RiscStorage::ScalableSettings::Clean&&state->status!=RiscStorage::ScalableSettings::Dirty)return false;
+      }
       if(grant.keyValue&&grant.instance>=installation_[0].namespaceFirst&&grant.instance-installation_[0].namespaceFirst<installation_[0].namespaceCount){
         const auto status=scalableSettings_?uint32_t(scalableSettings_[grant.instance-installation_[0].namespaceFirst].status):uint32_t(installedSettings_[grant.instance-installation_[0].namespaceFirst].status);
         if(status==RiscStorage::SdFirstKeyValue::Cold||status==RiscStorage::SdFirstKeyValue::Uncertain||status==RiscStorage::ScalableSettings::Restoring)return false;

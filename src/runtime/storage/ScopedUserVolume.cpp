@@ -1,4 +1,5 @@
 #include "ScopedUserVolume.h"
+#include <RiscProtectedSettingsPath.h>
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -23,7 +24,7 @@ uint32_t ScopedUserVolume::nextStage_=1;
 uint32_t ScopedUserVolume::nextHandle_=1;
 ScopedUserVolume::~ScopedUserVolume(){for(auto&slot:slots_)if(slot==this)slot=nullptr;}
 bool ScopedUserVolume::copy(char*out,size_t n,const char*s){if(!out || !n || !s || strlen(s)>=n)return false;memcpy(out,s,strlen(s)+1);return true;}
-bool ScopedUserVolume::reserved(const char*p){return p && p[0]=='~' && (p[1]=='r' || p[1]=='R');}
+bool ScopedUserVolume::reserved(const char*p){return risc_protected_settings_path(p) || (p && p[0]=='~' && (p[1]=='r' || p[1]=='R'));}
 bool ScopedUserVolume::valid(const char*p,bool root){
  if(!p || *p!='/' || length(p,PathMax+1)>PathMax || (root && !p[1]))return false;
  if(!p[1])return true;

@@ -63,7 +63,19 @@ typedef struct risc_installation_v1 {
 #else
  uint32_t settings_format;
 #endif
+ /* Optional explicit shared-namespace checkpoint suffix. Slots are
+  * namespace_capacity + 1 + index; this never grants app/provider access.
+  * Owner identity is exactly shared-%08x, using the namespace returned here. */
+#ifdef __cplusplus
+ uint32_t shared_settings_count=0;
+ uint32_t (*shared_settings_namespace)(void*,uint32_t index)=nullptr;
+#else
+ uint32_t shared_settings_count;
+ uint32_t (*shared_settings_namespace)(void*,uint32_t index);
+#endif
 } risc_installation_v1;
+#define RISC_INSTALLATION_SETTINGS_FORMAT_SIZE offsetof(risc_installation_v1,shared_settings_count)
+#define RISC_INSTALLATION_SHARED_SETTINGS_SIZE sizeof(risc_installation_v1)
 #define RISC_INSTALLATION_PROVIDER_PREFIX_SIZE offsetof(risc_installation_v1,settings_capacity)
 #define RISC_INSTALLATION_APP_PREFIX_SIZE offsetof(risc_installation_v1,providers)
 #ifdef __cplusplus
