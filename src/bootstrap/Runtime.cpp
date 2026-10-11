@@ -12,6 +12,7 @@
 #include "runtime/update/Version.h"
 #include "runtime/update/CohortMigration.h"
 #include "runtime/update/NativeAppDataExportPolicyV1.h"
+#include "runtime/update/NativeAppDataExportPolicyV2.h"
 #include "runtime/resources/ScopedBufferWipe.h"
 #include <RiscDiagnosticSourceV1.h>
 #include <esp_dlfcn.h>

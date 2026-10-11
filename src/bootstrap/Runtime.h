@@ -31,7 +31,7 @@
 #include <RiscBoundAppDataV1.h>
 struct esp_dl_image_cache;
 namespace RuntimeProviders { struct NativeProviderPolicySnapshotV1; }
-namespace RiscUpdate { struct NativeAppDataExportPolicyV1; }
+namespace RiscUpdate { struct NativeAppDataExportPolicyV1; struct NativeAppDataExportPolicyV2; }
 namespace RiscBoot {
 class Runtime;
 // Optional compiled-in backend. Namespace comes only from validated boot policy.
@@ -172,6 +172,9 @@ class Runtime final {
   bool validateNativeCohort(Runtime& candidate,const char* root,
                             bool (*admit)(void*,const char*,bool provider),void* context,
                             const RiscUpdate::NativeAppDataExportPolicyV1&) const;
+  bool validateNativeCohort(Runtime& candidate,const char* root,
+                            bool (*admit)(void*,const char*,bool),void* context,
+                            const RiscUpdate::NativeAppDataExportPolicyV2&) const;
   bool appInventory(size_t index,void*,size_t,uint32_t*) const;
   bool active() const { return invocation_->active_ && !invocation_->streams_.busy() && port_.owner(); }
   bool retained() const { return retained_; }
@@ -342,10 +345,11 @@ class Runtime final {
   bool endAppDataExport();
   static bool appDataExportOwner(void*);
   static bool appDataExportSafe(void*);
-  bool validateAppDataExportCohort(const Runtime&,const AppDataExportDelegation*,size_t) const;
+  bool validateAppDataExportCohort(const Runtime&,const AppDataExportDelegation*,size_t,bool exactMigration=false) const;
   bool validateCohortImpl(Runtime&,const char*,bool (*)(void*,const char*,bool),void*,
                          const AppDataExportDelegation*,size_t,
-                         const RiscUpdate::NativeAppDataExportPolicyV1*) const;
+                         const RiscUpdate::NativeAppDataExportPolicyV1*,
+                         const RiscUpdate::NativeAppDataExportPolicyV2* =nullptr) const;
   bool needsAppDataExportDelegation(const Runtime&) const;
   bool appDataExitSafe()const;
   bool appDataBusy()const;

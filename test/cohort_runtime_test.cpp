@@ -123,4 +123,5 @@ int main(int argc,char** argv){
  auto bad=identity;bad["extra"]=1;save(next/"cohort.json",bad);assert(!RiscUpdate::readCohort(next.c_str(),parsed));
  save(next/"cohort.json",std::string("{\"schema\":\"riscrte.cohort\",\"schema\":\"riscrte.cohort\"}"));assert(!RiscUpdate::readCohort(next.c_str(),parsed));
  std::cout<<"Cohort 20/18 and "<<appLimit<<"/"<<driverLimit<<" complete graph, namespace ownership, hardware, metadata, exact inventory and no native bind/provider execution PASS\n";
+ return 0;
 }

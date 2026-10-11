@@ -90,7 +90,7 @@ bool Runtime::needsAppDataExportDelegation(const Runtime& candidate) const {
   return false;
 }
 bool Runtime::validateAppDataExportCohort(const Runtime& candidate,
-                                         const AppDataExportDelegation* delegations,size_t count) const {
+                                         const AppDataExportDelegation* delegations,size_t count,bool exactMigration) const {
   if(count>MaxAppPolicies || (count && !delegations))return false;
   auto sameEntry=[](const RiscStorage::AppDataExport::Entry& a,const RiscStorage::AppDataExport::Entry& b) {
     return a.nameSpace==b.nameSpace && a.writable==b.writable && !strcmp(a.owner,b.owner) &&
@@ -109,9 +109,10 @@ bool Runtime::validateAppDataExportCohort(const Runtime& candidate,
   // Export admission cannot make room by silently dropping any existing
   // consumer grant. Persisted owner grants are independently preserved by the
   // ordinary cohort checks; unrelated apps retain their established behavior.
-  for(size_t q=0;q<candidate.policyCount_;++q)if(candidate.policies_[q].exportCount) {
+  for(size_t q=0;q<candidate.policyCount_;++q) {
     const auto& next=candidate.policies_[q];
-    for(size_t p=0;p<policyCount_;++p)if(!strcmp(policies_[p].id,next.id))
+    for(size_t p=0;p<policyCount_;++p)if(!strcmp(policies_[p].id,next.id) &&
+        (next.exportCount || policies_[p].exportCount))
       for(size_t g=0;g<policies_[p].count;++g) {
         const auto& old=policies_[p].grants[g];bool found=false;
         for(size_t h=0;h<next.count;++h) {
@@ -121,6 +122,10 @@ bool Runtime::validateAppDataExportCohort(const Runtime& candidate,
         if(!found)return false;
       }
   }
+  // A V2 native record has already matched complete before/after policies and
+  // exact cohort identities. It cannot discard old consumer grants (above),
+  // and all persistent ownership checks still run after this function.
+  if(exactMigration)return !count;
   // Existing authority is immutable, including reductions and label changes.
   // The optional native input can admit only a first map, never rewrite one.
   for(size_t p=0;p<policyCount_;++p)if(policies_[p].exportCount) {

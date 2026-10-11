@@ -7,7 +7,7 @@ san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
 extra=();if [[ "${APP_DATA_TEST:-0}" == 1 ]];then extra=(-DRISC_PAIRED_APP_DATA=1);fi
 if [[ "${INSTALLED_CAPACITY_TEST:-0}" == 1 ]];then extra+=(-DRISC_INSTALLED_APP_CAPACITY=64);fi
-for name in cohort_runtime cohort_migration; do
+for name in cohort_runtime cohort_migration native_export_migration; do
 c++ "${san[@]}" "${extra[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic \
  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
