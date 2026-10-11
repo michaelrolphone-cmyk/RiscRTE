@@ -619,14 +619,14 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
   if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_KEY_VALUE_INVALID;
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
-  if(r->scalableSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount)
-    return RiscStorage::ScalableSettings::get(r->scalableSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],key,buffer,capacity,outSize);
   if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount&&r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
     auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::get(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,buffer,capacity,outSize);
   }
   uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*r->port_.keyValue;
-  const int32_t result=backend.get(backend.context,matched->keyValueNamespace,key,temp,limit,&size);
+  const int32_t result=(r->scalableSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount)
+    ?RiscStorage::ScalableSettings::get(r->scalableSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],key,temp,limit,&size)
+    :backend.get(backend.context,matched->keyValueNamespace,key,temp,limit,&size);
   if (result==RISC_KEY_VALUE_NOT_FOUND || result==RISC_KEY_VALUE_BUSY) return result;
   if (result!=RISC_KEY_VALUE_OK || !size || size>limit) return RISC_KEY_VALUE_IO;
   if (capacity<size) {*outSize=size;return RISC_KEY_VALUE_BUFFER_SMALL;}

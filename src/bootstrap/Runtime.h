@@ -381,7 +381,7 @@ class Runtime final {
   };
   MetadataArray<InstallationState> installation_;
   MetadataArray<RiscStorage::SdFirstKeyValue::State> installedSettings_;
-  std::unique_ptr<RiscStorage::ScalableSettings::State[]> scalableSettings_;
+  RiscStorage::ScalableSettings::Collection scalableSettings_;
   MetadataArray<RiscStorage::SdFirstKeyValue::Workspace> installedSettingsWorkspace_;
   RiscStorage::SdFirstKeyValue::Journal settingsJournal();
   static uint32_t installationSettingsStatus(void*,uint32_t);

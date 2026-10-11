@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <new>
 #if defined(ESP_PLATFORM) && defined(RISC_PAIRED_BANKS)
 #include <esp_heap_caps.h>
 #endif
@@ -39,6 +40,14 @@ class ScalableSettings {
   return std::malloc(n);
 #endif
  }
+ struct Collection {
+  State*items=nullptr;size_t count=0;
+  ~Collection(){clear();}Collection()=default;Collection(const Collection&)=delete;Collection&operator=(const Collection&)=delete;
+  void clear(){for(size_t i=0;i<count;++i)items[i].~State();std::free(items);items=nullptr;count=0;}
+  bool create(size_t n){clear();if(!n||n>SIZE_MAX/sizeof(State))return false;items=static_cast<State*>(allocate(n*sizeof(State)));if(!items)return false;count=n;for(size_t i=0;i<n;++i)new(items+i)State();return true;}
+  explicit operator bool()const{return items!=nullptr;}
+  State&operator[](size_t i){return items[i];}const State&operator[](size_t i)const{return items[i];}
+ };
  static bool key(const char*s){if(!s||!*s)return false;for(unsigned i=0;i<16;++i){char c=s[i];if(!c)return true;if(!((c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='_'||c=='.'||c=='-'))return false;}return false;}
  static bool owner(const char*s){return s&&*s&&std::strlen(s)<96&&!std::strchr(s,'/')&&!std::strchr(s,'\\')&&!std::strstr(s,"..");}
  static uint32_t word(const uint8_t*p){uint32_t v=0;for(unsigned i=0;i<4;++i)v|=uint32_t(p[i])<<(8*i);return v;}

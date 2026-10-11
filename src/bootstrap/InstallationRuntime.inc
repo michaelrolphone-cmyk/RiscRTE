@@ -45,7 +45,7 @@ bool Runtime::configureInstallation(JsonVariantConst value){
    if(!count||!port_.keyValue||!port_.keyValue->journalRead||!port_.keyValue->journalWrite||!port_.keyValue->legacyNamespace)return fail("installed settings journal unavailable");
    for(JsonObjectConst grant:value["grants"].as<JsonArrayConst>())if(grant["capability"]=="storage.key-value"&&grant["api"]!=1)return fail("SD private settings require KV API 1");
    if(port_.keyValue->scalableSettings){
-    scalableSettings_.reset(new(std::nothrow) RiscStorage::ScalableSettings::State[size_t(count)]);if(!scalableSettings_)return false;
+    if(!scalableSettings_.create(size_t(count)))return false;
    }else{
    installedSettings_=metadataArray<RiscStorage::SdFirstKeyValue::State>(size_t(count));
    installedSettingsWorkspace_=metadataArray<RiscStorage::SdFirstKeyValue::Workspace>(1);
