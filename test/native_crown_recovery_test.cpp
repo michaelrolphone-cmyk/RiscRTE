@@ -37,7 +37,8 @@ int xSemaphoreTake(SemaphoreHandle_t p,TickType_t){return !refuseLock&&static_ca
 void xSemaphoreGive(SemaphoreHandle_t p){static_cast<std::timed_mutex*>(p)->unlock();}
 int xTaskCreatePinnedToCore(void(*entry)(void*),const char* name,uint32_t stack,void*,unsigned priority,TaskHandle_t* handle,int core){
   assert(!strcmp(name,"core-crown") && stack>=3072 && priority==configMAX_PRIORITIES-2 && core==0);
-  if(failTask)return 0;worker=entry;*handle=reinterpret_cast<void*>(1);return pdPASS;
+  if(failTask){return 0;}
+  worker=entry;*handle=reinterpret_cast<void*>(1);return pdPASS;
 }
 void vTaskDelay(TickType_t ticks){ms+=ticks;if(ms>11000)throw Stop{};std::this_thread::yield();}
 int esp_task_wdt_add(void*){watchdogRegistered=true;return 0;}

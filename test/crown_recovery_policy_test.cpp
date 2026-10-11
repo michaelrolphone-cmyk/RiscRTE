@@ -25,7 +25,8 @@ int main(){
   {CrownRecovery k;assert(!k.sample(2,0));quiet(k,10,4990);assert(!k.sample(0,4990,false));quiet(k,5000,11000);assert(!k.fired());}
   {CrownRecovery k;assert(!k.sample(2,0));quiet(k,10,1000);assert(!k.sample(0,6000));quiet(k,6010,12000);assert(!k.fired());}
   {CrownRecovery k;uint32_t begin=UINT32_MAX-2500;assert(!k.sample(2,begin));
-   for(uint32_t d=10;d<5000;d+=10)assert(!k.sample(0,begin+d));assert(k.sample(0,begin+5000));}
+   for(uint32_t d=10;d<5000;d+=10){assert(!k.sample(0,begin+d));}
+   assert(k.sample(0,begin+5000));}
   {RiscControl::CrownEvents e;assert(!e.observe(8,0));assert(e.shortSequence()==1 && e.legacy()==8);
    e.acknowledge(15);assert(!e.legacy()&&e.shortSequence()==1);assert(!e.observe(2,10));
    e.acknowledge(15);for(unsigned n=20;n<5010;n+=10)assert(!e.observe(0,n));assert(e.observe(0,5010));}
@@ -33,7 +34,8 @@ int main(){
    assert(e.shortSequence()==0 && !(e.legacy()&8));e.acknowledge(15);
    assert(!e.observe(2,200));assert(!e.observe(9,300));assert(e.shortSequence()==1);}
   {RiscControl::CrownEvents e;e.waking();assert(!e.observe(2,0));
-   for(unsigned n=10;n<5000;n+=10)assert(!e.observe(0,n));assert(e.observe(0,5000));}
+   for(unsigned n=10;n<5000;n+=10){assert(!e.observe(0,n));}
+   assert(e.observe(0,5000));}
   {RiscControl::CrownExit x;x.begin(false);x.press(10);assert(!x.pending()&&!x.expired(9999));
    x.begin(true);x.press(100);assert(x.pending()&&!x.expired(3099));x.press(2000);
    assert(x.expired(3100));x.end();assert(!x.pending());
