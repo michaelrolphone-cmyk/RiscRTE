@@ -87,3 +87,7 @@ Watch BIN boot, physical timing or device power-path qualification. Existing
 Context storage/retention flows and shared scene component tests remain covered.
 Runtime test runner portability suppresses two pre-existing Clang unused warnings
 and avoids Bash 3's empty-array/nounset failure; it does not weaken assertions.
+
+The final isolated branch was replayed onto Runtime release head
+`c6d770f0ae55f4bf3bcd8233a2a8d5a7da3a51a4`, preserving c3d750d and its newer
+metadata/startup/TCP corrections. Original checkpoints remain locally retained.
