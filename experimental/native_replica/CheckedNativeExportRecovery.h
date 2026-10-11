@@ -62,9 +62,9 @@ class CheckedNativeExportRecovery {
  int completeNative(){
   if(state_!=State::Verified)return C::Stale;
   if(!guard_.worker(guard_.context))return C::Busy;
-  if(!custody()){reason_=Reason::CustodyLost;finish(State::Failed,C::Conflict);return error_;}
   const int observed=api_->base.fs.state.observe(volume_->context);
   if(observed==RISC_STORAGE_STATE_RETAINED){retain();return C::Retained;}
+  if(!custody()){reason_=Reason::CustodyLost;finish(State::Failed,C::Conflict);return error_;}
   if(observed!=RISC_STORAGE_STATE_READY){reason_=Reason::ReadFailure;finish(State::Failed,C::Io);return error_;}
   const int rc=decision_==Decision::AcknowledgePrefix?core_.acknowledgeExport(marker_,verified_):core_.retireExport(marker_,verified_);
   if(rc==C::Busy)return rc;
@@ -72,7 +72,10 @@ class CheckedNativeExportRecovery {
   reason_=rc?Reason::NativeFailure:Reason::None;finish(rc?State::Failed:State::Done,rc);return rc;
  }
  void cancel(){
-  if(state_==State::Verified){finish(State::Cancelled,C::Ok);return;}
+  if(state_==State::Verified){
+   if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   finish(State::Cancelled,C::Ok);return;
+  }
   if(state_==State::Running){cancelled_=true;reader_.cancel();}
  }
  private:

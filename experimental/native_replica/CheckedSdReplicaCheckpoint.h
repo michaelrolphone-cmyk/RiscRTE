@@ -63,7 +63,10 @@ class CheckedSdReplicaCheckpoint {
  }
  public:
  void cancel(){
-  if(state_==State::Verified){finish(State::Cancelled,C::Ok);return;}
+  if(state_==State::Verified){
+   if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   finish(State::Cancelled,C::Ok);return;
+  }
   if(state_!=State::Running)return;
   cancelled_=true;phase_=Closing;
  }
@@ -72,9 +75,9 @@ class CheckedSdReplicaCheckpoint {
  int acknowledgeNative(){
   if(state_!=State::Verified)return C::Stale;
   if(!guard_.worker(guard_.context))return C::Busy;
-  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;finish(State::Failed,C::Conflict);return C::Conflict;}
   const int observed=api_->base.fs.state.observe(volume_->context);
   if(observed==RISC_STORAGE_STATE_RETAINED){retain();return error_;}
+  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;finish(State::Failed,C::Conflict);return C::Conflict;}
   if(observed!=RISC_STORAGE_STATE_READY){reason_=Reason::MediaUnavailable;finish(State::Failed,C::Io);return error_;}
   int rc=durable_?core_->acknowledgeExport(marker_,confirmed_):core_->acknowledge(snapshot_.ticket(),confirmed_);
   if(rc==C::Busy)return rc;

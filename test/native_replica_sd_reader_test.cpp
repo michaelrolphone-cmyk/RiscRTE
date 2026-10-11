@@ -97,4 +97,11 @@ static void finalChecks(){
  }
  puts("SD reader: changed-index recheck, late removal/export and late retained-close custody block candidate exposure PASS");
 }
-int main(){setbuf(stdout,nullptr);basics();malformed();boundsAndAvailability();boundaries();faults();finalChecks();puts("DISCONNECTED VERIFIED READER ONLY: no adoption, defaults, native mutation, migration, public ABI or hardware claim");}
+static void lateRetention(){
+ for(bool lostLease:{false,true})for(bool cancel:{false,true}){Native n;Files f;seed(n,f);C c(6,n.api(),limits(),C::heap());assert(c.load()==C::Ok);const auto root=n.root;const auto calls=n.calls;Sd sd(f);Hash hash;R reader(c,hash.api(),sd.guard());R::Candidate out;assert(reader.start(sd.volume())==C::Ok);sd.run(reader);assert(reader.state()==R::State::Verified);const unsigned io=sd.io;sd.retained=true;if(lostLease)sd.lease=false;
+  if(cancel)reader.cancel();else assert(reader.take(&out)==C::Retained);
+  assert(reader.state()==R::State::Retained&&reader.error()==C::Retained&&!reader.exitSafe()&&!out.valid());reader.cancel();reader.step();assert(reader.take(&out)==C::Stale&&reader.state()==R::State::Retained&&!reader.exitSafe()&&!out.valid());assert(sd.io==io&&n.calls==calls&&n.root==root&&c.pendingCount()==1);
+ }
+ puts("SD reader: four late-retained transfer/cancel cases, including concurrent lease loss, keep sticky custody and expose no candidate or native mutation PASS");
+}
+int main(){setbuf(stdout,nullptr);basics();malformed();boundsAndAvailability();boundaries();faults();finalChecks();lateRetention();puts("DISCONNECTED VERIFIED READER ONLY: no adoption, defaults, native mutation, migration, public ABI or hardware claim");}

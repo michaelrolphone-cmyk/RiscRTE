@@ -59,6 +59,13 @@ marker do not substitute for the exact selected-root handle and checked evidence
 Retained is sticky and `exitSafe()` stays false. The caller must keep all owning
 objects/resources alive until a proven reset or safe custody resolution.
 
+After `Verified`, transfer, cancellation and native completion observe provider
+retention before releasing custody. A simultaneous lost lease or lost writer
+quiescence cannot downgrade `Retained` to ordinary conflict or cancellation.
+This precedence applies to the ordinary reader, recovery wrapper, and both
+volatile/durable checked writers. The state observer is a metadata-only call;
+no additional filesystem or native mutation is needed to latch retention.
+
 ## Capacity and compatibility
 
 The reader now observes the selected header at `start`, so a reader constructed
@@ -86,6 +93,9 @@ modified relevant sources. In this execution environment its clean checkout is
 ```
 export SYSTEM_ROOT=/path/to/clean/System-at-c564dd665072db141fc42d55be3be52511750719
 bash test/run_native_durable_export_test.sh
+bash test/run_native_export_retained_test.sh
+SANITIZE=1 SANITIZERS=undefined bash test/run_native_export_retained_test.sh
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 SANITIZERS=address bash test/run_native_export_retained_test.sh
 SANITIZE=1 SANITIZERS=undefined bash test/run_native_durable_export_test.sh
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 SANITIZERS=address bash test/run_native_durable_export_test.sh
 bash test/run_native_rebase_roundtrip_test.sh
@@ -111,6 +121,11 @@ reader, app-owned Wi-Fi Stage, held receiver, and writer are exercised together:
   54 uncertain outcomes; complete old/new root recovery and exact pending prefix.
 - A 65,360-byte old v1 map verified for retirement while ordinary v2 import refuses;
   exact v2 receiver byte admission, one-byte excess refused before RAM staging.
+- 30 focused late-retention cases: four reader transfer/cancel transitions, eight
+  volatile/durable writer completion/cancel transitions, and 16 target-prefix or
+  old-base recovery transitions, plus two internal reader transfers immediately
+  after checked close. Lost lease/quiescence plus provider retention
+  remains sticky, with no candidate transfer, native commit or extra I/O.
 - Repeated prefix acknowledgement is stale. Foreign/newer/equal-generation but
   different-content SD, missing proof, lost lease, lost writer quiescence, and
   cancellation preserve the marker and all local intents.

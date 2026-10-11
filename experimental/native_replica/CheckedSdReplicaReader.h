@@ -47,15 +47,22 @@ class CheckedSdReplicaReader {
   std::snprintf(directory_,sizeof directory_,"/RTECFG/%08X",unsigned(namespace_));std::snprintf(index_,sizeof index_,"%s/replica.index",directory_);
   state_=State::Running;phase_=Begin;return C::Ok;
  }
- void cancel(){if(state_==State::Verified){finish(State::Cancelled,C::Ok);return;}if(state_==State::Running){cancelled_=true;phase_=Closing;}}
+ void cancel(){
+  if(state_==State::Verified){
+   if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   finish(State::Cancelled,C::Ok);return;
+  }
+  if(state_==State::Running){cancelled_=true;phase_=Closing;}
+ }
  // Transfer is possible only after checked close, and rechecks the same lease.
  // It proves historical content, not permission to adopt that generation.
  int take(Candidate*out){
   if(!out||out->valid_||out->bytes_)return C::Invalid;
   if(state_!=State::Verified)return C::Stale;
-  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;finish(State::Failed,C::Conflict);return C::Conflict;}
   const int observed=api_->base.fs.state.observe(volume_->context);
+  // Retained provider custody outranks a simultaneous lost-lease refusal.
   if(observed==RISC_STORAGE_STATE_RETAINED){retain();return C::Retained;}
+  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;finish(State::Failed,C::Conflict);return C::Conflict;}
   if(observed!=RISC_STORAGE_STATE_READY){reason_=Reason::MediaUnavailable;finish(State::Failed,C::Io);return C::Io;}
   out->alloc_=candidate_.alloc_;out->bytes_=candidate_.bytes_;out->capacity_=candidate_.capacity_;out->size_=candidate_.size_;out->count_=candidate_.count_;out->namespace_=namespace_;out->identity_=candidate_.identity_;out->valid_=true;
   candidate_.bytes_=nullptr;candidate_.reset();state_=State::Done;return C::Ok;
