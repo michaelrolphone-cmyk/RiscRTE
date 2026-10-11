@@ -43,3 +43,27 @@ On corrected source omit EXPECT_OLD_FAILURE. These use a mapped app and producti
 Runtime, CPU port and copied worker; hardware callbacks are controlled doubles.
 The test establishes the source defect matching the log, not an observed repaired
 hardware boot. No serial access or flashing was performed.
+
+## Diagnostic build receipt
+
+Built Runtime correction `ef7d68718d4f054447ecd79cf008549723eb532b` with
+X4 `7394ea165deb5fbb568b6993fb7cf6fab766ef24`, using the same 64-app/32-provider,
+24 policy/requirement rows, image cache, USB PHY, IQ, retained-wake and failure
+recording options as delivered. Single-job ESP32-S3 compilation passed.
+The complete 26-app/32-provider store passed strict ELF/import and Runtime
+cohort admission with no hardware/storage calls. SD manifests and linked native
+export-map V2 snapshots were verified. Full layout and bank hashes were parsed
+and checked independently after assembly.
+
+- Native firmware SHA256: `9ae270ccda4c1072dc28b4c0ea6c9f2f510de833e2eed1913da594f46e20393d`
+- 16 MiB full image SHA256: `8ae6e8a53011323325ec9197c7368e9e01d9ab8569d07e55f4d8ef4314ad3d86`
+- Diagnostic archive: `X4-PEER-BOOT-FIX-ef7d687-DIAGNOSTIC.zip`, with ELF/map,
+  SD contents, patch and detailed receipts. The initial full image replaces data;
+  it is not a preserving update. No new product release/version is claimed.
+
+The broader resident-shell suite asserts at `resident_shell_test.cpp:359`
+(`childFiles.dir_next`). It fails identically on the unchanged 209274b base and
+on this correction under the same macOS harness. This is not reported as a pass.
+Hardware boot/live heap and Watch hardware validation remain outstanding.
+The sole integrator should apply the focused source commit to current source;
+this diagnostic baseline must not replace newer composition work.
