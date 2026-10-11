@@ -4,6 +4,7 @@
 #include "runtime/update/PairedBank.h"
 #include "runtime/update/Version.h"
 #include "runtime/update/StoreAudit.h"
+#include "runtime/packages/ElfAdmission.h"
 #include "runtime/provisioning/StoreFiles.h"
 #include "runtime/provisioning/StoreImageCapacity.h"
 #include "CpuPort.h"
@@ -203,60 +204,16 @@ bool openApp(void*,unsigned b){
 bool writeApp(void*,const void* data,uint32_t n){return operationSafe() && appFile && fwrite(data,1,n,appFile)==n;}
 // An updater cannot smuggle firmware/peripheral imports through a native ELF.
 // This is the ordinary loader's side-effect-free public libc + runtime surface.
-bool allowedImport(const char* name){
-  static const char* const names[]={"risc_runtime_get_api","strerror","memset","memcpy","memmove","memcmp","memchr","strlen","strcpy","strncpy","strcmp","strncmp","strchr","strrchr","strstr","strtod","strtol","strtof","strtoul","strcat","strncasecmp","strcasecmp","strnlen","tolower","isalpha","qsort","vsnprintf","setjmp","longjmp","strcspn","strncat","snprintf","malloc","calloc","realloc","free","clock_gettime","strftime","__errno","__getreent","__locale_ctype_ptr","_ctype_","__ltdf2","__fixunsdfsi","__gtdf2","__floatunsidf","__divdf3","getopt_long","optind","opterr","optarg","optopt"};
-  for(const char* n:names)if(!strcmp(n,name))return true;
-  return false;
-}
+bool allowedImport(const char*name){return RiscPackages::ordinaryImport(name);}
 enum class ElfRole {Application,Driver,Either};
-bool admitElf(const uint8_t* bytes,size_t n,ElfRole role=ElfRole::Application,
-              const RuntimeProviders::NativeProviderPolicyV1* policy=nullptr){
-  if(!operationSafe() || n>RISC_BANK_APP_MAX)return false;
-  const uint32_t started=millis();unsigned visited=0;
-  // Only the exact prepared driver selection can carry native authority. A
-  // matching image in an application or unselected-file slot stays ordinary.
-  if(role!=ElfRole::Driver)policy=nullptr;
-  if(policy && !RuntimeProviders::nativeProviderImageValid(*policy,bytes,n))return false;
-  if(!esp_elf_validate_file(bytes,n))return false;
-  // Structural validation is the existing synchronous loader check. Bound its
-  // observed duration, then cooperate throughout the additional policy scan.
-  vTaskDelay(1);if(!operationSafe() || uint32_t(millis()-started)>30000u)return false;
-  const auto* h=reinterpret_cast<const elf32_hdr_t*>(bytes);
-  const auto* sections=reinterpret_cast<const elf32_shdr_t*>(bytes+h->shoff);
-  unsigned main=0,init=0,fini=0,driver=0;
-  const char* sectionNames=reinterpret_cast<const char*>(bytes+sections[h->shstrndx].offset);
-  // RELA may reference either symbol-table kind. Audit both, including tables
-  // that have no current relocations. Entry points must be actual exports from
-  // .dynsym, exactly as the production loader's dlsym path requires.
-  for(unsigned i=0;i<h->shnum;++i)if(sections[i].type==SHT_SYNSYM || sections[i].type==SHT_SYMTAB){
-    const auto& s=sections[i];const char* strings=reinterpret_cast<const char*>(bytes+sections[s.link].offset);
-    const bool exports=s.type==SHT_SYNSYM && !strcmp(sectionNames+s.name,ELF_DYNSYM);
-    const auto* symbols=reinterpret_cast<const elf32_sym_t*>(bytes+s.offset);
-    for(unsigned j=0;j<s.size/sizeof(*symbols);++j){
-      if(++visited>RISC_BANK_APP_MAX/sizeof(*symbols))return false;
-      if(!(visited%128)){vTaskDelay(1);if(!operationSafe() || uint32_t(millis()-started)>30000u)return false;}
-      const auto& sym=symbols[j];const char* name=strings+sym.name;
-      if(sym.shndx==SHN_UNDEF){
-        const elf32_sym_t empty{};if(!j && !memcmp(&sym,&empty,sizeof(sym)))continue;
-        if((ELF_ST_BIND(sym.info)!=STB_GLOBAL && ELF_ST_BIND(sym.info)!=STB_WEAK) || !*name ||
-           (!policy && (!allowedImport(name) || !elf_find_sym_default(name))))return false;
-        continue;
-      }
-      if(!exports)continue;
-      unsigned* entry=nullptr;
-      if(!strcmp(name,"app_main"))entry=&main;
-      if(role!=ElfRole::Application && !strcmp(name,"t5_driver_get"))entry=&driver;
-      if(!strcmp(name,"app_module_init"))entry=&init;
-      if(!strcmp(name,"app_module_fini"))entry=&fini;
-      if(entry){
-        if(ELF_ST_TYPE(sym.info)!=STT_FUNC || ELF_ST_BIND(sym.info)!=STB_GLOBAL || ++*entry!=1 || sym.shndx>=h->shnum)return false;
-        const auto& text=sections[sym.shndx];
-        if(strcmp(sectionNames+text.name,ELF_TEXT) || !(text.flags&SHF_EXECINSTR) || sym.value<text.addr || uint64_t(sym.value)>=uint64_t(text.addr)+text.size)return false;
-      }
-    }
-  }
-  const bool application=main==1 && init==fini;
-  return role==ElfRole::Application?application:role==ElfRole::Driver?driver==1 && !main && !init && !fini:application || (driver==1 && !main && !init && !fini);
+bool admitElf(const uint8_t*bytes,size_t n,ElfRole role=ElfRole::Application,
+              const RuntimeProviders::NativeProviderPolicyV1*policy=nullptr){
+ if(!operationSafe()||n>RISC_BANK_APP_MAX)return false;
+ if(role!=ElfRole::Driver)policy=nullptr;
+ if(policy&&!RuntimeProviders::nativeProviderImageValid(*policy,bytes,n))return false;
+ return RiscPackages::admitElf(bytes,n,role,policy!=nullptr,{esp_elf_validate_file,
+   [](const char*name){return allowedImport(name)&&elf_find_sym_default(name);},
+   operationSafe,[](){vTaskDelay(1);},[]()->uint32_t{return millis();}});
 }
 struct AdmissionImages {const char* root;uint32_t started;RiscBoot::Runtime* candidate;bool seen[RiscProvision::MaxFiles]{};};
 bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole role){
@@ -518,7 +475,7 @@ int32_t beginCohort(void*,const risc_bank_cohort_v1* image,uint64_t* token){
 const risc_bank_store_v1 api={1,sizeof(api),nullptr,
   [](void*,risc_bank_status_v1* out){
     if(!owner() || !transaction->status(out))return false;
-    out->store_abi=StoreAbi;out->app_count=runtime?runtime->appCount():0;
+    out->store_abi=StoreAbi;out->app_count=runtime?runtime->appInventoryCount():0;
     snprintf(out->runtime_version,sizeof(out->runtime_version),"%s",RISC_BUILD_VERSION);
     snprintf(out->layout,sizeof(out->layout),"%s",Layout);return true;
   },beginFirmware,beginApp,
@@ -526,7 +483,7 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
     if(!ready())return RISC_BANK_UNAVAILABLE;
     int32_t result=transaction->step(t,s);
     if(s && s->struct_size>=sizeof(*s)){
-      s->store_abi=StoreAbi;s->app_count=runtime->appCount();
+      s->store_abi=StoreAbi;s->app_count=runtime->appInventoryCount();
       snprintf(s->runtime_version,sizeof(s->runtime_version),"%s",RISC_BUILD_VERSION);
       snprintf(s->layout,sizeof(s->layout),"%s",Layout);}
     return result;
@@ -539,8 +496,8 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
   [](void*,uint32_t index,void* output,uint32_t capacity,uint32_t* actual)->int32_t{
     if(actual)*actual=0;
     if(!ready())return RISC_BANK_UNAVAILABLE;
-    if(index>=runtime->appCount())return RISC_BANK_NOT_FOUND;
-    return runtime->appInventory(index,output,capacity,actual)?RISC_BANK_OK:RISC_BANK_INVALID;
+    if(index>=runtime->appInventoryCount())return RISC_BANK_NOT_FOUND;
+    return runtime->appInventoryEntry(index,output,capacity,actual)?RISC_BANK_OK:RISC_BANK_INVALID;
   },cohortStatus,beginCohort};
 bool bindProvisioningCandidate(RiscBoot::Runtime& candidate){
   return candidateCpu && provisionState && prepared && confirmed && !pending && !runtime && operationSafe() &&

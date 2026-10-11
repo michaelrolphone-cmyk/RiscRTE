@@ -18,8 +18,8 @@
 static std::string mode,root;
 static std::vector<uint8_t> payload;
 static unsigned defaults,children,starts,stops,opens,closes,live,previousRuns;
-static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident";}
-static unsigned baseCount(){return mode=="catalog-resident"?2:0;}
+static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority";}
+static unsigned baseCount(){return mode=="catalog-resident"?2:mode=="catalog-authority"?1:0;}
 extern "C" bool removable_is_resident(){return mode=="catalog-resident";}
 static size_t offset;
 static bool present=true;
@@ -28,9 +28,9 @@ static const risc_installation_v1* installer;
 extern "C" void removable_installation(const void*api){installer=static_cast<const risc_installation_v1*>(api);}
 static unsigned privateWrites;
 static RiscBoot::AppDataBackend privateData{nullptr,
- [](void*,uint32_t ns,const char*,uint32_t*n,uint64_t*r)->int32_t{assert(ns==1000);*n=0;*r=privateWrites;return RISC_APP_DATA_NOT_FOUND;},
+ [](void*,uint32_t ns,const char*,uint32_t*n,uint64_t*r)->int32_t{assert(ns==(mode=="catalog-authority"?77u:1000u));*n=0;*r=privateWrites;return RISC_APP_DATA_NOT_FOUND;},
  [](void*,uint32_t,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*)->int32_t{return RISC_APP_DATA_NOT_FOUND;},
- [](void*,uint32_t ns,const char*,uint64_t,const void*,uint32_t)->int32_t{assert(ns==1000);++privateWrites;return RISC_APP_DATA_OK;},
+ [](void*,uint32_t ns,const char*,uint64_t,const void*,uint32_t)->int32_t{assert(ns==(mode=="catalog-authority"?77u:1000u));++privateWrites;return RISC_APP_DATA_OK;},
  [](void*){return true;}};
 extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
  if(!catalogMode())return;
@@ -85,11 +85,21 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         assert(runtime->appCount()==baseCount());
       }
       if(catalogMode()){
+        if(mode=="catalog-authority"){
+          assert(runtime->appInventoryCount()==0);assert(!runtime->launch("child.elf"));
+          char bytes[4096];uint32_t actual=99;assert(!runtime->appInventory(0,bytes,sizeof(bytes),&actual)&&actual==0);
+          char denied[193];assert(installer->admit(installer->context,"Apps/other/manifest.json",staged[0].second.c_str(),denied,sizeof(denied))==RISC_INSTALL_DENIED);
+        }
         assert(installer);risc_install_candidate_v1 item{staged[0].first.c_str(),staged[0].second.c_str()};risc_install_result_v1 result{};
         assert(installer->check(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
         assert(runtime->appCount()==baseCount());
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
         launchName=result.launch_path;assert(runtime->appCount()==baseCount()+1);
+        if(mode=="catalog-authority"){
+          assert(runtime->appInventoryCount()==1);char bytes[4096];uint32_t actual=0;
+          assert(runtime->appInventoryEntry(0,bytes,sizeof(bytes),&actual)&&actual);
+          assert(!runtime->appInventoryEntry(1,bytes,sizeof(bytes),&actual)&&!actual);
+        }
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&runtime->appCount()==baseCount()+1);
         assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK);
@@ -119,7 +129,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         auto privateNeed=privateManifest["requires"].add<JsonObject>();privateNeed["capability"]="storage.app-data";privateNeed["api"]=1;
         std::string privateJson;serializeJson(privateManifest,privateJson);item.manifest_json=privateJson.c_str();uint32_t slot=1;
         assert(installer->namespace_capacity==128);
-        assert(installer->check(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_DENIED);
+        int checked=installer->check(installer->context,&item,1,&result,true);assert(checked==RISC_INSTALL_OK&&result.status==(mode=="catalog-authority"?RISC_INSTALL_OK:RISC_INSTALL_DENIED));
         assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
         assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
         uint32_t changedSlot=2;
@@ -127,6 +137,12 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         changedSlot=129;assert(installer->namespaced(installer->context,&item,&changedSlot,1,&result,false,true)==RISC_INSTALL_INVALID);
         assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
         assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+        if(mode=="catalog-authority"){
+          assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
+          assert(!runtime->launch("child.elf"));
+          assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+          launchName="child.elf"; // Existing Home shortcut resolves admitted SD metadata.
+        }
         puts("Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS");
       } else for(const auto& item:staged){const char*path=item.first.c_str();const char*json=item.second.c_str();
         std::string folder(path);folder.resize(folder.rfind('/')+1);
@@ -253,6 +269,16 @@ int main(int argc,char** argv) {
       std::string raw;serializeJson(m,raw);write(std::string(name)+".json",raw);
       auto policy=doc["app_capabilities"].add<JsonObject>();policy["manifest"]=std::string(name)+".json";policy["grants"].to<JsonArray>();
     }
+    boot.clear();serializeJson(doc,boot);
+  }
+  if(mode=="catalog-authority"){
+    JsonDocument doc,m;assert(!deserializeJson(doc,boot));
+    std::ifstream f(root+"/child.json");std::string text((std::istreambuf_iterator<char>(f)),{});assert(!deserializeJson(m,text));
+    auto req=m["requires"].add<JsonObject>();req["capability"]="storage.app-data";req["api"]=1;
+    text.clear();serializeJson(m,text);write("child.json",text);
+    auto p=doc["app_capabilities"].add<JsonObject>();p["manifest"]="child.json";p["catalog_authority"]=true;
+    p["image_source"]["volume_instance"]=9;p["image_source"]["path"]="Apps/child/child.elf";
+    auto g=p["grants"].add<JsonObject>();g["capability"]="storage.app-data";g["api"]=1;g["instance_id"]=77;
     boot.clear();serializeJson(doc,boot);
   }
   write("boot.json",boot);

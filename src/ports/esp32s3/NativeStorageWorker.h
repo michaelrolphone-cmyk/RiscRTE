@@ -4,6 +4,7 @@
 #include <freertos/task.h>
 #include <esp_heap_caps.h>
 #include <new>
+#include "NativeStorageAdmission.h"
 namespace RiscCpu { namespace NativeStorageWorker {
 // Allocated only for a selected platform.storage-worker dependency. Control
 // atomics and copied buffers stay in INTERNAL RAM, never provider PSRAM.
@@ -12,7 +13,7 @@ static TaskHandle_t taskHandle=nullptr;
 static bool prepare();
 static bool isWorker(){return !xPortInIsrContext()&&taskHandle&&xTaskGetCurrentTaskHandle()==taskHandle;}
 static void delayMs(uint32_t ms){vTaskDelay(pdMS_TO_TICKS(ms)?pdMS_TO_TICKS(ms):1);}
-static StorageWorkBackend backend{nullptr,prepare,isWorker,delayMs};
+static StorageWorkBackend backend{nullptr,prepare,isWorker,delayMs,admitApplication};
 static bool idle(){return !backend.mailbox||backend.mailbox->idle();}
 static void run(void*){for(;;){backend.mailbox->workerStep();delayMs(1);}}
 static bool prepare(){

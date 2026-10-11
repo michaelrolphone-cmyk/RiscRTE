@@ -310,7 +310,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
     const size_t slot=replacing?replacement:policyCount_;
     auto& policy=policies_[slot]; char relative[193]; JsonDocument doc;
-    if (!keys(item,{"manifest","grants"},{"app_data_export","image_source"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+    if (!keys(item,{"manifest","grants"},{"app_data_export","image_source","catalog_authority"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,policy.elf,sizeof(policy.elf)) || (suppliedManifest.isNull() && !readJson(policy.elf,doc,&metadataCloseRetained_))) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=suppliedManifest.isNull()?doc.as<JsonObjectConst>():suppliedManifest.as<JsonObjectConst>(); char filename[128];
     if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","runtime_lifecycle"}) ||
@@ -332,7 +332,12 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     *(slash+1)=0;
     if (strlen(policy.elf)+strlen(filename)>=sizeof(policy.elf)) return fail("app path too long");
     strcat(policy.elf,filename);
-    for (size_t i=0;i<policyCount_;++i) if (i!=slot && (!strcmp(policies_[i].id,policy.id) || !strcmp(policies_[i].elf,policy.elf))) return fail("duplicate app identity/path policy");
+    for (size_t i=0;i<policyCount_;++i) if (i!=slot && !(installation_ && installation_[0].call && policies_[i].catalogAuthority && !strcmp(policies_[i].id,policy.id)) && (!strcmp(policies_[i].id,policy.id) || !strcmp(policies_[i].elf,policy.elf))) return fail("duplicate app identity/path policy");
+    if(!item["catalog_authority"].isUnbound()) {
+      if(!item["catalog_authority"].is<bool>() || !item["catalog_authority"].as<bool>() || !installation_ ||
+         suppliedManifest.isNull()==false || item["image_source"].isNull() || !item["app_data_export"].isNull())return fail("invalid catalog authority reservation");
+      policy.catalogAuthority=true;policy.enabled=false;
+    }
     if(!item["image_source"].isNull()) {
       auto source=item["image_source"].as<JsonObjectConst>();int64_t instance=0;char relativeImage[192];
       if(!keys(source,{"volume_instance","path"}) || !integer(source["volume_instance"],1,INT32_MAX,instance) ||
@@ -425,7 +430,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
           if(grant.api!=RISC_APP_DATA_API_V1 || !grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)return fail("app-data backend/namespace unavailable");
           // A namespace belongs to one admitted app identity. No accidental
           // sharing through copied policy numbers or provider-global tables.
-          for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(p!=slot && policies_[p].grants[g].driver==AppDataDriver && policies_[p].grants[g].instance==grant.instance)return fail("app-data namespace already owned");
+          for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(p!=slot && !(installation_ && installation_[0].call && policies_[p].catalogAuthority && !strcmp(policies_[p].id,policy.id)) && policies_[p].grants[g].driver==AppDataDriver && policies_[p].grants[g].instance==grant.instance)return fail("app-data namespace already owned");
           grant.driver=AppDataDriver;grant.capability=RISC_APP_DATA_CAPABILITY;
         } else if (!strcmp(capability,"storage.installed-files")) {
           if(grant.instance || grant.api!=1)return fail("invalid installed-files authority");
@@ -947,17 +952,28 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
   return port_.owner();
 }
 #include "CohortRuntime.inc"
+bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity)const {
+  if(!relative||!path(root_,relative,out,capacity))return false;
+  for(size_t i=0;i<bootPolicyCount_;++i)if(policies_[i].catalogAuthority&&!strcmp(policies_[i].elf,out)){
+    for(size_t j=bootPolicyCount_;j<policyCount_;++j)if(policies_[j].enabled&&!strcmp(policies_[j].id,policies_[i].id)){
+      const size_t n=strlen(policies_[j].elf);if(n>=capacity)return false;
+      memcpy(out,policies_[j].elf,n+1);return true;
+    }
+    out[0]=0;return false;
+  }
+  return true;
+}
 bool Runtime::launch(const char* relative) {
   if(residentEnabled_) {
     char selected[256];
     const bool legacy=invocation_==&mainInvocation_ && !invocation_->role && residentLegacyAllowed(invocation_->current_);
     if((invocation_->role!=RISC_RESIDENT_ROLE_FOREGROUND && !legacy) || !invocation_->entryRunning_ ||
-       !relative || !path(root_,relative,selected,sizeof(selected)) ||
+       !relative || !installedLaunchPath(relative,selected,sizeof(selected)) ||
        (!residentAllowed(selected) && !residentLegacyAllowed(selected) && !(legacy && !strcmp(selected,default_))))return false;
   }
   if(invocation_->fileOpen_.phase==FileOpenState::Phase::Requested || invocation_->fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
   if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained_ || !appDataExitSafe() || (invocation_->installedFiles_ && invocation_->installedFiles_->retained()) || invocation_->queued_[0] || appDataBusy() || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
-  const bool ok=path(root_,relative,invocation_->queued_,sizeof(invocation_->queued_));
+  const bool ok=installedLaunchPath(relative,invocation_->queued_,sizeof(invocation_->queued_));
   RISC_STAGE_LOG("app launch-request file=%s result=%s",relative,ok?"accepted":"invalid-path");
   if(ok)RiscPerf::emit(20);
   return ok;
@@ -1040,9 +1056,21 @@ bool Runtime::appManifestPath(size_t index,char* out,size_t capacity) const {
   if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,boot,&metadataCloseRetained_))return false;
   return text(boot["app_capabilities"][index]["manifest"],out,capacity);
 }
+size_t Runtime::appInventoryCount() const {
+  size_t count=0;for(size_t i=0;i<policyCount_;++i)if(policies_[i].enabled&&!policies_[i].catalogAuthority)++count;return count;
+}
+bool Runtime::appInventoryEntry(size_t index,void* output,size_t capacity,uint32_t* actual) const {
+  if(actual)*actual=0;
+  for(size_t i=0;i<policyCount_;++i)if(policies_[i].enabled&&!policies_[i].catalogAuthority){
+    if(!index)return appInventory(i,output,capacity,actual);
+    --index;
+  }
+  return false;
+}
 bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* actual) const {
   if(actual)*actual=0;
   if(!active() || index>=policyCount_ || !output || !actual || !capacity || capacity>4096 || !providerStorageSafe())return false;
+  if(policies_[index].catalogAuthority || !policies_[index].enabled)return false;
   if(index>=bootPolicyCount_ && installedMetadata_) {
     const char* manifest=installedMetadata_[index].manifest;
     const size_t n=strlen(manifest);

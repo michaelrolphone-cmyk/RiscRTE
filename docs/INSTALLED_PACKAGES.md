@@ -2,9 +2,10 @@
 
 Current status: an opt-in development composition now passes target native build,
 39-module ELF/import admission and complete Runtime store self-admission. Dynamic
-SD discovery, cached Springboard, copied async persistence/removal, and durable
-private namespace assignment are implemented. App Store SD transactions, legacy
-settings migration and dependency provisioning remain incomplete. No release or
+SD discovery, cached Springboard, copied async persistence/removal, durable
+private namespace assignment, App Store staged SD transactions and opt-in legacy
+authority migration are implemented. Missing-provider dependency provisioning
+remains incomplete; historical checkpoint sections below record their earlier scope. No release or
 hardware qualification is claimed. The checkpoint sections below record the
 implementation progression; see the current boundary at the end.
 
@@ -244,3 +245,64 @@ metadata or removal errors remain errors. Version 2 remains accepted for the
 existing discovery/rename operations. Clients must require version 3 before
 submitting operation 7. No capacity, worker scope or USB custody rule changes.
 This is the interface reservation for concurrent Files/WebDAV/BLE work.
+
+### Staged install interface reservation (0.2.9)
+
+`RiscStoragePackageAsyncV1.h` appends a separately tagged package suffix to the
+unchanged v3 volume API. Existing v2/v3 request bytes and operations 1–7 remain
+unchanged. Package operations 100–103 have a separate copied request/submit:
+selected-image validation, synced small-file creation, filesystem replacement,
+and replacement recovery. Both request forms fit the existing 4608-byte native
+mailbox. No provider-capacity change is made.
+
+`RiscStorageWorkerAdmissionV1.h` adds a separately tagged native worker suffix.
+Only the existing claimed storage worker can validate an SD application. It
+reads one bounded PSRAM snapshot (maximum 2 MiB), checks exact length and SHA256,
+and shares the bank updater's ELF role/import audit. Its name-only import query
+uses immutable compiled public exports, never loaded modules or owner authority.
+A failed close retains its provider handle. Image checks happen at installation
+or interrupted-install recovery, never ordinary launch/input/catalog reads.
+
+`StagedAppInstall` requires the caller to confirm a durable journal before any
+new manifest mutation. The selected image is immutable; the previous image and
+settings remain untouched. Recovery accepts only the journal's exact previous
+or next manifest, revalidates the image once, and reconciles ambiguous filesystem
+replacement. Ready means SD publication is verified and the worker session is
+closed; the catalog owner must then durably publish its index before native
+registry publication. These interfaces are reserved for Files integration;
+UI/catalog wiring and full integration qualification are still in progress.
+
+### Catalog authority migration (0.2.10)
+
+An opt-in `catalog_authority: true` removable boot policy is a dormant identity
+reservation, not an installed app. Its exact original grants remain immutable
+for preserving cohort validation and anti-reassignment, including multiple KV
+namespaces, private app-data and named shared files. Native catalog admission
+can instantiate that identity only from its original managed SD directory,
+with a subset of those grants. A different identity cannot inherit them.
+The active instance occupies an ordinary dynamic slot; removal and subsequent
+updates retain the dormant authority and settings. No storage copying occurs.
+
+The selected Springboard builder excludes these SD entries from its compiled
+installed list, retaining only optional appearance metadata. Cache and complete
+SD scans control installation and availability. Unknown apps still use the
+separate product installation envelope and durable private namespace ledger.
+The default boot format/behavior is unchanged unless this flag is selected.
+
+Staged transaction checkpoint f296e474 was target-built and admitted with the
+complete 39-module store. Tests cover new install/update, both activation restart
+boundaries, offline retry, manifest conflicts and draining a pending final cache
+write. This branch also integrates Files source 81845e8 without modifying its
+32-provider/48-grant/64-app opt-in capacities or SD worker request prefix.
+
+Runtime 0.2.11 resolves an old legacy shortcut filename to that identity's
+currently enabled SD entry, using metadata only. Removed or not-yet-admitted
+identities refuse the shortcut. Both ordinary and resident launch paths share
+this resolver. The actual host Runtime test launches twice through the old
+filename after discovery and rejects it before admission and after removal.
+
+The selected System-Apps Home 0.4.9 profile hydrates the catalog after its first
+submitted frame and continues copied-worker discovery. The X4 migration composer
+requires this Home alongside the internal-only Springboard list. Never
+fall back to a firmware-declared SD image when no admitted catalog entry exists:
+that could revive an app removed by a durable catalog transaction.

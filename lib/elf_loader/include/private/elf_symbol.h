@@ -7,6 +7,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,6 +83,8 @@ uintptr_t elf_find_sym(const char *sym_name);
  * @return Symbol address if success or 0 if failed.
  */
 uintptr_t elf_find_sym_default(const char *sym_name);
+/* Name-only immutable native application surface. No dynamic module lookup. */
+bool esp_elf_public_import_supported_v1(const char *sym_name);
 
 /**
  * @brief Override the internal symbol resolver.

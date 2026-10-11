@@ -8,6 +8,7 @@
 #include <RiscPlatformClockWaitV1.h>
 #include <RiscProviderSyncV1.h>
 #include "runtime/storage/StorageWorker.h"
+#include <RiscStorageWorkerAdmissionV1.h>
 #include <RiscHttpClientV1.h>
 #include <RiscRadioIqResourceV1.h>
 #include <RiscUsbPhyResourceV1.h>
@@ -15,6 +16,7 @@ namespace RiscCpu {
 struct StorageWorkBackend {
  RiscStorage::Worker*mailbox;
  bool (*prepare)();bool (*isWorker)();void (*delayMs)(uint32_t);
+ int32_t (*admitApplication)(const risc_storage_volume_api_v1*,const char*,uint32_t,const uint8_t*,uint32_t*)=nullptr;
 };
 // Lowest hardware boundary. Production uses ESP-IDF; host models emulate only
 // pins, controllers and register/byte transfers, not driver/capability behavior.
@@ -131,7 +133,7 @@ class Port final {
   } syncs_[RuntimeProviders::GraphV2::kMaxModules];
   struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{}; } gpios_[16];
   struct StorageWork {Gpio*gpio=nullptr;risc_storage_work_scope_v1 scope{};
-    risc_storage_work_io_v1 io{};risc_storage_worker_v1 api{};uint64_t sectors=0;bool opened=false,fault=false,powerClaimed=false;} storageWork_;
+    risc_storage_work_io_v1 io{};risc_storage_worker_admission_v1 api{};uint64_t sectors=0;bool opened=false,fault=false,powerClaimed=false;} storageWork_;
   bool storageWorkBusy()const {return hw_.storageWork&&hw_.storageWork->mailbox&&!hw_.storageWork->mailbox->idle();}
   bool configureStorageWork(Gpio&);
   static bool workIoAllowed(void*);

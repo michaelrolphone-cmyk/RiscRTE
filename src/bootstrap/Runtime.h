@@ -135,6 +135,9 @@ class Runtime final {
   // Native update authority: preserve the existing boot-policy identity/grants.
   bool appUpdate(const char* id,const void* manifest,size_t size,UpdateApp&) const;
   size_t appCount() const {return policyCount_;}
+  // Compact installed inventory excludes dormant authority and retired slots.
+  size_t appInventoryCount() const;
+  bool appInventoryEntry(size_t,void*,size_t,uint32_t*) const;
   // Trusted native installation coordinator only; never an app/provider import.
   // Reserve before run(), then admit one copied SD manifest and owner-resolved
   // policy at a default-app checkpoint. Existing identities cannot be replaced
@@ -349,7 +352,7 @@ class Runtime final {
   static int32_t appDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
-    bool enabled=true;
+    bool enabled=true, catalogAuthority=false;
     char sourcePath[193]{}; PolicyIndex sourceDriver=-1;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
     const RiscStorage::AppDataExport::Entry* exports=nullptr;
@@ -373,6 +376,7 @@ class Runtime final {
   static int32_t installationCheck(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
   static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool,const uint32_t* slots=nullptr);
   bool installationMutable(size_t)const;
+  bool installedLaunchPath(const char*,char*,size_t)const;
   void* loadRemovableApp(const AppPolicy&);
   RuntimeProviders::GrantV2 retainedAppSource_{};
   MetadataArray<RiscStorage::AppDataExport::Entry> exportEntries_[MaxAppPolicies];
