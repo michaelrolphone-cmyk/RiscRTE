@@ -325,3 +325,22 @@ The actual host Runtime fixture now loads a provider from SD, tests clean offlin
 fallback and required-SD failure, rejects an SD-backed mount closure without I/O,
 and retains the source after failed close. Existing dynamic app registration and
 launch tests continue to pass under UBSan. Hardware remains unqualified.
+
+## Copied SD download checkpoint (0.2.13)
+
+The additive storage download suffix streams immutable image staging through
+the existing copied worker in at most 4096-byte requests. HTTP delivery remains
+512 bytes through the existing bounded HTTPS transport. Legacy package/async
+prefixes are unchanged. The appended native admission suffix distinguishes
+ordinary driver and application ELF roles and checks selected bytes/SHA/imports
+once at admission. It grants no native imports or graph authority.
+
+`SdPackageDownload` requires a confirmed durable record before creating any
+folder/file. It restarts incomplete private staging, recovers atomic replacement,
+recognizes an already admitted destination, and closes HTTP/SD custody before
+Ready. Image names must encode the expected SHA. Pending work is polled without
+owner SD I/O. Failed close is retained, never an internal-fallback opportunity.
+110 interruption/resume schedules run through the real coordinator and copied
+worker with boundary HTTP/filesystem fixtures; separate native admission tests
+exercise the actual digest/ELF audit. Product catalog/graph-activation and settings
+routing are still integration work; this checkpoint is not a completed installer.

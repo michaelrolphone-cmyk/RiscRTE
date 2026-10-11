@@ -22,7 +22,7 @@ int main(){
  RiscBoot::Runtime rt({});RiscBoot::Board::Device d{};strcpy(d.type,"gpio.bank");d.hardware.instance_id=5;
  d.config.gpio={sizeof(risc_hw_gpio_bank_v1),4,1,1,0,{5,41,42,40},0,0,0};
  Port p(h);auto&g=p.gpios_[0];assert(p.gpioScope(rt,d,g));assert(p.configureStorageWork(g));
- auto&a=p.storageWork_.api.base;risc_storage_work_scope_v1 scope{5,41,42,40,20000000,true};
+ auto&a=p.storageWork_.api.base.base;risc_storage_work_scope_v1 scope{5,41,42,40,20000000,true};
  uint32_t held=0;
  auto*admission=risc_storage_worker_admission(&a);assert(admission);
  assert(admission->application(a.context,nullptr,"/Apps/new/app.elf",1,nullptr,&held)==RISC_STORAGE_WORK_CONTEXT&&!held);

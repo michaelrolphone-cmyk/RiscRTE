@@ -9,7 +9,7 @@ extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
 namespace RiscCpu { namespace NativeStorageWorker {
 static bool isWorker();
 static void delayMs(uint32_t);
-static int32_t admitApplication(const risc_storage_volume_api_v1*v,const char*path,uint32_t size,const uint8_t*digest,uint32_t*retained){
+static int32_t admitPackage(const risc_storage_volume_api_v1*v,const char*path,uint32_t size,const uint8_t*digest,uint32_t*retained,bool driver){
  if(retained)*retained=0;
  const auto*ext=risc_storage_volume_extension(v);
  if(!isWorker()||!retained||!ext||!ext->handle_error||!v->file_open_read||!v->file_read||!v->file_close||
@@ -32,9 +32,11 @@ static int32_t admitApplication(const risc_storage_volume_api_v1*v,const char*pa
  mbedtls_sha256_free(&hash);
  if(file&&!v->file_close(v->context,file,false)){*retained=file;heap_caps_free(bytes);return RISC_STORAGE_WORK_RETAINED;}
  enum class Role {Application,Driver,Either};
- if(ok)ok=RiscPackages::admitElf(bytes,size,Role::Application,false,{esp_elf_validate_file,
+ if(ok)ok=RiscPackages::admitElf(bytes,size,driver?Role::Driver:Role::Application,false,{esp_elf_validate_file,
   [](const char*name){return RiscPackages::ordinaryImport(name)&&esp_elf_public_import_supported_v1(name);},
   isWorker,[](){delayMs(1);},[]()->uint32_t{return uint32_t(esp_timer_get_time()/1000);}});
  heap_caps_free(bytes);return ok?RISC_STORAGE_WORK_OK:RISC_STORAGE_WORK_INVALID;
 }
+static int32_t admitApplication(const risc_storage_volume_api_v1*v,const char*p,uint32_t n,const uint8_t*h,uint32_t*r){return admitPackage(v,p,n,h,r,false);}
+static int32_t admitDriver(const risc_storage_volume_api_v1*v,const char*p,uint32_t n,const uint8_t*h,uint32_t*r){return admitPackage(v,p,n,h,r,true);}
 } }

@@ -47,6 +47,9 @@ int main(){
  missing="memcpy";assert(validate()==RISC_STORAGE_WORK_INVALID);missing=nullptr;
  image=elf("esp_partition_write");assert(validate()==RISC_STORAGE_WORK_INVALID);
  image=elf("memcpy","t5_driver_get");assert(validate()==RISC_STORAGE_WORK_INVALID);
+ {unsigned char digest[32];SHA256(image.data(),image.size(),digest);uint32_t held=0;
+  assert(RiscCpu::NativeStorageWorker::admitDriver(&v,"/Drivers/new/image.elf",uint32_t(image.size()),digest,&held)==RISC_STORAGE_WORK_OK&&!held);}
+
  image=elf("memcpy");assert(validate(false,uint32_t(image.size()+1))==RISC_STORAGE_WORK_INVALID);
  image[0]=0;assert(validate()==RISC_STORAGE_WORK_INVALID);image=elf("memcpy");
  readFail=true;assert(validate()==RISC_STORAGE_WORK_INVALID);readFail=false;

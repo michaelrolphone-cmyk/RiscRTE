@@ -13,7 +13,7 @@ static TaskHandle_t taskHandle=nullptr;
 static bool prepare();
 static bool isWorker(){return !xPortInIsrContext()&&taskHandle&&xTaskGetCurrentTaskHandle()==taskHandle;}
 static void delayMs(uint32_t ms){vTaskDelay(pdMS_TO_TICKS(ms)?pdMS_TO_TICKS(ms):1);}
-static StorageWorkBackend backend{nullptr,prepare,isWorker,delayMs,admitApplication};
+static StorageWorkBackend backend{nullptr,prepare,isWorker,delayMs,admitApplication,admitDriver};
 static bool idle(){return !backend.mailbox||backend.mailbox->idle();}
 static void run(void*){for(;;){backend.mailbox->workerStep();delayMs(1);}}
 static bool prepare(){
