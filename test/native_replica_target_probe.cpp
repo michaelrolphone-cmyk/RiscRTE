@@ -87,3 +87,29 @@ void native_baseline_target_probe(void*owner,RiscExperimental::NativeReplicaCore
  (void)fresh.valid();(void)imported.mapSize();(void)core.baseline().archiveObligation();
  (void)core.pendingOnlyAdoptionAllowed();(void)factory.exitSafe();
 }
+
+void fresh_initialization_target_probe(void*owner,RiscExperimental::NativeReplicaCore&core,
+ RiscExperimental::NativeBaselineAdmission::Guard guard,
+ RiscExperimental::NativeBaselineAdmission::Sources sources,
+ RiscExperimental::CheckedFreshInitArtifacts&inspector){
+ using C=RiscExperimental::NativeReplicaCore;using A=RiscExperimental::NativeBaselineAdmission;
+ A factory(owner,core,guard,{},sources);C::Initialization resume;
+ (void)factory.admitFreshResume(&resume);(void)core.initializeFreshEmpty(resume);
+ (void)inspector.inspectAbsent();(void)inspector.exitSafe();
+}
+using FreshCoreProbe=RiscExperimental::NativeReplicaCore;
+using FreshFactoryProbe=RiscExperimental::NativeBaselineAdmission;
+extern "C" {
+extern const unsigned char fresh_layout_core[sizeof(FreshCoreProbe)];
+extern const unsigned char fresh_layout_initialization[sizeof(FreshCoreProbe::Initialization)];
+extern const unsigned char fresh_layout_receipt[sizeof(FreshCoreProbe::FreshInitReceipt)];
+extern const unsigned char fresh_layout_factory[sizeof(FreshFactoryProbe)];
+extern const unsigned char fresh_layout_store[sizeof(RiscExperimental::CheckedNativeReplicaStore)];
+extern const unsigned char fresh_layout_inspector[sizeof(RiscExperimental::CheckedFreshInitArtifacts)];
+const unsigned char fresh_layout_core[sizeof(FreshCoreProbe)]={};
+const unsigned char fresh_layout_initialization[sizeof(FreshCoreProbe::Initialization)]={};
+const unsigned char fresh_layout_receipt[sizeof(FreshCoreProbe::FreshInitReceipt)]={};
+const unsigned char fresh_layout_factory[sizeof(FreshFactoryProbe)]={};
+const unsigned char fresh_layout_store[sizeof(RiscExperimental::CheckedNativeReplicaStore)]={};
+const unsigned char fresh_layout_inspector[sizeof(RiscExperimental::CheckedFreshInitArtifacts)]={};
+}

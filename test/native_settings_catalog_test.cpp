@@ -1,5 +1,4 @@
 #include "native_settings_catalog_fixture.h"
-#include "experimental/native_replica/NativeBaselineAdmission.h"
 #include "experimental/native_replica/NativeRebaseCandidate.h"
 static void basics(){for(unsigned mode=0;mode<7;++mode){Native n;Files f;C c(6,n.api(),limits(),C::heap());if(mode>=3){save(f,{},0,identity({},0));}if(mode>=4)addLegacy(f);if(mode>=5)addLegacy(f,true);if(mode==6)f["/RTECFG/00000006/orphan"]={1};DirectorySd sd(f);if(mode==1)sd.dirs.insert("/RTECFG");if(mode==2){sd.dirs.insert("/RTECFG");sd.dirs.insert("/RTECFG/00000006");}const Files before=f;Hash h;CatalogAlloc a;K k(c,h.api(),sd.guard(),a.api());assert(k.start(sd.volume())==0);sd.run(k);K::Report out;if(k.state()!=K::State::Verified)fprintf(stderr,"mode%u state%d reason%d err%d\n",mode,int(k.state()),int(k.reason()),k.error());assert(k.take(&out)==0&&out.valid()&&out.namespaceId()==6&&k.exitSafe());assert(out.vacant()==(mode<3));assert(out.stableInventory());if(mode>=3)assert(out.slot(0)->content==K::Content::Valid);if(mode>=4)assert(out.slot(1)->content==K::Content::Valid);if(mode>=5)assert(out.slot(2)->content==K::Content::Valid);assert(f==before&&!n.calls&&!a.live);}}
 static void forbidden(const DirectorySd&s){for(const auto&op:s.operations)assert(op!="open-write"&&op!="write"&&op!="remove"&&op!="sync"&&op.find("replace-")!=0);assert(!s.mutations&&!s.indexReplacements);}
@@ -116,15 +115,15 @@ static void memoryBounds(){
  for(unsigned limit:{128u,256u}){Native n;Files f;seed(n,f);addLegacy(f);addLegacy(f,true);C c(6,n.api(),limits(),C::heap());assert(c.load()==0);DirectorySd sd(f);Hash h;CatalogAlloc a;K k(c,h.api(),sd.guard(),a.api());assert(k.start(sd.volume(),{limit,limit==128?8192u:32768u})==0);const size_t inventory=a.live;assert(inventory==2*limit*K::entryStorageBytes());sd.run(k);K::Report out;assert(k.take(&out)==0&&!out.vacant()&&!a.live&&a.peak==inventory+65512);printf("Catalog memory: entries=%u inventory=%zu peak_allocated=%zu catalog_object=%zu report_object=%zu entry=%zu child_storage=%zu bytes (host ABI)\n",limit,inventory,a.peak,sizeof(K),sizeof(K::Report),K::entryStorageBytes(),K::childStorageBytes());}
 }
 
-// Synthetic native-only inventory for the checked union. No card or entropy is
-// consulted by FreshEmpty admission; SD evidence remains read-only afterward.
-static void initializeV3(C&core,Native&native){
- using A=RiscExperimental::NativeBaselineAdmission;
- A::Guard guard{&native,[](void*){return true;},[](void*){return uint64_t(1);}};
- A::Sources sources{&native,[](void*){return int(C::Ok);},
-  [](void*p,uint32_t ns,A::Witness*out){auto&n=*static_cast<Native*>(p);if(!n.root.empty()||!n.objects.empty()||n.next!=1)return int(C::Conflict);out->namespaceId=ns;out->root=A::RootState::NeverInitialized;out->fingerprint[0]=1;return int(C::Ok);},nullptr,
-  [](void*p,uint32_t ns,const A::Witness&w){auto&n=*static_cast<Native*>(p);return ns==w.namespaceId&&w.root==A::RootState::NeverInitialized&&n.root.empty()&&n.objects.empty()&&n.next==1?int(C::Ok):int(C::Conflict);}};
- A admission(&native,core,guard,{},sources);C::Initialization fresh;assert(admission.admitFreshEmpty(&fresh)==C::Ok&&core.initializeFreshEmpty(fresh)==C::Ok);assert(core.formatVersion()==3&&core.headerSize()==480&&core.baseline().origin()==C::Origin::FreshEmpty);
+// Explicitly synthetic selected bytes for read-only catalog format/capacity
+// tests. This fake Native backend has no initializer receipt capability and
+// does not qualify FreshEmpty admission; the checked-store suite covers that.
+static void loadSyntheticV3(C&core,Native&native){
+ assert(native.root.empty()&&native.objects.empty()&&native.next==1);
+ Bytes image(484);memcpy(image.data(),"RTENR03",8);put32(image.data()+8,6);put32(image.data()+16,1);put32(image.data()+108,image.size());
+ auto*b=image.data()+C::HeaderV2;memcpy(b,"RTENBP1",8);put32(b+8,6);put32(b+12,uint32_t(C::Origin::FreshEmpty));put32(b+92,catalogCrc(b,92));put32(image.data()+480,catalogCrc(image.data(),480));
+ native.root=Bytes(48);auto*r=native.root.data();memcpy(r,"RTENROOT",8);put32(r+8,6);put32(r+12,image.size());put32(r+16,1);put32(r+24,1);put32(r+32,catalogCrc(image.data(),480));put32(r+44,catalogCrc(r,44));native.objects[native.next++]=image;
+ assert(core.load()==C::Ok&&core.formatVersion()==3&&core.headerSize()==480&&core.baseline().origin()==C::Origin::FreshEmpty);
 }
 static Bytes catalogMap(uint32_t bytes,uint32_t*count){
  Bytes map;*count=0;while(bytes){assert(bytes>=21);uint32_t row=std::min(bytes,2068u);if(bytes>row&&bytes-row<21)row-=21-(bytes-row);const uint32_t at=map.size();map.resize(at+row);char key[16];snprintf(key,sizeof key,"bound%04u",(*count)++);strcpy(reinterpret_cast<char*>(map.data()+at),key);put32(map.data()+at+16,row-20);memset(map.data()+at+20,'v',row-20);bytes-=row;}return map;
@@ -135,9 +134,9 @@ static void storeCatalogLegacy(Files&files,const Bytes&map,uint32_t count){
 }
 static void v3CapacityAndPreconstruction(){using R=K::R;using L=K::L;unsigned cases=0;
  for(bool preconstructed:{false,true})for(unsigned extra:{0u,1u}){Native n;C core(6,n.api(),limits(),C::heap());Files files;uint32_t count=0;auto map=catalogMap(65028+extra,&count);save(files,map,count,identity(map,count));storeCatalogLegacy(files,map,count);addLegacy(files,true);const auto originalFiles=files;DirectorySd sd(files);Hash h;CatalogAlloc alloc;
-  if(!preconstructed)initializeV3(core,n);
+  if(!preconstructed)loadSyntheticV3(core,n);
   K catalog(core,h.api(),sd.guard(),alloc.api());R replica(core,h.api(),sd.guard());L legacy(core,h.api(),sd.guard());
-  if(preconstructed)initializeV3(core,n);
+  if(preconstructed)loadSyntheticV3(core,n);
   edit(core);const unsigned nativeCalls=n.calls;const auto root=n.root;const auto objects=n.objects;const size_t inventory=2*K::Limits{}.entries*K::entryStorageBytes();
   assert(catalog.start(sd.volume())==C::Ok);sd.run(catalog);K::Report report;assert(catalog.take(&report)==C::Ok&&catalog.exitSafe()&&!report.vacant()&&report.stableInventory());const auto expected=extra?K::Content::CapacityExceeded:K::Content::Valid;assert(report.slot(0)->content==expected&&report.slot(1)->content==expected&&report.slot(2)->content==K::Content::Valid);if(!extra)assert(report.slot(0)->mapBytes==65028&&report.slot(1)->mapBytes==65028);assert(!alloc.live&&alloc.peak==inventory+65160);
   assert(replica.start(sd.volume())==C::Ok);sd.run(replica);R::Candidate replicaMap;if(extra)assert(replica.state()==R::State::Failed&&replica.reason()==R::Reason::Capacity&&replica.exitSafe());else {assert(replica.take(&replicaMap)==C::Ok&&replicaMap.mapSize()==65028);RiscExperimental::NativeRebaseCandidate held(core,6,{},C::heap());assert(held.begin({replicaMap.namespaceId(),replicaMap.count(),replicaMap.mapSize(),replicaMap.map(),replicaMap.identity()})==C::NoSpace&&!held.held());}replicaMap.reset();
@@ -146,8 +145,8 @@ static void v3CapacityAndPreconstruction(){using R=K::R;using L=K::L;unsigned ca
  }
  // Small V1 single-file input must honor the live v3 target budget as well.
  for(bool preconstructed:{false,true})for(unsigned budget:{51u,52u}){Native n;C core(6,n.api(),{484+budget,4096,1024},C::heap());Files files;addLegacy(files,true);DirectorySd sd(files);Hash h;
-  if(!preconstructed)initializeV3(core,n);
-  K catalog(core,h.api(),sd.guard());L legacy(core,h.api(),sd.guard());if(preconstructed)initializeV3(core,n);const unsigned calls=n.calls;const auto root=n.root;
+  if(!preconstructed)loadSyntheticV3(core,n);
+  K catalog(core,h.api(),sd.guard());L legacy(core,h.api(),sd.guard());if(preconstructed)loadSyntheticV3(core,n);const unsigned calls=n.calls;const auto root=n.root;
   assert(catalog.start(sd.volume())==C::Ok);sd.run(catalog);K::Report report;assert(catalog.take(&report)==C::Ok&&!report.vacant()&&report.slot(2)->content==(budget==51?K::Content::CapacityExceeded:K::Content::Valid));
   assert(legacy.start(sd.volume(),L::Source::SingleFile)==C::Ok);sd.run(legacy);L::Candidate out;if(budget==51)assert(legacy.state()==L::State::Failed&&legacy.reason()==L::Reason::Capacity);else assert(legacy.take(&out)==C::Ok&&out.mapSize()==52);assert(n.calls==calls&&n.root==root);forbidden(sd);++cases;
  }

@@ -3,10 +3,12 @@
 #include <cerrno>
 #include <climits>
 #include <cstdio>
+#if defined(__linux__) && !defined(ESP_PLATFORM)
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#endif
 namespace RiscExperimental {
 // Read-only, worker/lease-only inspection of one firmware-private namespace.
 // The lease excludes every writer, renamer and cleanup owner, including changes
@@ -39,10 +41,18 @@ class CheckedFreshInitArtifacts {
  private:
  static constexpr uint32_t ImageBytes=484,ObjectBytes=508;
  uint32_t ns_;Hooks hooks_;char root_[160]{};bool entered_=false,retained_=false;
+#if defined(__linux__) && !defined(ESP_PLATFORM)
  int rootFd_=-1,fileFd_=-1,openingDir_=-1;DIR*dir_=nullptr;
+#endif
  struct Entry {bool&v;explicit Entry(bool&b):v(b){v=true;}~Entry(){v=false;}};
  struct Wipe {uint8_t*p;size_t n;~Wipe(){C::wipe(p,n);}};
- bool handles()const{return rootFd_>=0||fileFd_>=0||openingDir_>=0||dir_;}
+ bool handles()const{
+#if defined(__linux__) && !defined(ESP_PLATFORM)
+  return rootFd_>=0||fileFd_>=0||openingDir_>=0||dir_;
+#else
+  return false;
+#endif
+ }
  int retain(){retained_=true;return C::Retained;}
  int check(bool yield=false){
   if(retained_)return C::Retained;
@@ -59,6 +69,7 @@ class CheckedFreshInitArtifacts {
  }
  // Ordinary errors/cancellation still close under the lease. Retained or lost
  // lease with any handle suppresses ALL subsequent I/O, including other closes.
+#if defined(__linux__) && !defined(ESP_PLATFORM)
  int cleanup(int rc){
   if(handles()){
    int state=check();if(state==C::Retained)return state;if(!rc)rc=state;
@@ -69,6 +80,7 @@ class CheckedFreshInitArtifacts {
   }
   const int state=check();return state==C::Retained?state:rc?rc:state;
  }
+#endif
  struct Canonical {uint32_t baseline=0,image=0,object=0;};
  static uint8_t byte(uint32_t word,unsigned at){return uint8_t(word>>(8*at));}
  uint8_t expectedAt(uint32_t at,const Canonical&c)const{
@@ -155,6 +167,12 @@ class CheckedFreshInitArtifacts {
   struct stat current{};rc=lookup(::dirfd(dir_),name,&current);if(rc)return rc==C::Missing?C::Io:rc;
   return same(before,current)?C::Ok:C::Io;
  }
+ int stableRoot(const struct stat&root){
+  struct stat current{};int result=::fstat(rootFd_,&current);int rc=check();if(rc)return rc;
+  if(result||!same(root,current))return C::Io;
+  result=::lstat(root_,&current);rc=check();if(rc)return rc;
+  return !result&&same(root,current)?C::Ok:C::Io;
+ }
  int inventory(const Canonical&expected,uint64_t next,bool attempt){
   char component[sizeof root_]{};std::strcpy(component,root_);struct stat root{};
   for(size_t i=1;;++i)if(!component[i]||component[i]=='/'){
@@ -164,7 +182,15 @@ class CheckedFreshInitArtifacts {
   rootFd_=::open(root_,O_RDONLY|O_DIRECTORY|O_NOFOLLOW);int rc=check(true);if(rc)return rc;if(rootFd_<0)return C::Io;
   struct stat openedRoot{};int result=::fstat(rootFd_,&openedRoot);rc=check(true);if(rc)return rc;if(result||!same(root,openedRoot))return C::Io;
   char space[16]{};std::snprintf(space,sizeof space,"n%08x",unsigned(ns_));struct stat folder{};
-  rc=lookup(rootFd_,space,&folder);if(rc==C::Missing)return C::Ok;if(rc)return rc;if(!S_ISDIR(folder.st_mode))return C::Io;
+  rc=lookup(rootFd_,space,&folder);
+  if(rc==C::Missing){
+   // The first missing lookup cooperated. Recheck under the same lease, then
+   // fence both the open root and its path before reporting checked absence.
+   rc=lookup(rootFd_,space,&folder);if(rc!=C::Missing)return rc?rc:C::Io;
+   return stableRoot(root);
+  }
+  if(rc)return rc;
+  if(!S_ISDIR(folder.st_mode))return C::Io;
   openingDir_=::openat(rootFd_,space,O_RDONLY|O_DIRECTORY|O_NOFOLLOW);rc=check(true);if(rc)return rc;if(openingDir_<0)return C::Io;
   struct stat opened{};result=::fstat(openingDir_,&opened);rc=check(true);if(rc)return rc;if(result||!same(folder,opened))return C::Io;
   dir_=::fdopendir(openingDir_);if(dir_)openingDir_=-1;rc=check(true);if(rc)return rc;if(!dir_)return C::Io;
@@ -188,8 +214,7 @@ class CheckedFreshInitArtifacts {
   }
   struct stat current{};result=::fstat(::dirfd(dir_),&current);rc=check(true);if(rc)return rc;if(result||!same(folder,current))return C::Io;
   rc=lookup(rootFd_,space,&current);if(rc)return rc==C::Missing?C::Io:rc;if(!same(folder,current))return C::Io;
-  result=::fstat(rootFd_,&current);rc=check(true);if(rc)return rc;if(result||!same(root,current))return C::Io;
-  return C::Ok;
+  return stableRoot(root);
  }
 #endif
 };

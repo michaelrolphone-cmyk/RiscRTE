@@ -43,7 +43,7 @@ class NativeBaselineAdmission {
  NativeBaselineAdmission(void*owner,C&core,Guard guard,Digest digest,Sources sources,C::Allocator alloc=C::heap())
   :owner_(owner),core_(core),guard_(guard),hash_(digest),sources_(sources),alloc_(alloc){}
  NativeBaselineAdmission(const NativeBaselineAdmission&)=delete;NativeBaselineAdmission&operator=(const NativeBaselineAdmission&)=delete;
- bool exitSafe()const{return !retained_&&!entered_;}
+ bool exitSafe()const{return !retained_&&!entered_&&!core_.admissionBusy_&&!consuming_;}
  int admitFreshEmpty(C::Initialization*out){return admit(nullptr,out);}
  int admitFreshResume(C::Initialization*out){return admit(nullptr,out,true);}
  int admitImported(const Selection&selection,C::Initialization*out){return admit(&selection,out);}
@@ -56,8 +56,13 @@ class NativeBaselineAdmission {
  int custody(uint64_t expected=0){
   if(retained_)return C::Retained;
   const int state=sources_.observe(sources_.context);if(state!=C::Ok)return retain(state);
-  if(!guard_.workerWithLease(guard_.context))return C::Busy;
-  const uint64_t epoch=guard_.leaseEpoch(guard_.context);if(!epoch||(expected&&epoch!=expected))return C::Stale;
+  const bool held=guard_.workerWithLease(guard_.context);
+  const uint64_t epoch=guard_.leaseEpoch(guard_.context);
+  // A guard callback can discover retained custody while reporting lost lease
+  // or epoch. Observe again before returning either ordinary failure.
+  const int after=sources_.observe(sources_.context);if(after!=C::Ok)return retain(after);
+  if(!held)return C::Busy;
+  if(!epoch||(expected&&epoch!=expected))return C::Stale;
   return C::Ok;
  }
  int absent(){uint8_t root[C::RootBytes]{};const int rc=core_.b_.readRoot(core_.b_.context,root,sizeof root);C::wipe(root,sizeof root);return rc==C::Missing?int(C::Ok):retain(rc?rc:int(C::Conflict));}
