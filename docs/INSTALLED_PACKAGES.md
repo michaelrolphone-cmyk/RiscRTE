@@ -344,3 +344,31 @@ owner SD I/O. Failed close is retained, never an internal-fallback opportunity.
 worker with boundary HTTP/filesystem fixtures; separate native admission tests
 exercise the actual digest/ELF audit. Product catalog/graph-activation and settings
 routing are still integration work; this checkpoint is not a completed installer.
+
+
+## Transactional provider metadata publication (0.2.14)
+
+The optional `installation.provider_grants` array enables ordinary SD provider
+publication. Its entries explicitly name capability, API and selected instance
+that downloaded providers may consume from the boot/native graph. Dependencies
+on other admitted dynamic providers use their exact graph bindings. Downloaded
+manifests cannot create platform/native-import, bound-storage or app namespace
+authority. Existing board compatibility, ownership, cycle and SD mount-closure
+checks apply before publication. Boot-selected providers are immutable here.
+Preserving cohort updates must retain this envelope.
+
+The appended installation API supports metadata availability queries and a
+whole-batch dry-run/publication. Registration owns snapshots and atomically
+publishes all validated nodes without I/O or ELF execution. Replacing a mapped,
+live, failed or retained provider rejects. A newer unloaded dynamic provider
+may replace its own slot while preserving capability/API/instance identity.
+Unchanged cached records replay idempotently. The trusted catalog must persist
+the complete admitted metadata after selected-image worker admission and before
+publication; this native suffix does not itself persist the graph.
+
+The actual Runtime fixture registers a provider absent from boot metadata and
+runs a newly discovered dependent SD app twice through real module loading.
+It covers dry-run, rejected partial batch rollback, denied native grants,
+idempotent replay, replacement refusal while live and update after quiescence.
+All registration calls perform zero media I/O. Product durable cache, catalog
+resolution and App Store wiring are being integrated in the same task.

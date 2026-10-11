@@ -365,7 +365,7 @@ class Runtime final {
   struct InstalledAppMetadata {char manifest[4097]{};uint32_t namespaceSlot=0;};
   MetadataArray<InstalledAppMetadata> installedMetadata_;
   struct InstallationState {
-    risc_installation_v1 api{};uint64_t volume=0;char grants[4097]{};uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
+    risc_installation_v1 api{};uint64_t volume=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
   };
   MetadataArray<InstallationState> installation_;
   bool configureInstallation(JsonVariantConst);
@@ -377,6 +377,8 @@ class Runtime final {
   static int32_t installationCheck(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
   static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool,const uint32_t* slots=nullptr);
   bool installationMutable(size_t)const;
+  static int32_t installationProviders(void*,const risc_install_provider_v1*,uint32_t,bool);
+  static bool installationAvailable(void*,const char*,uint32_t,uint64_t);
   bool installedLaunchPath(const char*,char*,size_t)const;
   void* loadRemovableApp(const AppPolicy&);
   RuntimeProviders::GrantV2 retainedAppSource_{};
@@ -473,7 +475,7 @@ class Runtime final {
 
   RuntimeProviders::GrantV2 grants_[MaxDrivers]{};
   Driver drivers_[MaxDrivers]{};
-  size_t driverCount_=0;
+  size_t driverCount_=0,bootDriverCount_=0;
   char root_[256]{}, default_[256]{}, error_[192]{};
   bool registrationOpen_=false;
   bool demandActivation_=false;

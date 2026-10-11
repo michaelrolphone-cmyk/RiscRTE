@@ -175,6 +175,45 @@ bool GraphV2::addChecked(const SpecV2& spec, const NativeProviderPolicyV1* polic
   return true;
 }
 
+bool GraphV2::metadataMutable(size_t index) const {
+  if(lifecycleBusy() || !activationSafe() || index>=count_)return false;
+  const auto& n=nodes_[index];
+  if(n.visit!=Visit::Idle || n.module.state()!=ModuleV2::State::Absent || n.acquired || n.dependencyReleasePending)return false;
+  for(const auto& g:grants_)if(g.occupied && g.node==index)return false;
+  return !n.owned || !n.owned->nativePolicy;
+}
+bool GraphV2::publishOrdinaryBatch(const SpecV2* specs,const size_t* slots,size_t size,bool checkOnly) {
+  if(lifecycleBusy() || !activationSafe() || size>kMaxModules || (size&&(!specs||!slots)))return false;
+  size_t next=count_;
+  for(size_t i=0;i<size;++i){
+    const size_t slot=slots[i];
+    for(size_t j=0;j<i;++j)if(slot==slots[j])return false;
+    if(slot<count_){if(!metadataMutable(slot))return false;}
+    else if(slot!=next++ || slot>=kMaxModules)return false;
+    for(size_t j=0;j<count_;++j){
+      bool replaced=false;for(size_t k=0;k<size;++k)replaced|=slots[k]==j;
+      if(replaced)continue;
+      const auto& old=nodes_[j].spec;
+      if(!specs[i].id || (!std::strcmp(old.id,specs[i].id) &&
+         (!old.hardware || !specs[i].hardware || old.hardware->instance_id==specs[i].hardware->instance_id)))return false;
+    }
+  }
+  void* memory=OwnedNodeV2::allocate(sizeof(GraphV2));if(!memory)return false;
+  auto* staged=new(memory) GraphV2;
+  struct Cleanup {GraphV2* value;~Cleanup(){value->~GraphV2();OwnedNodeV2::release(value);}} cleanup{staged};
+  for(size_t i=0;i<size;++i)if(!staged->addVerified(specs[i]))return false;
+  if(checkOnly)return true;
+  // No fallible operation follows the first publication. Live unaffected
+  // modules retain their exact fixed node, dependency table and grant slots.
+  for(size_t i=0;i<size;++i){
+    auto& node=nodes_[slots[i]];delete node.owned;
+    node.owned=staged->nodes_[i].owned;node.spec=node.owned->spec;
+    staged->nodes_[i].owned=nullptr;
+    node.module.bindGraphOwnedImage(nullptr,0,nullptr);
+  }
+  count_=next;staged->count_=0;return true;
+}
+
 bool GraphV2::releaseDependencies(size_t index) {
   Node& node = nodes_[index];
   while (node.acquired) {

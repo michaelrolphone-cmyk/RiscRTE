@@ -852,6 +852,7 @@ bool Runtime::prepare(const char* root) {
        !providerFilePolicy(item,providerStorage_[driverCount_])) return false;
     ++driverCount_;
   }
+  bootDriverCount_=driverCount_;
   registrationOpen_=true;
   const bool bound=(!port_.bindPlatforms || port_.bindPlatforms(*this)) && registerProviderRealtime() && configureInstallation(c["installation"]);
   registrationOpen_=false;

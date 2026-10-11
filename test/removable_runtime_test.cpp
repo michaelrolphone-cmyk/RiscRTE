@@ -19,7 +19,7 @@ static std::string mode,root;
 static std::vector<uint8_t> payload;
 static unsigned defaults,children,starts,stops,opens,closes,live,previousRuns;
 static bool providerMode(){return mode.find("provider-")==0;}
-static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority";}
+static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority"||mode=="catalog-providers";}
 static unsigned baseCount(){return mode=="catalog-resident"?2:mode=="catalog-authority"?1:0;}
 extern "C" bool removable_is_resident(){return mode=="catalog-resident";}
 static size_t offset;
@@ -27,6 +27,31 @@ static bool present=true;
 static RiscBoot::Runtime* runtime;
 static const risc_installation_v1* installer;
 extern "C" void removable_installation(const void*api){installer=static_cast<const risc_installation_v1*>(api);}
+static const char*pluginManifest=R"({"type":"driver","id":"sd-plugin","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"plugin.elf","requires":[],"provides":[{"capability":"test.plugin","api":1}]})";
+static const char*pluginPath="/Drivers/sd-plugin/image-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.elf";
+static std::string pluginUpdate,pluginUpdatePath;
+static unsigned discoveryIo;
+static void installProviderFixture(){
+ assert(installer&&installer->providers&&installer->available);
+ assert(!installer->available(installer->context,"test.plugin",1,0));
+ risc_install_provider_v1 record{pluginManifest,pluginPath,0};
+ const unsigned io=opens+closes+discoveryIo;
+ assert(installer->providers(installer->context,&record,1,true)==RISC_INSTALL_OK);
+ assert(!installer->available(installer->context,"test.plugin",1,0));
+ std::string denied=pluginManifest;denied.replace(denied.find("\"requires\":[]"),13,"\"requires\":[{\"capability\":\"platform.installation\",\"api\":1}]");
+ record.manifest_json=denied.c_str();assert(installer->providers(installer->context,&record,1,false)==RISC_INSTALL_DENIED);
+ record.manifest_json=pluginManifest;
+ risc_install_provider_v1 partial[2]={record,{"{}",pluginPath,0}};
+ assert(installer->providers(installer->context,partial,2,false)==RISC_INSTALL_INVALID);
+ assert(!installer->available(installer->context,"test.plugin",1,0));
+ assert(installer->providers(installer->context,&record,1,false)==RISC_INSTALL_OK);
+ assert(installer->providers(installer->context,&record,1,false)==RISC_INSTALL_OK);
+ assert(installer->available(installer->context,"test.plugin",1,0));
+ assert(io==opens+closes+discoveryIo);
+ pluginUpdate=pluginManifest;pluginUpdate.replace(pluginUpdate.find("1.0.0"),5,"1.0.1");
+ pluginUpdatePath=pluginPath;pluginUpdatePath.replace(pluginUpdatePath.find("image-")+6,64,std::string(64,'b'));
+ puts("Provider batch: dry-run, atomic rollback, denied native grant, idempotent cache replay, zero I/O PASS");
+}
 static unsigned privateWrites;
 static RiscBoot::AppDataBackend privateData{nullptr,
  [](void*,uint32_t ns,const char*,uint32_t*n,uint64_t*r)->int32_t{assert(ns==(mode=="catalog-authority"?77u:1000u));*n=0;*r=privateWrites;return RISC_APP_DATA_NOT_FOUND;},
@@ -35,6 +60,17 @@ static RiscBoot::AppDataBackend privateData{nullptr,
  [](void*){return true;}};
 extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
  if(!catalogMode())return;
+ if(mode=="catalog-providers"){
+  risc_runtime_capability_v1 plugin{};plugin.struct_size=sizeof(plugin);
+  assert(rt->acquire("test.plugin",1,0,&plugin));assert(static_cast<const int*>(plugin.api)[2]==42);
+  std::string next=pluginUpdate,nextPath=pluginUpdatePath;
+  if(children){next.replace(next.find("1.0.1"),5,"1.0.2");nextPath.replace(nextPath.find("image-")+6,64,std::string(64,'c'));}
+  risc_install_provider_v1 update{next.c_str(),nextPath.c_str(),0};
+  assert(installer->providers(installer->context,&update,1,false)==RISC_INSTALL_BUSY);
+  assert(rt->release(&plugin));
+  if(!children)assert(installer->providers(installer->context,&update,1,false)==RISC_INSTALL_OK);
+ }
+
  risc_runtime_capability_v1 grant{};grant.struct_size=sizeof(grant);
  assert(rt->acquire("storage.app-data",1,0,&grant));
  const auto*api=static_cast<const risc_app_data_v1*>(grant.api);
@@ -43,7 +79,7 @@ extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
 }
 static std::string launchName="child.elf";
 static RiscStorage::Worker storageWorker;
-static unsigned discoveryIo;
+
 static FILE* manifestFile;
 static DIR* appDirectory;
 extern "C" const char* removable_launch_name(){return launchName.c_str();}
@@ -56,7 +92,12 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
   if(e==0){++defaults;if(providerMode())return 0;
     if(defaults==1 && (mode=="discovery"||catalogMode())) {
       assert(runtime->appCount()==baseCount());
+      if(mode=="catalog-providers")installProviderFixture();
       const char* manifest=R"({"type":"application","id":"child","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"child.elf","entry":"app_main","requires":[]})";
+      std::string dynamicManifest;
+      if(mode=="catalog-providers"){
+       dynamicManifest=manifest;dynamicManifest.replace(dynamicManifest.find("\"requires\":[]"),13,"\"requires\":[{\"capability\":\"test.plugin\",\"api\":1}]");manifest=dynamicManifest.c_str();
+      }
       const char* policy=R"({"manifest":"child.json","grants":[],"image_source":{"volume_instance":9,"path":"Apps/child/child.elf"}})";
       // Failed admission cannot consume a slot or poison the subsequent app.
       std::string bad=policy;
@@ -64,7 +105,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
       assert(!runtime->admitInstalledApp(bad.c_str(),manifest));
       bad=policy;bad.replace(bad.find("volume_instance\":9"),18,"volume_instance\":8");
       assert(!runtime->admitInstalledApp(bad.c_str(),manifest));
-      bad=manifest;bad.replace(bad.find("\"requires\":[]"),13,"\"requires\":[{\"capability\":\"raw.memory\",\"api\":1}]");
+      bad=manifest;auto requirementStart=bad.find("\"requires\":[");auto requirementEnd=bad.find(']',requirementStart);bad.replace(requirementStart,requirementEnd-requirementStart+1,"\"requires\":[{\"capability\":\"raw.memory\",\"api\":1}]");
       assert(!runtime->admitInstalledApp(policy,bad.c_str()));
       assert(runtime->appCount()==baseCount());
       // Add metadata to the real mock SD directory only AFTER prepare/first
@@ -197,7 +238,8 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
       ++discoveryIo;manifestFile=fopen((root+p).c_str(),"rb");if(!manifestFile)return 0;
       assert(!fseek(manifestFile,0,SEEK_END));*n=ftell(manifestFile);rewind(manifestFile);return 2;
     }
-    assert(!strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")));
+    if(mode=="catalog-providers")selectImage(!strncmp(p,"/Drivers/",9)?"plugin.elf":"revision1.elf");
+    assert((mode=="catalog-providers"&&!strncmp(p,"/Drivers/sd-plugin/image-",25)) || !strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")));
     if(mode=="missing" || mode=="busy")return 0;
     ++opens;live=1;offset=0;*n=payload.size();return 1;
   };
@@ -260,6 +302,7 @@ int main(int argc,char** argv) {
   if(catalogMode()){
     JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
     doc["installation"]["volume_instance"]=9;auto grant=doc["installation"]["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=0;
+    if(mode=="catalog-providers")doc["installation"]["provider_grants"].to<JsonArray>();
     doc["installation"]["namespace_range"]["first"]=1000;doc["installation"]["namespace_range"]["count"]=128;boot.clear();serializeJson(doc,boot);
     std::ifstream source(root+"/sd.json");std::string raw((std::istreambuf_iterator<char>(source)),{});JsonDocument sd;assert(!deserializeJson(sd,raw));
     auto req=sd["requires"].add<JsonObject>();req["capability"]=RISC_INSTALLATION_CAPABILITY;req["api"]=1;raw.clear();serializeJson(sd,raw);write("sd.json",raw);

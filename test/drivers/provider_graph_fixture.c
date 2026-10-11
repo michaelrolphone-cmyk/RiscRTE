@@ -6,7 +6,11 @@
 #ifndef FIXTURE_CAPABILITY
 #error FIXTURE_CAPABILITY must be set
 #endif
+#ifdef FIXTURE_TYPED
+static struct {uint32_t api,size;int value;} value={1,sizeof(value),42};
+#else
 static int value = 42;
+#endif
 static bool started;
 #ifdef FIXTURE_QUIESCE_FAIL_ONCE
 static unsigned quiesce_failures = 1;

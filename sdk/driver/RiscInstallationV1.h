@@ -16,6 +16,10 @@ enum {RISC_INSTALL_OK=0,RISC_INSTALL_DENIED=-1,RISC_INSTALL_BUSY=-2,RISC_INSTALL
  * protected from removal. Driver graphs are not mutated by this interface. */
 typedef struct {const char*manifest_path;const char*manifest_json;} risc_install_candidate_v1;
 typedef struct {int32_t status;char launch_path[193];} risc_install_result_v1;
+/* Trusted catalog metadata, after worker image admission and durable journal.
+ * Image paths select immutable SD bytes; instance comes from selected board
+ * bindings, never a package permission. Native imports remain unavailable. */
+typedef struct {const char*manifest_json;const char*image_path;uint64_t instance;} risc_install_provider_v1;
 typedef struct {
  uint32_t api_version,struct_size;void*context;
  int32_t (*admit)(void*,const char*relative_manifest,const char*manifest_json,char*launch_path,uint32_t capacity);
@@ -34,7 +38,17 @@ typedef struct {
   * The boot envelope maps slots 1..namespace_capacity to a reserved range. */
  uint32_t namespace_capacity;
  int32_t (*namespaced)(void*,const risc_install_candidate_v1*,const uint32_t*slots,uint32_t count,risc_install_result_v1*,bool replace,bool check);
+ /* Optional provider publication suffix. Requires boot provider_grants.
+  * check_only validates the entire graph and leaves metadata unchanged.
+  * Publication is atomic and I/O-free. Busy/live or retained provider slots
+  * cannot be replaced. Boot-selected providers can never be replaced here.
+  * Caller persists complete provider metadata before publication; cache replay
+  * uses this same admission path after restart without SD scans/checksums. */
+ int32_t (*providers)(void*,const risc_install_provider_v1*,uint32_t count,bool check_only);
+ bool (*available)(void*,const char*capability,uint32_t api,uint64_t instance);
+ uint32_t provider_capacity;
 } risc_installation_v1;
+#define RISC_INSTALLATION_APP_PREFIX_SIZE offsetof(risc_installation_v1,providers)
 #ifdef __cplusplus
 }
 #endif

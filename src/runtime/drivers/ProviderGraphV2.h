@@ -145,6 +145,11 @@ class GraphV2 final {
   bool addManagerValidatedPrivileged(const SpecV2& spec, const NativeProviderPolicyV1&);
   const NativeProviderPolicyV1* nativePolicyFor(const char* id, const char* capability, uint32_t api, uint64_t instance) const;
   bool addChecked(const SpecV2& spec, const NativeProviderPolicyV1*);
+  // Runtime-only atomic metadata publication. Existing slots must be fully
+  // unloaded; staged declarations never execute code or acquire resources.
+  bool metadataMutable(size_t index) const;
+  bool publishOrdinaryBatch(const SpecV2*,const size_t* slots,size_t count,bool checkOnly);
+
 
   enum class Visit : uint8_t { Idle, Visiting, Active, Releasing };
   struct Node {

@@ -1,7 +1,7 @@
 namespace RiscBoot {
 bool Runtime::configureInstallation(JsonVariantConst value){
  if(value.isUnbound())return true;
- if(!value.is<JsonObjectConst>() || !keys(value.as<JsonObjectConst>(),{"volume_instance","grants"},{"namespace_range"}) ||
+ if(!value.is<JsonObjectConst>() || !keys(value.as<JsonObjectConst>(),{"volume_instance","grants"},{"namespace_range","provider_grants"}) ||
     !value["grants"].is<JsonArrayConst>() || value["grants"].size()>MaxAppPolicyGrants)return fail("invalid installation envelope");
  int64_t volume=0;if(!integer(value["volume_instance"],1,INT32_MAX,volume))return fail("invalid installation volume");
  bool found=false;for(size_t i=0;i<driverCount_;++i)if(drivers_[i].instance==uint64_t(volume)&&!strcmp(drivers_[i].provides,"storage.volume")&&drivers_[i].api==1)found=true;
@@ -26,8 +26,21 @@ bool Runtime::configureInstallation(JsonVariantConst value){
  }
  installation_=metadataArray<InstallationState>(1);if(!installation_)return false;
  if(serializeJson(value["grants"],installation_[0].grants,sizeof(installation_[0].grants))>=sizeof(installation_[0].grants)-1)return false;
+ if(!value["provider_grants"].isUnbound()){
+  auto allowed=value["provider_grants"];
+  if(!allowed.is<JsonArrayConst>()||allowed.size()>32)return fail("invalid provider installation envelope");
+  for(JsonObjectConst g:allowed.as<JsonArrayConst>()){
+   char cap[96];int64_t api=0,instance=0;
+   if(!keys(g,{"capability","api","instance_id"})||!text(g["capability"],cap,sizeof(cap))||
+      !integer(g["api"],1,UINT32_MAX,api)||!integer(g["instance_id"],0,INT32_MAX,instance)||
+      !strcmp(cap,RISC_INSTALLATION_CAPABILITY)||!strcmp(cap,RISC_BOUND_KEY_VALUE_CAPABILITY)||
+      !strcmp(cap,RISC_BOUND_APP_DATA_CAPABILITY))return fail("unsupported provider installation grant");
+  }
+  if(serializeJson(allowed,installation_[0].providerGrants,sizeof(installation_[0].providerGrants))>=sizeof(installation_[0].providerGrants)-1)return false;
+  installation_[0].providersEnabled=true;
+ }
  installation_[0].volume=uint64_t(volume);installation_[0].namespaceFirst=uint32_t(first);installation_[0].namespaceCount=uint32_t(count);
- installation_[0].api={1,sizeof(risc_installation_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced};
+ installation_[0].api={1,sizeof(risc_installation_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0)};
  return registerPlatform(RISC_INSTALLATION_CAPABILITY,1,Scope::Global,0,&installation_[0].api);
 }
 bool Runtime::installationNamespaceRangeSafe()const{
@@ -99,6 +112,12 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
      }
      ++matches;
     }
+   if(!matches && r->installation_[0].providersEnabled){
+    for(size_t d=r->bootDriverCount_;d<r->driverCount_;++d){const auto& provider=r->drivers_[d];
+     if(requirement["capability"]!=provider.provides || requirement["api"]!=provider.api)continue;
+     auto grant=grants.add<JsonObject>();grant["capability"]=provider.provides;grant["api"]=provider.api;grant["instance_id"]=provider.instance;++matches;
+    }
+   }
    if(matches!=1)return RISC_INSTALL_DENIED;
   }
  }
@@ -205,3 +224,5 @@ int32_t Runtime::installationTransaction(void*ctx,const risc_install_candidate_v
  return status;
 }
 }
+
+#include "InstallationProvidersRuntime.inc"
