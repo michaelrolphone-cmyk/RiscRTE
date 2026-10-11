@@ -619,6 +619,8 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
   if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_KEY_VALUE_INVALID;
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
+  if(r->scalableSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount)
+    return RiscStorage::ScalableSettings::get(r->scalableSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],key,buffer,capacity,outSize);
   if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount&&r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
     auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::get(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,buffer,capacity,outSize);
   }
@@ -639,6 +641,8 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
   if (!keyValueKey(key) || !data || !size || size>limit) return RISC_KEY_VALUE_INVALID;
   const auto& backend=*r->port_.keyValue;
+  if(r->scalableSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount)
+    return RiscStorage::ScalableSettings::put(r->scalableSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],*r->port_.keyValue->scalableSettings,matched->keyValueNamespace,key,data,size);
   if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount&&r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
     auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::put(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,data,size);
   }
@@ -991,11 +995,11 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
 bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity)const {
   if(!relative||!path(root_,relative,out,capacity))return false;
   auto ready=[&](size_t index){
-    if(!installedSettings_)return true;
+    if(!installedSettings_&&!scalableSettings_)return true;
     const auto&policy=policies_[index];for(size_t g=0;g<policy.count;++g){const auto&grant=policy.grants[g];
       if(grant.keyValue&&grant.instance>=installation_[0].namespaceFirst&&grant.instance-installation_[0].namespaceFirst<installation_[0].namespaceCount){
-        const auto status=installedSettings_[grant.instance-installation_[0].namespaceFirst].status;
-        if(status==RiscStorage::SdFirstKeyValue::Cold||status==RiscStorage::SdFirstKeyValue::Uncertain)return false;
+        const auto status=scalableSettings_?uint32_t(scalableSettings_[grant.instance-installation_[0].namespaceFirst].status):uint32_t(installedSettings_[grant.instance-installation_[0].namespaceFirst].status);
+        if(status==RiscStorage::SdFirstKeyValue::Cold||status==RiscStorage::SdFirstKeyValue::Uncertain||status==RiscStorage::ScalableSettings::Restoring)return false;
       }
     }
     return true;

@@ -17,7 +17,7 @@
 #include <unistd.h>
 #include <cstdlib>
 static std::string mode,root;
-static bool settingsMode(){return mode=="catalog-settings"||mode=="catalog-settings-legacy";}
+static bool settingsMode(){return mode=="catalog-settings"||mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable";}
 static std::map<std::string,std::string> legacySettings;
 static std::vector<uint8_t> payload;
 static unsigned defaults,children,starts,stops,opens,closes,live,previousRuns;
@@ -63,7 +63,22 @@ static RiscBoot::KeyValueBackend privateKv{nullptr,
  [](void*,uint32_t ns,void*out,uint32_t capacity,uint32_t*n)->int32_t{assert(ns==1000);if(settingsJournal.empty())return RISC_KEY_VALUE_NOT_FOUND;assert(capacity>=settingsJournal.size());*n=settingsJournal.size();memcpy(out,settingsJournal.data(),*n);return 0;},
  [](void*,uint32_t ns,const void*data,uint32_t n)->int32_t{assert(ns==1000);settingsJournal.assign(static_cast<const uint8_t*>(data),static_cast<const uint8_t*>(data)+n);return 0;},
  [](void*,uint32_t ns,bool*exists)->int32_t{assert(ns==1000);*exists=!legacySettings.empty();return 0;}};
+static std::map<std::string,std::string> scalableDeltas;
+static std::vector<uint8_t> scalableAnchor;
+static const RiscStorage::ScalableSettings::Backend scalableBackend{nullptr,
+ [](void*,uint32_t,void*out,uint32_t cap,uint32_t*n)->int32_t{if(scalableAnchor.empty())return RISC_KEY_VALUE_NOT_FOUND;assert(cap>=scalableAnchor.size());*n=scalableAnchor.size();memcpy(out,scalableAnchor.data(),*n);return 0;},
+ [](void*,uint32_t,const void*p,uint32_t n)->int32_t{scalableAnchor.assign((const uint8_t*)p,(const uint8_t*)p+n);return 0;},
+ [](void*,uint32_t,bool delta,const char*after,char key[16],void*out,uint32_t cap,uint32_t*n)->int32_t{auto&m=delta?scalableDeltas:legacySettings;auto i=m.upper_bound(after);if(i==m.end())return RISC_KEY_VALUE_NOT_FOUND;strcpy(key,i->first.c_str());*n=i->second.size();assert(cap>=*n);memcpy(out,i->second.data(),*n);return 0;},
+ [](void*,uint32_t,const char*k,const void*p,uint32_t n)->int32_t{scalableDeltas[k].assign((const char*)p,n);return 0;},
+ [](void*,uint32_t,const char*k)->int32_t{scalableDeltas.erase(k);return 0;}};
 static void checkpointSettings(){
+ if(mode=="catalog-settings-scalable"){
+  uint32_t n=0;uint64_t generation=0;assert(installer->settings_snapshot(installer->context,1,nullptr,0,&n,&generation)==RISC_KEY_VALUE_BUFFER_SMALL);
+  settingsDisk.resize(n);assert(installer->settings_snapshot(installer->context,1,settingsDisk.data(),n,&n,&generation)==0);
+  int rc;do{rc=installer->settings_ack(installer->context,1,generation);}while(rc==RISC_KEY_VALUE_BUSY);assert(rc==0&&installer->settings_status(installer->context,1)==1&&scalableDeltas.empty());
+  for(unsigned i=0;i<32;++i)assert(legacySettings["key"+std::to_string(i)]=="preserved-"+std::to_string(i));
+  assert(legacySettings.size()==32&&settingsJournal.empty());return;
+ }
  if(mode=="catalog-settings-legacy"){assert(installer->settings_status(installer->context,1)==4&&settingsJournal.empty());return;}
  settingsDisk.resize(RiscStorage::SdFirstKeyValue::Bytes);uint32_t size=0;uint64_t generation=0;
  assert(installer->settings_snapshot(installer->context,1,settingsDisk.data(),settingsDisk.size(),&size,&generation)==0);settingsDisk.resize(size);
@@ -81,7 +96,7 @@ extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
  if(settingsMode()){
   risc_runtime_capability_v1 setting{};setting.struct_size=sizeof(setting);assert(rt->acquire("storage.key-value",1,0,&setting));
   const auto*kv=static_cast<const risc_key_value_v1*>(setting.api);char out[64]{};uint32_t n=0;
-  if(mode=="catalog-settings-legacy")for(unsigned i=0;i<64;++i){
+  if(mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable")for(unsigned i=0;i<64;++i){
    const auto key="key"+std::to_string(i),value="preserved-"+std::to_string(i);
    if(i<32||children){assert(kv->get(kv->context,key.c_str(),out,sizeof(out),&n)==0&&std::string(out,n)==value);}
    assert(kv->put(kv->context,key.c_str(),value.data(),value.size())==0);
@@ -221,7 +236,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
          const unsigned beforeIo=opens+closes+discoveryIo;assert(!runtime->launch(launchName.c_str()));
          assert(installer->settings_restore(installer->context,0,"child",nullptr,0,true)==RISC_KEY_VALUE_CONTEXT);
          assert(installer->settings_restore(installer->context,129,"child",nullptr,0,true)==RISC_KEY_VALUE_CONTEXT);
-         assert(installer->settings_restore(installer->context,1,"child",nullptr,0,true)==0);
+         int rc;do{rc=installer->settings_restore(installer->context,1,"child",nullptr,0,true);}while(rc==RISC_KEY_VALUE_BUSY);assert(rc==0);
          checkpointSettings();assert(opens+closes+discoveryIo==beforeIo);
         }
         puts("Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS");
@@ -378,8 +393,8 @@ int main(int argc,char** argv) {
     boot.clear();serializeJson(doc,boot);
   }
   write("boot.json",boot);
-  if(mode=="catalog-settings-legacy")for(unsigned i=0;i<32;++i)legacySettings["key"+std::to_string(i)]="preserved-"+std::to_string(i);
-  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(settingsMode())port.keyValue=&privateKv;runtime=new RiscBoot::Runtime(port);
+  if(mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable")for(unsigned i=0;i<32;++i)legacySettings["key"+std::to_string(i)]="preserved-"+std::to_string(i);
+  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(mode=="catalog-settings-scalable")privateKv.scalableSettings=&scalableBackend;if(settingsMode())port.keyValue=&privateKv;runtime=new RiscBoot::Runtime(port);
   if(mode=="invalid-path" || mode=="default-external" || mode=="provider-bootstrap") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
   if(catalogMode()){
     // Boot cannot reserve any namespace already owned by an app, even before

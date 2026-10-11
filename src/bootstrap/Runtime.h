@@ -12,6 +12,7 @@
 #include "EntropyBackend.h"
 #include "runtime/storage/AppDataExport.h"
 #include "runtime/storage/SdFirstKeyValue.h"
+#include "runtime/storage/ScalableSettings.h"
 #include "FileOpenState.h"
 #include "FailureEvidenceBackend.h"
 #include "runtime/sleep/RetainedWake.h"
@@ -46,6 +47,7 @@ struct KeyValueBackend {
   int32_t (*journalRead)(void*,uint32_t,void*,uint32_t,uint32_t*)=nullptr;
   int32_t (*journalWrite)(void*,uint32_t,const void*,uint32_t)=nullptr;
   int32_t (*legacyNamespace)(void*,uint32_t,bool*)=nullptr;
+  const RiscStorage::ScalableSettings::Backend* scalableSettings=nullptr;
 };
 struct Port {
   bool (*owner)();
@@ -379,6 +381,7 @@ class Runtime final {
   };
   MetadataArray<InstallationState> installation_;
   MetadataArray<RiscStorage::SdFirstKeyValue::State> installedSettings_;
+  std::unique_ptr<RiscStorage::ScalableSettings::State[]> scalableSettings_;
   MetadataArray<RiscStorage::SdFirstKeyValue::Workspace> installedSettingsWorkspace_;
   RiscStorage::SdFirstKeyValue::Journal settingsJournal();
   static uint32_t installationSettingsStatus(void*,uint32_t);

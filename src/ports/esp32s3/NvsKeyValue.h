@@ -61,6 +61,7 @@ inline int32_t put(void* context,uint32_t id,const char* key,const void* data,ui
   if(getUnlocked(context,id,key,check,sizeof(check),&actual)!=RISC_KEY_VALUE_OK || actual!=size || memcmp(check,data,size))return RISC_KEY_VALUE_IO;
   return RISC_KEY_VALUE_OK;
 }
+#include "NvsScalableSettings.h"
 inline const RiscBoot::KeyValueBackend* backend(){
   static const RiscBoot::KeyValueBackend value{nullptr,get,put,RISC_KEY_VALUE_V2_BLOB_MAX,
     [](void*,uint32_t ns,void*out,uint32_t capacity,uint32_t*size){return get(reinterpret_cast<void*>(uintptr_t(1)),ns,"snapshot",out,capacity,size);},
@@ -74,6 +75,6 @@ inline const RiscBoot::KeyValueBackend* backend(){
       if(rc==ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_OK;
       if(rc!=ESP_OK){return RISC_KEY_VALUE_IO;}
       *exists=true;return RISC_KEY_VALUE_OK;
-    }};return &value;
+    },Settings::backend()};return &value;
 }
 }

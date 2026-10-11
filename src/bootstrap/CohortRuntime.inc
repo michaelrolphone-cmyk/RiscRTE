@@ -94,7 +94,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
      !cohortSameJson(currentBoot["installation"]["namespace_range"],newBoot["installation"]["namespace_range"]))return false;
   if(installation_&&installation_[0].providersEnabled&&
      !cohortSameJson(currentBoot["installation"]["provider_grants"],newBoot["installation"]["provider_grants"]))return false;
-  if(installedSettings_&&newBoot["installation"]["settings_sd"]!=true)return false;
+  if((installedSettings_||scalableSettings_)&&newBoot["installation"]["settings_sd"]!=true)return false;
   bool consumed[RiscLimits::Apps]{};
   // Reuse the running graph's already scoped native tables with an identical
   // hardware/port declaration. Never bind the staged board into the CPU owner.

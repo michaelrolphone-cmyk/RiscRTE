@@ -1,6 +1,6 @@
 # RiscRTE
 
-This feature branch develops Runtime 0.2.17: transactional SD provider publication,
+This feature branch develops Runtime 0.2.18: transactional SD provider publication,
 explicit native export-map migration and provider-scoped installed-app
 admission and copied asynchronous storage work. It is not a hardware-qualified
 release. Existing boot profiles do not select the storage worker implicitly.

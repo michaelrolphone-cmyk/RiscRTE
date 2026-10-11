@@ -20,7 +20,7 @@ typedef struct {int32_t status;char launch_path[193];} risc_install_result_v1;
  * Image paths select immutable SD bytes; instance comes from selected board
  * bindings, never a package permission. Native imports remain unavailable. */
 typedef struct {const char*manifest_json;const char*image_path;uint64_t instance;} risc_install_provider_v1;
-typedef struct {
+typedef struct risc_installation_v1 {
  uint32_t api_version,struct_size;void*context;
  int32_t (*admit)(void*,const char*relative_manifest,const char*manifest_json,char*launch_path,uint32_t capacity);
  /* check_only=true proves mutability without changing policy. */
@@ -57,6 +57,12 @@ typedef struct {
  int32_t (*settings_restore)(void*,uint32_t slot,const char*owner,const void*bytes,uint32_t size,bool missing);
  int32_t (*settings_snapshot)(void*,uint32_t slot,void*bytes,uint32_t capacity,uint32_t*size,uint64_t*generation);
  int32_t (*settings_ack)(void*,uint32_t slot,uint64_t generation);
+ /* Additive format selector: 2 supports scalable paged checkpoints. */
+#ifdef __cplusplus
+ uint32_t settings_format=0;
+#else
+ uint32_t settings_format;
+#endif
 } risc_installation_v1;
 #define RISC_INSTALLATION_PROVIDER_PREFIX_SIZE offsetof(risc_installation_v1,settings_capacity)
 #define RISC_INSTALLATION_APP_PREFIX_SIZE offsetof(risc_installation_v1,providers)

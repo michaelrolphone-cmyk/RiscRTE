@@ -428,3 +428,11 @@ The actual Runtime fixture launches a preexisting-namespace app twice, reads
 32 original keys and grows it to 65 keys. Native NVS tests independently read
 back 64 keys and prove journal isolation and no erase. Repeated restore of the
 legacy-native mode leaves the original namespace and SD journal untouched.
+
+## Scalable SD checkpoints (0.2.18)
+
+The selected production NVS backend uses format 2 for installed-app private namespaces. Existing values are enumerated in bounded owner steps and retained byte-for-byte; original native values are never erased during migration. The active settings map allocates entries as needed in PSRAM, preserving up to the existing 2048-byte opaque backend value size without a 16-key namespace limit. Existing format-1 snapshots and pending journals are imported before new per-key recovery records.
+
+Successful changes commit a per-key native delta with a generation. The catalog writes immutable 4096-byte SD pages, verifies them, replaces a small index atomically, closes the worker, and only then commits the native anchor and retires covered deltas. Newer writes survive older acknowledgements. Missing, exported or failed media cannot redirect writes back into an independent native value store. Cold restore with an anchor requires its SD base; stale original values cannot replace it. Native original values remain a read-only migration backup, not the post-migration read/write backend.
+
+This selection covers private namespaces allocated by the installed-app ledger. It does not grant access to or migrate unrelated shared system, radio, or provider namespaces. Existing ownership/grants remain unchanged. Allocation or native-journal capacity failures return errors without truncation; accepted deltas remain durable. Host models do not qualify hardware.
