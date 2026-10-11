@@ -1,0 +1,420 @@
+[
+  {
+    "suite": "runtime",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_runtime_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 4.45,
+    "log": "runtime.log"
+  },
+  {
+    "suite": "runtime",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_runtime_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 9.46,
+    "log": "runtime-san.log"
+  },
+  {
+    "suite": "provider_graph_v2",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_graph_v2_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 3.06,
+    "log": "provider_graph_v2.log"
+  },
+  {
+    "suite": "provider_graph_v2",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_graph_v2_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 5.74,
+    "log": "provider_graph_v2-san.log"
+  },
+  {
+    "suite": "demand_activation",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_demand_activation_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 4.81,
+    "log": "demand_activation.log"
+  },
+  {
+    "suite": "demand_activation",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_demand_activation_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 9.42,
+    "log": "demand_activation-san.log"
+  },
+  {
+    "suite": "demand_retention",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_demand_retention_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 10.26,
+    "log": "demand_retention.log"
+  },
+  {
+    "suite": "demand_retention",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_demand_retention_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 18.86,
+    "log": "demand_retention-san.log"
+  },
+  {
+    "suite": "provider_queue_host",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_queue_host_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 0.65,
+    "log": "provider_queue_host.log"
+  },
+  {
+    "suite": "provider_queue_host",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_queue_host_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 1.11,
+    "log": "provider_queue_host-san.log"
+  },
+  {
+    "suite": "provider_queue_retained_fence",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_queue_retained_fence_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 0.74,
+    "log": "provider_queue_retained_fence.log"
+  },
+  {
+    "suite": "provider_queue_retained_fence",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_queue_retained_fence_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 1.18,
+    "log": "provider_queue_retained_fence-san.log"
+  },
+  {
+    "suite": "app_stream_sessions",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_app_stream_sessions_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 4.47,
+    "log": "app_stream_sessions.log"
+  },
+  {
+    "suite": "app_stream_sessions",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_app_stream_sessions_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 8.91,
+    "log": "app_stream_sessions-san.log"
+  },
+  {
+    "suite": "resident_shell",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_shell_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 4.7,
+    "log": "resident_shell.log"
+  },
+  {
+    "suite": "resident_shell",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_shell_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 8.75,
+    "log": "resident_shell-san.log"
+  },
+  {
+    "suite": "resident_loading",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_loading_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 9.31,
+    "log": "resident_loading.log"
+  },
+  {
+    "suite": "resident_loading",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_loading_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 17.62,
+    "log": "resident_loading-san.log"
+  },
+  {
+    "suite": "resident_legacy",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_legacy_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 5.3,
+    "log": "resident_legacy.log"
+  },
+  {
+    "suite": "resident_legacy",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_legacy_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 9.82,
+    "log": "resident_legacy-san.log"
+  },
+  {
+    "suite": "resident_policy",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_policy_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 5.32,
+    "log": "resident_policy.log"
+  },
+  {
+    "suite": "resident_policy",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_policy_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 10.06,
+    "log": "resident_policy-san.log"
+  },
+  {
+    "suite": "resident_native_contexts",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_native_contexts_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 5.0,
+    "log": "resident_native_contexts.log"
+  },
+  {
+    "suite": "resident_native_contexts",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_resident_native_contexts_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 9.46,
+    "log": "resident_native_contexts-san.log"
+  },
+  {
+    "suite": "cohort_runtime",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_cohort_runtime_test.sh"
+    ],
+    "exit": 134,
+    "seconds": 4.11,
+    "log": "cohort_runtime.log"
+  },
+  {
+    "suite": "cohort_runtime",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_cohort_runtime_test.sh"
+    ],
+    "exit": 134,
+    "seconds": 8.72,
+    "log": "cohort_runtime-san.log"
+  },
+  {
+    "suite": "update_runtime",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_update_runtime_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 3.85,
+    "log": "update_runtime.log"
+  },
+  {
+    "suite": "update_runtime",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_update_runtime_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 8.48,
+    "log": "update_runtime-san.log"
+  },
+  {
+    "suite": "paired_runtime_memory",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_paired_runtime_memory_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 3.62,
+    "log": "paired_runtime_memory.log"
+  },
+  {
+    "suite": "paired_runtime_memory",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_paired_runtime_memory_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 7.05,
+    "log": "paired_runtime_memory-san.log"
+  },
+  {
+    "suite": "provider_sync",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_sync_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 12.53,
+    "log": "provider_sync.log"
+  },
+  {
+    "suite": "provider_sync",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_provider_sync_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 26.13,
+    "log": "provider_sync-san.log"
+  },
+  {
+    "suite": "native_sdmmc",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_native_sdmmc_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 0.08,
+    "log": "native_sdmmc.log"
+  },
+  {
+    "suite": "native_sdmmc",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_native_sdmmc_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 0.18,
+    "log": "native_sdmmc-san.log"
+  },
+  {
+    "suite": "sdmmc_port",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_sdmmc_port_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 4.17,
+    "log": "sdmmc_port.log"
+  },
+  {
+    "suite": "sdmmc_port",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_sdmmc_port_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 8.73,
+    "log": "sdmmc_port-san.log"
+  },
+  {
+    "suite": "usb_phy",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_usb_phy_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 16.32,
+    "log": "usb_phy.log"
+  },
+  {
+    "suite": "usb_phy",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "/workspace/shared/runtime-shared-keyboard-capacity/test/run_usb_phy_test.sh"
+    ],
+    "exit": 0,
+    "seconds": 31.02,
+    "log": "usb_phy-san.log"
+  }
+]

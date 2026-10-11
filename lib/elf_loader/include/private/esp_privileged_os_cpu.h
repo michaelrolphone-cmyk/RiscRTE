@@ -12,11 +12,26 @@ extern "C" {
 #endif
 
 #define RISC_PRIVILEGED_OS_CPU_ABI_V1 1u
+#define RISC_PROVIDER_DIAGNOSTIC_ABI_V1 1u
+
+/* No runtime/task authority is granted by this availability query. */
+bool esp_elf_privileged_diagnostic_abi_supported_v1(uint32_t abi);
 
 /* The caller MUST authenticate package identity, signature, ABI and imports.
  * This mechanism is not itself a package verifier or memory sandbox.
  * At most one privileged relocation scope may exist at a time. */
 bool esp_elf_privileged_os_cpu_begin_v1(void);
+/* Narrower admission for an immutable, validated, exact import declaration.
+ * Names are borrowed only until end_v1. No name resolves before entry into
+ * the one authorized relocation or after it leaves. This is not public ABI. */
+bool esp_elf_privileged_os_cpu_begin_selected_v1(
+    const char *const *imports, size_t count);
+/* Explicit diagnostic policy, 0 disables, 1 selects the bounded native sink. */
+bool esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(
+    const char *const *imports, size_t count, uint32_t diagnostic_abi);
+/* True only for the owner and an allowed name in its active selected scope.
+ * The legacy fixed-inventory scope retains its previous lookup behavior. */
+bool esp_elf_privileged_os_cpu_import_allowed_v1(const char *symbol);
 /* Refuses to release while a relocation remains active or for another task. */
 bool esp_elf_privileged_os_cpu_end_v1(void);
 /* True only for the task holding the privileged scope. */

@@ -8,7 +8,7 @@
 #include <cstdio>
 using namespace RiscCpu;
 static Port* activePort;
-static unsigned io=0;
+static unsigned io=0,prepareCalls=0,asyncBegins=0;static bool prepareOk=true;static size_t expectedAsync=0;
 static bool owner(){return true;}
 static bool bind(RiscBoot::Runtime&r){return activePort->bind(r);}
 static Hardware hardware(){
@@ -30,9 +30,28 @@ int main(int argc,char**argv){
  auto prepared=[&](Hardware h,bool expected,size_t tables){
   Port p(h);activePort=&p;RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
   assert(r.prepare(root.c_str())==expected);assert(p.radioCount_==tables && !io);
-  if(tables){assert(p.radios_[0].config.unit==0 && p.radios_[0].config.features==3);assert(p.radios_[0].api.scan_poll && p.quiescent());}
+  if(tables && expectedAsync){
+   auto& radio=p.radios_[0];assert(radio.asyncUnavailable==!prepareOk);radio.token=71;
+   risc_radio_request_v1 request{};request.struct_size=sizeof(request);request.kind=RISC_RADIO_REQUEST_SCAN;
+   uint32_t id=99;const unsigned before=asyncBegins;
+   assert(radio.api.begin(radio.api.base.context,radio.token,&request,&id)==RISC_RADIO_UNAVAILABLE && !id);
+   assert(asyncBegins==before+unsigned(prepareOk) && !io && !radio.active && !radio.closing);
+   radio.token=0;
+  }
+  if(tables){assert(p.radios_[0].config.unit==0 && p.radios_[0].config.features==3);assert(p.radios_[0].api.base.scan_poll && p.quiescent());assert(p.radios_[0].api.base.struct_size==(expectedAsync?sizeof(garden_radio_async_v1):sizeof(garden_radio_v1)));}
  };
  board(config);boot(true);prepared(hardware(),true,1);
+ risc_native_radio_async_v1 async{sizeof(async),RISC_RADIO_ASYNC_TAG,1,
+   [](const risc_radio_request_v1*,uint32_t*)->int32_t{++asyncBegins;return RISC_RADIO_UNAVAILABLE;},
+   [](uint32_t,risc_radio_progress_v1*)->int32_t{return RISC_RADIO_UNAVAILABLE;},
+   [](uint32_t)->int32_t{return RISC_RADIO_UNAVAILABLE;},[](){return true;},[](){return true;},[](){return true;},[](){}};
+ auto extended=hardware();extended.radioAsync=&async;extended.radioAsyncPrepare=[](){++prepareCalls;return prepareOk;};
+ expectedAsync=1;prepared(extended,true,1);assert(prepareCalls==1);
+ prepareOk=false;prepared(extended,true,1);assert(prepareCalls==2);prepareOk=true;
+ expectedAsync=0;async.struct_size=sizeof(async)-1;prepared(extended,true,1);async.struct_size=sizeof(async);
+ async.tag=0;prepared(extended,true,1);async.tag=RISC_RADIO_ASYNC_TAG;
+ async.cancel=nullptr;prepared(extended,true,1);assert(prepareCalls==2);
+ boot(false);const unsigned beforePrepare=prepareCalls;prepared(extended,true,0);assert(prepareCalls==beforePrepare);
  boot(false);prepared(hardware(),true,0);
  boot(true);auto missing=hardware();missing.radioScanPoll=nullptr;prepared(missing,false,0);
  board(R"({"unit":1,"features":3})");prepared(hardware(),false,0);

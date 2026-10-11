@@ -14,6 +14,7 @@ extern "C" {
 #define RISC_KEY_VALUE_INVALID (-3)
 #define RISC_KEY_VALUE_CONTEXT (-4)
 #define RISC_KEY_VALUE_IO (-5)
+#define RISC_KEY_VALUE_BUSY (-6) /* No I/O began; preserve cached data and retry later. */
 /* storage.key-value@1. Explicit positive boot-grant instance_id selects the
  * namespace; applications cannot supply a namespace. Keys are 1..15 ASCII
  * characters in [a-z0-9_.-]; values are opaque 1..64-byte blobs. There is no

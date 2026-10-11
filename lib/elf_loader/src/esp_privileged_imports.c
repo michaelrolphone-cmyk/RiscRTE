@@ -12,17 +12,9 @@
  * Keep this snapshot synchronized with g_esp_libc_elfsyms and strict audits.
  */
 static const char *const s_public_libc[] = {
-    "strerror", "memset", "memcpy", "memcmp", "strlen", "strtod", "strrchr",
-    "strchr", "strcmp", "strncmp", "strtol", "strcspn", "strncat",
-    "puts", "putchar", "fputc", "fputs", "printf", "vfprintf",
-    "fprintf", "fwrite", "usleep", "sleep", "exit", "close",
-    "malloc", "calloc", "realloc", "free", "clock_gettime", "strftime",
-    "pthread_create", "pthread_attr_init", "pthread_attr_setstacksize",
-    "pthread_detach", "pthread_join", "pthread_exit", "__errno",
-    "__getreent", "__locale_ctype_ptr", "_ctype_", "__ltdf2",
-    "__fixunsdfsi", "__gtdf2", "__floatunsidf", "__divdf3",
-    "getopt_long", "optind", "opterr", "optarg", "optopt",
-    "longjmp", "setjmp"
+#define RISC_PUBLIC_LIBC_COMPAT_SYMBOL(name) #name,
+#include "private/privileged_public_libc_compat_v1.def"
+#undef RISC_PUBLIC_LIBC_COMPAT_SYMBOL
 };
 static const char *const s_privileged[] = {
 #define RISC_OS_CPU_SYMBOL(name) #name,

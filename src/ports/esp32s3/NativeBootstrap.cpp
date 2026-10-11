@@ -100,7 +100,7 @@ struct Session {
  }
  Step download(const RiscProvision::File& file,uint32_t limit){
    reason=Reason::DownloadFailed;
-   if(fileIndex>=profile.count||&file!=&profile.files[fileIndex]){reason=Reason::StageFailed;return Step::Failed;}
+   if(fileIndex>=profile.downloads()||&file!=&profile.download(fileIndex)){reason=Reason::StageFailed;return Step::Failed;}
    const auto* http=port.hardware.httpClient;
    if(!httpToken){uint64_t utc=0;bool pending=false;if(!clock(utc,pending))return pending?Step::Pending:Step::Failed;
      risc_http_request_v1 request{sizeof(request),file.url,file.bytes,300000u,utc};

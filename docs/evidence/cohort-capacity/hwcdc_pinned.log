@@ -1,0 +1,4 @@
+Actual Arduino 2.0.17 HWCDC: begin/end, all four allocation failures, zero-wait adapter recovery, no host, wrong owner, failed-state suppression, explicit retry and RX replay passed
+Actual HWCDC stage TX: preallocation, 6 KiB burst, full-ring preservation, delayed-host 13-line startup, no-host boundedness, recovery capacity, allocation fallback and zero waits PASS
+Actual Arduino 2.0.17 HWCDC: begin/end, all four allocation failures, zero-wait adapter recovery, no host, wrong owner, failed-state suppression, explicit retry and RX replay passed
+Actual HWCDC stage TX: preallocation, 6 KiB burst, full-ring preservation, delayed-host 13-line startup, no-host boundedness, recovery capacity, allocation fallback and zero waits PASS

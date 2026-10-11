@@ -63,6 +63,10 @@ int main(int argc,char** argv){
   RiscCpu::Hardware h{owner,now,waitMs,open,write,read,pwm,close,iOpen,iTransfer,close,sOpen,sBegin,sTransfer,sEnd,close};
   h.deepWakeValid=valid;h.deepReady=ready;h.deepWakeArm=arm;h.deepWakeClear=clear;h.deepSleep=enter;h.deepHold=hold;h.timerArm=timerArm;h.timerClear=timerClear;
   RiscCpu::Port port(h);cpu=&port;RiscBoot::Port p{owner,health,waitMs,log,bind,nullptr,appExitSafe,storageSafe};p.retainedWake=store;
+  static const RiscBoot::KeyValueBackend unusedStorage{nullptr,
+   [](void*,uint32_t,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(false);return -1;},
+   [](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return -1;}};
+  p.keyValue=&unusedStorage;
   if(mode==5)p.retainedWake=nullptr;
   RiscBoot::Runtime runtime(p);
   if(mode==5 || mode==6){assert(!runtime.prepare(root.c_str()));return 0;}
@@ -82,6 +86,22 @@ int main(int argc,char** argv){
  file("app.json",R"({"type":"application","id":"deep-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.deep","api":1},{"capability":"runtime.retained-wake","api":1}]})");
  file("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"deep.json","instance_id":7}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.deep","api":1,"instance_id":7},{"capability":"runtime.retained-wake","api":1,"instance_id":0}]}]})");
  const char* cohort=R"({"schema":"riscrte.cohort","schema_version":1,"product":"test","version":"1.0.0","runtime_version":"0.1.46","source_repo":"example/test","source_revision":"1111111111111111111111111111111111111111","layout":"riscrte-paired-16m-v1","store_abi":1,"firmware_size":32,"firmware_sha256":"1111111111111111111111111111111111111111111111111111111111111111"})";
+ if(RiscBoot::Runtime::MaxAppPolicyGrants==17){
+  // Put retained-wake at row seventeen, with fifteen unused explicit KV
+  // namespaces preceding the existing deep provider and retained authority.
+  for(const char* name:{"app.json","boot.json"}){
+   std::ifstream input(root+"/"+name);std::string json{std::istreambuf_iterator<char>(input),{}};
+   std::string prefix;
+   const bool manifest=!strcmp(name,"app.json");
+   for(unsigned i=1;i<=(manifest?1u:15u);++i){
+    prefix+="{\"capability\":\"storage.key-value\",\"api\":1";
+    if(!manifest)prefix+=",\"instance_id\":"+std::to_string(i);
+    prefix+="},";
+   }
+   const std::string key=manifest?"\"requires\":[":"\"grants\":[";
+   json.insert(json.find(key)+key.size(),prefix);file(name,json.c_str());
+  }
+ }
  file("cohort.json",cohort);
  child(argv[0],5,RISC_BOOT_POWER_ON,0);
  file("cohort.json","{}");child(argv[0],6,RISC_BOOT_POWER_ON,0);file("cohort.json",cohort);
@@ -96,7 +116,7 @@ int main(int argc,char** argv){
  child(argv[0],3,RISC_BOOT_RESET,0);child(argv[0],4,RISC_BOOT_RESET,0);
  // Stale format and corruption independently reject, with unchanged outputs.
  std::ifstream input(root+"/rtc.bin",std::ios::binary);input.read(reinterpret_cast<char*>(&image),sizeof(image));const auto good=image;
- for(unsigned variant=0;variant<3;++variant){image=good;if(variant==0)image.format=2;else if(variant==1)image.record.payload[30]^=1;else image.magic=0;
+ for(unsigned variant=0;variant<3;++variant){image=good;if(variant==0)image.format=RiscRetainedWake::ImageFormat+1;else if(variant==1)image.record.payload[30]^=1;else image.magic=0;
   std::ofstream output(root+"/rtc.bin",std::ios::binary);output.write(reinterpret_cast<const char*>(&image),sizeof(image));output.close();child(argv[0],0,RISC_BOOT_DEEP_TIMER,0);}
  // The RTC envelope itself rejects every one-bit byte corruption and
  // boot consumes committed storage before any app can read it.

@@ -25,6 +25,9 @@ class StoreFiles final {
  bool begin(const char* root,const Profile&,const uint8_t (&digest)[32],uint32_t capacity);
  bool write(size_t file,const void*,uint32_t); // sequential, <=4096 copied bytes
  bool finish(); // full readback, exact inventory, admission, digest metadata
+ // Read-only verification of an already hash-checked compact image. It must
+ // contain exactly the owner inventory; no private digest file is added.
+ bool verifyImage(const char* root,const Profile&,uint32_t capacity);
  bool close();  // failed close is permanently retained, never double-closed
  bool retained() const{return retained_;}
  size_t fileIndex() const{return index_;}

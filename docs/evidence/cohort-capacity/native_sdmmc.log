@@ -1,0 +1,6 @@
+Native SDMMC happy: one-bit/20MHz/exact pins, permanent DMA copy, bounds and teardown PASS
+Native SDMMC read-failure: one-bit/20MHz/exact pins, permanent DMA copy, bounds and teardown PASS
+Native SDMMC write-failure: one-bit/20MHz/exact pins, permanent DMA copy, bounds and teardown PASS
+Native SDMMC sync-failure: one-bit/20MHz/exact pins, permanent DMA copy, bounds and teardown PASS
+Native SDMMC close-failure: one-bit/20MHz/exact pins, permanent DMA copy, bounds and teardown PASS
+Native SDMMC reset-failure: one-bit/20MHz/exact pins, permanent DMA copy, bounds and teardown PASS

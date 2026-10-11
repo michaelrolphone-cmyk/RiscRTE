@@ -6,6 +6,10 @@ extern "C" {
 /* OS mappings behind the production registry. This is not a registry model. */
 size_t risc_test_native_mapping_count(void);
 size_t risc_test_native_relocation_count(void);
+/* Immutable host input snapshots are distinct from live mapped modules. */
+size_t risc_test_native_image_count(void);
+size_t risc_test_native_read_count(void);
+size_t risc_test_native_read_bytes(void);
 void risc_test_native_fail_relocations(unsigned count);
 /* Optional additional exported names, borrowed until all mappings are closed.
  * app_main, app_module_init/fini and t5_driver_get are always included. */

@@ -17,7 +17,7 @@ cc "${flags[@]}" "${link[@]}" "$repo/test/fixtures/yield_app.c" -o "$build/yield
 cc "${flags[@]}" "${link[@]}" -DYIELD_PROVIDER "$repo/test/fixtures/provider.c" -o "$build/yield-probe.elf"
 c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic \
   -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
-  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/test/runtime_test.cpp" -ldl -o "$build/test"
 "$build/test" "$build"

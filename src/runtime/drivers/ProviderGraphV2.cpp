@@ -1,3 +1,5 @@
+#include "diagnostics/Performance.h"
+#include "diagnostics/StageLog.h"
 #include "ProviderGraphV2.h"
 #include "../../../lib/hal/RuntimeFaultRetention.h"
 #include "ProviderOwnedSpecV2.h"
@@ -77,17 +79,29 @@ bool GraphV2::hasProviderId(const char* providerId) const {
   return false;
 }
 
+bool GraphV2::activeFrom(const char* id,const char* capability,uint32_t api,uint64_t instance) const {
+  const int index=findProvider(id,capability,api,instance);
+  return index>=0 && nodes_[index].visit==Visit::Active &&
+    nodes_[index].module.state()==ModuleV2::State::Active;
+}
+
 bool GraphV2::addVerified(const SpecV2& spec) {
-  return addChecked(spec, false);
+  return addChecked(spec, nullptr);
 }
 
-bool GraphV2::addManagerValidatedPrivileged(const SpecV2& spec) {
-  // Manager-validated private entry. Exact privileged import validation stays
-  // mandatory on relocation; content checksums are installation consistency.
-  (void)spec; return false; // Privileged package admission is outside this bootstrap slice.
+bool GraphV2::addManagerValidatedPrivileged(const SpecV2& spec, const NativeProviderPolicyV1& policy) {
+  return addChecked(spec, &policy);
+}
+const NativeProviderPolicyV1* GraphV2::nativePolicyFor(const char* id,const char* capability,
+                                                     uint32_t api,uint64_t instance) const {
+  const int found=findProvider(id,capability,api,instance);
+  if (found<0 || !nodes_[found].owned || !nodes_[found].owned->nativePolicy) return nullptr;
+  return &nodes_[found].owned->nativePolicy->policy;
 }
 
-bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
+bool GraphV2::addChecked(const SpecV2& spec, const NativeProviderPolicyV1* policy) {
+  const bool privilegedAdmission=policy!=nullptr;
+  if (lifecycleBusy()) return false;
   bool emptyDigest = true;
   for (uint8_t byte : spec.contentSha256)
     if (byte) { emptyDigest = false; break; }
@@ -129,7 +143,7 @@ bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
   for (size_t i = 0; i < count_; ++i) {
     if ((std::strcmp(nodes_[i].spec.id, spec.id) == 0 &&
          (!spec.hardware || !nodes_[i].spec.hardware || spec.hardware->instance_id==nodes_[i].spec.hardware->instance_id)) ||
-        nodes_[i].visit == Visit::Visiting ||
+        nodes_[i].visit == Visit::Visiting || nodes_[i].visit == Visit::Releasing ||
         nodes_[i].module.state() == ModuleV2::State::Failed) return false;
   }
   for (size_t i = 0; i < spec.requirementCount; ++i) {
@@ -149,39 +163,93 @@ bool GraphV2::addChecked(const SpecV2& spec, bool privilegedAdmission) {
   }
   auto* owned = new (std::nothrow) OwnedNodeV2();
   if (!owned) return false;
-  if (!owned->snapshot(spec)) {
+  if (!owned->snapshot(spec) || (policy && !owned->snapshotPolicy(*policy))) {
     delete owned;
     return false;
   }
   Node& node = nodes_[count_++];
   node.owned = owned;
   node.spec = owned->spec;
-  node.module.bindGraphOwnedImage(node.spec.verifiedElfBytes, node.spec.verifiedElfLength);
+  node.module.bindGraphOwnedImage(node.spec.verifiedElfBytes, node.spec.verifiedElfLength,
+      owned->nativePolicy?&owned->nativePolicy->policy:nullptr);
   return true;
 }
 
-void GraphV2::releaseDependencies(size_t index) {
+bool GraphV2::metadataMutable(size_t index) const {
+  if(lifecycleBusy() || !activationSafe() || index>=count_)return false;
+  const auto& n=nodes_[index];
+  if(n.visit!=Visit::Idle || n.module.state()!=ModuleV2::State::Absent || n.acquired || n.dependencyReleasePending)return false;
+  for(const auto& g:grants_)if(g.occupied && g.node==index)return false;
+  return !n.owned || !n.owned->nativePolicy;
+}
+bool GraphV2::publishOrdinaryBatch(const SpecV2* specs,const size_t* slots,size_t size,bool checkOnly) {
+  if(lifecycleBusy() || !activationSafe() || size>kMaxModules || (size&&(!specs||!slots)))return false;
+  size_t next=count_;
+  for(size_t i=0;i<size;++i){
+    const size_t slot=slots[i];
+    for(size_t j=0;j<i;++j)if(slot==slots[j])return false;
+    if(slot<count_){if(!metadataMutable(slot))return false;}
+    else if(slot!=next++ || slot>=kMaxModules)return false;
+    for(size_t j=0;j<count_;++j){
+      bool replaced=false;for(size_t k=0;k<size;++k)replaced|=slots[k]==j;
+      if(replaced)continue;
+      const auto& old=nodes_[j].spec;
+      if(!specs[i].id || (!std::strcmp(old.id,specs[i].id) &&
+         (!old.hardware || !specs[i].hardware || old.hardware->instance_id==specs[i].hardware->instance_id)))return false;
+    }
+  }
+  void* memory=OwnedNodeV2::allocate(sizeof(GraphV2));if(!memory)return false;
+  auto* staged=new(memory) GraphV2;
+  struct Cleanup {GraphV2* value;~Cleanup(){value->~GraphV2();OwnedNodeV2::release(value);}} cleanup{staged};
+  for(size_t i=0;i<size;++i)if(!staged->addVerified(specs[i]))return false;
+  if(checkOnly)return true;
+  // No fallible operation follows the first publication. Live unaffected
+  // modules retain their exact fixed node, dependency table and grant slots.
+  for(size_t i=0;i<size;++i){
+    auto& node=nodes_[slots[i]];delete node.owned;
+    node.owned=staged->nodes_[i].owned;node.spec=node.owned->spec;
+    staged->nodes_[i].owned=nullptr;
+    node.module.bindGraphOwnedImage(nullptr,0,nullptr);
+  }
+  count_=next;staged->count_=0;return true;
+}
+
+bool GraphV2::releaseDependencies(size_t index) {
   Node& node = nodes_[index];
   while (node.acquired) {
-    size_t dependency = node.dependencies[--node.acquired];
-    (void)nodes_[dependency].module.unpinConsumer();
-    (void)deactivateIfUnused(dependency);
+    const size_t dependency = node.dependencies[node.acquired - 1];
+    if (!node.dependencyReleasePending) {
+      if (!nodes_[dependency].module.unpinConsumer())
+        return fail("Dependency unpin rejected", nodes_[dependency].spec.id);
+      node.dependencyReleasePending = true;
+    }
+    // Do not touch an earlier dependency once one has retained custody. The
+    // exact edge remains recorded even though its consumer was already unpinned.
+    if (!deactivateIfUnused(dependency)) return false;
+    --node.acquired;
+    node.dependencyReleasePending = false;
   }
   // Never invalidate this table before the provider has safely unloaded.
   for (size_t i = 0; i < node.spec.requirementCount; ++i)
     node.boundDependencies[i] = {};
+  return true;
 }
 
 bool GraphV2::deactivateIfUnused(size_t index) {
   Node& node = nodes_[index];
-  if (node.visit != Visit::Active || node.module.consumers()) return true;
-  if (!node.module.unload()) {
-    if (node.module.lastError()[0]) copyError(error_, node.module.lastError());
-    else fail("Provider quiescence rejected", node.spec.id);
-    return false;
+  if (node.module.consumers()) return true;
+  if (node.visit == Visit::Active) {
+    if (!node.module.unload()) {
+      if (node.module.lastError()[0]) copyError(error_, node.module.lastError());
+      else fail("Provider quiescence rejected", node.spec.id);
+      return false;
+    }
+    node.visit = Visit::Releasing;
   }
-  node.visit = Visit::Idle;
-  releaseDependencies(index);
+  if (node.visit == Visit::Releasing) {
+    if (!releaseDependencies(index)) return false;
+    node.visit = Visit::Idle;
+  }
   return true;
 }
 
@@ -193,6 +261,7 @@ bool GraphV2::fail(const char* stage, const char* identity) {
 bool GraphV2::activate(size_t index) {
   Node& node = nodes_[index];
   if (node.visit == Visit::Visiting) return fail("Dependency cycle", node.spec.id);
+  if (node.visit == Visit::Releasing) return fail("Provider dependency cleanup pending", node.spec.id);
   if (node.module.state() == ModuleV2::State::Failed) {
     if (node.module.lastError()[0]) {
       copyError(error_, node.module.lastError());
@@ -207,8 +276,10 @@ bool GraphV2::activate(size_t index) {
     const RequirementV2& requirement = node.spec.requirements[i];
     if (!std::strcmp(requirement.capability,"hardware.device")) {
       if (!node.spec.hardware || requirement.api!=1) {
-        releaseDependencies(index); node.visit=Visit::Idle;
-        return fail("Missing selected hardware",node.spec.id);
+        fail("Missing selected hardware",node.spec.id);
+        node.visit=Visit::Releasing;
+        (void)deactivateIfUnused(index);
+        return false;
       }
       node.boundDependencies[i]={requirement.capability,1,node.spec.hardware};
       continue;
@@ -225,13 +296,23 @@ bool GraphV2::activate(size_t index) {
         !nodes_[dependency].module.pinConsumer()) {
       if (dependency < 0) fail("Dependency missing/ambiguous", requirement.capability);
       else if (!error_[0]) fail("Dependency pin failed", requirement.capability);
-      releaseDependencies(index);
-      node.visit = Visit::Idle;
+      node.visit = Visit::Releasing;
+      (void)deactivateIfUnused(index);
       return false;
     }
     node.dependencies[node.acquired++] = static_cast<uint8_t>(dependency);
     node.boundDependencies[i] = {requirement.capability, requirement.api,
                                  nodes_[dependency].module.capability()};
+  }
+  const void* imageSource=nullptr;
+  if(node.spec.openImage) {
+    const int source=findProvider(node.spec.imageProvider,"storage.volume",1,node.spec.imageInstance);
+    if(source<0 || !activate(size_t(source)) || !nodes_[source].module.pinConsumer()) {
+      if(source<0)fail("Image source missing",node.spec.id);
+      node.visit=Visit::Releasing;(void)deactivateIfUnused(index);return false;
+    }
+    node.dependencies[node.acquired++]=uint8_t(source);
+    imageSource=nodes_[source].module.capability();
   }
   (void)node.module.setStreamHost(streamHost_);
   (void)node.module.setLease(node.spec.lease);
@@ -240,6 +321,10 @@ bool GraphV2::activate(size_t index) {
   // The graph owns package identity, singleton admission and consumer counts.
   // Every node needs its own mapping: software and hardware packages may share
   // driver.elf, while ordinary dlopen intentionally rejects duplicate basenames.
+#if RISC_STAGE_LOGS
+  const auto loadUs=RiscDiagnostics::monotonicUs();
+#endif
+  RISC_STAGE_LOG("provider load begin id=%s",node.spec.id);
   const bool loaded = node.spec.requiredOsCpuAbi
       ? node.module.loadVerifiedBytes(node.spec.verifiedElfBytes,
                                       node.spec.verifiedElfLength,
@@ -253,14 +338,17 @@ bool GraphV2::activate(size_t index) {
       : node.module.load(node.spec.verifiedElfPath, node.spec.id,
                          node.spec.provides, node.spec.api,
                          node.spec.requirementCount ? node.boundDependencies : nullptr,
-                         node.spec.requirementCount, true);
+                         node.spec.requirementCount, true, node.spec.openImage, node.spec.imageContext, imageSource);
+  RISC_STAGE_LOG("provider load end id=%s result=%s elapsed_us=%llu",node.spec.id,loaded?"ok":"failed",
+                 (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
   if (!loaded) {
     if (node.module.lastError()[0])
       copyError(error_, node.module.lastError());
     else fail("Provider load/start failed (no diagnostic)", node.spec.id);
+    RISC_STAGE_LOG("provider load failed id=%s reason=%s",node.spec.id,error_);
     if (node.module.unload()) {
-      releaseDependencies(index);
-      node.visit = Visit::Idle;
+      node.visit = Visit::Releasing;
+      (void)deactivateIfUnused(index);
     } else {
       // A failed start may own live DMA/interrupt state. Never drop the
       // dependencies, clear the interface pointers or regrant the node.
@@ -273,6 +361,7 @@ bool GraphV2::activate(size_t index) {
 }
 
 GrantV2 GraphV2::acquireIndex(size_t index) {
+  if (streamCallback_ || polling_ || nextGeneration_ == UINT32_MAX) return {};
   size_t slot = kMaxGrants;
   for (size_t i = 0; i < kMaxGrants; ++i)
     if (!grants_[i].occupied) { slot = i; break; }
@@ -284,13 +373,15 @@ GrantV2 GraphV2::acquireIndex(size_t index) {
     return {};
   }
   ++nextGeneration_;
-  if (!nextGeneration_) ++nextGeneration_;
   grants_[slot] = {nextGeneration_, static_cast<uint8_t>(index), true};
+  const size_t live=liveGrants();
+  if(live>peakLiveGrants_)peakLiveGrants_=live;
   return {static_cast<uint32_t>(slot + 1), nextGeneration_};
 }
 
 void GraphV2::poll(uint32_t (*nowMs)(), void (*yield)()) {
-  if (!nowMs || !count_ || polling_) return;
+  if (!nowMs || !count_ || lifecycleBusy() || !dependencyReadSafe()) return;
+  RiscPerf::AggregateScope trace(27);
   polling_ = true;
   const uint32_t began = nowMs();
   unsigned calls = 0;
@@ -301,12 +392,27 @@ void GraphV2::poll(uint32_t (*nowMs)(), void (*yield)()) {
     const size_t index = nextPoll_;
     nextPoll_ = (nextPoll_ + 1) % count_;
     if (nodes_[index].module.poll(remaining < 8 ? remaining : 8)) ++calls;
+    if(!dependencyReadSafe())break;
     if (calls >= 4 || static_cast<uint32_t>(nowMs() - began) >= 10) break;
   }
   if (calls && yield) yield();
   polling_ = false;
 }
+void GraphV2::service(uint32_t budgetMs) {
+  if(!budgetMs || budgetMs>RISC_DRIVER_SERVICE_MAX_MS || !count_ ||
+     lifecycleBusy() || !dependencyReadSafe())return;
+  polling_=true; // Existing guard fences graph/lifecycle and recursive service.
+  for(size_t visited=0;visited<count_;++visited) {
+    const size_t index=nextService_;nextService_=(nextService_+1)%count_;
+    if(nodes_[index].module.service(budgetMs) || !dependencyReadSafe())break;
+  }
+  polling_=false;
+}
+
 GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
+  if(lifecycleBusy())return {};
+  LifecycleScope scope(lifecycle_);
+  RiscPerf::Scope trace(22,23,RiscPerf::identity(capability));
   error_[0] = 0;
   const int target = find(capability, api);
   if (target < 0) fail("Capability missing/ambiguous", capability);
@@ -315,6 +421,9 @@ GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
 
 GrantV2 GraphV2::acquireFrom(const char* providerId, const char* capability,
                            uint32_t api, uint64_t instance) {
+  if(lifecycleBusy())return {};
+  LifecycleScope scope(lifecycle_);
+  RiscPerf::Scope trace(22,23,RiscPerf::identity(providerId));
   error_[0] = 0;
   const int target = findProvider(providerId, capability, api, instance);
   if (target < 0) fail("Provider not admitted", providerId);
@@ -330,19 +439,42 @@ const void* GraphV2::interfaceFor(GrantV2 grant) const {
 }
 
 bool GraphV2::grantStream(GrantV2 grant, uint32_t consumer, uint32_t endpoint, uint32_t rights) {
-  if (!interfaceFor(grant) || !streamHost_ || !streamHost_->grant || !streamHost_->revokeGrant)
+  if (lifecycleBusy() || !interfaceFor(grant) || !streamHost_ || !streamHost_->grant || !streamHost_->revokeGrant)
     return false;
   const uint64_t context = nodes_[grants_[grant.slot - 1].node].module.streamContext();
   const uint64_t lease = (uint64_t(grant.generation) << 32) | grant.slot;
   return context && streamHost_->grant(context, lease, consumer, endpoint, rights);
 }
+const risc_stream_session_provider_v1* GraphV2::streamSessionsFor(GrantV2 grant, uint64_t* context) const {
+  if (context) *context=0;
+  if (!context || !interfaceFor(grant) || !activationSafe()) return nullptr;
+  const auto& module=nodes_[grants_[grant.slot-1].node].module;
+  *context=module.streamContext();
+  return *context ? module.streamSessions() : nullptr;
+}
+bool GraphV2::revokeStreamGrants(GrantV2 grant) {
+  if (lifecycleBusy() || !interfaceFor(grant)) return false;
+  const uint64_t context=nodes_[grants_[grant.slot-1].node].module.streamContext();
+  if (!context) return true;
+  if (!streamHost_ || !streamHost_->revokeGrant) return false;
+  const uint64_t lease=(uint64_t(grant.generation)<<32)|grant.slot;
+  if (streamHost_->revokeGrantChecked) return streamHost_->revokeGrantChecked(context,lease);
+  streamHost_->revokeGrant(context,lease); return true;
+}
 bool GraphV2::release(GrantV2 grant) {
+  if (lifecycleBusy()) return false;
+  LifecycleScope scope(lifecycle_);
   if (!grant.slot || grant.slot > kMaxGrants || !grant.generation) return false;
   GrantSlot& slot = grants_[grant.slot - 1];
   if (!slot.occupied || slot.generation != grant.generation) return false;
   if (!slot.pendingRelease && streamHost_ && streamHost_->revokeGrant) {
     const uint64_t context = nodes_[slot.node].module.streamContext();
-    if (context) streamHost_->revokeGrant(context, (uint64_t(grant.generation) << 32) | grant.slot);
+    if (context) {
+      const uint64_t lease=(uint64_t(grant.generation) << 32) | grant.slot;
+      if (streamHost_->revokeGrantChecked) {
+        if (!streamHost_->revokeGrantChecked(context,lease)) return false;
+      } else streamHost_->revokeGrant(context,lease);
+    }
   }
   const size_t node = slot.node;
   if (!slot.pendingRelease) {
@@ -364,20 +496,29 @@ size_t GraphV2::liveGrants() const {
   for (const GrantSlot& grant : grants_) if (grant.occupied) ++total;
   return total;
 }
+bool GraphV2::holdsGrant(GrantV2 grant) const {
+  if(!grant.slot || grant.slot>kMaxGrants || !grant.generation)return false;
+  const auto& slot=grants_[grant.slot-1];
+  return slot.occupied && slot.generation==grant.generation;
+}
 
 bool GraphV2::shutdown() {
+  if (lifecycleBusy()) return false;
+  LifecycleScope scope(lifecycle_);
   if (liveGrants()) return false;
   for (size_t pass = 0; pass <= count_; ++pass) {
     bool progress = false;
     for (size_t i = 0; i < count_; ++i) {
       Node& node = nodes_[i];
       if (node.module.consumers()) continue;
-      if (node.visit == Visit::Active ||
+      if (node.visit == Visit::Active || node.visit == Visit::Releasing ||
           (node.visit == Visit::Idle &&
            node.module.state() == ModuleV2::State::Failed)) {
-        if (!node.module.unload()) return false;
-        node.visit = Visit::Idle;
-        releaseDependencies(i);
+        if (node.visit == Visit::Idle) {
+          if (!node.module.unload()) return false;
+          node.visit = Visit::Releasing;
+        }
+        if (!deactivateIfUnused(i)) return false;
         progress = true;
       }
     }
@@ -392,11 +533,12 @@ bool GraphV2::shutdown() {
 }  // namespace RuntimeProviders
 
 bool RuntimeProviders::GraphV2::activationSafe() const {
-  return !polling_ && dependencyReadSafe();
+  return !lifecycleBusy() && dependencyReadSafe();
 }
 bool RuntimeProviders::GraphV2::dependencyReadSafe() const {
   for(size_t i=0;i<count_;++i)
-    if(nodes_[i].visit==Visit::Visiting || nodes_[i].module.state()==ModuleV2::State::Failed)return false;
+    if(nodes_[i].visit==Visit::Visiting || nodes_[i].visit==Visit::Releasing ||
+       (nodes_[i].module.state()==ModuleV2::State::Failed || !nodes_[i].module.leaseSafe() || !nodes_[i].module.streamSafe()))return false;
   for(const auto& grant:grants_)if(grant.occupied && grant.pendingRelease)return false;
   return true;
 }

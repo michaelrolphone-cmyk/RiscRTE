@@ -44,6 +44,21 @@ callbacks or enable its debug output. Testing optional upstream event-loop
 creation/deletion or concurrent external users is outside this adapter's scope.
 The fixture does not become firmware code and never runs on a serial device.
 
+The USB ownership suite (`test/run_usb_phy_test.sh`) additionally models the
+Serial/JTAG module clock/reset and RTC internal-PHY selection. It executes the
+production native resume after checked provider release, including disabled or
+unselected hardware, stuck register failures, all allocation failures, and 16
+absent-host release/reclaim cycles followed by real pinned-driver RX/TX.
+`usb_phy_lifecycle_bridge.cpp` links the same native adapter into the actual
+Runtime/Graph/Port/dlopen retention test. The before/after regression deliberately
+sets an unselected, clock-gated backend; it does not establish that a particular
+physical USB controller failure or cable event creates that state on a device.
+
 Run `bash run.sh /path/to/runtime`; add `SANITIZE=1` for ASan/UBSan.
+The stage-build cases also execute the unmodified pinned driver with 8192-byte
+preallocation, an undrained roughly 6 KiB startup burst, a completely full ring,
+missing host, allocation fallback and recovery-capacity restoration. Ordinary
+cases assert the original 256-byte capacity. These tests observe bounded ring
+capacity and zero waits; they do not promise delivery of arbitrary-sized bursts.
 Under process tracing, use `ASAN_OPTIONS=detect_leaks=0` if LeakSanitizer cannot
 run. This test explicitly counts stub resource allocation/deallocation too.

@@ -29,7 +29,7 @@ static void signal_retained(void) {
   risc_runtime_capability_v1 fresh = {.struct_size = sizeof(fresh)};
   assert(!rt->health(&health) && !rt->acquire("test.leaf", 1, 0, &fresh));
   assert(!rt->release(&grant) && !rt->confirm_boot());
-  rt->yield_ms(1); /* Must not poll a provider or invoke the delay backend. */
+  rt->yield_ms(1); /* Raw scheduler only; no provider or ordinary delay work. */
 }
 __attribute__((constructor)) static void loaded(void) { provider_exit_event("app:loaded"); }
 __attribute__((destructor)) static void unloaded(void) { provider_exit_event("app:unloaded"); }

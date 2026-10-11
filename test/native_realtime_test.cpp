@@ -13,9 +13,9 @@
 static esp_reset_reason_t reset=ESP_RST_POWERON;
 esp_reset_reason_t esp_reset_reason(){return reset;}
 static bool own=true,failSet=false,failRead=false;
-static int64_t monotonic=0;static timeval wall{};static unsigned sets=0;
+static int64_t monotonic=0;static timeval wall{};static unsigned sets=0,wallReads=0;
 int64_t esp_timer_get_time(){return monotonic++;}
-static int readTime(timeval* v,void*){*v=wall;return failRead?-1:0;}
+static int readTime(timeval* v,void*){++wallReads;*v=wall;return failRead?-1:0;}
 static int setTime(const timeval* v,const void*){++sets;wall=*v;return failSet?-1:0;}
 #define gettimeofday readTime
 #define settimeofday setTime
@@ -50,6 +50,24 @@ int main(int argc,char** argv){
  for(auto reason:{ESP_RST_UNKNOWN,ESP_RST_POWERON,ESP_RST_EXT,ESP_RST_SW,ESP_RST_PANIC,ESP_RST_INT_WDT,ESP_RST_TASK_WDT,ESP_RST_WDT,ESP_RST_BROWNOUT,ESP_RST_SDIO,ESP_RST_DEEPSLEEP}){
   reset=reason;start();assert(read(&s)==0 && !s.validity);
  }
+ // An untrusted SDK wall value cannot prevent explicit recovery from an
+ // external RTC. Cold/reset UNSET is independent of SDK wall corruption/I-O.
+ const auto unseededReads=wallReads;
+ for(auto reason:{ESP_RST_POWERON,ESP_RST_SW,ESP_RST_DEEPSLEEP}) {
+  reset=reason;start();
+  for(timeval raw: {timeval{-1,0},timeval{INT64_C(2147483648),0},
+                    timeval{1,-1},timeval{1,1000000}}) {
+   wall=raw;
+   for(bool failure:{false,true}) {
+    failRead=failure;s={};s.struct_size=sizeof(s);
+    assert(read(&s)==RISC_REALTIME_OK && s.validity==RISC_REALTIME_UNSET);
+    assert(!s.epoch_seconds && !s.nanoseconds && s.monotonic_after_us>=s.monotonic_before_us);
+   }
+  }
+ }
+ assert(wallReads==unseededReads);failRead=false;wall={1800000000,0};
+ auto invalidMono=s;monotonic=-1;
+ assert(read(&s)==RISC_REALTIME_IO && !memcmp(&s,&invalidMono,sizeof(s)));monotonic=0;
  assert(seed(-1,0)==RISC_REALTIME_INVALID);
  assert(seed(INT64_MAX,0)==RISC_REALTIME_INVALID);
  assert(seed(1,1000000000)==RISC_REALTIME_INVALID);
@@ -86,6 +104,10 @@ int main(int argc,char** argv){
  assert(seed(INT32_MAX,999999000)==0);assert(read(&s)==0);
  failSet=true;assert(seed(4,0)==RISC_REALTIME_IO);failSet=false;
  assert(read(&s)==0 && !s.validity);
- wall.tv_usec=1000000;before=s;assert(read(&s)==RISC_REALTIME_IO && !memcmp(&s,&before,sizeof(s)));
+ assert(seed(1800000000,0)==RISC_REALTIME_OK);
+ for(timeval raw: {timeval{-1,0},timeval{INT64_C(2147483648),0},
+                   timeval{1,-1},timeval{1,1000000}}) {
+  wall=raw;before=s;assert(read(&s)==RISC_REALTIME_IO && !memcmp(&s,&before,sizeof(s)));
+ }
  puts("Native realtime: explicit seed, cold/reset invalidity, SDK deep-time advance, rollback, corrupt retention and failures PASS");
 }

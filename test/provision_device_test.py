@@ -75,6 +75,25 @@ class Device(unittest.TestCase):
         return d.compose(self.seed, self.root / 'owner', self.validator,
                          Path(GENERATOR or '/not-used'), self.root / name, new_device)
 
+    def test_image_profile_requires_support_in_both_native_assets(self):
+        record, blobs = self.inputs(True)
+        owner_path = self.root / 'owner/owner.json'
+        profile_path = self.root / 'owner/profile.json'
+        profile = p.decode(profile_path.read_bytes())
+        profile.pop('base_url');profile['schema_version'] = 3
+        profile['image'] = {'url': BASE + 'image.bin', 'bytes': p.LAYOUTS[self.layout], 'sha256': '1' * 64}
+        profile_path.write_bytes(p.encode(profile))
+        owner = p.decode(owner_path.read_bytes());owner.update(profile_sha256=p.sha(profile_path.read_bytes()), profile_bytes=profile_path.stat().st_size)
+        owner_path.write_bytes(p.encode(owner))
+        for name in ('firmware.bin', 'firmware.elf'):
+            with patch.object(d, 'verify_seed', return_value=(record, blobs)), \
+                 patch.object(d, 'make_nvs', return_value=b'\xa5' * d.NVS_BYTES):
+                self.assertRaisesRegex(ValueError, 'native does not support', self.compose, 'unsupported-' + name)
+            blobs[name] += b'RISC_PROVISION_IMAGE:1\0'
+        with patch.object(d, 'verify_seed', return_value=(record, blobs)), \
+             patch.object(d, 'make_nvs', return_value=b'\xa5' * d.NVS_BYTES):
+            self.compose('supported-image')
+
     def test_abi1_abi2_segments_blank_inactive_and_private_modes(self):
         for app_data in (False, True):
             with self.subTest(app_data=app_data):

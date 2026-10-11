@@ -1,11 +1,26 @@
+#include "diagnostics/Performance.h"
 #ifdef ESP_PLATFORM
 #include "CpuPort.h"
 #include "CooperativeDelay.h"
 #include "NativeSleep.h"
 #include "NativeRetainedWake.h"
 #include "NativeI2s.h"
-#include "NativeRadio.h"
+#include "NativeRadioAsyncTask.h"
+#include "NativeRadioResources.h"
+#ifndef RISC_NATIVE_ENTROPY
+#define RISC_NATIVE_ENTROPY 0
+#endif
+#if RISC_NATIVE_ENTROPY
+#include "NativeEntropy.h"
+extern "C" __attribute__((used)) const uint32_t risc_entropy_abi=1;
+#endif
+#include "NativeRadioResourceOwner.h"
 #include "NativeHci.h"
+#if RISC_NATIVE_TCP_LISTENER
+#include "NativeTcpListener.h"
+extern "C" __attribute__((used)) const uint32_t risc_tcp_listener_abi=1;
+#endif
+#include "SleepDiagnostics.h"
 #ifdef RISC_ENABLE_RADIO_IQ
 #include "NativeRadioIq.h"
 #endif
@@ -30,15 +45,20 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <cstring>
+#if RISC_ENABLE_USB_PHY
+// Readonly, linked opt-in evidence for native candidate validation. The
+// volatile read below keeps this exact marker in the enabled target ELF.
+extern "C" const uint32_t risc_usb_phy_resource_enabled=1;
+#endif
+#if RISC_ENABLE_SDMMC
+#include "NativeSdmmc.h"
+#include "NativeStorageWorker.h"
+extern "C" __attribute__((used)) const uint32_t risc_sdmmc_host_abi=1;
+#endif
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
+#include "NativeSchedulerWait.inc"
 struct I2cState { bool installed=false,configured=false;int sda=-1,scl=-1; } i2c[2];
-struct SpiState {
-  bool initialized=false,held=false,pending=false;uint32_t hz=0;uint8_t mode=0;
-  int sclk=-1,mosi=-1,miso=-1;spi_device_handle_t device=nullptr;
-  spi_transaction_t transaction{};
-  alignas(4) uint8_t tx[512]{},rx[512]{};
-} spi[2];
 TickType_t ticks(uint32_t ms){return ms?pdMS_TO_TICKS(ms)+1:0;}
 spi_host_device_t host(uint8_t physical){return physical==2?SPI2_HOST:SPI3_HOST;}
 #include "NativePwmStop.inc"
@@ -87,65 +107,19 @@ bool i2cClose(uint8_t physical){
   if(state.scl>=0 && !gpioClose(state.scl))return false;
   state={};return true;
 }
-bool drain(SpiState& state,uint32_t ms){
-  if(!state.pending)return true;
-  spi_transaction_t* completed=nullptr;
-  if(spi_device_get_trans_result(state.device,&completed,ticks(ms))!=ESP_OK)return false;
-  if(completed!=&state.transaction)return false;
-  state.pending=false;return true;
-}
-bool spiOpen(uint8_t physical,int16_t sclk,int16_t mosi,int16_t miso){
-  auto& state=spi[physical-2];if(state.initialized)return false;
-  state.sclk=sclk;state.mosi=mosi;state.miso=miso;
-  spi_bus_config_t config{};config.sclk_io_num=sclk;config.mosi_io_num=mosi;config.miso_io_num=miso;
-  config.quadwp_io_num=-1;config.quadhd_io_num=-1;config.max_transfer_sz=512;
-  if(spi_bus_initialize(host(physical),&config,SPI_DMA_CH_AUTO)!=ESP_OK)return false;
-  state.initialized=true;return true;
-}
-bool spiBegin(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,uint32_t){
-  auto& state=spi[physical-2];if(!state.initialized || state.held || state.pending)return false;
-  if(state.device && (state.hz!=hz || state.mode!=mode)){
-    if(spi_bus_remove_device(state.device)!=ESP_OK)return false;
-    state.device=nullptr;
-  }
-  if(!state.device){
-    spi_device_interface_config_t config{};config.clock_speed_hz=hz;config.mode=mode;config.spics_io_num=-1;config.queue_size=1;
-    if(spi_bus_add_device(host(physical),&config,&state.device)!=ESP_OK)return false;
-    state.hz=hz;state.mode=mode;
-  }
-  // IDF4 acquire_bus accepts only an unbounded wait. The CPU port owns this
-  // controller exclusively and serializes every device on its owner task, so
-  // no SDK bus acquisition is needed. Queued transfers retain bounded waits.
-  if(!gpioWrite(cs,false))return false;
-  state.held=true;return true;
-}
-bool spiTransfer(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t count,uint32_t ms){
-  auto& state=spi[physical-2];if(!state.held || state.pending || count>sizeof(state.tx))return false;
-  if(tx)memcpy(state.tx,tx,count);else memset(state.tx,0xff,count);
-  state.transaction={};state.transaction.length=count*8;state.transaction.tx_buffer=state.tx;state.transaction.rx_buffer=state.rx;
-  const int64_t start=esp_timer_get_time();
-  if(spi_device_queue_trans(state.device,&state.transaction,ticks(ms))!=ESP_OK)return false;
-  state.pending=true;
-  const uint32_t elapsed=uint32_t((esp_timer_get_time()-start)/1000);
-  if(!drain(state,elapsed<ms?ms-elapsed:0))return false;
-  if(rx)memcpy(rx,state.rx,count);
-  return true;
-}
-bool spiEnd(uint8_t physical,uint8_t cs,uint32_t ms){
-  auto& state=spi[physical-2];if(!state.held || !drain(state,ms) || !gpioWrite(cs,true))return false;
-  state.held=false;return true;
-}
-bool spiClose(uint8_t physical){
-  auto& state=spi[physical-2];if(state.held || state.pending)return false;
-  if(state.device){if(spi_bus_remove_device(state.device)!=ESP_OK)return false;
-    state.device=nullptr;}
-  if(state.initialized){if(spi_bus_free(host(physical))!=ESP_OK)return false;state.initialized=false;}
-  for(int pin:{state.sclk,state.mosi,state.miso})if(pin>=0 && !gpioClose(pin))return false;
-  state={};return true;
-}
+#include "NativeSpi.inc"
 bool deepReady(){
+#if RISC_ENABLE_SDMMC
+  if(!NativeStorageWorker::idle() || !NativeSdmmc::closed())return false;
+#endif
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
-  if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
+  if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
+#if RISC_NATIVE_ENTROPY
+  if(!NativeEntropy::idle(nullptr,0))return false;
+#endif
+#if RISC_NATIVE_TCP_LISTENER
+  if(!NativeTcpListener::idle(nullptr,0))return false;
+#endif
 #ifdef RISC_ENABLE_HTTP
   if(!NativeHttp::idle())return false;
 #endif
@@ -160,7 +134,16 @@ bool deepReady(){
 }
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
 bool lightSleep(uint32_t* cause){
-  if(!NativeI2s::idle() || !NativeRadio::idle() || !NativeHci::idle())return false;
+#if RISC_ENABLE_SDMMC
+  if(!NativeStorageWorker::idle() || !NativeSdmmc::idle())return false;
+#endif
+  if(!NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
+#if RISC_NATIVE_ENTROPY
+  if(!NativeEntropy::idle(nullptr,0))return false;
+#endif
+#if RISC_NATIVE_TCP_LISTENER
+  if(!NativeTcpListener::idle(nullptr,0))return false;
+#endif
 #ifdef RISC_ENABLE_HTTP
   if(!NativeHttp::idle())return false;
 #endif
@@ -175,10 +158,19 @@ bool lightSleep(uint32_t* cause){
 }
 
 }
+static NativeRadioResourceOwner resourceOwner;
+bool nativeRadioResourceTry(){return resourceOwner.enter();}
+void nativeRadioResourceEnd(){resourceOwner.leave();}
+bool nativeRadioResourceReady(){return resourceOwner.ready();}
+bool nativeRadioResourceHeldReady(){return resourceOwner.heldReady();}
+bool nativeBackgroundResourceTry(){return !xPortInIsrContext()&&ownerTask&&ownerTask()&&NativeRadioAsync::tryShared();}
+void nativeBackgroundResourceEnd(){if(!xPortInIsrContext()&&ownerTask&&ownerTask())NativeRadioAsync::endShared();}
 Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
+  resourceOwner.configure([](){return !xPortInIsrContext() && ownerTask && ownerTask();},NativeRadioAsync::tryShared,NativeRadioAsync::endShared,NativeRadioAsync::sharedPhaseReady,NativeRadioAsync::sharedReady);
   Hardware hardware{[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
     [](uint32_t ms){
+      RiscPerf::AggregateScope wait(32,ms);
 #if RISC_DIAGNOSTIC_ADAPTER
       RiscDiagnostics::poll();
 #endif
@@ -186,7 +178,39 @@ Hardware nativeHardware(bool (*owner)()){
     },gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
-    NativeRadio::join,NativeRadio::state,NativeRadio::leave,NativeRadio::addresses,NativeRadio::scanStart,NativeRadio::scanPoll,NativeRadio::scanCancel,NativeRadio::idle};
+    NativeRadioAsync::join,NativeRadioAsync::state,NativeRadioAsync::leave,NativeRadioAsync::addresses,NativeRadioAsync::scanStart,NativeRadioAsync::scanPoll,NativeRadioAsync::scanCancel,NativeRadioAsync::idle};
+  hardware.spiBeginThreeWire=spiBeginThreeWire;
+  configureSchedulerWait(hardware);
+  static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
+  radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
+  // Under a nested owner lease, test the phase without refusing our own lease.
+  radioAsync.sharedReady=nativeRadioResourceReady;
+  hardware.radioAsync=&radioAsync;hardware.radioAsyncPrepare=NativeRadioAsync::provision;
+#if RISC_NATIVE_ENTROPY
+  NativeEntropy::configure(hardware.owner,[](){
+    // Read only while the shared native lease excludes worker SDK changes.
+    // This generation reached a healthy link and has not stopped/deinitialized.
+    // IDF guarantees RNG entropy while Wi-Fi is enabled, including normal
+    // modem power management; association/reachability is checked by TCP.
+    return nativeRadioResourceHeldReady() && NativeRadio::s.established &&
+      NativeRadio::s.wifi && NativeRadio::s.startAttempted && !NativeRadio::s.closing;
+  },nativeRadioResourceTry,nativeRadioResourceEnd);
+  hardware.entropy=NativeEntropy::backend();
+#endif
+#if RISC_ENABLE_SDMMC
+  NativeSdmmc::configure([](){return (ownerTask&&ownerTask())||NativeStorageWorker::isWorker();});
+  hardware.storageWork=&NativeStorageWorker::backend;
+  hardware.sdmmcOpen=NativeSdmmc::open;hardware.sdmmcRead=NativeSdmmc::read;
+  hardware.sdmmcWrite=NativeSdmmc::write;hardware.sdmmcSync=NativeSdmmc::sync;
+  hardware.sdmmcClose=NativeSdmmc::close;
+#endif
+#if RISC_ENABLE_USB_PHY
+  if(*static_cast<volatile const uint32_t*>(&risc_usb_phy_resource_enabled)==1){
+    hardware.usbPhyIdle=RiscDiagnostics::usbPhyIdle;
+    hardware.usbPhySuspend=RiscDiagnostics::suspendUsbPhy;
+    hardware.usbPhyResume=RiscDiagnostics::resumeUsbPhy;
+  }
+#endif
   NativeRealtime::configure(hardware.owner);hardware.realtimeRead=NativeRealtime::read;hardware.realtimeSeed=NativeRealtime::seed;
   hardware.hciOpen=NativeHci::open;hardware.hciSend=NativeHci::send;hardware.hciReceive=NativeHci::receive;
   hardware.hciClose=NativeHci::close;hardware.hciIdle=NativeHci::idle;hardware.hciSafe=NativeHci::safe;
@@ -194,12 +218,23 @@ Hardware nativeHardware(bool (*owner)()){
   hardware.radioIqReady=NativeRadioIq::ready;
   hardware.radioIqPrepare=NativeRadioIq::prepare;
   hardware.radioIqCleanup=NativeRadioIq::cleanup;
+  hardware.radioIqWorkerStart=NativeRadioIq::workerStart;
+  hardware.radioIqWorkerStop=NativeRadioIq::workerStop;
+  hardware.radioIqNowUs=NativeRadioIq::nowUs;
+#endif
+#if RISC_NATIVE_TCP_LISTENER
+  NativeTcpListener::configure(hardware.owner,[](){
+    uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;
+    return NativeRadioAsync::state(&state,&rssi) && state==2 && NativeRadioAsync::addresses(station,ap) &&
+      (station[0]||station[1]||station[2]||station[3]);
+  });
+  hardware.tcpListener=NativeTcpListener::backend();
 #endif
   hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;
 #ifdef RISC_ENABLE_HTTP
   NativeHttp::configure(hardware.owner,[](){
     uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;
-    return NativeRadio::state(&state,&rssi) && state==2 && NativeRadio::addresses(station,ap) &&
+    return NativeRadioAsync::state(&state,&rssi) && state==2 && NativeRadioAsync::addresses(station,ap) &&
       (station[0]||station[1]||station[2]||station[3]);
   });
   hardware.httpClient=NativeHttp::api();hardware.httpIdle=NativeHttp::idle;hardware.httpSafe=NativeHttp::safe;

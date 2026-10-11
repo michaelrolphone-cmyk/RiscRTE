@@ -1,0 +1,88 @@
+normal/eager: checked cleanup and stale invocation isolation PASS
+reentry/eager: checked cleanup and stale invocation isolation PASS
+lifecycle-reentry/eager: checked cleanup and stale invocation isolation PASS
+reuse/eager: checked cleanup and stale invocation isolation PASS
+copied-control/eager: checked cleanup and stale invocation isolation PASS
+two-sessions/eager: checked cleanup and stale invocation isolation PASS
+child/eager: checked cleanup and stale invocation isolation PASS
+child-init-fail/eager: checked cleanup and stale invocation isolation PASS
+release-open/eager: checked cleanup and stale invocation isolation PASS
+forgot-close/eager: checked cleanup and stale invocation isolation PASS
+fini-close/eager: checked cleanup and stale invocation isolation PASS
+unknown-tag/eager: checked cleanup and stale invocation isolation PASS
+unknown-version/eager: checked cleanup and stale invocation isolation PASS
+truncated-tag/eager: checked cleanup and stale invocation isolation PASS
+truncated-version/eager: checked cleanup and stale invocation isolation PASS
+truncated-pointer/eager: checked cleanup and stale invocation isolation PASS
+prefix-base/eager: checked cleanup and stale invocation isolation PASS
+prefix-diagnostics/eager: checked cleanup and stale invocation isolation PASS
+prefix-streams/eager: checked cleanup and stale invocation isolation PASS
+prefix-poll/eager: checked cleanup and stale invocation isolation PASS
+open-clean-fail/eager: checked cleanup and stale invocation isolation PASS
+grant1-fail/eager: checked cleanup and stale invocation isolation PASS
+grant2-fail/eager: checked cleanup and stale invocation isolation PASS
+open-retained-zero/eager: retained; closes=0 polls=0 bytes=0 PASS
+open-retained-token/eager: retained; closes=0 polls=0 bytes=14 PASS
+open-malformed/eager: retained; closes=0 polls=0 bytes=14 PASS
+open-duplicate/eager: retained; closes=0 polls=0 bytes=28 PASS
+open-foreign/eager: retained; closes=0 polls=0 bytes=14 PASS
+open-direction/eager: retained; closes=0 polls=0 bytes=14 PASS
+open-partial-error/eager: retained; closes=0 polls=0 bytes=14 PASS
+open-slow/eager: retained; closes=0 polls=0 bytes=14 PASS
+open-busy/eager: retained; closes=0 polls=0 bytes=14 PASS
+terminal-retained/eager: retained; closes=0 polls=1 bytes=14 PASS
+terminal-retained-busy/eager: retained; closes=0 polls=1 bytes=14 PASS
+call-retained/eager: retained; closes=0 polls=1 bytes=14 PASS
+call-overflow/eager: retained; closes=0 polls=1 bytes=14 PASS
+call-slow/eager: retained; closes=0 polls=1 bytes=14 PASS
+close-fail/eager: retained; closes=1 polls=1 bytes=14 PASS
+close-slow/eager: retained; closes=1 polls=1 bytes=14 PASS
+close-busy/eager: retained; closes=1 polls=1 bytes=14 PASS
+revoke-busy/eager: retained; closes=0 polls=1 bytes=14 PASS
+grant-rollback-retained/eager: retained; closes=1 polls=0 bytes=14 PASS
+start-retained/eager: retained; closes=0 polls=0 bytes=16 PASS
+normal/demand: checked cleanup and stale invocation isolation PASS
+reentry/demand: checked cleanup and stale invocation isolation PASS
+lifecycle-reentry/demand: checked cleanup and stale invocation isolation PASS
+reuse/demand: checked cleanup and stale invocation isolation PASS
+copied-control/demand: checked cleanup and stale invocation isolation PASS
+two-sessions/demand: checked cleanup and stale invocation isolation PASS
+child/demand: checked cleanup and stale invocation isolation PASS
+child-init-fail/demand: checked cleanup and stale invocation isolation PASS
+release-open/demand: checked cleanup and stale invocation isolation PASS
+forgot-close/demand: checked cleanup and stale invocation isolation PASS
+fini-close/demand: checked cleanup and stale invocation isolation PASS
+unknown-tag/demand: checked cleanup and stale invocation isolation PASS
+unknown-version/demand: checked cleanup and stale invocation isolation PASS
+truncated-tag/demand: checked cleanup and stale invocation isolation PASS
+truncated-version/demand: checked cleanup and stale invocation isolation PASS
+truncated-pointer/demand: checked cleanup and stale invocation isolation PASS
+prefix-base/demand: checked cleanup and stale invocation isolation PASS
+prefix-diagnostics/demand: checked cleanup and stale invocation isolation PASS
+prefix-streams/demand: checked cleanup and stale invocation isolation PASS
+prefix-poll/demand: checked cleanup and stale invocation isolation PASS
+open-clean-fail/demand: checked cleanup and stale invocation isolation PASS
+grant1-fail/demand: checked cleanup and stale invocation isolation PASS
+grant2-fail/demand: checked cleanup and stale invocation isolation PASS
+open-retained-zero/demand: retained; closes=0 polls=0 bytes=0 PASS
+open-retained-token/demand: retained; closes=0 polls=0 bytes=14 PASS
+open-malformed/demand: retained; closes=0 polls=0 bytes=14 PASS
+open-duplicate/demand: retained; closes=0 polls=0 bytes=28 PASS
+open-foreign/demand: retained; closes=0 polls=0 bytes=14 PASS
+open-direction/demand: retained; closes=0 polls=0 bytes=14 PASS
+open-partial-error/demand: retained; closes=0 polls=0 bytes=14 PASS
+open-slow/demand: retained; closes=0 polls=0 bytes=14 PASS
+open-busy/demand: retained; closes=0 polls=0 bytes=14 PASS
+terminal-retained/demand: retained; closes=0 polls=1 bytes=14 PASS
+terminal-retained-busy/demand: retained; closes=0 polls=1 bytes=14 PASS
+call-retained/demand: retained; closes=0 polls=1 bytes=14 PASS
+call-overflow/demand: retained; closes=0 polls=1 bytes=14 PASS
+call-slow/demand: retained; closes=0 polls=1 bytes=14 PASS
+close-fail/demand: retained; closes=1 polls=1 bytes=14 PASS
+close-slow/demand: retained; closes=1 polls=1 bytes=14 PASS
+close-busy/demand: retained; closes=1 polls=1 bytes=14 PASS
+revoke-busy/demand: retained; closes=0 polls=1 bytes=14 PASS
+grant-rollback-retained/demand: retained; closes=1 polls=0 bytes=14 PASS
+start-retained/demand: retained; closes=0 polls=0 bytes=16 PASS
+quiesce-fail/demand: retained; closes=1 polls=1 bytes=0 PASS
+demand-retained/demand-retained: checked cleanup and stale invocation isolation PASS

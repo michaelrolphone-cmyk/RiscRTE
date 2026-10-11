@@ -5,6 +5,11 @@
 extern "C" {
 #endif
 #define RISC_APP_DATA_CAPABILITY "storage.app-data"
+/* Same table, explicit boot-scoped single-file shared authority. A grant
+ * additionally requires "file": an exact valid basename. Each namespace can
+ * be shared only by explicitly admitted apps; ordinary app-data ownership and
+ * all revision, quota, lifetime and retention rules remain unchanged. */
+#define RISC_SHARED_DATA_CAPABILITY "storage.shared-data"
 #define RISC_APP_DATA_API_V1 1u
 #define RISC_APP_DATA_NAME_MAX 48u
 #define RISC_APP_DATA_FILE_MAX 65536u
@@ -21,6 +26,7 @@ extern "C" {
 #define RISC_APP_DATA_COMMIT_UNKNOWN (-8)
 #define RISC_APP_DATA_RETAINED (-9)
 #define RISC_APP_DATA_STALE (-10)
+#define RISC_APP_DATA_BUSY (-11) /* No I/O began; retry at a later settled tick. */
 /* Complete ordinary files, independent of the immutable installed store and NVS.
  * Explicit positive boot-grant instance_id binds one namespace. Callers cannot
  * supply a namespace, native path, partition, executable or format operation.

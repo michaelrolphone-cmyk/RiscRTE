@@ -19,7 +19,7 @@ cc -std=c11 -Wall -Wextra -Werror "${watchincs[@]}" "$watch/apps/clock/render.c"
 "$build/golden" valid > "$build/valid.rgb565"
 "$build/golden" unset > "$build/unset.rgb565"
 c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic "${incs[@]}" \
- "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+ "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \
  "$repo/test/clock_integration_test.cpp" -ldl -o "$build/test"
 "$build/test" "$build"

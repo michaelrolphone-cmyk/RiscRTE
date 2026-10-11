@@ -1,5 +1,10 @@
 # Default-app provider promotion (Runtime0.1.50)
 
+The existing contract below remains the default for `"demand"` and `"eager"`.
+Runtime 0.1.63 adds the explicit [demand-retained policy](DEMAND_RETENTION.md),
+under which the same authorized call pins active nodes and arms future retention
+without loading absent providers. Its ABI and caller authority are unchanged.
+
 This isolated integration preserves PR38 at
 `0c6ceef38d1d972febd959e8f2da46c5a4a398ac` and PR39 at
 `341e6e38ce00b7c57d5daaf5f8c829c3575db931` as merge ancestors.

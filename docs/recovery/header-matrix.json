@@ -1,0 +1,37 @@
+[
+  {
+    "policy": 16,
+    "requirements": 16,
+    "accepted": true
+  },
+  {
+    "policy": 17,
+    "requirements": 16,
+    "accepted": true
+  },
+  {
+    "policy": 18,
+    "requirements": 17,
+    "accepted": true
+  },
+  {
+    "policy": 15,
+    "requirements": 16,
+    "accepted": false
+  },
+  {
+    "policy": 19,
+    "requirements": 16,
+    "accepted": false
+  },
+  {
+    "policy": 18,
+    "requirements": 15,
+    "accepted": false
+  },
+  {
+    "policy": 18,
+    "requirements": 18,
+    "accepted": false
+  }
+]

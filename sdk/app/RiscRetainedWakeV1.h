@@ -27,6 +27,28 @@ typedef struct risc_retained_wake_api_v1 {
  int32_t (*stage)(void*,const risc_retained_wake_record_v1*);
  int32_t (*clear)(void*);
 } risc_retained_wake_api_v1;
+/* Optional, tagged tail. Existing record/table prefixes remain unchanged.
+ * Payloads are copied synchronously; no application pointer survives a call.
+ * read_bytes leaves payload/size untouched except on OK; capacity refusal does
+ * not consume the recovered record. Cause follows the legacy read contract. */
+#define RISC_RETAINED_WAKE_EXTENDED_TAG UINT32_C(0x52574531)
+#define RISC_RETAINED_WAKE_EXTENDED_MAX 512u
+typedef struct risc_retained_wake_api_v1_extended {
+ risc_retained_wake_api_v1 base;
+ uint32_t extension_tag,extension_version,max_payload_bytes,reserved;
+ int32_t (*read_bytes)(void*,uint32_t type,uint32_t schema_version,
+                       void* payload,uint32_t capacity,uint32_t* size,uint32_t* boot_cause);
+ int32_t (*stage_bytes)(void*,uint32_t type,uint32_t schema_version,
+                        const void* payload,uint32_t size);
+} risc_retained_wake_api_v1_extended;
+static inline const risc_retained_wake_api_v1_extended *risc_retained_wake_extended(const void *table) {
+ const risc_retained_wake_api_v1 *base=(const risc_retained_wake_api_v1*)table;
+ if(!base || base->api_version!=1 || base->struct_size<sizeof(risc_retained_wake_api_v1_extended))return 0;
+ const risc_retained_wake_api_v1_extended *tail=(const risc_retained_wake_api_v1_extended*)table;
+ return tail->extension_tag==RISC_RETAINED_WAKE_EXTENDED_TAG && tail->extension_version==1 &&
+  tail->max_payload_bytes>RISC_RETAINED_WAKE_PAYLOAD_MAX && tail->max_payload_bytes<=RISC_RETAINED_WAKE_EXTENDED_MAX &&
+  !tail->reserved && tail->read_bytes && tail->stage_bytes?tail:0;
+}
 #ifdef __cplusplus
 }
 #endif

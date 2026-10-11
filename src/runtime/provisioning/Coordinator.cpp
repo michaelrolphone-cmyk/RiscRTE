@@ -32,8 +32,8 @@ State Coordinator::step(){
     case State::Connect:result=io_.connect(c,profile_.ssid,profile_.password);next=State::Stage;break;
     case State::Stage:result=io_.begin(c);next=State::Download;break;
     case State::Download:
-      result=io_.download(c,profile_.files[file_],ChunkBytes);
-      if(result==Step::Done){++file_;next=file_==profile_.count?State::Validate:State::Download;}
+      result=io_.download(c,profile_.download(file_),ChunkBytes);
+      if(result==Step::Done){++file_;next=file_==profile_.downloads()?State::Validate:State::Download;}
       break;
     case State::Validate:result=io_.validate(c,profile_);next=State::Close;break;
     case State::Close:result=io_.close(c);next=State::Activate;break;

@@ -24,7 +24,11 @@ Migrated production modules:
 - Focused provider graph, allocation and ELF validator regression sources from
   Reader's `test/` tree, identified in `SOURCE_MAP.json`.
 
-Extraction changes: privileged package activation is explicitly disabled;
+Extraction changes: ordinary builds keep privileged package activation disabled;
+a default-off, explicit native per-provider selection now reuses the owned-image
+and exact-import contract (see `SCOPED_NATIVE_PROVIDERS.md`). Its bounded native
+executor follows Reader's `DeviceProviderExecutorV2` admission boundary without
+copying the Reader manager or replacing Runtime's newer module lifecycle.
 Reader package manager/UI/device bridges and their conditional private import exceptions are absent. The provider graph accepts
 an injected selected hardware configuration and exact provider bindings. Hardware
 providers require quiescence. The dynamic loader rejects duplicate module names
@@ -118,3 +122,12 @@ immutable source URLs, Git blob IDs and SHA-256 digests. These files are host-on
 test inputs, never firmware or replacement framework sources. The SDK/RTOS shim
 and runtime adapter tests are integration code, not copied full SDK headers and
 not hardware qualification.
+
+## Runtime 0.1.92 bounded provider diagnostics
+
+Derived locally from Runtime 0.1.91 `9b3c83f8772eb22273c1f0a524460742e4241706`.
+The new formatter is Runtime-owned implementation; it imports no Reader logging
+fallback or hardware code. Existing Espressif loader licensing is preserved.
+The explicit diagnostic ABI, owned policy copying and native lookup tests do
+not select a product or qualify USB hardware. The separately stopped .82
+ancestor continues to block source publication. See PROVIDER_DIAGNOSTICS.md.

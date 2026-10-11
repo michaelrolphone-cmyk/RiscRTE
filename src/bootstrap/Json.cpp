@@ -1,4 +1,5 @@
 #include "Json.h"
+#include "diagnostics/Performance.h"
 #include <cstdlib>
 #include <chrono>
 #ifdef ESP_PLATFORM
@@ -7,6 +8,7 @@
 #endif
 namespace RiscBoot {
 bool readJson(const char* filename, JsonDocument& doc, bool* closeRetained) {
+  RiscPerf::Scope trace(28,29,RiscPerf::identity(filename));
   FILE* f=fopen(filename,"rb"); if (!f) return false;
   auto close=[&](){
     if(fclose(f)==0)return true;
@@ -21,7 +23,7 @@ bool readJson(const char* filename, JsonDocument& doc, bool* closeRetained) {
   while (n<=limit) {
     size_t got=fread(data+n,1,(limit+1-n)>512?512:limit+1-n,f); n+=got;
 #ifdef ESP_PLATFORM
-    vTaskDelay(1);
+    {RiscPerf::AggregateScope wait(33,1);vTaskDelay(1);}
 #endif
     if (std::chrono::steady_clock::now()-start>std::chrono::seconds(5)) { good=false; break; }
     if (!got) { good=feof(f) && !ferror(f); break; }

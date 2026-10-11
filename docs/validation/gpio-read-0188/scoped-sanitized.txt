@@ -1,0 +1,2 @@
+GPIO read: scope/full-token collisions, invalidation, retained release, held/retired pads, hardware refusal and exhaustion PASS
+Scoped GPIO write cache: collisions, full tokens, foreign/stale/input/held/retired/owner rejection, reacquire, PWM failure and exhaustion PASS

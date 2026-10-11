@@ -82,6 +82,20 @@ class SeedTest(unittest.TestCase):
                 self.assertRaisesRegex(ValueError,'radio IQ linked reservation proof',p.candidate,root,source)
                 fake.prove.side_effect=ValueError('unreserved IQ bank')
                 self.assertRaisesRegex(ValueError,'unreserved IQ bank',p.candidate,root,source)
+                fake.prove.side_effect=None;fake.prove.return_value=linked
+                for name in ('firmware.bin','firmware.elf'):
+                    blobs[name]+=b'RISC_APP_POLICY_ROWS:17\0'
+                    (root/name).write_bytes(blobs[name])
+                    record['assets'][name]={'bytes':len(blobs[name]),'sha256':p.sha(blobs[name])}
+                (root/'candidate.json').write_text(json.dumps(record))
+                self.assertRaisesRegex(ValueError,'app policy proof missing',p.candidate,root,source)
+                record['native_proof']['app_policy']=p.policy_rows_proof(blobs,17)
+                (root/'candidate.json').write_text(json.dumps(record))
+                loaded,_=p.candidate(root,source)
+                self.assertEqual(loaded['native_proof']['app_policy']['rows'],17)
+                record['native_proof']['app_policy']['rows']=16
+                (root/'candidate.json').write_text(json.dumps(record))
+                self.assertRaisesRegex(ValueError,'policy row mismatch',p.candidate,root,source)
     @unittest.skipUnless(os.environ.get('MKSPIFFS'),'real SPIFFS tool runs in target CI')
     def test_real_store(self):
         members={'boot.json':b'{"board":"board.json","default_app":"default.elf","drivers":[]}',

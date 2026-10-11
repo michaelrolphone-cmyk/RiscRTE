@@ -5,6 +5,7 @@
  */
 
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -18,6 +19,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include "private/esp_privileged_os_cpu.h"
+#include "private/esp_privileged_elf.h"
 
 #if CONFIG_LIBC_PICOLIBC
 /*
@@ -51,6 +53,7 @@ static const char * const s_picolibc_ctype_tbl = _ctype_b + _CTYPE_OFFSET;
 
 #include "esp_log.h"
 #include "esp_elf.h"
+#include "../../hal/RuntimeImagePressure.h"
 
 #if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
 #include "private/esp_dlmod.h"
@@ -82,6 +85,19 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
      */
 
     ESP_ELFSYM_EXPORT(strerror),
+    ESP_ELFSYM_EXPORT(strtof),
+    ESP_ELFSYM_EXPORT(strtoul),
+    ESP_ELFSYM_EXPORT(strcat),
+    ESP_ELFSYM_EXPORT(strncasecmp),
+    ESP_ELFSYM_EXPORT(strcasecmp),
+    ESP_ELFSYM_EXPORT(strnlen),
+    ESP_ELFSYM_EXPORT(tolower),
+    ESP_ELFSYM_EXPORT(isalpha),
+    ESP_ELFSYM_EXPORT(qsort),
+    ESP_ELFSYM_EXPORT(vsnprintf),
+    ESP_ELFSYM_EXPORT(setjmp),
+    ESP_ELFSYM_EXPORT(longjmp),
+
     ESP_ELFSYM_EXPORT(memset),
     ESP_ELFSYM_EXPORT(memcpy),
     ESP_ELFSYM_EXPORT(memmove),
@@ -109,9 +125,15 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
 
     /* stdlib.h */
 
+#if RISC_APP_IMAGE_CACHE
+    {"malloc", (const void *)&risc_image_malloc},
+    {"calloc", (const void *)&risc_image_calloc},
+    {"realloc", (const void *)&risc_image_realloc},
+#else
     ESP_ELFSYM_EXPORT(malloc),
     ESP_ELFSYM_EXPORT(calloc),
     ESP_ELFSYM_EXPORT(realloc),
+#endif
     ESP_ELFSYM_EXPORT(free),
 
     /* time.h */
@@ -166,6 +188,36 @@ static const struct esp_elfsym g_esp_espidf_elfsyms[] = {
     ESP_ELFSYM_END
 };
 
+bool esp_elf_privileged_selected_import_supported_with_diagnostics_v1(
+    const char *symbol, uint32_t diagnostic_abi)
+{
+    if (!esp_elf_privileged_diagnostic_abi_supported_v1(diagnostic_abi)) return false;
+    if (diagnostic_abi == 1 && symbol && (!strcmp(symbol, "printf") ||
+        !strcmp(symbol, "puts") || !strcmp(symbol, "putchar"))) return true;
+    return esp_elf_privileged_selected_import_supported_v1(symbol);
+}
+
+bool esp_elf_privileged_selected_import_supported_v1(const char *symbol)
+{
+    if (!symbol || !symbol[0] || !strcmp(symbol, "printf") ||
+        !strcmp(symbol, "puts") || !strcmp(symbol, "putchar")) return false;
+    /* Every inventory entry is strongly linked by esp_privileged_os_cpu.c.
+     * This is a name-only query and cannot expose those addresses. */
+#define RISC_OS_CPU_SYMBOL(name) if (!strcmp(symbol, #name)) return true;
+#include "private/privileged_os_cpu_symbols_v1.def"
+#undef RISC_OS_CPU_SYMBOL
+#ifdef CONFIG_ELF_LOADER_LIBC_SYMBOLS
+    bool compatible = false;
+#define RISC_PUBLIC_LIBC_COMPAT_SYMBOL(name) if (!strcmp(symbol, #name)) compatible = true;
+#include "private/privileged_public_libc_compat_v1.def"
+#undef RISC_PUBLIC_LIBC_COMPAT_SYMBOL
+    if (!compatible) return false;
+    for (const struct esp_elfsym *entry = g_esp_libc_elfsyms; entry->name; ++entry)
+        if (entry->sym && !strcmp(symbol, entry->name)) return true;
+#endif
+    return false;
+}
+
 /**
  * @brief Find symbol address by name.
  *
@@ -173,6 +225,17 @@ static const struct esp_elfsym g_esp_espidf_elfsyms[] = {
  *
  * @return Symbol address if success or 0 if failed.
  */
+bool esp_elf_public_import_supported_v1(const char*name)
+{
+    if(!name||!name[0])return false;
+    if(!strcmp(name,"risc_runtime_get_api"))return true;
+#ifdef CONFIG_ELF_LOADER_LIBC_SYMBOLS
+    for(const struct esp_elfsym*entry=g_esp_libc_elfsyms;entry->name;++entry)
+        if(entry->sym&&!strcmp(name,entry->name))return true;
+#endif
+    return false;
+}
+
 uintptr_t elf_find_sym_default(const char *sym_name)
 {
     if (!sym_name) {
@@ -189,6 +252,7 @@ uintptr_t elf_find_sym_default(const char *sym_name)
      * Other tasks retain the ordinary app resolution path unchanged. */
     const bool privileged_scope = esp_elf_privileged_os_cpu_scope_owned_v1();
     if (privileged_scope) {
+        if (!esp_elf_privileged_os_cpu_import_allowed_v1(sym_name)) return 0;
         uintptr_t privileged = esp_elf_privileged_os_cpu_lookup_v1(sym_name);
         if (privileged) return privileged;
     }

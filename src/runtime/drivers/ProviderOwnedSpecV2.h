@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ProviderGraphV2.h"
+#include "NativeProviderPolicyValidationV1.h"
 #include <cstdlib>
 #include <cstring>
 #include <new>
@@ -20,21 +21,31 @@ struct OwnedNodeV2 final {
     char names[kImports][kImportName]{};
   };
 
+  struct NativePolicyStorage {
+    NativeProviderPolicyV1 policy{};
+    char relativePath[193]{}, version[32]{};
+    NativeProviderRequirementV1 requirements[GraphV2::kMaxRequirements]{};
+  };
+
   SpecV2 spec{};
   char id[96]{};
   char path[512]{};
   char provides[96]{};
+  char imageProvider[96]{};
   RequirementV2 requirements[GraphV2::kMaxRequirements]{};
   char requirementNames[GraphV2::kMaxRequirements][96]{};
   char requirementProviders[GraphV2::kMaxRequirements][96]{};
   ImportStorage* imported = nullptr;
   uint8_t* image = nullptr;
+  NativePolicyStorage* nativePolicy = nullptr;
 
   OwnedNodeV2() = default;
   OwnedNodeV2(const OwnedNodeV2&) = delete;
   OwnedNodeV2& operator=(const OwnedNodeV2&) = delete;
   ~OwnedNodeV2() {
     release(image);
+    if (nativePolicy) nativePolicy->~NativePolicyStorage();
+    release(nativePolicy);
     if (imported) imported->~ImportStorage();
     release(imported);
   }
@@ -63,6 +74,31 @@ struct OwnedNodeV2 final {
     return true;
   }
 
+  bool snapshotPolicy(const NativeProviderPolicyV1& from) {
+    // The trusted policy and candidate must still match AFTER candidate copy.
+    if (!nativePolicyMatchesModule(from,spec.verifiedElfBytes,spec.verifiedElfLength,
+          spec.contentSha256,spec.declaredImports,spec.declaredImportCount,
+          spec.id,spec.provides,spec.api) || from.requirementCount!=spec.requirementCount)
+      return false;
+    for (size_t i=0;i<from.requirementCount;++i)
+      if (from.requirements[i].api!=spec.requirements[i].api ||
+          std::strcmp(from.requirements[i].capability,spec.requirements[i].capability)) return false;
+    void* memory=allocate(sizeof(NativePolicyStorage));
+    if (!memory) return false;
+    nativePolicy=new(memory) NativePolicyStorage();
+    auto& p=nativePolicy->policy; p=from;
+    if (!copyString(nativePolicy->relativePath,sizeof(nativePolicy->relativePath),from.relativeElfPath) ||
+        !copyString(nativePolicy->version,sizeof(nativePolicy->version),from.version)) return false;
+    p.relativeElfPath=nativePolicy->relativePath; p.version=nativePolicy->version;
+    p.driverId=spec.id; p.capability=spec.provides; p.imports=spec.declaredImports;
+    for (size_t i=0;i<from.requirementCount;++i)
+      nativePolicy->requirements[i]={spec.requirements[i].capability,spec.requirements[i].api};
+    p.requirements=from.requirementCount?nativePolicy->requirements:nullptr;
+    return nativePolicyMatchesModule(p,spec.verifiedElfBytes,spec.verifiedElfLength,
+        spec.contentSha256,spec.declaredImports,spec.declaredImportCount,spec.id,spec.provides,spec.api) &&
+        nativeProviderImageValid(p,spec.verifiedElfBytes,spec.verifiedElfLength);
+  }
+
   bool snapshot(const SpecV2& from) {
     if (!copyString(id, sizeof(id), from.id) ||
         !copyString(provides, sizeof(provides), from.provides) ||
@@ -70,7 +106,9 @@ struct OwnedNodeV2 final {
          !copyString(path, sizeof(path), from.verifiedElfPath)) ||
         from.requirementCount > GraphV2::kMaxRequirements ||
         (from.requirementCount && !from.requirements)) return false;
+    if(bool(from.openImage)!=bool(from.imageProvider) || (from.openImage && (from.requiredOsCpuAbi || !from.imageContext || !from.imageInstance || !copyString(imageProvider,sizeof(imageProvider),from.imageProvider))))return false;
     spec = from;
+    spec.imageProvider=from.imageProvider?imageProvider:nullptr;
     spec.id = id;
     spec.provides = provides;
     spec.verifiedElfPath = from.verifiedElfPath ? path : nullptr;

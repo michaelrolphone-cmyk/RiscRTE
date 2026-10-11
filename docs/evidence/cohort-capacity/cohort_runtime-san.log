@@ -1,0 +1,3 @@
+candidate error: 
+test: /workspace/shared/runtime-shared-keyboard-capacity/test/cohort_runtime_test.cpp:72: main(int, char**)::<lambda(bool)>: Assertion `accepted==expected && bindings==1' failed.
+/workspace/shared/runtime-shared-keyboard-capacity/test/run_cohort_runtime_test.sh: line 9:  3858 Aborted                 "$build/test" "$build"

@@ -34,6 +34,10 @@ integration tests observe the original path and host handle. Host handles are
 only for fixture setup; Runtime consumers must use the production registry handle.
 Mapping and relocation counters distinguish registry rejection from backend
 failure. `risc_test_native_fail_relocations` provides bounded failure injection.
+The backend now snapshots actual host file bytes at open; relocations copy that
+snapshot into a fresh temporary inode. Input-read/byte and outstanding-snapshot
+counters let Runtime's production byte cache run unchanged in host lifecycle
+tests. Target structural validation remains covered by the real loader suite.
 
 Fresh temporary inodes give each admitted mapping independent host globals. The
 OS loader still supplies host machine-code relocation, imported-symbol lookup

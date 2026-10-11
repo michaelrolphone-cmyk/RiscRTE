@@ -20,4 +20,6 @@ if [[ ${SANITIZE:-0} == 1 ]]; then flags+=(-fsanitize=address,undefined -fno-omi
 for trace in 0 1; do
  "${CXX:-c++}" "${flags[@]}" -DRISC_SLEEP_DIAGNOSTICS="$trace" -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=1 -I"$here/shim" -I"$here/vendor" -I"$repo/src" "$here/test.cpp" "$repo/src/ports/esp32s3/SleepDiagnostics.cpp" -o "$build/actual-$trace"
  "$build/actual-$trace"
+ "${CXX:-c++}" "${flags[@]}" -DRISC_STAGE_LOGS=1 -DRISC_SLEEP_DIAGNOSTICS="$trace" -DARDUINO_USB_MODE=1 -DARDUINO_USB_CDC_ON_BOOT=1 -I"$here/shim" -I"$here/vendor" -I"$repo/src" "$here/stage_test.cpp" "$repo/src/ports/esp32s3/SleepDiagnostics.cpp" -o "$build/stage-$trace"
+ "$build/stage-$trace"
 done

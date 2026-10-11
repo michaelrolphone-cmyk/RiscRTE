@@ -1,5 +1,9 @@
 # Profile-driven provisioning (Runtime 0.1.36)
 
+Runtime 0.1.70 adds [compact-image provisioning](COMPACT_IMAGE_PROVISIONING.md)
+for dense stores. It preserves the schema1/2 streaming guard and adds schema3
+with a pinned immutable store image plus exact per-file admission inventory.
+
 ## Current first-install workflow
 
 [First-install packaging](FIRST_INSTALL.md) is the current entry point. A verified
@@ -54,7 +58,8 @@ contains private NVS and, for ABI2, initial empty app-data. It must never update
 existing device. Existing devices retain the separately authorized maintenance
 input route and inactive-bank updates. A full NVS partition fails without erase;
 two maximum-sized profiles plus historical/other NVS keys are not guaranteed to
-fit. The original layout and maintenance planner remain ABI1-only.
+fit. The maintenance planner explicitly supports the original ABI1 layout and
+the separate ABI2/app-data layout; it cannot migrate between them.
 
 The generic e-ink profile machinery is ready for a complete admitted product
 store. The existing X4 heartbeat is not a functioning Reader. See the
@@ -610,8 +615,12 @@ software integration workflow; hardware qualification is not its prerequisite.
 
 ### Explicit maintenance image and serial command
 
-Build `esp32s3-16mb-maintenance` only when deliberately preparing owner
-maintenance. This separate image enters its bounded serial command loop before
+Build `esp32s3-16mb-maintenance` for ABI1 or
+`esp32s3-16mb-appdata-maintenance` for ABI2 only when deliberately preparing owner
+maintenance. Stage the latter with `maintenance_candidate.py --app-data`; its
+artifact is `dist/owner-maintenance-appdata`. Both candidates require a clean
+exact-source build, a retained owner-target marker and matching partition table,
+and verify the matching ordinary target excludes the endpoint. This separate image enters its bounded serial command loop before
 paired boot, providers or app launch. Normal Runtime has no writable endpoint.
 The maintenance image omits the ordinary paired-store ABI marker, so it cannot
 be admitted as an ordinary paired firmware update. Its artifact is separate from
@@ -649,7 +658,7 @@ that the normal paired image lacks the maintenance endpoint. Hardware is UNRUN.
 ### Offline maintenance-entry/restoration planner
 
 `scripts/maintenance_plan.py` prepares reviewable entry/restoration payloads from
-an explicit ABI1 inventory, a frozen private 16 MiB flash snapshot, and the
+an explicit ABI1 or ABI2 inventory, a frozen private 16 MiB flash snapshot, and the
 verified separate maintenance artifact. It opens files only; it has no device,
 serial, reset, flash or erase implementation.
 
@@ -661,33 +670,65 @@ python scripts/maintenance_plan.py --inventory /owner/private/inventory.json \
 ```
 
 Inventory schema `riscrte.maintenance-inventory`, version 1, requires exactly:
-`layout` (`riscrte-paired-16m-v1`), `flash_bytes` (16777216), integer `active_bank`
+`layout` (`riscrte-paired-16m-v1` or `riscrte-paired-appdata-v2`),
+`flash_bytes` (16777216), integer `active_bank`
 (0 or 1), canonical `runtime_version`, `running_firmware_sha256`, exact
 `maintenance_source_sha`, and explicit `quiescent: true`. The ordinary Runtime
 must support descriptor v2 (0.1.31 or later). The planner verifies the partition
-table, pinned bootloader, confirmed OTA selection, active journal and active
-firmware/store digests against this inventory. Pending/ambiguous transitions,
-missing or incompatible inventory, unsupported near-wrap OTA sequences and
-ABI2/app-data layouts are rejected. These checks cannot establish that a live
-device still matches a stale snapshot; the owner must verify that separately.
+table, pinned bootloader, confirmed OTA selection, both journal records and
+firmware/store digests. Optional provisioning receipts must match their bank
+record and CRC; unknown journal bytes or uncommitted inactive contents refuse.
+Pending/ambiguous transitions, mismatched inventory, cross-layout artifacts and
+unsupported near-wrap OTA sequences are rejected. ABI2 uses the existing
+0x260000-byte application slots and 0x510000-byte stores. Its entire 0x80000-byte
+app-data region at 0x270000 is preserved. These checks cannot establish that a
+live device still matches a stale snapshot; the owner must verify that separately.
 
 The private output directory contains only an inactive-application entry image,
 one alternate OTA page selecting it as NEW, and exact restoration copies of
 those two regions, plus a plan and hashes. No health confirmation is fabricated.
 NVS is neither read nor included in any output/restoration payload. The active
-firmware/store, bank journal and partition table are untouched. Entry stages and
+firmware, both stores, bank journal, partition table, all app-data and every
+other region outside the two payload ranges are hashed for preservation checks.
+App-data bytes are never emitted in a payload. Entry stages and
 verifies the inactive image before changing the alternate OTA page; the original
 confirmed OTA page remains intact. Restoration requires deliberate ROM mode,
 verifies the expected maintenance image/sequence, restores the inactive image
 before its old OTA page, and retains newly installed NVS input. Unexpected
 ordinary provisioning invalidates the old restoration plan.
 
+Plan schema version 2 adds exact preserved-region hashes and an offline phase
+verifier. Keep the original inputs and plan unchanged. Before each operation,
+compare a new owner-frozen snapshot against the expected phase:
+
+```sh
+python scripts/maintenance_plan.py --inventory /owner/private/inventory.json \
+  --snapshot /owner/private/frozen-flash.bin \
+  --maintenance /owner/private/verified-maintenance-artifact \
+  --output /owner/private/new-maintenance-plan \
+  --verify-snapshot /owner/private/current-flash.bin --phase maintenance
+```
+
+The phases are `entry-ready`, `application-staged`, `maintenance`,
+`application-restored` and `restored`. They admit only exact completed write
+boundaries. The maintenance phase allows only the planned OTA sequence in NEW,
+PENDING_VERIFY or ABORTED state. VALID, INVALID, changed sequence, torn writes,
+changed protected bytes or modified restoration files refuse. After restoring
+the application, stay in ROM mode until the original alternate OTA page has
+also been restored. Interruption at a verified boundary permits the corresponding
+next step; torn writes require separate owner recovery analysis, not an inferred
+continuation. NVS can change during installation and is never compared or
+restored. The verifier does not open, freeze, inspect or control a live device.
+
 The plan includes offsets and preconditions, not executable flashing commands.
 It does not install a maintenance image over running code. Keep the snapshot and
 restoration files private; no owner snapshot is published or uploaded to CI.
 Software tests use dummy snapshots and separately use freshly built artifacts,
-checking deterministic plans, NVS exclusion and incompatible/missing inventory
-refusal. All physical entry, installation, restoration and hardware checks remain
+checking both banks and layouts, deterministic plans, all five phase boundaries,
+NVS exclusion, app-data preservation and incompatible/missing inventory refusal.
+This installs owner input only. It does not replace the running native Runtime,
+bridge 16 to 17 policy rows, change a product cohort or populate an update feed. All physical entry, installation, restoration and
+hardware checks remain
 UNRUN and are not software-readiness prerequisites.
 
 OTA selection/state handling follows the pinned IDF4.4.7

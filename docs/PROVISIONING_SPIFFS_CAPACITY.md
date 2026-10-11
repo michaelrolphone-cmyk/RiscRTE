@@ -1,5 +1,9 @@
 # Streamed SPIFFS provisioning capacity
 
+This bound continues to govern schema1/2 file streaming. Runtime0.1.70 offers
+[compact-image provisioning](COMPACT_IMAGE_PROVISIONING.md) with separate actual
+image occupancy checks; it does not relax this append/index-garbage bound.
+
 This is a host-verified admission estimate for the pinned ESP32-S3 storage
 configuration. It does not qualify hardware timing, physical power loss, Wi-Fi,
 TLS, or the whole boot graph. Every actual write, close, readback hash, inventory,

@@ -54,7 +54,7 @@ for name in springboard battery; do
   cc -std=c11 -Wall -Wextra -Werror -fPIC -shared -fvisibility=hidden "${portable[@]}" "${watchincs[@]}" "${link[@]}" "$source" "$adapter" "$watch/dist/launcher/catalog.c" -o "$build/$name.elf"
 done
 c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic "${incs[@]}" \
- "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+ "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \
  "$repo/test/launcher_integration_test.cpp" -ldl -o "$build/test"
 "$build/test" "$build"

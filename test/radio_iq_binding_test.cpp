@@ -32,7 +32,7 @@ int main(int argc,char**argv){
  auto prepared=[&](Hardware h,bool expected,size_t tables){
   Port p(h);activePort=&p;RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
   assert(r.prepare(root.c_str())==expected);assert(p.iqCount_==tables && !io);
-  if(tables){assert(p.iq_.api.claim && p.iq_.api.release && p.iq_.api.bank_base==0x3FCB0000u && p.iq_.api.bank_bytes==65536u && p.quiescent());}
+  if(tables){assert(p.iq_.api.base.claim && p.iq_.api.base.release && p.iq_.api.base.bank_base==0x3FCB0000u && p.iq_.api.base.bank_bytes==65536u && p.quiescent());}
  };
  boot(true);prepared(hardware(),true,1);
  // Native-first old graph has no selected IQ provider, but retains the table

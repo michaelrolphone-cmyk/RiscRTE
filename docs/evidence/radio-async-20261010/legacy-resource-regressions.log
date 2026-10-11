@@ -1,0 +1,79 @@
+=== test/run_radio_test.sh
+CPU radio: exclusive logical claim, exact bounds, scan/cancel, failed cleanup/retry, idle handoffs and Light/Deep retention PASS
+Actual JSON/manifest radio admission: exact selected config, no unselected table, unavailable backend and malformed graph reject before hardware I/O PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: idle PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: join-failed PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: scan-failed PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: join-clean PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: scan-clean PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: cleanup-retry PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: join-retained PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: scan-retained PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: cleanup-retained PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: state-failed PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: addresses-failed PASS
+Real Runtime/Graph/CpuPort/dlopen radio + Light/Deep lifecycle: poll-failed PASS
+Native radio adapter: lazy station-only RAM config, copied/wiped credentials, IPv4 status/address octets, no reconnect, bounded async scans, owned queue stale-event isolation and staged cleanup fault retries PASS
+=== test/run_radio_iq_test.sh
+IQ resource: fail-closed proof, owner/context, idle station coexistence, modem exclusion, exit/restart/all sleep forms, retained cleanup retry PASS
+IQ global CPU resource: opt-in registration, no selected hardware or bind-time I/O, native-first graph continuity and unavailable backend refusal PASS
+Native IQ: SDK modem/power/PHY balance, cold and post-Bluetooth claims, rejection and retained cleanup retry, bounded trace PASS
+Native IQ: unsupported actual ROM rejected before MMIO PASS
+Native IQ: unsupported actual ROM rejected before MMIO PASS
+Native IQ: static bank overlap rejected before MMIO PASS
+Native IQ: static bank overlap rejected before MMIO PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: lazy PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: refused PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: clean PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: retry PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: retained PASS
+Real Runtime/Graph/CpuPort/dlopen IQ resource retention lifecycle: unreleased PASS
+=== test/run_radio_stage_test.sh
+Native radio adapter: lazy station-only RAM config, copied/wiped credentials, IPv4 status/address octets, no reconnect, bounded async scans, owned queue stale-event isolation and staged cleanup fault retries PASS
+Native HCI: exact SDK lifecycle, bounded copied RX/TX, deadline, overflow, stale callback and retained uncertainty PASS
+Native radio adapter: lazy station-only RAM config, copied/wiped credentials, IPv4 status/address octets, no reconnect, bounded async scans, owned queue stale-event isolation and staged cleanup fault retries PASS
+Native HCI: exact SDK lifecycle, bounded copied RX/TX, deadline, overflow, stale callback and retained uncertainty PASS
+=== test/run_key_value_test.sh
+Volatile scratch wipe: full fixed buffer, all early/success exits, bounds and unique scope ownership PASS
+Real runtime + dynamic app key-value grants/handoff/fresh boot PASS
+Real runtime + dynamic app key-value grants/handoff/fresh boot PASS
+Capability policy denial, owner/live-generation enforcement, namespace isolation, bounds/faults and persistent fresh-process boot PASS
+Native NVS adapter: namespace isolation, bounds, probes, missing/type/size faults, atomic output, every-stage IO and exact readback PASS
+Native NVS initialization: ok, real status latched, one attempt, no erase PASS
+Native NVS initialization: no-free-pages, real status latched, one attempt, no erase PASS
+Native NVS initialization: new-version, real status latched, one attempt, no erase PASS
+Native NVS initialization: fail, real status latched, one attempt, no erase PASS
+Native NVS initialization: no-mem, real status latched, one attempt, no erase PASS
+Native NVS initialization: invalid-state, real status latched, one attempt, no erase PASS
+Native NVS initialization: not-initialized, real status latched, one attempt, no erase PASS
+Native NVS embedded-mode exclusion: PASS
+=== test/run_key_value_v2_test.sh
+Explicit KV v2 admission, mixed versions, 2048-byte bounds, uncertain writes, read isolation and lifecycle PASS
+=== test/run_bound_key_value_test.sh
+Bound KV schema, reserved capability and exact selection admission before ELF/backend PASS
+Bound KV start without app, distinct maps, exact backend counts, owner/bounds/errors, handoffs and stale Runtime contexts PASS
+Runtime failed-start storage revocation before real provider diagnostics/quiesce/stop PASS
+Native and explicit invocation retention deny provider storage, retain images across same-path reloads, and never revives copied contexts PASS
+=== test/run_native_app_data_test.sh
+Native LittleFS mount: exact partition/owner/safety, no autoformat/grow, absent vs unavailable PASS
+=== test/run_cold_provider_start_test.sh
+Cold provider start service-defer: PASS
+Cold provider start cold: PASS
+Cold provider start cold-demand: PASS
+Cold provider start deep: PASS
+Cold provider start deep-acquire: PASS
+Cold provider start deep-promotion: PASS
+Cold provider start no-option: PASS
+Cold provider start eager: PASS
+Cold provider start missing-classifier: PASS
+Cold provider start wrong-owner: PASS
+Cold provider start classifier-owner: PASS
+Cold provider start handoff: PASS
+Cold provider start promotion: PASS
+Cold provider start reuse: PASS
+Cold provider start failed-start: PASS
+Cold provider start failed-start-retained: PASS
+Cold provider start failed-release-retained: PASS
+Cold provider start native-retained: PASS
+Cold provider start partial-failed: PASS
+Cold provider start partial-retained: PASS

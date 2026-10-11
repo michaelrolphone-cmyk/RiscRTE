@@ -40,7 +40,7 @@ static bool failNextWrite=false;
 static const char* path(const char*p){return !strncmp(p,"/updatefs/",10)?p+9:nullptr;}
 struct Cookie {spiffs_file fd;};
 static ssize_t reader(void*c,char*p,size_t n){s32_t r=SPIFFS_read(&stage->fs,static_cast<Cookie*>(c)->fd,p,n);if(r<0){if(SPIFFS_errno(&stage->fs)==SPIFFS_ERR_END_OF_OBJECT)return 0;errno=EIO;return -1;}return r;}
-static ssize_t writer(void*c,const char*p,size_t n){s32_t r=SPIFFS_write(&stage->fs,static_cast<Cookie*>(c)->fd,const_cast<char*>(p),n);if(r<0)errno=ENOSPC;return r;}
+static ssize_t writer(void*c,const char*p,size_t n){s32_t r=SPIFFS_write(&stage->fs,static_cast<Cookie*>(c)->fd,const_cast<char*>(p),n);if(r<0){errno=ENOSPC;return -1;}return r;}
 static int closer(void*c){auto* k=static_cast<Cookie*>(c);int r=SPIFFS_close(&stage->fs,k->fd);delete k;if(r<0)errno=EIO;return r<0?-1:0;}
 extern "C" size_t __real_fwrite(const void*,size_t,size_t,FILE*);
 extern "C" size_t __wrap_fwrite(const void*p,size_t size,size_t n,FILE*f){if(failNextWrite){failNextWrite=false;errno=EIO;return 0;}return __real_fwrite(p,size,n,f);}

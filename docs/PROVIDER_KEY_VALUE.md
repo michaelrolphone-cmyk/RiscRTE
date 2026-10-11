@@ -42,7 +42,7 @@ unchanged into its authorized namespace. Unlisted keys and writes to read-only
 keys return CONTEXT without any backend I/O. Both callbacks remain present even
 for an all-read-only table; denial is enforced by the broker. There is no alias,
 enumeration, open/close, delete, filesystem, transaction or unrestricted namespace
-API. Runtime stores at most 16 maps of nine keys each; calls allocate nothing.
+API. Runtime stores at most 16 maps of ten keys each; calls allocate nothing.
 
 The example namespaces and keys above are deployment policy, not firmware
 defaults. Existing app KV grants continue to cover their entire namespace. A
@@ -135,3 +135,5 @@ production ELF validator. It is not staged into the boot store.
 Host fixtures and target CI builds do not qualify physical persistence,
 power-loss behavior, latency, wake reliability, output safety or current draw.
 No complete application service or product feature ships in this prerequisite.
+
+The ten-key admission bound preserves the Points catalog migration metadata alongside its existing settings, occurrence, output-policy and timezone keys. Each name and access mode is still explicit; an eleventh entry is rejected before provider construction or backend I/O. The added fixed map row costs 384 bytes across all sixteen provider slots on the 32-bit target.

@@ -224,7 +224,8 @@ static void schema() {
   // The ninth exact authorization is admitted; a tenth rejects before even
   // platform binding, ELF constructors or storage/hardware backend activity.
   doc = parseDoc(boot()); doc["drivers"][0]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"ninth","namespace":1,"access":"read"})").as<JsonVariantConst>()); file("boot.json", encode(doc)); expectAdmission(true);
-  doc["drivers"][0]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"tenth","namespace":1,"access":"read"})").as<JsonVariantConst>()); file("boot.json", encode(doc)); expectAdmission(false, &backend, true);
+  doc["drivers"][0]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"tenth","namespace":1,"access":"read"})").as<JsonVariantConst>()); file("boot.json", encode(doc)); expectAdmission(true);
+  doc["drivers"][0]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"eleventh","namespace":1,"access":"read"})").as<JsonVariantConst>()); file("boot.json", encode(doc)); expectAdmission(false, &backend, true);
   fixtures(); file("first.json", driver(0, "[]")); expectAdmission(false); // Unused map.
   fixtures(); file("first.json", driver(0, R"([{"capability":"storage.key-value.bound","api":2}])")); expectAdmission(false);
   fixtures(); file("first.json", driver(0, R"([{"capability":"storage.key-value.bound","api":1},{"capability":"storage.key-value.bound","api":1}])")); expectAdmission(false);
@@ -243,7 +244,7 @@ static void schema() {
   fixtures(); doc = parseDoc(boot()); doc["drivers"][0]["key_value"][0]["key"] = "abcdefghijklmno";
   doc["drivers"][0]["key_value"][0]["namespace"] = INT32_MAX; doc["drivers"][0]["key_value"][1]["key"] = "a-._09";
   file("boot.json", encode(doc)); expectAdmission(true);
-  // Maximum bounded policy storage: 16 selected modules, nine entries each.
+  // Maximum bounded policy storage: 16 selected modules, ten entries each.
   fixtures(); doc = parseDoc(boot()); doc.remove("app_capabilities"); doc["drivers"].to<JsonArray>();
   for (unsigned i = 0; i < 16; ++i) {
     auto manifest = parseDoc(driver(0)); manifest["id"] = "bound-limit-" + std::to_string(i);
@@ -252,9 +253,10 @@ static void schema() {
     auto selection = doc["drivers"].as<JsonArray>().add<JsonObject>(); selection["manifest"] = filename;
     selection["key_value"].set(parseDoc(primaryMap).as<JsonVariantConst>());
     selection["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"ninth","namespace":1,"access":"read"})").as<JsonVariantConst>());
+    selection["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"tenth","namespace":1,"access":"read"})").as<JsonVariantConst>());
   }
   file("boot.json", encode(doc)); expectAdmission(true);
-  doc["drivers"][15]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"tenth","namespace":1,"access":"read"})").as<JsonVariantConst>());
+  doc["drivers"][15]["key_value"].as<JsonArray>().add(parseDoc(R"({"key":"eleventh","namespace":1,"access":"read"})").as<JsonVariantConst>());
   file("boot.json", encode(doc)); expectAdmission(false, &backend, true);
   // Legacy selections and omitted key_value remain accepted without backend.
   fixtures(); file("first.json", driver(0, "[]")); file("boot.json", R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"first.json"}]})"); expectAdmission(true, nullptr);

@@ -1,0 +1,526 @@
+{
+  "base": "5a5c14de2dbcf189d1ca4912dfde1773a4d9813d",
+  "unchanged_files": 130,
+  "files": [
+    {
+      "path": "lib/elf_loader/CHANGELOG.md",
+      "sha256": "59231c48ad41bff1ed67690b194ff5e1780d07d3cb194f9d9674d35accd1a1a4"
+    },
+    {
+      "path": "lib/elf_loader/CMakeLists.txt",
+      "sha256": "0b942c88ecb16950bed4f418983014f6c9a25487fdfc621476ebefb51a3765af"
+    },
+    {
+      "path": "lib/elf_loader/Kconfig",
+      "sha256": "532cea3ef8cb7e9af97694c1f3bddec60a8453de6f7aabbbbcaca855168b3ca7"
+    },
+    {
+      "path": "lib/elf_loader/README.md",
+      "sha256": "dd33bb577b32f104f3e9f8b0650737cbb885b97b13ffab79c23b6d8057900524"
+    },
+    {
+      "path": "lib/elf_loader/UPSTREAM.md",
+      "sha256": "e8b6bacaa326492b3387fd46aa477a0fed5a42e116bd94513070a18a05c9a129"
+    },
+    {
+      "path": "lib/elf_loader/check_shared_object.cmake",
+      "sha256": "f6db411fcc6bb9a02fa1f09919ddfb99374a11bc57942ac4df6f6188ef032c45"
+    },
+    {
+      "path": "lib/elf_loader/elf_loader.cmake",
+      "sha256": "4e2b74ed77903be2b107dfe2c103deb5e76db4b3259179f8e17976a587dd79fa"
+    },
+    {
+      "path": "lib/elf_loader/idf_component.yml",
+      "sha256": "259f9e135559178b85ec6710ab6a17ab9a6a88c81187966eaa3ba614a455a7a9"
+    },
+    {
+      "path": "lib/elf_loader/include/esp_dlfcn.h",
+      "sha256": "dfba28c600bd42e48b683db8bc074ab625fbe45ae8467ec0838cbd1ca7a3a8da"
+    },
+    {
+      "path": "lib/elf_loader/include/esp_elf.h",
+      "sha256": "f4cef04b710e4863670a159040de4435a7fc19790a293a6223d2656ee98eb006"
+    },
+    {
+      "path": "lib/elf_loader/include/private/elf_platform.h",
+      "sha256": "8b13fcd20fb8f4f783bd29b868a9a9b4a3caf58047ee851230d1f3f38bda6792"
+    },
+    {
+      "path": "lib/elf_loader/include/private/elf_symbol.h",
+      "sha256": "288b180445016fc889a1aec0ece5693c9ba99d923f7ec82bc87b0f85b72bb719"
+    },
+    {
+      "path": "lib/elf_loader/include/private/elf_types.h",
+      "sha256": "13a6aa3f2977c9da9d83ed7101a6deed9c01e96d0c614be3f84963be0c1a3eda"
+    },
+    {
+      "path": "lib/elf_loader/include/private/esp_dlcache.h",
+      "sha256": "cde7ce194e344a6bca96a148680a01fd7feb1e96e09d742d830e8ebfc163cad4"
+    },
+    {
+      "path": "lib/elf_loader/include/private/esp_dlmod.h",
+      "sha256": "e8889e99df7336e2cd7b799c30f6ff0370b0f29df9748fffc3f473f0aa1f88e9"
+    },
+    {
+      "path": "lib/elf_loader/include/private/esp_elf_data_layout.h",
+      "sha256": "54bbab2ca18a95c92741da93c169605752914941f61955b694e8cbb301bcfc1e"
+    },
+    {
+      "path": "lib/elf_loader/include/private/esp_privileged_elf.h",
+      "sha256": "5467dd78225d84b528ad44579632aabbb53adf71523d10d4a665bb72cf2ca46a"
+    },
+    {
+      "path": "lib/elf_loader/include/private/esp_privileged_imports.h",
+      "sha256": "0a4a706df9a4580bb08ab8b32c294e74d4800ab8c6c5648aa243a1736cde142a"
+    },
+    {
+      "path": "lib/elf_loader/include/private/esp_privileged_manifest_imports.h",
+      "sha256": "d55d9f76d789f89ed00dac65a05b79f3e653c4a13e08a29fdcffbced1256c91a"
+    },
+    {
+      "path": "lib/elf_loader/include/private/esp_privileged_os_cpu.h",
+      "sha256": "7200f193e3ec0c83aaed46cc74369f5840a6e10a3232127079cc8ebbf1a5988c"
+    },
+    {
+      "path": "lib/elf_loader/include/private/privileged_os_cpu_symbols_v1.def",
+      "sha256": "77d0eb9c83ab4ea051c9b1011592049e774dc8c2e6d9ddbd14753cfedc3570e6"
+    },
+    {
+      "path": "lib/elf_loader/include/private/privileged_public_libc_compat_v1.def",
+      "sha256": "a887c81d255514eca177dda0f423b256c22f03caf521010845730c718f3169fa"
+    },
+    {
+      "path": "lib/elf_loader/library.json",
+      "sha256": "a42a8dcb15d81d987b055edfebec9e72e52af1bb9c978d42db7e6b48fbc8f5ee"
+    },
+    {
+      "path": "lib/elf_loader/license.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "lib/elf_loader/linker.lf",
+      "sha256": "26e023b07668f37c812cad1b41217ee7f31e10683acb4cb5407daf6fd8d53565"
+    },
+    {
+      "path": "lib/elf_loader/project_include.cmake",
+      "sha256": "f2fb6d2b5559ae8239a135b557aad3f147066f9a9c0afd0b72f28159ab106af5"
+    },
+    {
+      "path": "lib/elf_loader/src/arch/esp_elf_riscv.c",
+      "sha256": "f342b33cab7a66eb49bafc5f711f9c9ec53ccf2d81731b4719f4efa630c695a7"
+    },
+    {
+      "path": "lib/elf_loader/src/arch/esp_elf_xtensa.c",
+      "sha256": "9391c1f8c85becc8ec2d68188c7a451d83208b655ad083a61b4c51f80c067754"
+    },
+    {
+      "path": "lib/elf_loader/src/dlso/dlfcn.c",
+      "sha256": "12fc3a37cf14f479f635d7f5c64d6fd933489688f318470c3aa6cb9e4da08999"
+    },
+    {
+      "path": "lib/elf_loader/src/dlso/dlmod.c",
+      "sha256": "9cb75b09a25ccc7270f59328cef0603cd2c6200c1c3991e7d7b648c71641ce69"
+    },
+    {
+      "path": "lib/elf_loader/src/esp_all_symbol.c",
+      "sha256": "203376641eb31d39f5691865afbb6fab1eae2e8317e36e41f0a0192be206fb69"
+    },
+    {
+      "path": "lib/elf_loader/src/esp_elf.c",
+      "sha256": "d9db67b589fce4002ed59b06271a22df5f2be3a441b5ea1e1c1121815741eae7"
+    },
+    {
+      "path": "lib/elf_loader/src/esp_elf_adapter.c",
+      "sha256": "deccaf06ac8511b6f8a1bff2a5fe9c7928e345aaeefd6a89ea4bca397c13dd3a"
+    },
+    {
+      "path": "lib/elf_loader/src/esp_elf_symbol.c",
+      "sha256": "bc72e8c00a2ca2bc2eb46a31aad7f7b7da1b831e93ac1d5c418d422f8db04ff5"
+    },
+    {
+      "path": "lib/elf_loader/src/esp_elf_validate.c",
+      "sha256": "b9071ae62ba5d758fda077d436cc15c350028c341d3d9b531c3e41ba3d465594"
+    },
+    {
+      "path": "lib/elf_loader/src/esp_privileged_elf.c",
+      "sha256": "819c871da4c854665d57a6431c1d756bf9143793f19bb1bbac7dc05c9fb81220"
+    },
+    {
+      "path": "lib/elf_loader/src/esp_privileged_imports.c",
+      "sha256": "aecce9cf09ad22f70a4eabafd964c9b1f5ef1a827d515d07334ad6fbbf381cd2"
+    },
+    {
+      "path": "lib/elf_loader/src/esp_privileged_manifest_imports.c",
+      "sha256": "d88466041bcc9828bb007197b0083af6570c7c8f0d8b896c6d17c234bf15f3ef"
+    },
+    {
+      "path": "lib/elf_loader/src/esp_privileged_os_cpu.c",
+      "sha256": "3b97b7d729038afcd8c8c941e2980f047d228c6b5f6e811054e26c9d14adf175"
+    },
+    {
+      "path": "lib/elf_loader/src/soc/esp_elf_esp32s2.c",
+      "sha256": "163857a64578cf8bfbed900ea5168cd43a1db6a51b7921b7dec1b588b989e03e"
+    },
+    {
+      "path": "lib/elf_loader/tool/symbols.py",
+      "sha256": "81398e6eeb1bd381e0a8a1cb36d81452f6ea8f2d69a577e3a9599619c5e54246"
+    },
+    {
+      "path": "platformio.ini",
+      "sha256": "be8629355dea6005f580bc621cd14c55d462fca1bc8bf5bced2542bd03966cf1"
+    },
+    {
+      "path": "sdk/app/RiscAppDataV1.h",
+      "sha256": "49ced12bd617ce9e29626f97ee21d824edcf5f8272524a7da8780c60979df201"
+    },
+    {
+      "path": "sdk/app/RiscFailureEvidenceV1.h",
+      "sha256": "f2b024c21780155bacf78bd67a279d8959365c1d25ff1ba421449dd5d3b35265"
+    },
+    {
+      "path": "sdk/app/RiscKeyValueV1.h",
+      "sha256": "5d5524ffd27b164f31505c5f538f528b39b35e356922e03e2eb59a9c68677b56"
+    },
+    {
+      "path": "sdk/app/RiscKeyValueV2.h",
+      "sha256": "c66337a93c6f5fff6dac9507e011655f4827c3d0ec06b3e6d9d039084b3ec4d3"
+    },
+    {
+      "path": "sdk/app/RiscPerformanceV1.h",
+      "sha256": "c1e52e2e257a057dbbbc371fb8d83d9262bcea674f28f6ce9c56725b0d6dd14d"
+    },
+    {
+      "path": "sdk/app/RiscProviderPromotionV1.h",
+      "sha256": "751585fed0336bf068cdde488d65b2e0191f113184e48eecbfb4f80861512c51"
+    },
+    {
+      "path": "sdk/app/RiscRealtimeV1.h",
+      "sha256": "639781f728841cda6d40c3033877436b9e5d59519a4b15e11a9bc99b2365395d"
+    },
+    {
+      "path": "sdk/app/RiscResidentShellV1.h",
+      "sha256": "1a84715c03fcc7fae7f75cb72c0daf875e761567dda5d1b39ec0dc8b14fba8bd"
+    },
+    {
+      "path": "sdk/app/RiscRetainedWakeV1.h",
+      "sha256": "7c7b6f0d56631f3aab521a43499d2ea840d075084536e4afa654a74c52e1e511"
+    },
+    {
+      "path": "sdk/app/RiscRuntimeV1.h",
+      "sha256": "0171988c0b4cb7ff1146e871fab17e408ad352a1220f5851abef4c152473e8ad"
+    },
+    {
+      "path": "sdk/app/RiscSerialStreamSessionV1.h",
+      "sha256": "66d328c2a201625a7be348507c8dbedcaa937dfb46f86b05ecd04d60e3fba0b7"
+    },
+    {
+      "path": "sdk/app/RiscStorageVolumeV1.h",
+      "sha256": "96902eb6cca4356d44066798d0edb1260e32ae23721a401404450cdb191cd7e7"
+    },
+    {
+      "path": "sdk/app/RiscStreamClientV1.h",
+      "sha256": "ef5deb9a3bf8d20c0af9859a83977b93acfb8e480a851d0dcf96caf2795babcb"
+    },
+    {
+      "path": "sdk/app/T5FileOpenApi.h",
+      "sha256": "c1b873e364dba81ce39d8c8a62668db618735407a6291dca87b9795ce4accc30"
+    },
+    {
+      "path": "sdk/driver/GardenPlatformV1.h",
+      "sha256": "2e8e32f52554b706fafce1af27a5fbaf99187f67ecb55dc0cf333144b48ef9d2"
+    },
+    {
+      "path": "sdk/driver/RiscBankStoreV1.h",
+      "sha256": "4c20c21500f1c0724221f30cb5664e99b8316e3d0a9594319f63a206ed0e25a8"
+    },
+    {
+      "path": "sdk/driver/RiscBoundAppDataV1.h",
+      "sha256": "f4c6b9e475409515ee3b385a85790f592e8d943b0f811707926a32be4e1a6a42"
+    },
+    {
+      "path": "sdk/driver/RiscBoundKeyValueV1.h",
+      "sha256": "0d77dffef1e6513cbf9b3cf38266f7c9ebcc25d000605838821241ba742cd672"
+    },
+    {
+      "path": "sdk/driver/RiscBoundKeyValueV2.h",
+      "sha256": "f9c6589a346e6a79e784c37862228cc0c3ad3fe0c4cd8d6664800605f239b606"
+    },
+    {
+      "path": "sdk/driver/RiscDeepSleepV1.h",
+      "sha256": "0949cf9591ef0f07b61c1306897287ea2eb1533755b5e569bfe1cb2c9b236161"
+    },
+    {
+      "path": "sdk/driver/RiscDiagnosticSourceV1.h",
+      "sha256": "a2e246858df68fc5ad452f0d4b07d8eba10267176f75f17346417ef2b83fa845"
+    },
+    {
+      "path": "sdk/driver/RiscGpioBankV1.h",
+      "sha256": "58cb736872a689413f6ffcf24cc5cc1bce5187e7d7cfb6fcffe10ad854e7a35c"
+    },
+    {
+      "path": "sdk/driver/RiscGpioSdmmcV1.h",
+      "sha256": "00d7788c381be557deec18a959b55d474bad7edc0331ae8331b878a618b9818f"
+    },
+    {
+      "path": "sdk/driver/RiscHciControllerStatusV1.h",
+      "sha256": "235b388d91ed7e0becbb44dd476a29ef526fb2f7d9bf44b1072b86cbe5860e0e"
+    },
+    {
+      "path": "sdk/driver/RiscHttpClientV1.h",
+      "sha256": "e966177d426d3fadcb420f5fa9dd7226d3450a208f7ed333808d6466ba7bf8d6"
+    },
+    {
+      "path": "sdk/driver/RiscLightSleepV1.h",
+      "sha256": "43cbd671265959ec2db7904bf6185e97a87c4cde9d389cdccf6fbb7c916f3b94"
+    },
+    {
+      "path": "sdk/driver/RiscPackageResourcesV1.h",
+      "sha256": "8aff53415cf68a46e8e492dd02d12bde802ce2a1d69629dd4f3b0aad5794e459"
+    },
+    {
+      "path": "sdk/driver/RiscPlatformClockV1.h",
+      "sha256": "41a12f6529f38731ee874f8bc166e1cf89fe376a1448fe5a4dd4c9abac90e5e2"
+    },
+    {
+      "path": "sdk/driver/RiscPlatformRealtimeV1.h",
+      "sha256": "ed642c0f37350f7f1402342c7710564019db9c4750f3572f153d2ef1e37eca98"
+    },
+    {
+      "path": "sdk/driver/RiscProviderSyncV1.h",
+      "sha256": "c0981bde804b20c1b963323f91c4e9804c144c56535160bfd467be7e93028f45"
+    },
+    {
+      "path": "sdk/driver/RiscProviderV2.h",
+      "sha256": "62478822fa8943ddfd1607f8923de52d7b5b6fc8a0db2df6ca07c65c95c62d41"
+    },
+    {
+      "path": "sdk/driver/RiscRadioIqResourceV1.h",
+      "sha256": "dd6a9684d5be6203846b5ee06f685ca3dae6835d1e3b95821c336a48b5fa3827"
+    },
+    {
+      "path": "sdk/driver/RiscRadioScanV1.h",
+      "sha256": "696227eecfd124f941023673680e0a15917d5b03c8f769756ed12ec34f7ccc9b"
+    },
+    {
+      "path": "sdk/driver/RiscStreamProviderV1.h",
+      "sha256": "0fe306e060321387c816bb70ec4370a501a423f4fe19a20c9be80aa1b98f3432"
+    },
+    {
+      "path": "sdk/driver/RiscStreamResultV1.h",
+      "sha256": "af140ee9ca4f6286c5f1beeecb0a0952264b14eb40d3ba4f313ff952e8824a6f"
+    },
+    {
+      "path": "sdk/driver/RiscStreamSessionProviderV1.h",
+      "sha256": "fe463661530c43ae7d1dd8b9c8227fdc6a7e4380bca3f5c8a13287cb0db9e873"
+    },
+    {
+      "path": "sdk/driver/RiscTimedSleepV1.h",
+      "sha256": "475ba9bfaf6c7497ace7baeb93f2bd9a6abe1e3a91f62eed24862a88d60dbf34"
+    },
+    {
+      "path": "sdk/driver/RiscUsbPhyResourceV1.h",
+      "sha256": "fe668ff8e8f83ea454eafd059c61c633d2213bc2a77504d8794a64c1dc11b016"
+    },
+    {
+      "path": "sdk/driver/RiscWakeSetV1.h",
+      "sha256": "0b5a4914ac67d37b420e1ea19b591a71440f6e4c20149ca4324e1049517ba375"
+    },
+    {
+      "path": "sdk/driver/TWatchPlatformV1.h",
+      "sha256": "88457c6cd36a8d2550c964ede1060b4006b72be5d290cff7cd108087bacc16dd"
+    },
+    {
+      "path": "sdk/hardware/RiscHardwareConfigV1.h",
+      "sha256": "47fa4cd7d4f09f571a5aedc87376d2f57520ad7873f5556af0a932011633e240"
+    },
+    {
+      "path": "sdk/hardware/RiscTouchI2cV2.h",
+      "sha256": "78179bc7a8d2dbbb5fb738d1ffabe02b31312173e70c9573941d1c8a4fcad3cf"
+    },
+    {
+      "path": "sdk/hardware/TWatchHardwareV1.h",
+      "sha256": "ca48ca21a944565ae185f7c4e8cc0e73bcc18871d79b966f7e7da916e7ab2c99"
+    },
+    {
+      "path": "src/ports/esp32s3/CooperativeDelay.h",
+      "sha256": "583c9f420a5e5b8a3d01d43d9d2e95209697a653cb39af53584d9a8e9204d1a3"
+    },
+    {
+      "path": "src/ports/esp32s3/CpuPort.cpp",
+      "sha256": "bd03dd5c1dd482d1acaca86925566cb38ed516297db39a935166c178e19318bd"
+    },
+    {
+      "path": "src/ports/esp32s3/CpuPort.h",
+      "sha256": "004558aa1d4a471c3d577176490aea2a818c5d35c8a9723860424312fa7e0292"
+    },
+    {
+      "path": "src/ports/esp32s3/CpuSdmmc.inc",
+      "sha256": "48e04608dd53b363c75d920f3173f7c710a5551d854a9896779754ebb621f672"
+    },
+    {
+      "path": "src/ports/esp32s3/HciBounds.h",
+      "sha256": "59ef0d4f8fcdf3bb5d3ae65f905fc9eb899ab48d1dde6bd8345d056c2b35dd34"
+    },
+    {
+      "path": "src/ports/esp32s3/HttpBounds.h",
+      "sha256": "4f0549b3cbc2e30d2300b146e7a7099dbc7d36a968c635f9a3af23afdfd3f20c"
+    },
+    {
+      "path": "src/ports/esp32s3/HttpResponse.h",
+      "sha256": "9e9aba2cd3663fdc7c36b9f823be2d187cb02cdd918ac73b9593ac23396929ef"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeAppData.cpp",
+      "sha256": "8089a47f538feb2cd9b48d83b2a182d9e16597fe9dd3db1051edaca302cc9f69"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeAppData.h",
+      "sha256": "3abdedb89cc0edd0dd328113c5f246f123598bf0982a402a52b68a98fe4763b2"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeBankStore.cpp",
+      "sha256": "1b0857426486d2f80f5360aa85df20e6ce13407cfa181406616af5016bccfb64"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeBankStore.h",
+      "sha256": "daaf6afd22178dcf7fa9a037491da98e6cb963e955672eefd75ea3e3c217a858"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeBoard.h",
+      "sha256": "9147f5a56cbb49982d3bb8cb671d35dba978d3eb0c14a47bc8bf829a610d5f0c"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeBootstrap.cpp",
+      "sha256": "b28a2dc96b99b5ed57702a1c57e478cd40a020fcf8da33b8697135b67875cf40"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeBootstrap.h",
+      "sha256": "ab73c519e69d521c3302353f67ce27032a8ac7e205fc156ac45a2b502ee84b8f"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeDiagnosticBinding.h",
+      "sha256": "daa889051087e25e7c4d9472cc2765d16aa3c5a6c2fce0ab604614dc95675eea"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeFailureEvidence.cpp",
+      "sha256": "586e8715d9d172af960ae281f8bdd665f0d1724f39ba022c2dd7bdd24a51aae6"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeFailureEvidence.h",
+      "sha256": "016a0451a5ea911d6e818553f22673dc2cdb11662241bf00f5dd4e78fe76c4f0"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeHardware.cpp",
+      "sha256": "d7654eb91d5d12e368949503f59cfe1f47c6fb0e9bf3e9523c3937128e19f3b7"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeHci.h",
+      "sha256": "e682920cdae95b00321178807c0bdd3c1881c752f15e421d4ee2a93b18745673"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeHttp.h",
+      "sha256": "e8d5e5f1ec2dc2614af9a75af27dae1439081bd9b87cdc3c086809ad850920fa"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeI2s.h",
+      "sha256": "379fa50d32d535ef705fbcebce783a4c21b8012fff56d2bce9a59716f10764f6"
+    },
+    {
+      "path": "src/ports/esp32s3/NativePwm.inc",
+      "sha256": "17d09d56dacd6ea703dc64865a3214847376cab62b17354db9edc0c10b4f7d42"
+    },
+    {
+      "path": "src/ports/esp32s3/NativePwmStop.inc",
+      "sha256": "5ffa08642982ae9133b5b974ba5dc82838117b79e2d8b128f36d05e000c04e3f"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeRadio.h",
+      "sha256": "ce77401e7de255203b493d9595a36bd2891a53e4b2366ef40c655e49ea19c192"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeRadioIq.h",
+      "sha256": "4fb48c3d6cb11fd382e501e4517d12dccf500a8faefc811d72cf7c49a0dce0c6"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeRealtime.cpp",
+      "sha256": "91da83dfe09a75858ccba8bb02e728f7958c213811617d2db585daae1f31c3d6"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeRealtime.h",
+      "sha256": "354dbe30e528743460fb8359fb4cd529413e0a7ba5c40ebd54ed11392fc26732"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeRetainedWake.cpp",
+      "sha256": "7f1e04dcaa6a012fbb2432965ef788ec248b2688909581a49ed56cd3422d1c21"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeRetainedWake.h",
+      "sha256": "2a5475c4b69713ae50270937dee3240d23d741e41214e607a6e9637795b5ffa3"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeRuntime.h",
+      "sha256": "83d4b694395cb140fd9b06a4213963a3b6e2a80c6b08f4fb5afc5d8b2d3ce1e8"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeSdmmc.h",
+      "sha256": "ac792ee1addd7941cd542476da098ba269657677b25b3013a2714ebadc2b18ae"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeSleep.h",
+      "sha256": "1810ed26abbfef554435f80bdb6241a656677ccb3c935391646ca74fb4b8f9af"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeSntp.cpp",
+      "sha256": "8b305caed489f142def5072d7c777c6680da6789809577040096df653d1c0e02"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeSntp.h",
+      "sha256": "2d1a34c02c88807748a3eccf43057b8541839d758e92450ea7a0e52303b7f751"
+    },
+    {
+      "path": "src/ports/esp32s3/NativeSpi.inc",
+      "sha256": "d85ba11ea93cb85eb446b69a741ba6fca9f3cd77d2a7c4bb76568ac11ac58e10"
+    },
+    {
+      "path": "src/ports/esp32s3/NvsBootstrapInput.h",
+      "sha256": "67e2cb6be51df71ac3887e0a679d6d72a92e34e3f691e197db150ae82d3a70f1"
+    },
+    {
+      "path": "src/ports/esp32s3/NvsKeyValue.cpp",
+      "sha256": "ba2956fe6df223eb42c739b2b6df88498ac46646a40c0e116bf00e15a817644d"
+    },
+    {
+      "path": "src/ports/esp32s3/NvsKeyValue.h",
+      "sha256": "fa35b97705b949df6a82c856b686f44bd647aafd55e123d22fff98d500ba54b8"
+    },
+    {
+      "path": "src/ports/esp32s3/OwnerMaintenance.h",
+      "sha256": "1ecdf32d0a4e4db4aab67a101042c897ef61febb8c52f1c7d4c8e44ddbef5347"
+    },
+    {
+      "path": "src/ports/esp32s3/OwnerNvsInstaller.cpp",
+      "sha256": "8f1cabc3663059447691fba5df0dd280e4114b471d2d1c4c2a136ee2217b427e"
+    },
+    {
+      "path": "src/ports/esp32s3/OwnerNvsInstaller.h",
+      "sha256": "92b9ce872e53f4f9f187c7a079850bff8e3ed15514109a02bcccf6c9fae57617"
+    },
+    {
+      "path": "src/ports/esp32s3/ProviderDiagnostics.cpp",
+      "sha256": "28441d3b258840827c95e0721c7518606ef43968d0b3da32ad9f2040d21f3694"
+    },
+    {
+      "path": "src/ports/esp32s3/ProviderDiagnostics.h",
+      "sha256": "d717aaff4c41aaaa5d9b376f6f66060f4045b0c025494fbe558e55d506e56e46"
+    },
+    {
+      "path": "src/ports/esp32s3/SleepDiagnostics.cpp",
+      "sha256": "f2c5ecdb962735e2e35b471126ad1595c8bc7ef5f3b5188482b8b67fc25ee8fe"
+    },
+    {
+      "path": "src/ports/esp32s3/SleepDiagnostics.h",
+      "sha256": "3104219911fd185c0907ddf5d512205d843e6996fc803a98064b2ddf8dcc9309"
+    }
+  ]
+}

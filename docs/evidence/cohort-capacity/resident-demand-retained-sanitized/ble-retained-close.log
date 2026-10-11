@@ -1,0 +1,38 @@
+PHASE display-submit graph=13 peak=15 boot=8 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0
+PHASE home-started graph=13 peak=15 boot=8 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0
+PHASE home-before-handoff graph=13 peak=15 boot=8 host=5/5 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0
+PHASE display-submit graph=12 peak=15 boot=8 host=4/4 foreground=0/0 bytes=96000 blocks=2 peak_bytes=96000 allocations=2 frees=0
+PHASE ble-initialized graph=17 peak=17 boot=8 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE ble-modal-open graph=18 peak=19 boot=9 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE display-submit graph=18 peak=19 boot=9 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE ble-modal-edited graph=18 peak=19 boot=9 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE display-submit graph=18 peak=19 boot=9 host=4/4 foreground=5/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE ble-modal-retained graph=18 peak=19 boot=9 host=0/4 foreground=0/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE home-after-handoff graph=18 peak=19 boot=9 host=0/4 foreground=0/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+PHASE runtime-stopped graph=18 peak=19 boot=9 host=0/4 foreground=0/5 bytes=192000 blocks=4 peak_bytes=192000 allocations=4 frees=0
+peripherals frames=4 touch=3 keyboard=0 retained=1
+RESULT client=ble mode=retained-close graph_peak=19 graph_capacity=42 host_sampled_peak=7 foreground_sampled_peak=6 host_provider_sampled_peak=7 foreground_provider_sampled_peak=6 owned_peak_bytes=192000 owned_peak_blocks=4 owned_allocations=4 owned_frees=0 retained_owned_bytes=192000
+RTE_APP phase=entry
+SPARSE_CLOCK stage=classification status=0 elapsed_ms=0
+SPARSE_CLOCK stage=promotion status=0 elapsed_ms=0
+APP t_ms=0 stage=radio-preferences result=missing defaults=wifi-allowed,bluetooth-off
+APP t_ms=0 stage=radio-policy wifi=allowed auto-connect=not-requested
+APP t_ms=0 stage=bluetooth-request enabled=no
+APP t_ms=0 stage=bluetooth-result state=off
+APP t_ms=0 stage=draw-begin 
+APP t_ms=0 stage=draw-end 
+APP t_ms=0 stage=display-submit-begin intent=clean damage=0,0,800,480
+APP t_ms=0 stage=display-submit-end result=accepted
+APP t_ms=0 stage=display-complete result=complete
+SPARSE_CLOCK stage=native-recovery status=0 elapsed_ms=0
+adapter phase=4 failed=0 touch_api=0x615bc0 sub=1 api_size=56 need=56 nav=1 retained=0
+home started=1 desk_retained=0 promoted=1 ready=1 sleep_retained=0
+APP t_ms=0 stage=draw-begin 
+APP t_ms=0 stage=draw-end 
+APP t_ms=0 stage=display-submit-begin intent=low-latency damage=0,0,800,480
+APP t_ms=0 stage=display-submit-end result=accepted
+APP t_ms=0 stage=display-complete result=complete
+RTE_APP phase=entry
+APP t_ms=62 stage=app-retain reason=uncertain-capability-custody
+RTE_APP phase=returned
+RTE_APP phase=returned

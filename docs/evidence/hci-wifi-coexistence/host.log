@@ -1,0 +1,23 @@
+CpuPort + native HCI + native Wi-Fi worker: idle-iq-owner PASS
+CpuPort + native HCI + native Wi-Fi worker: token-exhausted PASS
+CpuPort + native HCI + native Wi-Fi worker: malformed-native-table PASS
+CpuPort + native HCI + native Wi-Fi worker: queued-nested PASS
+CpuPort + native HCI + native Wi-Fi worker: connected-nested PASS
+CpuPort + native HCI + native Wi-Fi worker: phases PASS
+CpuPort + native HCI + native Wi-Fi worker: cancel-nested PASS
+CpuPort + native HCI + native Wi-Fi worker: worker-start PASS
+CpuPort + native HCI + native Wi-Fi worker: worker-stop PASS
+CpuPort + native HCI + native Wi-Fi worker: worker-connected PASS
+CpuPort + native HCI + native Wi-Fi worker: worker-start-open PASS
+CpuPort + native HCI + native Wi-Fi worker: worker-stop-open PASS
+CpuPort + native HCI + native Wi-Fi worker: worker-connected-open PASS
+CpuPort + native HCI + native Wi-Fi worker: retained-wifi PASS
+CpuPort + native HCI + native Wi-Fi worker: open:alloc PASS
+CpuPort + native HCI + native Wi-Fi worker: uncertain init retained/retry PASS
+CpuPort + native HCI + native Wi-Fi worker: open:enable PASS
+CpuPort + native HCI + native Wi-Fi worker: open:register PASS
+CpuPort + native HCI + native Wi-Fi worker: rollback:disable PASS
+CpuPort + native HCI + native Wi-Fi worker: rollback:deinit PASS
+CpuPort + native HCI + native Wi-Fi worker: close:disable PASS
+CpuPort + native HCI + native Wi-Fi worker: close:deinit PASS
+CpuPort + native HCI + native Wi-Fi worker: concurrent PASS

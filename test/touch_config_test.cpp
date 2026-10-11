@@ -60,7 +60,7 @@ int main(int argc,char**argv){
   const uint64_t outputs=bit(4)|((scenario && scenario!=11)?bit(2)|bit(10):0);assert(p.gpios_[0].output==outputs);
   if(scenario){const auto& v=device.config.touchPowered;assert(base.struct_size==sizeof(v) && device.hardware.config_size==sizeof(v));for(auto x:v.reserved)assert(!x);}
   else assert(base.struct_size==sizeof(risc_hw_i2c_touch_v1) && device.hardware.config_size==sizeof(risc_hw_i2c_touch_v1));
-  uint64_t token=0;auto& api=p.gpios_[0].api;assert(!api.claim(api.context,39,true,false,false,&token) && !token && !io);
+  uint64_t token=0;auto& api=p.gpios_[0].api.base;assert(!api.claim(api.context,39,true,false,false,&token) && !token && !io);
   assert(api.claim(api.context,10,false,false,scenario==12,&token));assert(api.release(api.context,token));
   if(outputs&bit(10)){assert(api.claim(api.context,10,true,false,false,&token));assert(api.release(api.context,token));}
   else assert(!api.claim(api.context,10,true,false,false,&token));

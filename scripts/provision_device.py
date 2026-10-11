@@ -6,6 +6,7 @@ The full image overwrites NVS and (ABI2) app-data. NEVER use for existing device
 """
 import argparse
 from pathlib import Path
+import re
 import shutil
 import struct
 import subprocess
@@ -24,9 +25,9 @@ FLASH_BYTES = 0x1000000
 NVS_GENERATOR_SHA256 = 'c6979797dcf373b6e0f2700c6d7b54675f3f197619e61325acd8865ca72182b3'
 
 
-def verify_seed(directory, work):
+def verify_seed(directory, work, extension_validator=None):
     directory = safe_path(directory)
-    record = decode(read(directory / 'seed.json', 128 * 1024))
+    record = decode(read(directory / 'seed.json', seed.SEED_MANIFEST_BYTES))
     require(record['schema'] == 'riscrte.provisioning-seed' and
             type(record['schema_version']) is int and record['schema_version'] == 1, 'seed schema')
     expected, app_data = seed.layout(record)
@@ -35,12 +36,36 @@ def verify_seed(directory, work):
         names |= {'appdata.bin', 'appdata-image.json'}
     if record['target'] == 'esp32s3-16mb-appdata-iq':
         names.add('radio-iq-proof.json')
+    extension=record.get('extension')
+    if extension is not None:
+        require(callable(extension_validator), 'explicit candidate extension validator required')
+        require(isinstance(extension, dict) and set(extension)=={'id','native_proof','assets','metadata'} and
+                isinstance(extension['assets'],dict) and len(extension['assets'])<=seed.EXTENSION_MAX_FILES,
+                'seed extension fields')
+        require(not names.intersection(extension['assets']) and
+                all(isinstance(name,str) and name not in seed.SEED_RESERVED and
+                    re.fullmatch(r'[A-Za-z0-9_.-]+\.json',name) for name in extension['assets']),
+                'seed extension asset overlap')
+        total=0
+        for item in extension['assets'].values():
+            require(isinstance(item,dict) and set(item)=={'bytes','sha256'} and
+                    type(item['bytes']) is int and 0<item['bytes']<=seed.EXTENSION_FILE_BYTES and
+                    isinstance(item['sha256'],str) and re.fullmatch('[0-9a-f]{64}',item['sha256']),
+                    'seed extension asset bounds')
+            total+=item['bytes']
+        require(total<=seed.EXTENSION_TOTAL_BYTES,'seed extension total bounds')
+        names.update(extension['assets'])
+    else:
+        require(extension_validator is None, 'seed does not declare a candidate extension')
     require(set(record['assets']) == names and record['segments'] == seed.segments(app_data), 'seed asset/offset inventory')
     require({p.name for p in directory.iterdir()} == names | {'seed.json', 'SHA256SUMS'}, 'incomplete or extra seed files')
-    blobs = {name: read(directory / name, 32 * 1024 * 1024) for name in sorted(names)}
+    blobs = {name: read(directory / name, seed.EXTENSION_FILE_BYTES if extension and name in extension['assets'] else 32 * 1024 * 1024) for name in sorted(names)}
+    if extension:
+        require(sum(len(blobs[name]) for name in extension['assets'])<=seed.EXTENSION_TOTAL_BYTES,
+                'seed extension total bounds')
     for name, data in blobs.items():
         require(record['assets'][name] == {'bytes': len(data), 'sha256': sha(data)}, 'seed digest mismatch')
-    checks = {**blobs, 'seed.json': read(directory / 'seed.json', 128 * 1024)}
+    checks = {**blobs, 'seed.json': read(directory / 'seed.json', seed.SEED_MANIFEST_BYTES)}
     require(read(directory / 'SHA256SUMS', 8192) == ''.join(
             f'{sha(data)}  {name}\n' for name, data in sorted(checks.items())).encode(), 'seed completion checksum mismatch')
     # Revalidate the frozen bytes, not paths an external process can change after
@@ -49,7 +74,8 @@ def verify_seed(directory, work):
     frozen = work / 'seed'; frozen.mkdir()
     for name, data in blobs.items():
         (frozen / name).write_bytes(data)
-    candidate, _ = seed.candidate(frozen, record['source_sha'])
+    candidate, _ = seed.candidate(frozen, record['source_sha'], extension_validator)
+    require(seed.exact_json(candidate.get('_seed_extension'),extension), 'seed extension revalidation mismatch')
     require(all(record[key] == candidate[key] for key in
                 ('source_sha', 'target', 'layout', 'store_abi', 'firmware_version')), 'seed candidate identity mismatch')
     require(len(blobs['bootfs0.bin']) == expected['bootfs0'][3], 'seed store size mismatch')
@@ -136,7 +162,7 @@ def make_nvs(generator, inputs, work):
     return data
 
 
-def compose(seed_directory, owner_directory, validator, generator, output, new_device=False):
+def compose(seed_directory, owner_directory, validator, generator, output, new_device=False, extension_validator=None):
     require(new_device is True, 'explicit new-device acknowledgement required; existing-device NVS must never be replaced')
     output = destination(output, private=True)
     owner_directory = safe_path(owner_directory)
@@ -147,9 +173,13 @@ def compose(seed_directory, owner_directory, validator, generator, output, new_d
     require(owner['profile_sha256'] == sha(profile) and owner['profile_bytes'] == len(profile), 'owner profile custody')
     with tempfile.TemporaryDirectory(prefix='riscrte-first-install-') as temp:
         work = Path(temp)
-        record, blobs = verify_seed(seed_directory, work)
+        record, blobs = verify_seed(seed_directory, work, extension_validator)
         require(owner['layout'] == record['layout'], 'owner inventory and seed layout mismatch')
         require(owner['runtime_target'] == record['target'], 'owner inventory and Runtime target mismatch')
+        if decode(profile).get('schema_version') == 3:
+            require(b'RISC_PROVISION_IMAGE:1\0' in blobs['firmware.bin'] and
+                    b'RISC_PROVISION_IMAGE:1\0' in blobs['firmware.elf'],
+                    'seed native does not support compact image provisioning')
         private_profile = work / 'profile.json'
         write(private_profile, profile)
         run_validator(validator, private_profile, work / 'inputs', owner['time_server'])
@@ -168,6 +198,12 @@ def compose(seed_directory, owner_directory, validator, generator, output, new_d
         # encoded NVS. Everything in this output is private, including hashes.
         payloads['profile.json'] = profile
         payloads['first-install.bin'] = bytes(image)
+        if 'extension' in record:
+            # Custody evidence is retained beside the private image. These
+            # JSON sidecars never enter the flash segment map or owner input.
+            payloads['candidate.json'] = blobs['candidate.json']
+            for name in record['extension']['assets']:
+                payloads[name] = blobs[name]
         manifest = {'schema': 'riscrte.first-install', 'schema_version': 1,
                     'layout': record['layout'], 'store_abi': record['store_abi'], 'target': record['target'],
                     'source_sha': record['source_sha'], 'firmware_version': record['firmware_version'],
@@ -178,6 +214,7 @@ def compose(seed_directory, owner_directory, validator, generator, output, new_d
                                       'Full image overwrites NVS and ABI2 app-data; never use on an existing device.',
                                       'Owner must separately verify hardware/layout and authorize device installation.'],
                     'scope': 'PRIVATE credentials; keep local. Offline first-install image only. No device accessed; hardware UNRUN.'}
+        if 'extension' in record:manifest['extension']=record['extension']
         output.mkdir(mode=0o700)
         try:
             for name, data in payloads.items():

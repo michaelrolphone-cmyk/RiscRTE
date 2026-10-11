@@ -10,6 +10,11 @@
 #include <vector>
 
 extern "C" esp_err_t __wrap_nvs_flash_init();
+namespace RiscCpu {
+static bool resourceAvailable=true,resourceHeld=false;
+bool nativeRadioResourceTry(){if(!resourceAvailable || resourceHeld)return false;resourceHeld=true;return true;}
+void nativeRadioResourceEnd(){resourceHeld=false;}
+}
 
 namespace {
 const char* scenario = "initialization";
@@ -475,7 +480,7 @@ esp_err_t nvs_commit(nvs_handle_t handle) {
   events.push_back({"commit", state.name, {}, handle, 0});
   const auto error = faults["commit"].error;
   if (error == ESP_OK || persistOnCommitError) {
-    for (const auto& value : state.pending) store.at(state.name)[value.first] = value.second;
+    for (const auto& value : state.pending){if(value.second.bytes.empty())store.at(state.name).erase(value.first);else store.at(state.name)[value.first] = value.second;}
     state.pending.clear();
   }
   return error;
@@ -485,14 +490,51 @@ void nvs_close(nvs_handle_t handle) {
   events.push_back({"close", handles.at(handle).name, {}, handle, 0});
   handles.erase(handle);
 }
+esp_err_t nvs_get_used_entry_count(nvs_handle_t h,size_t*n){CHECK(handles.count(h));*n=store[handles.at(h).name].size();return ESP_OK;}
+struct Iterator {std::vector<nvs_entry_info_t> rows;size_t position=0;};
+nvs_iterator_t nvs_entry_find(const char*part,const char*ns,nvs_type_t type){
+ CHECK(!strcmp(part,"nvs")&&type==NVS_TYPE_ANY);auto found=store.find(ns);if(found==store.end()||found->second.empty())return nullptr;
+ auto*i=new Iterator;for(const auto&row:found->second){nvs_entry_info_t info{};strcpy(info.namespace_name,ns);strcpy(info.key,row.first.c_str());info.type=row.second.blob?NVS_TYPE_BLOB:NVS_TYPE_U8;i->rows.push_back(info);}return i;
+}
+nvs_iterator_t nvs_entry_next(nvs_iterator_t p){auto*i=static_cast<Iterator*>(p);if(++i->position==i->rows.size()){delete i;return nullptr;}return i;}
+void nvs_entry_info(nvs_iterator_t p,nvs_entry_info_t*out){auto*i=static_cast<Iterator*>(p);*out=i->rows.at(i->position);}
+void nvs_release_iterator(nvs_iterator_t p){delete static_cast<Iterator*>(p);}
+esp_err_t nvs_erase_key(nvs_handle_t h,const char*k){CHECK(handles.count(h));handles.at(h).pending[k]={};return ESP_OK;}
 } // extern "C"
 
 int main(int argc, char** argv) {
+  RiscCpu::resourceAvailable=false;
+  uint32_t deferredSize=77;uint8_t deferredBuffer=99;
+  CHECK(RiscNvs::get(nullptr,1,"clock",&deferredBuffer,1,&deferredSize)==RISC_KEY_VALUE_BUSY);
+  CHECK(!deferredSize && deferredBuffer==99 && events.empty());
+  CHECK(RiscNvs::put(nullptr,1,"clock",&deferredBuffer,1)==RISC_KEY_VALUE_BUSY && events.empty());
+  RiscCpu::resourceAvailable=true;
   CHECK(argc == 2);
   const auto result = selectedResult(argv[1]);
   testInitialization(result);
   if (result == ESP_OK) {
     testValidation(); testNamespaceAndBounds(); testReads(); testReadFaults(); testWriteFaults();
+    reset("private settings journal namespace");
+    const auto*backend=RiscNvs::backend();CHECK(backend->journalRead&&backend->journalWrite);
+    CHECK(backend->put(nullptr,3000,"snapshot",oldValue.data(),oldValue.size())==0);
+    CHECK(backend->journalWrite(nullptr,3000,newValue.data(),newValue.size())==0);
+    CHECK(store["rte00000bb8"]["snapshot"].bytes==oldValue&&store["kvj00000bb8"]["snapshot"].bytes==newValue);
+    uint8_t journal[64]{};uint32_t journalSize=0;CHECK(backend->journalRead(nullptr,3000,journal,sizeof(journal),&journalSize)==0&&journalSize==newValue.size()&&!memcmp(journal,newValue.data(),journalSize));
+    bool exists=true;CHECK(backend->legacyNamespace(nullptr,3001,&exists)==0&&!exists);
+    CHECK(backend->legacyNamespace(nullptr,3000,&exists)==0&&exists);
+    for(unsigned i=0;i<64;++i){auto key="key"+std::to_string(i);CHECK(backend->put(nullptr,3000,key.c_str(),newValue.data(),newValue.size())==0);}
+    for(unsigned i=0;i<64;++i){auto key="key"+std::to_string(i);uint8_t out[64]{};uint32_t n=0;CHECK(backend->get(nullptr,3000,key.c_str(),out,sizeof(out),&n)==0&&n==newValue.size()&&!memcmp(out,newValue.data(),n));}
+    CHECK(eraseAttempts==0);closed();
+    reset("scalable native settings enumeration and recovery");
+    for(unsigned i=0;i<65;++i){char key[16];snprintf(key,sizeof key,"key%03u",i);CHECK(backend->put(nullptr,3000,key,newValue.data(),newValue.size())==0);}
+    const auto saved=store["rte00000bb8"];auto*b=backend->scalableSettings;CHECK(b);RiscStorage::ScalableSettings::State settings;
+    CHECK(([&](){int rc;do{rc=RiscStorage::ScalableSettings::restore(settings,*b,3000,"app",nullptr,0,true);}while(rc==RISC_KEY_VALUE_BUSY);return rc;})()==0&&settings.count==65);
+    CHECK(RiscStorage::ScalableSettings::put(settings,*b,3000,"added",newValue.data(),newValue.size())==0);
+    uint8_t*image=nullptr;uint32_t imageSize=0;uint64_t generation=0;CHECK(RiscStorage::ScalableSettings::snapshot(settings,3000,&image,&imageSize,&generation)==0);
+    int rc=RISC_KEY_VALUE_BUSY;while(rc==RISC_KEY_VALUE_BUSY)rc=RiscStorage::ScalableSettings::acknowledge(settings,*b,3000,generation);CHECK(rc==0&&store["kvd00000bb8"].empty());
+    CHECK(store["rte00000bb8"].size()==saved.size());for(auto&row:saved)CHECK(store["rte00000bb8"][row.first].bytes==row.second.bytes);
+    RiscStorage::ScalableSettings::State reboot;CHECK(([&](){int rc;do{rc=RiscStorage::ScalableSettings::restore(reboot,*b,3000,"app",image,imageSize,false);}while(rc==RISC_KEY_VALUE_BUSY);return rc;})()==0&&reboot.count==66);free(image);
+    CHECK(eraseAttempts==0);closed();
     std::puts("Native NVS adapter: namespace isolation, bounds, probes, missing/type/size faults, atomic output, every-stage IO and exact readback PASS");
   }
   closed();

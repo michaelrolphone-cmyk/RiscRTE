@@ -1,0 +1,33 @@
+{
+  "scope": "Metadata-only host regression. No ELF qualification, target build, binary/firmware receipt, release, publication, or hardware test.",
+  "results": {
+    "expanded_normal": "PASS: 14 cases",
+    "expanded_asan_ubsan": "PASS: 14 cases, ASAN_OPTIONS=detect_leaks=0",
+    "original_24_provider_bound": "PASS: exact same 26/21 fixture rejects with invalid driver list",
+    "lsan": "BLOCKED: LeakSanitizer reports ptrace environment unsupported; no leak qualification",
+    "source_unchanged_files": 91
+  },
+  "commands": {
+    "normal": "bash test/run_full_product_metadata_capacity_test.sh --source-store /workspace/shared/x4-home-image-050/assembled/store --source-system /workspace/shared/system-shared-text-host-current-20261010",
+    "asan_ubsan": "SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_full_product_metadata_capacity_test.sh --source-store /workspace/shared/x4-home-image-050/assembled/store --source-system /workspace/shared/system-shared-text-host-current-20261010",
+    "original": "RUNTIME_SOURCE=/workspace/shared/runtime-usb-serial-0199 EXPECTED_PROVIDER_LIMIT=24 bash test/run_full_product_metadata_capacity_test.sh --source-store /workspace/shared/x4-home-image-050/assembled/store --source-system /workspace/shared/system-shared-text-host-current-20261010"
+  },
+  "test_sha256": {
+    "test/run_full_product_metadata_capacity_test.sh": "7067d51aeb53946b601e6902fd73dfbae6c7ca47421252382e48cdeee8a54c70",
+    "test/full_product_metadata_capacity_test.cpp": "5f2c5c9bc1f97969fa3edd9545faecfb1d8409c7b5cbbba846a2288b709b6921",
+    "test/full_product_metadata_capacity_test.py": "ce55a2bbcf28bd0d61de3ac3b18c79378a9377d84fadaddecc4b89e67d3f8797",
+    "test/fixtures/x4_shared_ui_metadata.json": "3e90c12a2762ba3f5d9b3748b7b0b123f24ec893bd193f3150fd41796054b7e8"
+  },
+  "logs": [
+    "full-product-metadata-lsan-blocked.stderr",
+    "full-product-metadata-lsan-blocked.stdout",
+    "full-product-metadata-normal.stderr",
+    "full-product-metadata-normal.stdout",
+    "full-product-metadata-sanitized.stderr",
+    "full-product-metadata-sanitized.stdout",
+    "full-product-original-capacity.stderr",
+    "full-product-original-capacity.stdout"
+  ],
+  "selected_ui_profile_version": "0.1.1",
+  "selected_ui_profile_manifest_sha256": "f85d3c86848887ba49133eeb395825d867e83bdbda469758f98b641baaa2a218"
+}

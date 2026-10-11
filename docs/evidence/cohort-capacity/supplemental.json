@@ -1,0 +1,206 @@
+[
+  {
+    "suite": "cohort_runtime_appdata",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_cohort_runtime_test.sh"
+    ],
+    "environment": {
+      "APP_DATA_TEST": "1"
+    },
+    "exit": 0,
+    "seconds": 8.6,
+    "log": "cohort_runtime_appdata.log"
+  },
+  {
+    "suite": "cohort_runtime_appdata",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_cohort_runtime_test.sh"
+    ],
+    "environment": {
+      "APP_DATA_TEST": "1"
+    },
+    "exit": 0,
+    "seconds": 19.21,
+    "log": "cohort_runtime_appdata-san.log"
+  },
+  {
+    "suite": "demand_retention_policy17",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_demand_retention_test.sh"
+    ],
+    "environment": {
+      "RISC_APP_POLICY_ROWS": "17"
+    },
+    "exit": 0,
+    "seconds": 10.68,
+    "log": "demand_retention_policy17.log"
+  },
+  {
+    "suite": "demand_retention_policy17",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_demand_retention_test.sh"
+    ],
+    "environment": {
+      "RISC_APP_POLICY_ROWS": "17"
+    },
+    "exit": 0,
+    "seconds": 19.44,
+    "log": "demand_retention_policy17-san.log"
+  },
+  {
+    "suite": "resident_loading_memory",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_resident_loading_test.sh"
+    ],
+    "environment": {
+      "RESIDENT_NATIVE_MEMORY": "1"
+    },
+    "exit": 0,
+    "seconds": 9.9,
+    "log": "resident_loading_memory.log"
+  },
+  {
+    "suite": "resident_loading_memory",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_resident_loading_test.sh"
+    ],
+    "environment": {
+      "RESIDENT_NATIVE_MEMORY": "1"
+    },
+    "exit": 0,
+    "seconds": 18.74,
+    "log": "resident_loading_memory-san.log"
+  },
+  {
+    "suite": "hwcdc_pinned",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/hwcdc_pinned/run.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "seconds": 2.75,
+    "log": "hwcdc_pinned.log"
+  },
+  {
+    "suite": "hwcdc_pinned",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/hwcdc_pinned/run.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "seconds": 3.75,
+    "log": "hwcdc_pinned-san.log"
+  },
+  {
+    "suite": "board",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_board_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "seconds": 1.74,
+    "log": "board.log"
+  },
+  {
+    "suite": "board",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_board_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "seconds": 1.75,
+    "log": "board-san.log"
+  },
+  {
+    "suite": "provider_dependency_cleanup",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_provider_dependency_cleanup_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "seconds": 0.69,
+    "log": "provider_dependency_cleanup.log"
+  },
+  {
+    "suite": "provider_dependency_cleanup",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_provider_dependency_cleanup_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "seconds": 1.29,
+    "log": "provider_dependency_cleanup-san.log"
+  },
+  {
+    "suite": "resident_object_export",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_resident_object_export_test.sh"
+    ],
+    "environment": {},
+    "exit": 1,
+    "seconds": 0.0,
+    "log": "resident_object_export.log"
+  },
+  {
+    "suite": "resident_object_export",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_resident_object_export_test.sh"
+    ],
+    "environment": {},
+    "exit": 1,
+    "seconds": 0.0,
+    "log": "resident_object_export-san.log"
+  },
+  {
+    "suite": "native_bank",
+    "sanitizer_requested": false,
+    "command": [
+      "bash",
+      "test/run_native_bank_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "seconds": 7.55,
+    "log": "native_bank.log"
+  },
+  {
+    "suite": "native_bank",
+    "sanitizer_requested": true,
+    "command": [
+      "bash",
+      "test/run_native_bank_test.sh"
+    ],
+    "environment": {},
+    "exit": 0,
+    "seconds": 15.81,
+    "log": "native_bank-san.log"
+  }
+]

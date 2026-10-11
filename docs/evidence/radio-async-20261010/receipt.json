@@ -1,0 +1,84 @@
+{
+  "date_utc": "2026-10-10",
+  "native_production_commit": "114f803",
+  "native_fixture_commit": "efc6c42",
+  "provider_public_commit": "a304597bf26491483bb0a567569f0ca0267cdf9c",
+  "provider_version": "0.2.1",
+  "system_app_commit": "e86492d87968c045536e0f7da04f1c9d894db678",
+  "system_app_tree": "509faef199cdf6161f505ca91f0d3dbe04e7a576",
+  "system_seam_source_sha256": "ff440d0a37b0d130529b0335b3b1f31738701b68375f5460012481e7794131ac",
+  "host_cpp_compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+  "core_cases_per_mode": 56,
+  "core_modes": [
+    "ASan+UBSan",
+    "ThreadSanitizer",
+    "stage-logging-disabled"
+  ],
+  "final_app_seam_cases_per_mode": 58,
+  "final_app_seam_modes": [
+    "normal",
+    "ASan+UBSan",
+    "ThreadSanitizer"
+  ],
+  "leak_sanitizer": "disabled: ptrace environment",
+  "device_actions": false,
+  "target_config_override": "Only tool-esptoolpy resolved to installed official-PyPI 4.11 wrapper; repository pins unchanged",
+  "target_builds": [
+    {
+      "environment": "esp32s3-16mb-appdata-iq",
+      "static_ram_bytes": 66112,
+      "flash_bytes": 1329697,
+      "result": "PASS"
+    },
+    {
+      "environment": "esp32s3-16mb-appdata-iq-stage-crash",
+      "static_ram_bytes": 68120,
+      "flash_bytes": 1368233,
+      "result": "PASS"
+    },
+    {
+      "environment": "esp32s3-16mb-appdata-iq-tcp",
+      "static_ram_bytes": 66296,
+      "flash_bytes": 1335349,
+      "result": "PASS"
+    }
+  ],
+  "public_provider_ci": "Draft: three dependency/baseline packaging checks fail until coordinated Watch union; five jobs pass; three skipped. See PR61.",
+  "logs": [
+    {
+      "name": "wifi-startup-san.log",
+      "sha256": "7cbac6d599de8caed569ad27c1a46db41ca73a89d6c7fb18b3a68a3615cf6488",
+      "pass_lines": 56
+    },
+    {
+      "name": "wifi-startup-tsan.log",
+      "sha256": "7cbac6d599de8caed569ad27c1a46db41ca73a89d6c7fb18b3a68a3615cf6488",
+      "pass_lines": 56
+    },
+    {
+      "name": "wifi-startup-off.log",
+      "sha256": "7cbac6d599de8caed569ad27c1a46db41ca73a89d6c7fb18b3a68a3615cf6488",
+      "pass_lines": 56
+    },
+    {
+      "name": "wifi-startup-target.log",
+      "sha256": "ba4af4f27659285099f9b8a9d1f68539c237381f00d816b96fa65526c41d964c",
+      "pass_lines": 0
+    },
+    {
+      "name": "wifi-final-app-e86492d-normal.log",
+      "sha256": "20da3ecd0c0219f2a27b24bdaebe8c4530e46edfea61357b9398aba35693def2",
+      "pass_lines": 58
+    },
+    {
+      "name": "wifi-final-app-e86492d-san.log",
+      "sha256": "20da3ecd0c0219f2a27b24bdaebe8c4530e46edfea61357b9398aba35693def2",
+      "pass_lines": 58
+    },
+    {
+      "name": "wifi-final-app-e86492d-tsan.log",
+      "sha256": "20da3ecd0c0219f2a27b24bdaebe8c4530e46edfea61357b9398aba35693def2",
+      "pass_lines": 58
+    }
+  ]
+}

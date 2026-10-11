@@ -12,11 +12,16 @@ int main(int argc, char **argv) {
   // First quiesce fails after the consumer is revoked. Preserve this grant's
   // generation for retry, but never expose an ELF pointer through it again.
   assert(!graph.release(grant));
+  assert(graph.liveGrants()==1 && graph.peakLiveGrants()==1);
+  assert(graph.holdsGrant(grant)); // Pending release still occupies capacity.
+  assert(!graph.holdsGrant({grant.slot,grant.generation+1}));
   assert(!graph.interfaceFor(grant) && graph.liveGrants() == 1);
   assert(!graph.shutdown()); // A caller MUST reconcile a failed release.
   assert(!graph.acquire("cap.retry", 1).slot); // No regrant while quarantined.
   assert(!graph.addVerified({"unsafe", argv[1], "cap.other", 1, nullptr, 0}));
   assert(graph.release(grant)); // Second quiesce succeeds; unload only NOW.
+  assert(graph.liveGrants()==0 && graph.peakLiveGrants()==1);
+  assert(!graph.holdsGrant(grant)); // A historical token is not occupancy.
   assert(!graph.release(grant)); // Idempotence must not double-unpin a consumer.
   assert(graph.liveGrants() == 0 && graph.shutdown());
   assert(graph.shutdown());

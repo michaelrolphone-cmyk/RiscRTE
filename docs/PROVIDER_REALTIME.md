@@ -29,7 +29,7 @@ a fresh, nonreusing opaque token on start and revokes it before diagnostics,
 quiesce or stop. Tokens are compared, never dereferenced; exhaustion fails
 closed. Copied retired tables cannot revive after reacquisition, another Runtime,
 or reuse of the same Runtime address. Providers already using bound KV share the
-lease without changing their key map, nine-key limit or KV startup authority.
+lease without changing their key map, ten-key limit or KV startup authority.
 
 A read requires the current Runtime's owner, active `app_main`, the provider's
 live generation, a safe selected graph and existing native/provider-storage
@@ -52,8 +52,8 @@ Graphs without the dependency consume no new platform slot or context token.
 - `test/run_provider_realtime_test.sh`: production Runtime/Graph/Module with
   real dlopen providers/apps; eager/demand, owner/entry/poll, output validation,
   no seed authority, missing backend/API/app-policy denial, per-provider tokens,
-  reacquisition, exact-address Runtime reuse, combined nine-key KV, rejection of
-  ten keys, native/invocation retention, failed graph/pending release and retained
+  reacquisition, exact-address Runtime reuse, combined ten-key KV, rejection of
+  eleven keys, native/invocation retention, failed graph/pending release and retained
   shutdown. Normal and ASan/UBSan variants run in CI.
 - `test/run_realtime_test.sh`: existing app and native realtime tests plus
   provider denial under actual CpuPort held-pad and retained deep-entry barriers.

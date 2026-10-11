@@ -1,0 +1,8 @@
+Generic graph: metadata enumeration, dependencies, competing provider choice, cycle detection and grants PASS
+Provider ownership: copied ordinary identities and privileged imports, dependencies, digest and ELF snapshot PASS
+Provider dependency table survives activation stack, quiesce and stop PASS
+Failed-start hardware recovery: retry, dependency pin and no stale grants PASS
+Exact-provider grantless recovery retains unrelated live grants: PASS
+Active teardown quarantine: retryable generation, no regrant, recovery PASS
+Provider graph destruction: failed quiescence fails stop, never dangling-table return PASS
+Actual graph scheduling: 8/10ms budgets, fairness, one/optional wait, idle/reentry/overrun/wrap, revocation and failed-start retry PASS

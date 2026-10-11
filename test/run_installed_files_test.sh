@@ -11,7 +11,7 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror "${incs[@]}" "$repo/test/instal
 "$build/vfs-test" "$build/model"
 for name in default child;do defs=();if [[ "$name" == child ]];then defs=(-DCHILD);fi;cc "${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared "${defs[@]}" -I"$repo/sdk/app" "$repo/test/fixtures/installed_files_app.c" -o "$build/$name.elf";done
 c++ "${san[@]}" -DRISC_METADATA_ALLOCATION_TEST -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic "${incs[@]}" \
- "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
+ "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
  "$repo/test/installed_files_runtime_test.cpp" -Wl,--wrap=fclose -ldl -o "$build/test"
 "$build/test" "$build"

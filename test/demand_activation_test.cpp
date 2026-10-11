@@ -101,7 +101,13 @@ extern "C" void demand_app(){
   risc_runtime_capability_v1 first{},second{};
   if(mode=="retry" || mode=="failed-start-retained"){
     startOk=false;stopOk=mode=="retry";assert(!acquire(first));
-    if(mode=="failed-start-retained") {assert(!acquire(first));return;}
+    if(mode=="failed-start-retained") {
+      // Failed activation fences this invocation immediately. API lookup is
+      // gone, and a table saved before retention must reject new authority.
+      assert(!risc_runtime_get_api(1));
+      assert(!api->acquire("test.leaf",1,0,&first));
+      return;
+    }
     assert(count("root:stop")==1 && count("leaf:stop")==1);startOk=true;
   }
   assert(acquire(first));

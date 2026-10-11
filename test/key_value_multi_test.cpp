@@ -9,6 +9,21 @@
 using namespace RiscBoot;
 static bool owned=true,safe=true,retaining=false;static unsigned phase=0,reads=0,writes=0;
 static unsigned capacity=0,indexMode=0;
+static void* allocations[8]{};
+static size_t allocationCount=0,allocationBytes=0;
+static bool allocationFailure=false;
+namespace RiscBoot {
+void* metadataTestAllocate(size_t n){
+ if(allocationFailure)return nullptr;
+ assert(allocationCount<8);void* p=std::malloc(n);assert(p);
+ allocations[allocationCount++]=p;allocationBytes=n;return p;
+}
+}
+extern "C" void __real_free(void*);
+extern "C" void __wrap_free(void* p){
+ for(size_t i=0;i<allocationCount;++i)if(allocations[i]==p){allocations[i]=allocations[--allocationCount];break;}
+ __real_free(p);
+}
 extern "C" unsigned multi_index_mode(){return indexMode;}
 extern "C" unsigned multi_capacity(){return capacity;}
 static risc_key_value_v1 saved{};
@@ -84,6 +99,13 @@ int main(int argc,char** argv){
  check(prefix+","+grant(12,"undeclared"),requirement(),false);
  check(prefix+","+grant(12,RISC_BOUND_KEY_VALUE_CAPABILITY),requirement(),false);
  check(prefix+","+grant(12,RISC_KEY_VALUE_CAPABILITY,2),requirement(),false);
+ assert(!allocationCount);
+ stage(many,requirement());allocationFailure=true;
+ {Runtime r(port());assert(!r.prepare(root.c_str()));assert(!strcmp(r.error(),"app policy allocation failed"));assert(!r.run());}
+ allocationFailure=false;assert(!allocationCount);
+ {Runtime r(port());assert(r.prepare(root.c_str()));assert(allocationCount==1);
+  printf("Policy rows=%zu Runtime bytes=%zu metadata per app=%zu\n",Runtime::MaxAppPolicyGrants,sizeof(Runtime),allocationBytes/2);}
+ assert(!allocationCount);++cases;
  for(unsigned run=0;run<3;++run){
   stage(run&1?grant(5)+","+grant(1):grant(1)+","+grant(5),requirement());
   owned=safe=true;retaining=run==2;phase=0;values.clear();reads=writes=0;
@@ -93,22 +115,27 @@ int main(int argc,char** argv){
   assert(saved.get(saved.context,"same",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_CONTEXT&&!size);
   assert(saved.put(saved.context,"same","bad",3)==RISC_KEY_VALUE_CONTEXT);++cases;
  }
- for(unsigned limit:{9u,12u,13u,14u,15u,16u}) {
+ for(unsigned limit:{9u,12u,13u,14u,15u,16u,17u}) {
+  if(limit>Runtime::MaxAppPolicyGrants)continue;
   capacity=limit;owned=safe=true;retaining=false;values.clear();reads=writes=0;
   std::string declared;for(unsigned i=1;i<=limit;++i){if(i>1)declared+=",";declared+=grant(i);}
   stage(declared,requirement());Runtime r(port());assert(r.prepare(root.c_str()));
   std::vector<std::string> parsedStorageChurn(256,std::string(4096,'X'));
   assert(!r.prepare(root.c_str()));assert(r.run());
-  assert(reads==limit&&writes==limit);++cases;
+  assert(reads==limit&&writes==limit);
+  for(unsigned ns=1;ns<=limit;++ns){unsigned got=0;assert(values[ns]["slot"].size()==sizeof(got));memcpy(&got,values[ns]["slot"].data(),sizeof(got));assert(got==ns);}
+  if(limit==17){unsigned value=0;uint32_t n=99;assert(saved.get(saved.context,"slot",&value,sizeof(value),&n)==RISC_KEY_VALUE_CONTEXT && !n);}
+  ++cases;
  }
  // Admit sixteen declarations; reject a seventeenth with only sixteen grants.
- static_assert(Runtime::MaxAppPolicyGrants==16,"Declared policy bound");
+ static_assert(Runtime::MaxAppRequirements==16,"Manifest requirement bound remains sixteen");
+ static_assert(Runtime::MaxAppPolicyGrants==16 || Runtime::MaxAppPolicyGrants==17,"Declared policy bound");
  for(unsigned count:{12u,13u,14u,15u,16u,17u}) {
   std::string requirements,grants,drivers;
   for(unsigned i=0;i<count;++i){const std::string cap=i==16?"platform.clock":"test.cap"+std::to_string(i),id="cap"+std::to_string(i);
    if(i){requirements+=",";if(i<16)drivers+=",";}
    requirements+=requirement(cap.c_str());
-   if(i<Runtime::MaxAppPolicyGrants){if(!grants.empty())grants+=",";grants+=grant(0,cap.c_str());}
+   if(i<16){if(!grants.empty())grants+=",";grants+=grant(0,cap.c_str());}
    if(i==16)continue;
    drivers+="{\"manifest\":\""+id+".json\"}";
    write((id+".json").c_str(),"{\"type\":\"driver\",\"id\":\""+id+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\"default.elf\",\"driver_abi\":2,\"requires\":[],\"provides\":["+requirement(cap.c_str())+"]}");
@@ -116,6 +143,20 @@ int main(int argc,char** argv){
   write("default.json",manifest("default","default.elf",requirements));
   write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+drivers+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]}]}");
   Runtime r(port());const bool accepted=r.prepare(root.c_str());if(accepted!=(count<=Runtime::MaxAppRequirements))fprintf(stderr,"requirement capacity: %s\n",r.error());assert(accepted==(count<=Runtime::MaxAppRequirements));if(count>Runtime::MaxAppRequirements)assert(!strcmp(r.error(),"invalid app identity/declarations"));++cases;
+ }
+ // Sixteen unique requirements need seventeen rows when one requirement has
+ // two distinct namespaces. Default rejects; opt-in admits the exact boundary.
+ {
+  std::string requirements=requirement(),grants=grant(1)+","+grant(5),drivers;
+  for(unsigned i=0;i<15;++i){const std::string cap="test.cap"+std::to_string(i),id="cap"+std::to_string(i);
+   requirements+=","+requirement(cap.c_str());grants+=","+grant(0,cap.c_str());
+   if(i)drivers+=",";
+   drivers+="{\"manifest\":\""+id+".json\"}";
+  }
+  write("default.json",manifest("default","default.elf",requirements));
+  write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+drivers+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]}]}");
+  {Runtime r(port());assert(r.prepare(root.c_str())==(Runtime::MaxAppPolicyGrants==17));}
+  ++cases;
  }
  capacity=0;indexMode=1;owned=safe=true;
  stage(grant(0,"platform.clock"),requirement("platform.clock"));
@@ -132,5 +173,6 @@ int main(int argc,char** argv){
  {Runtime r(port());assert(r.prepare(root.c_str()) && r.run());++cases;}
  indexMode=0;
  capacity=0;
+ assert(!allocationCount);
  printf("Multiple explicit KV namespaces: %u admission/lifecycle/owner/isolation/retention cases PASS\n",cases);
 }

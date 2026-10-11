@@ -26,6 +26,9 @@ typedef int esp_err_t;
 #define ESP_ERR_NVS_PART_NOT_FOUND (ESP_ERR_NVS_BASE + 0x0f)
 #define ESP_ERR_NVS_NEW_VERSION_FOUND (ESP_ERR_NVS_BASE + 0x10)
 typedef uint32_t nvs_handle_t;
+typedef enum {NVS_TYPE_U8=0x01,NVS_TYPE_BLOB=0x42,NVS_TYPE_ANY=0xff} nvs_type_t;
+typedef void* nvs_iterator_t;
+typedef struct {char namespace_name[16];char key[16];nvs_type_t type;} nvs_entry_info_t;
 typedef enum { NVS_READONLY, NVS_READWRITE } nvs_open_mode_t;
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +38,12 @@ esp_err_t nvs_get_blob(nvs_handle_t, const char*, void*, size_t*);
 esp_err_t nvs_set_blob(nvs_handle_t, const char*, const void*, size_t);
 esp_err_t nvs_commit(nvs_handle_t);
 void nvs_close(nvs_handle_t);
+nvs_iterator_t nvs_entry_find(const char*,const char*,nvs_type_t);
+nvs_iterator_t nvs_entry_next(nvs_iterator_t);
+void nvs_entry_info(nvs_iterator_t,nvs_entry_info_t*);
+void nvs_release_iterator(nvs_iterator_t);
+esp_err_t nvs_erase_key(nvs_handle_t,const char*);
+esp_err_t nvs_get_used_entry_count(nvs_handle_t,size_t*);
 #ifdef __cplusplus
 }
 #endif

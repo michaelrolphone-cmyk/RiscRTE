@@ -39,9 +39,16 @@ int32_t read(risc_realtime_snapshot_v1* out){
  if(!out || out->struct_size!=sizeof(*out))return RISC_REALTIME_INVALID;
  risc_realtime_snapshot_v1 result{};result.struct_size=sizeof(result);
  const int64_t before=esp_timer_get_time();
- timeval wall{};const int rc=gettimeofday(&wall,nullptr);
+ // Before an explicit seed (or an admitted deep-sleep checkpoint), the SDK
+ // wall clock has no authority. It may contain stale/invalid state after a
+ // reset or firmware replacement. Return UNSET with a monotonic bracket so
+ // clients can recover from their authorized external clock. Reading or
+ // validating that untrusted wall value here would turn UNSET into IO and
+ // prevent the very seed which repairs it.
+ timeval wall{};const int rc=valid?gettimeofday(&wall,nullptr):0;
  const int64_t after=esp_timer_get_time();
- if(rc || before<0 || after<before || wall.tv_sec<0 || wall.tv_sec>INT32_MAX || wall.tv_usec<0 || wall.tv_usec>=1000000)return RISC_REALTIME_IO;
+ if(before<0 || after<before)return RISC_REALTIME_IO;
+ if(valid && (rc || wall.tv_sec<0 || wall.tv_sec>INT32_MAX || wall.tv_usec<0 || wall.tv_usec>=1000000))return RISC_REALTIME_IO;
  result.monotonic_before_us=uint64_t(before);result.monotonic_after_us=uint64_t(after);
  if(valid){result.validity=RISC_REALTIME_VALID;result.epoch_seconds=wall.tv_sec;result.nanoseconds=uint32_t(wall.tv_usec)*1000u;}
  *out=result;return RISC_REALTIME_OK;

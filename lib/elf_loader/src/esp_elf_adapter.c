@@ -15,6 +15,7 @@
 #include "soc/cache_reg.h"
 #endif
 #include "private/elf_platform.h"
+#include "../../hal/RuntimeImagePressure.h"
 
 #if CONFIG_ELF_LOADER_LOAD_PSRAM && CONFIG_IDF_TARGET_ESP32S3 && \
     CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR && CONFIG_ELF_LOADER_CACHE_OFFSET
@@ -72,7 +73,9 @@ void *esp_elf_malloc(uint32_t n, bool exec)
 #endif
 #endif
 
-    return heap_caps_malloc(n, caps);
+    void *result=heap_caps_malloc(n,caps);
+    if(!result && n && risc_image_pressure_reclaim())result=heap_caps_malloc(n,caps);
+    return result;
 }
 
 /**
