@@ -27,16 +27,22 @@ class AppPolicyRows(unittest.TestCase):
         with self.assertRaises(ValueError):
             policy_rows_proof({}, 18)
 
-    def test_only_explicit_environments_select_seventeen(self):
+    def test_only_explicit_environments_select_expanded_rows(self):
         config = configparser.ConfigParser(interpolation=None)
         config.read(ROOT / 'platformio.ini')
         opted = set()
+        expanded = set()
         for name in config.sections():
             flags = config[name].get('build_flags', '')
-            if '-DRISC_APP_POLICY_ROWS=' in flags:
+            if '-DRISC_APP_POLICY_ROWS=24' in flags:
+                self.assertIn('-DRISC_APP_REQUIREMENT_ROWS=24', flags)
+                expanded.add(name)
+            elif '-DRISC_APP_POLICY_ROWS=' in flags:
                 self.assertIn('-DRISC_APP_POLICY_ROWS=17', flags)
                 self.assertTrue(name.endswith('-policy17'))
                 opted.add(name)
+        self.assertEqual(expanded, {'env:esp32s3-16mb-appdata-iq-sharing',
+                                    'env:esp32s3-16mb-appdata-iq-policy24'})
         self.assertEqual(opted, {'env:esp32s3-16mb-appdata' + suffix + '-policy17'
                                 for suffix in ('', '-iq', '-perf', '-iq-perf')})
 

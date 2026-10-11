@@ -250,7 +250,7 @@ def main():
     if args.legacy_capacity:
         print("PASS: original Runtime reproduces invalid driver list for the same 26/21 full-product metadata; no graph/binary qualification claimed")
     else:
-        print("PASS: 26 accept; 27 and malformed suffix/provider/dependency/bindings reject before image inspection; zero module/hardware/storage execution")
+        print(f"PASS: 26 and {args.provider_limit} accept; {args.provider_limit + 1} and malformed suffix/provider/dependency/bindings reject before image inspection; zero module/hardware/storage execution")
     print("SCOPE: metadata-only host regression; no matching binary receipt, release, target build, publication, or hardware qualification")
 
 
