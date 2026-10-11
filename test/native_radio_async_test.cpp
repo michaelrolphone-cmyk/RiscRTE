@@ -73,9 +73,9 @@ int main(int argc,char** argv){
  auto nativeTable=*Async::api();nativeTable.tryShared=[](){return resourceOwner.enter();};nativeTable.endShared=[](){resourceOwner.leave();};nativeTable.sharedReady=[](){return resourceOwner.ready();};h.radioAsync=&nativeTable;
  h.hciSafe=[](){return true;};h.hciIdle=[](){return true;};h.hciOpen=[](){assert(false);return false;};h.hciClose=[](){assert(false);return false;};
  h.radioIqReady=[](){return true;};h.radioIqPrepare=[](){return true;};h.radioIqCleanup=[](){return true;};
- Port port(h);auto& c=port.radios_[0];c.port=&port;port.iq_.port=&port;port.hci_.port=&port;
+ Port port(h);auto& c=port.radios_[0];c.port=&port;c.config.features=3;port.iq_.port=&port;port.hci_.port=&port;
  garden_radio_async_v1 native={{1,sizeof(native),&c,Port::radioClaim,Port::radioJoin,Port::radioState,Port::radioLeave,Port::radioRelease,Port::radioStartAp,Port::radioStopAp,Port::radioAddresses,Port::radioScanStart,Port::radioScanPoll,Port::radioScanCancel},RISC_RADIO_ASYNC_TAG,RISC_RADIO_ASYNC_VERSION,Port::radioAsyncBegin,Port::radioAsyncPoll,Port::radioAsyncCancel,Port::radioServiceBegin,Port::radioServiceEnd};
- const risc_hw_radio_v1 config={sizeof(config),0,1};
+ const risc_hw_radio_v1 config={sizeof(config),0,3};
  const risc_hardware_device_v1 device={1,sizeof(device),15,"espressif,esp32s3-wifi","unspecified","radio.integrated",1,sizeof(config),&config};
  const risc_provider_dependency_v1 deps[]={{"hardware.device",1,&device},{"platform.radio",1,&native}};
  const bool legacyOnly=test.rfind("suffix:",0)==0;
@@ -201,6 +201,40 @@ int main(int argc,char** argv){
   uint32_t other=0;assert(api->begin(nullptr,&request,&other)==RISC_RADIO_BUSY && !other);
   assert(api->base.disconnect_checked(nullptr));
   sdkBoundary=boundary;begin();runStep();close();
+ }else if(test=="private-ap" || test=="private-restore" || test=="private-restore-failure"){
+  uint32_t original=0;
+  if(test.rfind("private-restore",0)==0){
+    request.kind=RISC_RADIO_REQUEST_JOIN;strcpy(request.ssid,"Original network");strcpy(request.password,"original-password");begin();runStep();
+    associated=true;netif->up=true;ip.ip.addr=0x0201a8c0;ip.gw.addr=0x0101a8c0;ip.netmask.addr=0x00ffffff;
+    runStep();assert(poll()==RISC_RADIO_PENDING && progress.phase==RISC_RADIO_CONNECTED);original=id;
+  }
+  request.kind=RISC_RADIO_REQUEST_AP;request.flags=RISC_RADIO_TEMPORARY;strcpy(request.ssid,"Synthetic private AP");strcpy(request.password,"synthetic-password");begin();runStep();
+  assert(s.operation==AccessPoint && copied.ap.authmode==WIFI_AUTH_WPA2_PSK && copied.ap.max_connection==1);
+  netif->up=true;ip.ip.addr=0x0104a8c0;ip.gw.addr=ip.ip.addr;ip.netmask.addr=0x00ffffff;
+  runStep();assert(poll()==RISC_RADIO_PENDING && progress.phase==RISC_RADIO_CONNECTED);
+  assert(progress.station[0]==192 && progress.station[2]==4);
+  uint32_t other=0;assert(api->begin(nullptr,&request,&other)==RISC_RADIO_BUSY);
+  if(test=="private-restore-failure")failure="credentials_copy";
+  assert(api->cancel(nullptr,id)==RISC_RADIO_PENDING);runStep();
+  if(test=="private-restore-failure"){
+    assert(poll()==RISC_RADIO_RETAINED && c.closing && !port.appExitSafe());
+    const auto callsBefore=calls.size();runStep();assert(calls.size()==callsBefore);
+    puts("Production temporary radio: failed restoration retains ownership without retry PASS");return 0;
+  }
+  if(original){
+    assert(poll()==RISC_RADIO_PENDING && !progress.quiescent);
+    assert(s.operation==Join && !strcmp((char*)copied.sta.ssid,"Original network"));
+    associated=true;netif->up=true;ip.ip.addr=0x0201a8c0;runStep();
+  }
+  assert(poll()==RISC_RADIO_QUIESCENT);
+  assert(poll()==RISC_RADIO_QUIESCENT); // repeated terminal observation preserves restored authority
+  if(original){assert(c.operation==original && c.active);id=original;assert(poll()==RISC_RADIO_PENDING && progress.phase==RISC_RADIO_CONNECTED);close();}
+  else assert(port.appExitSafe());
+  assert(zero(&Async::buffers->activeCredentials,sizeof(Async::buffers->activeCredentials)) && zero(&Async::buffers->restoreCredentials,sizeof(Async::buffers->restoreCredentials)));
+ }else if(test=="private-cancel-queued"){
+  request.kind=RISC_RADIO_REQUEST_AP;request.flags=RISC_RADIO_TEMPORARY;strcpy(request.ssid,"Files-cancel");strcpy(request.password,"synthetic-password");begin();assert(api->cancel(nullptr,id)==RISC_RADIO_PENDING);runStep();assert(poll()==RISC_RADIO_QUIESCENT&&calls.empty());
+ }else if(test=="private-refuse-busy"){
+  begin();runStep();uint32_t original=id;request.kind=RISC_RADIO_REQUEST_AP;request.flags=RISC_RADIO_TEMPORARY;strcpy(request.ssid,"Files-refuse");strcpy(request.password,"synthetic-password");uint32_t refused=99;assert(api->begin(nullptr,&request,&refused)==RISC_RADIO_BUSY&&!refused&&c.operation==original);close();
  }else if(test=="copied"){
   request.kind=RISC_RADIO_REQUEST_JOIN;strcpy(request.ssid,"Synthetic AP");strcpy(request.password,"synthetic-password");begin();memset(&request,0,sizeof(request));runStep();
   assert(!strcmp(reinterpret_cast<char*>(copied.sta.ssid),"Synthetic AP"));
