@@ -23,7 +23,8 @@ Each selected namespace uses the existing scalable map and durable native
 per-key recovery journal. Both app KV and explicitly bound provider KV route
 through the same state. Keys remain individually bounded by the established
 ABI, but no sixteen-key namespace ceiling is introduced. Existing native values
-are enumerated without erasure. Unselected namespaces retain native behavior.
+are enumerated without erasure. Unselected namespaces retain native behavior. Preserving cohort updates must keep
+an already selected shared_settings list unchanged.
 
 Shared checkpoint slots follow the private slots. The appended installation
 suffix maps these slots to namespaces without granting new app/provider access.

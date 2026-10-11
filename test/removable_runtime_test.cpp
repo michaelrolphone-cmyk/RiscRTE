@@ -416,6 +416,18 @@ int main(int argc,char** argv) {
     auto grant=owner["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=1000;
     std::string invalid;serializeJson(conflicting,invalid);write("boot.json",invalid);
     {RiscBoot::Runtime overlapping(port);assert(!overlapping.prepare(root.c_str()));}
+    if(mode=="shared-settings"){
+      for(unsigned which=0;which<4;++which){
+        JsonDocument invalidShared;assert(!deserializeJson(invalidShared,boot));
+        auto list=invalidShared["installation"]["shared_settings"].to<JsonArray>();
+        if(which==0){list.add(1);list.add(1);}
+        if(which==1)list.add(1000);
+        if(which==2)list.add(0);
+        if(which==3){list.add(1);invalidShared["installation"]["settings_sd"]=false;}
+        std::string bad;serializeJson(invalidShared,bad);write("boot.json",bad);
+        RiscBoot::Runtime rejected(port);assert(!rejected.prepare(root.c_str()));
+      }
+    }
     write("boot.json",boot);
   }
   if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
@@ -430,7 +442,22 @@ int main(int argc,char** argv) {
     printf("SD driver source %s: actual module load, fallback/custody PASS\n",mode.c_str());return 0;
   }
   if(mode=="shared-settings"){
-    assert(runtime->run()&&!runtime->retained());delete runtime;
+    assert(runtime->run()&&!runtime->retained());
+    // Preserving updates cannot return a selected namespace to stale NVS.
+    const std::string stage=root+"/shared-stage";assert(!mkdir(stage.c_str(),0700));
+    for(const char*name:{"board.json","sd.json","shared-default.json"}){
+      std::ifstream source(root+"/"+name);std::ofstream dest(stage+"/"+name);dest<<source.rdbuf();
+    }
+    for(unsigned which=0;which<3;++which){
+      JsonDocument next;assert(!deserializeJson(next,boot));
+      if(which==0)next["installation"].remove("shared_settings");
+      if(which==1){auto list=next["installation"]["shared_settings"].to<JsonArray>();list.add(6);list.add(1);}
+      if(which==2){auto list=next["installation"]["shared_settings"].to<JsonArray>();list.add(1);}
+      std::ofstream target(stage+"/boot.json");std::string json;serializeJson(next,json);target<<json;target.close();
+      RiscBoot::Runtime candidate(port);
+      assert(!runtime->validateCohort(candidate,stage.c_str(),[](void*,const char*,bool){return true;},nullptr));
+    }
+    delete runtime;
     const auto disk=sharedDisk;sharedOriginal.clear();sharedDeltas.clear();sharedAnchors.clear();++sharedPass;
     runtime=new RiscBoot::Runtime(port);assert(runtime->prepare(root.c_str()));
     assert(runtime->run()&&!runtime->retained());assert(sharedDisk==disk);delete runtime;
