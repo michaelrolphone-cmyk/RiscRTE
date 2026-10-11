@@ -38,5 +38,7 @@ int main(){
    x.begin(true);x.press(100);assert(x.pending()&&!x.expired(3099));x.press(2000);
    assert(x.expired(3100));x.end();assert(!x.pending());
    x.begin(true);x.press(UINT32_MAX-1000);assert(x.expired(1999));}
+  {RiscControl::CrownEvents e;e.waking();assert(!e.observe(11,0));
+   assert(e.shortSequence()==0&&!(e.legacy()&8));assert(!e.observe(8,100));assert(e.shortSequence()==1);}
   puts("Crown policy: threshold, release, bounce, ambiguity, boot/wake gaps, wrap, independent consumers and single reset PASS");
 }

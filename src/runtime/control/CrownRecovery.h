@@ -46,7 +46,12 @@ class CrownEvents final {
  public:
   bool observe(uint8_t events,uint32_t now,bool valid=true){
     uint8_t delivered=events;
-    if(valid && waking_){suppressWakeRelease_=(events&0x06u) && !(events&0x09u);waking_=false;}
+    if(valid && waking_){
+      suppressWakeRelease_=(events&0x06u) && !(events&0x09u);
+      // A fast wake tap may have both edges queued before the first sample.
+      // Consume that completed wake action as well as a later held release.
+      delivered&=uint8_t(~0x08u);waking_=false;
+    }
     if(valid && suppressWakeRelease_ && (events&0x09u)){delivered&=uint8_t(~0x08u);suppressWakeRelease_=false;}
     if(valid){legacy_|=delivered&0x0f;if(delivered&0x08u)++shortSequence_;}
     return recovery_.sample(events,now,valid);
