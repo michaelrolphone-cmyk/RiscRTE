@@ -244,3 +244,29 @@ metadata or removal errors remain errors. Version 2 remains accepted for the
 existing discovery/rename operations. Clients must require version 3 before
 submitting operation 7. No capacity, worker scope or USB custody rule changes.
 This is the interface reservation for concurrent Files/WebDAV/BLE work.
+
+### Staged install interface reservation (0.2.9)
+
+`RiscStoragePackageAsyncV1.h` appends a separately tagged package suffix to the
+unchanged v3 volume API. Existing v2/v3 request bytes and operations 1–7 remain
+unchanged. Package operations 100–103 have a separate copied request/submit:
+selected-image validation, synced small-file creation, filesystem replacement,
+and replacement recovery. Both request forms fit the existing 4608-byte native
+mailbox. No provider-capacity change is made.
+
+`RiscStorageWorkerAdmissionV1.h` adds a separately tagged native worker suffix.
+Only the existing claimed storage worker can validate an SD application. It
+reads one bounded PSRAM snapshot (maximum 2 MiB), checks exact length and SHA256,
+and shares the bank updater's ELF role/import audit. Its name-only import query
+uses immutable compiled public exports, never loaded modules or owner authority.
+A failed close retains its provider handle. Image checks happen at installation
+or interrupted-install recovery, never ordinary launch/input/catalog reads.
+
+`StagedAppInstall` requires the caller to confirm a durable journal before any
+new manifest mutation. The selected image is immutable; the previous image and
+settings remain untouched. Recovery accepts only the journal's exact previous
+or next manifest, revalidates the image once, and reconciles ambiguous filesystem
+replacement. Ready means SD publication is verified and the worker session is
+closed; the catalog owner must then durably publish its index before native
+registry publication. These interfaces are reserved for Files integration;
+UI/catalog wiring and full integration qualification are still in progress.

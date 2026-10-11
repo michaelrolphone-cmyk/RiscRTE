@@ -225,6 +225,17 @@ bool esp_elf_privileged_selected_import_supported_v1(const char *symbol)
  *
  * @return Symbol address if success or 0 if failed.
  */
+bool esp_elf_public_import_supported_v1(const char*name)
+{
+    if(!name||!name[0])return false;
+    if(!strcmp(name,"risc_runtime_get_api"))return true;
+#ifdef CONFIG_ELF_LOADER_LIBC_SYMBOLS
+    for(const struct esp_elfsym*entry=g_esp_libc_elfsyms;entry->name;++entry)
+        if(entry->sym&&!strcmp(name,entry->name))return true;
+#endif
+    return false;
+}
+
 uintptr_t elf_find_sym_default(const char *sym_name)
 {
     if (!sym_name) {
