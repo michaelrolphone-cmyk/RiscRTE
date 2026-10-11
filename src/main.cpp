@@ -81,6 +81,7 @@ extern esp_err_t riscrte_mount_embedded_store();
 // the existing generic/Watch boot sequence.
 extern "C" const char* risc_native_startup_error(void) __attribute__((weak));
 #include "ports/esp32s3/NativeCompute.h"
+#include "ports/esp32s3/NativeCrownRecovery.h"
 namespace {
 TaskHandle_t owner=nullptr;
 bool isOwner() { return xTaskGetCurrentTaskHandle()==owner; }
@@ -188,6 +189,8 @@ void setup() {
   RISC_STAGE_LOG("boot begin reset=%d wake=%lu setup_start_us=%llu",int(esp_reset_reason()),
                  (unsigned long)esp_sleep_get_wakeup_cause(),(unsigned long long)bootUs);
   diagnosticLine(RISC_BUILD_IDENTITY);
+  if(RiscCpu::NativeCrownRecovery::previousEmergency())
+    diagnosticLine("RTE_RECOVERY reset=crown-held-5000ms cleanup=bypassed");
   diagnosticLine(risc_app_policy_rows);
 #if RISC_APP_REQUIREMENT_ROWS > 16
   diagnosticLine(risc_app_requirement_rows);
