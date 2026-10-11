@@ -69,7 +69,8 @@ int main(){setup();auto*volume=adapter.volume;
   files.clear();directories.clear();Download::Record record{};strcpy(record.url,"https://example.org/provider.elf");
   strcpy(record.path,"/Drivers/new/image-0000000000000000000000000000000000000000000000000000000000000000.elf");record.size=uint32_t(source.size());record.driver=true;
   Download d;assert(d.start(volume,&http,record,1800000000));auto before=mutations;
-  for(unsigned poll=0;poll<1000;++poll)d.step();assert(mutations==before&&!httpLive);assert(d.journalCommitted());
+  for(unsigned poll=0;poll<1000;++poll){d.step();}
+  assert(mutations==before&&!httpLive);assert(d.journalCommitted());
   auto tickDownload=[&](Download&x){auto prior=mutations;x.step();assert(prior==mutations);executing=true;worker.workerStep();executing=false;};
   for(unsigned step=0;step<cut;++step)tickDownload(d);
   d.cancel();unsigned spins=0;while(d.state()!=Download::State::Cancelled&&d.state()!=Download::State::Ready){assert(d.state()!=Download::State::Retained&&d.state()!=Download::State::Failed);tickDownload(d);assert(++spins<100);}
