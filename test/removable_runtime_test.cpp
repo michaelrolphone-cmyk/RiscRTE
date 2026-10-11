@@ -177,7 +177,8 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
           std::string id="filled"+std::to_string(filled),path="Apps/"+id+"/manifest.json";
           std::string m=manifest;auto at=m.find("\"id\":\"child\"");m.replace(at,12,"\"id\":\""+id+"\"");
           int status=installer->admit(installer->context,path.c_str(),m.c_str(),admitted,sizeof(admitted));
-          if(status==RISC_INSTALL_FULL)break;assert(status==RISC_INSTALL_OK);
+          if(status==RISC_INSTALL_FULL){break;}
+          assert(status==RISC_INSTALL_OK);
         }
         assert(filled>20&&filled<100);
         std::string updated=manifest;updated.replace(updated.find("1.0.0"),5,"1.0.1");
@@ -229,7 +230,8 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
       if(!catalogMode())assert(runtime->appCount()==baseCount()+1);
     }
     if(defaults>1&&mode=="catalog-settings")checkpointSettings();
-    if(defaults==2 && mode=="replacement")selectImage("revision2.elf");return defaults<3;}
+    if(defaults==2 && mode=="replacement"){selectImage("revision2.elf");}
+    return defaults<3;}
   if(e==1){assert(!live && opens==closes);++children;assert(value==(mode=="replacement" && children==2?2u:1u));}
   if(e==6){++previousRuns;assert(value==1);}
   if(e==2)++starts;
@@ -257,7 +259,7 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
   v.dir_open=[](void*,const char* p)->uint32_t{++discoveryIo;appDirectory=opendir((root+p).c_str());return appDirectory?1:0;};
   v.dir_next=[](void*,uint32_t,risc_storage_dirent_v1*out){
     ++discoveryIo;while(auto*e=readdir(appDirectory)){if(e->d_name[0]=='.')continue;
-      snprintf(out->name,sizeof(out->name),"%s",e->d_name);out->is_directory=e->d_type==DT_DIR;return true;}
+      assert(strlen(e->d_name)<sizeof(out->name));memcpy(out->name,e->d_name,strlen(e->d_name)+1);out->is_directory=e->d_type==DT_DIR;return true;}
     return false;
   };
   ext.handle_error=[](void*,uint32_t h,bool dir)->uint32_t{return dir?0:h==2&&manifestFile&&ferror(manifestFile)?1:0;};
