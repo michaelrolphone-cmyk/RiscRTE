@@ -1,0 +1,25 @@
+name: Policy fixture regressions
+on:
+  push:
+    branches: [release/completed-20261011]
+  pull_request:
+    paths:
+      - 'src/bootstrap/AppPolicyLimits.h'
+      - 'test/run_key_value_multi_test.sh'
+      - '.github/workflows/policy-fixture-regressions.yml'
+permissions:
+  contents: read
+jobs:
+  policy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Metadata row guards and live grant isolation
+        run: |
+          bash test/run_key_value_multi_test.sh
+          SANITIZE=1 bash test/run_key_value_multi_test.sh
+          python3 -m unittest discover -s test -p 'test_app_policy_rows.py'
