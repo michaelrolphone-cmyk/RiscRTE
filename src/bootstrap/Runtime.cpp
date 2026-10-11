@@ -815,6 +815,7 @@ bool Runtime::prepare(const char* root) {
   registrationOpen_=false;
   if (!bound) return fail("trusted platform binding failed");
   if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !configureAppDataExports(c["app_capabilities"]) || !residentPolicy(c["resident_shell"]) || !configureInstalledFiles(c)) return false;
+  if(!installationNamespaceRangeSafe())return fail("installation namespace range overlaps existing authority");
   bootPolicyCount_=policyCount_;
   bool hasProviderFiles=false;
   for(size_t i=0;i<driverCount_;++i)hasProviderFiles=hasProviderFiles || providerStorage_[i].fileCount;

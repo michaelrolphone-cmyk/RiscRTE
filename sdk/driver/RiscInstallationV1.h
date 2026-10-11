@@ -28,6 +28,12 @@ typedef struct {
  /* Same candidate validation and result paths, with complete registry rollback
   * even on success. Use before persisting a bounded admitted catalog. */
  int32_t (*check)(void*,const risc_install_candidate_v1*,uint32_t count,risc_install_result_v1*,bool replace);
+ /* Namespace slots are allocated durably by the trusted catalog owner, never
+  * read from SD manifests. Slot zero grants no private storage. Persist the
+  * identity/slot ledger (including removed identities) before check=false.
+  * The boot envelope maps slots 1..namespace_capacity to a reserved range. */
+ uint32_t namespace_capacity;
+ int32_t (*namespaced)(void*,const risc_install_candidate_v1*,const uint32_t*slots,uint32_t count,risc_install_result_v1*,bool replace,bool check);
 } risc_installation_v1;
 #ifdef __cplusplus
 }

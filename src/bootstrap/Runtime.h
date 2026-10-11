@@ -348,18 +348,20 @@ class Runtime final {
   };
   MetadataArray<AppPolicy> policies_;
   size_t policyCapacity_=0, bootPolicyCount_=0;
-  struct InstalledAppMetadata {char manifest[4097]{};};
+  struct InstalledAppMetadata {char manifest[4097]{};uint32_t namespaceSlot=0;};
   MetadataArray<InstalledAppMetadata> installedMetadata_;
   struct InstallationState {
-    risc_installation_v1 api{};uint64_t volume=0;char grants[4097]{};bool call=false;
+    risc_installation_v1 api{};uint64_t volume=0;char grants[4097]{};uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
   };
   MetadataArray<InstallationState> installation_;
   bool configureInstallation(JsonVariantConst);
+  bool installationNamespaceRangeSafe() const;
+  static int32_t installationNamespaced(void*,const risc_install_candidate_v1*,const uint32_t*,uint32_t,risc_install_result_v1*,bool,bool);
   static int32_t installationAdmit(void*,const char*,const char*,char*,uint32_t);
   static int32_t installationForget(void*,const char*,bool);
   static int32_t installationCommit(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
   static int32_t installationCheck(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
-  static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool);
+  static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool,const uint32_t* slots=nullptr);
   bool installationMutable(size_t)const;
   void* loadRemovableApp(const AppPolicy&);
   RuntimeProviders::GrantV2 retainedAppSource_{};

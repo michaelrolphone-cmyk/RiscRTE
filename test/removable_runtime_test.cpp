@@ -26,6 +26,20 @@ static bool present=true;
 static RiscBoot::Runtime* runtime;
 static const risc_installation_v1* installer;
 extern "C" void removable_installation(const void*api){installer=static_cast<const risc_installation_v1*>(api);}
+static unsigned privateWrites;
+static RiscBoot::AppDataBackend privateData{nullptr,
+ [](void*,uint32_t ns,const char*,uint32_t*n,uint64_t*r)->int32_t{assert(ns==1000);*n=0;*r=privateWrites;return RISC_APP_DATA_NOT_FOUND;},
+ [](void*,uint32_t,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*)->int32_t{return RISC_APP_DATA_NOT_FOUND;},
+ [](void*,uint32_t ns,const char*,uint64_t,const void*,uint32_t)->int32_t{assert(ns==1000);++privateWrites;return RISC_APP_DATA_OK;},
+ [](void*){return true;}};
+extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
+ if(!catalogMode())return;
+ risc_runtime_capability_v1 grant{};grant.struct_size=sizeof(grant);
+ assert(rt->acquire("storage.app-data",1,0,&grant));
+ const auto*api=static_cast<const risc_app_data_v1*>(grant.api);
+ assert(api->replace(api->context,"settings",0,"x",1)==RISC_APP_DATA_OK);
+ assert(rt->release(&grant));
+}
 static std::string launchName="child.elf";
 static RiscStorage::Worker storageWorker;
 static unsigned discoveryIo;
@@ -101,6 +115,18 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         assert(installer->admit(installer->context,item.manifest_path,invalid.c_str(),admitted,sizeof(admitted))==RISC_INSTALL_INVALID);
         // Replacement can evict a full catalog transactionally, without a spare.
         item.manifest_json=updated.c_str();assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK);
+        JsonDocument privateManifest;assert(!deserializeJson(privateManifest,updated));
+        auto privateNeed=privateManifest["requires"].add<JsonObject>();privateNeed["capability"]="storage.app-data";privateNeed["api"]=1;
+        std::string privateJson;serializeJson(privateManifest,privateJson);item.manifest_json=privateJson.c_str();uint32_t slot=1;
+        assert(installer->namespace_capacity==128);
+        assert(installer->check(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_DENIED);
+        assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+        assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+        uint32_t changedSlot=2;
+        assert(installer->namespaced(installer->context,&item,&changedSlot,1,&result,false,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_DENIED);
+        changedSlot=129;assert(installer->namespaced(installer->context,&item,&changedSlot,1,&result,false,true)==RISC_INSTALL_INVALID);
+        assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
+        assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
         puts("Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS");
       } else for(const auto& item:staged){const char*path=item.first.c_str();const char*json=item.second.c_str();
         std::string folder(path);folder.resize(folder.rfind('/')+1);
@@ -214,7 +240,8 @@ int main(int argc,char** argv) {
   if(mode=="discovery"||catalogMode())boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[]})";
   if(catalogMode()){
     JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
-    doc["installation"]["volume_instance"]=9;doc["installation"]["grants"].to<JsonArray>();boot.clear();serializeJson(doc,boot);
+    doc["installation"]["volume_instance"]=9;auto grant=doc["installation"]["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=0;
+    doc["installation"]["namespace_range"]["first"]=1000;doc["installation"]["namespace_range"]["count"]=128;boot.clear();serializeJson(doc,boot);
     std::ifstream source(root+"/sd.json");std::string raw((std::istreambuf_iterator<char>(source)),{});JsonDocument sd;assert(!deserializeJson(sd,raw));
     auto req=sd["requires"].add<JsonObject>();req["capability"]=RISC_INSTALLATION_CAPABILITY;req["api"]=1;raw.clear();serializeJson(sd,raw);write("sd.json",raw);
   }
@@ -229,8 +256,19 @@ int main(int argc,char** argv) {
     boot.clear();serializeJson(doc,boot);
   }
   write("boot.json",boot);
-  runtime=new RiscBoot::Runtime({[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});
+  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;runtime=new RiscBoot::Runtime(port);
   if(mode=="invalid-path" || mode=="default-external") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
+  if(catalogMode()){
+    // Boot cannot reserve any namespace already owned by an app, even before
+    // a dynamic catalog has loaded. No native I/O is needed to reject overlap.
+    JsonDocument conflicting;assert(!deserializeJson(conflicting,boot));
+    write("namespace-owner.json",R"({"type":"application","id":"namespace-owner","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"owner.elf","entry":"app_main","requires":[{"capability":"storage.app-data","api":1}]})");
+    auto owner=conflicting["app_capabilities"].add<JsonObject>();owner["manifest"]="namespace-owner.json";
+    auto grant=owner["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=1000;
+    std::string invalid;serializeJson(conflicting,invalid);write("boot.json",invalid);
+    {RiscBoot::Runtime overlapping(port);assert(!overlapping.prepare(root.c_str()));}
+    write("boot.json",boot);
+  }
   if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
   if(mode=="discovery")assert(runtime->reserveInstalledApps(4));
   unsigned inspected=0;
@@ -239,5 +277,6 @@ int main(int argc,char** argv) {
   assert(runtime->run()!=retained);assert(runtime->retained()==retained);
   if(retained){assert(defaults==1 && !children && live && !stops);}
   else {assert(defaults==3 && !live && starts==stops);assert(children==((mode=="normal" || mode=="replacement" || (mode=="discovery"||catalogMode()))?2u:0u));delete runtime;}
+  if(catalogMode())assert(privateWrites==2);
   printf("SD Runtime mode=%s defaults=%u children=%u opens=%u closes=%u provider_starts=%u stops=%u PASS\n",mode.c_str(),defaults,children,opens,closes,starts,stops);
 }

@@ -1,6 +1,7 @@
 #include <RiscRuntimeV1.h>
 #include <RiscResidentShellV1.h>
 extern bool removable_is_resident(void);
+extern void removable_private_data(const risc_runtime_api_v1*);
 extern void removable_resident_entry(const risc_runtime_api_v1*);
 #if defined(REMOVABLE_DEFAULT) || defined(REMOVABLE_PREVIOUS)
 __attribute__((visibility("default"))) const risc_resident_app_descriptor_v1_t risc_resident_app_descriptor_v1={1,sizeof(risc_resident_app_descriptor_v1_t),
@@ -24,6 +25,7 @@ __attribute__((visibility("default"))) void app_main(void) {
 #elif defined(REMOVABLE_PREVIOUS)
   removable_event(6,counter++);
 #else
+  removable_private_data(risc_runtime_get_api(1));
   removable_event(1,counter++);
 #endif
 }

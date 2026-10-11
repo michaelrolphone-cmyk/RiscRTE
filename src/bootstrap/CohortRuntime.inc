@@ -81,6 +81,11 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
     if(!migrating && !(RiscUpdate::migrationTarget(migration["to"],currentIdentity) &&
        RiscUpdate::sameCohortIdentity(currentIdentity,nextIdentity)))return false;
   }
+  // Dynamic namespace identities live in the protected catalog ledger. A
+  // preserving firmware update must keep its native slot-to-namespace mapping;
+  // removing the range would permit a later unrelated owner to reclaim it.
+  if(installation_&&installation_[0].namespaceCount&&
+     !cohortSameJson(currentBoot["installation"]["namespace_range"],newBoot["installation"]["namespace_range"]))return false;
   bool consumed[RiscLimits::Apps]{};
   // Reuse the running graph's already scoped native tables with an identical
   // hardware/port declaration. Never bind the staged board into the CPU owner.
@@ -90,7 +95,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
   for(size_t i=0;i<platformCount_;++i){const auto& p=platforms_[i];
     // Rebuild this Runtime-owned descriptor/leases against the copied native
     // backend; never borrow a source Runtime's mutable generation tables.
-    if(!strcmp(p.capability,RISC_PLATFORM_REALTIME_CAPABILITY) || !strcmp(p.capability,RISC_TCP_LISTENER_CAPABILITY))continue;
+    if(!strcmp(p.capability,RISC_PLATFORM_REALTIME_CAPABILITY) || !strcmp(p.capability,RISC_TCP_LISTENER_CAPABILITY) || !strcmp(p.capability,RISC_INSTALLATION_CAPABILITY))continue;
     if(!candidate.registerPlatform(p.capability,p.api,p.scope,p.id,p.table))return false;
   }
   if(!candidate.prepare(root))return false;
@@ -122,6 +127,8 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
   // Keep every existing persisted app namespace attached to the same identity.
   // Removing an owner would lose the only durable anti-reassignment record.
   for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(persistent(policies_[p].grants[g])){
+    if(p>=bootPolicyCount_&&installedMetadata_&&installedMetadata_[p].namespaceSlot&&
+       installation_&&installation_[0].namespaceCount)continue;
     bool found=false;
     for(size_t q=0;q<candidate.policyCount_;++q)if(!strcmp(policies_[p].id,candidate.policies_[q].id))
       for(size_t h=0;h<candidate.policies_[q].count;++h)if(same(policies_[p].grants[g],candidate.policies_[q].grants[h]))found=true;

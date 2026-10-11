@@ -1,26 +1,46 @@
 namespace RiscBoot {
 bool Runtime::configureInstallation(JsonVariantConst value){
  if(value.isUnbound())return true;
- if(!value.is<JsonObjectConst>() || !keys(value.as<JsonObjectConst>(),{"volume_instance","grants"}) ||
+ if(!value.is<JsonObjectConst>() || !keys(value.as<JsonObjectConst>(),{"volume_instance","grants"},{"namespace_range"}) ||
     !value["grants"].is<JsonArrayConst>() || value["grants"].size()>MaxAppPolicyGrants)return fail("invalid installation envelope");
  int64_t volume=0;if(!integer(value["volume_instance"],1,INT32_MAX,volume))return fail("invalid installation volume");
  bool found=false;for(size_t i=0;i<driverCount_;++i)if(drivers_[i].instance==uint64_t(volume)&&!strcmp(drivers_[i].provides,"storage.volume")&&drivers_[i].api==1)found=true;
  if(!found)return fail("installation volume unavailable");
- // Namespace-owning and privileged native capabilities need an independently
- // durable allocation/delegation protocol. They cannot be implicitly shared.
+ int64_t first=0,count=0;
+ if(!value["namespace_range"].isUnbound()){
+  auto range=value["namespace_range"].as<JsonObjectConst>();
+  if(!keys(range,{"first","count"})||!integer(range["first"],1,INT32_MAX,first)||
+     !integer(range["count"],1,128,count)||first+count-1>INT32_MAX)return fail("invalid installation namespace range");
+ }
+ // Private namespaces are templates with instance zero. Only native code maps
+ // a durably assigned slot into the boot-reserved range. Shared/provider-bound
+ // storage remains explicit authority outside this installation envelope.
  for(JsonObjectConst g:value["grants"].as<JsonArrayConst>()){
   char cap[96];int64_t api=0,instance=0;
   if(!keys(g,{"capability","api","instance_id"})||!text(g["capability"],cap,sizeof(cap))||
      !integer(g["api"],1,UINT32_MAX,api)||!integer(g["instance_id"],0,INT32_MAX,instance)||
      !strncmp(cap,"platform.",9)||!strncmp(cap,"runtime.",8)||!strcmp(cap,"hardware.device")||
-     !strcmp(cap,"spi.bus")||!strcmp(cap,"storage.key-value")||!strncmp(cap,"storage.app-data",16)||
+     !strcmp(cap,"spi.bus")||(!strncmp(cap,"storage.app-data",16)&&strcmp(cap,"storage.app-data"))||
      !strcmp(cap,"storage.shared-data"))return fail("unsupported installation grant envelope");
+  if((!strcmp(cap,"storage.key-value")||!strcmp(cap,"storage.app-data"))&&(!count||instance))return fail("private installation namespace template required");
  }
  installation_=metadataArray<InstallationState>(1);if(!installation_)return false;
  if(serializeJson(value["grants"],installation_[0].grants,sizeof(installation_[0].grants))>=sizeof(installation_[0].grants)-1)return false;
- installation_[0].volume=uint64_t(volume);
- installation_[0].api={1,sizeof(risc_installation_v1),this,installationAdmit,installationForget,installationCommit,installationCheck};
+ installation_[0].volume=uint64_t(volume);installation_[0].namespaceFirst=uint32_t(first);installation_[0].namespaceCount=uint32_t(count);
+ installation_[0].api={1,sizeof(risc_installation_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced};
  return registerPlatform(RISC_INSTALLATION_CAPABILITY,1,Scope::Global,0,&installation_[0].api);
+}
+bool Runtime::installationNamespaceRangeSafe()const{
+ if(!installation_||!installation_[0].namespaceCount)return true;
+ const auto&s=installation_[0];auto overlaps=[&](uint64_t n){return n>=s.namespaceFirst&&n<uint64_t(s.namespaceFirst)+s.namespaceCount;};
+ for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g){const auto&grant=policies_[p].grants[g];
+  if((grant.keyValue||grant.driver==AppDataDriver||grant.driver==SharedDataDriver)&&overlaps(grant.instance))return false;
+ }
+ for(const auto&provider:providerStorage_){
+  for(size_t i=0;i<provider.count;++i)if(overlaps(provider.keys[i].nameSpace))return false;
+  for(size_t i=0;i<provider.fileCount;++i)if(overlaps(provider.files[i].nameSpace))return false;
+ }
+ return true;
 }
 bool Runtime::installationMutable(size_t i)const{
  if(i>=policyCount_)return false;
@@ -49,13 +69,24 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
  if(!manifest["requires"].is<JsonArrayConst>())return RISC_INSTALL_INVALID;
  for(JsonObjectConst requirement:manifest["requires"].as<JsonArrayConst>()){
   unsigned matches=0;for(JsonObjectConst allowed:envelope.as<JsonArrayConst>())
-   if(requirement["capability"]==allowed["capability"]&&requirement["api"]==allowed["api"]){grants.add(allowed);++matches;}
+   if(requirement["capability"]==allowed["capability"]&&requirement["api"]==allowed["api"]){
+    auto grant=grants.add<JsonObject>();grant.set(allowed);
+    if(eq(allowed["capability"],"storage.key-value")||eq(allowed["capability"],"storage.app-data")){
+     const auto&s=r->installation_[0];if(!s.namespaceSlot||s.namespaceSlot>s.namespaceCount)return RISC_INSTALL_DENIED;
+     grant["instance_id"]=s.namespaceFirst+s.namespaceSlot-1;
+    }
+    ++matches;
+   }
   if(matches!=1)return RISC_INSTALL_DENIED;
  }
+ const uint32_t namespaceSlot=r->installation_[0].namespaceSlot;
+ for(size_t i=r->bootPolicyCount_;namespaceSlot&&i<r->policyCount_;++i)
+  if(r->installedMetadata_[i].namespaceSlot==namespaceSlot&&strcmp(r->policies_[i].id,id))return RISC_INSTALL_DENIED;
  size_t existing=r->policyCount_;
  for(size_t i=0;i<r->policyCount_;++i)if(!strcmp(r->policies_[i].id,id)){existing=i;break;}
  if(existing<r->policyCount_){
   auto&old=r->policies_[existing];
+  if(existing>=r->bootPolicyCount_&&r->installedMetadata_[existing].namespaceSlot&&r->installedMetadata_[existing].namespaceSlot!=namespaceSlot)return RISC_INSTALL_DENIED;
   // A discovered identity cannot redirect or override a bootstrap entry.
   if(existing<r->bootPolicyCount_){
    if(old.sourceDriver<0||strcmp(old.sourcePath+1,image.c_str()))return RISC_INSTALL_DENIED;
@@ -78,6 +109,7 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
  std::string encoded;serializeJson(policy,encoded);r->installation_[0].call=true;
  const bool ok=r->admitInstalledAppAt(encoded.c_str(),json,destination);r->installation_[0].call=false;
  if(!ok)return RISC_INSTALL_INVALID;
+ r->installedMetadata_[destination].namespaceSlot=namespaceSlot;
  r->residentForeground_[destination]=eq(mode,"foreground");r->residentLegacy_[destination]=!r->residentForeground_[destination];
  strcpy(out,image.c_str());return RISC_INSTALL_OK;
 }
@@ -102,16 +134,20 @@ int32_t Runtime::installationCommit(void*ctx,const risc_install_candidate_v1*ite
 int32_t Runtime::installationCheck(void*ctx,const risc_install_candidate_v1*items,uint32_t count,risc_install_result_v1*out,bool replace){
  return installationTransaction(ctx,items,count,out,replace,true);
 }
-int32_t Runtime::installationTransaction(void*ctx,const risc_install_candidate_v1*items,uint32_t count,risc_install_result_v1*out,bool replace,bool check){
+int32_t Runtime::installationNamespaced(void*ctx,const risc_install_candidate_v1*items,const uint32_t*slots,uint32_t count,risc_install_result_v1*out,bool replace,bool check){
+ if(count&&!slots)return RISC_INSTALL_INVALID;
+ return installationTransaction(ctx,items,count,out,replace,check,slots);
+}
+int32_t Runtime::installationTransaction(void*ctx,const risc_install_candidate_v1*items,uint32_t count,risc_install_result_v1*out,bool replace,bool check,const uint32_t*slots){
  auto*r=static_cast<Runtime*>(ctx);
  if(!r||r!=currentRuntime||!r->installation_||!r->active()||!r->port_.owner()||r->retained_||
     r->graph_.lifecycleBusy()||count>64||(count&&(!items||!out)))return RISC_INSTALL_DENIED;
  for(uint32_t i=0;i<count;++i){
-  if(!items[i].manifest_path||!items[i].manifest_json)return RISC_INSTALL_INVALID;
+  if(!items[i].manifest_path||!items[i].manifest_json||(slots&&slots[i]>r->installation_[0].namespaceCount))return RISC_INSTALL_INVALID;
   JsonDocument a;if(deserializeJson(a,items[i].manifest_json))return RISC_INSTALL_INVALID;
   for(uint32_t j=0;j<i;++j){
    JsonDocument b;if(deserializeJson(b,items[j].manifest_json))return RISC_INSTALL_INVALID;
-   if(!strcmp(items[i].manifest_path,items[j].manifest_path)||a["id"]==b["id"])return RISC_INSTALL_INVALID;
+   if((slots&&slots[i]&&slots[i]==slots[j])||!strcmp(items[i].manifest_path,items[j].manifest_path)||a["id"]==b["id"])return RISC_INSTALL_INVALID;
   }
  }
  auto policies=metadataArray<AppPolicy>(r->policyCapacity_);
@@ -130,9 +166,10 @@ int32_t Runtime::installationTransaction(void*ctx,const risc_install_candidate_v
    r->policies_[i].enabled=false;
   }
  }
- for(uint32_t i=0;status==RISC_INSTALL_OK&&i<count;++i){out[i]={};out[i].status=installationAdmit(ctx,items[i].manifest_path,items[i].manifest_json,out[i].launch_path,sizeof(out[i].launch_path));
+ for(uint32_t i=0;status==RISC_INSTALL_OK&&i<count;++i){r->installation_[0].namespaceSlot=slots?slots[i]:0;out[i]={};out[i].status=installationAdmit(ctx,items[i].manifest_path,items[i].manifest_json,out[i].launch_path,sizeof(out[i].launch_path));
   if(out[i].status==RISC_INSTALL_BUSY||out[i].status==RISC_INSTALL_FULL){status=out[i].status;break;}
  }
+ r->installation_[0].namespaceSlot=0;
  if(status==RISC_INSTALL_OK&&replace)for(size_t i=r->bootPolicyCount_;i<r->policyCount_;++i){
   bool found=false;const char*path=r->policies_[i].elf+strlen(r->root_)+1;
   for(uint32_t j=0;j<count;++j)found=found||(out[j].status==RISC_INSTALL_OK&&!strcmp(path,out[j].launch_path));
