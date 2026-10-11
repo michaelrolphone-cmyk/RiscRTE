@@ -9,7 +9,7 @@ policy=();if [[ -n "${RISC_APP_POLICY_ROWS:-}" ]];then policy=(-DRISC_APP_POLICY
 if [[ "${SANITIZE:-0}" == 1 ]];then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g);fi
 flags=("${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -I"$source/sdk/app")
 link=(-g);if [[ "$(uname)" == Darwin ]];then link=(-undefined dynamic_lookup);fi
-for id in root leaf unused $(printf 'p%02d ' {0..25});do
+for id in root leaf unused $(printf 'p%02d ' {0..39});do
   extra=(-g);if [[ "$id" == leaf ]];then extra=(-DLEAF);fi
   cc "${flags[@]}" "${link[@]}" "${extra[@]}" -DPROVIDER_ID=\"$id\" -I"$source/sdk/driver" "$repo/test/fixtures/demand_provider.c" -o "$build/$id.elf"
 done
