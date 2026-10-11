@@ -10,7 +10,7 @@
 #include <unistd.h>
 namespace RiscCpu { namespace NativeTcpListener {
 struct Socket {
- int fd=-1; uint64_t owner=0,token=0; bool listener=false;
+ int fd=-1; uint64_t owner=0,token=0; bool listener=false,connecting=false,connectFailed=false;
 };
 static Socket sockets[RISC_TCP_LISTENERS_MAX+RISC_TCP_CLIENTS_MAX];
 static uint64_t generation=0;
@@ -117,6 +117,8 @@ inline int32_t transfer(uint64_t owner,uint64_t token,void* output,const void* i
  const int32_t allowed=gate();if(allowed)return allowed;
  auto* s=find(owner,token);if(!s || s->listener)return RISC_TCP_CONTEXT;
  if(!count || (!output && !input) || !size || size>RISC_TCP_BYTES_MAX)return RISC_TCP_INVALID;
+ if(s->connectFailed)return RISC_TCP_IO;
+ if(s->connecting)return RISC_TCP_WOULD_BLOCK;
  Operation operation;
  const int32_t online=network();if(online)return online;
  const ssize_t result=output?::recv(s->fd,output,size,MSG_DONTWAIT) : ::send(s->fd,input,size,MSG_DONTWAIT);
@@ -135,7 +137,45 @@ inline int32_t close(void*,uint64_t owner,uint64_t token){
  if(s->listener)for(const auto& child:sockets)if(child.token && !child.listener)return RISC_TCP_BUSY;
  Operation operation;return destroy(*s);
 }
+inline int32_t connect(void*,uint64_t owner,const risc_tcp_listen_v1* request,uint64_t* out){
+ if(out)*out=0;
+ const int32_t allowed=gate();if(allowed)return allowed;
+ if(!owner || !request || !out || request->struct_size!=sizeof(*request) || !request->port || request->reserved || !request->address[0] || request->address[0]>=224)return RISC_TCP_INVALID;
+ Socket* slot=nullptr;for(size_t i=1;i<sizeof(sockets)/sizeof(*sockets);++i)if(!sockets[i].token){slot=&sockets[i];break;}
+ if(!slot || generation==UINT64_MAX)return RISC_TCP_LIMIT;
+ Operation operation;const int32_t online=network();if(online)return online;
+ auto& s=*slot;s.fd=::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+ if(s.fd>=0){s.owner=owner;s.token=++generation;}
+ if(!checked())return RISC_TCP_RETAINED;
+ if(s.fd<0)return RISC_TCP_IO;
+ int32_t result=nonblocking(s);if(result)return result;
+ sockaddr_in address{};address.sin_family=AF_INET;address.sin_port=htons(request->port);
+ std::memcpy(&address.sin_addr.s_addr,request->address,4);
+ if(!checked())return RISC_TCP_RETAINED;
+ const int rc=::connect(s.fd,reinterpret_cast<const sockaddr*>(&address),sizeof(address));const int error=errno;
+ if(!checked())return RISC_TCP_RETAINED;
+ if(rc<0 && error!=EINPROGRESS && error!=EWOULDBLOCK && error!=EALREADY)return failedSetup(s,RISC_TCP_IO);
+ s.connecting=rc<0;*out=s.token;return RISC_TCP_OK;
+}
+inline int32_t connected(void*,uint64_t owner,uint64_t token){
+ const int32_t allowed=gate();if(allowed)return allowed;
+ auto* s=find(owner,token);if(!s || s->listener)return RISC_TCP_CONTEXT;
+ if(s->connectFailed)return RISC_TCP_IO;
+ Operation operation;const int32_t online=network();if(online)return online;
+ if(!s->connecting)return RISC_TCP_OK;
+ if(s->fd<0 || s->fd>=FD_SETSIZE){s->connectFailed=true;return RISC_TCP_IO;}
+ fd_set set;FD_ZERO(&set);FD_SET(s->fd,&set);timeval timeout{};
+ if(!checked())return RISC_TCP_RETAINED;
+ const int ready=::select(s->fd+1,nullptr,&set,nullptr,&timeout);
+ if(!checked())return RISC_TCP_RETAINED;
+ if(ready==0)return RISC_TCP_WOULD_BLOCK;
+ if(ready<0){s->connectFailed=true;return RISC_TCP_IO;}
+ int error=0;socklen_t size=sizeof(error);const int rc=::getsockopt(s->fd,SOL_SOCKET,SO_ERROR,&error,&size);
+ if(!checked())return RISC_TCP_RETAINED;
+ if(rc || size!=sizeof(error) || error){s->connectFailed=true;return RISC_TCP_IO;}
+ s->connecting=false;return RISC_TCP_OK;
+}
 inline const RiscBoot::TcpListenerBackend* backend(){
- static const RiscBoot::TcpListenerBackend value{nullptr,listen,accept,read,write,close,idle,safe};return &value;
+ static const RiscBoot::TcpListenerBackend value{nullptr,listen,accept,read,write,close,idle,safe,connect,connected};return &value;
 }
 } }

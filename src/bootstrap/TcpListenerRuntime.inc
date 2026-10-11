@@ -4,6 +4,7 @@ bool Runtime::registerTcpListener(const TcpListenerBackend* backend){
     !backend->close || !backend->idle || !backend->safe)return false;
  tcpBackend_=backend;
  providerTcpTable_={1,sizeof(providerTcpTable_),nullptr,tcpListen,tcpAccept,tcpRead,tcpWrite,tcpClose};
+ if(backend->connect && backend->connected){providerTcpTable_.connect_tag=RISC_TCP_CONNECT_TAG;providerTcpTable_.connect=tcpConnect;providerTcpTable_.connected=tcpConnected;}
  return registerPlatform(RISC_TCP_LISTENER_CAPABILITY,1,Scope::Global,0,&providerTcpTable_);
 }
 bool Runtime::providerResourcesSafe(void* context){
@@ -57,4 +58,18 @@ int32_t Runtime::tcpClose(void* context,uint64_t handle){
  auto* s=tcpContext(context,true);if(!s)return RISC_TCP_CONTEXT;
  auto* r=s->owner;const auto* b=r->tcpBackend_;
  return r->tcpResult(b->close(b->context,reinterpret_cast<uintptr_t>(context),handle));
+}
+
+int32_t Runtime::tcpConnect(void* context,const risc_tcp_listen_v1* request,uint64_t* out){
+ if(out)*out=0;
+ auto* s=tcpContext(context);if(!s)return RISC_TCP_CONTEXT;
+ auto* r=s->owner;const auto* b=r->tcpBackend_;
+ if(!b->connect)return RISC_TCP_INVALID;
+ return r->tcpResult(b->connect(b->context,reinterpret_cast<uintptr_t>(context),request,out));
+}
+int32_t Runtime::tcpConnected(void* context,uint64_t handle){
+ auto* s=tcpContext(context);if(!s)return RISC_TCP_CONTEXT;
+ auto* r=s->owner;const auto* b=r->tcpBackend_;
+ if(!b->connected)return RISC_TCP_INVALID;
+ return r->tcpResult(b->connected(b->context,reinterpret_cast<uintptr_t>(context),handle));
 }

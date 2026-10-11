@@ -38,3 +38,17 @@ int32_t Port::tcpClose(void* context,uint64_t owner,uint64_t handle){
  if(!p.tcpSafe())return RISC_TCP_RETAINED;
  p.transferring_=true;const auto result=b->close(b->context,owner,handle);p.transferring_=false;return result;
 }
+
+int32_t Port::tcpConnect(void* context,uint64_t owner,const risc_tcp_listen_v1* request,uint64_t* out){
+ if(out)*out=0;
+ auto& p=*static_cast<Port*>(context);const auto* b=p.hw_.tcpListener;
+ if(!p.available() || p.sleepRetained_ || p.transferring_ || !b || !b->connect)return RISC_TCP_CONTEXT;
+ if(!p.providerStorageSafe())return RISC_TCP_RETAINED;
+ p.transferring_=true;const auto result=b->connect(b->context,owner,request,out);p.transferring_=false;return result;
+}
+int32_t Port::tcpConnected(void* context,uint64_t owner,uint64_t handle){
+ auto& p=*static_cast<Port*>(context);const auto* b=p.hw_.tcpListener;
+ if(!p.available() || p.sleepRetained_ || p.transferring_ || !b || !b->connected)return RISC_TCP_CONTEXT;
+ if(!p.providerStorageSafe())return RISC_TCP_RETAINED;
+ p.transferring_=true;const auto result=b->connected(b->context,owner,handle);p.transferring_=false;return result;
+}

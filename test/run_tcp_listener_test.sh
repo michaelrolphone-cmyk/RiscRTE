@@ -5,7 +5,12 @@ build="$(mktemp -d)";trap 'rm -rf "$build"' EXIT
 flags=(-std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers)
 san=();if [[ "${SANITIZE:-0}" == 1 ]];then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g);fi
 incs=(-I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs")
-wrap=();for call in socket setsockopt fcntl bind listen accept recv send close;do wrap+=(-Wl,--wrap="$call");done
+wrap=()
+if [[ "$(uname -s)" == Darwin ]]; then
+ wrap=(-include "$repo/test/native_tcp_shim/redirect.h")
+else
+ for call in socket setsockopt fcntl bind listen accept recv send close connect select getsockopt;do wrap+=(-Wl,--wrap="$call");done
+fi
 c++ "${flags[@]}" "${san[@]}" "${incs[@]}" -I"$repo/test/native_tcp_shim" "$repo/test/native_tcp_listener_test.cpp" "${wrap[@]}" -o "$build/native"
 "$build/native"
 mkdir "$build/store"

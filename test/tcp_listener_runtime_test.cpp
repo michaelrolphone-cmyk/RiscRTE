@@ -15,6 +15,7 @@ static std::string root;
 static Port* cpu;
 static bool owns=true,storageSafe=true,nativeSafe=true;
 static int calls=0,stops=0,mode=0;
+static bool outbound=false;
 static uint64_t heldOwner=0,heldHandle=0,nextHandle=0;
 static risc_tcp_listener_v1 tables[2]{};
 static risc_tcp_listen_v1 request{sizeof(request),{0,0,0,0},8080,0};
@@ -24,6 +25,7 @@ static int32_t accept(void*,uint64_t owner,uint64_t handle,uint64_t* out){++call
 static int32_t read(void*,uint64_t owner,uint64_t handle,void*,uint32_t,uint32_t* out){++calls;*out=0;return owner==heldOwner&&handle==heldHandle?RISC_TCP_WOULD_BLOCK:RISC_TCP_CONTEXT;}
 static int32_t write(void*,uint64_t owner,uint64_t handle,const void*,uint32_t,uint32_t* out){return read(nullptr,owner,handle,nullptr,0,out);}
 static int32_t close(void*,uint64_t owner,uint64_t handle){++calls;if(owner!=heldOwner||handle!=heldHandle)return RISC_TCP_CONTEXT;if(mode==2){nativeSafe=false;return RISC_TCP_RETAINED;}heldHandle=heldOwner=0;return 0;}
+static int32_t connected(void*,uint64_t owner,uint64_t handle){++calls;return owner==heldOwner&&handle==heldHandle?RISC_TCP_WOULD_BLOCK:RISC_TCP_CONTEXT;}
 static bool idle(void*,uint64_t owner){return nativeSafe&&(!heldHandle||(owner&&owner!=heldOwner));}
 static bool safe(void*){return nativeSafe;}
 static RiscBoot::TcpListenerBackend backend{nullptr,listen,accept,read,write,close,idle,safe};
@@ -37,6 +39,7 @@ static void denied(const risc_tcp_listener_v1& a){uint64_t out=99;uint32_t n=99;
  assert(a.read(a.context,1,bytes,8,&n)==RISC_TCP_CONTEXT&&n==0);
  assert(a.write(a.context,1,bytes,8,&n)==RISC_TCP_CONTEXT&&n==0);
  assert(a.close(a.context,1)==RISC_TCP_CONTEXT&&calls==before);
+ if(outbound){assert(a.connect(a.context,&request,&out)==RISC_TCP_CONTEXT&&out==0);assert(a.connected(a.context,1)==RISC_TCP_CONTEXT&&calls==before);}
 }
 extern "C" void tcp_run_app(){
  const auto* rt=risc_runtime_get_api(1);assert(rt);
@@ -45,7 +48,9 @@ extern "C" void tcp_run_app(){
  assert(rt->acquire("test.tcp.first",1,0,&first));assert(rt->acquire("test.tcp.second",1,0,&second));
  auto a=tables[0],b=tables[1];assert(a.context&&b.context&&a.context!=b.context);
  uint64_t handle=0,out=99;uint32_t n=99;char bytes[8]{};
- assert(a.listen(a.context,&request,&handle)==0&&heldOwner==reinterpret_cast<uintptr_t>(a.context));
+ assert(a.connect_tag==(outbound?RISC_TCP_CONNECT_TAG:0));
+ assert((outbound?a.connect:a.listen)(a.context,&request,&handle)==0&&heldOwner==reinterpret_cast<uintptr_t>(a.context));
+ if(outbound){assert(a.connected(a.context,handle)==RISC_TCP_WOULD_BLOCK);assert(b.connected(b.context,handle)==RISC_TCP_CONTEXT);}
  assert(b.accept(b.context,handle,&out)==RISC_TCP_CONTEXT&&out==0);
  assert(b.close(b.context,handle)==RISC_TCP_CONTEXT&&heldHandle==handle);
  assert(!cpu->appExitSafe()&&!cpu->quiescent()&&!cpu->restartResourcesSafe()&&cpu->providerStorageSafe());
@@ -112,7 +117,8 @@ int main(int argc,char** argv){
  file("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"platform.tcp-listener","api":1,"instance_id":0}]}]})");
  {Port p(hardware());cpu=&p;RiscBoot::Runtime r(runtimePort());assert(!r.prepare(root.c_str())&&calls==0);}
  file("app.json",normalApp);file("boot.json",normalBoot);
- for(mode=0;mode<5;++mode){
+ for(int extension=0;extension<2;++extension)for(mode=0;mode<5;++mode){
+  outbound=extension;backend.connect=outbound?listen:nullptr;backend.connected=outbound?connected:nullptr;
   const auto child=fork();assert(child>=0);
   if(!child){Port p(hardware());cpu=&p;RiscBoot::Runtime r(runtimePort());assert(r.prepare(root.c_str())&&calls==0);assert(r.run()==(mode==0));denied(tables[0]);assert(mode==0?stops==3:stops==0);_exit(0);}
   int status;assert(waitpid(child,&status,0)==child);assert(WIFEXITED(status)&&WEXITSTATUS(status)==0);
