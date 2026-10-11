@@ -23,5 +23,5 @@ fi
   "$source/src/runtime/drivers/ProviderGraphV2.cpp" "$source/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$source/src/ports/esp32s3/CpuPort.cpp" "$repo/test/full_product_metadata_capacity_test.cpp" \
   -Wl,--wrap=dlopen -Wl,--wrap=dlsym -Wl,--wrap=dlclose -ldl -o "$build/test"
-extra=(); if [[ "$expected" == 24 ]]; then extra=(--legacy-capacity); fi
+extra=(--provider-limit "$expected"); if [[ "$expected" == 24 ]]; then extra+=(--legacy-capacity); fi
 PYTHONDONTWRITEBYTECODE=1 python3 "$repo/test/full_product_metadata_capacity_test.py" "$build/test" "${extra[@]}" "$@"

@@ -130,7 +130,7 @@ def build_stores(parent, fixture):
     return baseline, expanded
 
 
-def check(executable, baseline, candidate, case, expected, error=None):
+def check(executable, baseline, candidate, case, expected, error=None, providers=26):
     process = subprocess.run([str(executable), str(baseline), str(candidate)],
                              text=True, capture_output=True, check=False)
     assert process.returncode == 0, (case, process.returncode, process.stdout, process.stderr)
@@ -141,7 +141,7 @@ def check(executable, baseline, candidate, case, expected, error=None):
                ("hardware_calls", "storage_calls", "module_calls", "cohort_rebound_platforms")), result
     if expected:
         assert result["prepared_apps"] == result["cohort_apps"] == 21, result
-        assert result["prepared_providers"] == result["cohort_providers"] == 26, result
+        assert result["prepared_providers"] == result["cohort_providers"] == providers, result
     else:
         # Reject before either the ordinary image-inspection callback or cohort
         # image-inventory callback is reached, not just before module execution.
@@ -164,6 +164,7 @@ def main():
     parser.add_argument("--source-store", type=Path)
     parser.add_argument("--source-system", type=Path)
     parser.add_argument("--legacy-capacity", action="store_true")
+    parser.add_argument("--provider-limit", type=int, choices=(24,26,28), default=28)
     args = parser.parse_args()
     def source_hashes():
         if args.source_store is None:
@@ -190,13 +191,29 @@ def main():
             cases.append((candidate, name, error))
             return candidate
 
-        overflow = case("27-provider-overflow", "boot.json", lambda d:
-                        d["drivers"].append({"manifest": "overflow/manifest.json"}), "invalid driver list")
-        extra = read(expanded / "ui-profile/manifest.json")
-        extra["id"] = "metadata-overflow-only"
-        extra["provides"][0]["capability"] = "test.metadata-overflow"
-        write(overflow / "overflow/manifest.json", extra)
-        (overflow / "overflow/driver.elf").write_bytes(MARKER)
+        def extend(candidate, count):
+            boot = read(candidate / "boot.json")
+            for i in range(26, count):
+                name = f"overflow-{i}"
+                boot["drivers"].append({"manifest": name + "/manifest.json"})
+                extra = read(expanded / "ui-profile/manifest.json")
+                extra["id"] = f"metadata-extra-{i}"
+                extra["provides"][0]["capability"] = f"test.metadata-extra-{i}"
+                write(candidate / name / "manifest.json", extra)
+                (candidate / name / "driver.elf").write_bytes(MARKER)
+            write(candidate / "boot.json", boot)
+
+        if not args.legacy_capacity:
+            boundary = root / "at-capacity"
+            shutil.copytree(expanded, boundary)
+            extend(boundary, args.provider_limit)
+            check(args.executable, baseline, boundary, "at-provider-capacity", True,
+                  providers=args.provider_limit)
+        overflow_count = max(27, args.provider_limit + 1)
+        overflow = root / "provider-overflow"
+        shutil.copytree(expanded, overflow)
+        extend(overflow, overflow_count)
+        cases.append((overflow, f"{overflow_count}-provider-overflow", "invalid driver list"))
         case("malformed-provider-26", "ui-text/manifest.json",
              lambda d: d.update(driver_abi=1))
         case("missing-dependency-provider-26", "ui-text/manifest.json", lambda d:
