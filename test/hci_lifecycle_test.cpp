@@ -7,6 +7,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include "retention_stage_capture.h"
 static std::string root,mode,trace;
 static RiscCpu::Port* cpu;
 static bool active=false,cleanup=true;
@@ -37,7 +38,9 @@ static void child(){
  h.hciReceive=[](uint8_t*,uint8_t*,size_t,size_t* n,uint32_t){*n=0;return mode!="poll-retained" || !cleanup;};
  cleanup=mode!="cleanup-retained" && mode!="cleanup-retry" && mode!="open-retained" && mode!="poll-retained";
  cpu=new RiscCpu::Port(h);
- auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,nullptr,appExitSafe,providerStorageSafe});
+ RiscBoot::Port port{owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,nullptr,appExitSafe,providerStorageSafe};
+ port.nativeRetentionReason=[](){return cpu->retentionReason();};
+ auto* runtime=new RiscBoot::Runtime(port);
  assert(runtime->prepare(root.c_str()));
  const bool retained=mode=="open-retained" || mode=="cleanup-retained" || mode=="poll-retained";
  // Child return reloads a fresh default, whose host-owned run counter ends the test.
@@ -45,9 +48,17 @@ static void child(){
  if(retained){
   assert(!cpu->appExitSafe() && !cpu->quiescent() && active);
   assert(strstr(runtime->error(),"native retention barrier"));
+#if RISC_STAGE_LOGS
+  assert(count("app retention barrier mode=exit predicate=native-app-exit detail=hci-closing")==1);
+  assert(count("native hci failure step=")==1);
+  assert(count(mode=="open-retained"?"step=open-rollback":mode=="poll-retained"?"step=receive":"step=close")==1);
+#endif
   Dl_info app{},provider{};assert(dladdr(appImage,&app) && dladdr(providerImage,&provider));assert(app.dli_fbase!=provider.dli_fbase);
   assert(!runtime->run() && !risc_runtime_get_api(1));test_hci_trace("retained");
- }else{assert(cpu->appExitSafe() && cpu->quiescent() && !active);delete runtime;delete cpu;test_hci_trace("clean");}
+ }else{assert(count("app retention barrier")==0);assert(cpu->appExitSafe() && cpu->quiescent() && !active);delete runtime;delete cpu;test_hci_trace("clean");}
+#if !RISC_STAGE_LOGS
+ assert(lines.empty());
+#endif
  _exit(0);
 }
 static void save(const char* name,const std::string& value){std::ofstream(root+"/"+name)<<value;}

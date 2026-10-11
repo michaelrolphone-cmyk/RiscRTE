@@ -1,0 +1,47 @@
+name: Native retention diagnostics
+on:
+  push:
+    branches: [fix/native-retention-diagnostics]
+  pull_request:
+    paths:
+      - '.github/workflows/native-retention-diagnostics.yml'
+      - 'src/bootstrap/Runtime.*'
+      - 'src/main.cpp'
+      - 'src/ports/esp32s3/CpuPort.*'
+      - 'src/ports/esp32s3/NativeHci.h'
+      - 'test/*retention*diagnostics*'
+      - 'test/retention_stage_capture.h'
+      - 'test/hci_lifecycle_test.cpp'
+      - 'test/native_hci_test.cpp'
+      - 'test/run_radio_stage_test.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-retention-diagnostics-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  focused:
+    name: Exact-head retention diagnostics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Stage-disabled and stage-enabled production paths
+        run: |
+          bash test/run_native_retention_diagnostics_test.sh
+          bash test/run_radio_stage_test.sh
+      - name: Address and undefined-behavior sanitizers
+        env:
+          SANITIZE: '1'
+        run: |
+          bash test/run_native_retention_diagnostics_test.sh
+          bash test/run_radio_stage_test.sh
+      - name: Retained custody and native coexistence
+        run: |
+          bash test/run_hci_radio_coexistence_test.sh
+          bash test/run_failure_evidence_lifecycle_test.sh
+          bash test/run_retained_yield_test.sh

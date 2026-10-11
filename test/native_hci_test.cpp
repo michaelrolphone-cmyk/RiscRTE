@@ -47,16 +47,35 @@ int main(){
  for(unsigned i=0;i<4;++i)assert(cb->notify_host_recv(event,sizeof(event))==0);
  for(unsigned i=0;i<4;++i){assert(NativeHci::receive(&type,out,sizeof(out),&n,0) && type==4 && n==3 && out[2]==42);}
  assert(NativeHci::receive(&type,out,sizeof(out),&n,0) && !n);
- ready=false;const auto start=now;assert(!NativeHci::send(1,command,3,20) && now-start==20000);ready=true;
+ ready=false;const auto start=now;assert(!NativeHci::send(1,command,3,20) && now-start==20000);
+ const size_t timeoutLines=stageLines.size();
+ for(unsigned i=0;i<1000;++i)assert(!NativeHci::send(1,command,3,0));
+ assert(stageLines.size()==timeoutLines);
+#if RISC_STAGE_LOGS
+ assert(stageCount("first-failure step=send-wait reason=timeout")==1);
+#endif
+ ready=true;
  assert(initializations==starts); // No send/receive ever auto-initializes.
  for(const char* phase:{"disable","deinit"}){failure=phase;assert(!NativeHci::close() && !NativeHci::idle());clean();assert(NativeHci::open());}
  // A malformed event or queue loss is terminal for this stream, not silent loss.
- assert(cb->notify_host_recv(nullptr,0)==-1 && !NativeHci::safe());assert(!NativeHci::receive(&type,out,sizeof(out),&n,0));clean();
+ const size_t callbackLines=stageLines.size();
+ assert(cb->notify_host_recv(nullptr,0)==-1 && stageLines.size()==callbackLines);
+ assert(!NativeHci::safe());assert(!NativeHci::receive(&type,out,sizeof(out),&n,0));
+ const size_t faultLines=stageLines.size();
+ for(unsigned i=0;i<1000;++i)assert(!NativeHci::safe() && !NativeHci::healthy());
+ assert(stageLines.size()==faultLines);clean();
  uint8_t acl[1029]={2,1,0,0,4};
  assert(NativeHci::open());for(unsigned i=0;i<4;++i)assert(cb->notify_host_recv(acl,sizeof(acl))==0);
  assert(cb->notify_host_recv(event,sizeof(event))==-1 && !NativeHci::safe());clean();
  assert(NativeHci::open());failure="send-fault";assert(!NativeHci::send(1,command,3,0));clean();
- assert(NativeHci::open());status=ESP_BT_CONTROLLER_STATUS_IDLE;assert(!NativeHci::safe() && !NativeHci::close());status=ESP_BT_CONTROLLER_STATUS_ENABLED;clean();
+ assert(NativeHci::open());status=ESP_BT_CONTROLLER_STATUS_IDLE;assert(!NativeHci::safe());
+ const size_t mismatchLines=stageLines.size();
+ for(unsigned i=0;i<1000;++i)assert(!NativeHci::safe());
+ assert(stageLines.size()==mismatchLines);
+#if RISC_STAGE_LOGS
+ assert(stageCount("first-failure step=safety reason=controller-state")==1);
+#endif
+ assert(!NativeHci::close());status=ESP_BT_CONTROLLER_STATUS_ENABLED;clean();
  failure="enable";failureResult=0x3131;assert(!NativeHci::open());clean();failureResult=ESP_FAIL;
  // SDK early-init failures can own PHY resources even while reporting IDLE.
  failure="init";assert(!NativeHci::open() && status==ESP_BT_CONTROLLER_STATUS_IDLE && !NativeHci::idle() && !NativeHci::safe());

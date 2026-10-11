@@ -125,8 +125,28 @@ class Port final {
   // Actual native cleanup failure retains the existing storage safety barrier.
   bool providerStorageSafe() const;
   bool radioSharedReady() const;
+  // Cached first failed predicate from the most recent safety evaluation.
+  // This accessor never re-evaluates a backend or emits a diagnostic.
+  const char* retentionReason() const {
+#if RISC_STAGE_LOGS
+    return safetyFailure_;
+#else
+    return nullptr;
+#endif
+  }
  private:
   const RiscBoot::Runtime* runtime_=nullptr;
+#if RISC_STAGE_LOGS
+  mutable const char* safetyFailure_=nullptr;
+#endif
+  bool unsafe(const char* reason) const {
+#if RISC_STAGE_LOGS
+    safetyFailure_=reason;
+#else
+    (void)reason;
+#endif
+    return false;
+  }
   struct Sync {
     Port* port=nullptr; uint64_t instance=0;
     struct Lock { uint64_t token=0; bool held=false; } locks[RISC_PROVIDER_SYNC_MAX_LOCKS]{};
@@ -152,7 +172,18 @@ class Port final {
   struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; } i2ss_[2];
   struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;
     bool active=false,closing=false,scanning=false,asyncUnavailable=false; uint32_t operation=0,completed=0,suspendedOperation=0,serviceLease=0,nextServiceLease=0; garden_radio_async_v1 api{}; } radios_[1];
-  struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
+  struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{};
+#if RISC_STAGE_LOGS
+    bool failureReported=false;
+#endif
+    void reportFailure(const char* step){
+#if RISC_STAGE_LOGS
+      if(!failureReported){failureReported=true;RISC_STAGE_LOG("native hci failure step=%s",step);}
+#else
+      (void)step;
+#endif
+    }
+  } hci_;
   struct RadioIq { Port* port=nullptr; uint64_t token=0; bool closing=false,worker=false; risc_radio_iq_worker_resource_v1 api{}; } iq_;
   struct UsbPhy { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_usb_phy_resource_api_v1 api{}; } usb_;
   struct Pin { const void* owner=nullptr; uint64_t token=0; bool output=false,pullup=false,held=false,pwm=false,wakeHigh=false; uint8_t wakeModes=0; bool retiredHeld=false; } pins_[49];

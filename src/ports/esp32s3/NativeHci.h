@@ -20,9 +20,23 @@ static portMUX_TYPE mux=portMUX_INITIALIZER_UNLOCKED;
 static Buffers* buffers=nullptr;
 static size_t head=0,used=0;
 static bool accepting=false,fault=false,initialized=false,enabled=false,initUncertain=false;
+#if RISC_STAGE_LOGS
+static bool failureReported=false;
+#endif
+inline void reportFailure(const char* step,const char* reason){
+#if RISC_STAGE_LOGS
+  if(!failureReported){
+    failureReported=true;
+    RISC_STAGE_LOG("radio bluetooth first-failure step=%s reason=%s",step,reason);
+  }
+#else
+  (void)step;(void)reason;
+#endif
+}
 inline bool sdk(const char* step,esp_err_t code){
   (void)step;
   if(code==ESP_OK)return true;
+  reportFailure(step,"sdk-error");
   RISC_STAGE_LOG("radio bluetooth failure step=%s code=%d",step,int(code));return false;
 }
 #if RISC_STAGE_LOGS
@@ -36,7 +50,10 @@ inline bool safe(){
   portENTER_CRITICAL(&mux);const uint8_t reason=faultReason;portEXIT_CRITICAL(&mux);
   if(reason && reportedFault!=reason){reportedFault=reason;RISC_STAGE_LOG("radio bluetooth stream result=failed reason=%s",reason==2?"receive-queue-full":"malformed-packet");}
 #endif
-  return result && esp_bt_controller_get_status()==(enabled?ESP_BT_CONTROLLER_STATUS_ENABLED:initialized?ESP_BT_CONTROLLER_STATUS_INITED:ESP_BT_CONTROLLER_STATUS_IDLE);
+  if(!result){reportFailure("safety",initUncertain?"uncertain-init":"stream-fault");return false;}
+  const bool controllerSafe=esp_bt_controller_get_status()==(enabled?ESP_BT_CONTROLLER_STATUS_ENABLED:initialized?ESP_BT_CONTROLLER_STATUS_INITED:ESP_BT_CONTROLLER_STATUS_IDLE);
+  if(!controllerSafe)reportFailure("safety","controller-state");
+  return controllerSafe;
 }
 inline bool idle(){return !buffers && !initialized && !enabled && !initUncertain && esp_bt_controller_get_status()==ESP_BT_CONTROLLER_STATUS_IDLE;}
 inline void sendAvailable(){} // The owner polls readiness for at most 20ms.
@@ -89,7 +106,7 @@ inline bool close(){
   portENTER_CRITICAL(&mux);auto* old=buffers;buffers=nullptr;head=used=0;fault=false;portEXIT_CRITICAL(&mux);
   if(old){memset(old,0,sizeof(*old));heap_caps_free(old);RISC_STAGE_LOG("radio bluetooth close result=ok state=off");}
 #if RISC_STAGE_LOGS
-  faultReason=reportedFault=0;
+  faultReason=reportedFault=0;failureReported=false;
 #endif
   return true;
 }
@@ -122,7 +139,8 @@ inline bool send(uint8_t type,const uint8_t* data,size_t length,uint32_t ms){
   if(!healthy() || !buffers || ms>HciBounds::MaxWaitMs || !HciBounds::tx(type,data,length))return false;
   const int64_t deadline=esp_timer_get_time()+int64_t(ms)*1000;
   while(!esp_vhci_host_check_send_available()){
-    if(!healthy() || esp_timer_get_time()>=deadline)return false;
+    if(!healthy()){reportFailure("send-wait","unhealthy");return false;}
+    if(esp_timer_get_time()>=deadline){reportFailure("send-wait","timeout");return false;}
     vTaskDelay(1);
   }
   // SDK consumes this bounded firmware-owned copy synchronously. Never pass an

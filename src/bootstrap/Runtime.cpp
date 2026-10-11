@@ -672,8 +672,19 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   return true;
 }
 bool Runtime::providerStorageSafe() const {
-  if(entropyRetained_ || tcpRetained_ || metadataCloseRetained_ || !appDataExitSafe())return false;
-  if(invocation_->installedFiles_ && invocation_->installedFiles_->retained())return false;
+#if RISC_STAGE_LOGS
+  auto reject=[this](const char* reason){providerStorageFailure_=reason;return false;};
+#else
+  auto reject=[](const char*){return false;};
+#endif
+  if(entropyRetained_)return reject("entropy-retained");
+  if(tcpRetained_)return reject("tcp-retained");
+  if(metadataCloseRetained_)return reject("metadata-close");
+  if(!appDataExitSafe())return reject("app-data");
+  if(invocation_->installedFiles_ && invocation_->installedFiles_->retained())return reject("installed-files");
+#if RISC_STAGE_LOGS
+  providerStorageFailure_="native";
+#endif
   if(port_.providerStorageSafe)return port_.providerStorageSafe();
   return !port_.appExitSafe || port_.appExitSafe();
 }
@@ -1222,7 +1233,37 @@ bool Runtime::appExitBarrier(bool exiting) {
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
+#if RISC_STAGE_LOGS
+  const char* failed=nullptr;
+  auto check=[&](bool safe,const char* predicate){if(!safe)failed=predicate;return safe;};
+#define RISC_BARRIER_SAFE(test, name) check((test),(name))
+#else
+#define RISC_BARRIER_SAFE(test, name) (test)
+#endif
+  if(RISC_BARRIER_SAFE(graphSafe,"provider-graph") &&
+     RISC_BARRIER_SAFE(otherSafe,"foreground-custody") &&
+     RISC_BARRIER_SAFE(hostSafe,"host-custody") &&
+     RISC_BARRIER_SAFE(appDataExportExitSafe(),"app-data-export") &&
+     RISC_BARRIER_SAFE(!exiting || !appDataBusy(),"app-data-busy") &&
+     RISC_BARRIER_SAFE(!retained_,"invocation-retained") &&
+     RISC_BARRIER_SAFE(!invocation_->streams_.retained(),"invocation-streams") &&
+     RISC_BARRIER_SAFE(!metadataCloseRetained_,"metadata-close") &&
+     RISC_BARRIER_SAFE(appDataExitSafe(),"app-data") &&
+     RISC_BARRIER_SAFE(!invocation_->installedFiles_ || !invocation_->installedFiles_->retained(),"installed-files") &&
+     RISC_BARRIER_SAFE(exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe(),
+                       exiting?"native-app-exit":"provider-storage"))return true;
+#undef RISC_BARRIER_SAFE
+#if RISC_STAGE_LOGS
+  if(!retentionReported_){
+    retentionReported_=true;
+    const bool native=failed && (!strcmp(failed,"native-app-exit") ||
+      (!strcmp(failed,"provider-storage") && providerStorageFailure_ && !strcmp(providerStorageFailure_,"native")));
+    const char* detail=native?(port_.nativeRetentionReason?port_.nativeRetentionReason():nullptr):
+      failed && !strcmp(failed,"provider-storage")?providerStorageFailure_:nullptr;
+    RISC_STAGE_LOG("app retention barrier mode=%s predicate=%s detail=%.64s",
+      exiting?"exit":"acquire",failed?failed:"unknown",detail?detail:"unavailable");
+  }
+#endif
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());

@@ -27,6 +27,7 @@
 #include <RiscPlatformRealtimeV1.h>
 #include <RiscProviderPromotionV1.h>
 #include <RiscKeyValueV1.h>
+#include "diagnostics/StageLog.h"
 #include <RiscBoundKeyValueV1.h>
 #include <RiscKeyValueV2.h>
 #include <RiscBoundKeyValueV2.h>
@@ -94,6 +95,9 @@ struct Port {
   void (*controlBegin)(bool child)=nullptr;
   bool (*controlEnd)()=nullptr;
   bool (*controlExitRequested)()=nullptr;
+  // Optional compiled-in diagnostic snapshot of the last failed native gate.
+  // Returns a static label only; must not sample hardware, call providers or do I/O.
+  const char* (*nativeRetentionReason)()=nullptr;
 };
 class Runtime final {
  public:
@@ -514,6 +518,10 @@ class Runtime final {
   bool promotionSafe() const;
   static int32_t promoteProviders(void*);
   bool prepared_=false, attempted_=false, retained_=false;
+#if RISC_STAGE_LOGS
+  bool retentionReported_=false;
+  mutable const char* providerStorageFailure_=nullptr;
+#endif
   bool yielding_=false;
   mutable bool metadataCloseRetained_=false;
   esp_dl_image_cache* appImages_=nullptr;

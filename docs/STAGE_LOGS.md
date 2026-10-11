@@ -114,3 +114,54 @@ checks real host-module lifecycle statements, cross-app order, failed-child
 fallback, named successful/failed provider starts and demand deferral, both with
 the recorder configured on and off. Sanitizers cover both suites. These checks
 and target builds do not qualify physical latency, radio reliability or hardware.
+
+## First retention failure
+
+Stage builds record the first failed terminal invocation barrier once per Runtime:
+
+```text
+RTE_STAGE us=... app retention barrier mode=exit predicate=native-app-exit detail=radio-active
+```
+
+`mode=acquire` means the narrower provider-storage barrier was being evaluated;
+`mode=exit` means the full app-exit barrier. The record names the first failed
+predicate in the existing short-circuit order. Native details name a cached CPU
+predicate such as `hci-closing`, `hci-custody`, `radio-active`, `radio-service-lease`,
+`http-active`, or `sync-held`. The native composition also distinguishes
+`bank-exit` and `app-data-custody`. Missing diagnostic hooks say `unavailable`.
+These labels identify a failed safety check, not the root cause of a fault.
+Healthy provider-owned HCI remains permitted across app navigation; healthy
+station activity still blocks app exit and still permits provider storage.
+
+The native-only `Port::nativeRetentionReason` hook returns a static label from
+the immediately preceding failed gate. It must not resample hardware, invoke a
+provider, allocate, or perform I/O. Runtime only calls it for the matching native
+failure, never for an earlier failed predicate or a repeated terminal barrier.
+The original retained error and failure evidence remain unchanged. No new
+public app, provider or shared hardware ABI is introduced.
+
+`native hci failure step=...` identifies the first CPU HCI failure stage per
+controller lifetime. `radio bluetooth first-failure step=... reason=...` adds a
+bounded native SDK/transport first-failure record, including a send-readiness
+timeout and unexpected controller state. Successful native/CPU close rearms
+its respective diagnostic; failed cleanup and repeated status/safety polling
+do not. RX callbacks still record only a small fault reason under the existing
+lock and never format or emit logs. Existing SDK error-code and RX fault lines
+remain available. No addresses, tokens, SSIDs, credentials, packet contents,
+file contents, or user-supplied strings appear in the new records.
+
+`test/run_native_retention_diagnostics_test.sh` runs stage-disabled and stage-enabled
+production Runtime/CpuPort checks and real dlopen app/provider lifecycle cases.
+It covers first-failure priority, the acquisition/exit distinction, original
+error preservation, clean navigation, failed open/close/receive retention and
+1,000 repeated polls/barriers without additional diagnostics or native calls.
+`test/run_radio_stage_test.sh` adds native-HCI timeout/state/fault repetition and
+callback-silence checks. Both support `SANITIZE=1`; on a ptrace executor use
+`ASAN_OPTIONS=detect_leaks=0` because LeakSanitizer cannot inspect that process.
+These host tests do not qualify hardware or substitute for a target build.
+
+Deployment scope for the October 11, 2026 checkpoint: these additional native
+diagnostics are source-only and are not included in Watch 1.1.10 or the X4
+replacement image. Those images retain native Runtime `3b90cd11cf0ff4e8116bb54d2d9eb9c7c67a148b`.
+Publishing this working branch does not replace, rebuild, tag or release either
+native image. The focused workflow checks the exact branch/PR head source.

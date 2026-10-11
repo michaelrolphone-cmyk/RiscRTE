@@ -49,28 +49,51 @@ bool Port::radioSharedReady() const {
   return !hw_.radioIdle || hw_.radioIdle();
 }
 bool Port::providerStorageSafe() const {
-  if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe() || !entropySafe())return false;
-  if(hw_.radioAsync && hw_.radioAsync->custodySafe && !hw_.radioAsync->custodySafe())return false;
-  if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
-  for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
-  if(hw_.httpSafe && !hw_.httpSafe())return false;
-  for(const auto& pin:pins_)if(pin.held && !pin.retiredHeld)return false;
-  for(const auto& c:i2ss_)if(c.closing)return false;
-  for(const auto& c:radios_)if(c.closing)return false;
-  if(hci_.closing || (hw_.hciSafe && !hw_.hciSafe()))return false;
+#if RISC_STAGE_LOGS
+  safetyFailure_=nullptr;
+#endif
+  // Keep predicate order and short circuiting: diagnostics must not introduce
+  // backend calls after a prior gate has failed.
+  if(storageWork_.gpio && !storageWorkBusy() && storageWork_.fault)return unsafe("storage-work-fault");
+  if(sdmmc_.closing)return unsafe("sdmmc-closing");
+  if(!tcpSafe())return unsafe("tcp-custody");
+  if(!entropySafe())return unsafe("entropy-custody");
+  if(hw_.radioAsync && hw_.radioAsync->custodySafe && !hw_.radioAsync->custodySafe())return unsafe("radio-custody");
+  if(!hw_.owner || !hw_.owner())return unsafe("owner");
+  if(poisoned_)return unsafe("poisoned");
+  if(sleeping_)return unsafe("sleeping");
+  if(sleepRetained_)return unsafe("sleep-retained");
+  if(transferring_)return unsafe("transferring");
+  if(iq_.closing)return unsafe("iq-closing");
+  if(iq_.token && !iq_.worker)return unsafe("iq-unparked");
+  for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return unsafe("sync-held");
+  if(hw_.httpSafe && !hw_.httpSafe())return unsafe("http-custody");
+  for(const auto& pin:pins_)if(pin.held && !pin.retiredHeld)return unsafe("gpio-held");
+  for(const auto& c:i2ss_)if(c.closing)return unsafe("i2s-closing");
+  for(const auto& c:radios_)if(c.closing)return unsafe("radio-closing");
+  if(hci_.closing)return unsafe("hci-closing");
+  if(hw_.hciSafe && !hw_.hciSafe())return unsafe("hci-custody");
   return true;
 }
 bool Port::appExitSafe() const {
-  if(storageWorkBusy())return false;
+  if(storageWorkBusy())return unsafe("storage-work-busy");
   // Healthy HCI is entirely firmware/provider-owned, with no app callbacks or
   // borrowed app storage; it survives navigation. Restart/sleep still drain it.
-  if(!providerStorageSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
-  for(const auto& pin:pins_)if(pin.wakeModes)return false;
-  if(!tcpIdle() || !entropyIdle())return false;
-  if(hw_.httpIdle && !hw_.httpIdle())return false;
-  for(const auto& c:i2ss_)if(c.token)return false;
-  for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
-  if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
+  if(!providerStorageSafe())return false;
+  if(iq_.token)return unsafe("iq-owned");
+  if(usb_.token)return unsafe("usb-owned");
+  if(usb_.closing)return unsafe("usb-closing");
+  if(hw_.usbPhyIdle && !hw_.usbPhyIdle())return unsafe("usb-active");
+  for(const auto& pin:pins_)if(pin.wakeModes)return unsafe("gpio-wake-armed");
+  if(!tcpIdle())return unsafe("tcp-active");
+  if(!entropyIdle())return unsafe("entropy-active");
+  if(hw_.httpIdle && !hw_.httpIdle())return unsafe("http-active");
+  for(const auto& c:i2ss_)if(c.token)return unsafe("i2s-owned");
+  for(const auto& c:radios_){
+    if(c.active)return unsafe("radio-active");
+    if(c.serviceLease)return unsafe("radio-service-lease");
+  }
+  if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return unsafe("maintenance-active");
   return true;
 }
 bool Port::restartResourcesSafe() const {
@@ -400,13 +423,13 @@ bool Port::hciOpen(void* context,uint32_t unit,uint64_t* out){
     p.transferring_=true;const bool clean=p.hw_.hciClose();p.transferring_=false;
     if(clean && p.hw_.hciIdle())return false;
   }
-  c.token=token;c.closing=!ok;*out=token;return ok;
+  c.token=token;c.closing=!ok;*out=token;if(!ok)c.reportFailure("open-rollback");return ok;
 }
 bool Port::hciSend(void* context,uint64_t token,uint8_t type,const uint8_t* data,size_t size,uint32_t ms){
   auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
   if(!p.available() || p.sleepRetained_ || p.transferring_ || c.closing || !token || token!=c.token || ms>HciBounds::MaxWaitMs || !HciBounds::tx(type,data,size))return false;
   p.transferring_=true;const bool ok=p.hw_.hciSend(type,data,size,ms);p.transferring_=false;
-  if(!ok)c.closing=true;
+  if(!ok){c.closing=true;c.reportFailure("send");}
   return ok;
 }
 bool Port::hciReceive(void* context,uint64_t token,uint8_t* type,uint8_t* data,size_t capacity,size_t* size,uint32_t ms){
@@ -415,7 +438,7 @@ bool Port::hciReceive(void* context,uint64_t token,uint8_t* type,uint8_t* data,s
   auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
   if(!type || !data || !size || capacity<HciBounds::MaxPayload || ms>HciBounds::MaxWaitMs || !p.available() || p.sleepRetained_ || p.transferring_ || c.closing || !token || token!=c.token)return false;
   p.transferring_=true;const bool ok=p.hw_.hciReceive(type,data,HciBounds::MaxPayload,size,ms);p.transferring_=false;
-  if(!ok || (*size && !HciBounds::rx(*type,data,*size))){*size=0;*type=0;c.closing=true;return false;}
+  if(!ok || (*size && !HciBounds::rx(*type,data,*size))){*size=0;*type=0;c.closing=true;c.reportFailure(ok?"receive-packet":"receive");return false;}
   return true;
 }
 bool Port::hciClose(void* context,uint64_t token){
@@ -424,8 +447,12 @@ bool Port::hciClose(void* context,uint64_t token){
   HciRadioLease lease(p.hw_.radioAsync);
   if(!lease.held || !p.radioSharedReady())return false;
   c.closing=true;p.transferring_=true;const bool ok=p.hw_.hciClose();p.transferring_=false;
-  if(!ok || !p.hw_.hciIdle())return false;
-  c.token=0;c.closing=false;return true;
+  if(!ok || !p.hw_.hciIdle()){c.reportFailure(ok?"close-not-idle":"close");return false;}
+  c.token=0;c.closing=false;
+#if RISC_STAGE_LOGS
+  c.failureReported=false;
+#endif
+  return true;
 }
 bool Port::hciStatus(void* context,uint64_t token,uint8_t* state){
   if(state)*state=RISC_HCI_CONTROLLER_RETAINED;
@@ -436,7 +463,7 @@ bool Port::hciStatus(void* context,uint64_t token,uint8_t* state){
     *state=RISC_HCI_CONTROLLER_OFF;return true;
   }
   if(c.closing || !p.hw_.hciSafe() || p.hw_.hciIdle()){
-    c.closing=true;*state=RISC_HCI_CONTROLLER_RETAINED;return true;
+    c.closing=true;c.reportFailure("status");*state=RISC_HCI_CONTROLLER_RETAINED;return true;
   }
   *state=RISC_HCI_CONTROLLER_ON;return true;
 }
