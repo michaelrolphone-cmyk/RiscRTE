@@ -19,6 +19,7 @@ struct Disk {
   [](void*v,uint32_t n,uint64_t*id){auto&d=*static_cast<Disk*>(v);if(d.begin())return int(C::Io);size_t used=0;for(auto&e:d.objects)used+=e.second.size();if(used>d.capacity||n>d.capacity-used)return int(C::NoSpace);*id=d.next++;d.objects[*id]=Bytes(n,0xa5);return d.end()?int(C::Io):int(C::Ok);},
   [](void*v,uint64_t id,uint32_t at,const void*p,uint32_t n){auto&d=*static_cast<Disk*>(v);if(d.begin())return int(C::Io);auto it=d.objects.find(id);if(it==d.objects.end()||at>it->second.size()||n>it->second.size()-at)return int(C::Io);const uint32_t written=d.cut==d.calls&&d.mode==Torn?n/2:n;memcpy(it->second.data()+at,p,written);return d.end()?int(C::Io):int(C::Ok);},
   [](void*v,uint64_t id,uint32_t at,void*p,uint32_t n){auto&d=*static_cast<Disk*>(v);if(d.begin())return int(C::Io);auto it=d.objects.find(id);if(it==d.objects.end()||at>it->second.size()||n>it->second.size()-at)return int(C::Io);memcpy(p,it->second.data()+at,n);return d.end()?int(C::Io):int(C::Ok);},
+  [](void*v,uint64_t id){auto&d=*static_cast<Disk*>(v);if(d.begin())return int(C::Io);if(!d.objects.count(id))return int(C::Io);return d.end()?int(C::Io):int(C::Ok);},
   [](void*v,const void*p,uint32_t n){auto&d=*static_cast<Disk*>(v);if(d.begin())return int(C::Io); // Root is atomic even when immutable payload writes can tear.
    if(!(d.cut==d.calls&&d.mode==Torn))d.root.assign(static_cast<const uint8_t*>(p),static_cast<const uint8_t*>(p)+n);
    return d.end()?int(C::Io):int(C::Ok);},

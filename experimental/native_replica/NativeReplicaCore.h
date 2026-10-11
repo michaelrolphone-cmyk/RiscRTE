@@ -8,7 +8,7 @@ namespace RiscExperimental {
 class NativeReplicaCore {
  public:
  enum Result { Ok=0, Missing=-1, Invalid=-2, NoMemory=-3, NoSpace=-4,
-               Io=-5, Uncertain=-6, Conflict=-7, Stale=-8, BufferSmall=-9 };
+               Io=-5, Uncertain=-6, Conflict=-7, Stale=-8, BufferSmall=-9, Busy=-10, Retained=-11 };
  struct Identity {
   bool known=false; uint64_t generation=0; uint8_t lineage[16]{}, digest[32]{};
  };
@@ -31,12 +31,15 @@ class NativeReplicaCore {
   int(*reserve)(void*,uint32_t,uint64_t*);
   int(*write)(void*,uint64_t,uint32_t,const void*,uint32_t);
   int(*read)(void*,uint64_t,uint32_t,void*,uint32_t);
+  // Complete and durably verify the staged object before root publication.
+  int(*seal)(void*,uint64_t);
   int(*replaceRoot)(void*,const void*,uint32_t);
   void(*retire)(void*,uint64_t);
  };
  struct Ticket { uint64_t serial=0, revision=0, through=0; uint32_t mapCrc=0; };
  static constexpr uint32_t Header=128, GroupHeader=88, RootBytes=48, ValueMax=2048;
- static Allocator heap(){return {nullptr,[](void*,size_t n){return std::malloc(n);},[](void*,void*p){std::free(p);}};}
+ static void wipe(void*p,size_t n){auto*v=static_cast<volatile uint8_t*>(p);while(n--)*v++=0;}
+ static Allocator heap(){return {nullptr,[](void*,size_t n)->void*{if(n>SIZE_MAX-sizeof(uint64_t))return nullptr;auto*p=static_cast<uint64_t*>(std::malloc(n+sizeof(uint64_t)));if(!p)return nullptr;*p=n;return p+1;},[](void*,void*p){auto*base=static_cast<uint64_t*>(p)-1;const size_t n=size_t(*base);wipe(p,n);wipe(base,sizeof(uint64_t));std::free(base);}};}
  NativeReplicaCore(uint32_t ns,const Backend&backend,const Limits&limits,const Allocator&alloc)
   :ns_(ns),b_(backend),limits_(limits),alloc_(alloc){}
  ~NativeReplicaCore(){drop(bytes_);}
@@ -177,7 +180,7 @@ class NativeReplicaCore {
  static Identity identityAt(const uint8_t*p){Identity i{};i.known=word(p+12)!=0;i.generation=wide(p+40);std::memcpy(i.lineage,p+48,16);std::memcpy(i.digest,p+64,32);return i;}
  static bool validValues(const Value*v,uint32_t n){if(n&&!v)return false;for(uint32_t i=0;i<n;++i){if(!validKey(v[i].key)||!v[i].data||!v[i].size||v[i].size>ValueMax)return false;for(uint32_t j=0;j<i;++j)if(!std::strcmp(v[i].key,v[j].key))return false;}return true;}
  static bool validMutations(const Mutation*m,uint32_t n){if(!n||!m)return false;for(uint32_t i=0;i<n;++i){if(!validKey(m[i].key)||(m[i].kind!=Put&&m[i].kind!=Delete)||(m[i].kind==Put&&(!m[i].data||!m[i].size||m[i].size>ValueMax))||(m[i].kind==Delete&&(m[i].size||m[i].data)))return false;for(uint32_t j=0;j<i;++j)if(!std::strcmp(m[i].key,m[j].key))return false;}return true;}
- bool validConfiguration()const{return ns_&&limits_.imageBytes>=Header+4&&limits_.groupBytes>=GroupHeader+25&&limits_.intentBytes&&limits_.intentBytes<=limits_.groupBytes&&alloc_.allocate&&alloc_.release&&b_.readRoot&&b_.reserve&&b_.write&&b_.read&&b_.replaceRoot;}
+ bool validConfiguration()const{return ns_&&limits_.imageBytes>=Header+4&&limits_.groupBytes>=GroupHeader+25&&limits_.intentBytes&&limits_.intentBytes<=limits_.groupBytes&&alloc_.allocate&&alloc_.release&&b_.readRoot&&b_.reserve&&b_.write&&b_.read&&b_.seal&&b_.replaceRoot;}
  bool fits(uint64_t n)const{return n<=UINT32_MAX&&n<=limits_.imageBytes&&n>=Header+4;}
  uint8_t*allocate(uint32_t n){return alloc_.allocate?static_cast<uint8_t*>(alloc_.allocate(alloc_.context,n)):nullptr;}
  void drop(void*p){if(p&&alloc_.release)alloc_.release(alloc_.context,p);}
@@ -209,8 +212,11 @@ class NativeReplicaCore {
  int publish(uint8_t*p,uint32_t n){
   if(!validate(p,n)){drop(p);return Invalid;}
   uint64_t object=0;int rc=b_.reserve(b_.context,n,&object);if(rc){drop(p);return rc;}if(!object||object==object_){drop(p);return Io;}
-  uint8_t check[4096];
-  for(uint32_t at=0;at<n;){const uint32_t size=chunk(n-at);rc=b_.write(b_.context,object,at,p+at,size);if(!rc)rc=b_.read(b_.context,object,at,check,size);if(rc||std::memcmp(check,p+at,size)){if(b_.retire)b_.retire(b_.context,object);drop(p);return rc?rc:Io;}at+=size;}
+  for(uint32_t at=0;at<n;){const uint32_t size=chunk(n-at);rc=b_.write(b_.context,object,at,p+at,size);if(rc){if(b_.retire)b_.retire(b_.context,object);drop(p);return rc;}at+=size;}
+  rc=b_.seal(b_.context,object);if(rc){if(b_.retire)b_.retire(b_.context,object);drop(p);return rc;}
+  uint8_t check[4096]{};
+  struct Wipe {uint8_t*p;size_t n;~Wipe(){NativeReplicaCore::wipe(p,n);}} scratch{check,sizeof check};
+  for(uint32_t at=0;at<n;){const uint32_t size=chunk(n-at);rc=b_.read(b_.context,object,at,check,size);if(rc||std::memcmp(check,p+at,size)){if(b_.retire)b_.retire(b_.context,object);drop(p);return rc?rc:Io;}at+=size;}
   uint8_t root[RootBytes]{};std::memcpy(root,"RTENROOT",8);putWord(root+8,ns_);putWord(root+12,n);putWide(root+16,wide(p+16));putWide(root+24,object);putWord(root+32,word(p+n-4));putWord(root+44,crc(root,44));
   rc=b_.replaceRoot(b_.context,root,sizeof root);uint8_t actual[RootBytes]{};if(!rc)rc=b_.readRoot(b_.context,actual,sizeof actual);
   if(rc||std::memcmp(root,actual,sizeof root)){uncertain_=true;ticketLive_=false;drop(p);return Uncertain;}

@@ -2,6 +2,7 @@
 
 Status: **unconnected host prototype**, based on Runtime
 `3b90cd11cf0ff4e8116bb54d2d9eb9c7c67a148b`.
+The next checked-file/metadata increment is documented in [ADAPTER.md](ADAPTER.md).
 Nothing in `.90` boot policy, Runtime routing, production storage, SDK, source
 version or build recipes references this directory. Not enabled in any product build.
 
@@ -31,7 +32,8 @@ it cannot reuse a RAM ticket. This prototype has no SD transport/export API.
 ### Native durability contract
 
 Backend reserve returns a never-reused immutable object ID. The candidate image
-is written and read back in chunks of at most 4096 bytes. Only afterward is a
+is staged in chunks of at most 4096 bytes, then sealed by its backend and
+read back. Only afterward is a
 48-byte root record atomically replaced and read back. A failed root switch or
 root readback is ambiguous: the core returns Uncertain and requires reload.
 It never translates uncertain writes into a retry-safe BUSY result.
