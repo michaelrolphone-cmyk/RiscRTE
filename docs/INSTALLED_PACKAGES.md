@@ -1,13 +1,11 @@
 # Dynamic installed packages
 
-Current status: an opt-in development composition now passes target native build,
-39-module ELF/import admission and complete Runtime store self-admission. Dynamic
-SD discovery, cached Springboard, copied async persistence/removal, durable
-private namespace assignment, App Store staged SD transactions and opt-in legacy
-authority migration are implemented. Missing-provider dependency provisioning
-remains incomplete; historical checkpoint sections below record their earlier scope. No release or
-hardware qualification is claimed. The checkpoint sections below record the
-implementation progression; see the current boundary at the end.
+Current source status: Runtime 0.2.16, installed catalog 0.7.0 and App Store
+1.5.0 implement cached discovery, selected missing-provider downloads, durable
+graph publication and SD-first private key/value settings. Historical checkpoint
+sections below describe their earlier boundaries. Current host execution and
+interruption tests pass; the new exact X4 composition still needs native/complete
+store qualification and hardware validation. No release is claimed.
 
 `reserveInstalledApps(capacity)` reserves stable policy/association slots after
 `prepare()` and before execution. A trusted native installation coordinator can
@@ -380,3 +378,34 @@ unchanged; exact release policy coordinates must describe the actual composed
 Runtime version and before/after app-capability snapshots. A policy frozen for
 another target remains invalid, as intended. No migration authority is inferred
 from downloaded provider manifests or the new installation suffix.
+
+
+## SD-first installed private settings (0.2.16)
+
+`installation.settings_sd: true` explicitly selects SD-first KV@1 for the
+reserved installed namespace range. It does not relocate static/shared settings,
+Wi-Fi credentials or AppData. Every successful put first commits and reads back
+a native journal; UI code never writes the SD filesystem. The catalog copied
+worker checkpoints `/AppData/<owner>/settings.kv` using recover/write/atomic
+replace/readback/checked close. Only then does native acknowledgement replace
+the pending value journal with a generation/owner anchor. New writes cannot be
+cleared by a stale acknowledgement. Failure or removal leaves durable pending
+state; uncertain native writes freeze access until restore.
+
+Cached RAM reads and launch-readiness checks do no media work. After restart,
+private-settings apps become available only after worker restoration reconciles
+the SD generation with the native journal. Old native per-key values remain
+intact and migrate lazily on first access. No journal is exposed to apps or
+shared-file exports. Export ownership prevents the catalog opening an SD session.
+Each namespace has a bounded 16-key quota, 15-byte keys and 64-byte values;
+exhaustion returns the existing KV I/O failure result without discarding values.
+Snapshots use explicit little-endian fields, owner/namespace binding and CRC32;
+CRC detects corruption, not authenticity. Settings records are distinct from
+package admission and never cause whole-ELF hashing on launch.
+
+Evidence: `run_sd_first_key_value_test.sh`, native NVS namespace-isolation tests,
+and `run_removable_runtime_test.sh` (actual app runs twice through the Runtime
+KV broker; cold launch denied) pass under UBSan on Darwin. System Apps tests
+exercise 65 interrupted durable states through the real catalog/checkpoint
+coordinator and copied storage worker, plus export and removal recovery. Existing
+cohort/export migration and private scope-denial regression suites pass.

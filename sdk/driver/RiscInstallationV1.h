@@ -47,7 +47,18 @@ typedef struct {
  int32_t (*providers)(void*,const risc_install_provider_v1*,uint32_t count,bool check_only);
  bool (*available)(void*,const char*capability,uint32_t api,uint64_t instance);
  uint32_t provider_capacity;
+ /* Optional SD-first private KV checkpoint bridge, owner-only. Slot is the
+  * existing protected namespace ledger slot. No static/shared namespaces.
+  * Status 0 cold, 1 clean, 2 dirty, 3 uncertain, UINT32_MAX unavailable.
+  * Restore/snapshot/ack use RISC_KEY_VALUE_* statuses. SD bytes are copied by
+  * the caller's worker; ack follows verified atomic replacement only. */
+ uint32_t settings_capacity;
+ uint32_t (*settings_status)(void*,uint32_t slot);
+ int32_t (*settings_restore)(void*,uint32_t slot,const char*owner,const void*bytes,uint32_t size,bool missing);
+ int32_t (*settings_snapshot)(void*,uint32_t slot,void*bytes,uint32_t capacity,uint32_t*size,uint64_t*generation);
+ int32_t (*settings_ack)(void*,uint32_t slot,uint64_t generation);
 } risc_installation_v1;
+#define RISC_INSTALLATION_PROVIDER_PREFIX_SIZE offsetof(risc_installation_v1,settings_capacity)
 #define RISC_INSTALLATION_APP_PREFIX_SIZE offsetof(risc_installation_v1,providers)
 #ifdef __cplusplus
 }

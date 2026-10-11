@@ -619,6 +619,9 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
   if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_KEY_VALUE_INVALID;
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
+  if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount){
+    auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::get(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,buffer,capacity,outSize);
+  }
   uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*r->port_.keyValue;
   const int32_t result=backend.get(backend.context,matched->keyValueNamespace,key,temp,limit,&size);
@@ -636,6 +639,9 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
   if (!keyValueKey(key) || !data || !size || size>limit) return RISC_KEY_VALUE_INVALID;
   const auto& backend=*r->port_.keyValue;
+  if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount){
+    auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::put(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,data,size);
+  }
   const int32_t result=backend.put(backend.context,matched->keyValueNamespace,key,data,size);
   return result==RISC_KEY_VALUE_OK || result==RISC_KEY_VALUE_BUSY ? result : RISC_KEY_VALUE_IO;
 }
@@ -984,13 +990,24 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
 #include "CohortRuntime.inc"
 bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity)const {
   if(!relative||!path(root_,relative,out,capacity))return false;
+  auto ready=[&](size_t index){
+    if(!installedSettings_)return true;
+    const auto&policy=policies_[index];for(size_t g=0;g<policy.count;++g){const auto&grant=policy.grants[g];
+      if(grant.keyValue&&grant.instance>=installation_[0].namespaceFirst&&grant.instance-installation_[0].namespaceFirst<installation_[0].namespaceCount){
+        const auto status=installedSettings_[grant.instance-installation_[0].namespaceFirst].status;
+        if(status==RiscStorage::SdFirstKeyValue::Cold||status==RiscStorage::SdFirstKeyValue::Uncertain)return false;
+      }
+    }
+    return true;
+  };
   for(size_t i=0;i<bootPolicyCount_;++i)if(policies_[i].catalogAuthority&&!strcmp(policies_[i].elf,out)){
     for(size_t j=bootPolicyCount_;j<policyCount_;++j)if(policies_[j].enabled&&!strcmp(policies_[j].id,policies_[i].id)){
       const size_t n=strlen(policies_[j].elf);if(n>=capacity)return false;
-      memcpy(out,policies_[j].elf,n+1);return true;
+      memcpy(out,policies_[j].elf,n+1);return ready(j);
     }
     out[0]=0;return false;
   }
+  for(size_t i=bootPolicyCount_;i<policyCount_;++i)if(policies_[i].enabled&&!strcmp(policies_[i].elf,out))return ready(i);
   return true;
 }
 bool Runtime::launch(const char* relative) {

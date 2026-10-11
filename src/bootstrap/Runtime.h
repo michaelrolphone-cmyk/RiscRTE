@@ -11,6 +11,7 @@
 #include "TcpListenerBackend.h"
 #include "EntropyBackend.h"
 #include "runtime/storage/AppDataExport.h"
+#include "runtime/storage/SdFirstKeyValue.h"
 #include "FileOpenState.h"
 #include "FailureEvidenceBackend.h"
 #include "runtime/sleep/RetainedWake.h"
@@ -42,6 +43,8 @@ struct KeyValueBackend {
   int32_t (*get)(void*,uint32_t,const char*,void*,uint32_t,uint32_t*);
   int32_t (*put)(void*,uint32_t,const char*,const void*,uint32_t);
   uint32_t maxBlobSize=RISC_KEY_VALUE_BLOB_MAX;
+  int32_t (*journalRead)(void*,uint32_t,void*,uint32_t,uint32_t*)=nullptr;
+  int32_t (*journalWrite)(void*,uint32_t,const void*,uint32_t)=nullptr;
 };
 struct Port {
   bool (*owner)();
@@ -374,6 +377,13 @@ class Runtime final {
     risc_installation_v1 api{};uint64_t volume=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
   };
   MetadataArray<InstallationState> installation_;
+  MetadataArray<RiscStorage::SdFirstKeyValue::State> installedSettings_;
+  MetadataArray<RiscStorage::SdFirstKeyValue::Workspace> installedSettingsWorkspace_;
+  RiscStorage::SdFirstKeyValue::Journal settingsJournal();
+  static uint32_t installationSettingsStatus(void*,uint32_t);
+  static int32_t installationSettingsRestore(void*,uint32_t,const char*,const void*,uint32_t,bool);
+  static int32_t installationSettingsSnapshot(void*,uint32_t,void*,uint32_t,uint32_t*,uint64_t*);
+  static int32_t installationSettingsAck(void*,uint32_t,uint64_t);
   bool configureInstallation(JsonVariantConst);
   bool installationNamespaceRangeSafe() const;
   static int32_t installationNamespaced(void*,const risc_install_candidate_v1*,const uint32_t*,uint32_t,risc_install_result_v1*,bool,bool);

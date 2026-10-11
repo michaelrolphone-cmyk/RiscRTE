@@ -504,6 +504,13 @@ int main(int argc, char** argv) {
   testInitialization(result);
   if (result == ESP_OK) {
     testValidation(); testNamespaceAndBounds(); testReads(); testReadFaults(); testWriteFaults();
+    reset("private settings journal namespace");
+    const auto*backend=RiscNvs::backend();CHECK(backend->journalRead&&backend->journalWrite);
+    CHECK(backend->put(nullptr,3000,"snapshot",oldValue.data(),oldValue.size())==0);
+    CHECK(backend->journalWrite(nullptr,3000,newValue.data(),newValue.size())==0);
+    CHECK(store["rte00000bb8"]["snapshot"].bytes==oldValue&&store["kvj00000bb8"]["snapshot"].bytes==newValue);
+    uint8_t journal[64]{};uint32_t journalSize=0;CHECK(backend->journalRead(nullptr,3000,journal,sizeof(journal),&journalSize)==0&&journalSize==newValue.size()&&!memcmp(journal,newValue.data(),journalSize));
+    closed();
     std::puts("Native NVS adapter: namespace isolation, bounds, probes, missing/type/size faults, atomic output, every-stage IO and exact readback PASS");
   }
   closed();

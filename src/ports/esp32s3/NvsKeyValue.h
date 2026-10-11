@@ -21,16 +21,16 @@ inline bool valid(uint32_t id,const char* key) {
 struct Handle {
   nvs_handle_t value=0; bool opened=false;
   ~Handle(){if(opened)nvs_close(value);}
-  esp_err_t open(uint32_t id,nvs_open_mode_t mode) {
-    char name[12];snprintf(name,sizeof(name),"rte%08x",static_cast<unsigned>(id));
+  esp_err_t open(uint32_t id,nvs_open_mode_t mode,bool journal=false) {
+    char name[12];snprintf(name,sizeof(name),journal?"kvj%08x":"rte%08x",static_cast<unsigned>(id));
     esp_err_t result=nvs_open(name,mode,&value);opened=result==ESP_OK;return result;
   }
 };
-inline int32_t getUnlocked(void*,uint32_t id,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
+inline int32_t getUnlocked(void* context,uint32_t id,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
   if(outSize)*outSize=0;
   if(!outSize || !valid(id,key) || (!buffer && capacity))return RISC_KEY_VALUE_INVALID;
   if(initializationStatus()!=ESP_OK)return RISC_KEY_VALUE_IO;
-  Handle handle;esp_err_t result=handle.open(id,NVS_READONLY);
+  Handle handle;esp_err_t result=handle.open(id,NVS_READONLY,context!=nullptr);
   if(result==ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_NOT_FOUND;
   if(result!=ESP_OK)return RISC_KEY_VALUE_IO;
   size_t size=0;result=nvs_get_blob(handle.value,key,nullptr,&size);
@@ -49,19 +49,21 @@ inline int32_t get(void* context,uint32_t id,const char* key,void* buffer,uint32
   RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_KEY_VALUE_BUSY;
   return getUnlocked(context,id,key,buffer,capacity,outSize);
 }
-inline int32_t put(void*,uint32_t id,const char* key,const void* data,uint32_t size) {
+inline int32_t put(void* context,uint32_t id,const char* key,const void* data,uint32_t size) {
   if(!valid(id,key) || !data || !size || size>RISC_KEY_VALUE_V2_BLOB_MAX)return RISC_KEY_VALUE_INVALID;
   RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_KEY_VALUE_BUSY;
   if(initializationStatus()!=ESP_OK)return RISC_KEY_VALUE_IO;
-  Handle handle;if(handle.open(id,NVS_READWRITE)!=ESP_OK)return RISC_KEY_VALUE_IO;
+  Handle handle;if(handle.open(id,NVS_READWRITE,context!=nullptr)!=ESP_OK)return RISC_KEY_VALUE_IO;
   if(nvs_set_blob(handle.value,key,data,size)!=ESP_OK || nvs_commit(handle.value)!=ESP_OK)return RISC_KEY_VALUE_IO;
   // A separate read-only handle after commit checks the exact bytes. A reported
   // error can still mean data reached flash; do not erase/roll back/retry.
   uint8_t check[RISC_KEY_VALUE_V2_BLOB_MAX];RiscRuntime::ScopedBufferWipe wipe(check);uint32_t actual=0;
-  if(getUnlocked(nullptr,id,key,check,sizeof(check),&actual)!=RISC_KEY_VALUE_OK || actual!=size || memcmp(check,data,size))return RISC_KEY_VALUE_IO;
+  if(getUnlocked(context,id,key,check,sizeof(check),&actual)!=RISC_KEY_VALUE_OK || actual!=size || memcmp(check,data,size))return RISC_KEY_VALUE_IO;
   return RISC_KEY_VALUE_OK;
 }
 inline const RiscBoot::KeyValueBackend* backend(){
-  static const RiscBoot::KeyValueBackend value{nullptr,get,put,RISC_KEY_VALUE_V2_BLOB_MAX};return &value;
+  static const RiscBoot::KeyValueBackend value{nullptr,get,put,RISC_KEY_VALUE_V2_BLOB_MAX,
+    [](void*,uint32_t ns,void*out,uint32_t capacity,uint32_t*size){return get(reinterpret_cast<void*>(uintptr_t(1)),ns,"snapshot",out,capacity,size);},
+    [](void*,uint32_t ns,const void*data,uint32_t size){return put(reinterpret_cast<void*>(uintptr_t(1)),ns,"snapshot",data,size);}};return &value;
 }
 }
