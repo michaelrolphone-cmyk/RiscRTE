@@ -148,13 +148,13 @@ extern "C" int __wrap_dlclose(void*){++moduleCalls;std::abort();}
 int main(int argc,char** argv){
   assert(argc==3);
 #ifndef FULL_PRODUCT_EXPECTED_PROVIDERS
-#define FULL_PRODUCT_EXPECTED_PROVIDERS 26
+#define FULL_PRODUCT_EXPECTED_PROVIDERS 28
 #endif
-  static_assert(FULL_PRODUCT_EXPECTED_PROVIDERS==24 || FULL_PRODUCT_EXPECTED_PROVIDERS==26,
+  static_assert(FULL_PRODUCT_EXPECTED_PROVIDERS==24 || FULL_PRODUCT_EXPECTED_PROVIDERS==26 || FULL_PRODUCT_EXPECTED_PROVIDERS==28,
                 "Only original and expanded cohort metadata profiles are tested");
   static_assert(RiscLimits::Providers==FULL_PRODUCT_EXPECTED_PROVIDERS &&
                 RiscLimits::Grants==FULL_PRODUCT_EXPECTED_PROVIDERS+16,
-                "Compile against the requested original 24/40 or expanded 26/42 profile");
+                "Compile against the requested original 24/40, expanded 26/42 or current 28/44 profile");
   static_assert(RiscBoot::Runtime::MaxAppPolicyGrants==17,
                 "Preserve .50 Home's existing 17-row installed app policy");
   Context installedContext;cpu=&installedContext.port;

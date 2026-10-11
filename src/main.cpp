@@ -287,7 +287,13 @@ void setup() {
   if(provision.outcome==RiscBootstrap::Outcome::Stopped)return;
 #endif
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
-  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot
+  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,
+#ifdef RISC_EMBEDDED_BOOTSTORE
+    nullptr
+#else
+    RiscNvs::backend()
+#endif
+    ,appExitSafe,providerStorageSafe,confirmBoot
 #ifdef RISC_PAIRED_APP_DATA
     ,RiscAppData::backend()
 #else

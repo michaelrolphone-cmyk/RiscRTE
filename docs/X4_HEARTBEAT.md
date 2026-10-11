@@ -41,3 +41,8 @@ The independent hardware-check.yml workflow polls the dedicated status `X4 hardw
 failed execution is terminal failure; CAM results cannot satisfy this check.
 Only the trusted controller can establish a real boot/heartbeat/cleanup pass.
 No display, storage, buttons or full X4 firmware qualification is implied.
+
+The CAM and X4 lab profiles explicitly retain Runtime metadata in octal PSRAM.
+They keep the embedded-store null key/value backend and wrapped NVS initialization;
+PSRAM allocation failure stops boot without a DRAM fallback. This avoids static
+DRAM overflow as native metadata grows, without shrinking provider limits.

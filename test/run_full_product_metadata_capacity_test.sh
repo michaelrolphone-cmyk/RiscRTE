@@ -6,8 +6,8 @@
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 source="${RUNTIME_SOURCE:-$repo}"
-expected="${EXPECTED_PROVIDER_LIMIT:-26}"
-[[ "$expected" == 24 || "$expected" == 26 ]] || { echo "Unsupported expected provider limit" >&2; exit 2; }
+expected="${EXPECTED_PROVIDER_LIMIT:-28}"
+[[ "$expected" == 24 || "$expected" == 26 || "$expected" == 28 ]] || { echo "Unsupported expected provider limit" >&2; exit 2; }
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
 san=()
