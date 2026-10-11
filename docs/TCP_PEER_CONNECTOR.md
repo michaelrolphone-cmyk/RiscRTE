@@ -27,9 +27,10 @@ connect/readiness still requires checked close; an uncertain close is never retr
 * Runtime broker: legacy and extended backend, candidate admission, activation
   generations, raw app denial, sleep/restart exclusion and revoked callbacks passed.
 * The production syscall test passed under UBSan on Darwin. The full broker UBSan
-  run stops at its candidate-admission assertion; the exact unchanged base repeats
-  that failure. This is a remaining test-harness/admission investigation, not a pass.
-  No AddressSanitizer result is claimed.
+  run also passes after keeping Darwin-generated `.dSYM` fixture bundles outside
+  the admitted store. The validator correctly rejects undeclared inventory; the
+  earlier assertion was fixture contamination, not a Runtime defect. No production
+  validation was relaxed. No AddressSanitizer result is claimed.
 * Current Runtime.cpp, CpuPort.cpp and production NativeTcpListener against the
   ESP32-S3/lwIP SDK compiled individually with the qualified 32-provider profile.
   No new complete firmware was built and no network or device was accessed.

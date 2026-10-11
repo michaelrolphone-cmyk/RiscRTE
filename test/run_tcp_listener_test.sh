@@ -16,9 +16,12 @@ c++ "${flags[@]}" "${san[@]}" "${incs[@]}" -I"$repo/test/native_tcp_shim" "$repo
 mkdir "$build/store"
 for index in 0 1;do
  name=first;[[ "$index" == 1 ]] && name=second
- cc -std=c11 -Wall -Wextra -Werror "${san[@]}" "${incs[@]}" -DPROVIDER_INDEX="$index" -fPIC -fvisibility=hidden -shared "$repo/test/fixtures/tcp_listener_provider.c" -o "$build/store/$name.elf"
+ cc -std=c11 -Wall -Wextra -Werror "${san[@]}" "${incs[@]}" -DPROVIDER_INDEX="$index" -fPIC -fvisibility=hidden -shared "$repo/test/fixtures/tcp_listener_provider.c" -o "$build/$name.elf"
 done
-cc -std=c11 -Wall -Wextra -Werror "${san[@]}" -fPIC -fvisibility=hidden -shared "$repo/test/fixtures/tcp_listener_app.c" -o "$build/store/default.elf"
+cc -std=c11 -Wall -Wextra -Werror "${san[@]}" -fPIC -fvisibility=hidden -shared "$repo/test/fixtures/tcp_listener_app.c" -o "$build/default.elf"
+# Darwin emits .dSYM siblings for sanitized debug fixtures. They are host-only
+# symbols, not admitted cohort files. Keep the exact test store inventory.
+cp "$build/first.elf" "$build/second.elf" "$build/default.elf" "$build/store/"
 sources=("$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/src/ports/esp32s3/CpuPort.cpp")
 c++ "${flags[@]}" "${san[@]}" "${incs[@]}" -rdynamic "${sources[@]}" "$repo/test/tcp_listener_runtime_test.cpp" -ldl -o "$build/runtime"
 "$build/runtime" "$build/store"
