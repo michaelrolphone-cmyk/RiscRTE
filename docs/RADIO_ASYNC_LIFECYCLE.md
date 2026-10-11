@@ -71,13 +71,26 @@ HeldReady checks the stable radio phase while the caller holds that lease.
 The implementation remains in the unique NativeHardware translation unit.
 Never include NativeRadioAsync.h from another native translation unit.
 
-The bool HCI lifecycle cannot represent temporary BUSY. CpuPort conservatively
-rejects HCI open/close for the whole nonquiescent async Wi-Fi operation. Shared
-UI must defer BLE enable/disable, broadcast lifecycle and last-grant release
-until Wi-Fi close is acknowledged, including a connected session. Existing
-bounded HCI RX/TX remains available. This is a deliberate coexistence limitation,
-not a claim of unchanged BLE lifecycle behavior. Sleep, IQ, restart and app exit
-remain fenced while native radio owns resources.
+From Runtime 0.2.5, CpuPort acquires the existing owner-reentrant shared lease
+for the entire HCI open/close call, including failed-open rollback and final
+idle verification. The native table's readiness callback uses owner-aware
+readiness, so a Files service that already holds the same lease can enter HCI.
+Readiness is checked after acquisition; it cannot substitute for exclusion.
+Nested acquisition still rejects queued or cancelled work even though an outer
+owner lease prevents the worker from advancing it.
+
+HCI lifecycle is admitted in idle, SCANNING, JOINING, CONNECTED and RESULTS
+only between worker SDK iterations. These phases mean native initialization
+completed, not that RF activity ceased or that a network peer is reachable.
+QUEUED, STARTING, STOPPING, cancellation and CLEANUP_FAILED reject admission.
+This supports ephemeral BLE setup while a healthy Wi-Fi connection and WebDAV
+listener stay owned. The bool HCI API still returns false on temporary lease
+contention: no SDK call starts, open returns token zero, and a refused close
+preserves its existing token and closing state for a later retry. After an
+actual SDK cleanup failure, the existing retained token and retry rules apply.
+An uncertain controller initialization remains retained even if SDK status
+says IDLE. Existing bounded HCI RX/TX and sleep/IQ/restart/exit fences remain.
+See [the exact-source coexistence qualification](HCI_WIFI_COEXISTENCE_025.md).
 
 Primary SDK audit sources:
 - https://github.com/espressif/esp-idf/blob/v4.4.7/components/esp_phy/src/phy_init.c
