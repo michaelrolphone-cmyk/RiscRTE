@@ -10,7 +10,7 @@ class PagedSettingsCheckpoint {
  using State=InstalledSettingsCheckpoint::State;
  ~PagedSettingsCheckpoint(){std::free(bytes_);}
  bool start(const risc_installation_v1*n,const risc_storage_volume_api_v1*v,uint32_t slot,const char*owner){
-  if(phase_!=Idle||!n||!n->settings_status||!n->settings_restore||!n->settings_snapshot||!n->settings_ack||!slot||!owner||!*owner||strlen(owner)>=96||strchr(owner,'/')||strstr(owner,"..")||!risc_storage_volume_download(v))return false;
+  if(phase_!=Idle||!n||n->struct_size<RISC_INSTALLATION_SETTINGS_FORMAT_SIZE||n->settings_format!=2||!n->settings_status||!n->settings_restore||!n->settings_snapshot||!n->settings_ack||!slot||(slot<=n->namespace_capacity&&slot>n->settings_capacity)||!owner||!*owner||strlen(owner)>=96||strchr(owner,'/')||strchr(owner,'\\')||strstr(owner,"..")||!risc_storage_volume_download(v))return false;
   native_=n;volume_=v;package_=risc_storage_volume_packages(v);slot_=slot;
   strcpy(owner_,owner);strcpy(root_,"/AppData");
   if(slot>n->namespace_capacity){

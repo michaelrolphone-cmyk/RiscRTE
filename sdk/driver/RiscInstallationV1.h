@@ -74,6 +74,7 @@ typedef struct risc_installation_v1 {
  uint32_t (*shared_settings_namespace)(void*,uint32_t index);
 #endif
 } risc_installation_v1;
+#define RISC_INSTALLATION_SETTINGS_CALLBACKS_SIZE offsetof(risc_installation_v1,settings_format)
 #define RISC_INSTALLATION_SETTINGS_FORMAT_SIZE offsetof(risc_installation_v1,shared_settings_count)
 #define RISC_INSTALLATION_SHARED_SETTINGS_SIZE sizeof(risc_installation_v1)
 #define RISC_INSTALLATION_PROVIDER_PREFIX_SIZE offsetof(risc_installation_v1,settings_capacity)
