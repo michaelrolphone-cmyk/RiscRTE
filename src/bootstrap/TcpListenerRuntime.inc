@@ -3,7 +3,7 @@ bool Runtime::registerTcpListener(const TcpListenerBackend* backend){
     !backend->listen || !backend->accept || !backend->read || !backend->write ||
     !backend->close || !backend->idle || !backend->safe)return false;
  tcpBackend_=backend;
- providerTcpTable_={1,sizeof(providerTcpTable_),nullptr,tcpListen,tcpAccept,tcpRead,tcpWrite,tcpClose};
+ providerTcpTable_={1,sizeof(providerTcpTable_),nullptr,tcpListen,tcpAccept,tcpRead,tcpWrite,tcpClose,0,nullptr,nullptr};
  if(backend->connect && backend->connected){providerTcpTable_.connect_tag=RISC_TCP_CONNECT_TAG;providerTcpTable_.connect=tcpConnect;providerTcpTable_.connected=tcpConnected;}
  return registerPlatform(RISC_TCP_LISTENER_CAPABILITY,1,Scope::Global,0,&providerTcpTable_);
 }
