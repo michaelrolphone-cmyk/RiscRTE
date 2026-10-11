@@ -135,6 +135,9 @@ class Runtime final {
   // Native update authority: preserve the existing boot-policy identity/grants.
   bool appUpdate(const char* id,const void* manifest,size_t size,UpdateApp&) const;
   size_t appCount() const {return policyCount_;}
+  // Compact installed inventory excludes dormant authority and retired slots.
+  size_t appInventoryCount() const;
+  bool appInventoryEntry(size_t,void*,size_t,uint32_t*) const;
   // Trusted native installation coordinator only; never an app/provider import.
   // Reserve before run(), then admit one copied SD manifest and owner-resolved
   // policy at a default-app checkpoint. Existing identities cannot be replaced

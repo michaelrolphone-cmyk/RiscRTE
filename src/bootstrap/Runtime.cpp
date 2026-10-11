@@ -1045,6 +1045,17 @@ bool Runtime::appManifestPath(size_t index,char* out,size_t capacity) const {
   if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,boot,&metadataCloseRetained_))return false;
   return text(boot["app_capabilities"][index]["manifest"],out,capacity);
 }
+size_t Runtime::appInventoryCount() const {
+  size_t count=0;for(size_t i=0;i<policyCount_;++i)if(policies_[i].enabled&&!policies_[i].catalogAuthority)++count;return count;
+}
+bool Runtime::appInventoryEntry(size_t index,void* output,size_t capacity,uint32_t* actual) const {
+  if(actual)*actual=0;
+  for(size_t i=0;i<policyCount_;++i)if(policies_[i].enabled&&!policies_[i].catalogAuthority){
+    if(!index)return appInventory(i,output,capacity,actual);
+    --index;
+  }
+  return false;
+}
 bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* actual) const {
   if(actual)*actual=0;
   if(!active() || index>=policyCount_ || !output || !actual || !capacity || capacity>4096 || !providerStorageSafe())return false;

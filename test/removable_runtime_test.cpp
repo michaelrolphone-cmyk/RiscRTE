@@ -86,6 +86,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
       }
       if(catalogMode()){
         if(mode=="catalog-authority"){
+          assert(runtime->appInventoryCount()==0);
           char bytes[4096];uint32_t actual=99;assert(!runtime->appInventory(0,bytes,sizeof(bytes),&actual)&&actual==0);
           char denied[193];assert(installer->admit(installer->context,"Apps/other/manifest.json",staged[0].second.c_str(),denied,sizeof(denied))==RISC_INSTALL_DENIED);
         }
@@ -94,6 +95,11 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         assert(runtime->appCount()==baseCount());
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
         launchName=result.launch_path;assert(runtime->appCount()==baseCount()+1);
+        if(mode=="catalog-authority"){
+          assert(runtime->appInventoryCount()==1);char bytes[4096];uint32_t actual=0;
+          assert(runtime->appInventoryEntry(0,bytes,sizeof(bytes),&actual)&&actual);
+          assert(!runtime->appInventoryEntry(1,bytes,sizeof(bytes),&actual)&&!actual);
+        }
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&runtime->appCount()==baseCount()+1);
         assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK);

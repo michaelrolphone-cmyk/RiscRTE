@@ -475,7 +475,7 @@ int32_t beginCohort(void*,const risc_bank_cohort_v1* image,uint64_t* token){
 const risc_bank_store_v1 api={1,sizeof(api),nullptr,
   [](void*,risc_bank_status_v1* out){
     if(!owner() || !transaction->status(out))return false;
-    out->store_abi=StoreAbi;out->app_count=runtime?runtime->appCount():0;
+    out->store_abi=StoreAbi;out->app_count=runtime?runtime->appInventoryCount():0;
     snprintf(out->runtime_version,sizeof(out->runtime_version),"%s",RISC_BUILD_VERSION);
     snprintf(out->layout,sizeof(out->layout),"%s",Layout);return true;
   },beginFirmware,beginApp,
@@ -483,7 +483,7 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
     if(!ready())return RISC_BANK_UNAVAILABLE;
     int32_t result=transaction->step(t,s);
     if(s && s->struct_size>=sizeof(*s)){
-      s->store_abi=StoreAbi;s->app_count=runtime->appCount();
+      s->store_abi=StoreAbi;s->app_count=runtime->appInventoryCount();
       snprintf(s->runtime_version,sizeof(s->runtime_version),"%s",RISC_BUILD_VERSION);
       snprintf(s->layout,sizeof(s->layout),"%s",Layout);}
     return result;
@@ -496,8 +496,8 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
   [](void*,uint32_t index,void* output,uint32_t capacity,uint32_t* actual)->int32_t{
     if(actual)*actual=0;
     if(!ready())return RISC_BANK_UNAVAILABLE;
-    if(index>=runtime->appCount())return RISC_BANK_NOT_FOUND;
-    return runtime->appInventory(index,output,capacity,actual)?RISC_BANK_OK:RISC_BANK_INVALID;
+    if(index>=runtime->appInventoryCount())return RISC_BANK_NOT_FOUND;
+    return runtime->appInventoryEntry(index,output,capacity,actual)?RISC_BANK_OK:RISC_BANK_INVALID;
   },cohortStatus,beginCohort};
 bool bindProvisioningCandidate(RiscBoot::Runtime& candidate){
   return candidateCpu && provisionState && prepared && confirmed && !pending && !runtime && operationSafe() &&
