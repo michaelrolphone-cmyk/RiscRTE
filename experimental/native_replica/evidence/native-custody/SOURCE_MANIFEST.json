@@ -1,0 +1,345 @@
+{
+  "schema": "native-sd-custody-design-sources-v1",
+  "scope": "Source-only design review; no adapter implementation or SDK/provider/production activation. Proposed proof/test plan has not been implemented or executed.",
+  "reference_prefixes": {
+    "R": "Runtime",
+    "X": "X4",
+    "D": "Drivers"
+  },
+  "repositories": [
+    {
+      "root": "/workspace/shared/native-custody-bootstrap-e471",
+      "commit": "e471163431b0ad2d324c81db4b55c13957c93699",
+      "tree": "bfd5f7854a45a7db8e655ffd5c09d600f4ead2b3",
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "bytes": 914,
+          "sha256": "86845934d134dd3f1cbf41187139b699cb05b22be0c20865a2522dcabcb7b587",
+          "git_blob": "981f059872a11c9c9022b13927c6eb5dd07c3c3c",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "sdk/driver/RiscProviderSyncV1.h",
+          "bytes": 1354,
+          "sha256": "c0981bde804b20c1b963323f91c4e9804c144c56535160bfd467be7e93028f45",
+          "git_blob": "b80b52407121020204a59c05bf1eaa7650f1f425",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "sdk/driver/RiscStorageVolumeStateV1.h",
+          "bytes": 1750,
+          "sha256": "1f2f7dbfe9ec7ac27a57149ac720cf7f3a4801d6d34b5532f77c77db252b87a1",
+          "git_blob": "9468d66e68e99cdd7f035e5d27534a0a4c80eeed",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "sdk/driver/RiscStorageWorkerV1.h",
+          "bytes": 2807,
+          "sha256": "9e859235403292a0108fd10b8122218d72c1c2d1dd460d94304d919f77b83b6f",
+          "git_blob": "3ba50c7de640274a2b517788b4ebe44f605ea08c",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "sdk/driver/RiscGpioSdmmcV1.h",
+          "bytes": 2473,
+          "sha256": "00d7788c381be557deec18a959b55d474bad7edc0331ae8331b878a618b9818f",
+          "git_blob": "8801a6945e57e10e8960dc07a012bb1d4c87a4fc",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "sdk/driver/RiscStorageAsyncAdapterV1.h",
+          "bytes": 13360,
+          "sha256": "2b90ba70e6c44d112a28ce4d9a4d9272baeaf277f233d127181c1eff1515c1c6",
+          "git_blob": "a5059d1e8db51e33520814dd09e64567a467eb68",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "sdk/driver/RiscStoragePackageAsyncV1.h",
+          "bytes": 2470,
+          "sha256": "c0b4a025fcbbc6ec55913dce2f99553c14cd7a96ae104f8eebc8d0dfd33ddf97",
+          "git_blob": "b62561f00a8fb804d2a260cf4b069439cad8e617",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/main.cpp",
+          "bytes": 15859,
+          "sha256": "b2e5ebbbf13bf24fbdeba9f6962289e6b0555f6d40ffb2a2a4ff856675c7ea0a",
+          "git_blob": "3ffa47b1f72da8f1997507aa1399651c3e8723c7",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/ports/esp32s3/CpuPort.h",
+          "bytes": 16017,
+          "sha256": "3013e09cd3647cabd3dfd0d2b29f33218089c4721918fa287a12ea9a0f6d56ea",
+          "git_blob": "05812d59a908028d00dfaba06715111dd644475a",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/ports/esp32s3/CpuPort.cpp",
+          "bytes": 64078,
+          "sha256": "9dd54ca3d946b04f547f893fc647af915b8c166cfe2d08c413edafde866960d3",
+          "git_blob": "ca88dd20b3db24b98e5dc9ece035ea4b86f17c36",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/ports/esp32s3/CpuStorageWork.inc",
+          "bytes": 7455,
+          "sha256": "ef9f22b777a643cd103afa665ea6c118a29fc789e88f66571b706333f927eade",
+          "git_blob": "eefeedfa83bb0d68bf6476da665294adf4300869",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/ports/esp32s3/CpuSdmmc.inc",
+          "bytes": 4269,
+          "sha256": "48e04608dd53b363c75d920f3173f7c710a5551d854a9896779754ebb621f672",
+          "git_blob": "bffbd2cbd2724f00b859e92faa045896a801d7d1",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/ports/esp32s3/NativeHardware.cpp",
+          "bytes": 12294,
+          "sha256": "dd528dda4f3e7c29777c0c373afd39fbe4e7600f375765fbca407a35289023d6",
+          "git_blob": "5912dcea6035bf4b42f61d5b2c8893551d5feb8c",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/ports/esp32s3/NativeSdmmc.h",
+          "bytes": 5118,
+          "sha256": "ac792ee1addd7941cd542476da098ba269657677b25b3013a2714ebadc2b18ae",
+          "git_blob": "dcec6319fc260d9633c290c45996dc52a62b1e40",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/ports/esp32s3/NativeStorageWorker.h",
+          "bytes": 1506,
+          "sha256": "8517a21dd62346ee0efe0cfb1226d71e612a15b925f6d700f42c55a01563fcbd",
+          "git_blob": "5b0fcfeffc0fffda98c10f386aadb4fc6c7d0b1d",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/runtime/storage/StorageWorker.h",
+          "bytes": 3988,
+          "sha256": "a402ecd14e2c00da069769b6d622e09eb954b5c5bc9d15f10ad0c2a6bdc1d297",
+          "git_blob": "9aa82a52cd12e28f9f04170f0feba3a49a7fdf71",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/bootstrap/Runtime.h",
+          "bytes": 27684,
+          "sha256": "cee322ed5c09c0bb71af01c699f50595a21d635e20dd5bda8e753febb00d87fb",
+          "git_blob": "d578fbb08eec21792210db365ec6bce7cdc0514f",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/bootstrap/Runtime.cpp",
+          "bytes": 102365,
+          "sha256": "fdc44c71625f9662ddb0708c293ef42621b2e4ad717032522e4a352f05b185d6",
+          "git_blob": "df1300db152b886eae569a2dc56f8b6d7a4f16ea",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/runtime/drivers/ProviderGraphV2.h",
+          "bytes": 9638,
+          "sha256": "fbe2d5ec13918e27ba08bac4f79da2bf9b2a4c83c98b6311cec0c95f4e8d2e9d",
+          "git_blob": "3b9d49f61049f8e790091ad5317ff9ae2f0050d5",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/runtime/drivers/ProviderGraphV2.cpp",
+          "bytes": 23733,
+          "sha256": "d97bedf6ff5d917502d6faccfd727df5bc4242cf131c46baddbd6909792030da",
+          "git_blob": "dca667cf678591dcb7139cecda2bfbf434f8ede2",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "src/runtime/drivers/ProviderModuleV2.cpp",
+          "bytes": 18635,
+          "sha256": "f014304eb12e00fef2734a533f446d97f49642c84df27fda85d35480e3f942a5",
+          "git_blob": "ce0601ec6a0cd976825da50d02a6461c623f26b5",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "lib/hal/StorageGeneration.h",
+          "bytes": 2381,
+          "sha256": "b0f61f618d814ac07c699fb83040d3909a7554b79b0a6d16d21e52e95c30efd5",
+          "git_blob": "7f23ac2367d2a5f538294104c62a9c15655a0f34",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "experimental/native_replica/CheckedSdReplicaReader.h",
+          "bytes": 13333,
+          "sha256": "bd0a8026054578041298f8b330ad537531ae83ada5b510eac577e598654da920",
+          "git_blob": "6ba02ede4844f300d526ee5dfe95fa5a7391152a",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "experimental/native_replica/CheckedSdReplicaCheckpoint.h",
+          "bytes": 16337,
+          "sha256": "74b1f3b8e5f6ae3f9491711a28f5d39513140ce78d9760efd74b98362902148f",
+          "git_blob": "1f9e175bf62a4d13c5e82e3bf99ac13f022a92d9",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "experimental/native_replica/CheckedLegacySettingsReader.h",
+          "bytes": 16517,
+          "sha256": "c7b511848d15f6ead715a5b84ba609ebbe07de7bf3ce91bc525fe55886045d66",
+          "git_blob": "290fe764d55b272340a3ed0ecdeddd95710532bb",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "experimental/native_replica/CheckedNativeExportRecovery.h",
+          "bytes": 6168,
+          "sha256": "ad145dad73ab7a59b039d5874710281a70c945d74de7366891e4585364471799",
+          "git_blob": "d6cc8a49390e3aaeb4837bebb8ad1bc12964b1eb",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "experimental/native_replica/CheckedSdSettingsCatalog.h",
+          "bytes": 19536,
+          "sha256": "2f160f367e847967df9b7d253bf6fcf4a19baec8e61e97bba2ca9ff0a51c61d3",
+          "git_blob": "8fa223211102a68ab404ac74526065f65b0e5519",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "test/native_replica_sd_fixture.h",
+          "bytes": 12533,
+          "sha256": "5a28d2532d55e14075f6e960ff5ecf9cdf5407377576df0f3d53d4e4ff736739",
+          "git_blob": "5547e0f4e862d5ac31a27fa4a30500ea612ca62a",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "test/storage_work_port_test.cpp",
+          "bytes": 3861,
+          "sha256": "d02fdf8f080e539e8e47cb268784e4e62ccdbff65aa3a07df54c426849a42cff",
+          "git_blob": "f5091ae44d76beacc257c514c225f6abb4112088",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "experimental/native_replica/NativeReplicaJob.h",
+          "bytes": 3147,
+          "sha256": "6c7654796c9824bbc104e81f65e64498db873e469c56856294b608316c6bc430",
+          "git_blob": "2864412238fa9e6b44d5a08ce016e1dea26ac041",
+          "equal_to_recorded_commit": true
+        }
+      ]
+    },
+    {
+      "root": "/workspace/shared/x4-shared-settings-090/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "tree": "f95f1361b631bbc8b2ca2789c276f8dc708d7ed0",
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "bytes": 1092,
+          "sha256": "68b5e68cc57bafe562474ed047766b57d2e03a7a8caecd488ed555e2bcb9f1dd",
+          "git_blob": "a758bfba0fbfc168fb9d645efeb6a66b8aeac7ad",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "minimal/drivers/x4pro_sd/driver.c",
+          "bytes": 37766,
+          "sha256": "ba86f49ccf3ea8b4958ebf9497650a7c63a9f92ffa8ec1f679b6e75526d85a1a",
+          "git_blob": "606ddc8a4d6cbb8167c11e04b0de2ec0b05a533a",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "minimal/drivers/x4pro_sd/Export.h",
+          "bytes": 12984,
+          "sha256": "4424ee6b9efd2c9fb6f85946c1800605ed3e6b699344741d85d3499c26a5cd2a",
+          "git_blob": "dfa3c96a980219040080a5a63aff4a443e20ef5f",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "minimal/drivers/x4pro_sd/BootLog.h",
+          "bytes": 12270,
+          "sha256": "f2ed275113f48fcb8ab30df44295cffe946cb8837ea12a3ce8eb7686fc3c5ce2",
+          "git_blob": "2f0c3be6ff26fb33936a42f0050755fb8ce899e8",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "minimal/scripts/test_storage_async.py",
+          "bytes": 1682,
+          "sha256": "229db023bc3bd78339c848ea9c64a5c545e49bb783b83fc47f18110e75360c24",
+          "git_blob": "e2047facdcec026375e595966af77824b095b0d6",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "minimal/test/sd_async_test.c",
+          "bytes": 9891,
+          "sha256": "2603965c48f4d1806d81c071a6a31c2b3c6078014d79dc50142c9a7941a11d31",
+          "git_blob": "5d54d83f772738aceccc1d703e31a83fdb03c8f7",
+          "equal_to_recorded_commit": true
+        }
+      ]
+    },
+    {
+      "root": "/workspace/shared/x4-shared-settings-090/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "tree": "eb4c3d5bbf79b5c3dc00cf16bda346c8f050418d",
+      "files": [
+        {
+          "path": "lib/StorageFatFs/volume.c",
+          "bytes": 30661,
+          "sha256": "9298c96e7a6310964b92330e29cd399f2300c49c75fc594f784bb26be960482b",
+          "git_blob": "84665a3bb34d48c96f31f48e9ba3033e5b6cccff",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "lib/StorageFatFs/fs_extensions.inc",
+          "bytes": 5330,
+          "sha256": "599f3ead76c0f3bb2e488a4dfaad698eafc6e2e751621e92b68523a5702d7301",
+          "git_blob": "350598c7825507ad5eb319adb50200919fc6cf0b",
+          "equal_to_recorded_commit": true
+        },
+        {
+          "path": "lib/StorageFatFs/fatfs/ff.c",
+          "bytes": 250260,
+          "sha256": "5082e1150cd9128a2b1494dcdd1db2f0a225459116f7531b054b25bd457e856d",
+          "git_blob": "b82327cf17877acefd133a289eaab63172428382",
+          "equal_to_recorded_commit": true
+        }
+      ]
+    }
+  ],
+  "review_baseline_tests": {
+    "runtime_commit": "7daed93b1837c1418531c9c95630136afb0d4ed7",
+    "runtime_root": "/workspace/shared/native-terminal-custody-d3a333",
+    "result": "Separate existing normal host suites passed; no new composed adapter test.",
+    "suites": [
+      "test/run_storage_work_port_test.sh",
+      "test/run_native_replica_sd_test.sh",
+      "test/run_native_replica_sd_reader_test.sh",
+      "test/run_native_sdmmc_test.sh",
+      "X4 minimal/scripts/test_storage_async.py"
+    ],
+    "x4_command": {
+      "cwd": "/workspace/shared/x4-shared-settings-090/repos/X4",
+      "argv": [
+        "python3",
+        "minimal/scripts/test_storage_async.py",
+        "--runtime",
+        "/workspace/shared/native-terminal-custody-d3a333",
+        "--drivers",
+        "/workspace/shared/x4-shared-settings-090/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/x4-shared-settings-090/repos/Reader",
+        "--output",
+        "/tmp/native-bootstrap-review-x4-async-20261011"
+      ],
+      "environment": {
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "exit_code": 0,
+      "reported_stdout": "production async SD: lazy activation, pending UI polls, unknown manifest, export refusal and 8-sector batching, cancel/exit, sleep-resume PASS",
+      "evidence": "Review worker reported completed command and stdout; no separate saved execution log. This historical output directory is not a checked-in runner dependency.",
+      "observer_coverage": "Compiles actual masked observer; sd_async_test.c does not invoke observe_state, so the incompatibility is not exercised."
+    }
+  },
+  "limits": [
+    "one-use permit is an audited design argument for the exact pinned call graph, not implemented proof",
+    "physical continuity/durability not qualified",
+    ".90 user test session is independent of this proposal",
+    "all listed files are tracked/byte-equal to specified commits; no whole-checkout claim for X4/Drivers"
+  ]
+}

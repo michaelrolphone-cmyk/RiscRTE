@@ -1,0 +1,31 @@
+{
+  "schema": "native-sd-custody-design-checkpoint-v1",
+  "status": "Frozen source-only design for review; no implementation or activation",
+  "runtime_reference": "e471163431b0ad2d324c81db4b55c13957c93699",
+  "runtime_tree": "bfd5f7854a45a7db8e655ffd5c09d600f4ead2b3",
+  "verified_source_inputs": 39,
+  "checks": [
+    "All source inputs match size, SHA-256, Git blob and recorded commit",
+    "Runtime reference worktree remains clean",
+    "Owner/worker authority and cancellation design reviewed; this is a design argument, not an implemented or tested adapter"
+  ],
+  "new_composed_tests_executed": false,
+  "hardware_qualified": false,
+  "files": [
+    {
+      "path": "NATIVE_SD_CUSTODY_DESIGN.md",
+      "bytes": 28433,
+      "sha256": "0ff5d11e2f09666054b389550c253d2e7fbe6704b85b2e2785d107d6ee48d57e"
+    },
+    {
+      "path": "NATIVE_SD_CUSTODY_TEST_PLAN.md",
+      "bytes": 17156,
+      "sha256": "bdefa52b9550db51d231561553d6f38c061d502a3c1e27e0775f81657cf419db"
+    },
+    {
+      "path": "SOURCE_MANIFEST.json",
+      "bytes": 14658,
+      "sha256": "e64af2e2e6a2b34170a2bf7ae658b00f26195dcf6d383bdf572a8af709e0119e"
+    }
+  ]
+}
