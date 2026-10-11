@@ -67,3 +67,13 @@ on this correction under the same macOS harness. This is not reported as a pass.
 Hardware boot/live heap and Watch hardware validation remain outstanding.
 The sole integrator should apply the focused source commit to current source;
 this diagnostic baseline must not replace newer composition work.
+
+## Current-lineage integration correction
+
+The first port evaluated the native safety predicate before the existing
+retention guards. The production retained-yield test caught native checks
+after a provider graph had already latched retention. Keep the native
+predicate as the final short-circuited condition, preserving the original
+no-further-native-work behavior. The unchanged retained-yield regression
+covers graph retention, invalid interfaces, explicit retention, native-busy
+and ordinary yielding; acquisition/actual-exit tests remain required.

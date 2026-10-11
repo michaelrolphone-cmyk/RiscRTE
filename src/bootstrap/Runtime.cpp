@@ -1199,11 +1199,10 @@ bool Runtime::appExitBarrier(bool exiting) {
   // Acquisition continues an existing invocation. Copied provider-owned work
   // may remain in flight; only real exit must require complete native idleness.
   // Custody faults still revoke authority and pin every image immediately.
-  const bool nativeSafe=exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe();
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && nativeSafe)return true;
+  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());
