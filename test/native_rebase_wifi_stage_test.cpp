@@ -37,7 +37,7 @@ void expect(C&core,unsigned slot,const portable_wifi_credentials&value){auto api
 struct Scenario {
  Disk disk;Alloc a,ra;C core;AppStore local,sd;std::vector<M::Intent> intents;Bytes map;portable_wifi_credentials alpha1=credential("synthetic-alpha","synthetic-one"),alpha2=credential("synthetic-alpha","synthetic-two"),beta=credential("synthetic-beta"),gamma=credential("synthetic-gamma");
  Scenario():core(6,disk.backend(),coreLimits(),a.api()),sd(seed(5)){
-  assert(core.initialize(nullptr,0,{})==C::Ok);intents.push_back(applyApp(core,local,M::Save,0,alpha1));intents.push_back(applyApp(core,local,M::Save,1,beta));intents.push_back(applyApp(core,local,M::Save,0,alpha2,&alpha1));
+  assert(core.initialize(nullptr,0,identity(0))==C::Ok);intents.push_back(applyApp(core,local,M::Save,0,alpha1));intents.push_back(applyApp(core,local,M::Save,1,beta));intents.push_back(applyApp(core,local,M::Save,0,alpha2,&alpha1));
   auto forget=credential(beta.ssid,"");intents.push_back(applyApp(core,local,M::Forget,1,forget,&beta));intents.push_back(applyApp(core,local,M::Save,1,gamma));
   intents.push_back(applyApp(core,local,M::Save,2,credential("synthetic-remote-3")));
   M::Intent absent{};auto ghost=credential("synthetic-absent","");assert(M::make(M::Forget,ghost,nullptr,&absent));C::Mutation deletion{"absent",C::Delete,nullptr,0};assert(core.apply(core.revision(),&deletion,1,absent.bytes,M::IntentBytes)==C::Ok);intents.push_back(absent);map=sd.map();ra.verifyWipe=true;

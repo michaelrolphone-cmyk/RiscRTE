@@ -40,7 +40,7 @@ int put(C&c,const char*k,const char*v,const char*intent="explicit-save"){C::Muta
 std::vector<uint64_t> pending(C&c){std::vector<uint64_t> out;uint64_t after=0,id=0;char intent[1024];uint32_t n;for(;;){int rc=c.pending(after,&id,intent,sizeof intent,&n);if(rc==C::Missing)return out;assert(rc==C::Ok&&n);out.push_back(id);after=id;}}
 Disk initial(unsigned count=3){Disk d;Alloc a;{C c(6,d.backend(),limits(),a.api());std::vector<std::string> keys,values;std::vector<C::Value> rows;keys.reserve(count);values.reserve(count);rows.reserve(count);
  for(unsigned i=0;i<count;++i){char k[16];snprintf(k,sizeof k,"key%04u",i);keys.emplace_back(k);values.emplace_back(i%7==0?2048:32,char('a'+i%26));rows.push_back({keys.back().c_str(),values.back().data(),uint32_t(values.back().size())});}
- assert(c.initialize(rows.data(),rows.size(),{})==C::Ok);assert(c.pendingCount()==0);assert(get(c,"key0000").size()==2048);}
+ assert(c.initialize(rows.data(),rows.size(),base(0))==C::Ok);assert(c.pendingCount()==0);assert(get(c,"key0000").size()==2048);}
  d.calls=0;return d;}
 void basics(){
  Disk d=initial(1025);Alloc a;
@@ -60,7 +60,7 @@ void basics(){
 void reconciliation(){
  Disk d=initial();Alloc a;C c(6,d.backend(),limits(),a.api());assert(c.load()==C::Ok);assert(put(c,"local","changed")==C::Ok);
  C::Value remote[]={{"sd_only","restored",8},{"local","changed",7}};const uint64_t one[]={1};auto rev=c.revision();d.calls=0;
- assert(c.installResolved(rev,remote,2,base(1000),nullptr,0)==C::Conflict&&d.calls==0);assert(get(c,"local")=="changed"&&!c.identity().known);
+ assert(c.installResolved(rev,remote,2,base(1000),nullptr,0)==C::Conflict&&d.calls==0);assert(get(c,"local")=="changed"&&c.identity().known&&c.identity().generation==0);
  assert(put(c,"newer","preserved")==C::Ok);d.calls=0;assert(c.installResolved(rev,remote,2,base(1000),one,1)==C::Stale&&d.calls==0);assert(get(c,"newer")=="preserved");
  C::Value resolved[]={{"sd_only","restored",8},{"local","changed",7},{"newer","preserved",9}};const uint64_t ids[]={1,2};
  assert(c.installResolved(c.revision(),resolved,3,base(1000),ids,2)==C::Ok);assert(get(c,"sd_only")=="restored"&&get(c,"newer")=="preserved");assert(pending(c)==(std::vector<uint64_t>{1,2}));
@@ -69,7 +69,7 @@ void reconciliation(){
  auto fork=base(1000);fork.digest[1]=1;assert(c.installResolved(c.revision(),resolved,3,fork,ids,2)==C::Conflict);
  C reboot(6,d.backend(),limits(),a.api());assert(reboot.load()==C::Ok);assert(pending(reboot)==(std::vector<uint64_t>{1,2}));assert(get(reboot,"local")=="changed");
  C::Ticket t;assert(reboot.capture(&t)==C::Ok);assert(reboot.acknowledge(t,base(1001))==C::Ok);assert(get(reboot,"sd_only")=="restored"&&get(reboot,"local")=="changed");
- puts("native replica: unknown-base edits require explicit resolution; high SD generation does not discard intent; stale candidate rejects concurrent changes; foreign lineage rejected PASS");
+ puts("native replica: selected known-base edits require explicit resolution; high SD generation does not discard intent; stale candidate rejects concurrent changes; foreign lineage rejected PASS");
 }
 void failureMatrix(){
  const Disk source=initial(33);unsigned totalCuts=0;
@@ -86,8 +86,8 @@ void failureMatrix(){
    try {C c(6,d.backend(),limits(),a.api());assert(c.load()==C::Ok);d.fault(cut,Disk::Mode(mode),power!=0);const int rc=run(c);assert(rc==C::Ok||rc==C::Io||rc==C::Uncertain);if(rc==C::Uncertain){uint32_t n;char b[8];assert(c.get("before",b,sizeof b,&n)==C::Uncertain);} } catch(const Disk::PowerCut&) {a.discardVolatileAfterPowerCut();}
    d.fault(0,Disk::Before);{C restored(6,d.backend(),limits(),a.api());assert(restored.load()==C::Ok);
     if(operation==0){const auto val=get(restored,"before");assert(val=="kept"||val=="new");if(val=="new"){assert(get(restored,"atomic_peer")=="new");missing(restored,"key0000");assert(pending(restored)==(std::vector<uint64_t>{1,2}));}else{missing(restored,"atomic_peer");assert(get(restored,"key0000").size()==2048);assert(pending(restored)==(std::vector<uint64_t>{1}));}}
-    else if(operation==1){assert(get(restored,"before")=="kept"&&get(restored,"key0000").size()==2048);assert(restored.pendingCount()==0||restored.pendingCount()==1);assert(restored.identity().known==(restored.pendingCount()==0));}
-    else {assert(get(restored,"before")=="kept"&&pending(restored)==(std::vector<uint64_t>{1}));if(restored.identity().known){assert(get(restored,"remote_only")=="new");missing(restored,"key0000");}else{missing(restored,"remote_only");assert(get(restored,"key0000").size()==2048);}}
+    else if(operation==1){assert(get(restored,"before")=="kept"&&get(restored,"key0000").size()==2048);assert(restored.pendingCount()==0||restored.pendingCount()==1);assert(restored.identity().generation==(restored.pendingCount()==0?100:0));}
+    else {assert(get(restored,"before")=="kept"&&pending(restored)==(std::vector<uint64_t>{1}));if(restored.identity().generation==500){assert(get(restored,"remote_only")=="new");missing(restored,"key0000");}else{missing(restored,"remote_only");assert(get(restored,"key0000").size()==2048);}}
    }++totalCuts;
   }
  }

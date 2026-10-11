@@ -31,7 +31,8 @@ class CheckedSdReplicaCheckpoint {
  // A missing/unknown base is not permission to initialize a card or merge data.
  int start(C&core,const risc_storage_volume_api_v1*volume){return startInternal(core,volume,false,nullptr);}
  // Explicit durable mode. A fresh native-owned incarnation is required only
- // when upgrading a v1 image. Ordinary native settings remain entropy-free.
+ // when upgrading v1 or enabling a zero-incarnation v3 image. Ordinary native
+ // settings remain entropy-free.
  int startDurable(C&core,const risc_storage_volume_api_v1*volume,const uint8_t*newIncarnation=nullptr){return startInternal(core,volume,true,newIncarnation);}
  private:
  int startInternal(C&core,const risc_storage_volume_api_v1*volume,bool durable,const uint8_t*newIncarnation){
@@ -94,6 +95,8 @@ class CheckedSdReplicaCheckpoint {
   }
   if(phase_==Closing){
    if(session_){const int rc=api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK){retain();return;}session_=operation_=0;}
+   // End OK fences adapter cleanup; provider custody can become visible only now.
+   if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
    if(cancelled_)finish(State::Cancelled,C::Ok);
    else if(error_)finish(State::Failed,error_);
    else state_=State::Verified;

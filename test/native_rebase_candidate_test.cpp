@@ -2,7 +2,7 @@
 #include <experimental/native_replica/NativeReplicaJob.h>
 void basics(){
  Disk disk;Alloc coreAlloc,receiverAlloc;receiverAlloc.verifyWipe=true;
- C core(6,disk.backend(),coreLimits(),coreAlloc.api());assert(core.initialize(nullptr,0,{})==C::Ok);
+ C core(6,disk.backend(),coreLimits(),coreAlloc.api());assert(core.initialize(nullptr,0,identity(0))==C::Ok);
  assert(put(core,"offline","one","save-one")==C::Ok);assert(put(core,"offline","two","save-two")==C::Ok);
  assert(put(core,"offline","two","same-value-save")==C::Ok);
  const auto originalIntents=nativeIntents(core),root=disk.root;const auto revision=core.revision();
@@ -27,7 +27,7 @@ void basics(){
  puts("native receiver: copied remote map, ordered exact intents, atomic generic PUT/DELETE plus zero-mutation markers, unchanged native reads until finish and retained original intents after reboot PASS");
 }
 void refusals(){
- Disk disk;Alloc a,ra;ra.verifyWipe=true;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,{})==C::Ok);assert(put(core,"local","kept","one")==C::Ok);assert(put(core,"local","kept","two")==C::Ok);
+ Disk disk;Alloc a,ra;ra.verifyWipe=true;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,identity(0))==C::Ok);assert(put(core,"local","kept","one")==C::Ok);assert(put(core,"local","kept","two")==C::Ok);
  Bytes map;append(map,"remote","r",1);const auto root=disk.root;R candidate(core,6,receiverLimits(),ra.api());
  assert(candidate.begin(remote(map,1,identity(900),1))==C::Invalid);
  {R wrong(core,1,receiverLimits(),ra.api());assert(wrong.begin(remote(map,1,identity(900),1))==C::Conflict);}
@@ -60,7 +60,7 @@ void refusals(){
  puts("native receiver: bound namespace, malformed map, unknown/out-of-order/duplicate ID, exact bytes, view/frontier CAS, abandonment, concurrent edit and identity refusals PASS");
 }
 void limitsAndAllocations(){
- Disk disk;Alloc a,ra;ra.verifyWipe=true;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,{})==C::Ok);assert(put(core,"local","kept","one")==C::Ok);const auto root=disk.root;
+ Disk disk;Alloc a,ra;ra.verifyWipe=true;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,identity(0))==C::Ok);assert(put(core,"local","kept","one")==C::Ok);const auto root=disk.root;
  Bytes map;append(map,"remote","x",1);
  for(unsigned failure=1;failure<=2;++failure){R c(core,6,receiverLimits(),ra.api());ra.fail=ra.calls+failure;assert(c.begin(remote(map,1))==C::NoMemory&&!c.held()&&disk.root==root);ra.fail=0;}
  {R c(core,6,receiverLimits(),ra.api());a.fail=a.calls+1;assert(c.begin(remote(map,1))==C::NoMemory&&!c.held());a.fail=0;}
@@ -80,14 +80,14 @@ void limitsAndAllocations(){
  puts("native receiver: snapshot/pending/map/descriptor/core allocation failures, byte budgets, retained full-group capacity and wiping custom allocator PASS");
 }
 void scaleAndReboot(){
- Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,{})==C::Ok);assert(put(core,"local","kept","one")==C::Ok);
+ Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,identity(0))==C::Ok);assert(put(core,"local","kept","one")==C::Ok);
  Bytes map;for(unsigned i=0;i<1025;++i){char key[16];snprintf(key,sizeof key,"opaque%04u",i);append(map,key,"v",1);}const auto root=disk.root;
  {R c(core,6,receiverLimits(),ra.api());assert(c.begin(remote(map,1025))==C::Ok&&c.count()==1025);assert(c.stage(batch(c,1,"one"))==C::Ok);assert(disk.root==root);}
  {C reboot(6,disk.backend(),coreLimits(),a.api());assert(reboot.load()==C::Ok&&reboot.pendingCount()==1&&get(reboot,"local")=="kept");R c(reboot,6,receiverLimits(),ra.api());assert(c.begin(remote(map,1025))==C::Ok&&c.resolvedCount()==0);assert(c.stage(batch(c,1,"one"))==C::Ok);assert(c.finish(c.viewRevision(),c.frontier())==C::Ok&&get(reboot,"opaque1024")=="v");}
  puts("native receiver: 1025 opaque keys, no key-count cap, discard/re-resolve RAM markers after reboot PASS");
 }
 void reentryAndFinalStale(){
- Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,{})==C::Ok);assert(put(core,"local","one","first")==C::Ok);
+ Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,identity(0))==C::Ok);assert(put(core,"local","one","first")==C::Ok);
  Bytes map;append(map,"remote","old",3);R c(core,6,receiverLimits(),ra.api());
  struct Probe {R*candidate;R::Remote source;unsigned calls=0;} probe{&c,remote(map,1)};
  ra.probeContext=&probe;ra.probe=[](void*p){auto&probe=*static_cast<Probe*>(p);auto&candidate=*probe.candidate;++probe.calls;
@@ -103,7 +103,7 @@ void reentryAndFinalStale(){
  puts("native receiver: allocator/release callback reentry refused, complete-resolution concurrent edit prevents final root publication PASS");
 }
 void ticketAndRetry(){
- Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,{})==C::Ok);assert(put(core,"local","kept","one")==C::Ok);
+ Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,identity(0))==C::Ok);assert(put(core,"local","kept","one")==C::Ok);
  Bytes map;append(map,"remote","new",3);const auto root=disk.root,original=nativeIntents(core);C::Ticket exportTicket;assert(core.capture(&exportTicket)==C::Ok);
  // begin captures a new core ticket even when later admission fails. Rebase and
  // asynchronous transport ticket ownership therefore MUST be mutually exclusive.
@@ -118,7 +118,7 @@ void uncertainRecoveryAndMembership(){
  // Small map root replace/readback are backend calls 5/6 after reserve,
  // write, seal and object read. Every old/new ambiguous outcome is reloaded.
  for(unsigned mode=0;mode<3;++mode)for(unsigned cut:{5u,6u}){
-  Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,{})==C::Ok);assert(put(core,"local","old","one")==C::Ok);
+  Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,identity(0))==C::Ok);assert(put(core,"local","old","one")==C::Ok);
   const auto original=nativeIntents(core);R c(core,6,receiverLimits(),ra.api());assert(c.begin(remote(map,2))==C::Ok);assert(c.stage(batch(c,1,"one"))==C::Ok);const auto old=batch(c,1,"one");
   disk.fault(cut,Disk::Mode(mode));assert(c.finish(c.viewRevision(),c.frontier())==C::Uncertain&&!c.held()&&c.abandon()==C::Uncertain);
   disk.fault(0,Disk::Before);assert(core.load()==C::Ok&&nativeIntents(core)==original);
@@ -126,7 +126,7 @@ void uncertainRecoveryAndMembership(){
   assert(c.stage(old)==C::Stale);assert(c.begin(remote(map,2))==C::Ok&&c.viewRevision()>old.viewRevision);assert(c.stage(old)==C::Stale);
   assert(c.stage(batch(c,1,"one"))==C::Ok&&c.finish(c.viewRevision(),c.frontier())==C::Ok&&nativeIntents(core)==original&&get(core,"remote_b")=="new");
  }
- {Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,{})==C::Ok);assert(put(core,"local","first","same-intent")==C::Ok);C::Ticket t;assert(core.capture(&t)==C::Ok);assert(put(core,"local","second","same-intent")==C::Ok);assert(core.acknowledge(t,identity(800))==C::Ok&&core.pendingCount()==1);
+ {Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,identity(0))==C::Ok);assert(put(core,"local","first","same-intent")==C::Ok);C::Ticket t;assert(core.capture(&t)==C::Ok);assert(put(core,"local","second","same-intent")==C::Ok);assert(core.acknowledge(t,identity(800))==C::Ok&&core.pendingCount()==1);
   R c(core,6,receiverLimits(),ra.api());assert(c.begin(remote(map,2))==C::Ok&&c.frontier()==2);
   assert(c.stage(batch(c,1,"same-intent"))==C::Conflict&&c.resolvedCount()==0);assert(c.stage(batch(c,2,"same-intent"))==C::Ok&&c.finish(c.viewRevision(),c.frontier())==C::Ok);
  }
@@ -134,7 +134,7 @@ void uncertainRecoveryAndMembership(){
 }
 void retainedRootCustody(){
  using J=RiscExperimental::NativeReplicaJob;
- for(unsigned mode=1;mode<=3;++mode){Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,{})==C::Ok);assert(put(core,"local","old","one")==C::Ok);
+ for(unsigned mode=1;mode<=3;++mode){Disk disk;Alloc a,ra;C core(6,disk.backend(),coreLimits(),a.api());assert(core.initialize(nullptr,0,identity(0))==C::Ok);assert(put(core,"local","old","one")==C::Ok);
   Bytes map;append(map,"remote_a","new",3);append(map,"remote_b","new",3);R c(core,6,receiverLimits(),ra.api());assert(c.begin(remote(map,2))==C::Ok);assert(c.stage(batch(c,1,"one"))==C::Ok);
   J job([](void*p,uint32_t,const void*,uint32_t)->J::Result{auto&c=*static_cast<R*>(p);return {c.finish(c.viewRevision(),c.frontier()),0,0};},&c);uint64_t token=0;assert(job.begin(1,nullptr,0,&token)==RISC_STORAGE_WORK_OK);disk.retainedRootMode=mode;assert(job.workerStep());
   J::Result result{};assert(job.collect(token,&result)==RISC_STORAGE_WORK_OK&&result.status==C::Retained&&!job.exitSafe());assert(!core.ready()&&!c.held()&&c.outcome()==C::Retained);
@@ -149,7 +149,7 @@ void retainedRootCustody(){
  puts("native receiver: retained root replacement before/after and retained root readback preserve uncertain native state plus receiver/job custody PASS");
 }
 void finishFaults(){
- Disk source;{Alloc a;C c(6,source.backend(),coreLimits(),a.api());assert(c.initialize(nullptr,0,{})==C::Ok);assert(put(c,"old_a","old","original")==C::Ok);assert(put(c,"old_b","old","second")==C::Ok);}
+ Disk source;{Alloc a;C c(6,source.backend(),coreLimits(),a.api());assert(c.initialize(nullptr,0,identity(0))==C::Ok);assert(put(c,"old_a","old","original")==C::Ok);assert(put(c,"old_b","old","second")==C::Ok);}
  const std::string payload(2048,'x');Bytes map;append(map,"new_a",payload.data(),payload.size());append(map,"new_b",payload.data(),payload.size());append(map,"new_c",payload.data(),payload.size());
  auto prepare=[&](R&c){assert(c.begin(remote(map,3))==C::Ok);assert(c.stage(batch(c,1,"original"))==C::Ok);assert(c.stage(batch(c,2,"second"))==C::Ok);};
  unsigned calls=0;{Disk d=source;Alloc a,ra;C core(6,d.backend(),coreLimits(),a.api());assert(core.load()==C::Ok);R c(core,6,receiverLimits(),ra.api());prepare(c);d.fault(0,Disk::Before);assert(c.finish(c.viewRevision(),c.frontier())==C::Ok);calls=d.calls;}
@@ -158,7 +158,7 @@ void finishFaults(){
   try{C core(6,d.backend(),coreLimits(),a.api());assert(core.load()==C::Ok);const auto original=nativeIntents(core);R c(core,6,receiverLimits(),ra.api());prepare(c);d.fault(cut,Disk::Mode(mode),power!=0);int rc=c.finish(c.viewRevision(),c.frontier());assert(rc==C::Ok||rc==C::Io||rc==C::Uncertain);if(rc==C::Uncertain){assert(!c.held()&&c.outcome()==C::Uncertain&&c.abandon()==C::Uncertain&&!core.ready());}else assert(nativeIntents(core)==original);
   }catch(const Disk::PowerCut&){a.discardVolatileAfterPowerCut();ra.discardVolatileAfterPowerCut();}
   d.fault(0,Disk::Before);{C reboot(6,d.backend(),coreLimits(),a.api());assert(reboot.load()==C::Ok&&reboot.pendingCount()==2);uint32_t n=0;char out[16];const int found=reboot.get("new_a",out,sizeof out,&n);const bool installed=found==C::Ok||found==C::BufferSmall;
-   if(installed){assert(get(reboot,"new_a")==payload&&get(reboot,"new_b")==payload&&get(reboot,"new_c")==payload&&reboot.identity().generation==900);assert(reboot.get("old_a",out,sizeof out,&n)==C::Missing&&reboot.get("old_b",out,sizeof out,&n)==C::Missing);}else{assert(get(reboot,"old_a")=="old"&&get(reboot,"old_b")=="old"&&!reboot.identity().known);assert(reboot.get("new_b",out,sizeof out,&n)==C::Missing&&reboot.get("new_c",out,sizeof out,&n)==C::Missing);}
+   if(installed){assert(get(reboot,"new_a")==payload&&get(reboot,"new_b")==payload&&get(reboot,"new_c")==payload&&reboot.identity().generation==900);assert(reboot.get("old_a",out,sizeof out,&n)==C::Missing&&reboot.get("old_b",out,sizeof out,&n)==C::Missing);}else{assert(get(reboot,"old_a")=="old"&&get(reboot,"old_b")=="old"&&reboot.identity().known&&reboot.identity().generation==0);assert(reboot.get("new_b",out,sizeof out,&n)==C::Missing&&reboot.get("new_c",out,sizeof out,&n)==C::Missing);}
    uint64_t id=0;assert(reboot.pending(0,&id,out,sizeof out,&n)==C::Ok&&id==1&&std::string(out,n)=="original");assert(reboot.pending(1,&id,out,sizeof out,&n)==C::Ok&&id==2&&std::string(out,n)=="second");
   }++cases;
  }

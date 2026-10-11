@@ -71,3 +71,19 @@ const unsigned char catalog_layout_report[sizeof(NativeCatalogProbe::Report)]={}
 const unsigned char catalog_layout_entry[NativeCatalogProbe::entryStorageBytes()]={};
 const unsigned char catalog_layout_child[NativeCatalogProbe::childStorageBytes()]={};
 }
+
+#include "experimental/native_replica/NativeBaselineAdmission.h"
+void native_baseline_target_probe(void*owner,RiscExperimental::NativeReplicaCore&core,
+ RiscExperimental::NativeBaselineAdmission::Guard guard,
+ RiscExperimental::NativeBaselineAdmission::Sources sources,
+ const RiscExperimental::NativeBaselineAdmission::Selection&selection){
+ using C=RiscExperimental::NativeReplicaCore;using A=RiscExperimental::NativeBaselineAdmission;
+ static_assert(C::HeaderV3==480&&C::ProvenanceBytes==96,"v3 envelope");
+ RiscExperimental::MbedTlsReplicaDigest hash;auto h=hash.api();
+ A factory(owner,core,guard,{h.context,h.begin,h.update,h.finish},sources);
+ C::Initialization fresh,imported;
+ (void)factory.admitFreshEmpty(&fresh);(void)core.initializeFreshEmpty(fresh);
+ (void)factory.admitImported(selection,&imported);(void)core.initializeImportedBaseline(imported);
+ (void)fresh.valid();(void)imported.mapSize();(void)core.baseline().archiveObligation();
+ (void)core.pendingOnlyAdoptionAllowed();(void)factory.exitSafe();
+}

@@ -48,6 +48,7 @@ class NativeRebaseCandidate {
   if(held()||core_.exportPrepared())return Core::Busy;
   if(!configuration()||remote.namespaceId!=namespace_)return Core::Invalid;
   if(!validIdentity(remote.identity))return Core::Invalid;
+  if(core_.ready()&&!core_.pendingOnlyAdoptionAllowed())return Core::Conflict;
   if(limits_.nativeImageBytes<core_.headerSize()+4)return Core::NoSpace;
   if(remote.mapBytes>limits_.nativeImageBytes-core_.headerSize()-4)return Core::NoSpace;
   if(!validMap(remote))return Core::Invalid;

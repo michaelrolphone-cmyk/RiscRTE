@@ -57,7 +57,8 @@ Disk source(bool large=false){Disk d;Alloc a;C c(6,d.backend(),limits(),a.api())
 void compatibilityAndBounds(){
  static_assert(C::Header==128&&C::HeaderV2==384&&C::MarkerBytes==256&&C::RootBytes==48,"native layout");
  static_assert(sizeof(C::ExportMarker)==256,"opaque encoded handle only");
- Disk d;Alloc a;C c(6,d.backend(),limits(),a.api());assert(c.initialize(nullptr,0,{})==C::Ok);assert(c.formatVersion()==1&&c.headerSize()==128&&!c.exportPrepared());
+ {Disk legacy;Alloc heap;C unclassified(6,legacy.backend(),limits(),heap.api());assert(unclassified.initialize(nullptr,0,{})==C::Ok);assert(put(unclassified,"offline","saved")==C::Ok);C::Ticket t;assert(unclassified.capture(&t)==C::Ok);assert(unclassified.acknowledge(t,identity(5))==C::Conflict&&get(unclassified,"offline")=="saved");}
+ Disk d;Alloc a;C c(6,d.backend(),limits(),a.api());assert(c.initialize(nullptr,0,identity(4))==C::Ok);assert(c.formatVersion()==1&&c.headerSize()==128&&!c.exportPrepared());
  C::ExportMarker m;assert(!m.valid()&&c.preparedExport(&m)==C::Missing);assert(put(c,"offline","saved")==C::Ok&&c.formatVersion()==1);
  for(unsigned i=112;i<128;++i)assert(selected(d)[i]==0);
  C::Snapshot unknown;assert(c.captureSnapshot(&unknown)==C::Ok);assert(c.prepareExport(unknown,identity(1),incarnation,&m)==C::Conflict);
