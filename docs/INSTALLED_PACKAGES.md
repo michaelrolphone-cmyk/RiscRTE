@@ -2,9 +2,10 @@
 
 Current status: an opt-in development composition now passes target native build,
 39-module ELF/import admission and complete Runtime store self-admission. Dynamic
-SD discovery, cached Springboard, copied async persistence/removal, and durable
-private namespace assignment are implemented. App Store SD transactions, legacy
-settings migration and dependency provisioning remain incomplete. No release or
+SD discovery, cached Springboard, copied async persistence/removal, durable
+private namespace assignment, App Store staged SD transactions and opt-in legacy
+authority migration are implemented. Missing-provider dependency provisioning
+remains incomplete; historical checkpoint sections below record their earlier scope. No release or
 hardware qualification is claimed. The checkpoint sections below record the
 implementation progression; see the current boundary at the end.
 
