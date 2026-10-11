@@ -294,3 +294,15 @@ complete 39-module store. Tests cover new install/update, both activation restar
 boundaries, offline retry, manifest conflicts and draining a pending final cache
 write. This branch also integrates Files source 81845e8 without modifying its
 32-provider/48-grant/64-app opt-in capacities or SD worker request prefix.
+
+Runtime 0.2.11 resolves an old legacy shortcut filename to that identity's
+currently enabled SD entry, using metadata only. Removed or not-yet-admitted
+identities refuse the shortcut. Both ordinary and resident launch paths share
+this resolver. The actual host Runtime test launches twice through the old
+filename after discovery and rejects it before admission and after removal.
+
+Product integration must hydrate the catalog in Home before enabling direct
+legacy shortcuts on a cold boot; the present selected client is Springboard.
+Keep migration opt-in until that Home startup integration is qualified. Never
+fall back to a firmware-declared SD image when no admitted catalog entry exists:
+that could revive an app removed by a durable catalog transaction.

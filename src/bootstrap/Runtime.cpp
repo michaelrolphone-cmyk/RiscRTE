@@ -952,17 +952,28 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
   return port_.owner();
 }
 #include "CohortRuntime.inc"
+bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity)const {
+  if(!relative||!path(root_,relative,out,capacity))return false;
+  for(size_t i=0;i<bootPolicyCount_;++i)if(policies_[i].catalogAuthority&&!strcmp(policies_[i].elf,out)){
+    for(size_t j=bootPolicyCount_;j<policyCount_;++j)if(policies_[j].enabled&&!strcmp(policies_[j].id,policies_[i].id)){
+      const size_t n=strlen(policies_[j].elf);if(n>=capacity)return false;
+      memcpy(out,policies_[j].elf,n+1);return true;
+    }
+    out[0]=0;return false;
+  }
+  return true;
+}
 bool Runtime::launch(const char* relative) {
   if(residentEnabled_) {
     char selected[256];
     const bool legacy=invocation_==&mainInvocation_ && !invocation_->role && residentLegacyAllowed(invocation_->current_);
     if((invocation_->role!=RISC_RESIDENT_ROLE_FOREGROUND && !legacy) || !invocation_->entryRunning_ ||
-       !relative || !path(root_,relative,selected,sizeof(selected)) ||
+       !relative || !installedLaunchPath(relative,selected,sizeof(selected)) ||
        (!residentAllowed(selected) && !residentLegacyAllowed(selected) && !(legacy && !strcmp(selected,default_))))return false;
   }
   if(invocation_->fileOpen_.phase==FileOpenState::Phase::Requested || invocation_->fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
   if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained_ || !appDataExitSafe() || (invocation_->installedFiles_ && invocation_->installedFiles_->retained()) || invocation_->queued_[0] || appDataBusy() || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
-  const bool ok=path(root_,relative,invocation_->queued_,sizeof(invocation_->queued_));
+  const bool ok=installedLaunchPath(relative,invocation_->queued_,sizeof(invocation_->queued_));
   RISC_STAGE_LOG("app launch-request file=%s result=%s",relative,ok?"accepted":"invalid-path");
   if(ok)RiscPerf::emit(20);
   return ok;

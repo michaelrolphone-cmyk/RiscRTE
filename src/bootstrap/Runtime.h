@@ -374,6 +374,7 @@ class Runtime final {
   static int32_t installationCheck(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
   static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool,const uint32_t* slots=nullptr);
   bool installationMutable(size_t)const;
+  bool installedLaunchPath(const char*,char*,size_t)const;
   void* loadRemovableApp(const AppPolicy&);
   RuntimeProviders::GrantV2 retainedAppSource_{};
   MetadataArray<RiscStorage::AppDataExport::Entry> exportEntries_[MaxAppPolicies];

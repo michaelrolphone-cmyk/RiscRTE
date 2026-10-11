@@ -86,7 +86,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
       }
       if(catalogMode()){
         if(mode=="catalog-authority"){
-          assert(runtime->appInventoryCount()==0);
+          assert(runtime->appInventoryCount()==0);assert(!runtime->launch("child.elf"));
           char bytes[4096];uint32_t actual=99;assert(!runtime->appInventory(0,bytes,sizeof(bytes),&actual)&&actual==0);
           char denied[193];assert(installer->admit(installer->context,"Apps/other/manifest.json",staged[0].second.c_str(),denied,sizeof(denied))==RISC_INSTALL_DENIED);
         }
@@ -137,6 +137,12 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         changedSlot=129;assert(installer->namespaced(installer->context,&item,&changedSlot,1,&result,false,true)==RISC_INSTALL_INVALID);
         assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
         assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+        if(mode=="catalog-authority"){
+          assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
+          assert(!runtime->launch("child.elf"));
+          assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+          launchName="child.elf"; // Existing Home shortcut resolves admitted SD metadata.
+        }
         puts("Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS");
       } else for(const auto& item:staged){const char*path=item.first.c_str();const char*json=item.second.c_str();
         std::string folder(path);folder.resize(folder.rfind('/')+1);
