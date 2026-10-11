@@ -291,15 +291,19 @@ bool Runtime::validateGraph() {
   for(size_t i=0;i<driverCount_;++i) if(edges[i][i]) return fail("driver dependency cycle");
   return true;
 }
-bool Runtime::appPolicies(JsonVariantConst value) {
+bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManifest) {
   if (value.isNull()) return true;
-  if (!value.is<JsonArrayConst>() || value.size()>MaxAppPolicies) return fail("invalid app capability policy");
-  if(value.size()){policies_=metadataArray<AppPolicy>(value.size());if(!policies_)return fail("app policy allocation failed");}
+  if (!value.is<JsonArrayConst>() || value.size()>MaxAppPolicies-policyCount_) return fail("invalid app capability policy");
+  if(!policies_ && value.size()){
+    policyCapacity_=value.size();policies_=metadataArray<AppPolicy>(policyCapacity_);
+    if(!policies_)return fail("app policy allocation failed");
+  }
+  if(value.size()>policyCapacity_-policyCount_)return fail("app policy capacity exhausted");
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
     auto& policy=policies_[policyCount_]; char relative[193]; JsonDocument doc;
     if (!keys(item,{"manifest","grants"},{"app_data_export","image_source"}) || !text(item["manifest"],relative,sizeof(relative)) ||
-        !path(root_,relative,policy.elf,sizeof(policy.elf)) || !readJson(policy.elf,doc,&metadataCloseRetained_)) return fail("invalid app policy manifest path");
-    JsonObjectConst manifest=doc.as<JsonObjectConst>(); char filename[128];
+        !path(root_,relative,policy.elf,sizeof(policy.elf)) || (suppliedManifest.isNull() && !readJson(policy.elf,doc,&metadataCloseRetained_))) return fail("invalid app policy manifest path");
+    JsonObjectConst manifest=suppliedManifest.isNull()?doc.as<JsonObjectConst>():suppliedManifest.as<JsonObjectConst>(); char filename[128];
     if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types"}) ||
         !eq(manifest["type"],"application") || !eq(manifest["architecture"],"xtensa-esp32s3") || !eq(manifest["entry"],"app_main") ||
         !text(manifest["id"],policy.id,sizeof(policy.id)) || !RuntimePackages::safeId(policy.id) ||
@@ -310,7 +314,7 @@ bool Runtime::appPolicies(JsonVariantConst value) {
     FileOpenMetadata fileMetadata;
     if(!fileOpenMetadata(manifest,fileMetadata))return fail("invalid app file associations");
     if(fileMetadata.count) {
-      if(!fileHandlers_)fileHandlers_=metadataArray<FileOpenMetadata>(value.size());
+      if(!fileHandlers_)fileHandlers_=metadataArray<FileOpenMetadata>(policyCapacity_);
       if(!fileHandlers_)return fail("file association allocation failed");
       fileHandlers_[policyCount_]=fileMetadata;
     }
@@ -807,6 +811,7 @@ bool Runtime::prepare(const char* root) {
   registrationOpen_=false;
   if (!bound) return fail("trusted platform binding failed");
   if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !configureAppDataExports(c["app_capabilities"]) || !residentPolicy(c["resident_shell"]) || !configureInstalledFiles(c)) return false;
+  bootPolicyCount_=policyCount_;
   bool hasProviderFiles=false;
   for(size_t i=0;i<driverCount_;++i)hasProviderFiles=hasProviderFiles || providerStorage_[i].fileCount;
   for(size_t i=0;i<driverCount_;++i) {
@@ -1020,6 +1025,12 @@ bool Runtime::appManifestPath(size_t index,char* out,size_t capacity) const {
 bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* actual) const {
   if(actual)*actual=0;
   if(!active() || index>=policyCount_ || !output || !actual || !capacity || capacity>4096 || !providerStorageSafe())return false;
+  if(index>=bootPolicyCount_ && installedMetadata_) {
+    const char* manifest=installedMetadata_[index].manifest;
+    const size_t n=strlen(manifest);
+    if(!n || n>capacity)return false;
+    memcpy(output,manifest,n);*actual=uint32_t(n);return true;
+  }
   char relative[193],name[256];
   if(!appManifestPath(index,relative,sizeof(relative)) || !path(root_,relative,name,sizeof(name)))return false;
   FILE* f=fopen(name,"rb");if(!f)return false;
@@ -1400,4 +1411,40 @@ bool Runtime::run() {
   if(!retained_)failureBreadcrumb(RISC_FAILURE_PHASE_IDLE);
   invocation_->fileOpen_={};revokeProviders(); currentRuntime=nullptr; return ok;
 }
+}
+
+// The installation coordinator supplies owner-resolved policy separately from
+// untrusted package declarations. Discovering a file never confers authority.
+bool RiscBoot::Runtime::reserveInstalledApps(size_t capacity) {
+  if(currentRuntime || !default_[0] || retained_ || !port_.owner() ||
+     capacity<policyCount_ || capacity>MaxAppPolicies || installedMetadata_)return false;
+  auto policies=metadataArray<AppPolicy>(capacity);
+  auto metadata=metadataArray<InstalledAppMetadata>(capacity);
+  auto handlers=metadataArray<FileOpenMetadata>(capacity);
+  if(!policies || !metadata || !handlers)return false;
+  for(size_t i=0;i<policyCount_;++i){policies[i]=policies_[i];if(fileHandlers_)handlers[i]=fileHandlers_[i];}
+  policies_=std::move(policies);installedMetadata_=std::move(metadata);
+  fileHandlers_=std::move(handlers);policyCapacity_=capacity;return true;
+}
+bool RiscBoot::Runtime::admitInstalledApp(const char* policyJson,const char* manifestJson) {
+  if(!installedMetadata_ || !port_.owner() || retained_ || metadataCloseRetained_ ||
+     !providerStorageSafe() || !graph_.activationSafe() || promotionRunning_ ||
+     graph_.lifecycleBusy() || policyCount_>=policyCapacity_ || !policyJson || !manifestJson ||
+     strnlen(policyJson,4097)>4096 || strnlen(manifestJson,4097)>4096)return false;
+  // A foreground/child may not mutate the host's registry, and no in-flight
+  // continuation can be silently redirected by admitting a duplicate identity.
+  if(currentRuntime && (currentRuntime!=this || !active() || invocation_!=&mainInvocation_ ||
+     strcmp(invocation_->current_,default_) || foreground_ || invocation_->streams_.busy()))return false;
+  JsonDocument policy,manifest,rows;
+  if(deserializeJson(policy,policyJson) || deserializeJson(manifest,manifestJson) ||
+     !policy.is<JsonObjectConst>() || !manifest.is<JsonObjectConst>() ||
+     policy["image_source"].isNull() || !policy["app_data_export"].isNull())return false;
+  rows.to<JsonArray>().add(policy.as<JsonVariantConst>());
+  const size_t slot=policyCount_;
+  if(!appPolicies(rows.as<JsonVariantConst>(),manifest.as<JsonVariantConst>())) {
+    policies_[slot]=AppPolicy{};fileHandlers_[slot]=FileOpenMetadata{};
+    policyCount_=slot;return false;
+  }
+  strcpy(installedMetadata_[slot].manifest,manifestJson);
+  return true;
 }

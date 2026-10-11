@@ -131,6 +131,12 @@ class Runtime final {
   // Native update authority: preserve the existing boot-policy identity/grants.
   bool appUpdate(const char* id,const void* manifest,size_t size,UpdateApp&) const;
   size_t appCount() const {return policyCount_;}
+  // Trusted native installation coordinator only; never an app/provider import.
+  // Reserve before run(), then admit one copied SD manifest and owner-resolved
+  // policy at a default-app checkpoint. Existing identities cannot be replaced
+  // while invocations may retain pointers. Driver graph authority is unchanged.
+  bool reserveInstalledApps(size_t capacity);
+  bool admitInstalledApp(const char* policyJson,const char* manifestJson);
   // Compiled-in owner-task diagnostics only; no app/provider SDK export.
   // Snapshotting never invokes providers, allocates, or changes authority.
   struct GrantUsage {
@@ -213,7 +219,7 @@ class Runtime final {
   bool residentFailure(uint64_t,risc_resident_failure_v1*);
   void recordResidentFailure(uint32_t,int32_t,const char*,uint64_t);
   bool selectInvocation(Invocation&);
-  bool appPolicies(JsonVariantConst);
+  bool appPolicies(JsonVariantConst,JsonVariantConst suppliedManifest=JsonVariantConst());
   bool revokeApp();
   bool appExitBarrier();
   bool streamBinding(const risc_runtime_capability_v1*,RuntimeStreams::AppStreamBinding&) const;
@@ -333,6 +339,9 @@ class Runtime final {
     char exportLabel[64]{};
   };
   MetadataArray<AppPolicy> policies_;
+  size_t policyCapacity_=0, bootPolicyCount_=0;
+  struct InstalledAppMetadata {char manifest[4097]{};};
+  MetadataArray<InstalledAppMetadata> installedMetadata_;
   void* loadRemovableApp(const AppPolicy&);
   RuntimeProviders::GrantV2 retainedAppSource_{};
   MetadataArray<RiscStorage::AppDataExport::Entry> exportEntries_[MaxAppPolicies];

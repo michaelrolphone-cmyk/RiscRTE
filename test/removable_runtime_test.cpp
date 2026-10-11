@@ -14,12 +14,32 @@ static std::vector<uint8_t> payload;
 static unsigned defaults,children,starts,stops,opens,closes,live;
 static size_t offset;
 static bool present=true;
+static RiscBoot::Runtime* runtime;
 static void write(const std::string& name,const std::string& value){std::ofstream(root+"/"+name)<<value;}
 static void selectImage(const char* name){
   std::ifstream f(root+"/"+name,std::ios::binary);payload.assign(std::istreambuf_iterator<char>(f),{});assert(payload.size()>52);
 }
 extern "C" unsigned removable_event(unsigned e,unsigned value) {
-  if(e==0){++defaults;if(defaults==2 && mode=="replacement")selectImage("revision2.elf");return defaults<3;}
+  if(e==0){++defaults;
+    if(defaults==1 && mode=="discovery") {
+      assert(runtime->appCount()==0);
+      const char* manifest=R"({"type":"application","id":"child","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"child.elf","entry":"app_main","requires":[]})";
+      const char* policy=R"({"manifest":"child.json","grants":[],"image_source":{"volume_instance":9,"path":"Apps/child/child.elf"}})";
+      // Failed admission cannot consume a slot or poison the subsequent app.
+      std::string bad=policy;
+      bad.replace(bad.find("Apps/child/child.elf"),20,"../child.elf");
+      assert(!runtime->admitInstalledApp(bad.c_str(),manifest));
+      bad=policy;bad.replace(bad.find("volume_instance\":9"),18,"volume_instance\":8");
+      assert(!runtime->admitInstalledApp(bad.c_str(),manifest));
+      bad=manifest;bad.replace(bad.find("\"requires\":[]"),13,"\"requires\":[{\"capability\":\"raw.memory\",\"api\":1}]");
+      assert(!runtime->admitInstalledApp(policy,bad.c_str()));
+      assert(runtime->appCount()==0);
+      assert(runtime->admitInstalledApp(policy,manifest));
+      assert(runtime->appCount()==1);
+      assert(!runtime->admitInstalledApp(policy,manifest));
+      assert(runtime->appCount()==1);
+    }
+    if(defaults==2 && mode=="replacement")selectImage("revision2.elf");return defaults<3;}
   if(e==1){assert(!live && opens==closes);++children;assert(value==(mode=="replacement" && children==2?2u:1u));}
   if(e==2)++starts;
   if(e==3){assert(!live);++stops;}
@@ -43,7 +63,13 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
 }
 extern "C" void* esp_elf_malloc(uint32_t n,bool){return malloc(n);}
 extern "C" void esp_elf_free(void* p){free(p);}
-extern "C" bool esp_elf_validate_file(const uint8_t* p,size_t n){return n>52 && !memcmp(p,"\177ELF",4);}
+extern "C" bool esp_elf_validate_file(const uint8_t* p,size_t n){
+#if defined(__APPLE__)
+  return n>52 && p[0]==0xcf && p[1]==0xfa && p[2]==0xed && p[3]==0xfe;
+#else
+  return n>52 && !memcmp(p,"\177ELF",4);
+#endif
+}
 extern "C" void* esp_dlopen_reader_instance(const char* name,esp_dl_image_reader reader,void* context){
   assert(!live);elf_file_t file{};assert(reader(context,name,&file)==0);
   char temporary[]="/tmp/riscrte-sd-test-XXXXXX";int fd=mkstemp(temporary);assert(fd>=0);
@@ -60,15 +86,17 @@ int main(int argc,char** argv) {
   std::string boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[{"manifest":"child.json","grants":[],"image_source":{"volume_instance":9,"path":"Apps/child/child.elf"}}]})";
   if(mode=="invalid-path")boot.replace(boot.find("Apps/child/child.elf"),20,"../child.elf");
   if(mode=="default-external")boot.replace(boot.find("default.elf"),11,"child.elf");
+  if(mode=="discovery")boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[]})";
   write("boot.json",boot);
-  auto* runtime=new RiscBoot::Runtime({[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});
+  runtime=new RiscBoot::Runtime({[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});
   if(mode=="invalid-path" || mode=="default-external") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
   if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
+  if(mode=="discovery")assert(runtime->reserveInstalledApps(4));
   unsigned inspected=0;
   assert(runtime->inspectImages([](void* c,const char* p,bool){assert(!strstr(p,"child.elf"));++*static_cast<unsigned*>(c);return true;},&inspected));assert(inspected==2);
   const bool retained=mode=="close-retained";
   assert(runtime->run()!=retained);assert(runtime->retained()==retained);
   if(retained){assert(defaults==1 && !children && live && !stops);}
-  else {assert(defaults==3 && !live && starts==stops);assert(children==((mode=="normal" || mode=="replacement")?2u:0u));delete runtime;}
+  else {assert(defaults==3 && !live && starts==stops);assert(children==((mode=="normal" || mode=="replacement" || mode=="discovery")?2u:0u));delete runtime;}
   printf("SD Runtime mode=%s defaults=%u children=%u opens=%u closes=%u provider_starts=%u stops=%u PASS\n",mode.c_str(),defaults,children,opens,closes,starts,stops);
 }
