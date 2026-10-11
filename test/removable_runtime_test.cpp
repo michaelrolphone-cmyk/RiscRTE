@@ -1,7 +1,9 @@
 // Real Runtime and provider lifecycle; host ELF mapping substitutes Xtensa.
 #include "bootstrap/Runtime.h"
 #include <RiscResidentShellV1.h>
-#include "runtime/packages/InstalledAppDiscovery.h"
+#include "runtime/packages/InstalledAppAsyncDiscovery.h"
+#include "runtime/storage/StorageWorker.h"
+#include <RiscStorageAsyncAdapterV1.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #include <esp_elf.h>
@@ -25,6 +27,8 @@ static RiscBoot::Runtime* runtime;
 static const risc_installation_v1* installer;
 extern "C" void removable_installation(const void*api){installer=static_cast<const risc_installation_v1*>(api);}
 static std::string launchName="child.elf";
+static RiscStorage::Worker storageWorker;
+static unsigned discoveryIo;
 static FILE* manifestFile;
 static DIR* appDirectory;
 extern "C" const char* removable_launch_name(){return launchName.c_str();}
@@ -54,15 +58,17 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
       (void)mkdir((root+"/Apps/child").c_str(),0700);
       write("Apps/child/manifest.json",manifest);
       std::vector<std::pair<std::string,std::string>> staged;
-      RiscPackages::InstalledAppDiscovery scan;
+      RiscPackages::InstalledAppAsyncDiscovery scan;
       assert(scan.start(removable_volume(),[](void*ctx,const char* path,const char* json){
         static_cast<std::vector<std::pair<std::string,std::string>>*>(ctx)->emplace_back(path,json);return true;
       },&staged));
       unsigned steps=0;
-      while(scan.state()!=RiscPackages::InstalledAppDiscovery::State::Complete){
-        assert(scan.state()!=RiscPackages::InstalledAppDiscovery::State::Failed &&
-               scan.state()!=RiscPackages::InstalledAppDiscovery::State::Retained && ++steps<100);
-        scan.step();assert(runtime->appCount()==baseCount());
+      while(scan.state()!=RiscPackages::InstalledAppAsyncDiscovery::State::Complete){
+        assert(scan.state()!=RiscPackages::InstalledAppAsyncDiscovery::State::Failed &&
+               scan.state()!=RiscPackages::InstalledAppAsyncDiscovery::State::Retained && ++steps<1000);
+        unsigned before=discoveryIo;scan.step();assert(discoveryIo==before);
+        if(steps%3==0)storageWorker.workerStep();
+        assert(runtime->appCount()==baseCount());
       }
       if(catalogMode()){
         assert(installer);risc_install_candidate_v1 item{staged[0].first.c_str(),staged[0].second.c_str()};risc_install_result_v1 result{};
@@ -106,20 +112,21 @@ extern "C" void removable_resident_entry(const risc_runtime_api_v1*rt){
   }
 }
 extern "C" const risc_storage_volume_api_v1* removable_volume() {
-  static risc_storage_volume_api_v1_ext ext{};auto& v=ext.base;
-  v.api_version=1;v.struct_size=sizeof(ext);
+  static risc_storage_volume_api_v1_async transport{};
+  auto& ext=*reinterpret_cast<risc_storage_volume_api_v1_ext*>(&transport);auto& v=ext.base;
+  v.api_version=1;v.struct_size=sizeof(transport);
   v.refresh=[](void*){return true;};v.ready=[](void*){return present;};
-  v.dir_open=[](void*,const char* p)->uint32_t{appDirectory=opendir((root+p).c_str());return appDirectory?1:0;};
+  v.dir_open=[](void*,const char* p)->uint32_t{++discoveryIo;appDirectory=opendir((root+p).c_str());return appDirectory?1:0;};
   v.dir_next=[](void*,uint32_t,risc_storage_dirent_v1*out){
-    while(auto*e=readdir(appDirectory)){if(e->d_name[0]=='.')continue;
+    ++discoveryIo;while(auto*e=readdir(appDirectory)){if(e->d_name[0]=='.')continue;
       snprintf(out->name,sizeof(out->name),"%s",e->d_name);out->is_directory=e->d_type==DT_DIR;return true;}
     return false;
   };
   ext.handle_error=[](void*,uint32_t h,bool dir)->uint32_t{return dir?0:h==2&&manifestFile&&ferror(manifestFile)?1:0;};
-  ext.dir_close_checked=[](void*,uint32_t){bool ok=closedir(appDirectory)==0;if(ok)appDirectory=nullptr;return ok;};
+  ext.dir_close_checked=[](void*,uint32_t){++discoveryIo;bool ok=closedir(appDirectory)==0;if(ok)appDirectory=nullptr;return ok;};
   v.file_open_read=[](void*,const char* p,uint64_t* n)->uint32_t {
     if(!strcmp(p,"/Apps/child/manifest.json")){
-      manifestFile=fopen((root+p).c_str(),"rb");if(!manifestFile)return 0;
+      ++discoveryIo;manifestFile=fopen((root+p).c_str(),"rb");if(!manifestFile)return 0;
       assert(!fseek(manifestFile,0,SEEK_END));*n=ftell(manifestFile);rewind(manifestFile);return 2;
     }
     assert(!strcmp(p,"/Apps/child/child.elf"));
@@ -127,11 +134,31 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
     ++opens;live=1;offset=0;*n=payload.size();return 1;
   };
   v.file_read=[](void*,uint32_t h,void* out,size_t n)->size_t {
-    if(h==2)return fread(out,1,n,manifestFile);
+    if(h==2){++discoveryIo;return fread(out,1,n,manifestFile);}
     assert(live && n<=4096);if(mode=="removed" && offset>1000)return 0;
     n=std::min(size_t(333),std::min(n,payload.size()-offset));memcpy(out,payload.data()+offset,n);offset+=n;return n;
   };
-  v.file_close=[](void*,uint32_t h,bool){if(h==2){bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained")return false;live=0;return true;};
+  v.file_close=[](void*,uint32_t h,bool){if(h==2){++discoveryIo;bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained")return false;live=0;return true;};
+  static risc_storage_worker_v1 workerApi{};static risc_storage_async_adapter_v1 bridge{};
+  static bool initialized=false;
+  if(!initialized){initialized=true;
+   auto&fs=transport.fs;fs.state.state_tag=RISC_STORAGE_STATE_TAG;fs.state.state_version=1;
+   fs.state.observe=[](void*)->int32_t{return present?RISC_STORAGE_STATE_READY:RISC_STORAGE_STATE_UNAVAILABLE;};
+   fs.fs_tag=RISC_STORAGE_FS_TAG;fs.fs_version=1;
+   fs.dir_tell=[](void*,uint32_t,uint64_t*){return false;};fs.dir_seek=[](void*,uint32_t,uint64_t){return false;};
+   fs.metadata=[](void*,const char*,risc_storage_metadata_v1*)->int32_t{++discoveryIo;return RISC_STORAGE_FS_NOT_FOUND;};
+   fs.file_truncate=[](void*,uint32_t,uint64_t){return false;};fs.replace_file=[](void*,const char*,const char*){return false;};fs.recover_replace=[](void*,const char*){return false;};
+   workerApi.submit=[](void*,const void*q,uint32_t n,uint64_t*t){return storageWorker.submit(q,n,t);};
+   workerApi.collect=[](void*,uint64_t t,void*q,uint32_t n,uint32_t*z,int32_t*r){return storageWorker.collect(t,q,n,z,r);};
+   workerApi.cancel=[](void*,uint64_t t){return storageWorker.cancel(t);};
+   bridge.worker=&workerApi;bridge.volume=&v;bridge.ext=&ext;bridge.fs=&fs;
+   assert(storageWorker.bind(risc_storage_async_execute,&bridge)==0);
+   transport.async_tag=RISC_STORAGE_ASYNC_TAG;transport.async_version=1;
+   transport.begin=[](void*,uint64_t*t){return risc_storage_async_begin(&bridge,t);};
+   transport.submit=[](void*,uint64_t token,const risc_storage_async_request_v1*q,uint64_t*t){return risc_storage_async_submit(&bridge,token,q,t);};
+   transport.collect=[](void*,uint64_t token,uint64_t t,risc_storage_async_result_v1*r){return risc_storage_async_collect(&bridge,token,t,r);};
+   transport.end=[](void*,uint64_t token){return risc_storage_async_end(&bridge,token);};
+  }
   return &v;
 }
 extern "C" void* esp_elf_malloc(uint32_t n,bool){return malloc(n);}
