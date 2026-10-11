@@ -10,10 +10,22 @@ static_assert(Grants>=Providers+12,"Legacy boot pins must leave room for app gra
 #else
 #if defined(RISC_INSTALLED_APP_CAPACITY)
 static_assert(RISC_INSTALLED_APP_CAPACITY>=28 && RISC_INSTALLED_APP_CAPACITY<=64,"installed app capacity 28..64");
-constexpr size_t Apps=RISC_INSTALLED_APP_CAPACITY,Providers=29,Grants=45;
+constexpr size_t Apps=RISC_INSTALLED_APP_CAPACITY;
+constexpr size_t DefaultProviders=29;
 #else
-constexpr size_t Apps=28,Providers=28,Grants=44;
+constexpr size_t Apps=28;
+constexpr size_t DefaultProviders=28;
 #endif
+// Explicit source composition selection. Default and legacy targets retain
+// their existing allocations. Changing this requires graph and memory evidence.
+#if defined(RISC_PROVIDER_CAPACITY)
+static_assert(RISC_PROVIDER_CAPACITY>=DefaultProviders && RISC_PROVIDER_CAPACITY<=40,
+              "provider capacity must preserve the cohort and stay within 40");
+constexpr size_t Providers=RISC_PROVIDER_CAPACITY;
+#else
+constexpr size_t Providers=DefaultProviders;
+#endif
+constexpr size_t Grants=Providers+16;
 // Preserve the cohort's sixteen shared non-boot graph slots. Resident host
 // and foreground grants share this reserve; their combined use is bounded by
 // Grants, not by the independent sixteen-slot invocation ledgers.

@@ -1,0 +1,127 @@
+{
+  "host": {
+    "default": {
+      "runtime": 278392,
+      "graph": 44032,
+      "cpu": 11400,
+      "streams": 592,
+      "owned_node": 4888,
+      "providers": 28,
+      "grants": 44,
+      "apps": 28
+    },
+    "discovery": {
+      "runtime": 283544,
+      "graph": 45592,
+      "cpu": 11504,
+      "streams": 608,
+      "owned_node": 4888,
+      "providers": 29,
+      "grants": 45,
+      "apps": 64
+    },
+    "sharing": {
+      "runtime": 297920,
+      "graph": 50272,
+      "cpu": 11816,
+      "streams": 672,
+      "owned_node": 4888,
+      "providers": 32,
+      "grants": 48,
+      "apps": 64
+    },
+    "legacy": {
+      "runtime": 225584,
+      "graph": 26864,
+      "cpu": 10256,
+      "streams": 368,
+      "owned_node": 4888,
+      "providers": 17,
+      "grants": 32,
+      "apps": 19
+    },
+    "legacy-selected": {
+      "runtime": 225584,
+      "graph": 26864,
+      "cpu": 10256,
+      "streams": 368,
+      "owned_node": 4888,
+      "providers": 17,
+      "grants": 32,
+      "apps": 19
+    },
+    "delta": {
+      "runtime": 14376,
+      "graph": 4680,
+      "cpu": 312,
+      "streams": 64,
+      "owned_node": 0,
+      "providers": 3,
+      "grants": 3,
+      "apps": 0
+    }
+  },
+  "xtensa": {
+    "default": {
+      "apps": 28,
+      "cpu": 8304,
+      "grants": 44,
+      "graph": 34144,
+      "owned_node": 4688,
+      "providers": 28,
+      "runtime": 259760,
+      "streams": 580
+    },
+    "discovery": {
+      "apps": 64,
+      "cpu": 8384,
+      "grants": 45,
+      "graph": 35352,
+      "owned_node": 4688,
+      "providers": 29,
+      "runtime": 264184,
+      "streams": 600
+    },
+    "sharing": {
+      "apps": 64,
+      "cpu": 8624,
+      "grants": 48,
+      "graph": 38976,
+      "owned_node": 4688,
+      "providers": 32,
+      "runtime": 276808,
+      "streams": 660
+    },
+    "legacy": {
+      "apps": 19,
+      "cpu": 7424,
+      "grants": 32,
+      "graph": 20848,
+      "owned_node": 4688,
+      "providers": 17,
+      "runtime": 213416,
+      "streams": 360
+    },
+    "legacy-selected": {
+      "apps": 19,
+      "cpu": 7424,
+      "grants": 32,
+      "graph": 20848,
+      "owned_node": 4688,
+      "providers": 17,
+      "runtime": 213416,
+      "streams": 360
+    },
+    "delta": {
+      "apps": 0,
+      "cpu": 240,
+      "grants": 3,
+      "graph": 3624,
+      "owned_node": 0,
+      "providers": 3,
+      "runtime": 12624,
+      "streams": 60
+    }
+  },
+  "scope": "Actual types, host and Xtensa object sizes; no firmware/hardware/free-heap claim. Runtime contains graph; do not add graph delta twice. Two retained Runtime allocations require twice Runtime delta."
+}
