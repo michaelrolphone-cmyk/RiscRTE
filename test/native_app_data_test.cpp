@@ -30,4 +30,16 @@ int main(int argc,char**argv){assert(argc==2);const char*mode=argv[1];
  }
  assert(api->stat(api->context,1,"timecard.json",&n,&revision)==(expected?RISC_APP_DATA_NOT_FOUND:RISC_APP_DATA_UNAVAILABLE));assert(!n && !revision);
  assert(!RiscAppData::prepare(owner,safe));
+ if(expected){
+  unsigned char buffer[16]{},value=1;uint64_t token=0;
+  RiscStorage::AsyncAppDataReplace writer(buffer,sizeof(buffer),
+   [](void*,uint32_t,const char*,uint64_t,const void*,uint32_t)->int32_t{return RISC_APP_DATA_OK;},nullptr);
+  RiscAppData::asyncWriter=&writer;
+  assert(writer.begin(1,"timecard.json",0,&value,1,&token)==RISC_APP_DATA_OK);
+  assert(RiscAppData::custodySafe() && !RiscAppData::exitSafe());
+  RiscAppData::asyncRetained=true;
+  assert(!RiscAppData::custodySafe() && !RiscAppData::exitSafe());
+  RiscAppData::asyncRetained=false;RiscAppData::asyncWriter=nullptr;
+ }
+
 }
