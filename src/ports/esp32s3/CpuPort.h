@@ -7,10 +7,15 @@
 #include <RiscHciControllerStatusV1.h>
 #include <RiscPlatformClockV1.h>
 #include <RiscProviderSyncV1.h>
+#include "runtime/storage/StorageWorker.h"
 #include <RiscHttpClientV1.h>
 #include <RiscRadioIqResourceV1.h>
 #include <RiscUsbPhyResourceV1.h>
 namespace RiscCpu {
+struct StorageWorkBackend {
+ RiscStorage::Worker*mailbox;
+ bool (*prepare)();bool (*isWorker)();void (*delayMs)(uint32_t);
+};
 // Lowest hardware boundary. Production uses ESP-IDF; host models emulate only
 // pins, controllers and register/byte transfers, not driver/capability behavior.
 struct Hardware {
@@ -96,6 +101,7 @@ struct Hardware {
   const RiscBoot::TcpListenerBackend* tcpListener=nullptr; // explicit native opt-in
   const risc_native_radio_async_v1* radioAsync=nullptr; // additive, native-owned lifecycle
   bool (*radioAsyncPrepare)()=nullptr; // owner bind, before exposing admission
+  const StorageWorkBackend* storageWork=nullptr; // explicit scoped storage worker opt-in
 };
 class Port final {
  public:
@@ -121,7 +127,19 @@ class Port final {
     struct Lock { uint64_t token=0; bool held=false; } locks[RISC_PROVIDER_SYNC_MAX_LOCKS]{};
     risc_provider_sync_api_v1 api{};
   } syncs_[RuntimeProviders::GraphV2::kMaxModules];
-  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{}; } gpios_[16];
+  struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{};risc_storage_worker_v1 work{}; } gpios_[16];
+  struct StorageWork {Gpio*gpio=nullptr;risc_storage_work_scope_v1 scope{};
+    risc_storage_work_io_v1 io{};uint64_t sectors=0;bool opened=false,fault=false,powerClaimed=false;} storageWork_;
+  bool storageWorkBusy()const {return hw_.storageWork&&hw_.storageWork->mailbox&&!hw_.storageWork->mailbox->idle();}
+  bool configureStorageWork(Gpio&);
+  static bool workIoAllowed(void*);
+  static int32_t workClaim(void*,const risc_storage_work_scope_v1*);
+  static int32_t workRelease(void*);
+  static int32_t workBind(void*,risc_storage_work_execute_v1,void*);
+  static int32_t workSubmit(void*,const void*,uint32_t,uint64_t*);
+  static int32_t workCollect(void*,uint64_t,void*,uint32_t,uint32_t*,int32_t*);
+  static int32_t workCancel(void*,uint64_t);
+  static int32_t workUnbind(void*);
   struct Sdmmc { Gpio* owner=nullptr; uint64_t token=0,sectors=0; uint8_t clk=0,cmd=0,dat0=0; bool closing=false; } sdmmc_;
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; bool threeWire=false,ready=false,closing=false; garden_spi_v1 api{}; } spis_[8];

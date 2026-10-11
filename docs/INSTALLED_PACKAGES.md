@@ -161,3 +161,29 @@ dynamic driver graph activation, and on-device verified package installation are
 not implemented by this API. The envelope deliberately rejects namespace-owning
 and raw native capabilities until an independent allocation protocol exists.
 The new SDK is an experimental feature-branch API, not a released native version.
+
+## Scoped worker implementation checkpoint
+
+`RiscStorageWorkerV1.h` and `runtime/storage/StorageWorker.h` add a one-operation
+copied mailbox. A single native task owns execution; owner submit/collect/cancel
+never wait. Queued cancellation prevents execution; running cancellation keeps
+code, buffers and dependencies live until completion. There is no forced task
+deletion, borrowed app storage, token reuse or physical-display-settle condition.
+
+The CPU port binds `platform.storage-worker` only to an explicitly selected
+hardware device. Claim checks and reserves its exact power/CLK/CMD/DAT0 pins on
+the owner task. The callback gets a dedicated storage I/O table; existing Runtime,
+GPIO, synchronization and clock tables remain owner-only. Storage transfers do
+not set the global `transferring_` fence, so other input/display peripherals can
+continue. Owner I/O into that storage scope is refused while work is pending.
+The native mailbox and permanent worker stack are allocated only when that
+capability is selected, in internal RAM rather than provider PSRAM.
+
+Normal/UBSan mailbox tests include a delayed callback with 10,000 nonblocking
+owner polls, cancellation before dispatch and during execution, copied inputs,
+small-buffer recovery, stale tokens and 1,000 repeated submissions. CPU scope
+tests cover exact pins, refusal of general GPIO/recursive submit from the worker,
+owner races, independent global transfer state and retained-close recovery.
+Existing synchronous SDMMC port regression still passes. This checkpoint is
+being integrated into the SD provider's optional asynchronous volume suffix;
+these tests alone do not yet qualify the complete X4 behavior.

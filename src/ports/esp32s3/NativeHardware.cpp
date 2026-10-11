@@ -45,6 +45,7 @@ extern "C" const uint32_t risc_usb_phy_resource_enabled=1;
 #endif
 #if RISC_ENABLE_SDMMC
 #include "NativeSdmmc.h"
+#include "NativeStorageWorker.h"
 extern "C" __attribute__((used)) const uint32_t risc_sdmmc_host_abi=1;
 #endif
 namespace RiscCpu { namespace {
@@ -101,7 +102,7 @@ bool i2cClose(uint8_t physical){
 #include "NativeSpi.inc"
 bool deepReady(){
 #if RISC_ENABLE_SDMMC
-  if(!NativeSdmmc::closed())return false;
+  if(!NativeStorageWorker::idle() || !NativeSdmmc::closed())return false;
 #endif
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
   if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
@@ -123,7 +124,7 @@ bool deepReady(){
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
 bool lightSleep(uint32_t* cause){
 #if RISC_ENABLE_SDMMC
-  if(!NativeSdmmc::idle())return false;
+  if(!NativeStorageWorker::idle() || !NativeSdmmc::idle())return false;
 #endif
   if(!NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
 #if RISC_NATIVE_TCP_LISTENER
@@ -167,7 +168,8 @@ Hardware nativeHardware(bool (*owner)()){
   radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
   hardware.radioAsync=&radioAsync;hardware.radioAsyncPrepare=NativeRadioAsync::provision;
 #if RISC_ENABLE_SDMMC
-  NativeSdmmc::configure(hardware.owner);
+  NativeSdmmc::configure([](){return (ownerTask&&ownerTask())||NativeStorageWorker::isWorker();});
+  hardware.storageWork=&NativeStorageWorker::backend;
   hardware.sdmmcOpen=NativeSdmmc::open;hardware.sdmmcRead=NativeSdmmc::read;
   hardware.sdmmcWrite=NativeSdmmc::write;hardware.sdmmcSync=NativeSdmmc::sync;
   hardware.sdmmcClose=NativeSdmmc::close;

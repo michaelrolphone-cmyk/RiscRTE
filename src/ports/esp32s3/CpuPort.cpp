@@ -29,6 +29,7 @@ bool Port::reserve(int16_t pin,const void* owner){
 }
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
 #include "CpuSdmmc.inc"
+#include "CpuStorageWork.inc"
 #include "CpuTcpListener.inc"
 bool Port::radioSharedReady() const {
   for(const auto& c:radios_)if(c.closing)return false;
@@ -36,7 +37,7 @@ bool Port::radioSharedReady() const {
   return !hw_.radioIdle || hw_.radioIdle();
 }
 bool Port::providerStorageSafe() const {
-  if(sdmmc_.closing || !tcpSafe())return false;
+  if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe())return false;
   if(hw_.radioAsync && hw_.radioAsync->custodySafe && !hw_.radioAsync->custodySafe())return false;
   if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
@@ -48,6 +49,7 @@ bool Port::providerStorageSafe() const {
   return true;
 }
 bool Port::appExitSafe() const {
+  if(storageWorkBusy())return false;
   // Healthy HCI is entirely firmware/provider-owned, with no app callbacks or
   // borrowed app storage; it survives navigation. Restart/sleep still drain it.
   if(!providerStorageSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
@@ -61,7 +63,7 @@ bool Port::appExitSafe() const {
 }
 bool Port::restartResourcesSafe() const {
   if(runtime_ && !runtime_->residentResetSafe())return false;
-  if(sdmmc_.token || sdmmc_.closing)return false;
+  if(storageWork_.gpio || storageWorkBusy() || sdmmc_.token || sdmmc_.closing)return false;
   if(!providerStorageSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(!tcpIdle())return false;
@@ -72,7 +74,7 @@ bool Port::restartResourcesSafe() const {
   return true;
 }
 bool Port::quiescent() const {
-  if(sdmmc_.token || sdmmc_.closing)return false;
+  if(storageWork_.gpio || storageWorkBusy() || sdmmc_.token || sdmmc_.closing)return false;
   if(usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   if(iq_.token || iq_.closing)return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.token)return false;
@@ -206,9 +208,10 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       c.api={RISC_PROVIDER_SYNC_API_V1,sizeof(c.api),&c,syncOwner,syncCreate,syncTryLock,syncUnlock,syncDestroy};
       if(!runtime.registerPlatform(RISC_PROVIDER_SYNC_CAPABILITY,RISC_PROVIDER_SYNC_API_V1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
-    if(runtime.uses(id,"platform.gpio",1)){
+    if(runtime.uses(id,"platform.gpio",1)||runtime.uses(id,RISC_STORAGE_WORKER_CAPABILITY,1)){
       if(gpioCount_==16)return false;
       auto& c=gpios_[gpioCount_++];if(!gpioScope(runtime,d,c) || !runtime.registerPlatform("platform.gpio",1,RiscBoot::Runtime::Scope::Device,id,&c.api.base))return false;
+      if(runtime.uses(id,RISC_STORAGE_WORKER_CAPABILITY,1) && (!configureStorageWork(c)||!runtime.registerPlatform(RISC_STORAGE_WORKER_CAPABILITY,1,RiscBoot::Runtime::Scope::Device,id,&c.work)))return false;
     }
     if(runtime.uses(id,"platform.i2c.controller",1)){
       if(i2cCount_==2 || strcmp(d.type,"controller.i2c"))return false;
@@ -689,7 +692,7 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_LIGHT_SLEEP_RETAINED;
   if(!p.tcpIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
-  if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
   // Failed cleanup outranks healthy activity on either selected I2S unit.
@@ -743,7 +746,7 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(!p.tcpIdle())return RISC_DEEP_SLEEP_BUSY;
   if(p.runtime_ && !p.runtime_->residentResetSafe())return RISC_DEEP_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
-  if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
   // Failed cleanup outranks healthy activity on either selected I2S unit.
@@ -797,7 +800,7 @@ int32_t Port::gpioWakeSource(void* context,uint64_t token,bool high,uint32_t mod
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_ || p.sleepRetained_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.sleeping_ || p.transferring_)return RISC_LIGHT_SLEEP_BUSY;
+  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_)return RISC_LIGHT_SLEEP_BUSY;
   unsigned count=0;for(const auto& pin:p.pins_)if(pin.wakeModes)++count;
   for(unsigned i=0;i<49;++i){auto& pin=p.pins_[i];
     if(pin.owner!=&c || pin.token!=token || pin.output)continue;
@@ -824,7 +827,7 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   if(!p.tcpIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(deep && p.runtime_ && !p.runtime_->residentResetSafe())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
-  if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& i:p.i2ss_)if(i.closing)return RISC_LIGHT_SLEEP_RETAINED;
@@ -881,7 +884,7 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_DEEP_SLEEP_RETAINED;
   if(!p.tcpIdle())return RISC_DEEP_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
-  if(p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(unsigned i=0;i<49;++i){
     auto& pin=p.pins_[i];
