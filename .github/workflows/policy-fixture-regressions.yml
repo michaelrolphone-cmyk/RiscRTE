@@ -7,6 +7,9 @@ on:
       - 'src/bootstrap/AppPolicyLimits.h'
       - 'src/ports/esp32s3/NvsScalableSettings.h'
       - 'test/native_nvs*'
+      - 'src/main.cpp'
+      - 'src/ports/esp32s3/NativeCrownRecovery.h'
+      - 'test/test_native_startup.py'
       - 'test/run_key_value_multi_test.sh'
       - '.github/workflows/policy-fixture-regressions.yml'
 permissions:
@@ -33,8 +36,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Strict native NVS host isolation
+      - name: Strict native NVS and startup host isolation
         run: |
           bash test/native_nvs_shim/run_test.sh
           SANITIZE=1 bash test/native_nvs_shim/run_test.sh
+          python3 -m unittest discover -s test -p 'test_native_startup.py' -v
 

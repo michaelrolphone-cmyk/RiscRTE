@@ -44,8 +44,8 @@ namespace RiscDiagnostics{inline void start(){mark("diagnostics");}inline void p
 namespace RiscPerf{inline void configure(uint64_t(*)(),bool(*)(),int){}inline void emit(unsigned,unsigned=0){}struct Scope{Scope(unsigned,unsigned){}};}
 namespace RiscBoot{
 struct Board{};class Runtime;
-struct Port{bool(*owner)();bool(*health)(risc_runtime_health_v1*);void(*delay)(uint32_t);bool(*diagnostic)(const char*);bool(*bind)(Runtime&);void*kv;bool(*exitSafe)();bool(*storageSafe)();bool(*confirm)();void*data;void*wake;void(*retainedDelay)(uint32_t);bool(*coldBoot)();bool(*priorFailure)(risc_resident_failure_v1*);RuntimeProviders::NativeProviderPolicySetV1 nativeProviders;void* failure;int32_t(*checkpoint)(const char*,uint64_t,const char*,uint32_t);bool(*ready)();bool(*begin)();void(*end)();bool(*monotonic)(uint32_t*);int32_t(*heap)(risc_memory_heap_snapshot_v1*);int32_t(*random)(void*,uint32_t);};
-class Runtime{Board b;public:explicit Runtime(Port p){assert(!p.kv && !p.nativeProviders.entries && !p.nativeProviders.count);}Board&board(){return b;}bool prepare(const char*){mark("prepare");return true;}bool run(){mark("run");return true;}const char*error(){return "test";}};
+struct Port{bool(*owner)();bool(*health)(risc_runtime_health_v1*);void(*delay)(uint32_t);bool(*diagnostic)(const char*);bool(*bind)(Runtime&);void*kv;bool(*exitSafe)();bool(*storageSafe)();bool(*confirm)();void*data;void*wake;void(*retainedDelay)(uint32_t);bool(*coldBoot)();bool(*priorFailure)(risc_resident_failure_v1*);RuntimeProviders::NativeProviderPolicySetV1 nativeProviders;void* failure;int32_t(*checkpoint)(const char*,uint64_t,const char*,uint32_t);bool(*ready)();bool(*begin)();void(*end)();bool(*monotonic)(uint32_t*);int32_t(*heap)(risc_memory_heap_snapshot_v1*);int32_t(*random)(void*,uint32_t);void(*controlBegin)(bool);bool(*controlEnd)();bool(*controlExitRequested)();};
+class Runtime{Board b;public:explicit Runtime(Port p){assert(!p.kv && !p.nativeProviders.entries && !p.nativeProviders.count);assert(p.controlBegin && p.controlEnd && p.controlExitRequested);}Board&board(){return b;}bool prepare(const char*){mark("prepare");return true;}bool run(){mark("run");return true;}const char*error(){return "test";}};
 }
 namespace RiscCpu{
 namespace NativeFailureEvidence{inline void start(){mark("failure-evidence");}inline void*backend(){return nullptr;}}
@@ -131,6 +131,7 @@ class NativeStartup(unittest.TestCase):
             # or evaluating diagnostic arguments.
             for name in ('bootstrap/AppPolicyLimits.h', 'diagnostics/StageLog.h',
                          'ports/esp32s3/NativeDiagnosticBinding.h',
+                         'ports/esp32s3/NativeCrownRecovery.h',
                          'runtime/drivers/NativeProviderPolicyV1.h',
                          'runtime/drivers/SelectedNativeProviderPolicyV1.h',
                          'runtime/packages/PackageIdentity.h'):
