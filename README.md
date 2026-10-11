@@ -5,6 +5,15 @@ admission and copied asynchronous storage work. It is not a hardware-qualified
 release. Existing boot profiles do not select the storage worker implicitly.
 See [installed-package integration](docs/INSTALLED_PACKAGES.md).
 
+Runtime 0.2.6 adds an optional tagged `platform.clock` suffix for bounded
+scheduler-only cleanup waits. The legacy clock prefix and sleep behavior remain
+unchanged. See [scheduler-only clock waits](docs/CLOCK_SCHEDULER_WAIT_026.md).
+
+Runtime 0.2.5 holds the native shared-resource lease across HCI lifecycle and
+rollback, allowing BLE setup alongside owned Wi-Fi between SDK iterations.
+Queued, starting, stopping and uncertain cleanup remain excluded. See
+[HCI/Wi-Fi coexistence](docs/HCI_WIFI_COEXISTENCE_025.md).
+
 An explicit, default-off [native TCP listener](docs/TCP_LISTENER.md) supplies
 bounded provider transport for external applications. Ordinary targets open no
 listener; protocol, file and product policy stay outside Runtime.

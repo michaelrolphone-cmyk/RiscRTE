@@ -3,6 +3,17 @@
 #include <cstring>
 namespace RiscCpu {
 namespace {
+// A readiness snapshot cannot exclude the native worker. Hold its existing
+// owner-reentrant lease across the complete HCI SDK lifecycle and rollback.
+struct HciRadioLease {
+  const risc_native_radio_async_v1* api;
+  bool held;
+  explicit HciRadioLease(const risc_native_radio_async_v1* value):api(value),
+    held(!api || (api->tryShared && api->endShared && api->tryShared())){}
+  ~HciRadioLease(){if(api && held)api->endShared();}
+  HciRadioLease(const HciRadioLease&)=delete;
+  HciRadioLease& operator=(const HciRadioLease&)=delete;
+};
 uint64_t pinBit(int pin){return pin>=0 && pin<=48?uint64_t(1)<<pin:0;}
 void pinsFor(const RiscBoot::Board::Device& d,uint64_t& input,uint64_t& output,uint64_t& pullup){
   if(!strcmp(d.type,"display.spi")){
@@ -31,13 +42,14 @@ void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins
 #include "CpuSdmmc.inc"
 #include "CpuStorageWork.inc"
 #include "CpuTcpListener.inc"
+#include "CpuEntropy.inc"
 bool Port::radioSharedReady() const {
   for(const auto& c:radios_)if(c.closing)return false;
   if(hw_.radioAsync)return hw_.radioAsync->sharedReady && hw_.radioAsync->sharedReady();
   return !hw_.radioIdle || hw_.radioIdle();
 }
 bool Port::providerStorageSafe() const {
-  if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe())return false;
+  if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe() || !entropySafe())return false;
   if(hw_.radioAsync && hw_.radioAsync->custodySafe && !hw_.radioAsync->custodySafe())return false;
   if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
@@ -54,7 +66,7 @@ bool Port::appExitSafe() const {
   // borrowed app storage; it survives navigation. Restart/sleep still drain it.
   if(!providerStorageSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
-  if(!tcpIdle())return false;
+  if(!tcpIdle() || !entropyIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
   for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
@@ -66,7 +78,7 @@ bool Port::restartResourcesSafe() const {
   if(storageWork_.gpio || storageWorkBusy() || sdmmc_.token || sdmmc_.closing)return false;
   if(!providerStorageSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
-  if(!tcpIdle())return false;
+  if(!tcpIdle() || !entropyIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
   for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
@@ -78,7 +90,7 @@ bool Port::quiescent() const {
   if(usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   if(iq_.token || iq_.closing)return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.token)return false;
-  if(!tcpIdle())return false;
+  if(!tcpIdle() || !entropyIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   for(const auto& c:radios_)if(c.token || c.active || c.closing || c.serviceLease)return false;
@@ -154,9 +166,16 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   if(bound_ || !available() || !hw_.now || !hw_.sleep || !hw_.gpioOpen || !hw_.gpioWrite || !hw_.gpioRead || !hw_.gpioPwm || !hw_.gpioClose ||
      !hw_.i2cOpen || !hw_.i2cTransfer || !hw_.i2cClose || !hw_.spiOpen || !hw_.spiBegin || !hw_.spiTransfer || !hw_.spiEnd || !hw_.spiClose)return false;
   bound_=true;runtime_=&runtime;
-  clock_={1,sizeof(clock_),this,[](void* c)->uint64_t{auto& p=*static_cast<Port*>(c);return p.hw_.owner()?p.hw_.now():0;},
+  clock_.base={1,sizeof(clock_.base),this,[](void* c)->uint64_t{auto& p=*static_cast<Port*>(c);return p.hw_.owner()?p.hw_.now():0;},
     [](void* c,uint32_t ms){auto& p=*static_cast<Port*>(c);if(p.hw_.owner())p.hw_.sleep(ms>5000?5000:ms);}};
-  if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_))return false;
+  if(hw_.schedulerWait){
+    clock_.base.struct_size=sizeof(clock_);clock_.wait_tag=RISC_PLATFORM_CLOCK_WAIT_TAG_V1;clock_.wait_version=RISC_PLATFORM_CLOCK_WAIT_VERSION_V1;
+    clock_.scheduler_wait_ms=[](void* c,uint32_t ms){
+      auto& p=*static_cast<Port*>(c);
+      return p.hw_.owner && p.hw_.owner() && ms && ms<=RISC_PLATFORM_CLOCK_WAIT_MAX_MS && p.hw_.schedulerWait && p.hw_.schedulerWait(ms);
+    };
+  }
+  if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_.base))return false;
   if(hw_.usbPhyIdle || hw_.usbPhySuspend || hw_.usbPhyResume){
     if(!hw_.usbPhyIdle || !hw_.usbPhySuspend || !hw_.usbPhyResume)return false;
     usb_.port=this;
@@ -184,6 +203,14 @@ bool Port::bind(RiscBoot::Runtime& runtime){
     ++iqCount_;iq_.port=this;
     iq_.api={{1,sizeof(iq_.api),&iq_,radioIqClaim,radioIqRelease,0x3FCB0000u,65536u},RISC_RADIO_IQ_WORKER_ABI,radioIqWorkerStart,radioIqWorkerStop,radioIqNowUs};
     if(!runtime.registerPlatform(RISC_RADIO_IQ_RESOURCE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&iq_.api))return false;
+  }
+  if(hw_.entropy){
+    const auto* b=hw_.entropy;
+    if(!b->fill || !b->idle || !b->safe)return false;
+    entropy_={this,entropyFill,
+      [](void* c,uint64_t owner){return static_cast<Port*>(c)->entropyIdle(owner);},
+      [](void* c){return static_cast<Port*>(c)->entropySafe();}};
+    if(!runtime.registerEntropy(&entropy_))return false;
   }
   if(hw_.tcpListener){
     const auto* b=hw_.tcpListener;
@@ -363,8 +390,9 @@ bool Port::i2sClose(void* context,uint64_t token){
 bool Port::hciOpen(void* context,uint32_t unit,uint64_t* out){
   if(out)*out=0;
   auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
-  for(const auto& radio:p.radios_)if(radio.operation)return false;
-  if(!p.radioSharedReady() || !out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || p.iq_.token || !p.hw_.hciIdle())return false;
+  if(!out || unit || !p.available() || p.sleepRetained_ || p.transferring_ || c.token || c.closing || p.iq_.token)return false;
+  HciRadioLease lease(p.hw_.radioAsync);
+  if(!lease.held || !p.radioSharedReady() || !p.hw_.hciIdle())return false;
   const uint64_t token=p.token();if(!token)return false;
   p.transferring_=true;const bool ok=p.hw_.hciOpen();p.transferring_=false;
   if(!ok){
@@ -392,8 +420,8 @@ bool Port::hciReceive(void* context,uint64_t token,uint8_t* type,uint8_t* data,s
 bool Port::hciClose(void* context,uint64_t token){
   auto& c=*static_cast<Hci*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
-  for(const auto& radio:p.radios_)if(radio.operation)return false;
-  if(!p.radioSharedReady())return false;
+  HciRadioLease lease(p.hw_.radioAsync);
+  if(!lease.held || !p.radioSharedReady())return false;
   c.closing=true;p.transferring_=true;const bool ok=p.hw_.hciClose();p.transferring_=false;
   if(!ok || !p.hw_.hciIdle())return false;
   c.token=0;c.closing=false;return true;
@@ -515,7 +543,7 @@ bool Port::radioLeave(void* context,uint64_t token){
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return false;
   // Live TCP/TLS sockets depend on the station interface. Drain them first; a
   // rejected out-of-order leave is not itself failed native radio cleanup.
-  if(!p.tcpIdle())return false;
+  if(!p.tcpIdle() || !p.entropyIdle())return false;
   if(p.hw_.httpIdle && !p.hw_.httpIdle())return false;
   if(c.serviceLease)return false;
   if(c.operation)return radioAsyncCancel(context,token,c.operation)==RISC_RADIO_QUIESCENT;
@@ -689,8 +717,8 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_LIGHT_SLEEP_RETAINED;
-  if(!p.tcpIdle())return RISC_LIGHT_SLEEP_BUSY;
+  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_LIGHT_SLEEP_RETAINED;
+  if(!p.tcpIdle() || !p.entropyIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
@@ -742,8 +770,8 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_DEEP_SLEEP_RETAINED;
-  if(!p.tcpIdle())return RISC_DEEP_SLEEP_BUSY;
+  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_DEEP_SLEEP_RETAINED;
+  if(!p.tcpIdle() || !p.entropyIdle())return RISC_DEEP_SLEEP_BUSY;
   if(p.runtime_ && !p.runtime_->residentResetSafe())return RISC_DEEP_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
   if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
@@ -823,8 +851,8 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_ || p.sleepRetained_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_LIGHT_SLEEP_RETAINED;
-  if(!p.tcpIdle())return RISC_LIGHT_SLEEP_BUSY;
+  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_LIGHT_SLEEP_RETAINED;
+  if(!p.tcpIdle() || !p.entropyIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(deep && p.runtime_ && !p.runtime_->residentResetSafe())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
@@ -881,8 +909,8 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
-  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe())return RISC_DEEP_SLEEP_RETAINED;
-  if(!p.tcpIdle())return RISC_DEEP_SLEEP_BUSY;
+  if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_DEEP_SLEEP_RETAINED;
+  if(!p.tcpIdle() || !p.entropyIdle())return RISC_DEEP_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
   if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;

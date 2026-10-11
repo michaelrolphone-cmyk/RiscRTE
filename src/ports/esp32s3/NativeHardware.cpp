@@ -7,6 +7,13 @@
 #include "NativeI2s.h"
 #include "NativeRadioAsyncTask.h"
 #include "NativeRadioResources.h"
+#ifndef RISC_NATIVE_ENTROPY
+#define RISC_NATIVE_ENTROPY 0
+#endif
+#if RISC_NATIVE_ENTROPY
+#include "NativeEntropy.h"
+extern "C" __attribute__((used)) const uint32_t risc_entropy_abi=1;
+#endif
 #include "NativeRadioResourceOwner.h"
 #include "NativeHci.h"
 #if RISC_NATIVE_TCP_LISTENER
@@ -50,6 +57,7 @@ extern "C" __attribute__((used)) const uint32_t risc_sdmmc_host_abi=1;
 #endif
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
+#include "NativeSchedulerWait.inc"
 struct I2cState { bool installed=false,configured=false;int sda=-1,scl=-1; } i2c[2];
 TickType_t ticks(uint32_t ms){return ms?pdMS_TO_TICKS(ms)+1:0;}
 spi_host_device_t host(uint8_t physical){return physical==2?SPI2_HOST:SPI3_HOST;}
@@ -106,6 +114,9 @@ bool deepReady(){
 #endif
   // IDF digital-pad isolation cannot run with an external/PSRAM task stack.
   if(!NativeSleep::stackReady() || !NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
+#if RISC_NATIVE_ENTROPY
+  if(!NativeEntropy::idle(nullptr,0))return false;
+#endif
 #if RISC_NATIVE_TCP_LISTENER
   if(!NativeTcpListener::idle(nullptr,0))return false;
 #endif
@@ -127,6 +138,9 @@ bool lightSleep(uint32_t* cause){
   if(!NativeStorageWorker::idle() || !NativeSdmmc::idle())return false;
 #endif
   if(!NativeI2s::idle() || !NativeRadioAsync::idle() || !NativeHci::idle())return false;
+#if RISC_NATIVE_ENTROPY
+  if(!NativeEntropy::idle(nullptr,0))return false;
+#endif
 #if RISC_NATIVE_TCP_LISTENER
   if(!NativeTcpListener::idle(nullptr,0))return false;
 #endif
@@ -166,9 +180,23 @@ Hardware nativeHardware(bool (*owner)()){
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadioAsync::join,NativeRadioAsync::state,NativeRadioAsync::leave,NativeRadioAsync::addresses,NativeRadioAsync::scanStart,NativeRadioAsync::scanPoll,NativeRadioAsync::scanCancel,NativeRadioAsync::idle};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
+  configureSchedulerWait(hardware);
   static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
   radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
+  // Under a nested owner lease, test the phase without refusing our own lease.
+  radioAsync.sharedReady=nativeRadioResourceReady;
   hardware.radioAsync=&radioAsync;hardware.radioAsyncPrepare=NativeRadioAsync::provision;
+#if RISC_NATIVE_ENTROPY
+  NativeEntropy::configure(hardware.owner,[](){
+    // Read only while the shared native lease excludes worker SDK changes.
+    // This generation reached a healthy link and has not stopped/deinitialized.
+    // IDF guarantees RNG entropy while Wi-Fi is enabled, including normal
+    // modem power management; association/reachability is checked by TCP.
+    return nativeRadioResourceHeldReady() && NativeRadio::s.established &&
+      NativeRadio::s.wifi && NativeRadio::s.startAttempted && !NativeRadio::s.closing;
+  },nativeRadioResourceTry,nativeRadioResourceEnd);
+  hardware.entropy=NativeEntropy::backend();
+#endif
 #if RISC_ENABLE_SDMMC
   NativeSdmmc::configure([](){return (ownerTask&&ownerTask())||NativeStorageWorker::isWorker();});
   hardware.storageWork=&NativeStorageWorker::backend;
