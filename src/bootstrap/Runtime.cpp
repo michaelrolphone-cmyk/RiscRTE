@@ -291,16 +291,19 @@ bool Runtime::validateGraph() {
   for(size_t i=0;i<driverCount_;++i) if(edges[i][i]) return fail("driver dependency cycle");
   return true;
 }
-bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManifest) {
+bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManifest,size_t replacement) {
+  const bool replacing=replacement<policyCount_;
+  if(replacing && value.size()!=1)return fail("replacement requires one app policy");
   if (value.isNull()) return true;
-  if (!value.is<JsonArrayConst>() || value.size()>MaxAppPolicies-policyCount_) return fail("invalid app capability policy");
+  if (!value.is<JsonArrayConst>() || (!replacing && value.size()>MaxAppPolicies-policyCount_)) return fail("invalid app capability policy");
   if(!policies_ && value.size()){
     policyCapacity_=value.size();policies_=metadataArray<AppPolicy>(policyCapacity_);
     if(!policies_)return fail("app policy allocation failed");
   }
-  if(value.size()>policyCapacity_-policyCount_)return fail("app policy capacity exhausted");
+  if(!replacing && value.size()>policyCapacity_-policyCount_)return fail("app policy capacity exhausted");
   for (JsonObjectConst item:value.as<JsonArrayConst>()) {
-    auto& policy=policies_[policyCount_]; char relative[193]; JsonDocument doc;
+    const size_t slot=replacing?replacement:policyCount_;
+    auto& policy=policies_[slot]; char relative[193]; JsonDocument doc;
     if (!keys(item,{"manifest","grants"},{"app_data_export","image_source"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,policy.elf,sizeof(policy.elf)) || (suppliedManifest.isNull() && !readJson(policy.elf,doc,&metadataCloseRetained_))) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=suppliedManifest.isNull()?doc.as<JsonObjectConst>():suppliedManifest.as<JsonObjectConst>(); char filename[128];
@@ -317,13 +320,13 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     if(fileMetadata.count) {
       if(!fileHandlers_)fileHandlers_=metadataArray<FileOpenMetadata>(policyCapacity_);
       if(!fileHandlers_)return fail("file association allocation failed");
-      fileHandlers_[policyCount_]=fileMetadata;
+      fileHandlers_[slot]=fileMetadata;
     }
     char* slash=strrchr(policy.elf,'/'); if (!slash) return false;
     *(slash+1)=0;
     if (strlen(policy.elf)+strlen(filename)>=sizeof(policy.elf)) return fail("app path too long");
     strcat(policy.elf,filename);
-    for (size_t i=0;i<policyCount_;++i) if (!strcmp(policies_[i].id,policy.id) || !strcmp(policies_[i].elf,policy.elf)) return fail("duplicate app identity/path policy");
+    for (size_t i=0;i<policyCount_;++i) if (i!=slot && (!strcmp(policies_[i].id,policy.id) || !strcmp(policies_[i].elf,policy.elf))) return fail("duplicate app identity/path policy");
     if(!item["image_source"].isNull()) {
       auto source=item["image_source"].as<JsonObjectConst>();int64_t instance=0;char relativeImage[192];
       if(!keys(source,{"volume_instance","path"}) || !integer(source["volume_instance"],1,INT32_MAX,instance) ||
@@ -416,7 +419,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
           if(grant.api!=RISC_APP_DATA_API_V1 || !grant.instance || !backend || !backend->stat || !backend->read || !backend->replace || !backend->exitSafe)return fail("app-data backend/namespace unavailable");
           // A namespace belongs to one admitted app identity. No accidental
           // sharing through copied policy numbers or provider-global tables.
-          for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(policies_[p].grants[g].driver==AppDataDriver && policies_[p].grants[g].instance==grant.instance)return fail("app-data namespace already owned");
+          for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(p!=slot && policies_[p].grants[g].driver==AppDataDriver && policies_[p].grants[g].instance==grant.instance)return fail("app-data namespace already owned");
           grant.driver=AppDataDriver;grant.capability=RISC_APP_DATA_CAPABILITY;
         } else if (!strcmp(capability,"storage.installed-files")) {
           if(grant.instance || grant.api!=1)return fail("invalid installed-files authority");
@@ -442,7 +445,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
       if (!matches) return fail("app requirement not uniquely authorized");
     }
     if (policy.count!=item["grants"].size()) return fail("undeclared app grant");
-    ++policyCount_;
+    if(!replacing)++policyCount_;
   }
   return true;
 }
@@ -1431,9 +1434,12 @@ bool RiscBoot::Runtime::reserveInstalledApps(size_t capacity) {
   fileHandlers_=std::move(handlers);policyCapacity_=capacity;return true;
 }
 bool RiscBoot::Runtime::admitInstalledApp(const char* policyJson,const char* manifestJson) {
+ return admitInstalledAppAt(policyJson,manifestJson,policyCount_);
+}
+bool RiscBoot::Runtime::admitInstalledAppAt(const char* policyJson,const char* manifestJson,size_t slot) {
   if(!installedMetadata_ || !port_.owner() || retained_ || metadataCloseRetained_ ||
      !providerStorageSafe() || !graph_.activationSafe() || promotionRunning_ ||
-     graph_.lifecycleBusy() || policyCount_>=policyCapacity_ || !policyJson || !manifestJson ||
+     graph_.lifecycleBusy() || slot>=policyCapacity_ || slot>policyCount_ || !policyJson || !manifestJson ||
      strnlen(policyJson,4097)>4096 || strnlen(manifestJson,4097)>4096)return false;
   // A foreground/child may not mutate the host's registry, and no in-flight
   // continuation can be silently redirected by admitting a duplicate identity.
@@ -1445,10 +1451,12 @@ bool RiscBoot::Runtime::admitInstalledApp(const char* policyJson,const char* man
      !policy.is<JsonObjectConst>() || !manifest.is<JsonObjectConst>() ||
      policy["image_source"].isNull() || !policy["app_data_export"].isNull())return false;
   rows.to<JsonArray>().add(policy.as<JsonVariantConst>());
-  const size_t slot=policyCount_;
-  if(!appPolicies(rows.as<JsonVariantConst>(),manifest.as<JsonVariantConst>())) {
-    policies_[slot]=AppPolicy{};fileHandlers_[slot]=FileOpenMetadata{};
-    policyCount_=slot;return false;
+  const size_t before=policyCount_;
+  const AppPolicy oldPolicy=policies_[slot];const FileOpenMetadata oldHandlers=fileHandlers_[slot];
+  policies_[slot]=AppPolicy{};fileHandlers_[slot]=FileOpenMetadata{};
+  if(!appPolicies(rows.as<JsonVariantConst>(),manifest.as<JsonVariantConst>(),slot)) {
+    policies_[slot]=oldPolicy;fileHandlers_[slot]=oldHandlers;
+    policyCount_=before;return false;
   }
   strcpy(installedMetadata_[slot].manifest,manifestJson);
   return true;

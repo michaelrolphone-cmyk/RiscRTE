@@ -220,7 +220,8 @@ class Runtime final {
   bool residentFailure(uint64_t,risc_resident_failure_v1*);
   void recordResidentFailure(uint32_t,int32_t,const char*,uint64_t);
   bool selectInvocation(Invocation&);
-  bool appPolicies(JsonVariantConst,JsonVariantConst suppliedManifest=JsonVariantConst());
+  bool appPolicies(JsonVariantConst,JsonVariantConst suppliedManifest=JsonVariantConst(),size_t replacement=MaxAppPolicies);
+  bool admitInstalledAppAt(const char*,const char*,size_t);
   bool revokeApp();
   bool appExitBarrier();
   bool streamBinding(const risc_runtime_capability_v1*,RuntimeStreams::AppStreamBinding&) const;

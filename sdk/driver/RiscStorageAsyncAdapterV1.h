@@ -24,6 +24,11 @@ static inline int32_t risc_storage_async_execute(void*context,const void*input,u
   if(a->file){if(!v->file_close(v->context,a->file,false))a->retained=true;else a->file=0;}
   if(!a->retained&&a->directory){if(!a->ext->dir_close_checked(v->context,a->directory))a->retained=true;else a->directory=0;}
   r->status=a->retained?RISC_STORAGE_ASYNC_RETAINED:RISC_STORAGE_ASYNC_OK;
+ }else if(q->operation==RISC_STORAGE_ASYNC_RENAME){
+  if(a->directory||a->file)r->status=RISC_STORAGE_ASYNC_BUSY;
+  else if(!a->ext->rename||!memchr(q->path,0,sizeof(q->path))||!q->path[0]||
+          !memchr(q->destination,0,sizeof(q->destination))||!q->destination[0])r->status=RISC_STORAGE_ASYNC_INVALID;
+  else if(a->ext->rename(v->context,q->path,q->destination))r->status=RISC_STORAGE_ASYNC_OK;
  }else if(q->operation==RISC_STORAGE_ASYNC_REFRESH){
   if(a->directory||a->file)r->status=RISC_STORAGE_ASYNC_BUSY;
   else if(v->ready(v->context)||(v->refresh(v->context)&&v->ready(v->context)))r->status=RISC_STORAGE_ASYNC_OK;
@@ -59,7 +64,7 @@ static inline int32_t risc_storage_async_begin(risc_storage_async_adapter_v1*a,u
 }
 static inline int32_t risc_storage_async_submit(risc_storage_async_adapter_v1*a,uint64_t session,const risc_storage_async_request_v1*q,uint64_t*out){
  if(out)*out=0;
- if(!out||!session||session!=a->session||!q||!q->operation||q->operation>RISC_STORAGE_ASYNC_CLOSE_DIRECTORY||!memchr(q->path,0,sizeof(q->path)))return RISC_STORAGE_ASYNC_INVALID;
+ if(!out||!session||session!=a->session||!q||!q->operation||q->operation>RISC_STORAGE_ASYNC_RENAME||!memchr(q->path,0,sizeof(q->path)))return RISC_STORAGE_ASYNC_INVALID;
  if(a->ending||a->operation)return RISC_STORAGE_ASYNC_BUSY;
  if(a->retained)return RISC_STORAGE_ASYNC_RETAINED;
  int32_t rc=a->worker->submit(a->worker->context,q,sizeof(*q),&a->operation);
@@ -91,7 +96,7 @@ static inline int32_t risc_storage_async_end(risc_storage_async_adapter_v1*a,uin
  }
  if(a->retained)return RISC_STORAGE_ASYNC_RETAINED;
  if(a->file||a->directory){
-  risc_storage_async_request_v1 q={0,{0}};a->cleanup=true;
+  risc_storage_async_request_v1 q={0,{0},{0}};a->cleanup=true;
   if(a->worker->submit(a->worker->context,&q,sizeof(q),&a->operation)!=RISC_STORAGE_WORK_OK)return RISC_STORAGE_ASYNC_BUSY;
   return RISC_STORAGE_ASYNC_PENDING;
  }

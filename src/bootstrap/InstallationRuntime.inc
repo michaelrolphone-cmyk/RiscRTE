@@ -68,16 +68,16 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
   }
   if(!r->installationMutable(existing))return RISC_INSTALL_BUSY;
  }
- if(r->policyCount_>=r->policyCapacity_)return RISC_INSTALL_FULL;
- // Stage in a spare stable slot, using the ordinary boot declaration validator.
- // Hide only duplicate keys during that one serialized call; restore on failure.
- AppPolicy previous{};if(existing<r->policyCount_){previous=r->policies_[existing];r->policies_[existing].id[0]=0;r->policies_[existing].elf[0]=0;}
+ // Stable retired slots can be reused only after both invocation owners have
+ // left them. Replacement validates in-place with exact rollback; no extra
+ // capacity is consumed merely to update an already installed identity.
+ size_t destination=existing;
+ if(existing==r->policyCount_)for(size_t i=r->bootPolicyCount_;i<r->policyCount_;++i)
+  if(!r->policies_[i].enabled&&r->installationMutable(i)){destination=i;break;}
+ if(destination>=r->policyCapacity_)return RISC_INSTALL_FULL;
  std::string encoded;serializeJson(policy,encoded);r->installation_[0].call=true;
- const size_t slot=r->policyCount_;const bool ok=r->admitInstalledApp(encoded.c_str(),json);r->installation_[0].call=false;
- if(existing<slot)r->policies_[existing]=previous;
+ const bool ok=r->admitInstalledAppAt(encoded.c_str(),json,destination);r->installation_[0].call=false;
  if(!ok)return RISC_INSTALL_INVALID;
- const size_t destination=existing<slot?existing:slot;
- if(existing<slot){r->policies_[existing]=r->policies_[slot];r->fileHandlers_[existing]=r->fileHandlers_[slot];r->installedMetadata_[existing]=r->installedMetadata_[slot];r->policies_[slot]=AppPolicy{};r->fileHandlers_[slot]=FileOpenMetadata{};r->installedMetadata_[slot]=InstalledAppMetadata{};--r->policyCount_;}
  r->residentForeground_[destination]=eq(mode,"foreground");r->residentLegacy_[destination]=!r->residentForeground_[destination];
  strcpy(out,image.c_str());return RISC_INSTALL_OK;
 }
@@ -115,7 +115,16 @@ int32_t Runtime::installationCommit(void*ctx,const risc_install_candidate_v1*ite
  const size_t before=r->policyCount_;bool foreground[MaxAppPolicies],legacy[MaxAppPolicies];
  for(size_t i=0;i<r->policyCapacity_;++i){policies[i]=r->policies_[i];metadata[i]=r->installedMetadata_[i];handlers[i]=r->fileHandlers_[i];foreground[i]=r->residentForeground_[i];legacy[i]=r->residentLegacy_[i];}
  int32_t status=RISC_INSTALL_OK;
- for(uint32_t i=0;i<count;++i){out[i]={};out[i].status=installationAdmit(ctx,items[i].manifest_path,items[i].manifest_json,out[i].launch_path,sizeof(out[i].launch_path));
+ // Retire absent identities inside the saved transaction before admitting new
+ // ones, so a full catalog can atomically replace an old app with a new app.
+ if(replace)for(size_t i=r->bootPolicyCount_;i<r->policyCount_;++i){
+  bool found=false;for(uint32_t j=0;j<count;++j){JsonDocument m;deserializeJson(m,items[j].manifest_json);found=found||eq(m["id"],r->policies_[i].id);}
+  if(!found&&r->policies_[i].enabled){
+   if(!r->installationMutable(i)){status=RISC_INSTALL_BUSY;break;}
+   r->policies_[i].enabled=false;
+  }
+ }
+ for(uint32_t i=0;status==RISC_INSTALL_OK&&i<count;++i){out[i]={};out[i].status=installationAdmit(ctx,items[i].manifest_path,items[i].manifest_json,out[i].launch_path,sizeof(out[i].launch_path));
   if(out[i].status==RISC_INSTALL_BUSY||out[i].status==RISC_INSTALL_FULL){status=out[i].status;break;}
  }
  if(status==RISC_INSTALL_OK&&replace)for(size_t i=r->bootPolicyCount_;i<r->policyCount_;++i){

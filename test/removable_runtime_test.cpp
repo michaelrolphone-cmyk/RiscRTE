@@ -77,6 +77,29 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&runtime->appCount()==baseCount()+1);
         assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK);
+        char admitted[193];
+        for(unsigned cycle=0;cycle<160;++cycle){
+          std::string id="churn"+std::to_string(cycle),path="Apps/"+id+"/manifest.json";
+          std::string m=manifest;auto at=m.find("\"id\":\"child\"");m.replace(at,12,"\"id\":\""+id+"\"");
+          assert(installer->admit(installer->context,path.c_str(),m.c_str(),admitted,sizeof(admitted))==RISC_INSTALL_OK);
+          assert(installer->forget(installer->context,admitted,false)==RISC_INSTALL_OK);
+          assert(runtime->appCount()<=baseCount()+2);
+        }
+        unsigned filled=0;
+        for(;filled<100;++filled){
+          std::string id="filled"+std::to_string(filled),path="Apps/"+id+"/manifest.json";
+          std::string m=manifest;auto at=m.find("\"id\":\"child\"");m.replace(at,12,"\"id\":\""+id+"\"");
+          int status=installer->admit(installer->context,path.c_str(),m.c_str(),admitted,sizeof(admitted));
+          if(status==RISC_INSTALL_FULL)break;assert(status==RISC_INSTALL_OK);
+        }
+        assert(filled>20&&filled<100);
+        std::string updated=manifest;updated.replace(updated.find("1.0.0"),5,"1.0.1");
+        assert(installer->admit(installer->context,item.manifest_path,updated.c_str(),admitted,sizeof(admitted))==RISC_INSTALL_OK);
+        std::string invalid=updated;invalid.replace(invalid.find("xtensa-esp32s3"),13,"bad-cpu");
+        assert(installer->admit(installer->context,item.manifest_path,invalid.c_str(),admitted,sizeof(admitted))==RISC_INSTALL_INVALID);
+        // Replacement can evict a full catalog transactionally, without a spare.
+        item.manifest_json=updated.c_str();assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK);
+        puts("Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS");
       } else for(const auto& item:staged){const char*path=item.first.c_str();const char*json=item.second.c_str();
         std::string folder(path);folder.resize(folder.rfind('/')+1);
         JsonDocument m;assert(!deserializeJson(m,json));
@@ -87,9 +110,9 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         assert(runtime->admitInstalledApp(encoded.c_str(),json));
       }
       assert(scan.admitted()==1 && !scan.rejected() && !manifestFile && !appDirectory);
-      assert(runtime->appCount()==baseCount()+1);
+      if(!catalogMode())assert(runtime->appCount()==baseCount()+1);
       assert(!runtime->admitInstalledApp(policy,manifest));
-      assert(runtime->appCount()==baseCount()+1);
+      if(!catalogMode())assert(runtime->appCount()==baseCount()+1);
     }
     if(defaults==2 && mode=="replacement")selectImage("revision2.elf");return defaults<3;}
   if(e==1){assert(!live && opens==closes);++children;assert(value==(mode=="replacement" && children==2?2u:1u));}
@@ -153,7 +176,7 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
    workerApi.cancel=[](void*,uint64_t t){return storageWorker.cancel(t);};
    bridge.worker=&workerApi;bridge.volume=&v;bridge.ext=&ext;bridge.fs=&fs;
    assert(storageWorker.bind(risc_storage_async_execute,&bridge)==0);
-   transport.async_tag=RISC_STORAGE_ASYNC_TAG;transport.async_version=1;
+   transport.async_tag=RISC_STORAGE_ASYNC_TAG;transport.async_version=RISC_STORAGE_ASYNC_VERSION;
    transport.begin=[](void*,uint64_t*t){return risc_storage_async_begin(&bridge,t);};
    transport.submit=[](void*,uint64_t token,const risc_storage_async_request_v1*q,uint64_t*t){return risc_storage_async_submit(&bridge,token,q,t);};
    transport.collect=[](void*,uint64_t token,uint64_t t,risc_storage_async_result_v1*r){return risc_storage_async_collect(&bridge,token,t,r);};
