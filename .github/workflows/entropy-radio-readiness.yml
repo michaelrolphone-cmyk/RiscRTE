@@ -20,7 +20,15 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: 6bc28feae525074a1a5e0030c4b1bf6bebdc48fa
+          path: build/watch-private-radio-source
+          persist-credentials: false
       - name: RF source readiness and entropy custody
+        env:
+          WATCH_SOURCE: ${{ github.workspace }}/build/watch-private-radio-source
         run: |
           c++ -std=c++17 -Wall -Wextra -Werror -Isrc test/native_entropy_radio_ready_test.cpp -o /tmp/entropy-radio-ready
           /tmp/entropy-radio-ready
