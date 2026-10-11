@@ -48,3 +48,26 @@ void legacy_reader_target_probe(RiscExperimental::NativeReplicaCore&core,
  reader.step();(void)reader.take(&candidate);reader.cancel();(void)reader.exitSafe();
  (void)candidate.sourceDigest();(void)candidate.mapSize();
 }
+
+#include "experimental/native_replica/CheckedSdSettingsCatalog.h"
+void settings_catalog_target_probe(RiscExperimental::NativeReplicaCore&core,
+ RiscExperimental::CheckedSdSettingsCatalog::Guard guard,const risc_storage_volume_api_v1*volume){
+ RiscExperimental::MbedTlsReplicaDigest hash;
+ RiscExperimental::CheckedSdSettingsCatalog catalog(core,hash.api(),guard);
+ RiscExperimental::CheckedSdSettingsCatalog::Report report;
+ (void)catalog.start(volume);catalog.step();(void)catalog.take(&report);
+ catalog.cancel();(void)catalog.exitSafe();(void)report.vacant();report.reset();
+}
+
+// Compile-only layout evidence. These functions/arrays are never installed.
+using NativeCatalogProbe=RiscExperimental::CheckedSdSettingsCatalog;
+extern "C" {
+extern const unsigned char catalog_layout_object[sizeof(NativeCatalogProbe)];
+extern const unsigned char catalog_layout_report[sizeof(NativeCatalogProbe::Report)];
+extern const unsigned char catalog_layout_entry[NativeCatalogProbe::entryStorageBytes()];
+extern const unsigned char catalog_layout_child[NativeCatalogProbe::childStorageBytes()];
+const unsigned char catalog_layout_object[sizeof(NativeCatalogProbe)]={};
+const unsigned char catalog_layout_report[sizeof(NativeCatalogProbe::Report)]={};
+const unsigned char catalog_layout_entry[NativeCatalogProbe::entryStorageBytes()]={};
+const unsigned char catalog_layout_child[NativeCatalogProbe::childStorageBytes()]={};
+}

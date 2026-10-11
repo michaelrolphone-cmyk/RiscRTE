@@ -1,0 +1,633 @@
+{
+  "schema": "protected-sd-provider-source-review-v1",
+  "verified_at_utc": "2026-10-11T19:40:43Z",
+  "scope": "Read-only directory/recovery/session contract review; no provider or code edits; no tests or hardware qualification by this review.",
+  "disposition": "Current strict active-session refusal remains unchanged. Boundary-only observation is a future qualification option.",
+  "checkouts": [
+    {
+      "reference_prefix": "R",
+      "root": "/workspace/shared/native-replica-legacy-reader-d1b",
+      "head": "70cf262a5fd06d53a4ddb0b26423d88ac6453f3c",
+      "all_listed_files_tracked": true,
+      "all_listed_files_equal_head_bytes": true,
+      "files": [
+        {
+          "relative_path": "AGENTS.md",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/AGENTS.md",
+          "reviewed_line_ranges": [
+            [
+              1,
+              15
+            ]
+          ],
+          "bytes": 914,
+          "sha256": "86845934d134dd3f1cbf41187139b699cb05b22be0c20865a2522dcabcb7b587",
+          "tracked": true,
+          "head_blob_sha256": "86845934d134dd3f1cbf41187139b699cb05b22be0c20865a2522dcabcb7b587",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "sdk/app/RiscStorageVolumeV1.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/sdk/app/RiscStorageVolumeV1.h",
+          "reviewed_line_ranges": [
+            [
+              11,
+              23
+            ],
+            [
+              54,
+              85
+            ]
+          ],
+          "bytes": 9048,
+          "sha256": "d477167a06004640b2c07c05d662c103be6e1b9e4a4d866f6fce13e754ef02f5",
+          "tracked": true,
+          "head_blob_sha256": "d477167a06004640b2c07c05d662c103be6e1b9e4a4d866f6fce13e754ef02f5",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "sdk/app/RiscProtectedSettingsPath.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/sdk/app/RiscProtectedSettingsPath.h",
+          "reviewed_line_ranges": [
+            [
+              4,
+              28
+            ]
+          ],
+          "bytes": 858,
+          "sha256": "d7b894658ad802fbb9c15b17f0f3953dfd9bd48e0a3ffffbc5c1b21f457ec750",
+          "tracked": true,
+          "head_blob_sha256": "d7b894658ad802fbb9c15b17f0f3953dfd9bd48e0a3ffffbc5c1b21f457ec750",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "sdk/driver/RiscStorageVolumeFsV1.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/sdk/driver/RiscStorageVolumeFsV1.h",
+          "reviewed_line_ranges": [
+            [
+              3,
+              35
+            ]
+          ],
+          "bytes": 2403,
+          "sha256": "e487352157e3c3d5c10a28a16fdfcce76db693bf45c612ff4e2f31ee83e9a329",
+          "tracked": true,
+          "head_blob_sha256": "e487352157e3c3d5c10a28a16fdfcce76db693bf45c612ff4e2f31ee83e9a329",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "sdk/driver/RiscStorageVolumeStateV1.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/sdk/driver/RiscStorageVolumeStateV1.h",
+          "reviewed_line_ranges": [
+            [
+              2,
+              11
+            ],
+            [
+              17,
+              35
+            ]
+          ],
+          "bytes": 1750,
+          "sha256": "1f2f7dbfe9ec7ac27a57149ac720cf7f3a4801d6d34b5532f77c77db252b87a1",
+          "tracked": true,
+          "head_blob_sha256": "1f2f7dbfe9ec7ac27a57149ac720cf7f3a4801d6d34b5532f77c77db252b87a1",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "sdk/driver/RiscStorageVolumeAsyncV1.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/sdk/driver/RiscStorageVolumeAsyncV1.h",
+          "reviewed_line_ranges": [
+            [
+              3,
+              33
+            ]
+          ],
+          "bytes": 2197,
+          "sha256": "e395dccfa5c89e1585acaed0e5c8932d8487940261759741e3e60b483aafcaec",
+          "tracked": true,
+          "head_blob_sha256": "e395dccfa5c89e1585acaed0e5c8932d8487940261759741e3e60b483aafcaec",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "sdk/driver/RiscStoragePackageAsyncV1.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/sdk/driver/RiscStoragePackageAsyncV1.h",
+          "reviewed_line_ranges": [
+            [
+              4,
+              26
+            ]
+          ],
+          "bytes": 2470,
+          "sha256": "c0b4a025fcbbc6ec55913dce2f99553c14cd7a96ae104f8eebc8d0dfd33ddf97",
+          "tracked": true,
+          "head_blob_sha256": "c0b4a025fcbbc6ec55913dce2f99553c14cd7a96ae104f8eebc8d0dfd33ddf97",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "sdk/driver/RiscStorageAsyncAdapterV1.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/sdk/driver/RiscStorageAsyncAdapterV1.h",
+          "reviewed_line_ranges": [
+            [
+              7,
+              18
+            ],
+            [
+              19,
+              44
+            ],
+            [
+              69,
+              125
+            ],
+            [
+              128,
+              182
+            ]
+          ],
+          "bytes": 13360,
+          "sha256": "2b90ba70e6c44d112a28ce4d9a4d9272baeaf277f233d127181c1eff1515c1c6",
+          "tracked": true,
+          "head_blob_sha256": "2b90ba70e6c44d112a28ce4d9a4d9272baeaf277f233d127181c1eff1515c1c6",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "sdk/driver/RiscStorageWorkerV1.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/sdk/driver/RiscStorageWorkerV1.h",
+          "reviewed_line_ranges": [
+            [
+              12,
+              54
+            ]
+          ],
+          "bytes": 2807,
+          "sha256": "9e859235403292a0108fd10b8122218d72c1c2d1dd460d94304d919f77b83b6f",
+          "tracked": true,
+          "head_blob_sha256": "9e859235403292a0108fd10b8122218d72c1c2d1dd460d94304d919f77b83b6f",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "sdk/driver/RiscGpioSdmmcV1.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/sdk/driver/RiscGpioSdmmcV1.h",
+          "reviewed_line_ranges": [
+            [
+              14,
+              36
+            ]
+          ],
+          "bytes": 2473,
+          "sha256": "00d7788c381be557deec18a959b55d474bad7edc0331ae8331b878a618b9818f",
+          "tracked": true,
+          "head_blob_sha256": "00d7788c381be557deec18a959b55d474bad7edc0331ae8331b878a618b9818f",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "src/runtime/storage/StorageWorker.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/src/runtime/storage/StorageWorker.h",
+          "reviewed_line_ranges": [
+            [
+              18,
+              68
+            ]
+          ],
+          "bytes": 3988,
+          "sha256": "a402ecd14e2c00da069769b6d622e09eb954b5c5bc9d15f10ad0c2a6bdc1d297",
+          "tracked": true,
+          "head_blob_sha256": "a402ecd14e2c00da069769b6d622e09eb954b5c5bc9d15f10ad0c2a6bdc1d297",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "src/ports/esp32s3/NativeSdmmc.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/src/ports/esp32s3/NativeSdmmc.h",
+          "reviewed_line_ranges": [
+            [
+              12,
+              45
+            ],
+            [
+              47,
+              100
+            ]
+          ],
+          "bytes": 5118,
+          "sha256": "ac792ee1addd7941cd542476da098ba269657677b25b3013a2714ebadc2b18ae",
+          "tracked": true,
+          "head_blob_sha256": "ac792ee1addd7941cd542476da098ba269657677b25b3013a2714ebadc2b18ae",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "src/ports/esp32s3/NativeStorageWorker.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/src/ports/esp32s3/NativeStorageWorker.h",
+          "reviewed_line_ranges": [
+            [
+              9,
+              26
+            ]
+          ],
+          "bytes": 1506,
+          "sha256": "8517a21dd62346ee0efe0cfb1226d71e612a15b925f6d700f42c55a01563fcbd",
+          "tracked": true,
+          "head_blob_sha256": "8517a21dd62346ee0efe0cfb1226d71e612a15b925f6d700f42c55a01563fcbd",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "src/ports/esp32s3/CpuStorageWork.inc",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/src/ports/esp32s3/CpuStorageWork.inc",
+          "reviewed_line_ranges": [
+            [
+              1,
+              105
+            ]
+          ],
+          "bytes": 7455,
+          "sha256": "ef9f22b777a643cd103afa665ea6c118a29fc789e88f66571b706333f927eade",
+          "tracked": true,
+          "head_blob_sha256": "ef9f22b777a643cd103afa665ea6c118a29fc789e88f66571b706333f927eade",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "src/ports/esp32s3/CpuPort.cpp",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/src/ports/esp32s3/CpuPort.cpp",
+          "reviewed_line_ranges": [
+            [
+              51,
+              89
+            ],
+            [
+              715,
+              725
+            ],
+            [
+              771,
+              779
+            ],
+            [
+              827,
+              832
+            ]
+          ],
+          "bytes": 64078,
+          "sha256": "9dd54ca3d946b04f547f893fc647af915b8c166cfe2d08c413edafde866960d3",
+          "tracked": true,
+          "head_blob_sha256": "9dd54ca3d946b04f547f893fc647af915b8c166cfe2d08c413edafde866960d3",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "src/ports/esp32s3/CpuPort.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/src/ports/esp32s3/CpuPort.h",
+          "reviewed_line_ranges": [
+            [
+              135,
+              138
+            ],
+            [
+              181,
+              181
+            ]
+          ],
+          "bytes": 16017,
+          "sha256": "3013e09cd3647cabd3dfd0d2b29f33218089c4721918fa287a12ea9a0f6d56ea",
+          "tracked": true,
+          "head_blob_sha256": "3013e09cd3647cabd3dfd0d2b29f33218089c4721918fa287a12ea9a0f6d56ea",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "lib/hal/StorageGeneration.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/lib/hal/StorageGeneration.h",
+          "reviewed_line_ranges": [
+            [
+              5,
+              26
+            ],
+            [
+              29,
+              81
+            ]
+          ],
+          "bytes": 2381,
+          "sha256": "b0f61f618d814ac07c699fb83040d3909a7554b79b0a6d16d21e52e95c30efd5",
+          "tracked": true,
+          "head_blob_sha256": "b0f61f618d814ac07c699fb83040d3909a7554b79b0a6d16d21e52e95c30efd5",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "test/native_replica_sd_fixture.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/test/native_replica_sd_fixture.h",
+          "reviewed_line_ranges": [
+            [
+              39,
+              82
+            ]
+          ],
+          "bytes": 12533,
+          "sha256": "5a28d2532d55e14075f6e960ff5ecf9cdf5407377576df0f3d53d4e4ff736739",
+          "tracked": true,
+          "head_blob_sha256": "5a28d2532d55e14075f6e960ff5ecf9cdf5407377576df0f3d53d4e4ff736739",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "test/storage_async_adapter_test.cpp",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/test/storage_async_adapter_test.cpp",
+          "reviewed_line_ranges": [
+            [
+              23,
+              67
+            ]
+          ],
+          "bytes": 5275,
+          "sha256": "925d099af6cf07e20ad12e8b55ffb046bf038d71d5d959af44607bc2dc2bae04",
+          "tracked": true,
+          "head_blob_sha256": "925d099af6cf07e20ad12e8b55ffb046bf038d71d5d959af44607bc2dc2bae04",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "test/storage_work_port_test.cpp",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/test/storage_work_port_test.cpp",
+          "reviewed_line_ranges": [
+            [
+              25,
+              50
+            ]
+          ],
+          "bytes": 3861,
+          "sha256": "d02fdf8f080e539e8e47cb268784e4e62ccdbff65aa3a07df54c426849a42cff",
+          "tracked": true,
+          "head_blob_sha256": "d02fdf8f080e539e8e47cb268784e4e62ccdbff65aa3a07df54c426849a42cff",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "experimental/native_replica/CheckedSdReplicaCheckpoint.h",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/experimental/native_replica/CheckedSdReplicaCheckpoint.h",
+          "reviewed_line_ranges": [
+            [
+              17,
+              20
+            ]
+          ],
+          "bytes": 16011,
+          "sha256": "fde9df0e1bb7b979c9c4d511ad4319c3782669d9381b9c5bdb17e4d801c49653",
+          "tracked": true,
+          "head_blob_sha256": "fde9df0e1bb7b979c9c4d511ad4319c3782669d9381b9c5bdb17e4d801c49653",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "experimental/native_replica/ADOPTION_MIGRATION_PLAN.md",
+          "absolute_path": "/workspace/shared/native-replica-legacy-reader-d1b/experimental/native_replica/ADOPTION_MIGRATION_PLAN.md",
+          "reviewed_line_ranges": [
+            [
+              52,
+              73
+            ]
+          ],
+          "bytes": 24095,
+          "sha256": "1afc058fb63d43dd65dfdbfe05a6815c72b8d19781c34ed915225900831f790e",
+          "tracked": true,
+          "head_blob_sha256": "1afc058fb63d43dd65dfdbfe05a6815c72b8d19781c34ed915225900831f790e",
+          "equals_head_bytes": true
+        }
+      ],
+      "published_equivalent_commit": "dfe7cf3851438b566e708d46223e2b561b8147cb",
+      "tree": "e6aafa0b56b6048d773be6d2af3a7cc3ffca6cd5",
+      "published_equivalent_tree": "e6aafa0b56b6048d773be6d2af3a7cc3ffca6cd5",
+      "tree_equality_verified": true
+    },
+    {
+      "reference_prefix": "D",
+      "root": "/workspace/shared/x4-shared-settings-090/repos/Drivers",
+      "head": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "all_listed_files_tracked": true,
+      "all_listed_files_equal_head_bytes": true,
+      "files": [
+        {
+          "relative_path": "lib/StorageFatFs/volume.c",
+          "absolute_path": "/workspace/shared/x4-shared-settings-090/repos/Drivers/lib/StorageFatFs/volume.c",
+          "reviewed_line_ranges": [
+            [
+              73,
+              138
+            ],
+            [
+              140,
+              247
+            ],
+            [
+              270,
+              318
+            ],
+            [
+              407,
+              429
+            ],
+            [
+              431,
+              462
+            ],
+            [
+              508,
+              527
+            ],
+            [
+              582,
+              596
+            ]
+          ],
+          "bytes": 30661,
+          "sha256": "9298c96e7a6310964b92330e29cd399f2300c49c75fc594f784bb26be960482b",
+          "tracked": true,
+          "head_blob_sha256": "9298c96e7a6310964b92330e29cd399f2300c49c75fc594f784bb26be960482b",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "lib/StorageFatFs/fs_extensions.inc",
+          "absolute_path": "/workspace/shared/x4-shared-settings-090/repos/Drivers/lib/StorageFatFs/fs_extensions.inc",
+          "reviewed_line_ranges": [
+            [
+              3,
+              14
+            ],
+            [
+              22,
+              34
+            ],
+            [
+              47,
+              89
+            ]
+          ],
+          "bytes": 5330,
+          "sha256": "599f3ead76c0f3bb2e488a4dfaad698eafc6e2e751621e92b68523a5702d7301",
+          "tracked": true,
+          "head_blob_sha256": "599f3ead76c0f3bb2e488a4dfaad698eafc6e2e751621e92b68523a5702d7301",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "lib/StorageFatFs/fatfs/ff.c",
+          "absolute_path": "/workspace/shared/x4-shared-settings-090/repos/Drivers/lib/StorageFatFs/fatfs/ff.c",
+          "reviewed_line_ranges": [
+            [
+              1078,
+              1098
+            ],
+            [
+              2312,
+              2379
+            ],
+            [
+              2678,
+              2735
+            ],
+            [
+              4710,
+              4736
+            ]
+          ],
+          "bytes": 250260,
+          "sha256": "5082e1150cd9128a2b1494dcdd1db2f0a225459116f7531b054b25bd457e856d",
+          "tracked": true,
+          "head_blob_sha256": "5082e1150cd9128a2b1494dcdd1db2f0a225459116f7531b054b25bd457e856d",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "lib/StorageFatFs/fatfs/ffconf.h",
+          "absolute_path": "/workspace/shared/x4-shared-settings-090/repos/Drivers/lib/StorageFatFs/fatfs/ffconf.h",
+          "reviewed_line_ranges": [
+            [
+              124,
+              125
+            ],
+            [
+              144,
+              164
+            ]
+          ],
+          "bytes": 12004,
+          "sha256": "760941150f5ed2e0c466db3816e1bfdc86d444fe714445f5e124f95bc9324395",
+          "tracked": true,
+          "head_blob_sha256": "760941150f5ed2e0c466db3816e1bfdc86d444fe714445f5e124f95bc9324395",
+          "equals_head_bytes": true
+        }
+      ]
+    },
+    {
+      "reference_prefix": "X",
+      "root": "/workspace/shared/x4-shared-settings-090/repos/X4",
+      "head": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "all_listed_files_tracked": true,
+      "all_listed_files_equal_head_bytes": true,
+      "files": [
+        {
+          "relative_path": "AGENTS.md",
+          "absolute_path": "/workspace/shared/x4-shared-settings-090/repos/X4/AGENTS.md",
+          "reviewed_line_ranges": [
+            [
+              1,
+              9
+            ]
+          ],
+          "bytes": 1092,
+          "sha256": "68b5e68cc57bafe562474ed047766b57d2e03a7a8caecd488ed555e2bcb9f1dd",
+          "tracked": true,
+          "head_blob_sha256": "68b5e68cc57bafe562474ed047766b57d2e03a7a8caecd488ed555e2bcb9f1dd",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "minimal/drivers/x4pro_sd/driver.c",
+          "absolute_path": "/workspace/shared/x4-shared-settings-090/repos/X4/minimal/drivers/x4pro_sd/driver.c",
+          "reviewed_line_ranges": [
+            [
+              103,
+              132
+            ],
+            [
+              250,
+              269
+            ],
+            [
+              328,
+              342
+            ],
+            [
+              423,
+              429
+            ],
+            [
+              464,
+              474
+            ],
+            [
+              503,
+              570
+            ],
+            [
+              634,
+              642
+            ],
+            [
+              650,
+              675
+            ],
+            [
+              724,
+              736
+            ]
+          ],
+          "bytes": 37766,
+          "sha256": "ba86f49ccf3ea8b4958ebf9497650a7c63a9f92ffa8ec1f679b6e75526d85a1a",
+          "tracked": true,
+          "head_blob_sha256": "ba86f49ccf3ea8b4958ebf9497650a7c63a9f92ffa8ec1f679b6e75526d85a1a",
+          "equals_head_bytes": true
+        },
+        {
+          "relative_path": "minimal/drivers/x4pro_sd/Export.h",
+          "absolute_path": "/workspace/shared/x4-shared-settings-090/repos/X4/minimal/drivers/x4pro_sd/Export.h",
+          "reviewed_line_ranges": [
+            [
+              3,
+              34
+            ],
+            [
+              65,
+              76
+            ],
+            [
+              199,
+              225
+            ]
+          ],
+          "bytes": 12984,
+          "sha256": "4424ee6b9efd2c9fb6f85946c1800605ed3e6b699344741d85d3499c26a5cd2a",
+          "tracked": true,
+          "head_blob_sha256": "4424ee6b9efd2c9fb6f85946c1800605ed3e6b699344741d85d3499c26a5cd2a",
+          "equals_head_bytes": true
+        }
+      ]
+    }
+  ],
+  "pending_references": [
+    {
+      "absolute_path": "/workspace/shared/native-settings-catalog-d3a333/experimental/native_replica/CheckedSdSettingsCatalog.h",
+      "checkout_base_head": "d3a3337d873f324cac1ebcd0efec12dbf5e950be",
+      "reviewed_line_ranges": [
+        [
+          55,
+          76
+        ],
+        [
+          83,
+          85
+        ],
+        [
+          112,
+          123
+        ]
+      ],
+      "frozen": false,
+      "hash_owner": "Parent frozen implementation checkpoint; no observation-time hash substituted here."
+    }
+  ],
+  "report": {
+    "absolute_path": "/workspace/shared/native-settings-catalog-evidence/PROVIDER_SESSION_REVIEW.md",
+    "sha256": "e0dc1ac89a6426b8f6e5d96be885e9ef0d95f640317ec275a1034e2ba58bebe2",
+    "bytes": 22551
+  }
+}
