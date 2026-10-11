@@ -81,7 +81,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
     if(!migrating && !(RiscUpdate::migrationTarget(migration["to"],currentIdentity) &&
        RiscUpdate::sameCohortIdentity(currentIdentity,nextIdentity)))return false;
   }
-  uint32_t consumed=0;
+  bool consumed[RiscLimits::Apps]{};
   // Reuse the running graph's already scoped native tables with an identical
   // hardware/port declaration. Never bind the staged board into the CPU owner.
   candidate.port_=port_;candidate.port_.bindPlatforms=nullptr;
@@ -159,11 +159,11 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
       size_t entry=0;
       for(;entry<shared.size();++entry)if(eq(shared[entry]["application_id"],id) &&
           shared[entry]["api"].as<uint32_t>()==grant.api && shared[entry]["namespace"].as<uint64_t>()==grant.instance)break;
-      if(entry==shared.size() || (consumed&(uint32_t(1)<<entry)))return false;
-      consumed|=uint32_t(1)<<entry;
+      if(entry==shared.size() || consumed[entry])return false;
+      consumed[entry]=true;
     }
   }
-  if(migrating && consumed!=((uint32_t(1)<<shared.size())-1))return false;
+  if(migrating)for(size_t entry=0;entry<shared.size();++entry)if(!consumed[entry])return false;
   for(size_t p=0;p<driverCount_;++p)for(size_t k=0;k<providerStorage_[p].count;++k){
     const auto& key=providerStorage_[p].keys[k];bool found=false;
     for(size_t q=0;q<candidate.driverCount_;++q)if(!strcmp(drivers_[p].id,candidate.drivers_[q].id) && drivers_[p].instance==candidate.drivers_[q].instance)

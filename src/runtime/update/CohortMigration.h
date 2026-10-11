@@ -2,7 +2,6 @@
 #include "Cohort.h"
 #include "runtime/RuntimeLimits.h"
 namespace RiscUpdate {
-static_assert(RiscLimits::Apps<32,"migration consumed mask must cover the entry bound");
 // Source-bound syntax only. Authority is checked against both actual cohort
 // identities and the running app policies by Runtime::validateCohort.
 inline bool validCohortMigration(JsonVariantConst value){
