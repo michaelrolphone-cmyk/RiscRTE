@@ -17,7 +17,7 @@ static std::vector<bool> controlBegins;
 static unsigned controlEnds=0;
 static bool controlPending=false,controlRetain=false;
 static void controlBegin(bool child){controlBegins.push_back(child);controlPending=child;}
-static void controlEnd(){++controlEnds;controlPending=false;}
+static bool controlEnd(){++controlEnds;bool pending=controlPending;controlPending=false;return pending;}
 static bool controlRequest(){return controlPending;}
 static bool controlSafe(){return !(controlRetain&&controlPending);}
 extern "C" void test_yield_owner(bool enabled){ownerOk=enabled;}

@@ -16,7 +16,7 @@ uint32_t shortSequence();
 bool previousEmergency();
 uint32_t previousReason();
 void beginInvocation(bool child);
-void endInvocation();
+bool endInvocation();
 bool exitRequested();
 #else
 inline bool opened(uint8_t,uint8_t,uint8_t,Transfer){return true;}
@@ -28,7 +28,7 @@ inline uint32_t shortSequence(){return 0;}
 inline bool previousEmergency(){return false;}
 inline uint32_t previousReason(){return 0;}
 inline void beginInvocation(bool){}
-inline void endInvocation(){}
+inline bool endInvocation(){return false;}
 inline bool exitRequested(){return false;}
 #endif
 }}

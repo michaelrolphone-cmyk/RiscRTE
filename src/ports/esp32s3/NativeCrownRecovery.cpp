@@ -145,12 +145,15 @@ uint32_t previousReason(){
   resetMarker[0]=resetMarker[1]=resetMarker[2]=0;return reason;
 }
 bool previousEmergency(){return previousReason()!=0;}
-void beginInvocation(bool child){
+static bool changeInvocation(bool child){
   if(mutex&&!lock(25))emergency(3);
+  const bool pending=hostExit.pending();
   hostExit.begin(child);requestEpoch.store((requestEpoch.load(std::memory_order_relaxed)+2u)&~1u,std::memory_order_release);
   if(mutex)unlock();
+  return pending;
 }
-void endInvocation(){beginInvocation(false);}
+void beginInvocation(bool child){(void)changeInvocation(child);}
+bool endInvocation(){return changeInvocation(false);}
 bool exitRequested(){return (requestEpoch.load(std::memory_order_acquire)&1u)!=0;}
 }}
 #endif

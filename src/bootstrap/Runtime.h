@@ -92,7 +92,7 @@ struct Port {
   // Compiled-in control, never app-writable. End acknowledges only completed
   // teardown. A retained or nonreturning invocation keeps its native deadline.
   void (*controlBegin)(bool child)=nullptr;
-  void (*controlEnd)()=nullptr;
+  bool (*controlEnd)()=nullptr;
   bool (*controlExitRequested)()=nullptr;
 };
 class Runtime final {

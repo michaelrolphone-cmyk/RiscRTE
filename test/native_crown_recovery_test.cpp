@@ -65,7 +65,7 @@ int main(int argc,char**argv){
   status=(exitTimeout||exitBus||homeShort||cleanExit)?8:!strcmp(argv[1],"held-at-boot")?4:2;
   if(cleanExit){assert(transact(0,0x34,&reg,1,&value,1,40,raw));assert(exitRequested());
     assert(transact(0,0x34,ack,2,nullptr,0,40,raw)&&exitRequested());
-    endInvocation();assert(!exitRequested());}
+    assert(endInvocation());assert(!exitRequested());}
   if(exitBus){assert(transact(0,0x34,&reg,1,&value,1,40,raw)&&exitRequested());refuseLock=true;}
   if(release)releaseAt=4990;
   busError=failure;

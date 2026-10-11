@@ -1242,8 +1242,9 @@ bool Runtime::runOne(const char* name) {
   if(!appExitBarrier())return false;
   if(port_.controlBegin)port_.controlBegin(strcmp(name,default_)!=0);
   struct ControlLifetime {
-    Port& port;bool& retained;
-    ~ControlLifetime(){if(!retained&&port.controlEnd)port.controlEnd();}
+    Port& port;bool& retained;bool ended=false;
+    bool finish(){ended=true;return port.controlEnd?port.controlEnd():false;}
+    ~ControlLifetime(){if(!retained&&!ended&&port.controlEnd)(void)port.controlEnd();}
   } control{port_,retained_};
   invocation_->role=0;
   invocation_->residentPolicyPending_=false;
@@ -1381,7 +1382,11 @@ bool Runtime::runOne(const char* name) {
   if(invocation_==&mainInvocation_){shellCallbacks_={};shellToken_=0;}
   invocation_->streams_.endInvocation();
   failureBreadcrumb(RISC_FAILURE_PHASE_HANDOFF,name);
-  if(port_.controlExitRequested && port_.controlExitRequested()) {
+  const bool nativeExit=port_.controlEnd?control.finish():
+    (port_.controlExitRequested && port_.controlExitRequested());
+  if(nativeExit) {
+    // End snapshots/acknowledges atomically, so a press between the last app
+    // callback and cleanup completion cannot be lost to a queued launch.
     // A child cannot replace native exit with a different app handoff. Every
     // fini/grant/allocation/image barrier has completed before Home is queued.
     strcpy(invocation_->queued_,default_);
