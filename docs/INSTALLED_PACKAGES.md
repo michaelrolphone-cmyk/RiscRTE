@@ -234,3 +234,13 @@ See System Apps `Services/installed_apps/README.md` and X4
 `minimal/installed-apps-async-checkpoint.json` for the exact current boundary and
 published source revisions. The earlier synchronous scanner remains a fixture/
 planning utility; the selected product path uses `InstalledAppAsyncDiscovery`.
+
+### Async storage version 3 reservation
+
+The unchanged copied-request/result layouts now reserve operation 7,
+`RISC_STORAGE_ASYNC_REMOVE_FILE`, for idempotent **ordinary-file** removal on the
+selected storage worker. Missing files succeed; directories are refused, and
+metadata or removal errors remain errors. Version 2 remains accepted for the
+existing discovery/rename operations. Clients must require version 3 before
+submitting operation 7. No capacity, worker scope or USB custody rule changes.
+This is the interface reservation for concurrent Files/WebDAV/BLE work.

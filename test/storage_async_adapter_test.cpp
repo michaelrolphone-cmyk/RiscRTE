@@ -49,6 +49,18 @@ int main(){
  assert(worker.workerStep());assert(risc_storage_async_end(&adapter,session)==0&&!dir&&!file&&closes==1&&dircloses==1);
  present=true;delayed=false;assert(risc_storage_async_begin(&adapter,&session)==0);
  submit(RISC_STORAGE_ASYNC_READ_SMALL_FILE);assert(worker.workerStep());assert(collect()==0&&result.size==4&&!memcmp(result.data,"DATA",4));assert(risc_storage_async_end(&adapter,session)==0);
+ // Version-three idempotent removal executes only on the worker and refuses
+ // directories. Older version-two discovery remains prefix compatible.
+ bool exists=true,isDirectory=false;unsigned removals=0;
+ struct Removal {bool*exists;bool*directory;unsigned*count;} removal{&exists,&isDirectory,&removals};
+ v.context=&removal;
+ volume.metadata=[](void*c,const char*,risc_storage_metadata_v1*m)->int32_t{auto*r=static_cast<Removal*>(c);m->flags=*r->directory?RISC_STORAGE_DIRECTORY:0;return *r->exists?RISC_STORAGE_FS_OK:RISC_STORAGE_FS_NOT_FOUND;};
+ v.remove=[](void*c,const char*){auto*r=static_cast<Removal*>(c);++*r->count;*r->exists=false;return true;};
+ assert(risc_storage_async_begin(&adapter,&session)==0);
+ submit(RISC_STORAGE_ASYNC_REMOVE_FILE);assert(removals==0);assert(worker.workerStep());assert(collect()==0&&removals==1&&!exists);
+ submit(RISC_STORAGE_ASYNC_REMOVE_FILE);assert(worker.workerStep());assert(collect()==0&&removals==1);
+ exists=isDirectory=true;submit(RISC_STORAGE_ASYNC_REMOVE_FILE);assert(worker.workerStep());assert(collect()==RISC_STORAGE_ASYNC_IO&&removals==1);
+ assert(risc_storage_async_end(&adapter,session)==0);
  assert(risc_storage_async_begin(&adapter,&session)==0);retainedClose=true;
  submit(RISC_STORAGE_ASYNC_READ_SMALL_FILE);assert(worker.workerStep());assert(collect()==RISC_STORAGE_ASYNC_RETAINED);
  const unsigned before=closes;assert(risc_storage_async_end(&adapter,session)==RISC_STORAGE_ASYNC_RETAINED&&closes==before&&file);
