@@ -23,3 +23,17 @@ void replica_reader_target_probe(RiscExperimental::NativeReplicaCore&core,
  (void)reader.start(volume);reader.step();(void)reader.take(&candidate);
  reader.cancel();(void)reader.exitSafe();(void)candidate.mapSize();
 }
+
+#include "experimental/native_replica/CheckedNativeExportRecovery.h"
+void durable_replica_target_probe(RiscExperimental::NativeReplicaCore&core,
+ RiscExperimental::CheckedSdReplicaCheckpoint::Guard guard,
+ RiscExperimental::CheckedNativeExportRecovery::Quiescence quiet,
+ const risc_storage_volume_api_v1*volume,const uint8_t*fresh){
+ RiscExperimental::MbedTlsReplicaDigest hash;
+ RiscExperimental::CheckedSdReplicaCheckpoint writer(hash.api(),guard);
+ (void)writer.startDurable(core,volume,fresh);writer.step();
+ (void)writer.acknowledgeNative();writer.cancel();(void)writer.exitSafe();
+ RiscExperimental::CheckedNativeExportRecovery recovery(core,hash.api(),guard,quiet);
+ (void)recovery.start(volume);recovery.step();(void)recovery.decision();
+ (void)recovery.completeNative();recovery.cancel();(void)recovery.exitSafe();
+}

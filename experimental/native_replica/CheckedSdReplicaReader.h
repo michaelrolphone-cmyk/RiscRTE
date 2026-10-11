@@ -26,7 +26,7 @@ class CheckedSdReplicaReader {
  // Bind actual configured native capacity, not a remote-advertised size. This
  // does not reserve room for pending groups; rebase must perform that admission.
  CheckedSdReplicaReader(const C&core,Digest digest,Guard guard,C::Allocator allocator=C::heap())
-  :namespace_(core.namespaceId()),nativeCapacity_(core.imageCapacity()),hash_(digest),guard_(guard),alloc_(allocator){}
+  :core_(core),namespace_(core.namespaceId()),nativeCapacity_(core.imageCapacity()),hash_(digest),guard_(guard),alloc_(allocator){}
  ~CheckedSdReplicaReader(){C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  CheckedSdReplicaReader(const CheckedSdReplicaReader&)=delete;CheckedSdReplicaReader&operator=(const CheckedSdReplicaReader&)=delete;
  State state()const{return state_;}Reason reason()const{return reason_;}int error()const{return error_;}
@@ -34,11 +34,13 @@ class CheckedSdReplicaReader {
  // Worker-only admission reserves at most native image capacity minus framing,
  // capped by the format's existing bound. No allocation follows untrusted size.
  int start(const risc_storage_volume_api_v1*volume){
-  if(state_!=State::Idle||!namespace_||namespace_>INT32_MAX||nativeCapacity_<C::Header+4||!alloc_.allocate||!alloc_.release||!guard_.held||!guard_.worker||!hash_.begin||!hash_.update||!hash_.finish||!risc_storage_volume_download(volume))return C::Invalid;
+  const uint32_t nativeHeader=core_.headerSize()?core_.headerSize():C::Header;
+  if(state_!=State::Idle||!namespace_||namespace_>INT32_MAX||nativeCapacity_<nativeHeader+4||!alloc_.allocate||!alloc_.release||!guard_.held||!guard_.worker||!hash_.begin||!hash_.update||!hash_.finish||!risc_storage_volume_download(volume))return C::Invalid;
   reason_=Reason::None;
   if(!guard_.worker(guard_.context))return C::Busy;
   if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
-  budget_=nativeCapacity_-C::Header-4;if(budget_>CheckedSdReplicaCheckpoint::MapMax)budget_=CheckedSdReplicaCheckpoint::MapMax;
+  budget_=verificationOnly_?CheckedSdReplicaCheckpoint::MapMax:nativeCapacity_-nativeHeader-4;
+  if(budget_>CheckedSdReplicaCheckpoint::MapMax)budget_=CheckedSdReplicaCheckpoint::MapMax;
   if(budget_){candidate_.bytes_=static_cast<uint8_t*>(alloc_.allocate(alloc_.context,budget_));if(!candidate_.bytes_)return C::NoMemory;std::memset(candidate_.bytes_,0,budget_);}
   candidate_.capacity_=budget_;candidate_.alloc_=alloc_;candidate_.namespace_=namespace_;
   volume_=volume;api_=risc_storage_volume_packages(volume);
@@ -92,6 +94,12 @@ class CheckedSdReplicaReader {
  }
  private:
  enum Phase{Begin,Refresh,ReadIndex,Recover,ReadPage,Grammar,Recheck,Closing};
+ friend class CheckedNativeExportRecovery;
+ // Recovery verifies the exact prior publication without importing that map.
+ // A previous v1 base can exceed today's v2 map budget after local deletion;
+ // allow the fixed SD format ceiling only through this private recovery path.
+ int startVerification(const risc_storage_volume_api_v1*volume){verificationOnly_=true;return start(volume);}
+ const C&core_;bool verificationOnly_=false;
  uint32_t namespace_,nativeCapacity_,budget_=0;Digest hash_;Guard guard_;C::Allocator alloc_;Candidate candidate_;
  const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
  State state_=State::Idle;Reason reason_=Reason::None;Phase phase_=Begin;int error_=0;bool cancelled_=false,recovered_=false,rowOpen_=false;

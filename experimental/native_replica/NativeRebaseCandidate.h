@@ -45,18 +45,19 @@ class NativeRebaseCandidate {
   if(busy_)return Core::Busy;
   Guard guard(busy_);
   if(outcome_==Core::Retained)return Core::Retained;
-  if(held())return Core::Busy;
+  if(held()||core_.exportPrepared())return Core::Busy;
   if(!configuration()||remote.namespaceId!=namespace_)return Core::Invalid;
   if(!validIdentity(remote.identity))return Core::Invalid;
-  if(remote.mapBytes>limits_.nativeImageBytes-Core::Header-4)return Core::NoSpace;
+  if(limits_.nativeImageBytes<core_.headerSize()+4)return Core::NoSpace;
+  if(remote.mapBytes>limits_.nativeImageBytes-core_.headerSize()-4)return Core::NoSpace;
   if(!validMap(remote))return Core::Invalid;
   if(serial_==UINT64_MAX)return Core::NoSpace;
   Core::Snapshot captured;int rc=core_.captureSnapshot(&captured);if(rc)return rc;
   if(captured.namespaceId()!=namespace_)return Core::Conflict;
   const auto ticket=captured.ticket();
   if(!compatible(captured.base(),remote.identity))return Core::Conflict;
-  const uint32_t groups=captured.imageSize()-Core::Header-captured.mapSize()-4;
-  if(uint64_t(Core::Header)+remote.mapBytes+groups+4>limits_.nativeImageBytes)return Core::NoSpace;
+  const uint32_t groups=captured.imageSize()-captured.headerSize()-captured.mapSize()-4;
+  if(uint64_t(captured.headerSize())+remote.mapBytes+groups+4>limits_.nativeImageBytes)return Core::NoSpace;
   const uint32_t pendingCount=core_.pendingCount();
   uint64_t after=0,bytes=0;
   for(uint32_t i=0;i<pendingCount;++i){uint64_t id=0;uint32_t size=0;
@@ -85,7 +86,7 @@ class NativeRebaseCandidate {
   if(!core_.ready())return Core::Uncertain;
   if(core_.revision()!=ticket.revision||core_.sequence()!=ticket.through||core_.pendingCount()!=pendingCount)return Core::Stale;
   pending_.swap(pending);state_.swap(state);pendingCount_=pendingCount;pendingAt_=0;
-  nativeRevision_=ticket.revision;nativeFrontier_=ticket.through;groupBytes_=groups;remote_=remote.identity;
+  nativeRevision_=ticket.revision;nativeFrontier_=ticket.through;groupBytes_=groups;headerBytes_=captured.headerSize();remote_=remote.identity;
   viewRevision_=++serial_;outcome_=Core::Busy;return Core::Ok;
  }
  // Explicit view revision makes any earlier read capability stale after a
@@ -132,7 +133,7 @@ class NativeRebaseCandidate {
    if(!m){mapBytes+=20u+uint64_t(n);++entries;}else if(m->kind==Core::Put){mapBytes+=20u+uint64_t(m->size);++entries;}at+=20+n;
   }
   for(uint32_t i=0;i<batch.count;++i)if(batch.mutations[i].kind==Core::Put&&!find(batch.mutations[i].key)){mapBytes+=20u+uint64_t(batch.mutations[i].size);++entries;}
-  if(uint64_t(Core::Header)+mapBytes+groupBytes_+4>limits_.nativeImageBytes)return Core::NoSpace;
+  if(uint64_t(headerBytes_)+mapBytes+groupBytes_+4>limits_.nativeImageBytes)return Core::NoSpace;
   Owned next(alloc_);if(!next.make(StateHeader+uint32_t(mapBytes)))return Core::NoMemory;
   putWord(next.p,uint32_t(mapBytes));putWord(next.p+4,entries);putWord(next.p+8,resolvedCount()+1);putWord(next.p+12,0);
   uint32_t out=StateHeader;
@@ -187,7 +188,7 @@ class NativeRebaseCandidate {
  };
  Core&core_;uint32_t namespace_;Limits limits_;Core::Allocator alloc_;Owned state_,pending_;
  uint64_t serial_=0,viewRevision_=0,nativeRevision_=0,nativeFrontier_=0;
- uint32_t pendingCount_=0,pendingAt_=0,groupBytes_=0;Core::Identity remote_{};
+ uint32_t pendingCount_=0,pendingAt_=0,groupBytes_=0,headerBytes_=Core::Header;Core::Identity remote_{};
  bool busy_=false;int outcome_=Core::Missing;
  static uint32_t word(const uint8_t*p){return uint32_t(p[0])|(uint32_t(p[1])<<8)|(uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);}
  static uint64_t wide(const uint8_t*p){return word(p)|(uint64_t(word(p+4))<<32);}
@@ -226,6 +227,6 @@ class NativeRebaseCandidate {
  const uint8_t*find(const char*key)const{for(uint32_t at=StateHeader;at<state_.n;at+=20+word(state_.p+at+16))if(!std::strcmp(reinterpret_cast<const char*>(state_.p+at),key))return state_.p+at;return nullptr;}
  static const Core::Mutation*mutation(const Batch&b,const char*key){for(uint32_t i=0;i<b.count;++i)if(!std::strcmp(key,b.mutations[i].key))return b.mutations+i;return nullptr;}
  static uint32_t write(uint8_t*p,uint32_t at,const Core::Mutation&m){std::memset(p+at,0,20);std::strcpy(reinterpret_cast<char*>(p+at),m.key);putWord(p+at+16,m.size);std::memcpy(p+at+20,m.data,m.size);return at+20+m.size;}
- void clear(){state_.reset();pending_.reset();pendingCount_=pendingAt_=groupBytes_=0;nativeRevision_=nativeFrontier_=viewRevision_=0;Core::wipe(&remote_,sizeof remote_);}
+ void clear(){state_.reset();pending_.reset();pendingCount_=pendingAt_=groupBytes_=0;headerBytes_=Core::Header;nativeRevision_=nativeFrontier_=viewRevision_=0;Core::wipe(&remote_,sizeof remote_);}
 };
 }

@@ -10,7 +10,7 @@ class CheckedSdReplicaCheckpoint {
  public:
  using C=NativeReplicaCore;
  enum class State {Idle,Running,Verified,Done,Failed,Cancelled,Retained};
- enum class Reason {None,UnknownBase,CheckpointMissing,MediaUnavailable,CustodyLost,ReadFailure,StorageFailure,InvalidContent,IdentityConflict,NativeFailure,Retained};
+ enum class Reason {None,UnknownBase,CheckpointMissing,MediaUnavailable,CustodyLost,ReadFailure,StorageFailure,InvalidContent,IdentityConflict,NativeFailure,PendingExport,Retained};
  // The port supplies SHA-256 (not a CRC substitute), with exclusively owned
  // context. update processes <=4096 bytes. All hooks are native, never app code.
  struct Digest {void*context;bool(*begin)(void*);bool(*update)(void*,const void*,uint32_t);bool(*finish)(void*,uint8_t[32]);};
@@ -29,13 +29,19 @@ class CheckedSdReplicaCheckpoint {
  bool exitSafe()const{return !session_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
  // Worker-only preparation copies the entire native image before returning.
  // A missing/unknown base is not permission to initialize a card or merge data.
- int start(C&core,const risc_storage_volume_api_v1*volume){
+ int start(C&core,const risc_storage_volume_api_v1*volume){return startInternal(core,volume,false,nullptr);}
+ // Explicit durable mode. A fresh native-owned incarnation is required only
+ // when upgrading a v1 image. Ordinary native settings remain entropy-free.
+ int startDurable(C&core,const risc_storage_volume_api_v1*volume,const uint8_t*newIncarnation=nullptr){return startInternal(core,volume,true,newIncarnation);}
+ private:
+ int startInternal(C&core,const risc_storage_volume_api_v1*volume,bool durable,const uint8_t*newIncarnation){
   if(state_!=State::Idle||!guard_.held||!guard_.worker||!hash_.begin||!hash_.update||!hash_.finish)return C::Invalid;
   reason_=Reason::None;
   if(!guard_.worker(guard_.context))return C::Busy;
   if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
   if(!risc_storage_volume_download(volume))return C::Invalid;
   if(!core.ready())return C::Uncertain;
+  if(core.exportPrepared()){reason_=Reason::PendingExport;return C::Busy;}
   if(!core.identity().known){reason_=Reason::UnknownBase;return C::Conflict;}
   if(core.identity().generation==UINT64_MAX)return C::NoSpace;
   int rc=core.captureSnapshot(&snapshot_);if(rc)return rc;
@@ -45,11 +51,17 @@ class CheckedSdReplicaCheckpoint {
   for(uint32_t at=0;at<snapshot_.mapSize();){const uint32_t n=chunk(snapshot_.mapSize()-at);if(!hash_.update(hash_.context,snapshot_.map()+at,n))return startFailed();at+=n;}
   if(!hash_.finish(hash_.context,confirmed_.digest))return startFailed();
   makeIndex(candidate_,snapshot_.namespaceId(),snapshot_.mapSize(),snapshot_.count(),confirmed_);
+  if(durable){
+   rc=core.prepareExport(snapshot_,confirmed_,newIncarnation,&marker_);
+   if(rc){reason_=Reason::NativeFailure;if(rc==C::Retained)retain();else finish(State::Failed,rc);return rc;}
+   durable_=true;
+  }
   std::snprintf(directory_,sizeof directory_,"/RTECFG/%08X",unsigned(snapshot_.namespaceId()));
   std::snprintf(index_,sizeof index_,"%s/replica.index",directory_);
   std::snprintf(temporary_,sizeof temporary_,"%s/.replica.next",directory_);
   state_=State::Running;phase_=Begin;return C::Ok;
  }
+ public:
  void cancel(){
   if(state_==State::Verified){finish(State::Cancelled,C::Ok);return;}
   if(state_!=State::Running)return;
@@ -64,7 +76,7 @@ class CheckedSdReplicaCheckpoint {
   const int observed=api_->base.fs.state.observe(volume_->context);
   if(observed==RISC_STORAGE_STATE_RETAINED){retain();return error_;}
   if(observed!=RISC_STORAGE_STATE_READY){reason_=Reason::MediaUnavailable;finish(State::Failed,C::Io);return error_;}
-  int rc=core_->acknowledge(snapshot_.ticket(),confirmed_);
+  int rc=durable_?core_->acknowledgeExport(marker_,confirmed_):core_->acknowledge(snapshot_.ticket(),confirmed_);
   if(rc==C::Busy)return rc;
   if(rc==C::Retained){retain();return rc;}
   reason_=rc?Reason::NativeFailure:Reason::None;finish(rc?State::Failed:State::Done,rc);return rc;
@@ -140,7 +152,7 @@ class CheckedSdReplicaCheckpoint {
  }
  private:
  enum Phase {Begin,Refresh,ReadIndex,ReadBase,RecoverMissing,Recover,CheckRecovered,ExistingPage,WritePage,VerifyPage,RemoveOrphan,RemoveTemp,WriteTemp,VerifyTemp,CheckBase,Replace,ReadFinal,ReadFinalPage,CheckFinal,Closing};
- Digest hash_;Guard guard_;C::Snapshot snapshot_;C*core_=nullptr;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
+ Digest hash_;Guard guard_;C::Snapshot snapshot_;C::ExportMarker marker_{};bool durable_=false;C*core_=nullptr;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
  C::Identity confirmed_{},remote_{};State state_=State::Idle;Phase phase_=Begin;int error_=0;Reason reason_=Reason::None;bool cancelled_=false,recoveredMissing_=false;uint64_t session_=0,operation_=0;uint32_t page_=0,remoteSize_=0;
  uint8_t candidate_[IndexBytes]{},previous_[IndexBytes]{};char directory_[32]{},index_[64]{},temporary_[64]{},pagePath_[160]{};
  risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};
@@ -159,7 +171,7 @@ class CheckedSdReplicaCheckpoint {
  void retain(){state_=State::Retained;error_=C::Retained;reason_=Reason::Retained;}
  void fail(int rc,Reason reason=Reason::StorageFailure){error_=rc;reason_=reason;phase_=Closing;}
  int startFailed(){reason_=Reason::StorageFailure;finish(State::Failed,C::Io);return C::Io;}
- void finish(State state,int rc){state_=state;error_=rc;snapshot_.reset();C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
+ void finish(State state,int rc){state_=state;error_=rc;snapshot_.reset();C::wipe(&marker_,sizeof marker_);C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  void finishBase(){uint8_t digest[32]{};const bool ok=hash_.finish(hash_.context,digest)&&!std::memcmp(digest,remote_.digest,32);C::wipe(digest,sizeof digest);if(!ok)fail(C::Io,Reason::InvalidContent);else phase_=Recover;}
  void readIndex(){
   const auto*p=result_.data;
