@@ -19,7 +19,7 @@ bool Runtime::configureInstallation(JsonVariantConst value){
   char cap[96];int64_t api=0,instance=0;
   if(!keys(g,{"capability","api","instance_id"})||!text(g["capability"],cap,sizeof(cap))||
      !integer(g["api"],1,UINT32_MAX,api)||!integer(g["instance_id"],0,INT32_MAX,instance)||
-     !strncmp(cap,"platform.",9)||!strncmp(cap,"runtime.",8)||!strcmp(cap,"hardware.device")||
+     !strncmp(cap,"platform.",9)||(!strncmp(cap,"runtime.",8)&&strcmp(cap,RISC_REALTIME_CAPABILITY))||!strcmp(cap,"hardware.device")||
      !strcmp(cap,"spi.bus")||(!strncmp(cap,"storage.app-data",16)&&strcmp(cap,"storage.app-data"))||
      !strcmp(cap,"storage.shared-data"))return fail("unsupported installation grant envelope");
   if((!strcmp(cap,"storage.key-value")||!strcmp(cap,"storage.app-data"))&&(!count||instance))return fail("private installation namespace template required");
