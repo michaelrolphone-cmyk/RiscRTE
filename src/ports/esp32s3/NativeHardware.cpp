@@ -149,6 +149,8 @@ bool nativeRadioResourceTry(){return resourceOwner.enter();}
 void nativeRadioResourceEnd(){resourceOwner.leave();}
 bool nativeRadioResourceReady(){return resourceOwner.ready();}
 bool nativeRadioResourceHeldReady(){return resourceOwner.heldReady();}
+bool nativeBackgroundResourceTry(){return !xPortInIsrContext()&&ownerTask&&ownerTask()&&NativeRadioAsync::tryShared();}
+void nativeBackgroundResourceEnd(){if(!xPortInIsrContext()&&ownerTask&&ownerTask())NativeRadioAsync::endShared();}
 Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   resourceOwner.configure([](){return !xPortInIsrContext() && ownerTask && ownerTask();},NativeRadioAsync::tryShared,NativeRadioAsync::endShared,NativeRadioAsync::sharedPhaseReady,NativeRadioAsync::sharedReady);

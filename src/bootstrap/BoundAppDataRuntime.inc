@@ -26,8 +26,13 @@ bool Runtime::providerFilePolicy(JsonObjectConst selection,ProviderStorage& stor
   entry.nameSpace=uint32_t(nameSpace);entry.writable=eq(item["access"],"read-write");++storage.fileCount;
  }
  storage.owner=this;
- storage.fileTable={RISC_BOUND_APP_DATA_API_V1,sizeof(risc_bound_app_data_v1),nullptr,
+  storage.fileTable.base={RISC_BOUND_APP_DATA_API_V1,sizeof(risc_bound_app_data_v1),nullptr,
                     boundAppDataStat,boundAppDataRead,boundAppDataReplace};
+ if(port_.appData&&port_.appData->beginReplace&&port_.appData->collectReplace&&port_.appData->pending){
+  storage.fileTable.base.struct_size=sizeof(storage.fileTable);
+  storage.fileTable.async_tag=RISC_BOUND_APP_DATA_ASYNC_TAG;storage.fileTable.async_version=1;
+  storage.fileTable.begin_replace=boundAppDataBeginReplace;storage.fileTable.collect_replace=boundAppDataCollectReplace;
+ }
  return true;
 }
 bool Runtime::providerFileSafe(void* context){
@@ -49,7 +54,7 @@ Runtime::ProviderStorage* Runtime::providerFileContext(void* context,int32_t& re
  if(!r || !context || !r->port_.owner() || !r->port_.appData)return nullptr;
  ProviderStorage* matched=nullptr;
  for(auto& storage:r->providerStorage_)
-  if(storage.owner==r && storage.live && storage.fileCount && storage.fileTable.context==context)matched=&storage;
+  if(storage.owner==r && storage.live && storage.fileCount && storage.fileTable.base.context==context)matched=&storage;
  if(!matched || r->retained_)return nullptr;
  if(!r->appDataExitSafe()){result=r->providerFileResult(RISC_APP_DATA_RETAINED);return nullptr;}
  if(!r->providerStorageSafe()){r->revokeProviders();return nullptr;}
@@ -85,4 +90,28 @@ int32_t Runtime::boundAppDataReplace(void* context,const char* name,uint64_t exp
   return r->providerFileResult(b.replace(b.context,storage->files[i].nameSpace,name,expected,bytes,size));
  }
  return RISC_APP_DATA_CONTEXT;
+}
+
+int32_t Runtime::boundAppDataBeginReplace(void*context,const char*name,uint64_t expected,const void*bytes,uint32_t size,uint64_t*token){
+ if(token)*token=0;
+ int32_t result;auto*storage=providerFileContext(context,result);if(!storage)return result;
+ auto*r=storage->owner;const auto&b=*r->port_.appData;
+ if(!token||!providerFileName(name)||(!bytes&&size)||size>RISC_APP_DATA_FILE_MAX)return RISC_APP_DATA_INVALID;
+ if(!b.beginReplace||!b.collectReplace||!b.pending)return RISC_APP_DATA_UNAVAILABLE;
+ if(storage->fileOperation)return RISC_APP_DATA_BUSY;
+ for(size_t i=0;i<storage->fileCount;++i)if(!strcmp(name,storage->files[i].name)&&storage->files[i].writable){
+  int32_t rc=b.beginReplace(b.context,storage->files[i].nameSpace,name,expected,bytes,size,&storage->fileOperation);
+  if(rc==RISC_APP_DATA_OK)*token=storage->fileOperation;
+  return r->providerFileResult(rc);
+ }
+ return RISC_APP_DATA_CONTEXT;
+}
+int32_t Runtime::boundAppDataCollectReplace(void*context,uint64_t token,int32_t*out){
+ int32_t result;auto*storage=providerFileContext(context,result);if(!storage)return result;
+ if(!out||!token||token!=storage->fileOperation)return RISC_APP_DATA_CONTEXT;
+ auto*r=storage->owner;const auto&b=*r->port_.appData;
+ if(!b.collectReplace)return RISC_APP_DATA_UNAVAILABLE;
+ int32_t rc=b.collectReplace(b.context,token,out);
+ if(rc==RISC_APP_DATA_OK){storage->fileOperation=0;(void)r->providerFileResult(*out);}
+ return r->providerFileResult(rc);
 }

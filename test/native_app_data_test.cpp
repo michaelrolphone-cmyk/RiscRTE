@@ -3,7 +3,7 @@
 #include <cstring>
 #include <cerrno>
 #include <sys/stat.h>
-namespace RiscCpu {static bool resourceAvailable=true,resourceHeld=false;bool nativeRadioResourceTry(){if(!resourceAvailable || resourceHeld)return false;resourceHeld=true;return true;}void nativeRadioResourceEnd(){resourceHeld=false;}}
+namespace RiscCpu {static bool resourceAvailable=true,resourceHeld=false;bool nativeRadioResourceTry(){if(!resourceAvailable || resourceHeld)return false;resourceHeld=true;return true;}void nativeRadioResourceEnd(){resourceHeld=false;}bool nativeBackgroundResourceTry(){return nativeRadioResourceTry();}void nativeBackgroundResourceEnd(){nativeRadioResourceEnd();}}
 static esp_partition_t partition{ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x41),0x270000,0x80000,"appdata",false};
 static bool absent=false,mountFail=false,ownerEnabled=true,safeEnabled=true;static unsigned mounts=0;
 const esp_partition_t* esp_partition_find_first(esp_partition_type_t type,esp_partition_subtype_t subtype,const char*label){assert(type==ESP_PARTITION_TYPE_DATA && subtype==0x41 && !strcmp(label,"appdata"));return absent?nullptr:&partition;}

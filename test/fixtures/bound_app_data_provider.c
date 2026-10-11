@@ -1,5 +1,6 @@
 #include <RiscProviderV2.h>
 #include <RiscBoundAppDataV1.h>
+#include <RiscBoundAppDataAsyncV1.h>
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
@@ -8,6 +9,7 @@
 #endif
 _Static_assert(sizeof(risc_bound_app_data_v1)==sizeof(risc_app_data_v1), "copied app-data ABI");
 _Static_assert(offsetof(risc_bound_app_data_v1,context)==8, "context prefix");
+extern void bound_files_async_received(unsigned,const risc_bound_app_data_async_v1*);
 extern bool bound_files_started(unsigned,risc_bound_app_data_v1);
 extern void bound_files_event(unsigned,const char*);
 extern void bound_files_denied(risc_bound_app_data_v1);
@@ -17,7 +19,8 @@ static bool start(const risc_provider_dependency_v1* deps,size_t count){
  assert(count==1 && deps && !strcmp(deps[0].capability_id,RISC_BOUND_APP_DATA_CAPABILITY));
  assert(deps[0].api_version==1 && deps[0].api);
  storage=*(const risc_bound_app_data_v1*)deps[0].api;
- assert(storage.api_version==1 && storage.struct_size==sizeof(storage) && storage.context);
+ assert(storage.api_version==1 && storage.struct_size>=sizeof(storage) && storage.context);
+ bound_files_async_received(PROVIDER_INDEX,risc_bound_app_data_async(deps[0].api));
  return bound_files_started(PROVIDER_INDEX,storage);
 }
 static bool quiesce(void){bound_files_event(PROVIDER_INDEX,"quiesce");bound_files_denied(storage);return true;}

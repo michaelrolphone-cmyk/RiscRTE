@@ -1,3 +1,4 @@
+bool Runtime::appDataBusy()const{return port_.appData && port_.appData->pending && port_.appData->pending(port_.appData->context);}
 bool Runtime::appDataExitSafe()const{return !providerFileRetained_ && (!mainInvocation_.appDataExport_ || !mainInvocation_.appDataExport_->retained()) && (!foreground_ || !foreground_->appDataExport_ || !foreground_->appDataExport_->retained()) && (!port_.appData || (port_.appData->exitSafe && port_.appData->exitSafe(port_.appData->context)));}
 Runtime* Runtime::appDataContext(void*context){
  Runtime*r=currentRuntime;

@@ -6,6 +6,10 @@ bool nativeRadioResourceTry();
 void nativeRadioResourceEnd();
 bool nativeRadioResourceReady();
 bool nativeRadioResourceHeldReady();
+// Non-reentrant lease held across a native background operation. Ordinary
+// owner guards cannot enter it. Release only on the owner after collection.
+bool nativeBackgroundResourceTry();
+void nativeBackgroundResourceEnd();
 struct NativeRadioResourceGuard {
   bool held;
   NativeRadioResourceGuard():held(nativeRadioResourceTry()){}

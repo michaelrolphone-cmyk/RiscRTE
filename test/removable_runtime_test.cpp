@@ -72,6 +72,8 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
       }
       if(catalogMode()){
         assert(installer);risc_install_candidate_v1 item{staged[0].first.c_str(),staged[0].second.c_str()};risc_install_result_v1 result{};
+        assert(installer->check(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+        assert(runtime->appCount()==baseCount());
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
         launchName=result.launch_path;assert(runtime->appCount()==baseCount()+1);
         assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&runtime->appCount()==baseCount()+1);

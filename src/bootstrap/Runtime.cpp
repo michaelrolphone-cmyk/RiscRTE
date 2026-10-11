@@ -649,7 +649,7 @@ bool Runtime::beginProvider(void* context) {
   void* token=nextKeyValueContext(keyValueGeneration);
   if (!token) return false;
   storage->table.context=token;
-  if(storage->fileCount)storage->fileTable.context=token;
+  if(storage->fileCount)storage->fileTable.base.context=token;
   if(storage->needsRealtime)storage->realtime.context=token;
   if(storage->needsTcp)storage->tcp.context=token;
   storage->live=true;
@@ -944,7 +944,7 @@ bool Runtime::launch(const char* relative) {
        (!residentAllowed(selected) && !residentLegacyAllowed(selected) && !(legacy && !strcmp(selected,default_))))return false;
   }
   if(invocation_->fileOpen_.phase==FileOpenState::Phase::Requested || invocation_->fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
-  if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained_ || !appDataExitSafe() || (invocation_->installedFiles_ && invocation_->installedFiles_->retained()) || invocation_->queued_[0] || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
+  if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained_ || !appDataExitSafe() || (invocation_->installedFiles_ && invocation_->installedFiles_->retained()) || invocation_->queued_[0] || appDataBusy() || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   const bool ok=path(root_,relative,invocation_->queued_,sizeof(invocation_->queued_));
   RISC_STAGE_LOG("app launch-request file=%s result=%s",relative,ok?"accepted":"invalid-path");
   if(ok)RiscPerf::emit(20);
@@ -1108,7 +1108,7 @@ bool Runtime::appExitBarrier() {
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && !appDataBusy() && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());

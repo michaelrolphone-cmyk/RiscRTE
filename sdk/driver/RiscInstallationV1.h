@@ -25,6 +25,9 @@ typedef struct {
   * packages have result.status != OK. BUSY/OOM rolls back the entire registry.
   * replace=true withdraws dynamic identities absent from the complete scan. */
  int32_t (*commit)(void*,const risc_install_candidate_v1*,uint32_t count,risc_install_result_v1*,bool replace);
+ /* Same candidate validation and result paths, with complete registry rollback
+  * even on success. Use before persisting a bounded admitted catalog. */
+ int32_t (*check)(void*,const risc_install_candidate_v1*,uint32_t count,risc_install_result_v1*,bool replace);
 } risc_installation_v1;
 #ifdef __cplusplus
 }

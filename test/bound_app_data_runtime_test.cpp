@@ -1,5 +1,6 @@
 #include "bootstrap/Runtime.h"
 #include "runtime/storage/AppDataFiles.h"
+#include "runtime/storage/AsyncAppDataReplace.h"
 #include <cassert>
 #include <cstdio>
 #include <cstring>
@@ -30,11 +31,19 @@ static bool log(const char*){return true;}
 static void delay(uint32_t){}
 static RiscStorage::AppDataFiles files({nullptr,[](void*){return 0u;},[](void*){return true;},malloc,free});
 static int32_t status(unsigned op){++calls;if(faultArmed && faultOp==int(op)){retainedTriggered=true;return RISC_APP_DATA_RETAINED;}return otherStatus;}
+static unsigned char asyncBytes[RISC_APP_DATA_FILE_MAX];
+static risc_bound_app_data_async_v1 asyncSaved[2]{};
+static RiscStorage::AsyncAppDataReplace writer(asyncBytes,sizeof(asyncBytes),
+ [](void*,uint32_t ns,const char*name,uint64_t expected,const void*bytes,uint32_t size){assert(ns==5);return files.replace(ns,name,expected,bytes,size);},nullptr);
+extern "C" void bound_files_async_received(unsigned index,const risc_bound_app_data_async_v1*a){assert(a&&index<2);asyncSaved[index]=*a;}
 static RiscBoot::AppDataBackend backend{nullptr,
- [](void*,uint32_t n,const char* p,uint32_t* s,uint64_t* r){int32_t e=status(1);return e?e:files.stat(n,p,s,r);},
- [](void*,uint32_t n,const char* p,uint64_t v,void* b,uint32_t z,uint32_t* s,uint64_t* r){int32_t e=status(2);return e?e:files.read(n,p,v,b,z,s,r);},
- [](void*,uint32_t n,const char* p,uint64_t v,const void* b,uint32_t z){int32_t e=status(3);return e?e:files.replace(n,p,v,b,z);},
- [](void*){return dataSafe && files.exitSafe();}};
+ [](void*,uint32_t n,const char* p,uint32_t* s,uint64_t* r){if(writer.pending())return RISC_APP_DATA_BUSY;int32_t e=status(1);return e?e:files.stat(n,p,s,r);},
+ [](void*,uint32_t n,const char* p,uint64_t v,void* b,uint32_t z,uint32_t* s,uint64_t* r){if(writer.pending())return RISC_APP_DATA_BUSY;int32_t e=status(2);return e?e:files.read(n,p,v,b,z,s,r);},
+ [](void*,uint32_t n,const char* p,uint64_t v,const void* b,uint32_t z){if(writer.pending())return RISC_APP_DATA_BUSY;int32_t e=status(3);return e?e:files.replace(n,p,v,b,z);},
+ [](void*){return dataSafe && (writer.pending()||files.exitSafe());},
+ [](void*,uint32_t ns,const char*name,uint64_t expected,const void*bytes,uint32_t size,uint64_t*token){return writer.begin(ns,name,expected,bytes,size,token);},
+ [](void*,uint64_t token,int32_t*out){return writer.collect(token,out);},
+ [](void*){return writer.pending();}};
 static RiscBoot::Port port(){RiscBoot::Port p{owner,health,delay,log};p.appData=&backend;p.providerStorageSafe=safe;return p;}
 extern "C" void bound_files_denied(risc_bound_app_data_v1 api){
  if(!api.stat)return;
@@ -163,6 +172,18 @@ extern "C" void bound_files_app(){
   assert(retainedTriggered);return;
  }
  if(faultOp){trigger(saved[0]);return;}
+ const auto&a=asyncSaved[0];uint64_t token=99;int32_t outcome=42;
+ assert(a.begin_replace(a.base.context,"catalog.json",0,"x",1,&token)==RISC_APP_DATA_CONTEXT&&!token); // read-only
+ assert(a.begin_replace(a.base.context,"other.bin",0,"x",1,&token)==RISC_APP_DATA_CONTEXT&&!token);
+ const uint64_t rev=revision(saved[0],"state.bin");char bytes[]="first",name[]="state.bin";
+ assert(a.begin_replace(a.base.context,name,rev,bytes,5,&token)==0);memset(bytes,'x',5);memset(name,'x',9);
+ for(unsigned i=0;i<1000;++i){rt->yield_ms(1);assert(!running->retained());assert(a.collect_replace(a.base.context,token,&outcome)==RISC_APP_DATA_BUSY);}
+ assert(asyncSaved[1].collect_replace(asyncSaved[1].base.context,token,&outcome)==RISC_APP_DATA_CONTEXT);
+ owned=false;assert(a.collect_replace(a.base.context,token,&outcome)==RISC_APP_DATA_CONTEXT);owned=true;
+ assert(!rt->request_launch("default.elf")); // pending write is not a permitted handoff
+ assert(writer.workerStep());assert(a.collect_replace(a.base.context,token,&outcome)==0&&outcome==0);
+ assert(a.collect_replace(a.base.context,token,&outcome)==RISC_APP_DATA_CONTEXT);
+ assert(read(saved[0],"state.bin")=="first");
  probes();
  // Existing app-data uses its own explicit namespace and ordinary filename set.
  risc_runtime_capability_v1 app{};app.struct_size=sizeof(app);assert(rt->acquire(RISC_APP_DATA_CAPABILITY,1,9,&app));

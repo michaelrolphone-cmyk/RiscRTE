@@ -19,7 +19,7 @@ bool Runtime::configureInstallation(JsonVariantConst value){
  installation_=metadataArray<InstallationState>(1);if(!installation_)return false;
  if(serializeJson(value["grants"],installation_[0].grants,sizeof(installation_[0].grants))>=sizeof(installation_[0].grants)-1)return false;
  installation_[0].volume=uint64_t(volume);
- installation_[0].api={1,sizeof(risc_installation_v1),this,installationAdmit,installationForget,installationCommit};
+ installation_[0].api={1,sizeof(risc_installation_v1),this,installationAdmit,installationForget,installationCommit,installationCheck};
  return registerPlatform(RISC_INSTALLATION_CAPABILITY,1,Scope::Global,0,&installation_[0].api);
 }
 bool Runtime::installationMutable(size_t i)const{
@@ -97,6 +97,12 @@ int32_t Runtime::installationForget(void*ctx,const char*relative,bool checkOnly)
 
 namespace RiscBoot {
 int32_t Runtime::installationCommit(void*ctx,const risc_install_candidate_v1*items,uint32_t count,risc_install_result_v1*out,bool replace){
+ return installationTransaction(ctx,items,count,out,replace,false);
+}
+int32_t Runtime::installationCheck(void*ctx,const risc_install_candidate_v1*items,uint32_t count,risc_install_result_v1*out,bool replace){
+ return installationTransaction(ctx,items,count,out,replace,true);
+}
+int32_t Runtime::installationTransaction(void*ctx,const risc_install_candidate_v1*items,uint32_t count,risc_install_result_v1*out,bool replace,bool check){
  auto*r=static_cast<Runtime*>(ctx);
  if(!r||r!=currentRuntime||!r->installation_||!r->active()||!r->port_.owner()||r->retained_||
     r->graph_.lifecycleBusy()||count>64||(count&&(!items||!out)))return RISC_INSTALL_DENIED;
@@ -132,9 +138,9 @@ int32_t Runtime::installationCommit(void*ctx,const risc_install_candidate_v1*ite
   for(uint32_t j=0;j<count;++j)found=found||(out[j].status==RISC_INSTALL_OK&&!strcmp(path,out[j].launch_path));
   if(!found&&r->policies_[i].enabled){if(!r->installationMutable(i)){status=RISC_INSTALL_BUSY;break;}r->policies_[i].enabled=false;}
  }
- if(status!=RISC_INSTALL_OK){
+ if(check||status!=RISC_INSTALL_OK){
   for(size_t i=0;i<r->policyCapacity_;++i){r->policies_[i]=policies[i];r->installedMetadata_[i]=metadata[i];r->fileHandlers_[i]=handlers[i];r->residentForeground_[i]=foreground[i];r->residentLegacy_[i]=legacy[i];}
-  r->policyCount_=before;for(uint32_t i=0;i<count;++i){out[i]={};out[i].status=status;}
+  r->policyCount_=before;if(status!=RISC_INSTALL_OK)for(uint32_t i=0;i<count;++i){out[i]={};out[i].status=status;}
  }
  return status;
 }

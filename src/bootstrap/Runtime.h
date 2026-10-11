@@ -7,6 +7,7 @@
 #include "AppRequirementLimits.h"
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
+#include <RiscBoundAppDataAsyncV1.h>
 #include "TcpListenerBackend.h"
 #include "runtime/storage/AppDataExport.h"
 #include "FileOpenState.h"
@@ -250,7 +251,8 @@ class Runtime final {
     risc_bound_key_value_v1 table{};
     MetadataArray<ProviderFile> files;
     size_t fileCount=0;
-    risc_bound_app_data_v1 fileTable{};
+    risc_bound_app_data_async_v1 fileTable{};
+    uint64_t fileOperation=0;
     risc_platform_realtime_api_v1 realtime{};
     bool needsRealtime=false;
     risc_tcp_listener_v1 tcp{};
@@ -276,6 +278,8 @@ class Runtime final {
   static int32_t boundAppDataStat(void*,const char*,uint32_t*,uint64_t*);
   static int32_t boundAppDataRead(void*,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*);
   static int32_t boundAppDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
+  static int32_t boundAppDataBeginReplace(void*,const char*,uint64_t,const void*,uint32_t,uint64_t*);
+  static int32_t boundAppDataCollectReplace(void*,uint64_t,int32_t*);
   int32_t providerFileResult(int32_t);
   static bool beginProvider(void*);
   static void revokeProvider(void*);
@@ -328,6 +332,7 @@ class Runtime final {
                          const RiscUpdate::NativeAppDataExportPolicyV1*) const;
   bool needsAppDataExportDelegation(const Runtime&) const;
   bool appDataExitSafe()const;
+  bool appDataBusy()const;
   static Runtime* appDataContext(void*);
   static int32_t appDataStat(void*,const char*,uint32_t*,uint64_t*);
   static int32_t appDataRead(void*,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*);
@@ -353,6 +358,8 @@ class Runtime final {
   static int32_t installationAdmit(void*,const char*,const char*,char*,uint32_t);
   static int32_t installationForget(void*,const char*,bool);
   static int32_t installationCommit(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
+  static int32_t installationCheck(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
+  static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool);
   bool installationMutable(size_t)const;
   void* loadRemovableApp(const AppPolicy&);
   RuntimeProviders::GrantV2 retainedAppSource_{};
