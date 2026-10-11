@@ -1,0 +1,36 @@
+name: Entropy radio readiness
+on:
+  push:
+    branches: [fix/entropy-offline-bootstrap]
+  pull_request:
+    paths:
+      - 'src/ports/esp32s3/NativeEntropy*'
+      - 'src/ports/esp32s3/NativeHardware.cpp'
+      - 'src/ports/esp32s3/NativeRadio.h'
+      - 'test/native_entropy*'
+      - '.github/workflows/entropy-radio-readiness.yml'
+permissions:
+  contents: read
+jobs:
+  entropy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: RF source readiness and entropy custody
+        run: |
+          c++ -std=c++17 -Wall -Wextra -Werror -Isrc test/native_entropy_radio_ready_test.cpp -o /tmp/entropy-radio-ready
+          /tmp/entropy-radio-ready
+          bash test/run_native_entropy_test.sh
+          SANITIZE=1 bash test/run_native_entropy_test.sh
+          bash test/run_radio_test.sh
+          SANITIZE=1 bash test/run_radio_test.sh
+          bash test/run_hci_test.sh
+          SANITIZE=1 bash test/run_hci_test.sh
+          bash test/run_radio_async_test.sh
+          SANITIZE=1 bash test/run_radio_async_test.sh
+          bash test/run_hci_radio_coexistence_test.sh
+          SANITIZE=1 bash test/run_hci_radio_coexistence_test.sh

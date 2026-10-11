@@ -48,7 +48,7 @@ constexpr int64_t ScanTimeoutUs=INT64_C(10000000);
 constexpr int64_t JoinTimeoutUs=INT64_C(30000000);
 enum Operation : uint32_t { None=0, Join=1, Scan=2, AccessPoint=3 };
 struct State {
-  bool loop=false,wifi=false,startAttempted=false,connectAttempted=false;
+  bool loop=false,wifi=false,startAttempted=false,started=false,connectAttempted=false;
   bool attachAttempted=false,driverClearPending=false,closing=false;
   bool scanAttempted=false,scanList=false,credentials=false,established=false;
   esp_netif_t* netif=nullptr;
@@ -191,7 +191,7 @@ inline bool leave(){
   }
   if(s.startAttempted){
     const esp_err_t result=sdkCall(Stop,[&](){return esp_wifi_stop();});if(!wifiAbsent(result))return sdkFailure("stop",result);
-    s.startAttempted=false;
+    s.startAttempted=false;s.started=false;
   }
   if(s.wifi){
     const esp_err_t result=sdkCall(Deinit,[&](){return esp_wifi_deinit();});
@@ -292,6 +292,7 @@ inline bool join(const char* ssid,const char* password){
   s.startAttempted=true;
   memoryStage("before-sdk-start");
   if(!sdk("start",sdkCall(Start,[&](){return esp_wifi_start();})) || !continueSetup()){leave();return false;}
+  s.started=true;
   memoryStage("sdk-start-complete");
   if(!ensureLogsSuppressed() || !continueSetup()){leave();return false;}
   s.connectAttempted=true;s.joinDeadline=esp_timer_get_time()+JoinTimeoutUs;
@@ -315,6 +316,7 @@ inline bool accessPoint(const char* ssid,const char* password){
   if(!sdk("ap-config",configured) || !continueSetup()){leave();return false;}
   s.startAttempted=true;s.joinDeadline=esp_timer_get_time()+JoinTimeoutUs;
   if(!sdk("ap-start",sdkCall(Start,[](){return esp_wifi_start();})) || !continueSetup()){leave();return false;}
+  s.started=true;
   return true;
 }
 inline bool state(uint8_t* status,int8_t* rssi){
@@ -376,6 +378,7 @@ inline bool scanStart(){
   s.startAttempted=true;
   memoryStage("before-sdk-start");
   if(!sdk("start",sdkCall(Start,[&](){return esp_wifi_start();})) || !continueSetup()){leave();return false;}
+  s.started=true;
   memoryStage("sdk-start-complete");
   wifi_scan_config_t config{};config.show_hidden=true;config.scan_type=WIFI_SCAN_TYPE_ACTIVE;
   config.scan_time.active.min=0;config.scan_time.active.max=120;
