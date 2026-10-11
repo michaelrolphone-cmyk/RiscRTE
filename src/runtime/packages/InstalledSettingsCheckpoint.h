@@ -34,7 +34,8 @@ class InstalledSettingsCheckpoint {
     int rc=native_->settings_restore(native_->context,slot_,owner_,missing_?nullptr:result_.data,missing_?0:result_.size,missing_);
     if(rc==RISC_KEY_VALUE_BUSY)return;
     if(rc!=RISC_KEY_VALUE_OK){state_=State::Failed;return;}
-    state_=native_->settings_status(native_->context,slot_)==1?State::Done:State::Snapshot;return;
+    const auto status=native_->settings_status(native_->context,slot_);
+    state_=(status==1||status==4)?State::Done:State::Snapshot;return;
    }
    if(state_==State::Snapshot){
     int rc=native_->settings_snapshot(native_->context,slot_,request_.data,sizeof(request_.data),&size_,&generation_);

@@ -45,6 +45,7 @@ struct KeyValueBackend {
   uint32_t maxBlobSize=RISC_KEY_VALUE_BLOB_MAX;
   int32_t (*journalRead)(void*,uint32_t,void*,uint32_t,uint32_t*)=nullptr;
   int32_t (*journalWrite)(void*,uint32_t,const void*,uint32_t)=nullptr;
+  int32_t (*legacyNamespace)(void*,uint32_t,bool*)=nullptr;
 };
 struct Port {
   bool (*owner)();

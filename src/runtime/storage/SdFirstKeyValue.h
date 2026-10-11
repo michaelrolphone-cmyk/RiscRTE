@@ -9,7 +9,7 @@ namespace RiscStorage {
 class SdFirstKeyValue {
  public:
   static constexpr unsigned Keys=16,OwnerBytes=96,Header=128,EntryBytes=84,Bytes=Header+Keys*EntryBytes;
-  enum Status {Cold=0,Clean=1,Dirty=2,Uncertain=3};
+  enum Status {Cold=0,Clean=1,Dirty=2,Uncertain=3,LegacyNative=4};
   struct Entry {char key[16]{};uint32_t size=0;uint8_t value[64]{};};
   struct State {char owner[OwnerBytes]{};uint64_t generation=0;uint32_t count=0;Status status=Cold;Entry entries[Keys]{};};
   struct Workspace {State decoded{},candidate{};uint8_t bytes[Bytes]{};};
@@ -18,6 +18,7 @@ class SdFirstKeyValue {
    int32_t(*read)(void*,uint32_t,void*,uint32_t,uint32_t*);
    int32_t(*write)(void*,uint32_t,const void*,uint32_t);
    int32_t(*legacy)(void*,uint32_t,const char*,void*,uint32_t,uint32_t*);
+   int32_t(*legacyNamespace)(void*,uint32_t,bool*)=nullptr;
   };
   static bool keyValid(const char*key){
    if(!key||!*key)return false;
@@ -57,9 +58,16 @@ class SdFirstKeyValue {
    if(!ownerValid(owner)||!journal.read||!journal.write||(!missing&&!sd)|| (missing&&size))return RISC_KEY_VALUE_INVALID;
    if(s.owner[0]&&std::strcmp(s.owner,owner))return RISC_KEY_VALUE_CONTEXT;
    State&card=w.candidate;card={};std::strcpy(card.owner,owner);bool anchor=false;
-   if(!missing&&(!decode(card,ns,owner,sd,size,anchor)||anchor))return RISC_KEY_VALUE_IO;
    uint32_t n=0;int rc=journal.read(journal.context,ns,w.bytes,Bytes,&n);
    if(rc!=RISC_KEY_VALUE_OK&&rc!=RISC_KEY_VALUE_NOT_FOUND)return rc;
+   // Existing namespace storage keeps its original backend and unlimited key
+   // count. Do not squeeze delivered data into the new bounded SD snapshot.
+   if(rc==RISC_KEY_VALUE_NOT_FOUND&&journal.legacyNamespace){
+    bool exists=false;const int found=journal.legacyNamespace(journal.context,ns,&exists);
+    if(found!=RISC_KEY_VALUE_OK)return found;
+    if(exists){card.status=LegacyNative;s=card;return RISC_KEY_VALUE_OK;}
+   }
+   if(!missing&&(!decode(card,ns,owner,sd,size,anchor)||anchor))return RISC_KEY_VALUE_IO;
    if(rc==RISC_KEY_VALUE_OK){
     if(!decode(w.decoded,ns,owner,w.bytes,n,anchor))return RISC_KEY_VALUE_IO;
     if(anchor){if(missing||card.generation!=w.decoded.generation)return RISC_KEY_VALUE_IO;}
@@ -74,6 +82,7 @@ class SdFirstKeyValue {
   static int32_t put(State&s,Workspace&w,const Journal&journal,uint32_t ns,const char*key,const void*data,unsigned size){
    if(!keyValid(key)||!data||!size||size>64)return RISC_KEY_VALUE_INVALID;
    if(s.status==Cold||s.status==Uncertain)return RISC_KEY_VALUE_BUSY;
+   if(s.status==LegacyNative)return RISC_KEY_VALUE_CONTEXT;
    unsigned slot=0;for(;slot<s.count;++slot)if(!std::strcmp(key,s.entries[slot].key))break;
    if(slot<s.count&&s.entries[slot].size==size&&!std::memcmp(s.entries[slot].value,data,size))return RISC_KEY_VALUE_OK;
    if(slot==Keys||s.generation==UINT64_MAX)return RISC_KEY_VALUE_IO;
@@ -89,6 +98,7 @@ class SdFirstKeyValue {
    if(size)*size=0;
    if(!size||!keyValid(key)||(!out&&capacity))return RISC_KEY_VALUE_INVALID;
    if(s.status==Cold||s.status==Uncertain)return RISC_KEY_VALUE_BUSY;
+   if(s.status==LegacyNative)return RISC_KEY_VALUE_CONTEXT;
    for(unsigned i=0;i<s.count;++i)if(!std::strcmp(key,s.entries[i].key)){
     const auto&e=s.entries[i];*size=e.size;if(capacity<e.size)return RISC_KEY_VALUE_BUFFER_SMALL;
     std::memcpy(out,e.value,e.size);return RISC_KEY_VALUE_OK;
@@ -106,6 +116,7 @@ class SdFirstKeyValue {
    if(size)*size=0;
    if(!out||!size||!generation)return RISC_KEY_VALUE_INVALID;
    if(s.status==Cold||s.status==Uncertain)return RISC_KEY_VALUE_BUSY;
+   if(s.status==LegacyNative)return RISC_KEY_VALUE_CONTEXT;
    const unsigned n=Header+s.count*EntryBytes;if(capacity<n){*size=n;return RISC_KEY_VALUE_BUFFER_SMALL;}
    *size=encode(s,ns,false,static_cast<uint8_t*>(out));*generation=s.generation;return RISC_KEY_VALUE_OK;
   }

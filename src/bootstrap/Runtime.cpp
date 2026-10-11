@@ -619,7 +619,7 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
   if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_KEY_VALUE_INVALID;
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
-  if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount){
+  if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount&&r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
     auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::get(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,buffer,capacity,outSize);
   }
   uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
@@ -639,7 +639,7 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
   if (!keyValueKey(key) || !data || !size || size>limit) return RISC_KEY_VALUE_INVALID;
   const auto& backend=*r->port_.keyValue;
-  if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount){
+  if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount&&r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
     auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::put(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,data,size);
   }
   const int32_t result=backend.put(backend.context,matched->keyValueNamespace,key,data,size);

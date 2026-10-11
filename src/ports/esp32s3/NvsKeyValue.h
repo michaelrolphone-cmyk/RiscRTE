@@ -64,6 +64,16 @@ inline int32_t put(void* context,uint32_t id,const char* key,const void* data,ui
 inline const RiscBoot::KeyValueBackend* backend(){
   static const RiscBoot::KeyValueBackend value{nullptr,get,put,RISC_KEY_VALUE_V2_BLOB_MAX,
     [](void*,uint32_t ns,void*out,uint32_t capacity,uint32_t*size){return get(reinterpret_cast<void*>(uintptr_t(1)),ns,"snapshot",out,capacity,size);},
-    [](void*,uint32_t ns,const void*data,uint32_t size){return put(reinterpret_cast<void*>(uintptr_t(1)),ns,"snapshot",data,size);}};return &value;
+    [](void*,uint32_t ns,const void*data,uint32_t size){return put(reinterpret_cast<void*>(uintptr_t(1)),ns,"snapshot",data,size);},
+    [](void*,uint32_t ns,bool*exists)->int32_t{
+      if(!exists||!valid(ns,"probe")){return RISC_KEY_VALUE_INVALID;}
+      *exists=false;
+      RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_KEY_VALUE_BUSY;
+      if(initializationStatus()!=ESP_OK)return RISC_KEY_VALUE_IO;
+      Handle handle;const auto rc=handle.open(ns,NVS_READONLY);
+      if(rc==ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_OK;
+      if(rc!=ESP_OK){return RISC_KEY_VALUE_IO;}
+      *exists=true;return RISC_KEY_VALUE_OK;
+    }};return &value;
 }
 }

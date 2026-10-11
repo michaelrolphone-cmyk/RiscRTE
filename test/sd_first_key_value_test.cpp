@@ -16,6 +16,10 @@ Store::State state;Store::Workspace workspace;
 Bytes snapshot(uint64_t&generation){Bytes out(Store::Bytes);uint32_t n=0;assert(Store::snapshot(state,3000,out.data(),out.size(),&n,&generation)==0);out.resize(n);return out;}
 void read(const char*key,const char*expected){char out[64]{};uint32_t n=0;assert(Store::get(state,workspace,backend,3000,key,out,sizeof(out),&n)==0&&n==strlen(expected)&&!memcmp(out,expected,n));}
 int main(){
+ // A delivered native namespace is never copied into the 16-key SD cache.
+ auto preserved=backend;preserved.legacyNamespace=[](void*,uint32_t,bool*exists)->int32_t{*exists=true;return 0;};
+ for(unsigned restart=0;restart<3;++restart){state={};assert(Store::restore(state,workspace,preserved,3000,"new-app",nullptr,0,true)==0&&state.status==Store::LegacyNative&&journals.empty()&&!writes);}
+ state={};
  char value[64];uint32_t n=0;uint64_t generation=0;
  assert(Store::get(state,workspace,backend,3000,"mode",value,64,&n)==RISC_KEY_VALUE_BUSY);
  assert(Store::put(state,workspace,backend,3000,"mode","x",1)==RISC_KEY_VALUE_BUSY);

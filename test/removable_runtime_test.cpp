@@ -12,14 +12,17 @@
 #include <cassert>
 #include <fstream>
 #include <vector>
+#include <map>
 #include <string>
 #include <unistd.h>
 #include <cstdlib>
 static std::string mode,root;
+static bool settingsMode(){return mode=="catalog-settings"||mode=="catalog-settings-legacy";}
+static std::map<std::string,std::string> legacySettings;
 static std::vector<uint8_t> payload;
 static unsigned defaults,children,starts,stops,opens,closes,live,previousRuns;
 static bool providerMode(){return mode.find("provider-")==0;}
-static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority"||mode=="catalog-providers"||mode=="catalog-settings";}
+static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority"||mode=="catalog-providers"||settingsMode();}
 static unsigned baseCount(){return mode=="catalog-resident"?2:mode=="catalog-authority"?1:0;}
 extern "C" bool removable_is_resident(){return mode=="catalog-resident";}
 static size_t offset;
@@ -55,11 +58,13 @@ static void installProviderFixture(){
 static unsigned privateWrites;
 static std::vector<uint8_t> settingsJournal,settingsDisk;
 static RiscBoot::KeyValueBackend privateKv{nullptr,
- [](void*,uint32_t ns,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(ns==1000);return RISC_KEY_VALUE_NOT_FOUND;},
- [](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},2048,
+ [](void*,uint32_t ns,const char*key,void*out,uint32_t capacity,uint32_t*n)->int32_t{assert(ns==1000);auto i=legacySettings.find(key);if(i==legacySettings.end())return RISC_KEY_VALUE_NOT_FOUND;*n=i->second.size();if(capacity<*n)return RISC_KEY_VALUE_BUFFER_SMALL;memcpy(out,i->second.data(),*n);return 0;},
+ [](void*,uint32_t ns,const char*key,const void*data,uint32_t n)->int32_t{assert(ns==1000&&mode=="catalog-settings-legacy");legacySettings[key]=std::string(static_cast<const char*>(data),n);return 0;},2048,
  [](void*,uint32_t ns,void*out,uint32_t capacity,uint32_t*n)->int32_t{assert(ns==1000);if(settingsJournal.empty())return RISC_KEY_VALUE_NOT_FOUND;assert(capacity>=settingsJournal.size());*n=settingsJournal.size();memcpy(out,settingsJournal.data(),*n);return 0;},
- [](void*,uint32_t ns,const void*data,uint32_t n)->int32_t{assert(ns==1000);settingsJournal.assign(static_cast<const uint8_t*>(data),static_cast<const uint8_t*>(data)+n);return 0;}};
+ [](void*,uint32_t ns,const void*data,uint32_t n)->int32_t{assert(ns==1000);settingsJournal.assign(static_cast<const uint8_t*>(data),static_cast<const uint8_t*>(data)+n);return 0;},
+ [](void*,uint32_t ns,bool*exists)->int32_t{assert(ns==1000);*exists=!legacySettings.empty();return 0;}};
 static void checkpointSettings(){
+ if(mode=="catalog-settings-legacy"){assert(installer->settings_status(installer->context,1)==4&&settingsJournal.empty());return;}
  settingsDisk.resize(RiscStorage::SdFirstKeyValue::Bytes);uint32_t size=0;uint64_t generation=0;
  assert(installer->settings_snapshot(installer->context,1,settingsDisk.data(),settingsDisk.size(),&size,&generation)==0);settingsDisk.resize(size);
  assert(installer->settings_ack(installer->context,1,generation)==0&&installer->settings_status(installer->context,1)==1);
@@ -73,9 +78,14 @@ static RiscBoot::AppDataBackend privateData{nullptr,
  [](void*){return true;}};
 extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
  if(!catalogMode())return;
- if(mode=="catalog-settings"){
+ if(settingsMode()){
   risc_runtime_capability_v1 setting{};setting.struct_size=sizeof(setting);assert(rt->acquire("storage.key-value",1,0,&setting));
   const auto*kv=static_cast<const risc_key_value_v1*>(setting.api);char out[64]{};uint32_t n=0;
+  if(mode=="catalog-settings-legacy")for(unsigned i=0;i<64;++i){
+   const auto key="key"+std::to_string(i),value="preserved-"+std::to_string(i);
+   if(i<32||children){assert(kv->get(kv->context,key.c_str(),out,sizeof(out),&n)==0&&std::string(out,n)==value);}
+   assert(kv->put(kv->context,key.c_str(),value.data(),value.size())==0);
+  }
   if(children)assert(kv->get(kv->context,"mode",out,sizeof(out),&n)==0&&n==5&&!memcmp(out,"saved",5));
   assert(kv->put(kv->context,"mode","saved",5)==0);assert(rt->release(&setting));
  }
@@ -189,7 +199,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         item.manifest_json=updated.c_str();assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK);
         JsonDocument privateManifest;assert(!deserializeJson(privateManifest,updated));
         auto privateNeed=privateManifest["requires"].add<JsonObject>();privateNeed["capability"]="storage.app-data";privateNeed["api"]=1;
-        if(mode=="catalog-settings"){auto kv=privateManifest["requires"].add<JsonObject>();kv["capability"]="storage.key-value";kv["api"]=1;}
+        if(settingsMode()){auto kv=privateManifest["requires"].add<JsonObject>();kv["capability"]="storage.key-value";kv["api"]=1;}
         std::string privateJson;serializeJson(privateManifest,privateJson);item.manifest_json=privateJson.c_str();uint32_t slot=1;
         assert(installer->namespace_capacity==128);
         int checked=installer->check(installer->context,&item,1,&result,true);assert(checked==RISC_INSTALL_OK&&result.status==(mode=="catalog-authority"?RISC_INSTALL_OK:RISC_INSTALL_DENIED));
@@ -206,7 +216,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
           assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
           launchName="child.elf"; // Existing Home shortcut resolves admitted SD metadata.
         }
-        if(mode=="catalog-settings"){
+        if(settingsMode()){
          assert(installer->settings_capacity==128&&installer->settings_status(installer->context,1)==0);
          const unsigned beforeIo=opens+closes+discoveryIo;assert(!runtime->launch(launchName.c_str()));
          assert(installer->settings_restore(installer->context,0,"child",nullptr,0,true)==RISC_KEY_VALUE_CONTEXT);
@@ -229,7 +239,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
       assert(!runtime->admitInstalledApp(policy,manifest));
       if(!catalogMode())assert(runtime->appCount()==baseCount()+1);
     }
-    if(defaults>1&&mode=="catalog-settings")checkpointSettings();
+    if(defaults>1&&settingsMode())checkpointSettings();
     if(defaults==2 && mode=="replacement"){selectImage("revision2.elf");}
     return defaults<3;}
   if(e==1){assert(!live && opens==closes);++children;assert(value==(mode=="replacement" && children==2?2u:1u));}
@@ -334,7 +344,7 @@ int main(int argc,char** argv) {
     JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
     doc["installation"]["volume_instance"]=9;auto grant=doc["installation"]["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=0;
     if(mode=="catalog-providers")doc["installation"]["provider_grants"].to<JsonArray>();
-    if(mode=="catalog-settings"){doc["installation"]["settings_sd"]=true;auto kv=doc["installation"]["grants"].add<JsonObject>();kv["capability"]="storage.key-value";kv["api"]=1;kv["instance_id"]=0;}
+    if(settingsMode()){doc["installation"]["settings_sd"]=true;auto kv=doc["installation"]["grants"].add<JsonObject>();kv["capability"]="storage.key-value";kv["api"]=1;kv["instance_id"]=0;}
     doc["installation"]["namespace_range"]["first"]=1000;doc["installation"]["namespace_range"]["count"]=128;boot.clear();serializeJson(doc,boot);
     std::ifstream source(root+"/sd.json");std::string raw((std::istreambuf_iterator<char>(source)),{});JsonDocument sd;assert(!deserializeJson(sd,raw));
     auto req=sd["requires"].add<JsonObject>();req["capability"]=RISC_INSTALLATION_CAPABILITY;req["api"]=1;raw.clear();serializeJson(sd,raw);write("sd.json",raw);
@@ -368,7 +378,8 @@ int main(int argc,char** argv) {
     boot.clear();serializeJson(doc,boot);
   }
   write("boot.json",boot);
-  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(mode=="catalog-settings")port.keyValue=&privateKv;runtime=new RiscBoot::Runtime(port);
+  if(mode=="catalog-settings-legacy")for(unsigned i=0;i<32;++i)legacySettings["key"+std::to_string(i)]="preserved-"+std::to_string(i);
+  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(settingsMode())port.keyValue=&privateKv;runtime=new RiscBoot::Runtime(port);
   if(mode=="invalid-path" || mode=="default-external" || mode=="provider-bootstrap") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
   if(catalogMode()){
     // Boot cannot reserve any namespace already owned by an app, even before

@@ -49,7 +49,7 @@ typedef struct {
  uint32_t provider_capacity;
  /* Optional SD-first private KV checkpoint bridge, owner-only. Slot is the
   * existing protected namespace ledger slot. No static/shared namespaces.
-  * Status 0 cold, 1 clean, 2 dirty, 3 uncertain, UINT32_MAX unavailable.
+  * Status 0 cold, 1 clean, 2 dirty, 3 uncertain, 4 existing native namespace, UINT32_MAX unavailable.
   * Restore/snapshot/ack use RISC_KEY_VALUE_* statuses. SD bytes are copied by
   * the caller's worker; ack follows verified atomic replacement only. */
  uint32_t settings_capacity;

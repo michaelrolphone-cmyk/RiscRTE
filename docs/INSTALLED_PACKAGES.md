@@ -409,3 +409,22 @@ KV broker; cold launch denied) pass under UBSan on Darwin. System Apps tests
 exercise 65 interrupted durable states through the real catalog/checkpoint
 coordinator and copied storage worker, plus export and removal recovery. Existing
 cohort/export migration and private scope-denial regression suites pass.
+
+
+## Delivered native-settings preservation (0.2.17)
+
+The 16-key SD snapshot bound is new, not an inherited NVS limit. Before the first
+SD journal is created, the production backend checks whether the original native
+namespace exists. Existing namespaces retain the original NVS backend for all
+reads and writes, including namespaces in the installed range. They are not
+partially migrated, truncated, cleared, or routed through the 16-key snapshot.
+The catalog treats this explicit legacy-native state as ready and schedules no
+SD checkpoint for it. Restart repeats the read-only namespace check; it does not
+need another persistent marker or free NVS space. SD-first snapshots apply only
+to new namespaces. Migrating populated namespaces to SD remains a separate
+operation requiring a format that can preserve their full contents.
+
+The actual Runtime fixture launches a preexisting-namespace app twice, reads
+32 original keys and grows it to 65 keys. Native NVS tests independently read
+back 64 keys and prove journal isolation and no erase. Repeated restore of the
+legacy-native mode leaves the original namespace and SD journal untouched.

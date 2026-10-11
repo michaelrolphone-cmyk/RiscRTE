@@ -510,7 +510,11 @@ int main(int argc, char** argv) {
     CHECK(backend->journalWrite(nullptr,3000,newValue.data(),newValue.size())==0);
     CHECK(store["rte00000bb8"]["snapshot"].bytes==oldValue&&store["kvj00000bb8"]["snapshot"].bytes==newValue);
     uint8_t journal[64]{};uint32_t journalSize=0;CHECK(backend->journalRead(nullptr,3000,journal,sizeof(journal),&journalSize)==0&&journalSize==newValue.size()&&!memcmp(journal,newValue.data(),journalSize));
-    closed();
+    bool exists=true;CHECK(backend->legacyNamespace(nullptr,3001,&exists)==0&&!exists);
+    CHECK(backend->legacyNamespace(nullptr,3000,&exists)==0&&exists);
+    for(unsigned i=0;i<64;++i){auto key="key"+std::to_string(i);CHECK(backend->put(nullptr,3000,key.c_str(),newValue.data(),newValue.size())==0);}
+    for(unsigned i=0;i<64;++i){auto key="key"+std::to_string(i);uint8_t out[64]{};uint32_t n=0;CHECK(backend->get(nullptr,3000,key.c_str(),out,sizeof(out),&n)==0&&n==newValue.size()&&!memcmp(out,newValue.data(),n));}
+    CHECK(eraseAttempts==0);closed();
     std::puts("Native NVS adapter: namespace isolation, bounds, probes, missing/type/size faults, atomic output, every-stage IO and exact readback PASS");
   }
   closed();
