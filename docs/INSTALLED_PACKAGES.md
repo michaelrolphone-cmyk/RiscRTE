@@ -301,8 +301,8 @@ identities refuse the shortcut. Both ordinary and resident launch paths share
 this resolver. The actual host Runtime test launches twice through the old
 filename after discovery and rejects it before admission and after removal.
 
-Product integration must hydrate the catalog in Home before enabling direct
-legacy shortcuts on a cold boot; the present selected client is Springboard.
-Keep migration opt-in until that Home startup integration is qualified. Never
+The selected System-Apps Home 0.4.9 profile hydrates the catalog after its first
+submitted frame and continues copied-worker discovery. The X4 migration composer
+requires this Home alongside the internal-only Springboard list. Never
 fall back to a firmware-declared SD image when no admitted catalog entry exists:
 that could revive an app removed by a durable catalog transaction.
