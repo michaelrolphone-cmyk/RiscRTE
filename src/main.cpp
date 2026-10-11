@@ -16,6 +16,9 @@ extern "C" const char risc_app_requirement_rows[]=RISC_APP_REQUIREMENT_ROWS_MARK
 #include "ports/esp32s3/NativeRadioResources.h"
 #include "ports/esp32s3/NativeRetainedWake.h"
 #include "ports/esp32s3/NativeRealtime.h"
+#ifdef RISC_ENABLE_HTTP
+#include "ports/esp32s3/NativeTlsMemory.h"
+#endif
 #include "ports/esp32s3/NativeBoard.h"
 #include "ports/esp32s3/CooperativeDelay.h"
 #include "ports/esp32s3/SleepDiagnostics.h"
@@ -199,6 +202,12 @@ void setup() {
     const char* failure=risc_native_startup_error();
     if(failure) { diagnosticFormat("RTE_BOOT error=native-startup detail=%s",failure);return; }
   }
+#ifdef RISC_ENABLE_HTTP
+  // Arduino has initialized PSRAM before setup. Install before any bootstrap
+  // or application can start networking; an unavailable hook disables HTTPS.
+  if(!RiscCpu::NativeTlsMemory::initialize())
+    diagnosticLine("RTE_HTTP unavailable=tls-psram-allocator");
+#endif
 #ifndef RISC_EMBEDDED_BOOTSTORE
   if(RiscNvs::initializationStatus()!=ESP_OK) diagnosticFormat("RTE_STORAGE unavailable=nvs code=%d erase_recovery=disabled",RiscNvs::initializationStatus());
 #endif

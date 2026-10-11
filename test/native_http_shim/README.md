@@ -16,7 +16,10 @@ TLS handshake or proof of native memory/latency/hardware behavior.
 
 Production transport uses `esp_tls_conn_new_async` with nonblocking sockets,
 TLS1.2 minimum, full compiled certificate bundle and hostname verification. The
-pinned qio_opi SDK defines CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC and omits
+pinned qio_opi SDK defines CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC, but Runtime now
+installs IDF-equivalent PSRAM-only mbedTLS allocation before networking; see
+`docs/HTTPS_PSRAM_MEMORY.md`. This shim exercises the production hook and models
+its two 16,717-byte record allocations plus handshake metadata. The SDK omits
 CONFIG_MBEDTLS_HAVE_TIME_DATE. The native callback therefore preserves bundle
 verification and adds certificate not-before/not-after checks using copied,
 explicitly supplied UTC. It never changes system time or disables verification.

@@ -1,0 +1,2 @@
+#pragma once
+#define MBEDTLS_ERR_CIPHER_ALLOC_FAILED -0x6180

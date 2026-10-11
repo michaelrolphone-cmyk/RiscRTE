@@ -1,0 +1,2 @@
+#pragma once
+#define MBEDTLS_ERR_MPI_ALLOC_FAILED -0x0010
