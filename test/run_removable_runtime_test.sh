@@ -7,7 +7,7 @@ flags=(-g)
 shared_flags=()
 host_flags=(-rdynamic)
 if [[ "$(uname -s)" == Darwin ]]; then shared_flags=(-Wl,-undefined,dynamic_lookup); host_flags=(-Wno-unused-private-field -Wno-unused-but-set-variable); fi
-if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
+if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=${SANITIZERS:-address,undefined} -fno-omit-frame-pointer); fi
 for name in default revision1 revision2; do
   extra=();if [[ "$name" == default ]]; then extra=(-DREMOVABLE_DEFAULT); elif [[ "$name" == revision2 ]]; then extra=(-DIMAGE_REVISION=2); fi
   cc "${flags[@]}" -std=c11 -shared "${shared_flags[@]}" -fPIC -fvisibility=hidden -I"$repo/sdk/app" "${extra[@]}" "$repo/test/fixtures/removable_app.c" -o "$build/$name.elf"

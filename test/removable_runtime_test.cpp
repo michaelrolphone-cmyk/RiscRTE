@@ -1,5 +1,8 @@
 // Real Runtime and provider lifecycle; host ELF mapping substitutes Xtensa.
 #include "bootstrap/Runtime.h"
+#include "runtime/packages/InstalledAppDiscovery.h"
+#include <dirent.h>
+#include <sys/stat.h>
 #include <esp_elf.h>
 #include <private/esp_dlcache.h>
 #include <dlfcn.h>
@@ -15,6 +18,11 @@ static unsigned defaults,children,starts,stops,opens,closes,live;
 static size_t offset;
 static bool present=true;
 static RiscBoot::Runtime* runtime;
+static std::string launchName="child.elf";
+static FILE* manifestFile;
+static DIR* appDirectory;
+extern "C" const char* removable_launch_name(){return launchName.c_str();}
+extern "C" const risc_storage_volume_api_v1* removable_volume();
 static void write(const std::string& name,const std::string& value){std::ofstream(root+"/"+name)<<value;}
 static void selectImage(const char* name){
   std::ifstream f(root+"/"+name,std::ios::binary);payload.assign(std::istreambuf_iterator<char>(f),{});assert(payload.size()>52);
@@ -34,7 +42,28 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
       bad=manifest;bad.replace(bad.find("\"requires\":[]"),13,"\"requires\":[{\"capability\":\"raw.memory\",\"api\":1}]");
       assert(!runtime->admitInstalledApp(policy,bad.c_str()));
       assert(runtime->appCount()==0);
-      assert(runtime->admitInstalledApp(policy,manifest));
+      // Add metadata to the real mock SD directory only AFTER prepare/first
+      // default entry. No boot policy or firmware launcher names this package.
+      assert(!mkdir((root+"/Apps").c_str(),0700));
+      assert(!mkdir((root+"/Apps/child").c_str(),0700));
+      write("Apps/child/manifest.json",manifest);
+      RiscPackages::InstalledAppDiscovery scan;
+      assert(scan.start(removable_volume(),[](void*,const char* path,const char* json){
+        std::string folder(path);folder.resize(folder.rfind('/')+1);
+        JsonDocument m;assert(!deserializeJson(m,json));
+        launchName=folder+m["file_name"].as<const char*>();
+        JsonDocument p;p["manifest"]=path;p["grants"].to<JsonArray>();
+        p["image_source"]["volume_instance"]=9;p["image_source"]["path"]=launchName;
+        std::string encoded;serializeJson(p,encoded);
+        return runtime->admitInstalledApp(encoded.c_str(),json);
+      },nullptr));
+      unsigned steps=0;
+      while(scan.state()!=RiscPackages::InstalledAppDiscovery::State::Complete){
+        assert(scan.state()!=RiscPackages::InstalledAppDiscovery::State::Failed &&
+               scan.state()!=RiscPackages::InstalledAppDiscovery::State::Retained && ++steps<100);
+        scan.step();
+      }
+      assert(scan.admitted()==1 && !scan.rejected() && !manifestFile && !appDirectory);
       assert(runtime->appCount()==1);
       assert(!runtime->admitInstalledApp(policy,manifest));
       assert(runtime->appCount()==1);
@@ -46,19 +75,32 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
   return 0;
 }
 extern "C" const risc_storage_volume_api_v1* removable_volume() {
-  static risc_storage_volume_api_v1 v{};
-  v.api_version=1;v.struct_size=sizeof(v);
+  static risc_storage_volume_api_v1_ext ext{};auto& v=ext.base;
+  v.api_version=1;v.struct_size=sizeof(ext);
   v.refresh=[](void*){return true;};v.ready=[](void*){return present;};
+  v.dir_open=[](void*,const char* p)->uint32_t{appDirectory=opendir((root+p).c_str());return appDirectory?1:0;};
+  v.dir_next=[](void*,uint32_t,risc_storage_dirent_v1*out){
+    while(auto*e=readdir(appDirectory)){if(e->d_name[0]=='.')continue;
+      snprintf(out->name,sizeof(out->name),"%s",e->d_name);out->is_directory=e->d_type==DT_DIR;return true;}
+    return false;
+  };
+  ext.handle_error=[](void*,uint32_t h,bool dir)->uint32_t{return dir?0:h==2&&manifestFile&&ferror(manifestFile)?1:0;};
+  ext.dir_close_checked=[](void*,uint32_t){bool ok=closedir(appDirectory)==0;if(ok)appDirectory=nullptr;return ok;};
   v.file_open_read=[](void*,const char* p,uint64_t* n)->uint32_t {
+    if(!strcmp(p,"/Apps/child/manifest.json")){
+      manifestFile=fopen((root+p).c_str(),"rb");if(!manifestFile)return 0;
+      assert(!fseek(manifestFile,0,SEEK_END));*n=ftell(manifestFile);rewind(manifestFile);return 2;
+    }
     assert(!strcmp(p,"/Apps/child/child.elf"));
     if(mode=="missing" || mode=="busy")return 0;
     ++opens;live=1;offset=0;*n=payload.size();return 1;
   };
-  v.file_read=[](void*,uint32_t,void* out,size_t n)->size_t {
+  v.file_read=[](void*,uint32_t h,void* out,size_t n)->size_t {
+    if(h==2)return fread(out,1,n,manifestFile);
     assert(live && n<=4096);if(mode=="removed" && offset>1000)return 0;
     n=std::min(size_t(333),std::min(n,payload.size()-offset));memcpy(out,payload.data()+offset,n);offset+=n;return n;
   };
-  v.file_close=[](void*,uint32_t,bool){assert(live);++closes;if(mode=="close-retained")return false;live=0;return true;};
+  v.file_close=[](void*,uint32_t h,bool){if(h==2){bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained")return false;live=0;return true;};
   return &v;
 }
 extern "C" void* esp_elf_malloc(uint32_t n,bool){return malloc(n);}

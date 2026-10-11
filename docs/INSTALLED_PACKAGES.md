@@ -74,3 +74,41 @@ Remaining: persistent catalog provider and storage worker, app ABI/capability,
 App Store installation transaction, Springboard snapshot binding, dependency and
 placement planner, mutable driver activation, cache migration, and X4 composition.
 Do not enable this checkpoint as a completed discovery/provisioning feature.
+
+## Checkpoint 2: bounded metadata scan and provisioning planner
+
+`runtime/packages/InstalledAppDiscovery.h` advances one directory/open/read/close
+operation per step and reads manifests in chunks of at most 512 bytes. It supports
+the current X4 `/Apps/<package>/manifest.json` layout. It requires the checked-close
+and handle-error volume suffix, never calls refresh implicitly, and distinguishes
+complete enumeration from I/O failure/retention. The caller must hold the volume
+provider/dependencies until all handles close; a retained close forbids release.
+An admission callback receives copied manifest bytes and a relative path.
+The scanner does not yet have a target storage-worker scheduler or public app API.
+
+The real Runtime test now creates a manifest in the mock SD filesystem after
+prepare, discovers it through this reader, builds owner policy separately, and
+executes the resulting host module twice through native SD handoff. Fixture native
+registration is the only authority bridge; no shipped product enables it yet.
+
+`scripts/installed_package_plan.py` resolves a bounded app/driver catalog by exact
+capability/API, requiring an explicit owner binding for ambiguity. It rejects
+cycles, missing requirements, collisions and unused bindings. Bootstrap packages
+and their dependency closure remain internal; other selected packages prefer SD
+when ready, with internal fallback when absent. Internal capacity reuses
+`provision_profile.spiffs_charge`; SD capacity is payload-only and still requires
+filesystem/staging accounting. This is an offline planner, not a downloader or
+native graph/grant admission. Its output must feed the existing provisioning and
+full-cohort transaction after complete manifest/hardware validation.
+
+Additional checks: `python3 test/installed_package_plan_test.py` (12 cases),
+`bash test/run_installed_app_discovery_test.sh` (11 cases), and the same discovery
+and Runtime tests with `SANITIZE=1 SANITIZERS=undefined`. ASan is blocked on this
+host before main by recursive sanitizer initialization in macOS malloc/dyld;
+normal and UBSan results do not substitute for future ASan or target qualification.
+
+Xtensa compile checks also pass for the new scanner header (GCC C++17,
+`-Wall -Wextra -Werror -fno-exceptions -fno-rtti`). This does not qualify a linked
+native firmware. Resident-default foreground admission still needs an explicit
+installation lifecycle policy; this checkpoint proves the legacy/default handoff
+path and must not silently mark unknown packages as resident-safe.
