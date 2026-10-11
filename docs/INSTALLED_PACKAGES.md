@@ -1,6 +1,12 @@
-# Dynamic installed packages — checkpoint 1
+# Dynamic installed packages
 
-Status: native app admission foundation, not an enabled product feature.
+Current status: an opt-in development composition now passes target native build,
+39-module ELF/import admission and complete Runtime store self-admission. Dynamic
+SD discovery, cached Springboard, copied async persistence/removal, and durable
+private namespace assignment are implemented. App Store SD transactions, legacy
+settings migration and dependency provisioning remain incomplete. No release or
+hardware qualification is claimed. The checkpoint sections below record the
+implementation progression; see the current boundary at the end.
 
 `reserveInstalledApps(capacity)` reserves stable policy/association slots after
 `prepare()` and before execution. A trusted native installation coordinator can
@@ -193,3 +199,38 @@ The asynchronous worker/volume implementation is now present; see
 record the prior checkpoint, not a justification to leave integration unfinished.
 The current service uses the nonblocking coordinator; Springboard/App Store and
 asynchronous cache writes are still being integrated.
+
+## Current boundary: cached async discovery and durable identities
+
+The System Apps `software.installed-apps` 0.3.0 provider owns schema-3 cached
+manifests and the private identity/namespace ledger. It loads metadata without SD
+I/O. The actual Springboard submits its cached first image before allowing scan
+progress; subsequent input and immutable frame processing continue while copied
+worker requests are pending. A complete scan uses native transactional `check`,
+atomically persists the admitted cache through `RiscBoundAppDataAsyncV1`, then
+publishes native policy. Cancellation collects pending writes and closes copied
+SD operations before any provider release or resident handoff.
+
+An installation envelope may reserve `namespace_range: {first, count}` with at
+most 128 slots. Private storage templates have `instance_id: 0`. The catalog
+assigns slots durably by app identity; tombstones survive uninstall. Native
+admission maps the slot into the reserved range and rejects collisions with
+existing static app, provider or shared-file authority and reassignment of an
+existing private identity. Cohort admission preserves the range and the existing
+bound cache-file owner. Namespace allocation does not provide implicit shared
+settings access or migrate existing static app namespaces.
+
+The actual Runtime test creates a new managed SD package after prepare, scans and
+registers it, then launches its mapped host image twice. Both invocations acquire
+and write through private app-data. The System Apps production Springboard test
+covers launch, Home, controls dismissal and refused launch at 0, 17 and 2300 ms
+physical panel latency. The X4 development store adds the catalog as provider 29,
+uses SD instance 9 and preserves the .80 source baseline. Its qualifier validates
+39 internal target modules, the complete native metadata graph and rejection of
+namespace relocation with zero hardware or storage calls. These are separate
+host/target-link proofs, not a claim of hardware execution.
+
+See System Apps `Services/installed_apps/README.md` and X4
+`minimal/installed-apps-async-checkpoint.json` for the exact current boundary and
+published source revisions. The earlier synchronous scanner remains a fixture/
+planning utility; the selected product path uses `InstalledAppAsyncDiscovery`.
