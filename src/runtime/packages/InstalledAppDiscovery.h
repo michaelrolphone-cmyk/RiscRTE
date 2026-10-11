@@ -1,5 +1,5 @@
 #pragma once
-#include <RiscStorageVolumeV1.h>
+#include <RiscStorageVolumeFsV1.h>
 #include <cstdio>
 #include <cstring>
 namespace RiscPackages {
@@ -10,7 +10,7 @@ namespace RiscPackages {
 // never hashes/maps an image or derives grants from package declarations.
 class InstalledAppDiscovery {
  public:
-  enum class State { Idle, Next, Open, Read, Close, Admit, Closing, Complete, Failed, Retained };
+  enum class State { Idle, Next, Open, CheckMissing, Read, Close, Admit, Closing, Complete, Failed, Retained };
   using Admit=bool (*)(void*,const char* relativeManifest,const char* json);
   bool start(const risc_storage_volume_api_v1* base,Admit admit,void* context) {
     if(state_!=State::Idle || !base || base->api_version!=1 ||
@@ -43,12 +43,20 @@ class InstalledAppDiscovery {
       }
       case State::Open: {
         char absolute[194];std::snprintf(absolute,sizeof(absolute),"/%s",path_);
-        file_=v.file_open_read(v.context,absolute,&size_);used_=0;
-        // Absence and I/O cannot be distinguished by this base operation.
-        // Conservatively abort reconciliation, never claim a complete empty scan.
-        if(!file_){failed_=true;state_=State::Closing;break;}
-        if(!size_ || size_>4096){failed_=true;state_=State::Close;break;}
+        file_=v.file_open_read(v.context,absolute,&size_);used_=0;rejectedFile_=false;
+        if(!file_){state_=State::CheckMissing;break;}
+        if(!size_ || size_>4096){rejectedFile_=true;state_=State::Close;break;}
         state_=State::Read;break;
+      }
+      case State::CheckMissing: {
+        // A confirmed absent manifest is an invalid package, not failed media.
+        // Older volumes cannot distinguish absence from an I/O error: preserve
+        // the old catalog rather than publishing a possibly incomplete scan.
+        const auto*fs=risc_storage_volume_fs(&v);risc_storage_metadata_v1 meta{};
+        meta.struct_size=sizeof(meta);char absolute[194];
+        std::snprintf(absolute,sizeof(absolute),"/%s",path_);
+        if(fs && fs->metadata(v.context,absolute,&meta)==RISC_STORAGE_FS_NOT_FOUND){++rejected_;state_=State::Next;}
+        else {failed_=true;state_=State::Closing;}break;
       }
       case State::Read: {
         const size_t remaining=size_t(size_)-used_, request=remaining<512?remaining:512;
@@ -59,7 +67,8 @@ class InstalledAppDiscovery {
       case State::Close:
         if(volume_->handle_error(v.context,file_,false))failed_=true;
         if(!v.file_close(v.context,file_,false)){state_=State::Retained;break;}
-        file_=0;state_=failed_?State::Closing:State::Admit;break;
+        file_=0;if(rejectedFile_)++rejected_;
+        state_=failed_?State::Closing:rejectedFile_?State::Next:State::Admit;break;
       case State::Admit:
         json_[used_]=0;
         if(std::memchr(json_,0,used_) || !admit_(context_,path_,json_))++rejected_;else ++admitted_;
@@ -86,6 +95,6 @@ class InstalledAppDiscovery {
   Admit admit_=nullptr;void*context_=nullptr;
   State state_=State::Idle;uint32_t directory_=0,file_=0;
   uint64_t size_=0;size_t used_=0;unsigned visited_=0,admitted_=0,rejected_=0;
-  bool failed_=false;char path_[193]{},json_[4097]{};
+  bool failed_=false,rejectedFile_=false;char path_[193]{},json_[4097]{};
 };
 }

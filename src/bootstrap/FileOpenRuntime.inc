@@ -75,14 +75,14 @@ uint32_t Runtime::fileHandlerCount(const char* source) const {
   char extension[FileOpenMetadata::TypeBytes];
   if(!fileOpenReady() || !fileHandlers_ || !fileOpenExtension(source,extension))return 0;
   uint32_t count=0;
-  for(size_t i=0;i<policyCount_;++i)if(fileOpenMatches(fileHandlers_[i],extension))++count;
+  for(size_t i=0;i<policyCount_;++i)if(policies_[i].enabled && fileOpenMatches(fileHandlers_[i],extension))++count;
   return count;
 }
 bool Runtime::fileHandlerGet(const char* source,uint32_t index,t5_file_handler_t* out) const {
   if(out)*out={};
   char extension[FileOpenMetadata::TypeBytes];
   if(!out || !fileOpenReady() || !fileHandlers_ || !fileOpenExtension(source,extension))return false;
-  for(size_t i=0;i<policyCount_;++i)if(fileOpenMatches(fileHandlers_[i],extension)) {
+  for(size_t i=0;i<policyCount_;++i)if(policies_[i].enabled && fileOpenMatches(fileHandlers_[i],extension)) {
     if(!index){*out=fileHandlers_[i].handler;return true;}--index;
   }
   return false;
@@ -95,7 +95,7 @@ bool Runtime::fileOpenRequest(const char* source,const char* id,uint64_t cookie)
      !fileHandlers_ || !id || !*id || strnlen(id,T5_FILE_HANDLER_ID_MAX)>=T5_FILE_HANDLER_ID_MAX ||
      !fileOpenExtension(source,extension) || (port_.appExitSafe && !port_.appExitSafe()))return false;
   for(size_t i=0;i<policyCount_;++i) {
-    if(strcmp(policies_[i].id,id) || &policies_[i]==invocation_->appPolicy_ || !fileOpenMatches(fileHandlers_[i],extension))continue;
+    if(!policies_[i].enabled || strcmp(policies_[i].id,id) || &policies_[i]==invocation_->appPolicy_ || !fileOpenMatches(fileHandlers_[i],extension))continue;
     if(residentEnabled_ && !residentAllowed(policies_[i].elf) && !residentLegacyAllowed(policies_[i].elf))return false;
     // These indices refer only to immutable deployment-admitted policy records.
     // The SD path is data, never a launch path. Caller and receiver map afresh.

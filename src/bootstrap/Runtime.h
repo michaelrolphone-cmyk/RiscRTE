@@ -1,6 +1,7 @@
 #pragma once
 #include "RiscMemoryHeapV1.h"
 #include "RiscRandomV1.h"
+#include <RiscInstallationV1.h>
 #include "Board.h"
 #include "AppPolicyLimits.h"
 #include "AppRequirementLimits.h"
@@ -332,6 +333,7 @@ class Runtime final {
   static int32_t appDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
+    bool enabled=true;
     char sourcePath[193]{}; PolicyIndex sourceDriver=-1;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
     const RiscStorage::AppDataExport::Entry* exports=nullptr;
@@ -342,6 +344,15 @@ class Runtime final {
   size_t policyCapacity_=0, bootPolicyCount_=0;
   struct InstalledAppMetadata {char manifest[4097]{};};
   MetadataArray<InstalledAppMetadata> installedMetadata_;
+  struct InstallationState {
+    risc_installation_v1 api{};uint64_t volume=0;char grants[4097]{};bool call=false;
+  };
+  MetadataArray<InstallationState> installation_;
+  bool configureInstallation(JsonVariantConst);
+  static int32_t installationAdmit(void*,const char*,const char*,char*,uint32_t);
+  static int32_t installationForget(void*,const char*,bool);
+  static int32_t installationCommit(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
+  bool installationMutable(size_t)const;
   void* loadRemovableApp(const AppPolicy&);
   RuntimeProviders::GrantV2 retainedAppSource_{};
   MetadataArray<RiscStorage::AppDataExport::Entry> exportEntries_[MaxAppPolicies];

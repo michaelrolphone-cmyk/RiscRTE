@@ -8,8 +8,8 @@ shared_flags=()
 host_flags=(-rdynamic)
 if [[ "$(uname -s)" == Darwin ]]; then shared_flags=(-Wl,-undefined,dynamic_lookup); host_flags=(-Wno-unused-private-field -Wno-unused-but-set-variable); fi
 if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=${SANITIZERS:-address,undefined} -fno-omit-frame-pointer); fi
-for name in default revision1 revision2; do
-  extra=();if [[ "$name" == default ]]; then extra=(-DREMOVABLE_DEFAULT); elif [[ "$name" == revision2 ]]; then extra=(-DIMAGE_REVISION=2); fi
+for name in default previous revision1 revision2; do
+  extra=();if [[ "$name" == default ]]; then extra=(-DREMOVABLE_DEFAULT); elif [[ "$name" == previous ]]; then extra=(-DREMOVABLE_PREVIOUS); elif [[ "$name" == revision2 ]]; then extra=(-DIMAGE_REVISION=2); fi
   cc "${flags[@]}" -std=c11 -shared "${shared_flags[@]}" -fPIC -fvisibility=hidden -I"$repo/sdk/app" "${extra[@]}" "$repo/test/fixtures/removable_app.c" -o "$build/$name.elf"
 done
 cc "${flags[@]}" -std=c11 -shared "${shared_flags[@]}" -fPIC -fvisibility=hidden -I"$repo/sdk/app" -I"$repo/sdk/driver" "$repo/test/fixtures/removable_provider.c" -o "$build/sd.elf"
@@ -20,6 +20,6 @@ c++ "${flags[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initialize
   "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/test/removable_runtime_test.cpp" -ldl -o "$build/test"
-for mode in discovery normal replacement absent missing busy removed malformed close-retained invalid-path default-external; do
+for mode in catalog-resident catalog discovery normal replacement absent missing busy removed malformed close-retained invalid-path default-external; do
   "$build/test" "$build" "$mode"
 done

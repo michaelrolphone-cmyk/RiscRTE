@@ -35,11 +35,11 @@ bool Runtime::residentPolicy(JsonVariantConst value) {
   residentEnabled_=true;return true;
 }
 bool Runtime::residentAllowed(const char* absolute) const {
-  for(size_t p=0;p<policyCount_;++p)if(residentForeground_[p] && !strcmp(policies_[p].elf,absolute))return true;
+  for(size_t p=0;p<policyCount_;++p)if(policies_[p].enabled && residentForeground_[p] && !strcmp(policies_[p].elf,absolute))return true;
   return false;
 }
 bool Runtime::residentLegacyAllowed(const char* absolute) const {
-  for(size_t p=0;p<policyCount_;++p)if(residentLegacy_[p] && !strcmp(policies_[p].elf,absolute))return true;
+  for(size_t p=0;p<policyCount_;++p)if(policies_[p].enabled && residentLegacy_[p] && !strcmp(policies_[p].elf,absolute))return true;
   return false;
 }
 bool Runtime::residentToken(uint64_t token,uint32_t role,bool entry) const {

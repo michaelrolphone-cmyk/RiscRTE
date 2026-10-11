@@ -1,5 +1,6 @@
 // Real Runtime and provider lifecycle; host ELF mapping substitutes Xtensa.
 #include "bootstrap/Runtime.h"
+#include <RiscResidentShellV1.h>
 #include "runtime/packages/InstalledAppDiscovery.h"
 #include <dirent.h>
 #include <sys/stat.h>
@@ -14,10 +15,15 @@
 #include <cstdlib>
 static std::string mode,root;
 static std::vector<uint8_t> payload;
-static unsigned defaults,children,starts,stops,opens,closes,live;
+static unsigned defaults,children,starts,stops,opens,closes,live,previousRuns;
+static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident";}
+static unsigned baseCount(){return mode=="catalog-resident"?2:0;}
+extern "C" bool removable_is_resident(){return mode=="catalog-resident";}
 static size_t offset;
 static bool present=true;
 static RiscBoot::Runtime* runtime;
+static const risc_installation_v1* installer;
+extern "C" void removable_installation(const void*api){installer=static_cast<const risc_installation_v1*>(api);}
 static std::string launchName="child.elf";
 static FILE* manifestFile;
 static DIR* appDirectory;
@@ -29,8 +35,8 @@ static void selectImage(const char* name){
 }
 extern "C" unsigned removable_event(unsigned e,unsigned value) {
   if(e==0){++defaults;
-    if(defaults==1 && mode=="discovery") {
-      assert(runtime->appCount()==0);
+    if(defaults==1 && (mode=="discovery"||catalogMode())) {
+      assert(runtime->appCount()==baseCount());
       const char* manifest=R"({"type":"application","id":"child","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"child.elf","entry":"app_main","requires":[]})";
       const char* policy=R"({"manifest":"child.json","grants":[],"image_source":{"volume_instance":9,"path":"Apps/child/child.elf"}})";
       // Failed admission cannot consume a slot or poison the subsequent app.
@@ -41,38 +47,63 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
       assert(!runtime->admitInstalledApp(bad.c_str(),manifest));
       bad=manifest;bad.replace(bad.find("\"requires\":[]"),13,"\"requires\":[{\"capability\":\"raw.memory\",\"api\":1}]");
       assert(!runtime->admitInstalledApp(policy,bad.c_str()));
-      assert(runtime->appCount()==0);
+      assert(runtime->appCount()==baseCount());
       // Add metadata to the real mock SD directory only AFTER prepare/first
       // default entry. No boot policy or firmware launcher names this package.
-      assert(!mkdir((root+"/Apps").c_str(),0700));
-      assert(!mkdir((root+"/Apps/child").c_str(),0700));
+      (void)mkdir((root+"/Apps").c_str(),0700);
+      (void)mkdir((root+"/Apps/child").c_str(),0700);
       write("Apps/child/manifest.json",manifest);
+      std::vector<std::pair<std::string,std::string>> staged;
       RiscPackages::InstalledAppDiscovery scan;
-      assert(scan.start(removable_volume(),[](void*,const char* path,const char* json){
+      assert(scan.start(removable_volume(),[](void*ctx,const char* path,const char* json){
+        static_cast<std::vector<std::pair<std::string,std::string>>*>(ctx)->emplace_back(path,json);return true;
+      },&staged));
+      unsigned steps=0;
+      while(scan.state()!=RiscPackages::InstalledAppDiscovery::State::Complete){
+        assert(scan.state()!=RiscPackages::InstalledAppDiscovery::State::Failed &&
+               scan.state()!=RiscPackages::InstalledAppDiscovery::State::Retained && ++steps<100);
+        scan.step();assert(runtime->appCount()==baseCount());
+      }
+      if(catalogMode()){
+        assert(installer);risc_install_candidate_v1 item{staged[0].first.c_str(),staged[0].second.c_str()};risc_install_result_v1 result{};
+        assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+        launchName=result.launch_path;assert(runtime->appCount()==baseCount()+1);
+        assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK&&runtime->appCount()==baseCount()+1);
+        assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
+        assert(installer->commit(installer->context,&item,1,&result,true)==RISC_INSTALL_OK);
+      } else for(const auto& item:staged){const char*path=item.first.c_str();const char*json=item.second.c_str();
         std::string folder(path);folder.resize(folder.rfind('/')+1);
         JsonDocument m;assert(!deserializeJson(m,json));
         launchName=folder+m["file_name"].as<const char*>();
         JsonDocument p;p["manifest"]=path;p["grants"].to<JsonArray>();
         p["image_source"]["volume_instance"]=9;p["image_source"]["path"]=launchName;
         std::string encoded;serializeJson(p,encoded);
-        return runtime->admitInstalledApp(encoded.c_str(),json);
-      },nullptr));
-      unsigned steps=0;
-      while(scan.state()!=RiscPackages::InstalledAppDiscovery::State::Complete){
-        assert(scan.state()!=RiscPackages::InstalledAppDiscovery::State::Failed &&
-               scan.state()!=RiscPackages::InstalledAppDiscovery::State::Retained && ++steps<100);
-        scan.step();
+        assert(runtime->admitInstalledApp(encoded.c_str(),json));
       }
       assert(scan.admitted()==1 && !scan.rejected() && !manifestFile && !appDirectory);
-      assert(runtime->appCount()==1);
+      assert(runtime->appCount()==baseCount()+1);
       assert(!runtime->admitInstalledApp(policy,manifest));
-      assert(runtime->appCount()==1);
+      assert(runtime->appCount()==baseCount()+1);
     }
     if(defaults==2 && mode=="replacement")selectImage("revision2.elf");return defaults<3;}
   if(e==1){assert(!live && opens==closes);++children;assert(value==(mode=="replacement" && children==2?2u:1u));}
+  if(e==6){++previousRuns;assert(value==1);}
   if(e==2)++starts;
   if(e==3){assert(!live);++stops;}
   return 0;
+}
+extern "C" void removable_resident_entry(const risc_runtime_api_v1*rt){
+  risc_resident_client_v1 host{};host.struct_size=sizeof(host);assert(rt->resident_shell(&host));
+  risc_resident_callbacks_v1 callbacks{1,sizeof(callbacks),nullptr,
+    [](void*,const risc_resident_request_v1*,risc_resident_reply_v1*)->int32_t{return RISC_RESIDENT_OK;},nullptr,nullptr};
+  assert(host.register_shell(host.invocation,&callbacks)==RISC_RESIDENT_OK);
+  if(defaults==0){risc_resident_result_v1 result{};result.struct_size=sizeof(result);
+    assert(host.run_foreground(host.invocation,"previous.elf",&result)==RISC_RESIDENT_OK);
+    assert(previousRuns==1); // Inactive allocated foreground context remains.
+  }
+  if(removable_event(0,0)){risc_resident_result_v1 result{};result.struct_size=sizeof(result);
+    assert(host.run_foreground(host.invocation,launchName.c_str(),&result)==RISC_RESIDENT_HANDOFF);
+  }
 }
 extern "C" const risc_storage_volume_api_v1* removable_volume() {
   static risc_storage_volume_api_v1_ext ext{};auto& v=ext.base;
@@ -128,17 +159,33 @@ int main(int argc,char** argv) {
   std::string boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[{"manifest":"child.json","grants":[],"image_source":{"volume_instance":9,"path":"Apps/child/child.elf"}}]})";
   if(mode=="invalid-path")boot.replace(boot.find("Apps/child/child.elf"),20,"../child.elf");
   if(mode=="default-external")boot.replace(boot.find("default.elf"),11,"child.elf");
-  if(mode=="discovery")boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[]})";
+  if(mode=="discovery"||catalogMode())boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[]})";
+  if(catalogMode()){
+    JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
+    doc["installation"]["volume_instance"]=9;doc["installation"]["grants"].to<JsonArray>();boot.clear();serializeJson(doc,boot);
+    std::ifstream source(root+"/sd.json");std::string raw((std::istreambuf_iterator<char>(source)),{});JsonDocument sd;assert(!deserializeJson(sd,raw));
+    auto req=sd["requires"].add<JsonObject>();req["capability"]=RISC_INSTALLATION_CAPABILITY;req["api"]=1;raw.clear();serializeJson(sd,raw);write("sd.json",raw);
+  }
+  if(mode=="catalog-resident"){
+    JsonDocument doc;assert(!deserializeJson(doc,boot));
+    auto shell=doc["resident_shell"].to<JsonObject>();shell["api"]=1;shell["host"]="default.elf";shell["foreground"].to<JsonArray>().add("previous.elf");
+    for(const char*name:{"default","previous"}){
+      JsonDocument m;m["type"]="application";m["id"]=name;m["version"]="1.0.0";m["architecture"]="xtensa-esp32s3";m["file_name"]=std::string(name)+".elf";m["entry"]="app_main";m["requires"].to<JsonArray>();
+      std::string raw;serializeJson(m,raw);write(std::string(name)+".json",raw);
+      auto policy=doc["app_capabilities"].add<JsonObject>();policy["manifest"]=std::string(name)+".json";policy["grants"].to<JsonArray>();
+    }
+    boot.clear();serializeJson(doc,boot);
+  }
   write("boot.json",boot);
   runtime=new RiscBoot::Runtime({[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});
   if(mode=="invalid-path" || mode=="default-external") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
   if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
   if(mode=="discovery")assert(runtime->reserveInstalledApps(4));
   unsigned inspected=0;
-  assert(runtime->inspectImages([](void* c,const char* p,bool){assert(!strstr(p,"child.elf"));++*static_cast<unsigned*>(c);return true;},&inspected));assert(inspected==2);
+  assert(runtime->inspectImages([](void* c,const char* p,bool){assert(!strstr(p,"child.elf"));++*static_cast<unsigned*>(c);return true;},&inspected));assert(inspected==(mode=="catalog-resident"?3u:2u));
   const bool retained=mode=="close-retained";
   assert(runtime->run()!=retained);assert(runtime->retained()==retained);
   if(retained){assert(defaults==1 && !children && live && !stops);}
-  else {assert(defaults==3 && !live && starts==stops);assert(children==((mode=="normal" || mode=="replacement" || mode=="discovery")?2u:0u));delete runtime;}
+  else {assert(defaults==3 && !live && starts==stops);assert(children==((mode=="normal" || mode=="replacement" || (mode=="discovery"||catalogMode()))?2u:0u));delete runtime;}
   printf("SD Runtime mode=%s defaults=%u children=%u opens=%u closes=%u provider_starts=%u stops=%u PASS\n",mode.c_str(),defaults,children,opens,closes,starts,stops);
 }

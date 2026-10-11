@@ -181,7 +181,7 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
                strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
-               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY))) return false;
+               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY) && strcmp(capability,RISC_INSTALLATION_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
@@ -304,8 +304,9 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     if (!keys(item,{"manifest","grants"},{"app_data_export","image_source"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,policy.elf,sizeof(policy.elf)) || (suppliedManifest.isNull() && !readJson(policy.elf,doc,&metadataCloseRetained_))) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=suppliedManifest.isNull()?doc.as<JsonObjectConst>():suppliedManifest.as<JsonObjectConst>(); char filename[128];
-    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types"}) ||
+    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","runtime_lifecycle"}) ||
         !eq(manifest["type"],"application") || !eq(manifest["architecture"],"xtensa-esp32s3") || !eq(manifest["entry"],"app_main") ||
+        (!manifest["runtime_lifecycle"].isUnbound() && !eq(manifest["runtime_lifecycle"],"foreground") && !eq(manifest["runtime_lifecycle"],"legacy")) ||
         !text(manifest["id"],policy.id,sizeof(policy.id)) || !RuntimePackages::safeId(policy.id) ||
         !text(manifest["version"],policy.version,sizeof(policy.version)) || !RuntimePackages::safeVersion(policy.version) ||
         !text(manifest["file_name"],filename,sizeof(filename)) || !RuntimePackages::safeArtifact(filename) || !elfPath(filename) ||
@@ -781,7 +782,7 @@ bool Runtime::prepare(const char* root) {
   JsonObjectConst c=config.as<JsonObjectConst>();
   if (!c["port"].isNull() && !board_.port(c["port"])) return fail(board_.error());
   if(!RiscUpdate::validCohortMigration(c["cohort_migration"]))return fail("invalid cohort migration policy");
-  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities","cohort_migration","provider_activation","resident_shell"}) || !text(c["board"],relative,sizeof(relative)) ||
+  if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities","cohort_migration","provider_activation","resident_shell","installation"}) || !text(c["board"],relative,sizeof(relative)) ||
       !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc,&metadataCloseRetained_) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
   // Activation policy never filters admission, registration or image inspection.
   const auto activation=c["provider_activation"];
@@ -807,7 +808,7 @@ bool Runtime::prepare(const char* root) {
     ++driverCount_;
   }
   registrationOpen_=true;
-  const bool bound=(!port_.bindPlatforms || port_.bindPlatforms(*this)) && registerProviderRealtime();
+  const bool bound=(!port_.bindPlatforms || port_.bindPlatforms(*this)) && registerProviderRealtime() && configureInstallation(c["installation"]);
   registrationOpen_=false;
   if (!bound) return fail("trusted platform binding failed");
   if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !configureAppDataExports(c["app_capabilities"]) || !residentPolicy(c["resident_shell"]) || !configureInstalledFiles(c)) return false;
@@ -840,7 +841,9 @@ bool Runtime::prepare(const char* root) {
     if(selected ? !registerNativeProvider(d,spec,*selected) : !graph_.addVerified(spec))
       return fail(error_[0]?error_:"driver registration failed");
   }
-  strcpy(default_,invocation_->current_); prepared_=true; return true;
+  strcpy(default_,invocation_->current_); prepared_=true;
+  if(installation_ && !reserveInstalledApps(MaxAppPolicies))return fail("installed registry reservation failed");
+  return true;
 }
 bool Runtime::registerNativeProvider(const Driver& d,RuntimeProviders::SpecV2& spec,
                                      const RuntimeProviders::NativeProviderPolicyV1& policy) {
@@ -1162,13 +1165,14 @@ bool Runtime::runOne(const char* name) {
   RiscPerf::emit(12);
   const AppPolicy* policy=nullptr;
   for(size_t p=0;p<policyCount_;++p)if(!strcmp(policies_[p].elf,name))policy=&policies_[p];
+  if(policy && !policy->enabled)fail("installed app unavailable");
 #if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
   // Only exact prepared installed-image paths enter this session's cache.
   // Loose child paths retain the ordinary reader and admission behavior.
-  void* module=policy && policy->sourceDriver>=0 ? loadRemovableApp(*policy) : (policy || !strcmp(name,default_)) ?
+  void* module=policy && !policy->enabled ? nullptr : policy && policy->sourceDriver>=0 ? loadRemovableApp(*policy) : (policy || !strcmp(name,default_)) ?
     esp_dlopen_cached_instance(&appImages_,name) : esp_dlopen_instance(name);
 #else
-  void* module=policy && policy->sourceDriver>=0 ? loadRemovableApp(*policy) : esp_dlopen_instance(name);
+  void* module=policy && !policy->enabled ? nullptr : policy && policy->sourceDriver>=0 ? loadRemovableApp(*policy) : esp_dlopen_instance(name);
 #endif
   RISC_STAGE_LOG("app load end file=%s result=%s elapsed_us=%llu",name,module?"ok":"failed",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
@@ -1416,7 +1420,7 @@ bool Runtime::run() {
 // The installation coordinator supplies owner-resolved policy separately from
 // untrusted package declarations. Discovering a file never confers authority.
 bool RiscBoot::Runtime::reserveInstalledApps(size_t capacity) {
-  if(currentRuntime || !default_[0] || retained_ || !port_.owner() ||
+  if(currentRuntime==this || !default_[0] || retained_ || !port_.owner() ||
      capacity<policyCount_ || capacity>MaxAppPolicies || installedMetadata_)return false;
   auto policies=metadataArray<AppPolicy>(capacity);
   auto metadata=metadataArray<InstalledAppMetadata>(capacity);
@@ -1433,8 +1437,9 @@ bool RiscBoot::Runtime::admitInstalledApp(const char* policyJson,const char* man
      strnlen(policyJson,4097)>4096 || strnlen(manifestJson,4097)>4096)return false;
   // A foreground/child may not mutate the host's registry, and no in-flight
   // continuation can be silently redirected by admitting a duplicate identity.
-  if(currentRuntime && (currentRuntime!=this || !active() || invocation_!=&mainInvocation_ ||
-     strcmp(invocation_->current_,default_) || foreground_ || invocation_->streams_.busy()))return false;
+  if(!(installation_ && installation_[0].call) && currentRuntime && (currentRuntime!=this || !active() || invocation_!=&mainInvocation_ ||
+     strcmp(invocation_->current_,default_) || foregroundRunning_ ||
+     (foreground_ && foreground_->active_) || invocation_->streams_.busy()))return false;
   JsonDocument policy,manifest,rows;
   if(deserializeJson(policy,policyJson) || deserializeJson(manifest,manifestJson) ||
      !policy.is<JsonObjectConst>() || !manifest.is<JsonObjectConst>() ||
@@ -1448,3 +1453,5 @@ bool RiscBoot::Runtime::admitInstalledApp(const char* policyJson,const char* man
   strcpy(installedMetadata_[slot].manifest,manifestJson);
   return true;
 }
+
+#include "InstallationRuntime.inc"

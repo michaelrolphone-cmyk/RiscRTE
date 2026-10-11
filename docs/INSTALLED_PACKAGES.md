@@ -112,3 +112,52 @@ Xtensa compile checks also pass for the new scanner header (GCC C++17,
 native firmware. Resident-default foreground admission still needs an explicit
 installation lifecycle policy; this checkpoint proves the legacy/default handoff
 path and must not silently mark unknown packages as resident-safe.
+
+## Native installation boundary (experimental branch, October 11)
+
+`RiscInstallationV1.h` exposes provider-only, owner-task metadata admission. An
+optional `installation` boot envelope selects the storage volume and allowable
+capability/API/provider bindings; it contains no application identities. The
+ordinary application declaration validator constructs each dynamic policy from
+its installed manifest. `commit` publishes a completed scan transaction, rolls
+back on busy/capacity failure, and disables removed dynamic launch paths.
+`forget(..., true)` is a mutation-free uninstall preflight. Bootstrap policies
+remain protected. A dynamic policy can request the existing resident foreground
+contract with `runtime_lifecycle: "foreground"`; otherwise it uses legacy handoff.
+No callback in this interface opens or hashes an executable.
+
+`catalog-resident` in `test/run_removable_runtime_test.sh` launches and exits a
+previous foreground app before discovering a newly created managed directory,
+committing its manifest and launching its returned path twice. It uses the real
+Runtime policy/provider/resident lifecycle with host executable mapping, not an
+Xtensa hardware execution. `catalog` also exercises idempotent commit and
+withdraw/re-admit. Existing absent, removed, malformed and retained-close tests
+remain enabled. Normal and UBSan runs pass.
+
+The metadata reader now distinguishes a confirmed missing manifest from a media
+I/O failure. Missing, empty and oversized package manifests do not discard a
+later valid package. An incomplete enumeration still cannot publish a catalog.
+
+### Required next boundary: asynchronous SD work
+
+This branch does NOT yet implement a background SD executor. The current X4
+`minimal/Drivers/x4pro_sd/driver.c` gates entry with `platform.sync.is_owner`, and
+`CpuSdmmc.inc` and `NativeSdmmc.h` independently enforce native owner access.
+`RiscProviderSyncV1.h` explicitly describes a reentrancy guard, not a thread mutex.
+The existing clock sleep hook does not make filesystem operations asynchronous.
+Do not move the current API table to a worker, widen global native ownership, or
+call its synchronous scanner from input/render/panel-settle loops.
+
+The next implementation must provide scoped queued storage operations, copied
+request/result ownership, serialization against launch/USB export/sleep, and
+checked cancellation that retains the provider until its outstanding request is
+quiescent. Native metadata commit remains an owner-side logical checkpoint.
+Progress cannot depend on physical display settling. SD driver start currently
+calls `init_card`, so lazy provider activation must be included in this work;
+queuing only directory reads would still block the first request.
+
+Durable namespace allocation for newly admitted key-value/app-data consumers,
+dynamic driver graph activation, and on-device verified package installation are
+not implemented by this API. The envelope deliberately rejects namespace-owning
+and raw native capabilities until an independent allocation protocol exists.
+The new SDK is an experimental feature-branch API, not a released native version.

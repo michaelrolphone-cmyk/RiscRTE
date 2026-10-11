@@ -8,7 +8,12 @@ namespace RiscLimits {
 constexpr size_t Apps=19,Providers=17,Grants=32;
 static_assert(Grants>=Providers+12,"Legacy boot pins must leave room for app grants");
 #else
+#if defined(RISC_INSTALLED_APP_CAPACITY)
+static_assert(RISC_INSTALLED_APP_CAPACITY>=28 && RISC_INSTALLED_APP_CAPACITY<=64,"installed app capacity 28..64");
+constexpr size_t Apps=RISC_INSTALLED_APP_CAPACITY,Providers=29,Grants=45;
+#else
 constexpr size_t Apps=28,Providers=28,Grants=44;
+#endif
 // Preserve the cohort's sixteen shared non-boot graph slots. Resident host
 // and foreground grants share this reserve; their combined use is bounded by
 // Grants, not by the independent sixteen-slot invocation ledgers.
