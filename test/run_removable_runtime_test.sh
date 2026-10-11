@@ -20,6 +20,6 @@ c++ "${flags[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initialize
   "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/test/removable_runtime_test.cpp" -ldl -o "$build/test"
-for mode in catalog-resident catalog discovery normal replacement absent missing busy removed malformed close-retained invalid-path default-external; do
+for mode in catalog-authority catalog-resident catalog discovery normal replacement absent missing busy removed malformed close-retained invalid-path default-external; do
   "$build/test" "$build" "$mode"
 done

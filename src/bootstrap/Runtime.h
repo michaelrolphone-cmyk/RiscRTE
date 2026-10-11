@@ -347,7 +347,7 @@ class Runtime final {
   static int32_t appDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
-    bool enabled=true;
+    bool enabled=true, catalogAuthority=false;
     char sourcePath[193]{}; PolicyIndex sourceDriver=-1;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
     const RiscStorage::AppDataExport::Entry* exports=nullptr;

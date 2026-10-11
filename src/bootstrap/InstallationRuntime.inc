@@ -67,23 +67,46 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
  policy["manifest"]=relative;policy["image_source"]["volume_instance"]=r->installation_[0].volume;
  policy["image_source"]["path"]=image;auto grants=policy["grants"].to<JsonArray>();
  if(!manifest["requires"].is<JsonArrayConst>())return RISC_INSTALL_INVALID;
+ // Immutable boot reservations preserve a legacy identity's exact grants,
+ // including multiple shared/private KV namespaces and named shared files.
+ // They are never launchable and never confer authority to another identity.
+ const AppPolicy* authority=nullptr;
+ for(size_t i=0;i<r->bootPolicyCount_;++i)if(r->policies_[i].catalogAuthority&&!strcmp(r->policies_[i].id,id))authority=&r->policies_[i];
+ if(authority){
+  if(authority->sourceDriver<0 || r->drivers_[authority->sourceDriver].instance!=r->installation_[0].volume)return RISC_INSTALL_DENIED;
+  // A migrated identity remains pinned to its original managed directory.
+  const char* oldSlash=strrchr(authority->sourcePath,'/');
+  if(!oldSlash || size_t(oldSlash-authority->sourcePath)!=size_t(slash-relative)+1 ||
+     strncmp(authority->sourcePath+1,relative,size_t(slash-relative)))return RISC_INSTALL_DENIED;
+ }
  for(JsonObjectConst requirement:manifest["requires"].as<JsonArrayConst>()){
-  unsigned matches=0;for(JsonObjectConst allowed:envelope.as<JsonArrayConst>())
-   if(requirement["capability"]==allowed["capability"]&&requirement["api"]==allowed["api"]){
-    auto grant=grants.add<JsonObject>();grant.set(allowed);
-    if(eq(allowed["capability"],"storage.key-value")||eq(allowed["capability"],"storage.app-data")){
-     const auto&s=r->installation_[0];if(!s.namespaceSlot||s.namespaceSlot>s.namespaceCount)return RISC_INSTALL_DENIED;
-     grant["instance_id"]=s.namespaceFirst+s.namespaceSlot-1;
-    }
+  unsigned matches=0;
+  if(authority){
+   for(size_t g=0;g<authority->count;++g){const auto& allowed=authority->grants[g];
+    if(requirement["capability"]!=allowed.capability || requirement["api"]!=allowed.api)continue;
+    auto grant=grants.add<JsonObject>();grant["capability"]=allowed.capability;grant["api"]=allowed.api;grant["instance_id"]=allowed.instance;
+    if(allowed.driver==SharedDataDriver)grant["file"]=allowed.sharedFile;
     ++matches;
    }
-  if(matches!=1)return RISC_INSTALL_DENIED;
+   if(!matches)return RISC_INSTALL_DENIED;
+  }else{
+   for(JsonObjectConst allowed:envelope.as<JsonArrayConst>())
+    if(requirement["capability"]==allowed["capability"]&&requirement["api"]==allowed["api"]){
+     auto grant=grants.add<JsonObject>();grant.set(allowed);
+     if(eq(allowed["capability"],"storage.key-value")||eq(allowed["capability"],"storage.app-data")){
+      const auto&s=r->installation_[0];if(!s.namespaceSlot||s.namespaceSlot>s.namespaceCount)return RISC_INSTALL_DENIED;
+      grant["instance_id"]=s.namespaceFirst+s.namespaceSlot-1;
+     }
+     ++matches;
+    }
+   if(matches!=1)return RISC_INSTALL_DENIED;
+  }
  }
  const uint32_t namespaceSlot=r->installation_[0].namespaceSlot;
  for(size_t i=r->bootPolicyCount_;namespaceSlot&&i<r->policyCount_;++i)
   if(r->installedMetadata_[i].namespaceSlot==namespaceSlot&&strcmp(r->policies_[i].id,id))return RISC_INSTALL_DENIED;
  size_t existing=r->policyCount_;
- for(size_t i=0;i<r->policyCount_;++i)if(!strcmp(r->policies_[i].id,id)){existing=i;break;}
+ for(size_t i=0;i<r->policyCount_;++i)if(!r->policies_[i].catalogAuthority&&!strcmp(r->policies_[i].id,id)){existing=i;break;}
  if(existing<r->policyCount_){
   auto&old=r->policies_[existing];
   if(existing>=r->bootPolicyCount_&&r->installedMetadata_[existing].namespaceSlot&&r->installedMetadata_[existing].namespaceSlot!=namespaceSlot)return RISC_INSTALL_DENIED;

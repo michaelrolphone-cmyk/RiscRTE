@@ -270,3 +270,26 @@ replacement. Ready means SD publication is verified and the worker session is
 closed; the catalog owner must then durably publish its index before native
 registry publication. These interfaces are reserved for Files integration;
 UI/catalog wiring and full integration qualification are still in progress.
+
+### Catalog authority migration (0.2.10)
+
+An opt-in `catalog_authority: true` removable boot policy is a dormant identity
+reservation, not an installed app. Its exact original grants remain immutable
+for preserving cohort validation and anti-reassignment, including multiple KV
+namespaces, private app-data and named shared files. Native catalog admission
+can instantiate that identity only from its original managed SD directory,
+with a subset of those grants. A different identity cannot inherit them.
+The active instance occupies an ordinary dynamic slot; removal and subsequent
+updates retain the dormant authority and settings. No storage copying occurs.
+
+The selected Springboard builder excludes these SD entries from its compiled
+installed list, retaining only optional appearance metadata. Cache and complete
+SD scans control installation and availability. Unknown apps still use the
+separate product installation envelope and durable private namespace ledger.
+The default boot format/behavior is unchanged unless this flag is selected.
+
+Staged transaction checkpoint f296e474 was target-built and admitted with the
+complete 39-module store. Tests cover new install/update, both activation restart
+boundaries, offline retry, manifest conflicts and draining a pending final cache
+write. This branch also integrates Files source 81845e8 without modifying its
+32-provider/48-grant/64-app opt-in capacities or SD worker request prefix.
