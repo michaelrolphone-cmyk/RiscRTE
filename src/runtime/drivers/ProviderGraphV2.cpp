@@ -265,6 +265,16 @@ bool GraphV2::activate(size_t index) {
     node.boundDependencies[i] = {requirement.capability, requirement.api,
                                  nodes_[dependency].module.capability()};
   }
+  const void* imageSource=nullptr;
+  if(node.spec.openImage) {
+    const int source=findProvider(node.spec.imageProvider,"storage.volume",1,node.spec.imageInstance);
+    if(source<0 || !activate(size_t(source)) || !nodes_[source].module.pinConsumer()) {
+      if(source<0)fail("Image source missing",node.spec.id);
+      node.visit=Visit::Releasing;(void)deactivateIfUnused(index);return false;
+    }
+    node.dependencies[node.acquired++]=uint8_t(source);
+    imageSource=nodes_[source].module.capability();
+  }
   (void)node.module.setStreamHost(streamHost_);
   (void)node.module.setLease(node.spec.lease);
   (void)node.module.setResourceIdentity(node.spec.resourceIdentity);
@@ -289,7 +299,7 @@ bool GraphV2::activate(size_t index) {
       : node.module.load(node.spec.verifiedElfPath, node.spec.id,
                          node.spec.provides, node.spec.api,
                          node.spec.requirementCount ? node.boundDependencies : nullptr,
-                         node.spec.requirementCount, true);
+                         node.spec.requirementCount, true, node.spec.openImage, node.spec.imageContext, imageSource);
   RISC_STAGE_LOG("provider load end id=%s result=%s elapsed_us=%llu",node.spec.id,loaded?"ok":"failed",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
   if (!loaded) {

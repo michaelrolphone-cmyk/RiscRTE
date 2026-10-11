@@ -292,9 +292,24 @@ bool Runtime::validateGraph() {
       if(!used) return fail("unused hardware binding");
     }
   }
+  // Source access is a loader dependency, not an extra capability passed to
+  // the provider. Keep the entire mount closure internal, even with fallback.
+  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].sourceVolume) {
+    auto& d=drivers_[i];
+    for(size_t j=0;j<driverCount_;++j)
+      if(drivers_[j].instance==d.sourceVolume && drivers_[j].api==1 &&
+         !strcmp(drivers_[j].provides,"storage.volume"))d.sourceDriver=int(j);
+    if(d.sourceDriver<0)return fail("driver source volume unavailable");
+  }
   // Bounded transitive closure catches every cycle before ANY ELF entry point.
   for(size_t k=0;k<driverCount_;++k) for(size_t i=0;i<driverCount_;++i) for(size_t j=0;j<driverCount_;++j) edges[i][j]=edges[i][j] || (edges[i][k] && edges[k][j]);
   for(size_t i=0;i<driverCount_;++i) if(edges[i][i]) return fail("driver dependency cycle");
+  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].sourceDriver>=0) {
+    const size_t source=size_t(drivers_[i].sourceDriver);
+    for(size_t j=0;j<driverCount_;++j)
+      if((j==source || edges[source][j]) && drivers_[j].sourceDriver>=0)
+        return fail("SD bootstrap dependency must remain internal");
+  }
   return true;
 }
 bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManifest,size_t replacement) {
@@ -814,7 +829,7 @@ bool Runtime::prepare(const char* root) {
   // Read all manifests and validate mappings before registering/activating modules.
   for(JsonObjectConst item:c["drivers"].as<JsonArrayConst>()) {
     Driver& d=drivers_[driverCount_]; int64_t instance=0;
-    if(!keys(item,{"manifest"},{"instance_id","key_value","app_data","boot_start"}) || !text(item["manifest"],relative,sizeof(relative)) ||
+    if(!keys(item,{"manifest"},{"instance_id","key_value","app_data","boot_start","image_source"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,d.elf,sizeof(d.elf)) || (!item["instance_id"].isNull() && !integer(item["instance_id"],1,INT32_MAX,instance))) return fail("invalid driver selection");
     if(!item["boot_start"].isUnbound()) {
       if(!demandActivation_ || !eq(item["boot_start"],"cold"))return fail("invalid driver boot start policy");
@@ -822,6 +837,17 @@ bool Runtime::prepare(const char* root) {
     }
     d.instance=instance; JsonDocument manifestDoc;
     if(!readJson(d.elf,manifestDoc,&metadataCloseRetained_) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
+    if(!item["image_source"].isUnbound()) {
+      const auto source=item["image_source"].as<JsonObjectConst>();int64_t volume=0;char checked[256];
+      if(!keys(source,{"volume_instance","path","internal_fallback"}) ||
+         !integer(source["volume_instance"],1,INT32_MAX,volume) ||
+         !text(source["path"],d.sourcePath,sizeof(d.sourcePath)) ||
+         strncmp(d.sourcePath,"Drivers/",8) || !elfPath(d.sourcePath) ||
+         !path("",d.sourcePath,checked,sizeof(d.sourcePath)) ||
+         !source["internal_fallback"].is<bool>())return fail("invalid driver image source");
+      strcpy(d.sourcePath,checked);
+      d.sourceVolume=uint64_t(volume);d.internalFallback=source["internal_fallback"].as<bool>();d.sourceOwner=this;
+    }
     if(!providerPolicy(item,providerStorage_[driverCount_]) ||
        !providerFilePolicy(item,providerStorage_[driverCount_])) return false;
     ++driverCount_;
@@ -834,10 +860,11 @@ bool Runtime::prepare(const char* root) {
   if(!installationNamespaceRangeSafe())return fail("installation namespace range overlaps existing authority");
   bootPolicyCount_=policyCount_;
   bool hasProviderFiles=false;
-  for(size_t i=0;i<driverCount_;++i)hasProviderFiles=hasProviderFiles || providerStorage_[i].fileCount;
+  for(size_t i=0;i<driverCount_;++i)hasProviderFiles=hasProviderFiles || providerStorage_[i].fileCount || drivers_[i].sourceDriver>=0;
   for(size_t i=0;i<driverCount_;++i) {
     const Driver& d=drivers_[i];
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
+    if(d.sourceDriver>=0){spec.openImage=openDriverImage;spec.imageContext=&drivers_[i];spec.imageProvider=drivers_[d.sourceDriver].id;spec.imageInstance=d.sourceVolume;}
     spec.hardware=d.instance?&board_.device(d.instance)->hardware:nullptr;
     if (providerStorage_[i].count || providerStorage_[i].needsRealtime || providerStorage_[i].needsTcp || providerStorage_[i].needsEntropy || hasProviderFiles){
       providerStorage_[i].owner=this;
@@ -858,6 +885,7 @@ bool Runtime::prepare(const char* root) {
         selected=&policy;
       }
     }
+    if(selected && d.sourceDriver>=0)return fail("native provider must remain internal");
     if(selected ? !registerNativeProvider(d,spec,*selected) : !graph_.addVerified(spec))
       return fail(error_[0]?error_:"driver registration failed");
   }

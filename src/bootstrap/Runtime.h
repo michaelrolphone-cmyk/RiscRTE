@@ -207,11 +207,14 @@ class Runtime final {
     char names[RuntimeProviders::GraphV2::kMaxRequirements][96]{};
     size_t count=0;
     bool coldBootStart=false;
+    Runtime* sourceOwner=nullptr;uint64_t sourceVolume=0;int sourceDriver=-1;
+    char sourcePath[193]{};bool internalFallback=false;
   };
   bool fail(const char* reason) { if (reason != error_) snprintf(error_,sizeof(error_),"%s",reason); return false; }
   bool manifest(JsonObjectConst, Driver&);
   bool registerNativeProvider(const Driver&, RuntimeProviders::SpecV2&, const RuntimeProviders::NativeProviderPolicyV1&);
   bool validateGraph();
+  static void* openDriverImage(void*,const char*,const void*);
   void serviceProviders();
   bool runOne(const char*);
   bool residentPolicy(JsonVariantConst);

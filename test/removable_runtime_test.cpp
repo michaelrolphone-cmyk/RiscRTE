@@ -18,6 +18,7 @@
 static std::string mode,root;
 static std::vector<uint8_t> payload;
 static unsigned defaults,children,starts,stops,opens,closes,live,previousRuns;
+static bool providerMode(){return mode.find("provider-")==0;}
 static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority";}
 static unsigned baseCount(){return mode=="catalog-resident"?2:mode=="catalog-authority"?1:0;}
 extern "C" bool removable_is_resident(){return mode=="catalog-resident";}
@@ -52,7 +53,7 @@ static void selectImage(const char* name){
   std::ifstream f(root+"/"+name,std::ios::binary);payload.assign(std::istreambuf_iterator<char>(f),{});assert(payload.size()>52);
 }
 extern "C" unsigned removable_event(unsigned e,unsigned value) {
-  if(e==0){++defaults;
+  if(e==0){++defaults;if(providerMode())return 0;
     if(defaults==1 && (mode=="discovery"||catalogMode())) {
       assert(runtime->appCount()==baseCount());
       const char* manifest=R"({"type":"application","id":"child","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"child.elf","entry":"app_main","requires":[]})";
@@ -196,7 +197,7 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
       ++discoveryIo;manifestFile=fopen((root+p).c_str(),"rb");if(!manifestFile)return 0;
       assert(!fseek(manifestFile,0,SEEK_END));*n=ftell(manifestFile);rewind(manifestFile);return 2;
     }
-    assert(!strcmp(p,"/Apps/child/child.elf"));
+    assert(!strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")));
     if(mode=="missing" || mode=="busy")return 0;
     ++opens;live=1;offset=0;*n=payload.size();return 1;
   };
@@ -205,7 +206,7 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
     assert(live && n<=4096);if(mode=="removed" && offset>1000)return 0;
     n=std::min(size_t(333),std::min(n,payload.size()-offset));memcpy(out,payload.data()+offset,n);offset+=n;return n;
   };
-  v.file_close=[](void*,uint32_t h,bool){if(h==2){++discoveryIo;bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained")return false;live=0;return true;};
+  v.file_close=[](void*,uint32_t h,bool){if(h==2){++discoveryIo;bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained" || mode=="provider-retained")return false;live=0;return true;};
   static risc_storage_worker_v1 workerApi{};static risc_storage_async_adapter_v1 bridge{};
   static bool initialized=false;
   if(!initialized){initialized=true;
@@ -245,6 +246,8 @@ extern "C" void* esp_dlopen_reader_instance(const char* name,esp_dl_image_reader
 }
 int main(int argc,char** argv) {
   assert(argc==3);root=argv[1];mode=argv[2];selectImage("revision1.elf");
+  if(providerMode())selectImage("plugin.elf");
+  if(mode=="provider-fallback" || mode=="provider-required")present=false;
   if(mode=="malformed")payload[0]=0;
   if(mode=="absent")present=false;
   write("board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[{"instance_id":9,"chip":{"vendor":"test","model":"gpio","revision":"unspecified"},"compatible":"test,gpio","config_type":"gpio.bank","config_version":1,"config":{"pins":[5],"active_high":true,"pull_up":false,"debounce_us":0,"long_press_us":0,"click_min_us":0}}]})");
@@ -281,9 +284,17 @@ int main(int argc,char** argv) {
     auto g=p["grants"].add<JsonObject>();g["capability"]="storage.app-data";g["api"]=1;g["instance_id"]=77;
     boot.clear();serializeJson(doc,boot);
   }
+  if(providerMode()){
+    write("plugin.json",R"({"type":"driver","id":"sd-plugin","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"plugin.elf","requires":[],"provides":[{"capability":"test.plugin","api":1}]})");
+    JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
+    auto d=doc["drivers"].add<JsonObject>();d["manifest"]="plugin.json";
+    auto source=d["image_source"].to<JsonObject>();source["volume_instance"]=9;source["path"]="Drivers/plugin/plugin.elf";source["internal_fallback"]=mode!="provider-required";
+    if(mode=="provider-bootstrap")doc["drivers"][0]["image_source"].set(source);
+    boot.clear();serializeJson(doc,boot);
+  }
   write("boot.json",boot);
   RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;runtime=new RiscBoot::Runtime(port);
-  if(mode=="invalid-path" || mode=="default-external") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
+  if(mode=="invalid-path" || mode=="default-external" || mode=="provider-bootstrap") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
   if(catalogMode()){
     // Boot cannot reserve any namespace already owned by an app, even before
     // a dynamic catalog has loaded. No native I/O is needed to reject overlap.
@@ -297,6 +308,15 @@ int main(int argc,char** argv) {
   }
   if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
   if(mode=="discovery")assert(runtime->reserveInstalledApps(4));
+  if(providerMode()){
+    const bool retained=mode=="provider-retained",required=mode=="provider-required";
+    const bool ran=runtime->run();
+    assert(ran==(!retained&&!required));assert(runtime->retained()==retained);
+    if(retained){assert(live && !defaults && !stops);}
+    else {assert(!live && starts==stops);assert(defaults==(required?0u:1u));delete runtime;}
+    assert(opens==((mode=="provider-source"||retained)?1u:0u));
+    printf("SD driver source %s: actual module load, fallback/custody PASS\n",mode.c_str());return 0;
+  }
   unsigned inspected=0;
   assert(runtime->inspectImages([](void* c,const char* p,bool){assert(!strstr(p,"child.elf"));++*static_cast<unsigned*>(c);return true;},&inspected));assert(inspected==(mode=="catalog-resident"?3u:2u));
   const bool retained=mode=="close-retained";

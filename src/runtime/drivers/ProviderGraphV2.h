@@ -38,6 +38,11 @@ struct SpecV2 {
   StorageGenerationStamp packageSourceStamp{};
   const risc_hardware_device_v1* hardware = nullptr;
   ModuleLeaseV2 lease{};
+  // Native-selected ordinary image source; no import/hardware authority.
+  // Context survives graph teardown, including retained mappings.
+  void* (*openImage)(void*,const char*,const void*) = nullptr;
+  void* imageContext = nullptr;
+  const char* imageProvider=nullptr;uint64_t imageInstance=0;
 };
 struct GrantV2 {
   uint32_t slot = 0;
@@ -147,7 +152,7 @@ class GraphV2 final {
     OwnedNodeV2* owned = nullptr;
     ModuleV2 module;
     Visit visit = Visit::Idle;
-    uint8_t dependencies[kMaxRequirements]{};
+    uint8_t dependencies[kMaxRequirements+1]{};
     // start() may retain this table until quiesce/stop; unlike a temporary
     // activate() stack array, this remains valid while the ELF is mapped.
     risc_provider_dependency_v1 boundDependencies[kMaxRequirements]{};

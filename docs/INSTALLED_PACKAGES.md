@@ -306,3 +306,22 @@ submitted frame and continues copied-worker discovery. The X4 migration composer
 requires this Home alongside the internal-only Springboard list. Never
 fall back to a firmware-declared SD image when no admitted catalog entry exists:
 that could revive an app removed by a durable catalog transaction.
+
+## SD provider source checkpoint (0.2.12)
+
+A selected ordinary driver can use `image_source: {volume_instance: 9,
+path: "Drivers/<package>/<image>.elf", internal_fallback: true}`. Manifests
+and the complete graph stay internal. Runtime resolves the exact selected volume
+and rejects an external image anywhere in its transitive mount closure before
+provider execution. Privileged native-policy providers remain internal. The graph
+pins the source provider with mapped module custody; the loader reads one snapshot,
+closes it, then performs ordinary relocation/entry validation without a checksum
+pass. A clean unavailable volume can use the explicit admitted internal image.
+Uncertain close retains source/dependencies and forbids fallback. This source
+checkpoint retains internal images for existing whole-store admission and fallback;
+it does not yet implement package download, SD publication, or graph activation.
+
+The actual host Runtime fixture now loads a provider from SD, tests clean offline
+fallback and required-SD failure, rejects an SD-backed mount closure without I/O,
+and retains the source after failed close. Existing dynamic app registration and
+launch tests continue to pass under UBSan. Hardware remains unqualified.
