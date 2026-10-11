@@ -33,7 +33,9 @@ class PagedSettingsCheckpoint {
    phase_=phase_==EndRead?Restore:phase_==EndWrite?Ack:phase_==EndCleanup?Done:cancelled_?Cancelled:Failed;return;
   }
   if(phase_==Restore){int rc=native_->settings_restore(native_->context,slot_,owner_,missing_?nullptr:bytes_,missing_?0:size_,missing_);if(rc==RISC_KEY_VALUE_BUSY)return;if(rc){phase_=Failed;return;}
-   std::free(bytes_);bytes_=nullptr;size_=0;phase_=native_->settings_status(native_->context,slot_)==1?Done:Snapshot;return;}
+   std::free(bytes_);bytes_=nullptr;size_=0;// A clean SD restore still needs a native anchor after a full erase and
+   // may have same-generation journal rows left by a cancelled checkpoint.
+   phase_=native_->settings_status(native_->context,slot_)==1?(restoredIndex_?Ack:Done):Snapshot;return;}
   if(phase_==Snapshot){
    uint32_t needed=0;int rc=native_->settings_snapshot(native_->context,slot_,nullptr,0,&needed,&generation_);
    if(rc==RISC_KEY_VALUE_BUSY){return;}if(rc!=RISC_KEY_VALUE_BUFFER_SMALL||needed<132){phase_=Failed;return;}
@@ -90,7 +92,7 @@ class PagedSettingsCheckpoint {
     if(size_<132){fail(-1);break;}bytes_=static_cast<uint8_t*>(std::malloc(size_));if(!bytes_){fail(-1);break;}page_=0;phase_=ReadPage;break;
    case ReadPage:
     if(result_.size!=pageSize()){fail(-1);break;}memcpy(bytes_+page_*4096,result_.data,result_.size);++page_;
-    if(page_*uint64_t(4096)>=size_){if(crc(bytes_,size_)!=word(indexBytes_+20)){fail(-1);break;}phase_=EndRead;}break;
+    if(page_*uint64_t(4096)>=size_){if(crc(bytes_,size_)!=word(indexBytes_+20)||memcmp(bytes_,"RISCKV2",8)||wide(bytes_+16)!=generation_){fail(-1);break;}restoredIndex_=true;phase_=EndRead;}break;
    case RefreshWrite:phase_=RecoverWrite;break;
    case RecoverWrite:phase_=ReadPrevious;break;
    case ReadPrevious:
@@ -127,7 +129,7 @@ class PagedSettingsCheckpoint {
  static uint32_t crc(const void*data,uint32_t n){auto*p=static_cast<const uint8_t*>(data);uint32_t v=~0u;while(n--){v^=*p++;for(unsigned i=0;i<8;++i)v=(v>>1)^((v&1)?0xedb88320u:0);}return ~v;}
  uint32_t pageSize()const{uint64_t at=uint64_t(page_)*4096;return uint32_t(size_-at>4096?4096:size_-at);}
  void pagePath(){snprintf(pagePath_,sizeof pagePath_,"%s/kv-%08x%08x-%08x",directory_,unsigned(generation_>>32),unsigned(generation_),unsigned(page_));}
- Phase phase_=Idle;bool missing_=false,cancelled_=false,priorPresent_=false;uint64_t priorGeneration_=0;uint32_t priorSize_=0;const risc_installation_v1*native_=nullptr;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*package_=nullptr;
+ Phase phase_=Idle;bool missing_=false,cancelled_=false,priorPresent_=false,restoredIndex_=false;uint64_t priorGeneration_=0;uint32_t priorSize_=0;const risc_installation_v1*native_=nullptr;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*package_=nullptr;
  uint64_t session_=0,operation_=0,generation_=0;uint32_t slot_=0,size_=0,page_=0;uint8_t*bytes_=nullptr;uint8_t indexBytes_[28]{};
  char root_[12]{},owner_[96]{},directory_[128]{},index_[160]{},temporary_[160]{},pagePath_[192]{};
  risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};
