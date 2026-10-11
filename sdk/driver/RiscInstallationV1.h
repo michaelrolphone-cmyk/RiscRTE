@@ -13,7 +13,7 @@ enum {RISC_INSTALL_OK=0,RISC_INSTALL_DENIED=-1,RISC_INSTALL_BUSY=-2,RISC_INSTALL
  * Caller must complete its package validation/storage transaction first.
  * Cached manifests can rehydrate metadata; mutable images still pass the normal
  * loader/import checks on their actual snapshot. Existing bootstrap apps are
- * protected from removal. Driver graphs are not mutated by this interface. */
+ * protected from removal. Provider mutation is a separately opted-in suffix. */
 typedef struct {const char*manifest_path;const char*manifest_json;} risc_install_candidate_v1;
 typedef struct {int32_t status;char launch_path[193];} risc_install_result_v1;
 /* Trusted catalog metadata, after worker image admission and durable journal.

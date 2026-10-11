@@ -77,7 +77,8 @@ class SdPackageDownload final {
     }
     if(rc==RISC_STORAGE_ASYNC_BUSY){if(state_==State::Directory)directory_=previousDirectory_;return;}
     if(rc!=RISC_STORAGE_ASYNC_OK){fail(rc==RISC_STORAGE_ASYNC_RETAINED);return;}
-    if(state_==State::Directory)previousDirectory_=directory_;return;
+    if(state_==State::Directory)previousDirectory_=directory_;
+    return;
    }
    int rc=api_->base.collect(volume_->context,session_,operation_,&result_);
    if(rc==RISC_STORAGE_ASYNC_BUSY||rc==RISC_STORAGE_ASYNC_PENDING)return;
