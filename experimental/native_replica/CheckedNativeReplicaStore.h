@@ -41,7 +41,7 @@ class CheckedNativeReplicaStore {
  int pin(uint64_t object,uint64_t*out){
   if(out)*out=0;
   if(!out||!object)return C::Invalid;
-  if(!allowed())return C::Busy;
+  if(const int rc=admission())return rc;
   const unsigned bank=unsigned(object&1);
   if(pins_[bank])return C::Busy;
   int rc=loadBank(object);if(rc)return rc;
@@ -54,12 +54,12 @@ class CheckedNativeReplicaStore {
   return C::Stale;
  }
  uint64_t activeObject()const{return active_;}
- bool exitSafe()const{return files_.exitSafe()&&!pins_[0]&&!pins_[1];}
+ bool exitSafe()const{return !retained_&&files_.exitSafe()&&!pins_[0]&&!pins_[1];}
  void finishOperation(){release(stage_,stageSize_);release(cache_,cacheSize_);candidate_=cached_=0;written_=0;sealed_=false;}
  private:
  uint32_t ns_;RiscStorage::AppDataFiles&files_;Metadata metadata_;Guard guard_;C::Allocator alloc_;
  uint64_t active_=0,candidate_=0,cached_=0,pinSerial_=0,pins_[2]{},pinnedObjects_[2]{};
- uint8_t*stage_=nullptr,*cache_=nullptr;uint32_t stageSize_=0,cacheSize_=0,written_=0;bool initialized_=false,sealed_=false;
+ uint8_t*stage_=nullptr,*cache_=nullptr;uint32_t stageSize_=0,cacheSize_=0,written_=0;bool initialized_=false,sealed_=false,retained_=false;
  struct Scratch {uint8_t*p;size_t n;~Scratch(){C::wipe(p,n);}};
  static uint32_t word(const uint8_t*p){return uint32_t(p[0])|(uint32_t(p[1])<<8)|(uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);}
  static uint64_t wide(const uint8_t*p){return word(p)|(uint64_t(word(p+4))<<32);}
@@ -68,13 +68,15 @@ class CheckedNativeReplicaStore {
  static uint32_t crc(const void*v,uint32_t n){auto*p=static_cast<const uint8_t*>(v);uint32_t c=~0u;while(n--){c^=*p++;for(unsigned i=0;i<8;++i)c=(c>>1)^((c&1)?0xedb88320u:0);}return ~c;}
  static bool zeros(const uint8_t*p,uint32_t n){while(n--)if(*p++)return false;return true;}
  static const char*name(uint64_t id){return id&1?"replica-b.bin":"replica-a.bin";}
- bool allowed()const{return ns_&&ns_<=INT32_MAX&&guard_.workerWithExclusiveLease&&guard_.workerWithExclusiveLease(guard_.context)&&metadata_.read&&metadata_.write&&alloc_.allocate&&alloc_.release;}
+ // Retained close is a lifetime terminal state, ahead of worker/lease checks.
+ // Never update the NVS sequence or touch files after custody becomes unsafe.
+ int admission(){if(retained_||files_.retained()){retained_=true;return C::Retained;}return ns_&&ns_<=INT32_MAX&&guard_.workerWithExclusiveLease&&guard_.workerWithExclusiveLease(guard_.context)&&metadata_.read&&metadata_.write&&alloc_.allocate&&alloc_.release?C::Ok:C::Busy;}
  void release(uint8_t*&p,uint32_t&n){if(p){C::wipe(p,n);alloc_.release(alloc_.context,p);}p=nullptr;n=0;}
- int mapped(int rc)const{
+ int mapped(int rc){
   if(rc==RISC_APP_DATA_OK)return C::Ok;
   if(rc==RISC_APP_DATA_NOT_FOUND)return C::Missing;
   if(rc==RISC_APP_DATA_NO_SPACE)return C::NoSpace;
-  if(rc==RISC_APP_DATA_RETAINED)return C::Retained;
+  if(rc==RISC_APP_DATA_RETAINED){retained_=true;return C::Retained;}
   if(rc==RISC_APP_DATA_BUSY||rc==RISC_APP_DATA_STALE||rc==RISC_APP_DATA_UNAVAILABLE)return C::Busy;
   return C::Io;
  }
@@ -83,7 +85,7 @@ class CheckedNativeReplicaStore {
    (initial?zeros(p+12,24):word(p+12)>=C::Header+4&&word(p+12)<=ImageMax&&wide(p+16)&&wide(p+24));
  }
  int root(void*out,uint32_t n){
-  if(!allowed())return C::Busy;
+  if(const int rc=admission())return rc;
   if(!out||n!=C::RootBytes)return C::Invalid;
   uint8_t bytes[C::RootBytes]{};Scratch wipe{bytes,sizeof bytes};int rc=metadata_.read(metadata_.context,ns_,"root",bytes,sizeof bytes);
   if(rc==C::Missing){
@@ -99,7 +101,7 @@ class CheckedNativeReplicaStore {
  }
  int reserve(uint32_t n,uint64_t*out){
   if(out)*out=0;
-  if(!allowed())return C::Busy;
+  if(const int rc=admission())return rc;
   if(!out||n<C::Header+4)return C::Invalid;
   if(n>ImageMax)return C::NoSpace;
   const unsigned bank=active_?unsigned((active_&1)^1):0;
@@ -120,12 +122,12 @@ class CheckedNativeReplicaStore {
   candidate_=(next<<1)|bank;*out=candidate_;return C::Ok;
  }
  int write(uint64_t id,uint32_t at,const void*p,uint32_t n){
-  if(!allowed())return C::Busy;
+  if(const int rc=admission())return rc;
   if(!stage_||id!=candidate_||sealed_||!p||!n||at!=written_||at>stageSize_-ObjectHeader||n>stageSize_-ObjectHeader-at)return C::Invalid;
   std::memcpy(stage_+ObjectHeader+at,p,n);written_+=n;return C::Ok;
  }
  int seal(uint64_t id){
-  if(!allowed())return C::Busy;
+  if(const int rc=admission())return rc;
   if(!stage_||id!=candidate_||sealed_||written_!=stageSize_-ObjectHeader)return C::Invalid;
   std::memcpy(stage_,"RTENOBJ",7);putWide(stage_+8,id);putWord(stage_+16,written_);putWord(stage_+20,crc(stage_+ObjectHeader,written_));
   uint32_t oldSize=0;uint64_t rev=0;int rc=files_.stat(ns_,name(id),&oldSize,&rev);if(rc&&rc!=RISC_APP_DATA_NOT_FOUND)return mapped(rc);
@@ -135,7 +137,7 @@ class CheckedNativeReplicaStore {
   sealed_=true;return C::Ok;
  }
  int loadBank(uint64_t id){
-  if(!allowed())return C::Busy;
+  if(const int rc=admission())return rc;
   if(!id)return C::Invalid;
   if(cached_==id&&cache_)return C::Ok;
   release(cache_,cacheSize_);cached_=0;
@@ -153,7 +155,7 @@ class CheckedNativeReplicaStore {
   std::memcpy(out,cache_+ObjectHeader+at,n);return C::Ok;
  }
  int replaceRoot(const void*p,uint32_t n){
-  if(!allowed())return C::Busy;
+  if(const int rc=admission())return rc;
   if(!p||n!=C::RootBytes||!stage_||!sealed_)return C::Invalid;
   auto*bytes=static_cast<const uint8_t*>(p);
   if(!validRoot(bytes)||wide(bytes+24)!=candidate_||word(bytes+12)!=written_||word(bytes+32)!=word(stage_+stageSize_-4))return C::Invalid;

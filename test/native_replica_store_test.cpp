@@ -1,5 +1,6 @@
 #include "experimental/native_replica/NvsReplicaMetadata.h"
 #include "experimental/native_replica/NativeReplicaJob.h"
+#include "experimental/native_replica/NativeRebaseCandidate.h"
 #include <cassert>
 #include <cerrno>
 #include <cstdio>
@@ -16,7 +17,7 @@ struct Handle {std::string name;nvs_open_mode_t mode;};
 std::map<std::string,std::map<std::string,Bytes>> nvs;
 std::map<nvs_handle_t,Handle> handles;uint32_t handleSerial=1;
 bool onWorker=true,lease=true,initialized=true,armed=false;unsigned nativeCalls=0,cut=0;bool after=false;std::string fault;
-unsigned fsCalls=0;uint32_t otherUsed=0,totalBytes=0x80000,ticks=0;std::string rootPath;
+unsigned nvsTotal=0,fsTotal=0;unsigned fsCalls=0;uint32_t otherUsed=0,totalBytes=0x80000,ticks=0;std::string rootPath;
 bool hit(const char*k){if(!armed||fault!=k)return false;return ++nativeCalls==cut;}
 bool ioHit(const char*k){if(!armed||fault!=k)return false;return ++fsCalls==cut;}
 void safe(){assert(onWorker&&lease);}
@@ -38,21 +39,21 @@ void reset(){armed=false;onWorker=lease=initialized=true;nativeCalls=fsCalls=cut
 void empty(){reset();nvs.clear();std::filesystem::remove_all(rootPath);std::filesystem::create_directories(rootPath);}
 void seed(unsigned count=1025){Fixture f;std::vector<std::string> keys;std::vector<C::Value> rows;keys.reserve(count);rows.reserve(count);for(unsigned i=0;i<count;++i){char k[16];snprintf(k,sizeof k,"key%04u",i);keys.emplace_back(k);rows.push_back({keys.back().c_str(),"small",5});}assert(f.core.initialize(rows.data(),rows.size(),{})==C::Ok);assert(put(f.core,"edit","old")==C::Ok);f.store.finishOperation();}
 }
-extern "C" esp_err_t nvs_open(const char*name,nvs_open_mode_t mode,nvs_handle_t*out){safe();bool fail=hit("nvs-open");if(fail&&!after)return ESP_FAIL;if(strncmp(name,"rnr",3)||strlen(name)!=11)return ESP_ERR_INVALID_ARG;if(mode==NVS_READONLY&&!nvs.count(name))return ESP_ERR_NVS_NOT_FOUND;*out=handleSerial++;handles[*out]={name,mode};if(fail&&after){handles.erase(*out);return ESP_FAIL;}return ESP_OK;}
-extern "C" esp_err_t nvs_get_blob(nvs_handle_t h,const char*k,void*out,size_t*n){safe();bool fail=hit(out?"nvs-read":"nvs-probe");if(fail&&!after)return ESP_FAIL;auto it=handles.find(h);assert(it!=handles.end());auto ns=nvs.find(it->second.name);if(ns==nvs.end()||!ns->second.count(k))return ESP_ERR_NVS_NOT_FOUND;const auto&b=ns->second.at(k);if(!out){*n=b.size();return fail?ESP_FAIL:ESP_OK;}if(*n<b.size()){*n=b.size();return ESP_ERR_NVS_INVALID_LENGTH;}memcpy(out,b.data(),b.size());*n=b.size();return fail?ESP_FAIL:ESP_OK;}
-extern "C" esp_err_t nvs_set_blob(nvs_handle_t h,const char*k,const void*p,size_t n){safe();bool fail=hit("nvs-set");if(fail&&!after)return ESP_ERR_NVS_NOT_ENOUGH_SPACE;auto it=handles.find(h);assert(it!=handles.end()&&it->second.mode==NVS_READWRITE);assert((!strcmp(k,"root")&&n==48)||(!strcmp(k,"next")&&n==24));size_t used=0;for(auto&space:nvs)for(auto&e:space.second)used+=e.second.size()+64;if(used+n+64>0x6000)return ESP_ERR_NVS_NOT_ENOUGH_SPACE;nvs[it->second.name][k]=Bytes(static_cast<const uint8_t*>(p),static_cast<const uint8_t*>(p)+n);return fail?ESP_FAIL:ESP_OK;}
-extern "C" esp_err_t nvs_commit(nvs_handle_t h){safe();assert(handles.count(h));return hit("nvs-commit")?ESP_FAIL:ESP_OK;}
-extern "C" void nvs_close(nvs_handle_t h){assert(handles.erase(h)==1);}
+extern "C" esp_err_t nvs_open(const char*name,nvs_open_mode_t mode,nvs_handle_t*out){++nvsTotal;safe();bool fail=hit("nvs-open");if(fail&&!after)return ESP_FAIL;if(strncmp(name,"rnr",3)||strlen(name)!=11)return ESP_ERR_INVALID_ARG;if(mode==NVS_READONLY&&!nvs.count(name))return ESP_ERR_NVS_NOT_FOUND;*out=handleSerial++;handles[*out]={name,mode};if(fail&&after){handles.erase(*out);return ESP_FAIL;}return ESP_OK;}
+extern "C" esp_err_t nvs_get_blob(nvs_handle_t h,const char*k,void*out,size_t*n){++nvsTotal;safe();bool fail=hit(out?"nvs-read":"nvs-probe");if(fail&&!after)return ESP_FAIL;auto it=handles.find(h);assert(it!=handles.end());auto ns=nvs.find(it->second.name);if(ns==nvs.end()||!ns->second.count(k))return ESP_ERR_NVS_NOT_FOUND;const auto&b=ns->second.at(k);if(!out){*n=b.size();return fail?ESP_FAIL:ESP_OK;}if(*n<b.size()){*n=b.size();return ESP_ERR_NVS_INVALID_LENGTH;}memcpy(out,b.data(),b.size());*n=b.size();return fail?ESP_FAIL:ESP_OK;}
+extern "C" esp_err_t nvs_set_blob(nvs_handle_t h,const char*k,const void*p,size_t n){++nvsTotal;safe();bool fail=hit("nvs-set");if(fail&&!after)return ESP_ERR_NVS_NOT_ENOUGH_SPACE;auto it=handles.find(h);assert(it!=handles.end()&&it->second.mode==NVS_READWRITE);assert((!strcmp(k,"root")&&n==48)||(!strcmp(k,"next")&&n==24));size_t used=0;for(auto&space:nvs)for(auto&e:space.second)used+=e.second.size()+64;if(used+n+64>0x6000)return ESP_ERR_NVS_NOT_ENOUGH_SPACE;nvs[it->second.name][k]=Bytes(static_cast<const uint8_t*>(p),static_cast<const uint8_t*>(p)+n);return fail?ESP_FAIL:ESP_OK;}
+extern "C" esp_err_t nvs_commit(nvs_handle_t h){++nvsTotal;safe();assert(handles.count(h));return hit("nvs-commit")?ESP_FAIL:ESP_OK;}
+extern "C" void nvs_close(nvs_handle_t h){++nvsTotal;assert(handles.erase(h)==1);}
 extern "C" ssize_t __real_write(int,const void*,size_t);
-extern "C" ssize_t __wrap_write(int fd,const void*p,size_t n){safe();if(ioHit("write")){errno=ENOSPC;return -1;}if(ioHit("partial"))return __real_write(fd,p,n/2);return __real_write(fd,p,n);}
+extern "C" ssize_t __wrap_write(int fd,const void*p,size_t n){++fsTotal;safe();if(ioHit("write")){errno=ENOSPC;return -1;}if(ioHit("partial"))return __real_write(fd,p,n/2);return __real_write(fd,p,n);}
 extern "C" ssize_t __real_read(int,void*,size_t);
-extern "C" ssize_t __wrap_read(int fd,void*p,size_t n){safe();if(ioHit("read")){errno=EIO;return -1;}return __real_read(fd,p,n);}
+extern "C" ssize_t __wrap_read(int fd,void*p,size_t n){++fsTotal;safe();if(ioHit("read")){errno=EIO;return -1;}return __real_read(fd,p,n);}
 extern "C" int __real_fsync(int);
-extern "C" int __wrap_fsync(int fd){safe();if(ioHit("sync")){errno=EIO;return -1;}return __real_fsync(fd);}
+extern "C" int __wrap_fsync(int fd){++fsTotal;safe();if(ioHit("sync")){errno=EIO;return -1;}return __real_fsync(fd);}
 extern "C" int __real_close(int);
-extern "C" int __wrap_close(int fd){int rc=__real_close(fd);if(ioHit("close")){errno=EIO;return -1;}return rc;}
+extern "C" int __wrap_close(int fd){++fsTotal;int rc=__real_close(fd);if(ioHit("close")){errno=EIO;return -1;}return rc;}
 extern "C" int __real_rename(const char*,const char*);
-extern "C" int __wrap_rename(const char*a,const char*b){safe();if(ioHit("rename-before")){errno=EIO;return -1;}int rc=__real_rename(a,b);if(ioHit("rename-after")){errno=EIO;return -1;}return rc;}
+extern "C" int __wrap_rename(const char*a,const char*b){++fsTotal;safe();if(ioHit("rename-before")){errno=EIO;return -1;}int rc=__real_rename(a,b);if(ioHit("rename-after")){errno=EIO;return -1;}return rc;}
 int main(int argc,char**argv){assert(argc>=3);rootPath=argv[1];std::filesystem::create_directories(rootPath);const std::string mode=argv[2];empty();
  if(mode=="bounds"){
   seed();Fixture f;assert(f.core.load()==C::Ok&&value(f.core,"key1024")=="small");assert(value(f.core,"edit")=="old");
@@ -72,6 +73,28 @@ int main(int argc,char**argv){assert(argc>=3);rootPath=argv[1];std::filesystem::
   assert(job.begin(1,"cancelled",10,&token)==RISC_STORAGE_WORK_OK);assert(job.cancel(token)==RISC_STORAGE_WORK_CANCELLED&&job.scratchCleared()&&job.exitSafe());onWorker=true;assert(!job.workerStep());assert(value(f.core,"edit")=="copied-value");
   J retained([](void*,uint32_t,const void*,uint32_t)->J::Result{return {C::Retained,0,0};},nullptr);assert(retained.begin(1,"secret-synthetic",17,&token)==RISC_STORAGE_WORK_OK);assert(retained.workerStep());assert(retained.cancel(token)==RISC_STORAGE_WORK_CANCELLED&&!retained.exitSafe()&&retained.scratchCleared());
   puts("checked native replica worker: bounded copied owner submission/1000 no-I/O polls, queued cancel, scratch wiping and retained cancellation custody PASS");
+ }else if(mode=="retained"){
+  using R=RiscExperimental::NativeRebaseCandidate;
+  seed(30);Fixture f;assert(f.core.load()==C::Ok);C::Snapshot snapshot;assert(f.core.captureSnapshot(&snapshot)==C::Ok);auto remoteId=C::Identity{};remoteId.known=true;remoteId.generation=900;remoteId.lineage[0]=1;
+  const R::Remote remote{6,snapshot.count(),snapshot.mapSize(),snapshot.map(),remoteId};R receiver(f.core,6,{S::ImageMax,S::ImageMax,4096,1024},C::heap());assert(receiver.begin(remote)==C::Ok);
+  uint64_t id=0;uint8_t intent[1024]{};uint32_t size=0;assert(receiver.pending(receiver.viewRevision(),0,&id,intent,sizeof intent,&size)==C::Ok);
+  const R::Batch batch{6,receiver.viewRevision(),receiver.frontier(),id,intent,size,nullptr,0};assert(receiver.stage(batch)==C::Ok);C::wipe(intent,sizeof intent);
+  J job([](void*p,uint32_t,const void*,uint32_t)->J::Result{auto&r=*static_cast<R*>(p);return {r.finish(r.viewRevision(),r.frontier()),0,0};},&receiver);uint64_t token=0;assert(job.begin(1,nullptr,0,&token)==RISC_STORAGE_WORK_OK);
+  fault="close";cut=1;fsCalls=0;armed=true;assert(job.workerStep());armed=false;
+  J::Result result{};assert(job.collect(token,&result)==RISC_STORAGE_WORK_OK&&result.status==C::Retained);
+  assert(f.files.retained()&&!f.files.exitSafe()&&!f.store.exitSafe()&&!job.exitSafe());assert(!receiver.held()&&receiver.outcome()==C::Retained);
+  const auto metadataBefore=nvs;const unsigned nativeBefore=nvsTotal,fileBefore=fsTotal;
+  assert(receiver.abandon()==C::Retained&&receiver.outcome()==C::Retained);assert(receiver.begin(remote)==C::Retained&&receiver.stage(batch)==C::Retained&&receiver.finish(batch.viewRevision,batch.pendingFrontier)==C::Retained);
+  assert(job.begin(1,nullptr,0,&token)==RISC_STORAGE_WORK_RETAINED);
+  auto backend=f.store.backend();uint8_t root[C::RootBytes]{},bytes[16]{};uint64_t object=99,pin=99;
+  assert(backend.readRoot(backend.context,root,sizeof root)==C::Retained);
+  assert(backend.reserve(backend.context,C::Header+4,&object)==C::Retained&&object==0);
+  assert(backend.write(backend.context,1,0,bytes,sizeof bytes)==C::Retained);assert(backend.seal(backend.context,1)==C::Retained);
+  assert(backend.read(backend.context,f.store.activeObject(),0,bytes,sizeof bytes)==C::Retained);assert(backend.replaceRoot(backend.context,root,sizeof root)==C::Retained);assert(f.store.pin(f.store.activeObject(),&pin)==C::Retained&&pin==0);
+  assert(put(f.core,"edit","forbidden")==C::Retained&&value(f.core,"edit")=="old"&&f.core.pendingCount()==1);
+  f.store.finishOperation();lease=onWorker=false;assert(backend.readRoot(backend.context,root,sizeof root)==C::Retained);lease=onWorker=true;
+  assert(nvs==metadataBefore&&nvsTotal==nativeBefore&&fsTotal==fileBefore&&!f.store.exitSafe()&&!job.exitSafe());
+  puts("checked native replica: actual retained close latches receiver/store/job custody; late abandon/rebegin/direct backend reuse causes no further filesystem or NVS I/O PASS");
  }else if(mode=="initial-fault"){
   assert(argc==6);C::Value rows[]={{"first","initial-one",11},{"second","initial-two",11}};
   {Fixture before;fault=argv[3];cut=unsigned(atoi(argv[4]));after=atoi(argv[5])!=0;nativeCalls=fsCalls=0;armed=true;int rc=before.core.initialize(rows,2,{});armed=false;assert(rc==C::Ok||rc==C::Io||rc==C::NoSpace||rc==C::Uncertain||rc==C::Retained);}

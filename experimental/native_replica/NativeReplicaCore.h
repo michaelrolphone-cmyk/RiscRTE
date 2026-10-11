@@ -250,7 +250,9 @@ class NativeReplicaCore {
   for(uint32_t at=0;at<n;){const uint32_t size=chunk(n-at);rc=b_.read(b_.context,object,at,check,size);if(rc||std::memcmp(check,p+at,size)){if(b_.retire)b_.retire(b_.context,object);drop(p);return rc?rc:Io;}at+=size;}
   uint8_t root[RootBytes]{};std::memcpy(root,"RTENROOT",8);putWord(root+8,ns_);putWord(root+12,n);putWide(root+16,wide(p+16));putWide(root+24,object);putWord(root+32,word(p+n-4));putWord(root+44,crc(root,44));
   rc=b_.replaceRoot(b_.context,root,sizeof root);uint8_t actual[RootBytes]{};if(!rc)rc=b_.readRoot(b_.context,actual,sizeof actual);
-  if(rc||std::memcmp(root,actual,sizeof root)){uncertain_=true;ticketLive_=false;drop(p);return Uncertain;}
+  // Root custody may be retained as well as ambiguous; never hide that status
+  // from the owning worker, while still making native reads require recovery.
+  if(rc||std::memcmp(root,actual,sizeof root)){uncertain_=true;ticketLive_=false;drop(p);return rc==Retained?Retained:Uncertain;}
   const auto old=object_;drop(bytes_);bytes_=p;size_=n;object_=object;uncertain_=false;if(old&&b_.retire)b_.retire(b_.context,old);return Ok;
  }
 };
