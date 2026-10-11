@@ -3,6 +3,7 @@ static std::map<uint32_t,std::map<std::string,std::string>> sharedOriginal,share
 static std::map<uint32_t,std::vector<uint8_t>> sharedAnchors,sharedDisk;
 static const risc_bound_key_value_v1* sharedProvider;
 static unsigned sharedPass=0;
+static bool sharedHydratedThisRun=false;
 extern "C" void removable_bound_settings(const void*api){sharedProvider=static_cast<const risc_bound_key_value_v1*>(api);}
 static RiscStorage::ScalableSettings::Backend sharedBackend{nullptr,
  [](void*,uint32_t ns,void*out,uint32_t cap,uint32_t*n)->int32_t{auto&p=sharedAnchors[ns];if(p.empty())return RISC_KEY_VALUE_NOT_FOUND;assert(cap>=p.size());*n=p.size();memcpy(out,p.data(),*n);return 0;},
@@ -23,6 +24,8 @@ static RiscBoot::KeyValueBackend sharedKv{nullptr,
  [](void*,uint32_t,bool*exists)->int32_t{*exists=false;return 0;},&sharedBackend};
 static void sharedSettingsTest(){
  const auto*rt=risc_runtime_get_api(1);assert(rt&&installer&&sharedProvider);
+ sharedHydratedThisRun=true;
+ assert(!rt->request_launch("revision1.elf")); // Cold shared KV cannot initialize a bundled child.
  assert(installer->shared_settings_count==2&&installer->settings_capacity==128);
  assert(installer->shared_settings_namespace(installer->context,0)==1);
  assert(installer->shared_settings_namespace(installer->context,1)==6);
@@ -73,8 +76,10 @@ static void sharedSettingsTest(){
    // Once anchored, absent/corrupt SD may never resurrect the original NVS.
    assert(installer->settings_restore(installer->context,slot,owner,nullptr,0,true)==RISC_KEY_VALUE_IO);
    assert(kv[i]->get(kv[i]->context,"same",out,sizeof out,&n)==RISC_KEY_VALUE_BUSY);
+   if(ns==6)assert(!rt->request_launch("revision1.elf")); // Failed recovery stays fenced.
    do{rc=installer->settings_restore(installer->context,slot,owner,disk.data(),disk.size(),false);}while(rc==RISC_KEY_VALUE_BUSY);assert(!rc);
   }
  }
  for(auto&grant:grants)assert(rt->release(&grant));
+ assert(rt->request_launch("revision1.elf")); // Ready selected settings admit the actual bundled child.
 }

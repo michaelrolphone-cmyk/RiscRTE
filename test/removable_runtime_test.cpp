@@ -94,6 +94,7 @@ static RiscBoot::AppDataBackend privateData{nullptr,
  [](void*){return true;}};
 extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
  if(!catalogMode())return;
+ if(mode=="shared-settings"){risc_runtime_capability_v1 g{};g.struct_size=sizeof(g);assert(rt->acquire("storage.key-value",1,6,&g));const auto*kv=static_cast<const risc_key_value_v1*>(g.api);char out[16];uint32_t n=0;assert(!kv->get(kv->context,"same",out,sizeof out,&n)&&std::string(out,n)=="six");assert(rt->release(&g));return;}
  if(settingsMode()){
   risc_runtime_capability_v1 setting{};setting.struct_size=sizeof(setting);assert(rt->acquire("storage.key-value",1,0,&setting));
   const auto*kv=static_cast<const risc_key_value_v1*>(setting.api);char out[64]{};uint32_t n=0;
@@ -135,7 +136,7 @@ static void selectImage(const char* name){
 }
 extern "C" unsigned removable_event(unsigned e,unsigned value) {
   if(e==0){++defaults;if(providerMode())return 0;
-    if(mode=="shared-settings"){sharedSettingsTest();return 0;}
+    if(mode=="shared-settings"){if(!sharedHydratedThisRun)sharedSettingsTest();return 0;}
     if(defaults==1 && (mode=="discovery"||catalogMode())) {
       assert(runtime->appCount()==baseCount());
       if(mode=="catalog-providers")installProviderFixture();
@@ -367,6 +368,9 @@ int main(int argc,char** argv) {
      write("shared-default.json",R"({"type":"application","id":"shared-default","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"storage.key-value","api":1}]})");
      auto app=doc["app_capabilities"].add<JsonObject>();app["manifest"]="shared-default.json";
      for(unsigned ns:{1u,6u,7u}){auto g=app["grants"].add<JsonObject>();g["capability"]="storage.key-value";g["api"]=1;g["instance_id"]=ns;}
+     write("shared-child.json",R"({"type":"application","id":"shared-child","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"revision1.elf","entry":"app_main","requires":[{"capability":"storage.key-value","api":1}]})");
+     auto child=doc["app_capabilities"].add<JsonObject>();child["manifest"]="shared-child.json";
+     auto childKv=child["grants"].add<JsonObject>();childKv["capability"]="storage.key-value";childKv["api"]=1;childKv["instance_id"]=6;
      auto key=doc["drivers"][0]["key_value"].add<JsonObject>();key["key"]="wifi.test";key["namespace"]=6;key["access"]="read-write";
     }
     doc["installation"]["namespace_range"]["first"]=1000;doc["installation"]["namespace_range"]["count"]=128;boot.clear();serializeJson(doc,boot);
@@ -445,7 +449,7 @@ int main(int argc,char** argv) {
     assert(runtime->run()&&!runtime->retained());
     // Preserving updates cannot return a selected namespace to stale NVS.
     const std::string stage=root+"/shared-stage";assert(!mkdir(stage.c_str(),0700));
-    for(const char*name:{"board.json","sd.json","shared-default.json"}){
+    for(const char*name:{"board.json","sd.json","shared-default.json","shared-child.json"}){
       std::ifstream source(root+"/"+name);std::ofstream dest(stage+"/"+name);dest<<source.rdbuf();
     }
     for(unsigned which=0;which<3;++which){
@@ -458,7 +462,7 @@ int main(int argc,char** argv) {
       assert(!runtime->validateCohort(candidate,stage.c_str(),[](void*,const char*,bool){return true;},nullptr));
     }
     delete runtime;
-    const auto disk=sharedDisk;sharedOriginal.clear();sharedDeltas.clear();sharedAnchors.clear();++sharedPass;
+    const auto disk=sharedDisk;sharedOriginal.clear();sharedDeltas.clear();sharedAnchors.clear();++sharedPass;sharedHydratedThisRun=false;
     runtime=new RiscBoot::Runtime(port);assert(runtime->prepare(root.c_str()));
     assert(runtime->run()&&!runtime->retained());assert(sharedDisk==disk);delete runtime;
     puts("Shared settings: actual app/provider namespace 1/6 routing, 1024 opaque keys, native erase/restart, isolation and fail-closed recovery PASS");return 0;

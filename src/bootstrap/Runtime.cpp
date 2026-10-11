@@ -1019,6 +1019,11 @@ bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity
     out[0]=0;return false;
   }
   for(size_t i=bootPolicyCount_;i<policyCount_;++i)if(policies_[i].enabled&&!strcmp(policies_[i].elf,out))return ready(i);
+  // The configured default must run to recover cold SD settings. Other bundled
+  // applications cannot initialize from BUSY-as-empty or strand the catalog
+  // worker inside a foreground client that has no restoration authority.
+  for(size_t i=0;i<bootPolicyCount_;++i)if(policies_[i].enabled&&!strcmp(policies_[i].elf,out))
+    return !strcmp(out,default_)||ready(i);
   return true;
 }
 bool Runtime::launch(const char* relative) {
@@ -1031,7 +1036,9 @@ bool Runtime::launch(const char* relative) {
   }
   if(invocation_->fileOpen_.phase==FileOpenState::Phase::Requested || invocation_->fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
   if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained_ || !appDataExitSafe() || (invocation_->installedFiles_ && invocation_->installedFiles_->retained()) || invocation_->queued_[0] || appDataBusy() || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
-  const bool ok=installedLaunchPath(relative,invocation_->queued_,sizeof(invocation_->queued_));
+  char selected[sizeof(invocation_->queued_)]{};
+  const bool ok=installedLaunchPath(relative,selected,sizeof(selected));
+  if(ok)std::strcpy(invocation_->queued_,selected);
   RISC_STAGE_LOG("app launch-request file=%s result=%s",relative,ok?"accepted":"invalid-path");
   if(ok)RiscPerf::emit(20);
   return ok;
