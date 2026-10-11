@@ -44,8 +44,8 @@ reset marker consumption and one restart while a separate foreground thread
 spins without yielding. UBSan is supported through `SANITIZE=1
 SANITIZERS=undefined`. Target compilation is separate evidence.
 
-This checkpoint is **not yet a host-owned short-press exit implementation** and
-is not a firmware delivery or hardware qualification. Monitoring starts only
+The initial emergency checkpoint alone was not a host-owned short-press exit
+implementation. Neither checkpoint is a firmware delivery or hardware qualification. Monitoring starts only
 when the validated PMU physical bus is opened and pauses when that controller
 closes or sleeps. The boot-before-open and deep-sleep intervals are not observed.
 A press already held at boot cannot be backdated: the first reliable event
@@ -55,3 +55,35 @@ wake timing, scheduler latency, physical radio behavior, or actual watchdog rese
 behavior. Unbounded interrupt masking, scheduler/I2C/PMU failure, or corruption by
 trusted native/ELF code can defeat software observation. This is not a security
 boundary or an impossible-to-override guarantee. No hardware was flashed.
+
+## Host-owned short exit (successor checkpoint)
+
+The successor adds a read-only `exit_requested` Runtime suffix and native
+invocation begin/end callbacks. A child short press latches an exit request;
+legacy IRQ ACK, repeated reads, ignored scene events and queued launches cannot
+clear it. The independent native task requests a reset after 3000 ms if the
+host has not completed teardown. This timeout uses an atomic invocation epoch
+and remains runnable without the I2C mutex once the request has been observed.
+The host acknowledges only after fini, grant revocation, memory cleanup and
+image unload. Failed custody retains images and leaves recovery armed. A
+successful native exit overrides a competing launch and returns to fresh Home.
+Home short presses remain available to its existing manual sleep policy.
+
+The shared portable adapter tests the request ahead of modal/keyboard branches;
+the scene host prioritizes a suspend event ahead of its input/render queues.
+Contexts also checks the persistent request independently of scene navigation,
+then runs its existing context/scene cleanup. This is cooperative **cleanup**,
+with native enforcement if an app never returns. It does not attempt an unsafe
+longjmp through app/provider stacks, force-unload live code, or promise that
+uncommitted editor changes survive emergency restart. Persisted storage is not
+erased or reformatted.
+
+Additional tests execute real Runtime runOne (including a competing relaunch and
+a failed custody barrier), real Contexts app_main with the production renderer
+(Home, pending refresh, shared keyboard), and real Springboard/Battery with the
+portable adapter. The separate SDK-shim task test covers a non-yielding app and
+one short-exit timeout reset. These are compositional tests, not one complete
+Watch BIN boot, physical timing or device power-path qualification. Existing
+Context storage/retention flows and shared scene component tests remain covered.
+Runtime test runner portability suppresses two pre-existing Clang unused warnings
+and avoids Bash 3's empty-array/nounset failure; it does not weaken assertions.

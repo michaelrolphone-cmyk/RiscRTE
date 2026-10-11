@@ -83,7 +83,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](risc_resident_client_v1* out){return currentRuntime && currentRuntime->residentClient(out);},
     [](risc_failure_evidence_client_v1* out){return currentRuntime && currentRuntime->failureEvidenceClient(out);},
     [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && currentRuntime->diagnosticCheckpointClient(out);},
-    [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);}};
+    [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);},
+    [](){return currentRuntime && currentRuntime->exitRequested();}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -1029,6 +1030,7 @@ bool Runtime::launch(const char* relative) {
   if(ok)RiscPerf::emit(20);
   return ok;
 }
+bool Runtime::exitRequested()const {return active() && port_.controlExitRequested && port_.controlExitRequested();}
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
 bool Runtime::monotonicMs(uint32_t* out) {
   if(!active() || !out)return false;
@@ -1238,6 +1240,11 @@ bool Runtime::appExitBarrier(bool exiting) {
 }
 bool Runtime::runOne(const char* name) {
   if(!appExitBarrier())return false;
+  if(port_.controlBegin)port_.controlBegin(strcmp(name,default_)!=0);
+  struct ControlLifetime {
+    Port& port;bool& retained;
+    ~ControlLifetime(){if(!retained&&port.controlEnd)port.controlEnd();}
+  } control{port_,retained_};
   invocation_->role=0;
   invocation_->residentPolicyPending_=false;
   invocation_->failureKind=RISC_RESIDENT_FAILURE_NONE;invocation_->status=RISC_RESIDENT_OK;
@@ -1374,6 +1381,13 @@ bool Runtime::runOne(const char* name) {
   if(invocation_==&mainInvocation_){shellCallbacks_={};shellToken_=0;}
   invocation_->streams_.endInvocation();
   failureBreadcrumb(RISC_FAILURE_PHASE_HANDOFF,name);
+  if(port_.controlExitRequested && port_.controlExitRequested()) {
+    // A child cannot replace native exit with a different app handoff. Every
+    // fini/grant/allocation/image barrier has completed before Home is queued.
+    strcpy(invocation_->queued_,default_);
+    invocation_->fileOpen_={};residentContinuation_[0]=0;
+    port_.log("RTE_CONTROL crown=exit cleanup=complete action=home");
+  }
   unloadTrace.result(1);
   return ok || fail("app entry/lifecycle invalid");
 }

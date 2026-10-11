@@ -19,7 +19,7 @@ namespace RiscCpu { namespace NativeCrownRecovery { namespace {
 constexpr uint8_t Port=RISC_RECOVERY_I2C_PORT, Address=0x34, Status=0x49;
 constexpr uint32_t Magic=0x43524e35;
 static_assert(Port<2 && RISC_RECOVERY_SDA<49 && RISC_RECOVERY_SCL<49,"invalid recovery bus");
-RTC_NOINIT_ATTR uint32_t resetMarker[2];
+RTC_NOINIT_ATTR uint32_t resetMarker[3];
 SemaphoreHandle_t mutex=nullptr;
 TaskHandle_t task=nullptr;
 Transfer raw=nullptr;
@@ -27,12 +27,14 @@ bool online=false;
 std::atomic<bool> paused{false};
 std::atomic<bool> wakeBoundary{false};
 RiscControl::CrownEvents events;
+RiscControl::CrownExit hostExit;
+std::atomic<uint32_t> requestEpoch{0},requestSince{0};
 std::atomic<uint32_t> shortSerial{0};
 uint32_t now(){return uint32_t(uint64_t(esp_timer_get_time())/1000);}
 bool lock(uint32_t ms){return mutex && xSemaphoreTake(mutex,pdMS_TO_TICKS(ms)+1)==pdTRUE;}
 void unlock(){xSemaphoreGive(mutex);}
-void emergency(){
-  resetMarker[0]=Magic;resetMarker[1]=~Magic;
+void emergency(uint32_t reason=1){
+  resetMarker[0]=Magic;resetMarker[1]=~Magic;resetMarker[2]=reason;
   // Do not invoke app/provider cleanup, shutdown hooks, logging, filesystem
   // or locks on this explicit emergency path. IDF stalls the other core.
   std::atomic_thread_fence(std::memory_order_seq_cst);
@@ -45,7 +47,13 @@ bool sample(){
   if(ok && keys){const uint8_t ack[]={Status,keys};ok=raw(Port,Address,ack,2,nullptr,0,20);}
   if(!ok){events.discontinuity();return false;}
   if(wakeBoundary.exchange(false,std::memory_order_acq_rel))events.waking();
+  const auto serial=events.shortSequence();
   const bool reboot=events.observe(keys,now());
+  if(events.shortSequence()!=serial)hostExit.press(now());
+  if(hostExit.pending() && !(requestEpoch.load(std::memory_order_relaxed)&1u)){
+    requestSince.store(now(),std::memory_order_relaxed);
+    requestEpoch.fetch_or(1u,std::memory_order_release);
+  }
   shortSerial.store(events.shortSequence(),std::memory_order_release);
   if(reboot)emergency();
   return true;
@@ -56,6 +64,11 @@ void supervise(void*){
   if(esp_task_wdt_add(nullptr)!=ESP_OK)esp_restart_noos();
   for(;;){
     if(lock(25)){if(online && !paused)(void)sample();unlock();}
+    // Once requested, nonresponse recovery must not depend on the I2C mutex.
+    // CAS races clean completion against timeout for this exact invocation.
+    uint32_t epoch=requestEpoch.load(std::memory_order_acquire);
+    if((epoch&1u) && uint32_t(now()-requestSince.load(std::memory_order_relaxed))>=RiscControl::CrownExit::CleanupMs &&
+       requestEpoch.compare_exchange_strong(epoch,epoch&~1u,std::memory_order_acq_rel))emergency(2);
     // High priority, independent task on core0. No app, GUI, grant, yield,
     // owner-task heartbeat or provider callback is needed to reach sample().
     if(esp_task_wdt_reset()!=ESP_OK)esp_restart_noos();
@@ -126,9 +139,18 @@ bool transact(uint8_t port,uint8_t address,const uint8_t* tx,size_t tn,uint8_t* 
   unlock();return ok;
 }
 uint32_t shortSequence(){return shortSerial.load(std::memory_order_acquire);}
-bool previousEmergency(){
+uint32_t previousReason(){
   const bool found=esp_reset_reason()==ESP_RST_SW && resetMarker[0]==Magic && resetMarker[1]==~Magic;
-  resetMarker[0]=resetMarker[1]=0;return found;
+  const uint32_t reason=found?resetMarker[2]:0;
+  resetMarker[0]=resetMarker[1]=resetMarker[2]=0;return reason;
 }
+bool previousEmergency(){return previousReason()!=0;}
+void beginInvocation(bool child){
+  if(mutex&&!lock(25))emergency(3);
+  hostExit.begin(child);requestEpoch.store((requestEpoch.load(std::memory_order_relaxed)+2u)&~1u,std::memory_order_release);
+  if(mutex)unlock();
+}
+void endInvocation(){beginInvocation(false);}
+bool exitRequested(){return (requestEpoch.load(std::memory_order_acquire)&1u)!=0;}
 }}
 #endif

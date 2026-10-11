@@ -27,6 +27,19 @@ class CrownRecovery final {
   uint32_t since_=0,last_=0;
   bool held_=false,seen_=false,fired_=false;
 };
+// Native lifetime owns the request. Neither reading it nor app event ACK can
+// dismiss it. Only a completed host cleanup ends this bounded exit interval.
+class CrownExit final {
+ public:
+  static constexpr uint32_t CleanupMs=3000;
+  void begin(bool child){child_=child;pending_=false;since_=0;}
+  void end(){begin(false);}
+  void press(uint32_t now){if(child_&&!pending_){pending_=true;since_=now;}}
+  bool pending()const{return pending_;}
+  bool expired(uint32_t now)const{return pending_&&uint32_t(now-since_)>=CleanupMs;}
+ private:
+  uint32_t since_=0;bool child_=false,pending_=false;
+};
 // Separate native and legacy consumers: application ACK cannot erase host
 // navigation/recovery state, and native polling does not steal app events.
 class CrownEvents final {

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <algorithm>
 using namespace RiscBoot;
 static unsigned generation=0, beats=0;
 static bool heartbeatMode=false;
@@ -12,6 +13,13 @@ static std::vector<std::string> lines;
 static bool ownerOk=true;
 static std::vector<uint32_t> waits;
 static unsigned polls=0;
+static std::vector<bool> controlBegins;
+static unsigned controlEnds=0;
+static bool controlPending=false,controlRetain=false;
+static void controlBegin(bool child){controlBegins.push_back(child);controlPending=child;}
+static void controlEnd(){++controlEnds;controlPending=false;}
+static bool controlRequest(){return controlPending;}
+static bool controlSafe(){return !(controlRetain&&controlPending);}
 extern "C" void test_yield_owner(bool enabled){ownerOk=enabled;}
 extern "C" void test_yield_poll(uint32_t ms){assert(ms>0 && ms<=8);++polls;}
 static bool owner(){return ownerOk;}
@@ -234,5 +242,21 @@ int main(int argc,char** argv){
     runtime.yield(20);assert(waits.size()==(pollable?5u:4u));
   }
   puts("Runtime cooperative yield: exactly one wait, active/idle, owner guard and 1..50ms bounds PASS");
+  // The real runOne owns cancellation through load/init/fini/revoke/unload.
+  write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[]})");
+  generation=0;lines.clear();controlBegins.clear();controlEnds=0;
+  Port cp{owner,health,delay,logLine};cp.controlBegin=controlBegin;cp.controlEnd=controlEnd;cp.controlExitRequested=controlRequest;cp.appExitSafe=controlSafe;
+  {Runtime r(cp);assert(r.prepare(root.c_str()));assert(r.run());}
+  assert((controlBegins==std::vector<bool>{false,true,false,true,false}));
+  assert(controlEnds==5&&!controlPending);
+  assert(std::find(lines.begin(),lines.end(),"TEST native-exit-read")!=lines.end());
+  assert(std::find(lines.begin(),lines.end(),"TEST child-relaunch-queued")!=lines.end());
+  assert(std::find(lines.begin(),lines.end(),"RTE_CONTROL crown=exit cleanup=complete action=home")!=lines.end());
+  generation=0;controlBegins.clear();controlEnds=0;controlRetain=true;
+  // A retained image deliberately remains owned until native reset.
+  auto *retainedRuntime=new Runtime(cp);assert(retainedRuntime->prepare(root.c_str()));
+  assert(!retainedRuntime->run()&&retainedRuntime->retained());
+  assert(controlPending&&controlEnds==1&&controlBegins.size()==2);
+  puts("Native host control: persistent child request, competing launch overridden after cleanup, failed custody keeps recovery armed PASS");
   puts("Runtime integration: mapped provider, default/child/default/missing/default, manifest/path rejection PASS");
 }

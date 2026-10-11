@@ -9,4 +9,4 @@ if [[ "${SANITIZE:-0}" == 1 ]];then flags+=(-fsanitize="${SANITIZERS:-address,un
 "${CXX:-c++}" "${flags[@]}" -I"$repo/src" -I"$repo/test/native_crown_shim" \
  -DESP_PLATFORM -DRISC_NATIVE_RECOVERY_AXP2101=1 -DRISC_RECOVERY_I2C_PORT=0 -DRISC_RECOVERY_SDA=10 -DRISC_RECOVERY_SCL=11 \
  "$repo/src/ports/esp32s3/NativeCrownRecovery.cpp" "$repo/test/native_crown_recovery_test.cpp" -o "$build/native"
-for scenario in held held-at-boot release bus-error sleep task-failure wrong-chip;do "$build/native" "$scenario";done
+for scenario in exit-timeout home-short clean-exit held held-at-boot release bus-error sleep task-failure wrong-chip;do "$build/native" "$scenario";done

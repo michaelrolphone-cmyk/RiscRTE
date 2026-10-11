@@ -89,6 +89,11 @@ struct Port {
   bool (*monotonicMs)(uint32_t*)=nullptr;
   int32_t (*memoryHeap)(risc_memory_heap_snapshot_v1*)=nullptr;
   int32_t (*randomBytes)(void*,uint32_t)=nullptr;
+  // Compiled-in control, never app-writable. End acknowledges only completed
+  // teardown. A retained or nonreturning invocation keeps its native deadline.
+  void (*controlBegin)(bool child)=nullptr;
+  void (*controlEnd)()=nullptr;
+  bool (*controlExitRequested)()=nullptr;
 };
 class Runtime final {
  public:
@@ -127,6 +132,7 @@ class Runtime final {
   void yield(uint32_t);
   bool diagnostic(const char*);
   bool confirmBoot();
+  bool exitRequested()const;
   bool retainInvocation();
   bool streamClient(risc_stream_client_v1*);
   bool residentClient(risc_resident_client_v1*);

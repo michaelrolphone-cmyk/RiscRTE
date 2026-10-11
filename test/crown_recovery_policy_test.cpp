@@ -34,5 +34,9 @@ int main(){
    assert(!e.observe(2,200));assert(!e.observe(9,300));assert(e.shortSequence()==1);}
   {RiscControl::CrownEvents e;e.waking();assert(!e.observe(2,0));
    for(unsigned n=10;n<5000;n+=10)assert(!e.observe(0,n));assert(e.observe(0,5000));}
+  {RiscControl::CrownExit x;x.begin(false);x.press(10);assert(!x.pending()&&!x.expired(9999));
+   x.begin(true);x.press(100);assert(x.pending()&&!x.expired(3099));x.press(2000);
+   assert(x.expired(3100));x.end();assert(!x.pending());
+   x.begin(true);x.press(UINT32_MAX-1000);assert(x.expired(1999));}
   puts("Crown policy: threshold, release, bounce, ambiguity, boot/wake gaps, wrap, independent consumers and single reset PASS");
 }

@@ -14,6 +14,10 @@ bool pause();
 void resume(bool gpioWake=false);
 uint32_t shortSequence();
 bool previousEmergency();
+uint32_t previousReason();
+void beginInvocation(bool child);
+void endInvocation();
+bool exitRequested();
 #else
 inline bool opened(uint8_t,uint8_t,uint8_t,Transfer){return true;}
 inline bool transact(uint8_t p,uint8_t a,const uint8_t*t,size_t n,uint8_t*r,size_t z,uint32_t ms,Transfer f){return f(p,a,t,n,r,z,ms);}
@@ -22,5 +26,9 @@ inline bool pause(){return true;}
 inline void resume(bool=false){}
 inline uint32_t shortSequence(){return 0;}
 inline bool previousEmergency(){return false;}
+inline uint32_t previousReason(){return 0;}
+inline void beginInvocation(bool){}
+inline void endInvocation(){}
+inline bool exitRequested(){return false;}
 #endif
 }}
