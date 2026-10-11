@@ -36,7 +36,17 @@ typedef struct {
  /* Closes either kind of handle. A listener with clients returns BUSY.
   * Failed/uncertain close returns RETAINED; the handle must not be reused. */
  int32_t (*close)(void*,uint64_t);
+ /* Optional tagged append-only peer connector. The original prefix is unchanged.
+  * connect returns OK with a nonzero owned handle, including while connecting.
+  * connected returns WOULD_BLOCK until complete, OK when usable, or an error.
+  * Every returned handle must be closed even after a connection error. No DNS,
+  * discovery, credentials or protocol logic cross the native boundary. */
+ uint32_t connect_tag;
+ int32_t (*connect)(void*,const risc_tcp_listen_v1*,uint64_t*);
+ int32_t (*connected)(void*,uint64_t);
 } risc_tcp_listener_v1;
+#define RISC_TCP_CONNECT_TAG UINT32_C(0x54435031)
+
 #ifdef __cplusplus
 }
 #endif

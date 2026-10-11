@@ -49,10 +49,16 @@ bool Runtime::validateNativeCohort(Runtime& candidate,const char* root,
                                   const RiscUpdate::NativeAppDataExportPolicyV1& policy) const {
   return validateCohortImpl(candidate,root,admit,context,nullptr,0,&policy);
 }
+bool Runtime::validateNativeCohort(Runtime& candidate,const char* root,
+                                  bool (*admit)(void*,const char*,bool),void* context,
+                                  const RiscUpdate::NativeAppDataExportPolicyV2& policy) const {
+  return validateCohortImpl(candidate,root,admit,context,nullptr,0,nullptr,&policy);
+}
 bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
                                 bool (*admit)(void*,const char*,bool),void* context,
                                 const AppDataExportDelegation* delegations,size_t delegationCount,
-                                const RiscUpdate::NativeAppDataExportPolicyV1* nativePolicy) const {
+                                const RiscUpdate::NativeAppDataExportPolicyV1* nativePolicy,
+                                const RiscUpdate::NativeAppDataExportPolicyV2* nativeV2) const {
   if(&candidate==this || !attempted_ || !port_.owner() || !providerStorageSafe() || !root || !admit || candidate.attempted_ || candidate.metadataCloseRetained_)return false;
   // All metadata opened for this admission, including source comparisons,
   // belongs to the candidate's native session. Keep its close failure visible
@@ -124,7 +130,40 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
        !matches(nativePolicy->from,currentIdentity) || !matches(nativePolicy->to,nextIdentity))return false;
     delegations=nativePolicy->delegations;delegationCount=nativePolicy->count;
   }
-  if(!validateAppDataExportCohort(candidate,delegations,delegationCount))return false;
+  bool exactExportMigration=false;
+  bool nativeKvConsumed[MaxAppPolicies]{};
+  if(nativeV2 && nativeV2->migrationId &&
+     !cohortSameJson(currentBoot["app_capabilities"],newBoot["app_capabilities"])) {
+    if(nativeV2->schemaVersion!=2 || !*nativeV2->migrationId ||
+       strnlen(nativeV2->migrationId,96)>=96 || !nativeV2->before || !nativeV2->after ||
+       nativeV2->sharedKeyValueCount>MaxAppPolicies ||
+       (nativeV2->sharedKeyValueCount && !nativeV2->sharedKeyValue))return false;
+    auto matches=[](const RiscUpdate::NativeAppDataExportCohortV1& selected,
+                    const RiscUpdate::CohortIdentity& actual) {
+      auto exact=[](const char* value,const char* expected,size_t bound) {
+        return value && strnlen(value,bound)<bound && !strcmp(value,expected);
+      };
+      return exact(selected.product,actual.product.product,sizeof(actual.product.product)) &&
+        exact(selected.version,actual.product.version,sizeof(actual.product.version)) &&
+        exact(selected.sourceRepo,actual.product.source_repo,sizeof(actual.product.source_repo)) &&
+        exact(selected.sourceRevision,actual.product.source_revision,sizeof(actual.product.source_revision)) &&
+        exact(selected.runtimeVersion,actual.runtimeVersion,sizeof(actual.runtimeVersion));
+    };
+    RiscUpdate::CohortIdentity sourceIdentity{},targetIdentity{};
+    if(!RiscUpdate::readCohort(root_,sourceIdentity,&candidate.metadataCloseRetained_) ||
+       !RiscUpdate::readCohort(root,targetIdentity,&candidate.metadataCloseRetained_))return false;
+    if(matches(nativeV2->from,sourceIdentity) && matches(nativeV2->to,targetIdentity)) {
+    JsonDocument before,after;
+    if(strnlen(nativeV2->before,65536)>=65536 || strnlen(nativeV2->after,65536)>=65536 ||
+       deserializeJson(before,nativeV2->before)!=DeserializationError::Ok ||
+       deserializeJson(after,nativeV2->after)!=DeserializationError::Ok ||
+       !before.is<JsonArray>() || !after.is<JsonArray>() ||
+       !cohortSameJson(before.as<JsonVariantConst>(),currentBoot["app_capabilities"]) ||
+       !cohortSameJson(after.as<JsonVariantConst>(),newBoot["app_capabilities"]))return false;
+    exactExportMigration=true;
+    }
+  }
+  if(!validateAppDataExportCohort(candidate,delegations,delegationCount,exactExportMigration))return false;
   auto persistent=[](const AppGrantPolicy& g){return g.keyValue || g.driver==AppDataDriver;};
   auto same=[](const AppGrantPolicy& a,const AppGrantPolicy& b){return a.api==b.api && a.instance==b.instance && !strcmp(a.capability,b.capability);};
   // Keep every existing persisted app namespace attached to the same identity.
@@ -157,6 +196,37 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
       used=true;if(same(previous,grant) && !strcmp(policies_[q].id,candidate.policies_[p].id))owned=true;
     }
     if(used && !owned){
+      if(exactExportMigration && grant.keyValue) {
+        size_t selected=nativeV2->sharedKeyValueCount;
+        for(size_t i=0;i<nativeV2->sharedKeyValueCount;++i) {
+          const auto& entry=nativeV2->sharedKeyValue[i];
+          if(!entry.consumer || strnlen(entry.consumer,96)>=96)return false;
+          if(strcmp(entry.consumer,candidate.policies_[p].id) || entry.api!=grant.api || entry.nameSpace!=grant.instance)continue;
+          if(selected!=nativeV2->sharedKeyValueCount || nativeKvConsumed[i] ||
+             !entry.previousOwners || !entry.previousOwnerCount || entry.previousOwnerCount>MaxAppPolicies)return false;
+          bool owners[MaxAppPolicies]{};size_t ownersFound=0;
+          for(size_t q=0;q<policyCount_;++q) {
+            bool owns=false;
+            for(size_t h=0;h<policies_[q].count;++h)
+              owns=owns || (policies_[q].grants[h].keyValue && same(policies_[q].grants[h],grant));
+            if(!owns)continue;
+            size_t match=entry.previousOwnerCount;
+            for(size_t j=0;j<entry.previousOwnerCount;++j) {
+              if(!entry.previousOwners[j] || strnlen(entry.previousOwners[j],96)>=96)return false;
+              if(!strcmp(entry.previousOwners[j],policies_[q].id)) {
+                if(match!=entry.previousOwnerCount || owners[j])return false;
+                match=j;
+              }
+            }
+            if(match==entry.previousOwnerCount)return false;
+            owners[match]=true;++ownersFound;
+          }
+          if(ownersFound!=entry.previousOwnerCount)return false;
+          selected=i;
+        }
+        if(selected==nativeV2->sharedKeyValueCount)return false;
+        nativeKvConsumed[selected]=true;continue;
+      }
       if(!migrating || !grant.keyValue || policyCount_<2)return false;
       const char* id=candidate.policies_[p].id;
       for(size_t q=0;q<policyCount_;++q){
@@ -173,6 +243,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
       consumed[entry]=true;
     }
   }
+  if(exactExportMigration)for(size_t i=0;i<nativeV2->sharedKeyValueCount;++i)if(!nativeKvConsumed[i])return false;
   if(migrating)for(size_t entry=0;entry<shared.size();++entry)if(!consumed[entry])return false;
   for(size_t p=0;p<driverCount_;++p)for(size_t k=0;k<providerStorage_[p].count;++k){
     const auto& key=providerStorage_[p].keys[k];bool found=false;

@@ -12,5 +12,7 @@ struct TcpListenerBackend {
  int32_t (*close)(void*,uint64_t,uint64_t);
  bool (*idle)(void*,uint64_t); // zero queries all owners; no I/O
  bool (*safe)(void*);          // false after uncertain cleanup/context loss
+ int32_t (*connect)(void*,uint64_t,const risc_tcp_listen_v1*,uint64_t*)=nullptr;
+ int32_t (*connected)(void*,uint64_t,uint64_t)=nullptr;
 };
 }

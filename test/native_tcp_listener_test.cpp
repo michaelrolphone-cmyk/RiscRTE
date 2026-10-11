@@ -5,6 +5,7 @@
 using namespace RiscCpu;
 static bool owns=true,online=true,networkLose=false;
 static int calls=0,nextFd=10,failCall=0,loseCall=0,accepted=10,readResult=2,writeResult=3,closeResult=0;
+static int connectResult=-1,connectError=EINPROGRESS,selectResult=0,socketError=0;
 static sockaddr_in bound{};
 static bool owner(){return owns;}
 static bool network(){if(networkLose)owns=false;return online;}
@@ -18,9 +19,12 @@ extern "C" int __wrap_accept(int,sockaddr*,socklen_t*){if(step()<0)return -1;if(
 extern "C" ssize_t __wrap_recv(int,void* bytes,size_t size,int flags){assert(flags==MSG_DONTWAIT);if(step()<0)return -1;if(readResult<0){errno=EWOULDBLOCK;return -1;}assert(unsigned(readResult)<=size);memset(bytes,'r',readResult);return readResult;}
 extern "C" ssize_t __wrap_send(int,const void*,size_t size,int flags){assert(flags==MSG_DONTWAIT);if(step()<0)return -1;if(writeResult<0){errno=EAGAIN;return -1;}assert(unsigned(writeResult)<=size);return writeResult;}
 extern "C" int __wrap_close(int){if(step()<0)return -1;return closeResult;}
+extern "C" int __wrap_connect(int,const sockaddr* address,socklen_t size){assert(size==sizeof(bound));memcpy(&bound,address,size);if(step()<0)return -1;errno=connectError;return connectResult;}
+extern "C" int __wrap_select(int,fd_set* read,fd_set* write,fd_set* except,timeval* timeout){assert(!read&&write&&!except&&timeout&&!timeout->tv_sec&&!timeout->tv_usec);return step()<0?-1:selectResult;}
+extern "C" int __wrap_getsockopt(int,int level,int name,void* data,socklen_t* size){assert(level==SOL_SOCKET&&name==SO_ERROR&&*size==sizeof(int));if(step()<0)return -1;*static_cast<int*>(data)=socketError;return 0;}
 static const auto* api=NativeTcpListener::backend();
 static void reset(){
- owns=online=true;networkLose=false;calls=failCall=loseCall=closeResult=0;accepted=10;readResult=2;writeResult=3;
+ owns=online=true;networkLose=false;connectResult=-1;connectError=EINPROGRESS;selectResult=socketError=0;calls=failCall=loseCall=closeResult=0;accepted=10;readResult=2;writeResult=3;
  for(auto& s:NativeTcpListener::sockets)s=NativeTcpListener::Socket{};
  NativeTcpListener::retained=NativeTcpListener::busy=false;
  NativeTcpListener::configure(owner,network);
@@ -35,6 +39,8 @@ static void noIo(uint64_t l,uint64_t c,int32_t result){
  assert(api->read(nullptr,71,c,bytes,sizeof(bytes),&n)==result&&n==0);
  assert(api->write(nullptr,71,c,bytes,sizeof(bytes),&n)==result&&n==0);
  assert(api->close(nullptr,71,c)==result&&calls==old);
+ assert(api->connect(nullptr,71,&request,&t)==result&&t==0);
+ assert(api->connected(nullptr,71,c)==result&&calls==old);
 }
 int main(){
  reset();auto l=listen();assert(bound.sin_port==htons(8080)&&!memcmp(&bound.sin_addr.s_addr,request.address,4));
@@ -89,5 +95,34 @@ int main(){
  invalid=request;invalid.reserved=1;assert(api->listen(nullptr,71,&invalid,&other)==RISC_TCP_INVALID&&calls==0);
  invalid=request;invalid.address[0]=224;assert(api->listen(nullptr,71,&invalid,&other)==RISC_TCP_INVALID&&calls==0);
  reset();online=false;other=99;assert(api->listen(nullptr,71,&request,&other)==RISC_TCP_NETWORK_DOWN&&calls==0&&other==0);
+ // Outbound connections keep the same custody, bounded nonblocking and owner fences.
+ reset();c=0;assert(api->connect(nullptr,71,&request,&c)==0&&c&&!api->idle(nullptr,0));
+ assert(bound.sin_port==htons(8080)&&!memcmp(&bound.sin_addr.s_addr,request.address,4));
+ before=calls;assert(api->read(nullptr,71,c,bytes,8,&n)==RISC_TCP_WOULD_BLOCK&&n==0&&calls==before);
+ assert(api->connected(nullptr,72,c)==RISC_TCP_CONTEXT&&calls==before);
+ assert(api->connected(nullptr,71,c)==RISC_TCP_WOULD_BLOCK);
+ selectResult=1;assert(api->connected(nullptr,71,c)==0);
+ assert(api->write(nullptr,71,c,bytes,8,&n)==0&&n==3);
+ assert(api->close(nullptr,71,c)==0&&api->idle(nullptr,0));
+ assert(api->connected(nullptr,71,c)==RISC_TCP_CONTEXT);
+ reset();connectResult=0;assert(api->connect(nullptr,71,&request,&c)==0);before=calls;
+ assert(api->connected(nullptr,71,c)==0&&calls==before);assert(api->close(nullptr,71,c)==0);
+ reset();assert(api->connect(nullptr,71,&request,&c)==0);selectResult=1;socketError=ECONNREFUSED;
+ assert(api->connected(nullptr,71,c)==RISC_TCP_IO);before=calls;
+ assert(api->connected(nullptr,71,c)==RISC_TCP_IO&&calls==before);
+ assert(api->read(nullptr,71,c,bytes,8,&n)==RISC_TCP_IO&&n==0&&calls==before);
+ assert(api->close(nullptr,71,c)==0&&api->idle(nullptr,0));
+ reset();connectError=ECONNREFUSED;assert(api->connect(nullptr,71,&request,&c)==RISC_TCP_IO&&c==0&&api->idle(nullptr,0));
+ reset();assert(api->connect(nullptr,71,&request,&c)==0);online=false;before=calls;
+ assert(api->connected(nullptr,71,c)==RISC_TCP_NETWORK_DOWN&&calls==before);
+ assert(api->close(nullptr,71,c)==0&&api->idle(nullptr,0)); // cancel pending, including offline
+ for(int fail=1;fail<=4;++fail){reset();failCall=fail;assert(api->connect(nullptr,71,&request,&c)==(fail==2?RISC_TCP_RETAINED:RISC_TCP_IO)&&c==0);assert(api->idle(nullptr,0)==(fail!=2));}
+ for(int loss=1;loss<=4;++loss){reset();loseCall=loss;assert(api->connect(nullptr,71,&request,&c)==RISC_TCP_RETAINED&&c==0&&calls==loss);owns=true;noIo(1,2,RISC_TCP_RETAINED);}
+ for(int loss=1;loss<=2;++loss){reset();assert(api->connect(nullptr,71,&request,&c)==0);selectResult=1;loseCall=calls+loss;
+  assert(api->connected(nullptr,71,c)==RISC_TCP_RETAINED&&calls==loseCall);owns=true;noIo(1,c,RISC_TCP_RETAINED);}
+ reset();assert(api->connect(nullptr,71,&request,&c)==0);closeResult=-1;
+ assert(api->close(nullptr,71,c)==RISC_TCP_RETAINED);noIo(1,c,RISC_TCP_RETAINED);
+ reset();for(unsigned i=0;i<RISC_TCP_CLIENTS_MAX;++i)assert(api->connect(nullptr,71,&request,&c)==0);
+ before=calls;assert(api->connect(nullptr,71,&request,&c)==RISC_TCP_LIMIT&&c==0&&calls==before);
  puts("Native TCP production syscall shim: bounds, partial/blocked/EOF, owner generations, Wi-Fi, retained close and no I/O after context loss PASS");
 }

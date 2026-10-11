@@ -372,3 +372,11 @@ It covers dry-run, rejected partial batch rollback, denied native grants,
 idempotent replay, replacement refusal while live and update after quiescence.
 All registration calls perform zero media I/O. Product durable cache, catalog
 resolution and App Store wiring are being integrated in the same task.
+
+
+The combined integration checkpoint uses Runtime 0.2.15 after merging the Files
+owner's 0.2.14 V2 migration and peer TCP connector. The V2 mechanism is retained
+unchanged; exact release policy coordinates must describe the actual composed
+Runtime version and before/after app-capability snapshots. A policy frozen for
+another target remains invalid, as intended. No migration authority is inferred
+from downloaded provider manifests or the new installation suffix.

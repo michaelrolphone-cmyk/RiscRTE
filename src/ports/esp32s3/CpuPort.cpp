@@ -218,6 +218,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
     tcp_={this,tcpListen,tcpAccept,tcpRead,tcpWrite,tcpClose,
       [](void* c,uint64_t owner){return static_cast<Port*>(c)->tcpIdle(owner);},
       [](void* c){return static_cast<Port*>(c)->tcpSafe();}};
+    if(b->connect && b->connected){tcp_.connect=tcpConnect;tcp_.connected=tcpConnected;}
     if(!runtime.registerTcpListener(&tcp_))return false;
   }
   if(hw_.httpClient){
