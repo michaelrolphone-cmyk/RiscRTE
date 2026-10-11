@@ -89,6 +89,11 @@ struct Port {
   bool (*monotonicMs)(uint32_t*)=nullptr;
   int32_t (*memoryHeap)(risc_memory_heap_snapshot_v1*)=nullptr;
   int32_t (*randomBytes)(void*,uint32_t)=nullptr;
+  // Compiled-in control, never app-writable. End acknowledges only completed
+  // teardown. A retained or nonreturning invocation keeps its native deadline.
+  void (*controlBegin)(bool child)=nullptr;
+  bool (*controlEnd)()=nullptr;
+  bool (*controlExitRequested)()=nullptr;
 };
 class Runtime final {
  public:
@@ -127,6 +132,7 @@ class Runtime final {
   void yield(uint32_t);
   bool diagnostic(const char*);
   bool confirmBoot();
+  bool exitRequested()const;
   bool retainInvocation();
   bool streamClient(risc_stream_client_v1*);
   bool residentClient(risc_resident_client_v1*);
@@ -381,7 +387,11 @@ class Runtime final {
   };
   MetadataArray<InstallationState> installation_;
   MetadataArray<RiscStorage::SdFirstKeyValue::State> installedSettings_;
-  RiscStorage::ScalableSettings::Collection scalableSettings_;
+  RiscStorage::ScalableSettings::Collection scalableSettings_, sharedSettings_;
+  MetadataArray<uint32_t> sharedSettingsNamespaces_;
+  RiscStorage::ScalableSettings::State* scalableSettingsState(uint32_t)const;
+  uint32_t settingsNamespace(uint32_t slot)const;
+  static uint32_t installationSharedSettingsNamespace(void*,uint32_t);
   MetadataArray<RiscStorage::SdFirstKeyValue::Workspace> installedSettingsWorkspace_;
   RiscStorage::SdFirstKeyValue::Journal settingsJournal();
   static uint32_t installationSettingsStatus(void*,uint32_t);
@@ -399,7 +409,7 @@ class Runtime final {
   bool installationMutable(size_t)const;
   static int32_t installationProviders(void*,const risc_install_provider_v1*,uint32_t,bool);
   static bool installationAvailable(void*,const char*,uint32_t,uint64_t);
-  bool installedLaunchPath(const char*,char*,size_t)const;
+  bool installedLaunchPath(const char*,char*,size_t,bool* settingsPending=nullptr)const;
   void* loadRemovableApp(const AppPolicy&);
   RuntimeProviders::GrantV2 retainedAppSource_{};
   MetadataArray<RiscStorage::AppDataExport::Entry> exportEntries_[MaxAppPolicies];

@@ -10,9 +10,18 @@ class PagedSettingsCheckpoint {
  using State=InstalledSettingsCheckpoint::State;
  ~PagedSettingsCheckpoint(){std::free(bytes_);}
  bool start(const risc_installation_v1*n,const risc_storage_volume_api_v1*v,uint32_t slot,const char*owner){
-  if(phase_!=Idle||!n||!n->settings_restore||!n->settings_snapshot||!n->settings_ack||!slot||!owner||!*owner||strlen(owner)>=96||strchr(owner,'/')||strstr(owner,"..")||!risc_storage_volume_download(v))return false;
+  if(phase_!=Idle||!n||n->struct_size<RISC_INSTALLATION_SETTINGS_FORMAT_SIZE||n->settings_format!=2||!n->settings_status||!n->settings_restore||!n->settings_snapshot||!n->settings_ack||!slot||(slot<=n->namespace_capacity&&slot>n->settings_capacity)||!owner||!*owner||strlen(owner)>=96||strchr(owner,'/')||strchr(owner,'\\')||strstr(owner,"..")||!risc_storage_volume_download(v))return false;
   native_=n;volume_=v;package_=risc_storage_volume_packages(v);slot_=slot;
-  strcpy(owner_,owner);snprintf(directory_,sizeof directory_,"/AppData/%s",owner);snprintf(index_,sizeof index_,"%s/settings.index",directory_);snprintf(temporary_,sizeof temporary_,"%s/.settings.index.next",directory_);
+  strcpy(owner_,owner);strcpy(root_,"/AppData");
+  if(slot>n->namespace_capacity){
+   if(n->struct_size<RISC_INSTALLATION_SHARED_SETTINGS_SIZE||!n->shared_settings_namespace||
+      slot-n->namespace_capacity-1>=n->shared_settings_count)return false;
+   const uint32_t ns=n->shared_settings_namespace(n->context,slot-n->namespace_capacity-1);
+   char expected[32];snprintf(expected,sizeof expected,"shared-%08x",unsigned(ns));
+   if(!ns||strcmp(owner,expected))return false;
+   strcpy(root_,"/RTECFG");snprintf(directory_,sizeof directory_,"%s/%08X",root_,unsigned(ns));
+  }else snprintf(directory_,sizeof directory_,"%s/%s",root_,owner);
+  snprintf(index_,sizeof index_,"%s/settings.index",directory_);snprintf(temporary_,sizeof temporary_,"%s/.settings.index.next",directory_);
   if(package_->base.begin(v->context,&session_)!=RISC_STORAGE_ASYNC_OK){return false;}phase_=Refresh;return true;
  }
  State state()const{return phase_==Done?State::Done:phase_==Failed?State::Failed:phase_==Cancelled?State::Cancelled:phase_==Retained?State::Retained:State::Refresh;}
@@ -24,7 +33,9 @@ class PagedSettingsCheckpoint {
    phase_=phase_==EndRead?Restore:phase_==EndWrite?Ack:phase_==EndCleanup?Done:cancelled_?Cancelled:Failed;return;
   }
   if(phase_==Restore){int rc=native_->settings_restore(native_->context,slot_,owner_,missing_?nullptr:bytes_,missing_?0:size_,missing_);if(rc==RISC_KEY_VALUE_BUSY)return;if(rc){phase_=Failed;return;}
-   std::free(bytes_);bytes_=nullptr;size_=0;phase_=native_->settings_status(native_->context,slot_)==1?Done:Snapshot;return;}
+   std::free(bytes_);bytes_=nullptr;size_=0;// A clean SD restore still needs a native anchor after a full erase and
+   // may have same-generation journal rows left by a cancelled checkpoint.
+   phase_=native_->settings_status(native_->context,slot_)==1?(restoredIndex_?Ack:Done):Snapshot;return;}
   if(phase_==Snapshot){
    uint32_t needed=0;int rc=native_->settings_snapshot(native_->context,slot_,nullptr,0,&needed,&generation_);
    if(rc==RISC_KEY_VALUE_BUSY){return;}if(rc!=RISC_KEY_VALUE_BUFFER_SMALL||needed<132){phase_=Failed;return;}
@@ -50,7 +61,7 @@ class PagedSettingsCheckpoint {
     request_.operation=phase_==RecoverIndex||phase_==RecoverLegacy||phase_==RecoverWrite?RISC_STORAGE_PACKAGE_RECOVER:phase_==Root||phase_==Directory?RISC_STORAGE_PACKAGE_MKDIR:phase_==ReplaceIndex?RISC_STORAGE_PACKAGE_REPLACE:RISC_STORAGE_PACKAGE_WRITE_SMALL;
     const char*path=index_;
     if(phase_==RecoverLegacy){snprintf(pagePath_,sizeof pagePath_,"%s/settings.kv",directory_);path=pagePath_;}
-    if(phase_==Root){path="/AppData";}if(phase_==Directory){path=directory_;}
+    if(phase_==Root){path=root_;}if(phase_==Directory){path=directory_;}
     if(phase_==WritePage){pagePath();path=pagePath_;request_.size=pageSize();memcpy(request_.data,bytes_+page_*4096,request_.size);}
     if(phase_==WriteIndex||phase_==ReplaceIndex){path=temporary_;strcpy(request_.destination,index_);request_.size=sizeof indexBytes_;memcpy(request_.data,indexBytes_,sizeof indexBytes_);}
     strcpy(request_.path,path);rc=package_->submit_package(volume_->context,session_,&request_,&operation_);
@@ -81,7 +92,7 @@ class PagedSettingsCheckpoint {
     if(size_<132){fail(-1);break;}bytes_=static_cast<uint8_t*>(std::malloc(size_));if(!bytes_){fail(-1);break;}page_=0;phase_=ReadPage;break;
    case ReadPage:
     if(result_.size!=pageSize()){fail(-1);break;}memcpy(bytes_+page_*4096,result_.data,result_.size);++page_;
-    if(page_*uint64_t(4096)>=size_){if(crc(bytes_,size_)!=word(indexBytes_+20)){fail(-1);break;}phase_=EndRead;}break;
+    if(page_*uint64_t(4096)>=size_){if(crc(bytes_,size_)!=word(indexBytes_+20)||memcmp(bytes_,"RISCKV2",8)||wide(bytes_+16)!=generation_){fail(-1);break;}restoredIndex_=true;phase_=EndRead;}break;
    case RefreshWrite:phase_=RecoverWrite;break;
    case RecoverWrite:phase_=ReadPrevious;break;
    case ReadPrevious:
@@ -118,9 +129,9 @@ class PagedSettingsCheckpoint {
  static uint32_t crc(const void*data,uint32_t n){auto*p=static_cast<const uint8_t*>(data);uint32_t v=~0u;while(n--){v^=*p++;for(unsigned i=0;i<8;++i)v=(v>>1)^((v&1)?0xedb88320u:0);}return ~v;}
  uint32_t pageSize()const{uint64_t at=uint64_t(page_)*4096;return uint32_t(size_-at>4096?4096:size_-at);}
  void pagePath(){snprintf(pagePath_,sizeof pagePath_,"%s/kv-%08x%08x-%08x",directory_,unsigned(generation_>>32),unsigned(generation_),unsigned(page_));}
- Phase phase_=Idle;bool missing_=false,cancelled_=false,priorPresent_=false;uint64_t priorGeneration_=0;uint32_t priorSize_=0;const risc_installation_v1*native_=nullptr;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*package_=nullptr;
+ Phase phase_=Idle;bool missing_=false,cancelled_=false,priorPresent_=false,restoredIndex_=false;uint64_t priorGeneration_=0;uint32_t priorSize_=0;const risc_installation_v1*native_=nullptr;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*package_=nullptr;
  uint64_t session_=0,operation_=0,generation_=0;uint32_t slot_=0,size_=0,page_=0;uint8_t*bytes_=nullptr;uint8_t indexBytes_[28]{};
- char owner_[96]{},directory_[128]{},index_[160]{},temporary_[160]{},pagePath_[192]{};
+ char root_[12]{},owner_[96]{},directory_[128]{},index_[160]{},temporary_[160]{},pagePath_[192]{};
  risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};
 };
 class SettingsCheckpoint {
@@ -128,7 +139,7 @@ class SettingsCheckpoint {
  using State=InstalledSettingsCheckpoint::State;
  ~SettingsCheckpoint(){if(constructed_){if(paged_)paged()->~PagedSettingsCheckpoint();else legacy()->~InstalledSettingsCheckpoint();}}
  bool start(const risc_installation_v1*n,const risc_storage_volume_api_v1*v,uint32_t slot,const char*id){
-  paged_=n&&n->struct_size>=sizeof(*n)&&n->settings_format==2;constructed_=true;
+  paged_=n&&n->struct_size>=RISC_INSTALLATION_SETTINGS_FORMAT_SIZE&&n->settings_format==2;constructed_=true;
   if(paged_)return (new(memory_)PagedSettingsCheckpoint())->start(n,v,slot,id);
   return (new(memory_)InstalledSettingsCheckpoint())->start(n,v,slot,id);
  }

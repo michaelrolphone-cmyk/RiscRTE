@@ -4,6 +4,7 @@
 #include "CooperativeDelay.h"
 #include "NativeSleep.h"
 #include "NativeRetainedWake.h"
+#include "NativeCrownRecovery.h"
 #include "NativeI2s.h"
 #include "NativeRadioAsyncTask.h"
 #include "NativeRadioResources.h"
@@ -78,6 +79,7 @@ bool gpioClose(uint8_t pin){
 }
 #include "NativePwm.inc"
 bool gpioPwm(uint8_t pin,uint32_t hz,uint16_t duty,uint16_t maximum){return pwmWrite(pin,hz,duty,maximum);}
+bool i2cRawTransfer(uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);
 bool i2cOpen(uint8_t physical,uint8_t sda,uint8_t scl,uint32_t hz){
   auto& state=i2c[physical];if(state.installed)return false;
   state.sda=sda;state.scl=scl;
@@ -86,9 +88,9 @@ bool i2cOpen(uint8_t physical,uint8_t sda,uint8_t scl,uint32_t hz){
   if(i2c_param_config(static_cast<i2c_port_t>(physical),&config)!=ESP_OK)return false;
   state.configured=true;
   if(i2c_driver_install(static_cast<i2c_port_t>(physical),I2C_MODE_MASTER,0,0,0)!=ESP_OK)return false;
-  state.installed=true;return true;
+  state.installed=true;return NativeCrownRecovery::opened(physical,sda,scl,i2cRawTransfer);
 }
-bool i2cTransfer(uint8_t physical,uint8_t address,const uint8_t* tx,size_t tn,uint8_t* rx,size_t rn,uint32_t ms){
+bool i2cRawTransfer(uint8_t physical,uint8_t address,const uint8_t* tx,size_t tn,uint8_t* rx,size_t rn,uint32_t ms){
   if(!i2c[physical].installed)return false;
   const auto port=static_cast<i2c_port_t>(physical);esp_err_t result;
   if(tn && rn)result=i2c_master_write_read_device(port,address,tx,tn,rx,rn,ticks(ms));
@@ -96,7 +98,11 @@ bool i2cTransfer(uint8_t physical,uint8_t address,const uint8_t* tx,size_t tn,ui
   else result=i2c_master_read_from_device(port,address,rx,rn,ticks(ms));
   return result==ESP_OK;
 }
+bool i2cTransfer(uint8_t physical,uint8_t address,const uint8_t* tx,size_t tn,uint8_t* rx,size_t rn,uint32_t ms){
+  return NativeCrownRecovery::transact(physical,address,tx,tn,rx,rn,ms,i2cRawTransfer);
+}
 bool i2cClose(uint8_t physical){
+  if(!NativeCrownRecovery::closing(physical))return false;
   auto& state=i2c[physical];
   // IDF4 param_config enables the peripheral before install allocates its
   // driver. Failed install can leave that clock enabled without a deletable
@@ -155,7 +161,10 @@ bool lightSleep(uint32_t* cause){
 #endif
 #endif
   for(const auto& state:spi)if(state.held || state.pending)return false;
-  return NativeSleep::lightEnter(cause);
+  if(!NativeCrownRecovery::pause())return false;
+  const bool result=NativeSleep::lightEnter(cause);
+  NativeCrownRecovery::resume(result && *cause==RISC_LIGHT_SLEEP_WAKE_GPIO);
+  return result;
 }
 
 }
@@ -178,7 +187,11 @@ Hardware nativeHardware(bool (*owner)()){
       vTaskDelay(cooperativeDelayTicks(ms,configTICK_RATE_HZ));
     },gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
-    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});},NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
+    NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){
+      if(!NativeCrownRecovery::pause())return;
+      NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});
+      NativeCrownRecovery::resume();
+    },NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadioAsync::join,NativeRadioAsync::state,NativeRadioAsync::leave,NativeRadioAsync::addresses,NativeRadioAsync::scanStart,NativeRadioAsync::scanPoll,NativeRadioAsync::scanCancel,NativeRadioAsync::idle};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
   configureSchedulerWait(hardware);

@@ -1,7 +1,7 @@
 namespace RiscBoot {
 bool Runtime::configureInstallation(JsonVariantConst value){
  if(value.isUnbound())return true;
- if(!value.is<JsonObjectConst>() || !keys(value.as<JsonObjectConst>(),{"volume_instance","grants"},{"namespace_range","provider_grants","settings_sd"}) ||
+ if(!value.is<JsonObjectConst>() || !keys(value.as<JsonObjectConst>(),{"volume_instance","grants"},{"namespace_range","provider_grants","settings_sd","shared_settings"}) ||
     !value["grants"].is<JsonArrayConst>() || value["grants"].size()>MaxAppPolicyGrants)return fail("invalid installation envelope");
  int64_t volume=0;if(!integer(value["volume_instance"],1,INT32_MAX,volume))return fail("invalid installation volume");
  bool found=false;for(size_t i=0;i<driverCount_;++i)if(drivers_[i].instance==uint64_t(volume)&&!strcmp(drivers_[i].provides,"storage.volume")&&drivers_[i].api==1)found=true;
@@ -53,8 +53,21 @@ bool Runtime::configureInstallation(JsonVariantConst value){
    }
   }
  }
+ if(!value["shared_settings"].isUnbound()){
+  const auto shared=value["shared_settings"];
+  if(!shared.is<JsonArrayConst>()||!shared.size()||shared.size()>128||
+     !value["settings_sd"].is<bool>()||!value["settings_sd"].as<bool>()||
+     !port_.keyValue||!port_.keyValue->scalableSettings)return fail("shared settings require scalable SD selection");
+  sharedSettingsNamespaces_=metadataArray<uint32_t>(shared.size());
+  if(!sharedSettingsNamespaces_||!sharedSettings_.create(shared.size()))return false;
+  size_t i=0;for(JsonVariantConst item:shared.as<JsonArrayConst>()){
+   int64_t ns=0;if(!integer(item,1,INT32_MAX,ns)||(ns>=first&&ns<first+count))return fail("invalid shared settings namespace");
+   for(size_t j=0;j<i;++j)if(sharedSettingsNamespaces_[j]==uint32_t(ns))return fail("duplicate shared settings namespace");
+   sharedSettingsNamespaces_[i++]=uint32_t(ns);
+  }
+ }
  installation_[0].volume=uint64_t(volume);installation_[0].namespaceFirst=uint32_t(first);installation_[0].namespaceCount=uint32_t(count);
- installation_[0].api={1,sizeof(risc_installation_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),uint32_t((installedSettings_||scalableSettings_)?count:0),installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,scalableSettings_?2u:1u};
+ installation_[0].api={1,sizeof(risc_installation_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),uint32_t((installedSettings_||scalableSettings_)?count:0),installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,scalableSettings_?2u:1u,uint32_t(sharedSettings_.count),installationSharedSettingsNamespace};
  return registerPlatform(RISC_INSTALLATION_CAPABILITY,1,Scope::Global,0,&installation_[0].api);
 }
 bool Runtime::installationNamespaceRangeSafe()const{

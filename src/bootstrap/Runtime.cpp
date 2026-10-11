@@ -83,7 +83,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](risc_resident_client_v1* out){return currentRuntime && currentRuntime->residentClient(out);},
     [](risc_failure_evidence_client_v1* out){return currentRuntime && currentRuntime->failureEvidenceClient(out);},
     [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && currentRuntime->diagnosticCheckpointClient(out);},
-    [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);}};
+    [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);},
+    [](){return currentRuntime && currentRuntime->exitRequested();}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -624,8 +625,9 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   }
   uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*r->port_.keyValue;
-  const int32_t result=(r->scalableSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount)
-    ?RiscStorage::ScalableSettings::get(r->scalableSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],key,temp,limit,&size)
+  auto*state=r->scalableSettingsState(matched->keyValueNamespace);
+  const int32_t result=state
+    ?RiscStorage::ScalableSettings::get(*state,key,temp,limit,&size)
     :backend.get(backend.context,matched->keyValueNamespace,key,temp,limit,&size);
   if (result==RISC_KEY_VALUE_NOT_FOUND || result==RISC_KEY_VALUE_BUSY) return result;
   if (result!=RISC_KEY_VALUE_OK || !size || size>limit) return RISC_KEY_VALUE_IO;
@@ -641,8 +643,8 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
   if (!keyValueKey(key) || !data || !size || size>limit) return RISC_KEY_VALUE_INVALID;
   const auto& backend=*r->port_.keyValue;
-  if(r->scalableSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount)
-    return RiscStorage::ScalableSettings::put(r->scalableSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],*r->port_.keyValue->scalableSettings,matched->keyValueNamespace,key,data,size);
+  if(auto*state=r->scalableSettingsState(matched->keyValueNamespace))
+    return RiscStorage::ScalableSettings::put(*state,*r->port_.keyValue->scalableSettings,matched->keyValueNamespace,key,data,size);
   if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount&&r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
     auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::put(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,data,size);
   }
@@ -732,7 +734,8 @@ int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uin
   const uint32_t limit=storage->table.api_version==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX;
   uint8_t temp[RISC_BOUND_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*storage->owner->port_.keyValue;
-  const int32_t result=backend.get(backend.context,matched->nameSpace,key,temp,limit,&size);
+  auto*state=storage->owner->scalableSettingsState(matched->nameSpace);
+  const int32_t result=state?RiscStorage::ScalableSettings::get(*state,key,temp,limit,&size):backend.get(backend.context,matched->nameSpace,key,temp,limit,&size);
   if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND || result==RISC_BOUND_KEY_VALUE_BUSY) return result;
   if (result!=RISC_BOUND_KEY_VALUE_OK || !size || size>limit) return RISC_BOUND_KEY_VALUE_IO;
   if (capacity<size) {*outSize=size;return RISC_BOUND_KEY_VALUE_BUFFER_SMALL;}
@@ -747,7 +750,8 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
   for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
   if (!matched || !matched->writable) return RISC_BOUND_KEY_VALUE_CONTEXT;
   const auto& backend=*storage->owner->port_.keyValue;
-  const int32_t result=backend.put(backend.context,matched->nameSpace,key,data,size);
+  auto*state=storage->owner->scalableSettingsState(matched->nameSpace);
+  const int32_t result=state?RiscStorage::ScalableSettings::put(*state,*backend.scalableSettings,matched->nameSpace,key,data,size):backend.put(backend.context,matched->nameSpace,key,data,size);
   return result==RISC_BOUND_KEY_VALUE_OK || result==RISC_BOUND_KEY_VALUE_BUSY ? result : RISC_BOUND_KEY_VALUE_IO;
 }
 bool Runtime::release(risc_runtime_capability_v1* out) {
@@ -992,11 +996,19 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
   return port_.owner();
 }
 #include "CohortRuntime.inc"
-bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity)const {
+bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity,bool* settingsPending)const {
+  if(settingsPending)*settingsPending=false;
   if(!relative||!path(root_,relative,out,capacity))return false;
   auto ready=[&](size_t index){
     if(!installedSettings_&&!scalableSettings_)return true;
     const auto&policy=policies_[index];for(size_t g=0;g<policy.count;++g){const auto&grant=policy.grants[g];
+      if(grant.keyValue){
+        const auto*state=scalableSettingsState(uint32_t(grant.instance));
+        if(state&&state->status!=RiscStorage::ScalableSettings::Clean&&state->status!=RiscStorage::ScalableSettings::Dirty){
+          if(settingsPending)*settingsPending=state->status==RiscStorage::ScalableSettings::Cold||state->status==RiscStorage::ScalableSettings::Restoring;
+          return false;
+        }
+      }
       if(grant.keyValue&&grant.instance>=installation_[0].namespaceFirst&&grant.instance-installation_[0].namespaceFirst<installation_[0].namespaceCount){
         const auto status=scalableSettings_?uint32_t(scalableSettings_[grant.instance-installation_[0].namespaceFirst].status):uint32_t(installedSettings_[grant.instance-installation_[0].namespaceFirst].status);
         if(status==RiscStorage::SdFirstKeyValue::Cold||status==RiscStorage::SdFirstKeyValue::Uncertain||status==RiscStorage::ScalableSettings::Restoring)return false;
@@ -1012,6 +1024,11 @@ bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity
     out[0]=0;return false;
   }
   for(size_t i=bootPolicyCount_;i<policyCount_;++i)if(policies_[i].enabled&&!strcmp(policies_[i].elf,out))return ready(i);
+  // The configured default must run to recover cold SD settings. Other bundled
+  // applications cannot initialize from BUSY-as-empty or strand the catalog
+  // worker inside a foreground client that has no restoration authority.
+  for(size_t i=0;i<bootPolicyCount_;++i)if(policies_[i].enabled&&!strcmp(policies_[i].elf,out))
+    return !strcmp(out,default_)||ready(i);
   return true;
 }
 bool Runtime::launch(const char* relative) {
@@ -1024,11 +1041,14 @@ bool Runtime::launch(const char* relative) {
   }
   if(invocation_->fileOpen_.phase==FileOpenState::Phase::Requested || invocation_->fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
   if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained_ || !appDataExitSafe() || (invocation_->installedFiles_ && invocation_->installedFiles_->retained()) || invocation_->queued_[0] || appDataBusy() || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
-  const bool ok=installedLaunchPath(relative,invocation_->queued_,sizeof(invocation_->queued_));
+  char selected[sizeof(invocation_->queued_)]{};
+  const bool ok=installedLaunchPath(relative,selected,sizeof(selected));
+  if(ok)std::strcpy(invocation_->queued_,selected);
   RISC_STAGE_LOG("app launch-request file=%s result=%s",relative,ok?"accepted":"invalid-path");
   if(ok)RiscPerf::emit(20);
   return ok;
 }
+bool Runtime::exitRequested()const {return active() && port_.controlExitRequested && port_.controlExitRequested();}
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
 bool Runtime::monotonicMs(uint32_t* out) {
   if(!active() || !out)return false;
@@ -1238,6 +1258,12 @@ bool Runtime::appExitBarrier(bool exiting) {
 }
 bool Runtime::runOne(const char* name) {
   if(!appExitBarrier())return false;
+  if(port_.controlBegin)port_.controlBegin(strcmp(name,default_)!=0);
+  struct ControlLifetime {
+    Port& port;bool& retained;bool ended=false;
+    bool finish(){ended=true;return port.controlEnd?port.controlEnd():false;}
+    ~ControlLifetime(){if(!retained&&!ended&&port.controlEnd)(void)port.controlEnd();}
+  } control{port_,retained_};
   invocation_->role=0;
   invocation_->residentPolicyPending_=false;
   invocation_->failureKind=RISC_RESIDENT_FAILURE_NONE;invocation_->status=RISC_RESIDENT_OK;
@@ -1374,6 +1400,17 @@ bool Runtime::runOne(const char* name) {
   if(invocation_==&mainInvocation_){shellCallbacks_={};shellToken_=0;}
   invocation_->streams_.endInvocation();
   failureBreadcrumb(RISC_FAILURE_PHASE_HANDOFF,name);
+  const bool nativeExit=port_.controlEnd?control.finish():
+    (port_.controlExitRequested && port_.controlExitRequested());
+  if(nativeExit) {
+    // End snapshots/acknowledges atomically, so a press between the last app
+    // callback and cleanup completion cannot be lost to a queued launch.
+    // A child cannot replace native exit with a different app handoff. Every
+    // fini/grant/allocation/image barrier has completed before Home is queued.
+    strcpy(invocation_->queued_,default_);
+    invocation_->fileOpen_={};residentContinuation_[0]=0;
+    port_.log("RTE_CONTROL crown=exit cleanup=complete action=home");
+  }
   unloadTrace.result(1);
   return ok || fail("app entry/lifecycle invalid");
 }

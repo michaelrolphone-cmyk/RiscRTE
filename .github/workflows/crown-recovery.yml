@@ -1,0 +1,66 @@
+name: Crown recovery qualification
+on:
+  push:
+    branches: [fix/host-owned-crown-exit]
+  pull_request:
+    paths:
+      - '.github/workflows/crown-recovery.yml'
+      - 'crown-build.ini'
+      - 'src/ports/esp32s3/NativeCrownRecovery.*'
+      - 'src/runtime/control/CrownRecovery.h'
+      - 'test/*crown*'
+      - 'test/native_crown_shim/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: crown-recovery-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
+jobs:
+  host:
+    name: Crown policy and native supervisor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Production supervisor and policy
+        run: bash test/run_crown_recovery_test.sh
+      - name: Undefined-behavior sanitizer
+        run: SANITIZE=1 SANITIZERS=undefined bash test/run_crown_recovery_test.sh
+      - name: Runtime host control and retained custody
+        run: |
+          bash test/run_runtime_test.sh
+          SANITIZE=1 bash test/run_runtime_test.sh
+  target:
+    name: Explicit AXP2101 recovery target
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned compiler tooling
+        run: python -m pip install -r requirements-ci.txt
+      - name: Compile explicit Watch recovery profile
+        run: pio run -c crown-build.ini -e crown-recovery-qualification -j 1
+      - name: Archive exact qualification sources
+        run: git archive --format=tar.gz -o crown-runtime-source.tar.gz HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crown-native-qualification-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            .pio/build/crown-recovery-qualification/firmware.bin
+            .pio/build/crown-recovery-qualification/firmware.elf
+            crown-build.ini
+            crown-runtime-source.tar.gz
+          if-no-files-found: error
+          retention-days: 14

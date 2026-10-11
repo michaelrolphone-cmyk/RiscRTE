@@ -12,7 +12,7 @@ class InstalledSettingsCheckpoint {
  public:
   enum class State {Idle,Refresh,Recover,Read,EndRead,Restore,Snapshot,BeginWrite,RefreshWrite,RecoverWrite,Root,Directory,Remove,Write,Replace,Verify,EndWrite,Acknowledge,Ending,Done,Failed,Cancelled,Retained};
   bool start(const risc_installation_v1*n,const risc_storage_volume_api_v1*v,uint32_t slot,const char*owner){
-   if(state_!=State::Idle||!n||n->struct_size<sizeof(*n)||!n->settings_capacity||slot<1||slot>n->settings_capacity||
+   if(state_!=State::Idle||!n||n->struct_size<RISC_INSTALLATION_SETTINGS_CALLBACKS_SIZE||!n->settings_capacity||slot<1||slot>n->settings_capacity||
       !n->settings_restore||!n->settings_status||!n->settings_snapshot||!n->settings_ack||!risc_storage_volume_download(v)||
       !owner||!*owner||std::strlen(owner)>=sizeof(owner_)||std::strchr(owner,'/')||std::strchr(owner,'\\')||std::strstr(owner,"..")||!std::strcmp(owner,"."))return false;
    native_=n;volume_=v;package_=risc_storage_volume_packages(v);slot_=slot;std::strcpy(owner_,owner);

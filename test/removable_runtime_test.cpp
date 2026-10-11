@@ -22,7 +22,7 @@ static std::map<std::string,std::string> legacySettings;
 static std::vector<uint8_t> payload;
 static unsigned defaults,children,starts,stops,opens,closes,live,previousRuns;
 static bool providerMode(){return mode.find("provider-")==0;}
-static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority"||mode=="catalog-providers"||settingsMode();}
+static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority"||mode=="catalog-providers"||settingsMode()||mode=="shared-settings";}
 static unsigned baseCount(){return mode=="catalog-resident"?2:mode=="catalog-authority"?1:0;}
 extern "C" bool removable_is_resident(){return mode=="catalog-resident";}
 static size_t offset;
@@ -71,6 +71,7 @@ static const RiscStorage::ScalableSettings::Backend scalableBackend{nullptr,
  [](void*,uint32_t,bool delta,const char*after,char key[16],void*out,uint32_t cap,uint32_t*n)->int32_t{auto&m=delta?scalableDeltas:legacySettings;auto i=m.upper_bound(after);if(i==m.end())return RISC_KEY_VALUE_NOT_FOUND;strcpy(key,i->first.c_str());*n=i->second.size();assert(cap>=*n);memcpy(out,i->second.data(),*n);return 0;},
  [](void*,uint32_t,const char*k,const void*p,uint32_t n)->int32_t{scalableDeltas[k].assign((const char*)p,n);return 0;},
  [](void*,uint32_t,const char*k)->int32_t{scalableDeltas.erase(k);return 0;}};
+#include "shared_settings_runtime.inc"
 static void checkpointSettings(){
  if(mode=="catalog-settings-scalable"){
   uint32_t n=0;uint64_t generation=0;assert(installer->settings_snapshot(installer->context,1,nullptr,0,&n,&generation)==RISC_KEY_VALUE_BUFFER_SMALL);
@@ -93,6 +94,7 @@ static RiscBoot::AppDataBackend privateData{nullptr,
  [](void*){return true;}};
 extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
  if(!catalogMode())return;
+ if(mode=="shared-settings"){risc_runtime_capability_v1 g{};g.struct_size=sizeof(g);assert(rt->acquire("storage.key-value",1,6,&g));const auto*kv=static_cast<const risc_key_value_v1*>(g.api);char out[16];uint32_t n=0;assert(!kv->get(kv->context,"same",out,sizeof out,&n)&&std::string(out,n)=="six");assert(rt->release(&g));return;}
  if(settingsMode()){
   risc_runtime_capability_v1 setting{};setting.struct_size=sizeof(setting);assert(rt->acquire("storage.key-value",1,0,&setting));
   const auto*kv=static_cast<const risc_key_value_v1*>(setting.api);char out[64]{};uint32_t n=0;
@@ -134,6 +136,7 @@ static void selectImage(const char* name){
 }
 extern "C" unsigned removable_event(unsigned e,unsigned value) {
   if(e==0){++defaults;if(providerMode())return 0;
+    if(mode=="shared-settings"){if(!sharedHydratedThisRun)sharedSettingsTest();return 0;}
     if(defaults==1 && (mode=="discovery"||catalogMode())) {
       assert(runtime->appCount()==baseCount());
       if(mode=="catalog-providers")installProviderFixture();
@@ -359,10 +362,21 @@ int main(int argc,char** argv) {
     JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
     doc["installation"]["volume_instance"]=9;auto grant=doc["installation"]["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=0;
     if(mode=="catalog-providers")doc["installation"]["provider_grants"].to<JsonArray>();
-    if(settingsMode()){doc["installation"]["settings_sd"]=true;auto kv=doc["installation"]["grants"].add<JsonObject>();kv["capability"]="storage.key-value";kv["api"]=1;kv["instance_id"]=0;}
+    if(settingsMode()||mode=="shared-settings"){doc["installation"]["settings_sd"]=true;auto kv=doc["installation"]["grants"].add<JsonObject>();kv["capability"]="storage.key-value";kv["api"]=1;kv["instance_id"]=0;}
+    if(mode=="shared-settings"){
+     auto list=doc["installation"]["shared_settings"].to<JsonArray>();list.add(1);list.add(6);
+     write("shared-default.json",R"({"type":"application","id":"shared-default","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"storage.key-value","api":1}]})");
+     auto app=doc["app_capabilities"].add<JsonObject>();app["manifest"]="shared-default.json";
+     for(unsigned ns:{1u,6u,7u}){auto g=app["grants"].add<JsonObject>();g["capability"]="storage.key-value";g["api"]=1;g["instance_id"]=ns;}
+     write("shared-child.json",R"({"type":"application","id":"shared-child","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"revision1.elf","entry":"app_main","requires":[{"capability":"storage.key-value","api":1}]})");
+     auto child=doc["app_capabilities"].add<JsonObject>();child["manifest"]="shared-child.json";
+     auto childKv=child["grants"].add<JsonObject>();childKv["capability"]="storage.key-value";childKv["api"]=1;childKv["instance_id"]=6;
+     auto key=doc["drivers"][0]["key_value"].add<JsonObject>();key["key"]="wifi.test";key["namespace"]=6;key["access"]="read-write";
+    }
     doc["installation"]["namespace_range"]["first"]=1000;doc["installation"]["namespace_range"]["count"]=128;boot.clear();serializeJson(doc,boot);
     std::ifstream source(root+"/sd.json");std::string raw((std::istreambuf_iterator<char>(source)),{});JsonDocument sd;assert(!deserializeJson(sd,raw));
-    auto req=sd["requires"].add<JsonObject>();req["capability"]=RISC_INSTALLATION_CAPABILITY;req["api"]=1;raw.clear();serializeJson(sd,raw);write("sd.json",raw);
+    auto req=sd["requires"].add<JsonObject>();req["capability"]=RISC_INSTALLATION_CAPABILITY;req["api"]=1;if(mode=="shared-settings"){auto bound=sd["requires"].add<JsonObject>();bound["capability"]="storage.key-value.bound";bound["api"]=1;}
+    raw.clear();serializeJson(sd,raw);write("sd.json",raw);
   }
   if(mode=="catalog-resident"){
     JsonDocument doc;assert(!deserializeJson(doc,boot));
@@ -394,7 +408,8 @@ int main(int argc,char** argv) {
   }
   write("boot.json",boot);
   if(mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable")for(unsigned i=0;i<32;++i)legacySettings["key"+std::to_string(i)]="preserved-"+std::to_string(i);
-  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(mode=="catalog-settings-scalable")privateKv.scalableSettings=&scalableBackend;if(settingsMode())port.keyValue=&privateKv;runtime=new RiscBoot::Runtime(port);
+  if(mode=="shared-settings")for(unsigned i=0;i<40;++i){char key[16];snprintf(key,sizeof key,"legacy%04u",i);sharedOriginal[6][key]="opaque-legacy";}
+  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(mode=="catalog-settings-scalable")privateKv.scalableSettings=&scalableBackend;if(settingsMode())port.keyValue=&privateKv;if(mode=="shared-settings")port.keyValue=&sharedKv;runtime=new RiscBoot::Runtime(port);
   if(mode=="invalid-path" || mode=="default-external" || mode=="provider-bootstrap") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
   if(catalogMode()){
     // Boot cannot reserve any namespace already owned by an app, even before
@@ -405,6 +420,18 @@ int main(int argc,char** argv) {
     auto grant=owner["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=1000;
     std::string invalid;serializeJson(conflicting,invalid);write("boot.json",invalid);
     {RiscBoot::Runtime overlapping(port);assert(!overlapping.prepare(root.c_str()));}
+    if(mode=="shared-settings"){
+      for(unsigned which=0;which<4;++which){
+        JsonDocument invalidShared;assert(!deserializeJson(invalidShared,boot));
+        auto list=invalidShared["installation"]["shared_settings"].to<JsonArray>();
+        if(which==0){list.add(1);list.add(1);}
+        if(which==1)list.add(1000);
+        if(which==2)list.add(0);
+        if(which==3){list.add(1);invalidShared["installation"]["settings_sd"]=false;}
+        std::string bad;serializeJson(invalidShared,bad);write("boot.json",bad);
+        RiscBoot::Runtime rejected(port);assert(!rejected.prepare(root.c_str()));
+      }
+    }
     write("boot.json",boot);
   }
   if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
@@ -417,6 +444,28 @@ int main(int argc,char** argv) {
     else {assert(!live && starts==stops);assert(defaults==(required?0u:1u));delete runtime;}
     assert(opens==((mode=="provider-source"||retained)?1u:0u));
     printf("SD driver source %s: actual module load, fallback/custody PASS\n",mode.c_str());return 0;
+  }
+  if(mode=="shared-settings"){
+    assert(runtime->run()&&!runtime->retained());
+    // Preserving updates cannot return a selected namespace to stale NVS.
+    const std::string stage=root+"/shared-stage";assert(!mkdir(stage.c_str(),0700));
+    for(const char*name:{"board.json","sd.json","shared-default.json","shared-child.json"}){
+      std::ifstream source(root+"/"+name);std::ofstream dest(stage+"/"+name);dest<<source.rdbuf();
+    }
+    for(unsigned which=0;which<3;++which){
+      JsonDocument next;assert(!deserializeJson(next,boot));
+      if(which==0)next["installation"].remove("shared_settings");
+      if(which==1){auto list=next["installation"]["shared_settings"].to<JsonArray>();list.add(6);list.add(1);}
+      if(which==2){auto list=next["installation"]["shared_settings"].to<JsonArray>();list.add(1);}
+      std::ofstream target(stage+"/boot.json");std::string json;serializeJson(next,json);target<<json;target.close();
+      RiscBoot::Runtime candidate(port);
+      assert(!runtime->validateCohort(candidate,stage.c_str(),[](void*,const char*,bool){return true;},nullptr));
+    }
+    delete runtime;
+    const auto disk=sharedDisk;sharedOriginal.clear();sharedDeltas.clear();sharedAnchors.clear();++sharedPass;sharedHydratedThisRun=false;
+    runtime=new RiscBoot::Runtime(port);assert(runtime->prepare(root.c_str()));
+    assert(runtime->run()&&!runtime->retained());assert(sharedDisk==disk);delete runtime;
+    puts("Shared settings: actual app/provider namespace 1/6 routing, 1024 opaque keys, native erase/restart, isolation and fail-closed recovery PASS");return 0;
   }
   unsigned inspected=0;
   assert(runtime->inspectImages([](void* c,const char* p,bool){assert(!strstr(p,"child.elf"));++*static_cast<unsigned*>(c);return true;},&inspected));assert(inspected==(mode=="catalog-resident"?3u:2u));

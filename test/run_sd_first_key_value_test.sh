@@ -9,3 +9,6 @@ if [[ "${SANITIZE:-0}" == 1 ]];then flags+=(-fsanitize=undefined -fno-sanitize-r
 
 "${CXX:-c++}" "${flags[@]}" -I"$root/src" -I"$root/sdk/app" "$root/test/scalable_settings_test.cpp" -o "$build/scalable"
 "$build/scalable"
+
+"${CXX:-c++}" "${flags[@]}" -I"$root/sdk/app" "$root/test/protected_settings_path_test.cpp" -o "$build/protected"
+"$build/protected"

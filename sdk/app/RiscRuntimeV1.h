@@ -94,6 +94,12 @@ typedef struct {
    * Active owner only, including init/fini. No heap query, hardware identity,
    * provider polling or I/O. Check struct_size before reading this suffix. */
   bool (*monotonic_ms)(uint32_t* out);
+  /* Read-only native host cancellation. A true result remains true until the
+   * host completes teardown; reading is not acknowledgement. Finish bounded
+   * cleanup and return from app_main; do not queue another app. Native recovery
+   * may restart when cleanup/nonresponse exceeds its board-selected deadline.
+   * Defaults/Home retain their normal short-key behavior. Check suffix size. */
+  bool (*exit_requested)(void);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
@@ -105,6 +111,7 @@ typedef struct {
 #define RISC_RUNTIME_FAILURE_EVIDENCE_V1_SIZE (offsetof(risc_runtime_api_v1, failure_evidence) + sizeof(((risc_runtime_api_v1*)0)->failure_evidence))
 #define RISC_RUNTIME_DIAGNOSTIC_CHECKPOINT_V1_SIZE (offsetof(risc_runtime_api_v1, diagnostic_checkpoint_client) + sizeof(((risc_runtime_api_v1*)0)->diagnostic_checkpoint_client))
 #define RISC_RUNTIME_MONOTONIC_V1_SIZE (offsetof(risc_runtime_api_v1, monotonic_ms) + sizeof(((risc_runtime_api_v1*)0)->monotonic_ms))
+#define RISC_RUNTIME_EXIT_REQUESTED_V1_SIZE (offsetof(risc_runtime_api_v1, exit_requested) + sizeof(((risc_runtime_api_v1*)0)->exit_requested))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }
