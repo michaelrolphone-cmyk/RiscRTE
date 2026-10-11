@@ -36,7 +36,11 @@ int32_t Runtime::installationSettingsRestore(void*c,uint32_t slot,const char*own
  if(!r->providerStorageSafe()||r->installation_[0].call)return RISC_KEY_VALUE_BUSY;
  const uint32_t ns=r->settingsNamespace(slot);
  if(slot>r->installation_[0].namespaceCount){char expected[32];std::snprintf(expected,sizeof expected,"shared-%08x",unsigned(ns));if(!owner||std::strcmp(owner,expected))return RISC_KEY_VALUE_CONTEXT;}
- if(auto*state=r->scalableSettingsState(ns))return RiscStorage::ScalableSettings::restore(*state,*r->port_.keyValue->scalableSettings,ns,owner,data,size,missing);
+ if(auto*state=r->scalableSettingsState(ns)){
+  const int32_t rc=RiscStorage::ScalableSettings::restore(*state,*r->port_.keyValue->scalableSettings,ns,owner,data,size,missing);
+  if(rc!=RISC_KEY_VALUE_OK&&rc!=RISC_KEY_VALUE_BUSY)state->status=RiscStorage::ScalableSettings::Uncertain;
+  return rc;
+ }
  auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::restore(r->installedSettings_[slot-1],r->installedSettingsWorkspace_[0],journal,r->installation_[0].namespaceFirst+slot-1,owner,data,size,missing);
 }
 int32_t Runtime::installationSettingsSnapshot(void*c,uint32_t slot,void*out,uint32_t capacity,uint32_t*size,uint64_t*generation){

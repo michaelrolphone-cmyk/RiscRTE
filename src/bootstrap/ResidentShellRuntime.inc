@@ -135,8 +135,10 @@ int32_t Runtime::runForeground(uint64_t token,const char* relative,risc_resident
   }else {
     // A fresh host must first resolve a saved file caller/foreground request.
     if(residentContinuation_[0])return refuse(RISC_RESIDENT_BUSY);
-    if(!installedLaunchPath(relative,absolute,sizeof(absolute)) ||
-       (!residentAllowed(absolute) && !residentLegacyAllowed(absolute)))return refuse(RISC_RESIDENT_DENIED);
+    bool settingsPending=false;
+    if(!installedLaunchPath(relative,absolute,sizeof(absolute),&settingsPending))
+      return refuse(settingsPending?RISC_RESIDENT_BUSY:RISC_RESIDENT_DENIED);
+    if(!residentAllowed(absolute) && !residentLegacyAllowed(absolute))return refuse(RISC_RESIDENT_DENIED);
   }
   if(!appExitBarrier()) {out->status=RISC_RESIDENT_RETAINED;out->failure=lastFailure_;return out->status;}
   if(residentLegacyAllowed(absolute)) {

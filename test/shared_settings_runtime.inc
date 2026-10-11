@@ -75,6 +75,7 @@ static void sharedSettingsTest(){
    char owner[32];snprintf(owner,sizeof owner,"shared-%08x",unsigned(ns));
    // Once anchored, absent/corrupt SD may never resurrect the original NVS.
    assert(installer->settings_restore(installer->context,slot,owner,nullptr,0,true)==RISC_KEY_VALUE_IO);
+   assert(installer->settings_status(installer->context,slot)==RiscStorage::ScalableSettings::Uncertain);
    assert(kv[i]->get(kv[i]->context,"same",out,sizeof out,&n)==RISC_KEY_VALUE_BUSY);
    if(ns==6)assert(!rt->request_launch("revision1.elf")); // Failed recovery stays fenced.
    do{rc=installer->settings_restore(installer->context,slot,owner,disk.data(),disk.size(),false);}while(rc==RISC_KEY_VALUE_BUSY);assert(!rc);

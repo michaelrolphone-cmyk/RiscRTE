@@ -995,14 +995,18 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
   return port_.owner();
 }
 #include "CohortRuntime.inc"
-bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity)const {
+bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity,bool* settingsPending)const {
+  if(settingsPending)*settingsPending=false;
   if(!relative||!path(root_,relative,out,capacity))return false;
   auto ready=[&](size_t index){
     if(!installedSettings_&&!scalableSettings_)return true;
     const auto&policy=policies_[index];for(size_t g=0;g<policy.count;++g){const auto&grant=policy.grants[g];
       if(grant.keyValue){
         const auto*state=scalableSettingsState(uint32_t(grant.instance));
-        if(state&&state->status!=RiscStorage::ScalableSettings::Clean&&state->status!=RiscStorage::ScalableSettings::Dirty)return false;
+        if(state&&state->status!=RiscStorage::ScalableSettings::Clean&&state->status!=RiscStorage::ScalableSettings::Dirty){
+          if(settingsPending)*settingsPending=state->status==RiscStorage::ScalableSettings::Cold||state->status==RiscStorage::ScalableSettings::Restoring;
+          return false;
+        }
       }
       if(grant.keyValue&&grant.instance>=installation_[0].namespaceFirst&&grant.instance-installation_[0].namespaceFirst<installation_[0].namespaceCount){
         const auto status=scalableSettings_?uint32_t(scalableSettings_[grant.instance-installation_[0].namespaceFirst].status):uint32_t(installedSettings_[grant.instance-installation_[0].namespaceFirst].status);

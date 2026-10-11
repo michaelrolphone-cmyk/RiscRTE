@@ -403,7 +403,7 @@ class Runtime final {
   bool installationMutable(size_t)const;
   static int32_t installationProviders(void*,const risc_install_provider_v1*,uint32_t,bool);
   static bool installationAvailable(void*,const char*,uint32_t,uint64_t);
-  bool installedLaunchPath(const char*,char*,size_t)const;
+  bool installedLaunchPath(const char*,char*,size_t,bool* settingsPending=nullptr)const;
   void* loadRemovableApp(const AppPolicy&);
   RuntimeProviders::GrantV2 retainedAppSource_{};
   MetadataArray<RiscStorage::AppDataExport::Entry> exportEntries_[MaxAppPolicies];
