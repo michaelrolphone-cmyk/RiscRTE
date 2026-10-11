@@ -49,12 +49,12 @@ int main(int argc,char**argv){
   assert(a.physical==physical && a.bus.instance_id==100 && a.cs==7 && b.cs==11 && display.cs==15);
   assert(g.output==(uint64_t(1)<<8) && g.input==((uint64_t(1)<<9)|(uint64_t(1)<<10)) && !g.pullup);
   uint64_t rst=0,busy=0,irq=0,token=0,two=0,screen=0;
-  for(uint8_t pin:{4,5,6,7,12,16})assert(!g.api.claim(g.api.context,pin,true,false,false,&token) && !token && !calls);
-  assert(!g.api.claim(g.api.context,9,false,false,true,&token) && !token && !calls);
-  assert(!g.api.claim(g.api.context,9,true,false,false,&token) && !token && !calls);
-  assert(g.api.claim(g.api.context,8,true,true,false,&rst));assert(g.api.claim(g.api.context,9,false,false,false,&busy));assert(g.api.claim(g.api.context,10,false,false,false,&irq));
-  bool value=true;assert(g.api.read(g.api.context,busy,&value) && !value);assert(!g.api.write(g.api.context,busy,true));assert(!other.api.write(other.api.context,rst,true));
-  assert(g.api.write(g.api.context,rst,false));unsigned before=calls;
+  for(uint8_t pin:{4,5,6,7,12,16})assert(!g.api.base.claim(g.api.base.context,pin,true,false,false,&token) && !token && !calls);
+  assert(!g.api.base.claim(g.api.base.context,9,false,false,true,&token) && !token && !calls);
+  assert(!g.api.base.claim(g.api.base.context,9,true,false,false,&token) && !token && !calls);
+  assert(g.api.base.claim(g.api.base.context,8,true,true,false,&rst));assert(g.api.base.claim(g.api.base.context,9,false,false,false,&busy));assert(g.api.base.claim(g.api.base.context,10,false,false,false,&irq));
+  bool value=true;assert(g.api.base.read(g.api.base.context,busy,&value) && !value);assert(!g.api.base.write(g.api.base.context,busy,true));assert(!other.api.base.write(other.api.base.context,rst,true));
+  assert(g.api.base.write(g.api.base.context,rst,false));unsigned before=calls;
   assert(!a.api.claim(a.api.context,4,5,6,11,&token) && !token && calls==before);
   assert(!a.api.claim(a.api.context,4,5,-1,7,&token) && !token && calls==before);
   assert(a.api.claim(a.api.context,4,5,6,7,&token) && token);uint64_t first=token;
@@ -63,18 +63,18 @@ int main(int argc,char**argv){
   owned=false;assert(!a.api.begin(a.api.context,token,2000000,0,20));owned=true;
   beginOk=false;assert(!a.api.begin(a.api.context,token,2000000,0,20) && !p.spiBuses_[physical-2].held);beginOk=true;
   assert(a.api.begin(a.api.context,token,2000000,0,20));assert(!b.api.begin(b.api.context,two,2000000,0,20));assert(!display.api.begin(display.api.context,screen,2000000,0,20));
-  risc_light_sleep_result_v1 wake{sizeof(wake),0};assert(g.api.light_sleep(g.api.context,irq,true,&wake)==RISC_LIGHT_SLEEP_BUSY);assert(g.api.deep_sleep(g.api.context,irq,true)==RISC_DEEP_SLEEP_BUSY);
+  risc_light_sleep_result_v1 wake{sizeof(wake),0};assert(g.api.base.light_sleep(g.api.base.context,irq,true,&wake)==RISC_LIGHT_SLEEP_BUSY);assert(g.api.base.deep_sleep(g.api.base.context,irq,true)==RISC_DEEP_SLEEP_BUSY);
   uint8_t tx[513]{},rx[513]{};assert(a.api.exchange(a.api.context,token,tx,rx,255) && rx[254]==254);assert(!a.api.exchange(a.api.context,token,tx,rx,513));
   transferOk=false;assert(!a.api.exchange(a.api.context,token,tx,rx,1));transferOk=true;
   endOk=false;assert(!a.api.end(a.api.context,token) && p.spiBuses_[physical-2].held==&a);assert(!a.api.release(a.api.context,token));endOk=true;
   tick=21;assert(!a.api.exchange(a.api.context,token,tx,rx,1));assert(a.api.end(a.api.context,token));
-  assert(g.api.light_sleep(g.api.context,irq,true,&wake)==RISC_LIGHT_SLEEP_UNSUPPORTED);
+  assert(g.api.base.light_sleep(g.api.base.context,irq,true,&wake)==RISC_LIGHT_SLEEP_UNSUPPORTED);
   assert(display.api.begin(display.api.context,screen,2000000,0,20));assert(display.api.end(display.api.context,screen));
   assert(a.api.release(a.api.context,token));assert(!a.api.begin(a.api.context,first,2000000,0,20));assert(a.api.claim(a.api.context,4,5,6,7,&token) && token!=first && opens==1);
   assert(a.api.release(a.api.context,token));assert(b.api.release(b.api.context,two));assert(!closes);
   closeOk=false;assert(!display.api.release(display.api.context,screen) && display.token==screen);closeOk=true;
   gpioCloseOk=false;assert(!display.api.release(display.api.context,screen) && display.token==screen);gpioCloseOk=true;
-  assert(display.api.release(display.api.context,screen));assert(g.api.release(g.api.context,rst));assert(g.api.release(g.api.context,busy));assert(g.api.release(g.api.context,irq));assert(p.quiescent());
+  assert(display.api.release(display.api.context,screen));assert(g.api.base.release(g.api.base.context,rst));assert(g.api.base.release(g.api.base.context,busy));assert(g.api.base.release(g.api.base.context,irq));assert(p.quiescent());
  }
  // Config v2 selects only an explicit allowed mask; binding remains inert.
  static_assert(offsetof(tw_hw_lora_v2,base)==0,"v1 prefix moved");
