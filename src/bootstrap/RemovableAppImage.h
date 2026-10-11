@@ -21,7 +21,7 @@ struct RemovableAppImage {
   bool read(const risc_storage_volume_api_v1* v,const char* path,Hooks h) {
     if(!v || v->api_version!=1 || v->struct_size<sizeof(*v) || !v->refresh || !v->ready ||
        !v->file_open_read || !v->file_read || !v->file_close || !h.allocate || !h.free || !h.checkpoint ||
-       !v->refresh(v->context) || !v->ready(v->context))return false;
+       (!v->ready(v->context) && (!v->refresh(v->context) || !v->ready(v->context))))return false;
     uint64_t length=0;
     auto file=v->file_open_read(v->context,path,&length);
     if(!file){error="SD app file missing or busy";return false;}

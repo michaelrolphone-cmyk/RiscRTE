@@ -9,12 +9,12 @@ struct Card {
   std::vector<uint8_t> data=std::vector<uint8_t>(100000,0x5a);
   size_t offset=0,limit=4096,reads=0,checkpoints=0,failAt=SIZE_MAX;
   uint64_t length=100000;
-  bool present=true,busy=false,closeOk=true,allocationOk=true;
-  unsigned opens=0,closes=0;
+  bool refreshReady=false,present=true,busy=false,closeOk=true,allocationOk=true;
+  unsigned opens=0,closes=0,refreshes=0;
   risc_storage_volume_api_v1 api{};
   Card() {
     api.api_version=1;api.struct_size=sizeof(api);api.context=this;
-    api.refresh=[](void*){return true;};
+    api.refresh=[](void*c){auto&card=*static_cast<Card*>(c);++card.refreshes;if(card.refreshReady)card.present=true;return true;};
     api.ready=[](void* c){return static_cast<Card*>(c)->present;};
     api.file_open_read=[](void* c,const char*,uint64_t* n)->uint32_t {
       auto& x=*static_cast<Card*>(c);++x.opens;*n=x.length;return x.busy?0:1;
@@ -38,9 +38,18 @@ int main() {
   for(size_t limit:{size_t(4096),size_t(37)}) {
     Card c;c.limit=limit;RemovableAppImage s;
     assert(s.read(&c.api,"/Apps/example/app.elf",c.hooks()));
+    assert(c.refreshes==0);
     assert(s.size==c.data.size() && !memcmp(s.bytes,c.data.data(),s.size));
     c.data.assign(c.data.size(),0);c.present=false;
     assert(s.bytes[0]==0x5a && c.closes==1 && c.opens==1);free(s.bytes);
+  }
+  { Card c;RemovableAppImage first,second;
+    assert(first.read(&c.api,"/Drivers/one.elf",c.hooks()));c.offset=0;
+    assert(second.read(&c.api,"/Drivers/two.elf",c.hooks()));
+    assert(c.refreshes==0 && c.opens==2 && c.closes==2);free(first.bytes);free(second.bytes);
+  }
+  { Card c;c.present=false;c.refreshReady=true;RemovableAppImage first;
+    assert(first.read(&c.api,"/Drivers/one.elf",c.hooks()));assert(c.refreshes==1);free(first.bytes);
   }
   for(unsigned mode=0;mode<8;++mode) {
     Card c;RemovableAppImage s;auto h=c.hooks();

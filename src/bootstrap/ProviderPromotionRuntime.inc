@@ -1,7 +1,7 @@
 bool Runtime::promotionSafe() const {
   return !retained_ && !metadataCloseRetained_ && !invocation_->queued_[0] &&
     appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) &&
-    (!port_.appExitSafe || port_.appExitSafe()) && graph_.activationSafe();
+    providerStorageSafe() && graph_.activationSafe();
 }
 int32_t Runtime::promoteProviders(void* context) {
   auto* r=currentRuntime;

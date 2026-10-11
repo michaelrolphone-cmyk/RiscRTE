@@ -76,6 +76,7 @@ bool prepare(bool (*owner)(),bool (*operationSafe)()){
  return files.configure("/appdata");
 }
 const RiscBoot::AppDataBackend* backend(){return &api;}
+bool custodySafe(){return !asyncRetained&&(pending()||files.exitSafe());}
 bool exitSafe(){return !asyncRetained&&!pending()&&files.exitSafe();}
 }
 #endif

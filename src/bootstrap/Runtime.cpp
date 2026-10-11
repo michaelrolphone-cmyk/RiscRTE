@@ -479,7 +479,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
 bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
   if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !invocation_->appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
   out->slot=out->generation=0;out->api=nullptr;
-  if(!appDataExitSafe()){(void)appExitBarrier();return false;}
+  if(!appDataExitSafe()){(void)appExitBarrier(false);return false;}
   const AppGrantPolicy* allowed=nullptr;
   for (size_t i=0;i<invocation_->appPolicy_->count;++i) {
     const auto& p=invocation_->appPolicy_->grants[i];
@@ -538,7 +538,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   } else if (allowed->driver==AppDataExportDriver) {
     if(!acquireAppDataExport()) {
       if(invocation_->appDataExport_ && invocation_->appDataExport_->retained()) {
-        retained_=true;fail("app-data export admission retained");(void)appExitBarrier();
+        retained_=true;fail("app-data export admission retained");(void)appExitBarrier(false);
       }
       return false;
     }
@@ -555,7 +555,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     invocation_->installedVolumeContext_=context;invocation_->installedVolume_=volumeTable(context);grant.api=&invocation_->installedVolume_;
   } else if (allowed->driver>=0) {
     serviceProviders();
-    if(!appExitBarrier())return false;
+    if(!appExitBarrier(false))return false;
     const auto& driver=drivers_[allowed->driver];
     if(demandRetention_ && !demandActivation_ && !grants_[allowed->driver].slot) {
       // Only the first real acquisition after promotion creates session custody.
@@ -568,25 +568,25 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
       promotionRunning_=false;
       if(!safe) {
         retained_=true;invocation_->active_=false;fail("provider activation retained; restart required");
-        if(residentEnabled_)(void)appExitBarrier();
+        if(residentEnabled_)(void)appExitBarrier(false);
         return false;
       }
       if(!pin.slot)return fail(graph_.lastError());
     }
     grant.provider=graph_.acquireFrom(driver.id,capability,api,driver.instance);
-    if (!grant.provider.slot) {serviceProviders();(void)appExitBarrier();return false;}
+    if (!grant.provider.slot) {serviceProviders();(void)appExitBarrier(false);return false;}
     grant.api=graph_.interfaceFor(grant.provider);
   } else grant.api=platforms_[allowed->platform].table;
   const auto* header=static_cast<const uint32_t*>(grant.api);
   if (!header || header[0]!=api || header[1]<8) {
     if (grant.provider.slot && !graph_.release(grant.provider)) {
-      retained_=true;fail("invalid app interface retained");if(residentEnabled_)(void)appExitBarrier();return false;
+      retained_=true;fail("invalid app interface retained");if(residentEnabled_)(void)appExitBarrier(false);return false;
     }
     grant={}; return false;
   }
   grant.live=true;grant.generation=++grantGeneration_;grant.invocation=invocation_->streams_.context();
   serviceProviders();
-  if(!appExitBarrier())return false;
+  if(!appExitBarrier(false))return false;
   out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
 }
 int32_t Runtime::randomFill(void* context,void* bytes,uint32_t length){
@@ -1195,11 +1195,15 @@ bool Runtime::retainInvocation() {
   (void)appExitBarrier();
   return true;
 }
-bool Runtime::appExitBarrier() {
+bool Runtime::appExitBarrier(bool exiting) {
+  // Acquisition continues an existing invocation. Copied provider-owned work
+  // may remain in flight; only real exit must require complete native idleness.
+  // Custody faults still revoke authority and pin every image immediately.
+  const bool nativeSafe=exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe();
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && !appDataBusy() && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (!port_.appExitSafe || port_.appExitSafe()))return true;
+  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && nativeSafe)return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());

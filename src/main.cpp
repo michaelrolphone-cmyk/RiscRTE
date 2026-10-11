@@ -132,7 +132,7 @@ bool appExitSafe(){return cpu.appExitSafe()
   ;}
 bool providerStorageSafe(){return cpu.providerStorageSafe()
 #ifdef RISC_PAIRED_APP_DATA
- && RiscAppData::exitSafe()
+ && RiscAppData::custodySafe()
 #endif
  ;}
 bool restartSafe(){return cpu.restartResourcesSafe()

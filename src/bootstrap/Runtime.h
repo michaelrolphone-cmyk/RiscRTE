@@ -241,7 +241,7 @@ class Runtime final {
   bool appPolicies(JsonVariantConst,JsonVariantConst suppliedManifest=JsonVariantConst(),size_t replacement=MaxAppPolicies);
   bool admitInstalledAppAt(const char*,const char*,size_t);
   bool revokeApp();
-  bool appExitBarrier();
+  bool appExitBarrier(bool exiting=true);
   bool streamBinding(const risc_runtime_capability_v1*,RuntimeStreams::AppStreamBinding&) const;
   static bool streamBindingValid(void*,const RuntimeStreams::AppStreamBinding&,bool);
   static void streamRetain(void*);
