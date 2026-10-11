@@ -31,3 +31,11 @@ Reproduce sizes with test/shared_files_capacity_test.py --target-prefix
 /path/to/xtensa-esp32s3-elf- --output /new/output. The test also verifies legacy
 layout equality. The X4 isolated qualify_shared_files.py runs the real admission
 paths with inert native TCP/entropy callbacks; all calls are counted and forbidden.
+
+The generic `esp32s3-16mb-appdata-iq-sharing` environment is an explicit source
+build entrypoint with the above 64/32/48 and 24/24 selections plus native TCP and
+entropy. It inherits the existing IQ/paired app-data layout; default environments
+remain unchanged. The X4 composer independently exposes recorded opt-ins for
+provider capacity and sharing transport while preserving its native boot hooks.
+The Watch full-canvas source build can use the generic sharing environment.
+No selected native firmware is produced by this checkpoint.
