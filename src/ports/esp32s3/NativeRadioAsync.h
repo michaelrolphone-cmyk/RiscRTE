@@ -19,7 +19,8 @@ constexpr uint32_t RecordCount=32;
 #endif
 struct Buffers {
   risc_radio_request_v1 request{};
-  risc_radio_progress_v1 snapshot{},working{};
+  risc_radio_progress_v1 snapshot{},working{},suspended{};
+  risc_radio_request_v1 activeCredentials{},restoreCredentials{};
 #if RISC_STAGE_LOGS
   Record records[RecordCount]{};
 #endif
@@ -89,16 +90,18 @@ inline void drain(){
 inline void capture(uint32_t,int32_t,bool){}
 inline void drain(){}
 #endif
+static std::atomic<bool> restoring{false};
 inline bool valid(const risc_radio_request_v1* in){
-  if(!in || in->struct_size!=sizeof(*in) || in->flags || in->reserved[0] || in->reserved[1] || in->reserved[2])return false;
+  if(!in || in->struct_size!=sizeof(*in) || (in->flags & ~RISC_RADIO_TEMPORARY) || in->reserved[0] || in->reserved[1] || in->reserved[2])return false;
   if(in->kind==RISC_RADIO_REQUEST_SCAN){
+    if(in->flags)return false;
     for(char ch:in->ssid)if(ch)return false;
     for(char ch:in->password)if(ch)return false;
     return true;
   }
-  if(in->kind!=RISC_RADIO_REQUEST_JOIN)return false;
+  if(in->kind!=RISC_RADIO_REQUEST_JOIN && in->kind!=RISC_RADIO_REQUEST_AP)return false;
   const size_t sn=NativeRadio::boundedLength(in->ssid,32),pn=NativeRadio::boundedLength(in->password,63);
-  return sn && sn<=32 && pn<=63 && (!pn || pn>=8);
+  return sn && sn<=32 && pn<=63 && ((!pn && in->kind==RISC_RADIO_REQUEST_JOIN) || pn>=8);
 }
 inline bool idle(){return !activeId.load(std::memory_order_acquire) && NativeRadio::idle();}
 inline bool sharedPhaseReady(){
@@ -120,9 +123,16 @@ inline int32_t begin(const risc_radio_request_v1* in,uint32_t* out){
   if(out)*out=0;
   if(!out || !valid(in))return RISC_RADIO_INVALID;
   if(!ready || !buffers)return RISC_RADIO_UNAVAILABLE;
-  if(activeId.load(std::memory_order_acquire) || !NativeRadio::idle())return RISC_RADIO_BUSY;
+  const bool suspend=activeId.load(std::memory_order_acquire)!=0;
+  if(suspend && (!(in->flags&RISC_RADIO_TEMPORARY) || phase.load()!=RISC_RADIO_CONNECTED ||
+     NativeRadio::cancelRequested.load() || buffers->suspended.operation_id || buffers->activeCredentials.kind!=RISC_RADIO_REQUEST_JOIN || buffers->activeCredentials.flags))return RISC_RADIO_BUSY;
+  if(!suspend && !NativeRadio::idle())return RISC_RADIO_BUSY;
+  uint32_t leaseExpected=0;
+  if(suspend && !sharedLease.compare_exchange_strong(leaseExpected,2))return RISC_RADIO_AGAIN;
+  struct BeginLease {bool held;~BeginLease(){if(held)sharedLease.store(0);}} beginLease{suspend};
   if(nextId==UINT32_MAX)return RISC_RADIO_UNAVAILABLE;
   if(!lock())return RISC_RADIO_AGAIN;
+  if(suspend){buffers->suspended=buffers->snapshot;buffers->restoreCredentials=buffers->activeCredentials;}
   buffers->request=*in;buffers->snapshot={};buffers->snapshot.struct_size=sizeof(buffers->snapshot);buffers->snapshot.operation_id=++nextId;
   buffers->snapshot.phase=RISC_RADIO_QUEUED;buffers->snapshot.owned=1;buffers->snapshot.rssi=-127;
   buffers->snapshot.scan.struct_size=sizeof(buffers->snapshot.scan);
@@ -136,7 +146,14 @@ inline int32_t begin(const risc_radio_request_v1* in,uint32_t* out){
 inline void acknowledge(){
   NativeRadio::wipe(&buffers->request,sizeof(buffers->request));NativeRadio::wipe(&buffers->snapshot,sizeof(buffers->snapshot));
   NativeRadio::cancelRequested.store(false,std::memory_order_release);
-  activeId.store(0,std::memory_order_release);phase.store(RISC_RADIO_IDLE,std::memory_order_release);
+  if(buffers->suspended.operation_id){
+    buffers->snapshot=buffers->suspended;buffers->working=buffers->suspended;
+    buffers->activeCredentials=buffers->restoreCredentials;
+    workerId=buffers->suspended.operation_id;workingDone=terminalPublished=false;
+    NativeRadio::wipe(&buffers->suspended,sizeof(buffers->suspended));NativeRadio::wipe(&buffers->restoreCredentials,sizeof(buffers->restoreCredentials));
+    restoring.store(false);NativeRadio::asyncExecuting=true;
+    phase.store(RISC_RADIO_CONNECTED);activeId.store(workerId);
+  }else{NativeRadio::wipe(&buffers->activeCredentials,sizeof(buffers->activeCredentials));activeId.store(0,std::memory_order_release);phase.store(RISC_RADIO_IDLE,std::memory_order_release);}
 }
 inline int32_t poll(uint32_t id,risc_radio_progress_v1* out){
   if(!id || !out || out->struct_size<sizeof(*out))return RISC_RADIO_INVALID;
@@ -160,6 +177,7 @@ inline int32_t cancel(uint32_t id){
   if(!id)return RISC_RADIO_INVALID;
   drain();
   if(id!=activeId.load(std::memory_order_acquire))return id==finishedId.load(std::memory_order_acquire)?RISC_RADIO_QUIESCENT:RISC_RADIO_STALE;
+  if(restoring.load())return RISC_RADIO_PENDING;
   NativeRadio::cancelRequested.store(true,std::memory_order_release);
   NativeRadio::generation.store(0,std::memory_order_release);NativeRadio::eventOperation.store(NativeRadio::None,std::memory_order_release);
   if(finishedId.load(std::memory_order_acquire)==id){
@@ -188,6 +206,13 @@ inline void cleanup(uint32_t reason){
   buffers->working.scan={};buffers->working.scan.struct_size=sizeof(buffers->working.scan);
   phase.store(RISC_RADIO_STOPPING,std::memory_order_release);(void)publish();
   const bool clean=NativeRadio::idle() || (!NativeRadio::s.closing && NativeRadio::leave() && NativeRadio::idle());
+  if(clean && buffers->suspended.operation_id && !restoring.load()){
+    restoring.store(true);NativeRadio::cancelRequested.store(false);
+    if(NativeRadio::join(buffers->restoreCredentials.ssid,buffers->restoreCredentials.password))return;
+    // Failed restoration is custody failure, never permission to lose the old session.
+    buffers->working.phase=RISC_RADIO_CLEANUP_FAILED;buffers->working.failure=RISC_RADIO_FAILURE_CLEANUP;
+    workingDone=true;(void)publish();return;
+  }
   buffers->working.phase=clean?RISC_RADIO_IDLE:RISC_RADIO_CLEANUP_FAILED;
   buffers->working.owned=clean?0:1;buffers->working.quiescent=clean?1:0;
   if(!clean)buffers->working.failure=RISC_RADIO_FAILURE_CLEANUP;
@@ -207,11 +232,14 @@ inline void step(){
     if(!lock())return;
     risc_radio_request_v1 copied=buffers->request;NativeRadio::wipe(&buffers->request,sizeof(buffers->request));
     buffers->working=buffers->snapshot;workerId=id;workingDone=terminalPublished=false;unlock();
-    NativeRadio::asyncExecuting=true;buffers->working.phase=RISC_RADIO_STARTING;(void)publish();
+    NativeRadio::asyncExecuting=true;buffers->activeCredentials=copied;buffers->working.phase=RISC_RADIO_STARTING;(void)publish();
     if(NativeRadio::cancelRequested.load(std::memory_order_acquire)){
       NativeRadio::wipe(&copied,sizeof(copied));cleanup(RISC_RADIO_FAILURE_CANCELLED);return;
     }
-    const bool started=copied.kind==RISC_RADIO_REQUEST_SCAN?NativeRadio::scanStart():NativeRadio::join(copied.ssid,copied.password);
+    if(buffers->suspended.operation_id && !NativeRadio::leave()){
+      NativeRadio::wipe(&copied,sizeof(copied));buffers->working.phase=RISC_RADIO_CLEANUP_FAILED;buffers->working.failure=RISC_RADIO_FAILURE_CLEANUP;workingDone=true;(void)publish();return;
+    }
+    const bool started=copied.kind==RISC_RADIO_REQUEST_SCAN?NativeRadio::scanStart():copied.kind==RISC_RADIO_REQUEST_AP?NativeRadio::accessPoint(copied.ssid,copied.password):NativeRadio::join(copied.ssid,copied.password);
     const uint32_t kind=copied.kind;NativeRadio::wipe(&copied,sizeof(copied));
     if(NativeRadio::cancelRequested.load(std::memory_order_acquire)){cleanup(RISC_RADIO_FAILURE_CANCELLED);return;}
     if(!started){cleanup(RISC_RADIO_FAILURE_SETUP);return;}
@@ -223,6 +251,14 @@ inline void step(){
     if(!terminalPublished)(void)publish();
     return;
   }
+  if(restoring.load()){
+    uint8_t state=0;int8_t rssi=0;
+    if(!NativeRadio::state(&state,&rssi) || state==0){buffers->working.phase=RISC_RADIO_CLEANUP_FAILED;buffers->working.failure=RISC_RADIO_FAILURE_CLEANUP;workingDone=true;(void)publish();return;}
+    if(state==2){uint8_t ap[12]{};
+      if(!NativeRadio::addresses(buffers->suspended.station,ap)){buffers->working.phase=RISC_RADIO_CLEANUP_FAILED;workingDone=true;(void)publish();return;}
+      buffers->suspended.rssi=rssi;buffers->working.phase=RISC_RADIO_IDLE;buffers->working.owned=0;buffers->working.quiescent=1;workingDone=true;(void)publish();
+    }return;
+  }
   if(NativeRadio::cancelRequested.load(std::memory_order_acquire)){cleanup(RISC_RADIO_FAILURE_CANCELLED);return;}
   if(buffers->working.phase==RISC_RADIO_SCANNING){
     buffers->working.scan.struct_size=sizeof(buffers->working.scan);
@@ -233,6 +269,7 @@ inline void step(){
     if(!NativeRadio::state(&buffers->working.station_state,&buffers->working.rssi) || !buffers->working.station_state){cleanup(RISC_RADIO_FAILURE_LINK);return;}
     if(buffers->working.station_state==2){
       if(!NativeRadio::addresses(buffers->working.station,ap)){cleanup(RISC_RADIO_FAILURE_LINK);return;}
+      if(NativeRadio::s.operation==NativeRadio::AccessPoint)memcpy(buffers->working.station,ap,12);
       buffers->working.phase=RISC_RADIO_CONNECTED;
     }
   }

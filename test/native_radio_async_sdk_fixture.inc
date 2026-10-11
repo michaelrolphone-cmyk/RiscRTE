@@ -51,7 +51,7 @@ size_t heap_caps_get_free_size(uint32_t caps){++heapQueries;return caps&(MALLOC_
 size_t heap_caps_get_largest_free_block(uint32_t caps){++heapQueries;return caps&MALLOC_CAP_DMA?32000u:caps&MALLOC_CAP_SPIRAM?1000000u:50000u;}
 void* heap_caps_calloc(size_t count,size_t size,uint32_t capabilities){
  if(capabilities==(MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT)){
-  assert(count==1 && size>=1384 && size<=2304 && !workspaceAllocation);++workspaceAllocations;
+  assert(count==1 && size>=1384 && size<=4096 && !workspaceAllocation);++workspaceAllocations;
   if(workspaceFails)return nullptr;
   workspaceBytes=size;workspaceAllocation=std::calloc(count,size);assert(workspaceAllocation);return workspaceAllocation;
  }
@@ -78,7 +78,7 @@ int64_t esp_timer_get_time(){return now;}
 esp_err_t esp_netif_init(){auto result=call("netif_init");if(result==ESP_OK)++netifInitCount;return result;}
 esp_err_t esp_event_loop_create_default(){assert(!loop);if(externalLoop){call("loop_create");return ESP_ERR_INVALID_STATE;}auto result=call("loop_create");if(result==ESP_OK)loop=true;return result;}
 esp_err_t esp_event_loop_delete_default(){assert(loop && !wifi);auto result=call("loop_delete");if(result==ESP_OK){loop=false;handler={};queued.clear();defaults=false;}return result;}
-esp_netif_t* esp_netif_new(const esp_netif_config_t* config){assert(loop && !netif && config->station==1);if(call("netif_new")!=ESP_OK)return nullptr;netif=new esp_netif_t;return netif;}
+esp_netif_t* esp_netif_new(const esp_netif_config_t* config){assert(loop && !netif && (config->station==1 || config->station==0));if(call("netif_new")!=ESP_OK)return nullptr;netif=new esp_netif_t;return netif;}
 esp_err_t esp_netif_attach_wifi_station(esp_netif_t* n){assert(n==netif && !driver);attachCalled=true;if(failure=="attach_no_driver")return call("attach_no_driver");driver=true;n->attached=true;return call("attach");}
 esp_err_t esp_wifi_set_default_wifi_sta_handlers(){assert(driver);defaults=true;return call("defaults");}
 esp_err_t esp_wifi_clear_default_wifi_driver_and_handlers(void* n){assert(n==netif && attachCalled);attachCalled=false;++clears;driver=false;defaults=false;const auto result=call("driver_clear");if(result==ESP_OK)netif->attached=false;return result;}
@@ -86,15 +86,15 @@ esp_err_t esp_netif_set_driver_config(esp_netif_t* n,const esp_netif_driver_ifco
 esp_err_t esp_event_handler_instance_register(esp_event_base_t base,int32_t id,esp_event_handler_t f,void* arg,esp_event_handler_instance_t* out){assert(base==WIFI_EVENT && id==ESP_EVENT_ANY_ID && loop && !handler.function);auto result=call("register");if(result==ESP_OK){handler={f,arg};oldHandlers.push_back(handler);*out=reinterpret_cast<void*>(uintptr_t(42));}return result;}
 esp_err_t esp_event_handler_instance_unregister(esp_event_base_t base,int32_t id,esp_event_handler_instance_t h){assert(base==WIFI_EVENT && id==ESP_EVENT_ANY_ID && h && handler.function);auto result=call("unregister");if(result==ESP_OK)handler={};return result;}
 esp_err_t esp_netif_dhcpc_stop(esp_netif_t* n){assert(n==netif && !loop && !wifi);auto result=call("dhcp_stop");if(result==ESP_OK)n->dhcp=false;return result;}
-void esp_netif_action_stop(void* n,esp_event_base_t base,int32_t id,void* data){assert(n==netif && base==WIFI_EVENT && id==WIFI_EVENT_STA_STOP && !data && !loop);call("netif_stop");netif->up=false;}
+void esp_netif_action_stop(void* n,esp_event_base_t base,int32_t id,void* data){assert(n==netif && base==WIFI_EVENT && (id==WIFI_EVENT_STA_STOP || id==WIFI_EVENT_AP_STOP) && !data && !loop);call("netif_stop");netif->up=false;}
 void esp_netif_destroy(esp_netif_t* n){assert(n==netif && !n->attached && !n->dhcp && !n->up && !loop && !driver);call("netif_destroy");delete n;netif=nullptr;}
 esp_err_t esp_wifi_get_mode(wifi_mode_t*){auto result=call("get_mode");return result!=ESP_OK?result:wifi?ESP_OK:ESP_ERR_WIFI_NOT_INIT;}
 esp_err_t esp_wifi_init(const wifi_init_config_t* c){logsQuiet();assert(!wifi && loop && netif && c->nvs_enable==0);auto result=call("wifi_init");if(result==ESP_OK)wifi=true;if(initChangesLogs){logLevels[0]=ESP_LOG_INFO;if(blockLogRemute)failure="log_suppress_wifi";}return result;}
 esp_err_t esp_wifi_deinit(){logsQuiet();assert(wifi && !started);auto result=call("deinit");if(result==ESP_OK){wifi=false;assert(zero(&copied,sizeof(copied)));}return result;}
 esp_err_t esp_wifi_set_storage(wifi_storage_t value){assert(wifi && value==WIFI_STORAGE_RAM);return call("storage_ram");}
-esp_err_t esp_wifi_set_mode(wifi_mode_t value){assert(wifi && value==WIFI_MODE_STA);return call("station_mode");}
+esp_err_t esp_wifi_set_mode(wifi_mode_t value){assert(wifi && (value==WIFI_MODE_STA || value==WIFI_MODE_AP));return call("station_mode");}
 esp_err_t esp_wifi_set_config(wifi_interface_t iface,const wifi_config_t* config){
- logsQuiet();assert(wifi && iface==WIFI_IF_STA);
+ logsQuiet();assert(wifi && (iface==WIFI_IF_STA || iface==WIFI_IF_AP));
  const bool empty=zero(config,sizeof(*config));auto result=call(empty?"credentials_clear":"credentials_copy");
  if(result==ESP_OK)copied=*config;
  if(empty)pendingCredentialWipe=nullptr;
@@ -122,3 +122,7 @@ static void reset(){
 }
 static garden_radio_scan_result_v1 poll(){garden_radio_scan_result_v1 value{};value.struct_size=sizeof(value);assert(scanPoll(&value));return value;}
 static uint8_t status(){uint8_t value=99;int8_t rssi=99;assert(state(&value,&rssi));assert((value==2 && rssi==-42) || (value!=2 && !rssi));return value;}
+
+esp_err_t esp_netif_attach_wifi_ap(esp_netif_t*n){return esp_netif_attach_wifi_station(n);}
+esp_err_t esp_wifi_set_default_wifi_ap_handlers(){return esp_wifi_set_default_wifi_sta_handlers();}
+esp_err_t esp_netif_dhcps_stop(esp_netif_t*n){return esp_netif_dhcpc_stop(n);}
