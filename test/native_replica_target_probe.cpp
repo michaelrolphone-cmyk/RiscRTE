@@ -13,3 +13,13 @@ void replica_target_probe(RiscExperimental::CheckedNativeReplicaStore&store,
  (void)transport.start(core,volume);transport.step();(void)transport.acknowledgeNative();
  transport.cancel();(void)transport.exitSafe();
 }
+
+#include "experimental/native_replica/CheckedSdReplicaReader.h"
+void replica_reader_target_probe(RiscExperimental::NativeReplicaCore&core,
+ RiscExperimental::CheckedSdReplicaReader::Guard guard,const risc_storage_volume_api_v1*volume){
+ RiscExperimental::MbedTlsReplicaDigest hash;
+ RiscExperimental::CheckedSdReplicaReader reader(core,hash.api(),guard);
+ RiscExperimental::CheckedSdReplicaReader::Candidate candidate;
+ (void)reader.start(volume);reader.step();(void)reader.take(&candidate);
+ reader.cancel();(void)reader.exitSafe();(void)candidate.mapSize();
+}

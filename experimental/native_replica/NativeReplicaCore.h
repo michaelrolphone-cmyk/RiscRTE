@@ -67,6 +67,8 @@ class NativeReplicaCore {
  NativeReplicaCore(const NativeReplicaCore&)=delete;
  NativeReplicaCore&operator=(const NativeReplicaCore&)=delete;
  bool ready()const{return bytes_&&!uncertain_;}
+ uint32_t namespaceId()const{return ns_;}
+ uint32_t imageCapacity()const{return limits_.imageBytes;}
  uint64_t revision()const{return ready()?wide(bytes_+16):0;}
  uint64_t sequence()const{return ready()?wide(bytes_+24):0;}
  uint32_t pendingCount()const{return ready()?word(bytes_+100):0;}

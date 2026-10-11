@@ -154,3 +154,7 @@ own copies and scratch. Transport snapshot/request/result buffers and the
 mbedTLS context are wiped; that does not erase those other copies or media.
 The earlier production AppData verifier wiping patch remains unapplied. These
 are explicit credential-hygiene integration gates, not production changes here.
+
+The separate [verified candidate reader](SD_READER.md) implements bounded
+RTENSD1 content admission without native adoption. Its valid result does not
+grant permission to use a remote base or resolve pending application intent.
