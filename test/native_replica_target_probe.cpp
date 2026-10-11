@@ -37,3 +37,14 @@ void durable_replica_target_probe(RiscExperimental::NativeReplicaCore&core,
  (void)recovery.start(volume);recovery.step();(void)recovery.decision();
  (void)recovery.completeNative();recovery.cancel();(void)recovery.exitSafe();
 }
+
+#include "experimental/native_replica/CheckedLegacySettingsReader.h"
+void legacy_reader_target_probe(RiscExperimental::NativeReplicaCore&core,
+ RiscExperimental::CheckedLegacySettingsReader::Guard guard,const risc_storage_volume_api_v1*volume){
+ RiscExperimental::MbedTlsReplicaDigest hash;
+ RiscExperimental::CheckedLegacySettingsReader reader(core,hash.api(),guard);
+ RiscExperimental::CheckedLegacySettingsReader::Candidate candidate;
+ (void)reader.start(volume,RiscExperimental::CheckedLegacySettingsReader::Source::PagedV2);
+ reader.step();(void)reader.take(&candidate);reader.cancel();(void)reader.exitSafe();
+ (void)candidate.sourceDigest();(void)candidate.mapSize();
+}
