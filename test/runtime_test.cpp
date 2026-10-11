@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <new>
 using namespace RiscBoot;
 static unsigned generation=0, beats=0;
 static bool heartbeatMode=false;
@@ -253,8 +254,10 @@ int main(int argc,char** argv){
   assert(std::find(lines.begin(),lines.end(),"TEST child-relaunch-queued")!=lines.end());
   assert(std::find(lines.begin(),lines.end(),"RTE_CONTROL crown=exit cleanup=complete action=home")!=lines.end());
   generation=0;controlBegins.clear();controlEnds=0;controlRetain=true;
-  // A retained image deliberately remains owned until native reset.
-  auto *retainedRuntime=new Runtime(cp);assert(retainedRuntime->prepare(root.c_str()));
+  // A retained image remains owned until native reset. Give the fixture itself
+  // process-lifetime storage; destructing it would violate the custody contract.
+  alignas(Runtime) static unsigned char retainedStorage[sizeof(Runtime)];
+  auto *retainedRuntime=new (retainedStorage) Runtime(cp);assert(retainedRuntime->prepare(root.c_str()));
   assert(!retainedRuntime->run()&&retainedRuntime->retained());
   assert(controlPending&&controlEnds==1&&controlBegins.size()==2);
   puts("Native host control: persistent child request, competing launch overridden after cleanup, failed custody keeps recovery armed PASS");
