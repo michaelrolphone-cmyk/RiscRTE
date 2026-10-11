@@ -27,7 +27,8 @@ The checkpoint transport must independently verify the exact captured map,
 remote identity and successful checked close before calling acknowledgement.
 Tickets expire on reload and successful base changes. A transport needing to
 resume acknowledgement after restart must reacquire and verify a checkpoint;
-it cannot reuse a RAM ticket. This prototype has no SD transport/export API.
+it cannot reuse a RAM ticket. The original checkpoint had no SD transport/export API. The disconnected
+checked transport increment is documented in [SD_TRANSPORT.md](SD_TRANSPORT.md).
 
 ### Native durability contract
 

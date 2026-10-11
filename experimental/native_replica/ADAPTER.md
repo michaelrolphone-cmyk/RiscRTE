@@ -115,7 +115,9 @@ claim target timing, storage lifetime or UI-latency qualification.
 
 Still missing: native port worker/resource-lease and private-root wiring; actual
 LittleFS/NVS flash cut tests of this adapter; verified real free-space reporting;
-SD transport and restart acknowledgement; app-owned Wi-Fi semantic reconciliation;
+production SD transport wiring and restart-prefix recovery; app-owned Wi-Fi semantic reconciliation;
 final migration/format compatibility; public versioned ABI; hardware tests.
+The independently tested SD transport increment is documented in
+[SD_TRANSPORT.md](SD_TRANSPORT.md); it is not production integration.
 All remain outside `.90`. Do not enable shared native fallback based solely on
 this checkpoint.

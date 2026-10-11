@@ -1,5 +1,5 @@
 #pragma once
-// Unconnected host prototype. No Runtime routing, SDK ABI or SD/NVS adapter.
+// Unconnected experimental core. No production Runtime routing or SDK ABI.
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -37,6 +37,27 @@ class NativeReplicaCore {
   void(*retire)(void*,uint64_t);
  };
  struct Ticket { uint64_t serial=0, revision=0, through=0; uint32_t mapCrc=0; };
+ // Owned, immutable complete image custody. Exporters expose only the map;
+ // pending intent bytes remain native and are never written to the SD format.
+ class Snapshot {
+  public:
+  Snapshot()=default;
+  ~Snapshot(){reset();}
+  Snapshot(const Snapshot&)=delete;
+  Snapshot&operator=(const Snapshot&)=delete;
+  bool valid()const{return bytes_!=nullptr;}
+  uint32_t namespaceId()const{return valid()?NativeReplicaCore::word(bytes_+8):0;}
+  uint32_t imageSize()const{return valid()?size_:0;}
+  uint32_t mapSize()const{return valid()?NativeReplicaCore::word(bytes_+104):0;}
+  uint32_t count()const{return valid()?NativeReplicaCore::word(bytes_+96):0;}
+  const uint8_t*map()const{return valid()?bytes_+128:nullptr;}
+  Identity base()const{return valid()?NativeReplicaCore::identityAt(bytes_):Identity{};}
+  Ticket ticket()const{return ticket_;}
+  void reset(){if(bytes_){NativeReplicaCore::wipe(bytes_,size_);alloc_.release(alloc_.context,bytes_);}bytes_=nullptr;size_=0;ticket_={};}
+  private:
+  friend class NativeReplicaCore;
+  uint8_t*bytes_=nullptr;uint32_t size_=0;Allocator alloc_{};Ticket ticket_{};
+ };
  static constexpr uint32_t Header=128, GroupHeader=88, RootBytes=48, ValueMax=2048;
  static void wipe(void*p,size_t n){auto*v=static_cast<volatile uint8_t*>(p);while(n--)*v++=0;}
  static Allocator heap(){return {nullptr,[](void*,size_t n)->void*{if(n>SIZE_MAX-sizeof(uint64_t))return nullptr;auto*p=static_cast<uint64_t*>(std::malloc(n+sizeof(uint64_t)));if(!p)return nullptr;*p=n;return p+1;},[](void*,void*p){auto*base=static_cast<uint64_t*>(p)-1;const size_t n=size_t(*base);wipe(p,n);wipe(base,sizeof(uint64_t));std::free(base);}};}
@@ -120,6 +141,16 @@ class NativeReplicaCore {
   if(!ready())return Uncertain;
   if(ticketSerial_==UINT64_MAX)return NoSpace;
   ticket_={++ticketSerial_,revision(),sequence(),crc(bytes_+Header,word(bytes_+104))};ticketBase_=identity();ticketLive_=true;*out=ticket_;return Ok;
+ }
+ // Call under the native serialization lease. No storage I/O; copy precedes
+ // ticket replacement so an allocation failure cannot invalidate a live export.
+ int captureSnapshot(Snapshot*out){
+  if(!out||out->valid())return Invalid;
+  if(!ready())return Uncertain;
+  auto*p=allocate(size_);if(!p)return NoMemory;
+  std::memcpy(p,bytes_,size_);Ticket t{};const int rc=capture(&t);
+  if(rc){wipe(p,size_);drop(p);return rc;}
+  out->bytes_=p;out->size_=size_;out->alloc_=alloc_;out->ticket_=t;return Ok;
  }
  int acknowledge(const Ticket&t,const Identity&confirmed){
   if(!ready())return Uncertain;
