@@ -57,3 +57,29 @@ void* Runtime::loadRemovableApp(const AppPolicy& policy) {
   (void)policy;fail("SD app loading requires the native snapshot loader");return nullptr;
 #endif
 }
+
+void* Runtime::openDriverImage(void* raw,const char* path,const void* table) {
+#if defined(ESP_PLATFORM) || defined(RISC_REMOVABLE_APP_TEST)
+  auto& d=*static_cast<Driver*>(raw);auto* r=d.sourceOwner;
+  if(!r || r->retained_ || !r->port_.owner() || !r->providerStorageSafe())return nullptr;
+  struct Context{Runtime*r;std::chrono::steady_clock::time_point start;}context{r,std::chrono::steady_clock::now()};
+  RemovableAppImage image;
+  const bool read=image.read(static_cast<const risc_storage_volume_api_v1*>(table),d.sourcePath,{
+    [](size_t n)->void*{return esp_elf_malloc(n,false);},[](void*p){esp_elf_free(p);},
+    [](void*raw)->bool{auto&c=*static_cast<Context*>(raw);
+      if(!c.r->port_.owner() || !c.r->providerStorageSafe() || std::chrono::steady_clock::now()-c.start>std::chrono::seconds(30))return false;
+      c.r->port_.delay(1);return c.r->port_.owner() && c.r->providerStorageSafe();},&context});
+  if(image.closeRetained){r->retained_=true;r->providerFileRetained_=true;r->fail("SD provider close retained");return nullptr;}
+  void* module=nullptr;
+  if(read && esp_elf_validate_file(image.bytes,image.size)) {
+    module=esp_dlopen_reader_instance(path,[](void*raw,const char*,elf_file_t*file)->int{
+      auto&s=*static_cast<RemovableAppImage*>(raw);file->payload=s.bytes;file->size=s.size;s.bytes=nullptr;return 0;
+    },&image);
+  }
+  if(image.bytes)esp_elf_free(image.bytes);
+  if(module || !r->providerStorageSafe())return module;
+  return d.internalFallback?esp_dlopen_instance(path):nullptr;
+#else
+  (void)raw;(void)path;(void)table;return nullptr;
+#endif
+}

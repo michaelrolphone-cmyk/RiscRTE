@@ -31,6 +31,7 @@ struct OwnedNodeV2 final {
   char id[96]{};
   char path[512]{};
   char provides[96]{};
+  char imageProvider[96]{};
   RequirementV2 requirements[GraphV2::kMaxRequirements]{};
   char requirementNames[GraphV2::kMaxRequirements][96]{};
   char requirementProviders[GraphV2::kMaxRequirements][96]{};
@@ -105,7 +106,9 @@ struct OwnedNodeV2 final {
          !copyString(path, sizeof(path), from.verifiedElfPath)) ||
         from.requirementCount > GraphV2::kMaxRequirements ||
         (from.requirementCount && !from.requirements)) return false;
+    if(bool(from.openImage)!=bool(from.imageProvider) || (from.openImage && (from.requiredOsCpuAbi || !from.imageContext || !from.imageInstance || !copyString(imageProvider,sizeof(imageProvider),from.imageProvider))))return false;
     spec = from;
+    spec.imageProvider=from.imageProvider?imageProvider:nullptr;
     spec.id = id;
     spec.provides = provides;
     spec.verifiedElfPath = from.verifiedElfPath ? path : nullptr;

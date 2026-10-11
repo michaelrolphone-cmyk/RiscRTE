@@ -51,7 +51,8 @@ class ModuleV2 final {
    * requiring OS/CPU privilege. Never grants privileged imports. */
   bool load(const char* validatedElf, const char* expectedId,
             const char* expectedCapability, uint32_t expectedApi,
-            const risc_provider_dependency_v1* dependencies, size_t count, bool independent = false);
+            const risc_provider_dependency_v1* dependencies, size_t count, bool independent = false,
+            void* (*openImage)(void*,const char*,const void*) = nullptr, void* imageContext = nullptr, const void* imageSource = nullptr);
   /* PRIVATE firmware admission path. Requires GraphV2's owned image AND copied
    * approved native policy; public arguments cannot grant execution. The exact
    * mapping snapshot is hashed and checked against the policy on every load.

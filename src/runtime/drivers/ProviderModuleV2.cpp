@@ -233,7 +233,8 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
 
 bool ModuleV2::load(const char* path, const char* expectedId,
                     const char* expectedCapability, uint32_t expectedApi,
-                    const risc_provider_dependency_v1* deps, size_t count, bool independent) {
+                    const risc_provider_dependency_v1* deps, size_t count, bool independent,
+                    void* (*openImage)(void*,const char*,const void*), void* imageContext, const void* imageSource) {
   if (!handle_) error_[0] = 0;
   if (handle_ || !path || !path[0] ||
       !validRequest(expectedId, expectedCapability, expectedApi, deps, count)) {
@@ -242,7 +243,8 @@ bool ModuleV2::load(const char* path, const char* expectedId,
   }
   state_ = State::Failed;
   (void)dlerror();
-  handle_ = independent ? esp_dlopen_instance(path) : dlopen(path, RTLD_NOW);
+  handle_ = openImage ? openImage(imageContext,path,imageSource) :
+      independent ? esp_dlopen_instance(path) : dlopen(path, RTLD_NOW);
   if (!handle_) { report(expectedId, "elf-open-failed"); return false; }
   privileged_image_ = false;
   (void)dlerror();

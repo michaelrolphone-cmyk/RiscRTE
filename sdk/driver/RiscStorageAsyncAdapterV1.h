@@ -14,13 +14,42 @@ typedef struct {
  const risc_storage_volume_api_v1_ext*ext;const risc_storage_volume_api_v1_fs*fs;
  uint64_t serial,session,operation;bool ending,cleanup,retained;
  risc_storage_async_result_v1 cleanup_result; // provider-owned owner output, never app memory
- uint32_t directory,file; // worker-only until completion fence
+ uint32_t directory,file;bool writing;uint32_t written; // worker-only until completion fence
 } risc_storage_async_adapter_v1;
 static inline int32_t risc_storage_package_execute(risc_storage_async_adapter_v1*a,const risc_storage_package_request_v1*q,risc_storage_async_result_v1*r){
  const risc_storage_volume_api_v1*v=a->volume;r->status=RISC_STORAGE_ASYNC_IO;
  if(a->retained)return r->status=RISC_STORAGE_ASYNC_RETAINED;
+ if(q->operation==RISC_STORAGE_PACKAGE_WRITE_CHUNK || q->operation==RISC_STORAGE_PACKAGE_CLOSE_WRITE){
+  if(!a->file||!a->writing||a->directory)return r->status=RISC_STORAGE_ASYNC_INVALID;
+  if(q->operation==RISC_STORAGE_PACKAGE_WRITE_CHUNK){
+   if(!q->size||q->size>sizeof(q->data)||a->written>2097152u-q->size)return r->status=RISC_STORAGE_ASYNC_INVALID;
+   size_t n=v->file_write(v->context,a->file,q->data,q->size);
+   if(n!=q->size||a->ext->handle_error(v->context,a->file,false))return r->status=RISC_STORAGE_ASYNC_IO;
+   a->written+=q->size;return r->status=RISC_STORAGE_ASYNC_OK;
+  }
+  bool ok=a->written==q->size&&!a->ext->handle_error(v->context,a->file,false)&&a->ext->file_sync(v->context,a->file);
+  if(!v->file_close(v->context,a->file,ok)){a->retained=true;return r->status=RISC_STORAGE_ASYNC_RETAINED;}
+  a->file=0;a->writing=false;a->written=0;return r->status=ok?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_IO;
+ }
  if(a->directory||a->file)return r->status=RISC_STORAGE_ASYNC_BUSY;
  if(!memchr(q->path,0,sizeof(q->path))||!q->path[0]||!memchr(q->destination,0,sizeof(q->destination)))return r->status=RISC_STORAGE_ASYNC_INVALID;
+ if(q->operation==RISC_STORAGE_PACKAGE_OPEN_WRITE){
+  if(!v->file_open_write||!v->file_write||!a->ext->file_sync)return r->status=RISC_STORAGE_ASYNC_INVALID;
+  a->file=v->file_open_write(v->context,q->path);a->writing=a->file!=0;a->written=0;
+  return r->status=a->file?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_IO;
+ }
+ if(q->operation==RISC_STORAGE_PACKAGE_MKDIR){
+  risc_storage_metadata_v1 m={sizeof(m),0,0,0};int32_t found=a->fs->metadata(v->context,q->path,&m);
+  if(found==RISC_STORAGE_FS_OK)return r->status=(m.flags&RISC_STORAGE_DIRECTORY)?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_INVALID;
+  return r->status=found==RISC_STORAGE_FS_NOT_FOUND&&a->ext->mkdir&&a->ext->mkdir(v->context,q->path)?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_IO;
+ }
+ if(q->operation==RISC_STORAGE_PACKAGE_VALIDATE_DRIVER){
+  const risc_storage_worker_admission_v2*n=risc_storage_worker_driver_admission(a->worker);
+  if(!n)return r->status=RISC_STORAGE_ASYNC_INVALID;
+  int32_t rc=n->driver(a->worker->context,v,q->path,q->size,q->sha256,&a->file);
+  if(rc==RISC_STORAGE_WORK_RETAINED){a->retained=true;return r->status=RISC_STORAGE_ASYNC_RETAINED;}
+  return r->status=rc==RISC_STORAGE_WORK_OK?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_INVALID;
+ }
  if(q->operation==RISC_STORAGE_PACKAGE_VALIDATE){
   const risc_storage_worker_admission_v1*n=risc_storage_worker_admission(a->worker);
   if(!n)return r->status=RISC_STORAGE_ASYNC_INVALID;
@@ -52,8 +81,9 @@ static inline int32_t risc_storage_async_execute(void*context,const void*input,u
  if(n==sizeof(risc_storage_package_request_v1)){risc_storage_package_execute(a,(const risc_storage_package_request_v1*)input,r);return RISC_STORAGE_WORK_OK;}
  const risc_storage_volume_api_v1*v=a->volume;
  if(a->retained){r->status=RISC_STORAGE_ASYNC_RETAINED;return RISC_STORAGE_WORK_OK;}
+ if(a->writing&&q->operation!=0&&q->operation!=RISC_STORAGE_ASYNC_CLOSE_DIRECTORY){r->status=RISC_STORAGE_ASYNC_BUSY;return RISC_STORAGE_WORK_OK;}
  if(q->operation==0||q->operation==RISC_STORAGE_ASYNC_CLOSE_DIRECTORY){
-  if(a->file){if(!v->file_close(v->context,a->file,false))a->retained=true;else a->file=0;}
+  if(a->file){if(!v->file_close(v->context,a->file,false))a->retained=true;else {a->file=0;a->writing=false;a->written=0;}}
   if(!a->retained&&a->directory){if(!a->ext->dir_close_checked(v->context,a->directory))a->retained=true;else a->directory=0;}
   r->status=a->retained?RISC_STORAGE_ASYNC_RETAINED:RISC_STORAGE_ASYNC_OK;
  }else if(q->operation==RISC_STORAGE_ASYNC_REMOVE_FILE){
@@ -114,7 +144,7 @@ static inline int32_t risc_storage_async_submit(risc_storage_async_adapter_v1*a,
 }
 static inline int32_t risc_storage_package_submit(risc_storage_async_adapter_v1*a,uint64_t session,const risc_storage_package_request_v1*q,uint64_t*out){
  if(out)*out=0;
- if(!out||!q||!session||session!=a->session||q->operation<RISC_STORAGE_PACKAGE_VALIDATE||q->operation>RISC_STORAGE_PACKAGE_RECOVER||!memchr(q->path,0,sizeof(q->path))||!memchr(q->destination,0,sizeof(q->destination)))return RISC_STORAGE_ASYNC_INVALID;
+ if(!out||!q||!session||session!=a->session||q->operation<RISC_STORAGE_PACKAGE_VALIDATE||q->operation>RISC_STORAGE_PACKAGE_MKDIR||!memchr(q->path,0,sizeof(q->path))||!memchr(q->destination,0,sizeof(q->destination)))return RISC_STORAGE_ASYNC_INVALID;
  if(a->ending||a->operation)return RISC_STORAGE_ASYNC_BUSY;
  if(a->retained)return RISC_STORAGE_ASYNC_RETAINED;
  if(a->worker->submit(a->worker->context,q,sizeof(*q),&a->operation)!=RISC_STORAGE_WORK_OK)return RISC_STORAGE_ASYNC_BUSY;

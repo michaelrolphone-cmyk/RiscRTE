@@ -306,3 +306,41 @@ submitted frame and continues copied-worker discovery. The X4 migration composer
 requires this Home alongside the internal-only Springboard list. Never
 fall back to a firmware-declared SD image when no admitted catalog entry exists:
 that could revive an app removed by a durable catalog transaction.
+
+## SD provider source checkpoint (0.2.12)
+
+A selected ordinary driver can use `image_source: {volume_instance: 9,
+path: "Drivers/<package>/<image>.elf", internal_fallback: true}`. Manifests
+and the complete graph stay internal. Runtime resolves the exact selected volume
+and rejects an external image anywhere in its transitive mount closure before
+provider execution. Privileged native-policy providers remain internal. The graph
+pins the source provider with mapped module custody; the loader reads one snapshot,
+closes it, then performs ordinary relocation/entry validation without a checksum
+pass. A clean unavailable volume can use the explicit admitted internal image.
+Uncertain close retains source/dependencies and forbids fallback. This source
+checkpoint retains internal images for existing whole-store admission and fallback;
+it does not yet implement package download, SD publication, or graph activation.
+
+The actual host Runtime fixture now loads a provider from SD, tests clean offline
+fallback and required-SD failure, rejects an SD-backed mount closure without I/O,
+and retains the source after failed close. Existing dynamic app registration and
+launch tests continue to pass under UBSan. Hardware remains unqualified.
+
+## Copied SD download checkpoint (0.2.13)
+
+The additive storage download suffix streams immutable image staging through
+the existing copied worker in at most 4096-byte requests. HTTP delivery remains
+512 bytes through the existing bounded HTTPS transport. Legacy package/async
+prefixes are unchanged. The appended native admission suffix distinguishes
+ordinary driver and application ELF roles and checks selected bytes/SHA/imports
+once at admission. It grants no native imports or graph authority.
+
+`SdPackageDownload` requires a confirmed durable record before creating any
+folder/file. It restarts incomplete private staging, recovers atomic replacement,
+recognizes an already admitted destination, and closes HTTP/SD custody before
+Ready. Image names must encode the expected SHA. Pending work is polled without
+owner SD I/O. Failed close is retained, never an internal-fallback opportunity.
+110 interruption/resume schedules run through the real coordinator and copied
+worker with boundary HTTP/filesystem fixtures; separate native admission tests
+exercise the actual digest/ELF audit. Product catalog/graph-activation and settings
+routing are still integration work; this checkpoint is not a completed installer.
