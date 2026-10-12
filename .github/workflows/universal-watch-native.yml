@@ -1,0 +1,39 @@
+name: Universal watch native substrate
+on:
+  push:
+    branches: [feat/watch-quad-spi]
+    paths: ['.github/workflows/universal-watch-native.yml', 'src/**', 'sdk/**', 'platformio.ini']
+  pull_request:
+    paths: ['.github/workflows/universal-watch-native.yml']
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile generic ESP32-S3 firmware
+        run: |
+          python -m pip install platformio==6.1.18 pyelftools==0.32
+          pio run -e esp32s3-16mb-appdata-universal
+      - name: Record complete native build identity
+        run: |
+          mkdir -p dist
+          git rev-parse HEAD > dist/COMMIT.txt
+          git archive HEAD | gzip > dist/source.tar.gz
+          cp .pio/build/esp32s3-16mb-appdata-universal/firmware.elf dist/
+          cp .pio/build/esp32s3-16mb-appdata-universal/firmware.bin dist/
+          cp .pio/build/esp32s3-16mb-appdata-universal/bootloader.bin dist/
+          cp .pio/build/esp32s3-16mb-appdata-universal/partitions.bin dist/
+          sha256sum dist/*.bin dist/*.elf > dist/SHA256SUMS
+          printf '%s\n' 'Generic native substrate only; not a complete device firmware image.' 'Requires a board-specific boot store containing the shared app and supported generic providers.' 'Uses the first 16 MiB flash layout on both devices. Remaining Waveshare flash is not allocated by this profile.' > dist/README.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-watch-native
+          path: dist
+          retention-days: 30
