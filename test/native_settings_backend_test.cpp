@@ -1,5 +1,6 @@
 #include "ports/esp32s3/NativeAppDataMount.h"
 #include "ports/esp32s3/NativeSettingsBackend.h"
+#include "ports/esp32s3/NativeSettingsStartupEntropy.h"
 #include "ports/esp32s3/NativeSettingsAssembly.h"
 #include "ports/esp32s3/NativeSettingsWorker.h"
 #include "ports/esp32s3/NativeSettingsPayloadAllocator.h"
@@ -63,8 +64,23 @@ extern "C" nvs_iterator_t nvs_entry_next(nvs_iterator_t v){safe();auto*i=static_
 extern "C" void nvs_entry_info(nvs_iterator_t v,nvs_entry_info_t*out){safe();auto*i=static_cast<Iterator*>(v);assert(iterators.count(i));*out={};strcpy(out->namespace_name,i->space.c_str());strcpy(out->key,i->keys[i->at].c_str());out->type=NVS_TYPE_BLOB;}
 extern "C" void nvs_release_iterator(nvs_iterator_t v){safe();auto*i=static_cast<Iterator*>(v);if(i){assert(iterators.erase(i));delete i;}}
 static bool owner(){return onOwner;}
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+static bool entropyWindow=false;static unsigned entropyFills=0;
+extern "C" void bootloader_random_enable(){assert(!entropyWindow);entropyWindow=true;}
+extern "C" void bootloader_random_disable(){assert(entropyWindow);entropyWindow=false;}
+extern "C" void esp_fill_random(void*p,size_t n){assert(entropyWindow&&n==32);++entropyFills;memset(p,0x31,n);}
+#endif
 static void bind(){native_lfs_fixture_shutdown();native_lfs_fixture_select_appdata();assert(M::prepare(static_cast<const esp_partition_t*>(native_lfs_fixture_partition())));assert(native_lfs_fixture_reboot()==0&&M::finish());}
 static void ready(){bind();assert(B::prepare(owner)&&B::admission()==&selected&&selections==1);assert(!B::prepare(owner));assert(!nvsCalls&&!allocations);native_lfs_fixture_counters a{},b{};native_lfs_fixture_get_counters(&a);for(unsigned i=0;i<100;++i)assert(risc_native_settings_admission()==&selected);native_lfs_fixture_get_counters(&b);assert(!memcmp(&a,&b,sizeof a)&&!nvsCalls&&!allocations);}
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+static void entropyInputs(){
+ const auto&a=inputs.preferences;const auto&b=inputs.wifi;
+ assert(a.initialIncarnation&&b.initialIncarnation&&memcmp(a.initialIncarnation,b.initialIncarnation,16));
+ assert(a.first.otherWritersStopped&&a.first.entropy&&!a.first.stagingCapacity&&a.firstContextBytes);
+ uint8_t v[16];memset(v,0x51,16);assert(a.first.otherWritersStopped(a.first.context));
+ assert(!a.first.entropy(a.first.context,v));for(auto n:v)assert(n==0x51);assert(entropyFills==1&&!entropyWindow);
+}
+#endif
 static void active(uint32_t ns){liveWorker=true;onOwner=false;workerNs=ns;++generation;}
 static void verifyValue(C&core,const char*k,const char*v){char out[128]{};uint32_t n=0;assert(core.get(k,out,sizeof out,&n)==C::Ok&&n==strlen(v)&&!memcmp(out,v,n));}
 static void exercise(unsigned index,const char*mode){
@@ -74,6 +90,11 @@ static void exercise(unsigned index,const char*mode){
  F::Store store(ns,*b.files,b.metadata,b.guard,RiscCpu::NativeSettingsPayloadAllocator::allocator(),b.artifacts);
  C core(ns,store.backend(),F::Store::limits(),RiscCpu::NativeSettingsPayloadAllocator::allocator());
  if(!strcmp(mode,"wrong-worker")||!strcmp(mode,"wrong-namespace")){auto calls=nvsCalls;assert(core.load()==C::Busy&&nvsCalls==calls);return;}
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+ uint8_t first[16]{},next[16]{};assert(input.first.otherWritersStopped(input.first.context));
+ assert(input.first.entropy(input.first.context,first)&&input.first.entropy(input.first.context,next));
+ assert(memcmp(first,next,16)&&memcmp(first,input.initialIncarnation,16)&&entropyFills==1&&!entropyWindow);
+#endif
  assert(core.load()==C::Missing);
  const bool legacy=!strcmp(mode,"legacy");
  const std::string originalSpace=ns==1?"rte00000001":"rte00000006";
@@ -96,11 +117,18 @@ static void exercise(unsigned index,const char*mode){
  assert(!handles.size()&&!iterators.size()&&store.exitSafe()&&factory.exitSafe());
 }
 int main(int argc,char**argv){assert(argc==2&&native_lfs_fixture_reset()==0);const char*mode=argv[1];
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+ if(!strcmp(mode,"no-entropy")){ready();assert(!inputs.preferences.initialIncarnation&&!inputs.wifi.initialIncarnation&&inputs.preferences.first.entropy&&inputs.wifi.first.entropy&&!nvsCalls);return 0;}
+ assert(RiscCpu::NativeSettingsStartupEntropy::capture(owner));
+#endif
  if(!strcmp(mode,"no-mount")){assert(!B::prepare(owner)&&!B::admission()&&!selections);return 0;}
  if(!strcmp(mode,"wrong-owner")){onOwner=false;assert(!B::prepare(owner)&&!B::admission()&&!selections);return 0;}
  if(!strcmp(mode,"nvs-unavailable")){nvsReady=false;assert(!B::prepare(owner)&&!B::admission()&&!selections);return 0;}
  if(!strcmp(mode,"busy-mount")){bind();M::Guard g(M::Access::AppData);assert(g.held&&!B::prepare(owner)&&!B::admission()&&!M::retained());return 0;}
  ready();
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+ entropyInputs();
+#endif
  {M::Guard g(M::Access::AppData);assert(g.held);assert(native_lfs_fixture_mkdir("/n00000001")==0);assert(native_lfs_fixture_seed("/n00000001/timecard.json","preserve",8)==0);}
  exercise(0,mode);if(!strcmp(mode,"normal")||!strcmp(mode,"legacy"))exercise(1,mode);
  if(!M::retained()){liveWorker=false;onOwner=true;M::Guard g(M::Access::AppData);assert(g.held);char bytes[8]{};int fd=native_lfs_fixture_open("/n00000001/timecard.json",O_RDONLY);assert(fd>=0&&native_lfs_fixture_read(fd,bytes,8)==8&&!memcmp(bytes,"preserve",8)&&native_lfs_fixture_close(fd)==0);}

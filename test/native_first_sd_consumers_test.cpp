@@ -14,7 +14,7 @@
 namespace Nf=NativeFixture;
 #endif
 using F=RiscExperimental::CheckedFirstSdCheckpoint;
-extern "C" {void first_seed_begin(unsigned);void first_trace_enable(unsigned);unsigned first_collected(void);unsigned first_fault_count(void);unsigned first_fault_mutations(void);}
+extern "C" {void first_capacity_budget(void);unsigned first_capacity_elapsed(void);void first_capacity_limit(int);void first_capacity_epoch_change(void);void first_capacity_receipt_change(void);void first_capacity_disable(void);unsigned first_capacity_scans(void);unsigned first_capacity_reads(void);unsigned first_capacity_writes(void);void first_seed_begin(unsigned);void first_trace_enable(unsigned);unsigned first_collected(void);unsigned first_fault_count(void);unsigned first_fault_mutations(void);}
 static void role(Task next){task=next;
 #ifdef NATIVE_FIRST_CHECKED_STORE
  Nf::onWorker=next==Task::NativeSettings;
@@ -29,6 +29,8 @@ struct NativeCounters {
  void unchanged()const{assert(calls==nativeOps);}
 #endif
 };
+static bool firstOwnerHeld=true;
+static F::Guard firstGuard(){auto result=guard();result.held=[](void*){return lease&&firstOwnerHeld;};return result;}
 struct FirstAuthority {
  unsigned randoms=0;bool stopped=true,space=true,entropy=true,retain=false;
  F::Authority api(){return {this,[](void*p){assert(task==Task::Owner);auto&s=*static_cast<FirstAuthority*>(p);if(s.retain){fixture_retain();lease=false;return false;}return s.stopped;},[](void*p,uint8_t out[16]){assert(task==Task::NativeSettings);auto&s=*static_cast<FirstAuthority*>(p);memset(out,0,16);out[0]=uint8_t(++s.randoms+64);return s.entropy;},[](void*p,uint32_t,uint32_t){assert(task==Task::Owner);return static_cast<FirstAuthority*>(p)->space;}};}
@@ -107,14 +109,41 @@ int main(int argc,char**argv){assert(argc==3);const char*mode=argv[1];role(Task:
  #ifdef NATIVE_FIRST_CHECKED_STORE
  if(!strncmp(mode,"store-",6)){storeComposition(checked,hash,a,v,mode);return 0;}
 #endif
- FirstAuthority authority;if(strstr(mode,"entropy"))authority.entropy=false;if(strstr(mode,"capacity"))authority.space=false;
- F first(core,hash.api(),guard(),authority.api());if(strstr(mode,"quiet-queue")){authority.retain=true;assert(first.prepareNative(a)==C::Retained&&!first.exitSafe()&&!a.exitSafe());return 0;}
+ FirstAuthority authority;if(strstr(mode,"entropy"))authority.entropy=false;authority.space=false; /* Synthetic capacity callback cannot authorize native arm. */
+ if(!strcmp(mode,"capacity-budget"))first_capacity_budget();
+ if(!strncmp(mode,"capacity",8))first_capacity_limit(!strcmp(mode,"capacity")?-1000:!strcmp(mode,"capacity-short")?-1:!strcmp(mode,"capacity-exact")?0:1000);
+ F first(core,hash.api(),firstGuard(),authority.api());
+ if(!strcmp(mode,"native-owner-queue")){firstOwnerHeld=false;const unsigned reads=fixture_reads(),writes=fixture_writes(),submitted=consumers_submissions();NativeCounters native;assert(first.prepareNative(a)==C::Conflict&&first.exitSafe());assert(reads==fixture_reads()&&writes==fixture_writes()&&submitted==consumers_submissions());native.unchanged();firstOwnerHeld=true;cleanup(a);return 0;}
+ if(!strcmp(mode,"capacity-missing")){first_capacity_disable();Counters before;assert(first.prepareNative(a)==C::Invalid);before.unchanged();cleanup(a);return 0;}
+ if(strstr(mode,"quiet-queue")){authority.retain=true;assert(first.prepareNative(a)==C::Retained&&!first.exitSafe()&&!a.exitSafe());return 0;}
  const int prep=firstPrepare(first,a,strstr(mode,"cancel-prep"),strstr(mode,"cancel-after-prep"));
- if(strstr(mode,"cancel-prep")||strstr(mode,"cancel-after-prep")||strstr(mode,"entropy")||strstr(mode,"capacity")){assert(prep!=C::Ok&&first.exitSafe()&&!core.exportPrepared()&&!consumers_mutations());cleanup(a);return 0;}assert(prep==C::Ok);
+ if(strstr(mode,"cancel-prep")||strstr(mode,"cancel-after-prep")||strstr(mode,"entropy")){assert(prep!=C::Ok&&first.exitSafe()&&!core.exportPrepared()&&!consumers_mutations());cleanup(a);return 0;}assert(prep==C::Ok);
+ if(!strcmp(mode,"capacity-cancel")||!strcmp(mode,"capacity-running-cancel")||!strcmp(mode,"capacity-cancel-retained")){
+  first.step();first.step();assert(!worker.idle());
+  if(strstr(mode,"running")){
+   blockRead=true;std::thread thread([]{role(Task::ProviderIo);assert(worker.workerStep());});
+   {std::unique_lock<std::mutex> lock(gate);cv.wait(lock,[]{return enteredRead;});}
+   first.cancel();first.step();assert(!first.exitSafe()&&first.state()==F::State::Running);
+   {std::lock_guard<std::mutex> lock(gate);allowRead=true;}cv.notify_all();thread.join();blockRead=false;
+  }else first.cancel();
+  if(strstr(mode,"retained"))fixture_adapter_retain();
+  firstDrive(first,a,core,v);
+  assert(!core.exportPrepared()&&!consumers_mutations());
+  if(strstr(mode,"retained")){assert(first.state()==F::State::Retained&&!first.exitSafe());return 0;}
+  assert(first.exitSafe());cleanup(a);return 0;
+ }
  if(strstr(mode,"quiet-scan")){authority.retain=true;}firstDrive(first,a,core,v);
+ if(!strcmp(mode,"capacity-budget")){assert(first.state()==F::State::Failed&&first.error()==C::Io&&first.exitSafe()&&!core.exportPrepared()&&!consumers_mutations()&&!first_capacity_writes());cleanup(a);return 0;}
+ if(!strcmp(mode,"capacity")||!strcmp(mode,"capacity-short")){assert(first_capacity_elapsed()>0&&first_capacity_elapsed()<15000);assert(first.state()==F::State::Failed&&first.error()==C::NoSpace&&first.exitSafe()&&!core.exportPrepared()&&!consumers_mutations()&&first_capacity_reads()>0&&!first_capacity_writes());cleanup(a);return 0;}
+ if(!strncmp(mode,"capacity",8)){assert(first_capacity_scans()==1&&first_capacity_reads()>0&&!first_capacity_writes());}
+ if(!strcmp(mode,"capacity-epoch")||!strcmp(mode,"capacity-receipt")||!strcmp(mode,"capacity-lease")){
+  if(strstr(mode,"epoch"))first_capacity_epoch_change();else if(strstr(mode,"receipt"))first_capacity_receipt_change();else lease=false;
+  assert(first.issueNativeArm()!=C::Ok&&!core.exportPrepared()&&!consumers_mutations()&&first.exitSafe());if(lease)cleanup(a);return 0;
+ }
  if(strstr(mode,"quiet-scan")){assert(first.state()==F::State::Retained&&!first.exitSafe()&&!a.exitSafe());return 0;}
  if(strstr(mode,"conflict")||first_fault_count()){assert(first.state()==F::State::Failed&&first.exitSafe()&&!core.exportPrepared()&&!consumers_mutations());cleanup(a);return 0;}
  assert(first.state()==F::State::Admitted&&!core.exportPrepared()&&!consumers_mutations()&&core.identity().known==!unknown);assert(first.issueNativeCompletion()!=C::Ok);
+ if(!strcmp(mode,"native-owner-arm")||!strcmp(mode,"native-owner-retained")){firstOwnerHeld=false;NativeCounters native;const bool retained=strstr(mode,"retained");if(retained)fixture_adapter_retain();assert(first.issueNativeArm()==(retained?C::Retained:C::Conflict)&&!core.exportPrepared()&&!consumers_mutations());native.unchanged();if(retained){assert(!first.exitSafe());return 0;}assert(first.exitSafe());firstOwnerHeld=true;cleanup(a);return 0;}
  if(strstr(mode,"quiet-arm")){authority.retain=true;assert(first.issueNativeArm()==C::Retained&&!first.exitSafe()&&!a.exitSafe());return 0;}
  if(strstr(mode,"stale"))firstEdit(core,"stale");
  const int armed=armFirst(first,a,memory,mode);
@@ -137,10 +166,11 @@ int main(int argc,char**argv){assert(argc==3);const char*mode=argv[1];role(Task:
 #endif
    assert(core.load()==C::Ok&&core.exportPrepared()&&value(core)=="newer");role(Task::Owner);
   }
-  resumed.reset(new F(core,hash.api(),guard(),authority.api()));assert(firstPrepare(*resumed,a)==C::Ok&&authority.randoms==randoms);job=resumed.get();}
+  resumed.reset(new F(core,hash.api(),firstGuard(),authority.api()));assert(firstPrepare(*resumed,a)==C::Ok&&authority.randoms==randoms);job=resumed.get();}
  firstDrive(*job,a,core,v);
  if(first_fault_count()){assert(job->state()==F::State::Failed&&job->error()==C::Io&&job->exitSafe()&&core.exportPrepared()&&consumers_mutations()==first_fault_mutations());cleanup(a);return 0;}
  assert(job->state()==F::State::Verified&&!job->exitSafe()&&a.release()==A::Context&&core.pendingCount()==captured+(strstr(mode,"resume")?8u:1u));assert(core.preparedExport(&marker)==C::Ok&&!memcmp(markerBytes.data(),marker.encoded(),markerBytes.size()));
+ if(!strcmp(mode,"native-owner-ack")){firstOwnerHeld=false;NativeCounters native;assert(job->issueNativeCompletion()==C::Conflict&&job->exitSafe()&&core.exportPrepared());native.unchanged();firstOwnerHeld=true;cleanup(a);return 0;}
  if(strstr(mode,"quiet-complete")){authority.retain=true;assert(job->issueNativeCompletion()==C::Retained&&!job->exitSafe()&&!a.exitSafe());return 0;}
  const int rc=finishFirst(*job,a,memory,mode);
  if(strstr(mode,"final-release-epoch")){assert(rc==C::Conflict&&job->exitSafe()&&!a.exitSafe());return 0;}

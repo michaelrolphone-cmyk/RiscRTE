@@ -1,0 +1,44 @@
+name: Experimental settings contracts
+on:
+  push:
+    branches: [experimental/x4-settings-persistence-20261012]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'experimental/native_replica/**'
+      - 'src/bootstrap/**'
+      - 'src/ports/esp32s3/NativeSettings*'
+      - 'sdk/app/RiscKeyValue*'
+      - 'test/native_*settings*'
+      - 'test/run_native_*settings*'
+      - '.github/workflows/experimental-settings.yml'
+permissions:
+  contents: read
+jobs:
+  host-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      SANITIZERS: address,undefined
+      ASAN_OPTIONS: detect_leaks=0
+      UBSAN_OPTIONS: halt_on_error=1
+      NO_PIE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Host SHA dependency
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - name: Exact namespace, custody, availability and startup contracts
+        run: |
+          python3 test/run_native_settings_startup_entropy_test.py
+          bash test/run_native_atomic_key_value_test.sh
+          bash test/run_native_settings_coordinator_test.sh
+          bash test/run_native_first_sd_checkpoint_test.sh
+          bash test/run_native_settings_availability_test.sh
+          python3 test/test_native_settings_startup.py

@@ -12,15 +12,15 @@ for arg in command[1:]:
  if arg.startswith('-ffile-prefix-map='):arg=f'-ffile-prefix-map={root}=.'
  flags.append(arg)
 flags=['-I'+str(root/'src'),'-I'+str(root),'-I'+str(root/'sdk/app'),'-I'+str(root/'sdk/driver'),'-I'+str(root/'sdk/hardware'),*flags,'-fstack-usage','-Wall','-Wextra','-Werror','-Wno-missing-field-initializers','-Wno-misleading-indentation']
-selected=['-DBOARD_XTEINK_X4_PRO','-DRISC_PAIRED_APP_DATA','-DRISC_PAIRED_BANKS','-DRISC_NATIVE_SETTINGS_BACKEND=1','-DRISC_NATIVE_APP_DATA_MOUNT=1','-DRISC_NATIVE_SETTINGS_ASSEMBLY=1','-DRISC_NATIVE_SETTINGS_PSRAM_PAYLOAD=1','-DRISC_NATIVE_SETTINGS_LIFECYCLE=1','-DRISC_NATIVE_SETTINGS_WORKER=1','-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1','-DRISC_NATIVE_STORAGE_CUSTODY=1']
+selected=['-DBOARD_XTEINK_X4_PRO','-DRISC_PAIRED_APP_DATA','-DRISC_PAIRED_BANKS','-DRISC_NATIVE_SETTINGS_BACKEND=1','-DRISC_NATIVE_SETTINGS_STARTUP_ENTROPY=1','-DRISC_NATIVE_APP_DATA_MOUNT=1','-DRISC_NATIVE_SETTINGS_ASSEMBLY=1','-DRISC_NATIVE_SETTINGS_PSRAM_PAYLOAD=1','-DRISC_NATIVE_SETTINGS_LIFECYCLE=1','-DRISC_NATIVE_SETTINGS_WORKER=1','-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1','-DRISC_NATIVE_STORAGE_CUSTODY=1']
 identities=list(pathlib.Path(entry['directory']).glob('.pio/build/*/RiscBuildIdentity.h'));assert len(identities)==1,identities
 identity=identities[0];flags+=['-I'+str(identity.parent)]
 commands=[]
 def run(cmd):commands.append(cmd);subprocess.run(cmd,cwd=root,check=True)
 probe=out/'backend-layout.cpp';probe.write_text('#include "'+str(root/'src/ports/esp32s3/NativeSettingsBackend.cpp')+'"\nextern "C" { char settings_backend_controls[sizeof(RiscCpu::NativeSettingsBackend::state)]; char settings_namespace_backend[sizeof(RiscCpu::NativeSettingsBackend::Backend)]; }\n')
-for source,name,extra in [(root/'src/ports/esp32s3/NativeSettingsBackend.cpp','backend',selected),(probe,'layout',selected),(root/'src/main.cpp','main',selected),(root/'src/ports/esp32s3/NativeSettingsBackend.cpp','backend-off',[])]:
+for source,name,extra in [(root/'src/ports/esp32s3/NativeSettingsStartupEntropy.cpp','entropy',selected),(root/'src/ports/esp32s3/NativeSettingsStartupEntropy.cpp','entropy-off',[]),(root/'src/ports/esp32s3/NativeSettingsBackend.cpp','backend',selected),(probe,'layout',selected),(root/'src/main.cpp','main',selected),(root/'src/ports/esp32s3/NativeSettingsBackend.cpp','backend-off',[])]:
  run([tool,*flags,*extra,'-c',str(source),'-o',str(out/(name+'.o'))]);nm=subprocess.check_output([tool.removesuffix('g++')+'nm','-S',str(out/(name+'.o'))],text=True);(out/(name+'.nm')).write_text(nm)
- if name=='backend-off':assert not nm.strip()
+ if name in ('backend-off','entropy-off'):assert not nm.strip()
  for line in nm.splitlines():
   if ' settings_' in line:print(line)
 # Same path/flags excludes filename noise. Default-off entrypoint remains exact.

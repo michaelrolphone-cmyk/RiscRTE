@@ -11,6 +11,7 @@
 #pragma pop_macro("B1000000")
 #pragma pop_macro("B110")
 #include "NativeSettingsWorker.h"
+#include "NativeSettingsStartupEntropy.h"
 #include "../../../experimental/native_replica/NvsReplicaMetadata.h"
 #include <esp_timer.h>
 #include <freertos/task.h>
@@ -44,6 +45,9 @@ struct Backend {
  Little::Mount binding;
  mbedtls_sha256_context hash{};
  bool hashing=false;
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+ uint8_t incarnation[16]{};
+#endif
  F::Files::Hooks hooks;
  F::Files files;
  Metadata metadata;
@@ -106,13 +110,27 @@ struct Backend {
    [](void*p){auto&s=*static_cast<Backend*>(p);if(!digestAllowed(p))return false;s.hashing=mbedtls_sha256_starts_ret(&s.hash,0)==0;return s.hashing;},
    [](void*p,const void*b,uint32_t n){auto&s=*static_cast<Backend*>(p);if(!s.hashing||!digestAllowed(p)||(!b&&n))return false;return mbedtls_sha256_update_ret(&s.hash,static_cast<const unsigned char*>(b),n)==0;},
    [](void*p,uint8_t out[32]){auto&s=*static_cast<Backend*>(p);if(!out||!s.hashing||!digestAllowed(p))return false;const int rc=mbedtls_sha256_finish_ret(&s.hash,out);s.hashing=false;return rc==0;}};}
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+ static bool ownerOrWorker(void*p){auto&s=*static_cast<Backend*>(p);return !xPortInIsrContext()&&!observe(p)&&((s.owner&&s.owner())||held(p));}
+ static bool firstEntropy(void*p,uint8_t out[16]){auto&s=*static_cast<Backend*>(p);return NativeSettingsStartupEntropy::take(s.ns,NativeSettingsStartupEntropy::Purpose::FirstCheckpoint,p,held,out);}
+#endif
  F::Namespace input(){
   const F::Backend backend{&files,&artifacts,&sources,identity.settingsRoot,hooks,sizeof(*this),metadata.api(),sizeof(metadata),{this,held,space},sizeof(*this),&legacy};
   const auto hashApi=legacyDigest();
   const NativeSettingsBootstrap::Catalog::Digest digest{hashApi.context,hashApi.begin,hashApi.update,hashApi.finish};
-  // First-export SD capacity admission remains a separate pending binding. An absent callback fails closed;
-  // this backend does not invent a capacity receipt or select a source.
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+  // The first-checkpoint guard separately proves the exact namespace lease on
+  // owner and worker. All native file writers share the fixed fenced mount;
+  // selected KV writers share the coordinator. The immutable table/root cannot
+  // be replaced. SD capacity is admitted by the typed session's worker receipt,
+  // never by a synthetic stagingCapacity callback.
+  uint8_t any=0;for(uint8_t b:incarnation)any|=b;
+  // Keep guarded resume available even if capture failed: a durable first
+  // marker already contains its identities. New identity requests still fail.
+  return {backend,digest,sizeof(*this),{this,ownerOrWorker,firstEntropy,nullptr},sizeof(*this),any?incarnation:nullptr};
+#else
   return {backend,digest,sizeof(*this),{},0,nullptr};
+#endif
  }
 };
 template<class T>struct Permanent {alignas(T) unsigned char bytes[sizeof(T)]{};template<class...Args>T*construct(Args&&...args){return new(bytes)T(static_cast<Args&&>(args)...);}};
@@ -134,6 +152,14 @@ bool prepare(bool(*owner)()){
  std::strcpy(bound.mountPath,id.mountPath);std::strcpy(bound.privateRoot,id.settingsRoot+std::strlen(id.mountPath));
  auto*one=state.namespaces[0].construct(1,owner,id,bound);auto*six=state.namespaces[1].construct(6,owner,id,bound);
  if(!one->files.configure(id.settingsRoot)||!six->files.configure(id.settingsRoot)||M::retained())return false;
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+ if(!NativeSettingsStartupEntropy::take(1,NativeSettingsStartupEntropy::Purpose::Incarnation,one,Backend::ownerOrWorker,one->incarnation)||
+    !NativeSettingsStartupEntropy::take(6,NativeSettingsStartupEntropy::Purpose::Incarnation,six,Backend::ownerOrWorker,six->incarnation)) {
+  // Failed entropy does not hide an existing native/SD baseline. Only operations
+  // requiring a fresh identity are unavailable; no clock/MAC/counter fallback.
+  C::wipe(one->incarnation,sizeof one->incarnation);C::wipe(six->incarnation,sizeof six->incarnation);
+ }
+#endif
  state.selected=F::assemble({one->input(),six->input(),VolumeInstance,Writers,sizeof Writers/sizeof Writers[0],owner});
  return state.selected&&!M::retained();
 }

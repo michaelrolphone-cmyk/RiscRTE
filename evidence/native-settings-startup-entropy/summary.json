@@ -1,0 +1,166 @@
+{
+  "source_commit": "25e57dc27aeea090cd6310fad291a0e2caf594e4",
+  "qualified": {
+    "startup_entropy_normal": true,
+    "startup_entropy_asan_ubsan": true,
+    "concrete_backend_normal_10_process_cases": true,
+    "concrete_backend_asan_ubsan_10_process_cases": true,
+    "actual_X4_FatFs_first_cases_normal": 73,
+    "actual_X4_FatFs_first_cases_asan_ubsan": 73,
+    "checked_native_store_cases_normal": 41,
+    "checked_native_store_cases_asan_ubsan": 41,
+    "target_selected_compile": true,
+    "default_off_empty_entropy_backend": true,
+    "default_off_main_stripped_debug_exact": true,
+    "source_hashes_unchanged": true
+  },
+  "controls": {
+    "startup_seed_counter_target_bytes": 44,
+    "startup_seed_counter_host_bytes": 44,
+    "backend_target_bytes": 2840,
+    "backend_host_bytes": 3392,
+    "target_capture_local_frame": 144,
+    "target_take_local_frame": 288
+  },
+  "review_repairs": [
+    "Explicit exact owner-side guard in typed first custody, SD retention precedence preserved",
+    "Keep guarded durable first-marker recovery when early entropy fails",
+    "First fixtures optionally sparse after complete hash and metadata verification"
+  ],
+  "limitations": [
+    "Host SDK/RTOS/NVS/physical flash models",
+    "Focused backend factory/worker doubles; complete production-path fixture qualified separately",
+    "No physical RNG or card qualification",
+    "Whole selected product static resource gate currently fails fixed IQ overlap; separate scratch split in progress",
+    "All selections remain disabled"
+  ],
+  "development_results": [
+    "Wrong local vendor path refused before build",
+    "Private helper reference failed compile and repaired without changing Core access",
+    "Wrong reference Reader path refused before build",
+    "Queue guard test initially counted harmless RAM observation as I/O; corrected assertion still requires zero reads/writes/submissions/native operations",
+    "Target attempt hit ENOSPC before output creation; final target rerun passed"
+  ],
+  "files": {
+    "reviewed-entropy-final-normal.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/entropy-final-normal.log",
+      "uncompressed_sha256": "daf44b96409ea8abbd913cb69f1837613663a0475fcda6ec1a83b361bbcb93b4",
+      "stored_sha256": "daf44b96409ea8abbd913cb69f1837613663a0475fcda6ec1a83b361bbcb93b4"
+    },
+    "reviewed-entropy-final-asan.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/entropy-final-asan.log",
+      "uncompressed_sha256": "daf44b96409ea8abbd913cb69f1837613663a0475fcda6ec1a83b361bbcb93b4",
+      "stored_sha256": "daf44b96409ea8abbd913cb69f1837613663a0475fcda6ec1a83b361bbcb93b4"
+    },
+    "reviewed-entropy-final-normal-manifest.json": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/entropy-final-normal/manifest.json",
+      "uncompressed_sha256": "5edb34f4ca70494c94faf0f2381dbf9ae5bba98636ad1b9795d4de51c0853eab",
+      "stored_sha256": "5edb34f4ca70494c94faf0f2381dbf9ae5bba98636ad1b9795d4de51c0853eab"
+    },
+    "reviewed-entropy-final-asan-manifest.json": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/entropy-final-asan/manifest.json",
+      "uncompressed_sha256": "1cca7cdd13d30296e0f68b33856dc7e5a11d10af06d65693c46fc486fe4f58f2",
+      "stored_sha256": "1cca7cdd13d30296e0f68b33856dc7e5a11d10af06d65693c46fc486fe4f58f2"
+    },
+    "reviewed-backend-reviewed-normal.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/backend-reviewed-normal.log",
+      "uncompressed_sha256": "3e182fff223df023da9045a13c831830d4313ef5b7f435d45ee0303af56ebfea",
+      "stored_sha256": "3e182fff223df023da9045a13c831830d4313ef5b7f435d45ee0303af56ebfea"
+    },
+    "reviewed-backend-reviewed-asan.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/backend-reviewed-asan.log",
+      "uncompressed_sha256": "8467d5046e551e269305617f1590b8156487e08b54d137701fc5bf831fdbc64f",
+      "stored_sha256": "8467d5046e551e269305617f1590b8156487e08b54d137701fc5bf831fdbc64f"
+    },
+    "reviewed-target-reviewed-final.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/target-reviewed-final.log",
+      "uncompressed_sha256": "2e4675a890377e27a4e9f414d18814f2aead7cf5618232aefff970b46dd9ca99",
+      "stored_sha256": "2e4675a890377e27a4e9f414d18814f2aead7cf5618232aefff970b46dd9ca99"
+    },
+    "reviewed-target-reviewed-final-manifest.json.gz": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/target-reviewed-final/manifest.json",
+      "uncompressed_sha256": "93c3dc8fa081de411c63a0910e575d36a6890df7e438e595cf06b29595bef76a",
+      "stored_sha256": "6128d4a02f331c4aa95154539f0aa960b9b5b5ad25f02ab0badb165ed0b1ef49"
+    },
+    "reviewed-target-reviewed-final-entropy.su": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/target-reviewed-final/entropy.su",
+      "uncompressed_sha256": "a646b46528c0eafef7215941dc466d26b8fb0476a261265fcd0fe0d60f6d250d",
+      "stored_sha256": "a646b46528c0eafef7215941dc466d26b8fb0476a261265fcd0fe0d60f6d250d"
+    },
+    "reviewed-target-reviewed-final-backend.su": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/target-reviewed-final/backend.su",
+      "uncompressed_sha256": "4975b0eab777b8a43d4251874d601e7a3e79d86e4d8ee6c45e746b1da946ff1c",
+      "stored_sha256": "4975b0eab777b8a43d4251874d601e7a3e79d86e4d8ee6c45e746b1da946ff1c"
+    },
+    "reviewed-target-reviewed-final-layout.nm": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/target-reviewed-final/layout.nm",
+      "uncompressed_sha256": "70d883d5405aad17e710e9fc7e52cb32c3a3c8446c77f0162d1fccca5b446819",
+      "stored_sha256": "70d883d5405aad17e710e9fc7e52cb32c3a3c8446c77f0162d1fccca5b446819"
+    },
+    "reviewed-run-reviewed.sh": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/run-reviewed.sh",
+      "uncompressed_sha256": "1780c47d81a256be21492b83bd8851b800da96e28188c4ddc51619a46d94d51d",
+      "stored_sha256": "1780c47d81a256be21492b83bd8851b800da96e28188c4ddc51619a46d94d51d"
+    },
+    "reviewed-run-guard-reviewed.sh": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/run-guard-reviewed.sh",
+      "uncompressed_sha256": "df4a8d6c31cd57d134da09bb79665b76a7e6b62a5ee450fbbae581fc1146cd99",
+      "stored_sha256": "df4a8d6c31cd57d134da09bb79665b76a7e6b62a5ee450fbbae581fc1146cd99"
+    },
+    "reviewed-first-guard-normal.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-normal.log",
+      "uncompressed_sha256": "772d9eb516c96de8771a94b214e847ba8b01ab142be403d1306a12dc63be1116",
+      "stored_sha256": "772d9eb516c96de8771a94b214e847ba8b01ab142be403d1306a12dc63be1116"
+    },
+    "reviewed-first-guard-final-normal.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-final-normal.log",
+      "uncompressed_sha256": "c7f7313bb88567267f28384de282521b2e80ec4975cbaa550e8111abc2387b5e",
+      "stored_sha256": "c7f7313bb88567267f28384de282521b2e80ec4975cbaa550e8111abc2387b5e"
+    },
+    "reviewed-target-reviewed.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/target-reviewed.log",
+      "uncompressed_sha256": "de2c947e78cf6769828827ba98bff4391016866081ece55c8e7d4e816fb1fdb1",
+      "stored_sha256": "de2c947e78cf6769828827ba98bff4391016866081ece55c8e7d4e816fb1fdb1"
+    },
+    "reviewed-first-guard-reviewed-normal.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-reviewed-normal.log",
+      "uncompressed_sha256": "8c98cb06c61b30ec111e676e5c50de78acf5217ad44684887060836553b0d5a9",
+      "stored_sha256": "8c98cb06c61b30ec111e676e5c50de78acf5217ad44684887060836553b0d5a9"
+    },
+    "reviewed-first-guard-reviewed-normal-source-manifest.json.gz": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-reviewed-normal/source-manifest.json",
+      "uncompressed_sha256": "b8bc1144cb18ec406e84a2b528d40ed004a7b80cbb5b47300fb7f632111231e2",
+      "stored_sha256": "d4a4e541e6a36afaad8b6b53af5f3575442c785417813637d65b094acb871d7a"
+    },
+    "reviewed-first-guard-reviewed-asan.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-reviewed-asan.log",
+      "uncompressed_sha256": "8c98cb06c61b30ec111e676e5c50de78acf5217ad44684887060836553b0d5a9",
+      "stored_sha256": "8c98cb06c61b30ec111e676e5c50de78acf5217ad44684887060836553b0d5a9"
+    },
+    "reviewed-first-guard-reviewed-asan-source-manifest.json.gz": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-reviewed-asan/source-manifest.json",
+      "uncompressed_sha256": "6526aa432928de37ba3c8e732229a2598619f2e95cafef35b8830b68aed4f308",
+      "stored_sha256": "656f7a76442e787b14d839a833386670f0bee15e4b92acefec5b10a0b50c5751"
+    },
+    "reviewed-first-guard-reviewed-store-normal.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-reviewed-store-normal.log",
+      "uncompressed_sha256": "d7a136dfb986bb918adfb2f21d41aa11fe8b8eb946e030b09e2f6e2e900a3056",
+      "stored_sha256": "d7a136dfb986bb918adfb2f21d41aa11fe8b8eb946e030b09e2f6e2e900a3056"
+    },
+    "reviewed-first-guard-reviewed-store-normal-source-manifest.json.gz": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-reviewed-store-normal/source-manifest.json",
+      "uncompressed_sha256": "e4b7bfec354e0ad166485829acf341d75b3cd985e22e5f5e156b99f9d402b199",
+      "stored_sha256": "5174926ddad9e6ef2359ad309af06fa4aa53dd8f7c989f65e9838ce82d056aee"
+    },
+    "reviewed-first-guard-reviewed-store-asan.log": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-reviewed-store-asan.log",
+      "uncompressed_sha256": "d7a136dfb986bb918adfb2f21d41aa11fe8b8eb946e030b09e2f6e2e900a3056",
+      "stored_sha256": "d7a136dfb986bb918adfb2f21d41aa11fe8b8eb946e030b09e2f6e2e900a3056"
+    },
+    "reviewed-first-guard-reviewed-store-asan-source-manifest.json.gz": {
+      "source": "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/first-guard-reviewed-store-asan/source-manifest.json",
+      "uncompressed_sha256": "f3ae906cca065b512b92f23cbce4ca829d744936a9b92cb1afdf6c9b3df0618c",
+      "stored_sha256": "94f0320aee4251621b625ebbfd79ad9fb47f600556fb9798d81ed2b29568f60a"
+    }
+  }
+}

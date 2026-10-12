@@ -1,0 +1,42 @@
+NativeSettingsBackend.cpp:117:15:RiscCpu::NativeSettingsAssembly::Namespace RiscCpu::NativeSettingsBackend::{anonymous}::Backend::input()	128	static
+NativeSettingsBackend.cpp:66:19:static esp_err_t RiscCpu::NativeSettingsBackend::{anonymous}::Backend::initialized(void*)	32	static
+NativeSettingsBackend.cpp:76:13:static int RiscCpu::NativeSettingsBackend::{anonymous}::Backend::observe(void*)	32	static
+NativeSettingsBackend.cpp:115:14:static bool RiscCpu::NativeSettingsBackend::{anonymous}::Backend::firstEntropy(void*, uint8_t*)	32	static
+NativeSettingsBackend.cpp:67:14:static bool RiscCpu::NativeSettingsBackend::{anonymous}::Backend::held(void*)	128	static
+NativeSettingsBackend.cpp:75:18:static uint64_t RiscCpu::NativeSettingsBackend::{anonymous}::Backend::epoch(void*)	64	static
+NativeSettingsBackend.cpp:84:13:static int RiscCpu::NativeSettingsBackend::{anonymous}::Backend::snapshot(void*, RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount*)	80	static
+NativeSettingsBackend.cpp:65:18:static uint32_t RiscCpu::NativeSettingsBackend::{anonymous}::Backend::now(void*)	32	static
+NativeSettingsBackend.cpp:114:14:static bool RiscCpu::NativeSettingsBackend::{anonymous}::Backend::ownerOrWorker(void*)	32	static
+NativeSettingsBackend.cpp:77:14:static bool RiscCpu::NativeSettingsBackend::{anonymous}::Backend::cooperate(void*)	32	static
+NativeSettingsBackend.cpp:96:18:static RiscCpu::NativeSettingsBackend::{anonymous}::Backend* RiscCpu::NativeSettingsBackend::{anonymous}::Backend::io(void*, const void*)	32	static
+NativeSettingsBackend.cpp:107:32:static int RiscCpu::NativeSettingsBackend::{anonymous}::Backend::port()::<lambda(void*, const void*, void*)>::_FUN(void*, const void*, void*)	32	static
+NativeSettingsBackend.cpp:103:50:static int RiscCpu::NativeSettingsBackend::{anonymous}::Backend::port()::<lambda(void*, const void*, void*, RiscExperimental::CheckedLittleFsFreshInitArtifacts::Entry*)>::_FUN(void*, const void*, void*, RiscExperimental::CheckedLittleFsFreshInitArtifacts::Entry*)	32	static
+NativeSettingsBackend.cpp:102:45:static void* RiscCpu::NativeSettingsBackend::{anonymous}::Backend::port()::<lambda(void*, const void*, const char*)>::_FUN(void*, const void*, const char*)	32	static
+NativeSettingsBackend.cpp:101:32:static int RiscCpu::NativeSettingsBackend::{anonymous}::Backend::port()::<lambda(void*, const void*, int)>::_FUN(void*, const void*, int)	32	static
+NativeSettingsBackend.cpp:100:53:static ptrdiff_t RiscCpu::NativeSettingsBackend::{anonymous}::Backend::port()::<lambda(void*, const void*, int, void*, size_t)>::_FUN(void*, const void*, int, void*, size_t)	32	static
+NativeSettingsBackend.cpp:99:38:static int RiscCpu::NativeSettingsBackend::{anonymous}::Backend::port()::<lambda(void*, const void*, const char*)>::_FUN(void*, const void*, const char*)	32	static
+NativeSettingsBackend.cpp:98:54:static int RiscCpu::NativeSettingsBackend::{anonymous}::Backend::port()::<lambda(void*, const void*, const char*, stat*)>::_FUN(void*, const void*, const char*, stat*)	32	static
+NativeSettingsBackend.cpp:78:14:static bool RiscCpu::NativeSettingsBackend::{anonymous}::Backend::space(void*, uint32_t*, uint32_t*)	48	static
+NvsReplicaMetadata.h:20:7:bool RiscExperimental::NvsReplicaMetadata::valid(uint32_t, const char*, uint32_t) const	32	static
+NativeSettingsBackend.cpp:108:14:static bool RiscCpu::NativeSettingsBackend::{anonymous}::Backend::digestAllowed(void*)	32	static
+NativeSettingsBackend.cpp:112:29:static bool RiscCpu::NativeSettingsBackend::{anonymous}::Backend::legacyDigest()::<lambda(void*, uint8_t*)>::_FUN(void*, uint8_t*)	32	static
+NativeSettingsBackend.cpp:111:37:static bool RiscCpu::NativeSettingsBackend::{anonymous}::Backend::legacyDigest()::<lambda(void*, const void*, uint32_t)>::_FUN(void*, const void*, uint32_t)	32	static
+NativeSettingsBackend.cpp:110:13:static bool RiscCpu::NativeSettingsBackend::{anonymous}::Backend::legacyDigest()::<lambda(void*)>::_FUN(void*)	32	static
+NativeReplicaCore.h:182:14:static void RiscExperimental::NativeReplicaCore::wipe(void*, size_t)	32	static
+CheckedFreshInitArtifacts.h:28:2:RiscExperimental::CheckedFreshInitArtifacts::CheckedFreshInitArtifacts(uint32_t, const char*, RiscExperimental::CheckedFreshInitArtifacts::Hooks)	32	static
+NativeSettingsBackend.cpp:57:11:RiscCpu::NativeSettingsBackend::{anonymous}::Backend::Backend(uint32_t, bool (*)(), const RiscAppDataMount::Identity&, const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&)	112	static
+NvsReplicaMetadata.h:18:54:RiscExperimental::NvsReplicaMetadata::Handle::~Handle()	32	static
+NvsReplicaMetadata.h:19:37:RiscExperimental::NvsReplicaMetadata::Scratch::~Scratch()	32	static
+NvsReplicaMetadata.h:21:6:int RiscExperimental::NvsReplicaMetadata::ready() const	32	static
+NvsReplicaMetadata.h:22:13:static int RiscExperimental::NvsReplicaMetadata::map(esp_err_t)	32	static
+NvsReplicaMetadata.h:23:13:static int RiscExperimental::NvsReplicaMetadata::open(RiscExperimental::NvsReplicaMetadata::Handle&, uint32_t, nvs_open_mode_t)	48	static
+NvsReplicaMetadata.h:24:6:int RiscExperimental::NvsReplicaMetadata::read(uint32_t, const char*, void*, uint32_t)	112	static
+NvsReplicaMetadata.h:14:57:RiscExperimental::NvsReplicaMetadata::api()::<lambda(void*, uint32_t, const char*, void*, uint32_t)>	32	static
+NvsReplicaMetadata.h:14:57:static int RiscExperimental::NvsReplicaMetadata::api()::<lambda(void*, uint32_t, const char*, void*, uint32_t)>::_FUN(void*, uint32_t, const char*, void*, uint32_t)	32	static
+NvsReplicaMetadata.h:32:6:int RiscExperimental::NvsReplicaMetadata::write(uint32_t, const char*, const void*, uint32_t)	128	static
+NvsReplicaMetadata.h:15:64:RiscExperimental::NvsReplicaMetadata::api()::<lambda(void*, uint32_t, const char*, const void*, uint32_t)>	32	static
+NvsReplicaMetadata.h:15:64:static int RiscExperimental::NvsReplicaMetadata::api()::<lambda(void*, uint32_t, const char*, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, const void*, uint32_t)	32	static
+NativeSettingsBackend.cpp:139:6:bool RiscCpu::NativeSettingsBackend::prepare(bool (*)())	608	static
+NativeSettingsBackend.cpp:166:42:const RiscCpu::NativeSettingsLifecycle::Admission* RiscCpu::NativeSettingsBackend::admission()	32	static
+NativeSettingsBackend.cpp:167:8:size_t RiscCpu::NativeSettingsBackend::controlBytes()	32	static
+NativeSettingsBackend.cpp:169:62:const RiscCpu::NativeSettingsLifecycle::Admission* risc_native_settings_admission()	32	static

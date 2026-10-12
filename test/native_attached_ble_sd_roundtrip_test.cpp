@@ -120,7 +120,13 @@ int main(int argc,char**argv){
  if(restoring){assert(loadMedia);loadMedia(mediaPath);}
  {P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());}
  if(!restoring){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));seedMaintenance(1,one,oneId);seedMaintenance(6,six,sixId);file("/ordinary.txt","keep",4);}
- const auto writes=f->counter(6);assert(L::hydrate(runtime,cpu)&&L::attachOwner(runtime,cpu));if(restoring)assert(f->counter(6)==writes);
+ const auto writes=f->counter(6);assert(L::hydrate(runtime,cpu)&&L::attachOwner(runtime,cpu));
+ if(restoring){
+  // This controller round-trip fixture explicitly collects async discovery
+  // before entry; production hydration returns immediately with RAM defaults.
+  assert(L::discoveryCheckpoint());while(!L::exitSafe()){assert(!L::retained()&&L::discoveryCheckpoint());schedule(1);}
+  assert(L::discoveryCheckpoint()&&a->core.ready()&&b->core.ready()&&f->counter(6)==writes);
+ }
  if(!runtime.run()){fprintf(stderr,"run: %s\n",runtime.error());assert(false);}assert(L::exitSafe()&&anchor.exitSafe()&&!f);
- printf("ATTACHED BLE actual Runtime lifecycle / X4 FatFs / %s PASS; checkpoint admissions=%u deferred=%u\n",restoring?"typed pre-app restore after complete native erasure":"controller capture, compensation and settled SD acknowledgement",checkpoints,admissionDeferred);std::fflush(stdout);std::_Exit(0);
+ printf("ATTACHED BLE actual Runtime lifecycle / X4 FatFs / %s PASS; checkpoint admissions=%u deferred=%u\n",restoring?"typed async restore after complete native erasure":"controller capture, compensation and settled SD acknowledgement",checkpoints,admissionDeferred);std::fflush(stdout);std::_Exit(0);
 }

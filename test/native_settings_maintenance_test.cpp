@@ -26,8 +26,9 @@ extern "C" void nvs_release_iterator(nvs_iterator_t it){++F::nvsTotal;F::safe();
 static const uint8_t nativeOwner[16]={'R','i','s','c','R','T','E','/','N','a','t','i','v','e','1',0};
 static Sources::Hooks sourceHooks(F::Fixture&f){return {&f,[](void*){return F::onWorker&&F::lease;},[](void*){return ESP_OK;},[](void*p){return static_cast<F::Fixture*>(p)->files.retained()?int(C::Retained):int(C::Ok);}};}
 [[maybe_unused]] static LegacySources::Hooks legacyHooks(F::Fixture&f){return {&f,[](void*){return F::onWorker&&F::lease;},[](void*){return uint64_t(1);},[](void*){return F::initialized?ESP_OK:ESP_ERR_NVS_NOT_INITIALIZED;},[](void*p){return static_cast<F::Fixture*>(p)->files.retained()?int(C::Retained):int(C::Ok);}};}
+static bool asyncCase(){return scenario.rfind("unavailable-",0)==0;}
 static bool startupCase(){return scenario.rfind("bootstrap-",0)==0;}
-static bool noCard(){return scenario=="absent"||(startupCase()&&scenario.find("absent")!=std::string::npos);}
+static bool noCard(){return scenario=="absent"||scenario=="unavailable-absent"||(startupCase()&&scenario.find("absent")!=std::string::npos);}
 static bool importCase(){return startupCase()&&scenario.find("legacy")!=std::string::npos;}
 static void freshBaseline(F::Fixture&f,const char*value){Sources sources(f.core.namespaceId(),nativeOwner,f.inspector,sourceHooks(f));using Factory=RiscExperimental::NativeBaselineAdmission;Factory factory(&sources,f.core,{nullptr,[](void*){return F::onWorker&&F::lease;},[](void*){return uint64_t(1);}},{},sources.sources(),{});C::Initialization admission;assert(!factory.admitFreshEmpty(&admission)&&!f.core.initializeFreshEmpty(admission));f.store.finishOperation();assert(!F::put(f.core,"setting",value));f.store.finishOperation();}
 #if !RISC_NATIVE_SETTINGS_ASSEMBLY
@@ -115,7 +116,62 @@ static void historyInventory(unsigned expected,unsigned expectedSix=0){
 }
 
 static void trigger(){const auto*api=risc_runtime_get_api(1);assert(api);risc_runtime_capability_v1 grant{sizeof grant};assert(api->acquire(RISC_KEY_VALUE_CAPABILITY,1,1,&grant));assert(api->release(&grant));assert(L::exitSafe()&&maintenance->exitSafe()&&!port->nativeStorageAttached());}
+static uint64_t asyncExport=0;
+static uint32_t available(const risc_key_value_availability_v1&api){risc_key_value_availability_state_v1 value{sizeof(value)};assert(!api.snapshot(api.context,&value));return value.availability;}
+static void unavailableApp(){
+ const auto*api=risc_runtime_get_api(1);assert(api&&L::ready());
+ const auto before=F::nvs;const auto writes=f->counter(6);risc_runtime_capability_v1 status[2]={{sizeof(status[0])},{sizeof(status[0])}},data{sizeof(data)},atomic{sizeof(atomic)};
+ for(unsigned i=0;i<2;++i)assert(api->acquire(RISC_KEY_VALUE_AVAILABILITY_CAPABILITY,1,i?6:1,&status[i]));
+ const auto one=*static_cast<const risc_key_value_availability_v1*>(status[0].api),six=*static_cast<const risc_key_value_availability_v1*>(status[1].api);
+ assert(available(one)==RISC_KEY_VALUE_UNAVAILABLE&&available(six)==RISC_KEY_VALUE_UNAVAILABLE);
+ assert(api->acquire(RISC_KEY_VALUE_CAPABILITY,1,1,&data)&&api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,1,&atomic));
+ const auto kv=*static_cast<const risc_key_value_v1*>(data.api);const auto writer=*static_cast<const risc_key_value_atomic_v1*>(atomic.api);
+ char value[16]="keep";uint32_t size=9;risc_key_value_atomic_state_v1 state{sizeof(state)};
+ assert(kv.get(kv.context,"setting",value,sizeof(value),&size)==RISC_KEY_VALUE_NOT_FOUND&&!size&&!strcmp(value,"keep"));
+ assert(kv.put(kv.context,"setting","default",7)==RISC_KEY_VALUE_CONTEXT&&writer.state(writer.context,&state)==RISC_ATOMIC_BUSY);
+ bool sawPinned=false;
+ auto pump=[&](){const auto polls=L::timing().lastPolls;api->yield_ms(1);assert(L::timing().lastPolls<=polls+1||!polls);
+  if(L::discovering()&&port->nativeStorageAttached()){
+   sawPinned=true;assert(!port->providerStorageSafe()&&!port->appExitSafe()&&!port->restartResourcesSafe()&&!port->quiescent());
+   assert(port->nativeDiscoveryProviderSafe()&&port->nativeDiscoveryAppExitSafe());
+   uint64_t n=0,t=0,sectors=0;uint32_t bytes=0;assert(!f->volume->file_open_read(f->volume->context,"/ordinary.txt",&n));
+   assert(risc_storage_volume_export(f->volume)->export_begin(f->volume->context,&t,&sectors,&bytes)==RISC_STORAGE_EXPORT_REFUSED&&!t);
+  }
+ };
+ pump();
+ if(scenario=="unavailable-return"){assert(L::discovering());return;}
+ for(unsigned i=0;i<10000&&L::discovering();++i){
+  if(scenario=="unavailable-cancel"&&port->nativeStorageAttached())cancelLatch=true;
+  if(scenario=="unavailable-retained"&&port->nativeStorageAttached())f->fault(3);
+  if(scenario=="unavailable-app-retained"&&port->nativeStorageAttached()){
+   const auto polls=L::timing().lastPolls,ends=f->counter(4);assert(api->retain_invocation());
+   assert(L::retained()&&!L::exitSafe()&&!risc_runtime_get_api(1));L::cooperate();
+   assert(polls==L::timing().lastPolls&&ends==f->counter(4)&&port->nativeStorageAttached()&&!anchorPin->exitSafe());
+   puts("unrelated Runtime retention freezes discovery and keeps native graph custody PASS");std::fflush(stdout);std::_Exit(0);
+  }
+  pump();
+  if(scenario=="unavailable-retained"&&L::retained()){
+   assert(maintenance->retained()&&!L::exitSafe()&&port->nativeStorageAttached()&&!risc_runtime_get_api(1));
+   puts("discovery custody failure retains Runtime/app/SD graph without cleanup PASS");std::fflush(stdout);std::_Exit(0);
+  }
+ }
+ assert(L::exitSafe()&&!L::retained()&&(sawPinned||scenario=="unavailable-recover")&&f->counter(6)==writes);
+ if(scenario=="unavailable-recover"){
+  assert(!cores[0]->ready()&&!cores[1]->ready()&&F::nvs==before);
+  assert(asyncExport&&!risc_storage_volume_export(f->volume)->export_end(f->volume->context,asyncExport));asyncExport=0;nowMs+=1000;pump();for(unsigned i=0;i<10000&&L::discovering();++i)pump();
+  assert(L::exitSafe()&&sawPinned&&cores[0]->ready()&&cores[1]->ready());
+  assert(available(one)==RISC_KEY_VALUE_RECONCILIATION_PENDING&&available(six)==RISC_KEY_VALUE_AVAILABLE);
+  assert(kv.get(kv.context,"setting",value,sizeof(value),&size)==RISC_KEY_VALUE_NOT_FOUND&&!size);
+ }else if(scenario=="unavailable-conflict"){
+  assert(!cores[0]->ready()&&cores[1]->ready()&&available(one)==RISC_KEY_VALUE_CONFLICT&&available(six)==RISC_KEY_VALUE_AVAILABLE);
+ }else {assert(!cores[0]->ready()&&!cores[1]->ready()&&F::nvs==before&&available(one)==RISC_KEY_VALUE_UNAVAILABLE);}
+ assert(api->release(&atomic));if(scenario=="unavailable-recover")assert(available(one)==RISC_KEY_VALUE_RECONCILIATION_PENDING);
+ assert(api->release(&data));
+ if(scenario=="unavailable-recover")assert(available(one)==RISC_KEY_VALUE_AVAILABLE&&F::value(*cores[0],"setting")=="one"&&F::value(*cores[1],"setting")=="six");
+ for(auto&g:status){assert(api->release(&g));}assert(f->counter(6)==writes);
+}
 extern "C" void test_maintenance_app(){
+ if(asyncCase()){unavailableApp();return;}
  assert(L::ready()&&cores[0]->ready()&&cores[1]->ready());
  if(scenario.rfind("first",0)==0){
   if(scenario=="first-cancel"){assert(maintenance->result(1)==M::Sync::State::Cancelled&&cores[0]->pendingCount());cancelLatch=false;}
@@ -167,7 +223,7 @@ extern "C" void test_maintenance_app(){
 int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[3];F::empty();const auto one=map("one"),six=map("six");auto oneId=identity(1,one),sixId=identity(6,six);
  {F::Fixture a(1),b(6);C::Value v1{"setting","one",3},v6{"setting","six",3};
   if(scenario.rfind("first",0)==0){freshBaseline(a,scenario.rfind("first-history",0)==0?historyValue(1,1).c_str():"one");freshBaseline(b,scenario.rfind("first-history",0)==0?historyValue(6,1).c_str():"six");}
-  else {if(scenario.rfind("restore",0)!=0&&!startupCase()){assert(!a.core.initialize(&v1,1,oneId));a.store.finishOperation();}if((scenario.rfind("restore",0)!=0&&!startupCase())||scenario=="restore-single"){assert(!b.core.initialize(&v6,1,sixId));b.store.finishOperation();}
+  else {if(scenario.rfind("restore",0)!=0&&!startupCase()&&!asyncCase()){assert(!a.core.initialize(&v1,1,oneId));a.store.finishOperation();}if((scenario.rfind("restore",0)!=0&&!startupCase()&&!asyncCase())||scenario=="restore-single"){assert(!b.core.initialize(&v6,1,sixId));b.store.finishOperation();}
    if(scenario=="persisted-incarnation"){for(auto*f:{&a,&b}){C::Snapshot snapshot;assert(!f->core.captureSnapshot(&snapshot));auto target=f->core.identity();++target.generation;const uint8_t persisted[16]={0x55};C::ExportMarker marker;assert(!f->core.prepareExport(snapshot,target,persisted,&marker));f->store.finishOperation();assert(!f->core.acknowledgeExport(marker,target));f->store.finishOperation();assert(!f->core.exportIncarnationRequired());}++oneId.generation;++sixId.generation;}
   }
  }
@@ -180,7 +236,7 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
 #else
  auto*a=new F::Fixture(1);auto*b=new F::Fixture(6);cores[0]=&a->core;cores[1]=&b->core;Hash h1,h6;const uint8_t incarnation1[16]={0x71},incarnation6[16]={0x76};static const L::Writer writers[]={{"maintenance-test",1},{"maintenance-test",6}};
  B*bootstrapClient=nullptr;
- if(scenario.rfind("restore",0)==0||scenario.rfind("first",0)==0||startupCase()){auto*s1=new Sources(1,nativeOwner,a->inspector,sourceHooks(*a));auto*s6=new Sources(6,nativeOwner,b->inspector,sourceHooks(*b));
+ if(scenario.rfind("restore",0)==0||scenario.rfind("first",0)==0||startupCase()||asyncCase()){auto*s1=new Sources(1,nativeOwner,a->inspector,sourceHooks(*a));auto*s6=new Sources(6,nativeOwner,b->inspector,sourceHooks(*b));
   B::First::Authority first{nullptr,[](void*){return F::lease.load();},[](void*,uint8_t out[16]){static uint8_t serial=33;memset(out,0,16);out[0]=serial++;return true;},[](void*,uint32_t,uint32_t){return F::lease.load();}};
   const auto d1=h1.api(),d6=h6.api();
   auto*l1=new LegacySources(1,nativeOwner,"shared-00000001",S::ImageMax-C::HeaderV3-4,a->inspector,{d1.context,d1.begin,d1.update,d1.finish},legacyHooks(*a));
@@ -195,16 +251,20 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
  assert(L::prepare(&maintenance->admission(),{owner,schedule,[](){return uint32_t(nowMs);},[](){return cancelLatch;}}));
  auto hw=hardware();hw.sleep=[](uint32_t ms){hardwareSleepMs+=ms;nowMs+=ms;};workBackend.delayMs=[](uint32_t ms){providerWorkerDelayMs+=ms;nowMs+=ms;};
  Port cpu(hw);port=&cpu;RiscBoot::Port boot{owner,[](risc_runtime_health_v1*){return true;},schedule,[](const char*){return true;},bind};
- boot.appExitSafe=[](){return port->appExitSafe()&&L::exitSafe();};boot.providerStorageSafe=[](){return port->providerStorageSafe()&&!L::retained();};boot.retainedDelay=schedule;boot.nativeOwnerCheckpoint=[](bool admitNew){++checkpoints;const bool safe=L::checkpoint(admitNew);if(safe&&releaseAnchorAtFinal){assert(admitNew&&!anchorPin->release()&&!f);releaseAnchorAtFinal=false;}return safe;};
+ boot.appExitSafe=[](){return L::discovering()?port->nativeDiscoveryAppExitSafe():port->appExitSafe()&&L::exitSafe();};boot.providerStorageSafe=[](){return !L::retained()&&(L::discovering()?port->nativeDiscoveryProviderSafe():port->providerStorageSafe());};
+ boot.nativeDiscoveryCheckpoint=[](){return L::discoveryCheckpoint();};
+ boot.nativeSettingsShutdown=[](){const bool ok=L::shutdown();if(ok&&asyncCase())assert(!anchorPin->release()&&!f);return ok;};boot.retainedDelay=schedule;boot.nativeOwnerCheckpoint=[](bool admitNew){++checkpoints;const bool safe=L::checkpoint(admitNew);if(safe&&releaseAnchorAtFinal){assert(admitNew&&!anchorPin->release()&&!f);releaseAnchorAtFinal=false;}return safe;};
  static const RiscBoot::KeyValueBackend forbiddenLegacy{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},[](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},2048};boot.keyValue=&forbiddenLegacy;
  RiscBoot::Runtime runtime(boot);assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());if(!noCard()){P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());}
  if(!noCard()){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));auto remote=oneId;if(scenario=="foreign")remote.lineage[0]^=42;if(scenario!="restore-no-checkpoint"&&(!startupCase()||scenario=="bootstrap-legacy-conflict"||scenario=="bootstrap-fresh-restore")){if(scenario.rfind("first",0)!=0||scenario=="first-conflict")seedMaintenance(1,one,remote);if(scenario.rfind("first",0)!=0)seedMaintenance(6,six,sixId);}file("/ordinary.txt","keep",4);}else f->fault(8);
- if(scenario=="restore-conflict")F::nvs["rte00000001"]["valuable"]={1,2,3};
+ if(scenario=="restore-conflict"||scenario=="unavailable-conflict")F::nvs["rte00000001"]["valuable"]={1,2,3};
  if(scenario=="restore-resume"||(startupCase()&&scenario.find("resume")!=std::string::npos)){
   const pid_t child=fork();assert(child>=0);if(!child){F::powerCheckpoint=[](const char*at){
    const char*point=scenario.find("stage")!=std::string::npos?"write-prefix":scenario.find("rename")!=std::string::npos?"rename-after":"nvs-commit-after";
    if(strcmp(at,point))return;
-   saveNvs();std::_Exit(73);};(void)L::hydrate(runtime,cpu);std::_Exit(95);}
+   saveNvs();std::_Exit(73);};if(L::hydrate(runtime,cpu)&&L::attachOwner(runtime,cpu)){
+    assert(L::discoveryCheckpoint());while(!L::exitSafe()){assert(L::discoveryCheckpoint());schedule(1);}}
+   std::_Exit(95);}
   int status=0;assert(waitpid(child,&status,0)==child&&WIFEXITED(status)&&WEXITSTATUS(status)==73);loadNvs();assert(!oneCore.ready());
  }
  concurrentNative=scenario.find("concurrent")!=std::string::npos;std::atomic<bool>stopNative{false};std::thread nativeThreads[2];
@@ -222,17 +282,35 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
  if(startupCase()&&scenario.find("resume")==std::string::npos&&scenario.find("busy")==std::string::npos)F::powerCheckpoint=[](const char*at){if(!strcmp(at,"nvs-set-before"))assert(nativeFenceSnapshot.load(std::memory_order_acquire));};
  if(scenario=="bootstrap-fresh-retained"){F::fault="close";F::cut=1;F::armed=true;}
  if(scenario=="bootstrap-native-error"){F::fault="nvs-open";F::cut=1;F::armed=true;}
- const bool hydrated=L::hydrate(runtime,cpu);F::armed=false;
+ const bool bootReady=L::hydrate(runtime,cpu);bool attached=false;
+ if(bootReady){assert(L::attachOwner(runtime,cpu));attached=true;}
+ if(bootReady&&!asyncCase()&&(!oneCore.ready()||!sixCore.ready())){
+  assert(L::discoveryCheckpoint());while(!L::exitSafe()&&!L::retained()){(void)L::discoveryCheckpoint();schedule(1);}
+  if(!L::retained())assert(L::discoveryCheckpoint());
+ }
+ const bool hydrated=bootReady&&oneCore.ready()&&sixCore.ready()&&!L::retained();F::armed=false;
+ if(asyncCase()){
+  assert(bootReady&&L::ready()&&!oneCore.ready()&&!sixCore.ready()&&F::nvs==nativeBefore&&f->counter(6)==writesBefore);
+  if(scenario=="unavailable-recover"){uint64_t sectors=0;uint32_t size=0;assert(!risc_storage_volume_export(f->volume)->export_begin(f->volume->context,&asyncExport,&sectors,&size));}
+  const bool ran=runtime.run();
+  if(!ran){fprintf(stderr,"async run: %s\n",runtime.error());assert(false);}
+  assert(L::exitSafe()&&!L::retained()&&anchor.exitSafe()&&!f);
+  printf("actual nonblocking Runtime/X4/FatFs %s PASS; no default persistence or SD replacement\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);
+ }
 #if RISC_NATIVE_SETTINGS_ASSEMBLY
  if(scenario=="payload-failure"){assert(!hydrated&&!L::ready()&&L::exitSafe()&&!L::retained()&&F::nvs==nativeBefore&&payloadRequests>payloadBefore&&!oneCore.ready());ordinaryMaintenance();assert(!anchor.release()&&!f);puts("PSRAM allocation failure refuses hydration without fallback, mutation or retention PASS");std::fflush(stdout);std::_Exit(0);}
 #endif
  if(scenario=="bootstrap-fresh-retained"){assert(!hydrated&&L::retained()&&maintenance->retained()&&!maintenance->exitSafe());puts("actual native initialization retention keeps bootstrap factory, controls and lease alive PASS");std::fflush(stdout);std::_Exit(0);}
  if(scenario=="restore-retained"){assert(!hydrated&&L::retained()&&maintenance->retained()&&port->nativeStorageAttached());puts("actual pre-app restore retention PASS");std::fflush(stdout);std::_Exit(0);}
- if(scenario=="restore-no-source"||scenario=="restore-conflict"||scenario=="restore-cancel"||scenario=="corrupt-native"){assert(!hydrated&&!L::ready()&&maintenance->exitSafe()&&F::nvs==nativeBefore&&f->counter(6)==writesBefore&&!oneCore.ready());ordinaryMaintenance();assert(!anchor.release()&&!f);printf("actual lifecycle pre-app %s refuses unchanged PASS\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);}
+ if(scenario=="restore-no-source"||scenario=="restore-conflict"||scenario=="restore-cancel"||scenario=="corrupt-native"){assert(!hydrated&&maintenance->exitSafe()&&f->counter(6)==writesBefore&&!oneCore.ready());
+  if(!bootReady)assert(!L::ready());else assert(L::ready());
+  for(const char*ns:{"rnr00000001","rte00000001","kvj00000001"}){const auto before=nativeBefore.find(ns);const auto after=F::nvs.find(ns);assert((before==nativeBefore.end()&&after==F::nvs.end())||(before!=nativeBefore.end()&&after!=F::nvs.end()&&before->second==after->second));}ordinaryMaintenance();assert(!anchor.release()&&!f);printf("actual lifecycle pre-app %s refuses unchanged PASS\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);}
  if(startupCase()||scenario=="restore-no-checkpoint"){
   const bool refused=scenario=="bootstrap-fresh-absent"||scenario=="bootstrap-fresh-busy"||scenario=="bootstrap-legacy-conflict"||scenario=="bootstrap-legacy-corrupt"||scenario=="bootstrap-bare-init"||scenario=="bootstrap-native-error";
   assert(maintenance->exitSafe()&&!L::retained()&&!port->nativeStorageAttached()&&F::handles.empty()&&iterators.empty()&&f->counter(6)==writesBefore);
-  if(refused){assert(!hydrated&&!L::ready()&&!oneCore.ready()&&F::nvs==nativeBefore);}
+  if(refused){assert(!hydrated&&!oneCore.ready());
+   if(!bootReady)assert(!L::ready());else assert(L::ready());
+   for(const char*ns:{"rnr00000001","rte00000001","kvj00000001"}){const auto before=nativeBefore.find(ns);const auto after=F::nvs.find(ns);assert((before==nativeBefore.end()&&after==F::nvs.end())||(before!=nativeBefore.end()&&after!=F::nvs.end()&&before->second==after->second));}}
   else {assert(hydrated&&L::ready()&&oneCore.ready()&&sixCore.ready());
    for(C*c:{&oneCore,&sixCore}){
     if(scenario=="bootstrap-fresh-restore"){assert(c->identity().known);continue;}
@@ -241,7 +319,7 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
     else {assert(c->baseline().origin()==C::Origin::FreshEmpty&&!c->baseline().archiveObligation());std::string v;assert(F::get(*c,"setting",&v)==C::Missing);}
    }
    if(importCase())for(const char*space:{"rte00000001","rte00000006"})assert(F::nvs.at(space)==nativeBefore.at(space));
-   assert(L::attachOwner(runtime,cpu));
+   assert(attached);
    // No qualified first-SD capacity authority was supplied. Ordinary native
    // access remains usable; a checkpoint may not fabricate an SD identity.
    const auto nvsAfter=F::nvs;assert(L::checkpoint(true)&&F::nvs==nvsAfter&&f->counter(6)==writesBefore);
@@ -252,7 +330,7 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
   if(concurrentNative){stopNative.store(true,std::memory_order_release);for(auto&t:nativeThreads)t.join();}
   printf("actual checked startup dispatch %s PASS; hydrated=%d; native sources preserved; SD unchanged\n",scenario.c_str(),hydrated);std::fflush(stdout);std::_Exit(0);
  }
- assert(hydrated&&L::attachOwner(runtime,cpu));
+ assert(hydrated&&attached);
  if(scenario=="first-cancel")cancellationArmed=true;
 if(!runtime.run()){fprintf(stderr,"run: %s\n",runtime.error());assert(false);}assert(checkpoints>((scenario=="first-conflict"||scenario=="draft-fence")?0u:8u)&&L::exitSafe());assert(anchor.exitSafe()&&!f);
  if(scenario=="save-exit"||scenario=="implicit-exit"){assert(!oneCore.pendingCount()&&!sixCore.pendingCount()&&oneCore.identity().generation==20&&sixCore.identity().generation==20);puts("last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS");}

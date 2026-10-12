@@ -14,19 +14,23 @@ SHIM = baseline.SHIM.replace('inline uint32_t millis(){return 0;}', 'extern uint
 SHIM = SHIM.replace('inline void vTaskDelay(uint32_t){mark("yield");}', 'void testScheduler(uint32_t);inline void vTaskDelay(uint32_t n){testScheduler(n);}')
 SHIM = SHIM.replace('using esp_err_t=int;constexpr esp_err_t ESP_OK=0;', '#include <nvs.h>')
 SHIM = SHIM.replace('namespace RiscDiagnostics{', 'extern unsigned diagnosticsPolls;namespace RiscDiagnostics{').replace('inline void poll(){}', 'inline void poll(){++diagnosticsPolls;}')
-SHIM = SHIM.replace('bool(*controlExitRequested)();};', 'bool(*controlExitRequested)();bool(*nativeOwnerCheckpoint)(bool);};\nvoid testRuntimeRun(Port&);')
+SHIM = SHIM.replace('bool(*controlExitRequested)();};', 'bool(*controlExitRequested)();bool(*nativeOwnerCheckpoint)(bool);bool(*nativeDiscoveryCheckpoint)();bool(*nativeSettingsShutdown)();};\nvoid testRuntimeRun(Port&);')
 a = SHIM.index('class Runtime{Board b;')
 b = SHIM.index('\n}\nnamespace RiscCpu', a)
 SHIM = SHIM[:a] + r'''
-class Runtime{Board b;Port p;public:explicit Runtime(Port v):p(v){}Board&board(){return b;}
+extern bool dataGrants,runtimeRetained;class Runtime{Board b;Port p;public:explicit Runtime(Port v):p(v){}Board&board(){return b;}
  bool registerAtomicKeyValueReadThrough(uint32_t ns,RiscExperimental::NativeAtomicKeyValue&e){assert(e.namespaceId()==ns);mark(ns==1?"read1":"read6");return true;}
  bool registerAtomicKeyValue(const char*,uint32_t ns,RiscExperimental::NativeAtomicKeyValue&e){assert(e.namespaceId()==ns);mark(ns==1?"write1":"write6");return true;}
+ struct KeyValueAvailability {void*context;int32_t(*snapshot)(void*,uint32_t,risc_key_value_availability_state_v1*);};
+ bool registerKeyValueAvailability(uint32_t,KeyValueAvailability){return true;}
+ bool keyValueReconciliationSafe(uint32_t)const{return !dataGrants;}
+ bool keyValueRetentionObserved()const{return runtimeRetained;}
  bool prepare(const char*){mark("prepare");return true;}bool run(){mark("run");testRuntimeRun(p);return true;}const char*error(){return "test";}
 };
 ''' + SHIM[b:]
-SHIM = SHIM.replace('namespace RiscBoot{', '#include "experimental/native_replica/NativeSettingsCoordinator.h"\nnamespace RiscBoot{', 1)
+SHIM = SHIM.replace('namespace RiscBoot{', '#include "experimental/native_replica/NativeSettingsCoordinator.h"\n#include <RiscKeyValueAvailabilityV1.h>\nnamespace RiscBoot{', 1)
 SHIM = SHIM.replace('class Port{public:explicit Port(int){}', 'class Port{public:bool attached=false;explicit Port(int){}bool nativeStorageAttached(){return attached;}')
-SHIM = SHIM.replace('bool providerStorageSafe(){return true;}', 'bool providerStorageSafe(){return !attached;}')
+SHIM = SHIM.replace('bool providerStorageSafe(){return true;}', 'bool providerStorageSafe(){return !attached;}bool nativeDiscoveryProviderSafe(){return true;}bool nativeDiscoveryAppExitSafe(){return true;}')
 WORKER = r'''
 #pragma once
 #include "experimental/native_replica/NativeSettingsCoordinator.h"
@@ -43,6 +47,7 @@ HARNESS = r'''
 #include "test/native_replica_checked_fixture.h"
 #include <memory>
 namespace L=RiscCpu::NativeSettingsLifecycle;namespace W=RiscCpu::NativeSettingsWorker;namespace NF=NativeFixture;
+namespace RiscBoot {bool dataGrants=false,runtimeRetained=false;}
 std::vector<std::string>calls;uint32_t clockMs=0;unsigned diagnosticsPolls=0;
 std::string mode;bool selected=false;uint32_t onNamespace=0;unsigned registered=0,delays=0;bool failSecond=false;
 std::unique_ptr<W::Coordinator>services[2];
@@ -80,11 +85,37 @@ void configure(){
  [](void*p){auto&m=*static_cast<Model*>(p);assert(m.held&&!L::exitSafe()&&!m.port->providerStorageSafe());++m.polls;L::cooperate();assert(L::checkpoint());
   if(m.retained)return L::Progress::Retained;
   if(m.polls<m.until)return L::Progress::Pending;
+  if(mode=="preapp-loaded"){NF::onWorker=NF::lease=true;C::Value recovered{"setting","recovered",9};assert(!b->core.initialize(&recovered,1,{}));b->store.finishOperation();NF::onWorker=NF::lease=false;}
   m.held=m.port->attached=false;return L::Progress::Idle;},
  [](void*p){auto&m=*static_cast<Model*>(p);++m.cancels;m.cancel=true;},
  [](void*p){return !static_cast<Model*>(p)->held;},[](void*p){return static_cast<Model*>(p)->retained&&static_cast<Model*>(p)->held;}};
 }
 namespace RiscBoot {void testRuntimeRun(Port&p){
+ if(mode.rfind("preapp-",0)==0||mode=="initializing"){
+  assert(L::ready()&&a->core.ready()&&!b->core.ready()&&model.preApps==0);
+  risc_key_value_availability_state_v1 status{};status.struct_size=sizeof(status);
+  assert(!L::availability(6,&status)&&status.availability==RISC_KEY_VALUE_UNAVAILABLE);
+  assert(!L::availability(1,&status)&&status.availability==RISC_KEY_VALUE_AVAILABLE);
+  const auto old=delays;assert(p.nativeDiscoveryCheckpoint());assert(delays==old&&model.preApps==1);
+  if(mode=="preapp-pending"||mode=="preapp-loaded"||mode=="preapp-runtime-retained"){
+   assert(L::discovering()&&!L::exitSafe()&&p.exitSafe()&&p.storageSafe());
+   if(mode=="preapp-runtime-retained"){runtimeRetained=true;const auto polls=model.polls;L::cooperate();assert(L::retained()&&!L::exitSafe()&&model.polls==polls&&model.held);return;}
+   dataGrants=true;model.until=mode=="preapp-pending"?101:3;
+   for(unsigned i=0;i<model.until;++i){const auto n=delays;assert(p.nativeDiscoveryCheckpoint());assert(delays==n);}
+   assert(!L::discovering()&&L::exitSafe());
+   assert(!L::availability(6,&status));
+   if(mode=="preapp-loaded"){
+    assert(b->core.ready()&&status.availability==RISC_KEY_VALUE_RECONCILIATION_PENDING);
+    const auto generation=status.generation;assert(p.nativeDiscoveryCheckpoint());assert(!L::availability(6,&status)&&status.generation==generation);
+    dataGrants=false;assert(p.nativeDiscoveryCheckpoint());assert(!L::availability(6,&status)&&status.availability==RISC_KEY_VALUE_AVAILABLE&&status.generation>generation);
+    assert(NF::value(b->core,"setting")=="recovered");
+   }else assert(status.availability==RISC_KEY_VALUE_UNAVAILABLE&&!b->core.ready());
+  }else{
+   for(unsigned i=0;i<100;++i){assert(p.nativeDiscoveryCheckpoint());}assert(model.preApps==1);
+   clockMs+=1000;assert(p.nativeDiscoveryCheckpoint());assert(model.preApps==2&&!model.begins);
+  }
+  assert(p.nativeSettingsShutdown()&&L::exitSafe());return;
+ }
  assert(L::ready()&&a->core.ready()&&b->core.ready()&&!NF::onWorker&&!NF::lease);
  assert(NF::value(a->core,"setting")=="one"&&NF::value(b->core,"setting")=="six");
  const auto before=model.begins;p.delay(2);assert(model.begins==before); // actual cooperate is drain-only
@@ -105,7 +136,7 @@ int main(int argc,char**argv){assert(argc==3);mode=argv[1];NF::rootPath=argv[2];
  if(mode=="corrupt-native")NF::nvs["rnr00000006"]["root"][0]^=1;
  if(mode=="initializing"){Bytes receipt(48,0);std::memcpy(receipt.data(),"RTENFI1",8);receipt[8]=6;receipt[12]=1;uint32_t crc=~0u;for(unsigned i=0;i<44;++i){crc^=receipt[i];for(unsigned bit=0;bit<8;++bit)crc=(crc>>1)^((crc&1)?0xedb88320u:0);}crc=~crc;for(unsigned i=0;i<4;++i)receipt[44+i]=uint8_t(crc>>(8*i));NF::nvs["rnr00000006"]["root"]=receipt;}
  a=std::make_unique<NF::Fixture>(1);b=std::make_unique<NF::Fixture>(6);configure();
- admission.beginPreApp=[](void*p,RiscBoot::Runtime&,RiscCpu::Port&,int one,int six){auto&m=*static_cast<Model*>(p);++m.preApps;assert(one==C::Ok&&six==(mode=="initializing"?C::Initializing:C::Missing));return mode=="preapp-false-success"?L::Progress::Idle:L::Progress::Deferred;};
+ admission.beginPreApp=[](void*p,RiscBoot::Runtime&,RiscCpu::Port&port,int one,int six){auto&m=*static_cast<Model*>(p);++m.preApps;assert(one==C::Ok&&six==(mode=="initializing"?C::Initializing:C::Missing));if(mode=="preapp-pending"||mode=="preapp-loaded"||mode=="preapp-runtime-retained"){m.port=&port;m.held=port.attached=true;return L::Progress::Pending;}return mode=="preapp-false-success"?L::Progress::Idle:L::Progress::Deferred;};
  if(mode=="missing-native")admission.beginPreApp=nullptr;
  admission.cancelRequested=[](void*p){auto&m=*static_cast<Model*>(p);return ((mode=="cancel-load"||mode=="cancel-load-complete")&&clockMs>=1&&!m.begins)||(mode=="cancel-maintenance"&&m.held&&m.polls>=1);};
  selected=mode!="missing-admission";failSecond=mode=="second-fail";
@@ -114,13 +145,13 @@ int main(int argc,char**argv){assert(argc==3);mode=argv[1];NF::rootPath=argv[2];
  if(mode=="external-core")deniedInternal=&b->core;
  if(mode=="duplicate-writer"){static L::Writer duplicate[]={{"settings",1},{"settings",1}};admission.writers=duplicate;admission.writerCount=2;}
  NF::onWorker=false;NF::lease=false;const auto before=NF::nvs;
- setup();assert(NF::nvs==before); // startup only reads; no default repair or native writes
+ setup();if(mode!="preapp-loaded")assert(NF::nvs==before); // startup only reads; no default repair or native writes
  const bool ran=std::find(calls.begin(),calls.end(),"run")!=calls.end();
- const bool expected=mode=="normal"||mode=="busy"||mode=="long"||mode=="retained"||mode=="cancel-maintenance";
+ const bool expected=mode=="normal"||mode=="busy"||mode=="long"||mode=="retained"||mode=="cancel-maintenance"||mode.rfind("preapp-",0)==0||mode=="initializing";
  assert(ran==expected);
- if(ran){assert(registered==1);const auto read=std::find(calls.begin(),calls.end(),"read1");assert(read<std::find(calls.begin(),calls.end(),"prepare"));const auto begins=model.begins,diagnostics=diagnosticsPolls;loop();assert(model.begins==begins);if(mode=="retained")assert(diagnosticsPolls==diagnostics);}
+ if(ran){assert(registered==1);const auto read=std::find(calls.begin(),calls.end(),"read1");assert(read<std::find(calls.begin(),calls.end(),"prepare"));const auto begins=model.begins,diagnostics=diagnosticsPolls;loop();assert(model.begins==begins);if(L::retained())assert(diagnosticsPolls==diagnostics);}
  else assert(!model.begins&&!L::ready());
- assert(model.preApps==((mode.rfind("preapp-",0)==0||mode=="initializing")?1u:0u));
+ assert(model.preApps==((mode=="preapp-pending"||mode=="preapp-loaded"||mode=="preapp-runtime-retained")?1u:(mode.rfind("preapp-",0)==0||mode=="initializing")?2u:0u));
  if(mode=="cancel-load-complete")assert(a->core.ready()&&!b->core.ready()&&!model.preApps&&L::exitSafe());
  assert(!NF::lease||mode=="retained");printf("actual startup + checked load: %s PASS\n",mode.c_str());
  // Firmware objects are permanent. The deterministic shim has no running task;
@@ -149,7 +180,7 @@ class NativeSettingsStartup(unittest.TestCase):
    includes=[folder,ROOT,ROOT/'src',ROOT/'sdk/app',ROOT/'sdk/driver',ROOT/'sdk/hardware',ROOT/'test/native_nvs_shim',ROOT/'test/native_settings_worker_shim']
    command=['c++',*flags,*['-I'+str(p) for p in includes],str(folder/'main.cpp'),str(folder/'lifecycle.cpp'),str(folder/'harness.cpp'),str(ROOT/'src/runtime/storage/AppDataFiles.cpp'),'-Wl,--wrap=read,--wrap=write,--wrap=fsync,--wrap=close,--wrap=rename','-o',str(folder/'test')]
    subprocess.run(command,check=True)
-   for mode in ('normal','busy','long','retained','missing-admission','missing-native','corrupt-native','wrong-namespace','duplicate-writer','second-fail','cancel-load','cancel-load-complete','cancel-maintenance','preapp-deferred','preapp-false-success','initializing','external-control','external-core'):
+   for mode in ('normal','busy','long','retained','missing-admission','missing-native','corrupt-native','wrong-namespace','duplicate-writer','second-fail','cancel-load','cancel-load-complete','cancel-maintenance','preapp-deferred','preapp-false-success','preapp-pending','preapp-loaded','preapp-runtime-retained','initializing','external-control','external-core'):
     subprocess.run([str(folder/'test'),mode,str(folder/mode)],check=True)
    # An absent native selector symbol must link and fail closed, not initialize.
    subprocess.run([command[0],'-DNO_ADMISSION',*command[1:]],check=True)

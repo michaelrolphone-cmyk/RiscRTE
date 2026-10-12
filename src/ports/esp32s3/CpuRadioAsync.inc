@@ -59,6 +59,9 @@ int32_t Port::radioServiceBegin(void* context,uint64_t token,uint32_t* out){
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
   if(!out || !p.available() || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return RISC_RADIO_INVALID;
   if(!p.hw_.radioAsync || !p.hw_.radioAsync->tryShared || !p.hw_.radioAsync->endShared)return RISC_RADIO_UNAVAILABLE;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(!c.closing&&p.nativeDiscoveryBusy())return RISC_RADIO_BUSY;
+#endif
   if(c.closing || !p.providerStorageSafe())return RISC_RADIO_RETAINED;
   if(c.serviceLease)return RISC_RADIO_BUSY;
   if(c.nextServiceLease==UINT32_MAX)return RISC_RADIO_UNAVAILABLE;

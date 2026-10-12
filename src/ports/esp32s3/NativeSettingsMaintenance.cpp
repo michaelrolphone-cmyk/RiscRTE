@@ -19,6 +19,16 @@ NativeSettingsMaintenance::NativeSettingsMaintenance(Namespace preferences,Names
   [](void*p){static_cast<NativeSettingsMaintenance*>(p)->cancel();},
   [](void*p){return static_cast<NativeSettingsMaintenance*>(p)->exitSafe();},
   [](void*p){return static_cast<NativeSettingsMaintenance*>(p)->retained();}};
+ if(bootstrap_)admission_.sourceStatus=[](void*p,uint32_t ns){auto&s=*static_cast<NativeSettingsMaintenance*>(p);
+  if(ns!=1&&ns!=6)return Progress::Failed;
+  switch(s.bootstrap_->result(ns==6?1:0)){
+   case Sync::State::Synchronized:return Progress::Idle;
+   case Sync::State::Running:return Progress::Pending;
+   case Sync::State::Conflict:case Sync::State::Failed:return Progress::Failed;
+   case Sync::State::Retained:return Progress::Retained;
+   default:return Progress::Deferred;
+  }
+ };
  if(bootstrap_)admission_.beginPreApp=[](void*p,RiscBoot::Runtime&r,Port&port,int one,int six){auto&s=*static_cast<NativeSettingsMaintenance*>(p);
   const auto rc=s.bootstrap_->beginPreApp(r,port,one,six);s.preAppAuxiliary_=true;s.auxiliary_=rc==Progress::Pending||!s.bootstrap_->exitSafe();s.active_=s.auxiliary_;return rc;};
 }

@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/workspace/shared/x4-settings-startup-entropy-20261012/test/compile_native_settings_backend_target.py", line 5, in <module>
+    root=pathlib.Path(__file__).resolve().parents[1];out=a.output.resolve();out.mkdir(parents=True,exist_ok=True)
+                                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+OSError: [Errno 28] No space left on device: '/workspace/shared/x4-settings-startup-entropy-evidence-20261012/target-reviewed'

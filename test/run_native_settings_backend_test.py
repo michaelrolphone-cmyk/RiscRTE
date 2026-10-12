@@ -20,6 +20,10 @@ with (stubs/'esp_partition.h').open('a') as f:f.write('\ntypedef int esp_partiti
 (stubs/'esp_heap_caps.h').write_text('#pragma once\n#include <stddef.h>\n#define MALLOC_CAP_SPIRAM 1\n#define MALLOC_CAP_8BIT 2\n#define MALLOC_CAP_INTERNAL 4\nvoid* heap_caps_malloc(size_t,unsigned);\nvoid heap_caps_free(void*);\n')
 (stubs/'mbedtls').mkdir(exist_ok=True)
 (stubs/'mbedtls/sha256.h').write_text('#pragma once\n#include <openssl/sha.h>\n#include <string.h>\ntypedef SHA256_CTX mbedtls_sha256_context;\nstatic inline void mbedtls_sha256_init(mbedtls_sha256_context*p){memset(p,0,sizeof *p);}\nstatic inline int mbedtls_sha256_starts_ret(mbedtls_sha256_context*p,int n){return n?-1:SHA256_Init(p)==1?0:-1;}\nstatic inline int mbedtls_sha256_update_ret(mbedtls_sha256_context*p,const unsigned char*b,size_t n){return SHA256_Update(p,b,n)==1?0:-1;}\nstatic inline int mbedtls_sha256_finish_ret(mbedtls_sha256_context*p,unsigned char*b){return SHA256_Final(b,p)==1?0:-1;}\n')
+if os.environ.get('STARTUP_ENTROPY')=='1':
+ (stubs/'bootloader_random.h').write_text('#pragma once\nextern "C" void bootloader_random_enable();\nextern "C" void bootloader_random_disable();\n')
+ (stubs/'esp_random.h').write_text('#pragma once\n#include <stddef.h>\nextern "C" void esp_fill_random(void*,size_t);\n')
+ with (stubs/'mbedtls/sha256.h').open('a') as f:f.write('\nstatic inline void mbedtls_sha256_free(mbedtls_sha256_context*p){memset(p,0,sizeof *p);}\n')
 # Host esp_vfs.h declares the older ssize_t truncate member; IDF 4.4 uses int.
 
 s= (root/'test/native_littlefs_profile_fixture.c').read_text()
@@ -35,12 +39,13 @@ objects=[]
 for source in [vendor/'littlefs/lfs.c',vendor/'littlefs/lfs_util.c',vendor/'littlefs_esp_part.c',vendor/'esp_littlefs.c',fixture]:
  obj=build/(source.name+'.o');profile.run(['cc','-std=c11',*common,*includes,'-c',str(source),'-o',str(obj)]);objects.append(str(obj))
 flags=['-std=c++17',*common,*includes,'-DESP_PLATFORM','-DRISC_PAIRED_APP_DATA','-DRISC_PAIRED_BANKS','-DRISC_NATIVE_APP_DATA_MOUNT=1','-Wall','-Wextra','-Werror','-Wno-misleading-indentation','-Wno-deprecated-declarations','-DBOARD_XTEINK_X4_PRO','-DRISC_NATIVE_SETTINGS_BACKEND=1','-DRISC_NATIVE_SETTINGS_ASSEMBLY=1','-DRISC_NATIVE_SETTINGS_PSRAM_PAYLOAD=1','-DRISC_NATIVE_SETTINGS_LIFECYCLE=1','-DRISC_NATIVE_SETTINGS_WORKER=1','-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1','-DRISC_NATIVE_STORAGE_CUSTODY=1']
+if os.environ.get('STARTUP_ENTROPY')=='1':flags+=['-DRISC_NATIVE_SETTINGS_STARTUP_ENTROPY=1']
 obj=build/'mount.o';profile.run(['c++',*flags,'-c',str(root/'src/ports/esp32s3/NativeAppDataMount.cpp'),'-o',str(obj)]);objects.append(str(obj))
-for name in ('NativeSettingsBackend','NativeSettingsPayloadAllocator'):
+for name in ('NativeSettingsBackend','NativeSettingsPayloadAllocator',*(['NativeSettingsStartupEntropy'] if os.environ.get('STARTUP_ENTROPY')=='1' else [])):
  obj=build/(name+'.o');profile.run(['c++',*flags,'-c',str(root/'src/ports/esp32s3'/(name+'.cpp')),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'appdata.o';profile.run(['c++',*flags,'-c',str(root/'src/runtime/storage/AppDataFiles.cpp'),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'posix.o';profile.run(['c++',*flags,'-c',str(root/'test/native_app_data_mount_posix.cpp'),'-o',str(obj)]);objects.append(str(obj))
 wrapped=['stat','fstat','open','read','write','close','fsync','mkdir','unlink','rename','opendir','readdir','closedir','esp_vfs_register','esp_vfs_unregister','esp_partition_read','esp_partition_write','esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
 exe=build/'test';profile.run(['c++',*flags,str(root/'test/native_settings_backend_test.cpp'),*objects,'-Wl,'+','.join('--wrap='+f for f in wrapped),'-lcrypto','-no-pie','-o',str(exe)])
-for case in ['normal','legacy','no-mount','wrong-owner','nvs-unavailable','busy-mount','wrong-worker','wrong-namespace','retained-flash']:profile.run([str(exe),case])
+for case in [*(['no-entropy'] if os.environ.get('STARTUP_ENTROPY')=='1' else []),'normal','legacy','no-mount','wrong-owner','nvs-unavailable','busy-mount','wrong-worker','wrong-namespace','retained-flash']:profile.run([str(exe),case])
 print('PASS: real native settings backend/VFS, source checks, namespace preservation and retained failure; no firmware activation/hardware claim')

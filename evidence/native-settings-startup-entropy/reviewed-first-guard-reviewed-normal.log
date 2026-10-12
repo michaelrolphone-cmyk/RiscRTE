@@ -1,0 +1,90 @@
+PASS native-owner-queue
+PASS native-owner-arm
+PASS native-owner-ack
+PASS native-owner-retained
+PASS paths
+typed first checkpoint known PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known
+typed first checkpoint known-bare PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known-bare
+typed first checkpoint known-parent PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known-parent
+typed first checkpoint unknown PASS (refreshes=1, sessions=3, successful collections=24)
+PASS unknown
+typed first checkpoint empty PASS (refreshes=1, sessions=3, successful collections=19)
+PASS empty
+typed first checkpoint known-resume PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known-resume
+typed first checkpoint unknown-resume PASS (refreshes=1, sessions=3, successful collections=24)
+PASS unknown-resume
+typed first checkpoint empty-resume PASS (refreshes=1, sessions=3, successful collections=19)
+PASS empty-resume
+typed first checkpoint known-resume-prefix PASS (refreshes=1, sessions=4, successful collections=31)
+PASS known-resume-prefix
+typed first checkpoint unknown-resume-prefix-reload PASS (refreshes=1, sessions=4, successful collections=31)
+PASS unknown-resume-prefix-reload
+typed first checkpoint known-resume-reload PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known-resume-reload
+PASS conflict-legacy
+PASS conflict-index
+PASS conflict-orphan
+PASS cancel-prep
+PASS cancel-after-prep
+PASS unknown-entropy
+PASS capacity
+PASS capacity-budget
+PASS capacity-short
+typed first checkpoint capacity-exact PASS (refreshes=1, sessions=3, successful collections=24)
+PASS capacity-exact
+PASS capacity-missing
+PASS capacity-epoch
+PASS capacity-receipt
+PASS capacity-lease
+PASS capacity-cancel
+PASS capacity-running-cancel
+PASS capacity-cancel-retained
+PASS stale
+PASS quiet-queue
+PASS quiet-scan
+PASS quiet-arm
+PASS quiet-complete
+PASS arm-cancel
+PASS arm-running-cancel
+PASS arm-native-retained
+PASS arm-late-retained
+PASS arm-unavailable
+typed first checkpoint poll PASS (refreshes=1, sessions=3, successful collections=24)
+PASS poll
+typed first checkpoint poll-busy PASS (refreshes=1, sessions=3, successful collections=24)
+PASS poll-busy
+typed first checkpoint cancel PASS (refreshes=1, sessions=3, successful collections=24)
+PASS cancel
+typed first checkpoint running-cancel PASS (refreshes=1, sessions=3, successful collections=24)
+PASS running-cancel
+PASS retained
+PASS late-retained
+PASS completion-unavailable
+PASS final-release-retained
+PASS final-release-epoch
+PASS io-1
+PASS io-2
+PASS io-3
+PASS io-4
+PASS io-5
+PASS io-6
+PASS io-7
+PASS io-8
+PASS io-9
+PASS io-10
+PASS io-11
+PASS io-12
+PASS io-13
+PASS io-14
+PASS io-15
+PASS io-16
+PASS io-17
+PASS io-18
+PASS io-19
+PASS io-20
+PASS io-21
+Actual X4/FatFs typed first-create composition PASS; external source inputs: 263

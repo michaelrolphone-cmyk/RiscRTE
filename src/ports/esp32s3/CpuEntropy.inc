@@ -8,6 +8,9 @@ int32_t Port::entropyFill(void* context,uint64_t owner,void* output,uint32_t siz
  auto& p=*static_cast<Port*>(context);const auto* b=p.hw_.entropy;
  if(!p.available() || p.sleepRetained_ || !b)return RISC_ENTROPY_CONTEXT;
  if(p.transferring_)return RISC_ENTROPY_BUSY;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+ if(p.nativeDiscoveryBusy())return RISC_ENTROPY_BUSY;
+#endif
  if(!p.providerStorageSafe())return RISC_ENTROPY_RETAINED;
  if(!owner || !output || !size || size>RISC_ENTROPY_BYTES_MAX)return RISC_ENTROPY_INVALID;
  struct Scratch {

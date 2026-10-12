@@ -60,7 +60,31 @@ class NativeSdSession final {
   if(!out||!allowed(q)||!enter())return NativeSdAttempt::Context;
   const int rc=attempt_->packageImpl(q,role_==Role::FirstCheckpoint);leave();if(!rc)*out=1;return rc;
  }
- int collect(risc_storage_async_result_v1*out){if(!enter())return NativeSdAttempt::Context;const int rc=attempt_->collect(out);leave();return rc;}
+ int capacity(uint32_t mapBytes,uint32_t pages,uint64_t*out){
+  if(out)*out=0;
+  if(!out||role_!=Role::FirstCheckpoint||!firstBound_||pages!=firstPages_||!enter())return NativeSdAttempt::Context;
+  risc_storage_native_capacity_request_v1 q{RISC_STORAGE_NATIVE_CAPACITY_TAG,1u,mapBytes,pages};
+  const int rc=attempt_->capacity(q);leave();if(!rc){capacityPending_=true;capacityMapBytes_=mapBytes;capacity_={};*out=1;}return rc;
+ }
+ int capacityValid(uint32_t mapBytes,uint32_t pages){
+  if(role_!=Role::FirstCheckpoint||capacityPending_||capacityMapBytes_!=mapBytes||pages!=firstPages_||!capacity_.serial||!enter())return C::Invalid;
+  const int rc=attempt_->checkCapacity(capacity_);leave();
+  return rc==RISC_STORAGE_ASYNC_OK?C::Ok:rc==RISC_STORAGE_ASYNC_RETAINED?C::Retained:rc==RISC_STORAGE_ASYNC_IO?C::Io:C::Conflict;
+ }
+ int collect(risc_storage_async_result_v1*out){
+  if(!enter())return NativeSdAttempt::Context;
+  const int rc=attempt_->collect(out);leave();
+  if(capacityPending_&&rc!=RISC_STORAGE_ASYNC_PENDING&&!(rc==RISC_STORAGE_ASYNC_BUSY&&out->status!=RISC_STORAGE_ASYNC_BUSY)){
+   capacityPending_=false;
+   if(rc==RISC_STORAGE_ASYNC_OK){
+    if(out->size!=sizeof(capacity_)){attempt_->retain();return RISC_STORAGE_ASYNC_RETAINED;}
+    std::memcpy(&capacity_,out->data,sizeof capacity_);
+    const auto required=risc_storage_native_capacity_required(capacityMapBytes_,firstPages_,capacity_.cluster_bytes);
+    if(capacity_.tag!=RISC_STORAGE_NATIVE_CAPACITY_TAG||capacity_.version!=1u||!required||capacity_.required_clusters!=required||capacity_.free_clusters<required||capacity_.reserved||!capacity_.mount_epoch||!capacity_.serial){attempt_->retain();return RISC_STORAGE_ASYNC_RETAINED;}
+   }
+  }
+  return rc;
+ }
  int end(){if(!enter())return NativeSdAttempt::Context;const int rc=attempt_->close();leave();return rc;}
  int release(){
   if(!attempt_||!owner()||!pinned_)return C::Invalid;
@@ -70,12 +94,13 @@ class NativeSdSession final {
   // still performs its checked release. Retained custody can never drop it.
   const bool valid=a.boundary();
   if(!valid&&a.state_==NativeSdAttempt::State::Retained)return C::Retained;
-  --a.clientPins_;pinned_=false;C::wipe(firstPrefix_,sizeof firstPrefix_);C::wipe(checkpointStage_,sizeof checkpointStage_);firstPages_=0;firstBound_=false;
+  --a.clientPins_;pinned_=false;C::wipe(firstPrefix_,sizeof firstPrefix_);C::wipe(checkpointStage_,sizeof checkpointStage_);firstPages_=0;firstBound_=false;capacity_={};capacityPending_=false;
   return valid?C::Ok:a.state_==NativeSdAttempt::State::Unavailable?C::Io:C::Conflict;
  }
  private:
  friend class NativeSdPreparation;friend class CheckedFirstSdCheckpoint;friend class CheckedSdReplicaCheckpoint;
  NativeSdAttempt*attempt_=nullptr;Role role_=Role::ReplicaReader;bool pinned_=false;
+ risc_storage_native_capacity_result_v1 capacity_{};uint32_t capacityMapBytes_=0;bool capacityPending_=false;
  char firstPrefix_[85]{};uint32_t firstPages_=0;bool firstBound_=false;
  char checkpointStage_[SdReplicaStage::PathBytes]{};
  bool bindCheckpointStage(const C::Identity&id){return attempt_&&pinned_&&role_==Role::Checkpoint&&!checkpointStage_[0]&&SdReplicaStage::makePath(checkpointStage_,sizeof checkpointStage_,attempt_->binding_.namespaceId,id);}

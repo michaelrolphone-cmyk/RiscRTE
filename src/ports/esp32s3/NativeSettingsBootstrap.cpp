@@ -20,7 +20,7 @@ bool NativeSettingsBootstrap::registerBeforeActivate(Coordinator&a,Coordinator&b
 }
 bool NativeSettingsBootstrap::retained()const{if(fault_.load(std::memory_order_acquire))return true;for(auto*s:services_)if(s&&s->retained())return true;return false;}
 bool NativeSettingsBootstrap::exitSafe()const{return !active_&&!lease_.serial&&!gate_.load(std::memory_order_acquire)&&!retained()&&(!attempt_||attempt_->exitSafe());}
-bool NativeSettingsBootstrap::firstAvailable(unsigned i)const{if(i>1)return false;const auto&a=inputs_[i].first;return a.otherWritersStopped&&a.entropy&&a.stagingCapacity;}
+bool NativeSettingsBootstrap::firstAvailable(unsigned i)const{if(i>1)return false;const auto&a=inputs_[i].first;return a.otherWritersStopped&&a.entropy;}
 NativeSettingsBootstrap::Catalog::Guard NativeSettingsBootstrap::guard(){return {this,[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeOwner(s.lease_);},[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeWorker(s.slots_[s.current_]);}};}
 NativeSettingsBootstrap::Restore::Guard NativeSettingsBootstrap::restoreGuard(){return {this,[](void*p){return static_cast<NativeSettingsBootstrap*>(p)->owner();},[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeWorker(s.slots_[s.current_]);},[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeWorker(s.slots_[s.current_]);},[](void*p){return static_cast<NativeSettingsBootstrap*>(p)->lease_.serial;}};}
 void NativeSettingsBootstrap::destroy(){if(kind_==1)catalog()->~Catalog();else if(kind_==2)restore()->~Restore();else if(kind_==3)first()->~First();else if(kind_==4)native()->~NativeInitialization();kind_=0;C::wipe(storage_,sizeof storage_);}
@@ -74,10 +74,19 @@ int NativeSettingsBootstrap::initializeNative(){
 NativeSettingsBootstrap::Progress NativeSettingsBootstrap::startNamespace(){
  destroy();destroyAttempt();nativeMode_=NativeMode::None;C::wipe(&nativeWitness_,sizeof nativeWitness_);nativeResult_=C::Invalid;
  const int rc=services_[current_]->acquireNative(slots_[current_],&lease_);
- if(rc){errors_[current_]=rc;results_[current_]=rc==C::Retained?Result::Retained:Result::Deferred;remaining_=0;return rc==C::Retained?retain():Progress::Deferred;}
+ if(rc){if(rc==C::Retained)return retain();errors_[current_]=rc;results_[current_]=rc==C::Busy||rc==C::Io?Result::Deferred:rc==C::Conflict||rc==C::Missing?Result::Conflict:Result::Failed;return completeNamespace();}
  active_=true;results_[current_]=Result::Running;errors_[current_]=C::Ok;
  if(firstMode_)return startAttempt();
  phase_=Phase::NativeInspect;return Progress::Pending;
+}
+NativeSettingsBootstrap::Progress NativeSettingsBootstrap::completeNamespace(){
+ const auto result=results_[current_];
+ const auto completed=result==Result::Synchronized?Progress::Idle:result==Result::Deferred||result==Result::Cancelled?Progress::Deferred:Progress::Failed;
+ if(completed==Progress::Failed||(completed==Progress::Deferred&&sweepResult_!=Progress::Failed))sweepResult_=completed;
+ // A bounded sweep consumes each namespace once. A clean refusal or conflict
+ // cannot starve its sibling; cancellation and retained custody still stop it.
+ if(!cancelled_&&remaining_){current_=(remaining_&1)?0:1;remaining_&=~(1u<<current_);return startNamespace();}
+ remaining_=0;return sweepResult_;
 }
 NativeSettingsBootstrap::Progress NativeSettingsBootstrap::startAttempt(){
  destroyAttempt();attempt_=new(attemptStorage_)Attempt(*runtime_,*port_,inputs_[current_].core->namespaceId(),device_,A::Profile::CheckedWarm);
@@ -93,12 +102,19 @@ NativeSettingsBootstrap::Progress NativeSettingsBootstrap::startAttempt(){
  }
  phase_=Phase::Refresh;return Progress::Pending;
 }
-NativeSettingsBootstrap::Progress NativeSettingsBootstrap::beginFirst(RiscBoot::Runtime&r,Port&p,unsigned i){if(!owner()||!exitSafe()||!firstAvailable(i))return retained()?Progress::Retained:Progress::Deferred;remaining_=0;return start(r,p,i,true);}
+NativeSettingsBootstrap::Progress NativeSettingsBootstrap::beginFirst(RiscBoot::Runtime&r,Port&p,unsigned i){if(!owner()||!exitSafe()||!firstAvailable(i))return retained()?Progress::Retained:Progress::Deferred;remaining_=0;sweepResult_=Progress::Idle;return start(r,p,i,true);}
 NativeSettingsBootstrap::Progress NativeSettingsBootstrap::beginPreApp(RiscBoot::Runtime&r,Port&p,int one,int six){
  if(!owner()||!exitSafe()||!services_[0]->exitSafe()||!services_[1]->exitSafe())return retained()?Progress::Retained:Progress::Deferred;
- const int codes[2]={one,six};unsigned mask=0;
- for(unsigned i=0;i<2;++i){if(codes[i]==C::Ok){if(!inputs_[i].core->ready())return Progress::Failed;continue;}if((codes[i]!=C::Missing&&codes[i]!=C::Initializing)||inputs_[i].core->ready())return Progress::Failed;if(!inputs_[i].sources)return Progress::Deferred;mask|=1u<<i;}
- if(!mask)return Progress::Idle;
+ const int codes[2]={one,six};unsigned mask=0;bool unavailable=false;
+ // Validate caller facts before changing any per-namespace terminal status.
+ for(unsigned i=0;i<2;++i){if(codes[i]==C::Ok){if(!inputs_[i].core->ready())return Progress::Failed;}
+  else if((codes[i]!=C::Missing&&codes[i]!=C::Initializing)||inputs_[i].core->ready())return Progress::Failed;}
+ for(unsigned i=0;i<2;++i){if(codes[i]==C::Ok)continue;
+  if(!inputs_[i].sources){results_[i]=Result::Deferred;errors_[i]=C::Missing;unavailable=true;continue;}
+  results_[i]=Result::Idle;errors_[i]=C::Ok;mask|=1u<<i;
+ }
+ sweepResult_=unavailable?Progress::Deferred:Progress::Idle;
+ if(!mask)return sweepResult_;
  const unsigned first=(mask&1)?0:1;remaining_=mask&~(1u<<first);return start(r,p,first,false);
 }
 void NativeSettingsBootstrap::cancel(){if(owner()&&active_&&!retained())cancelled_=true;}
@@ -174,8 +190,7 @@ NativeSettingsBootstrap::Progress NativeSettingsBootstrap::poll(){
   active_=false;
   if(lease_.serial){const int rc=services_[current_]->releaseNative(lease_);if(rc){active_=true;return retain();}lease_={};}
   destroy();destroyAttempt();C::wipe(&nativeWitness_,sizeof nativeWitness_);nativeMode_=NativeMode::None;phase_=Phase::Idle;
-  if(!cancelled_&&results_[current_]==Result::Synchronized&&remaining_){current_=(remaining_&1)?0:1;remaining_&=~(1u<<current_);return startNamespace();}
-  remaining_=0;return results_[current_]==Result::Synchronized||results_[current_]==Result::Cancelled?Progress::Idle:results_[current_]==Result::Deferred?Progress::Deferred:Progress::Failed;}
+  return completeNamespace();}
  default:return retain();
  }
  return retained()?Progress::Retained:Progress::Pending;

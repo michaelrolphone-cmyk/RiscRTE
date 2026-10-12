@@ -5,11 +5,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 p=argparse.ArgumentParser(description=__doc__)
 for key in ('x4','drivers','reference-reader','output'):
     p.add_argument('--'+key,type=lambda x:pathlib.Path(x).resolve(),required=True)
+p.add_argument('--x4-revision',default='c8004c5c8362b142ebb35a0e1c5d266532a11581')
+p.add_argument('--drivers-revision',default='281609a0d2ae514f107d2ef67b6e8b4d25c72fb8')
 p.add_argument('--sanitize',choices=('none','undefined','address,undefined'),default='none')
 a=p.parse_args(); a.output.mkdir(parents=True,exist_ok=True)
 if (a.output/'sdk').exists(): raise SystemExit('Use a fresh output directory')
-PINS=((a.x4,'c8004c5c8362b142ebb35a0e1c5d266532a11581',('minimal/drivers/x4pro_sd','minimal/test','minimal/scripts/prepare_sdk.py','minimal/scripts/prepare_sd_wire_fixture.py','minimal/interfaces','Drivers/x4pro_board/x4pro_proto.h')),
-      (a.drivers,'281609a0d2ae514f107d2ef67b6e8b4d25c72fb8',('lib/StorageFatFs',)),
+PINS=((a.x4,a.x4_revision,('minimal/drivers/x4pro_sd','minimal/test','minimal/scripts/prepare_sdk.py','minimal/scripts/prepare_sd_wire_fixture.py','minimal/interfaces','Drivers/x4pro_board/x4pro_proto.h')),
+      (a.drivers,a.drivers_revision,('lib/StorageFatFs',)),
       (a.reference_reader,'45cf61ac013fb618e8d7fed63217a35350484d52',('sdk/driver','Drivers/x4pro_board','test/storage_volume/fake')))
 records=[]
 for root,commit,paths in PINS:

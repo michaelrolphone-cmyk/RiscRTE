@@ -10,6 +10,7 @@
 #include "AtomicKeyValueConfig.h"
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
 #include <RiscKeyValueAtomicV1.h>
+#include <RiscKeyValueAvailabilityV1.h>
 namespace RiscExperimental { class NativeAtomicKeyValue; }
 #endif
 #include <RiscBoundAppDataAsyncV1.h>
@@ -107,6 +108,10 @@ struct Port {
   // admitNew=false fences new work while a host/foreground atomic grant can
   // hold an edit snapshot. It never suppresses draining accepted custody.
   bool (*nativeOwnerCheckpoint)(bool admitNew)=nullptr;
+  // Separately qualified bounded discovery only: ordinary yield must never
+  // admit synchronous maintenance. Shutdown drains before any graph teardown.
+  bool (*nativeDiscoveryCheckpoint)()=nullptr;
+  bool (*nativeSettingsShutdown)()=nullptr;
 #endif
 };
 class Runtime final {
@@ -131,6 +136,17 @@ class Runtime final {
   // Optional namespace routing for already-admitted KV1/KV2 readers. All
   // legacy writes into that namespace are denied; no implicit intent/fallback.
   bool registerAtomicKeyValueReadThrough(uint32_t nameSpace,RiscExperimental::NativeAtomicKeyValue&);
+  struct KeyValueAvailability {
+    void* context=nullptr;
+    int32_t (*snapshot)(void*,uint32_t,risc_key_value_availability_state_v1*)=nullptr;
+  };
+  // Optional RAM-only availability gate, bound before prepare to an exact
+  // read-through namespace. Missing registration preserves the old contract.
+  bool registerKeyValueAvailability(uint32_t nameSpace,KeyValueAvailability);
+  // Owner checkpoint only, no callbacks/I/O. Includes host, foreground and
+  // bound-provider KV grants. Status-only grants never hold a data snapshot.
+  bool keyValueReconciliationSafe(uint32_t nameSpace) const;
+  bool keyValueRetentionObserved() const; // out-of-line native/host boundary
 #endif
   bool registerEntropy(const EntropyBackend*); // provider-only, no generation during admission
   bool registerTcpListener(const TcpListenerBackend*); // compiled-in opt-in only
@@ -266,7 +282,7 @@ class Runtime final {
   static void* openDriverImage(void*,const char*,const void*);
   void serviceProviders();
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-  void serviceNativeSettings();
+  void serviceNativeSettings(bool discoveryOnly=false);
 #endif
   bool runOne(const char*);
   bool residentPolicy(JsonVariantConst);
@@ -295,9 +311,14 @@ class Runtime final {
   struct AtomicBinding {
     char app[96]{};uint32_t nameSpace=0;
     RiscExperimental::NativeAtomicKeyValue* endpoint=nullptr;
+    KeyValueAvailability availability{};
   };
   AtomicBinding atomicBindings_[8]{};size_t atomicBindingCount_=0;
   static constexpr PolicyIndex AtomicKeyValueDriver=-11;
+  static constexpr PolicyIndex KeyValueAvailabilityDriver=-12;
+  const KeyValueAvailability* keyValueAvailability(uint32_t) const;
+  bool keyValueAuthoritative(uint32_t) const;
+  static int32_t keyValueAvailabilitySnapshot(void*,risc_key_value_availability_state_v1*);
   AtomicBinding* atomicBinding(const char*,uint32_t);
   RiscExperimental::NativeAtomicKeyValue* atomicReadThrough(uint32_t) const;
   int32_t atomicLegacyGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t);
@@ -488,6 +509,8 @@ class Runtime final {
     risc_memory_heap_api_v1 memoryHeap{};risc_random_api_v1 random{};
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
     risc_key_value_atomic_v1 atomic{};
+    risc_key_value_availability_v1 availability{};
+    uint32_t availabilityNamespace=0;
     RiscExperimental::NativeAtomicKeyValue* atomicEndpoint=nullptr;
     uint64_t atomicOperation=0;
 #endif

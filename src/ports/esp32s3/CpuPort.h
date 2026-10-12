@@ -150,9 +150,16 @@ class Port final {
   NativeStorageState nativeStorageSnapshot(uint64_t,uint64_t*) const;
   bool nativeStorageOwner() const {return hw_.owner && hw_.owner();}
   bool nativeStorageBoundTo(const RiscBoot::Runtime&r) const {return nativeStorageOwner()&&bound_&&runtime_==&r;}
-  bool nativeStorageAttached() const {return nativeStorageOwner()&&nativeStoragePinned();}
+  bool nativeStorageAttached() const; // out-of-line native/host layout boundary
+  // App/UI continuation only during externally verified healthy settings
+  // discovery. Global shutdown/restart and raw storage use keep normal barriers.
+  bool nativeDiscoveryProviderSafe() const;
+  bool nativeDiscoveryAppExitSafe() const;
  #endif
  private:
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  bool nativeDiscoveryBusy() const;
+#endif
   const RiscBoot::Runtime* runtime_=nullptr;
   struct Sync {
     Port* port=nullptr; uint64_t instance=0;

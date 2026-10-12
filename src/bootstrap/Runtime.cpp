@@ -392,8 +392,9 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
       const bool keyValue=!strcmp(requested,RISC_KEY_VALUE_CAPABILITY);
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
       const bool atomicKeyValue=!strcmp(requested,RISC_KEY_VALUE_ATOMIC_CAPABILITY);
+      const bool availability=!strcmp(requested,RISC_KEY_VALUE_AVAILABILITY_CAPABILITY);
 #else
-      const bool atomicKeyValue=false;
+      const bool atomicKeyValue=false,availability=false;
 #endif
       const bool sharedData=!strcmp(requested,RISC_SHARED_DATA_CAPABILITY);
       for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,requested) &&
@@ -407,7 +408,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
         if (!strcmp(capability,RISC_BOUND_APP_DATA_CAPABILITY)) return fail("provider app-data denied to app");
         if (strcmp(capability,requested) || allowedApi!=api) continue;
-        if (++matches>1 && !keyValue && !atomicKeyValue && !sharedData) return fail("app requirement not uniquely authorized");
+        if (++matches>1 && !keyValue && !atomicKeyValue && !availability && !sharedData) return fail("app requirement not uniquely authorized");
         if (policy.count==MaxAppPolicyGrants) return fail("too many app grants");
         for (size_t i=0;i<policy.count;++i) {
           const auto& earlier=policy.grants[i];
@@ -417,7 +418,11 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         auto& grant=policy.grants[policy.count];
         grant.api=api;grant.instance=instance;
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
-        if (atomicKeyValue) {
+        if (availability) {
+          if(grant.api!=1 || !grant.instance || !keyValueAvailability(uint32_t(grant.instance)))
+            return fail("key-value availability namespace unavailable");
+          grant.driver=KeyValueAvailabilityDriver;grant.capability=RISC_KEY_VALUE_AVAILABILITY_CAPABILITY;
+        } else if (atomicKeyValue) {
           if(grant.api!=1 || !grant.instance || !atomicBinding(policy.id,uint32_t(grant.instance)))
             return fail("atomic key-value app/backend/namespace unavailable");
           grant.driver=AtomicKeyValueDriver;grant.capability=RISC_KEY_VALUE_ATOMIC_CAPABILITY;
@@ -526,7 +531,12 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   if (slot==16) return false;
   auto& grant=invocation_->appGrants_[slot];
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
-  if(allowed->driver==AtomicKeyValueDriver){
+  if(allowed->driver==KeyValueAvailabilityDriver){
+    if(!keyValueAvailability(uint32_t(allowed->instance)))return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    grant.availability={1,sizeof(grant.availability),context,keyValueAvailabilitySnapshot};
+    grant.availabilityNamespace=allowed->instance;grant.api=&grant.availability;
+  } else if(allowed->driver==AtomicKeyValueDriver){
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
     // Drain old pending work before publishing the first draft-capable grant.
     // Existing host/foreground grants fence admission inside this checkpoint.
@@ -849,7 +859,7 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   if(grant.api==&invocation_->realtimeControlTable_)invocation_->realtimeControlContext_=nullptr;
   if(grant.api==&invocation_->retainedWakeTable_){port_.retainedWake->cancel();invocation_->retainedWakeContext_=nullptr;}
 #if RISC_NATIVE_SETTINGS_LIFECYCLE && RISC_RUNTIME_ATOMIC_KEY_VALUE
-  const bool releasedAtomic=grant.atomicEndpoint!=nullptr;
+  const bool releasedAtomic=grant.atomicEndpoint!=nullptr || (grant.keyValueNamespace && keyValueAvailability(grant.keyValueNamespace) && !keyValueAuthoritative(grant.keyValueNamespace));
 #endif
   grant={};out->slot=out->generation=0;out->api=nullptr;
 #if RISC_NATIVE_SETTINGS_LIFECYCLE && RISC_RUNTIME_ATOMIC_KEY_VALUE
@@ -1257,9 +1267,9 @@ Runtime::GrantUsage Runtime::grantUsage() const {
   return out;
 }
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-void Runtime::serviceNativeSettings() {
-  if(nativeCheckpointRunning_)return;
-  if(port_.nativeOwnerCheckpoint && currentRuntime==this && port_.owner() &&
+void Runtime::serviceNativeSettings(bool discoveryOnly) {
+  if(nativeCheckpointRunning_ || (discoveryOnly && !invocation_->entryRunning_))return;
+  if((discoveryOnly?bool(port_.nativeDiscoveryCheckpoint):bool(port_.nativeOwnerCheckpoint)) && currentRuntime==this && port_.owner() &&
      !retained_ && !promotionRunning_ && !invocation_->streams_.busy() &&
      !graph_.lifecycleBusy() && appDataExitSafe()) {
     bool admitNew=true;
@@ -1268,7 +1278,7 @@ void Runtime::serviceNativeSettings() {
     admitNew=!draft(mainInvocation_)&&(!foreground_||!draft(*foreground_));
 #endif
     nativeCheckpointRunning_=true;
-    const bool safe=port_.nativeOwnerCheckpoint(admitNew);
+    const bool safe=discoveryOnly?port_.nativeDiscoveryCheckpoint():port_.nativeOwnerCheckpoint(admitNew);
     nativeCheckpointRunning_=false;
     if(!safe){retained_=true;fail("native settings custody retained; restart required");(void)appExitBarrier();return;}
   }
@@ -1297,6 +1307,10 @@ void Runtime::yield(uint32_t ms) {
   yielding_=true;
   struct Guard { bool& flag; ~Guard(){flag=false;} } guard{yielding_};
   if(!retained_) {
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+    serviceNativeSettings(true); // bounded discovery only, never maintenance
+    if(retained_){if(port_.retainedDelay)port_.retainedDelay(ms<1?1:ms>50?50:ms);return;}
+#endif
     // Poll work is bounded separately; each admitted yield cooperates once.
     if(appDataExitSafe())graph_.poll([](){uint32_t now=0;return currentRuntime->monotonicMs(&now)?now:0;},nullptr);
     // Yield is a display/input polling path. Synchronous provider services may
@@ -1652,6 +1666,12 @@ bool Runtime::run() {
     // Default reload is a fresh invocation: no ELF pointers/static state survive.
     error_[0]=0; port_.delay(1);
   }
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(!retained_ && port_.nativeSettingsShutdown){
+    nativeCheckpointRunning_=true;const bool safe=port_.nativeSettingsShutdown();nativeCheckpointRunning_=false;
+    if(!safe){retained_=true;ok=fail("native settings shutdown retained; restart required");}
+  }
+#endif
   if(!retained_) {
     for(size_t i=driverCount_;i--;) if(grants_[i].slot && !graph_.release(grants_[i])) {
       retained_=true;

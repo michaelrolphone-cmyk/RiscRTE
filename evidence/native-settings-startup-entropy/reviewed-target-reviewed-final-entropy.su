@@ -1,0 +1,6 @@
+NativeSettingsStartupEntropy.cpp:19:6:void RiscCpu::NativeSettingsStartupEntropy::{anonymous}::word(uint8_t*, uint32_t)	32	static
+NativeSettingsStartupEntropy.cpp:16:136:RiscCpu::NativeSettingsStartupEntropy::{anonymous}::Lock::~Lock()	32	static
+NativeSettingsStartupEntropy.cpp:17:50:RiscCpu::NativeSettingsStartupEntropy::{anonymous}::Scratch::~Scratch()	32	static
+NativeSettingsStartupEntropy.cpp:21:6:bool RiscCpu::NativeSettingsStartupEntropy::capture(bool (*)())	144	static
+NativeSettingsStartupEntropy.cpp:32:6:bool RiscCpu::NativeSettingsStartupEntropy::take(uint32_t, RiscCpu::NativeSettingsStartupEntropy::Purpose, void*, bool (*)(void*), uint8_t*)	288	static
+NativeSettingsStartupEntropy.cpp:51:8:size_t RiscCpu::NativeSettingsStartupEntropy::controlBytes()	32	static

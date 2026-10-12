@@ -1,5 +1,8 @@
 #include "CpuPort.h"
 #include "HciBounds.h"
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#include "NativeSettingsLifecycle.h"
+#endif
 #if RISC_NATIVE_STORAGE_CUSTODY
 #include <RiscStorageSessionAdmissionV1.h>
 #endif
@@ -77,6 +80,41 @@ bool Port::appExitSafe() const {
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   return true;
 }
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+bool Port::nativeDiscoveryBusy() const {
+  return NativeSettingsLifecycle::discovering()&&nativeStorageAttached()&&nativeDiscoveryProviderSafe();
+}
+#endif
+#if RISC_NATIVE_STORAGE_CUSTODY
+bool Port::nativeDiscoveryProviderSafe() const {
+  if(!nativeStoragePinned())return providerStorageSafe();
+  if(!nativeStorageHeld(nativeStorageLease_))return false;
+  if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe() || !entropySafe())return false;
+  if(hw_.radioAsync && hw_.radioAsync->custodySafe && !hw_.radioAsync->custodySafe())return false;
+  if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
+  for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
+  if(hw_.httpSafe && !hw_.httpSafe())return false;
+  for(const auto& pin:pins_)if(pin.held && !pin.retiredHeld)return false;
+  for(const auto& c:i2ss_)if(c.closing)return false;
+  for(const auto& c:radios_)if(c.closing)return false;
+  if(hci_.closing || (hw_.hciSafe && !hw_.hciSafe()))return false;
+  return true;
+}
+bool Port::nativeDiscoveryAppExitSafe() const {
+  if(!nativeStoragePinned())return appExitSafe();
+  if(!nativeStorageHeld(nativeStorageLease_))return false;
+  // Healthy HCI is entirely firmware/provider-owned, with no app callbacks or
+  // borrowed app storage; it survives navigation. Restart/sleep still drain it.
+  if(!nativeDiscoveryProviderSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
+  for(const auto& pin:pins_)if(pin.wakeModes)return false;
+  if(!tcpIdle() || !entropyIdle())return false;
+  if(hw_.httpIdle && !hw_.httpIdle())return false;
+  for(const auto& c:i2ss_)if(c.token)return false;
+  for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
+  if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
+  return true;
+}
+#endif
 bool Port::restartResourcesSafe() const {
   if(runtime_ && !runtime_->residentResetSafe())return false;
   if(storageWork_.gpio || storageWorkBusy() || sdmmc_.token || sdmmc_.closing)return false;
@@ -106,6 +144,9 @@ int32_t Port::httpOpen(void* context,const risc_http_request_v1* request,uint64_
   if(out)*out=0;
   auto& p=*static_cast<Port*>(context);
   if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClient)return RISC_HTTP_CLOSED;
+  #if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(p.nativeDiscoveryBusy())return RISC_HTTP_BUSY;
+#endif
   if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
   p.transferring_=true;const auto result=p.hw_.httpClient->open(p.hw_.httpClient->context,request,out);p.transferring_=false;return result;
 }
@@ -113,6 +154,9 @@ int32_t Port::httpRead(void* context,uint64_t token,void* out,uint32_t size,uint
   if(count)*count=0;
   auto& p=*static_cast<Port*>(context);
   if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClient)return RISC_HTTP_CLOSED;
+  #if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(p.nativeDiscoveryBusy())return RISC_HTTP_BUSY;
+#endif
   if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
   p.transferring_=true;const auto result=p.hw_.httpClient->read(p.hw_.httpClient->context,token,out,size,count);p.transferring_=false;return result;
 }

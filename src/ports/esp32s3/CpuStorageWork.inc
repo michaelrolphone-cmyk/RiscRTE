@@ -1,4 +1,5 @@
 #if RISC_NATIVE_STORAGE_CUSTODY
+bool Port::nativeStorageAttached()const{return nativeStorageOwner()&&nativeStoragePinned();}
 // Native custody is deliberately opt-in. Fresh admission requires the exact
 // selected device, one native scope/bind, no transport use and no provider Sync
 // admission since binding. The latter rejects a foreign async_begin even when

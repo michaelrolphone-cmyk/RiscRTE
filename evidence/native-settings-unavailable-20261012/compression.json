@@ -1,0 +1,33 @@
+{
+  "lossless": true,
+  "entries": [
+    {
+      "original": "evidence/native-bootstrap-sweep-20261012/target-commands.json",
+      "stored": "evidence/native-bootstrap-sweep-20261012/target-commands.json.gz",
+      "bytes": 511034,
+      "sha256": "4bec0d1605a82907414cc47d5ebde8d8fc4fa63aa55d32ce801ced980577a2cf",
+      "stored_sha256": "2ecf278e0f1e94ad07efbdd71d35623670cf21b383a531d3f659b7cceefc1981"
+    },
+    {
+      "original": "evidence/native-settings-unavailable-20261012/asan-manifest.json",
+      "stored": "evidence/native-settings-unavailable-20261012/asan-manifest.json.gz",
+      "bytes": 193050,
+      "sha256": "a7855e70e8c14a8ec5f49b17aa7a4fb0492190f8f862ee95fcedb7aefb932f35",
+      "stored_sha256": "28b18ecfffee4d29b17f74fc44ecbd6bc1df7108faa2cbe4b2650eb39577dbff"
+    },
+    {
+      "original": "evidence/native-settings-unavailable-20261012/normal-manifest.json",
+      "stored": "evidence/native-settings-unavailable-20261012/normal-manifest.json.gz",
+      "bytes": 193136,
+      "sha256": "44f0c7b9fdf07e3eba29fca0356b923afc4568188ba71d210bd9d04a5b2fc53a",
+      "stored_sha256": "372cca384a9b2bfd66579ebce3b95172741c890655ef71b3f778b3d68b0913fa"
+    },
+    {
+      "original": "evidence/native-settings-unavailable-20261012/target-commands.json",
+      "stored": "evidence/native-settings-unavailable-20261012/target-commands.json.gz",
+      "bytes": 510215,
+      "sha256": "2425041d929abbbdf4396c0c0406e50d7b1afefe5eadd3b5b6764788a2fc7764",
+      "stored_sha256": "3be98ada7140f0fa8afac9945cca1f7ed093d892706aeec411c8d80b5654db23"
+    }
+  ]
+}

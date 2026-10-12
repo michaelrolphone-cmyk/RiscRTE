@@ -27,7 +27,7 @@ class CheckedFirstSdCheckpoint {
  // Owner -> native worker -> owner. Planned identity exists only in owned RAM;
  // the selected core identity is unchanged until the final verified ack.
  int prepareNative(NativeSdAttempt&attempt){
-  if(io_.native()||state_!=State::Idle||!guard_.worker||!authority_.otherWritersStopped||!authority_.stagingCapacity)return C::Invalid;
+  if(io_.native()||state_!=State::Idle||!guard_.worker||!authority_.otherWritersStopped||!risc_storage_volume_native_capacity(attempt.binding().volume))return C::Invalid;
   const int rc=io_.bind(attempt,NativeSdSession::Role::FirstCheckpoint,attempt.binding().namespaceId);if(rc)return rc;
   const int check=ownerCustody();if(check)return stopNative(check,State::Failed,custodyReason(check));
   volume_=attempt.binding().volume;
@@ -40,7 +40,7 @@ class CheckedFirstSdCheckpoint {
   if(!preparation_.pending())return C::Stale;
   const int rc=preparation_.collect();if(rc==C::Busy&&preparation_.pending())return rc;
   if(rc)return stopNative(rc,rc==C::Stale?State::Cancelled:State::Failed,reason_==Reason::None?Reason::NativeFailure:reason_);
-  const int check=ownerCustody(true);return check?stopNative(check,State::Failed,custodyReason(check)):C::Ok;
+  const int check=ownerCustody();return check?stopNative(check,State::Failed,custodyReason(check)):C::Ok;
  }
  // A distinct live-vacancy receipt. A historical catalog or a known planned
  // target does not confer permission to arm: this exact child must have closed.
@@ -96,7 +96,7 @@ class CheckedFirstSdCheckpoint {
  // captured map, even when today's native map contains newer explicit edits.
  int start(const risc_storage_volume_api_v1*volume){
   if(io_.native()&&!preparation_.workerClaimed())return C::Busy;
-  if(state_!=State::Idle||!guard_.held||!guard_.worker||!authority_.otherWritersStopped||!authority_.stagingCapacity||!hash_.begin||!hash_.update||!hash_.finish||!risc_storage_volume_download(volume))return C::Invalid;
+  if(state_!=State::Idle||!guard_.held||!guard_.worker||!authority_.otherWritersStopped||(!io_.native()&&!authority_.stagingCapacity)||!hash_.begin||!hash_.update||!hash_.finish||!risc_storage_volume_download(volume))return C::Invalid;
   volume_=volume;api_=risc_storage_volume_packages(volume);
   if(!io_.native()&&api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return C::Retained;}
   if(!guard_.worker(guard_.context))return C::Busy;
@@ -184,12 +184,13 @@ class CheckedFirstSdCheckpoint {
     if(io_.native()){if(armed_)captureClosed(published_,true);else captureClosed(vacancy_,false);}
    }return;
   }
-  if(phase_==Begin){const int rc=io_.native()?io_.begin(&session_):api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::StorageFailure);return;}if(io_.native())beginScan(false);else phase_=Refresh;return;}
+  if(phase_==Begin){const int rc=io_.native()?io_.begin(&session_):api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::StorageFailure);return;}if(io_.native())phase_=Capacity;else phase_=Refresh;return;}
   if(!operation_){submit();return;}
   result_.status=INT32_MIN;const int rc=io_.native()?io_.collect(&result_):api_->base.collect(volume_->context,session_,operation_,&result_);
   if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
+  if(phase_==Capacity&&rc==RISC_STORAGE_NATIVE_CAPACITY_NO_SPACE){fail(C::NoSpace,Reason::Capacity);wipeResult();return;}
   if(phase_==OpenScan&&rc==RISC_STORAGE_ASYNC_NOT_FOUND){if(level_<2){++level_;work_=names_=0;}else fail(C::Io,Reason::ReadFailure);wipeResult();return;}
   if(phase_==NextScan&&rc==RISC_STORAGE_ASYNC_END){phase_=CloseScan;wipeResult();return;}
   if(rc==RISC_STORAGE_ASYNC_NOT_FOUND){
@@ -204,7 +205,7 @@ class CheckedFirstSdCheckpoint {
   if(rc==RISC_STORAGE_ASYNC_INVALID&&phase_==PublishedTemp&&zeroTemp_){phase_=snapshot_.mapSize()?FinalPage:FinalIndex;wipeResult();return;}
   if(rc!=RISC_STORAGE_ASYNC_OK){fail(C::Io,Reason::ReadFailure);wipeResult();return;}
   switch(phase_){
-   case Refresh:beginScan(false);break;
+   case Capacity:case Refresh:beginScan(false);break;
    case OpenScan:phase_=NextScan;break;
    case NextScan:entry();break;
    case CloseScan:phase_=LegacyIndex;break;
@@ -237,7 +238,7 @@ class CheckedFirstSdCheckpoint {
   }wipeResult();
  }
  private:
- enum Phase {Begin,Refresh,OpenScan,NextScan,CloseScan,LegacyIndex,LegacyFile,Recover,ReadIndex,PublishedTemp,Root,Directory,ReadPage,RepairPage,WritePage,VerifyPage,ReadTemp,RepairTemp,WriteTemp,VerifyTemp,Replace,FinalIndex,FinalPage,Closing};
+ enum Phase {Begin,Refresh,Capacity,OpenScan,NextScan,CloseScan,LegacyIndex,LegacyFile,Recover,ReadIndex,PublishedTemp,Root,Directory,ReadPage,RepairPage,WritePage,VerifyPage,ReadTemp,RepairTemp,WriteTemp,VerifyTemp,Replace,FinalIndex,FinalPage,Closing};
  C&core_;Digest hash_;Guard guard_;Authority authority_;C::Snapshot snapshot_;C::ExportMarker marker_{};C::Identity target_{};
  NativeSdSession io_;NativeSdPreparation preparation_;NativeSdCompletion arm_,completion_;
  static constexpr uint32_t ArmAction=5,AckAction=6;
@@ -287,9 +288,10 @@ class CheckedFirstSdCheckpoint {
  static Reason custodyReason(int rc){return rc==C::Retained?Reason::Retained:rc==C::NoSpace?Reason::Capacity:rc==C::Io?Reason::MediaUnavailable:Reason::CustodyLost;}
  int ownerCustody(bool capacity=false){
   const int before=io_.custody();if(before)return before;
-  const bool stopped=authority_.otherWritersStopped&&authority_.otherWritersStopped(authority_.context);
-  const bool space=!capacity||(authority_.stagingCapacity&&authority_.stagingCapacity(authority_.context,snapshot_.mapSize(),(snapshot_.mapSize()+4095)/4096));
-  const int after=io_.custody();if(after)return after;return !stopped?C::Conflict:!space?C::NoSpace:C::Ok;
+  const bool held=guard_.held&&guard_.held(guard_.context);
+  const bool stopped=held&&authority_.otherWritersStopped&&authority_.otherWritersStopped(authority_.context);
+  const int space=capacity?io_.capacityValid(snapshot_.mapSize(),(snapshot_.mapSize()+4095)/4096):C::Ok;
+  const int after=io_.custody();if(after)return after;return !stopped?C::Conflict:space;
  }
  int stopNative(int rc,State state=State::Failed,Reason reason=Reason::NativeFailure){
   if(rc==C::Retained){retain();return rc;}
@@ -327,7 +329,9 @@ class CheckedFirstSdCheckpoint {
   for(unsigned page=0;uint64_t(page)*4096<snapshot_.mapSize();++page){pagePath(page);if(std::strcmp(e.name,path_+std::strlen(directory_)+1))continue;const uint32_t n=C::chunk(snapshot_.mapSize()-page*4096),bit=1u<<page;if((seenPages_&bit)||e.size>n)fail(C::Conflict,Reason::Conflict);seenPages_|=bit;if(!e.size)zeroPages_|=bit;return;}
   fail(C::Conflict,Reason::Conflict);
  }
- void submit(){C::wipe(&request_,sizeof request_);int rc;const bool package=phase_==Recover||phase_==Root||phase_==Directory||phase_==WritePage||phase_==WriteTemp||phase_==Replace;
+ void submit(){
+  if(phase_==Capacity){const int rc=io_.capacity(snapshot_.mapSize(),(snapshot_.mapSize()+4095)/4096,&operation_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc)fail(C::Io,Reason::StorageFailure);return;}
+  C::wipe(&request_,sizeof request_);int rc;const bool package=phase_==Recover||phase_==Root||phase_==Directory||phase_==WritePage||phase_==WriteTemp||phase_==Replace;
   if(package){request_.operation=phase_==Recover?RISC_STORAGE_PACKAGE_RECOVER:(phase_==Root||phase_==Directory)?RISC_STORAGE_PACKAGE_MKDIR:phase_==Replace?RISC_STORAGE_PACKAGE_REPLACE:RISC_STORAGE_PACKAGE_WRITE_SMALL;const char*p=index_;
    if(phase_==Root)p="/RTECFG";
    if(phase_==Directory)p=directory_;

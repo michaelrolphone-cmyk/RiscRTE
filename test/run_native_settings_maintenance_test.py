@@ -106,12 +106,13 @@ manifest['requires'].append(dict(capability='platform.storage-worker', api=1))
 (a.output / 'board.json').write_text(json.dumps(product_board))
 (a.output / 'boot.json').write_text(json.dumps(dict(board='board.json', default_app='default.elf',
     provider_activation='demand', drivers=[dict(manifest='power.json', instance_id=1), dict(manifest='sd.json', instance_id=9)],
-    installation=dict(volume_instance=9, grants=[]), app_capabilities=[dict(manifest='app.json', grants=[dict(capability='storage.key-value',api=1,instance_id=1),dict(capability='storage.key-value.atomic',api=1,instance_id=1),dict(capability='storage.key-value.atomic',api=1,instance_id=6)])])))
-(a.output/'app.json').write_text(json.dumps(dict(type='application', id='maintenance-test', version='1.0.0',architecture='xtensa-esp32s3',file_name='default.elf',entry='app_main',requires=[dict(capability='storage.key-value',api=1),dict(capability='storage.key-value.atomic',api=1)])))
+    installation=dict(volume_instance=9, grants=[]), app_capabilities=[dict(manifest='app.json', grants=[dict(capability='storage.key-value',api=1,instance_id=1),dict(capability='storage.key-value.atomic',api=1,instance_id=1),dict(capability='storage.key-value.atomic',api=1,instance_id=6),dict(capability='storage.key-value.availability',api=1,instance_id=1),dict(capability='storage.key-value.availability',api=1,instance_id=6)])])))
+(a.output/'app.json').write_text(json.dumps(dict(type='application', id='maintenance-test', version='1.0.0',architecture='xtensa-esp32s3',file_name='default.elf',entry='app_main',requires=[dict(capability='storage.key-value',api=1),dict(capability='storage.key-value.atomic',api=1),dict(capability='storage.key-value.availability',api=1)])))
 (a.output/'app.c').write_text('extern void test_maintenance_app(void); __attribute__((visibility("default"))) void app_main(void){test_maintenance_app();}\n')
 run([cc, '-std=c11', *flags, '-shared', '-fPIC', a.output/'app.c', '-o', a.output/'default.elf'])
 cases = a.cases or ['happy','idle','draft-fence','pre-capture','save-exit','implicit-exit','absent','persisted-incarnation','foreign','usb-before','no-incarnation','cancel','retained','restore','restore-concurrent','restore-resume','restore-single','restore-no-source','restore-conflict','restore-cancel','restore-retained','first','first-concurrent','first-conflict','first-cancel']
 if not a.cases:
+    cases += ['unavailable-'+s for s in ('absent','recover','conflict','cancel','return','retained','app-retained')]
     cases += ['bootstrap-'+s for s in ('fresh','fresh-restore','fresh-concurrent','legacy','legacy-concurrent','fresh-absent','legacy-absent','fresh-busy','legacy-busy','fresh-retained','legacy-conflict','legacy-corrupt','native-error','bare-init','fresh-resume','fresh-resume-stage','fresh-resume-rename','legacy-resume','legacy-resume-stage','legacy-resume-rename')]
 if a.assembly and not a.cases:
     cases += ['payload-failure','restore-no-checkpoint','corrupt-native','six-writers','littlefs-assembly-only']

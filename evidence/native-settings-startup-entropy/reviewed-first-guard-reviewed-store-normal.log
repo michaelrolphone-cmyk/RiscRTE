@@ -1,0 +1,57 @@
+PASS native-owner-queue
+PASS native-owner-arm
+PASS native-owner-ack
+PASS native-owner-retained
+PASS paths
+typed first checkpoint known PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known
+typed first checkpoint known-bare PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known-bare
+typed first checkpoint known-parent PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known-parent
+typed first checkpoint unknown PASS (refreshes=1, sessions=3, successful collections=24)
+PASS unknown
+typed first checkpoint empty PASS (refreshes=1, sessions=3, successful collections=19)
+PASS empty
+typed first checkpoint known-resume PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known-resume
+typed first checkpoint unknown-resume PASS (refreshes=1, sessions=3, successful collections=24)
+PASS unknown-resume
+typed first checkpoint empty-resume PASS (refreshes=1, sessions=3, successful collections=19)
+PASS empty-resume
+typed first checkpoint known-resume-prefix PASS (refreshes=1, sessions=4, successful collections=31)
+PASS known-resume-prefix
+typed first checkpoint unknown-resume-prefix-reload PASS (refreshes=1, sessions=4, successful collections=31)
+PASS unknown-resume-prefix-reload
+typed first checkpoint known-resume-reload PASS (refreshes=1, sessions=3, successful collections=24)
+PASS known-resume-reload
+PASS conflict-legacy
+PASS conflict-index
+PASS conflict-orphan
+PASS cancel-prep
+PASS cancel-after-prep
+PASS unknown-entropy
+PASS capacity
+PASS capacity-budget
+PASS capacity-short
+typed first checkpoint capacity-exact PASS (refreshes=1, sessions=3, successful collections=24)
+PASS capacity-exact
+PASS capacity-missing
+PASS capacity-epoch
+PASS capacity-receipt
+PASS capacity-lease
+PASS capacity-cancel
+PASS capacity-running-cancel
+PASS capacity-cancel-retained
+PASS stale
+PASS quiet-queue
+PASS quiet-scan
+PASS quiet-arm
+PASS quiet-complete
+actual checked native store + X4/FatFs store-writer PASS
+PASS store-writer
+actual checked native store + X4/FatFs store-recovery PASS
+PASS store-recovery
+actual checked native store + X4/FatFs store-retire PASS
+PASS store-retire
+Actual X4/FatFs typed first-create composition PASS; external source inputs: 263

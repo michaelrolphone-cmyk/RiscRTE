@@ -41,7 +41,7 @@ bool valid(const Namespace&n,uint32_t ns){
     !b.guard.workerWithExclusiveLease||!b.guard.space||!context(b.guard.context,b.guardContextBytes)||
     !n.digest.begin||!n.digest.update||!n.digest.finish||!context(n.digest.context,n.digestContextBytes))return false;
  const auto&f=n.first;const bool first=f.otherWritersStopped||f.entropy||f.stagingCapacity||f.context||n.firstContextBytes;
- if(first&&(!f.otherWritersStopped||!f.entropy||!f.stagingCapacity||!context(f.context,n.firstContextBytes)))return false;
+ if(first&&(!f.otherWritersStopped||!f.entropy||!context(f.context,n.firstContextBytes)))return false;
  if(n.initialIncarnation){uint8_t nonzero=0;for(unsigned i=0;i<16;++i)nonzero|=n.initialIncarnation[i];if(!nonzero)return false;}
  return true;
 }

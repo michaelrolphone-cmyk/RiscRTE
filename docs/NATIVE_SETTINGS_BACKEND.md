@@ -59,7 +59,7 @@ later filesystem I/O. The existing real-worker integration explicitly tests this
 terminal propagation. The original false-success-open assertion has separate
 retained-mount coverage; it is not the same fault location as this focused case.
 
-The serial Xtensa probe compiles selected backend and real main preparation,
+The initial serial Xtensa probe compiles selected backend and real main preparation,
 checks 2,808 target bytes for supplied backend controls (3,360 host), and a 608-byte
 local prepare frame. These are not a complete live heap or call-chain stack
 budget. The disabled backend object is empty. Default-off main objects are
@@ -70,9 +70,11 @@ and is used only for this compile probe, not a release identity.
 
 ## Remaining activation gates
 
-- First SD export still lacks a real checked capacity receipt and a qualified
-  native startup entropy/incarnation source. Its Authority is
-  deliberately absent rather than asserting unmeasured SD capacity.
+- First SD export now has a real checked capacity receipt and the separately
+  selected startup identity source. See `NATIVE_FIRST_SD_CAPACITY.md` and
+  `NATIVE_SETTINGS_STARTUP_ENTROPY.md`. Fresh identities require successful
+  qualified early capture; guarded durable-marker recovery does not.
+  Product/physical qualification is pending.
 - Blank native storage with ambiguous SD availability needs the requested
   temporary-default/visible-unavailable UI and asynchronous reconciliation path.
   No persistent defaults or source overwrite are introduced here.
@@ -84,3 +86,8 @@ The mount's seven required linker wraps and exact vendor/configuration pins are
 in `experimental/native_replica/NATIVE_PRIVATE_MOUNT.md`. A compile-only backend
 probe does not replace that final link gate. Test receipts and preserved failed
 harness-development attempts are in `evidence/native-settings-backend/`.
+
+The startup-entropy follow-on uses 2,840 target backend bytes (3,392 host), plus
+44 bytes for seed/counter controls; it supplies actual first-checkpoint and
+incarnation callbacks. The source consumes no later RF/ADC operation. Its focused
+backend tests add absent-entropy fallback and both-namespace guarded derivation.

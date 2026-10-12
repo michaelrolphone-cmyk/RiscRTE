@@ -42,6 +42,7 @@ class NativeSettingsBootstrap final {
  struct Lock {std::atomic<bool>&g;bool held;explicit Lock(std::atomic<bool>&v):g(v),held(!g.exchange(true,std::memory_order_acquire)){}~Lock(){if(held)g.store(false,std::memory_order_release);}explicit operator bool()const{return held;}};
  Namespace inputs_[2];Coordinator*services_[2]{};uint32_t slots_[2]{};uint64_t device_;
  Result results_[2]={Result::Idle,Result::Idle};int errors_[2]={C::Ok,C::Ok};
+ Progress sweepResult_=Progress::Idle;
  Coordinator::Lease lease_{};RiscBoot::Runtime*runtime_=nullptr;Port*port_=nullptr;
  unsigned current_=0,remaining_=0,kind_=0;bool registered_=false,active_=false,firstMode_=false;
  std::atomic<bool>cancelled_{false};
@@ -55,7 +56,7 @@ class NativeSettingsBootstrap final {
  NativeInitialization*native(){return reinterpret_cast<NativeInitialization*>(storage_);}
  bool owner()const;bool workerStep();void destroy();void destroyAttempt();
  int inspectNative();int initializeNative();void queueNative();Baseline::Guard nativeGuard();
- Progress start(RiscBoot::Runtime&,Port&,unsigned,bool);Progress startNamespace();Progress startAttempt();Progress retain();
+ Progress start(RiscBoot::Runtime&,Port&,unsigned,bool);Progress startNamespace();Progress completeNamespace();Progress startAttempt();Progress retain();
  void finish(int,bool=false);Catalog::Guard guard();Restore::Guard restoreGuard();
 };
 }

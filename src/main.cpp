@@ -17,6 +17,7 @@ extern "C" const char risc_app_requirement_rows[]=RISC_APP_REQUIREMENT_ROWS_MARK
 #include "ports/esp32s3/NativeSettingsLifecycle.h"
 #if RISC_NATIVE_SETTINGS_BACKEND
 #include "ports/esp32s3/NativeSettingsBackend.h"
+#include "ports/esp32s3/NativeSettingsStartupEntropy.h"
 #endif
 #include "ports/esp32s3/NativeRetainedWake.h"
 #include "ports/esp32s3/NativeRealtime.h"
@@ -117,7 +118,8 @@ void schedulerDelay(uint32_t ms) {
 }
 void cooperate(uint32_t ms) {
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-  // Drain only. Display/input yields are not permission to begin SD work.
+  // This callback never starts work. Runtime separately admits bounded discovery
+  // at its post-entry owner checkpoint; ordinary maintenance still drains.
   RiscCpu::NativeSettingsLifecycle::cooperate();
   if(RiscCpu::NativeSettingsLifecycle::retained()){schedulerDelay(ms);return;}
 #endif
@@ -138,17 +140,23 @@ bool bindPlatforms(RiscBoot::Runtime& runtime){
   ))return false;
   return RiscDiagnostics::bindNativeSource(runtime);
 }
-bool appExitSafe(){return cpu.appExitSafe()
+bool appExitSafe(){return
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-  && RiscCpu::NativeSettingsLifecycle::exitSafe()
+  (RiscCpu::NativeSettingsLifecycle::discovering()?cpu.nativeDiscoveryAppExitSafe():cpu.appExitSafe())
+  && (RiscCpu::NativeSettingsLifecycle::discovering()||RiscCpu::NativeSettingsLifecycle::exitSafe())
+#else
+  cpu.appExitSafe()
 #endif
 #ifdef RISC_PAIRED_BANKS
   && RiscBankStore::exitSafe()
 #endif
   ;}
-bool providerStorageSafe(){return cpu.providerStorageSafe()
+bool providerStorageSafe(){return
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
+ (RiscCpu::NativeSettingsLifecycle::discovering()?cpu.nativeDiscoveryProviderSafe():cpu.providerStorageSafe())
  && !RiscCpu::NativeSettingsLifecycle::retained()
+#else
+ cpu.providerStorageSafe()
 #endif
 #ifdef RISC_PAIRED_APP_DATA
  && RiscAppData::custodySafe()
@@ -165,6 +173,8 @@ bool restartSafe(){return cpu.restartResourcesSafe()
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
 bool updateStorageSafe(){return providerStorageSafe() && RiscCpu::NativeSettingsLifecycle::exitSafe();}
 bool nativeOwnerCheckpoint(bool admitNew){return RiscCpu::NativeSettingsLifecycle::checkpoint(admitNew);}
+bool nativeDiscoveryCheckpoint(){return RiscCpu::NativeSettingsLifecycle::discoveryCheckpoint();}
+bool nativeSettingsShutdown(){return RiscCpu::NativeSettingsLifecycle::shutdown();}
 #endif
 bool confirmBoot(){
 #ifdef RISC_PAIRED_BANKS
@@ -188,19 +198,22 @@ RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
 RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-,nativeOwnerCheckpoint
+,nativeOwnerCheckpoint,nativeDiscoveryCheckpoint,nativeSettingsShutdown
 #endif
 });
 #else
 RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-,nativeOwnerCheckpoint
+,nativeOwnerCheckpoint,nativeDiscoveryCheckpoint,nativeSettingsShutdown
 #endif
 });
 #endif
 }
 void setup() {
   owner=xTaskGetCurrentTaskHandle();
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+  (void)RiscCpu::NativeSettingsStartupEntropy::capture(isOwner);
+#endif
   RiscCpu::NativeFailureEvidence::start();
 #if RISC_STAGE_LOGS
   const auto bootUs=uint64_t(esp_timer_get_time());
@@ -356,7 +369,7 @@ void setup() {
 #endif
     ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-    ,nativeOwnerCheckpoint
+    ,nativeOwnerCheckpoint,nativeDiscoveryCheckpoint,nativeSettingsShutdown
 #endif
   });
   if(!retainedRuntime){
@@ -395,8 +408,8 @@ void setup() {
     return; }
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   // Worker-only native load precedes every app. Missing/initializing roots
-  // require an exact separately qualified pre-app dispatcher; corrupt roots
-  // stop here. This binding never synthesizes a baseline.
+  // remain temporarily unavailable while a qualified dispatcher retries later.
+  // Corrupt roots stop here. This binding never synthesizes a baseline.
   if(!RiscCpu::NativeSettingsLifecycle::hydrate(runtime,cpu) ||
      !RiscCpu::NativeSettingsLifecycle::attachOwner(runtime,cpu)) {
     diagnosticLine("RTE_BOOT error=native-settings-hydration");return;

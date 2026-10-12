@@ -1,0 +1,8 @@
+checked bootstrap bounded sweep both-ready: exact per-namespace status and no sibling starvation PASS
+checked bootstrap bounded sweep conflict-second: exact per-namespace status and no sibling starvation PASS
+checked bootstrap bounded sweep conflict-first: exact per-namespace status and no sibling starvation PASS
+checked bootstrap bounded sweep defer-first: exact per-namespace status and no sibling starvation PASS
+checked bootstrap bounded sweep missing-source-first: exact per-namespace status and no sibling starvation PASS
+checked bootstrap bounded sweep native-busy-first: exact per-namespace status and no sibling starvation PASS
+checked bootstrap bounded sweep cancel-stop: exact per-namespace status and no sibling starvation PASS
+retained discovery stops bounded sweep and preserves sibling/source controls PASS

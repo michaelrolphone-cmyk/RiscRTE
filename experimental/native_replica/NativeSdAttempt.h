@@ -1,6 +1,7 @@
 #pragma once
 #include <RiscStoragePackageAsyncV1.h>
 #include <RiscStorageSessionAdmissionV1.h>
+#include <RiscStorageNativeCapacityV1.h>
 #include <RiscStorageVolumeAsyncV1.h>
 #include <RiscStorageWorkerV1.h>
 #include <cstdint>
@@ -13,7 +14,7 @@ class NativeSdAttempt final {
  public:
  enum class State {Idle,Admission,OwnedSession,Closing,ReadyClosed,Unavailable,Cancelled,Failed,Released,Retained};
  enum class Profile {Fresh,CheckedWarm};
- enum class Call {None,Begin,Submit,Package,Collect,End};
+ enum class Call {None,Begin,Submit,Package,Collect,End,Capacity,CapacityCheck};
  enum class Scope {Healthy,Unavailable,Retained};
  static constexpr int Context=-30,Lost=-31,Unsupported=-32;
  struct Binding {uint32_t namespaceId;uint64_t device,grant,scope;const risc_storage_volume_api_v1*volume;Profile profile=Profile::Fresh;};
@@ -75,6 +76,24 @@ class NativeSdAttempt final {
  friend class CheckedSdNativeRestore;
  // Only the typed first-checkpoint dispatch may create its exact parent.
  // Raw package callers retain the existing namespace-only path restriction.
+ int capacity(const risc_storage_native_capacity_request_v1&q){
+  const auto*api=risc_storage_volume_native_capacity(volume_);
+  if(!api||!owner()||call_!=Call::None||state_!=State::OwnedSession||operation_||nativePin_||!dispatchOwner_||!sessionAccess()||!live()||!arm(Call::Capacity,&q,sizeof q))return Context;
+  uint64_t token=0;const int rc=api->submit_capacity(volume_->context,session_,&q,&token);
+  if(!disarm())return RISC_STORAGE_ASYNC_RETAINED;
+  if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return rc;}
+  if(rc==RISC_STORAGE_ASYNC_IO){failed_=true;state_=State::Closing;}
+  if(!rc){if(!token||token!=minted_){retain();return RISC_STORAGE_ASYNC_RETAINED;}operation_=token;}
+  return rc;
+ }
+ int checkCapacity(const risc_storage_native_capacity_result_v1&q){
+  const auto*api=risc_storage_volume_native_capacity(volume_);
+  if(!api||!owner()||call_!=Call::None||state_!=State::ReadyClosed||session_||operation_||nativePin_||!dispatchOwner_||!clientAccess()||!boundary()||!arm(Call::CapacityCheck))return Context;
+  const int rc=api->check_capacity(volume_->context,&q);
+  if(!disarm())return RISC_STORAGE_ASYNC_RETAINED;
+  if(rc==RISC_STORAGE_ASYNC_RETAINED)retain();
+  return rc;
+ }
  int packageImpl(const risc_storage_package_request_v1&q,bool firstParent){
   if(!owner()||call_!=Call::None||state_!=State::OwnedSession||operation_||nativePin_||!sessionAccess()||!live())return Context;
   if(q.operation==RISC_STORAGE_PACKAGE_VALIDATE||q.operation==RISC_STORAGE_PACKAGE_VALIDATE_DRIVER)return Context;
@@ -145,7 +164,7 @@ class NativeSdAttempt final {
  // Private native mailbox gate model: exact call kind, pointer/size and token.
  bool rawSubmit(uint64_t scope,const void*p,uint32_t n){
   if(scope!=binding_.scope||!rawReady()||rawSubmitted_)return false;
-  if(call_==Call::Submit||call_==Call::Package){if(p!=request_||n!=requestSize_)return false;}
+  if(call_==Call::Submit||call_==Call::Package||call_==Call::Capacity){if(p!=request_||n!=requestSize_)return false;}
   else if(call_==Call::End){
    if(operation_&&!rawFinished_)return false;
    if(n!=sizeof(risc_storage_async_request_v1)||!p)return false;

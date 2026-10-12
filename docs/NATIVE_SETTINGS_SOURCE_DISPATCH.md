@@ -35,6 +35,14 @@ storage until collection; retained or uncertain publication preserves custody.
   refuse without source deletion. A collector's `Missing` result may only select
   the independently checked fresh inventory, never substitute for it.
 
+A bounded discovery sweep visits each discoverable unresolved namespace at most
+once. A clean conflict, deferred result, failed admission or unavailable source
+adapter cannot starve its sibling. Cancellation and retained custody stop the
+sweep. The aggregate result preserves Failed over Deferred over Idle, while the
+appended native-only `Admission::sourceStatus` reports each namespace separately
+from the bootstrap result after full collection. A successful namespace stays
+independent of a conflicted or unavailable sibling.
+
 Legacy rows, full journals and deltas are preserved byte-for-byte, including
 shadowed values covered by their fingerprint. Imported provenance retains its
 archive obligation. Native initialization does not acknowledge an SD generation.
@@ -96,3 +104,10 @@ sources, receipt/stage/rename process-death recovery and permanent retained
 controls. Existing first-export, lifecycle, cancellation and Files/USB controls
 remain in the same suite. Separate fresh and imported recovery campaigns test the
 underlying checked protocols across their full interruption matrices.
+
+The independent mixed-sweep harness is `test/run_native_bootstrap_sweep_test.py`.
+Supply `--fixtures` from a source-pinned maintenance fixture run (a single
+`--case happy` fixture build is sufficient) and a fresh `--output` directory.
+It preserves the original fixture source, derives its shared prefix, rebuilds the
+current lifecycle/bootstrap/maintenance sources and records all command and input
+hashes. A sanitizer fixture supplies the matching sanitized driver and flags.

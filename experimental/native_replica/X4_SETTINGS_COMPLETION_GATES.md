@@ -13,7 +13,9 @@ Core used by their actual readers and writers. A completed native transaction
 preserves the edit and its intent together. At a settled Runtime checkpoint, the
 selected SD provider publishes and verifies a complete image before acknowledging
 the captured native prefix. On a subsequent boot with erased native state, the
-typed SD restore must complete before an app can read preferences or Wi-Fi.
+typed SD restore must complete before an app reads authoritative preferences or
+Wi-Fi. While blank native storage awaits discovery, applications may use visible,
+temporary read-only defaults; they cannot persist those defaults as recovery.
 
 A successful save receipt is native durability. `exitSafe()` is custody safety.
 Neither alone proves that the latest edit has reached SD. An externally forced
@@ -65,11 +67,13 @@ passes and target compilation are not hardware or private-filesystem approval.
    Explicit pre-app preparation is separate from the RAM-only selector. The
    checked source dispatcher handles fresh/import/SD receipts and preserves
    conflicts; all 86 full assembly cases pass normally and under sanitizers.
-   New blank native plus ambiguous SD still needs the requested temporary RAM
-   defaults, visible unavailable state and asynchronous reconciliation behavior.
-   First SD export additionally needs real bounded SD capacity and qualified
-   native startup entropy/incarnation facts. Neither is replaced by a fabricated
-   success callback. See `docs/NATIVE_SETTINGS_BACKEND.md`,
+   New blank native plus ambiguous SD now has Runtime availability fencing and
+   nonblocking discovery/reconciliation. The selected Settings/Wi-Fi/Home visible
+   state and explicit draft reconciliation are being integrated separately.
+   First SD export now has a bounded fresh FAT capacity receipt and an explicit
+   early native entropy/incarnation source. Both are source/host/target qualified;
+   full composition and physical behavior remain gates. Neither is replaced by
+   a fabricated success callback. See `docs/NATIVE_SETTINGS_BACKEND.md`,
    `docs/NATIVE_SETTINGS_SOURCE_DISPATCH.md`, and `LIVE_SETTINGS_CUSTODY.md`.
 3. Carry the source-qualified controller paths into the actual selected product.
    Attached BLE and two-profile Wi-Fi campaigns pass normal and ASan/UBSan
@@ -77,8 +81,8 @@ passes and target compilation are not hardware or private-filesystem approval.
    typed pre-app restore and fresh actual readers. Separately, all nine controller
    groups pass 18 normal/sanitized builds and 36 explicit-dispatch campaigns
    against the single final System union. Revision checking and genuine
-   competing-edit rejection remain unchanged. These host proofs do not supply
-   the missing private factory or a flashed product.
+   competing-edit rejection remain unchanged. These host proofs do not by
+   themselves qualify the complete resource layout or a flashed product.
 4. Select the qualified Runtime, System, Utilities and checked-warm X4 SD sources
    together in the eventual product cohort, preserving the delivered fixes. Bind the six demonstrated writers
    and both read-through namespaces without expanding their manifests. Preserve
@@ -141,3 +145,9 @@ owner polls and 791 synthetic milliseconds; the paired checkpoint uses 1,082
 polls and 1,583 milliseconds. Five normal and sanitized repetitions agree. This
 removes idle scheduler turns but leaves physical-card latency and responsiveness
 unqualified. See `CATALOG_POLL_BUDGET.md` and `evidence/catalog-poll-fusion/`.
+
+The first selected full native link passes GNU ld but fails the mandatory fixed
+IQ-bank layout proof: static DRAM grows by55,848 bytes and overlaps that bank
+by42,472 bytes. IRAM growth is zero. A field-level PSRAM scratch/INTERNAL atomic
+control split is in progress; this is a hard activation gate, not a linker
+warning to bypass or permission to move IQ/audio buffers.
