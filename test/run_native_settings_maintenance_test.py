@@ -112,8 +112,8 @@ manifest['requires'].append(dict(capability='platform.storage-worker', api=1))
 run([cc, '-std=c11', *flags, '-shared', '-fPIC', a.output/'app.c', '-o', a.output/'default.elf'])
 cases = a.cases or ['happy','idle','draft-fence','pre-capture','save-exit','implicit-exit','absent','persisted-incarnation','foreign','usb-before','no-incarnation','cancel','retained','restore','restore-concurrent','restore-resume','restore-single','restore-no-source','restore-conflict','restore-cancel','restore-retained','first','first-concurrent','first-conflict','first-cancel']
 if a.assembly and not a.cases:
-    cases += ['payload-failure','restore-no-checkpoint','corrupt-native','six-writers']
-    cases += ['assembly-'+s for s in ('no-owner','owner-refuses','no-device','no-writers','many-writers','bad-writer','duplicate-writer','wrong-writer-namespace','files-root','files-hooks','files-allocator','files-context','artifact-namespace','source-namespace','missing-source','no-metadata','metadata-range','guard-range','no-guard','no-space','no-digest','digest-range','partial-first','first-range','zero-incarnation','external-control','external-tail')]
+    cases += ['payload-failure','restore-no-checkpoint','corrupt-native','six-writers','littlefs-assembly-only']
+    cases += ['assembly-'+s for s in ('no-owner','owner-refuses','no-device','no-writers','many-writers','bad-writer','duplicate-writer','wrong-writer-namespace','files-root','files-hooks','files-allocator','files-context','artifact-namespace','source-namespace','missing-source','no-metadata','metadata-range','guard-range','no-guard','no-space','no-digest','digest-range','partial-first','first-range','zero-incarnation','external-control','external-tail','artifact-identity','artifact-missing','artifact-tail','littlefs-identity','littlefs-root','littlefs-type','littlefs-tail')]
 case_metrics=[]
 for case in cases:
     command=[a.output / 'test', a.output, case, a.output / ('native-'+case)]

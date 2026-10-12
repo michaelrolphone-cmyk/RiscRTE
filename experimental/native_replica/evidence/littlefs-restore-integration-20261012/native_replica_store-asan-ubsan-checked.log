@@ -1,0 +1,5 @@
+checked native replica: 1025 small keys, 72-byte NVS payload, 64KiB banks, recovery reserve, oversized-map preservation, namespace isolation, non-reused IDs and export pins PASS
+checked native replica worker: bounded copied owner submission/1000 no-I/O polls, queued cancel, scratch wiping and retained cancellation custody PASS
+checked native replica: actual retained close latches receiver/store/job custody; late abandon/rebegin/direct backend reuse causes no further filesystem or NVS I/O PASS
+checked native replica: lost root with existing banks never initializes defaults PASS
+Checked AppData/NVS adapter: 216 before/after API and every-chunk I/O failure cases preserve complete old/new replica and pending intent PASS

@@ -1,0 +1,16 @@
+Checked SD restore: complete unsorted opaque map, 30 profile records, exact identity, reboot and no selected-native overwrite PASS
+Checked SD restore: 9 native legacy/root/unknown/artifact conflicts preserve both sources PASS
+Checked SD restore: 11 mixed legacy/corrupt/unknown/orphan/stage/legacy-backup/directory/bounded catalog conflicts refuse source selection PASS
+Normal checkpoint restore: actual writer generation 19 -> 20, native erase, exact generation-20 restore; both old immutable pages remain byte-for-byte PASS
+Historical pages: canonical unselected pages at all generations and empty partial pages preserved; malformed names and impossible page sizes remain Conflict PASS
+Many-generation restore: 1/65/257 generations, up to 515 entries, shuffled scans and dots, exact current opaque map, all old bytes untouched; constant allocator peak 176972 bytes PASS
+History window boundaries: exactly 63/64/65 historical descriptors restore without dropped or repeated entries PASS
+Many-generation catalog: early/late/boundary duplicates, case aliases, sweep descriptor/name changes, omitted/duplicate selected files, late unknown/legacy sources, backups/staging and work cutoff all refuse without writes PASS
+Many-generation catalog: between-window cancellation, Retained, epoch and lease loss preserve all evidence and mint no candidate PASS
+Many-generation catalog: changed checked lineage/generation, open/closed hash failure, closed-window Retained and invalid resource bounds cannot mint a candidate PASS
+Checked SD restore: 154 reached native write/read/commit/partial/close errors recover exact image after reset PASS
+Checked SD restore: 12 foreign lineage/generation/map/owner/receipt/native-source/artifact resumes refuse without writes PASS
+Checked SD restore: empty/maximum/over-capacity maps, zero generation, and 209 exact interrupted object prefixes PASS
+Checked SD restore: mid-write competing source/receipt/metadata changes and foreign typed receipt refusal PASS
+Checked SD restore: queued cancellation, task/lease/epoch loss, foreign or stale sessions, detached candidate and late/issue Retained custody PASS
+Checked SD restore host suite PASS

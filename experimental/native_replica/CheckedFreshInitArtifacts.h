@@ -47,6 +47,7 @@ class CheckedFreshInitArtifacts {
  // Separate known-SD grammar; no legacy archive or map sorting is inferred.
  int inspectSdAttempt(const uint8_t*image,uint32_t bytes,uint64_t next){return inspect(image,bytes,next,Attempt::Sd);}
  private:
+ friend class CheckedLittleFsFreshInitArtifacts;
  enum class Attempt {Absent,Fresh,Imported,Sd};
  static constexpr uint32_t ImageBytes=484,MaxImageBytes=65512,ChunkBytes=4096;
  uint32_t ns_;Hooks hooks_;char root_[160]{};bool entered_=false,retained_=false;

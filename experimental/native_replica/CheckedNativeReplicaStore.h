@@ -1,6 +1,6 @@
 #pragma once
 #include "NativeReplicaCore.h"
-#include "CheckedFreshInitArtifacts.h"
+#include "FreshInitArtifactInspector.h"
 #include "runtime/storage/AppDataFiles.h"
 #include <climits>
 namespace RiscExperimental {
@@ -22,7 +22,7 @@ class CheckedNativeReplicaStore {
  };
  static constexpr uint32_t PartitionBytes=0x80000,RecoveryReserve=8*4096;
  static constexpr uint32_t ObjectHeader=24,ImageMax=RISC_APP_DATA_FILE_MAX-ObjectHeader;
- CheckedNativeReplicaStore(uint32_t ns,RiscStorage::AppDataFiles&files,Metadata metadata,Guard guard,C::Allocator allocator=C::heap(),CheckedFreshInitArtifacts*fresh=nullptr)
+ CheckedNativeReplicaStore(uint32_t ns,RiscStorage::AppDataFiles&files,Metadata metadata,Guard guard,C::Allocator allocator=C::heap(),FreshInitArtifactInspector fresh=nullptr)
   :ns_(ns),files_(files),metadata_(metadata),guard_(guard),alloc_(allocator),fresh_(fresh){}
  ~CheckedNativeReplicaStore(){finishOperation();}
  CheckedNativeReplicaStore(const CheckedNativeReplicaStore&)=delete;
@@ -70,7 +70,7 @@ class CheckedNativeReplicaStore {
  private:
  friend class CheckedSdNativeRestore;
  uint32_t ns_;RiscStorage::AppDataFiles&files_;Metadata metadata_;Guard guard_;C::Allocator alloc_;
- CheckedFreshInitArtifacts*fresh_=nullptr;
+ FreshInitArtifactInspector fresh_{};
  uint8_t freshReceipt_[C::RootBytes]{};bool freshArmed_=false,transitioning_=false;const C::Initialization*freshAdmission_=nullptr;
  uint8_t importReceipt_[C::RootBytes]{};bool importArmed_=false;const C::Initialization*importAdmission_=nullptr;
  uint8_t sdReceipt_[C::RootBytes]{};bool sdArmed_=false;const C::Initialization*sdAdmission_=nullptr;

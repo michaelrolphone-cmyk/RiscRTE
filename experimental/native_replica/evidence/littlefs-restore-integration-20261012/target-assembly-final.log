@@ -1,0 +1,4 @@
+00000000 0000c588 B assembly_controls
+00000000 00000228 B assembly_namespace_controls
+Default-off AppDataFiles object byte-identical to bee53b48d0b8cbd355c40f5a7c87f6e0f4e2cd0d: 8378459d7d0dc73649243a4b716f913d6a80d5575f73ad9e35f17d208a9c9458
+Target assembly/PSRAM/files compilation, static sizes, dependency refusal and empty default-off object PASS; no firmware link or hardware qualification

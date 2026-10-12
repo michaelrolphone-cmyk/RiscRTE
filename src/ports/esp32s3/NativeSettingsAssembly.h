@@ -11,7 +11,7 @@
 namespace RiscCpu { namespace NativeSettingsAssembly {
 using C=RiscExperimental::NativeReplicaCore;
 using Store=RiscExperimental::CheckedNativeReplicaStore;
-using Artifacts=RiscExperimental::CheckedFreshInitArtifacts;
+using Artifacts=RiscExperimental::FreshInitArtifactInspector;
 using Sources=RiscExperimental::CheckedNvsFreshSources;
 using Files=RiscStorage::AppDataFiles;
 // Every non-null callback context must have its whole permanent INTERNAL range
@@ -19,7 +19,7 @@ using Files=RiscStorage::AppDataFiles;
 // Reachable controls, executable lifetimes, filesystem qualification and global
 // lease exclusion remain the trusted backend supplier's contract.
 struct Backend {
- Files*files=nullptr;Artifacts*artifacts=nullptr;Sources*sources=nullptr;
+ Files*files=nullptr;Artifacts artifacts{};Sources*sources=nullptr;
  const char*root=nullptr; // compared in RAM only, not retained or opened
  Files::Hooks fileHooks{};size_t fileContextBytes=0;
  Store::Metadata metadata{};size_t metadataContextBytes=0;

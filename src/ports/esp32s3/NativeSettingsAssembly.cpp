@@ -31,9 +31,9 @@ void*allocate(size_t n){const auto a=NativeSettingsPayloadAllocator::allocator()
 void release(void*p){const auto a=NativeSettingsPayloadAllocator::allocator();a.release(a.context,p);}
 bool valid(const Namespace&n,uint32_t ns){
  const auto&b=n.backend;
- if(!internal(b.files,sizeof(Files))||!internal(b.artifacts,sizeof(Artifacts))||!internal(b.sources,sizeof(Sources))||
+ if(!internal(b.files,sizeof(Files))||!internal(b.artifacts.concreteAddress(),b.artifacts.concreteBytes())||!internal(b.sources,sizeof(Sources))||
     !b.root||strnlen(b.root,160)>=160||!b.artifacts->boundTo(ns,b.root)||!b.artifacts->exitSafe()||
-    !b.sources->boundTo(ns,*b.artifacts)||!b.sources->exitSafe()||
+    !b.sources->boundTo(ns,b.artifacts)||!b.sources->exitSafe()||
     !b.fileHooks.now||!b.fileHooks.cooperate||b.fileHooks.allocate!=allocate||b.fileHooks.deallocate!=release||
     !context(b.fileHooks.context,b.fileContextBytes)||!b.files->configuredFor(b.root,b.fileHooks)||
     !b.metadata.read||!b.metadata.write||!context(b.metadata.context,b.metadataContextBytes)||

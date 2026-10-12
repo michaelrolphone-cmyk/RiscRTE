@@ -1,0 +1,10 @@
+NVS source collector: actual checked factory/create path, all legacy namespaces, stable owner witness and callback reentry refusal PASS
+NVS source collector: 12 competing row/journal/anchor/delta/unknown-key refusals; empty spaces and other namespace isolation PASS
+NVS source collector: checked receipt resume and 8 owner/metadata/type/iterator/source/artifact refusals preserve all bytes PASS
+NVS source collector: all 509 exact checked scratch prefixes resume through actual factory/store without reusing IDs PASS
+NVS source collector: 88 reached read-only NVS failures reject evidence without writes or leaked handles PASS
+NVS source collector: owner-worker/initialization refusal and late guard Retained precedence with zero NVS I/O PASS
+Collector host size=88; no collector-owned heap allocation, no production selection, ESP artifact inspector remains unsupported
+==16==LeakSanitizer has encountered a fatal error.
+==16==HINT: For debugging, try setting environment variable LSAN_OPTIONS=verbosity=1:log_threads=1
+==16==HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)

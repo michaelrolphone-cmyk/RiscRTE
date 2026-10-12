@@ -1,0 +1,7 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+00000000 000000c8 B native_nvs_legacy_sources_size
+3eda5f811c60d19eca4754a801934e9a1247793a7a9a26e4bb7c60db57d76161  /workspace/shared/x4-littlefs-restore-integration-evidence-20261012/target-nvs_legacy_sources/native-nvs-legacy-sources.o

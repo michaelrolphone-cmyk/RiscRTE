@@ -48,7 +48,7 @@ class CheckedSdNativeRestore final {
  private:
  C&core_;CheckedNativeReplicaStore&store_;CheckedNvsFreshSources&sources_;Digest hash_;Guard guard_;
  C::Initialization admission_;NativeSdCompletion completion_;uint8_t*image_=nullptr;uint32_t imageBytes_=0;std::atomic<bool>retained_{false};
- bool configured(){return guard_.context&&guard_.owner&&guard_.worker&&guard_.workerWithLease&&guard_.leaseEpoch&&hash_.begin&&hash_.update&&hash_.finish&&core_.validConfiguration()&&core_.sdHooks()&&core_.usesBackend(store_.backend())&&store_.fresh_==&sources_.artifacts_&&sources_.ns_==core_.namespaceId();}
+ bool configured(){return guard_.context&&guard_.owner&&guard_.worker&&guard_.workerWithLease&&guard_.leaseEpoch&&hash_.begin&&hash_.update&&hash_.finish&&core_.validConfiguration()&&core_.sdHooks()&&core_.usesBackend(store_.backend())&&store_.fresh_.sameInspector(sources_.artifacts_)&&sources_.ns_==core_.namespaceId();}
  static bool worker(void*p){auto&s=*static_cast<CheckedSdNativeRestore*>(p);return s.guard_.worker&&s.guard_.worker(s.guard_.context);}
  void clearImage(){if(image_){C::wipe(image_,imageBytes_);core_.alloc_.release(core_.alloc_.context,image_);}image_=nullptr;imageBytes_=0;}
  int checked(int result){if(result==C::Retained)retained_=true;return result;}

@@ -52,6 +52,34 @@ static bool assembleMaintenance(){
  if(scenario=="assembly-files-allocator")input.preferences.backend.fileHooks.allocate=F::secureAlloc;
  if(scenario=="assembly-files-context")input.preferences.backend.fileContextBytes=1;
  if(scenario=="assembly-artifact-namespace")input.preferences.backend.artifacts=&b->artifacts;
+ if(scenario=="assembly-artifact-identity"){
+  // Same namespace/root and callbacks do not substitute a different inspector.
+  auto*other=new AssemblyBackend(1);input.preferences.backend.artifacts=&other->artifacts;
+ }
+ if(scenario=="assembly-artifact-missing")input.preferences.backend.artifacts=nullptr;
+ if(scenario=="assembly-artifact-tail")refusedInternal=reinterpret_cast<uint8_t*>(&a->artifacts)+sizeof(a->artifacts)-1;
+ if(scenario=="littlefs-assembly-only"||scenario.rfind("assembly-littlefs-",0)==0){
+  using Little=RiscExperimental::CheckedLittleFsFreshInitArtifacts;
+  Little::Mount mount{};mount.profile=Little::PinnedProfile;mount.partitionAddress=0x10000;mount.partitionBytes=0x80000;
+  mount.vfs=&a->files;mount.partition=&a->metadata;mount.worker=a;mount.nativeLease=2;
+  mount.mountEpoch=mount.rootEpoch=mount.leaseEpoch=mount.writerFenceEpoch=mount.redirectEpoch=1;
+  static const std::string fullRoot="/tmp/lfs-assembly-"+std::to_string(getpid());
+  std::filesystem::create_directory(fullRoot);
+  strcpy(mount.mountPath,"/tmp");strcpy(mount.privateRoot,fullRoot.c_str()+4);
+  // Existing-directory configuration precedes the RAM-only assembly boundary.
+  // It does not qualify an actual native mount or its POSIX mutation route.
+  auto*littleFiles=new RiscStorage::AppDataFiles(a->hooks);assert(littleFiles->configure(fullRoot.c_str()));
+  input.preferences.backend.files=littleFiles;input.preferences.backend.root=fullRoot.c_str();
+  auto*little=new Little(1,mount,{});auto*source=new Sources(1,nativeOwner,*little,{});
+  input.preferences.backend.artifacts=little;input.preferences.backend.sources=source;
+  if(scenario=="assembly-littlefs-identity")input.preferences.backend.artifacts=new Little(1,mount,{});
+  if(scenario=="assembly-littlefs-root")input.preferences.backend.root=fullRoot.c_str()+4;
+  if(scenario=="assembly-littlefs-type")input.preferences.backend.artifacts=&a->artifacts;
+  if(scenario=="assembly-littlefs-tail")refusedInternal=reinterpret_cast<uint8_t*>(little)+sizeof(*little)-1;
+  // RAM binding admits supplied concrete permanent controls only. The empty
+  // port is intentional: no mount qualification or storage callback is claimed.
+ }
+
  if(scenario=="assembly-source-namespace")input.preferences.backend.sources=&b->sources;
  if(scenario=="assembly-missing-source"||scenario=="restore-no-source")input.preferences.backend.sources=nullptr;
  if(scenario=="assembly-no-metadata")input.preferences.backend.metadata.read=nullptr;
@@ -74,6 +102,10 @@ static bool assembleMaintenance(){
   printf("RAM-only assembly %s refuses without backend I/O, allocation or registration PASS\n",scenario.c_str());return false;
  }
  assert(admitted&&admitted==Assembly::admission()&&!Assembly::assemble(input));
+ if(scenario=="littlefs-assembly-only"){
+  puts("RAM-only LittleFS factory: exact full mount/root, concrete identity and permanent range compose without I/O or activation PASS");return false;
+ }
+
  maintenance=Assembly::maintenance();assert(maintenance&&admitted==&maintenance->admission());
  cores[0]=admitted->preferences.core;cores[1]=admitted->wifi.core;
  assert(cores[0]->namespaceId()==1&&cores[1]->namespaceId()==6&&!cores[0]->ready()&&!cores[1]->ready());

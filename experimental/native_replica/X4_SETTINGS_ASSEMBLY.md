@@ -143,3 +143,21 @@ Every recorded final code/test source hash was rechecked against this source.
 Logs, full manifests, case metrics, local target frames and remaining gates are
 recorded in `evidence/native-settings-assembly/`. These results do not qualify
 a production backend, product image, full target link or physical hardware.
+
+
+## Concrete inspector integration
+
+The backend now carries a narrow `FreshInitArtifactInspector` value. Existing
+Linux callers keep their concrete pointer; an explicit pinned LittleFS caller
+may supply its concrete pointer. Selection still checks the whole concrete
+object's permanent INTERNAL range, exact namespace and full store root,
+collector/inspector identity, and every existing file/PSRAM allocator binding.
+Copies of the adapter retain concrete type and address. Root-only or namespace-
+only equality cannot compose a different inspector.
+
+The pinned LittleFS grammar and RAM-only factory tests are described in
+[LITTLEFS_RESTORE_INTEGRATION.md](LITTLEFS_RESTORE_INTEGRATION.md). They do not
+supply a production private mount. A permanent worker/lease witness must be
+reconciled with actual worker construction and lease acquisition; fabricated
+constant epochs or a pre-worker snapshot are not production admission. The
+immutable inspector currently refuses any changed captured tuple.

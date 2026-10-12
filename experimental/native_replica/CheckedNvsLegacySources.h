@@ -1,6 +1,6 @@
 #pragma once
 #include "NativeBaselineAdmission.h"
-#include "CheckedFreshInitArtifacts.h"
+#include "FreshInitArtifactInspector.h"
 #include <nvs.h>
 #include <cstdio>
 #include <climits>
@@ -25,7 +25,7 @@ class CheckedNvsLegacySources final {
  // exact historical owner string (for example shared-00000006), never a label
  // inferred from the contents. Limits are trusted owner policy, not NVS sizes.
  CheckedNvsLegacySources(uint32_t ns,const uint8_t owner[16],const char*legacyOwner,
-                         uint32_t mapCapacity,CheckedFreshInitArtifacts&artifacts,
+                         uint32_t mapCapacity,FreshInitArtifactInspector artifacts,
                          A::Digest digest,Hooks hooks,C::Allocator allocator=C::heap())
   :ns_(ns),capacity_(mapCapacity),artifacts_(artifacts),hash_(digest),hooks_(hooks),alloc_(allocator){
   if(owner)std::memcpy(owner_,owner,16);
@@ -46,7 +46,7 @@ class CheckedNvsLegacySources final {
   [](void*p,uint32_t ns,const C::ImportInitReceipt&r,const A::Rows&rows,A::Witness*out){return static_cast<CheckedNvsLegacySources*>(p)->collectImported(ns,r,&rows,out);},
   [](void*p,uint32_t ns,const C::ImportInitReceipt&r,const A::Witness&w){auto&s=*static_cast<CheckedNvsLegacySources*>(p);A::Witness now{};const int rc=s.collectImported(ns,r,nullptr,&now);return rc?rc:same(w,now)?int(C::Ok):s.fail(C::Conflict,Reason::SourceChanged);}};}
  private:
- uint32_t ns_,capacity_;CheckedFreshInitArtifacts&artifacts_;A::Digest hash_;Hooks hooks_;C::Allocator alloc_;
+ uint32_t ns_,capacity_;FreshInitArtifactInspector artifacts_;A::Digest hash_;Hooks hooks_;C::Allocator alloc_;
  uint8_t owner_[16]{};char legacyOwner_[96]{};Reason reason_=Reason::None;
  bool entered_=false,retained_=false,opened_=false;nvs_handle_t handle_=0;nvs_iterator_t iterator_=nullptr;uint64_t epoch_=0;
  struct Entry {bool&v;explicit Entry(bool&b):v(b){v=true;}~Entry(){v=false;}};

@@ -1,0 +1,90 @@
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance happy PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=6; peak-vendor-bytes=856; live-vendor-bytes=404
+actual lifecycle/Runtime/X4/FatFs maintenance idle PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+live atomic draft survives ordinary acquisition; obsolete revision still refuses; final release SD-acks PASS
+Factory PSRAM allocator coverage PASS; requests=34; peak-vendor-bytes=177940; live-vendor-bytes=668
+actual lifecycle/Runtime/X4/FatFs maintenance draft-fence PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+first atomic grant is published after both older namespaces settle on SD PASS
+Factory PSRAM allocator coverage PASS; requests=52; peak-vendor-bytes=178054; live-vendor-bytes=927
+actual lifecycle/Runtime/X4/FatFs maintenance pre-capture PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+Factory PSRAM allocator coverage PASS; requests=52; peak-vendor-bytes=178060; live-vendor-bytes=931
+actual lifecycle/Runtime/X4/FatFs maintenance save-exit PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+Factory PSRAM allocator coverage PASS; requests=52; peak-vendor-bytes=178069; live-vendor-bytes=937
+actual lifecycle/Runtime/X4/FatFs maintenance implicit-exit PASS; control=33296; polls=210
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=16; peak-vendor-bytes=2021; live-vendor-bytes=700
+actual lifecycle/Runtime/X4/FatFs maintenance absent PASS; control=33296; polls=8
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance persisted-incarnation PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=174; peak-vendor-bytes=178459; live-vendor-bytes=1078
+actual lifecycle/Runtime/X4/FatFs maintenance foreign PASS; control=33296; polls=63
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance usb-before PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=185; peak-vendor-bytes=178459; live-vendor-bytes=1078
+actual lifecycle/Runtime/X4/FatFs maintenance no-incarnation PASS; control=33296; polls=63
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance cancel PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+last atomic release drains to terminal SD retention PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=164; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=164; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore-concurrent PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=164; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore-resume PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=154; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore-single PASS; control=33296; polls=0
+RAM-only assembly restore-no-source refuses without backend I/O, allocation or registration PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app restore-conflict refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app restore-cancel refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual pre-app restore retention PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=178633; live-vendor-bytes=1115
+actual lifecycle/Runtime/X4/FatFs maintenance first PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=178633; live-vendor-bytes=1115
+actual lifecycle/Runtime/X4/FatFs maintenance first-concurrent PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=32; peak-vendor-bytes=5150; live-vendor-bytes=1108
+actual lifecycle/Runtime/X4/FatFs maintenance first-conflict PASS; control=33296; polls=93
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=178633; live-vendor-bytes=1115
+actual lifecycle/Runtime/X4/FatFs maintenance first-cancel PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+PSRAM allocation failure refuses hydration without fallback, mutation or retention PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app restore-no-checkpoint refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app corrupt-native refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance six-writers PASS; control=33296; polls=0
+test: /workspace/shared/x4-littlefs-restore-integration-20261012/test/native_settings_assembly_fixture.h:69: bool assembleMaintenance(): Assertion `littleFiles->configure(fullRoot)' failed.
+Traceback (most recent call last):
+  File "/workspace/shared/x4-littlefs-restore-integration-20261012/test/run_native_settings_maintenance_test.py", line 122, in <module>
+    result=subprocess.run(command, check=True, timeout=a.case_timeout, text=True, stdout=subprocess.PIPE)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '[PosixPath('/workspace/shared/x4-littlefs-restore-integration-evidence-20261012/factory-final-normal/test'), PosixPath('/workspace/shared/x4-littlefs-restore-integration-evidence-20261012/factory-final-normal'), 'littlefs-assembly-only', PosixPath('/workspace/shared/x4-littlefs-restore-integration-evidence-20261012/factory-final-normal/native-littlefs-assembly-only')]' died with <Signals.SIGABRT: 6>.

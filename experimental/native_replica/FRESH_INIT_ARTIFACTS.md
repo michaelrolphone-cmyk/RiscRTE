@@ -109,3 +109,14 @@ heap-allocation hook is added.
 These tests are isolated native inspection evidence. Full initializer/store
 power-cut integration, NVS durability, target filesystem qualification and
 production activation are separate obligations.
+
+
+## Explicit concrete LittleFS adapter
+
+`FreshInitArtifactInspector` preserves existing Linux dispatch and permits an
+explicitly constructed `CheckedLittleFsFreshInitArtifacts` only. The separately
+pinned profile uses the same canonical fresh/imported/SD validators and bounded
+512-byte reads; it does not give generic ESP POSIX metadata identity semantics.
+See [the pinned profile](LITTLEFS_FRESH_PROFILE.md) and
+[integration qualification](LITTLEFS_RESTORE_INTEGRATION.md). No production port
+or feature selection is supplied.

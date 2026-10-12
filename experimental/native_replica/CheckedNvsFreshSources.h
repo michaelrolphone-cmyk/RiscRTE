@@ -1,6 +1,6 @@
 #pragma once
 #include "NativeBaselineAdmission.h"
-#include "CheckedFreshInitArtifacts.h"
+#include "FreshInitArtifactInspector.h"
 #include <nvs.h>
 #include <cstdio>
 namespace RiscExperimental {
@@ -19,13 +19,13 @@ class CheckedNvsFreshSources final {
  };
  // A stable firmware-native logical owner, never an address, boot ID or secret.
  // The 16-byte domain is copied and permanently bound with the namespace/schema.
- CheckedNvsFreshSources(uint32_t ns,const uint8_t owner[16],CheckedFreshInitArtifacts&artifacts,Hooks hooks)
+ CheckedNvsFreshSources(uint32_t ns,const uint8_t owner[16],FreshInitArtifactInspector artifacts,Hooks hooks)
   :ns_(ns),artifacts_(artifacts),hooks_(hooks){if(owner)std::memcpy(owner_,owner,16);}
  CheckedNvsFreshSources(const CheckedNvsFreshSources&)=delete;
  CheckedNvsFreshSources&operator=(const CheckedNvsFreshSources&)=delete;
  ~CheckedNvsFreshSources(){C::wipe(owner_,sizeof owner_);}
  // RAM-only composition identity, not an absence or source receipt.
- bool boundTo(uint32_t ns,const CheckedFreshInitArtifacts&a)const{return ns_==ns && &artifacts_==&a;}
+ bool boundTo(uint32_t ns,FreshInitArtifactInspector a)const{return ns_==ns&&artifacts_.sameInspector(a);}
  bool retained()const{return retained_||artifacts_.retained();}
  bool exitSafe()const{return !entered_&&!retained()&&!opened_&&!iterator_&&artifacts_.exitSafe();}
  A::Sources sources(){return {this,
@@ -41,7 +41,7 @@ class CheckedNvsFreshSources final {
  struct SdCheck {const C::SdInitReceipt*receipt;const uint8_t*fingerprint;const uint8_t*image;uint32_t imageBytes;};
  int sdInventory(const SdCheck&sd,bool allowReceipt,A::Witness*out){return collect(ns_,out,nullptr,allowReceipt,&sd);}
  A::Witness sdOriginalWitness()const{return witness();}
- uint32_t ns_;CheckedFreshInitArtifacts&artifacts_;Hooks hooks_;uint8_t owner_[16]{};
+ uint32_t ns_;FreshInitArtifactInspector artifacts_;Hooks hooks_;uint8_t owner_[16]{};
  bool entered_=false,retained_=false,opened_=false;nvs_handle_t handle_=0;nvs_iterator_t iterator_=nullptr;
  struct Entry {bool&v;explicit Entry(bool&b):v(b){v=true;}~Entry(){v=false;}};
  struct Wipe {void*p;size_t n;~Wipe(){C::wipe(p,n);}};
