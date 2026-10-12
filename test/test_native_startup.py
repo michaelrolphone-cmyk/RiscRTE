@@ -36,6 +36,17 @@ inline int64_t esp_timer_get_time(){return 0;}
 enum {ESP_RST_PANIC=1,ESP_RST_INT_WDT,ESP_RST_TASK_WDT,ESP_RST_WDT,ESP_RST_BROWNOUT};
 inline int esp_reset_reason(){return 0;}
 using esp_err_t=int;constexpr esp_err_t ESP_OK=0;
+struct esp_vfs_spiffs_conf_t{const char*base_path;const char*partition_label;size_t max_files;bool format_if_mount_failed;};
+inline esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t*s){
+ assert(s && !std::strcmp(s->base_path,"/bootfs") && !std::strcmp(s->partition_label,"bootfs"));
+ assert(s->max_files==4 && !s->format_if_mount_failed);mark("mount");
+#ifdef SPIFFS_FAIL
+ return -1;
+#else
+ return ESP_OK;
+#endif
+}
+namespace RiscNvs{inline esp_err_t initializationStatus(){return ESP_OK;}inline void*backend(){static int value;return &value;}}
 struct risc_memory_heap_snapshot_v1{};
 struct risc_runtime_health_v1{uint32_t uptime_ms,free_heap,app_address;uint8_t mac[6];char target[64];};
 #define RISC_BUILD_IDENTITY "RTE_SOURCE=test"
@@ -44,10 +55,23 @@ namespace RiscDiagnostics{inline void start(){mark("diagnostics");}inline void p
 namespace RiscPerf{inline void configure(uint64_t(*)(),bool(*)(),int){}inline void emit(unsigned,unsigned=0){}struct Scope{Scope(unsigned,unsigned){}};}
 namespace RiscBoot{
 struct Board{};class Runtime;
-struct Port{bool(*owner)();bool(*health)(risc_runtime_health_v1*);void(*delay)(uint32_t);bool(*diagnostic)(const char*);bool(*bind)(Runtime&);void*kv;bool(*exitSafe)();bool(*storageSafe)();bool(*confirm)();void*data;void*wake;void(*retainedDelay)(uint32_t);bool(*coldBoot)();bool(*priorFailure)(risc_resident_failure_v1*);RuntimeProviders::NativeProviderPolicySetV1 nativeProviders;void* failure;int32_t(*checkpoint)(const char*,uint64_t,const char*,uint32_t);bool(*ready)();bool(*begin)();void(*end)();bool(*monotonic)(uint32_t*);int32_t(*heap)(risc_memory_heap_snapshot_v1*);int32_t(*random)(void*,uint32_t);};
-class Runtime{Board b;public:explicit Runtime(Port p){assert(!p.kv && !p.nativeProviders.entries && !p.nativeProviders.count);}Board&board(){return b;}bool prepare(const char*){mark("prepare");return true;}bool run(){mark("run");return true;}const char*error(){return "test";}};
+struct Port{bool(*owner)();bool(*health)(risc_runtime_health_v1*);void(*delay)(uint32_t);bool(*diagnostic)(const char*);bool(*bind)(Runtime&);void*kv;bool(*exitSafe)();bool(*storageSafe)();bool(*confirm)();void*data;void*wake;void(*retainedDelay)(uint32_t);bool(*coldBoot)();bool(*priorFailure)(risc_resident_failure_v1*);RuntimeProviders::NativeProviderPolicySetV1 nativeProviders;void* failure;int32_t(*checkpoint)(const char*,uint64_t,const char*,uint32_t);bool(*ready)();bool(*begin)();void(*end)();bool(*monotonic)(uint32_t*);int32_t(*heap)(risc_memory_heap_snapshot_v1*);int32_t(*random)(void*,uint32_t);void(*controlBegin)(bool);bool(*controlEnd)();bool(*controlExitRequested)();};
+class Runtime{Board b;public:explicit Runtime(Port p){assert(!p.nativeProviders.entries && !p.nativeProviders.count);
+#ifdef RISC_EMBEDDED_BOOTSTORE
+assert(!p.kv);
+#else
+assert(p.kv==RiscNvs::backend());
+#endif
+assert(p.controlBegin && p.controlEnd && p.controlExitRequested);}Board&board(){return b;}bool prepare(const char*){mark("prepare");return true;}bool run(){mark("run");return true;}const char*error(){return "test";}};
 }
 namespace RiscCpu{
+namespace NativeTlsMemory{inline bool initialize(){mark("tls-allocator");
+#ifdef TLS_ALLOCATOR_FAIL
+return false;
+#else
+return true;
+#endif
+}}
 namespace NativeFailureEvidence{inline void start(){mark("failure-evidence");}inline void*backend(){return nullptr;}}
 inline bool nativeRadioResourceReady(){return true;}inline bool nativeRadioResourceTry(){return true;}inline void nativeRadioResourceEnd(){}
 inline int32_t memoryHeap(risc_memory_heap_snapshot_v1*){return 0;}inline int32_t randomBytes(void*,uint32_t){return 0;}
@@ -91,7 +115,16 @@ int main(){
 #ifdef STARTUP_FAIL
  expected.push_back("RTE_BOOT error=native-startup detail=test-rail-hold");
 #else
+#ifdef RISC_ENABLE_HTTP
+ expected.push_back("tls-allocator");
+#ifdef TLS_ALLOCATOR_FAIL
+ expected.push_back("RTE_HTTP unavailable=tls-psram-allocator");
+#endif
+#endif
  expected.push_back("mount");
+#ifdef SPIFFS_FAIL
+ expected.push_back("RTE_BOOT error=storage-mount code=-1");
+#else
 #ifdef RISC_RUNTIME_METADATA_PSRAM
  expected.push_back("metadata-psram");
 #ifdef PSRAM_FAIL
@@ -103,6 +136,7 @@ int main(){
  for(const char* s:{"reserve","prepare","RTE_BOOT board=validated drivers=admitted","run","RTE_BOOT state=idle reason=app-returned"})expected.emplace_back(s);
 #endif
  #endif
+ #endif
  assert(calls==expected);loop();assert(calls.back()=="yield");
 }
 '''
@@ -110,7 +144,8 @@ int main(){
 
 class NativeStartup(unittest.TestCase):
     def test_production_setup_optional_status(self):
-        headers = ('esp_heap_caps.h', 'ports/esp32s3/NativeRadioResources.h',
+        headers = ('ports/esp32s3/NativeTlsMemory.h', 'esp_heap_caps.h', 'ports/esp32s3/NativeRadioResources.h',
+                   'ports/esp32s3/NvsKeyValue.h',
                    'ports/esp32s3/NativeFailureEvidence.h', 'ports/esp32s3/NativeCompute.h',
                    'ports/esp32s3/NativeRuntime.h', 'ports/esp32s3/NativeBootstrap.h',
                    'ports/esp32s3/NativeSntp.h', 'ports/esp32s3/NvsBootstrapInput.h',
@@ -131,6 +166,7 @@ class NativeStartup(unittest.TestCase):
             # or evaluating diagnostic arguments.
             for name in ('bootstrap/AppPolicyLimits.h', 'diagnostics/StageLog.h',
                          'ports/esp32s3/NativeDiagnosticBinding.h',
+                         'ports/esp32s3/NativeCrownRecovery.h',
                          'runtime/drivers/NativeProviderPolicyV1.h',
                          'runtime/drivers/SelectedNativeProviderPolicyV1.h',
                          'runtime/packages/PackageIdentity.h'):
@@ -144,13 +180,18 @@ class NativeStartup(unittest.TestCase):
             (folder/'main.cpp').write_text(source)
             (folder/'harness.cpp').write_text(HARNESS)
             for name, flags in (('no-hook', []), ('success', ['-DSTARTUP_HOOK']),
+                                ('https', ['-DRISC_ENABLE_HTTP']),
+                                ('https-fail', ['-DRISC_ENABLE_HTTP', '-DTLS_ALLOCATOR_FAIL']),
                                 ('failure', ['-DSTARTUP_HOOK', '-DSTARTUP_FAIL']),
                                 ('psram', ['-DRISC_RUNTIME_METADATA_PSRAM']),
-                                ('psram-failure', ['-DRISC_RUNTIME_METADATA_PSRAM', '-DPSRAM_FAIL'])):
+                                ('psram-failure', ['-DRISC_RUNTIME_METADATA_PSRAM', '-DPSRAM_FAIL']),
+                                ('spiffs', ['-DRISC_RUNTIME_METADATA_PSRAM']),
+                                ('spiffs-psram-failure', ['-DRISC_RUNTIME_METADATA_PSRAM', '-DPSRAM_FAIL']),
+                                ('spiffs-mount-failure', ['-DRISC_RUNTIME_METADATA_PSRAM', '-DSPIFFS_FAIL'])):
                 with self.subTest(name=name):
                     output = folder/name
                     subprocess.run(['c++', '-std=c++17', '-Wall', '-Wextra', '-Werror',
-                                    '-Wno-unused-function', '-DRISC_EMBEDDED_BOOTSTORE=1', *flags, '-I'+str(folder),
+                                    '-Wno-unused-function', *([] if name.startswith('spiffs') else ['-DRISC_EMBEDDED_BOOTSTORE=1']), *flags, '-I'+str(folder),
                                     str(folder/'main.cpp'), str(folder/'harness.cpp'),
                                     *(['-Wl,-U,_risc_native_startup_error'] if sys.platform == 'darwin' else []),
                                     '-o', str(output)], check=True)

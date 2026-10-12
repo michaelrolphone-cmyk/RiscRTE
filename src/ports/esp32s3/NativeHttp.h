@@ -4,12 +4,22 @@
  * SDK DNS may take its configured resolver timeout; all later TLS/read/write
  * calls are nonblocking. Each caller step yields through the runtime. */
 #include "HttpResponse.h"
+#include "NativeTlsMemory.h"
+#include "diagnostics/StageLog.h"
 #include <esp_tls.h>
 #include <esp_crt_bundle.h>
 #include <esp_heap_caps.h>
 #include <esp_timer.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/x509_crt.h>
+#include <mbedtls/asn1.h>
+#include <mbedtls/bignum.h>
+#include <mbedtls/cipher.h>
+#include <mbedtls/dhm.h>
+#include <mbedtls/ecp.h>
+#include <mbedtls/md.h>
+#include <mbedtls/pem.h>
+#include <mbedtls/pk.h>
 #include <new>
 #include <cstdio>
 #include <unistd.h>
@@ -32,6 +42,16 @@ static bool (*owner)()=nullptr;static bool (*networkReady)()=nullptr;
 inline bool idle(){return session==nullptr;}
 inline bool safe(){return !session || !session->retained;}
 inline void configure(bool(*o)(),bool(*ready)()){owner=o;networkReady=ready;}
+inline void memoryStage(const char* stage){
+  (void)stage;
+  RISC_STAGE_LOG("http memory stage=%s tls_psram=%u internal_free=%lu internal_largest=%lu psram_free=%lu psram_largest=%lu dma_largest=%lu",stage,
+    unsigned(NativeTlsMemory::ready()),
+    static_cast<unsigned long>(heap_caps_get_free_size(NativeTlsMemory::InternalCaps)),
+    static_cast<unsigned long>(heap_caps_get_largest_free_block(NativeTlsMemory::InternalCaps)),
+    static_cast<unsigned long>(heap_caps_get_free_size(NativeTlsMemory::ExternalCaps)),
+    static_cast<unsigned long>(heap_caps_get_largest_free_block(NativeTlsMemory::ExternalCaps)),
+    static_cast<unsigned long>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA)));
+}
 inline int compare(const mbedtls_x509_time& a,const HttpBounds::Calendar& b){
   const int left[]={a.year,a.mon,a.day,a.hour,a.min,a.sec};
   const int right[]={b.year,b.month,b.day,b.hour,b.minute,b.second};
@@ -52,9 +72,13 @@ inline int verifyCertificate(void* context,mbedtls_x509_crt* crt,int depth,uint3
 }
 inline esp_err_t attachBundle(void* raw){
   auto* s=session;auto* conf=static_cast<mbedtls_ssl_config*>(raw);
-  if(!s || !conf || esp_crt_bundle_attach(raw)!=ESP_OK)return ESP_FAIL;
+  if(!s || !conf)return ESP_FAIL;
+  const esp_err_t attached=esp_crt_bundle_attach(raw);
+  // Pinned IDF ignores the bundle callback's return value. Record its failure
+  // ourselves so a failed allocation cannot proceed without our verifier.
+  if(attached!=ESP_OK){s->error=attached==ESP_ERR_NO_MEM?RISC_HTTP_MEMORY:RISC_HTTP_TRANSPORT;return attached;}
   s->verify=conf->f_vrfy;s->verifyContext=conf->p_vrfy;
-  if(!s->verify)return ESP_FAIL;
+  if(!s->verify){s->error=RISC_HTTP_TRANSPORT;return ESP_FAIL;}
   mbedtls_ssl_conf_verify(conf,verifyCertificate,s);
   mbedtls_ssl_conf_min_version(conf,MBEDTLS_SSL_MAJOR_VERSION_3,MBEDTLS_SSL_MINOR_VERSION_3);
   return ESP_OK;
@@ -74,6 +98,8 @@ inline bool prepare(Session& s){
   s.requestBytes=n;s.sent=0;s.phase=Phase::Connect;
   s.config={};s.config.non_block=true;s.config.timeout_ms=1;
   s.config.skip_common_name=false;s.config.crt_bundle_attach=attachBundle;
+  NativeTlsMemory::DmaHeadroom dma;
+  if(!dma)return false;
   s.tls=esp_tls_init();return s.tls!=nullptr;
 }
 inline bool destroy(Session& s){
@@ -104,14 +130,15 @@ inline int32_t open(void*,const risc_http_request_v1* r,uint64_t* out){
   if(session)return RISC_HTTP_BUSY;
   if(!networkReady || !networkReady())return RISC_HTTP_NETWORK;
   if(generation==UINT64_MAX)return RISC_HTTP_CLOSED;
-  // TLS buffers remain internal in the pinned SDK. Reserve a conservative
-  // minimum before starting; all bulk metadata is PSRAM-only, no fallback.
-  if(heap_caps_get_free_size(MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT)<80u*1024u ||
-     heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT)<36u*1024u)return RISC_HTTP_MEMORY;
+  // Software TLS allocations use PSRAM. prepare() probes the actual separate
+  // internal/DMA blocks while creating the SDK handle, rather than demanding
+  // 80 KiB free / a 36 KiB internal block for records now allocated externally.
+  memoryStage("open");
+  if(!NativeTlsMemory::ready())return RISC_HTTP_MEMORY;
   void* memory=heap_caps_malloc(sizeof(Session),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
-  if(!memory)return RISC_HTTP_MEMORY;
+  if(!memory){memoryStage("session-allocation-failed");return RISC_HTTP_MEMORY;}
   session=new(memory)Session(++generation,*r);*out=session->token;
-  if(!prepare(*session)){const int32_t c=close(nullptr,*out);if(c==RISC_HTTP_OK)*out=0;return c==RISC_HTTP_OK?RISC_HTTP_MEMORY:c;}
+  if(!prepare(*session)){memoryStage("prepare-allocation-failed");const int32_t c=close(nullptr,*out);if(c==RISC_HTTP_OK)*out=0;return c==RISC_HTTP_OK?RISC_HTTP_MEMORY:c;}
   return RISC_HTTP_OK;
 }
 inline int32_t info(void*,uint64_t token,risc_http_response_v1* out){
@@ -120,6 +147,25 @@ inline int32_t info(void*,uint64_t token,risc_http_response_v1* out){
   if(!session || token!=session->token)return RISC_HTTP_CLOSED;
   out->status_code=session->decoder.status;out->content_length=session->decoder.length;out->received_bytes=session->decoder.received;
   return session->retained?RISC_HTTP_RETAINED:session->error;
+}
+// MbedTLS composes a high-level error and an optional low-level cause.
+// IDF stores positive -ret, while read/write may return a negative raw value.
+inline bool allocationError(int code){
+  const uint32_t magnitude=code<0?0u-static_cast<uint32_t>(code):static_cast<uint32_t>(code);
+  const uint32_t high=magnitude&0x7f80u,low=magnitude&0x7fu;
+  return high==uint32_t(-MBEDTLS_ERR_SSL_ALLOC_FAILED) || high==uint32_t(-MBEDTLS_ERR_X509_ALLOC_FAILED) ||
+    high==uint32_t(-MBEDTLS_ERR_PK_ALLOC_FAILED) || high==uint32_t(-MBEDTLS_ERR_PEM_ALLOC_FAILED) ||
+    high==uint32_t(-MBEDTLS_ERR_MD_ALLOC_FAILED) || high==uint32_t(-MBEDTLS_ERR_CIPHER_ALLOC_FAILED) ||
+    high==uint32_t(-MBEDTLS_ERR_ECP_ALLOC_FAILED) || high==uint32_t(-MBEDTLS_ERR_DHM_ALLOC_FAILED) ||
+    low==uint32_t(-MBEDTLS_ERR_MPI_ALLOC_FAILED) || low==uint32_t(-MBEDTLS_ERR_ASN1_ALLOC_FAILED);
+}
+inline int32_t transportError(Session& s,int direct=0){
+  int code=0,flags=0;
+  const esp_err_t error=esp_tls_get_and_clear_last_error(s.tls->error_handle,&code,&flags);
+  const bool memory=error==ESP_ERR_NO_MEM || allocationError(code) || allocationError(direct);
+  RISC_STAGE_LOG("http failure esp=%d mbedtls=%d flags=%d memory=%u",int(error),code,flags,unsigned(memory));
+  memoryStage(memory?"tls-allocation-failed":"tls-transport-failed");
+  return memory?RISC_HTTP_MEMORY:RISC_HTTP_TRANSPORT;
 }
 inline bool again(ssize_t code){return code==ESP_TLS_ERR_SSL_WANT_READ || code==ESP_TLS_ERR_SSL_WANT_WRITE;}
 inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* count){
@@ -141,7 +187,8 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
     }
     const int code=esp_tls_conn_new_async(s->host,std::strlen(s->host),443,&s->config,s->tls);
     if(!s->budget.alive(now()))return s->error=RISC_HTTP_TIMEOUT;
-    if(code<0)return s->error=RISC_HTTP_TRANSPORT;
+    if(s->error)return s->error;
+    if(code<0)return s->error=transportError(*s);
     if(code==1){s->phase=Phase::Send;s->budget.connected(now());}
     return RISC_HTTP_AGAIN;
   }
@@ -149,7 +196,8 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
     const uint32_t left=s->requestBytes-s->sent;const uint32_t n=left>512?512:left;
     const ssize_t sent=esp_tls_conn_write(s->tls,s->request+s->sent,n);
     if(again(sent))return RISC_HTTP_AGAIN;
-    if(sent<0 || static_cast<uint32_t>(sent)>n)return s->error=RISC_HTTP_TRANSPORT;
+    if(sent<0)return s->error=transportError(*s,int(sent));
+    if(static_cast<uint32_t>(sent)>n)return s->error=RISC_HTTP_TRANSPORT;
     s->sent+=sent;if(s->sent==s->requestBytes)s->phase=Phase::Receive;
     return RISC_HTTP_AGAIN;
   }
@@ -157,7 +205,8 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
   uint8_t bytes[RISC_HTTP_CHUNK_MAX];const ssize_t n=esp_tls_conn_read(s->tls,bytes,capacity);
   if(!s->budget.alive(now()))return s->error=RISC_HTTP_TIMEOUT;
   if(again(n))return RISC_HTTP_AGAIN;
-  if(n<0 || n>capacity)return s->error=RISC_HTTP_TRANSPORT;
+  if(n<0)return s->error=transportError(*s,int(n));
+  if(n>capacity)return s->error=RISC_HTTP_TRANSPORT;
   if(s->wire>s->decoder.maximum+65536u || static_cast<uint32_t>(n)>s->decoder.maximum+65536u-s->wire)return s->error=RISC_HTTP_SIZE;
   s->wire+=n;
   if(!s->decoder.feed(bytes,n,out,capacity))return s->error=s->decoder.error;

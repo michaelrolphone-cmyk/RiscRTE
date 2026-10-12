@@ -1,0 +1,2 @@
+#pragma once
+#define MBEDTLS_ERR_PK_ALLOC_FAILED -0x3F80
