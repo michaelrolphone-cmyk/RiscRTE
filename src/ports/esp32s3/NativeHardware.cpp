@@ -12,6 +12,7 @@
 #endif
 #if RISC_NATIVE_ENTROPY
 #include "NativeEntropy.h"
+#include "NativeEntropyRadioReady.h"
 extern "C" __attribute__((used)) const uint32_t risc_entropy_abi=1;
 #endif
 #include "NativeRadioResourceOwner.h"
@@ -188,12 +189,10 @@ Hardware nativeHardware(bool (*owner)()){
   hardware.radioAsync=&radioAsync;hardware.radioAsyncPrepare=NativeRadioAsync::provision;
 #if RISC_NATIVE_ENTROPY
   NativeEntropy::configure(hardware.owner,[](){
-    // Read only while the shared native lease excludes worker SDK changes.
-    // This generation reached a healthy link and has not stopped/deinitialized.
-    // IDF guarantees RNG entropy while Wi-Fi is enabled, including normal
-    // modem power management; association/reachability is checked by TCP.
-    return nativeRadioResourceHeldReady() && NativeRadio::s.established &&
-      NativeRadio::s.wifi && NativeRadio::s.startAttempted && !NativeRadio::s.closing;
+    // IDF 4.4.7 guarantees entropy with enabled Wi-Fi OR Bluetooth. The lease
+    // excludes radio worker transitions; neither a router nor a peer is needed.
+    return nativeEntropyRadioReady(nativeRadioResourceHeldReady(),
+      NativeRadio::s,NativeHci::healthy);
   },nativeRadioResourceTry,nativeRadioResourceEnd);
   hardware.entropy=NativeEntropy::backend();
 #endif

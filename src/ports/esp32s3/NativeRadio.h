@@ -1,5 +1,5 @@
 #pragma once
-/* Generic station-only IDF 4.4 adapter. Calls are serialized by the CPU port.
+/* Generic station/AP IDF 4.4 adapter. Calls are serialized by the CPU port.
  * Exclusive radio/default-event-loop owner; never share with Arduino WiFi.
  * No app strings or code pointers are retained. See native_radio_shim/README.md
  * for the pinned SDK cleanup contracts and limits exercised by the host shim.
@@ -46,9 +46,9 @@ inline bool cancelled(){return asyncExecuting && cancelRequested.load(std::memor
 
 constexpr int64_t ScanTimeoutUs=INT64_C(10000000);
 constexpr int64_t JoinTimeoutUs=INT64_C(30000000);
-enum Operation : uint32_t { None=0, Join=1, Scan=2 };
+enum Operation : uint32_t { None=0, Join=1, Scan=2, AccessPoint=3 };
 struct State {
-  bool loop=false,wifi=false,startAttempted=false,connectAttempted=false;
+  bool loop=false,wifi=false,startAttempted=false,started=false,connectAttempted=false;
   bool attachAttempted=false,driverClearPending=false,closing=false;
   bool scanAttempted=false,scanList=false,credentials=false,established=false;
   esp_netif_t* netif=nullptr;
@@ -186,12 +186,12 @@ inline bool leave(){
   if(s.credentials){
     wifi_config_t empty{};
     // The only SDK credential copy is RAM-only; overwrite before stop/deinit.
-    if(!sdk("config-clear",sdkCall(ConfigClear,[&](){return esp_wifi_set_config(WIFI_IF_STA,&empty);})))return false;
+    if(!sdk("config-clear",sdkCall(ConfigClear,[&](){return esp_wifi_set_config(s.operation==AccessPoint?WIFI_IF_AP:WIFI_IF_STA,&empty);})))return false;
     s.credentials=false;
   }
   if(s.startAttempted){
     const esp_err_t result=sdkCall(Stop,[&](){return esp_wifi_stop();});if(!wifiAbsent(result))return sdkFailure("stop",result);
-    s.startAttempted=false;
+    s.startAttempted=false;s.started=false;
   }
   if(s.wifi){
     const esp_err_t result=sdkCall(Deinit,[&](){return esp_wifi_deinit();});
@@ -222,9 +222,9 @@ inline bool leave(){
     s.loop=false;
   }
   if(s.netif){
-    const esp_err_t result=sdkCall(DhcpStop,[&](){return esp_netif_dhcpc_stop(s.netif);});
+    const esp_err_t result=sdkCall(DhcpStop,[&](){return s.operation==AccessPoint?esp_netif_dhcps_stop(s.netif):esp_netif_dhcpc_stop(s.netif);});
     if(result!=ESP_OK && result!=ESP_ERR_ESP_NETIF_DHCP_ALREADY_STOPPED && result!=ESP_ERR_ESP_NETIF_IF_NOT_READY)return sdkFailure("dhcp-stop",result);
-    sdkVoid(NetifStop,[&](){esp_netif_action_stop(s.netif,WIFI_EVENT,WIFI_EVENT_STA_STOP,nullptr);});
+    sdkVoid(NetifStop,[&](){esp_netif_action_stop(s.netif,WIFI_EVENT,s.operation==AccessPoint?WIFI_EVENT_AP_STOP:WIFI_EVENT_STA_STOP,nullptr);});
     sdkVoid(NetifDestroy,[&](){esp_netif_destroy(s.netif);});s.netif=nullptr;
   }
   if(!restoreLogs())return false;
@@ -249,15 +249,16 @@ inline bool begin(Operation operation){
   if(!sdk("event-loop-create",sdkCall(LoopCreate,[](){return esp_event_loop_create_default();}))){s={};return false;}
   s.loop=true;if(!continueSetup())return false;
   if(!suppressLogs() || !continueSetup()){leave();return false;}
-  esp_netif_config_t netifConfig=ESP_NETIF_DEFAULT_WIFI_STA();
+  esp_netif_config_t stationConfig=ESP_NETIF_DEFAULT_WIFI_STA(),apConfig=ESP_NETIF_DEFAULT_WIFI_AP();
+  esp_netif_config_t netifConfig=operation==AccessPoint?apConfig:stationConfig;
   if(asyncExecuting && stageSink)stageSink(NetifNew,0,true);
   s.netif=esp_netif_new(&netifConfig);
   if(asyncExecuting && stageSink)stageSink(NetifNew,s.netif?0:-1,false);
   if(!s.netif){leave();return false;}
   if(!continueSetup())return false;
   s.attachAttempted=true;
-  if(!sdk("netif-attach",sdkCall(Attach,[&](){return esp_netif_attach_wifi_station(s.netif);})) || !continueSetup()){leave();return false;}
-  if(!sdk("default-handlers",sdkCall(Defaults,[](){return esp_wifi_set_default_wifi_sta_handlers();})) || !continueSetup()){leave();return false;}
+  if(!sdk("netif-attach",sdkCall(Attach,[&](){return operation==AccessPoint?esp_netif_attach_wifi_ap(s.netif):esp_netif_attach_wifi_station(s.netif);})) || !continueSetup()){leave();return false;}
+  if(!sdk("default-handlers",sdkCall(Defaults,[&](){return operation==AccessPoint?esp_wifi_set_default_wifi_ap_handlers():esp_wifi_set_default_wifi_sta_handlers();})) || !continueSetup()){leave();return false;}
   const uint32_t token=++nextGeneration;
   generation.store(token,std::memory_order_release);eventOperation.store(operation,std::memory_order_release);
   scanEvent.store(0,std::memory_order_release);joinFailed.store(0,std::memory_order_release);
@@ -270,7 +271,7 @@ inline bool begin(Operation operation){
   if(!sdk("init",sdkCall(Init,[&](){return esp_wifi_init(&config);} ))){leave();return false;}
   s.wifi=true;memoryStage("sdk-init-complete");if(!continueSetup())return false;
   if(!sdk("storage-ram",sdkCall(Storage,[](){return esp_wifi_set_storage(WIFI_STORAGE_RAM);})) || !continueSetup()){leave();return false;}
-  if(!sdk("station-mode",sdkCall(Mode,[](){return esp_wifi_set_mode(WIFI_MODE_STA);})) || !continueSetup()){leave();return false;}
+  if(!sdk("station-mode",sdkCall(Mode,[&](){return esp_wifi_set_mode(operation==AccessPoint?WIFI_MODE_AP:WIFI_MODE_STA);})) || !continueSetup()){leave();return false;}
   RADIO_STAGE_LOG("radio wifi begin result=ready operation=%s",operation==Join?"connect":"scan");return true;
 }
 inline bool join(const char* ssid,const char* password){
@@ -291,6 +292,7 @@ inline bool join(const char* ssid,const char* password){
   s.startAttempted=true;
   memoryStage("before-sdk-start");
   if(!sdk("start",sdkCall(Start,[&](){return esp_wifi_start();})) || !continueSetup()){leave();return false;}
+  s.started=true;
   memoryStage("sdk-start-complete");
   if(!ensureLogsSuppressed() || !continueSetup()){leave();return false;}
   s.connectAttempted=true;s.joinDeadline=esp_timer_get_time()+JoinTimeoutUs;
@@ -298,10 +300,30 @@ inline bool join(const char* ssid,const char* password){
   RADIO_STAGE_LOG("radio wifi connect result=accepted");
   return true;
 }
+// Temporary WPA2 AP uses IDF's default 192.168.4.1/24 DHCP network. The
+// caller verifies the returned address before publishing an endpoint. No NVS.
+inline bool accessPoint(const char* ssid,const char* password){
+  const size_t sn=boundedLength(ssid,32),pn=boundedLength(password,63);
+  if(!sn || sn>32 || pn<8 || pn>63 || !idle())return false;
+  wifi_config_t config{};memcpy(config.ap.ssid,ssid,sn);memcpy(config.ap.password,password,pn);
+  config.ap.ssid_len=sn;config.ap.channel=1;config.ap.authmode=WIFI_AUTH_WPA2_PSK;
+  config.ap.max_connection=1;config.ap.beacon_interval=100;
+  if(!begin(AccessPoint)){wipe(&config,sizeof(config));return false;}
+  if(!ensureLogsSuppressed() || !continueSetup()){wipe(&config,sizeof(config));leave();return false;}
+  s.credentials=true;
+  const auto configured=sdkCall(Config,[&](){return esp_wifi_set_config(WIFI_IF_AP,&config);});
+  wipe(&config,sizeof(config));
+  if(!sdk("ap-config",configured) || !continueSetup()){leave();return false;}
+  s.startAttempted=true;s.joinDeadline=esp_timer_get_time()+JoinTimeoutUs;
+  if(!sdk("ap-start",sdkCall(Start,[](){return esp_wifi_start();})) || !continueSetup()){leave();return false;}
+  s.started=true;
+  return true;
+}
 inline bool state(uint8_t* status,int8_t* rssi){
   if(!status || !rssi)return false;
   *status=0;*rssi=0;
   if(s.closing)return false;
+  if(s.operation==AccessPoint && s.wifi && s.startAttempted){*status=sdkCall(NetifUp,[&](){return esp_netif_is_netif_up(s.netif);})?2:1;if(*status==1&&esp_timer_get_time()>=s.joinDeadline){*status=0;return leave();}return true;}
   if(s.operation!=Join || !s.wifi || !s.startAttempted)return true;
   if(joinFailed.load(std::memory_order_acquire)){
 #if RISC_STAGE_LOGS
@@ -327,7 +349,8 @@ inline bool addresses(uint8_t station[12],uint8_t ap[12]){
   if(status!=2)return true;
   esp_netif_ip_info_t ip{};if(!sdk("ip-info",sdkCall(IpInfo,[&](){return esp_netif_get_ip_info(s.netif,&ip);})))return false;
   // esp_ip4_addr_t.addr already stores the network byte order octets.
-  std::memcpy(station,&ip.ip.addr,4);std::memcpy(station+4,&ip.gw.addr,4);std::memcpy(station+8,&ip.netmask.addr,4);
+  uint8_t* target=s.operation==AccessPoint?ap:station;
+  std::memcpy(target,&ip.ip.addr,4);std::memcpy(target+4,&ip.gw.addr,4);std::memcpy(target+8,&ip.netmask.addr,4);
   return true;
 }
 inline uint8_t auth(wifi_auth_mode_t mode){
@@ -355,6 +378,7 @@ inline bool scanStart(){
   s.startAttempted=true;
   memoryStage("before-sdk-start");
   if(!sdk("start",sdkCall(Start,[&](){return esp_wifi_start();})) || !continueSetup()){leave();return false;}
+  s.started=true;
   memoryStage("sdk-start-complete");
   wifi_scan_config_t config{};config.show_hidden=true;config.scan_type=WIFI_SCAN_TYPE_ACTIVE;
   config.scan_time.active.min=0;config.scan_time.active.max=120;

@@ -102,7 +102,7 @@ int main(int argc,char** argv){
  resourceOwner.configure(h.owner,Async::tryShared,Async::endShared,Async::sharedPhaseReady,Async::sharedReady);
  auto table=*Async::api();table.tryShared=[](){++leaseTakes;return resourceOwner.enter();};
  table.endShared=[](){++leaseEnds;resourceOwner.leave();};table.sharedReady=[](){return resourceOwner.ready();};h.radioAsync=&table;
- Port port(h);auto& radio=port.radios_[0];radio.port=&port;auto& hci=port.hci_;hci.port=&port;port.iq_.port=&port;
+ Port port(h);auto& radio=port.radios_[0];radio.port=&port;radio.config.features=3;auto& hci=port.hci_;hci.port=&port;port.iq_.port=&port;
  assert(Port::radioClaim(&radio,&radio.token));
  risc_radio_request_v1 request{};request.struct_size=sizeof(request);request.kind=RISC_RADIO_REQUEST_JOIN;
  strcpy(request.ssid,"Synthetic AP");strcpy(request.password,"synthetic-password");
@@ -116,7 +116,12 @@ int main(int argc,char** argv){
  auto refused=[&](){const auto before=btCalls;uint64_t token=99;assert(!Port::hciOpen(&hci,0,&token) && !token && btCalls==before);};
  auto connect=[&](){runStep();assert(poll(RISC_RADIO_JOINING)==RISC_RADIO_PENDING);associated=true;netif->up=true;ip.ip.addr=0x01020304;runStep();assert(poll(RISC_RADIO_CONNECTED)==RISC_RADIO_PENDING);};
  sdkBoundary=wifiBoundary;
- if(test=="idle-iq-owner"){
+ if(test=="private-ap"){
+  assert(open());request.kind=RISC_RADIO_REQUEST_AP;request.flags=RISC_RADIO_TEMPORARY;
+  begin();runStep();assert(poll(RISC_RADIO_JOINING)==RISC_RADIO_PENDING);
+  netif->up=true;ip.ip.addr=0x0104a8c0;runStep();assert(poll(RISC_RADIO_CONNECTED)==RISC_RADIO_PENDING);
+  assert(close());assert(open());finish();assert(close());
+ }else if(test=="idle-iq-owner"){
   uint64_t iq=0;assert(Port::radioIqClaim(&port.iq_,&iq) && iq);refused();assert(!leaseTakes);assert(Port::radioIqRelease(&port.iq_,iq));
   const auto takes=leaseTakes;std::thread stranger([&](){refused();});stranger.join();assert(leaseTakes==takes);
   assert(open());const auto token=hciToken;const auto before=btCalls;

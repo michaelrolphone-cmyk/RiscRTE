@@ -4,11 +4,11 @@ int32_t Port::radioAsyncBegin(void* context,uint64_t token,const risc_radio_requ
   auto& c=*static_cast<Radio*>(context);auto& p=*c.port;
   if(!out || !request || request->struct_size!=sizeof(*request))return RISC_RADIO_INVALID;
   if(!p.available() || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return RISC_RADIO_INVALID;
-  if(!p.hw_.radioAsync || c.asyncUnavailable)return RISC_RADIO_UNAVAILABLE;
-  if(c.active || c.closing || c.operation || p.iq_.token || p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_RADIO_BUSY;
+  if(!p.hw_.radioAsync || c.asyncUnavailable || (request->kind==RISC_RADIO_REQUEST_AP && !(c.config.features&2)))return RISC_RADIO_UNAVAILABLE;
+  if(((c.active || c.operation) && !(request->flags&RISC_RADIO_TEMPORARY)) || c.suspendedOperation || ((request->flags&RISC_RADIO_TEMPORARY) && (c.serviceLease || !p.tcpIdle() || (p.hw_.httpIdle && !p.hw_.httpIdle()))) || c.closing || p.iq_.token || p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_RADIO_BUSY;
   const int32_t result=p.hw_.radioAsync->begin(request,out);
   if(result==RISC_RADIO_ACCEPTED && *out){
-    c.operation=*out;c.completed=0;c.active=true;c.scanning=request->kind==RISC_RADIO_REQUEST_SCAN;
+    c.suspendedOperation=c.operation;c.operation=*out;c.completed=0;c.active=true;c.scanning=request->kind==RISC_RADIO_REQUEST_SCAN;
   }else if(result==RISC_RADIO_ACCEPTED){c.closing=true;return RISC_RADIO_RETAINED;}
   return result;
 }
@@ -31,10 +31,10 @@ int32_t Port::radioAsyncPoll(void* context,uint64_t token,uint32_t operation,ris
     if(strnlen(e.ssid,sizeof(e.ssid))>32 || e.reserved || e.channel>14 || (e.auth>GARDEN_RADIO_AUTH_WPA2_WPA3_PSK && e.auth!=GARDEN_RADIO_AUTH_UNSUPPORTED))valid=false;
   }
   if(result==RISC_RADIO_QUIESCENT){
-    if(next.phase!=RISC_RADIO_IDLE || !next.quiescent || next.owned || !p.hw_.radioIdle())valid=false;
+    if(next.phase!=RISC_RADIO_IDLE || !next.quiescent || next.owned || (operation==c.operation && !c.suspendedOperation && !p.hw_.radioIdle()))valid=false;
   }else if(next.quiescent || !next.owned)valid=false;
   if(!valid){c.closing=true;return RISC_RADIO_RETAINED;}
-  if(result==RISC_RADIO_QUIESCENT){c.active=c.closing=c.scanning=false;c.completed=operation;c.operation=0;}
+  if(result==RISC_RADIO_QUIESCENT && operation==c.operation){c.closing=c.scanning=false;c.completed=operation;c.operation=c.suspendedOperation;c.suspendedOperation=0;c.active=c.operation!=0;}
   if(result==RISC_RADIO_RETAINED || next.phase==RISC_RADIO_CLEANUP_FAILED)c.closing=true;
   *out=next;return result;
 }
@@ -46,8 +46,8 @@ int32_t Port::radioAsyncCancel(void* context,uint64_t token,uint32_t operation){
   if(!p.tcpIdle() || (p.hw_.httpIdle && !p.hw_.httpIdle()))return RISC_RADIO_BUSY;
   const int32_t result=p.hw_.radioAsync->cancel(operation);
   if(result==RISC_RADIO_QUIESCENT){
-    if(!p.hw_.radioIdle()){c.closing=true;return RISC_RADIO_RETAINED;}
-    c.active=c.closing=c.scanning=false;c.completed=operation;c.operation=0;
+    if(operation==c.operation && !c.suspendedOperation && !p.hw_.radioIdle()){c.closing=true;return RISC_RADIO_RETAINED;}
+    c.closing=c.scanning=false;c.completed=operation;c.operation=c.suspendedOperation;c.suspendedOperation=0;c.active=c.operation!=0;
   }else if(result==RISC_RADIO_RETAINED)c.closing=true;
   // Ordinary STOPPING deliberately leaves c.closing false: KV/time/input and
   // display keep their owner context; exit/sleep/IQ are fenced by c.active.
