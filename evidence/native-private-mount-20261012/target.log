@@ -1,0 +1,169 @@
+/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/lib/libesp_littlefs.a: OK
+/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/qio_opi/include/sdkconfig.h: OK
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+c8e4672667c185564d0b8166a897673d5cf97bfa91cf536ee904fb53bb26f8fd  /workspace/shared/x4-native-private-mount-evidence-20261012/target/NativeAppData-off.o
+0eb4ff655f781413a286a9382b8c8e819321a7fd929c3f9a927ef9d2ff4c595b  /workspace/shared/x4-native-private-mount-evidence-20261012/target/NativeAppData-on.o
+8c0ef5b4a5c9e51f73f204d93a0d906883b92159f04cfac10dcd1d9f8a70e5cb  /workspace/shared/x4-native-private-mount-evidence-20261012/target/NativeAppDataMount-off.o
+ac9b39849d398013106e6a6f37b287a98e2ce0260c49d576dc9fdc5282593327  /workspace/shared/x4-native-private-mount-evidence-20261012/target/NativeAppDataMount-on.o
+ad7b18b6348b50aafa6b12459c71716dbe2b4b9197b589ef44da39ac9cce78a3  /workspace/shared/x4-native-private-mount-evidence-20261012/target/parity-new.o
+ad7b18b6348b50aafa6b12459c71716dbe2b4b9197b589ef44da39ac9cce78a3  /workspace/shared/x4-native-private-mount-evidence-20261012/target/parity-old.o
+74c97ecd4b9f2763d7a888b1947638b9188c7310b3815641fcf16fd548342199  /workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/lib/libesp_littlefs.a
+09b7ecccbd4960d49aa9aacc57662c7982221c3f49bc500c663bf117afe78fdd  /workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/qio_opi/include/sdkconfig.h
+AsyncAppDataReplace.h:33:18:static int32_t RiscStorage::AsyncAppDataReplace::execute(void*, const void*, uint32_t, void*, uint32_t, uint32_t*)	64	static
+NativeAppData.cpp:41:6:bool RiscAppData::{anonymous}::safe()	32	static
+NativeAppData.cpp:44:23:static void* RiscAppData::{anonymous}::<lambda(size_t)>::_FUN(size_t)	32	static
+NativeAppData.cpp:39:6:bool RiscAppData::{anonymous}::worker()	32	static
+NativeAppData.cpp:54:90:static int32_t RiscAppData::{anonymous}::prepareWriter()::<lambda(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)	48	static
+NativeAppData.cpp:43:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+NativeAppData.cpp:42:50:static unsigned int RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+NativeAppData.cpp:45:6:void RiscAppData::{anonymous}::work(void*)	48	static
+NativeAppData.cpp:38:6:bool RiscAppData::{anonymous}::pending()	32	static
+NativeAppData.cpp:89:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+NativeAppData.cpp:86:88:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)>::_FUN(void*, uint32_t, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)	48	static
+NativeAppData.cpp:87:72:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)	48	static
+NativeAppData.cpp:85:59:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint32_t*, uint64_t*)>::_FUN(void*, uint32_t, const char*, uint32_t*, uint64_t*)	32	static
+AppDataFiles.h:21:8:bool RiscStorage::AppDataFiles::exitSafe() const	32	static
+NativeAppData.cpp:88:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+AsyncAppDataReplace.h:12:11:int32_t RiscStorage::AsyncAppDataReplace::begin(uint32_t, const char*, uint64_t, const void*, uint32_t, uint64_t*)	128	static
+NativeAppData.cpp:61:9:int32_t RiscAppData::{anonymous}::beginReplace(void*, uint32_t, const char*, uint64_t, const void*, uint32_t, uint64_t*)	64	static
+AsyncAppDataReplace.h:20:11:int32_t RiscStorage::AsyncAppDataReplace::collect(uint64_t, int32_t*)	48	static
+NativeAppData.cpp:72:9:int32_t RiscAppData::{anonymous}::collectReplace(void*, uint64_t, int32_t*)	32	static
+NativeAppData.cpp:91:6:bool RiscAppData::prepare(bool (*)(), bool (*)())	48	static
+NativeAppData.cpp:117:33:const RiscBoot::AppDataBackend* RiscAppData::backend()	32	static
+NativeAppData.cpp:118:6:bool RiscAppData::custodySafe()	32	static
+NativeAppData.cpp:119:6:bool RiscAppData::exitSafe()	32	static
+NativeAppData.cpp:120:1:cpp)	80	static
+AsyncAppDataReplace.h:33:18:static int32_t RiscStorage::AsyncAppDataReplace::execute(void*, const void*, uint32_t, void*, uint32_t, uint32_t*)	64	static
+NativeAppData.cpp:41:6:bool RiscAppData::{anonymous}::safe()	32	static
+NativeAppData.cpp:44:23:static void* RiscAppData::{anonymous}::<lambda(size_t)>::_FUN(size_t)	32	static
+NativeAppData.cpp:39:6:bool RiscAppData::{anonymous}::worker()	32	static
+NativeAppData.cpp:43:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+NativeAppData.cpp:42:50:static unsigned int RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+NativeAppData.cpp:45:6:void RiscAppData::{anonymous}::work(void*)	48	static
+NativeAppData.cpp:38:6:bool RiscAppData::{anonymous}::pending()	32	static
+NativeAppData.cpp:89:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+NativeAppDataMount.h:46:2:RiscAppDataMount::Guard::~Guard()	32	static
+NativeAppData.cpp:54:90:static int32_t RiscAppData::{anonymous}::prepareWriter()::<lambda(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)	64	static
+NativeRadioResources.h:16:3:RiscCpu::NativeRadioResourceGuard::~NativeRadioResourceGuard()	32	static
+NativeAppData.cpp:87:72:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)	64	static
+NativeAppData.cpp:86:88:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)>::_FUN(void*, uint32_t, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)	80	static
+NativeAppData.cpp:85:59:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint32_t*, uint64_t*)>::_FUN(void*, uint32_t, const char*, uint32_t*, uint64_t*)	48	static
+AppDataFiles.h:21:8:bool RiscStorage::AppDataFiles::exitSafe() const	32	static
+NativeAppData.cpp:88:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+AsyncAppDataReplace.h:12:11:int32_t RiscStorage::AsyncAppDataReplace::begin(uint32_t, const char*, uint64_t, const void*, uint32_t, uint64_t*)	128	static
+NativeAppData.cpp:61:9:int32_t RiscAppData::{anonymous}::beginReplace(void*, uint32_t, const char*, uint64_t, const void*, uint32_t, uint64_t*)	64	static
+AsyncAppDataReplace.h:20:11:int32_t RiscStorage::AsyncAppDataReplace::collect(uint64_t, int32_t*)	48	static
+NativeAppData.cpp:72:9:int32_t RiscAppData::{anonymous}::collectReplace(void*, uint64_t, int32_t*)	32	static
+NativeAppData.cpp:91:6:bool RiscAppData::prepare(bool (*)(), bool (*)())	64	static
+NativeAppData.cpp:117:33:const RiscBoot::AppDataBackend* RiscAppData::backend()	32	static
+NativeAppData.cpp:118:6:bool RiscAppData::custodySafe()	32	static
+NativeAppData.cpp:119:6:bool RiscAppData::exitSafe()	32	static
+NativeAppData.cpp:120:1:cpp)	80	static
+NativeAppDataMount.cpp:173:6:bool RiscAppDataMount::{anonymous}::protectedPartition(const esp_partition_t*)	32	static
+NativeAppDataMount.cpp:45:7:void* RiscAppDataMount::{anonymous}::task()	32	static
+NativeAppDataMount.cpp:64:6:bool RiscAppDataMount::{anonymous}::exact()	32	static
+NativeAppDataMount.cpp:46:6:bool RiscAppDataMount::{anonymous}::under(const char*, const char*)	32	static
+NativeAppDataMount.cpp:181:6:bool RiscAppDataMount::retained()	32	static
+NativeAppDataMount.cpp:174:6:bool RiscAppDataMount::{anonymous}::partitionCall(const esp_partition_t*)	32	static
+NativeAppDataMount.cpp:182:6:void RiscAppDataMount::retain()	32	static
+NativeAppDataMount.cpp:72:6:bool RiscAppDataMount::{anonymous}::end(bool, bool)	32	static
+NativeAppDataMount.cpp:179:11:esp_err_t RiscAppDataMount::{anonymous}::observed(esp_err_t, const esp_partition_t*)	32	static
+NativeAppDataMount.cpp:183:6:bool RiscAppDataMount::ready()	32	static
+NativeAppDataMount.cpp:184:6:bool RiscAppDataMount::held()	32	static
+NativeAppDataMount.cpp:55:6:bool RiscAppDataMount::{anonymous}::pathAllowed(const char*, bool)	48	static
+NativeAppDataMount.cpp:63:6:bool RiscAppDataMount::{anonymous}::mutablePath(const char*)	32	static
+NativeAppDataMount.cpp:66:6:bool RiscAppDataMount::{anonymous}::start(void*)	32	static
+NativeAppDataMount.cpp:141:5:int RiscAppDataMount::{anonymous}::mkdir(void*, const char*, mode_t)	32	static
+NativeAppDataMount.cpp:100:5:int RiscAppDataMount::{anonymous}::stat(void*, const char*, stat*)	32	static
+NativeAppDataMount.cpp:143:5:int RiscAppDataMount::{anonymous}::utime(void*, const char*, const utimbuf*)	32	static
+NativeAppDataMount.cpp:142:6:int RiscAppDataMount::{anonymous}::truncate(void*, const char*, off_t)	32	static
+NativeAppDataMount.cpp:81:8:) [with Result = int; Function = int (*)(void*, const char*); Args = {const char*}]	32	static
+NativeAppDataMount.cpp:140:5:int RiscAppDataMount::{anonymous}::rmdir(void*, const char*)	32	static
+NativeAppDataMount.cpp:139:5:int RiscAppDataMount::{anonymous}::unlink(void*, const char*)	32	static
+NativeAppDataMount.cpp:129:5:int RiscAppDataMount::{anonymous}::rename(void*, const char*, const char*)	32	static
+NativeAppDataMount.cpp:107:6:DIR* RiscAppDataMount::{anonymous}::opendir(void*, const char*)	32	static
+NativeAppDataMount.cpp:86:5:int RiscAppDataMount::{anonymous}::open(void*, const char*, int, int)	32	static
+NativeAppDataMount.cpp:43:6:bool RiscAppDataMount::{anonymous}::directoryKnown(DIR*)	32	static
+NativeAppDataMount.cpp:138:6:long int RiscAppDataMount::{anonymous}::telldir(void*, DIR*)	32	static
+NativeAppDataMount.cpp:126:6:void RiscAppDataMount::{anonymous}::seekdir(void*, DIR*, long int)	32	static
+NativeAppDataMount.cpp:122:5:int RiscAppDataMount::{anonymous}::closedir(void*, DIR*)	32	static
+NativeAppDataMount.cpp:118:5:int RiscAppDataMount::{anonymous}::readdir_r(void*, DIR*, dirent*, dirent**)	32	static
+NativeAppDataMount.cpp:115:16:dirent* RiscAppDataMount::{anonymous}::readdir(void*, DIR*)	32	static
+NativeAppDataMount.cpp:42:6:bool RiscAppDataMount::{anonymous}::fileKnown(int)	32	static
+NativeAppDataMount.cpp:137:5:int RiscAppDataMount::{anonymous}::ftruncate(void*, int, off_t)	32	static
+NativeAppDataMount.cpp:136:5:int RiscAppDataMount::{anonymous}::fcntl(void*, int, int, int)	32	static
+NativeAppDataMount.cpp:135:5:int RiscAppDataMount::{anonymous}::fsync(void*, int)	32	static
+NativeAppDataMount.cpp:134:7:off_t RiscAppDataMount::{anonymous}::lseek(void*, int, off_t, int)	32	static
+NativeAppDataMount.cpp:133:9:ssize_t RiscAppDataMount::{anonymous}::pread(void*, int, void*, size_t, off_t)	32	static
+NativeAppDataMount.cpp:132:9:ssize_t RiscAppDataMount::{anonymous}::read(void*, int, void*, size_t)	32	static
+NativeAppDataMount.cpp:131:9:ssize_t RiscAppDataMount::{anonymous}::pwrite(void*, int, const void*, size_t, off_t)	32	static
+NativeAppDataMount.cpp:130:9:ssize_t RiscAppDataMount::{anonymous}::write(void*, int, const void*, size_t)	32	static
+NativeAppDataMount.cpp:104:5:int RiscAppDataMount::{anonymous}::fstat(void*, int, stat*)	32	static
+NativeAppDataMount.cpp:94:5:int RiscAppDataMount::{anonymous}::close(void*, int)	32	static
+NativeAppDataMount.cpp:185:6:bool RiscAppDataMount::prepare(const esp_partition_t*)	32	static
+NativeAppDataMount.cpp:200:6:bool RiscAppDataMount::enter(RiscAppDataMount::Access)	32	static
+NativeAppDataMount.cpp:207:6:void RiscAppDataMount::leave()	32	static
+NativeAppDataMount.cpp:190:6:bool RiscAppDataMount::finish()	96	static
+NativeAppDataMount.cpp:212:6:bool RiscAppDataMount::identity(RiscAppDataMount::Identity&)	32	static
+NativeAppDataMount.cpp:213:6:bool RiscAppDataMount::custody(RiscAppDataMount::Custody&)	32	static
+NativeAppDataMount.cpp:214:6:bool RiscAppDataMount::usage(size_t*, size_t*)	32	static
+NativeAppDataMount.cpp:220:22:esp_err_t __wrap_esp_vfs_register(const char*, const esp_vfs_t*, void*)	48	static
+NativeAppDataMount.cpp:232:22:esp_err_t __wrap_esp_vfs_unregister(const char*)	32	static
+NativeAppDataMount.cpp:236:22:esp_err_t __wrap_esp_partition_read(const esp_partition_t*, size_t, void*, size_t)	32	static
+NativeAppDataMount.cpp:239:22:esp_err_t __wrap_esp_partition_write(const esp_partition_t*, size_t, const void*, size_t)	32	static
+NativeAppDataMount.cpp:243:22:esp_err_t __wrap_esp_partition_erase_range(const esp_partition_t*, size_t, size_t)	32	static
+NativeAppDataMount.cpp:247:22:esp_err_t __wrap_esp_littlefs_format(const char*)	32	static
+NativeAppDataMount.cpp:250:22:esp_err_t __wrap_esp_littlefs_format_partition(const esp_partition_t*)	32	static
+AsyncAppDataReplace.h:33:18:static int32_t RiscStorage::AsyncAppDataReplace::execute(void*, const void*, uint32_t, void*, uint32_t, uint32_t*)	64	static
+parity.cpp:41:6:bool RiscAppData::{anonymous}::safe()	32	static
+parity.cpp:44:23:static void* RiscAppData::{anonymous}::<lambda(size_t)>::_FUN(size_t)	32	static
+parity.cpp:39:6:bool RiscAppData::{anonymous}::worker()	32	static
+parity.cpp:54:90:static int32_t RiscAppData::{anonymous}::prepareWriter()::<lambda(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)	48	static
+parity.cpp:43:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+parity.cpp:42:50:static unsigned int RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+parity.cpp:45:6:void RiscAppData::{anonymous}::work(void*)	48	static
+parity.cpp:38:6:bool RiscAppData::{anonymous}::pending()	32	static
+parity.cpp:89:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+parity.cpp:86:88:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)>::_FUN(void*, uint32_t, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)	48	static
+parity.cpp:87:72:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)	48	static
+parity.cpp:85:59:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint32_t*, uint64_t*)>::_FUN(void*, uint32_t, const char*, uint32_t*, uint64_t*)	32	static
+AppDataFiles.h:21:8:bool RiscStorage::AppDataFiles::exitSafe() const	32	static
+parity.cpp:88:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+AsyncAppDataReplace.h:12:11:int32_t RiscStorage::AsyncAppDataReplace::begin(uint32_t, const char*, uint64_t, const void*, uint32_t, uint64_t*)	128	static
+parity.cpp:61:9:int32_t RiscAppData::{anonymous}::beginReplace(void*, uint32_t, const char*, uint64_t, const void*, uint32_t, uint64_t*)	64	static
+AsyncAppDataReplace.h:20:11:int32_t RiscStorage::AsyncAppDataReplace::collect(uint64_t, int32_t*)	48	static
+parity.cpp:72:9:int32_t RiscAppData::{anonymous}::collectReplace(void*, uint64_t, int32_t*)	32	static
+parity.cpp:91:6:bool RiscAppData::prepare(bool (*)(), bool (*)())	48	static
+parity.cpp:117:33:const RiscBoot::AppDataBackend* RiscAppData::backend()	32	static
+parity.cpp:118:6:bool RiscAppData::custodySafe()	32	static
+parity.cpp:119:6:bool RiscAppData::exitSafe()	32	static
+parity.cpp:120:1:cpp)	80	static
+AsyncAppDataReplace.h:33:18:static int32_t RiscStorage::AsyncAppDataReplace::execute(void*, const void*, uint32_t, void*, uint32_t, uint32_t*)	64	static
+parity.cpp:19:6:bool RiscAppData::{anonymous}::safe()	32	static
+parity.cpp:22:23:static void* RiscAppData::{anonymous}::<lambda(size_t)>::_FUN(size_t)	32	static
+parity.cpp:17:6:bool RiscAppData::{anonymous}::worker()	32	static
+parity.cpp:32:90:static int32_t RiscAppData::{anonymous}::prepareWriter()::<lambda(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)	48	static
+parity.cpp:21:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+parity.cpp:20:50:static unsigned int RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+parity.cpp:23:6:void RiscAppData::{anonymous}::work(void*)	48	static
+parity.cpp:16:6:bool RiscAppData::{anonymous}::pending()	32	static
+parity.cpp:64:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+parity.cpp:61:88:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)>::_FUN(void*, uint32_t, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)	48	static
+parity.cpp:62:72:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, uint64_t, const void*, uint32_t)	48	static
+parity.cpp:60:59:static int32_t RiscAppData::{anonymous}::<lambda(void*, uint32_t, const char*, uint32_t*, uint64_t*)>::_FUN(void*, uint32_t, const char*, uint32_t*, uint64_t*)	32	static
+AppDataFiles.h:21:8:bool RiscStorage::AppDataFiles::exitSafe() const	32	static
+parity.cpp:63:10:static bool RiscAppData::{anonymous}::<lambda(void*)>::_FUN(void*)	32	static
+AsyncAppDataReplace.h:12:11:int32_t RiscStorage::AsyncAppDataReplace::begin(uint32_t, const char*, uint64_t, const void*, uint32_t, uint64_t*)	128	static
+parity.cpp:39:9:int32_t RiscAppData::{anonymous}::beginReplace(void*, uint32_t, const char*, uint64_t, const void*, uint32_t, uint64_t*)	64	static
+AsyncAppDataReplace.h:20:11:int32_t RiscStorage::AsyncAppDataReplace::collect(uint64_t, int32_t*)	48	static
+parity.cpp:50:9:int32_t RiscAppData::{anonymous}::collectReplace(void*, uint64_t, int32_t*)	32	static
+parity.cpp:66:6:bool RiscAppData::prepare(bool (*)(), bool (*)())	48	static
+parity.cpp:78:33:const RiscBoot::AppDataBackend* RiscAppData::backend()	32	static
+parity.cpp:79:6:bool RiscAppData::custodySafe()	32	static
+parity.cpp:80:6:bool RiscAppData::exitSafe()	32	static
+parity.cpp:81:1:cpp)	80	static
+PASS: pinned target compile; empty default-off binding; NativeAppData default-off byte-identical
