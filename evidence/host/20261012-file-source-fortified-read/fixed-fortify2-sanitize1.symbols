@@ -1,0 +1,4 @@
+                 U __printf_chk@GLIBC_2.3.4
+                 U __read_chk@GLIBC_2.4
+                 U __strcpy_chk@GLIBC_2.3.4
+                 U read

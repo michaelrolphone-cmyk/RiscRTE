@@ -1,0 +1,1 @@
+test: test/file_source_storage_test.cpp:55: int main(int, char**): Assertion `shortIo.readAt(0,copied.data(),4096,&n)==RISC_FILE_SOURCE_IO&&!n' failed.

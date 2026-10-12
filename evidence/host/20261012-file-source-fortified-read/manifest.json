@@ -1,0 +1,98 @@
+{
+  "schema": "riscrte.file-source-fortified-read-ci-repair.v1",
+  "date_utc": "2026-10-12",
+  "base_commit": "548db9339a9de9ec767a6b9303d5d6a8e59ff07f",
+  "failed_run": {
+    "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/actions/runs/38264028081",
+    "sha": "9c4772461532bd5349b5c392d51533ed212c202a",
+    "normal_job": 114861507369,
+    "normal_conclusion": "success",
+    "sanitized_job": 114861507808,
+    "sanitized_conclusion": "failure",
+    "failed_assertion": "test/file_source_storage_test.cpp:55",
+    "exit_code": 134
+  },
+  "local_compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+  "pre_repair_test_sha256": "a8e5357f8a7e85a07fbc9980a83621b71b54b57a2866344bb9ccbba541586228",
+  "reproduction": {
+    "default_asan_exit": 0,
+    "fortify3_asan_exit": 134,
+    "fortified_undefined_symbol": "__read_chk@GLIBC_2.4"
+  },
+  "verification": [
+    {
+      "fortify": "default",
+      "sanitize": 0,
+      "exit": 0,
+      "injected_failures": 1,
+      "fortified_read_calls": 0,
+      "log": "fixed-fortifydefault-sanitize0.log"
+    },
+    {
+      "fortify": "default",
+      "sanitize": 1,
+      "exit": 0,
+      "injected_failures": 1,
+      "fortified_read_calls": 0,
+      "log": "fixed-fortifydefault-sanitize1.log"
+    },
+    {
+      "fortify": "2",
+      "sanitize": 0,
+      "exit": 0,
+      "injected_failures": 1,
+      "fortified_read_calls": 0,
+      "log": "fixed-fortify2-sanitize0.log"
+    },
+    {
+      "fortify": "2",
+      "sanitize": 1,
+      "exit": 0,
+      "injected_failures": 1,
+      "fortified_read_calls": 8,
+      "log": "fixed-fortify2-sanitize1.log"
+    },
+    {
+      "fortify": "3",
+      "sanitize": 0,
+      "exit": 0,
+      "injected_failures": 1,
+      "fortified_read_calls": 0,
+      "log": "fixed-fortify3-sanitize0.log"
+    },
+    {
+      "fortify": "3",
+      "sanitize": 1,
+      "exit": 0,
+      "injected_failures": 1,
+      "fortified_read_calls": 8,
+      "log": "fixed-fortify3-sanitize1.log"
+    }
+  ],
+  "production_files_changed": [],
+  "hosted_repair_rerun": false,
+  "hardware_qualification": false,
+  "sources_sha256": {
+    "test/file_source_storage_test.cpp": "458e998b93c62ea2a739d5c58a87214bfd6672644f2ac270241d5a54a929dd03",
+    "test/run_file_source_storage_test.sh": "1f571e84cb1062795e9ce44972fd61d33c7b3d3fc8a81bdaf8ccbf8f3f4be801",
+    "src/runtime/storage/FileSourceFiles.h": "c3090ebf69da39259cf8ed2e42356dde0fe32f8d8f7fdf42be364b97331349fb"
+  },
+  "evidence_sha256": {
+    "before-default-asan.log": "c1c9f98c809f6277ef37dbe130b4692dceae59a2c4fdb6ade91af349f39109d6",
+    "before-fortify3-asan.log": "77263467168bde8269f9df123dc51fcef3aa9fed81f9d745c6bd1149059de174",
+    "before-fortify3-asan.symbols": "2d217b78115dc347da81a4679bdacbd5bd3fb7681dde5826c125394feb62aaca",
+    "fixed-fortify2-sanitize0.log": "4483b6e6b48f6c5fdb83d1dadb49506bbe50e26ad9f77093ff01c44cdc2e9925",
+    "fixed-fortify2-sanitize0.symbols": "d954cb1276157ade04db7f4d4a8fe741cbf308f652811b5325d72621471b9545",
+    "fixed-fortify2-sanitize1.log": "fd4a1c38271e8bbb7b8586ccaadba8a2859eff0948cb40eab874a7bc00502034",
+    "fixed-fortify2-sanitize1.symbols": "de07cb5ea330f18c6c88fa2293a379c51107a7ee5e82427f31a8a996abb73ecb",
+    "fixed-fortify3-sanitize0.log": "4483b6e6b48f6c5fdb83d1dadb49506bbe50e26ad9f77093ff01c44cdc2e9925",
+    "fixed-fortify3-sanitize0.symbols": "d954cb1276157ade04db7f4d4a8fe741cbf308f652811b5325d72621471b9545",
+    "fixed-fortify3-sanitize1.log": "fd4a1c38271e8bbb7b8586ccaadba8a2859eff0948cb40eab874a7bc00502034",
+    "fixed-fortify3-sanitize1.symbols": "de07cb5ea330f18c6c88fa2293a379c51107a7ee5e82427f31a8a996abb73ecb",
+    "fixed-fortifydefault-sanitize0.log": "4483b6e6b48f6c5fdb83d1dadb49506bbe50e26ad9f77093ff01c44cdc2e9925",
+    "fixed-fortifydefault-sanitize0.symbols": "3ce8eacee37c53b7f1808382c661da607ec73a2a9f76f4253b4ac03aaa5b0112",
+    "fixed-fortifydefault-sanitize1.log": "4483b6e6b48f6c5fdb83d1dadb49506bbe50e26ad9f77093ff01c44cdc2e9925",
+    "fixed-fortifydefault-sanitize1.symbols": "f782b049399e59237a5e43333d0e46402abb1d47d19c97d17221cb7373172cc7",
+    "hosted-failure-excerpt.log": "4199a59449873547e2f8584e536747957f73e041180426e9e4728620d3ef0e52"
+  }
+}

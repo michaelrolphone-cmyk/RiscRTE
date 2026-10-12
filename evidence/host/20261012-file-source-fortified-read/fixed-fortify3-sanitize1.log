@@ -1,0 +1,3 @@
+File source read injection: 1 consumed failure; 8 fortified read calls PASS
+File source headroom, short I/O, failed-read privacy, symlink refusal, false-success-open and terminal I/O no-retry PASS
+File source disk backend: 12 MiB bounded streaming, seek, full disk, interrupted capture, close retention, cold cleanup and reopen PASS
