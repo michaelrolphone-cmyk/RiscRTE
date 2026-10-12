@@ -1,0 +1,3 @@
+copied job payload: zero-payload no allocation, OOM before mailbox acceptance, queued cancel wipe/free, returning Retained wipe/free with permanent retained control PASS
+copied job payload: blocked worker and pending cancellation retain the allocation until callback return, then wipe/free before completion publication PASS
+compact native jobs: zero/full payload bounds, copy/wipe, 10000 threaded generations, retention and result bounds PASS; default Worker=9272, payload job=160, control job=160

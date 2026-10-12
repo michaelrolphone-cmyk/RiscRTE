@@ -1,0 +1,13 @@
+{
+  "failed_public_commit": "59f6ff5d5b6cf9351c6db24d26d99558fcc0a181",
+  "failed_run": 38303598975,
+  "failed_jobs": [
+    114992176641,
+    114992177134
+  ],
+  "failure": "git show historical StorageWorker.h cannot resolve it in the depth-one Actions checkout",
+  "repair": "exact hash-verified historical header fixture; no production change or network fetch",
+  "baseline_commit": "1c1ed8661ea30d47e7e9707c41d492ce3a2b4d70",
+  "baseline_blob": "9aa82a52cd12e28f9f04170f0feba3a49a7fdf71",
+  "sha256": "a402ecd14e2c00da069769b6d622e09eb954b5c5bc9d15f10ad0c2a6bdc1d297"
+}

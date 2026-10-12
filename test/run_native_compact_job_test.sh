@@ -2,8 +2,11 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 build="$(mktemp -d)";trap 'rm -rf "$build"' EXIT
-# Fixed reviewed baseline, not a moving HEAD whose layout might silently change.
-git -C "$root" show 1c1ed8661ea30d47e7e9707c41d492ce3a2b4d70:src/runtime/storage/StorageWorker.h | sed 's/namespace RiscStorage {/namespace BaselineStorage {/' > "$build/OldWorker.h"
+# Exact reviewed historical bytes are checked in so shallow source archives and
+# GitHub's depth-one checkout exercise the same ABI baseline without network I/O.
+baseline="$root/test/fixtures/runtime028/StorageWorker.h"
+printf '%s  %s\n' 'a402ecd14e2c00da069769b6d622e09eb954b5c5bc9d15f10ad0c2a6bdc1d297' "$baseline" | sha256sum --check --status
+sed 's/namespace RiscStorage {/namespace BaselineStorage {/' "$baseline" > "$build/OldWorker.h"
 flags=(-std=c++17 -Wall -Wextra -Werror -pthread -I"$root" -I"$root/src" -I"$root/sdk/driver" -I"$root/sdk/hardware")
 if [[ "${SANITIZE:-0}" == 1 ]];then flags+=(-fsanitize=${SANITIZERS:-undefined} -fno-sanitize-recover=all -fno-omit-frame-pointer -g);fi
 if [[ "${NO_PIE:-0}" == 1 ]];then flags+=(-fno-pie -no-pie);fi
