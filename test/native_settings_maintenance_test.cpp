@@ -14,7 +14,7 @@
 #include <openssl/evp.h>
 #include <memory>
 namespace F=NativeFixture;namespace L=RiscCpu::NativeSettingsLifecycle;namespace W=RiscCpu::NativeSettingsWorker;
-using B=RiscCpu::NativeSettingsBootstrap;using Sources=B::Sources;using M=RiscCpu::NativeSettingsMaintenance;using Coordinator=RiscExperimental::NativeSettingsCoordinator;
+using B=RiscCpu::NativeSettingsBootstrap;using Sources=B::Sources;using LegacySources=B::Legacy;using M=RiscCpu::NativeSettingsMaintenance;using Coordinator=RiscExperimental::NativeSettingsCoordinator;
 static std::unique_ptr<Coordinator> services[2];static thread_local unsigned onNamespace=0;static bool concurrentNative=false;static M*maintenance;static Pin*anchorPin;static bool releaseAnchorAtFinal=false;static C*cores[2];static std::string scenario;static bool cancelLatch=false,cancellationArmed=false;static unsigned checkpoints=0;
 struct Iterator {std::string space;std::vector<std::string>keys;size_t at=0;};
 static std::set<Iterator*>iterators;
@@ -25,6 +25,10 @@ extern "C" void nvs_entry_info(nvs_iterator_t it,nvs_entry_info_t*out){++F::nvsT
 extern "C" void nvs_release_iterator(nvs_iterator_t it){++F::nvsTotal;F::safe();auto*i=static_cast<Iterator*>(it);if(i){assert(iterators.erase(i));delete i;}}
 static const uint8_t nativeOwner[16]={'R','i','s','c','R','T','E','/','N','a','t','i','v','e','1',0};
 static Sources::Hooks sourceHooks(F::Fixture&f){return {&f,[](void*){return F::onWorker&&F::lease;},[](void*){return ESP_OK;},[](void*p){return static_cast<F::Fixture*>(p)->files.retained()?int(C::Retained):int(C::Ok);}};}
+[[maybe_unused]] static LegacySources::Hooks legacyHooks(F::Fixture&f){return {&f,[](void*){return F::onWorker&&F::lease;},[](void*){return uint64_t(1);},[](void*){return F::initialized?ESP_OK:ESP_ERR_NVS_NOT_INITIALIZED;},[](void*p){return static_cast<F::Fixture*>(p)->files.retained()?int(C::Retained):int(C::Ok);}};}
+static bool startupCase(){return scenario.rfind("bootstrap-",0)==0;}
+static bool noCard(){return scenario=="absent"||(startupCase()&&scenario.find("absent")!=std::string::npos);}
+static bool importCase(){return startupCase()&&scenario.find("legacy")!=std::string::npos;}
 static void freshBaseline(F::Fixture&f,const char*value){Sources sources(f.core.namespaceId(),nativeOwner,f.inspector,sourceHooks(f));using Factory=RiscExperimental::NativeBaselineAdmission;Factory factory(&sources,f.core,{nullptr,[](void*){return F::onWorker&&F::lease;},[](void*){return uint64_t(1);}},{},sources.sources(),{});C::Initialization admission;assert(!factory.admitFreshEmpty(&admission)&&!f.core.initializeFreshEmpty(admission));f.store.finishOperation();assert(!F::put(f.core,"setting",value));f.store.finishOperation();}
 #if !RISC_NATIVE_SETTINGS_ASSEMBLY
 bool esp_ptr_internal(const void*p){return p!=nullptr;}
@@ -47,12 +51,14 @@ struct Hash {EVP_MD_CTX*ctx=EVP_MD_CTX_new();~Hash(){EVP_MD_CTX_free(ctx);}
 static void saveNvs(){std::ofstream out(F::rootPath+".receipt",std::ios::binary);auto write=[&](uint32_t n){out.write(reinterpret_cast<const char*>(&n),sizeof n);};write(F::nvs.size());for(const auto&space:F::nvs){write(space.first.size());out.write(space.first.data(),space.first.size());write(space.second.size());for(const auto&row:space.second){write(row.first.size());out.write(row.first.data(),row.first.size());write(row.second.size());out.write(reinterpret_cast<const char*>(row.second.data()),row.second.size());}}out.close();assert(out);}
 static void loadNvs(){std::ifstream in(F::rootPath+".receipt",std::ios::binary);auto read=[&](){uint32_t n;in.read(reinterpret_cast<char*>(&n),sizeof n);assert(in);return n;};F::nvs.clear();const auto count=read();assert(count<8);for(unsigned i=0;i<count;++i){auto n=read();assert(n<32);std::string space(n,' ');in.read(space.data(),n);const auto rows=read();assert(rows<8);for(unsigned j=0;j<rows;++j){n=read();assert(n<32);std::string key(n,' ');in.read(key.data(),n);n=read();assert(n<1000);auto&bytes=F::nvs[space][key];bytes.resize(n);in.read(reinterpret_cast<char*>(bytes.data()),n);}}assert(in);}
 static uint64_t ownerScheduleCalls=0,ownerScheduleMs=0,providerWorkerDelayMs=0,hardwareSleepMs=0;
-static void schedule(uint32_t ms){assert(owner());++ownerScheduleCalls;ownerScheduleMs+=ms;nowMs+=ms;
+static std::atomic<bool>nativeFenceSnapshot{false};
+static void schedule(uint32_t ms){assert(owner());nativeFenceSnapshot.store(port&&port->nativeStorageAttached(),std::memory_order_release);++ownerScheduleCalls;ownerScheduleMs+=ms;nowMs+=ms;
  if(cancellationArmed&&port->nativeStorageAttached()){cancelLatch=true;cancellationArmed=false;}
  if(!mailbox.idle()){task=Task::ProviderWorker;(void)mailbox.workerStep();task=Task::Owner;}
  if(concurrentNative){std::this_thread::yield();return;}
  for(unsigned i=0;i<2;++i)if(services[i]){task=Task::NativeSettings;F::onWorker=true;onNamespace=i?6:1;services[i]->workerStep();F::onWorker=false;onNamespace=0;task=Task::Owner;}
 }
+static uint32_t nativeCrc(const uint8_t*p,uint32_t n){uint32_t c=~0u;while(n--){c^=*p++;for(unsigned i=0;i<8;++i)c=(c>>1)^((c&1)?0xedb88320u:0);}return ~c;}
 static void le(uint8_t*p,uint32_t n){for(unsigned i=0;i<4;++i)p[i]=uint8_t(n>>(8*i));}
 static Bytes map(const char*value){Bytes b(20+strlen(value));strcpy(reinterpret_cast<char*>(b.data()),"setting");le(b.data()+16,strlen(value));memcpy(b.data()+20,value,strlen(value));return b;}
 static C::Identity identity(uint32_t ns,const Bytes&map){Bytes b(12);le(b.data(),ns);le(b.data()+4,1);le(b.data()+8,map.size());b.insert(b.end(),map.begin(),map.end());C::Identity id{};id.known=true;id.generation=19;id.lineage[0]=ns;unsigned n=0;assert(EVP_Digest(b.data(),b.size(),id.digest,&n,EVP_sha256(),nullptr)==1&&n==32);return id;}
@@ -161,19 +167,26 @@ extern "C" void test_maintenance_app(){
 int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[3];F::empty();const auto one=map("one"),six=map("six");auto oneId=identity(1,one),sixId=identity(6,six);
  {F::Fixture a(1),b(6);C::Value v1{"setting","one",3},v6{"setting","six",3};
   if(scenario.rfind("first",0)==0){freshBaseline(a,scenario.rfind("first-history",0)==0?historyValue(1,1).c_str():"one");freshBaseline(b,scenario.rfind("first-history",0)==0?historyValue(6,1).c_str():"six");}
-  else {if(scenario.rfind("restore",0)!=0){assert(!a.core.initialize(&v1,1,oneId));a.store.finishOperation();}if(scenario.rfind("restore",0)!=0||scenario=="restore-single"){assert(!b.core.initialize(&v6,1,sixId));b.store.finishOperation();}
+  else {if(scenario.rfind("restore",0)!=0&&!startupCase()){assert(!a.core.initialize(&v1,1,oneId));a.store.finishOperation();}if((scenario.rfind("restore",0)!=0&&!startupCase())||scenario=="restore-single"){assert(!b.core.initialize(&v6,1,sixId));b.store.finishOperation();}
    if(scenario=="persisted-incarnation"){for(auto*f:{&a,&b}){C::Snapshot snapshot;assert(!f->core.captureSnapshot(&snapshot));auto target=f->core.identity();++target.generation;const uint8_t persisted[16]={0x55};C::ExportMarker marker;assert(!f->core.prepareExport(snapshot,target,persisted,&marker));f->store.finishOperation();assert(!f->core.acknowledgeExport(marker,target));f->store.finishOperation();assert(!f->core.exportIncarnationRequired());}++oneId.generation;++sixId.generation;}
   }
  }
 
+ if(importCase())for(const char*space:{"rte00000001","rte00000006"})F::nvs[space]["setting"]={'l','e','g','a','c','y'};
+ if(scenario=="bootstrap-legacy-corrupt")F::nvs["kvj00000001"]["snapshot"]={1,2,3};
+ if(scenario=="bootstrap-bare-init"){Bytes root(48);memcpy(root.data(),"RTENINIT",8);le(root.data()+8,1);le(root.data()+44,nativeCrc(root.data(),44));F::nvs["rnr00000001"]["root"]=root;}
 #if RISC_NATIVE_SETTINGS_ASSEMBLY
  if(!assembleMaintenance())return 0;
 #else
  auto*a=new F::Fixture(1);auto*b=new F::Fixture(6);cores[0]=&a->core;cores[1]=&b->core;Hash h1,h6;const uint8_t incarnation1[16]={0x71},incarnation6[16]={0x76};static const L::Writer writers[]={{"maintenance-test",1},{"maintenance-test",6}};
  B*bootstrapClient=nullptr;
- if(scenario.rfind("restore",0)==0||scenario.rfind("first",0)==0){auto*s1=new Sources(1,nativeOwner,a->inspector,sourceHooks(*a));auto*s6=new Sources(6,nativeOwner,b->inspector,sourceHooks(*b));
+ if(scenario.rfind("restore",0)==0||scenario.rfind("first",0)==0||startupCase()){auto*s1=new Sources(1,nativeOwner,a->inspector,sourceHooks(*a));auto*s6=new Sources(6,nativeOwner,b->inspector,sourceHooks(*b));
   B::First::Authority first{nullptr,[](void*){return F::lease.load();},[](void*,uint8_t out[16]){static uint8_t serial=33;memset(out,0,16);out[0]=serial++;return true;},[](void*,uint32_t,uint32_t){return F::lease.load();}};
-  bootstrapClient=new B({&a->core,&a->store,h1.api(),C::heap(),scenario=="restore-no-source"?nullptr:s1,first},{&b->core,&b->store,h6.api(),C::heap(),s6,first},9);
+  const auto d1=h1.api(),d6=h6.api();
+  auto*l1=new LegacySources(1,nativeOwner,"shared-00000001",S::ImageMax-C::HeaderV3-4,a->inspector,{d1.context,d1.begin,d1.update,d1.finish},legacyHooks(*a));
+  auto*l6=new LegacySources(6,nativeOwner,"shared-00000006",S::ImageMax-C::HeaderV3-4,b->inspector,{d6.context,d6.begin,d6.update,d6.finish},legacyHooks(*b));
+  if(startupCase())first={}; // no fake capacity authority for native-only tests
+  bootstrapClient=new B({&a->core,&a->store,h1.api(),C::heap(),scenario=="restore-no-source"?nullptr:s1,first,l1},{&b->core,&b->store,h6.api(),C::heap(),s6,first,l6},9);
  }
  maintenance=new M({&a->core,&a->store,h1.api(),C::heap(),scenario=="no-incarnation"?nullptr:incarnation1},{&b->core,&b->store,h6.api(),C::heap(),incarnation6},9,writers,2,bootstrapClient);
 #endif
@@ -184,16 +197,21 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
  Port cpu(hw);port=&cpu;RiscBoot::Port boot{owner,[](risc_runtime_health_v1*){return true;},schedule,[](const char*){return true;},bind};
  boot.appExitSafe=[](){return port->appExitSafe()&&L::exitSafe();};boot.providerStorageSafe=[](){return port->providerStorageSafe()&&!L::retained();};boot.retainedDelay=schedule;boot.nativeOwnerCheckpoint=[](bool admitNew){++checkpoints;const bool safe=L::checkpoint(admitNew);if(safe&&releaseAnchorAtFinal){assert(admitNew&&!anchorPin->release()&&!f);releaseAnchorAtFinal=false;}return safe;};
  static const RiscBoot::KeyValueBackend forbiddenLegacy{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},[](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},2048};boot.keyValue=&forbiddenLegacy;
- RiscBoot::Runtime runtime(boot);assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());if(scenario!="absent"){P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());}
- if(scenario!="absent"){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));auto remote=oneId;if(scenario=="foreign")remote.lineage[0]^=42;if(scenario!="restore-no-checkpoint"){if(scenario.rfind("first",0)!=0||scenario=="first-conflict")seedMaintenance(1,one,remote);if(scenario.rfind("first",0)!=0)seedMaintenance(6,six,sixId);}file("/ordinary.txt","keep",4);}else f->fault(8);
+ RiscBoot::Runtime runtime(boot);assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());if(!noCard()){P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());}
+ if(!noCard()){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));auto remote=oneId;if(scenario=="foreign")remote.lineage[0]^=42;if(scenario!="restore-no-checkpoint"&&(!startupCase()||scenario=="bootstrap-legacy-conflict"||scenario=="bootstrap-fresh-restore")){if(scenario.rfind("first",0)!=0||scenario=="first-conflict")seedMaintenance(1,one,remote);if(scenario.rfind("first",0)!=0)seedMaintenance(6,six,sixId);}file("/ordinary.txt","keep",4);}else f->fault(8);
  if(scenario=="restore-conflict")F::nvs["rte00000001"]["valuable"]={1,2,3};
- if(scenario=="restore-resume"){
-  const pid_t child=fork();assert(child>=0);if(!child){F::powerCheckpoint=[](const char*at){if(strcmp(at,"nvs-commit-after"))return;saveNvs();std::_Exit(73);};(void)L::hydrate(runtime,cpu);std::_Exit(95);}
+ if(scenario=="restore-resume"||(startupCase()&&scenario.find("resume")!=std::string::npos)){
+  const pid_t child=fork();assert(child>=0);if(!child){F::powerCheckpoint=[](const char*at){
+   const char*point=scenario.find("stage")!=std::string::npos?"write-prefix":scenario.find("rename")!=std::string::npos?"rename-after":"nvs-commit-after";
+   if(strcmp(at,point))return;
+   saveNvs();std::_Exit(73);};(void)L::hydrate(runtime,cpu);std::_Exit(95);}
   int status=0;assert(waitpid(child,&status,0)==child&&WIFEXITED(status)&&WEXITSTATUS(status)==73);loadNvs();assert(!oneCore.ready());
  }
  concurrentNative=scenario.find("concurrent")!=std::string::npos;std::atomic<bool>stopNative{false};std::thread nativeThreads[2];
  if(concurrentNative)for(unsigned i=0;i<2;++i)nativeThreads[i]=std::thread([&,i]{task=Task::NativeSettings;F::onWorker=true;onNamespace=i?6:1;while(!stopNative.load(std::memory_order_acquire)){services[i]->workerStep();std::this_thread::yield();}});
  if(scenario=="corrupt-native")F::nvs.at("rnr00000001").at("root")[0]^=1;
+ uint64_t startupExport=0;
+ if(scenario=="bootstrap-fresh-busy"||scenario=="bootstrap-legacy-busy"){uint64_t sectors=0;uint32_t size=0;assert(!risc_storage_volume_export(f->volume)->export_begin(f->volume->context,&startupExport,&sectors,&size));}
  const auto nativeBefore=F::nvs;const auto writesBefore=f->counter(6);
  if(scenario=="restore-cancel")cancellationArmed=true;
  if(scenario=="restore-retained")f->fault(3);
@@ -201,12 +219,39 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
  if(scenario=="payload-failure")failPayload=true;
  const auto payloadBefore=payloadRequests;
 #endif
- const bool hydrated=L::hydrate(runtime,cpu);
+ if(startupCase()&&scenario.find("resume")==std::string::npos&&scenario.find("busy")==std::string::npos)F::powerCheckpoint=[](const char*at){if(!strcmp(at,"nvs-set-before"))assert(nativeFenceSnapshot.load(std::memory_order_acquire));};
+ if(scenario=="bootstrap-fresh-retained"){F::fault="close";F::cut=1;F::armed=true;}
+ if(scenario=="bootstrap-native-error"){F::fault="nvs-open";F::cut=1;F::armed=true;}
+ const bool hydrated=L::hydrate(runtime,cpu);F::armed=false;
 #if RISC_NATIVE_SETTINGS_ASSEMBLY
  if(scenario=="payload-failure"){assert(!hydrated&&!L::ready()&&L::exitSafe()&&!L::retained()&&F::nvs==nativeBefore&&payloadRequests>payloadBefore&&!oneCore.ready());ordinaryMaintenance();assert(!anchor.release()&&!f);puts("PSRAM allocation failure refuses hydration without fallback, mutation or retention PASS");std::fflush(stdout);std::_Exit(0);}
 #endif
+ if(scenario=="bootstrap-fresh-retained"){assert(!hydrated&&L::retained()&&maintenance->retained()&&!maintenance->exitSafe());puts("actual native initialization retention keeps bootstrap factory, controls and lease alive PASS");std::fflush(stdout);std::_Exit(0);}
  if(scenario=="restore-retained"){assert(!hydrated&&L::retained()&&maintenance->retained()&&port->nativeStorageAttached());puts("actual pre-app restore retention PASS");std::fflush(stdout);std::_Exit(0);}
- if(scenario=="restore-no-source"||scenario=="restore-conflict"||scenario=="restore-cancel"||scenario=="restore-no-checkpoint"||scenario=="corrupt-native"){assert(!hydrated&&!L::ready()&&maintenance->exitSafe()&&F::nvs==nativeBefore&&f->counter(6)==writesBefore&&!oneCore.ready());ordinaryMaintenance();assert(!anchor.release()&&!f);printf("actual lifecycle pre-app %s refuses unchanged PASS\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);}
+ if(scenario=="restore-no-source"||scenario=="restore-conflict"||scenario=="restore-cancel"||scenario=="corrupt-native"){assert(!hydrated&&!L::ready()&&maintenance->exitSafe()&&F::nvs==nativeBefore&&f->counter(6)==writesBefore&&!oneCore.ready());ordinaryMaintenance();assert(!anchor.release()&&!f);printf("actual lifecycle pre-app %s refuses unchanged PASS\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);}
+ if(startupCase()||scenario=="restore-no-checkpoint"){
+  const bool refused=scenario=="bootstrap-fresh-absent"||scenario=="bootstrap-fresh-busy"||scenario=="bootstrap-legacy-conflict"||scenario=="bootstrap-legacy-corrupt"||scenario=="bootstrap-bare-init"||scenario=="bootstrap-native-error";
+  assert(maintenance->exitSafe()&&!L::retained()&&!port->nativeStorageAttached()&&F::handles.empty()&&iterators.empty()&&f->counter(6)==writesBefore);
+  if(refused){assert(!hydrated&&!L::ready()&&!oneCore.ready()&&F::nvs==nativeBefore);}
+  else {assert(hydrated&&L::ready()&&oneCore.ready()&&sixCore.ready());
+   for(C*c:{&oneCore,&sixCore}){
+    if(scenario=="bootstrap-fresh-restore"){assert(c->identity().known);continue;}
+    assert(!c->identity().known&&!c->pendingCount());
+    if(importCase()){assert(c->baseline().origin()==C::Origin::ImportedLegacy&&c->baseline().archiveObligation()&&F::value(*c,"setting")=="legacy");}
+    else {assert(c->baseline().origin()==C::Origin::FreshEmpty&&!c->baseline().archiveObligation());std::string v;assert(F::get(*c,"setting",&v)==C::Missing);}
+   }
+   if(importCase())for(const char*space:{"rte00000001","rte00000006"})assert(F::nvs.at(space)==nativeBefore.at(space));
+   assert(L::attachOwner(runtime,cpu));
+   // No qualified first-SD capacity authority was supplied. Ordinary native
+   // access remains usable; a checkpoint may not fabricate an SD identity.
+   const auto nvsAfter=F::nvs;assert(L::checkpoint(true)&&F::nvs==nvsAfter&&f->counter(6)==writesBefore);
+  }
+  if(startupExport)assert(!risc_storage_volume_export(f->volume)->export_end(f->volume->context,startupExport));
+  if(!noCard())ordinaryMaintenance();
+  assert(!anchor.release()&&!f);
+  if(concurrentNative){stopNative.store(true,std::memory_order_release);for(auto&t:nativeThreads)t.join();}
+  printf("actual checked startup dispatch %s PASS; hydrated=%d; native sources preserved; SD unchanged\n",scenario.c_str(),hydrated);std::fflush(stdout);std::_Exit(0);
+ }
  assert(hydrated&&L::attachOwner(runtime,cpu));
  if(scenario=="first-cancel")cancellationArmed=true;
 if(!runtime.run()){fprintf(stderr,"run: %s\n",runtime.error());assert(false);}assert(checkpoints>((scenario=="first-conflict"||scenario=="draft-fence")?0u:8u)&&L::exitSafe());assert(anchor.exitSafe()&&!f);

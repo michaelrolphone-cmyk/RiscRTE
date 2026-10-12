@@ -1,0 +1,15 @@
+NVS source collector: actual checked factory/create path, all legacy namespaces, stable owner witness and callback reentry refusal PASS
+NVS source collector: 12 competing row/journal/anchor/delta/unknown-key refusals; empty spaces and other namespace isolation PASS
+NVS source collector: checked receipt resume and 8 owner/metadata/type/iterator/source/artifact refusals preserve all bytes PASS
+NVS source collector: all 509 exact checked scratch prefixes resume through actual factory/store without reusing IDs PASS
+NVS source collector: 88 reached read-only NVS failures reject evidence without writes or leaked handles PASS
+NVS source collector: owner-worker/initialization refusal and late guard Retained precedence with zero NVS I/O PASS
+Collector host size=88; no collector-owned heap allocation, no production selection, ESP artifact inspector remains unsupported
+Legacy NVS: original opaque rows, full v1 journals, exact protocol overlays, empty full journal and v2 deltas import through real admission/store with every original preserved PASS
+Legacy NVS: 30 malformed/unknown/duplicate/anchored/artifact refusals preserve every source; no SD access or stale anchored reconstruction PASS
+Legacy NVS: owner/namespace/schema selection, shadowed source bytes, generations/padding/absence bound; mutation during hash/append and before import revalidation reject publication PASS
+Legacy NVS: exact map capacity, maximum value, allocation/hash failures, and wiped temporary source/map memory PASS
+Legacy NVS: 240 reached inventory/materialization NVS failures reject evidence without writes or leaked handles PASS
+Legacy NVS: all 428 truncated v1 journal/v2 anchor lengths and append failures reject evidence; Retained append is sticky PASS
+Legacy NVS: worker/global-lease/epoch/initialization gates, reentry, late callback lease loss and sticky Retained precedence suppress further I/O PASS
+Collector host size=264; disconnected, no production selection or hardware qualification

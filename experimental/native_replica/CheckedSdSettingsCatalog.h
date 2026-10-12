@@ -44,6 +44,9 @@ class CheckedSdSettingsCatalog {
  CheckedSdSettingsCatalog(const CheckedSdSettingsCatalog&)=delete;CheckedSdSettingsCatalog&operator=(const CheckedSdSettingsCatalog&)=delete;
  State state()const{return prep_.retained()?State::Retained:prep_.pending()?State::Running:state_;}Reason reason()const{return prep_.retained()?Reason::Retained:prep_.pending()?Reason::None:reason_;}int error()const{return prep_.retained()?C::Retained:prep_.pending()?C::Busy:error_;}
  bool exitSafe()const{return !prep_.pending()&&!io_.pinned()&&!session_&&!child_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
+ // Historical RAM-only classification. Call take() to close custody and obtain
+ // the checked report; this does not grant SD creation or mutation authority.
+ bool vacant()const{return state()==State::Verified&&report_.vacant_;}
  // Capture core framing on the native worker, then transfer ownership through
  // collection before owner scans or child construction can begin.
  int prepareNative(NativeSdAttempt&attempt,Limits limits){return prepareMode(attempt,limits,false);}

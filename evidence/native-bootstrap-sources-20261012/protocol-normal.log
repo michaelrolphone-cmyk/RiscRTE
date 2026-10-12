@@ -1,0 +1,26 @@
+FreshEmpty: native-only/no SD/no entropy create, callback reentry refusal, distinct Initializing, checked resume and later edit preservation PASS
+FreshEmpty: all 509 exact pending prefixes resume using a NEW monotonically reserved ID, never a bank promotion PASS
+FreshEmpty: 17 foreign/malformed/source/counter/alternate-entry refusals preserve evidence; canonical A never promoted; RTENINIT remains Unclassified PASS
+FreshEmpty: 33 source/journal/epoch and simultaneous Retained+lease-loss callback boundaries refuse publication and recover exact receipt PASS
+FreshEmpty allocations: exactly3 owned image/stage/cache allocations,1500 requested bytes peak; admission/store inspector adds zero heap allocations
+FreshEmpty: stale generic stages cannot seal or replace a newly selected receipt; unprepared backend admission refuses PASS
+FreshEmpty: 8 altered staged image/header/provenance cases refuse at checked canonical seal before any bank publication PASS
+FreshEmpty: missing version/collector/backend hooks refuse Fresh authorization while entropy-free Unclassified initialization remains available; late guard Retained outranks lease loss PASS
+FreshEmpty: 624 checked create/resume crash faults (86 Retained, 156 Uncertain) reload complete root or re-resolve exact receipt, with no defaults/source cleanup PASS
+Host layouts: Core=328 Initialization=528 Receipt=56 Factory=208 Store=392 Inspector=224; receipt48/image484/object508; disconnected host fact collectors only
+Imported initialization: 196 process-death cuts (initial/resume, originally absent/empty rnr), including partial writes, no destructors, exact-source reboot recovery PASS
+NVS source collector: actual checked factory/create path, all legacy namespaces, stable owner witness and callback reentry refusal PASS
+NVS source collector: 12 competing row/journal/anchor/delta/unknown-key refusals; empty spaces and other namespace isolation PASS
+NVS source collector: checked receipt resume and 8 owner/metadata/type/iterator/source/artifact refusals preserve all bytes PASS
+NVS source collector: all 509 exact checked scratch prefixes resume through actual factory/store without reusing IDs PASS
+NVS source collector: 88 reached read-only NVS failures reject evidence without writes or leaked handles PASS
+NVS source collector: owner-worker/initialization refusal and late guard Retained precedence with zero NVS I/O PASS
+Collector host size=88; no collector-owned heap allocation, no production selection, ESP artifact inspector remains unsupported
+Legacy NVS: original opaque rows, full v1 journals, exact protocol overlays, empty full journal and v2 deltas import through real admission/store with every original preserved PASS
+Legacy NVS: 30 malformed/unknown/duplicate/anchored/artifact refusals preserve every source; no SD access or stale anchored reconstruction PASS
+Legacy NVS: owner/namespace/schema selection, shadowed source bytes, generations/padding/absence bound; mutation during hash/append and before import revalidation reject publication PASS
+Legacy NVS: exact map capacity, maximum value, allocation/hash failures, and wiped temporary source/map memory PASS
+Legacy NVS: 240 reached inventory/materialization NVS failures reject evidence without writes or leaked handles PASS
+Legacy NVS: all 428 truncated v1 journal/v2 anchor lengths and append failures reject evidence; Retained append is sticky PASS
+Legacy NVS: worker/global-lease/epoch/initialization gates, reentry, late callback lease loss and sticky Retained precedence suppress further I/O PASS
+Collector host size=264; disconnected, no production selection or hardware qualification

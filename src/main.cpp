@@ -15,6 +15,9 @@ extern "C" const char risc_app_requirement_rows[]=RISC_APP_REQUIREMENT_ROWS_MARK
 #include "ports/esp32s3/CpuPort.h"
 #include "ports/esp32s3/NativeRadioResources.h"
 #include "ports/esp32s3/NativeSettingsLifecycle.h"
+#if RISC_NATIVE_SETTINGS_BACKEND
+#include "ports/esp32s3/NativeSettingsBackend.h"
+#endif
 #include "ports/esp32s3/NativeRetainedWake.h"
 #include "ports/esp32s3/NativeRealtime.h"
 #ifdef RISC_ENABLE_HTTP
@@ -308,6 +311,13 @@ void setup() {
   }
   RISC_STAGE_LOG("boot app-data end result=%s elapsed_us=%llu",appDataReady?"ok":"unavailable",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
+#endif
+#if RISC_NATIVE_SETTINGS_BACKEND
+  // Explicit pre-app provisioning/binding is separate from the RAM-only
+  // selector below. The existing mount owner never formats or grows storage.
+  if(!appDataReady || !RiscCpu::NativeSettingsBackend::prepare(isOwner)) {
+    diagnosticLine("RTE_BOOT error=native-settings-backend");return;
+  }
 #endif
   // Read-only owner input, before any app/driver binding. No configured fresh
   // time source means offline installed boot, never a stale timestamp bypass.

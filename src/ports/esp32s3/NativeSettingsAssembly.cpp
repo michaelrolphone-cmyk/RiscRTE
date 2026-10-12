@@ -34,6 +34,7 @@ bool valid(const Namespace&n,uint32_t ns){
  if(!internal(b.files,sizeof(Files))||!internal(b.artifacts.concreteAddress(),b.artifacts.concreteBytes())||!internal(b.sources,sizeof(Sources))||
     !b.root||strnlen(b.root,160)>=160||!b.artifacts->boundTo(ns,b.root)||!b.artifacts->exitSafe()||
     !b.sources->boundTo(ns,b.artifacts)||!b.sources->exitSafe()||
+    (b.legacy&&(!internal(b.legacy,sizeof(NativeSettingsBootstrap::Legacy))||!b.legacy->boundTo(ns,b.artifacts)||!b.legacy->exitSafe()))||
     !b.fileHooks.now||!b.fileHooks.cooperate||b.fileHooks.allocate!=allocate||b.fileHooks.deallocate!=release||
     !context(b.fileHooks.context,b.fileContextBytes)||!b.files->configuredFor(b.root,b.fileHooks)||
     !b.metadata.read||!b.metadata.write||!context(b.metadata.context,b.metadataContextBytes)||
@@ -64,7 +65,7 @@ const NativeSettingsLifecycle::Admission*assemble(const Inputs&i){
  for(unsigned n=0;n<2;++n){const auto&v=*inputs[n];const auto&b=v.backend;auto&out=state.namespaces[n];
   auto*s=out.store.construct(n?6u:1u,*b.files,b.metadata,b.guard,payload,b.artifacts);
   auto*c=out.core.construct(n?6u:1u,s->backend(),Store::limits(),payload);
-  normal[n]={c,s,v.digest,payload,v.initialIncarnation};startup[n]={c,s,v.digest,payload,b.sources,v.first};
+  normal[n]={c,s,v.digest,payload,v.initialIncarnation};startup[n]={c,s,v.digest,payload,b.sources,v.first,b.legacy};
  }
  for(size_t n=0;n<i.writerCount;++n){std::strcpy(state.names[n],i.writers[n].app);state.writers[n]={state.names[n],i.writers[n].nameSpace};}
  auto*b=state.bootstrap.construct(startup[0],startup[1],i.device);

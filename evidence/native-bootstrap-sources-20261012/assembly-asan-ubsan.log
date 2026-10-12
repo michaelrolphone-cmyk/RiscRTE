@@ -1,0 +1,160 @@
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance happy PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=6; peak-vendor-bytes=856; live-vendor-bytes=404
+actual lifecycle/Runtime/X4/FatFs maintenance idle PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+live atomic draft survives ordinary acquisition; obsolete revision still refuses; final release SD-acks PASS
+Factory PSRAM allocator coverage PASS; requests=34; peak-vendor-bytes=177940; live-vendor-bytes=668
+actual lifecycle/Runtime/X4/FatFs maintenance draft-fence PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+first atomic grant is published after both older namespaces settle on SD PASS
+Factory PSRAM allocator coverage PASS; requests=52; peak-vendor-bytes=178054; live-vendor-bytes=927
+actual lifecycle/Runtime/X4/FatFs maintenance pre-capture PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+Factory PSRAM allocator coverage PASS; requests=52; peak-vendor-bytes=178060; live-vendor-bytes=931
+actual lifecycle/Runtime/X4/FatFs maintenance save-exit PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+Factory PSRAM allocator coverage PASS; requests=52; peak-vendor-bytes=178069; live-vendor-bytes=937
+actual lifecycle/Runtime/X4/FatFs maintenance implicit-exit PASS; control=33296; polls=210
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=16; peak-vendor-bytes=2021; live-vendor-bytes=700
+actual lifecycle/Runtime/X4/FatFs maintenance absent PASS; control=33296; polls=8
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance persisted-incarnation PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=174; peak-vendor-bytes=178459; live-vendor-bytes=1078
+actual lifecycle/Runtime/X4/FatFs maintenance foreign PASS; control=33296; polls=63
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance usb-before PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=185; peak-vendor-bytes=178459; live-vendor-bytes=1078
+actual lifecycle/Runtime/X4/FatFs maintenance no-incarnation PASS; control=33296; polls=63
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance cancel PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+last atomic release drains to terminal SD retention PASS
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=168; peak-vendor-bytes=264504; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=168; peak-vendor-bytes=264504; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore-concurrent PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=264504; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore-resume PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=156; peak-vendor-bytes=264504; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore-single PASS; control=33296; polls=0
+RAM-only assembly restore-no-source refuses without backend I/O, allocation or registration PASS
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app restore-conflict refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app restore-cancel refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual pre-app restore retention PASS
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=178633; live-vendor-bytes=1115
+actual lifecycle/Runtime/X4/FatFs maintenance first PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=178633; live-vendor-bytes=1115
+actual lifecycle/Runtime/X4/FatFs maintenance first-concurrent PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=32; peak-vendor-bytes=5150; live-vendor-bytes=1108
+actual lifecycle/Runtime/X4/FatFs maintenance first-conflict PASS; control=33296; polls=93
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=178633; live-vendor-bytes=1115
+actual lifecycle/Runtime/X4/FatFs maintenance first-cancel PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-fresh PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-fresh-restore PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-fresh-concurrent PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-legacy PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-legacy-concurrent PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-fresh-absent PASS; hydrated=0; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-legacy-absent PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-fresh-busy PASS; hydrated=0; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-legacy-busy PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual native initialization retention keeps bootstrap factory, controls and lease alive PASS
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-legacy-conflict PASS; hydrated=0; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-legacy-corrupt PASS; hydrated=0; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-native-error PASS; hydrated=0; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-bare-init PASS; hydrated=0; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-fresh-resume PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-fresh-resume-stage PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-fresh-resume-rename PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-legacy-resume PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-legacy-resume-stage PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-legacy-resume-rename PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+PSRAM allocation failure refuses hydration without fallback, mutation or retention PASS
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual checked startup dispatch restore-no-checkpoint PASS; hydrated=1; native sources preserved; SD unchanged
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app corrupt-native refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52264; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance six-writers PASS; control=33296; polls=0
+RAM-only LittleFS factory: exact full mount/root, concrete identity and permanent range compose without I/O or activation PASS
+RAM-only assembly assembly-no-owner refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-owner-refuses refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-device refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-writers refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-many-writers refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-bad-writer refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-duplicate-writer refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-wrong-writer-namespace refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-files-root refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-files-hooks refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-files-allocator refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-files-context refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-artifact-namespace refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-source-namespace refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-legacy-namespace refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-legacy-tail refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-missing-source refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-metadata refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-metadata-range refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-guard-range refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-guard refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-space refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-digest refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-digest-range refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-partial-first refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-first-range refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-zero-incarnation refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-external-control refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-external-tail refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-artifact-identity refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-artifact-missing refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-artifact-tail refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-littlefs-identity refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-littlefs-root refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-littlefs-type refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-littlefs-tail refuses without backend I/O, allocation or registration PASS
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: happy, idle, draft-fence, pre-capture, save-exit, implicit-exit, absent, persisted-incarnation, foreign, usb-before, no-incarnation, cancel, retained, restore, restore-concurrent, restore-resume, restore-single, restore-no-source, restore-conflict, restore-cancel, restore-retained, first, first-concurrent, first-conflict, first-cancel, bootstrap-fresh, bootstrap-fresh-restore, bootstrap-fresh-concurrent, bootstrap-legacy, bootstrap-legacy-concurrent, bootstrap-fresh-absent, bootstrap-legacy-absent, bootstrap-fresh-busy, bootstrap-legacy-busy, bootstrap-fresh-retained, bootstrap-legacy-conflict, bootstrap-legacy-corrupt, bootstrap-native-error, bootstrap-bare-init, bootstrap-fresh-resume, bootstrap-fresh-resume-stage, bootstrap-fresh-resume-rename, bootstrap-legacy-resume, bootstrap-legacy-resume-stage, bootstrap-legacy-resume-rename, payload-failure, restore-no-checkpoint, corrupt-native, six-writers, littlefs-assembly-only, assembly-no-owner, assembly-owner-refuses, assembly-no-device, assembly-no-writers, assembly-many-writers, assembly-bad-writer, assembly-duplicate-writer, assembly-wrong-writer-namespace, assembly-files-root, assembly-files-hooks, assembly-files-allocator, assembly-files-context, assembly-artifact-namespace, assembly-source-namespace, assembly-legacy-namespace, assembly-legacy-tail, assembly-missing-source, assembly-no-metadata, assembly-metadata-range, assembly-guard-range, assembly-no-guard, assembly-no-space, assembly-no-digest, assembly-digest-range, assembly-partial-first, assembly-first-range, assembly-zero-incarnation, assembly-external-control, assembly-external-tail, assembly-artifact-identity, assembly-artifact-missing, assembly-artifact-tail, assembly-littlefs-identity, assembly-littlefs-root, assembly-littlefs-type, assembly-littlefs-tail

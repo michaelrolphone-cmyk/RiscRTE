@@ -34,6 +34,8 @@ class CheckedNvsLegacySources final {
  ~CheckedNvsLegacySources(){C::wipe(owner_,sizeof owner_);C::wipe(legacyOwner_,sizeof legacyOwner_);}
  CheckedNvsLegacySources(const CheckedNvsLegacySources&)=delete;
  CheckedNvsLegacySources&operator=(const CheckedNvsLegacySources&)=delete;
+ // RAM-only identity check for permanent native assembly; not source evidence.
+ bool boundTo(uint32_t ns,FreshInitArtifactInspector a)const{return ns_==ns&&artifacts_.sameInspector(a);}
  Reason reason()const{return reason_;}
  bool retained()const{return retained_||artifacts_.retained();}
  bool exitSafe()const{return !entered_&&!retained()&&!opened_&&!iterator_&&artifacts_.exitSafe();}

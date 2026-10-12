@@ -24,6 +24,7 @@ struct Backend {
  Files::Hooks fileHooks{};size_t fileContextBytes=0;
  Store::Metadata metadata{};size_t metadataContextBytes=0;
  Store::Guard guard{};size_t guardContextBytes=0;
+ NativeSettingsBootstrap::Legacy*legacy=nullptr; // optional complete native import collector
 };
 struct Namespace {
  Backend backend{};

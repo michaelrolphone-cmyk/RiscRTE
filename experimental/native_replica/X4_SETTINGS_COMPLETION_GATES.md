@@ -1,7 +1,9 @@
 # X4 SD-first settings: product completion gates
 
 This is an experimental source checkpoint, not an enabled product or a firmware
-delivery. The integration preserves the X4 .99 source cohort and is default-off.
+delivery. The original hardware-protocol evidence preserves the frozen X4 .99 source cohort.
+The source union now also reconciles the .101 System/Files lineage; all native
+persistence selections remain default-off.
 Watch has no SD and is excluded from this selection.
 
 ## Everyday path being completed
@@ -51,20 +53,24 @@ passes and target compilation are not hardware or private-filesystem approval.
 
 ## Smallest remaining product implementation
 
-1. Complete the qualified private filesystem/NVS backend. The stopped backend
-   work has an unresolved sanitizer assertion and no production mount/private
-   root/epoch/serialization binding. Do not substitute a generic POSIX inode
-   assumption for the pinned SDK VFS. This blocked work is separate from the
-   lifecycle and SD protocols that can be qualified independently.
-2. Supply the qualified backend inputs and concrete product selector for the
-   implemented `NativeSettingsAssembly`. Its permanent INTERNAL controls now own
-   exact namespace 1 and 6 Core/store, bootstrap and maintenance bindings, enforce
-   the PSRAM-only payload allocator and check injected source/digest/authority
-   composition. The 56-case combined host matrix and target default-off checks
-   pass; this does not construct or qualify private storage. The existing weak
-   selector still has no production implementation. Enabling its flag without
-   that input intentionally refuses boot; it does not initialize empty settings.
-   See `X4_SETTINGS_ASSEMBLY.md` for the owned controls and supplied-backend contract.
+1. The private filesystem assertion is diagnosed and repaired for the pinned
+   native path. Actual VFS/context/partition capture, all-writer task custody,
+   ignored physical-error fencing, preserved handles and exact private root now
+   pass normal/ASan/UBSan fault campaigns and target/default-off checks. No vendor
+   assertion is suppressed. This is software qualification; physical flash/NVS
+   and complete product paths still need their final checks.
+2. The concrete `NativeSettingsBackend` now supplies the permanent RAM-only
+   assembly from real mount identity, live worker lease, checked metadata,
+   fresh/legacy source collectors, actual native capacity and PSRAM payloads.
+   Explicit pre-app preparation is separate from the RAM-only selector. The
+   checked source dispatcher handles fresh/import/SD receipts and preserves
+   conflicts; all 86 full assembly cases pass normally and under sanitizers.
+   New blank native plus ambiguous SD still needs the requested temporary RAM
+   defaults, visible unavailable state and asynchronous reconciliation behavior.
+   First SD export additionally needs real bounded SD capacity and qualified
+   native startup entropy/incarnation facts. Neither is replaced by a fabricated
+   success callback. See `docs/NATIVE_SETTINGS_BACKEND.md`,
+   `docs/NATIVE_SETTINGS_SOURCE_DISPATCH.md`, and `LIVE_SETTINGS_CUSTODY.md`.
 3. Carry the source-qualified controller paths into the actual selected product.
    Attached BLE and two-profile Wi-Fi campaigns pass normal and ASan/UBSan
    through automatic last-release SD acknowledgement, complete native erasure,
@@ -74,7 +80,7 @@ passes and target compilation are not hardware or private-filesystem approval.
    competing-edit rejection remain unchanged. These host proofs do not supply
    the missing private factory or a flashed product.
 4. Select the qualified Runtime, System, Utilities and checked-warm X4 SD sources
-   together in the frozen .99 product cohort. Bind the six demonstrated writers
+   together in the eventual product cohort, preserving the delivered fixes. Bind the six demonstrated writers
    and both read-through namespaces without expanding their manifests. Preserve
    boot packing, Files/USB, OBD and HTTPS/Hollow functionality. Independent
    source checkpoints are not evidence that this product selection exists.

@@ -27,9 +27,13 @@ struct AssemblyBackend {
  N metadata{{nullptr,[](void*){return F::onWorker&&F::lease;},[](void*){return F::initialized?ESP_OK:ESP_ERR_NVS_NOT_INITIALIZED;}}};
  RiscExperimental::CheckedFreshInitArtifacts artifacts;
  Sources sources;
+ Hash sourceHash;LegacySources legacy;
  explicit AssemblyBackend(unsigned ns):artifacts(ns,F::rootPath.c_str(),{&files,[](void*){return F::onWorker&&F::lease;},F::cooperate,[](void*p){return static_cast<RiscStorage::AppDataFiles*>(p)->retained()?int(C::Retained):int(C::Ok);}}),
-  sources(ns,nativeOwner,artifacts,{&files,[](void*){return F::onWorker&&F::lease;},[](void*){return F::initialized?ESP_OK:ESP_ERR_NVS_NOT_INITIALIZED;},[](void*p){return static_cast<RiscStorage::AppDataFiles*>(p)->retained()?int(C::Retained):int(C::Ok);}}){assert(files.configure(F::rootPath.c_str()));}
- Assembly::Backend input(){return {&files,&artifacts,&sources,F::rootPath.c_str(),hooks,0,metadata.api(),sizeof metadata,{nullptr,[](void*){return F::onWorker&&F::lease;},F::space},0};}
+  sources(ns,nativeOwner,artifacts,{&files,[](void*){return F::onWorker&&F::lease;},[](void*){return F::initialized?ESP_OK:ESP_ERR_NVS_NOT_INITIALIZED;},[](void*p){return static_cast<RiscStorage::AppDataFiles*>(p)->retained()?int(C::Retained):int(C::Ok);}}),
+  legacy(ns,nativeOwner,ns==1?"shared-00000001":"shared-00000006",S::ImageMax-C::HeaderV3-4,artifacts,
+   {&sourceHash,sourceHash.api().begin,sourceHash.api().update,sourceHash.api().finish},
+   {&files,[](void*){return F::onWorker&&F::lease;},[](void*){return uint64_t(1);},[](void*){return F::initialized?ESP_OK:ESP_ERR_NVS_NOT_INITIALIZED;},[](void*p){return static_cast<RiscStorage::AppDataFiles*>(p)->retained()?int(C::Retained):int(C::Ok);}},RiscCpu::NativeSettingsPayloadAllocator::allocator()){assert(files.configure(F::rootPath.c_str()));}
+ Assembly::Backend input(){return {&files,&artifacts,&sources,F::rootPath.c_str(),hooks,0,metadata.api(),sizeof metadata,{nullptr,[](void*){return F::onWorker&&F::lease;},F::space},0,&legacy};}
 };
 static bool assembleMaintenance(){
  assert(!Assembly::admission()&&!Assembly::maintenance());
@@ -37,6 +41,7 @@ static bool assembleMaintenance(){
  uint8_t incarnation1[16]={0x71},incarnation6[16]={0x76};char writerName[]="maintenance-test";
  L::Writer writers[]={{writerName,1},{writerName,6},{"assembly-writer-2",1},{"assembly-writer-3",1},{"assembly-writer-4",1},{"assembly-writer-5",1}};
  B::First::Authority first{nullptr,[](void*){return F::lease.load();},[](void*,uint8_t out[16]){static uint8_t serial=33;memset(out,0,16);out[0]=serial++;return true;},[](void*,uint32_t,uint32_t){return F::lease.load();}};
+ if(startupCase()||scenario=="restore-no-checkpoint")first={};
  Assembly::Inputs input{{a->input(),h1->api(),sizeof(Hash),first,0,scenario=="no-incarnation"?nullptr:incarnation1},
   {b->input(),h6->api(),sizeof(Hash),first,0,incarnation6},9,writers,scenario=="six-writers"?6u:2u,owner};
  if(scenario=="assembly-no-owner")input.owner=nullptr;
@@ -72,7 +77,7 @@ static bool assembleMaintenance(){
   auto*littleFiles=new RiscStorage::AppDataFiles(a->hooks);assert(littleFiles->configure(fullRoot.c_str()));
   input.preferences.backend.files=littleFiles;input.preferences.backend.root=fullRoot.c_str();
   auto*little=new Little(1,mount,{});auto*source=new Sources(1,nativeOwner,*little,{});
-  input.preferences.backend.artifacts=little;input.preferences.backend.sources=source;
+  input.preferences.backend.artifacts=little;input.preferences.backend.sources=source;input.preferences.backend.legacy=nullptr;
   if(scenario=="assembly-littlefs-identity")input.preferences.backend.artifacts=new Little(1,mount,{});
   if(scenario=="assembly-littlefs-root")input.preferences.backend.root=fullRoot.c_str()+4;
   if(scenario=="assembly-littlefs-type")input.preferences.backend.artifacts=&a->artifacts;
@@ -81,6 +86,8 @@ static bool assembleMaintenance(){
   // port is intentional: no mount qualification or storage callback is claimed.
  }
 
+ if(scenario=="assembly-legacy-namespace")input.preferences.backend.legacy=&b->legacy;
+ if(scenario=="assembly-legacy-tail")refusedInternal=reinterpret_cast<uint8_t*>(&a->legacy)+sizeof(a->legacy)-1;
  if(scenario=="assembly-source-namespace")input.preferences.backend.sources=&b->sources;
  if(scenario=="assembly-missing-source"||scenario=="restore-no-source")input.preferences.backend.sources=nullptr;
  if(scenario=="assembly-no-metadata")input.preferences.backend.metadata.read=nullptr;

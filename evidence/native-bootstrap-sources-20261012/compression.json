@@ -1,0 +1,33 @@
+{
+  "method": "Lossless deterministic gzip; original receipt hashes apply to decompressed bytes",
+  "files": [
+    {
+      "original": "target-lifecycle-commands.json",
+      "stored": "target-lifecycle-commands.json.gz",
+      "original_bytes": 511112,
+      "original_sha256": "8200019e6817144a3dc47684ccd379256adbc3d7502a3cfe17e0643017926a39",
+      "stored_sha256": "cfe414c8b9665c68576f9fa4835476fb50cc679ac31cb8d343d80c8266bd60a5"
+    },
+    {
+      "original": "assembly-normal-manifest.json",
+      "stored": "assembly-normal-manifest.json.gz",
+      "original_bytes": 190486,
+      "original_sha256": "e8e6073a52d9b0ac8a71491ac6d9c9f241d59c878702fbc515ac00cc83d2b232",
+      "stored_sha256": "6f2ff08f9b5c87208eb534280bdc702b46042ac93a49430edf8e26e918bf03a8"
+    },
+    {
+      "original": "target-assembly-manifest.json",
+      "stored": "target-assembly-manifest.json.gz",
+      "original_bytes": 505957,
+      "original_sha256": "78acb0479e7ba48d394c24b37606c544c8dbed13e7daeb1e53950c87d313415c",
+      "stored_sha256": "d9b58ccba24c17d58cd5ac5efdf866c76f4b6e429f9dbcfd859f1ebd11a31f02"
+    },
+    {
+      "original": "assembly-asan-ubsan-manifest.json",
+      "stored": "assembly-asan-ubsan-manifest.json.gz",
+      "original_bytes": 190442,
+      "original_sha256": "7c2c6d738cc5f9e51f3429ccd921714744a45a22d97a7bda684724edf5536ba2",
+      "stored_sha256": "18233efaed466506eb3008bfc8e6c275786a76b089c751334e6804d4b2f80984"
+    }
+  ]
+}
