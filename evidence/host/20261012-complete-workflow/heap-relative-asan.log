@@ -1,0 +1,8 @@
+Imported init allocations (84-byte map create): 26 allocations, 940044 requested bytes total, 192012 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init allocations (84-byte map resume): 26 allocations, 817084 requested bytes total, 192012 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init allocations (65028-byte map create): 26 allocations, 2573796 requested bytes total, 595428 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init allocations (65028-byte map resume): 26 allocations, 2440612 requested bytes total, 595428 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init: bounded scratch allocation/hash failures unwind and wipe; all shared core/admission/store/source allocations released PASS
+heap_case=atomic live_payload=196584 peak_payload=331593 allocations=6
+heap_case=sync live_payload=261840 peak_payload=396728 allocations=7
+heap_case=first live_payload=229214 peak_payload=331476 allocations=7
