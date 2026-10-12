@@ -110,6 +110,17 @@ extern "C" void test_complete_app(unsigned ns){
   assert(kv.get(kv.context,"ui.theme",value,sizeof(value),&size)==RISC_KEY_VALUE_NOT_FOUND&&!strcmp(value,"draft-kept"));risc_key_value_atomic_state_v1 captured{sizeof(captured)};assert(writer.state(writer.context,&captured)==RISC_ATOMIC_BUSY);
   assert(api->release(&atomic)&&observed()==RISC_KEY_VALUE_RECONCILIATION_PENDING);assert(api->release(&data)&&observed()==RISC_KEY_VALUE_AVAILABLE);assert(api->release(&status));verify(1,4);verify(6,4);puts("ASYNC restore: actual app remains usable; source authority waits for both retained data grants; no SD/default writes");
  }
+ if(mode=="writer-identities"){
+  static unsigned at=0;const unsigned namespaces[]={1,6,1,1,1,1};const char*next[]={"wifi.elf","home.elf","battery.elf","scanner.elf","contexts.elf"};
+  assert(at<6&&ns==namespaces[at]&&availability(ns)==RISC_KEY_VALUE_AVAILABLE);risc_runtime_capability_v1 g{sizeof(g)};
+  assert(!api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,ns==1?6:1,&g)&&!g.api);
+  assert(api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,ns,&g));auto&e=*static_cast<const risc_key_value_atomic_v1*>(g.api);risc_key_value_atomic_state_v1 captured{sizeof(captured)};
+  const auto initialState=e.state(e.context,&captured);printf("WRITER state before maintenance collection id=%u namespace=%u result=%d\n",at,ns,initialState);fflush(stdout);
+  assert(initialState==RISC_ATOMIC_OK||initialState==RISC_ATOMIC_BUSY);settle();
+  assert(e.state(e.context,&captured)==RISC_ATOMIC_OK&&captured.namespace_id==ns);assert(api->release(&g));settle();
+  printf("WRITER exact selected ID %u namespace=%u admitted; wrong namespace refused\n",at,ns);
+  if(at<5)assert(api->request_launch(next[at]));else completed=true;++at;return;
+ }
  assert(availability(ns)==RISC_KEY_VALUE_AVAILABLE&&core(ns)->ready());if(restored)verify(ns,(mode=="publication-resume"||mode=="publication-erase")&&ns==1?5:4);
  risc_runtime_capability_v1 g{sizeof(g)};assert(api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,ns,&g));auto&e=*static_cast<const risc_key_value_atomic_v1*>(g.api);settle();edit(e,ns,pass);if(mode=="interrupt"&&ns==1){assert(core(1)->pendingCount()==1&&core(1)->identity().generation==5);Shim::stop();saveNative();saveMedia(cardPath.c_str());puts("POWER CUT after native receipt, before SD acknowledgement; previous SD generation preserved");fflush(stdout);std::_Exit(73);}if(mode=="publication-cut"&&ns==1){publicationCut=true;priorReplaces=f->counter(7);}assert(api->release(&g));settle();
  assert(L::exitSafe()&&!core(ns)->pendingCount()&&core(ns)->identity().known);
@@ -138,6 +149,6 @@ int main(int argc,char**argv){assert(argc==6);mode=argv[2];output=argv[4];cardPa
  if(mode!="absent"&&mode!="ambiguous"&&mode!="async-restore")discovery();firstCut=mode=="first-cut";
  if(mode=="conflict"){assert(!core(1)->ready()&&availability(1)!=RISC_KEY_VALUE_AVAILABLE&&core(6)->ready()&&nvs.at("rte00000001")==beforeNvs.at("rte00000001")&&f->counter(6)==writes);}
  else if(mode=="absent"||mode=="ambiguous"){assert(!core(1)->ready()&&nvs==beforeNvs&&f->counter(6)==writes);assert(runtime.run()&&L::exitSafe()&&!runtime.retained()&&nvs==beforeNvs);}
- else{assert(mode=="async-restore"||(core(1)->ready()&&core(6)->ready()));if(existing&&mode!="first-resume"){restored=true;const bool published=mode=="publication-resume"||mode=="publication-erase";pass=maxPass=published?6:5;if(mode!="async-restore"){verify(1,published?5:4);verify(6,4);}assert(f->counter(6)==writes);}bool ran=runtime.run();fprintf(stderr,"run=%d error=%s retained=%d lifecycle=%d completed=%d\n",ran,runtime.error(),runtime.retained(),L::exitSafe(),completed);assert(ran&&!runtime.retained()&&L::exitSafe());if(mode!="first-resume"&&mode!="no-entropy"){verify(1,maxPass);verify(6,maxPass);for(auto ns:{1u,6u})assert(core(ns)->identity().generation>=maxPass&&!core(ns)->pendingCount());}}
+ else{assert(mode=="async-restore"||(core(1)->ready()&&core(6)->ready()));if(existing&&mode!="first-resume"){restored=true;const bool published=mode=="publication-resume"||mode=="publication-erase";pass=maxPass=published?6:5;if(mode!="async-restore"){verify(1,published?5:4);verify(6,4);}assert(f->counter(6)==writes);}bool ran=runtime.run();fprintf(stderr,"run=%d error=%s retained=%d lifecycle=%d completed=%d\n",ran,runtime.error(),runtime.retained(),L::exitSafe(),completed);assert(ran&&!runtime.retained()&&L::exitSafe());if(mode!="first-resume"&&mode!="no-entropy"&&mode!="writer-identities"){verify(1,maxPass);verify(6,maxPass);for(auto ns:{1u,6u})assert(core(ns)->identity().generation>=maxPass&&!core(ns)->pendingCount());}}
  if(!storageFinished)finishStorage();assert(L::shutdown());printf("PASS complete concrete settings path %s; native NVS calls=%u; full block-native fixture and real SD worker\n",mode.c_str(),nvsCalls);fflush(stdout);std::_Exit(0);
 }

@@ -44,7 +44,7 @@ static void*alloc(size_t n){auto a=RiscCpu::NativeSettingsPayloadAllocator::allo
 static void release(void*p){auto a=RiscCpu::NativeSettingsPayloadAllocator::allocator();a.release(a.context,p);}
 namespace RiscCpu {namespace NativeSettingsAssembly {
 Files::Hooks fileHooks(void*c,uint32_t(*now)(void*),bool(*yield)(void*)){return {c,now,yield,alloc,release};}
-const NativeSettingsLifecycle::Admission*assemble(const Inputs&i){++selections;assert(i.owner&&i.owner()&&i.device==9&&i.writerCount==6);inputs=i;return &selected;}
+const NativeSettingsLifecycle::Admission*assemble(const Inputs&i){++selections;assert(i.owner&&i.owner()&&i.device==9&&i.writerCount==6);const char*expected[]={"settings","paper_clock","battery","ble_scanner","contexts","wifi_settings"};for(unsigned n=0;n<6;++n){assert(!strcmp(i.writers[n].app,expected[n]));assert(i.writers[n].nameSpace==(n==5?6u:1u));}inputs=i;return &selected;}
 }}
 static std::map<std::string,std::map<std::string,Bytes>> nvs;
 struct Handle {std::string space;nvs_open_mode_t mode;};

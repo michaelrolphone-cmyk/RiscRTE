@@ -86,13 +86,13 @@ fixture_root=a.sdk.parent
 for name in ['board.json','power.json']:shutil.copy(fixture_root/name,build/name)
 sd=json.loads((a.x4/'minimal/drivers/x4pro_sd/manifest.json').read_text());sd['requires'].append(dict(capability='platform.storage-worker',api=1));(build/'sd.json').write_text(json.dumps(sd))
 apps=[]
-for name,id,ns in [('settings','settings',1),('wifi','wifi-settings',6)]:
+for name,id,ns in [('settings','settings',1),('wifi','wifi_settings',6),('home','paper_clock',1),('battery','battery',1),('scanner','ble_scanner',1),('contexts','contexts',1)]:
  source=build/(name+'.c');source.write_text('extern void test_complete_app(unsigned); __attribute__((visibility("default"))) void app_main(void){test_complete_app('+str(ns)+');}\n');run(['cc','-std=c11',*shared,source,'-o',build/(name+'.elf')])
  (build/(name+'.json')).write_text(json.dumps(dict(type='application',id=id,version='1.0.0',architecture='xtensa-esp32s3',file_name=name+'.elf',entry='app_main',requires=[dict(capability='storage.key-value',api=1),dict(capability='storage.key-value.atomic',api=1),dict(capability='storage.key-value.availability',api=1)])))
  apps.append(dict(manifest=name+'.json',grants=[dict(capability='storage.key-value',api=1,instance_id=ns),dict(capability='storage.key-value.atomic',api=1,instance_id=ns),dict(capability='storage.key-value.availability',api=1,instance_id=ns)]))
 (build/'boot.json').write_text(json.dumps(dict(board='board.json',default_app='settings.elf',provider_activation='demand',drivers=[dict(manifest='power.json',instance_id=1),dict(manifest='sd.json',instance_id=9)],installation=dict(volume_instance=9,grants=[]),app_capabilities=apps)))
 if not a.build_only:
- for case in ['normal','restore','absent','ambiguous','conflict','interrupt','interruption-restore','first-cut','first-resume','no-entropy','publication-cut','publication-resume','publication-erase','async-restore']:
+ for case in ['writer-identities','normal','restore','absent','ambiguous','conflict','interrupt','interruption-restore','first-cut','first-resume','no-entropy','publication-cut','publication-resume','publication-erase','async-restore']:
   out=build/case;out.mkdir(exist_ok=True);card=out/'card.img'
   if case in ['restore','conflict','interrupt','publication-cut','async-restore']:subprocess.run(['cp','--sparse=always',build/'normal/card.img',card],check=True)
   if case=='interruption-restore':subprocess.run(['cp','--sparse=always',build/'interrupt/card.img',card],check=True)

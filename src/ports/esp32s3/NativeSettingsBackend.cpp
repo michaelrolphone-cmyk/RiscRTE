@@ -36,7 +36,7 @@ using Legacy=RiscExperimental::CheckedNvsLegacySources;
 constexpr uint8_t LogicalOwner[16]={'X','4','-','R','T','E','-','S','E','T','T','I','N','G','S',1};
 constexpr uint64_t VolumeInstance=9; // checked against the admitted installation graph
 constexpr NativeSettingsLifecycle::Writer Writers[]={
- {"settings",1},{"paper-clock",1},{"battery",1},{"ble-scanner",1},{"contexts",1},{"wifi-settings",6}};
+ {"settings",1},{"paper_clock",1},{"battery",1},{"ble_scanner",1},{"contexts",1},{"wifi_settings",6}};
 bool internal(const void*p,size_t n){return p&&n&&uintptr_t(p)<=UINTPTR_MAX-(n-1)&&esp_ptr_internal(p)&&esp_ptr_internal(static_cast<const uint8_t*>(p)+n-1);}
 struct Backend {
  uint32_t ns;
