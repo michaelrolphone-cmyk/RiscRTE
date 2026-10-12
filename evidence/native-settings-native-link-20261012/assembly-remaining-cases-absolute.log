@@ -1,0 +1,5 @@
+Permanent factory assembly PASS; static-control=13704; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=238; peak-vendor-bytes=264504; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore PASS; control=7592; polls=0
+Permanent factory assembly PASS; static-control=13704; no selection I/O/allocation; copied writer/entropy inputs
+PSRAM allocation failure refuses hydration without fallback, mutation or retention PASS

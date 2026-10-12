@@ -91,7 +91,7 @@ bool Runtime::fileOpenRequest(const char* source,const char* id,uint64_t cookie)
   char extension[FileOpenMetadata::TypeBytes];
   if(residentEnabled_ && invocation_->role!=RISC_RESIDENT_ROLE_FOREGROUND &&
      !(invocation_==&mainInvocation_ && !invocation_->role && residentLegacyAllowed(invocation_->current_)))return false;
-  if(!fileOpenReady() || !invocation_->entryRunning_ || invocation_->queued_[0] || invocation_->fileOpen_.phase!=FileOpenState::Phase::Idle ||
+  if(fileSource_.token || !fileOpenReady() || !invocation_->entryRunning_ || invocation_->queued_[0] || invocation_->fileOpen_.phase!=FileOpenState::Phase::Idle ||
      !fileHandlers_ || !id || !*id || strnlen(id,T5_FILE_HANDLER_ID_MAX)>=T5_FILE_HANDLER_ID_MAX ||
      !fileOpenExtension(source,extension) || (port_.appExitSafe && !port_.appExitSafe()))return false;
   for(size_t i=0;i<policyCount_;++i) {
@@ -110,7 +110,7 @@ bool Runtime::fileOpenRequest(const char* source,const char* id,uint64_t cookie)
   return false;
 }
 bool Runtime::fileOpenTakeResult(int32_t* error,uint64_t* cookie) {
-  if(!fileOpenReady() || invocation_->fileOpen_.phase!=FileOpenState::Phase::Result ||
+  if(!fileOpenReady() || invocation_->fileOpen_.sourceToken || invocation_->fileOpen_.phase!=FileOpenState::Phase::Result ||
      invocation_->appPolicy_!=&policies_[invocation_->fileOpen_.caller])return false;
   if(error)*error=invocation_->fileOpen_.result;
   if(cookie)*cookie=invocation_->fileOpen_.cookie;
@@ -118,15 +118,19 @@ bool Runtime::fileOpenTakeResult(int32_t* error,uint64_t* cookie) {
 }
 bool Runtime::fileSourcePathGet(char* out,size_t capacity) const {
   if(out && capacity)*out=0;
-  if(!out || !capacity || !fileOpenReady() || invocation_->fileOpen_.phase!=FileOpenState::Phase::Receiving ||
+  if(!out || !capacity || !fileOpenReady() || invocation_->fileOpen_.sourceToken || invocation_->fileOpen_.phase!=FileOpenState::Phase::Receiving ||
      invocation_->appPolicy_!=&policies_[invocation_->fileOpen_.receiver] || strlen(invocation_->fileOpen_.source)>=capacity)return false;
   strcpy(out,invocation_->fileOpen_.source);return true;
 }
 bool Runtime::fileOpenAfterRun(bool completed) {
+  // Abandoned capture has no continuation and cannot outlive its caller.
+  if(fileSource_.token && fileSource_.ownerInvocation==invocation_->token &&
+     invocation_->fileOpen_.phase!=FileOpenState::Phase::Requested && !fileSourceCleanup())return false;
   if(invocation_->fileOpen_.phase==FileOpenState::Phase::Requested) {
     if(completed && !strcmp(invocation_->queued_,policies_[invocation_->fileOpen_.receiver].elf))invocation_->fileOpen_.phase=FileOpenState::Phase::Receiving;
-    else invocation_->fileOpen_={};
+    else {if(invocation_->fileOpen_.sourceToken && !fileSourceCleanup())return false;invocation_->fileOpen_={};}
   }else if(invocation_->fileOpen_.phase==FileOpenState::Phase::Receiving) {
+    if(invocation_->fileOpen_.sourceToken && !fileSourceCleanup())return false;
     // Only explicit Home can queue during Receiving. runOne has already
     // finalized/unmapped the receiver and revoked every grant successfully.
     if(completed && invocation_->queued_[0] && !strcmp(invocation_->queued_,default_)) {

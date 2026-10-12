@@ -188,6 +188,7 @@ class NativeReplicaCore {
  NativeReplicaCore&operator=(const NativeReplicaCore&)=delete;
  bool ready()const{return bytes_&&!uncertain_;}
  uint32_t namespaceId()const{return ns_;}
+ Allocator payloadAllocator()const{return alloc_;} // Native copied scratch uses the same no-fallback payload policy.
  // Read-only exact native composition check; it grants no initialization authority.
  bool usesBackend(const Backend&b)const{return b_.context==b.context&&b_.readRoot==b.readRoot&&b_.reserve==b.reserve&&b_.write==b.write&&b_.read==b.read&&b_.seal==b.seal&&b_.replaceRoot==b.replaceRoot&&b_.retire==b.retire&&b_.readInitialization==b.readInitialization&&b_.beginFreshInitialization==b.beginFreshInitialization&&b_.endFreshInitialization==b.endFreshInitialization&&b_.readImportedInitialization==b.readImportedInitialization&&b_.beginImportedInitialization==b.beginImportedInitialization&&b_.endImportedInitialization==b.endImportedInitialization&&b_.readSdInitialization==b.readSdInitialization&&b_.beginSdInitialization==b.beginSdInitialization&&b_.endSdInitialization==b.endSdInitialization;}
  uint32_t imageCapacity()const{return limits_.imageBytes;}
@@ -459,6 +460,18 @@ class NativeReplicaCore {
   finish(p,total);
   out->bytes_=p;out->size_=total;out->alloc_=alloc_;out->owner_=this;return Ok;
  }
+ // Copied verification bytes are ordinary cache-on task data. Obtain them
+ // through the explicit payload allocator, before reserve/begin can mutate a
+ // persistent record, and wipe/release on every synchronous exit. The native
+ // allocator checks the whole PSRAM range and has no INTERNAL fallback.
+ struct PublicationScratch {
+  NativeReplicaCore&core;uint32_t size;uint8_t*bytes;
+  PublicationScratch(NativeReplicaCore&c,uint32_t n,bool needed=true)
+   :core(c),size(chunk(n)),bytes(needed?c.allocate(size):nullptr){if(bytes)std::memset(bytes,0,size);}
+  ~PublicationScratch(){if(bytes){NativeReplicaCore::wipe(bytes,size);core.drop(bytes);}}
+  PublicationScratch(const PublicationScratch&)=delete;
+  PublicationScratch&operator=(const PublicationScratch&)=delete;
+ };
  bool admissionBusy_=false;
  struct AdmissionScope {bool&busy;explicit AdmissionScope(bool&b):busy(b){busy=true;}~AdmissionScope(){busy=false;}};
  struct AdmissionCompletion {Initialization&admission;int&result;~AdmissionCompletion(){admission.complete_(admission.factory_,result);}};
@@ -474,10 +487,11 @@ class NativeReplicaCore {
   auto*p=allocate(uint32_t(total));if(!p)return rc=NoMemory;
   makeSdImage(p,ns_,a.sdIdentity_,a.map_,a.mapBytes_,a.count_);
   if(!validate(p,uint32_t(total))){drop(p);return rc=Invalid;}
+  PublicationScratch scratch(*this,uint32_t(total));if(!scratch.bytes){drop(p);return rc=NoMemory;}
   rc=a.revalidate_(a.factory_,a,*this);if(rc){drop(p);return rc;}
   permit.started=true;{AdmissionScope activation(a.activating_);rc=b_.beginSdInitialization(b_.context,a);}
   if(rc){drop(p);return rc;}
-  return rc=publish(p,uint32_t(total));
+  return rc=publish(p,uint32_t(total),&scratch);
  }
  static void makeSdImage(uint8_t*p,uint32_t ns,const Identity&id,const uint8_t*map,uint32_t bytes,uint32_t count){
   const uint32_t total=Header+bytes+4;std::memset(p,0,Header);std::memcpy(p,"RTENR01",8);putWord(p+8,ns);putWord(p+12,1);putWide(p+16,1);putWide(p+40,id.generation);std::memcpy(p+48,id.lineage,16);std::memcpy(p+64,id.digest,32);putWord(p+96,count);putWord(p+104,bytes);putWord(p+108,total);if(bytes)std::memcpy(p+Header,map,bytes);finish(p,total);
@@ -504,6 +518,7 @@ class NativeReplicaCore {
    finish(p,uint32_t(total));
   }
   if(!validate(p,uint32_t(total))){drop(p);return rc=Invalid;}
+  PublicationScratch scratch(*this,uint32_t(total));if(!scratch.bytes){drop(p);return rc=NoMemory;}
   if(fresh||checkedImport){
    rc=a.revalidate_(a.factory_,a,*this);if(rc){drop(p);return rc;}
    // The immutable, consumed admission is live only for this hook invocation.
@@ -512,7 +527,7 @@ class NativeReplicaCore {
    {AdmissionScope activation(a.activating_);rc=checkedImport?b_.beginImportedInitialization(b_.context,a):b_.beginFreshInitialization(b_.context,a);}
    if(rc){drop(p);return rc;}
   }
-  return rc=publish(p,uint32_t(total));
+  return rc=publish(p,uint32_t(total),&scratch);
  }
  uint32_t ns_;Backend b_;Limits limits_;Allocator alloc_;uint8_t*bytes_=nullptr;uint32_t size_=0;uint64_t object_=0;bool uncertain_=false;
  Ticket ticket_{};Identity ticketBase_{};uint64_t ticketSerial_=0;bool ticketLive_=false;
@@ -616,13 +631,14 @@ class NativeReplicaCore {
   return at==n-4&&(header==Header||zero(p+Header,MarkerBytes)||validSelectedMarker(p,n));
  }
  bool validRoot(const uint8_t*p)const{return !std::memcmp(p,"RTENROOT",8)&&word(p+8)==ns_&&fits(word(p+12))&&wide(p+16)&&wide(p+24)&&zero(p+36,8)&&word(p+44)==crc(p,44);}
- int publish(uint8_t*p,uint32_t n){
+ int publish(uint8_t*p,uint32_t n,PublicationScratch*prepared=nullptr){
   if(!validate(p,n)){drop(p);return Invalid;}
+  PublicationScratch owned(*this,n,!prepared);auto&scratch=prepared?*prepared:owned;
+  if(!scratch.bytes||scratch.size!=chunk(n)){drop(p);return NoMemory;}
+  uint8_t*check=scratch.bytes;
   uint64_t object=0;int rc=b_.reserve(b_.context,n,&object);if(rc){drop(p);return rc;}if(!object||object==object_){drop(p);return Io;}
   for(uint32_t at=0;at<n;){const uint32_t size=chunk(n-at);rc=b_.write(b_.context,object,at,p+at,size);if(rc){if(b_.retire)b_.retire(b_.context,object);drop(p);return rc;}at+=size;}
   rc=b_.seal(b_.context,object);if(rc){if(b_.retire)b_.retire(b_.context,object);drop(p);return rc;}
-  uint8_t check[4096]{};
-  struct Wipe {uint8_t*p;size_t n;~Wipe(){NativeReplicaCore::wipe(p,n);}} scratch{check,sizeof check};
   for(uint32_t at=0;at<n;){const uint32_t size=chunk(n-at);rc=b_.read(b_.context,object,at,check,size);if(rc||std::memcmp(check,p+at,size)){if(b_.retire)b_.retire(b_.context,object);drop(p);return rc?rc:Io;}at+=size;}
   uint8_t root[RootBytes]{};std::memcpy(root,"RTENROOT",8);putWord(root+8,ns_);putWord(root+12,n);putWide(root+16,wide(p+16));putWide(root+24,object);putWord(root+32,word(p+n-4));putWord(root+44,crc(root,44));
   rc=b_.replaceRoot(b_.context,root,sizeof root);uint8_t actual[RootBytes]{};if(!rc)rc=b_.readRoot(b_.context,actual,sizeof actual);

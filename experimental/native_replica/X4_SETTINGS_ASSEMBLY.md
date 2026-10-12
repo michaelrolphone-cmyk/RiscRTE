@@ -10,10 +10,13 @@ method is compiled only when assembly is selected.
 
 ## Owned controls and injected backend contract
 
-One static INTERNAL block owns both exact namespace-1/namespace-6 checked stores
+One checked, explicitly allocated permanent INTERNAL block owns both exact namespace-1/namespace-6 checked stores
 and Cores, one bootstrap controller, one maintenance controller and six bounded
 writer-name slots. Construction uses placement new into permanent storage; no
-control allocation, task creation or destructor registration occurs. A successful
+task creation or destructor registration occurs. The one-time control allocation
+uses INTERNAL-only capability flags and validates the complete raw and aligned
+ranges before construction. Allocation or range failure returns no admission;
+there is no fallback, backend I/O or worker registration. A successful
 selection never replaces those controls. An unsuccessful selection is latched
 and cannot be retried in the same firmware lifetime. Existing lifecycle prepare,
 worker activation, bind, hydrate, owner checkpoint and retention logic are reused.
@@ -47,7 +50,8 @@ same private filesystem and metadata namespace are used by all callbacks and
 source collectors under the exact global native lease. The factory does not infer
 that proof from a pointer, a size, a string, or a boolean.
 
-`assemble()` calls only the native owner predicate and RAM-only checks/constructors.
+`assemble()` calls the native owner predicate, RAM-only checks/constructors and
+one checked INTERNAL heap allocation.
 It does not configure files, enumerate sources, initialize NVS, mount, format,
 provision, read/write storage, generate entropy, register workers, initialize a
 baseline or activate a product. `admission()` returns the completed permanent
@@ -74,6 +78,21 @@ wiping remains the existing allocator's responsibility and is checked by the hos
 vendor shim whenever a payload is freed.
 
 ## Measured source scope
+
+The current integrated selected-target resource repair reduces the owned
+assembly from 50,976 static bytes to 11,976 permanently allocated INTERNAL
+control bytes (11,983-byte allocator request including alignment slack). Copied
+SD request/result buffers and refresh results use `OwnedSettingsScratch` through
+the existing checked PSRAM allocator, before persistent mutation. Atomic gates,
+mailbox state and task stacks remain INTERNAL. Every remaining placement union
+has compile-time coverage checks; refresh results no longer reuse those unions.
+The exact selected native link now passes the unchanged fixed-IQ-bank proof:
+77,344 static DRAM bytes, 4,880 above the delivered baseline, no IRAM growth, and
+8,496 bytes before the bank. This is a static/link proof, not free-heap or
+physical stack high-water qualification.
+
+The following figures describe the earlier pre-repair checkpoint:
+
 
 The pinned .99 target compiler reports 50,552 static assembly bytes, including
 544 bytes per Core/store pair and all 48,832 bytes of maintenance/bootstrap

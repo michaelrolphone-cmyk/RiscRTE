@@ -1,4 +1,5 @@
 #pragma once
+#include "OwnedSettingsScratch.h"
 #include "CheckedSdReplicaReader.h"
 #include "CheckedLegacySettingsReader.h"
 #include <new>
@@ -12,6 +13,7 @@ class CheckedSdSettingsCatalog {
  enum class Reason {None,MediaUnavailable,CustodyLost,Allocation,ReadFailure,Retained};
  enum class Directory {Unknown,Absent,Empty,Populated,Incomplete,Unreadable,Invalid};
  enum class Content {NotChecked,Missing,Valid,Invalid,Unreadable,CapacityExceeded};
+ static constexpr size_t scratchStorageBytes(){return sizeof(risc_storage_async_result_v1);}
  static constexpr size_t entryStorageBytes(){return sizeof(Entry);}
  static constexpr size_t childStorageBytes(){return sizeof(R)>sizeof(L)?sizeof(R):sizeof(L);}
  // Nonhistorical inventory remains bounded separately. Restore history uses a
@@ -73,7 +75,7 @@ class CheckedSdSettingsCatalog {
   if(!report_.stable_||report_.before_!=Directory::Populated||report_.after_!=Directory::Populated||s.content!=Content::Valid||report_.slots_[1].content!=Content::Missing||report_.slots_[2].content!=Content::Missing||a.orphanPages!=restoreHistorical_||a.staging!=allowedStage_||a.unknown||a.directories||a.backups!=allowedBackup_||report_.initialBackups_!=backups||report_.finalBackups_!=backups||report_.recovered_||a.selectedPages!=pages||report_.initialEntries_!=expected||report_.finalEntries_!=expected||!restoreCandidate_.valid_||!artifactValid_){finish(State::Failed,C::Conflict);return error_;}
   const int released=io_.release();if(released){if(released==C::Retained)retain();else finish(State::Failed,released);return error_;}
   restoreCandidate_.sourceCore_=&core_;restoreCandidate_.sourceAttempt_=io_.attempt();restoreCandidate_.sourceEpoch_=io_.attempt()->epoch();restoreCandidate_.sourceClosed_=io_.attempt()->closedSequence();restoreCandidate_.restoreQualified_=!synchronize_;restoreCandidate_.transferTo(*out);
-  report_.reset();wipeScratch();state_=State::Done;return C::Ok;
+  report_.reset();wipeScratch();scratch_.reset();state_=State::Done;return C::Ok;
  }
  bool preparationWorkerStep(){return prep_.workerStep();}
  int collectPreparation(){
@@ -90,6 +92,7 @@ class CheckedSdSettingsCatalog {
   if(state_!=State::Idle||!core_.namespaceId()||core_.namespaceId()>INT32_MAX||!limits.entries||limits.entries>256||!limits.nameBytes||limits.nameBytes>32768||(restore_&&(!limits.restoreWork||limits.restoreWork>RestoreWorkMax))||!guard_.held||!guard_.worker||!alloc_.allocate||!alloc_.release||!hash_.begin||!hash_.update||!hash_.finish||!risc_storage_volume_download(volume))return C::Invalid;
   const auto*ext=risc_storage_volume_extension(volume);if(!volume->dir_open||!volume->dir_next||!ext->dir_close_checked||!ext->handle_error)return C::Invalid;
   reason_=Reason::None;error_=0;if(!guard_.worker(guard_.context))return C::Busy;if(!prep_.workerClaimed()&&!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
+  if(!scratch_.ensure(alloc_)){reason_=Reason::Allocation;return C::NoMemory;}
   limits_=limits;entryBytes_=(2*limits.entries+(restore_?HistoryWindow:0))*sizeof(Entry);entries_=static_cast<Entry*>(alloc_.allocate(alloc_.context,entryBytes_));if(!entries_){reason_=Reason::Allocation;return C::NoMemory;}std::memset(entries_,0,entryBytes_);
   volume_=volume;api_=risc_storage_volume_packages(volume);report_.namespace_=core_.namespaceId();std::snprintf(namespaceName_,sizeof namespaceName_,"%08X",unsigned(core_.namespaceId()));std::snprintf(directory_,sizeof directory_,"/RTECFG/%s",namespaceName_);
   state_=State::Running;restorePreflight_=restore_;phase_=restore_?StartChild:BeginScan;return C::Ok;
@@ -104,7 +107,7 @@ class CheckedSdSettingsCatalog {
   const int custody=checkCustody();if(custody==C::Busy)return custody;if(custody==C::Retained){retain();return custody;}
   if(custody){reason_=custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable;finish(State::Failed,custody);return error_;}
   if(io_.pinned()){const int released=io_.release();if(released){if(released==C::Retained)retain();else finish(State::Failed,released);return error_;}}
-  *out=report_;out->valid_=true;report_.reset();restoreCandidate_.reset();wipeScratch();state_=State::Done;return C::Ok;
+  *out=report_;out->valid_=true;report_.reset();restoreCandidate_.reset();wipeScratch();scratch_.reset();state_=State::Done;return C::Ok;
  }
  void step(){
   if(prep_.pending()||(io_.native()&&!io_.owner()))return;
@@ -132,16 +135,16 @@ class CheckedSdSettingsCatalog {
   if(phase_==StartChild){startChild();return;}
   if(phase_==BeginScan){const int rc=io_.native()?io_.begin(&session_):api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::ReadFailure);return;}phase_=io_.native()?OpenScan:RefreshScan;return;}
   if(!operation_){submit();return;}
-  result_.status=INT32_MIN;const int rc=io_.native()?io_.collect(&result_):api_->base.collect(volume_->context,session_,operation_,&result_);
-  if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
+  scratch_->status=INT32_MIN;const int rc=io_.native()?io_.collect(&scratch_.get()):api_->base.collect(volume_->context,session_,operation_,&scratch_.get());
+  if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&scratch_->status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
   auto&s=scans_[scan_];
-  if(phase_==OpenScan&&rc==RISC_STORAGE_ASYNC_NOT_FOUND){if(s.level<2){++s.level;s.count=s.names=s.work=0;phase_=OpenScan;}else{s.status=Directory::Unreadable;phase_=EndScan;}C::wipe(&result_,sizeof result_);return;}
-  if(phase_==NextScan&&rc==RISC_STORAGE_ASYNC_END){s.status=s.level?Directory::Absent:(s.count||historyPassCount_)?Directory::Populated:Directory::Empty;phase_=EndScan;C::wipe(&result_,sizeof result_);return;}
-  if(rc!=RISC_STORAGE_ASYNC_OK){s.status=rc==RISC_STORAGE_ASYNC_INVALID?Directory::Invalid:Directory::Unreadable;phase_=EndScan;C::wipe(&result_,sizeof result_);return;}
+  if(phase_==OpenScan&&rc==RISC_STORAGE_ASYNC_NOT_FOUND){if(s.level<2){++s.level;s.count=s.names=s.work=0;phase_=OpenScan;}else{s.status=Directory::Unreadable;phase_=EndScan;}scratch_.wipe();return;}
+  if(phase_==NextScan&&rc==RISC_STORAGE_ASYNC_END){s.status=s.level?Directory::Absent:(s.count||historyPassCount_)?Directory::Populated:Directory::Empty;phase_=EndScan;scratch_.wipe();return;}
+  if(rc!=RISC_STORAGE_ASYNC_OK){s.status=rc==RISC_STORAGE_ASYNC_INVALID?Directory::Invalid:Directory::Unreadable;phase_=EndScan;scratch_.wipe();return;}
   if(phase_==RefreshScan)phase_=OpenScan;else if(phase_==OpenScan)phase_=NextScan;else if(phase_==NextScan)admitEntry();else fail(C::Invalid,Reason::ReadFailure);
-  C::wipe(&result_,sizeof result_);
+  scratch_.wipe();
   // A collected native directory result has surrendered its operation token.
   // Queue at most one next entry now, rather than spending a scheduler turn on
   // that submission alone. This never executes provider work or loops through
@@ -171,7 +174,7 @@ class CheckedSdSettingsCatalog {
  uint32_t namespace_=0,nativeCapacity_=0,nativeHeader_=0;NativeSdSession io_;NativeSdPreparation prep_;
  State state_=State::Idle;Reason reason_=Reason::None;Phase phase_=BeginScan;int error_=0;bool entered_=false,cancelled_=false;unsigned scan_=0,source_=0,child_=0;
  unsigned summaryStage_=0,summaryScan_=0;uint32_t summaryAt_=0;char pagePrefix_[2][96]{};
- char namespaceName_[9]{},directory_[32]{};risc_storage_async_result_v1 result_{};
+ char namespaceName_[9]{},directory_[32]{};OwnedSettingsScratch<risc_storage_async_result_v1> scratch_;
  alignas(R) alignas(L) uint8_t childBytes_[sizeof(R)>sizeof(L)?sizeof(R):sizeof(L)]{};
  R*reader(){return reinterpret_cast<R*>(childBytes_);}L*legacy(){return reinterpret_cast<L*>(childBytes_);}
  static bool preparationWorker(void*p){auto&self=*static_cast<CheckedSdSettingsCatalog*>(p);return self.guard_.worker&&self.guard_.worker(self.guard_.context);}
@@ -194,10 +197,10 @@ class CheckedSdSettingsCatalog {
  void releaseEntries(){if(entries_){C::wipe(entries_,entryBytes_);alloc_.release(alloc_.context,entries_);entries_=nullptr;entryBytes_=0;}}
  void destroyChild(){if(child_==1)reader()->~R();else if(child_==2)legacy()->~L();child_=0;C::wipe(childBytes_,sizeof childBytes_);}
  void cancelChild(){if(child_==1)reader()->cancel();else if(child_==2)legacy()->cancel();}
- void wipeScratch(){C::wipe(&result_,sizeof result_);C::wipe(pagePrefix_,sizeof pagePrefix_);C::wipe(historyCursor_,sizeof historyCursor_);C::wipe(historySeen_,sizeof historySeen_);C::wipe(historySum_,sizeof historySum_);C::wipe(historyXor_,sizeof historyXor_);for(auto&s:scans_){C::wipe(s.historyDigest,sizeof s.historyDigest);C::wipe(s.historySum,sizeof s.historySum);C::wipe(s.historyXor,sizeof s.historyXor);}}
+ void wipeScratch(){scratch_.wipe();C::wipe(pagePrefix_,sizeof pagePrefix_);C::wipe(historyCursor_,sizeof historyCursor_);C::wipe(historySeen_,sizeof historySeen_);C::wipe(historySum_,sizeof historySum_);C::wipe(historyXor_,sizeof historyXor_);for(auto&s:scans_){C::wipe(s.historyDigest,sizeof s.historyDigest);C::wipe(s.historySum,sizeof s.historySum);C::wipe(s.historyXor,sizeof s.historyXor);}}
  void retain(){state_=State::Retained;reason_=Reason::Retained;error_=C::Retained;wipeScratch();}
  void fail(int rc,Reason reason){error_=rc;reason_=reason;if(child_)cancelChild();else phase_=EndScan;}
- void finish(State state,int rc){if(io_.pinned()){const int released=io_.release();if(released==C::Retained){retain();return;}if(released){state=State::Failed;rc=released;}}destroyChild();releaseEntries();report_.reset();restoreCandidate_.reset();wipeScratch();state_=state;error_=rc;}
+ void finish(State state,int rc){if(io_.pinned()){const int released=io_.release();if(released==C::Retained){retain();return;}if(released){state=State::Failed;rc=released;}}destroyChild();releaseEntries();report_.reset();restoreCandidate_.reset();wipeScratch();scratch_.reset();state_=state;error_=rc;}
  void submit(){risc_storage_async_request_v1 q{};q.operation=phase_==RefreshScan?RISC_STORAGE_ASYNC_REFRESH:phase_==OpenScan?RISC_STORAGE_ASYNC_OPEN_DIRECTORY:RISC_STORAGE_ASYNC_NEXT_ENTRY;const unsigned level=scans_[scan_].level;std::strcpy(q.path,level==0?directory_:level==1?"/RTECFG":"/");const int rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){scans_[scan_].status=Directory::Unreadable;phase_=EndScan;}}
  // Only the next fixed lexicographic window is retained. Every history name is
  // revisited until emitted, so an exact duplicate is rejected in the sweep in
@@ -218,7 +221,7 @@ class CheckedSdSettingsCatalog {
   window[at]=e;
  }
  void admitEntry(){
-  auto&s=scans_[scan_];const auto&e=result_.entry;const char*end=static_cast<const char*>(std::memchr(e.name,0,sizeof e.name));
+  auto&s=scans_[scan_];const auto&e=scratch_->entry;const char*end=static_cast<const char*>(std::memchr(e.name,0,sizeof e.name));
   if(!end||end==e.name||e.is_directory>1||std::strchr(e.name,'/')||std::strchr(e.name,'\\')){s.status=Directory::Invalid;phase_=EndScan;return;}
   if(restore_){if(restoreWork_>=limits_.restoreWork){s.status=Directory::Incomplete;phase_=EndScan;return;}++restoreWork_;}
   const uint32_t n=uint32_t(end-e.name)+1;Entry entry{};std::memcpy(entry.name,e.name,n);entry.size=e.size;entry.directory=e.is_directory;
@@ -349,14 +352,14 @@ class CheckedSdSettingsCatalog {
   }
   const Entry&e=list(1)[artifact_];
   if(!operation_){risc_storage_async_request_v1 q{};q.operation=RISC_STORAGE_ASYNC_READ_SMALL_FILE;std::snprintf(q.path,sizeof q.path,"%s/%s",directory_,e.name);const int rc=io_.submit(q,&operation_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc)fail(C::Io,Reason::ReadFailure);return;}
-  result_.status=INT32_MIN;const int rc=io_.collect(&result_);if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;operation_=0;
+  scratch_->status=INT32_MIN;const int rc=io_.collect(&scratch_.get());if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&scratch_->status!=RISC_STORAGE_ASYNC_BUSY))return;operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
   const bool stage=stagedName(e.name);
   // INVALID alone also means oversized; stable directory size zero is required.
-  const bool emptyStage=stage&&!e.directory&&!e.size&&rc==RISC_STORAGE_ASYNC_INVALID&&!result_.size;
-  if((rc&&!emptyStage)||e.directory||e.size!=result_.size||!artifactIndex(result_.data,result_.size,e))artifactValid_=false;
+  const bool emptyStage=stage&&!e.directory&&!e.size&&rc==RISC_STORAGE_ASYNC_INVALID&&!scratch_->size;
+  if((rc&&!emptyStage)||e.directory||e.size!=scratch_->size||!artifactIndex(scratch_->data,scratch_->size,e))artifactValid_=false;
   else if(stage)++allowedStage_;else ++allowedBackup_;
-  C::wipe(&result_,sizeof result_);++artifact_;phase_=BeginArtifacts;
+  scratch_.wipe();++artifact_;phase_=BeginArtifacts;
  }
  uint8_t backupMask(unsigned scan)const{uint8_t mask=0;for(unsigned n=0;n<3;++n){char b[48];std::snprintf(b,sizeof b,"%s.risc-replace",name(n));if(find(scan,b))mask|=uint8_t(1u<<n);}return mask;}
  bool recovered(unsigned n)const{if(!complete(scans_[0].status)||!complete(scans_[1].status)||scans_[0].level||scans_[1].level)return false;char b[48];std::snprintf(b,sizeof b,"%s.risc-replace",name(n));const Entry*old=find(0,b),*now=find(1,name(n));return old&&now&&!find(0,name(n))&&!find(1,b)&&sameObject(*old,*now);}

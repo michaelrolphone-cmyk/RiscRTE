@@ -24,7 +24,7 @@ bool NativeSettingsBootstrap::firstAvailable(unsigned i)const{if(i>1)return fals
 NativeSettingsBootstrap::Catalog::Guard NativeSettingsBootstrap::guard(){return {this,[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeOwner(s.lease_);},[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeWorker(s.slots_[s.current_]);}};}
 NativeSettingsBootstrap::Restore::Guard NativeSettingsBootstrap::restoreGuard(){return {this,[](void*p){return static_cast<NativeSettingsBootstrap*>(p)->owner();},[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeWorker(s.slots_[s.current_]);},[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeWorker(s.slots_[s.current_]);},[](void*p){return static_cast<NativeSettingsBootstrap*>(p)->lease_.serial;}};}
 void NativeSettingsBootstrap::destroy(){if(kind_==1)catalog()->~Catalog();else if(kind_==2)restore()->~Restore();else if(kind_==3)first()->~First();else if(kind_==4)native()->~NativeInitialization();kind_=0;C::wipe(storage_,sizeof storage_);}
-void NativeSettingsBootstrap::destroyAttempt(){if(attempt_){if(!attempt_->exitSafe())std::abort();attempt_->~Attempt();attempt_=nullptr;C::wipe(attemptStorage_,sizeof attemptStorage_);}}
+void NativeSettingsBootstrap::destroyAttempt(){if(attempt_){if(!attempt_->exitSafe())std::abort();attempt_->~Attempt();attempt_=nullptr;C::wipe(attemptStorage_,sizeof attemptStorage_);}refresh_.reset();}
 NativeSettingsBootstrap::Progress NativeSettingsBootstrap::retain(){fault_.store(true,std::memory_order_release);results_[current_]=Result::Retained;errors_[current_]=C::Retained;if(lease_.serial)(void)services_[current_]->releaseNative(lease_);return Progress::Retained;}
 void NativeSettingsBootstrap::finish(int rc,bool cancelled){if(rc==C::Retained||rc==C::Uncertain){(void)retain();return;}errors_[current_]=rc;results_[current_]=cancelled||rc==C::Stale?Result::Cancelled:!rc?Result::Synchronized:rc==C::Conflict||rc==C::Missing?Result::Conflict:rc==C::Busy||rc==C::Io?Result::Deferred:Result::Failed;phase_=Phase::Release;}
 NativeSettingsBootstrap::Progress NativeSettingsBootstrap::start(RiscBoot::Runtime&r,Port&p,unsigned i,bool first){
@@ -89,7 +89,7 @@ NativeSettingsBootstrap::Progress NativeSettingsBootstrap::completeNamespace(){
  remaining_=0;return sweepResult_;
 }
 NativeSettingsBootstrap::Progress NativeSettingsBootstrap::startAttempt(){
- destroyAttempt();attempt_=new(attemptStorage_)Attempt(*runtime_,*port_,inputs_[current_].core->namespaceId(),device_,A::Profile::CheckedWarm);
+ destroyAttempt();if(!refresh_.ensure(inputs_[current_].allocator)){finish(C::NoMemory);return Progress::Pending;}attempt_=new(attemptStorage_)Attempt(*runtime_,*port_,inputs_[current_].core->namespaceId(),device_,A::Profile::CheckedWarm);
  const int acquired=attempt_->acquire();
  if(acquired){
   if(acquired==RISC_STORAGE_ASYNC_RETAINED||!attempt_->exitSafe())return retain();
@@ -148,7 +148,7 @@ NativeSettingsBootstrap::Progress NativeSettingsBootstrap::poll(){
   break;
  case Phase::NativeInitializeResult:finish(nativeResult_,cancelled_&&nativeResult_==C::Stale);break;
  case Phase::Refresh:{const int rc=a->refresh();if(rc==RISC_STORAGE_ASYNC_BUSY)break;if(rc==RISC_STORAGE_ASYNC_RETAINED)return retain();phase_=rc?Phase::Close:Phase::RefreshResult;break;}
- case Phase::RefreshResult:{auto*r=new(storage_)risc_storage_async_result_v1{};r->status=INT32_MIN;const int rc=a->collect(r);const bool waiting=rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&r->status!=RISC_STORAGE_ASYNC_BUSY);C::wipe(storage_,sizeof storage_);if(waiting)break;if(rc==RISC_STORAGE_ASYNC_RETAINED)return retain();phase_=Phase::Close;break;}
+ case Phase::RefreshResult:{auto*r=&refresh_.get();r->status=INT32_MIN;const int rc=a->collect(r);const bool waiting=rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&r->status!=RISC_STORAGE_ASYNC_BUSY);refresh_.wipe();if(waiting)break;if(rc==RISC_STORAGE_ASYNC_RETAINED)return retain();phase_=Phase::Close;break;}
  case Phase::Close:{if(a->hasSession()){const int rc=a->close();if(rc==RISC_STORAGE_ASYNC_PENDING||rc==RISC_STORAGE_ASYNC_BUSY)break;if(rc==RISC_STORAGE_ASYNC_RETAINED)return retain();}
   if(!lease_.serial){phase_=Phase::Release;break;}
   if(cancelled_){finish(C::Stale,true);break;}

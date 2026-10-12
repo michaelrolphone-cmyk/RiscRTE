@@ -1,0 +1,864 @@
+{
+  "scope": "Static section/linked-symbol and pre-startup region ceilings only. Excludes heap metadata, startup SDK/RTOS allocations, fragmentation and all runtime high-water. Negative pre-IQ room is a layout failure; GNU ld success does not override the fixed IQ proof.",
+  "baseline": {
+    "path": "/workspace/shared/x4-https-099-20261012/native-candidate/firmware.elf",
+    "sha256": "f6cadeca79d04ebf9c26505358f7a5105a408a6e9f88359be5f9d9cab6b810d4",
+    "sections": [
+      {
+        "name": ".rtc.text",
+        "address": 1611653120,
+        "bytes": 33
+      },
+      {
+        "name": ".rtc.dummy",
+        "address": 1611653120,
+        "bytes": 33
+      },
+      {
+        "name": ".rtc.force_fast",
+        "address": 1611653156,
+        "bytes": 8
+      },
+      {
+        "name": ".rtc_noinit",
+        "address": 1342177280,
+        "bytes": 2792
+      },
+      {
+        "name": ".iram0.vectors",
+        "address": 1077362688,
+        "bytes": 1027
+      },
+      {
+        "name": ".iram0.text",
+        "address": 1077363716,
+        "bytes": 93343
+      },
+      {
+        "name": ".dram0.dummy",
+        "address": 1070104576,
+        "bytes": 77988
+      },
+      {
+        "name": ".dram0.data",
+        "address": 1070182576,
+        "bytes": 25752
+      },
+      {
+        "name": ".dram0.bss",
+        "address": 1070208328,
+        "bytes": 46712
+      },
+      {
+        "name": ".flash.text",
+        "address": 1107296288,
+        "bytes": 1054367
+      },
+      {
+        "name": ".flash_rodata_dummy",
+        "address": 1006632992,
+        "bytes": 1114112
+      },
+      {
+        "name": ".flash.appdesc",
+        "address": 1007747104,
+        "bytes": 256
+      },
+      {
+        "name": ".flash.rodata",
+        "address": 1007747360,
+        "bytes": 283676
+      },
+      {
+        "name": ".flash.rodata_noload",
+        "address": 1008031036,
+        "bytes": 15988
+      },
+      {
+        "name": ".iram0.data",
+        "address": 1077457059,
+        "bytes": 1
+      }
+    ],
+    "heap_start": 1070255040,
+    "iram_end": 1077457060,
+    "static_dram": 72464,
+    "static_iram": 94371,
+    "pre_iq_static_room": 13376,
+    "reserved": [
+      [
+        1070268416,
+        1070333952
+      ],
+      [
+        1611661296,
+        1611661312
+      ],
+      [
+        1611653120,
+        1611653164
+      ],
+      [
+        1023410176,
+        1040187392
+      ],
+      [
+        1077362688,
+        1077457060
+      ],
+      [
+        1070088192,
+        1070182564
+      ],
+      [
+        1070182576,
+        1070255040
+      ]
+    ],
+    "memory_regions": [
+      {
+        "start": 1023410176,
+        "size": 16777216,
+        "type": {
+          "name": "SPIRAM",
+          "caps": 5126,
+          "aliased_iram": false,
+          "startup_stack": false
+        },
+        "alias": 0,
+        "unreserved": []
+      },
+      {
+        "start": 1077362688,
+        "size": 16384,
+        "type": {
+          "name": "IRAM",
+          "caps": 2051,
+          "aliased_iram": false,
+          "startup_stack": false
+        },
+        "alias": 0,
+        "unreserved": []
+      },
+      {
+        "start": 1070104576,
+        "size": 32768,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077379072,
+        "unreserved": []
+      },
+      {
+        "start": 1070137344,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077411840,
+        "unreserved": [
+          {
+            "start": 1070182564,
+            "end": 1070182576,
+            "bytes": 12
+          }
+        ]
+      },
+      {
+        "start": 1070202880,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077477376,
+        "unreserved": [
+          {
+            "start": 1070255040,
+            "end": 1070268416,
+            "bytes": 13376
+          }
+        ]
+      },
+      {
+        "start": 1070268416,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077542912,
+        "unreserved": []
+      },
+      {
+        "start": 1070333952,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077608448,
+        "unreserved": [
+          {
+            "start": 1070333952,
+            "end": 1070399488,
+            "bytes": 65536
+          }
+        ]
+      },
+      {
+        "start": 1070399488,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077673984,
+        "unreserved": [
+          {
+            "start": 1070399488,
+            "end": 1070465024,
+            "bytes": 65536
+          }
+        ]
+      },
+      {
+        "start": 1070465024,
+        "size": 38672,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077739520,
+        "unreserved": [
+          {
+            "start": 1070465024,
+            "end": 1070503696,
+            "bytes": 38672
+          }
+        ]
+      },
+      {
+        "start": 1070503696,
+        "size": 26864,
+        "type": {
+          "name": "STACK/DIRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": true
+        },
+        "alias": 1077778192,
+        "unreserved": [
+          {
+            "start": 1070503696,
+            "end": 1070530560,
+            "bytes": 26864
+          }
+        ]
+      },
+      {
+        "start": 1070530560,
+        "size": 32768,
+        "type": {
+          "name": "DRAM",
+          "caps": 6158,
+          "aliased_iram": false,
+          "startup_stack": false
+        },
+        "alias": 0,
+        "unreserved": [
+          {
+            "start": 1070530560,
+            "end": 1070563328,
+            "bytes": 32768
+          }
+        ]
+      },
+      {
+        "start": 1611653120,
+        "size": 8192,
+        "type": {
+          "name": "RTCRAM",
+          "caps": 38918,
+          "aliased_iram": false,
+          "startup_stack": false
+        },
+        "alias": 0,
+        "unreserved": [
+          {
+            "start": 1611653164,
+            "end": 1611661296,
+            "bytes": 8132
+          }
+        ]
+      }
+    ],
+    "internal_8bit_unreserved_ceiling": 250896,
+    "settings_objects": [],
+    "required_symbols": {
+      "__wrap_esp_vfs_register": null,
+      "__wrap_esp_vfs_unregister": null,
+      "__wrap_esp_partition_read": null,
+      "__wrap_esp_partition_write": null,
+      "__wrap_esp_partition_erase_range": null,
+      "__wrap_esp_littlefs_format": null,
+      "__wrap_esp_littlefs_format_partition": null,
+      "bootloader_random_enable": null,
+      "bootloader_random_disable": null,
+      "esp_fill_random": {
+        "address": 1107776832,
+        "bytes": 59,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      }
+    }
+  },
+  "selected": {
+    "path": "build/native-resource/selected-psram/firmware.elf",
+    "sha256": "a871627a4f05b0819df85902a4193f1cd9da02ceb1755147d79791979e0fc0fe",
+    "sections": [
+      {
+        "name": ".rtc.text",
+        "address": 1611653120,
+        "bytes": 33
+      },
+      {
+        "name": ".rtc.dummy",
+        "address": 1611653120,
+        "bytes": 33
+      },
+      {
+        "name": ".rtc.force_fast",
+        "address": 1611653156,
+        "bytes": 8
+      },
+      {
+        "name": ".rtc_noinit",
+        "address": 1342177280,
+        "bytes": 2792
+      },
+      {
+        "name": ".iram0.vectors",
+        "address": 1077362688,
+        "bytes": 1027
+      },
+      {
+        "name": ".iram0.text",
+        "address": 1077363716,
+        "bytes": 93343
+      },
+      {
+        "name": ".dram0.dummy",
+        "address": 1070104576,
+        "bytes": 77988
+      },
+      {
+        "name": ".dram0.data",
+        "address": 1070182576,
+        "bytes": 25752
+      },
+      {
+        "name": ".dram0.bss",
+        "address": 1070208328,
+        "bytes": 51592
+      },
+      {
+        "name": ".flash.text",
+        "address": 1107296288,
+        "bytes": 1214295
+      },
+      {
+        "name": ".flash_rodata_dummy",
+        "address": 1006632992,
+        "bytes": 1245184
+      },
+      {
+        "name": ".flash.appdesc",
+        "address": 1007878176,
+        "bytes": 256
+      },
+      {
+        "name": ".flash.rodata",
+        "address": 1007878432,
+        "bytes": 316748
+      },
+      {
+        "name": ".flash.rodata_noload",
+        "address": 1008195180,
+        "bytes": 15988
+      },
+      {
+        "name": ".iram0.data",
+        "address": 1077457059,
+        "bytes": 1
+      }
+    ],
+    "heap_start": 1070259920,
+    "iram_end": 1077457060,
+    "static_dram": 77344,
+    "static_iram": 94371,
+    "pre_iq_static_room": 8496,
+    "reserved": [
+      [
+        1070268416,
+        1070333952
+      ],
+      [
+        1611661296,
+        1611661312
+      ],
+      [
+        1611653120,
+        1611653164
+      ],
+      [
+        1023410176,
+        1040187392
+      ],
+      [
+        1077362688,
+        1077457060
+      ],
+      [
+        1070088192,
+        1070182564
+      ],
+      [
+        1070182576,
+        1070259920
+      ]
+    ],
+    "memory_regions": [
+      {
+        "start": 1023410176,
+        "size": 16777216,
+        "type": {
+          "name": "SPIRAM",
+          "caps": 5126,
+          "aliased_iram": false,
+          "startup_stack": false
+        },
+        "alias": 0,
+        "unreserved": []
+      },
+      {
+        "start": 1077362688,
+        "size": 16384,
+        "type": {
+          "name": "IRAM",
+          "caps": 2051,
+          "aliased_iram": false,
+          "startup_stack": false
+        },
+        "alias": 0,
+        "unreserved": []
+      },
+      {
+        "start": 1070104576,
+        "size": 32768,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077379072,
+        "unreserved": []
+      },
+      {
+        "start": 1070137344,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077411840,
+        "unreserved": [
+          {
+            "start": 1070182564,
+            "end": 1070182576,
+            "bytes": 12
+          }
+        ]
+      },
+      {
+        "start": 1070202880,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077477376,
+        "unreserved": [
+          {
+            "start": 1070259920,
+            "end": 1070268416,
+            "bytes": 8496
+          }
+        ]
+      },
+      {
+        "start": 1070268416,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077542912,
+        "unreserved": []
+      },
+      {
+        "start": 1070333952,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077608448,
+        "unreserved": [
+          {
+            "start": 1070333952,
+            "end": 1070399488,
+            "bytes": 65536
+          }
+        ]
+      },
+      {
+        "start": 1070399488,
+        "size": 65536,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077673984,
+        "unreserved": [
+          {
+            "start": 1070399488,
+            "end": 1070465024,
+            "bytes": 65536
+          }
+        ]
+      },
+      {
+        "start": 1070465024,
+        "size": 38672,
+        "type": {
+          "name": "D/IRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": false
+        },
+        "alias": 1077739520,
+        "unreserved": [
+          {
+            "start": 1070465024,
+            "end": 1070503696,
+            "bytes": 38672
+          }
+        ]
+      },
+      {
+        "start": 1070503696,
+        "size": 26864,
+        "type": {
+          "name": "STACK/DIRAM",
+          "caps": 22543,
+          "aliased_iram": true,
+          "startup_stack": true
+        },
+        "alias": 1077778192,
+        "unreserved": [
+          {
+            "start": 1070503696,
+            "end": 1070530560,
+            "bytes": 26864
+          }
+        ]
+      },
+      {
+        "start": 1070530560,
+        "size": 32768,
+        "type": {
+          "name": "DRAM",
+          "caps": 6158,
+          "aliased_iram": false,
+          "startup_stack": false
+        },
+        "alias": 0,
+        "unreserved": [
+          {
+            "start": 1070530560,
+            "end": 1070563328,
+            "bytes": 32768
+          }
+        ]
+      },
+      {
+        "start": 1611653120,
+        "size": 8192,
+        "type": {
+          "name": "RTCRAM",
+          "caps": 38918,
+          "aliased_iram": false,
+          "startup_stack": false
+        },
+        "alias": 0,
+        "unreserved": [
+          {
+            "start": 1611653164,
+            "end": 1611661296,
+            "bytes": 8132
+          }
+        ]
+      }
+    ],
+    "internal_8bit_unreserved_ceiling": 246016,
+    "settings_objects": [
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_17contextE",
+        "address": 1070223564,
+        "bytes": 4
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_19partitionE",
+        "address": 1070223568,
+        "bytes": 4
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_1L5MountE",
+        "address": 1007901439,
+        "bytes": 9
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_16failedE",
+        "address": 1070223576,
+        "bytes": 1
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_15ownerE",
+        "address": 1070223572,
+        "bytes": 4
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_18mountingE",
+        "address": 1070223227,
+        "bytes": 1
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_16inCallE",
+        "address": 1070223224,
+        "bytes": 1
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_16usableE",
+        "address": 1070223225,
+        "bytes": 1
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_16accessE",
+        "address": 1070223232,
+        "bytes": 4
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_1L8SettingsE",
+        "address": 1007901421,
+        "bytes": 18
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_1L7ScratchE",
+        "address": 1007901402,
+        "bytes": 19
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_18originalE",
+        "address": 1070223400,
+        "bytes": 164
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_17handlesE",
+        "address": 1070223220,
+        "bytes": 4
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_111directoriesE",
+        "address": 1070223092,
+        "bytes": 64
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_111descriptorsE",
+        "address": 1070223156,
+        "bytes": 64
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_19attemptedE",
+        "address": 1070223228,
+        "bytes": 1
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_122descriptorsInitializedE",
+        "address": 1070223088,
+        "bytes": 1
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_117custodyGenerationE",
+        "address": 1070223064,
+        "bytes": 8
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_110registeredE",
+        "address": 1070223226,
+        "bytes": 1
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_114rootGenerationE",
+        "address": 1070223072,
+        "bytes": 8
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_115mountGenerationE",
+        "address": 1070223080,
+        "bytes": 8
+      },
+      {
+        "name": "_ZN16RiscAppDataMount12_GLOBAL__N_16fencedE",
+        "address": 1070223236,
+        "bytes": 164
+      },
+      {
+        "name": "_ZN7RiscCpu22NativeSettingsAssembly12_GLOBAL__N_19attemptedE",
+        "address": 1070226748,
+        "bytes": 1
+      },
+      {
+        "name": "_ZN7RiscCpu22NativeSettingsAssembly12_GLOBAL__N_15stateE",
+        "address": 1070226752,
+        "bytes": 4
+      },
+      {
+        "name": "_ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_1L12LogicalOwnerE",
+        "address": 1007906876,
+        "bytes": 16
+      },
+      {
+        "name": "_ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_15stateE",
+        "address": 1070226760,
+        "bytes": 2840
+      },
+      {
+        "name": "_ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_1L7WritersE",
+        "address": 1007906828,
+        "bytes": 48
+      },
+      {
+        "name": "_ZN7RiscCpu23NativeSettingsLifecycle12_GLOBAL__N_15stateE",
+        "address": 1070229600,
+        "bytes": 1048
+      },
+      {
+        "name": "_ZN7RiscCpu28NativeSettingsStartupEntropy12_GLOBAL__N_15stateE",
+        "address": 1070230648,
+        "bytes": 44
+      },
+      {
+        "name": "_ZN7RiscCpu20NativeSettingsWorker12_GLOBAL__N_18registryE",
+        "address": 1070230692,
+        "bytes": 16
+      }
+    ],
+    "required_symbols": {
+      "__wrap_esp_vfs_register": {
+        "address": 1107496816,
+        "bytes": 535,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      },
+      "__wrap_esp_vfs_unregister": {
+        "address": 1107497352,
+        "bytes": 70,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      },
+      "__wrap_esp_partition_read": {
+        "address": 1107497424,
+        "bytes": 36,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      },
+      "__wrap_esp_partition_write": {
+        "address": 1107497460,
+        "bytes": 69,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      },
+      "__wrap_esp_partition_erase_range": {
+        "address": 1107497532,
+        "bytes": 66,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      },
+      "__wrap_esp_littlefs_format": {
+        "address": 1107497600,
+        "bytes": 36,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      },
+      "__wrap_esp_littlefs_format_partition": {
+        "address": 1107497636,
+        "bytes": 28,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      },
+      "bootloader_random_enable": {
+        "address": 1107788884,
+        "bytes": 554,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      },
+      "bootloader_random_disable": {
+        "address": 1107789440,
+        "bytes": 177,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      },
+      "esp_fill_random": {
+        "address": 1107934528,
+        "bytes": 59,
+        "binding": "STB_GLOBAL",
+        "section": 12
+      }
+    }
+  },
+  "delta": {
+    "static_dram": 4880,
+    "static_iram": 0,
+    "heap_start": 4880,
+    "iram_end": 0,
+    "internal_8bit_unreserved_ceiling": -4880
+  }
+}

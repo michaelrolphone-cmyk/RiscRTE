@@ -153,7 +153,7 @@ static void edgeCases(){
  for(bool cancel:{false,true}){Native n;Files f;auto b=legacy(1);storeLegacy(f,b,L::Source::PagedV2);C c(6,n.api(),limits(),C::heap());Sd s(f);Hash h;L l(c,h.api(),s.guard());assert(l.start(s.volume(),L::Source::PagedV2)==0);s.run(l);assert(l.state()==L::State::Verified);s.lease=false;s.retained=true;L::Candidate out;const unsigned io=s.io;if(cancel)l.cancel();else assert(l.take(&out)==C::Retained);assert(!out.valid()&&l.state()==L::State::Retained&&!l.exitSafe()&&l.reason()==L::Reason::Retained);l.cancel();l.step();assert(s.io==io&&l.state()==L::State::Retained&&!l.exitSafe());}
  // Reader admission/hash callbacks cannot recursively mutate the same job.
  Native n;Files f;auto b=legacy(100);storeLegacy(f,b,L::Source::PagedV2);const Files original=f;C c(6,n.api(),limits(),C::heap());unsigned hashCalls=0;
- {Sd s(f);FaultHash h;ReentryAlloc a;L l(c,h.api(),s.guard(),a.api());a.job=&l;a.volume=s.volume();h.job=&l;assert(l.start(s.volume(),L::Source::PagedV2)==0);s.run(l);L::Candidate out;assert(l.take(&out)==0&&a.attempts==1);hashCalls=h.calls;}
+ {Sd s(f);FaultHash h;ReentryAlloc a;L l(c,h.api(),s.guard(),a.api());a.job=&l;a.volume=s.volume();h.job=&l;assert(l.start(s.volume(),L::Source::PagedV2)==0);s.run(l);L::Candidate out;assert(l.take(&out)==0&&a.attempts==2);hashCalls=h.calls;}
  for(unsigned fail=1;fail<=hashCalls;++fail){Sd s(f);FaultHash h;h.failAt=fail;WipingAlloc a;L l(c,h.api(),s.guard(),a.api());assert(l.start(s.volume(),L::Source::PagedV2)==0);s.run(l);assert(h.hit&&l.state()==L::State::Failed&&l.reason()==L::Reason::ReadFailure&&l.exitSafe()&&!a.live&&f==original);}
  for(auto source:{L::Source::PagedV2,L::Source::SingleFile}){
   // Corrupt source retained after missing-only recovery; no new defaults/fallback.
@@ -169,7 +169,7 @@ static void dynamicEnvelope(){
  Native n;Files f;C c(6,n.api(),{512,4096,1024},C::heap());auto base=identity({},0);assert(c.initialize(nullptr,0,base)==0);Sd s(f);Hash h;WipingAlloc a;
  L before(c,h.api(),s.guard(),a.api()); // Construct while v1 is still selected.
  C::Snapshot snapshot;assert(c.captureSnapshot(&snapshot)==0);auto target=identity({},0,8);uint8_t incarnation[16]={9};C::ExportMarker marker;assert(c.prepareExport(snapshot,target,incarnation,&marker)==0&&c.headerSize()==C::HeaderV2);
- auto tooBig=legacy(3);storeLegacy(f,tooBig,L::Source::PagedV2);unsigned calls=n.calls;assert(before.start(s.volume(),L::Source::PagedV2)==0);s.run(before);assert(before.state()==L::State::Failed&&before.reason()==L::Reason::Capacity&&a.peak==512-C::HeaderV2-4+132&&n.calls==calls&&c.exportPrepared());
+ auto tooBig=legacy(3);storeLegacy(f,tooBig,L::Source::PagedV2);unsigned calls=n.calls;assert(before.start(s.volume(),L::Source::PagedV2)==0);s.run(before);assert(before.state()==L::State::Failed&&before.reason()==L::Reason::Capacity&&a.peak==512-C::HeaderV2-4+132+L::scratchStorageBytes()&&n.calls==calls&&c.exportPrepared());
  auto exact=legacy(1,false,104);storeLegacy(f,exact,L::Source::PagedV2);Hash h2;L after(c,h2.api(),s.guard());assert(after.start(s.volume(),L::Source::PagedV2)==0);s.run(after);L::Candidate out;assert(after.take(&out)==0&&out.mapSize()==124&&n.calls==calls&&c.exportPrepared());
  puts("Legacy reader: start-time RTENR02 envelope after preconstructed-v1 upgrade, exact v2 capacity and untouched active export marker PASS");
 }

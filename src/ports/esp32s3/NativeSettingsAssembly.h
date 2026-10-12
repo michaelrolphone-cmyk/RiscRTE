@@ -42,7 +42,9 @@ struct Inputs {
 // PSRAM-only payload allocator used by every owned Core/store/catalog client.
 // Calling this does not configure, mount, allocate, initialize or access storage.
 Files::Hooks fileHooks(void*context,uint32_t(*now)(void*),bool(*cooperate)(void*));
-// One-shot, native-owner RAM-only construction. No worker registration, source
+// One-shot native-owner construction with one checked permanent INTERNAL
+// control allocation. Large copied I/O scratch uses checked PSRAM only when a
+// client starts. No worker registration, source
 // inventory, baseline creation, backend callback, storage I/O or activation.
 // Invalid selection is latched; retry/replacement/destruction is not supported.
 // The caller and all supplied backend controls must remain alive permanently.
@@ -50,6 +52,6 @@ const NativeSettingsLifecycle::Admission*assemble(const Inputs&);
 const NativeSettingsLifecycle::Admission*admission(); // null until assembled
 // Native-only diagnostics and lifecycle test seams, not SDK imports.
 NativeSettingsMaintenance*maintenance();
-size_t controlBytes(); // static assembly only, excludes supplied controls/workers
+size_t controlBytes(); // allocated assembly only, excludes supplied controls/workers
 } }
 #endif

@@ -13,7 +13,7 @@ static void basics(){
  Native n;Files f;seed(n,f,1025);C c(6,n.api(),limits(),C::heap());assert(c.load()==0);const unsigned calls=n.calls;const auto expected=selectedMap(f);WipingAlloc a;R::Candidate out;
  {Sd s(f);Hash h;R r(c,h.api(),s.guard(),a.api());assert(r.start(s.volume())==0);for(unsigned i=0;i<1000;++i)s.tick(r,false);assert(s.io==0);assert(r.take(&out)==C::Stale&&!out.valid());s.run(r);assert(r.state()==R::State::Verified&&s.ends&&!r.exitSafe());assert(r.take(&out)==0&&r.exitSafe()&&out.valid());assert(out.count()==1025&&out.mapSize()==expected.size()&&!memcmp(out.map(),expected.data(),expected.size()));assert(n.calls==calls&&c.pendingCount()==1);}
  // Candidate owns its bytes after all reader/hash/SD objects are destroyed.
- f.clear();edit(c,"newer");assert(out.mapSize()==expected.size()&&!memcmp(out.map(),expected.data(),expected.size()));assert(a.peak==c.imageCapacity()-C::Header-4);out.reset();assert(!a.live&&!out.valid());
+ f.clear();edit(c,"newer");assert(out.mapSize()==expected.size()&&!memcmp(out.map(),expected.data(),expected.size()));assert(a.peak==c.imageCapacity()-C::Header-4+R::scratchStorageBytes());out.reset();assert(!a.live&&!out.valid());
  puts("SD reader: 1025 keys, owned immutable candidate after checked close, actual native-capacity allocation, no native I/O/mutation, post-export custody and wiping PASS");
 }
 static void malformed(){
@@ -57,11 +57,11 @@ static void boundsAndAvailability(){
   if(mode==7)s.terminalBusy=true;
   int rc=r.start(s.volume());if(mode==3){assert(rc==C::Conflict&&r.reason()==R::Reason::CustodyLost);continue;}if(mode==4){assert(rc==C::NoMemory&&s.io==0);continue;}assert(rc==0);s.run(r);
   if(mode==6){R::Candidate out;assert(r.state()==R::State::Verified&&r.take(&out)==0&&out.identity().generation==UINT64_MAX&&out.identity().lineage[0]==88);}
-  else {assert(r.state()==R::State::Failed);if(mode==0)assert(r.reason()==R::Reason::CheckpointMissing);if(mode==1)assert(r.reason()==R::Reason::MediaUnavailable);if(mode==2||mode==7)assert(r.reason()==R::Reason::ReadFailure);if(mode==5)assert(r.reason()==R::Reason::Capacity&&a.peak==512-C::Header-4);}
+  else {assert(r.state()==R::State::Failed);if(mode==0)assert(r.reason()==R::Reason::CheckpointMissing);if(mode==1)assert(r.reason()==R::Reason::MediaUnavailable);if(mode==2||mode==7)assert(r.reason()==R::Reason::ReadFailure);if(mode==5)assert(r.reason()==R::Reason::Capacity&&a.peak==512-C::Header-4+R::scratchStorageBytes());}
   assert(get(c,"edited")=="local"&&c.pendingCount()==1);
  }
  // An empty complete map is valid, including the minimum native image budget.
- Native n;Files f;auto id=identity({},0);save(f,{},0,id);C c(6,n.api(),{C::Header+4,4096,1024},C::heap());Sd s(f);Hash h;WipingAlloc a;R r(c,h.api(),s.guard(),a.api());assert(r.start(s.volume())==0);s.run(r);R::Candidate out;assert(r.take(&out)==0&&out.valid()&&out.mapSize()==0&&out.count()==0&&a.allocations==0);
+ Native n;Files f;auto id=identity({},0);save(f,{},0,id);C c(6,n.api(),{C::Header+4,4096,1024},C::heap());Sd s(f);Hash h;WipingAlloc a;R r(c,h.api(),s.guard(),a.api());assert(r.start(s.volume())==0);s.run(r);R::Candidate out;assert(r.take(&out)==0&&out.valid()&&out.mapSize()==0&&out.count()==0&&a.allocations==1);
  puts("SD reader: missing/unavailable/unreadable distinguishable, high/foreign generation gives no adoption authority, capacity/allocator failure and empty map PASS");
 }
 static void boundaries(){

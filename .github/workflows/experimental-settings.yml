@@ -37,6 +37,12 @@ jobs:
       - name: Exact namespace, custody, availability and startup contracts
         run: |
           python3 test/run_native_settings_startup_entropy_test.py
+          bash test/run_native_replica_core_test.sh
+          bash test/run_native_fresh_initialization_test.sh
+          bash test/run_native_import_initialization_test.sh
+          bash test/run_native_settings_scratch_allocation_test.sh
+          bash test/run_file_source_storage_test.sh
+          bash test/run_file_source_runtime_test.sh
           bash test/run_native_atomic_key_value_test.sh
           bash test/run_native_settings_coordinator_test.sh
           bash test/run_native_first_sd_checkpoint_test.sh

@@ -56,7 +56,7 @@ class NativeSdSynchronization final {
   }
   switch(phase_){
    case Phase::Refresh:{const int rc=attempt_->refresh();if(rc==RISC_STORAGE_ASYNC_BUSY)break;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();break;}phase_=rc?Phase::AdmissionClose:Phase::RefreshResult;break;}
-   case Phase::RefreshResult:{auto*result=new(storage_)risc_storage_async_result_v1{};result->status=INT32_MIN;const int rc=attempt_->collect(result);const bool waiting=rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result->status!=RISC_STORAGE_ASYNC_BUSY);C::wipe(storage_,sizeof storage_);if(waiting)break;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();break;}phase_=Phase::AdmissionClose;break;}
+   case Phase::RefreshResult:{auto*result=&refresh_.get();result->status=INT32_MIN;const int rc=attempt_->collect(result);const bool waiting=rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result->status!=RISC_STORAGE_ASYNC_BUSY);refresh_.wipe();if(waiting)break;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();break;}phase_=Phase::AdmissionClose;break;}
    case Phase::AdmissionClose:{
     if(attempt_->hasSession()){const int rc=attempt_->close();if(rc==RISC_STORAGE_ASYNC_PENDING||rc==RISC_STORAGE_ASYNC_BUSY)break;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();break;}}
     if(cancelled_)finish(State::Cancelled,C::Stale);
@@ -138,12 +138,14 @@ class NativeSdSynchronization final {
  // the permanent worker is still returning from that callback.
  struct Lock {std::atomic<bool>&gate;bool held;explicit Lock(std::atomic<bool>&g):gate(g),held(!g.exchange(true,std::memory_order_acquire)){}~Lock(){if(held)gate.store(false,std::memory_order_release);}explicit operator bool()const{return held;}};
  C&core_;CheckedNativeReplicaStore&store_;Coordinator&service_;Checkpoint::Digest digest_;C::Allocator allocator_;
+ OwnedSettingsScratch<risc_storage_async_result_v1> refresh_;
  Coordinator::Lease hold_{};uint32_t slot_=0;NativeSdAttempt*attempt_=nullptr;NativeSdPortAttempt*port_=nullptr;
  std::atomic<bool>gate_{false},retained_{false},storeRetained_{false};bool active_=false,cancelled_=false,recovered_=false,hasIncarnation_=false;unsigned kind_=0;uint8_t incarnation_[16]{};
  Recovery::Decision recoveryDecision_=Recovery::Decision::None;
  State state_=State::Idle,result_=State::Idle;Phase phase_=Phase::Idle;int error_=C::Ok;
  static constexpr size_t ConsumerBytes=sizeof(Catalog)>sizeof(Checkpoint)?sizeof(Catalog):sizeof(Checkpoint);
  alignas(Catalog) alignas(Checkpoint) alignas(Recovery) unsigned char storage_[ConsumerBytes>sizeof(Recovery)?ConsumerBytes:sizeof(Recovery)]{};
+ static_assert(sizeof(storage_)>=sizeof(Catalog)&&sizeof(storage_)>=sizeof(Checkpoint)&&sizeof(storage_)>=sizeof(Recovery),"Consumer placement storage must cover every selected type");
  Catalog*catalog(){return reinterpret_cast<Catalog*>(storage_);}Checkpoint*checkpoint(){return reinterpret_cast<Checkpoint*>(storage_);}Recovery*recovery(){return reinterpret_cast<Recovery*>(storage_);}
  static bool same(const C::Identity&a,const C::Identity&b){return a.known&&b.known&&a.generation==b.generation&&!std::memcmp(a.lineage,b.lineage,16)&&!std::memcmp(a.digest,b.digest,32);}
  Checkpoint::Guard guard(){return {this,[](void*p){auto&s=*static_cast<NativeSdSynchronization*>(p);return s.service_.nativeOwner(s.hold_);},[](void*p){auto&s=*static_cast<NativeSdSynchronization*>(p);return s.service_.nativeWorker(s.slot_);}};}
@@ -153,7 +155,8 @@ class NativeSdSynchronization final {
   Lock lock(gate_);if(!lock||active_)return C::Busy;
   if(retained_.load(std::memory_order_acquire))return C::Retained;
   if(!a->fenced()||(a->state()!=NativeSdAttempt::State::Admission&&a->state()!=NativeSdAttempt::State::ReadyClosed))return C::Invalid;
-  const int rc=service_.acquireNative(slot_,&hold_);if(rc)return rc;
+  if(!refresh_.ensure(allocator_))return C::NoMemory;
+  const int rc=service_.acquireNative(slot_,&hold_);if(rc){refresh_.reset();return rc;}
   destroy();attempt_=a;port_=p;active_=true;cancelled_=recovered_=false;recoveryDecision_=Recovery::Decision::None;C::wipe(incarnation_,sizeof incarnation_);hasIncarnation_=incarnation!=nullptr;if(incarnation)std::memcpy(incarnation_,incarnation,16);state_=State::Running;result_=State::Idle;error_=C::Ok;
   phase_=a->state()==NativeSdAttempt::State::Admission?Phase::Refresh:Phase::CatalogQueue;return C::Ok;
  }
@@ -182,7 +185,7 @@ class NativeSdSynchronization final {
   active_=false;
   const int released=service_.releaseNative(hold_);
   if(released){active_=true;retain();return;}
-  C::wipe(incarnation_,sizeof incarnation_);hasIncarnation_=false;hold_={};attempt_=nullptr;port_=nullptr;state_=result_;phase_=Phase::Terminal;
+  C::wipe(incarnation_,sizeof incarnation_);hasIncarnation_=false;hold_={};attempt_=nullptr;port_=nullptr;state_=result_;phase_=Phase::Terminal;refresh_.reset();
  }
 };
 }

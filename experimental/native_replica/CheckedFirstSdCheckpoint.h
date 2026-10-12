@@ -1,4 +1,5 @@
 #pragma once
+#include "OwnedSettingsScratch.h"
 #include "CheckedSdReplicaCheckpoint.h"
 namespace RiscExperimental {
 // Disconnected first-create path; the constructor is native-owner-only. Raw
@@ -8,6 +9,7 @@ namespace RiscExperimental {
 class CheckedFirstSdCheckpoint {
  public:
  using C=NativeReplicaCore;using Writer=CheckedSdReplicaCheckpoint;using Digest=Writer::Digest;using Guard=Writer::Guard;
+ static constexpr size_t scratchStorageBytes(){return sizeof(Scratch);}
  enum class State {Idle,Running,Admitted,Verified,Done,Failed,Cancelled,Retained};
  enum class Reason {None,Conflict,Unclassified,NoMarker,Capacity,CustodyLost,MediaUnavailable,ReadFailure,StorageFailure,NativeFailure,Retained};
  // Qualified native entropy, never an app/card/clock-derived lineage. The
@@ -97,6 +99,7 @@ class CheckedFirstSdCheckpoint {
  int start(const risc_storage_volume_api_v1*volume){
   if(io_.native()&&!preparation_.workerClaimed())return C::Busy;
   if(state_!=State::Idle||!guard_.held||!guard_.worker||!authority_.otherWritersStopped||(!io_.native()&&!authority_.stagingCapacity)||!hash_.begin||!hash_.update||!hash_.finish||!risc_storage_volume_download(volume))return C::Invalid;
+  if(!scratch_.ensure(core_.payloadAllocator()))return C::NoMemory;
   volume_=volume;api_=risc_storage_volume_packages(volume);
   if(!io_.native()&&api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return C::Retained;}
   if(!guard_.worker(guard_.context))return C::Busy;
@@ -186,8 +189,8 @@ class CheckedFirstSdCheckpoint {
   }
   if(phase_==Begin){const int rc=io_.native()?io_.begin(&session_):api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::StorageFailure);return;}if(io_.native())phase_=Capacity;else phase_=Refresh;return;}
   if(!operation_){submit();return;}
-  result_.status=INT32_MIN;const int rc=io_.native()?io_.collect(&result_):api_->base.collect(volume_->context,session_,operation_,&result_);
-  if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
+  scratch_->result.status=INT32_MIN;const int rc=io_.native()?io_.collect(&scratch_->result):api_->base.collect(volume_->context,session_,operation_,&scratch_->result);
+  if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&scratch_->result.status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
   if(phase_==Capacity&&rc==RISC_STORAGE_NATIVE_CAPACITY_NO_SPACE){fail(C::NoSpace,Reason::Capacity);wipeResult();return;}
@@ -246,7 +249,7 @@ class CheckedFirstSdCheckpoint {
  ClosedEvidence vacancy_{},published_{};bool armIssued_=false,completionIssued_=false,hasIncarnation_=false;uint8_t incarnation_[16]{};
  const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;State state_=State::Idle;Reason reason_=Reason::None;Phase phase_=Begin;int error_=0;
  bool validating_=false,armed_=false,cancelled_=false,finalScan_=false,finalStart_=false,zeroTemp_=false,seenTemp_=false,seenIndex_=false;uint64_t session_=0,operation_=0;unsigned level_=0,page_=0,work_=0,names_=0;uint32_t seenPages_=0,zeroPages_=0;
- char namespace_[9]{},directory_[32]{},index_[64]{},temp_[64]{},path_[160]{};uint8_t candidate_[Writer::IndexBytes]{};risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};
+ char namespace_[9]{},directory_[32]{},index_[64]{},temp_[64]{},path_[160]{};uint8_t candidate_[Writer::IndexBytes]{};struct Scratch {risc_storage_package_request_v1 request{};risc_storage_async_result_v1 result{};};OwnedSettingsScratch<Scratch> scratch_;
  static bool wait(int rc){return rc==RISC_STORAGE_ASYNC_PENDING||rc==RISC_STORAGE_ASYNC_BUSY;}
  bool nativePending()const{return preparation_.pending()||arm_.pending()||completion_.pending();}
  bool nativeRetained()const{return preparation_.retained()||arm_.state()==NativeSdCompletion::State::Retained||completion_.state()==NativeSdCompletion::State::Retained;}
@@ -305,9 +308,9 @@ class CheckedFirstSdCheckpoint {
  void makeCandidate(){Writer::makeIndex(candidate_,core_.namespaceId(),snapshot_.mapSize(),snapshot_.count(),target_);}
  void nextPage(){++page_;phase_=uint64_t(page_)*4096>=snapshot_.mapSize()?ReadTemp:ReadPage;}
  uint32_t pageSize()const{return C::chunk(snapshot_.mapSize()-page_*4096);}const uint8_t*pageData()const{return snapshot_.map()+page_*4096;}
- bool equal(const void*p,uint32_t n)const{return result_.size==n&&!std::memcmp(result_.data,p,n);}
- bool prefix(const void*p,uint32_t n)const{return result_.size<n&&!std::memcmp(result_.data,p,result_.size);}
- void wipeResult(){C::wipe(&result_,sizeof result_);}void wipeScratch(){wipeResult();C::wipe(&request_,sizeof request_);C::wipe(candidate_,sizeof candidate_);C::wipe(&marker_,sizeof marker_);C::wipe(&target_,sizeof target_);C::wipe(incarnation_,sizeof incarnation_);vacancy_={};published_={};}
+ bool equal(const void*p,uint32_t n)const{return scratch_->result.size==n&&!std::memcmp(scratch_->result.data,p,n);}
+ bool prefix(const void*p,uint32_t n)const{return scratch_->result.size<n&&!std::memcmp(scratch_->result.data,p,scratch_->result.size);}
+ void wipeResult(){scratch_.wipe(&Scratch::result);}void wipeScratch(){wipeResult();scratch_.wipe(&Scratch::request);C::wipe(candidate_,sizeof candidate_);C::wipe(&marker_,sizeof marker_);C::wipe(&target_,sizeof target_);C::wipe(incarnation_,sizeof incarnation_);vacancy_={};published_={};}
  void finish(State s,int rc,Reason reason){
   if(io_.native()&&!preparation_.workerClaimed()&&io_.pinned()){
    const int released=io_.release();if(released==C::Retained){retain();return;}if(released){s=State::Failed;rc=released;reason=custodyReason(released);}
@@ -319,7 +322,7 @@ class CheckedFirstSdCheckpoint {
  void beginScan(bool final){finalScan_=final;level_=work_=names_=seenPages_=zeroPages_=0;seenTemp_=zeroTemp_=seenIndex_=false;phase_=OpenScan;}
  void pagePath(unsigned page){char digest[65];for(unsigned i=0;i<32;++i)std::snprintf(digest+i*2,3,"%02x",unsigned(target_.digest[i]));std::snprintf(path_,sizeof path_,"%s/nr-%08x%08x-%s-%08x",directory_,unsigned(target_.generation>>32),unsigned(target_.generation),digest,page);C::wipe(digest,sizeof digest);}
  static bool folded(const char*a,const char*b){for(;*a&&*b;++a,++b){unsigned x=uint8_t(*a),y=uint8_t(*b);if(x>='A'&&x<='Z')x+=32;if(y>='A'&&y<='Z')y+=32;if(x!=y)return false;}return !*a&&!*b;}
- void entry(){const auto&e=result_.entry;const char*end=static_cast<const char*>(std::memchr(e.name,0,sizeof e.name));if(!end||end==e.name||e.is_directory>1||std::strchr(e.name,'/')||std::strchr(e.name,'\\')){fail(C::Conflict,Reason::Conflict);return;}
+ void entry(){const auto&e=scratch_->result.entry;const char*end=static_cast<const char*>(std::memchr(e.name,0,sizeof e.name));if(!end||end==e.name||e.is_directory>1||std::strchr(e.name,'/')||std::strchr(e.name,'\\')){fail(C::Conflict,Reason::Conflict);return;}
   const unsigned n=unsigned(end-e.name)+1;if(++work_>128||n>8192-names_){fail(C::NoSpace,Reason::Capacity);return;}names_+=n;
   if(!std::strcmp(e.name,".")||!std::strcmp(e.name,"..")){if(!e.is_directory)fail(C::Conflict,Reason::Conflict);return;}
   if(level_){if(folded(e.name,level_==1?namespace_:"RTECFG"))fail(C::Conflict,Reason::Conflict);return;}
@@ -331,11 +334,11 @@ class CheckedFirstSdCheckpoint {
  }
  void submit(){
   if(phase_==Capacity){const int rc=io_.capacity(snapshot_.mapSize(),(snapshot_.mapSize()+4095)/4096,&operation_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc)fail(C::Io,Reason::StorageFailure);return;}
-  C::wipe(&request_,sizeof request_);int rc;const bool package=phase_==Recover||phase_==Root||phase_==Directory||phase_==WritePage||phase_==WriteTemp||phase_==Replace;
-  if(package){request_.operation=phase_==Recover?RISC_STORAGE_PACKAGE_RECOVER:(phase_==Root||phase_==Directory)?RISC_STORAGE_PACKAGE_MKDIR:phase_==Replace?RISC_STORAGE_PACKAGE_REPLACE:RISC_STORAGE_PACKAGE_WRITE_SMALL;const char*p=index_;
+  scratch_.wipe(&Scratch::request);int rc;const bool package=phase_==Recover||phase_==Root||phase_==Directory||phase_==WritePage||phase_==WriteTemp||phase_==Replace;
+  if(package){scratch_->request.operation=phase_==Recover?RISC_STORAGE_PACKAGE_RECOVER:(phase_==Root||phase_==Directory)?RISC_STORAGE_PACKAGE_MKDIR:phase_==Replace?RISC_STORAGE_PACKAGE_REPLACE:RISC_STORAGE_PACKAGE_WRITE_SMALL;const char*p=index_;
    if(phase_==Root)p="/RTECFG";
    if(phase_==Directory)p=directory_;
-   if(phase_==WritePage){pagePath(page_);p=path_;request_.size=pageSize();std::memcpy(request_.data,pageData(),request_.size);}if(phase_==WriteTemp||phase_==Replace){p=temp_;request_.size=sizeof candidate_;std::memcpy(request_.data,candidate_,sizeof candidate_);std::strcpy(request_.destination,index_);}std::strcpy(request_.path,p);rc=io_.native()?io_.package(request_,&operation_):api_->submit_package(volume_->context,session_,&request_,&operation_);C::wipe(&request_,sizeof request_);
+   if(phase_==WritePage){pagePath(page_);p=path_;scratch_->request.size=pageSize();std::memcpy(scratch_->request.data,pageData(),scratch_->request.size);}if(phase_==WriteTemp||phase_==Replace){p=temp_;scratch_->request.size=sizeof candidate_;std::memcpy(scratch_->request.data,candidate_,sizeof candidate_);std::strcpy(scratch_->request.destination,index_);}std::strcpy(scratch_->request.path,p);rc=io_.native()?io_.package(scratch_->request,&operation_):api_->submit_package(volume_->context,session_,&scratch_->request,&operation_);scratch_.wipe(&Scratch::request);
   }else{risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:phase_==OpenScan?RISC_STORAGE_ASYNC_OPEN_DIRECTORY:phase_==NextScan?RISC_STORAGE_ASYNC_NEXT_ENTRY:phase_==CloseScan?RISC_STORAGE_ASYNC_CLOSE_DIRECTORY:(phase_==RepairPage||phase_==RepairTemp)?RISC_STORAGE_ASYNC_REMOVE_FILE:RISC_STORAGE_ASYNC_READ_SMALL_FILE;const char*p=index_;
    if(phase_==OpenScan)p=level_==0?directory_:level_==1?"/RTECFG":"/";
    if(phase_==LegacyIndex||phase_==LegacyFile){std::snprintf(path_,sizeof path_,"%s/%s",directory_,phase_==LegacyIndex?"settings.index":"settings.kv");p=path_;}

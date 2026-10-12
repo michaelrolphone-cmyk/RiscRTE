@@ -1,0 +1,13 @@
+Assembly assembly-control-oom refuses without backend I/O, payload allocation or registration PASS
+Assembly assembly-control-range refuses without backend I/O, payload allocation or registration PASS
+Permanent factory assembly PASS; static-control=13704; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=198; peak-vendor-bytes=195878; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance happy PASS; control=7592; polls=0
+test: /workspace/shared/x4-settings-native-resource-link-20261012/test/native_settings_maintenance_test.cpp:180: void test_maintenance_app(): Assertion `cores[0]->identity().generation==1&&cores[1]->identity().generation==1&&!cores[0]->pendingCount()&&!cores[1]->pendingCount()' failed.
+Traceback (most recent call last):
+  File "/workspace/shared/x4-settings-native-resource-link-20261012/test/run_native_settings_maintenance_test.py", line 125, in <module>
+    result=subprocess.run(command, check=True, timeout=a.case_timeout, text=True, stdout=subprocess.PIPE)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '[PosixPath('/workspace/shared/x4-settings-native-resource-link-20261012/build/assembly-psram-fixed/test'), PosixPath('/workspace/shared/x4-settings-native-resource-link-20261012/build/assembly-psram-fixed'), 'first', PosixPath('/workspace/shared/x4-settings-native-resource-link-20261012/build/assembly-psram-fixed/native-first')]' died with <Signals.SIGABRT: 6>.

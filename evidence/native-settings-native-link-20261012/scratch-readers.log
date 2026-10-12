@@ -1,0 +1,8 @@
+SD reader: 1025 keys, owned immutable candidate after checked close, actual native-capacity allocation, no native I/O/mutation, post-export custody and wiping PASS
+SD reader: 22 valid-digest malformed map/index cases reject grammar, padding, duplicate keys, zero/oversize/truncated values, count, framing and SHA mismatches PASS
+SD reader: missing/unavailable/unreadable distinguishable, high/foreign generation gives no adoption authority, capacity/allocator failure and empty map PASS
+SD reader: 424 real queued/completed worker cancel/removal/export/restart boundaries preserve native intents and candidate custody PASS
+SD reader: 220 reached before/after read/recovery/close failures and power cuts, backup-only replacement recovery and sticky retention PASS
+SD reader: changed-index recheck, late removal/export and late retained-close custody block candidate exposure PASS
+SD reader: four late-retained transfer/cancel cases, including concurrent lease loss, keep sticky custody and expose no candidate or native mutation PASS
+DISCONNECTED VERIFIED READER ONLY: no adoption, defaults, native mutation, migration, public ABI or hardware claim

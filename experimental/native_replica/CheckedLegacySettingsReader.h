@@ -1,4 +1,5 @@
 #pragma once
+#include "OwnedSettingsScratch.h"
 #include "CheckedSdReplicaCheckpoint.h"
 #include "NativeSdSession.h"
 namespace RiscExperimental {
@@ -10,6 +11,7 @@ class CheckedLegacySettingsReader {
  using C=NativeReplicaCore;using Digest=CheckedSdReplicaCheckpoint::Digest;using Guard=CheckedSdReplicaCheckpoint::Guard;
  enum class Source:uint32_t {PagedV2=1,SingleFile=2};
  enum class Format:uint32_t {None=0,V1=1,V2=2};
+ static constexpr size_t scratchStorageBytes(){return sizeof(Scratch);}
  enum class State {Idle,Running,Verified,Done,Failed,Cancelled,Retained};
  enum class Reason {None,SourceMissing,MediaUnavailable,CustodyLost,ReadFailure,InvalidContent,SourceChanged,Capacity,Retained};
  class Candidate {
@@ -35,7 +37,7 @@ class CheckedLegacySettingsReader {
  // separately by the receiver. No allocation is driven by an on-card length.
  CheckedLegacySettingsReader(const C&core,Digest digest,Guard guard,C::Allocator allocator=C::heap())
   :core_(core),namespace_(core.namespaceId()),nativeCapacity_(core.imageCapacity()),nativeHeader_(C::Header),hash_(digest),guard_(guard),alloc_(allocator),prep_(this,preparationWorker,prepareCallback){}
- ~CheckedLegacySettingsReader(){C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
+ ~CheckedLegacySettingsReader(){scratch_.wipe(&Scratch::request);scratch_.wipe(&Scratch::result);}
  CheckedLegacySettingsReader(const CheckedLegacySettingsReader&)=delete;CheckedLegacySettingsReader&operator=(const CheckedLegacySettingsReader&)=delete;
  State state()const{return prep_.retained()?State::Retained:prep_.pending()?State::Running:state_;}Reason reason()const{return prep_.retained()?Reason::Retained:prep_.pending()?Reason::None:reason_;}int error()const{return prep_.retained()?C::Retained:prep_.pending()?C::Busy:error_;}
  bool exitSafe()const{return !prep_.pending()&&!io_.pinned()&&!session_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
@@ -65,6 +67,7 @@ class CheckedLegacySettingsReader {
   reason_=Reason::None;error_=C::Ok;
   if(!preparedStart_&&!guard_.worker(guard_.context))return C::Busy;
   if(!preparedStart_&&!prep_.workerClaimed()&&!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
+  if(!scratch_.ensure(alloc_))return C::NoMemory;
   if(!preparedStart_)nativeHeader_=core_.headerSize()?core_.headerSize():C::Header;
   if(nativeCapacity_<nativeHeader_+4)return C::Invalid;
   budget_=nativeCapacity_-nativeHeader_-4;if(budget_>CheckedSdReplicaCheckpoint::MapMax)budget_=CheckedSdReplicaCheckpoint::MapMax;
@@ -89,7 +92,7 @@ class CheckedLegacySettingsReader {
   if(custody){reason_=custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable;finish(State::Failed,custody);return error_;}
   if(io_.pinned()){const int released=io_.release();if(released){if(released==C::Retained)retain();else finish(State::Failed,released);return error_;}}
   out->alloc_=candidate_.alloc_;out->bytes_=candidate_.bytes_;out->capacity_=candidate_.capacity_;out->size_=candidate_.size_;out->count_=candidate_.count_;out->namespace_=namespace_;out->sourceSize_=candidate_.sourceSize_;out->generation_=candidate_.generation_;out->source_=candidate_.source_;out->format_=candidate_.format_;std::memcpy(out->digest_,candidate_.digest_,32);out->valid_=true;
-  candidate_.bytes_=nullptr;candidate_.reset();state_=State::Done;return C::Ok;
+  candidate_.bytes_=nullptr;candidate_.reset();scratch_.reset();state_=State::Done;return C::Ok;
  }
  void step(){
   if(prep_.pending()||(io_.native()&&!io_.owner()))return;
@@ -104,15 +107,15 @@ class CheckedLegacySettingsReader {
    if(session_){const int rc=io_.native()?io_.end():api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK&&(!io_.native()||rc!=NativeSdAttempt::Lost)){retain();return;}session_=operation_=0;if(rc==NativeSdAttempt::Lost){const int lost=io_.custody();if(lost==C::Retained){retain();return;}fail(lost==C::Io?C::Io:C::Conflict,lost==C::Io?Reason::MediaUnavailable:Reason::CustodyLost);}}
    // End OK fences adapter cleanup; provider custody can become visible only now.
    if(retainedCustody()){retain();return;}
-   if(cancelled_)finish(State::Cancelled,C::Ok);else if(error_)finish(State::Failed,error_);else {C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);state_=State::Verified;}return;
+   if(cancelled_)finish(State::Cancelled,C::Ok);else if(error_)finish(State::Failed,error_);else {scratch_.wipe(&Scratch::request);scratch_.wipe(&Scratch::result);state_=State::Verified;}return;
   }
   if(phase_==Begin){const int rc=io_.native()?io_.begin(&session_):api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::ReadFailure);return;}phase_=io_.native()?ReadSource:Refresh;return;}
   if(phase_==Grammar){grammarStep();return;}
   if(phase_==Hash){hashStep();return;}
   if(phase_==Compact){compactStep();return;}
   if(!operation_){submit();return;}
-  result_.status=INT32_MIN;const int rc=io_.native()?io_.collect(&result_):api_->base.collect(volume_->context,session_,operation_,&result_);
-  if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
+  scratch_->result.status=INT32_MIN;const int rc=io_.native()?io_.collect(&scratch_->result):api_->base.collect(volume_->context,session_,operation_,&scratch_->result);
+  if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&scratch_->result.status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
   if(rc==RISC_STORAGE_ASYNC_NOT_FOUND){if(phase_==ReadSource&&recoverAllowed_&&!recovered_){recovered_=true;phase_=Recover;return;}fail(phase_==ReadSource?C::Missing:C::Invalid,phase_==ReadSource?Reason::SourceMissing:(phase_==Recheck||phase_==RecheckPage)?Reason::SourceChanged:Reason::InvalidContent);return;}
@@ -122,16 +125,16 @@ class CheckedLegacySettingsReader {
    case Recover:phase_=ReadSource;break;
    case ReadSource:admitSource();break;
    case ReadPage:{const uint32_t at=page_*4096,n=chunk(candidate_.sourceSize_-at);
-    if(result_.size!=n){fail(C::Invalid,Reason::InvalidContent);break;}
-    std::memcpy(candidate_.bytes_+at,result_.data,n);++page_;if(uint64_t(page_)*4096>=candidate_.sourceSize_)admitImage();break;}
+    if(scratch_->result.size!=n){fail(C::Invalid,Reason::InvalidContent);break;}
+    std::memcpy(candidate_.bytes_+at,scratch_->result.data,n);++page_;if(uint64_t(page_)*4096>=candidate_.sourceSize_)admitImage();break;}
    case RecheckPage:{const uint32_t at=page_*4096,n=chunk(candidate_.sourceSize_-at);
-    if(result_.size!=n||std::memcmp(result_.data,candidate_.bytes_+at,n)){fail(C::Conflict,Reason::SourceChanged);break;}
+    if(scratch_->result.size!=n||std::memcmp(scratch_->result.data,candidate_.bytes_+at,n)){fail(C::Conflict,Reason::SourceChanged);break;}
     ++page_;if(uint64_t(page_)*4096>=candidate_.sourceSize_)phase_=Recheck;break;}
    case Recheck:{const bool paged=candidate_.source_==Source::PagedV2;const uint32_t n=paged?28:candidate_.sourceSize_;const uint8_t*p=paged?indexBytes_:candidate_.bytes_;
-    if(result_.size!=n||std::memcmp(result_.data,p,n))fail(C::Conflict,Reason::SourceChanged);else {row_=0;at_=rowStart();out_=0;phase_=Compact;}break;}
+    if(scratch_->result.size!=n||std::memcmp(scratch_->result.data,p,n))fail(C::Conflict,Reason::SourceChanged);else {row_=0;at_=rowStart();out_=0;phase_=Compact;}break;}
    default:fail(C::Invalid,Reason::InvalidContent);break;
   }
-  C::wipe(&result_,sizeof result_);
+  scratch_.wipe(&Scratch::result);
  }
  private:
  friend class CheckedSdSettingsCatalog;
@@ -161,7 +164,7 @@ class CheckedLegacySettingsReader {
  NativeSdSession io_;NativeSdPreparation prep_;bool preparedStart_=false,recoverAllowed_=true;uint32_t preparedHeader_=C::Header;Source preparedSource_=Source::PagedV2;
  State state_=State::Idle;Reason reason_=Reason::None;Phase phase_=Begin;int error_=0;bool entered_=false,cancelled_=false,recovered_=false,rowOpen_=false;
  uint64_t session_=0,operation_=0;uint32_t page_=0,row_=0,at_=0,prior_=0,rowSize_=0,out_=0,hashed_=0;
- uint8_t indexBytes_[28]{};char directory_[32]{},selected_[64]{},owner_[32]{},path_[96]{};risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};
+ uint8_t indexBytes_[28]{};char directory_[32]{},selected_[64]{},owner_[32]{},path_[96]{};struct Scratch {risc_storage_package_request_v1 request{};risc_storage_async_result_v1 result{};};OwnedSettingsScratch<Scratch> scratch_;
  static bool wait(int rc){return rc==RISC_STORAGE_ASYNC_PENDING||rc==RISC_STORAGE_ASYNC_BUSY;}
  static uint32_t chunk(uint32_t n){return n>4096?4096:n;}
  static uint32_t word(const uint8_t*p){return uint32_t(p[0])|(uint32_t(p[1])<<8)|(uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);}
@@ -170,11 +173,11 @@ class CheckedLegacySettingsReader {
  static void put(uint8_t*p,uint32_t n){for(unsigned i=0;i<4;++i)p[i]=uint8_t(n>>(8*i));}
  uint32_t rowStart()const{return candidate_.format_==Format::V1?124:128;}
  uint32_t stride(uint32_t at)const{return candidate_.format_==Format::V1?84:20+word(candidate_.bytes_+at+16);}
- void retain(){state_=State::Retained;reason_=Reason::Retained;error_=C::Retained;C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
+ void retain(){state_=State::Retained;reason_=Reason::Retained;error_=C::Retained;scratch_.wipe(&Scratch::request);scratch_.wipe(&Scratch::result);}
  void fail(int rc,Reason reason){error_=rc;reason_=reason;phase_=Closing;}
- void finish(State state,int rc){if(io_.pinned()){const int released=io_.release();if(released==C::Retained){retain();return;}if(released){state=State::Failed;rc=released;}}state_=state;error_=rc;candidate_.reset();C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
+ void finish(State state,int rc){if(io_.pinned()){const int released=io_.release();if(released==C::Retained){retain();return;}if(released){state=State::Failed;rc=released;}}state_=state;error_=rc;candidate_.reset();scratch_.reset();}
  void admitSource(){
-  const uint8_t*p=result_.data;const uint32_t n=result_.size;
+  const uint8_t*p=scratch_->result.data;const uint32_t n=scratch_->result.size;
   if(candidate_.source_==Source::SingleFile){
    if(n>candidate_.capacity_){fail(C::NoSpace,Reason::Capacity);return;}
    candidate_.sourceSize_=n;std::memcpy(candidate_.bytes_,p,n);admitImage();return;
@@ -228,7 +231,7 @@ class CheckedLegacySettingsReader {
  }
  void submit(){
   int rc;
-  if(phase_==Recover){C::wipe(&request_,sizeof request_);request_.operation=RISC_STORAGE_PACKAGE_RECOVER;std::strcpy(request_.path,selected_);rc=io_.native()?io_.package(request_,&operation_):api_->submit_package(volume_->context,session_,&request_,&operation_);C::wipe(&request_,sizeof request_);}
+  if(phase_==Recover){scratch_.wipe(&Scratch::request);scratch_->request.operation=RISC_STORAGE_PACKAGE_RECOVER;std::strcpy(scratch_->request.path,selected_);rc=io_.native()?io_.package(scratch_->request,&operation_):api_->submit_package(volume_->context,session_,&scratch_->request,&operation_);scratch_.wipe(&Scratch::request);}
   else {risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:RISC_STORAGE_ASYNC_READ_SMALL_FILE;const char*p=selected_;if(phase_==ReadPage||phase_==RecheckPage){const uint64_t gen=wide(indexBytes_+12);std::snprintf(path_,sizeof path_,"%s/kv-%08x%08x-%08x",directory_,unsigned(gen>>32),unsigned(gen),unsigned(page_));p=path_;}std::strcpy(q.path,p);rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);}
   if(rc==RISC_STORAGE_ASYNC_BUSY)return;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}

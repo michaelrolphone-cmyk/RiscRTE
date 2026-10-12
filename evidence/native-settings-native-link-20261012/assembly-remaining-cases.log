@@ -1,0 +1,2 @@
+test: /workspace/shared/x4-settings-native-resource-link-20261012/test/native_replica_checked_fixture.h:52: NativeFixture::Fixture::Fixture(uint32_t, RiscExperimental::NativeReplicaCore::Allocator): Assertion `files.configure(rootPath.c_str())' failed.
+/bin/bash: line 5:     9 Aborted                 build/assembly-psram-fixed/test build/assembly-psram-fixed "$case" "build/assembly-psram-fixed/native-$case"

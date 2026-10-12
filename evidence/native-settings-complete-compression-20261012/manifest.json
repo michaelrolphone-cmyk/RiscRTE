@@ -1,0 +1,54 @@
+{
+  "format": "gzip",
+  "entries": [
+    {
+      "logical_path": "evidence/native-settings-complete-path-20261012/asan-manifest.json",
+      "stored_path": "evidence/native-settings-complete-path-20261012/asan-manifest.json.gz",
+      "original_bytes": 290054,
+      "stored_bytes": 81820,
+      "original_sha256": "95073c169b5a8b84cf497d19a6ba3c385923f27cac36d3f4d0a78d21b5ea072e",
+      "stored_sha256": "610b0187cdc683500f53a60ebb6ff8f633ec5134e6a367bb7ebabfeaff9ebaea"
+    },
+    {
+      "logical_path": "evidence/native-settings-complete-path-20261012/normal-manifest.json",
+      "stored_path": "evidence/native-settings-complete-path-20261012/normal-manifest.json.gz",
+      "original_bytes": 287349,
+      "stored_bytes": 81736,
+      "original_sha256": "b7f06ece40012d025fec05b88ff1cea9bd9f034caa4c126ce486ee59c0c22804",
+      "stored_sha256": "dac05702b128ded893eae3468615d87be5c5fce9f605733b1c777a152a0b7352"
+    },
+    {
+      "logical_path": "evidence/native-settings-complete-union-39d0c6c-20261012/asan-manifest.json",
+      "stored_path": "evidence/native-settings-complete-union-39d0c6c-20261012/asan-manifest.json.gz",
+      "original_bytes": 293663,
+      "stored_bytes": 82475,
+      "original_sha256": "53818df20ce9810e57bfcc2ead85a44399ca4b0534c1fe65b1f4eaa5792ad140",
+      "stored_sha256": "80c1e59a87a92600a34ceaf3c254da3e400ab7a3db9e96fd36fc8636471bd2c1"
+    },
+    {
+      "logical_path": "evidence/native-settings-complete-union-39d0c6c-20261012/normal-manifest.json",
+      "stored_path": "evidence/native-settings-complete-union-39d0c6c-20261012/normal-manifest.json.gz",
+      "original_bytes": 290958,
+      "stored_bytes": 82409,
+      "original_sha256": "cd7ee4691eb0f58fe5b4ff4a477996125dc8e8aa78bdb731230a7d83c37b0a6e",
+      "stored_sha256": "26baca2e280de7e92c92bcd272203bfc95bea4e43f40e569c609f51701cc02e2"
+    },
+    {
+      "logical_path": "evidence/native-settings-complete-union-609e390-20261012/asan-manifest.json",
+      "stored_path": "evidence/native-settings-complete-union-609e390-20261012/asan-manifest.json.gz",
+      "original_bytes": 293663,
+      "stored_bytes": 82458,
+      "original_sha256": "e70ec0b681de41fcf6da922b1e9ea086faa24b503069b63501ea46772c9b3c1b",
+      "stored_sha256": "923b319916ee663d5be2e39b5db9e0bb936e5ba99285d1a7f4c4c529178a090a"
+    },
+    {
+      "logical_path": "evidence/native-settings-complete-union-609e390-20261012/normal-manifest.json",
+      "stored_path": "evidence/native-settings-complete-union-609e390-20261012/normal-manifest.json.gz",
+      "original_bytes": 290958,
+      "stored_bytes": 82403,
+      "original_sha256": "74c9d1559e949a09fd41814a3379419ee781ec053450407436a849f4dd2cf9ea",
+      "stored_sha256": "de758a64cbe477753777c3d7bb8e6bf7411c293b8dcf2238669543ff1f7d1ace"
+    }
+  ],
+  "receipt_semantics": "Prior receipt paths and hashes refer to the original decompressed bytes. Decompress each stored_path to logical_path to restore exact bytes."
+}

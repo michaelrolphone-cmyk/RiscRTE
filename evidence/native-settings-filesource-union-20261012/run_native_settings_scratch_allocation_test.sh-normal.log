@@ -1,0 +1,1 @@
+Settings scratch: five clients refuse allocation before native/SD I/O or persistent mutation; zero-init, wipe-before-free, no fallback and idempotent release PASS

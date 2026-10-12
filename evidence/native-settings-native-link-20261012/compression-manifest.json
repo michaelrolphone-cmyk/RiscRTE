@@ -1,0 +1,93 @@
+{
+  "restoration": "gzip -dc STORED > ORIGINAL; verify original_sha256. Compression is byte-for-byte reversible.",
+  "files": [
+    {
+      "original": "call-evidence-combined-final.json",
+      "stored": "call-evidence-combined-final.json.gz",
+      "original_bytes": 1920836,
+      "stored_bytes": 167649,
+      "original_sha256": "47b7cecd311f29151106379266c11facffa72fe045e23ce25059448cd6d6db7c",
+      "stored_sha256": "bd639e51ea4ac637ef853a51bcb30dac15e410d2ddb6a7fa1dbfeeef2dc8ef2a"
+    },
+    {
+      "original": "target-selected-final.log",
+      "stored": "target-selected-final.log.gz",
+      "original_bytes": 653495,
+      "stored_bytes": 33941,
+      "original_sha256": "dbf7ac0d8b9df69d313bb4f6730f348b43dde1ac2fa9e83e8c88db72f940c5b2",
+      "stored_sha256": "eb487a5539ab2a9bd51b2678989b06656a5d35c52c4fa51b36e3402688eb62bf"
+    },
+    {
+      "original": "combined-final-manifest.json",
+      "stored": "combined-final-manifest.json.gz",
+      "original_bytes": 1836785,
+      "stored_bytes": 145368,
+      "original_sha256": "ab74196bd31312e894d72d678bff31fbdf36f3c39052fc2aedd6f3d0bf6ab60e",
+      "stored_sha256": "d0581c1e276dbaaf58244b026a54feb406ece0c2be1ccc6464eca3f7bde5a6be"
+    },
+    {
+      "original": "target-baseline.log",
+      "stored": "target-baseline.log.gz",
+      "original_bytes": 334220,
+      "stored_bytes": 18202,
+      "original_sha256": "353607309940030779a52205e0920ea7dbab7fbdedc98aed42cc755f85a2093b",
+      "stored_sha256": "668ce560c4c11fe530b4737dd9fe9feca285f805baecfa872c1978833870dc04"
+    },
+    {
+      "original": "call-evidence.json",
+      "stored": "call-evidence.json.gz",
+      "original_bytes": 1523508,
+      "stored_bytes": 119890,
+      "original_sha256": "7e4ccda36d5bcd3edee4446e7c90e212ebdf2bdfb340cbfc620dcfc9a279b82c",
+      "stored_sha256": "ad59ab183b16eefa277c763e63693c16847d8482ba78b48d7b20f5fbadaa24d7"
+    },
+    {
+      "original": "target-selected-psram-final.log",
+      "stored": "target-selected-psram-final.log.gz",
+      "original_bytes": 655357,
+      "stored_bytes": 33755,
+      "original_sha256": "f0bd152b9dfedef657a6a5b04253a59c78a9a86c079c42d856ca583f4e0c58b6",
+      "stored_sha256": "46ed61759a343d4339fc563c30c4b426b15a35f0c852a28e5062bff8adc6b5f3"
+    },
+    {
+      "original": "call-evidence-final.json",
+      "stored": "call-evidence-final.json.gz",
+      "original_bytes": 1925713,
+      "stored_bytes": 167212,
+      "original_sha256": "5449c49ecf403c5873d5089db2c916a1226f888f297fb3bb740945d7bf8635d5",
+      "stored_sha256": "1bfae5456a80889be437e1b43440d966712048ee93689bc3d63f77f8f3e24392"
+    },
+    {
+      "original": "baseline-manifest.json",
+      "stored": "baseline-manifest.json.gz",
+      "original_bytes": 153093,
+      "stored_bytes": 27271,
+      "original_sha256": "a31aa612082ff7d54e1b3a9806b66a9c9117663bd11aa4ca0dc3d19ea51fdc72",
+      "stored_sha256": "0b9d3d2f1003a1a6716fe86fc70f97f97d5d51d79d23f048c62ccc36a583981e"
+    },
+    {
+      "original": "target-combined-final.log",
+      "stored": "target-combined-final.log.gz",
+      "original_bytes": 656910,
+      "stored_bytes": 33821,
+      "original_sha256": "dde036a7737e9e99a85f40e5405edb703d741a22cf7fd466b47793e277cd362f",
+      "stored_sha256": "c357b781c9c65044f40d78a18efec620a2ecf68fdbe6723140c397c3c8f2ec83"
+    },
+    {
+      "original": "scratch-repaired-manifest.json",
+      "stored": "scratch-repaired-manifest.json.gz",
+      "original_bytes": 1799016,
+      "stored_bytes": 142678,
+      "original_sha256": "c880d867bfb4610ea99a7ea10e6bb47abf8a326af1f80f7fee4a76b4d8254dfd",
+      "stored_sha256": "d5bd26f23f4f111fbfaa75e9ee666a739e892dc0e5adf6233a1849a3281838a8"
+    },
+    {
+      "original": "initial-selected-manifest.json",
+      "stored": "initial-selected-manifest.json.gz",
+      "original_bytes": 1798732,
+      "stored_bytes": 142456,
+      "original_sha256": "e5caf8b7581bde7eef8b7d67e218dc90d44bdfa3f2a6f04f3c920472da3dd433",
+      "stored_sha256": "613a1a12a91ba1213e57db25c4985843ba52e25b1c2c6588d29ed5a112a8d68d"
+    }
+  ]
+}

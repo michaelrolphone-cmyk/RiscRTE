@@ -27,8 +27,8 @@ struct Disk {
  };}
 };
 struct Alloc {
- unsigned calls=0,fail=0;std::map<void*,size_t> live;size_t bytes=0,peak=0;
- C::Allocator api(){return {this,[](void*v,size_t n)->void*{auto&a=*static_cast<Alloc*>(v);if(++a.calls==a.fail)return nullptr;void*p=malloc(n);if(p){a.live[p]=n;a.bytes+=n;if(a.bytes>a.peak)a.peak=a.bytes;}return p;},[](void*v,void*p){auto&a=*static_cast<Alloc*>(v);auto i=a.live.find(p);assert(i!=a.live.end());a.bytes-=i->second;a.live.erase(i);free(p);}};}
+ unsigned calls=0,fail=0,watchWipe=0,wiped=0;void*watched=nullptr;std::map<void*,size_t> live;size_t bytes=0,peak=0;
+ C::Allocator api(){return {this,[](void*v,size_t n)->void*{auto&a=*static_cast<Alloc*>(v);if(++a.calls==a.fail)return nullptr;void*p=malloc(n);if(p){if(a.calls==a.watchWipe)a.watched=p;a.live[p]=n;a.bytes+=n;if(a.bytes>a.peak)a.peak=a.bytes;}return p;},[](void*v,void*p){auto&a=*static_cast<Alloc*>(v);auto i=a.live.find(p);assert(i!=a.live.end());if(p==a.watched){for(size_t k=0;k<i->second;++k)assert(!static_cast<uint8_t*>(p)[k]);++a.wiped;a.watched=nullptr;}a.bytes-=i->second;a.live.erase(i);free(p);}};}
  void discardVolatileAfterPowerCut(){for(auto&v:live)free(v.first);live.clear();bytes=0;}
  ~Alloc(){assert(live.empty()&&bytes==0);}
 };
@@ -110,6 +110,22 @@ void failuresAndBounds(){
  puts("native replica: allocation failures, storage exhaustion, bounded group/intent, corruption, wrong namespace, expired acknowledgement and explicit initialization PASS");
 }
 
+void publicationScratchFailures(){
+ Disk d=initial();Alloc a;C c(6,d.backend(),limits(),a.api());assert(c.load()==C::Ok);
+ assert(put(c,"stable","original")==C::Ok);const auto root=d.root;const auto objects=d.objects;const auto next=d.next;const auto bytes=a.bytes;
+ auto unchanged=[&](){assert(d.calls==0&&d.root==root&&d.objects==objects&&d.next==next&&a.bytes==bytes&&get(c,"stable")=="original");};
+ // The image allocation succeeds; only the second, verification allocation fails.
+ a.fail=a.calls+2;d.calls=0;assert(put(c,"stable","changed")==C::NoMemory);unchanged();a.fail=0;
+ C::Ticket ticket;assert(c.capture(&ticket)==C::Ok);a.fail=a.calls+2;d.calls=0;
+ assert(c.acknowledge(ticket,base(7))==C::NoMemory);unchanged();a.fail=0;
+ const uint64_t ids[]={1};C::Value row{"stable","candidate",9};a.fail=a.calls+2;d.calls=0;
+ assert(c.installResolved(c.revision(),&row,1,base(8),ids,1)==C::NoMemory);unchanged();a.fail=0;
+ a.watchWipe=a.calls+2;assert(put(c,"stable","changed")==C::Ok&&a.wiped==1&&!a.watched);
+ {Disk blank;Alloc b;C fresh(6,blank.backend(),limits(),b.api());b.fail=2;
+  assert(fresh.initialize(nullptr,0,{})==C::NoMemory&&blank.root.empty()&&blank.objects.empty()&&blank.next==1&&!b.bytes);}
+ puts("Publication verification scratch: second-allocation failure preserves all native records before reserve; apply/acknowledge/install/initialize fail closed and successful release wipes every verification byte PASS");
+}
+
 void creationAndConcurrentAckCuts(){
  std::string value(2048,'x');C::Value rows[]={{"first",value.data(),uint32_t(value.size())},{"second",value.data(),uint32_t(value.size())},{"third",value.data(),uint32_t(value.size())}};
  unsigned createCalls=0;
@@ -129,4 +145,4 @@ void creationAndConcurrentAckCuts(){
  printf("native replica: %u creation and concurrent-newer-ack error/power-cut interruption points PASS\n",cuts);
 }
 
-int main(){basics();reconciliation();failureMatrix();creationAndConcurrentAckCuts();failuresAndBounds();puts("UNCONNECTED HOST CORE ONLY: no .90 routing/ABI change, SD/NVS integration or Wi-Fi semantic reconciliation qualified");}
+int main(){basics();reconciliation();failureMatrix();publicationScratchFailures();creationAndConcurrentAckCuts();failuresAndBounds();puts("UNCONNECTED HOST CORE ONLY: no .90 routing/ABI change, SD/NVS integration or Wi-Fi semantic reconciliation qualified");}

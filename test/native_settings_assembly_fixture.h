@@ -5,17 +5,26 @@
 namespace Assembly=RiscCpu::NativeSettingsAssembly;
 namespace {
 std::mutex payloadMutex;std::map<void*,size_t>payloads;
+std::map<void*,size_t>internalControls;unsigned internalRequests=0;
 unsigned payloadRequests=0;size_t payloadBytes=0,payloadPeak=0;
 const void*refusedInternal=nullptr;bool failPayload=false;
 }
 void*heap_caps_malloc(size_t n,uint32_t caps){
  std::lock_guard<std::mutex>lock(payloadMutex);
+ if(caps==(MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT)){
+  ++internalRequests;if(scenario=="assembly-control-oom")return nullptr;
+  void*p=std::calloc(1,n);assert(p);internalControls[p]=n;
+  if(scenario=="assembly-control-range")refusedInternal=static_cast<uint8_t*>(p)+n-1;
+  return p;
+ }
  assert(caps==(MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));++payloadRequests;
  if(failPayload)return nullptr;
  void*p=std::malloc(n);assert(p);payloads[p]=n;payloadBytes+=n;if(payloadBytes>payloadPeak)payloadPeak=payloadBytes;return p;
 }
 void heap_caps_free(void*p){
- std::lock_guard<std::mutex>lock(payloadMutex);const auto i=payloads.find(p);assert(i!=payloads.end());
+ std::lock_guard<std::mutex>lock(payloadMutex);
+ const auto internal=internalControls.find(p);if(internal!=internalControls.end()){internalControls.erase(internal);std::free(p);return;}
+ const auto i=payloads.find(p);assert(i!=payloads.end());
  for(size_t n=0;n<i->second;++n)assert(static_cast<uint8_t*>(p)[n]==0);
  payloadBytes-=i->second;payloads.erase(i);std::free(p);
 }
@@ -107,7 +116,8 @@ static bool assembleMaintenance(){
  assert(fs==F::fsTotal&&nvs==F::nvsTotal&&allocations==payloadRequests&&iterators.empty()&&F::handles.empty()&&!services[0]&&!services[1]);
  if(scenario.rfind("assembly-",0)==0||scenario=="restore-no-source"){
   assert(!admitted&&!Assembly::admission()&&!Assembly::maintenance());assert(!Assembly::assemble(input));
-  printf("RAM-only assembly %s refuses without backend I/O, allocation or registration PASS\n",scenario.c_str());return false;
+  if(scenario=="assembly-control-oom"||scenario=="assembly-control-range")assert(internalRequests==1&&internalControls.empty());
+  printf("Assembly %s refuses without backend I/O, payload allocation or registration PASS\n",scenario.c_str());return false;
  }
  assert(admitted&&admitted==Assembly::admission()&&!Assembly::assemble(input));
  if(scenario=="littlefs-assembly-only"){
@@ -120,5 +130,5 @@ static bool assembleMaintenance(){
  assert(cores[0]->usesBackend(admitted->preferences.store->backend())&&cores[1]->usesBackend(admitted->wifi.store->backend()));
  memset(writerName,'x',sizeof writerName-1);memset(incarnation1,0,16);memset(incarnation6,0,16);input={};
  assert(!strcmp(admitted->writers[0].app,"maintenance-test")&&!strcmp(admitted->writers[1].app,"maintenance-test"));
- printf("Permanent factory assembly PASS; static-control=%zu; no selection I/O/allocation; copied writer/entropy inputs\n",Assembly::controlBytes());return true;
+ printf("Permanent factory assembly PASS; allocated INTERNAL-control=%zu; no selection I/O/payload allocation; copied writer/entropy inputs\n",Assembly::controlBytes());return true;
 }

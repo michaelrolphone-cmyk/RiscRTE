@@ -147,7 +147,7 @@ int32_t Runtime::runForeground(uint64_t token,const char* relative,risc_resident
   if(residentLegacyAllowed(absolute)) {
     const int32_t status=residentLoading(absolute);
     if(status!=RISC_RESIDENT_OK) {
-      if(status==RISC_RESIDENT_BUSY){residentContinuation_[0]=0;residentTransferFileOpen_={};}
+      if(status==RISC_RESIDENT_BUSY){if(!fileSourceCleanup())return refuse(RISC_RESIDENT_RETAINED);residentContinuation_[0]=0;residentTransferFileOpen_={};}
       if(status<0)out->failure=lastFailure_;
       return refuse(status);
     }
@@ -204,12 +204,14 @@ int32_t Runtime::runForeground(uint64_t token,const char* relative,risc_resident
       recordResidentFailure(invocation_->failureKind?invocation_->failureKind:uint32_t(RISC_RESIDENT_FAILURE_LOAD),status,invocation_->current_,out->invocation);
     }
     const bool caller=fileOpenAfterRun(completed);
+    if(retained_){status=RISC_RESIDENT_RETAINED;break;}
     if(!caller && (!completed || !invocation_->queued_[0] || !strcmp(invocation_->queued_,default_)))break;
     const char* next=caller?invocation_->current_:invocation_->queued_;
     if(!residentAllowed(next) && !residentLegacyAllowed(next)){status=RISC_RESIDENT_DENIED;break;}
     if(!caller)strcpy(invocation_->current_,next);
     error_[0]=0;
   }
+  if(!retained_ && status!=RISC_RESIDENT_HANDOFF && !fileSourceCleanup())status=RISC_RESIDENT_RETAINED;
   invocation_->fileOpen_={};
   if(retained_)invocation_=&mainInvocation_;
   else if(!selectInvocation(mainInvocation_)) {

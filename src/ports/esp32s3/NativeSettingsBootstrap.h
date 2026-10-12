@@ -43,6 +43,7 @@ class NativeSettingsBootstrap final {
  Namespace inputs_[2];Coordinator*services_[2]{};uint32_t slots_[2]{};uint64_t device_;
  Result results_[2]={Result::Idle,Result::Idle};int errors_[2]={C::Ok,C::Ok};
  Progress sweepResult_=Progress::Idle;
+ RiscExperimental::OwnedSettingsScratch<risc_storage_async_result_v1> refresh_;
  Coordinator::Lease lease_{};RiscBoot::Runtime*runtime_=nullptr;Port*port_=nullptr;
  unsigned current_=0,remaining_=0,kind_=0;bool registered_=false,active_=false,firstMode_=false;
  std::atomic<bool>cancelled_{false};
@@ -52,6 +53,7 @@ class NativeSettingsBootstrap final {
  static constexpr size_t FirstBytes=sizeof(Catalog)>sizeof(First)?sizeof(Catalog):sizeof(First);
  static constexpr size_t Bytes=FirstBytes>sizeof(NativeInitialization)?FirstBytes:sizeof(NativeInitialization);
  alignas(Catalog) alignas(First) alignas(Restore) alignas(NativeInitialization) unsigned char storage_[Bytes>sizeof(Restore)?Bytes:sizeof(Restore)]{};
+ static_assert(sizeof(storage_)>=sizeof(Catalog)&&sizeof(storage_)>=sizeof(First)&&sizeof(storage_)>=sizeof(Restore)&&sizeof(storage_)>=sizeof(NativeInitialization),"Bootstrap placement storage must cover every selected type");
  Catalog*catalog(){return reinterpret_cast<Catalog*>(storage_);}First*first(){return reinterpret_cast<First*>(storage_);}Restore*restore(){return reinterpret_cast<Restore*>(storage_);}
  NativeInitialization*native(){return reinterpret_cast<NativeInitialization*>(storage_);}
  bool owner()const;bool workerStep();void destroy();void destroyAttempt();

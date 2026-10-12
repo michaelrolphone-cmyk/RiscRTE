@@ -1,0 +1,1164 @@
+{
+  "schema": "native-settings-complete-union-qualification-v1",
+  "completed_utc": "2026-10-12T14:13:37.996883+00:00",
+  "source_commit": "39d0c6c59c50783fae1edce09f6c70509c72cb1f",
+  "result": "PASS",
+  "scope": "Final FileSource98b9/settings union with checked-PSRAM control scratch and publication verification-stack repair",
+  "same_source_normal_and_sanitized": true,
+  "all_recorded_binary_case_and_source_hashes_rechecked": true,
+  "runs": {
+    "normal": {
+      "sanitizers": "none",
+      "source_commit": "39d0c6c59c50783fae1edce09f6c70509c72cb1f",
+      "source_clean": true,
+      "output_directory": "/workspace/shared/x4-complete-settings-evidence-20261012/union-39d0c6c-normal",
+      "manifest_sha256": "cd7ee4691eb0f58fe5b4ff4a477996125dc8e8aa78bdb731230a7d83c37b0a6e",
+      "log_sha256": "bd42040208005eb68537f37e5c0393bf818269ba84c41da0ccd9cb8466af7aa1",
+      "case_count": 14,
+      "cases": [
+        {
+          "case": "normal",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633823,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "absent",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 540672
+        },
+        {
+          "case": "ambiguous",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 544768
+        },
+        {
+          "case": "conflict",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633562,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interrupt",
+          "expected_exit": 73,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633819,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interruption-restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "first-cut",
+          "expected_exit": 74,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633883,
+          "allocated_artifact_bytes": 552960
+        },
+        {
+          "case": "first-resume",
+          "expected_exit": 0,
+          "payload_peak_bytes": 17142,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "no-entropy",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "publication-cut",
+          "expected_exit": 75,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633815,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "publication-resume",
+          "expected_exit": 0,
+          "payload_peak_bytes": 195810,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633813,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "publication-erase",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264560,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633812,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "async-restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        }
+      ],
+      "max_payload_bytes": 264833,
+      "max_internal_control_heap_bytes": 40141
+    },
+    "asan": {
+      "sanitizers": "address,undefined",
+      "source_commit": "39d0c6c59c50783fae1edce09f6c70509c72cb1f",
+      "source_clean": true,
+      "output_directory": "/workspace/shared/x4-complete-settings-evidence-20261012/union-39d0c6c-asan",
+      "manifest_sha256": "53818df20ce9810e57bfcc2ead85a44399ca4b0534c1fe65b1f4eaa5792ad140",
+      "log_sha256": "853550fc26ff3ba18da4774b7a56933180d96ae5450828af30da0455866b0adb",
+      "case_count": 14,
+      "cases": [
+        {
+          "case": "normal",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633823,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "absent",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 540672
+        },
+        {
+          "case": "ambiguous",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 544768
+        },
+        {
+          "case": "conflict",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633562,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interrupt",
+          "expected_exit": 73,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633819,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interruption-restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "first-cut",
+          "expected_exit": 74,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633883,
+          "allocated_artifact_bytes": 552960
+        },
+        {
+          "case": "first-resume",
+          "expected_exit": 0,
+          "payload_peak_bytes": 17142,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "no-entropy",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "publication-cut",
+          "expected_exit": 75,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633815,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "publication-resume",
+          "expected_exit": 0,
+          "payload_peak_bytes": 195810,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633813,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "publication-erase",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264560,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633812,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "async-restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        }
+      ],
+      "max_payload_bytes": 264833,
+      "max_internal_control_heap_bytes": 40141
+    }
+  },
+  "layout": {
+    "Runtime": 289064,
+    "CpuPort": 11776,
+    "uniform_paired_bank_limits": true
+  },
+  "source_map": {
+    "Runtime": "39d0c6c59c50783fae1edce09f6c70509c72cb1f",
+    "prior_union_source": "609e390b0116c5dd7cc31449038fcc30292d7aaa",
+    "publication_scratch_source": "499247f39d3103c9ee4fbed8982d415f16973dfc",
+    "external": [
+      {
+        "root": "/workspace/shared/x4-first-sd-capacity-20261012",
+        "local_commit": "0a10bd15e3693768683fd41870f5d438ed57ccfe",
+        "published_commit": "3c32f85de9c3c80a6b085753d16744c47712172d",
+        "files": [
+          {
+            "path": "minimal/drivers/x4pro_board_power/PowerReadyV1.h",
+            "sha256": "5e9ea2fbd5491561a55272afc61ab2b94c8c179916930c9ee4c5f8e16ac58048"
+          },
+          {
+            "path": "minimal/drivers/x4pro_sd/BootLog.h",
+            "sha256": "ed07383add468485b29293403ff4e9353ebcbee1f056153070308277a52edb57"
+          },
+          {
+            "path": "minimal/drivers/x4pro_sd/Export.h",
+            "sha256": "4424ee6b9efd2c9fb6f85946c1800605ed3e6b699344741d85d3499c26a5cd2a"
+          },
+          {
+            "path": "minimal/drivers/x4pro_sd/README.md",
+            "sha256": "91d44712ab57e4b7b6cb9285c0f86cb3c37fa93368adabfbb2b4e90a4e3d190e"
+          },
+          {
+            "path": "minimal/drivers/x4pro_sd/driver.c",
+            "sha256": "5969ea38fd96ccd3069dfc360b4aa3dcbdf68e88242b6d728c9ea6c893b3b6b7"
+          },
+          {
+            "path": "minimal/drivers/x4pro_sd/manifest.json",
+            "sha256": "7ce7be59f6c46351e41eb86a0734d8bac3d7ae5b6830d978b7132c5243030090"
+          },
+          {
+            "path": "minimal/drivers/x4pro_sd/shared-volume-hooks.patch",
+            "sha256": "d01d645850ce20888bfd2148f10bd4ef55bc676662746d142106851422d09af9"
+          },
+          {
+            "path": "minimal/interfaces/RiscDisplayOutputFrontlightV1.h",
+            "sha256": "80add72493af301d89b521cd1987dbc3e17c618c5c56415ddf345aff50f4d18d"
+          },
+          {
+            "path": "minimal/interfaces/RiscDisplayOutputMetricsV1.h",
+            "sha256": "5be17adbae2ec26a855894e0d6443ac29572002c21efe53b2a913a5a0f0c642d"
+          },
+          {
+            "path": "minimal/interfaces/RiscDisplayOutputSettledV1.h",
+            "sha256": "18bfd89f3fa01d35e74f83c28ace60f16ca42fa0f678d7dc1fdc16e163fccc4f"
+          },
+          {
+            "path": "minimal/interfaces/RiscDisplayOutputSnapshotV1.h",
+            "sha256": "b835fd1a3600551d54efb2806cbe8dd3ecc512a538572dc853aaf11f4e2490b6"
+          },
+          {
+            "path": "minimal/interfaces/RiscFrontlightToneV1.h",
+            "sha256": "7c9956bdb5d0f7cccf91146b4bbb42b41745e9fa547fdf0a46850f30203f2872"
+          },
+          {
+            "path": "minimal/interfaces/RiscStorageSessionAdmissionV1.h",
+            "sha256": "eccf8e59cba6ec58a2456d00bcbd07131d1e4ec8d5ac36f23b35f793a33284fc"
+          },
+          {
+            "path": "minimal/interfaces/RiscStorageVolumeStateV1.h",
+            "sha256": "1f2f7dbfe9ec7ac27a57149ac720cf7f3a4801d6d34b5532f77c77db252b87a1"
+          },
+          {
+            "path": "minimal/test/app_bundle_grants_test.py",
+            "sha256": "f88db4f6f0a86314245fb22a59c4de7b322a5ccb7adb59dec814c335149ddc03"
+          },
+          {
+            "path": "minimal/test/battery_test.c",
+            "sha256": "4a468cfc832721220849139061d5d85da9b7872e0e07cb82802defcf89ae0038"
+          },
+          {
+            "path": "minimal/test/board_keepalive_cpu_test.cpp",
+            "sha256": "845cc8223a47c36024558f70bd2317744a849c35f75726a52ff6d677f705a073"
+          },
+          {
+            "path": "minimal/test/board_keepalive_validation.json",
+            "sha256": "e81ef24edf5e4bcc0888fc71918556033d931b0f43b1e58f1f41113e6d062082"
+          },
+          {
+            "path": "minimal/test/board_power_test.c",
+            "sha256": "71f7fe71608c8f04d29d2dff7504ae5f660d03840603f3bef59214dc90daa314"
+          },
+          {
+            "path": "minimal/test/boot_logging_profile_test.py",
+            "sha256": "8e7509094e026c605a53f0c3a562f56fcb14f341900d84c5e11732abffe0c803"
+          },
+          {
+            "path": "minimal/test/boot_order_095_test.py",
+            "sha256": "2a1bf7af1533f401ffe2fc14783b0af3cad7293262a484d933df0dd8c15601a3"
+          },
+          {
+            "path": "minimal/test/bootlog/latency_test.cpp",
+            "sha256": "7de9ad9cec0fbc9e05db62a0285275a4317aa81684596cae640d0c22ced6cc40"
+          },
+          {
+            "path": "minimal/test/bootlog/logger_test.cpp",
+            "sha256": "76b474e4309f145e803222c3bc3fdb10acec1e7ec360295bfbce4890332a185b"
+          },
+          {
+            "path": "minimal/test/bootlog/make_stubs.py",
+            "sha256": "ae381cd06423385f7ceaee9401e3918f36c328d253fafb76907c5aabafef08c9"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/X4NativeBuildIdentity.h",
+            "sha256": "c41fce49d2c20eaf54480da22e9fecb81fd27b03b22e73365b39073b0e37f8dd"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/driver/gpio.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/driver/rtc_io.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/esp_attr.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/esp_heap_caps.h",
+            "sha256": "9cf0ffe107312704339b1f8fc86f564c7d8275965ef67e8ab140fe7ac09c8837"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/esp_sleep.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/esp_system.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/esp_timer.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/hal/gpio_ll.h",
+            "sha256": "d4c14993b07700b1be712a8cf88a197ccfdd39851a4bb1bafad4d667709f8bda"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/mock.h",
+            "sha256": "f4b11dc88e94319877e5b79c1126e7806d595a587213ebbec4be175697a82452"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/nvs.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/nvs_flash.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/rom/rtc.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/soc/gpio_reg.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/soc/gpio_sig_map.h",
+            "sha256": "b995c8940d6699ae80eaf5f903cd0b2157c62923761664d9c02a08be0b76efda"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/soc/io_mux_reg.h",
+            "sha256": "b995c8940d6699ae80eaf5f903cd0b2157c62923761664d9c02a08be0b76efda"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/soc/rtc_cntl_reg.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/stubs/soc/soc.h",
+            "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+          },
+          {
+            "path": "minimal/test/bootlog/test_recovery.py",
+            "sha256": "0d6b4d00f0730041e2485549971276d9c01c823ea5b5cb477003ae0ca0d875d5"
+          },
+          {
+            "path": "minimal/test/bootlog/usb_fixture.cpp",
+            "sha256": "19459f48921dc82ef1a1b553276956dfc4fe09fe031c4aa45c4fae7da5de9ea7"
+          },
+          {
+            "path": "minimal/test/bundle_identity_test.py",
+            "sha256": "f7875b9300e24ce6447834c3581f78e127aa9008b51a09328a5390f224f3d3de"
+          },
+          {
+            "path": "minimal/test/buttons_test.c",
+            "sha256": "adb44c3b4118ed1e08b509a285ab9029eb6207772af9abc762112f76152a70a3"
+          },
+          {
+            "path": "minimal/test/clock_sleep_test.c",
+            "sha256": "0b66591ad233384738ae5116a0ce55264744ccd2cc5f6c79913b115b05abdb1b"
+          },
+          {
+            "path": "minimal/test/contexts_cohort_test.py",
+            "sha256": "0a0419ebc13108b97156ef72e4444cbe35b51e8b4a2be7bbca82cc195c9c456e"
+          },
+          {
+            "path": "minimal/test/contexts_update_route_test.py",
+            "sha256": "65837f2a159fe938d12276c5783a27c7c981985b5618ffbf9d718a2644be0a72"
+          },
+          {
+            "path": "minimal/test/crash_report_sd_integration.c",
+            "sha256": "c9c9c2d21f355fff066cf8aae446c0921a04833b703a7b35d6fde152e6ab3860"
+          },
+          {
+            "path": "minimal/test/deployment_payload_test.cpp",
+            "sha256": "8a934a52f6b928ff7bc621a3753f10d1540e22ce63e658571940b5f558bbce39"
+          },
+          {
+            "path": "minimal/test/desk_clock_bundle_test.py",
+            "sha256": "0ca22793e05c078a24369d45bd0a9fc24d13d46e629e5e9fe253a23772739f4e"
+          },
+          {
+            "path": "minimal/test/desk_clock_sleep_test.c",
+            "sha256": "10ee8c132092a8d35f383d147a93404f7e96124eb617d4d9d794d33b4850538f"
+          },
+          {
+            "path": "minimal/test/desk_clock_typed_app_test.c",
+            "sha256": "a5943f38a27e068ca1b1a9131d5e60a010a6da83448313496cf7285e49bb58c6"
+          },
+          {
+            "path": "minimal/test/diagnostic_source_fixture.h",
+            "sha256": "90b75a95fd366f3984ba7a356ad548484ffe5777f4a9f013f7365b34d3d2cd45"
+          },
+          {
+            "path": "minimal/test/early_native_boot_test.cpp",
+            "sha256": "7eae99621337d292bbdc653acb71b78f4c2578dc608b6b346d28eafa35b5567a"
+          },
+          {
+            "path": "minimal/test/early_native_fake/driver/gpio.h",
+            "sha256": "0367b9044390df69e9e51dfbe3d805f275312793f5b7e369dcc5cae7fc5d142b"
+          },
+          {
+            "path": "minimal/test/early_native_fake/driver/rtc_io.h",
+            "sha256": "28081bc0ba593213f6972dfeb17a9b398d1afa7a7a4a91fda95df8f11cc9667d"
+          },
+          {
+            "path": "minimal/test/early_native_fake/hal/gpio_ll.h",
+            "sha256": "e997afcd4bc8ab58a1b3800a6289eca6b8014b5288d2998e13eef0997674d3a7"
+          },
+          {
+            "path": "minimal/test/early_native_fake/soc/gpio_sig_map.h",
+            "sha256": "b995c8940d6699ae80eaf5f903cd0b2157c62923761664d9c02a08be0b76efda"
+          },
+          {
+            "path": "minimal/test/early_native_fake/soc/io_mux_reg.h",
+            "sha256": "b995c8940d6699ae80eaf5f903cd0b2157c62923761664d9c02a08be0b76efda"
+          },
+          {
+            "path": "minimal/test/fast_boot_094_composition_test.py",
+            "sha256": "3c27e8277f58fef784a1774f50a27b9c20e71404ac1ff0b6dfc1a02587232684"
+          },
+          {
+            "path": "minimal/test/file_browser_admission_test.py",
+            "sha256": "d6abc2fd5c5aba3f55ee4e332d8bc45c5125f5c16b4e027acb18b41d3583892f"
+          },
+          {
+            "path": "minimal/test/files_092_composition_test.py",
+            "sha256": "252819a15603d9695a8a479c1f51854493b4a57e9c57101c623d687889e32a73"
+          },
+          {
+            "path": "minimal/test/frontlight_cpu_port_test.cpp",
+            "sha256": "ac53bde0a64a8264dc732458386b5ee046dd40d37a1036ad4b886612acbb4cb3"
+          },
+          {
+            "path": "minimal/test/frontlight_test.c",
+            "sha256": "57aa0f8475e416875f5287212a891443d90b71aa816e3286e565c180e5447e44"
+          },
+          {
+            "path": "minimal/test/frontlight_tone_discovery_test.c",
+            "sha256": "9bd8a61df5437b46bfad305a3211f824de71bc1dafbc474f4c88e44ad7f8ee99"
+          },
+          {
+            "path": "minimal/test/gt911_multicontact_test.c",
+            "sha256": "819d0815f159249d57f22f58c1354e2fe0964b40d629560083ba5b7e9a5cdaad"
+          },
+          {
+            "path": "minimal/test/gt911_test.c",
+            "sha256": "538377486bf3be4b9a0f166590f89e850e518b793e8118864973c3d591cdfdc1"
+          },
+          {
+            "path": "minimal/test/hid_gt911_backend.c",
+            "sha256": "26e30a1f72fd2b5d7f546238a068072f13a5976351a899cd32c49275040b5002"
+          },
+          {
+            "path": "minimal/test/i2c_test.c",
+            "sha256": "20349a6e4a43ecadfbf24e68c168dc65d14084864c94aa47923a8740adf1b88e"
+          },
+          {
+            "path": "minimal/test/idle_alarm_sleep_test.c",
+            "sha256": "6a5fa2e97af3272d56a562778bafeef8775bc040c0da70b43ecf504bca90241d"
+          },
+          {
+            "path": "minimal/test/idle_cohort_test.py",
+            "sha256": "36b0d60162ff8ff691d73953991274a2efa57b3e870c00b2772a7480e974df3e"
+          },
+          {
+            "path": "minimal/test/idle_grant_app.c",
+            "sha256": "6537810349003398c9404d1f5f18cf7585bde5fb61af885676eef309e4fc74df"
+          },
+          {
+            "path": "minimal/test/idle_grant_provider.c",
+            "sha256": "fca7402ead36a9cde4ec209dcbf6cb3785eff105691a979651b7265ae621fee6"
+          },
+          {
+            "path": "minimal/test/idle_grant_runtime.cpp",
+            "sha256": "74196671f044b49bae0cf758c14ae6c785fc985b4d6251b2a70782386c98ad04"
+          },
+          {
+            "path": "minimal/test/idle_panel_policy.inc",
+            "sha256": "a27dcd7540f66d31c687e47aedae633ede1cde14779f2af327b81ed9cd5febcf"
+          },
+          {
+            "path": "minimal/test/idle_policy_grants_test.py",
+            "sha256": "6eebc0f04ede97c12bca62569302be05bd00f782f69b6ecbb23eea0eeaaf9984"
+          },
+          {
+            "path": "minimal/test/memory_099_composition_test.py",
+            "sha256": "9dde96d9e5f636c77bddd2904777e259381cd1846ef861b7d6665011db0ca9dd"
+          },
+          {
+            "path": "minimal/test/mounted_files_097_final_test.py",
+            "sha256": "26f3ed57695ab107f1f56f559908f6f3f0cc41a942991dee6ddc340762ef15a7"
+          },
+          {
+            "path": "minimal/test/mounted_files_097_test.py",
+            "sha256": "4051f1b96ae7c05910262af6261663ddd2baf2ee207250e1d21decc74566fb35"
+          },
+          {
+            "path": "minimal/test/native_bundle_composition_test.py",
+            "sha256": "cf1091e65c481b4338fbee9ee4f2535a3c2205d63f2def63d95a9a8e3a18a0b9"
+          },
+          {
+            "path": "minimal/test/native_composition_test.py",
+            "sha256": "e4fcd1d9d975d12a5cccb64ddb22021552386265ca759fb4953ba549f5077b71"
+          },
+          {
+            "path": "minimal/test/native_failure_evidence_test.py",
+            "sha256": "62be5914fbc9b06334bf99530302e674b2cda7aa433867d7e8bfc27b81d5a1c3"
+          },
+          {
+            "path": "minimal/test/native_flash_profile_test.py",
+            "sha256": "b8b0ccdba5f7bf1f24f4874ff14b4fcc00a5f94e2dd29e148909f4621a6881cc"
+          },
+          {
+            "path": "minimal/test/native_gpio_readback.cpp",
+            "sha256": "08cfe700b172f3d393d90bdd763ef5c116e3f8dddaadf3367b8f53929219d1b9"
+          },
+          {
+            "path": "minimal/test/native_retained_options_test.py",
+            "sha256": "2025aa9aa26368c802faf7e490b33b9bc14fe3f550042a7bb06007e52f6fef71"
+          },
+          {
+            "path": "minimal/test/native_time_cohort_test.py",
+            "sha256": "177c99cb2f946a9f68f8f08ffebea48cbb69636b74fabdbd0e8951ebff05fd2a"
+          },
+          {
+            "path": "minimal/test/native_xtensa_calls_test.py",
+            "sha256": "6c65f7e6208e7db3002315ef94a9e766c0f2e26ad918ca81c04dabba42ef6a0f"
+          },
+          {
+            "path": "minimal/test/obd_098_composition_test.py",
+            "sha256": "7bea063871d62add57586d364a265ccdee7fe1e5567d30b227c1822a0d90156b"
+          },
+          {
+            "path": "minimal/test/ordinary-driver-sources.lock.json",
+            "sha256": "fee0d7e0496454047e36ee7dbb1c94ed674129ab6857b2850dcea94f50f168be"
+          },
+          {
+            "path": "minimal/test/panel_cadence/adapter_bridge.c",
+            "sha256": "9fed8973bb4ff4ed76d5341b1ab3c76ab8da68e6a3cb2adf69854a4bf57307b5"
+          },
+          {
+            "path": "minimal/test/panel_cadence/modules.c",
+            "sha256": "27b6549ba57c552e218120af13446209c198493ab5864192410138a2fa8cb6dd"
+          },
+          {
+            "path": "minimal/test/panel_cadence/panel_model.c",
+            "sha256": "a7bc939f2de04fdb8befa195814d94553bef9a3784e85357323b6b5f5b84f209"
+          },
+          {
+            "path": "minimal/test/panel_cadence/runtime_bridge.cpp",
+            "sha256": "7349229541f0e764c18c9e2ef7d821c417abba2d934f8bc9c988ed6a00ccff63"
+          },
+          {
+            "path": "minimal/test/panel_test.c",
+            "sha256": "4852fa709ccae39a5bb0837ea7cd1359af3fb6030145e46c3914bcb837f0f36e"
+          },
+          {
+            "path": "minimal/test/power_deep_test.c",
+            "sha256": "7420e937df782c79b77026325423ed757e84e49766e47a2eda868208897eb277"
+          },
+          {
+            "path": "minimal/test/power_navigation_test.c",
+            "sha256": "8458e3919a12341a3df4548f8585ef729d935f2a91574218d0fc3dedcd762103"
+          },
+          {
+            "path": "minimal/test/power_test.c",
+            "sha256": "0eef9993d36e07e59a19ced2c313196cdc44f1a143807a0c8d4cdf4b42c1e591"
+          },
+          {
+            "path": "minimal/test/prepare_sdk_test.py",
+            "sha256": "68b6ec534d9cd29d951e9e73ba827e4389540bce0df5808154837b7994b89f29"
+          },
+          {
+            "path": "minimal/test/preserving_serial_qualification.py",
+            "sha256": "bf8d9aacba6b0c6dde4875407ea19c9fbb4442d7908342f7ea4b9810b92262ae"
+          },
+          {
+            "path": "minimal/test/profile_materialize.cpp",
+            "sha256": "0e389436415b7313e5aaba0109150dee0529a7042458707a5a67d0e31fb69528"
+          },
+          {
+            "path": "minimal/test/provision_seed_extension_target_test.py",
+            "sha256": "343d96f90e721062c389cfb295301ce29b7db6e9ca700df1c41f40649ad295e8"
+          },
+          {
+            "path": "minimal/test/provision_seed_extension_test.py",
+            "sha256": "4fd4f609be88536945ad19b23ac43bf679ba88ac1be4cb1ac23dbefb05ffe647"
+          },
+          {
+            "path": "minimal/test/provisioning_profile_test.py",
+            "sha256": "5af25f9c0d41901e69355f8e57e6e91b056be0c5137c4d4a38686d3a491291e3"
+          },
+          {
+            "path": "minimal/test/qualified_update_service_test.cpp",
+            "sha256": "d51013dd37f5418237a94aca5dca55b94586a3eff12609c3466980913b0a659f"
+          },
+          {
+            "path": "minimal/test/resident_cohort_policy_test.py",
+            "sha256": "0510c4425daad9415b220ee4c6bd1fc8892bac9fdd298c7903ea3ff7448a1d3a"
+          },
+          {
+            "path": "minimal/test/resident_native_test.py",
+            "sha256": "719012f09e3c639d9198485ec2c82127097cb735d192198f8bedb400703338d6"
+          },
+          {
+            "path": "minimal/test/rtc_test.c",
+            "sha256": "5d66b747a0bf7665bd1a42ebd4eb0efa49e2d215d9447a898e080b074ae3b8af"
+          },
+          {
+            "path": "minimal/test/run_battery_test.sh",
+            "sha256": "068b5a56d00e8e18c1cfd636d2203c0fd879219c3a690f75894deb43c320b79b"
+          },
+          {
+            "path": "minimal/test/run_board_keepalive_cpu_test.sh",
+            "sha256": "712115ec7ab5d6a68bb46a533162e6935e1a15f4e74aae73012174ce4669e59f"
+          },
+          {
+            "path": "minimal/test/run_board_power_test.sh",
+            "sha256": "536b91c962825f64b88afe029facfc6dc5010ba708f4c3d7a924f40f0a8dbabf"
+          },
+          {
+            "path": "minimal/test/run_bootlog_latency_test.sh",
+            "sha256": "d2bf15d9e6ca490ecaa887fd6292dc8c72d3daa322188addd6167e7bd98d0cd1"
+          },
+          {
+            "path": "minimal/test/run_bootlog_test.sh",
+            "sha256": "a26ff1c06261c658cc63a4492aecccd1d529b0aa8cce8bae30f5f2dee60959eb"
+          },
+          {
+            "path": "minimal/test/run_buttons_test.sh",
+            "sha256": "59c4cd3a07b1e6ae42d1218c8fec8af144412ed4f7d7c035d32ea2422c419cb7"
+          },
+          {
+            "path": "minimal/test/run_clock_sleep_test.sh",
+            "sha256": "d7d9cef70aef336b9aa7aa9d4657b97b643acdac5d08cf58a6e9fe354024afb2"
+          },
+          {
+            "path": "minimal/test/run_desk_clock_sleep_test.sh",
+            "sha256": "ca7d7163a451abed2ffb28dc2d2a72d659f7bfe62528730a93a99c4e9d80f44f"
+          },
+          {
+            "path": "minimal/test/run_desk_clock_typed_app_test.sh",
+            "sha256": "f5413aaa4d2ff931eac449de6429d39a65e42aaca3bc561607fe02357ee3bc5c"
+          },
+          {
+            "path": "minimal/test/run_early_native_boot_test.sh",
+            "sha256": "173fe7efaed6b13681cacce2ceee83e6853ef44f23944ecf69c5359662ac5483"
+          },
+          {
+            "path": "minimal/test/run_frontlight_cpu_port_test.sh",
+            "sha256": "679f23f52d754bfe7a58198d6074210f62e751398811d9a1695978f1c405b647"
+          },
+          {
+            "path": "minimal/test/run_frontlight_test.sh",
+            "sha256": "3c20947149f98c98ac27806f99a4b4329bf8b2f3586f777afb44fba0e82f671b"
+          },
+          {
+            "path": "minimal/test/run_frontlight_tone_discovery_test.sh",
+            "sha256": "1931dc2514ecce622b4b0adfe4f1057e78dfc8adcbf3e9b9bcb7b8768c57737b"
+          },
+          {
+            "path": "minimal/test/run_gt911_test.sh",
+            "sha256": "cd05bab60488a413a595d96c97b306ae37247dbec409dda7a9de6a1b42e6fd80"
+          },
+          {
+            "path": "minimal/test/run_hid_gt911_test.py",
+            "sha256": "7b1ae5a354600ee4811857e2eeb8fba4037fbcc9f77b33801bed507cb707f86f"
+          },
+          {
+            "path": "minimal/test/run_i2c_test.sh",
+            "sha256": "3de95384c85eeac994041790e491ff2c29b4a5de2c7c0c83e4e2ced5f782181d"
+          },
+          {
+            "path": "minimal/test/run_idle_alarm_sleep_test.py",
+            "sha256": "1f0ae7875152fa15af844a3d1ee30861ecf9037bd677de84005f7741bf8848d5"
+          },
+          {
+            "path": "minimal/test/run_idle_grant_runtime_test.py",
+            "sha256": "ad7ae36a05312c7b0ddb7c400d0c5d83c12cde82d6e027eabec8cb83262ecb37"
+          },
+          {
+            "path": "minimal/test/run_idle_panel_policy_test.py",
+            "sha256": "5ec9aea5ad0d24fa28b8c11c507aa53cfc932638875144e242c409949e3f0192"
+          },
+          {
+            "path": "minimal/test/run_light_buttons_target_test.sh",
+            "sha256": "601804ec62dd10cbf0e5a14bc82685cd2b4922630afaa76ee22707f1d579db97"
+          },
+          {
+            "path": "minimal/test/run_native_gpio_readback_test.sh",
+            "sha256": "c66ce36da2265b54841a712c849df8fc0f0cf35504f9a19145760d6801e876c7"
+          },
+          {
+            "path": "minimal/test/run_panel_cadence_test.py",
+            "sha256": "7dac5ce5a6cfebbd1f2eaf71df1f904bf19c6d57e35cde434dd9711f2b4e3fac"
+          },
+          {
+            "path": "minimal/test/run_panel_target_test.sh",
+            "sha256": "dc5a5765404c392c219521dba22ef9fc0578d4a5248cc300c7db8067ff501b3d"
+          },
+          {
+            "path": "minimal/test/run_panel_test.sh",
+            "sha256": "db693fed47e69327887ee23b96c071fff512b9721acd33852aa24b6529bb1d41"
+          },
+          {
+            "path": "minimal/test/run_pinned_early_boot_test.py",
+            "sha256": "123d908771b1c7fb8ea76e1093fa95fa982ca397517ce901abfd60d885838075"
+          },
+          {
+            "path": "minimal/test/run_power_navigation_test.sh",
+            "sha256": "6c48da9f51cf86a09a99a3a1125aa8246840f4caca3f0430adc64d67671442bb"
+          },
+          {
+            "path": "minimal/test/run_power_test.sh",
+            "sha256": "c4532af00e16df9b6b98db57aafd35f6cbeab0295057380801e5712e4d84bfdc"
+          },
+          {
+            "path": "minimal/test/run_profile_test.sh",
+            "sha256": "aa81d55d09133bf28e959a30472785d18735093bf22730ece330d481d878c238"
+          },
+          {
+            "path": "minimal/test/run_qualified_update_service.sh",
+            "sha256": "4ff4f1305d19da30a72d1b52d8e9f4b8add65957b342329508168cbfa721cde0"
+          },
+          {
+            "path": "minimal/test/run_rtc_test.sh",
+            "sha256": "fb517ea7f1b300f9a476e3a2942cfd0f92a1bba3d0fffb18e7bc855cd77b8771"
+          },
+          {
+            "path": "minimal/test/run_sd_target_test.sh",
+            "sha256": "d38e67231e05d985e8ee2582bca8abaf7105dbe51b546d9b04d8a63a6b85607d"
+          },
+          {
+            "path": "minimal/test/run_sd_test.sh",
+            "sha256": "346926d26b3be69e118562b96ca492901a1931365067281630d4398726507b69"
+          },
+          {
+            "path": "minimal/test/run_sd_usb_test.sh",
+            "sha256": "1f57c32b65b5d49683fe234ba71f3f0726b5a3004aa6685f0506c19224578c7a"
+          },
+          {
+            "path": "minimal/test/run_sparse_desk_clock_compatibility_test.sh",
+            "sha256": "7e3c002b4c48951596226052ae06e439202411710f6f69304a05ae91b841eece"
+          },
+          {
+            "path": "minimal/test/run_sparse_desk_clock_sleep_test.sh",
+            "sha256": "ed73faf45fffb432c36929927f9b08a59f5d1b2a4f882ac64c0dccdf21bc8dad"
+          },
+          {
+            "path": "minimal/test/run_springboard_display_test.py",
+            "sha256": "f7fe3a87f00dff1acd6bd43a261dca92d3b3f45ea540102cf26ce730bae4087d"
+          },
+          {
+            "path": "minimal/test/run_tagged_alarm_sleep_owner_test.sh",
+            "sha256": "220a2ca0b485bcfa08a6e6f807a404ca9846ffe714b6f7836ae9ad1d6e373f7b"
+          },
+          {
+            "path": "minimal/test/run_telemetry_runtime.py",
+            "sha256": "65a2b6aae0cd6fecd2e284767e81b0b68a5513cb46a287253d61017025c7bd97"
+          },
+          {
+            "path": "minimal/test/run_uc8279_fast_cadence_test.py",
+            "sha256": "40f0d4605b46afbb193405af41cbee75721836ff6810b83a2797c3098bee5836"
+          },
+          {
+            "path": "minimal/test/run_uc8279_fast_target_test.sh",
+            "sha256": "0d721df47c10b9c01b12eb8b1b6f13265696117920490d495bdb892a8a916343"
+          },
+          {
+            "path": "minimal/test/run_uc8279_fast_test.sh",
+            "sha256": "05da8e77a769c2b7a0354d8e34018871fd1b89e828c5835f0bbc866feb58a599"
+          },
+          {
+            "path": "minimal/test/sd_async_test.c",
+            "sha256": "70993b7ece40664b9bf2c2c96cca114491eb852b72afe7c2f8ce101ab0ae4b5c"
+          },
+          {
+            "path": "minimal/test/sd_export_test.inc",
+            "sha256": "ce7553f0de751f0ddc4c3469d427fc60ffcd7960ddc2978141dbdc37f3602ad5"
+          },
+          {
+            "path": "minimal/test/sd_filesystem_extensions.inc",
+            "sha256": "5e528167cb991a5ea1a88c65107e49318092961505960f4d6a4e257f78af00a6"
+          },
+          {
+            "path": "minimal/test/sd_first_placement_test.py",
+            "sha256": "60ae59e8d593b74b5a181197f4194168ebeb2ecce9dcc9ea4a35a79c36a3970c"
+          },
+          {
+            "path": "minimal/test/sd_lifecycle_096_test.py",
+            "sha256": "c29fb97ac3c5c6a8842f43ee0195d5cf59f2bf3b29f7400eb9ad3be0fe7fb354"
+          },
+          {
+            "path": "minimal/test/sd_lifecycle_runtime/bad_descriptor_app.c",
+            "sha256": "bc0afa1ee988d83bfa325b588f518f550f2fdef9cda30a2e60fd41b7084b41c2"
+          },
+          {
+            "path": "minimal/test/sd_lifecycle_runtime/installed_role_test.cpp",
+            "sha256": "74689349008f54f216537cb8e038c3c607a12215d4db1a2363a7a23c09f7df33"
+          },
+          {
+            "path": "minimal/test/sd_lifecycle_runtime/run.sh",
+            "sha256": "aea0dffff413d2501b67c21d96fbc9e3b1ca1a3542957199a64ca79e7eb338ef"
+          },
+          {
+            "path": "minimal/test/sd_provider_selection/README.md",
+            "sha256": "5161044b5b4da7c04acbc2d612d5e616142ac41b4f064d19653c0ae3e6cd0a0e"
+          },
+          {
+            "path": "minimal/test/sd_provider_selection/default.c",
+            "sha256": "c84690ea911fbbbcea7b0f38475be62ee6da08796209d504ccee38af80dd3b34"
+          },
+          {
+            "path": "minimal/test/sd_provider_selection/run.sh",
+            "sha256": "19734a514dedb15ab1f63fb4240080552deaba1c21a7f4b30540d450556a00c5"
+          },
+          {
+            "path": "minimal/test/sd_provider_selection/run_cases.py",
+            "sha256": "bdcbf08e8d1315c9be5083ac2bc4e841df9e8d52fa805ec5603dba637477dbfc"
+          },
+          {
+            "path": "minimal/test/sd_provider_selection/sd_provider.c",
+            "sha256": "0b554bd2e007fe2acebc1fdbf86444f00303efe60fe4da876d4467cfe402acee"
+          },
+          {
+            "path": "minimal/test/sd_provider_selection/selected_image_test.cpp",
+            "sha256": "604e29d02811b666ea43cbe54ca9549551719de624b6a259bc13c30e53133d8c"
+          },
+          {
+            "path": "minimal/test/sd_session_admission_test.c",
+            "sha256": "e3a11a47a61b8b5e0143da2d80c5d9b39b30fbe84f1a00accdcd7e387afd63b8"
+          },
+          {
+            "path": "minimal/test/sd_test.c",
+            "sha256": "444709018fb962520c378696e2b546629e9462546941b50529da87ceb7b3a6fd"
+          },
+          {
+            "path": "minimal/test/sd_usb_test.c",
+            "sha256": "8bfec30a4cc06d245e02701252c85aff8633dab6947a8b583bf46bf5c0c9e387"
+          },
+          {
+            "path": "minimal/test/sdmmc_storage_test.inc",
+            "sha256": "1739f02751536b9c1208b7a1a316bbeea51aa1e1d8c7545ebe05db1991d6be13"
+          },
+          {
+            "path": "minimal/test/settings_power_profile_test.py",
+            "sha256": "25a9bc7965d8ec8e466642063b94d59cc384d6f037a9a21acff051ae04b890bd"
+          },
+          {
+            "path": "minimal/test/shared_settings_composition_test.py",
+            "sha256": "f348485517126be1d51b915c80c6e3d64c6bdae4687567ece11cadd59a091224"
+          },
+          {
+            "path": "minimal/test/sleep_profile_test.py",
+            "sha256": "3135a3fdae14e2d1aafb9187b2a0d6da02237f555306388b2f9a5ce637c8cea6"
+          },
+          {
+            "path": "minimal/test/sparse_app_grants_test.py",
+            "sha256": "d644125777f8053e52bc4e4f63109e5f76bf043acdd132ec394b0d717f83d2bd"
+          },
+          {
+            "path": "minimal/test/sparse_clock_profile_test.py",
+            "sha256": "a72adbc312396a516f75b165f6bcba2900c59e84742237bc35c6a788fbb86114"
+          },
+          {
+            "path": "minimal/test/sparse_desk_clock_sleep_test.c",
+            "sha256": "c4c039335852b79499f132a8174a1472964dbce3f36ca99a9f38b5da84dbb382"
+          },
+          {
+            "path": "minimal/test/spiffs_boot_order_replay.c",
+            "sha256": "e6b16da7ac1fbe467ca53b38f699692b78174fe052235b3f20d86aec88b21af1"
+          },
+          {
+            "path": "minimal/test/springboard_display/adapter_bridge.c",
+            "sha256": "d7e3f9881359050f44868a29fbae1471669156fb9a2e49e0866a65ea958d3f4a"
+          },
+          {
+            "path": "minimal/test/springboard_display/modules.c",
+            "sha256": "2b15da4f3344e8997625caab61ee233108f3ad1033fb49a138453040021b4d0e"
+          },
+          {
+            "path": "minimal/test/springboard_display/panel_model.c",
+            "sha256": "b47d638f7397267205385a58d0fd9c2b30d964e7e6c5a12896d2ac2a3c124ed2"
+          },
+          {
+            "path": "minimal/test/springboard_display/runtime_bridge.cpp",
+            "sha256": "441de3e85e48ade1a5d966ca0ccb673a12b3b09ac299c74714a72352ea3843b4"
+          },
+          {
+            "path": "minimal/test/tagged_alarm_sleep_owner_test.c",
+            "sha256": "e28714ab087cb866cac36aa306e880d0158447fd292244736675b26178054d97"
+          },
+          {
+            "path": "minimal/test/telemetry/app.c",
+            "sha256": "a40806844c0f009b7126f31f135a834a75cfd2d91c2a99267f1e9fc468eb9c98"
+          },
+          {
+            "path": "minimal/test/telemetry/provider.c",
+            "sha256": "67bcfdf954ea0bf21a26af76f9362230ffb7fc48826d4b03e0ffa56cb449aa12"
+          },
+          {
+            "path": "minimal/test/telemetry/runtime.cpp",
+            "sha256": "9c093cc32fa58ebea68445a702f0474110d76d8e66f997c579f99afe2fca46df"
+          },
+          {
+            "path": "minimal/test/telemetry_cohort_test.py",
+            "sha256": "0f20e2dbd09980283e86b089fc068a86daf672f35e020559634ab0032d9431e5"
+          },
+          {
+            "path": "minimal/test/test_daily_digest_integration.py",
+            "sha256": "e40da2da66f8446ad937ec7adf196558c8e65ba62d4d2148078d415797062bf4"
+          },
+          {
+            "path": "minimal/test/test_native_binary_exports.py",
+            "sha256": "fdf5872af7e8326ad5e504d845ef7c6f180c8d237179a9f0594722f8f2dbeb00"
+          },
+          {
+            "path": "minimal/test/test_tagged_alarm_sleep_target.py",
+            "sha256": "6e561e3d987ea50f43541f98538fb434ec29001ecf369dc99e675b8ffa065b42"
+          },
+          {
+            "path": "minimal/test/test_usb_transfer_app.py",
+            "sha256": "588da58791434a988fec3717a401cc09315677a6674a02ba1ed1f3eeb8cc5923"
+          },
+          {
+            "path": "minimal/test/uc8279_fast_cadence/adapter_bridge.c",
+            "sha256": "6f96f1c74fa9651902e4d19a95be329a55fcea2c141b276f6c9180f5679c06e4"
+          },
+          {
+            "path": "minimal/test/uc8279_fast_cadence/modules.c",
+            "sha256": "e3d2e98170905f66aa4d1e4df6b00d275e885bad964bf4cf236cc0cfd1fa4c8f"
+          },
+          {
+            "path": "minimal/test/uc8279_fast_cadence/panel_model.c",
+            "sha256": "508c83817878d181187bf03caf6e0dc7cffa6a4d1458669485f5b3d1417ae9a0"
+          },
+          {
+            "path": "minimal/test/uc8279_fast_cadence/runtime_bridge.cpp",
+            "sha256": "45c00d95ffc56ea47e9c4a558049c9e96c79c5c0787924467440e486e6dd9df8"
+          },
+          {
+            "path": "minimal/test/uc8279_fast_profile_test.py",
+            "sha256": "c8370c2409ad66b03c86c95c75946be46b28e3506d23a8156e247a7f43dea462"
+          },
+          {
+            "path": "minimal/test/uc8279_fast_settled.inc",
+            "sha256": "d0af5781f87eb279fd666e097feb695a32e0e71db78972419a584bd1da12a66e"
+          },
+          {
+            "path": "minimal/test/uc8279_fast_test.c",
+            "sha256": "6f8aaf35a0aaec660a84d4109afe0c386cf7bc0a28c8ab027b11923c552a1d84"
+          },
+          {
+            "path": "minimal/test/update_artifacts_test.py",
+            "sha256": "aae58c3328c8a225e5c79c9ee8f7561292ac1cbbd8cbffc903f40260342f40f9"
+          },
+          {
+            "path": "minimal/test/verify_early_boot_target.py",
+            "sha256": "1507ba7698f2e53a6a845d91c1a2172af4695398cecde59869853606de9f3c92"
+          },
+          {
+            "path": "minimal/test/webdav_sd_integration.cpp",
+            "sha256": "17e7e3f797b305b49fce3549c66e4d43f2a11e9e0285abe1e14fda29fa8a2d37"
+          }
+        ]
+      },
+      {
+        "root": "/workspace/shared/drivers-first-sd-capacity-20261012",
+        "local_commit": "ee244590d3c835af012776ce2480e47b25e23477",
+        "published_commit": "11bc45d263f830c70cea53a8c8749e4fcf17b041",
+        "files": [
+          {
+            "path": "lib/StorageFatFs/README.md",
+            "sha256": "006b4e8fb5c0f484b6095a88fe7a38820ad5bebb3fddb90c2b820478b77a25af"
+          },
+          {
+            "path": "lib/StorageFatFs/UPSTREAM.json",
+            "sha256": "fc48e148ae17c51518a1ca50b817b98d640fefbeeaa44db69cf998a393101ccb"
+          },
+          {
+            "path": "lib/StorageFatFs/fatfs/LICENSE.txt",
+            "sha256": "b896e32fb2cdb3fc8b3b6fd854706fca4ac55619fbb6d5eb2429cb05ee338966"
+          },
+          {
+            "path": "lib/StorageFatFs/fatfs/README.md",
+            "sha256": "71f25ff5d78cbb7a5fe2bafd3f4545e5e80f70a283cf69892d49bde403b31ceb"
+          },
+          {
+            "path": "lib/StorageFatFs/fatfs/diskio.h",
+            "sha256": "901d6670aeea2c4fcc6e1c2f38866e142069627a95c9b023eb7a4bf991e47a04"
+          },
+          {
+            "path": "lib/StorageFatFs/fatfs/ff.c",
+            "sha256": "69d24a03aa19a212cb827f978b3de5abcfd7a533a62d97eb0f44381b3fbd75d5"
+          },
+          {
+            "path": "lib/StorageFatFs/fatfs/ff.h",
+            "sha256": "2a5ea07637ee8863b20d73a7a51a24d715b964dba52c82c7368bb60b09dbf1a0"
+          },
+          {
+            "path": "lib/StorageFatFs/fatfs/ffconf.h",
+            "sha256": "760941150f5ed2e0c466db3816e1bfdc86d444fe714445f5e124f95bc9324395"
+          },
+          {
+            "path": "lib/StorageFatFs/fatfs/ffunicode.c",
+            "sha256": "6cd4dc4a664386ebd108e56d367582c35f005fc20381486366b5d77ac58119bd"
+          },
+          {
+            "path": "lib/StorageFatFs/fs_extensions.inc",
+            "sha256": "22643739ad2a9a5c3d07c2b19c76926f126270388d9774ffe61448486ae725fc"
+          },
+          {
+            "path": "lib/StorageFatFs/sd_protocol.h",
+            "sha256": "1590b7009fde866a0b944c8ecb2d613de90961a811440d8215886ff58860dd5d"
+          },
+          {
+            "path": "lib/StorageFatFs/volume.c",
+            "sha256": "4f99ec31ad9e7848fdabd3d642e64c24a4facf4c64765d5724fce1ecd8d8e86c"
+          }
+        ]
+      },
+      {
+        "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "local_commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+        "published_commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+        "files": [
+          {
+            "path": "Drivers/x4pro_board/x4pro_mmio.h",
+            "sha256": "13eaddbbbf0baab7cc334633161645268d543677d5a8cd0172ae77891f22cd26"
+          },
+          {
+            "path": "Drivers/x4pro_board/x4pro_pins.h",
+            "sha256": "b31b36b9a13f49e43581df97bc2551a269ad621efd7477ebd8786f5405c15e76"
+          },
+          {
+            "path": "Drivers/x4pro_board/x4pro_proto.h",
+            "sha256": "daa7efef2ceace7df6edd31c356bc1fc58830b0b9b3880c096d7b565a6e5f945"
+          },
+          {
+            "path": "test/storage_volume/fake/x4pro_mmio.h",
+            "sha256": "cec81bab38e32c82068670daf8f0150aed219d420d7241f568b3a01049d65231"
+          }
+        ]
+      }
+    ]
+  },
+  "publication_scratch_observation": {
+    "case": "first-resume",
+    "previous_peak_bytes": 16611,
+    "final_peak_bytes": 17142,
+    "increase_bytes": 531,
+    "overall_peak_bytes": 264833,
+    "explanation": "Transient publication verification scratch increases the first-resume peak; larger nonoverlapping catalog/restore scratch dominates the overall campaign peak."
+  },
+  "boundaries": [
+    "Host model only, with boundaries from docs/NATIVE_SETTINGS_COMPLETE_PATH.md unchanged.",
+    "FileSource backend is not bound by these settings applications; independent FileSource controller tests own feature behavior.",
+    "Host heap peaks are not target BSS, INTERNAL headroom or stack measurements; independent target resource evidence owns those conclusions.",
+    "No hardware execution or product activation."
+  ]
+}
