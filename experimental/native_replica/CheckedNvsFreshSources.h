@@ -1,6 +1,6 @@
 #pragma once
 #include "NativeBaselineAdmission.h"
-#include "CheckedFreshInitArtifacts.h"
+#include "FreshInitArtifactInspector.h"
 #include <nvs.h>
 #include <cstdio>
 namespace RiscExperimental {
@@ -19,7 +19,7 @@ class CheckedNvsFreshSources final {
  };
  // A stable firmware-native logical owner, never an address, boot ID or secret.
  // The 16-byte domain is copied and permanently bound with the namespace/schema.
- CheckedNvsFreshSources(uint32_t ns,const uint8_t owner[16],CheckedFreshInitArtifacts&artifacts,Hooks hooks)
+ CheckedNvsFreshSources(uint32_t ns,const uint8_t owner[16],FreshInitArtifactInspector artifacts,Hooks hooks)
   :ns_(ns),artifacts_(artifacts),hooks_(hooks){if(owner)std::memcpy(owner_,owner,16);}
  CheckedNvsFreshSources(const CheckedNvsFreshSources&)=delete;
  CheckedNvsFreshSources&operator=(const CheckedNvsFreshSources&)=delete;
@@ -33,7 +33,7 @@ class CheckedNvsFreshSources final {
   A::FreshAbsenceV1,
   [](void*p,uint32_t ns,const C::FreshInitReceipt&r,A::Witness*out){return static_cast<CheckedNvsFreshSources*>(p)->collect(ns,out,&r,true);}};}
  private:
- uint32_t ns_;CheckedFreshInitArtifacts&artifacts_;Hooks hooks_;uint8_t owner_[16]{};
+ uint32_t ns_;FreshInitArtifactInspector artifacts_;Hooks hooks_;uint8_t owner_[16]{};
  bool entered_=false,retained_=false,opened_=false;nvs_handle_t handle_=0;nvs_iterator_t iterator_=nullptr;
  struct Entry {bool&v;explicit Entry(bool&b):v(b){v=true;}~Entry(){v=false;}};
  struct Wipe {void*p;size_t n;~Wipe(){C::wipe(p,n);}};

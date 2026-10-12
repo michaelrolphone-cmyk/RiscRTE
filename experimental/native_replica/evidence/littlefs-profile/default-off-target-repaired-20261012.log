@@ -1,0 +1,12 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+
+/tmp/tmp.0vW2tAyxK6/esp.o:     file format elf32-xtensa-le
+
+Contents of section .rodata:
+ 0000 b8000000                             ....            
+CheckedFreshInitArtifacts.h:58:6:int RiscExperimental::CheckedFreshInitArtifacts::check(bool)	32	static
+CheckedFreshInitArtifacts.h:87:10:uint8_t RiscExperimental::CheckedFreshInitArtifacts::expectedAt(uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:102:11:uint32_t RiscExperimental::CheckedFreshInitArtifacts::expectedCrc(uint32_t, uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:129:6:int RiscExperimental::CheckedFreshInitArtifacts::inspect(const uint8_t*, uint32_t, uint64_t, bool)	80	static
+target.cpp:3:16:int inspect_fresh_target(Inspector&, const uint8_t*)	48	static
+Fresh artifact pinned Xtensa: normal/ESP_PLATFORM compile, identical unsupported objects, no filesystem imports PASS

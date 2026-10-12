@@ -1,0 +1,49 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+         U __ashldi3
+         U __errno
+         U memchr
+         U memset
+         U snprintf
+         U strcmp
+         U strcpy
+
+/tmp/native-profile-target/native-littlefs-profile.o:     file format elf32-xtensa-le
+
+Contents of section .rodata:
+ 0000 0e000000 1c000000 2a000000 c8010000  ........*.......
+ 0010 18000000 b8000000                    ........        
+CheckedFreshInitArtifacts.h:87:10:uint8_t RiscExperimental::CheckedFreshInitArtifacts::expectedAt(uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:102:11:uint32_t RiscExperimental::CheckedFreshInitArtifacts::expectedCrc(uint32_t, uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedLittleFsFreshInitArtifacts.h:58:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::path(const char*, size_t)	32	static
+CheckedLittleFsFreshInitArtifacts.h:66:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::valid(const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:72:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::same(const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&, const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:79:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::check(bool)	464	static
+CheckedLittleFsFreshInitArtifacts.h:94:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::cleanup(int)	32	static
+CheckedLittleFsFreshInitArtifacts.h:106:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::metadata(const stat&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:107:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::sameStat(const stat&, const stat&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:108:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::stat(const char*, stat*)	32	static
+CheckedLittleFsFreshInitArtifacts.h:115:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::file(const char*, const stat&, const Canonical&, uint64_t, bool)	640	static
+CheckedLittleFsFreshInitArtifacts.h:127:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::inventory(const Canonical&, uint64_t, bool)	752	static
+CheckedLittleFsFreshInitArtifacts.h:158:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::inspect(const uint8_t*, uint32_t, uint64_t, bool)	96	static
+native_littlefs_profile_target_probe.cpp:3:16:int checked_littlefs_profile_target(I&, const uint8_t*)	48	static
+a9cc4a9f47770e7d30e9ecf6fa897aeeb7a721ff3b95c7b115d5e40ef3399d0b  /tmp/native-profile-target/native-littlefs-profile.o
+PASS: separately supplied profile compiles; no production mount adapter or selection
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+
+/tmp/tmp.DX1iwXFWky/esp.o:     file format elf32-xtensa-le
+
+Contents of section .rodata:
+ 0000 b8000000                             ....            
+CheckedFreshInitArtifacts.h:58:6:int RiscExperimental::CheckedFreshInitArtifacts::check(bool)	32	static
+CheckedFreshInitArtifacts.h:87:10:uint8_t RiscExperimental::CheckedFreshInitArtifacts::expectedAt(uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:102:11:uint32_t RiscExperimental::CheckedFreshInitArtifacts::expectedCrc(uint32_t, uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:129:6:int RiscExperimental::CheckedFreshInitArtifacts::inspect(const uint8_t*, uint32_t, uint64_t, bool)	80	static
+target.cpp:3:16:int inspect_fresh_target(Inspector&, const uint8_t*)	48	static
+Fresh artifact pinned Xtensa: normal/ESP_PLATFORM compile, identical unsupported objects, no filesystem imports PASS
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+00000000 00000048 B native_nvs_fresh_sources_size
+82c3a1753b68a8c1c5b42a7eed839ea27cdedc718b93b026cadde2c33c41dbd4  /tmp/native-profile-target-nvs/native-nvs-fresh-sources.o

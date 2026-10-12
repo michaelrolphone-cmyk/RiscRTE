@@ -39,6 +39,7 @@ class CheckedFreshInitArtifacts {
  // exact RTENSEQ record and receipt/source inventory. No artifact may then exist.
  int inspectAttempt(const uint8_t*canonicalImage,uint32_t imageBytes,uint64_t persistedNext){return inspect(canonicalImage,imageBytes,persistedNext,true);}
  private:
+ friend class CheckedLittleFsFreshInitArtifacts;
  static constexpr uint32_t ImageBytes=484,ObjectBytes=508;
  uint32_t ns_;Hooks hooks_;char root_[160]{};bool entered_=false,retained_=false;
 #if defined(__linux__) && !defined(ESP_PLATFORM)

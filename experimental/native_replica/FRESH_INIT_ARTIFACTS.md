@@ -109,3 +109,10 @@ heap-allocation hook is added.
 These tests are isolated native inspection evidence. Full initializer/store
 power-cut integration, NVS durability, target filesystem qualification and
 production activation are separate obligations.
+
+## Separately admitted pinned target profile
+
+A distinct, still-unselected profile and real VFS/LittleFS model are now described
+in [LITTLEFS_FRESH_PROFILE.md](LITTLEFS_FRESH_PROFILE.md). The default inspector's
+Linux proof and ESP/unsupported refusal remain unchanged. Typed store/source
+injection does not supply the missing production private-mount/epoch binding.
