@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/errno.h>
 #include <sys/param.h>
+#include <sys/stat.h>
 #include <inttypes.h>
 #include <fcntl.h>
 
@@ -126,16 +127,30 @@ static int esp_elf_open_impl(elf_file_t *file, const char *name)
         goto errout_open_file;
     }
 
-    size = lseek(fd, 0, SEEK_END);
-    if (size == -1) {
-        ESP_LOGE(TAG, "Failed to seek file %s errno=%d", file_path, errno);
-        goto errout_lseek_end;
-    }
+    /* The newly opened regular file is already at offset zero. SPIFFS can
+     * answer fstat from its open object header, whereas seeking to EOF walks
+     * index pages only to rewind immediately. Preserve the original seek
+     * path for ports without regular-file fstat support. This replaces the
+     * size query; it adds no content scan, cache or admission shortcut. */
+    struct stat info;
+    const int before_stat_errno = errno;
+    if (fstat(fd, &info) == 0 && S_ISREG(info.st_mode)) {
+        size = info.st_size;
+    } else {
+        /* Optional fstat failure must not turn a later malformed image into
+         * an apparent ENOMEM and evict otherwise valid cached images. */
+        errno = before_stat_errno;
+        size = lseek(fd, 0, SEEK_END);
+        if (size == -1) {
+            ESP_LOGE(TAG, "Failed to seek file %s errno=%d", file_path, errno);
+            goto errout_lseek_end;
+        }
 
-    ret = lseek(fd, 0, SEEK_SET);
-    if (ret == -1) {
-        ESP_LOGE(TAG, "Failed to seek file %s errno=%d", file_path, errno);
-        goto errout_lseek_end;
+        ret = lseek(fd, 0, SEEK_SET);
+        if (ret == -1) {
+            ESP_LOGE(TAG, "Failed to seek file %s errno=%d", file_path, errno);
+            goto errout_lseek_end;
+        }
     }
 
     /* Keep the reader bounded even for ports other than the SD VFS. */

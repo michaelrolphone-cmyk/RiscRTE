@@ -27,7 +27,7 @@ for cache in 0 1;do
     -DCONFIG_ELF_LOADER_LOAD_PSRAM=1 -DCONFIG_ELF_LOADER_LIBC_SYMBOLS=1
     -I"$stubs" -I"$repo/test/support/native_registry/stubs" -I"$repo/lib/elf_loader/include"
     -I"$repo/src" -I"$repo/test" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src")
-  for src in dlso/dlfcn dlso/dlmod esp_elf_adapter esp_elf_symbol;do
+  for src in dlso/dlfcn dlso/dlmod esp_elf_adapter esp_elf_symbol esp_elf_validate;do
     cc -std=c11 "${common[@]}" -include "$repo/test/support/native_registry/redirect.h" \
       -include "$stubs/alloc_redirect.h" -c "$repo/lib/elf_loader/src/$src.c" -o "$out/$(basename "$src").o"
   done
