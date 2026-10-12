@@ -1,0 +1,89 @@
+name: Current watch transport integration
+on:
+  push:
+    branches: [feat/watch-quad-spi]
+    paths: ['.github/workflows/latest-watch-transport.yml']
+permissions:
+  contents: write
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/watch-quad-spi
+          fetch-depth: 0
+      - name: Reconcile exact current sleep and loader changes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,tempfile,re,json
+          base='3b90cd11cf0ff4e8116bb54d2d9eb9c7c67a148b'
+          latest='267aab6d9382ce4921a1536fab1620749b2f5301'
+          marker=Path('docs/universal-integration.json')
+          def get(ref,path):
+              p=subprocess.run(['git','show',ref+':'+path],capture_output=True)
+              return p.stdout if p.returncode==0 else None
+          if not marker.exists():
+              names=subprocess.check_output(['git','diff','--name-only',base,latest],text=True).splitlines()
+              for name in names:
+                  if name.startswith('.github/') or name in ['platformio.ini','README.md']:continue
+                  old,new=get(base,name),get(latest,name)
+                  path=Path(name)
+                  if new is None:raise RuntimeError('Unexpected deleted input: '+name)
+                  path.parent.mkdir(parents=True,exist_ok=True)
+                  if old is None or not path.exists() or path.read_bytes()==old:
+                      path.write_bytes(new);continue
+                  if path.read_bytes()==new:continue
+                  with tempfile.TemporaryDirectory() as temp:
+                      b=Path(temp)/'base';t=Path(temp)/'latest';b.write_bytes(old);t.write_bytes(new)
+                      p=subprocess.run(['git','merge-file','-p',str(path),str(b),str(t)],capture_output=True)
+                  if p.returncode not in [0,1]:raise RuntimeError('Cannot merge '+name)
+                  merged=p.stdout.decode()
+                  if p.returncode:
+                      if name!='src/ports/esp32s3/CpuPort.h':raise RuntimeError('Review needed: '+name)
+                      merged,n=re.subn(r'^<<<<<<<[^\n]*\n(.*?)^=======\n(.*?)^>>>>>>>[^\n]*\n',lambda m:m[1]+m[2],merged,flags=re.M|re.S)
+                      if n!=1:raise RuntimeError('Unexpected Hardware-table conflict')
+                  path.write_text(merged)
+              p=Path('platformio.ini');s=p.read_text();assert 'version = 0.3.0' in s;p.write_text(s.replace('version = 0.3.0','version = 0.3.1',1))
+              marker.write_text(json.dumps({'schema':1,'runtime_version':'0.3.1','transport_source':'be6400926227e6eb2d36ec28cd8a3cdad9978c12','wake_source':latest,'common_ancestor':base,'hardware_verified':False},indent=2)+'\n')
+          PY
+      - name: Actual transport and current wake regressions
+        run: |
+          bash test/run_i2s_test.sh
+          SANITIZE=1 bash test/run_i2s_test.sh
+          bash test/run_native_spi_test.sh
+          bash test/run_deep_prepare_test.sh
+          bash test/run_crown_recovery_test.sh
+          bash test/run_metadata_checkpoint_test.sh
+          bash test/run_board_test.sh
+      - name: Commit reconciled source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add platformio.ini crown-wake-profile.ini sdk src lib test docs
+          if ! git diff --cached --quiet; then
+            git commit -m 'Preserve Watch deep-entry and loader checkpoint fixes in universal Runtime 0.3.1'
+            git push origin HEAD:feat/watch-quad-spi
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build universal native runtime
+        run: |
+          python -m pip install platformio==6.1.18 pyelftools==0.32
+          pio run -e esp32s3-16mb-appdata-universal
+          git rev-parse HEAD > UNIVERSAL_SOURCE.txt
+          git archive HEAD | gzip > universal-native-source.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: universal-native-current
+          path: |
+            UNIVERSAL_SOURCE.txt
+            universal-native-source.tar.gz
+            .pio/build/esp32s3-16mb-appdata-universal/firmware.elf
+            .pio/build/esp32s3-16mb-appdata-universal/firmware.bin
+            .pio/build/esp32s3-16mb-appdata-universal/bootloader.bin
+            .pio/build/esp32s3-16mb-appdata-universal/partitions.bin
+          retention-days: 30
