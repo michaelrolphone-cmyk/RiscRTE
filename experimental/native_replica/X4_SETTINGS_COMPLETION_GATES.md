@@ -2,7 +2,8 @@
 
 This is an experimental source checkpoint, not an enabled product or a firmware
 delivery. The original hardware-protocol evidence preserves the frozen X4 .99 source cohort.
-The source union now also reconciles the .101 System/Files lineage; all native
+The source union now also reconciles the .101/.102 System/Files lineage, shared
+text hosts, RTC fixes and checked native FileSource handoff; all native
 persistence selections remain default-off.
 Watch has no SD and is excluded from this selection.
 
@@ -68,11 +69,19 @@ passes and target compilation are not hardware or private-filesystem approval.
    checked source dispatcher handles fresh/import/SD receipts and preserves
    conflicts; all 86 full assembly cases pass normally and under sanitizers.
    New blank native plus ambiguous SD now has Runtime availability fencing and
-   nonblocking discovery/reconciliation. The selected Settings/Wi-Fi/Home visible
-   state and explicit draft reconciliation are being integrated separately.
+   nonblocking discovery/reconciliation. Selected Settings/Wi-Fi/Home now expose
+   unavailable/pending/conflict states, preserve drafts, refuse default writes,
+   and reconcile only at explicit clean release/reload boundaries. Their actual
+   controller and new shared-text-host regressions pass normal and ASan/UBSan.
+   Long-lived provider data grants can require a clean Runtime restart after
+   drafts are resolved; no live provider is silently revoked.
    First SD export now has a bounded fresh FAT capacity receipt and an explicit
-   early native entropy/incarnation source. Both are source/host/target qualified;
-   full composition and physical behavior remain gates. Neither is replaced by
+   early native entropy/incarnation source. Both compose through the actual
+   Backend/Assembly/Worker/coordinator, retained LittleFS mount, Runtime/CpuPort
+   and X4/FatFs path in fourteen normal and ASan/UBSan process scenarios. These
+   include three profiles, repeated saves, live discovery, three interruption
+   points and restore using exact .102 full-image appdata bytes. Physical behavior
+   remains a gate. Neither mechanism is replaced by
    a fabricated success callback. See `docs/NATIVE_SETTINGS_BACKEND.md`,
    `docs/NATIVE_SETTINGS_SOURCE_DISPATCH.md`, and `LIVE_SETTINGS_CUSTODY.md`.
 3. Carry the source-qualified controller paths into the actual selected product.
@@ -146,8 +155,38 @@ polls and 1,583 milliseconds. Five normal and sanitized repetitions agree. This
 removes idle scheduler turns but leaves physical-card latency and responsiveness
 unqualified. See `CATALOG_POLL_BUDGET.md` and `evidence/catalog-poll-fusion/`.
 
-The first selected full native link passes GNU ld but fails the mandatory fixed
-IQ-bank layout proof: static DRAM grows by55,848 bytes and overlaps that bank
-by42,472 bytes. IRAM growth is zero. A field-level PSRAM scratch/INTERNAL atomic
-control split is in progress; this is a hard activation gate, not a linker
-warning to bypass or permission to move IQ/audio buffers.
+## Selected target resource results
+
+The initial full link's 42,472-byte IQ overlap and a feasible 8,512-byte worker
+stack path are preserved as failed evidence. Both concrete defects are repaired:
+large copied requests/results, publication verification and atomic payloads now
+use the explicit whole-range-checked PSRAM allocator without INTERNAL fallback.
+Atomic/mailbox/task controls and unchanged 8 KiB worker stacks remain INTERNAL.
+
+The final selected native link and unchanged fixed IQ proof pass. Static DRAM
+is 77,392 bytes (+4,928 over the delivered baseline), permanent settings INTERNAL
+requests are 29,917 bytes before allocator metadata, IRAM is unchanged, and
+8,448 bytes remain before the unchanged IQ bank. Runtime metadata is 322,312
+PSRAM bytes. The audited linked worker call-chain lower bounds fall to 4,464
+and 3,248 bytes; these are not whole-stack maxima or measured high-water.
+
+The complete fourteen-case real-path fixture peaks at 264,833 raw PSRAM request
+bytes, including checked-allocator overhead. Deliberately full-size legacy import
+peaks at 595,428 logical payload bytes, excluding allocator headers/vendor heaps.
+Neither is a universal device-memory bound. Heap-region ceilings, allocation
+failure paths, exact wrapper addresses and source-stable target receipts are in
+`docs/SETTINGS_NATIVE_RESOURCE_LINK_20261012.md` and
+`docs/SETTINGS_ATOMIC_PAYLOAD_PSRAM_20261012.md`.
+
+Remaining activation gates are the exact selected multi-repository product
+composition and physical free/largest-block/stack high-water, latency/watchdog,
+card removal/swap and power-loss qualification. Source and host/target results
+do not authorize enabling an unqualified product or moving IQ/audio buffers.
+
+## Saved-network privacy
+
+Replicas contain the opaque settings map, including saved Wi-Fi credential bytes.
+This format adds integrity/recovery checks, not encryption; anyone who can read
+the card may read those bytes. Test credentials are synthetic and never sourced
+from a user's device. Keep card backups private. Full native erase recovery
+must not depend on an encryption key that the same operation would erase.

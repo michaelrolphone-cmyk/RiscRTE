@@ -21,7 +21,7 @@ class NativeAtomicKeyValue final {
   // Optional shared native namespace retention, never an app callback.
   bool(*retained)(void*)=nullptr;
  };
- NativeAtomicKeyValue(C&core,const Guard&guard):core_(core),guard_(guard),job_(execute,this){}
+ NativeAtomicKeyValue(C&core,const Guard&guard):core_(core),guard_(guard),job_(execute,this,core.payloadAllocator()){}
  NativeAtomicKeyValue(const NativeAtomicKeyValue&)=delete;NativeAtomicKeyValue&operator=(const NativeAtomicKeyValue&)=delete;
  risc_key_value_atomic_v1 api(){return {1,sizeof(risc_key_value_atomic_v1),this,
   [](void*p,risc_key_value_atomic_state_v1*s){return static_cast<NativeAtomicKeyValue*>(p)->state(s);},
@@ -65,7 +65,7 @@ class NativeAtomicKeyValue final {
   if(revision!=core_.revision())return unlock(RISC_ATOMIC_STALE);
   phase_.store(Phase::Queued,std::memory_order_release);operation_=0;wasCancelled_=false;
   uint64_t id=0;rc=job_.begin(1,payload,total,&id);
-  if(rc!=RISC_STORAGE_WORK_OK){phase_.store(Phase::Idle);return unlock(rc==RISC_STORAGE_WORK_BUSY?RISC_ATOMIC_BUSY:RISC_ATOMIC_RETAINED);}
+  if(rc!=RISC_STORAGE_WORK_OK){phase_.store(Phase::Idle);return unlock(rc==NativeReplicaJob::NoMemory?RISC_ATOMIC_CAPACITY:rc==RISC_STORAGE_WORK_BUSY?RISC_ATOMIC_BUSY:RISC_ATOMIC_RETAINED);}
   token_=id;*token=id;return RISC_ATOMIC_OK;
  }
  int cancel(uint64_t token){

@@ -1,0 +1,12 @@
+[
+  {
+    "path": "/workspace/shared/x4-settings-native-resource-link-20261012/build/native-resource/selected-atomic/firmware.elf",
+    "bytes": 28750600,
+    "sha256": "a45a5c5f8f435f07dc6138ea4c7f6f77da2b1c30a3b6b3fc59b3ee9f43796f0e"
+  },
+  {
+    "path": "/workspace/shared/x4-settings-native-resource-link-20261012/build/native-resource/selected-atomic/firmware.map",
+    "bytes": 20707977,
+    "sha256": "b7638fc6e064e5ffa8b07e19f892f8c82c0d6039c3bcd4b7e9b08adc87218d3f"
+  }
+]

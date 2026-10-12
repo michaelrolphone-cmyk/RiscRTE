@@ -23,7 +23,7 @@ ldflags+=['-Wl,-Map='+str(out/'firmware.map')]
 selected=['BOARD_XTEINK_X4_PRO','RISC_NATIVE_SETTINGS_BACKEND=1','RISC_NATIVE_SETTINGS_STARTUP_ENTROPY=1','RISC_NATIVE_APP_DATA_MOUNT=1','RISC_NATIVE_SETTINGS_ASSEMBLY=1','RISC_NATIVE_SETTINGS_PSRAM_PAYLOAD=1','RISC_NATIVE_SETTINGS_LIFECYCLE=1','RISC_NATIVE_SETTINGS_WORKER=1','RISC_RUNTIME_ATOMIC_KEY_VALUE=1','RISC_NATIVE_STORAGE_CUSTODY=1']
 wraps=['esp_vfs_register','esp_vfs_unregister','esp_partition_read','esp_partition_write','esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
 calls=[];sha=lambda q:hashlib.sha256(P(q).read_bytes()).hexdigest()
-def sources():return {str(q.relative_to(root)):sha(q) for folder in ['src','sdk','experimental/native_replica','lib'] for q in (root/folder).rglob('*') if q.is_file() and q.suffix in ['.cpp','.c','.h','.inc']}
+def sources():return {str(q.relative_to(root)):sha(q) for folder in ['src','sdk','include','experimental/native_replica','lib'] for q in (root/folder).rglob('*') if q.is_file() and q.suffix in ['.cpp','.c','.h','.hpp','.ipp','.tpp','.inc']}
 source_input=sources()
 manifest={'scope':'Experimental native link only; no hardware, product selection, release or flash qualification. Archives and early wrapper reused read-only from exact pinned baseline.','mode':a.mode,'link_only':a.no_compile,'source_head':subprocess.check_output(['git','rev-parse','HEAD'],cwd=root,text=True).strip(),'compile_database_sha256':sha(db),'baseline_map_sha256':sha(mapfile),'inputs':{},'commands':calls}
 def run(c):

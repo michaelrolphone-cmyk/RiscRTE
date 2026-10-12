@@ -185,3 +185,25 @@ control heap remains 40,141 bytes. Runtime/CpuPort layout checks remain
 289,064/11,776 bytes on both compilation boundaries. The independent target
 resource qualification owns target frame, IQ placement and headroom conclusions;
 these host tests make no physical stack or hardware claim.
+
+## Final union with copied atomic payloads in PSRAM
+
+All 14 cases pass normally and under ASan+UBSan on frozen clean source
+`11a84764a78e6e00be6479d13318eb2b1f6a78a5`. This includes the preceding repairs
+and the copied atomic endpoint payload split. Compact evidence is in
+`evidence/native-settings-complete-union-11a8476-20261012/`. The manifests and
+logs are losslessly stored as `.gz`; `restoration-map.json` records each original
+and stored SHA-256, byte length, source path and metadata. Every compressed file
+was decompressed and byte-verified. Every recorded Runtime source, executable
+and case artifact hash was independently rechecked after the runs.
+
+The maximum selected PSRAM measurement remains 264,833 bytes; first-marker
+resume remains 17,142. These counters sum simultaneous **raw heap_caps_malloc
+request sizes**, including the host payload allocator's 47-byte header/alignment
+overhead per allocation. They are not caller-payload-only totals or target heap
+usage estimates. The atomic payload allocation does not overlap the larger
+catalog/restore peak in these scenarios. Permanent modeled INTERNAL control
+heap decreases from 40,141 to 32,381 bytes, saving 7,760 host bytes. Layout checks
+remain 289,064 bytes for Runtime and 11,776 for CpuPort. Independent target
+resource evidence remains necessary for target allocation overhead, placement,
+headroom and stack conclusions. No product or hardware was activated.

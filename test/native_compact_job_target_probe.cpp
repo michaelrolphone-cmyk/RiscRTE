@@ -5,7 +5,7 @@ using namespace RiscExperimental;
 static_assert(sizeof(RiscStorage::Worker)==sizeof(BaselineStorage::Worker),"default hardware mailbox layout");
 static_assert(alignof(RiscStorage::Worker)==alignof(BaselineStorage::Worker),"default hardware mailbox alignment");
 static_assert(sizeof(NativeReplicaControlJob)<256,"bounded numeric control");
-static_assert(sizeof(NativeReplicaJob)<4608,"bounded credential payload");
+static_assert(sizeof(NativeReplicaJob)<256,"credential payload is separately allocated");
 extern "C" {
 unsigned char compact_default_worker_size[sizeof(RiscStorage::Worker)];
 unsigned char compact_control_worker_size[sizeof(RiscStorage::BasicWorker<8,16>)];

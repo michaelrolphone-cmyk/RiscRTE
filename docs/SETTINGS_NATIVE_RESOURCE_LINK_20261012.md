@@ -1,5 +1,9 @@
 # Experimental selected native resource/link qualification
 
+This is the frozen pre-endpoint-split checkpoint. The subsequent
+[atomic payload PSRAM report](SETTINGS_ATOMIC_PAYLOAD_PSRAM_20261012.md) supersedes
+its final footprint and adds full-size payload overlap measurements.
+
 ## Result and scope
 
 The selected settings path initially **linked but violated the fixed IQ bank**.

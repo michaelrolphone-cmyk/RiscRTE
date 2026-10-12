@@ -1,0 +1,306 @@
+{
+  "schema": "native-settings-complete-union-qualification-v2",
+  "completed_utc": "2026-10-12T14:31:10.798672+00:00",
+  "source_commit": "11a84764a78e6e00be6479d13318eb2b1f6a78a5",
+  "result": "PASS",
+  "scope": "Final FileSource98b9/settings union with checked-PSRAM control scratch, publication verification scratch and copied atomic job payloads",
+  "same_source_normal_and_sanitized": true,
+  "all_recorded_binary_case_and_source_hashes_rechecked": true,
+  "runs": {
+    "normal": {
+      "sanitizers": "none",
+      "source_commit": "11a84764a78e6e00be6479d13318eb2b1f6a78a5",
+      "source_clean": true,
+      "output_directory": "/workspace/shared/x4-complete-settings-evidence-20261012/union-11a8476-normal",
+      "manifest_sha256": "c2f938e9c2bec8b7d3d1c7543966c44b09bda7e86504806527cdd3f1435297ca",
+      "stored_manifest_sha256": "213949e3d3818a1436ae5cf4c1e3d2e9171c44d30ed34d2affa064e00c121fe2",
+      "log_sha256": "193c03062fc66b0766f9c39f1134b072848cdbf07831d09808acf4f806d7d7ff",
+      "case_count": 14,
+      "cases": [
+        {
+          "case": "normal",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633823,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "restore",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "absent",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 540672
+        },
+        {
+          "case": "ambiguous",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 544768
+        },
+        {
+          "case": "conflict",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633562,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interrupt",
+          "expected_exit": 73,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633819,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interruption-restore",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "first-cut",
+          "expected_exit": 74,
+          "raw_psram_request_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633883,
+          "allocated_artifact_bytes": 552960
+        },
+        {
+          "case": "first-resume",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 17142,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "no-entropy",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "publication-cut",
+          "expected_exit": 75,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633815,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "publication-resume",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 195810,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633813,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "publication-erase",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264560,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633812,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "async-restore",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        }
+      ],
+      "max_raw_psram_request_bytes": 264833,
+      "max_internal_control_heap_bytes": 32381
+    },
+    "asan": {
+      "sanitizers": "address,undefined",
+      "source_commit": "11a84764a78e6e00be6479d13318eb2b1f6a78a5",
+      "source_clean": true,
+      "output_directory": "/workspace/shared/x4-complete-settings-evidence-20261012/union-11a8476-asan",
+      "manifest_sha256": "a42957c7967f8afe6516fff2f0bc61c0e29113e1b117d5d1ce7ae90e381b8c3d",
+      "stored_manifest_sha256": "1d2e7676a3b5285f24870a1681bab5e97428eb942ca0b3689859599ae4ec5f3c",
+      "log_sha256": "edb189cf67009a126ca3030ddbfcb96df1bd0d8a6871ebb50e17bfd9f76d1aa4",
+      "case_count": 14,
+      "cases": [
+        {
+          "case": "normal",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633823,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "restore",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "absent",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 540672
+        },
+        {
+          "case": "ambiguous",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 544768
+        },
+        {
+          "case": "conflict",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633562,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interrupt",
+          "expected_exit": 73,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633819,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interruption-restore",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "first-cut",
+          "expected_exit": 74,
+          "raw_psram_request_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633883,
+          "allocated_artifact_bytes": 552960
+        },
+        {
+          "case": "first-resume",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 17142,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "no-entropy",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "publication-cut",
+          "expected_exit": 75,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633815,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "publication-resume",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 195810,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633813,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "publication-erase",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264560,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633812,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "async-restore",
+          "expected_exit": 0,
+          "raw_psram_request_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 32381,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        }
+      ],
+      "max_raw_psram_request_bytes": 264833,
+      "max_internal_control_heap_bytes": 32381
+    }
+  },
+  "layout": {
+    "Runtime": 289064,
+    "CpuPort": 11776,
+    "uniform_paired_bank_limits": true
+  },
+  "source_map": {
+    "Runtime": "11a84764a78e6e00be6479d13318eb2b1f6a78a5",
+    "prior_union_source": "39d0c6c59c50783fae1edce09f6c70509c72cb1f",
+    "atomic_payload_source": "949630beba4aaec45c92c501179132923df2594e",
+    "external": [
+      {
+        "root": "/workspace/shared/x4-first-sd-capacity-20261012",
+        "local_commit": "0a10bd15e3693768683fd41870f5d438ed57ccfe",
+        "published_commit": "3c32f85de9c3c80a6b085753d16744c47712172d"
+      },
+      {
+        "root": "/workspace/shared/drivers-first-sd-capacity-20261012",
+        "local_commit": "ee244590d3c835af012776ce2480e47b25e23477",
+        "published_commit": "11bc45d263f830c70cea53a8c8749e4fcf17b041"
+      },
+      {
+        "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "local_commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+        "published_commit": "45cf61ac013fb618e8d7fed63217a35350484d52"
+      }
+    ]
+  },
+  "allocation_measurement": {
+    "method": "Sum simultaneous live raw heap_caps_malloc requests for MALLOC_CAP_SPIRAM; includes payload allocator headers and alignment slack.",
+    "host_payload_allocator_overhead_bytes": 47,
+    "previous_internal_control_heap_peak_bytes": 40141,
+    "final_internal_control_heap_peak_bytes": 32381,
+    "internal_reduction_bytes": 7760,
+    "raw_psram_request_peak_bytes": 264833,
+    "first_resume_raw_psram_request_peak_bytes": 17142,
+    "explanation": "Transient atomic payload allocation does not overlap the larger catalog/restore peak in these scenarios."
+  },
+  "boundaries": [
+    "Host model only, with boundaries from docs/NATIVE_SETTINGS_COMPLETE_PATH.md unchanged.",
+    "FileSource backend is not bound by these settings applications; independent FileSource controller tests own feature behavior.",
+    "Raw host allocation requests are not caller-only payload totals, target heap overhead, target BSS, INTERNAL headroom or stack measurements.",
+    "No hardware execution or product activation."
+  ]
+}

@@ -5,16 +5,44 @@
 #include <thread>
 #include <cstring>
 #include <cstdio>
+#include <map>
 using namespace RiscExperimental;
 static_assert(sizeof(RiscStorage::Worker)==sizeof(BaselineStorage::Worker),"default hardware mailbox layout must stay unchanged");
 static_assert(alignof(RiscStorage::Worker)==alignof(BaselineStorage::Worker),"default alignment");
 static_assert(sizeof(NativeReplicaControlJob)<256,"numeric control must not allocate credential/media buffers");
-static_assert(sizeof(NativeReplicaJob)<4608,"4096-byte credential payload plus bounded control only");
+static_assert(sizeof(NativeReplicaJob)<256,"copied credential bytes must not live inside the atomic control object");
 struct Calls {std::atomic<unsigned> count{0};bool retained=false;};
 static NativeReplicaJobResult execute(void*p,uint32_t action,const void*data,uint32_t n){
  auto&calls=*static_cast<Calls*>(p);++calls.count;const auto*b=static_cast<const unsigned char*>(data);uint64_t sum=action;for(uint32_t i=0;i<n;++i)sum+=b[i];return {calls.retained?NativeReplicaCore::Retained:NativeReplicaCore::Ok,n,sum};
 }
-int main(){
+struct PayloadAlloc {
+ bool fail=false;unsigned calls=0,releases=0;std::map<void*,size_t>live;
+ NativeReplicaCore::Allocator api(){return {this,[](void*p,size_t n)->void*{auto&a=*static_cast<PayloadAlloc*>(p);++a.calls;if(a.fail)return nullptr;auto*b=malloc(n);assert(b);memset(b,0xa5,n);a.live[b]=n;return b;},[](void*p,void*b){auto&a=*static_cast<PayloadAlloc*>(p);auto i=a.live.find(b);assert(i!=a.live.end());for(size_t k=0;k<i->second;++k)assert(!static_cast<uint8_t*>(b)[k]);a.live.erase(i);++a.releases;free(b);}};}
+ ~PayloadAlloc(){assert(live.empty());}
+};
+void payloadAllocation(){
+ PayloadAlloc allocation;allocation.fail=true;Calls calls;
+ {NativeReplicaControlJob control(execute,&calls,allocation.api());uint64_t token=0;assert(!control.begin(1,nullptr,0,&token)&&control.workerStep());NativeReplicaJobResult result{};assert(!control.collect(token,&result)&&!allocation.calls);}
+ calls.count=0;
+ NativeReplicaJob job(execute,&calls,allocation.api());uint8_t bytes[4096];memset(bytes,7,sizeof bytes);uint64_t token=123;
+ assert(job.begin(2,bytes,sizeof bytes,&token)==NativeReplicaJob::NoMemory&&!token&&job.exitSafe()&&job.scratchCleared()&&!calls.count&&allocation.live.empty());
+ allocation.fail=false;assert(!job.begin(2,bytes,sizeof bytes,&token)&&allocation.live.size()==1);
+ assert(job.cancel(token)==RISC_STORAGE_WORK_CANCELLED&&allocation.live.empty()&&allocation.releases==1&&!calls.count);
+ assert(!job.begin(3,bytes,sizeof bytes,&token)&&allocation.live.size()==1);calls.retained=true;assert(job.workerStep());
+ assert(allocation.live.empty()&&allocation.releases==2);NativeReplicaJobResult result{};assert(!job.collect(token,&result)&&result.status==NativeReplicaCore::Retained&&!job.exitSafe());
+ const auto count=allocation.calls;assert(job.begin(4,bytes,sizeof bytes,&token)==RISC_STORAGE_WORK_RETAINED&&!token&&allocation.calls==count);
+ puts("copied job payload: zero-payload no allocation, OOM before mailbox acceptance, queued cancel wipe/free, returning Retained wipe/free with permanent retained control PASS");
+}
+void blockedPayload(){
+ PayloadAlloc allocation;struct State {std::atomic<bool>entered{false},release{false};}state;
+ NativeReplicaJob job([](void*p,uint32_t,const void*bytes,uint32_t n){auto&s=*static_cast<State*>(p);s.entered.store(true);while(!s.release.load())std::this_thread::yield();assert(n==4096&&static_cast<const uint8_t*>(bytes)[0]==9);return NativeReplicaJobResult{0,0,0};},&state,allocation.api());
+ uint8_t bytes[4096];memset(bytes,9,sizeof bytes);uint64_t token=0;assert(!job.begin(1,bytes,sizeof bytes,&token));
+ std::thread worker([&]{assert(job.workerStep());});while(!state.entered.load())std::this_thread::yield();
+ assert(allocation.live.size()==1&&!allocation.releases&&job.cancel(token)==RISC_STORAGE_WORK_PENDING&&allocation.live.size()==1);
+ state.release.store(true);worker.join();assert(allocation.live.empty()&&allocation.releases==1);NativeReplicaJobResult result{};assert(job.collect(token,&result)==RISC_STORAGE_WORK_CANCELLED&&job.exitSafe()&&job.scratchCleared());
+ puts("copied job payload: blocked worker and pending cancellation retain the allocation until callback return, then wipe/free before completion publication PASS");
+}
+int main(){payloadAllocation();blockedPayload();
  {Calls calls;NativeReplicaControlJob job(execute,&calls);uint64_t token=99;unsigned char rejected=0x7f;
   assert(job.begin(7,&rejected,1,&token)==RISC_STORAGE_WORK_INVALID&&!token&&job.exitSafe());
   assert(!job.begin(7,nullptr,0,&token)&&token);assert(job.pending()&&!job.exitSafe());assert(job.workerStep());NativeReplicaJob::Result result{};assert(!job.collect(token,&result)&&result.status==0&&result.pending==0&&result.revision==7);assert(calls.count==1&&job.exitSafe()&&job.scratchCleared());

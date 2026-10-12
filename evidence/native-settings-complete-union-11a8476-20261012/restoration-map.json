@@ -1,0 +1,58 @@
+{
+  "schema": "gzip-evidence-restoration-v1",
+  "instruction": "Decompress each stored_path into its logical_name in a separate restoration directory, verify original_bytes and original_sha256, then restore original_mode and original_mtime_ns if filesystem metadata is required. Original campaign outputs remain unchanged.",
+  "files": [
+    {
+      "logical_name": "normal-manifest.json",
+      "source_path": "/workspace/shared/x4-complete-settings-evidence-20261012/union-11a8476-normal/manifest.json",
+      "stored_path": "normal-manifest.json.gz",
+      "compression": "gzip",
+      "original_bytes": 291746,
+      "original_sha256": "c2f938e9c2bec8b7d3d1c7543966c44b09bda7e86504806527cdd3f1435297ca",
+      "stored_bytes": 82764,
+      "stored_sha256": "213949e3d3818a1436ae5cf4c1e3d2e9171c44d30ed34d2affa064e00c121fe2",
+      "original_mode": "0o644",
+      "original_mtime_ns": 1791815347419369231,
+      "round_trip_verified": true
+    },
+    {
+      "logical_name": "normal.log",
+      "source_path": "/workspace/shared/x4-complete-union-11a8476-normal.log",
+      "stored_path": "normal.log.gz",
+      "compression": "gzip",
+      "original_bytes": 66115,
+      "original_sha256": "193c03062fc66b0766f9c39f1134b072848cdbf07831d09808acf4f806d7d7ff",
+      "stored_bytes": 3129,
+      "stored_sha256": "1b9b061b0b1d88bfb6f11c6dc45b16a6fdd54a1777349c7cddfae3fad148f9b4",
+      "original_mode": "0o644",
+      "original_mtime_ns": 1791815346964658059,
+      "round_trip_verified": true
+    },
+    {
+      "logical_name": "asan-manifest.json",
+      "source_path": "/workspace/shared/x4-complete-settings-evidence-20261012/union-11a8476-asan/manifest.json",
+      "stored_path": "asan-manifest.json.gz",
+      "compression": "gzip",
+      "original_bytes": 294451,
+      "original_sha256": "a42957c7967f8afe6516fff2f0bc61c0e29113e1b117d5d1ce7ae90e381b8c3d",
+      "stored_bytes": 82830,
+      "stored_sha256": "1d2e7676a3b5285f24870a1681bab5e97428eb942ca0b3689859599ae4ec5f3c",
+      "original_mode": "0o644",
+      "original_mtime_ns": 1791815391761500740,
+      "round_trip_verified": true
+    },
+    {
+      "logical_name": "asan.log",
+      "source_path": "/workspace/shared/x4-complete-union-11a8476-asan.log",
+      "stored_path": "asan.log.gz",
+      "compression": "gzip",
+      "original_bytes": 67875,
+      "original_sha256": "edb189cf67009a126ca3030ddbfcb96df1bd0d8a6871ebb50e17bfd9f76d1aa4",
+      "stored_bytes": 3187,
+      "stored_sha256": "1d848f120c03ab0859b72034681d8a37d28bb934e4072471c9d33c710df4c642",
+      "original_mode": "0o644",
+      "original_mtime_ns": 1791815391030559368,
+      "round_trip_verified": true
+    }
+  ]
+}

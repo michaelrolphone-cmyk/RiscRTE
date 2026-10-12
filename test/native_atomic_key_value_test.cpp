@@ -87,6 +87,19 @@ void endpointRetention(){
  risc_key_value_atomic_state_v1 state{};state.struct_size=sizeof(state);assert(a.state(&state)==RISC_ATOMIC_RETAINED);
  puts("atomic endpoint: failed native terminal cleanup retains namespace gate and suppresses unsafe success PASS");
 }
+void endpointPayloadAllocation(){
+ Disk d=initial();Alloc allocation;C c(6,d.backend(),limits(),allocation.api());assert(!c.load());Gate gate;A a(c,gate.api());
+ const auto root=d.root;const auto objects=d.objects;const auto next=d.next;const auto live=allocation.bytes;uint64_t token=99;
+ risc_key_value_atomic_mutation_v1 mutation{"saved",RISC_ATOMIC_PUT,"secret",6};allocation.fail=allocation.calls+1;d.calls=0;
+ assert(a.submit(c.revision(),&mutation,1,"save",4,&token)==RISC_ATOMIC_CAPACITY&&!token&&a.exitSafe()&&a.scratchCleared()&&!gate.held);
+ assert(!d.calls&&d.root==root&&d.objects==objects&&d.next==next&&allocation.bytes==live&&!a.workerStep());
+ allocation.fail=0;allocation.watchWipe=allocation.calls+1;
+ assert(!a.submit(c.revision(),&mutation,1,"save",4,&token)&&allocation.bytes==live+4096&&allocation.watched);
+ assert(a.cancel(token)==RISC_ATOMIC_PENDING);gate.run(a);assert(collect(a,token).status==RISC_ATOMIC_CANCELLED&&allocation.bytes==live&&allocation.wiped==1&&!allocation.watched&&!d.calls&&a.exitSafe());
+ allocation.watchWipe=allocation.calls+1;assert(!a.submit(c.revision(),&mutation,1,"save",4,&token));gate.finishResult=C::Retained;gate.run(a);
+ risc_key_value_atomic_receipt_v1 result{sizeof(result),0,0,0};assert(a.collect(token,&result)==RISC_ATOMIC_RETAINED&&gate.held&&!a.exitSafe()&&allocation.wiped==2&&!allocation.watched);
+ puts("atomic payload PSRAM contract: OOM returns CAPACITY with no queued work/native mutation, retry works, cancellation wipes, and returning Retained releases copied bytes while keeping custody controls pinned PASS");
+}
 void endpointFaults(){
  const Disk source=initial();unsigned calls=0;
  {Disk d=source;Alloc allocation;C c(6,d.backend(),limits(),allocation.api());assert(!c.load());Gate gate;A a(c,gate.api());auto token=submit(a,c);d.calls=0;gate.run(a);assert(collect(a,token).status==0);calls=d.calls;}
@@ -101,5 +114,5 @@ void endpointFaults(){
  assert(uncertain);printf("atomic endpoint: %u before/after/torn native backend failures recover complete old or new map+intent; %u uncertain receipts PASS\n",cases,uncertain);
 }
 #ifndef NATIVE_ATOMIC_ENDPOINT_FIXTURE_ONLY
-int main(){endpointBasics();endpointCancellation();endpointCancelRace();endpointRefusals();endpointRetention();endpointFaults();}
+int main(){endpointBasics();endpointCancellation();endpointCancelRace();endpointRefusals();endpointRetention();endpointPayloadAllocation();endpointFaults();}
 #endif

@@ -25,6 +25,7 @@ template<class T> class OwnedSettingsScratch final {
   if(uintptr_t(p)%alignof(T)){a.release(a.context,p);return false;}
   allocator_=a;value_=new(p)T{};return true;
  }
+ bool empty()const{return value_==nullptr;}
  T*operator->(){return value_;}const T*operator->()const{return value_;}
  T&get(){return *value_;}const T&get()const{return *value_;}
  void wipe(){if(value_)C::wipe(value_,sizeof(T));}
