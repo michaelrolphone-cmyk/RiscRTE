@@ -113,6 +113,12 @@ struct Hardware {
   bool (*spiOpenQuad)(uint8_t,int16_t,int16_t,int16_t,int16_t,int16_t)=nullptr;
   bool (*spiTransferQuad)(uint8_t,const uint8_t*,size_t,uint32_t)=nullptr;
   bool (*i2sStandardOpen)(const risc_hw_i2s_standard_v1&,uint8_t,uint32_t)=nullptr;
+  // Optional native-only deep-entry preparation transaction. Install both or
+  // neither. prepare may refuse before terminal entry; cancel must undo every
+  // attempted preparation, including a partial refusal. No app ABI changes.
+  // Successful terminal entry and an unexpected terminal return never cancel.
+  bool (*deepPrepare)()=nullptr;
+  bool (*deepCancel)()=nullptr;
 };
 class Port final {
  public:

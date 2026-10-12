@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "runtime_version": "0.3.1",
+  "transport_source": "be6400926227e6eb2d36ec28cd8a3cdad9978c12",
+  "wake_source": "267aab6d9382ce4921a1536fab1620749b2f5301",
+  "common_ancestor": "3b90cd11cf0ff4e8116bb54d2d9eb9c7c67a148b",
+  "hardware_verified": false
+}

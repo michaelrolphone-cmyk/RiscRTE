@@ -57,6 +57,7 @@ class CrownEvents final {
     return recovery_.sample(events,now,valid);
   }
   uint8_t legacy()const{return legacy_;}
+  bool sleepPending()const{return legacy_ || recovery_.held();}
   void acknowledge(uint8_t mask){legacy_&=uint8_t(~mask);}
   uint32_t shortSequence()const{return shortSequence_;}
   void discontinuity(){recovery_.sample(0,0,false);}

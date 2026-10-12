@@ -7,13 +7,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include "esp_elf.h"
 #include "esp_dlfcn.h"
 #include "private/esp_dlmod.h"
 #include "private/elf_platform.h"
 #include "freertos/task.h"
 
-static unsigned opens, seeks, reads, parses, relocations, publications, allocations, yields;
+static unsigned opens, stats, seeks, reads, parses, relocations, publications, allocations, yields;
 static size_t bytes;
 static TickType_t ticks;
 static int fail_allocation_at=-1, arch_result;
@@ -35,6 +36,7 @@ ssize_t risc_test_read(int fd, void *data, size_t n) {
     return result;
 }
 int risc_test_open(const char *path, int flags, ...) { ++opens; return open(path, flags); }
+int risc_test_fstat(int fd, struct stat *info) { ++stats; return fstat(fd,info); }
 off_t risc_test_lseek(int fd, off_t offset, int how) { ++seeks; return lseek(fd,offset,how); }
 void *esp_elf_malloc(uint32_t n, bool exec) {
     (void)exec;
@@ -66,15 +68,15 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
     const int result=arch_result;arch_result=0;return result;
 }
 int esp_elf_arch_flush(esp_elf_t *elf) { (void)elf; ++publications; return 0; }
-static void reset_counts(void) { opens=seeks=reads=parses=relocations=publications=yields=0;bytes=0; }
+static void reset_counts(void) { opens=stats=seeks=reads=parses=relocations=publications=yields=0;bytes=0; }
 static void load(esp_dl_image_cache **cache, const char *path) {
     void *module=esp_dlopen_cached_instance(cache,path);
     assert(module && dlsym(module,"app_main"));
     assert(dlclose(module)==0);
 }
 static void report(const char *mode) {
-    printf("%s default/app/default/app/default: opens=%u seeks=%u reads=%u bytes=%zu parses=%u relocations=%u publications=%u read_yields=%u\n",
-           mode,opens,seeks,reads,bytes,parses,relocations,publications,yields);
+    printf("%s default/app/default/app/default: opens=%u stats=%u seeks=%u reads=%u bytes=%zu parses=%u relocations=%u publications=%u read_yields=%u\n",
+           mode,opens,stats,seeks,reads,bytes,parses,relocations,publications,yields);
 }
 static int snapshot_reader(void* source,const char* logical,elf_file_t* out) {
     (void)logical;return esp_elf_open(out,(const char*)source);
@@ -104,7 +106,7 @@ int main(int argc, char **argv) {
         assert(allocations==1+(i?2:1));
     }
     forbid_reads=false;
-    assert(opens==2 && seeks==4 && parses==2 && relocations==5 && publications==5);
+    assert(opens==2 && stats==2 && seeks==0 && parses==2 && relocations==5 && publications==5);
     report("cached");
 #ifdef TEST_COUNTS_ONLY
     esp_dl_image_cache_destroy(cache);assert(!allocations);return 0;
