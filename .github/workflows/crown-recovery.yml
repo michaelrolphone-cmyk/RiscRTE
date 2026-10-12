@@ -1,12 +1,15 @@
 name: Crown recovery qualification
 on:
   push:
-    branches: [fix/host-owned-crown-exit]
+    branches: [fix/host-owned-crown-exit, work/watch-crown-wake-20261012]
   pull_request:
     paths:
       - '.github/workflows/crown-recovery.yml'
       - 'crown-build.ini'
       - 'src/ports/esp32s3/NativeCrownRecovery.*'
+      - 'src/ports/esp32s3/NativeHardware.cpp'
+      - 'src/ports/esp32s3/CpuPort.*'
+      - 'test/*deep_prepare*'
       - 'src/runtime/control/CrownRecovery.h'
       - 'test/*crown*'
       - 'test/native_crown_shim/**'
@@ -32,6 +35,10 @@ jobs:
         run: bash test/run_crown_recovery_test.sh
       - name: Undefined-behavior sanitizer
         run: SANITIZE=1 SANITIZERS=undefined bash test/run_crown_recovery_test.sh
+      - name: Deep preflight, wake sets and retained lifecycle
+        run: |
+          bash test/run_deep_sleep_test.sh
+          SANITIZE=1 bash test/run_deep_prepare_test.sh
       - name: Runtime host control and retained custody
         run: |
           bash test/run_runtime_test.sh

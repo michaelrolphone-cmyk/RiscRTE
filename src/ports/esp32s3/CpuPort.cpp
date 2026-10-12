@@ -790,6 +790,7 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(pin<0)return RISC_DEEP_SLEEP_INVALID;
   if(!p.hw_.deepWakeValid || !p.hw_.deepReady || !p.hw_.deepWakeArm || !p.hw_.deepWakeClear ||
      !p.hw_.deepSleep || !p.hw_.deepWakeValid(pin) ||
+     (bool(p.hw_.deepPrepare)!=bool(p.hw_.deepCancel)) ||
      (ms && (!p.hw_.timerArm || !p.hw_.timerClear)))return RISC_DEEP_SLEEP_UNSUPPORTED;
   if(!p.hw_.deepReady())return RISC_DEEP_SLEEP_BUSY;
   bool level=false;
@@ -797,6 +798,14 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(level==active)return RISC_DEEP_SLEEP_ACTIVE_WAKE;
   const bool pullup=p.pins_[pin].pullup;
   p.sleeping_=true;
+  // Fallible native quiescence belongs before the nonreturning callback. A
+  // clean refusal lets the caller restore its prepared display/output holds.
+  if(p.hw_.deepPrepare && !p.hw_.deepPrepare()){
+    const bool clean=p.hw_.deepCancel();
+    if(!clean)p.poisoned_=p.sleepRetained_=true;
+    p.sleeping_=false;
+    return clean?RISC_DEEP_SLEEP_BUSY:RISC_DEEP_SLEEP_RETAINED;
+  }
   int32_t result=RISC_DEEP_SLEEP_PLATFORM;
   if(p.hw_.deepWakeArm(pin,active,pullup) && (!ms || p.hw_.timerArm(ms))){
     if(p.hw_.gpioRead(pin,&level)){
@@ -818,7 +827,9 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   // even then. Explicit output holds belong to their callers and are not stolen.
   const bool timerClean=!ms || p.hw_.timerClear();
   const bool inputClean=p.hw_.deepWakeClear(pin,pullup);
-  if(!timerClean || !inputClean){
+  // Do not resume a native participant after a terminal-contract violation.
+  const bool preparationClean=p.sleepRetained_ || !p.hw_.deepCancel || p.hw_.deepCancel();
+  if(!timerClean || !inputClean || !preparationClean){
     p.poisoned_=p.sleepRetained_=true;result=RISC_DEEP_SLEEP_RETAINED;
   }
   p.sleeping_=false;
@@ -879,6 +890,7 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   if(ms && (!p.hw_.timerArm || !p.hw_.timerClear))return RISC_LIGHT_SLEEP_UNSUPPORTED;
   if(deep){
     if(!p.hw_.deepWakeSetValid || !p.hw_.deepWakeSetArm || !p.hw_.deepWakeSetClear || !p.hw_.deepReady || !p.hw_.deepSleep ||
+       (bool(p.hw_.deepPrepare)!=bool(p.hw_.deepCancel)) ||
        !p.hw_.deepWakeSetValid(mask,high))return RISC_LIGHT_SLEEP_UNSUPPORTED;
     if(!p.hw_.deepReady())return RISC_LIGHT_SLEEP_BUSY;
   }else{
@@ -891,6 +903,12 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   }return int32_t(0);};
   int32_t result=quiet();if(result)return result;
   p.sleeping_=true;uint64_t attempted=0;bool armOk=true,timerAttempted=false;
+  if(deep && p.hw_.deepPrepare && !p.hw_.deepPrepare()){
+    const bool clean=p.hw_.deepCancel();
+    if(!clean)p.poisoned_=p.sleepRetained_=true;
+    p.sleeping_=false;
+    return clean?RISC_LIGHT_SLEEP_BUSY:RISC_LIGHT_SLEEP_RETAINED;
+  }
   if(deep){attempted=mask;armOk=p.hw_.deepWakeSetArm(mask,high,pulls);}
   else for(unsigned i=0;i<49 && armOk;++i)if(mask&pinBit(i)){attempted|=pinBit(i);armOk=p.hw_.wakeArm(i,bool(high&pinBit(i)));}
   if(armOk && ms){timerAttempted=true;armOk=p.hw_.timerArm(ms);}
@@ -902,6 +920,7 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   bool clean=!timerAttempted || p.hw_.timerClear();
   if(deep){if(!p.hw_.deepWakeSetClear(mask,high,pulls))clean=false;}
   else for(unsigned i=0;i<49;++i)if((attempted&pinBit(i)) && !p.hw_.wakeClear(i))clean=false;
+  if(deep && !p.sleepRetained_ && p.hw_.deepCancel && !p.hw_.deepCancel())clean=false;
   if(!clean){p.poisoned_=p.sleepRetained_=true;result=RISC_LIGHT_SLEEP_RETAINED;}
   p.sleeping_=false;return result;
 }

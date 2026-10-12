@@ -188,11 +188,11 @@ Hardware nativeHardware(bool (*owner)()){
     },gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){
-      if(!NativeCrownRecovery::pause())return;
       NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});
-      NativeCrownRecovery::resume();
     },NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadioAsync::join,NativeRadioAsync::state,NativeRadioAsync::leave,NativeRadioAsync::addresses,NativeRadioAsync::scanStart,NativeRadioAsync::scanPoll,NativeRadioAsync::scanCancel,NativeRadioAsync::idle};
+  hardware.deepPrepare=[](){return NativeCrownRecovery::pause(true);};
+  hardware.deepCancel=[](){NativeCrownRecovery::resume();return true;};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
   configureSchedulerWait(hardware);
   static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();

@@ -107,6 +107,12 @@ struct Hardware {
   const StorageWorkBackend* storageWork=nullptr; // explicit scoped storage worker opt-in
   const RiscBoot::EntropyBackend* entropy=nullptr; // explicit native opt-in
   bool (*schedulerWait)(uint32_t)=nullptr; // owner-only, bounded, scheduler only
+  // Optional native-only deep-entry preparation transaction. Install both or
+  // neither. prepare may refuse before terminal entry; cancel must undo every
+  // attempted preparation, including a partial refusal. No app ABI changes.
+  // Successful terminal entry and an unexpected terminal return never cancel.
+  bool (*deepPrepare)()=nullptr;
+  bool (*deepCancel)()=nullptr;
 };
 class Port final {
  public:

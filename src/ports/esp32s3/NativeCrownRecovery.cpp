@@ -11,6 +11,7 @@
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
 #include <esp_system.h>
+#include <esp_sleep.h>
 #include <esp_private/system_internal.h>
 #include <atomic>
 #include <cstring>
@@ -23,7 +24,7 @@ RTC_NOINIT_ATTR uint32_t resetMarker[3];
 SemaphoreHandle_t mutex=nullptr;
 TaskHandle_t task=nullptr;
 Transfer raw=nullptr;
-bool online=false;
+bool online=false,bootWakeApplied=false;
 std::atomic<bool> paused{false};
 std::atomic<bool> wakeBoundary{false};
 RiscControl::CrownEvents events;
@@ -92,6 +93,16 @@ bool opened(uint8_t port,uint8_t sda,uint8_t scl,Transfer transfer){
   if(ok)ok=raw(Port,Address,&enableReg,1,&enable,1,20);
   const uint8_t enableWrite[]={enableReg,uint8_t(enable|0x0f)};
   if(ok)ok=raw(Port,Address,enableWrite,2,nullptr,0,20);
+  if(ok && !bootWakeApplied){
+    // Deep sleep creates a fresh supervisor. Treat any key history present
+    // at an external-wake boundary as the waking gesture, just as light wake
+    // does. A motion-only wake with no key history consumes no later press.
+    const auto cause=esp_sleep_get_wakeup_cause();
+    if(esp_reset_reason()==ESP_RST_DEEPSLEEP &&
+       (cause==ESP_SLEEP_WAKEUP_EXT0 || cause==ESP_SLEEP_WAKEUP_EXT1 || cause==ESP_SLEEP_WAKEUP_GPIO))
+      wakeBoundary.store(true,std::memory_order_release);
+    bootWakeApplied=true;
+  }
   if(ok && !task)ok=xTaskCreatePinnedToCore(supervise,"core-crown",3072,nullptr,
                                           configMAX_PRIORITIES-2,&task,0)==pdPASS;
   if(!ok)online=false;
@@ -102,9 +113,13 @@ bool closing(uint8_t port){
   if(!lock(25))return false;
   online=false;events.discontinuity();unlock();return true;
 }
-bool pause(){
+bool pause(bool requireQuiet){
   if(!mutex)return true;
   if(!lock(25))return false;
+  // A sampler may already have acknowledged the physical IRQ since the
+  // application's last status check. Preserve that pending gesture instead
+  // of sleeping behind a now-inactive line. Refusal changes no pause state.
+  if(requireQuiet && events.sleepPending()){unlock();return false;}
   paused=true;events.discontinuity();unlock();return true;
 }
 void resume(bool gpioWake){
