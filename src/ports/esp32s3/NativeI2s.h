@@ -2,6 +2,7 @@
 // Generic standard signed16 stereo TX and mono PDM RX. No board/audio policy.
 // Exclusive runtime owner: no Arduino/other IDF caller may share these units.
 #include "NativeSleep.h"
+#include <RiscI2sStandardConfigV1.h>
 #include <driver/i2s.h>
 #include <driver/gpio.h>
 #include <esp_timer.h>
@@ -9,7 +10,7 @@
 #include <freertos/task.h>
 #include <cstdint>
 namespace RiscCpu { namespace NativeI2s {
-struct State { bool installed=false,closing=false,rx=false; int clock=-1,word=-1,data=-1,core=-1; };
+struct State { bool installed=false,closing=false,rx=false; int clock=-1,word=-1,data=-1,core=-1;bool standard=false;uint8_t directions=0;int master=-1,input=-1; };
 static State states[2];
 inline bool low(int pin){
   if(pin<0)return true;
@@ -29,6 +30,8 @@ inline bool close(uint8_t unit){
   bool quiet=s.rx?(s.data<0 || NativeSleep::openPin(uint8_t(s.data),false,false,false)):low(s.data);
   if(!low(s.clock))quiet=false;
   if(!low(s.word))quiet=false;
+  if(!low(s.master))quiet=false;
+  if(s.input>=0&&!NativeSleep::openPin(uint8_t(s.input),false,false,false))quiet=false;
   bool removed=!s.installed;
   if(s.installed && stopped){
     removed=i2s_driver_uninstall(port)==ESP_OK;
@@ -77,18 +80,43 @@ inline bool openRx(uint8_t unit,uint8_t clock,uint8_t data,uint32_t rate){
   pins.ws_io_num=clock;pins.data_out_num=I2S_PIN_NO_CHANGE;pins.data_in_num=data;
   return i2s_set_pin(port,&pins)==ESP_OK;
 }
+inline bool openStandard(const risc_hw_i2s_standard_v1& wire,uint8_t directions,uint32_t rate){
+  const unsigned unit=wire.controller;
+  if(unit>1 || states[unit].installed || states[unit].clock>=0 || !directions || directions>3 ||
+     (rate!=8000&&rate!=16000&&rate!=22050&&rate!=32000&&rate!=44100&&rate!=48000))return false;
+  const int pins[]={wire.mclk,wire.bclk,wire.ws,wire.data_out,wire.data_in};
+  for(unsigned i=0;i<5;i++) {
+    if(pins[i]<0){if(i<3||(i==3&&(directions&1))||(i==4&&(directions&2)))return false;continue;}
+    if(pins[i]>48 || (i==4?!GPIO_IS_VALID_GPIO(pins[i]):!GPIO_IS_VALID_OUTPUT_GPIO(pins[i])))return false;
+    for(unsigned j=0;j<i;j++)if(pins[j]==pins[i])return false;
+  }
+  auto& s=states[unit];s.standard=true;s.directions=directions;s.clock=wire.bclk;s.word=wire.ws;s.master=wire.mclk;
+  s.data=(directions&1)?wire.data_out:-1;s.input=(directions&2)?wire.data_in:-1;
+  if(!low(s.data)||!low(s.clock)||!low(s.word)||!low(s.master)||
+     (s.input>=0&&!NativeSleep::openPin(uint8_t(s.input),false,false,false)))return false;
+  i2s_config_t config{};config.mode=static_cast<i2s_mode_t>(I2S_MODE_MASTER|((directions&1)?I2S_MODE_TX:0)|((directions&2)?I2S_MODE_RX:0));
+  config.sample_rate=rate;config.bits_per_sample=I2S_BITS_PER_SAMPLE_16BIT;config.channel_format=I2S_CHANNEL_FMT_RIGHT_LEFT;
+  config.communication_format=I2S_COMM_FORMAT_STAND_I2S;config.dma_buf_count=2;config.dma_buf_len=256;
+  config.use_apll=false;config.tx_desc_auto_clear=true;config.mclk_multiple=I2S_MCLK_MULTIPLE_256;
+  const auto port=static_cast<i2s_port_t>(unit);
+  if(i2s_driver_install(port,&config,0,nullptr)!=ESP_OK)return false;
+  s.installed=true;s.core=xPortGetCoreID();
+  i2s_pin_config_t pin{};pin.mck_io_num=s.master;pin.bck_io_num=s.clock;pin.ws_io_num=s.word;
+  pin.data_out_num=s.data<0?I2S_PIN_NO_CHANGE:s.data;pin.data_in_num=s.input<0?I2S_PIN_NO_CHANGE:s.input;
+  return i2s_set_pin(port,&pin)==ESP_OK;
+}
 inline bool read(uint8_t unit,int16_t* pcm,size_t frames,size_t* done,uint32_t ms){
   if(done)*done=0;
-  if(!done || unit!=0 || !states[unit].installed || !states[unit].rx || states[unit].closing ||
+  if(!done || unit>1 || !states[unit].installed || (states[unit].standard?!(states[unit].directions&2):!states[unit].rx) || states[unit].closing ||
      states[unit].core!=xPortGetCoreID() || !pcm || !frames || frames>256 || !ms || ms>40)return false;
-  auto* bytes=reinterpret_cast<uint8_t*>(pcm);const size_t size=frames*2;
+  auto* bytes=reinterpret_cast<uint8_t*>(pcm);const size_t frameBytes=states[unit].standard?4:2;const size_t size=frames*frameBytes;
   size_t copied=0;const int64_t deadline=esp_timer_get_time()+int64_t(ms)*1000;
   // IDF's RX mutex is uncontended by the exclusive runtime-owner contract.
   // Queue timeouts are zero; one deadline covers all partial copies.
   for(unsigned attempt=0;attempt<42 && copied<size;++attempt){
     size_t n=0;const esp_err_t result=i2s_read(static_cast<i2s_port_t>(unit),bytes+copied,size-copied,&n,0);
-    if(n>size-copied || n%2)return false;
-    copied+=n;*done=copied/2;
+    if(n>size-copied || n%frameBytes)return false;
+    copied+=n;*done=copied/frameBytes;
     if(result!=ESP_OK)return false;
     if(copied==size)return true;
     if(esp_timer_get_time()>=deadline)return true;
@@ -100,7 +128,7 @@ inline bool read(uint8_t unit,int16_t* pcm,size_t frames,size_t* done,uint32_t m
 }
 inline bool write(uint8_t unit,const int16_t* pcm,size_t frames,size_t* done,uint32_t ms){
   if(done)*done=0;
-  if(!done || unit>1 || !states[unit].installed || states[unit].rx || states[unit].closing || states[unit].core!=xPortGetCoreID() || !pcm || !frames || frames>256 || !ms || ms>40)return false;
+  if(!done || unit>1 || !states[unit].installed || (states[unit].standard?!(states[unit].directions&1):states[unit].rx) || states[unit].closing || states[unit].core!=xPortGetCoreID() || !pcm || !frames || frames>256 || !ms || ms>40)return false;
   const auto* bytes=reinterpret_cast<const uint8_t*>(pcm);const size_t size=frames*4;
   size_t copied=0;const int64_t deadline=esp_timer_get_time()+int64_t(ms)*1000;
   // IDF's timeout applies per DMA buffer; instead all queue waits are zero.

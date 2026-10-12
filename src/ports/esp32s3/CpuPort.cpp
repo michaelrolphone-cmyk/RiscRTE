@@ -27,6 +27,8 @@ void pinsFor(const RiscBoot::Board::Device& d,uint64_t& input,uint64_t& output,u
   } else if(!strcmp(d.type,"peripheral.i2c") || !strcmp(d.type,"power.axp2101")){
     const auto& c=!strcmp(d.type,"peripheral.i2c")?d.config.peripheral:d.config.power.device;
     input|=pinBit(c.irq);if(c.irq_pull_up)pullup|=pinBit(c.irq);
+  } else if(!strcmp(d.type,"audio.i2s-standard")){
+    output|=pinBit(d.config.standardAudio.enable);
   } else if(!strcmp(d.type,"gpio.bank")){
     const auto& c=d.config.gpio;
     for(unsigned i=0;i<c.count;++i){input|=pinBit(c.pins[i]);output|=pinBit(c.pins[i]);if(c.pull_up)pullup|=pinBit(c.pins[i]);}
@@ -248,6 +250,12 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       c.api={1,sizeof(c.api),&c,i2cOpen,i2cTransfer,i2cClose};
       if(!runtime.registerPlatform("platform.i2c.controller",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
+    if(runtime.uses(id,RISC_I2S_STANDARD_CAPABILITY,1)) {
+      if(i2sCount_==2 || strcmp(d.type,"audio.i2s-standard") || !hw_.i2sStandardOpen || !hw_.i2sClose || !hw_.i2sRead || !hw_.i2sWrite)return false;
+      auto& c=i2ss_[i2sCount_++];c.port=this;c.standard=true;c.wire=d.config.standardAudio;c.config.controller=c.wire.controller;
+      c.standardApi={1,sizeof(c.standardApi),&c,i2sStandardOpen,i2sWrite,i2sRead,i2sClose};
+      if(!runtime.registerPlatform(RISC_I2S_STANDARD_CAPABILITY,1,RiscBoot::Runtime::Scope::Device,id,&c.standardApi))return false;
+    }
     if(runtime.uses(id,"platform.i2s.controller",1)){
       if(i2sCount_==2 || strcmp(d.type,"audio.i2s") || !hw_.i2sClose ||
          (d.config.audio.pdm_rx ? (!hw_.i2sOpenRx || !hw_.i2sRead) : (!hw_.i2sOpen || !hw_.i2sWrite)))return false;
@@ -342,10 +350,26 @@ bool Port::usbPhyRelease(void* context,uint64_t token){
   if(!ok || !usbPhyOwner(context) || !p.hw_.usbPhyIdle())return false;
   p.unreserve(19,&c);p.unreserve(20,&c);c.token=0;c.closing=false;return true;
 }
+bool Port::i2sStandardOpen(void* context,uint8_t directions,uint32_t rate,uint64_t* out){
+  if(out)*out=0;
+  auto& c=*static_cast<I2s*>(context);auto& p=*c.port;const auto& w=c.wire;
+  if(!out || !c.standard || !p.available() || p.transferring_ || c.token || !directions || directions>3 ||
+     ((directions&1)&&w.data_out<0) || ((directions&2)&&w.data_in<0) ||
+     (rate!=8000 && rate!=16000 && rate!=22050 && rate!=32000 && rate!=44100 && rate!=48000))return false;
+  const int16_t pins[]={w.mclk,w.bclk,w.ws,w.data_out,w.data_in};
+  for(auto pin:pins)if(!p.reserve(pin,&c)){for(auto old:pins)p.unreserve(old,&c);return false;}
+  uint64_t token=p.token();if(!token){for(auto pin:pins)p.unreserve(pin,&c);return false;}
+  p.transferring_=true;bool ok=p.hw_.i2sStandardOpen(w,directions,rate);p.transferring_=false;
+  if(!ok){
+    p.transferring_=true;bool clean=p.hw_.i2sClose(w.controller);p.transferring_=false;
+    if(clean){for(auto pin:pins)p.unreserve(pin,&c);return false;}
+  }
+  c.token=token;c.closing=!ok;c.directions=directions;*out=token;return ok;
+}
 bool Port::i2sOpen(void* context,uint8_t unit,bool rx,uint8_t clk,int8_t ws,uint8_t data,uint32_t rate,uint8_t channels,uint64_t* out){
   if(out)*out=0;
   auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
-  if(!out || !p.available() || p.transferring_ || c.token || rx!=bool(c.config.pdm_rx) || unit!=c.config.controller ||
+  if(!out || c.standard || !p.available() || p.transferring_ || c.token || rx!=bool(c.config.pdm_rx) || unit!=c.config.controller ||
      clk!=c.config.bclk || ws!=c.config.ws || data!=c.config.data ||
      (rx ? (unit!=0 || ws!=-1 || channels!=1 || (rate!=8000 && rate!=16000) || !p.hw_.i2sOpenRx || !p.hw_.i2sRead) :
            (channels!=2 || (rate!=8000 && rate!=16000 && rate!=22050 && rate!=44100) || !p.hw_.i2sOpen || !p.hw_.i2sWrite)) ||
@@ -369,7 +393,7 @@ bool Port::i2sOpen(void* context,uint8_t unit,bool rx,uint8_t clk,int8_t ws,uint
 bool Port::i2sWrite(void* context,uint64_t token,const int16_t* pcm,size_t frames,size_t* done,uint32_t ms){
   if(done)*done=0;
   auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
-  if(!done || !p.available() || p.transferring_ || c.closing || c.config.pdm_rx || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
+  if(!done || !p.available() || p.transferring_ || c.closing || (c.standard?!(c.directions&RISC_I2S_TX):c.config.pdm_rx) || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
   p.transferring_=true;const bool ok=p.hw_.i2sWrite(c.config.controller,pcm,frames,done,ms);p.transferring_=false;
   if(*done>frames){*done=0;p.poisoned_=true;c.closing=true;return false;}
   if(!ok || *done!=frames){c.closing=true;return false;}
@@ -378,7 +402,7 @@ bool Port::i2sWrite(void* context,uint64_t token,const int16_t* pcm,size_t frame
 bool Port::i2sRead(void* context,uint64_t token,int16_t* pcm,size_t frames,size_t* done,uint32_t ms){
   if(done)*done=0;
   auto& c=*static_cast<I2s*>(context);auto& p=*c.port;
-  if(!done || !p.available() || p.transferring_ || c.closing || !c.config.pdm_rx || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
+  if(!done || !p.available() || p.transferring_ || c.closing || (c.standard?!(c.directions&RISC_I2S_RX):!c.config.pdm_rx) || !token || token!=c.token || !pcm || !frames || frames>256 || !ms || ms>40)return false;
   p.transferring_=true;const bool ok=p.hw_.i2sRead(c.config.controller,pcm,frames,done,ms);p.transferring_=false;
   if(*done>frames){*done=0;p.poisoned_=true;c.closing=true;return false;}
   if(!ok){c.closing=true;return false;}
@@ -392,7 +416,9 @@ bool Port::i2sClose(void* context,uint64_t token){
   c.closing=true;
   p.transferring_=true;const bool ok=p.hw_.i2sClose(c.config.controller);p.transferring_=false;
   if(!ok)return false;
-  p.unreserve(c.config.bclk,&c);p.unreserve(c.config.ws,&c);p.unreserve(c.config.data,&c);c.token=0;c.closing=false;return true;
+  if(c.standard) {for(int16_t pin:{c.wire.mclk,c.wire.bclk,c.wire.ws,c.wire.data_out,c.wire.data_in})p.unreserve(pin,&c);c.directions=0;}
+  else {p.unreserve(c.config.bclk,&c);p.unreserve(c.config.ws,&c);p.unreserve(c.config.data,&c);}
+  c.token=0;c.closing=false;return true;
 }
 // HCI is opt-in at open, with a cleanup token retained on partial activation.
 bool Port::hciOpen(void* context,uint32_t unit,uint64_t* out){

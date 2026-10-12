@@ -243,7 +243,7 @@ Hardware nativeHardware(bool (*owner)()){
   });
   hardware.tcpListener=NativeTcpListener::backend();
 #endif
-  hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;
+  hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;hardware.i2sStandardOpen=NativeI2s::openStandard;
 #ifdef RISC_ENABLE_HTTP
   NativeHttp::configure(hardware.owner,[](){
     uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;

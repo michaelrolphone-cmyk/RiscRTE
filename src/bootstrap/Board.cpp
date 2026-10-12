@@ -53,6 +53,7 @@ uint64_t Board::deviceBus(uint64_t id) const {
   if (!strcmp(d->type,"power.axp2101")) return d->config.power.device.bus.instance_id;
   if (!strcmp(d->type,"display.spi")) return d->display().bus.instance_id;
   if (!strcmp(d->type,"touch.i2c")) return d->touch().bus.instance_id;
+  if (!strcmp(d->type,"audio.i2s-standard")) return d->config.standardAudio.bus.instance_id;
   if (!strcmp(d->type,"storage.sd-spi")) return d->config.sd.bus.instance_id;
   if (!strcmp(d->type,"radio.lora")) return d->lora().bus.instance_id;
   return 0;
@@ -111,12 +112,31 @@ bool Board::materialize(JsonObjectConst c,Device& d) {
     for (size_t i=0;i<devicesCount_;++i) if (!strcmp(devices_[i].type,d.type)) return false;
     d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
   }
+  if (!strcmp(d.type,"audio.i2s-standard")) {
+    auto& x=d.config.standardAudio;x={};x.struct_size=sizeof(x);uint64_t busId=0;
+    if(!keys(c,{"bus_instance_id","controller","mclk","bclk","ws","data_out","data_in","enable","enable_active_high","output_address","input_address"}) ||
+       !number(c["bus_instance_id"],1,INT32_MAX,busId))return false;
+    const auto* b=bus(busId);if(!b || b->kind!=RISC_HW_BUS_I2C)return false;x.bus=*b;
+    if(!number(c["controller"],0,1,x.controller) || !pin(c["mclk"],x.mclk) || !pin(c["bclk"],x.bclk) || !pin(c["ws"],x.ws) ||
+       !pin(c["data_out"],x.data_out,true) || !pin(c["data_in"],x.data_in,true) || (x.data_out<0&&x.data_in<0) ||
+       !pin(c["enable"],x.enable,true) || !flag(c["enable_active_high"],x.enable_active_high) ||
+       !number(c["output_address"],8,119,x.output_address) || !number(c["input_address"],8,119,x.input_address) ||
+       !address(busId,x.output_address) || (x.input_address!=x.output_address&&!address(busId,x.input_address)) ||
+       !claim(x.mclk) || !claim(x.bclk) || !claim(x.ws) || !claim(x.data_out,true) || !claim(x.data_in,true) || !claim(x.enable,true))return false;
+    for(size_t i=0;i<devicesCount_;++i) {
+      const auto& other=devices_[i];
+      if((!strcmp(other.type,"audio.i2s")&&other.config.audio.controller==x.controller) ||
+         (!strcmp(other.type,"audio.i2s-standard")&&other.config.standardAudio.controller==x.controller))return false;
+    }
+    d.hardware.config=&x;d.hardware.config_size=sizeof(x);return true;
+  }
   if (!strcmp(d.type,"audio.i2s")) {
     auto& x=d.config.audio; x={}; x.struct_size=sizeof(x);
     if (!keys(c,{"controller","pdm_rx","bclk","ws","data"}) || !number(c["controller"],0,1,x.controller) || !flag(c["pdm_rx"],x.pdm_rx) ||
         !pin(c["bclk"],x.bclk) || !pin(c["data"],x.data) || !pin(c["ws"],x.ws,true) ||
         (x.pdm_rx ? (x.controller!=0 || x.ws!=-1) : x.ws<0) || !claim(x.bclk) || !claim(x.ws,true) || !claim(x.data)) return false;
-    for (size_t i=0;i<devicesCount_;++i) if (!strcmp(devices_[i].type,d.type) && devices_[i].config.audio.controller==x.controller) return false;
+    for (size_t i=0;i<devicesCount_;++i) if ((!strcmp(devices_[i].type,d.type) && devices_[i].config.audio.controller==x.controller) ||
+        (!strcmp(devices_[i].type,"audio.i2s-standard") && devices_[i].config.standardAudio.controller==x.controller)) return false;
     d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
   }
   if (!strcmp(d.type,"peripheral.i2c")) {

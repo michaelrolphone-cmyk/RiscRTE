@@ -4,6 +4,7 @@
 #include <TWatchHardwareV1.h>
 #include <RiscTouchI2cV2.h>
 #include <RiscDisplaySpiV2.h>
+#include <RiscI2sStandardConfigV1.h>
 namespace RiscBoot {
 class Board final {
  public:
@@ -31,6 +32,7 @@ class Board final {
       tw_hw_i2c_device_v1 peripheral;
       tw_hw_axp2101_v1 power;
       tw_hw_audio_v1 audio;
+      risc_hw_i2s_standard_v1 standardAudio;
       tw_hw_lora_v1 lora;
       tw_hw_lora_v2 loraSelectable;
       Config() : display{} {}

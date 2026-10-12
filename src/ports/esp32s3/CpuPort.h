@@ -2,6 +2,7 @@
 #include "bootstrap/Runtime.h"
 #include <GardenPlatformV1.h>
 #include <RiscSpiQuadV1.h>
+#include <RiscI2sStandardV1.h>
 #include <GardenRadioAsyncV1.h>
 #include <RiscGpioSdmmcV1.h>
 #include <TWatchPlatformV1.h>
@@ -111,6 +112,7 @@ struct Hardware {
   // Additive raw quad write transport; no controller command knowledge.
   bool (*spiOpenQuad)(uint8_t,int16_t,int16_t,int16_t,int16_t,int16_t)=nullptr;
   bool (*spiTransferQuad)(uint8_t,const uint8_t*,size_t,uint32_t)=nullptr;
+  bool (*i2sStandardOpen)(const risc_hw_i2s_standard_v1&,uint8_t,uint32_t)=nullptr;
 };
 class Port final {
  public:
@@ -153,7 +155,7 @@ class Port final {
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; bool threeWire=false,quad=false,ready=false,closing=false; int16_t data2=-1,data3=-1; risc_spi_quad_v1 api{}; } spis_[8];
   struct SpiBus { uint64_t instance=0; unsigned refs=0; bool quad=false; Spi* held=nullptr; Spi* closing=nullptr; } spiBuses_[2];
-  struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; } i2ss_[2];
+  struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; bool standard=false;uint8_t directions=0;risc_hw_i2s_standard_v1 wire{};risc_i2s_standard_api_v1 standardApi{}; } i2ss_[2];
   struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;
     bool active=false,closing=false,scanning=false,asyncUnavailable=false; uint32_t operation=0,completed=0,suspendedOperation=0,serviceLease=0,nextServiceLease=0; garden_radio_async_v1 api{}; } radios_[1];
   struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
@@ -228,6 +230,7 @@ class Port final {
   static bool spiBegin(void*,uint64_t,uint32_t,uint8_t,uint32_t);
   static bool spiTransfer(void*,uint64_t,const uint8_t*,uint8_t*,size_t);
   static bool spiEnd(void*,uint64_t); static bool spiRelease(void*,uint64_t);
+  static bool i2sStandardOpen(void*,uint8_t,uint32_t,uint64_t*);
   static bool i2sOpen(void*,uint8_t,bool,uint8_t,int8_t,uint8_t,uint32_t,uint8_t,uint64_t*);
   static bool i2sWrite(void*,uint64_t,const int16_t*,size_t,size_t*,uint32_t);
   static bool i2sRead(void*,uint64_t,int16_t*,size_t,size_t*,uint32_t);
