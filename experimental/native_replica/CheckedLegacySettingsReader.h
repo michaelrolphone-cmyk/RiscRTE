@@ -115,7 +115,7 @@ class CheckedLegacySettingsReader {
   if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
-  if(rc==RISC_STORAGE_ASYNC_NOT_FOUND){if(phase_==ReadSource&&!recovered_){recovered_=true;phase_=Recover;return;}fail(phase_==ReadSource?C::Missing:C::Invalid,phase_==ReadSource?Reason::SourceMissing:(phase_==Recheck||phase_==RecheckPage)?Reason::SourceChanged:Reason::InvalidContent);return;}
+  if(rc==RISC_STORAGE_ASYNC_NOT_FOUND){if(phase_==ReadSource&&recoverAllowed_&&!recovered_){recovered_=true;phase_=Recover;return;}fail(phase_==ReadSource?C::Missing:C::Invalid,phase_==ReadSource?Reason::SourceMissing:(phase_==Recheck||phase_==RecheckPage)?Reason::SourceChanged:Reason::InvalidContent);return;}
   if(rc!=RISC_STORAGE_ASYNC_OK){fail(C::Io,rc==RISC_STORAGE_ASYNC_INVALID?Reason::InvalidContent:Reason::ReadFailure);return;}
   switch(phase_){
    case Refresh:phase_=ReadSource;break;
@@ -137,7 +137,8 @@ class CheckedLegacySettingsReader {
  friend class CheckedSdSettingsCatalog;
  CheckedLegacySettingsReader(const C&core,uint32_t ns,uint32_t capacity,uint32_t header,Digest digest,Guard guard,C::Allocator allocator)
   :core_(core),namespace_(ns),nativeCapacity_(capacity),nativeHeader_(header),hash_(digest),guard_(guard),alloc_(allocator),prep_(this,preparationWorker,prepareCallback){preparedHeader_=header;}
- int startPreparedNative(NativeSdAttempt&attempt,Source source,const NativeSdSession&parent){
+ int startPreparedNative(NativeSdAttempt&attempt,Source source,const NativeSdSession&parent,bool recover=true){
+  recoverAllowed_=recover;
   const int rc=io_.bind(attempt,NativeSdSession::Role::LegacyReader,namespace_,&parent);if(rc)return rc;
   preparedStart_=true;const int started=start(attempt.binding().volume,source);preparedStart_=false;
   if(started){const int released=io_.release();if(released==C::Retained){retain();return released;}}return started;
@@ -157,7 +158,7 @@ class CheckedLegacySettingsReader {
  enum Phase{Begin,Refresh,ReadSource,Recover,ReadPage,Grammar,Hash,RecheckPage,Recheck,Compact,Closing};
  const C&core_;uint32_t namespace_,nativeCapacity_,nativeHeader_,budget_=0;Digest hash_;Guard guard_;C::Allocator alloc_;Candidate candidate_;
  const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
- NativeSdSession io_;NativeSdPreparation prep_;bool preparedStart_=false;uint32_t preparedHeader_=C::Header;Source preparedSource_=Source::PagedV2;
+ NativeSdSession io_;NativeSdPreparation prep_;bool preparedStart_=false,recoverAllowed_=true;uint32_t preparedHeader_=C::Header;Source preparedSource_=Source::PagedV2;
  State state_=State::Idle;Reason reason_=Reason::None;Phase phase_=Begin;int error_=0;bool entered_=false,cancelled_=false,recovered_=false,rowOpen_=false;
  uint64_t session_=0,operation_=0;uint32_t page_=0,row_=0,at_=0,prior_=0,rowSize_=0,out_=0,hashed_=0;
  uint8_t indexBytes_[28]{};char directory_[32]{},selected_[64]{},owner_[32]{},path_[96]{};risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};

@@ -1,0 +1,905 @@
+{
+  "runtime_commit": "df220d446cb131c739f39b449d18b31b0652f74a",
+  "runtime_sources_unchanged": true,
+  "matrix_runner_sha256": "87b6a79a8392ebbc2727bd390472df5ec27796bfa8620800a86fd5713ab399e9",
+  "finished_utc": "2026-10-12T10:15:32.275141+00:00",
+  "result": "passed",
+  "builds": 18,
+  "campaigns": 36,
+  "attached_automatic_maintenance_cases": 0,
+  "limits": "Explicit real synchronization after actual controller saves; automatic lifecycle maintenance is qualified separately. Host sectors, NVS/RTOS and UI/radio/RTC shims. No physical firmware or hardware qualification. LeakSanitizer disabled.",
+  "records": [
+    {
+      "group": "home-low-battery",
+      "sanitizers": "address,undefined",
+      "return_code": 0,
+      "elapsed_seconds": 91.607,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "address,undefined",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-asan-ubsan",
+        "--controller",
+        "home-low-battery",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-asan-ubsan.log",
+      "log_sha256": "00026ae761c57dbc27faac6b11ad9c164a1761c3803198b851c2147839d09e6c",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-asan-ubsan/source-manifest.json",
+      "manifest_sha256": "536d3a480e87e6e9a7e89fb5c4c06b18c633f8c96b80c6607c1ded1ac6c0cb75",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-asan-ubsan/interrupted/card.img",
+          "sha256": "66a3405051e3ad5f2c91b3c38c61b2b927b6ab2c66227a200367c92a5845fc7d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-asan-ubsan/normal/card.img",
+          "sha256": "66a3405051e3ad5f2c91b3c38c61b2b927b6ab2c66227a200367c92a5845fc7d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "home-low-battery",
+      "sanitizers": "none",
+      "return_code": 0,
+      "elapsed_seconds": 91.775,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "none",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-normal",
+        "--controller",
+        "home-low-battery",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-normal.log",
+      "log_sha256": "00026ae761c57dbc27faac6b11ad9c164a1761c3803198b851c2147839d09e6c",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-normal/source-manifest.json",
+      "manifest_sha256": "9118890da7bf58ea72dbadf6cfde8a3650702a58ba7aa189815c40474996a0b2",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-normal/interrupted/card.img",
+          "sha256": "66a3405051e3ad5f2c91b3c38c61b2b927b6ab2c66227a200367c92a5845fc7d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-low-battery-normal/normal/card.img",
+          "sha256": "66a3405051e3ad5f2c91b3c38c61b2b927b6ab2c66227a200367c92a5845fc7d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "home-preset",
+      "sanitizers": "address,undefined",
+      "return_code": 0,
+      "elapsed_seconds": 60.687,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "address,undefined",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-asan-ubsan",
+        "--controller",
+        "home-preset",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-asan-ubsan.log",
+      "log_sha256": "e762f02edf3f9b7f413b5618cdf40959f6031162b41776fdfe62b93b52a73aa0",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-asan-ubsan/source-manifest.json",
+      "manifest_sha256": "712bc851a113e008a62a3bb1ed48742e9d0e86531709c30b0350d604dd168868",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-asan-ubsan/interrupted/card.img",
+          "sha256": "86602760fcf0f82ee3ca3f0a9713003365a786ad5d63e4dc37ac59102c58d215",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 24576
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-asan-ubsan/normal/card.img",
+          "sha256": "86602760fcf0f82ee3ca3f0a9713003365a786ad5d63e4dc37ac59102c58d215",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 24576
+        }
+      ]
+    },
+    {
+      "group": "home-preset",
+      "sanitizers": "none",
+      "return_code": 0,
+      "elapsed_seconds": 62.669,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "none",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-normal",
+        "--controller",
+        "home-preset",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-normal.log",
+      "log_sha256": "e762f02edf3f9b7f413b5618cdf40959f6031162b41776fdfe62b93b52a73aa0",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-normal/source-manifest.json",
+      "manifest_sha256": "3d0cc440b4e38ddfef823dc0e19c79b39a6c33bf712fffd29e83bcdf700d823f",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-normal/interrupted/card.img",
+          "sha256": "86602760fcf0f82ee3ca3f0a9713003365a786ad5d63e4dc37ac59102c58d215",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 24576
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-preset-normal/normal/card.img",
+          "sha256": "86602760fcf0f82ee3ca3f0a9713003365a786ad5d63e4dc37ac59102c58d215",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "home-rules",
+      "sanitizers": "address,undefined",
+      "return_code": 0,
+      "elapsed_seconds": 78.132,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "address,undefined",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-asan-ubsan",
+        "--controller",
+        "home-rules",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-asan-ubsan.log",
+      "log_sha256": "5bd2de378b20ef9703208ecdfe29d297a8210ce4790e1c12fbfd0c63c47815ce",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-asan-ubsan/source-manifest.json",
+      "manifest_sha256": "a49b52f6e24c703aa35942d0c20e857b878f62b88bbb59df1a170268a06fe3d5",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-asan-ubsan/interrupted/card.img",
+          "sha256": "a1246fe0f305b30c8d8add593fd46c969437d417c528b8ecd58e5f5bf420349d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-asan-ubsan/normal/card.img",
+          "sha256": "a1246fe0f305b30c8d8add593fd46c969437d417c528b8ecd58e5f5bf420349d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "home-rules",
+      "sanitizers": "none",
+      "return_code": 0,
+      "elapsed_seconds": 71.534,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "none",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-normal",
+        "--controller",
+        "home-rules",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-normal.log",
+      "log_sha256": "5bd2de378b20ef9703208ecdfe29d297a8210ce4790e1c12fbfd0c63c47815ce",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-normal/source-manifest.json",
+      "manifest_sha256": "f1be025419845af75c50c0d432163c1f996a68d88faa0d523d895d7e63266303",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-normal/interrupted/card.img",
+          "sha256": "a1246fe0f305b30c8d8add593fd46c969437d417c528b8ecd58e5f5bf420349d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 24576
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/home-rules-normal/normal/card.img",
+          "sha256": "a1246fe0f305b30c8d8add593fd46c969437d417c528b8ecd58e5f5bf420349d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "quick",
+      "sanitizers": "address,undefined",
+      "return_code": 0,
+      "elapsed_seconds": 74.547,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "address,undefined",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-asan-ubsan",
+        "--controller",
+        "quick",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-asan-ubsan.log",
+      "log_sha256": "b2ecc06e00f95e2e14ddb78395f7db2181fe5a56fd1d208f370c1a6451b947d2",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-asan-ubsan/source-manifest.json",
+      "manifest_sha256": "0309c67f76575cbdf63f9c579f0865e7ba59d9ffead40c52aa423dc65c17d26f",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-asan-ubsan/interrupted/card.img",
+          "sha256": "1d82a0cf06b9d710ab8ca3a67e872e47e9231e7d40ee84bbc1aafd140def6197",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-asan-ubsan/normal/card.img",
+          "sha256": "1d82a0cf06b9d710ab8ca3a67e872e47e9231e7d40ee84bbc1aafd140def6197",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "quick",
+      "sanitizers": "none",
+      "return_code": 0,
+      "elapsed_seconds": 74.04,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "none",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-normal",
+        "--controller",
+        "quick",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-normal.log",
+      "log_sha256": "b2ecc06e00f95e2e14ddb78395f7db2181fe5a56fd1d208f370c1a6451b947d2",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-normal/source-manifest.json",
+      "manifest_sha256": "5057c542c963fcb3e9ecc8b23ee0cd6fc4930812c1f30d89fc5baa48f179009a",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-normal/interrupted/card.img",
+          "sha256": "1d82a0cf06b9d710ab8ca3a67e872e47e9231e7d40ee84bbc1aafd140def6197",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/quick-normal/normal/card.img",
+          "sha256": "1d82a0cf06b9d710ab8ca3a67e872e47e9231e7d40ee84bbc1aafd140def6197",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "settings",
+      "sanitizers": "address,undefined",
+      "return_code": 0,
+      "elapsed_seconds": 85.301,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "address,undefined",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-asan-ubsan"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-asan-ubsan.log",
+      "log_sha256": "4b3f7debc7f11e7dcc24655d86a6d99fc774dab9b51ee9d214516d17c9dc771e",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-asan-ubsan/source-manifest.json",
+      "manifest_sha256": "6da8542a03a9f699a43dfae2d525a7e9aeb4c4fdce779608f2f8b08d0405de1a",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-asan-ubsan/interrupted/card.img",
+          "sha256": "d50d31bd5bd071b0b6e3d7aa65cadfdf37f39eabbdb57507bf581cf1621d6324",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-asan-ubsan/normal/card.img",
+          "sha256": "d50d31bd5bd071b0b6e3d7aa65cadfdf37f39eabbdb57507bf581cf1621d6324",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "settings",
+      "sanitizers": "none",
+      "return_code": 0,
+      "elapsed_seconds": 78.911,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "none",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-normal"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-normal.log",
+      "log_sha256": "4b3f7debc7f11e7dcc24655d86a6d99fc774dab9b51ee9d214516d17c9dc771e",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-normal/source-manifest.json",
+      "manifest_sha256": "f24b1467f3e6b3d63342594749b8d04be4fc39676dac841f456c60a015c63068",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-normal/interrupted/card.img",
+          "sha256": "d50d31bd5bd071b0b6e3d7aa65cadfdf37f39eabbdb57507bf581cf1621d6324",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/settings-normal/normal/card.img",
+          "sha256": "d50d31bd5bd071b0b6e3d7aa65cadfdf37f39eabbdb57507bf581cf1621d6324",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "utility-battery",
+      "sanitizers": "address,undefined",
+      "return_code": 0,
+      "elapsed_seconds": 64.295,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "address,undefined",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-asan-ubsan",
+        "--controller",
+        "utility-battery",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-asan-ubsan.log",
+      "log_sha256": "091e2570b340a070f81574b9f40a4af8d4a5c09aa5f26a99d32e9d63b98c2d60",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-asan-ubsan/source-manifest.json",
+      "manifest_sha256": "b65517628edac2a0985fc2083e55d49b66bd415ae32867b16df1b3f24028d8af",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-asan-ubsan/interrupted/card.img",
+          "sha256": "d0d02c8a6e9ef6c98b20efe32c84a05c417260647d35182b19c102ce31ae1d05",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-asan-ubsan/normal/card.img",
+          "sha256": "d0d02c8a6e9ef6c98b20efe32c84a05c417260647d35182b19c102ce31ae1d05",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "utility-battery",
+      "sanitizers": "none",
+      "return_code": 0,
+      "elapsed_seconds": 64.82,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "none",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-normal",
+        "--controller",
+        "utility-battery",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-normal.log",
+      "log_sha256": "091e2570b340a070f81574b9f40a4af8d4a5c09aa5f26a99d32e9d63b98c2d60",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-normal/source-manifest.json",
+      "manifest_sha256": "64e9f61280f34bdb6846952a55e8511c0e64c34fad4ad5708182134e2f83d79b",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-normal/interrupted/card.img",
+          "sha256": "d0d02c8a6e9ef6c98b20efe32c84a05c417260647d35182b19c102ce31ae1d05",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-battery-normal/normal/card.img",
+          "sha256": "d0d02c8a6e9ef6c98b20efe32c84a05c417260647d35182b19c102ce31ae1d05",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "utility-ble",
+      "sanitizers": "address,undefined",
+      "return_code": 0,
+      "elapsed_seconds": 76.134,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "address,undefined",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-asan-ubsan",
+        "--controller",
+        "utility-ble",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-asan-ubsan.log",
+      "log_sha256": "de4b723209add04417bdbaae0c652389842bfe88877be4f7953721a8ab09972b",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-asan-ubsan/source-manifest.json",
+      "manifest_sha256": "83ba6f91323394da8dd98e9c3b594c1f6c87bba0c696b0b92f3690a10f120edd",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-asan-ubsan/interrupted/card.img",
+          "sha256": "9c35c734ea89482f5aab3b02eeea4a9e1de0472d295790c163696c920da31d2d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 24576
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-asan-ubsan/normal/card.img",
+          "sha256": "9c35c734ea89482f5aab3b02eeea4a9e1de0472d295790c163696c920da31d2d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "utility-ble",
+      "sanitizers": "none",
+      "return_code": 0,
+      "elapsed_seconds": 70.081,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "none",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-normal",
+        "--controller",
+        "utility-ble",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-normal.log",
+      "log_sha256": "de4b723209add04417bdbaae0c652389842bfe88877be4f7953721a8ab09972b",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-normal/source-manifest.json",
+      "manifest_sha256": "b719e79cc793047cf19e2afc0322faff6b16ec6c7842c6cbf35d7331619a9d8c",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-normal/interrupted/card.img",
+          "sha256": "9c35c734ea89482f5aab3b02eeea4a9e1de0472d295790c163696c920da31d2d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-ble-normal/normal/card.img",
+          "sha256": "9c35c734ea89482f5aab3b02eeea4a9e1de0472d295790c163696c920da31d2d",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "utility-contexts",
+      "sanitizers": "address,undefined",
+      "return_code": 0,
+      "elapsed_seconds": 74.728,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "address,undefined",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-asan-ubsan",
+        "--controller",
+        "utility-contexts",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-asan-ubsan.log",
+      "log_sha256": "3e5eb871d943b79045442da9ffa78fbabaff6107dc0086379465b384184d1ebb",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-asan-ubsan/source-manifest.json",
+      "manifest_sha256": "2603e38f5eb2b841c50bbdc54f8693a848fad2208135dbe4826f545f946353ad",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-asan-ubsan/interrupted/card.img",
+          "sha256": "ec38364da5736e28b536423ff6a5a11268a66c3e0d4ba5a6330cc5bcb116fa98",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-asan-ubsan/normal/card.img",
+          "sha256": "ec38364da5736e28b536423ff6a5a11268a66c3e0d4ba5a6330cc5bcb116fa98",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 24576
+        }
+      ]
+    },
+    {
+      "group": "utility-contexts",
+      "sanitizers": "none",
+      "return_code": 0,
+      "elapsed_seconds": 66.021,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "none",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-normal",
+        "--controller",
+        "utility-contexts",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-normal.log",
+      "log_sha256": "3e5eb871d943b79045442da9ffa78fbabaff6107dc0086379465b384184d1ebb",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-normal/source-manifest.json",
+      "manifest_sha256": "9793fcfc534a7310ed62341e6fe0157e1f1013a708f8dc611c516fc7c89f77e6",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-normal/interrupted/card.img",
+          "sha256": "ec38364da5736e28b536423ff6a5a11268a66c3e0d4ba5a6330cc5bcb116fa98",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 24576
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-normal/normal/card.img",
+          "sha256": "ec38364da5736e28b536423ff6a5a11268a66c3e0d4ba5a6330cc5bcb116fa98",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "utility-contexts-automatic",
+      "sanitizers": "address,undefined",
+      "return_code": 0,
+      "elapsed_seconds": 71.322,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "address,undefined",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-asan-ubsan",
+        "--controller",
+        "utility-contexts-automatic",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-asan-ubsan.log",
+      "log_sha256": "125bdf5b81ffc8cb56c216f2dca59a6ad48e2b3cc0ca63983b58ce0669e3c256",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-asan-ubsan/source-manifest.json",
+      "manifest_sha256": "64723cc489d0c6e4abb849788fc3d7e9d2bac5125a0db6d961907f21aca314a5",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-asan-ubsan/interrupted/card.img",
+          "sha256": "316b1340f58837142df5762df6f68fac028a7503966f175e75ffd341f3fd4ccd",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-asan-ubsan/normal/card.img",
+          "sha256": "316b1340f58837142df5762df6f68fac028a7503966f175e75ffd341f3fd4ccd",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    },
+    {
+      "group": "utility-contexts-automatic",
+      "sanitizers": "none",
+      "return_code": 0,
+      "elapsed_seconds": 66.819,
+      "command": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "/workspace/shared/x4-final-settings-union-20261012/test/run_native_extra_settings_sd_roundtrip_test.py",
+        "--x4",
+        "/workspace/shared/x4-warm-sd-admission-20261012",
+        "--drivers",
+        "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+        "--reference-reader",
+        "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+        "--settings-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--wifi-system",
+        "/workspace/shared/x4-system-utility-broadcast-result-20261012",
+        "--system-cohort",
+        "final-union",
+        "--sanitize",
+        "none",
+        "--output",
+        "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-normal",
+        "--controller",
+        "utility-contexts-automatic",
+        "--utilities",
+        "/workspace/shared/x4-utilities-atomic-intents-20261012"
+      ],
+      "log": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-normal.log",
+      "log_sha256": "125bdf5b81ffc8cb56c216f2dca59a6ad48e2b3cc0ca63983b58ce0669e3c256",
+      "manifest": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-normal/source-manifest.json",
+      "manifest_sha256": "547e90311c3685a83c17f85ee2d631fe449ee85d86df6280ad27fe912c5f5efe",
+      "sparse_media": [
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-normal/interrupted/card.img",
+          "sha256": "316b1340f58837142df5762df6f68fac028a7503966f175e75ffd341f3fd4ccd",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        },
+        {
+          "path": "/workspace/shared/x4-settings-persistence-evidence-20261012/final-union-matrix/utility-contexts-automatic-normal/normal/card.img",
+          "sha256": "316b1340f58837142df5762df6f68fac028a7503966f175e75ffd341f3fd4ccd",
+          "bytes": 67108864,
+          "allocated_before": 67108864,
+          "allocated_after": 20480
+        }
+      ]
+    }
+  ]
+}

@@ -173,4 +173,4 @@ static void custody(){
  reset();seed();F::Fixture f;Hash h;h.retainAfterFinish=true;Sources s(6,Owner,LegacyOwner,30000,f.inspector,h.api(),hooks());A::Witness w;assert(s.inventory(&w)==C::Retained&&!s.exitSafe());F::lease=true;retained=false;
  puts("Legacy NVS: worker/global-lease/epoch/initialization gates, reentry, late callback lease loss and sticky Retained precedence suppress further I/O PASS");
 }
-int main(int argc,char**argv){assert(argc==2);F::rootPath=argv[1];setbuf(stdout,nullptr);maps();rejected();bindings();capacities();faults();truncations();custody();reset();printf("Collector host size=%zu; disconnected, no production selection or hardware qualification\n",sizeof(Sources));}
+int main(int argc,char**argv){assert(argc==2);F::rootPath=argv[1];setbuf(stdout,nullptr);maps();rejected();bindings();capacities();faults();truncations();custody();reset();printf("Collector host size=%zu; disconnected, no production selection or hardware qualification\n",sizeof(Sources));return 0;}

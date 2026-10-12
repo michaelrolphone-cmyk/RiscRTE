@@ -6,18 +6,21 @@ namespace RiscExperimental {
 // only bounded copies/atomics. Filesystem/NVS calls belong to the fixed native
 // execute callback, never an app callback. Credentials never enter Worker’s
 // non-wiping request/result arrays: only control fields and numeric results do.
-class NativeReplicaJob {
+struct NativeReplicaJobResult {int32_t status;uint32_t pending;uint64_t revision;};
+template<uint32_t PayloadBytes=4096>
+class NativeReplicaJobT {
  public:
- static constexpr uint32_t PayloadMax=4096;
- struct Result {int32_t status;uint32_t pending;uint64_t revision;};
+ static_assert(PayloadBytes<=4096,"bounded native credential scratch");
+ static constexpr uint32_t PayloadMax=PayloadBytes;
+ using Result=NativeReplicaJobResult;
  using Execute=Result(*)(void*,uint32_t,const void*,uint32_t);
- NativeReplicaJob(Execute fn,void*context):fn_(fn),context_(context){worker_.bind(run,this);}
- ~NativeReplicaJob(){NativeReplicaCore::wipe(payload_,sizeof payload_);}
- NativeReplicaJob(const NativeReplicaJob&)=delete;
- NativeReplicaJob&operator=(const NativeReplicaJob&)=delete;
+ NativeReplicaJobT(Execute fn,void*context):fn_(fn),context_(context){worker_.bind(run,this);}
+ ~NativeReplicaJobT(){NativeReplicaCore::wipe(payload_,sizeof payload_);}
+ NativeReplicaJobT(const NativeReplicaJobT&)=delete;
+ NativeReplicaJobT&operator=(const NativeReplicaJobT&)=delete;
  int begin(uint32_t action,const void*payload,uint32_t size,uint64_t*out){
   if(out)*out=0;
-  if(!out||(!payload&&size)||size>sizeof payload_||!fn_)return RISC_STORAGE_WORK_INVALID;
+  if(!out||(!payload&&size)||size>PayloadMax||!fn_)return RISC_STORAGE_WORK_INVALID;
   if(retained_.load())return RISC_STORAGE_WORK_RETAINED;
   if(!worker_.idle())return RISC_STORAGE_WORK_BUSY;
   if(size)std::memcpy(payload_,payload,size);
@@ -39,15 +42,17 @@ class NativeReplicaJob {
  bool scratchCleared()const{if(!worker_.idle())return false;for(auto v:payload_)if(v)return false;return true;}
  private:
  struct Request {uint32_t action,size;};
- RiscStorage::Worker worker_;Execute fn_;void*context_;std::atomic<bool>retained_{false};uint8_t payload_[PayloadMax]{};
+ RiscStorage::BasicWorker<sizeof(Request),sizeof(Result)> worker_;Execute fn_;void*context_;std::atomic<bool>retained_{false};uint8_t payload_[PayloadMax?PayloadMax:1]{};
  struct Wipe {uint8_t*p;size_t n;~Wipe(){NativeReplicaCore::wipe(p,n);}};
  static int32_t run(void*p,const void*input,uint32_t size,void*out,uint32_t cap,uint32_t*actual){
-  auto&self=*static_cast<NativeReplicaJob*>(p);Wipe wipe{self.payload_,sizeof self.payload_};
+  auto&self=*static_cast<NativeReplicaJobT*>(p);Wipe wipe{self.payload_,sizeof self.payload_};
   if(size!=sizeof(Request)||cap<sizeof(Result))return RISC_STORAGE_WORK_INVALID;
-  const auto&q=*static_cast<const Request*>(input);if(q.size>sizeof self.payload_)return RISC_STORAGE_WORK_INVALID;
+  const auto&q=*static_cast<const Request*>(input);if(q.size>PayloadMax)return RISC_STORAGE_WORK_INVALID;
   const auto result=self.fn_(self.context_,q.action,self.payload_,q.size);
   if(result.status==NativeReplicaCore::Retained)self.retained_.store(true);
   std::memcpy(out,&result,sizeof result);*actual=sizeof result;return RISC_STORAGE_WORK_OK;
  }
 };
+using NativeReplicaJob=NativeReplicaJobT<4096>;
+using NativeReplicaControlJob=NativeReplicaJobT<0>;
 }

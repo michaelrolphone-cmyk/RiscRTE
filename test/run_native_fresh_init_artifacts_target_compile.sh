@@ -10,6 +10,7 @@ cat > "$build/target.cpp" <<'SOURCE'
 #include "experimental/native_replica/CheckedFreshInitArtifacts.h"
 using Inspector=RiscExperimental::CheckedFreshInitArtifacts;
 extern "C" int inspect_fresh_target(Inspector&i,const uint8_t*p){return i.inspectAbsent()+i.inspectAttempt(p,484,1);}
+extern "C" int inspect_imported_target(Inspector&i,const uint8_t*p,unsigned n){return i.inspectImportedAttempt(p,n,1);}
 extern "C" const unsigned int fresh_inspector_size=sizeof(Inspector);
 SOURCE
 flags=(-std=gnu++17 -Wall -Wextra -Werror -Os -mlongcalls -fno-exceptions -fno-rtti -fstack-usage -I"$root")
@@ -18,9 +19,9 @@ flags=(-std=gnu++17 -Wall -Wextra -Werror -Os -mlongcalls -fno-exceptions -fno-r
 cmp "$build/normal.o" "$build/esp.o"
 for object in normal esp;do
  symbols="$("${prefix}nm" -u "$build/$object.o" | awk '{print $NF}')"
- [[ "$symbols" == strlen ]] || { echo "Unexpected target imports: $symbols" >&2;exit 1; }
+ [[ "$symbols" == $'memcmp\nmemcpy\nstrlen' ]] || { echo "Unexpected target imports: $symbols" >&2;exit 1; }
 done
 printf '%s\n' "$version"
 "${prefix}objdump" -s -j .rodata "$build/esp.o"
 cat "$build/esp.su"
-printf 'Fresh artifact pinned Xtensa: normal/ESP_PLATFORM compile, identical unsupported objects, no filesystem imports PASS\n'
+printf 'Fresh/imported artifact pinned Xtensa: normal/ESP_PLATFORM compile, identical unsupported objects, no filesystem imports PASS\n'

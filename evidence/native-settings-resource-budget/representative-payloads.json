@@ -1,0 +1,262 @@
+[
+  {
+    "namespace": 1,
+    "phase": "controller-edits",
+    "live": 2554,
+    "peak": 12714,
+    "peak_default_heap_request": 12754,
+    "peak_blocks": 5,
+    "allocated_total": 64808,
+    "allocations": 40
+  },
+  {
+    "namespace": 1,
+    "phase": "sync",
+    "live": 597,
+    "peak": 179658,
+    "peak_default_heap_request": 179690,
+    "peak_blocks": 4,
+    "allocated_total": 336101,
+    "allocations": 18
+  },
+  {
+    "namespace": 1,
+    "phase": "after-all-scopes",
+    "live": 0,
+    "peak": 179658,
+    "peak_default_heap_request": 179690,
+    "peak_blocks": 4,
+    "allocated_total": 336698,
+    "allocations": 19
+  },
+  {
+    "namespace": 6,
+    "phase": "controller-edits",
+    "live": 1640,
+    "peak": 7464,
+    "peak_default_heap_request": 7504,
+    "peak_blocks": 5,
+    "allocated_total": 12552,
+    "allocations": 10
+  },
+  {
+    "namespace": 6,
+    "phase": "sync",
+    "live": 880,
+    "peak": 178744,
+    "peak_default_heap_request": 178776,
+    "peak_blocks": 4,
+    "allocated_total": 332032,
+    "allocations": 18
+  },
+  {
+    "namespace": 6,
+    "phase": "after-all-scopes",
+    "live": 0,
+    "peak": 178744,
+    "peak_default_heap_request": 178776,
+    "peak_blocks": 4,
+    "allocated_total": 332912,
+    "allocations": 19
+  },
+  {
+    "namespace": 1,
+    "phase": "restore",
+    "live": 341,
+    "peak": 176972,
+    "peak_default_heap_request": 176996,
+    "peak_blocks": 3,
+    "allocated_total": 318198,
+    "allocations": 13
+  },
+  {
+    "namespace": 1,
+    "phase": "restored-readers",
+    "live": 341,
+    "peak": 1071,
+    "peak_default_heap_request": 1095,
+    "peak_blocks": 3,
+    "allocated_total": 1412,
+    "allocations": 4
+  },
+  {
+    "namespace": 1,
+    "phase": "after-all-scopes",
+    "live": 0,
+    "peak": 1071,
+    "peak_default_heap_request": 1095,
+    "peak_blocks": 3,
+    "allocated_total": 1412,
+    "allocations": 4
+  },
+  {
+    "namespace": 6,
+    "phase": "restore",
+    "live": 624,
+    "peak": 176972,
+    "peak_default_heap_request": 176996,
+    "peak_blocks": 3,
+    "allocated_total": 319896,
+    "allocations": 13
+  },
+  {
+    "namespace": 6,
+    "phase": "restored-readers",
+    "live": 624,
+    "peak": 1920,
+    "peak_default_heap_request": 1944,
+    "peak_blocks": 3,
+    "allocated_total": 2544,
+    "allocations": 4
+  },
+  {
+    "namespace": 6,
+    "phase": "after-all-scopes",
+    "live": 0,
+    "peak": 1920,
+    "peak_default_heap_request": 1944,
+    "peak_blocks": 3,
+    "allocated_total": 2544,
+    "allocations": 4
+  },
+  {
+    "namespace": 1,
+    "phase": "controller-edits",
+    "live": 2554,
+    "peak": 12714,
+    "peak_default_heap_request": 12754,
+    "peak_blocks": 5,
+    "allocated_total": 64808,
+    "allocations": 40
+  },
+  {
+    "namespace": 1,
+    "phase": "sync",
+    "live": 2810,
+    "peak": 179658,
+    "peak_default_heap_request": 179690,
+    "peak_blocks": 4,
+    "allocated_total": 333020,
+    "allocations": 13
+  },
+  {
+    "namespace": 1,
+    "phase": "sync-recovery",
+    "live": 597,
+    "peak": 179914,
+    "peak_default_heap_request": 179946,
+    "peak_blocks": 4,
+    "allocated_total": 384401,
+    "allocations": 13
+  },
+  {
+    "namespace": 1,
+    "phase": "after-all-scopes",
+    "live": 0,
+    "peak": 179914,
+    "peak_default_heap_request": 179946,
+    "peak_blocks": 4,
+    "allocated_total": 384998,
+    "allocations": 14
+  },
+  {
+    "namespace": 6,
+    "phase": "controller-edits",
+    "live": 1640,
+    "peak": 7464,
+    "peak_default_heap_request": 7504,
+    "peak_blocks": 5,
+    "allocated_total": 12552,
+    "allocations": 10
+  },
+  {
+    "namespace": 6,
+    "phase": "sync",
+    "live": 1896,
+    "peak": 178744,
+    "peak_default_heap_request": 178776,
+    "peak_blocks": 4,
+    "allocated_total": 327536,
+    "allocations": 13
+  },
+  {
+    "namespace": 6,
+    "phase": "sync-recovery",
+    "live": 880,
+    "peak": 179000,
+    "peak_default_heap_request": 179032,
+    "peak_blocks": 4,
+    "allocated_total": 385816,
+    "allocations": 13
+  },
+  {
+    "namespace": 6,
+    "phase": "after-all-scopes",
+    "live": 0,
+    "peak": 179000,
+    "peak_default_heap_request": 179032,
+    "peak_blocks": 4,
+    "allocated_total": 386696,
+    "allocations": 14
+  },
+  {
+    "namespace": 1,
+    "phase": "restore",
+    "live": 341,
+    "peak": 176972,
+    "peak_default_heap_request": 176996,
+    "peak_blocks": 3,
+    "allocated_total": 318198,
+    "allocations": 13
+  },
+  {
+    "namespace": 1,
+    "phase": "restored-readers",
+    "live": 341,
+    "peak": 1071,
+    "peak_default_heap_request": 1095,
+    "peak_blocks": 3,
+    "allocated_total": 1412,
+    "allocations": 4
+  },
+  {
+    "namespace": 1,
+    "phase": "after-all-scopes",
+    "live": 0,
+    "peak": 1071,
+    "peak_default_heap_request": 1095,
+    "peak_blocks": 3,
+    "allocated_total": 1412,
+    "allocations": 4
+  },
+  {
+    "namespace": 6,
+    "phase": "restore",
+    "live": 624,
+    "peak": 176972,
+    "peak_default_heap_request": 176996,
+    "peak_blocks": 3,
+    "allocated_total": 319896,
+    "allocations": 13
+  },
+  {
+    "namespace": 6,
+    "phase": "restored-readers",
+    "live": 624,
+    "peak": 1920,
+    "peak_default_heap_request": 1944,
+    "peak_blocks": 3,
+    "allocated_total": 2544,
+    "allocations": 4
+  },
+  {
+    "namespace": 6,
+    "phase": "after-all-scopes",
+    "live": 0,
+    "peak": 1920,
+    "peak_default_heap_request": 1944,
+    "peak_blocks": 3,
+    "allocated_total": 2544,
+    "allocations": 4
+  }
+]

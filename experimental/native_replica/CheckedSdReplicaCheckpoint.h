@@ -2,6 +2,8 @@
 #include "NativeReplicaCore.h"
 #include "NativeSdSession.h"
 #include "NativeSdCompletion.h"
+#include "CheckedSdZeroFile.h"
+#include "SdReplicaStage.h"
 #include <RiscStoragePackageAsyncV1.h>
 #include <cstdio>
 namespace RiscExperimental {
@@ -84,7 +86,7 @@ class CheckedSdReplicaCheckpoint {
   reason_=Reason::None;
   if(!guard_.worker(guard_.context))return C::Busy;
   if(!preparation_.workerClaimed()&&!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
-  if(!risc_storage_volume_download(volume))return C::Invalid;
+  if(!risc_storage_volume_download(volume)||(durable&&!CheckedSdZeroFile::supported(volume)))return C::Invalid;
   if(io_.native()&&core.namespaceId()!=io_.attempt()->binding().namespaceId)return C::Conflict;
   if(!core.ready())return C::Uncertain;
   if(core.exportPrepared()){reason_=Reason::PendingExport;return C::Busy;}
@@ -104,7 +106,9 @@ class CheckedSdReplicaCheckpoint {
   }
   std::snprintf(directory_,sizeof directory_,"/RTECFG/%08X",unsigned(snapshot_.namespaceId()));
   std::snprintf(index_,sizeof index_,"%s/replica.index",directory_);
-  std::snprintf(temporary_,sizeof temporary_,"%s/.replica.next",directory_);
+  if(durable_){
+   if(!SdReplicaStage::makePath(temporary_,sizeof temporary_,snapshot_.namespaceId(),confirmed_)||(io_.native()&&!io_.bindCheckpointStage(confirmed_))){finish(State::Failed,C::Conflict);return C::Conflict;}
+  }else std::snprintf(temporary_,sizeof temporary_,"%s/.replica.next",directory_);
   state_=State::Running;phase_=Begin;return C::Ok;
  }
  public:
@@ -169,13 +173,15 @@ class CheckedSdReplicaCheckpoint {
   if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
+  if(phase_==ProbeEmpty){const int proof=zero_.consume(rc,result_);C::wipe(&result_,sizeof result_);if(proof==C::Busy)return;if(proof){fail(proof,Reason::IdentityConflict);return;}phase_=emptyPage_?RemoveOrphan:RemoveTemp;return;}
+  if(rc==RISC_STORAGE_ASYNC_INVALID&&durable_&&(phase_==ExistingPage||phase_==ReadTemp)){if(!CheckedSdZeroFile::supported(volume_)){fail(C::Invalid,Reason::ReadFailure);return;}emptyPage_=phase_==ExistingPage;zero_.begin(snapshot_.namespaceId(),std::strrchr(emptyPage_?pagePath_:temporary_,'/')+1);phase_=ProbeEmpty;C::wipe(&result_,sizeof result_);return;}
   if(rc==RISC_STORAGE_ASYNC_NOT_FOUND){
    if(phase_==ReadIndex&&!recoveredMissing_){recoveredMissing_=true;phase_=RecoverMissing;return;}
    if(phase_==ExistingPage){phase_=WritePage;return;}
-   if(phase_==RemoveTemp){phase_=WriteTemp;return;}
+   if(phase_==ReadTemp||phase_==RemoveTemp){phase_=WriteTemp;return;}
    fail(phase_==ReadIndex?C::Missing:C::Io,phase_==ReadIndex?Reason::CheckpointMissing:Reason::ReadFailure);return;
   }
-  if(rc!=RISC_STORAGE_ASYNC_OK){if(phase_==ExistingPage&&((!io_.native()&&rc==RISC_STORAGE_ASYNC_IO)||rc==RISC_STORAGE_ASYNC_INVALID)){phase_=RemoveOrphan;return;}fail(C::Io,reading()?Reason::ReadFailure:Reason::StorageFailure);return;}
+  if(rc!=RISC_STORAGE_ASYNC_OK){if(phase_==ExistingPage&&((!io_.native()&&rc==RISC_STORAGE_ASYNC_IO)||rc==RISC_STORAGE_ASYNC_INVALID)){if(durable_)fail(C::Conflict,Reason::IdentityConflict);else phase_=RemoveOrphan;return;}fail(C::Io,reading()?Reason::ReadFailure:Reason::StorageFailure);return;}
   switch(phase_){
    case Refresh:phase_=ReadIndex;break;
    case ReadIndex:readIndex();break;
@@ -186,12 +192,13 @@ class CheckedSdReplicaCheckpoint {
    case Recover:phase_=CheckRecovered;break;
    case CheckRecovered:
     if(!sameResult(previous_,IndexBytes)){fail(C::Conflict,Reason::IdentityConflict);break;}
-    page_=0;phase_=snapshot_.mapSize()?ExistingPage:RemoveTemp;break;
+    page_=0;phase_=snapshot_.mapSize()?ExistingPage:(durable_?ReadTemp:RemoveTemp);break;
    case ExistingPage:case VerifyPage:
-    if(!sameResult(snapshot_.map()+uint64_t(page_)*4096,pageSize(snapshot_.mapSize()))){if(phase_==ExistingPage)phase_=RemoveOrphan;else fail(C::Io);break;}
-    ++page_;phase_=uint64_t(page_)*4096>=snapshot_.mapSize()?RemoveTemp:ExistingPage;break;
+    if(!sameResult(snapshot_.map()+uint64_t(page_)*4096,pageSize(snapshot_.mapSize()))){if(phase_==ExistingPage){if(!durable_||(result_.size<pageSize(snapshot_.mapSize())&&!std::memcmp(result_.data,snapshot_.map()+uint64_t(page_)*4096,result_.size)))phase_=RemoveOrphan;else fail(C::Conflict,Reason::IdentityConflict);}else fail(C::Io);break;}
+    ++page_;phase_=uint64_t(page_)*4096>=snapshot_.mapSize()?(durable_?ReadTemp:RemoveTemp):ExistingPage;break;
    case RemoveOrphan:phase_=WritePage;break;
    case WritePage:phase_=VerifyPage;break;
+   case ReadTemp:if(sameResult(candidate_,IndexBytes))phase_=CheckBase;else if(result_.size<IndexBytes&&!std::memcmp(result_.data,candidate_,result_.size))phase_=RemoveTemp;else fail(C::Conflict,Reason::IdentityConflict);break;
    case RemoveTemp:phase_=WriteTemp;break;
    case WriteTemp:phase_=VerifyTemp;break;
    case VerifyTemp:if(!sameResult(candidate_,IndexBytes))fail(C::Io);else phase_=CheckBase;break;
@@ -215,7 +222,7 @@ class CheckedSdReplicaCheckpoint {
   std::memset(out,0,IndexBytes);std::memcpy(out,"RTENSD1",7);put(out+8,ns);put(out+12,bytes);put(out+16,count);wide(out+24,id.generation);std::memcpy(out+32,id.lineage,16);std::memcpy(out+48,id.digest,32);put(out+80,crc(out,80));
  }
  private:
- enum Phase {Begin,Refresh,ReadIndex,ReadBase,RecoverMissing,Recover,CheckRecovered,ExistingPage,WritePage,VerifyPage,RemoveOrphan,RemoveTemp,WriteTemp,VerifyTemp,CheckBase,Replace,ReadFinal,ReadFinalPage,CheckFinal,Closing};
+ enum Phase {Begin,Refresh,ReadIndex,ReadBase,RecoverMissing,Recover,CheckRecovered,ExistingPage,WritePage,VerifyPage,RemoveOrphan,ReadTemp,ProbeEmpty,RemoveTemp,WriteTemp,VerifyTemp,CheckBase,Replace,ReadFinal,ReadFinalPage,CheckFinal,Closing};
  NativeSdSession io_;NativeSdPreparation preparation_;C*preparationCore_=nullptr;bool preparationDurable_=false,hasIncarnation_=false;uint8_t preparationIncarnation_[16]{};
  NativeSdCompletion completion_;bool completionIssued_=false;
  static bool preparationWorker(void*p){auto&s=*static_cast<CheckedSdReplicaCheckpoint*>(p);return s.guard_.worker&&s.guard_.worker(s.guard_.context);}
@@ -228,7 +235,8 @@ class CheckedSdReplicaCheckpoint {
  }
  Digest hash_;Guard guard_;C::Snapshot snapshot_;C::ExportMarker marker_{};bool durable_=false;C*core_=nullptr;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
  C::Identity confirmed_{},remote_{};State state_=State::Idle;Phase phase_=Begin;int error_=0;Reason reason_=Reason::None;bool cancelled_=false,recoveredMissing_=false;uint64_t session_=0,operation_=0;uint32_t page_=0,remoteSize_=0;
- uint8_t candidate_[IndexBytes]{},previous_[IndexBytes]{};char directory_[32]{},index_[64]{},temporary_[64]{},pagePath_[160]{};
+ uint8_t candidate_[IndexBytes]{},previous_[IndexBytes]{};char directory_[32]{},index_[64]{},temporary_[SdReplicaStage::PathBytes]{},pagePath_[160]{};
+ CheckedSdZeroFile zero_;bool emptyPage_=false;
  risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};
  static bool wait(int rc){return rc==RISC_STORAGE_ASYNC_PENDING||rc==RISC_STORAGE_ASYNC_BUSY;}
  static uint32_t chunk(uint32_t n){return n>4096?4096:n;}
@@ -241,7 +249,7 @@ class CheckedSdReplicaCheckpoint {
  bool hashBegin(uint32_t ns,uint32_t count,uint32_t size){uint8_t prefix[12];put(prefix,ns);put(prefix+4,count);put(prefix+8,size);return hash_.begin(hash_.context)&&hash_.update(hash_.context,prefix,sizeof prefix);}
  bool sameResult(const void*p,uint32_t n)const{return result_.size==n&&!std::memcmp(result_.data,p,n);}
  uint32_t pageSize(uint32_t size)const{return chunk(size-page_*4096);}
- bool reading()const{return phase_==ReadIndex||phase_==ReadBase||phase_==CheckRecovered||phase_==ExistingPage||phase_==VerifyPage||phase_==VerifyTemp||phase_==CheckBase||phase_==ReadFinal||phase_==ReadFinalPage||phase_==CheckFinal;}
+ bool reading()const{return phase_==ReadIndex||phase_==ReadBase||phase_==CheckRecovered||phase_==ExistingPage||phase_==VerifyPage||phase_==ReadTemp||phase_==VerifyTemp||phase_==CheckBase||phase_==ReadFinal||phase_==ReadFinalPage||phase_==CheckFinal;}
  void retain(){state_=State::Retained;error_=C::Retained;reason_=Reason::Retained;}
  void fail(int rc,Reason reason=Reason::StorageFailure){error_=rc;reason_=reason;phase_=Closing;}
  int startFailed(){reason_=Reason::StorageFailure;finish(State::Failed,C::Io);return C::Io;}
@@ -262,11 +270,11 @@ class CheckedSdReplicaCheckpoint {
  }
  void submit(){
   int rc;C::wipe(&request_,sizeof request_);
-  if(phase_==Refresh||phase_==ReadIndex||phase_==ReadBase||phase_==CheckRecovered||phase_==ExistingPage||phase_==VerifyPage||phase_==RemoveOrphan||phase_==RemoveTemp||phase_==VerifyTemp||phase_==CheckBase||phase_==ReadFinal||phase_==ReadFinalPage||phase_==CheckFinal){
+  if(phase_==ProbeEmpty||phase_==Refresh||phase_==ReadIndex||phase_==ReadBase||phase_==CheckRecovered||phase_==ExistingPage||phase_==VerifyPage||phase_==RemoveOrphan||phase_==ReadTemp||phase_==RemoveTemp||phase_==VerifyTemp||phase_==CheckBase||phase_==ReadFinal||phase_==ReadFinalPage||phase_==CheckFinal){
    risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:(phase_==RemoveOrphan||phase_==RemoveTemp)?RISC_STORAGE_ASYNC_REMOVE_FILE:RISC_STORAGE_ASYNC_READ_SMALL_FILE;
-   const char*p=index_;if(phase_==RemoveTemp||phase_==VerifyTemp)p=temporary_;
+   const char*p=index_;if(phase_==ReadTemp||phase_==RemoveTemp||phase_==VerifyTemp)p=temporary_;
    if(phase_==ReadBase||phase_==ExistingPage||phase_==VerifyPage||phase_==RemoveOrphan||phase_==ReadFinalPage){path(phase_==ReadBase?remote_:confirmed_);p=pagePath_;}
-   std::strcpy(q.path,p);rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);
+   std::strcpy(q.path,p);if(phase_==ProbeEmpty)zero_.request(q);rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);
   }else{
    request_.operation=(phase_==Recover||phase_==RecoverMissing)?RISC_STORAGE_PACKAGE_RECOVER:phase_==Replace?RISC_STORAGE_PACKAGE_REPLACE:RISC_STORAGE_PACKAGE_WRITE_SMALL;
    const char*p=index_;

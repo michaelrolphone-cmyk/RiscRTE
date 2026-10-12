@@ -166,7 +166,7 @@ class NativeStartup(unittest.TestCase):
             # or evaluating diagnostic arguments.
             for name in ('bootstrap/AppPolicyLimits.h', 'diagnostics/StageLog.h',
                          'ports/esp32s3/NativeDiagnosticBinding.h',
-                         'ports/esp32s3/NativeCrownRecovery.h',
+                         'ports/esp32s3/NativeCrownRecovery.h', 'ports/esp32s3/NativeSettingsLifecycle.h',
                          'runtime/drivers/NativeProviderPolicyV1.h',
                          'runtime/drivers/SelectedNativeProviderPolicyV1.h',
                          'runtime/packages/PackageIdentity.h'):

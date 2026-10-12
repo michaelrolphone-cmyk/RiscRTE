@@ -1,0 +1,17 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+
+/tmp/tmp.aIQ67bk2Gf/esp.o:     file format elf32-xtensa-le
+
+Contents of section .rodata:
+ 0000 b8000000                             ....
+CheckedFreshInitArtifacts.h:62:6:int RiscExperimental::CheckedFreshInitArtifacts::check(bool)	32	static
+CheckedFreshInitArtifacts.h:91:10:uint8_t RiscExperimental::CheckedFreshInitArtifacts::expectedAt(uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:107:11:uint32_t RiscExperimental::CheckedFreshInitArtifacts::expectedCrc(uint32_t, uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:135:18:static uint32_t RiscExperimental::CheckedFreshInitArtifacts::word(const uint8_t*)	32	static
+CheckedFreshInitArtifacts.h:136:14:static bool RiscExperimental::CheckedFreshInitArtifacts::zero(const uint8_t*, uint32_t)	32	static
+CheckedFreshInitArtifacts.h:137:18:static uint32_t RiscExperimental::CheckedFreshInitArtifacts::crc(const uint8_t*, uint32_t)	32	static
+CheckedFreshInitArtifacts.h:138:7:bool RiscExperimental::CheckedFreshInitArtifacts::validImported(const uint8_t*, uint32_t) const	64	static
+CheckedFreshInitArtifacts.h:157:6:int RiscExperimental::CheckedFreshInitArtifacts::inspect(const uint8_t*, uint32_t, uint64_t, RiscExperimental::CheckedFreshInitArtifacts::Attempt)	80	static
+target.cpp:3:16:int inspect_fresh_target(Inspector&, const uint8_t*)	48	static
+target.cpp:4:16:int inspect_imported_target(Inspector&, const uint8_t*, unsigned int)	48	static
+Fresh/imported artifact pinned Xtensa: normal/ESP_PLATFORM compile, identical unsupported objects, no filesystem imports PASS

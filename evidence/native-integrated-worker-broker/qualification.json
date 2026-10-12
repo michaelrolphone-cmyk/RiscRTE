@@ -1,0 +1,27 @@
+{
+  "status": "PASS: integrated Runtime broker and coordinator regressions; combined checked-store controller proof remains separate",
+  "runtime_commit": "7d0648d4ee9a938a740239b62c4d4d40a1beadfb",
+  "system_source": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89",
+  "sanitizers": "address,undefined",
+  "leak_sanitizer": false,
+  "commands": [
+    "SYSTEM_ROOT=<pinned System> SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_runtime_atomic_wifi_controller_test.sh",
+    "SANITIZE=1 SANITIZERS=address,undefined ASAN_OPTIONS=detect_leaks=0 bash test/run_native_settings_coordinator_test.sh"
+  ],
+  "sources": {
+    "src/bootstrap/Runtime.h": "2157b5fcf03b8871f2504a856cc7067c8faf617679d43dc6cba8cb7c6740bd65",
+    "src/bootstrap/Runtime.cpp": "e2b70931ee70037ba96138f1ae95103c390844c360a967c3e699b6ee880591fd",
+    "src/bootstrap/AtomicKeyValueRuntime.inc": "b2823bcd6a0f766558c78c1c6510ac860016118c6832f4be126e6fe12c492eb2",
+    "experimental/native_replica/NativeAtomicKeyValue.h": "7152a52cb225b7777c45ab74df2285099ab7c3fbb0e61be500c1ccaec4aa24a1",
+    "experimental/native_replica/NativeSettingsCoordinator.h": "cfdc0124cd35d68b00d2ddfa53e29c13f544d485fff4b61e996c7dca4fc0ba08",
+    "src/ports/esp32s3/NativeSettingsWorker.cpp": "0a1b5a6c0ca06b00dc2cbfbd5e641b9b0947744487c2cdf69980c5aebd39c1f0",
+    "test/runtime_atomic_wifi_controller.c": "5c64f8fb618821f9d71131a285d23e986ae10876b6af63753e9c589ff351145e",
+    "test/atomic_key_value_runtime_test.cpp": "ab4b9fb3dcccde7a24d7a0aa11b6553b4879c81b01d781a162b5cbcc2cf97abf",
+    "test/native_settings_coordinator_test.cpp": "1b323745e31f42d881de8b355ecccad1365323b052adcec13566f5d469019475"
+  },
+  "logs": {
+    "coordinator-asan.log": "8652084f8df60c54f0a71a00caac637806b4a0b991ef5a00c0204147c6c11846",
+    "controller-asan.log": "78a5536c77aa6751805a924c390d017a8fb5c8618b1b6fbf7176937aab655e68"
+  },
+  "production_selected": false
+}

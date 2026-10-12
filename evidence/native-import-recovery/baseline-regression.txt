@@ -1,0 +1,11 @@
+baseline provenance: FreshEmpty uses native inventory with no SD provider, import/digest hooks or entropy; existing and newly appeared native legacy rows/journals/banks and orphan metadata block publication PASS
+baseline provenance: entropy-free FreshEmpty, actual Wi-Fi Save/update/Forget adoption, all original groups retained, v3 durable marker/newer edit/ack/retire/reboot preserve exact origin PASS
+baseline provenance: v3 published-prefix acknowledgement and exact-old-base retirement recover after reboot/newer edits with byte-identical provenance PASS
+baseline provenance: imported untouched rows and later intents cannot be discarded by receiver, direct installResolved, volatile acknowledgement or FreshEmpty initializer; empty imported origin remains imported PASS
+baseline provenance: unclassified empty/deleted maps stay unclassified; purpose/core/serial/lease/source/root binding, one-shot use and source callback reentry refusals PASS
+baseline provenance: 22 repaired-outer-checksum semantic corruptions refuse; old unknown v2 remains Unclassified; 484-byte minimum and exact 65,028-byte payload boundaries PASS
+baseline provenance: 9 materialization/hash/source/epoch/reentry/copy-integrity failures, factory/core allocator refusals and owned-byte wiping preserve native absence and original sources PASS
+baseline provenance: source callbacks and Core allocation observe in-flight factory custody; completed admission becomes exit-safe PASS
+baseline provenance: late guard-observed retention outranks simultaneous lease loss/epoch change during admission and consumption PASS
+baseline provenance: 526 checked fresh/import initializer faults (52 retained, 108 uncertain), complete map+origin roots; 255 interrupted FreshEmpty receipts resumed through fresh source/lease admission; zero source cleanup PASS
+DISCONNECTED PROVENANCE CORE: synthetic source inventory only; first SD creation, whole imported-baseline disposition and product activation remain deferred; host FreshEmpty receipt recovery is explicitly checked

@@ -1,9 +1,10 @@
-# Disconnected native SD attempt and typed consumers
+# Native SD attempt and typed consumers
 
-This is experimental native composition, not a production Port/graph/provider
-binding. SDK tables, external X4/FatFs source and product startup are unchanged.
-The custody design remains the authority boundary. Fresh-exclusive admission is
-required; arbitrary warm admission remains unsupported.
+This is experimental native composition, with an explicitly selected
+[Runtime/Port graph bridge](NATIVE_RUNTIME_CUSTODY.md). Product startup remains
+unselected. Existing SDK prefixes are unchanged; a separately versioned additive
+SAD1 suffix enables checked warm admission only for providers that attest it.
+Fresh remains the default; arbitrary warm admission remains unsupported.
 
 ## Attempt custody
 
@@ -76,11 +77,12 @@ pinned ESP32-S3 Xtensa compiler and emits fixed object sizes. These are compile-
 layout evidence. Native worker/control objects contain atomics and must reside in
 native internal RAM; target heap/stack/total admission is not established here.
 
-Graph pins, native scope epochs, exact task/non-ISR admission, lifecycle/raw bypass
-gates, native worker scheduling/core serialization, the real production backend
-and total memory admission remain separate binding/qualification work. Host task
-predicates and deterministic backend fixtures do not prove those production
-properties. No physical card-swap, removal, durability or electrical behavior is
+The selected bridge separately qualifies graph pins, native scope epochs, exact
+task/non-ISR admission and lifecycle/raw gates against actual Runtime and CpuPort.
+Native settings-worker scheduling/core serialization, the real production
+backend and total memory admission remain separate product qualification work.
+Host task predicates and deterministic backend fixtures do not prove physical
+hardware or those remaining product properties. No physical card-swap, removal, durability or electrical behavior is
 qualified, and no product enables this path.
 
 Run the source-pinned suites with fresh output directories:

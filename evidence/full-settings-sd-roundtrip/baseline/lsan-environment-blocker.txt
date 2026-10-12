@@ -1,0 +1,13 @@
+==532==LeakSanitizer has encountered a fatal error.
+==532==HINT: For debugging, try setting environment variable LSAN_OPTIONS=verbosity=1:log_threads=1
+==532==HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)
+Verified pinned System namespace 1 closure: 75 files at 5636756db893d682ad42a595625b226f40bbba4d
+Verified pinned System namespace 6 closure: 63 files at a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89
+Traceback (most recent call last):
+  File "/workspace/shared/x4-full-settings-sd-roundtrip-20261012/test/run_native_settings_sd_roundtrip_test.py", line 157, in <module>
+    run([a.output/f'app-{ns}'/'test', a.output/f'app-{ns}', a.output, native/f'ns-{ns}', card, a.output/f'expected-{ns}.bin', 'edit'])
+  File "/workspace/shared/x4-full-settings-sd-roundtrip-20261012/test/run_native_settings_sd_roundtrip_test.py", line 62, in run
+    subprocess.run(cmd, check=True, timeout=90 if pathlib.Path(cmd[0]).name == "test" else None)
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '[PosixPath('/workspace/shared/x4-full-settings-sd-evidence-20261012/asan-ubsan/app-1/test'), PosixPath('/workspace/shared/x4-full-settings-sd-evidence-20261012/asan-ubsan/app-1'), PosixPath('/workspace/shared/x4-full-settings-sd-evidence-20261012/asan-ubsan'), PosixPath('/workspace/shared/x4-full-settings-sd-evidence-20261012/asan-ubsan/native/ns-1'), PosixPath('/workspace/shared/x4-full-settings-sd-evidence-20261012/asan-ubsan/card.img'), PosixPath('/workspace/shared/x4-full-settings-sd-evidence-20261012/asan-ubsan/expected-1.bin'), 'edit']' died with <Signals.SIGABRT: 6>.

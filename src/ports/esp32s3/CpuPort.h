@@ -142,6 +142,7 @@ class Port final {
  #if RISC_NATIVE_STORAGE_CUSTODY
   enum class NativeStorageState {Context,Busy,Healthy,Unavailable,Retained};
   bool nativeStorageAttach(uint64_t,const NativeStorageCustody&,uint64_t*,uint64_t*);
+  bool nativeStorageAttachCheckedWarm(uint64_t,const risc_storage_volume_api_v1*,const NativeStorageCustody&,uint64_t*,uint64_t*);
   bool nativeStorageDetach(uint64_t);
   bool nativeStorageHeld(uint64_t) const;
   bool nativeStorageFresh(uint64_t) const;
@@ -174,6 +175,7 @@ class Port final {
   bool nativeStoragePinned() const {return nativeStorageLease_!=0;}
   Sync* storageSync(uint64_t);
   const Sync* storageSync(uint64_t) const;
+  bool nativeStorageAttachImpl(uint64_t,const NativeStorageCustody&,uint64_t*,uint64_t*,bool);
   bool transportChanged();
  #else
   bool nativeStoragePinned() const {return false;}
@@ -204,6 +206,9 @@ class Port final {
   // against the current full token and scope before any read/write. Zero is empty.
   uint8_t gpioWritePins_[64]{};
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
+ #if RISC_NATIVE_STORAGE_CUSTODY
+  bool nativeStorageAttaching_=false;
+ #endif
   size_t syncCount_=0,gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0,iqCount_=0;
   risc_platform_clock_wait_v1 clock_{};
   risc_realtime_control_api_v1 realtime_{};

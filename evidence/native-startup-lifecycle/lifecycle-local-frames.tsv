@@ -1,0 +1,50 @@
+legacy	NativeSettingsLifecycle.cpp:40:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::owner()	32	static
+legacy	NativeSettingsLifecycle.cpp:48:6:void RiscCpu::NativeSettingsLifecycle::{anonymous}::measure(uint32_t&)	32	static
+legacy	NativeSettingsLifecycle.cpp:49:6:void RiscCpu::NativeSettingsLifecycle::{anonymous}::startTiming()	32	static
+legacy	NativeSettingsLifecycle.cpp:47:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::cancellationRequested()	32	static
+legacy	NativeSettingsLifecycle.cpp:46:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::clientsSafe()	32	static
+legacy	NativeSettingsLifecycle.cpp:39:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::internal(const void*, size_t)	32	static
+legacy	NativeSettingsLifecycle.cpp:27:12:static bool RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::registerClient()::<lambda(void*)>::_FUN(void*)	32	static
+legacy	NativeSettingsLifecycle.cpp:41:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::selectedRetained()	32	static
+legacy	NativeSettingsLifecycle.cpp:50:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::drain()	48	static
+legacy	NativeSettingsLifecycle.cpp:16:21:static RiscExperimental::NativeReplicaJobT<0>::Result RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::execute(void*, uint32_t, const void*, uint32_t)	48	static
+legacy	NativeSettingsLifecycle.cpp:69:6:bool RiscCpu::NativeSettingsLifecycle::prepare(const RiscCpu::NativeSettingsLifecycle::Admission*, RiscCpu::NativeSettingsLifecycle::Hooks)	128	static
+legacy	NativeSettingsLifecycle.cpp:92:6:bool RiscCpu::NativeSettingsLifecycle::bind(RiscBoot::Runtime&)	48	static
+legacy	NativeSettingsLifecycle.cpp:126:6:bool RiscCpu::NativeSettingsLifecycle::attachOwner(RiscBoot::Runtime&, RiscCpu::Port&)	32	static
+legacy	NativeSettingsLifecycle.cpp:130:6:bool RiscCpu::NativeSettingsLifecycle::checkpoint()	48	static
+legacy	NativeSettingsLifecycle.cpp:142:6:void RiscCpu::NativeSettingsLifecycle::cooperate()	32	static
+legacy	NativeSettingsLifecycle.cpp:143:6:bool RiscCpu::NativeSettingsLifecycle::retained()	32	static
+legacy	NativeSettingsLifecycle.cpp:144:6:bool RiscCpu::NativeSettingsLifecycle::exitSafe()	32	static
+legacy	NativeSettingsLifecycle.cpp:145:6:bool RiscCpu::NativeSettingsLifecycle::ready()	32	static
+legacy	NativeSettingsLifecycle.cpp:146:8:RiscCpu::NativeSettingsLifecycle::Timing RiscCpu::NativeSettingsLifecycle::timing()	32	static
+legacy	NativeSettingsLifecycle.cpp:26:12:static constexpr bool RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::registerClient()::<lambda(void*)>::_FUN(void*)	32	static
+legacy	NativeSettingsLifecycle.cpp:25:12:static bool RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::registerClient()::<lambda(void*)>::_FUN(void*)	32	static
+legacy	NativeSettingsLifecycle.cpp:24:12:static bool RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::registerClient()::<lambda(void*)>::_FUN(void*)	32	static
+legacy	NativeSettingsLifecycle.cpp:98:6:bool RiscCpu::NativeSettingsLifecycle::hydrate(RiscBoot::Runtime&, RiscCpu::Port&)	112	static
+legacy	NativeSettingsLifecycle.cpp:147:3:cpp)	48	static
+legacy	NativeSettingsLifecycle.cpp:147:3:cpp)	32	static
+cohort	NativeSettingsLifecycle.cpp:40:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::owner()	32	static
+cohort	NativeSettingsLifecycle.cpp:48:6:void RiscCpu::NativeSettingsLifecycle::{anonymous}::measure(uint32_t&)	32	static
+cohort	NativeSettingsLifecycle.cpp:49:6:void RiscCpu::NativeSettingsLifecycle::{anonymous}::startTiming()	32	static
+cohort	NativeSettingsLifecycle.cpp:47:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::cancellationRequested()	32	static
+cohort	NativeSettingsLifecycle.cpp:46:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::clientsSafe()	32	static
+cohort	NativeSettingsLifecycle.cpp:39:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::internal(const void*, size_t)	32	static
+cohort	NativeSettingsLifecycle.cpp:27:12:static bool RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::registerClient()::<lambda(void*)>::_FUN(void*)	32	static
+cohort	NativeSettingsLifecycle.cpp:41:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::selectedRetained()	32	static
+cohort	NativeSettingsLifecycle.cpp:50:6:bool RiscCpu::NativeSettingsLifecycle::{anonymous}::drain()	48	static
+cohort	NativeSettingsLifecycle.cpp:16:21:static RiscExperimental::NativeReplicaJobT<0>::Result RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::execute(void*, uint32_t, const void*, uint32_t)	48	static
+cohort	NativeSettingsLifecycle.cpp:69:6:bool RiscCpu::NativeSettingsLifecycle::prepare(const RiscCpu::NativeSettingsLifecycle::Admission*, RiscCpu::NativeSettingsLifecycle::Hooks)	128	static
+cohort	NativeSettingsLifecycle.cpp:92:6:bool RiscCpu::NativeSettingsLifecycle::bind(RiscBoot::Runtime&)	48	static
+cohort	NativeSettingsLifecycle.cpp:126:6:bool RiscCpu::NativeSettingsLifecycle::attachOwner(RiscBoot::Runtime&, RiscCpu::Port&)	32	static
+cohort	NativeSettingsLifecycle.cpp:130:6:bool RiscCpu::NativeSettingsLifecycle::checkpoint()	48	static
+cohort	NativeSettingsLifecycle.cpp:142:6:void RiscCpu::NativeSettingsLifecycle::cooperate()	32	static
+cohort	NativeSettingsLifecycle.cpp:143:6:bool RiscCpu::NativeSettingsLifecycle::retained()	32	static
+cohort	NativeSettingsLifecycle.cpp:144:6:bool RiscCpu::NativeSettingsLifecycle::exitSafe()	32	static
+cohort	NativeSettingsLifecycle.cpp:145:6:bool RiscCpu::NativeSettingsLifecycle::ready()	32	static
+cohort	NativeSettingsLifecycle.cpp:146:8:RiscCpu::NativeSettingsLifecycle::Timing RiscCpu::NativeSettingsLifecycle::timing()	32	static
+cohort	NativeSettingsLifecycle.cpp:26:12:static constexpr bool RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::registerClient()::<lambda(void*)>::_FUN(void*)	32	static
+cohort	NativeSettingsLifecycle.cpp:25:12:static bool RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::registerClient()::<lambda(void*)>::_FUN(void*)	32	static
+cohort	NativeSettingsLifecycle.cpp:24:12:static bool RiscCpu::NativeSettingsLifecycle::{anonymous}::Load::registerClient()::<lambda(void*)>::_FUN(void*)	32	static
+cohort	NativeSettingsLifecycle.cpp:98:6:bool RiscCpu::NativeSettingsLifecycle::hydrate(RiscBoot::Runtime&, RiscCpu::Port&)	112	static
+cohort	NativeSettingsLifecycle.cpp:147:3:cpp)	48	static
+cohort	NativeSettingsLifecycle.cpp:147:3:cpp)	32	static

@@ -183,3 +183,10 @@ The four new files are this document, the roundtrip test, the checked native
 fixture, and the roundtrip runner. All existing combined-base files, including
 the frozen receiver, core, checked store, production AppData and SDK, remained
 byte-identical.
+
+## Later typed restore qualification
+
+The compatibility initializer used by this original disconnected harness is
+not the current restore admission. See [checked SD native restoration](CHECKED_SD_NATIVE_RESTORE.md)
+for the separate catalog-qualified, empty-native, durable-receipt path and its
+actual checked-store/X4 tests. Production private-mount admission remains closed.

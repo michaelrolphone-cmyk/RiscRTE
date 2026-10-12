@@ -1,0 +1,28 @@
+test_actual_entrypoint (__main__.NativeSettingsStartup.test_actual_entrypoint) ... checkpoint timing: polls=3 synthetic_blocked_ms=2
+actual startup + checked load: normal PASS
+checkpoint timing: polls=3 synthetic_blocked_ms=2
+actual startup + checked load: busy PASS
+checkpoint timing: polls=65537 synthetic_blocked_ms=65536
+actual startup + checked load: long PASS
+actual startup + checked load: retained PASS
+actual startup + checked load: missing-admission PASS
+actual startup + checked load: missing-native PASS
+actual startup + checked load: corrupt-native PASS
+actual startup + checked load: wrong-namespace PASS
+actual startup + checked load: duplicate-writer PASS
+actual startup + checked load: second-fail PASS
+actual startup + checked load: cancel-load PASS
+checkpoint timing: polls=5 synthetic_blocked_ms=4
+actual startup + checked load: cancel-maintenance PASS
+actual startup + checked load: preapp-deferred PASS
+actual startup + checked load: preapp-false-success PASS
+actual startup + checked load: initializing PASS
+actual startup + checked load: external-control PASS
+actual startup + checked load: external-core PASS
+actual startup + checked load: missing-admission PASS
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 9.106s
+
+OK

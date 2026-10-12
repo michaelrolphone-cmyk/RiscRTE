@@ -37,7 +37,13 @@ class CheckedNativeReplicaStore {
   [](void*p,uint64_t id){static_cast<CheckedNativeReplicaStore*>(p)->retire(id);},
   [](void*p,C::FreshInitReceipt*out){return static_cast<CheckedNativeReplicaStore*>(p)->readInitialization(out);},
   [](void*p,const C::Initialization&a){return static_cast<CheckedNativeReplicaStore*>(p)->beginFreshInitialization(a);},
-  [](void*p){static_cast<CheckedNativeReplicaStore*>(p)->endFreshInitialization();}};}
+  [](void*p){static_cast<CheckedNativeReplicaStore*>(p)->endFreshInitialization();},
+  [](void*p,C::ImportInitReceipt*out){return static_cast<CheckedNativeReplicaStore*>(p)->readImportedInitialization(out);},
+  [](void*p,const C::Initialization&a){return static_cast<CheckedNativeReplicaStore*>(p)->beginImportedInitialization(a);},
+  [](void*p){static_cast<CheckedNativeReplicaStore*>(p)->endImportedInitialization();},
+  [](void*p,C::SdInitReceipt*out){return static_cast<CheckedNativeReplicaStore*>(p)->readSdInitialization(out);},
+  [](void*p,const C::Initialization&a){return static_cast<CheckedNativeReplicaStore*>(p)->beginSdInitialization(a);},
+  [](void*p){static_cast<CheckedNativeReplicaStore*>(p)->endSdInitialization();}};}
  static C::Limits limits(){return {ImageMax,4096,1024};}
  // Export custody pins the physical bank under its logical object identity.
  // No namespace or filename enters from the caller. One independent lease per
@@ -57,13 +63,17 @@ class CheckedNativeReplicaStore {
   for(unsigned i=0;i<2;++i)if(pins_[i]==token){pins_[i]=pinnedObjects_[i]=0;return C::Ok;}
   return C::Stale;
  }
+ uint32_t namespaceId()const{return ns_;}
  uint64_t activeObject()const{return active_;}
  bool exitSafe()const{return !retained_&&(!fresh_||fresh_->exitSafe())&&files_.exitSafe()&&!pins_[0]&&!pins_[1];}
- void finishOperation(){if(transitioning_)return;endFreshInitialization();clearBuffers();}
+ void finishOperation(){if(transitioning_)return;endFreshInitialization();endImportedInitialization();endSdInitialization();clearBuffers();}
  private:
+ friend class CheckedSdNativeRestore;
  uint32_t ns_;RiscStorage::AppDataFiles&files_;Metadata metadata_;Guard guard_;C::Allocator alloc_;
  CheckedFreshInitArtifacts*fresh_=nullptr;
  uint8_t freshReceipt_[C::RootBytes]{};bool freshArmed_=false,transitioning_=false;const C::Initialization*freshAdmission_=nullptr;
+ uint8_t importReceipt_[C::RootBytes]{};bool importArmed_=false;const C::Initialization*importAdmission_=nullptr;
+ uint8_t sdReceipt_[C::RootBytes]{};bool sdArmed_=false;const C::Initialization*sdAdmission_=nullptr;
  struct Transition {bool&v;explicit Transition(bool&b):v(b){v=true;}~Transition(){v=false;}};
  void clearBuffers(){release(stage_,stageSize_);release(cache_,cacheSize_);candidate_=cached_=0;written_=0;sealed_=false;}
  uint64_t active_=0,candidate_=0,cached_=0,pinSerial_=0,pins_[2]{},pinnedObjects_[2]{};
@@ -78,7 +88,7 @@ class CheckedNativeReplicaStore {
  static const char*name(uint64_t id){return id&1?"replica-b.bin":"replica-a.bin";}
  // Retained close is a lifetime terminal state, ahead of worker/lease checks.
  // Never update the NVS sequence or touch files after custody becomes unsafe.
- int admission(){if(retained_||files_.retained()||(fresh_&&fresh_->retained())){retained_=true;return C::Retained;}if(transitioning_)return C::Busy;if(freshAdmission_){Transition transition(transitioning_);const int rc=freshCustody(nullptr);if(rc)return rc;}return ns_&&ns_<=INT32_MAX&&guard_.workerWithExclusiveLease&&guard_.workerWithExclusiveLease(guard_.context)&&metadata_.read&&metadata_.write&&alloc_.allocate&&alloc_.release?C::Ok:C::Busy;}
+ int admission(){if(retained_||files_.retained()||(fresh_&&fresh_->retained())){retained_=true;return C::Retained;}if(transitioning_)return C::Busy;if(freshAdmission_||importAdmission_||sdAdmission_){Transition transition(transitioning_);const int rc=sdAdmission_?sdCustody(nullptr):importAdmission_?importCustody(nullptr):freshCustody(nullptr);if(rc)return rc;}return ns_&&ns_<=INT32_MAX&&guard_.workerWithExclusiveLease&&guard_.workerWithExclusiveLease(guard_.context)&&metadata_.read&&metadata_.write&&alloc_.allocate&&alloc_.release?C::Ok:C::Busy;}
  void release(uint8_t*&p,uint32_t&n){if(p){C::wipe(p,n);alloc_.release(alloc_.context,p);}p=nullptr;n=0;}
  int mapped(int rc){
   if(rc==RISC_APP_DATA_OK)return C::Ok;
@@ -106,11 +116,13 @@ class CheckedNativeReplicaStore {
    active_=0;initialized_=false;return C::Missing;
   }
   if(rc)return rc;
-  if(validFreshReceipt(bytes)){active_=0;initialized_=true;return C::Initializing;}
+  if(validFreshReceipt(bytes)||validImportReceipt(bytes)||validSdReceipt(bytes)){active_=0;initialized_=true;return C::Initializing;}
   if(validRoot(bytes,true)){active_=0;initialized_=true;return C::Missing;}
   if(!validRoot(bytes))return C::Io;
   active_=wide(bytes+24);initialized_=true;std::memcpy(out,bytes,n);return C::Ok;
  }
+ bool validSdReceipt(const uint8_t*p)const{return C::validSdReceipt(p)&&word(p+8)==ns_;}
+ bool validImportReceipt(const uint8_t*p)const{return C::validImportReceipt(p)&&word(p+8)==ns_;}
  bool validFreshReceipt(const uint8_t*p)const{return !std::memcmp(p,"RTENFI1",8)&&word(p+8)==ns_&&!zeros(p+12,32)&&word(p+44)==crc(p,44);}
  static constexpr uint32_t FreshImageBytes=484;
  void freshImage(uint8_t*p)const{C::makeFreshEmpty(p,ns_);}
@@ -141,12 +153,12 @@ class CheckedNativeReplicaStore {
   if(!out||out->valid())return C::Invalid;
   Transition transition(transitioning_);
   uint8_t p[C::RootBytes]{};Scratch wipe{p,sizeof p};int rc=metadata_.read(metadata_.context,ns_,"root",p,sizeof p);if(rc)return rc;
-  if(!validFreshReceipt(p))return validRoot(p)||validRoot(p,true)?int(C::Missing):int(C::Io);
+  if(!validFreshReceipt(p))return validRoot(p)||validRoot(p,true)||validImportReceipt(p)||validSdReceipt(p)?int(C::Missing):int(C::Io);
   std::memcpy(out->bytes_,p,sizeof p);out->backendContext_=this;return C::Ok;
  }
  int beginFreshInitialization(const C::Initialization&a){
   if(const int rc=admission())return rc;
-  if(freshArmed_)return C::Busy;
+  if(freshArmed_||importArmed_||sdArmed_)return C::Busy;
   if(!fresh_||fresh_->namespaceId()!=ns_||!a.freshCustody_||!a.prepared_||!a.consumed_||!a.activating_||!a.core_||!a.core_->admissionBusy_||a.core_->b_.context!=this||a.backendContext_!=this||a.namespace_!=ns_||a.baseline_.origin()!=C::Origin::FreshEmpty||a.mapBytes_||a.count_||zeros(a.sourceFingerprint_,32))return C::Invalid;
   Transition transition(transitioning_);freshAdmission_=&a;int rc=freshCustody(nullptr);if(rc)return rc;
   uint8_t p[C::RootBytes]{};Scratch wipe{p,sizeof p};rc=metadata_.read(metadata_.context,ns_,"root",p,sizeof p);
@@ -164,15 +176,130 @@ class CheckedNativeReplicaStore {
   freshArmed_=true;active_=0;initialized_=true;return C::Ok;
  }
  void endFreshInitialization(){freshAdmission_=nullptr;freshArmed_=false;C::wipe(freshReceipt_,sizeof freshReceipt_);}
+ int importCustody(const C::ImportInitReceipt*receipt){
+  if(!importAdmission_||!importAdmission_->importCustody_)return C::Invalid;
+  const int rc=importAdmission_->importCustody_(importAdmission_->factory_,*importAdmission_,receipt);if(rc==C::Retained)retained_=true;return rc;
+ }
+ bool canonicalImported(const uint8_t*p,uint32_t n)const{
+  if(!importAdmission_)return false;
+  const auto&a=*importAdmission_;
+  if(uint64_t(C::HeaderV3)+a.mapBytes_+4!=n||!a.baseline_.archiveObligation())return false;
+  // The receipt's fixed materializer produces a unique sorted encoding.
+  // A caller cannot turn a differently ordered map into an owned candidate.
+  const char*previous=nullptr;
+  for(uint32_t at=0;at<a.mapBytes_;){
+   if(a.mapBytes_-at<21)return false;
+   const char*key=reinterpret_cast<const char*>(a.map_+at);const uint32_t bytes=word(a.map_+at+16);
+   if(!std::memchr(key,0,16)||!bytes||bytes>a.mapBytes_-at-20||(previous&&std::strcmp(previous,key)>=0))return false;
+   previous=key;at+=20+bytes;
+  }
+  uint8_t expected[C::HeaderV3]{};Scratch wipe{expected,sizeof expected};
+  std::memcpy(expected,"RTENR03",8);putWord(expected+8,ns_);putWide(expected+16,1);
+  putWord(expected+96,a.count_);putWord(expected+104,a.mapBytes_);putWord(expected+108,n);
+  std::memcpy(expected+C::HeaderV2,a.baseline_.bytes_,C::ProvenanceBytes);
+  return !std::memcmp(p,expected,sizeof expected)&&(!a.mapBytes_||!std::memcmp(p+C::HeaderV3,a.map_,a.mapBytes_))&&word(p+n-4)==crc(p,n-4);
+ }
+ int checkImportReceiptAndArtifacts(){
+  int rc=importCustody(nullptr);if(rc)return rc;
+  C::ImportInitReceipt receipt;rc=metadata_.read(metadata_.context,ns_,"root",receipt.bytes_,sizeof receipt.bytes_);if(rc)return rc;
+  if(!validImportReceipt(receipt.bytes_)||std::memcmp(receipt.bytes_,importReceipt_,sizeof importReceipt_))return C::Stale;
+  receipt.backendContext_=this;
+  // The purpose-versioned collector rechecks original bytes AND all owned
+  // sequence/bank/stage artifacts against its rematerialized canonical image.
+  rc=importCustody(&receipt);if(rc)return rc;
+  uint8_t current[C::RootBytes]{};Scratch wipe{current,sizeof current};rc=metadata_.read(metadata_.context,ns_,"root",current,sizeof current);if(rc)return rc;
+  if(std::memcmp(current,importReceipt_,sizeof current))return C::Stale;
+  return importCustody(nullptr);
+ }
+ int readImportedInitialization(C::ImportInitReceipt*out){
+  if(const int rc=admission())return rc;
+  if(!out||out->valid())return C::Invalid;
+  Transition transition(transitioning_);
+  uint8_t p[C::RootBytes]{};Scratch wipe{p,sizeof p};int rc=metadata_.read(metadata_.context,ns_,"root",p,sizeof p);if(rc)return rc;
+  if(!validImportReceipt(p))return validRoot(p)||validRoot(p,true)||validFreshReceipt(p)||validImportReceipt(p)||validSdReceipt(p)?int(C::Missing):int(C::Io);
+  std::memcpy(out->bytes_,p,sizeof p);out->backendContext_=this;return C::Ok;
+ }
+ int beginImportedInitialization(const C::Initialization&a){
+  if(const int rc=admission())return rc;
+  if(freshArmed_||importArmed_||sdArmed_)return C::Busy;
+  if(!fresh_||fresh_->namespaceId()!=ns_||!a.importCustody_||!a.prepared_||!a.consumed_||!a.activating_||!a.core_||!a.core_->admissionBusy_||a.core_->b_.context!=this||a.backendContext_!=this||a.namespace_!=ns_||a.baseline_.origin()!=C::Origin::ImportedLegacy||!a.baseline_.archiveObligation()||a.sourceKind_!=0x4e4c0001||a.sourceRevision_!=1||a.sourceState_!=1||zeros(a.sourceFingerprint_,32))return C::Invalid;
+  Transition transition(transitioning_);importAdmission_=&a;int rc=importCustody(nullptr);if(rc)return rc;
+  uint8_t p[C::RootBytes]{};Scratch wipe{p,sizeof p};rc=metadata_.read(metadata_.context,ns_,"root",p,sizeof p);
+  if(a.mode_==C::Initialization::Mode::CreateImport){
+   if(rc!=C::Missing)return rc?rc:int(C::Conflict);
+   uint64_t next=0;bool missing=false;rc=sequence(&next,&missing);if(rc)return rc;if(!missing)return C::Conflict;
+   rc=fresh_->inspectAbsent();if(rc){if(rc==C::Retained)retained_=true;return rc;}
+   std::memcpy(p,"RTENLI1",8);putWord(p+8,ns_);std::memcpy(p+12,a.sourceFingerprint_,32);putWord(p+44,crc(p,44));
+   rc=metadata_.write(metadata_.context,ns_,"root",p,sizeof p);if(rc)return rc==C::Retained?(retained_=true,C::Retained):C::Uncertain;
+  }else if(a.mode_==C::Initialization::Mode::ResumeImport){
+   if(rc)return rc;
+   if(!a.importReceipt_.valid()||a.importReceipt_.backendContext_!=this||!validImportReceipt(p)||std::memcmp(p,a.importReceipt_.bytes_,sizeof p)||std::memcmp(p+12,a.sourceFingerprint_,32))return C::Stale;
+  }else return C::Invalid;
+  std::memcpy(importReceipt_,p,sizeof p);rc=checkImportReceiptAndArtifacts();if(rc){C::wipe(importReceipt_,sizeof importReceipt_);return rc;}
+  importArmed_=true;active_=0;initialized_=true;return C::Ok;
+ }
+ void endImportedInitialization(){importAdmission_=nullptr;importArmed_=false;C::wipe(importReceipt_,sizeof importReceipt_);}
+ int sdCustody(const C::SdInitReceipt*receipt){
+  if(!sdAdmission_||!sdAdmission_->sdCustody_)return C::Invalid;
+  const int rc=sdAdmission_->sdCustody_(sdAdmission_->factory_,*sdAdmission_,receipt);if(rc==C::Retained)retained_=true;return rc;
+ }
+ bool canonicalSd(const uint8_t*p,uint32_t n)const{
+  if(!sdAdmission_)return false;
+  const auto&a=*sdAdmission_;
+  if(uint64_t(C::Header)+a.mapBytes_+4!=n)return false;
+  uint8_t header[C::Header+4]{};Scratch wipe{header,sizeof header};
+  C::makeSdImage(header,ns_,a.sdIdentity_,nullptr,0,a.count_);putWord(header+104,a.mapBytes_);putWord(header+108,n);
+  return !std::memcmp(p,header,C::Header)&&(!a.mapBytes_||!std::memcmp(p+C::Header,a.map_,a.mapBytes_))&&word(p+n-4)==crc(p,n-4);
+ }
+ int checkSdReceiptAndArtifacts(){
+  int rc=sdCustody(nullptr);if(rc)return rc;
+  C::SdInitReceipt receipt;rc=metadata_.read(metadata_.context,ns_,"root",receipt.bytes_,sizeof receipt.bytes_);if(rc)return rc;
+  if(!validSdReceipt(receipt.bytes_)||std::memcmp(receipt.bytes_,sdReceipt_,sizeof sdReceipt_))return C::Stale;
+  receipt.backendContext_=this;
+  // The purpose-versioned collector rechecks original bytes AND all owned
+  // sequence/bank/stage artifacts against its rematerialized canonical image.
+  rc=sdCustody(&receipt);if(rc)return rc;
+  uint8_t current[C::RootBytes]{};Scratch wipe{current,sizeof current};rc=metadata_.read(metadata_.context,ns_,"root",current,sizeof current);if(rc)return rc;
+  if(std::memcmp(current,sdReceipt_,sizeof current))return C::Stale;
+  return sdCustody(nullptr);
+ }
+ int readSdInitialization(C::SdInitReceipt*out){
+  if(const int rc=admission())return rc;
+  if(!out||out->valid())return C::Invalid;
+  Transition transition(transitioning_);
+  uint8_t p[C::RootBytes]{};Scratch wipe{p,sizeof p};int rc=metadata_.read(metadata_.context,ns_,"root",p,sizeof p);if(rc)return rc;
+  if(!validSdReceipt(p))return validRoot(p)||validRoot(p,true)||validFreshReceipt(p)||validImportReceipt(p)||validSdReceipt(p)?int(C::Missing):int(C::Io);
+  std::memcpy(out->bytes_,p,sizeof p);out->backendContext_=this;return C::Ok;
+ }
+ int beginSdInitialization(const C::Initialization&a){
+  if(const int rc=admission())return rc;
+  if(freshArmed_||importArmed_||sdArmed_)return C::Busy;
+  if(!fresh_||fresh_->namespaceId()!=ns_||!a.sdCustody_||!a.prepared_||!a.consumed_||!a.activating_||!a.core_||!a.core_->admissionBusy_||a.core_->b_.context!=this||a.backendContext_!=this||a.namespace_!=ns_||!a.sdIdentity_.known||!C::validIdentity(a.sdIdentity_)||zeros(a.sourceFingerprint_,32))return C::Invalid;
+  Transition transition(transitioning_);sdAdmission_=&a;int rc=sdCustody(nullptr);if(rc)return rc;
+  uint8_t p[C::RootBytes]{};Scratch wipe{p,sizeof p};rc=metadata_.read(metadata_.context,ns_,"root",p,sizeof p);
+  if(a.mode_==C::Initialization::Mode::CreateSd){
+   if(rc!=C::Missing)return rc?rc:int(C::Conflict);
+   uint64_t next=0;bool missing=false;rc=sequence(&next,&missing);if(rc)return rc;if(!missing)return C::Conflict;
+   rc=fresh_->inspectAbsent();if(rc){if(rc==C::Retained)retained_=true;return rc;}
+   std::memcpy(p,"RTENSI1",8);putWord(p+8,ns_);std::memcpy(p+12,a.sourceFingerprint_,32);putWord(p+44,crc(p,44));
+   rc=metadata_.write(metadata_.context,ns_,"root",p,sizeof p);if(rc)return rc==C::Retained?(retained_=true,C::Retained):C::Uncertain;
+  }else if(a.mode_==C::Initialization::Mode::ResumeSd){
+   if(rc)return rc;
+   if(!a.sdReceipt_.valid()||a.sdReceipt_.backendContext_!=this||!validSdReceipt(p)||std::memcmp(p,a.sdReceipt_.bytes_,sizeof p)||std::memcmp(p+12,a.sourceFingerprint_,32))return C::Stale;
+  }else return C::Invalid;
+  std::memcpy(sdReceipt_,p,sizeof p);rc=checkSdReceiptAndArtifacts();if(rc){C::wipe(sdReceipt_,sizeof sdReceipt_);return rc;}
+  sdArmed_=true;active_=0;initialized_=true;return C::Ok;
+ }
+ void endSdInitialization(){sdAdmission_=nullptr;sdArmed_=false;C::wipe(sdReceipt_,sizeof sdReceipt_);}
  int reserve(uint32_t n,uint64_t*out){
   if(out)*out=0;
   if(const int rc=admission())return rc;
   Transition transition(transitioning_);
   uint8_t current[C::RootBytes]{};Scratch wipeCurrent{current,sizeof current};const int selected=readRootRecord(current,sizeof current);
   if(selected!=C::Ok&&selected!=C::Missing&&selected!=C::Initializing)return selected;
-  if(selected==C::Initializing){if(!freshArmed_)return C::Initializing;const int check=checkFreshReceiptAndArtifacts();if(check)return check;}
-  else if(freshArmed_)return C::Stale;
-  if(!out||n<C::Header+4||(freshArmed_&&n!=FreshImageBytes))return C::Invalid;
+  if(selected==C::Initializing){if(!freshArmed_&&!importArmed_&&!sdArmed_)return C::Initializing;const int check=sdArmed_?checkSdReceiptAndArtifacts():importArmed_?checkImportReceiptAndArtifacts():checkFreshReceiptAndArtifacts();if(check)return check;}
+  else if(freshArmed_||importArmed_||sdArmed_)return C::Stale;
+  if(!out||n<C::Header+4||(freshArmed_&&n!=FreshImageBytes)||(importArmed_&&n!=C::HeaderV3+importAdmission_->mapBytes_+4)||(sdArmed_&&n!=C::Header+sdAdmission_->mapBytes_+4))return C::Invalid;
   if(n>ImageMax)return C::NoSpace;
   const unsigned bank=active_?unsigned((active_&1)^1):0;
   if(pins_[bank])return C::Busy;
@@ -200,8 +327,10 @@ class CheckedNativeReplicaStore {
   if(const int rc=admission())return rc;
   Transition transition(transitioning_);
   if(!stage_||id!=candidate_||sealed_||written_!=stageSize_-ObjectHeader)return C::Invalid;
-  if(freshArmed_){int check=checkFreshReceiptAndArtifacts();if(check)return check;if(!canonicalFresh(stage_+ObjectHeader,written_))return C::Invalid;}
-  else {uint8_t current[C::RootBytes]{};Scratch wipe{current,sizeof current};int rc=metadata_.read(metadata_.context,ns_,"root",current,sizeof current);if(rc)return rc;if(validFreshReceipt(current))return C::Initializing;if(!validRoot(current)&&!validRoot(current,true))return C::Io;}
+  if(sdArmed_){int check=checkSdReceiptAndArtifacts();if(check)return check;if(!canonicalSd(stage_+ObjectHeader,written_))return C::Invalid;}
+  else if(importArmed_){int check=checkImportReceiptAndArtifacts();if(check)return check;if(!canonicalImported(stage_+ObjectHeader,written_))return C::Invalid;}
+  else if(freshArmed_){int check=checkFreshReceiptAndArtifacts();if(check)return check;if(!canonicalFresh(stage_+ObjectHeader,written_))return C::Invalid;}
+  else {uint8_t current[C::RootBytes]{};Scratch wipe{current,sizeof current};int rc=metadata_.read(metadata_.context,ns_,"root",current,sizeof current);if(rc)return rc;if(validFreshReceipt(current)||validImportReceipt(current)||validSdReceipt(current))return C::Initializing;if(!validRoot(current)&&!validRoot(current,true))return C::Io;}
   std::memcpy(stage_,"RTENOBJ",7);putWide(stage_+8,id);putWord(stage_+16,written_);putWord(stage_+20,crc(stage_+ObjectHeader,written_));
   uint32_t oldSize=0;uint64_t rev=0;int rc=files_.stat(ns_,name(id),&oldSize,&rev);if(rc&&rc!=RISC_APP_DATA_NOT_FOUND)return mapped(rc);
   rc=files_.replace(ns_,name(id),rev,stage_,stageSize_);if(rc)return mapped(rc);
@@ -234,10 +363,12 @@ class CheckedNativeReplicaStore {
   Transition transition(transitioning_);
   if(!p||n!=C::RootBytes||!stage_||!sealed_)return C::Invalid;
   auto*bytes=static_cast<const uint8_t*>(p);
-  if(freshArmed_){int check=checkFreshReceiptAndArtifacts();if(check)return check;if(!canonicalFresh(stage_+ObjectHeader,written_))return C::Invalid;}
-  else {uint8_t current[C::RootBytes]{};Scratch wipe{current,sizeof current};int rc=metadata_.read(metadata_.context,ns_,"root",current,sizeof current);if(rc)return rc;if(validFreshReceipt(current))return C::Initializing;if(!validRoot(current)&&!validRoot(current,true))return C::Io;}
+  if(sdArmed_){int check=checkSdReceiptAndArtifacts();if(check)return check;if(!canonicalSd(stage_+ObjectHeader,written_))return C::Invalid;}
+  else if(importArmed_){int check=checkImportReceiptAndArtifacts();if(check)return check;if(!canonicalImported(stage_+ObjectHeader,written_))return C::Invalid;}
+  else if(freshArmed_){int check=checkFreshReceiptAndArtifacts();if(check)return check;if(!canonicalFresh(stage_+ObjectHeader,written_))return C::Invalid;}
+  else {uint8_t current[C::RootBytes]{};Scratch wipe{current,sizeof current};int rc=metadata_.read(metadata_.context,ns_,"root",current,sizeof current);if(rc)return rc;if(validFreshReceipt(current)||validImportReceipt(current)||validSdReceipt(current))return C::Initializing;if(!validRoot(current)&&!validRoot(current,true))return C::Io;}
 
-  if(!validRoot(bytes)||wide(bytes+24)!=candidate_||word(bytes+12)!=written_||word(bytes+32)!=word(stage_+stageSize_-4))return C::Invalid;
+  if(!validRoot(bytes)||wide(bytes+16)!=wide(stage_+ObjectHeader+16)||wide(bytes+24)!=candidate_||word(bytes+12)!=written_||word(bytes+32)!=word(stage_+stageSize_-4))return C::Invalid;
   int rc=metadata_.write(metadata_.context,ns_,"root",p,n);if(!rc)active_=candidate_;return rc;
  }
  void retire(uint64_t id){

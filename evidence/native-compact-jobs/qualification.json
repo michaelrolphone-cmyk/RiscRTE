@@ -1,0 +1,133 @@
+{
+  "status": "PASS: experimental compact mailboxes; no product activation",
+  "base_commit": "3352ad329a70993c2211e1ad20d095b2dc2ea4f9",
+  "source_files": [
+    {
+      "path": "src/runtime/storage/StorageWorker.h",
+      "sha256": "07b9ef437436e5e51f52ad13fc11da3bdcdb08628b39203b68146bd786e90430"
+    },
+    {
+      "path": "experimental/native_replica/NativeReplicaJob.h",
+      "sha256": "754bf13c4144702b224cc93ad1d7302f4b72e127dcf391bcc99b0da0c0ab9f78"
+    },
+    {
+      "path": "experimental/native_replica/NativeSdCompletion.h",
+      "sha256": "afc3b4f09afb77e2daf88ef88b66ccc74d867eddf06cc927cb7bc2e91e9d23b8"
+    },
+    {
+      "path": "experimental/native_replica/NativeSdSession.h",
+      "sha256": "909a8cf76acb9a667e6608f56e00aedb3c2d7da8dcfeb0a1850a3970167b83e0"
+    },
+    {
+      "path": "test/native_compact_job_test.cpp",
+      "sha256": "0207200eb9cc00060bc64cba39366ec83e528ae11d6953e0ec440084723be823"
+    },
+    {
+      "path": "test/run_native_compact_job_test.sh",
+      "sha256": "39a4358f66848561138518b6af8f324f4b966da89ecd9c702fb3c0af649079bb"
+    },
+    {
+      "path": "test/native_compact_job_target_probe.cpp",
+      "sha256": "e1f5f5483b079a641d73b9616d6a6d17249f803254f7a4baf2d5f9c6bd02b313"
+    },
+    {
+      "path": "test/compile_native_compact_job_target.sh",
+      "sha256": "6733e587320731ff5fa0a7a48ded883cf705c32b0a0b0234ae408cc32aad9511"
+    }
+  ],
+  "host": {
+    "default_worker_bytes": 9272,
+    "credential_job_bytes": 4200,
+    "control_job_bytes": 104,
+    "threaded_generations": 10000,
+    "normal_and_asan_ubsan": true
+  },
+  "xtensa": {
+    "compiler": "8.4.0 esp-2021r2-patch5",
+    "default_worker_before_after": [
+      9264,
+      9264
+    ],
+    "credential_job_before_after": [
+      13376,
+      4184
+    ],
+    "control_job_before_after": [
+      13376,
+      88
+    ],
+    "first_checkpoint_before_after": [
+      50512,
+      10648
+    ],
+    "default_off_cpu_port_bytes": {
+      "legacy": 7464,
+      "cohort_40_64": 9304
+    },
+    "compact_probe_sha256": "ba5529eb81529286f1f037644a146fbaac1aa094f08ff09de69ef793398eeafc",
+    "baseline_layout_sha256": "4bb9645e2f750bcb0de6b1609a60472687b0f132407c943ca27f0ce7aa551e63"
+  },
+  "typed_actual_x4_fatfs_asan_ubsan": [
+    {
+      "name": "typed-first-asan",
+      "cases": 59,
+      "manifest_sha256": "5d65ccae12ba9cc546f4cb0f7f2c006ac4ae4128ca7d8fff2fdea92f3a5dabbd"
+    },
+    {
+      "name": "typed-first-checked-asan",
+      "cases": 27,
+      "manifest_sha256": "fcd0b53c60e5a8e0000e298136841cc110aa01d4d8af8d40f6075667d4dc36de"
+    },
+    {
+      "name": "typed-consumers-asan",
+      "cases": 61,
+      "manifest_sha256": "4dfb1b6dae959099249dcbd98d0e85dfb0386a0763b2d8e6a2358ea6f9534734"
+    }
+  ],
+  "other_passed_suites": {
+    "default_storage_worker": "1000 generations/copy/cancel",
+    "native_replica_store": "216 reached backend failures, owner no-I/O checks",
+    "first_sd_checked_store": "488 reached arm/ack cuts; 16 Retained, 48 Uncertain",
+    "atomic_key_value": "copied data, cancellation claim race, 21 publication fault points; 6 uncertain",
+    "atomic_checked_store": "1000 owner polls without native I/O and reboot map/intent",
+    "atomic_wifi_bridge": "actual System C codec, count/chunks/selector/intent, stale/cancel/reboot",
+    "import_initialization": "1850 returned-error cuts, 593 prefixes, 628 mutation refusals, 46 allocation failures, 96 digest-custody cuts",
+    "cpu_port_custody": "actual CpuPort owner/worker and retention regression"
+  },
+  "limits": [
+    "LeakSanitizer disabled in executor; ASan and UBSan enabled",
+    "No whole-product RAM admission",
+    "No firmware, SD hardware or update survival qualification",
+    "No production settings selection or Watch SD policy"
+  ],
+  "logs": [
+    {
+      "path": "compact-job-tests.log",
+      "sha256": "221987eb38fd241e1c4a27cbc76fc48c56b1ee376f263a28d1f9d103231434ae"
+    },
+    {
+      "path": "port-asan.log",
+      "sha256": "5733aae14f2e81d1102685ae1eaf12edd06c57c6ea52a882333f905d460a10dd"
+    },
+    {
+      "path": "target-compact.log",
+      "sha256": "0de8e21ce5a01c7f631c1f300301f37b6ab6bc9dd93140aaf829d17928943bc8"
+    },
+    {
+      "path": "target-port.log",
+      "sha256": "ee93c9d22c9edb09812410d77557b7cc0ef5dfc4b9bca93bf761f279bb480ffe"
+    },
+    {
+      "path": "typed-consumers-asan.log",
+      "sha256": "03f5c8ca81d92dec6e5da978dcbacd58e3e438dd285c39ee94bb745d6eceab63"
+    },
+    {
+      "path": "typed-first-asan.log",
+      "sha256": "6d755acf062035633085b0406fa9a5805ce9f9ea3b2a1f946d6a61b16e80cf31"
+    },
+    {
+      "path": "typed-first-checked-asan.log",
+      "sha256": "33724eb0754b3e0b6dae6e68217a71e5711bdad6c286880d8107a0dc3fdf6d6d"
+    }
+  ]
+}

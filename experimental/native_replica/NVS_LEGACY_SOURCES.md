@@ -56,7 +56,7 @@ exclude every competing native writer, filesystem writer, and cleanup owner,
 including mutations from its own digest/allocation/append callbacks. These
 callbacks must be synchronous and must not retain the append input pointer.
 
-The collector reads all four NVS namespaces, including `rnr%08x`; new-native
+Initial inventory reads all four NVS namespaces, including `rnr%08x`; new-native
 metadata must be absent/empty. `CheckedFreshInitArtifacts::inspectAbsent()` must
 also prove no competing private bank or staging artifact. The captured source
 is read again before inventory succeeds, before any append, and after all
@@ -93,8 +93,9 @@ larger than `core.imageCapacity() - NativeReplicaCore::HeaderV3 - 4`.
    new-root publication does not discharge the archive obligation or authorize
    cleanup, SD adoption, or semantic reconciliation.
 
-`sources()` deliberately supplies only observation, imported materialization,
-and source recheck. Use `CheckedNvsFreshSources` separately for fresh absence;
+`sources()` supplies observation, imported materialization, source recheck and
+the versioned import-only receipt recovery collectors described in
+[checked interrupted import](IMPORTED_INITIALIZATION_RECOVERY.md). Use `CheckedNvsFreshSources` separately for fresh absence;
 `Missing` from this provider is not permission to initialize empty defaults.
 A failed append invalidates the result witness; the caller must discard all
 partially appended rows, as `NativeBaselineAdmission` already does.
@@ -126,5 +127,8 @@ fits the target's internal heap.
 The existing ESP `CheckedFreshInitArtifacts` inspector still refuses unsupported
 filesystem evidence. This new collector does not relax that gate. There is no
 production selection, flash, GitHub publication, or device access in this work.
-Interrupted new-native import receipts/banks are also refused by this source
-provider; a separately checked import-recovery path is required to resume them.
+Initial inventory still refuses interrupted new-native receipts/banks. The
+separate `admitImportedResume()` path now accepts only a selected `RTENLI1`
+receipt and exact owned artifacts, rematerializing the unchanged original
+source under a fresh admission. Bare older `RTENINIT` remains refused. See
+[the receipt protocol, memory budget and recovery tests](IMPORTED_INITIALIZATION_RECOVERY.md).

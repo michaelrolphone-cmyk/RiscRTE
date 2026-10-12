@@ -89,11 +89,15 @@ light sleep and deep/timed/wake-set/native sleep suites pass with the seam compi
 in and with no attachment. The same suites also passed before adding the compile
 selection. Existing SDK contracts and default product selection remain intact.
 
-## Remaining integration gates
+## Runtime bridge and remaining gates
 
-The native controller still needs an exact Runtime graph pin, a concrete
-NativeSdAttempt-to-Port adapter, production namespace/backend selection, admitted
-settings-worker serialization, private LittleFS mount proof, bounded startup /
-maintenance scheduling, total RAM admission and physical-card qualification.
-The unit-test hooks do not establish those properties. Do not enable SD-first
-policy from this checkpoint alone.
+The [selected Runtime bridge](NATIVE_RUNTIME_CUSTODY.md) supplies the graph pin
+and NativeSdAttempt adapter, including a separately versioned checked-warm
+attach path. Fresh attachment retains the rules above. Checked warm requires
+SAD1/version 1, idle mailbox, no held selected Sync lock and checked provider
+admission; clean refusal returns custody to ordinary consumers.
+
+Production namespace/backend selection, settings-worker serialization, private
+LittleFS mount proof, bounded startup/maintenance scheduling, total RAM admission
+and physical-card qualification remain separate. Do not enable SD-first policy
+from this bridge alone.

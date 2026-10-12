@@ -1,0 +1,385 @@
+{
+  "status": "Frozen .99 authority inventory only; native persistence remains unselected",
+  "product_source": "199e231d962c401c5d20617e2f5e4da07bffd780",
+  "runtime_source": "1c1ed8661ea30d47e7e9707c41d492ce3a2b4d70",
+  "system_source": "49752a02746b38afbcc403bb92189be5a8356c9d",
+  "receipt_sha256": "91262b2ccdc1809f81f1be61908808789ee28580ed65c2831221f6dbe985ab7e",
+  "boot_sha256": "407360631dc10b73168701013a95ce19f846ae76e7a89b84db267870d8290446",
+  "verified_store_files": 106,
+  "app_count": 27,
+  "provider_count": 33,
+  "installed_settings": {
+    "settings_sd": true,
+    "namespace_range": {
+      "count": 128,
+      "first": 3000
+    }
+  },
+  "shared_settings_selected": false,
+  "atomic_capability_selected": false,
+  "app_authority_counts": {
+    "1": 20,
+    "6": 5
+  },
+  "apps": [
+    {
+      "id": "paper_clock",
+      "manifest": "default.json",
+      "version": "0.4.13",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "fc16120d123932426974be2f253b4e22e4082745869240dc4065c689e8c7555b",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "springboard",
+      "manifest": "springboard.json",
+      "version": "1.8.4",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "d5befe455987ff163e61f78d007412e435f49d3dcdf81ccc9caf9956d8b2c105",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "file_browser",
+      "manifest": "file_browser.json",
+      "version": "1.5.31",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        },
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 6
+        }
+      ],
+      "manifest_sha256": "a416ad5adff643ca45ef009c10a93de6986a4dd663c2709ae3ca551181f460eb",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "ble_scanner",
+      "manifest": "ble_scanner.json",
+      "version": "0.2.24",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "f5a3c081d1ce39feffb09a332187799bb255bdc60000ffd837724c9268ee8e1e",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "points_in_time",
+      "manifest": "points_in_time.json",
+      "version": "0.6.17",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "ead276f1b21deba612417f9748aa575bd9ca890949bfb6896ff39b2bd74b9c3f",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "settings",
+      "manifest": "settings.json",
+      "version": "1.3.28",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "2518f483c26b928815b5311e2b3dd1549988ffac4bd2fbd76d06e4da21f29b29",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "calculator",
+      "manifest": "calculator.json",
+      "version": "0.1.25",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "77d07d60c4c2aa2295ffebdb72406cab8080709350a892c20079f2f497088038",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "stopwatch",
+      "manifest": "stopwatch.json",
+      "version": "0.1.25",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "8122ab1ccd38ed597a593d8d5070cbb9484524aee6237bd0e73442cbd121316a",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "countdown",
+      "manifest": "countdown.json",
+      "version": "0.1.24",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "dbb4cde4fa66e9e8ecc54eda9fd17ea8d5cb2af8f594a9781a7ce66705ca02a1",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "timecard",
+      "manifest": "timecard.json",
+      "version": "0.2.15",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "b70916dab9885ee553d8ed4e2d44717c1084cfdf56e9fec3e8d4694011c58974",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "battery",
+      "manifest": "battery.json",
+      "version": "1.1.18",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "a0a0ee9ac5490c6007cb5b9cbe826acac2ecd63506d7e99325b99bd5e3811476",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "alarms",
+      "manifest": "alarms.json",
+      "version": "0.2.20",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "6c62c39bab1b4f8586eff9a1543e665d88fd798951d31971b77f58b92fd06879",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "wifi_settings",
+      "manifest": "wifi_settings.json",
+      "version": "1.1.27",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 6
+        },
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "74b2c6ccda8f05aa095c0c163401cc601d1037f8e8fbac9d58684111f555aad9",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "ble_touchpad",
+      "manifest": "ble_touchpad.json",
+      "version": "0.1.23",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "b8ac0a6778bcd14dba159eeb11ab91f666b5503d8ae15c6317ff908185351ee3",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "ble_buttons",
+      "manifest": "ble_buttons.json",
+      "version": "0.1.25",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "de31438b351803a958e2ef3634720e3aa588696c2fd5bb9a23ce89635bb3e635",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "waterfall",
+      "manifest": "waterfall.json",
+      "version": "0.3.2",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "36c418e524ca6a86ccf967831f6fcdce869f51f349888e4c86b0ce42174c770f",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "ota_update",
+      "manifest": "ota_update.json",
+      "version": "1.2.15",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 6
+        },
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "5ee862213e415f3fe5eff7588fccb5a4f817930f665b096bfe74b6c1dc847a4e",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "app_store",
+      "manifest": "app_store.json",
+      "version": "1.5.1",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 6
+        },
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "b6e2ab4421f9a45264d3991a50a5c100d383a47bd89644a60791bc618f755bd3",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "contexts",
+      "manifest": "contexts.json",
+      "version": "0.4.2",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "5e42291c956444c131386e4d311a06255b07874fc2a19217f706ecef942ebb03",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "gameboy",
+      "manifest": "gameboy.json",
+      "version": "1.3.24",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 1
+        }
+      ],
+      "manifest_sha256": "5b0bc21e973e9ee0c2562a9a27db3b6f4dde824cd2f9e53cb4421ce6b36418fd",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    },
+    {
+      "id": "daily-digest",
+      "manifest": "daily_digest.json",
+      "version": "0.1.0",
+      "grants": [
+        {
+          "api": 1,
+          "capability": "storage.key-value",
+          "instance_id": 6
+        }
+      ],
+      "manifest_sha256": "1f8827a772257e0136ead7de69971867be557e60483f1ae7d530c4e4f31edd21",
+      "authority": "KV1/KV2 grant permits reads and writes; this is not proof every app writes"
+    }
+  ],
+  "bound_provider_readers": [
+    {
+      "id": "alarm-service",
+      "manifest": "alarm/manifest.json",
+      "bindings": [
+        {
+          "access": "read",
+          "key": "alert_mode",
+          "namespace": 1
+        },
+        {
+          "access": "read",
+          "key": "alert_dnd",
+          "namespace": 1
+        },
+        {
+          "access": "read",
+          "key": "time_zone",
+          "namespace": 1
+        }
+      ],
+      "manifest_sha256": "2990b997960533f9083da7d854a50360c6bdbc135ed6374442e14b27af76b777"
+    },
+    {
+      "id": "civil-clock-x4",
+      "manifest": "civil-clock-x4/manifest.json",
+      "bindings": [
+        {
+          "access": "read",
+          "key": "time_zone",
+          "namespace": 1
+        }
+      ],
+      "manifest_sha256": "f80cd2713b87f5b74a08d37b0789b78ac375d50f59df2ede306b4e05d456e1bf"
+    }
+  ],
+  "required_integration": [
+    "Exact namespace-6 Core read-through for Files, Wi-Fi, OTA, App Store and Daily Digest",
+    "Atomic Wi-Fi controller publication plus same-Core reads, lifecycle and namespace serialization",
+    "Namespace-1 app and bound-provider access must share the same admitted native Core when selected",
+    "Legacy puts cannot silently bypass a selected atomic namespace or invent user intents",
+    "Read/write grant inventory is an authority upper bound, not a semantic writer audit",
+    "Retain old native and SD datasets and report unresolved conflicting source selection",
+    "Do not apply the X4 SD policy to Watch"
+  ]
+}

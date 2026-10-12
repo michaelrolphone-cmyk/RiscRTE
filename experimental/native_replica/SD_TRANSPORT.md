@@ -158,3 +158,14 @@ are explicit credential-hygiene integration gates, not production changes here.
 The separate [verified candidate reader](SD_READER.md) implements bounded
 RTENSD1 content admission without native adoption. Its valid result does not
 grant permission to use a remote base or resolve pending application intent.
+
+The [interrupted catalog qualification](INTERRUPTED_SD_CATALOG.md) interprets
+canonical unreferenced pages as non-root artifacts regardless of generation and
+adds a byte-preserving, fully checked backup-only read path. It preserves the
+single committed-index authority and does not grant mutation rights from names.
+
+The internal v2 durable staging extension uses
+`.nr2-<lineage>-<generation>-<digest>.next` instead of reusing `.replica.next`.
+The committed RTENSD1 index/page format is unchanged. This permits later targets
+to publish while legacy or abandoned staging descriptors remain byte-for-byte
+intact. Names alone still grant no overwrite/cleanup authority.

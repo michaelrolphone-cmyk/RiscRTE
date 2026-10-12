@@ -7,10 +7,13 @@ namespace RiscStorage {
 // buffers in native internal RAM: Xtensa CAS must never target provider PSRAM.
 // Owner methods are serialized by the Runtime owner task. workerStep is called
 // by exactly one native worker task. No callback runs under a mutex/spinlock.
-class Worker final {
+template<uint32_t RequestBytes,uint32_t ResultBytes>
+class BasicWorker final {
+ static_assert(RequestBytes>0&&RequestBytes<=RISC_STORAGE_WORKER_BYTES,"copied request bound");
+ static_assert(ResultBytes>0&&ResultBytes<=RISC_STORAGE_WORKER_BYTES,"copied result bound");
  public:
   enum class State:uint32_t {Idle,Queued,Running,Complete};
-  Worker()=default;Worker(const Worker&)=delete;Worker&operator=(const Worker&)=delete;
+  BasicWorker()=default;BasicWorker(const BasicWorker&)=delete;BasicWorker&operator=(const BasicWorker&)=delete;
   int32_t bind(risc_storage_work_execute_v1 fn,void*context){
     if(callback_||!fn||state_.load()!=State::Idle)return RISC_STORAGE_WORK_BUSY;
     context_=context;callback_=fn;return RISC_STORAGE_WORK_OK;
@@ -70,6 +73,8 @@ class Worker final {
   risc_storage_work_execute_v1 callback_=nullptr;void*context_=nullptr;
   uint64_t serial_=0,token_=0;bool cancelled_=false;
   uint32_t requestSize_=0,resultSize_=0;int32_t status_=0;
-  alignas(8) unsigned char request_[RISC_STORAGE_WORKER_BYTES]{},result_[RISC_STORAGE_WORKER_BYTES]{};
+  alignas(8) unsigned char request_[RequestBytes]{},result_[ResultBytes]{};
 };
+// Existing hardware mailbox retains its exact bounds and member layout.
+using Worker=BasicWorker<RISC_STORAGE_WORKER_BYTES,RISC_STORAGE_WORKER_BYTES>;
 }

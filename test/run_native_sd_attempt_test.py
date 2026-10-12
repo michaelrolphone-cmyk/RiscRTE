@@ -5,6 +5,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 p=argparse.ArgumentParser(description=__doc__)
 for key in ('x4','drivers','reference-reader','output'):
     p.add_argument('--'+key,type=lambda x:pathlib.Path(x).resolve(),required=True)
+p.add_argument('--settings-coordinator',action='store_true',help='Compose the native settings coordinator and checked AppData/NVS store')
 p.add_argument('--sanitize',choices=('none','undefined','address,undefined'),default='none')
 a=p.parse_args(); a.output.mkdir(parents=True,exist_ok=True)
 if (a.output/'sdk').exists(): raise SystemExit('Use a fresh output directory')
@@ -31,9 +32,13 @@ def run(cmd): commands.append(cmd);subprocess.run(cmd,check=True)
 objects=[]
 for name,source,extra in [('fixture',ROOT/'test/native_sd_attempt_fixture.c',['-DX4PRO_SD_ALLOW_LEGACY_GPIO=1','-DX4_SD_TEST_SOURCE="'+str(a.x4/'minimal/test/sd_test.c')+'"']),('ff',a.drivers/'lib/StorageFatFs/fatfs/ff.c',[]),('ffunicode',a.drivers/'lib/StorageFatFs/fatfs/ffunicode.c',[])]:
     obj=a.output/(name+'.o');run([cc,'-std=c11',*flags,*inc,*extra,'-c',str(source),'-o',str(obj)]);objects.append(str(obj))
-binary=a.output/'native-sd-attempt-test'
-run([cxx,'-std=c++17',*flags,*inc,'-pthread',str(ROOT/'test/native_sd_attempt_test.cpp'),*objects,'-o',str(binary)])
-for case in ['happy','cleanup-padding','submit-retained','package-retained','uncopied-invalid','malformed-size','malformed-status','reentry','package','foreign-session','wrong-binding','warm','wrong-task','clean-unavailable','closed-unavailable','snapshot-retained','scope-retained','absent','cancel-running','cancel-queued','cancel-complete','late-retained','native-happy','native-cancel','native-running','native-retained','native-loss','native-preloss','native-result-retained','native-result-uncertain']:
-    run([str(binary),case])
-(a.output/'source-manifest.json').write_text(json.dumps({'external_sources':records,'commands':commands,'sanitizers':a.sanitize,'limits':'Disconnected native seams; no Port/graph/product or hardware qualification'},indent=2)+'\n')
+binary=a.output/('native-settings-sd-coordinator-test' if a.settings_coordinator else 'native-sd-attempt-test')
+source=ROOT/'test'/('native_settings_sd_coordinator_test.cpp' if a.settings_coordinator else 'native_sd_attempt_test.cpp')
+extra=['-I'+str(ROOT/'test/native_nvs_shim'),str(ROOT/'src/runtime/storage/AppDataFiles.cpp'),'-Wl,--wrap=read,--wrap=write,--wrap=fsync,--wrap=close,--wrap=rename'] if a.settings_coordinator else []
+run([cxx,'-std=c++17',*flags,*inc,'-pthread',str(source),*objects,*extra,'-o',str(binary)])
+cases= ['happy','cleanup-padding','submit-retained','package-retained','uncopied-invalid','malformed-size','malformed-status','reentry','package','foreign-session','wrong-binding','warm','wrong-task','clean-unavailable','closed-unavailable','snapshot-retained','scope-retained','absent','cancel-running','cancel-queued','cancel-complete','late-retained','native-happy','native-cancel','native-running','native-retained','native-loss','native-preloss','native-result-retained','native-result-uncertain']
+if a.settings_coordinator: cases=['prep-happy','prep-cancel','completion-happy','completion-cancel','completion-native-retained','completion-late-retained']
+for case in cases:
+    run([str(binary),case,*([str(a.output/('store-'+case))] if a.settings_coordinator else [])])
+(a.output/'source-manifest.json').write_text(json.dumps({'external_sources':records,'commands':commands,'sanitizers':a.sanitize,'settings_coordinator':a.settings_coordinator,'limits':'Disconnected native seams; no Port/graph/product or hardware qualification'},indent=2)+'\n')
 print('Actual X4/FatFs native custody composition PASS; external source inputs:',len(records))

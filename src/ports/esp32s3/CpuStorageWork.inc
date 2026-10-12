@@ -7,14 +7,31 @@
 Port::Sync* Port::storageSync(uint64_t device){for(auto& s:syncs_)if(s.port==this&&s.instance==device)return &s;return nullptr;}
 const Port::Sync* Port::storageSync(uint64_t device)const{for(const auto& s:syncs_)if(s.port==this&&s.instance==device)return &s;return nullptr;}
 bool Port::nativeStorageAttach(uint64_t device,const NativeStorageCustody& hooks,uint64_t*lease,uint64_t*scope){
+ return nativeStorageAttachImpl(device,hooks,lease,scope,true);
+}
+bool Port::nativeStorageAttachCheckedWarm(uint64_t device,const risc_storage_volume_api_v1*volume,const NativeStorageCustody& hooks,uint64_t*lease,uint64_t*scope){
  if(lease)*lease=0;
  if(scope)*scope=0;
+ // The pinned provider must explicitly attest metadata-only checked begin.
+ // Public READY or an idle raw mailbox alone cannot attest ordinary handles.
+ if(!nativeStorageOwner()||!risc_storage_volume_session_admission(volume))return false;
+ return nativeStorageAttachImpl(device,hooks,lease,scope,false);
+}
+bool Port::nativeStorageAttachImpl(uint64_t device,const NativeStorageCustody& hooks,uint64_t*lease,uint64_t*scope,bool fresh){
+ if(lease)*lease=0;
+ if(scope)*scope=0;
+ if(!available()||nativeStorageAttaching_||nativeStoragePinned())return false;
+ struct Attaching {bool&value;explicit Attaching(bool&v):value(v){value=true;}~Attaching(){value=false;}} attaching(nativeStorageAttaching_);
+ // The native USB callback may reenter other owner code. Prevent recursive
+ // attachment and evaluate every mutable exclusion again after it returns.
+ if(hw_.usbPhyIdle&&!hw_.usbPhyIdle())return false;
  auto&w=storageWork_;const auto*s=storageSync(device);
  if(!lease||!scope||!device||!available()||sleepRetained_||transferring_||nativeStoragePinned()||usb_.token||usb_.closing||
-    (hw_.usbPhyIdle&&!hw_.usbPhyIdle())||!hw_.storageWork||!hw_.storageWork->mailbox||storageWorkBusy()||
-    !w.gpio||w.gpio->instance!=device||!w.serial||w.bindings!=1||!hw_.storageWork->mailbox->bound()||
-    w.submitted||w.touched||w.opened||w.fault||!s||!s->ownerCalls||s->ownerCalls!=w.bindOwnerCalls||
+    !hw_.storageWork||!hw_.storageWork->mailbox||storageWorkBusy()||
+    !w.gpio||w.gpio->instance!=device||!w.serial||!w.bindings||!hw_.storageWork->mailbox->bound()||w.fault||
+    !s||!s->ownerCalls||s->ownerCalls==UINT64_MAX||
     !hooks.context||!hooks.sync||!hooks.submit||!hooks.submitted||!hooks.collect||!hooks.cancel||!hooks.releasable)return false;
+ if(fresh&&(w.bindings!=1||w.submitted||w.touched||w.opened||s->ownerCalls!=w.bindOwnerCalls))return false;
  for(const auto& lock:s->locks)if(lock.held)return false;
  const uint64_t t=token();if(!t)return false;
  nativeStorageCustody_=hooks;nativeStorageLease_=t;*lease=t;*scope=w.serial;return true;

@@ -1,0 +1,11 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+legacy
+00000000 00003b98 B native_sd_synchronization_size
+344285eb2615f3c637b2ebaf98664456533faaa9756c12de12377cd585bf0d7c  .build/sync-target-final/probe-legacy.o
+cohort
+00000000 00003b98 B native_sd_synchronization_size
+3c908e8d56804a73076da4602a69a6e7cb231cf5cddd369525d12d1d8baa102e  .build/sync-target-final/probe-cohort.o

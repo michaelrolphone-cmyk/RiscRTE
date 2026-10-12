@@ -1,0 +1,1244 @@
+{
+  "compiler": "xtensa-esp32s3-elf-gcc (crosstool-NG esp-2021r2-patch5) 8.4.0",
+  "elf_sha256": "aa64ddd754f324b6468cb240111dfbbc5579f4cb7105d1a4a97dee0da9d56901",
+  "scope": "per-function caller frames only; no native broker, RTOS/loader, interrupt or libc call-chain bound",
+  "policy_changed": false,
+  "frames": [
+    {
+      "source": "settings_paper.inc:70:13:sp_redraw",
+      "bytes": 320,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:182:13:sv_root",
+      "bytes": 304,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:906:16:settings_activate",
+      "bytes": 240,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:145:5:portable_set_time_apply_clocks_confirmed",
+      "bytes": 208,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:94:13:stz_wrapped",
+      "bytes": 208,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2419:13:poll",
+      "bytes": 192,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZonePreference.c:44:5:portable_timezone_preference_save",
+      "bytes": 176,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:678:13:input_dispatch",
+      "bytes": 176,
+      "kind": "static"
+    },
+    {
+      "source": "settings_native_time.inc:70:13:snt_save",
+      "bytes": 176,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:523:17:millis_now",
+      "bytes": 160,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:169:13:stz_poll",
+      "bytes": 160,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZonePreference.c:25:5:portable_timezone_preference_load",
+      "bytes": 144,
+      "kind": "static"
+    },
+    {
+      "source": "alarm.inc:283:13:alarm_foreground",
+      "bytes": 144,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:239:5:portable_timezone_interpret_rtc",
+      "bytes": 128,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:158:5:portable_realtime_recover_rtc",
+      "bytes": 112,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:32:5:portable_set_time_prepare",
+      "bytes": 112,
+      "kind": "static"
+    },
+    {
+      "source": "nova.inc:143:13:np_caption",
+      "bytes": 112,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1376:13:present",
+      "bytes": 112,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:350:13:settings_view_redraw",
+      "bytes": 112,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:201:5:portable_timezone_utc_to_local",
+      "bytes": 96,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:216:5:portable_timezone_local_to_utc",
+      "bytes": 96,
+      "kind": "static"
+    },
+    {
+      "source": "settings_native_time.inc:37:13:snt_read_local",
+      "bytes": 96,
+      "kind": "static"
+    },
+    {
+      "source": "settings_atomic.inc:29:16:settings_atomic_get",
+      "bytes": 96,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouch.h:84:20:portable_touch_sync.constprop",
+      "bytes": 96,
+      "kind": "static"
+    },
+    {
+      "source": "paper.inc:34:13:pp_text",
+      "bytes": 96,
+      "kind": "static"
+    },
+    {
+      "source": "resident_adapter.inc:123:12:resident_checkpoint",
+      "bytes": 96,
+      "kind": "static"
+    },
+    {
+      "source": "settings_atomic_save.inc:3:13:settings_atomic_save",
+      "bytes": 96,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:68:5:portable_realtime_open",
+      "bytes": 80,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:106:5:portable_realtime_read",
+      "bytes": 80,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:106:5:portable_timezone_parse",
+      "bytes": 80,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:212:13:settings_get",
+      "bytes": 80,
+      "kind": "static"
+    },
+    {
+      "source": "nova.inc:54:13:np_icon",
+      "bytes": 80,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1176:13:icon",
+      "bytes": 80,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:890:13:fill",
+      "bytes": 80,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1121:13:text_color$part$43",
+      "bytes": 80,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:90:13:sv_text$part$47",
+      "bytes": 80,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper_scroll.inc:4:13:sp_scroll_configure",
+      "bytes": 64,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:16:13:stz_scroll_configure",
+      "bytes": 64,
+      "kind": "static"
+    },
+    {
+      "source": "PortablePreferenceAtomic.h:120:19:portable_preference_atomic_collect.constprop",
+      "bytes": 64,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1078:13:rounded",
+      "bytes": 64,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:132:13:sv_button",
+      "bytes": 64,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2823:22:t5_app_get_api",
+      "bytes": 64,
+      "kind": "static"
+    },
+    {
+      "source": "settings.c:47:45:portable_settings_controller_main",
+      "bytes": 64,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:29:12:acquire",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:38:12:release",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:120:12:finish_rtc",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:78:12:clock_seconds",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:89:12:transition",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:27:10:portable_timezone_region_count",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:33:5:portable_timezone_city_index",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouchScroll.h:31:20:portable_scroll_configure",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouchScroll.h:84:24:portable_scroll_touch",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "paper.inc:90:13:pp_battery",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:41:13:settings_time_format_load",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSleepPolicy.h:74:19:portable_sleep_timer_load",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableReaderPreferences.h:29:19:portable_reader_preference_load",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableDeskClockSettings.h:23:19:portable_desk_face_load",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableDeskClockSettings.h:47:19:portable_desk_direction_load",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2694:13:read_battery",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:375:13:editor_set_value",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:396:13:editor_step",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings_native_time.inc:29:13:snt_load_basis",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "resident_adapter.inc:35:13:resident_focus$part$57",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:227:13:custody_release",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:224:13:custody_acquire",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "nova.inc:26:13:np_pixel",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "nova.inc:82:13:np_circle",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "paper.inc:5:13:pp_circle$part$40",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper.inc:24:13:sp_text",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper.inc:26:13:sp_button",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper.inc:37:13:sp_footer",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:153:13:sv_fade",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1285:13:paper_token_progress",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:432:13:sv_slider",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2716:13:list",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2645:13:launch",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "settings_atomic_save.inc:34:13:settings_atomic_choice",
+      "bytes": 48,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:10:12:safe",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:19:12:live",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:48:12:snapshot_status",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:58:12:native_status",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:115:5:portable_realtime_seed_confirmed",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:212:5:portable_realtime_close",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:223:6:portable_realtime_stop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableRealtimeClient.c:227:5:portable_realtime_project",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:88:12:failed",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:116:13:same_calendar",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:18:12:native_result",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:10:12:safe",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:51:5:portable_set_time_open",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:231:5:portable_set_time_close",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSetTime.c:240:6:portable_set_time_stop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:10:12:equal",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:53:12:consume",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:57:12:number",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:97:12:valid_transition",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:140:16:civil_days",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:4:15:text_length",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:101:12:valid_rule",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:67:12:abbreviation",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:177:16:transition_epoch",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:14:5:portable_timezone_find",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:22:13:portable_timezone_region_name",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:38:5:portable_timezone_display_name",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:126:5:portable_timezone_resolve",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:152:5:portable_timezone_civil_to_epoch",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZone.c:159:5:portable_timezone_epoch_to_civil",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZoneCatalog.c:427:10:portable_timezone_count",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZoneCatalog.c:428:32:portable_timezone_get",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZonePreference.c:6:13:copy_id",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTimeZonePreference.c:16:13:encode",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouch.h:74:20:portable_touch_snapshot_valid",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouchScroll.h:24:20:portable_scroll_inside",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableSleepPolicy.h:18:20:portable_sleep_api_valid",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:256:13:custody_diagnostic",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:872:16:width",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:873:16:height",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "nova.inc:19:17:np_root",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "nova.inc:188:13:np_contact",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "nova.inc:189:13:np_clock",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "paper.inc:98:13:pp_enabled",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2101:13:clear_contact_snapshots",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2634:13:refresh",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2635:17:count",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2752:16:hit",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2766:16:next",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2769:16:prev",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortablePreferenceAtomic.h:24:20:portable_preference_atomic_api_valid",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortablePreferenceAtomic.h:27:20:portable_preference_atomic_state_valid",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortablePreferenceAtomic.h:43:20:portable_preference_atomic_terminal",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortablePreferenceAtomic.h:72:20:portable_preference_word",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_atomic.inc:10:13:settings_atomic_guard",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_atomic.inc:50:16:settings_atomic_deny_put",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:161:17:calendar_days",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_native_time.inc:13:12:snt_guard",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_native_time.inc:53:34:snt_request",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:205:13:set_back_exits",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:206:17:settings_categories",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:211:17:settings_count",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:371:13:editor_bounds",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:428:13:sv_back_input",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper_scroll.inc:16:17:sp_scroll_begin",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:7:12:stz_width",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:8:12:stz_height",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:9:12:stz_top",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:10:12:stz_step",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:14:12:stz_margin",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouchScroll.h:43:20:portable_scroll_reveal",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:250:13:custody_yield",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:813:13:input_navigation_take$isra$8",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:884:13:native_point",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "paper.inc:21:12:pp_measure$part$10",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "paper.inc:21:12:pp_measure",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1227:6:portable_paper_frame_ready",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2638:13:get",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_atomic.inc:16:20:settings_atomic_message",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_native_time.inc:32:20:snt_basis_label",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:367:17:editor_value",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:391:13:editor_value_text",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:81:12:sv_measure$part$20",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper_scroll.inc:13:13:sp_scroll_visible",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:11:17:stz_rows",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:207:13:settings_category",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:4:17:stz_count",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:29:13:stz_visible",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:38:13:stz_choose",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:47:13:stz_page_step",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "alarm.inc:191:20:alarm_title.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableAlarmTerminalClient.h:116:20:portable_alarm_owned.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouch.h:144:20:portable_touch_close$isra$25.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouch.h:167:20:portable_touch_level.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:72:17:settings_sleep_at",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouch.h:67:20:portable_touch_fault$isra$0.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortablePreferenceAtomic.h:40:19:portable_preference_atomic_safe.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortablePreferenceAtomic.h:132:19:portable_preference_atomic_cancel.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:20:13:portable_adapter_retain_inner.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:67:17:settings_sleep_count",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableAlarmTerminalClient.h:72:20:portable_alarm_callable.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:35:13:settings_view_interrupt",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_native_time.inc:63:13:snt_describe_result",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper.inc:50:12:sp_sleep_step",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:70:12:stz_measure",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:458:13:editor_select_field",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:449:6:portable_app_sleep_retained",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:45:6:portable_adapter_retain",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:966:13:display_failure$isra$51",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:625:20:input_navigation_reset",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "alarm.inc:38:13:alarm_failure",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_native_time.inc:18:13:snt_halted",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_atomic.inc:24:12:settings_atomic_result$part$56",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:242:13:custody_health",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:92:16:custody_kv_put",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:72:16:custody_kv_get",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:650:13:input_service",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:819:13:raster_checkpoint",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "paper.inc:5:13:pp_circle",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1159:13:label$part$44",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1159:13:label",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1156:13:text",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper.inc:25:13:sp_header",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper_scroll.inc:22:13:sp_scroll_end",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_paper.inc:41:13:sp_row",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1075:13:rect",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:53:13:sv_pixel",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:90:13:sv_text",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:90:13:stz_text",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:110:13:sv_center",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:113:13:sv_right.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:71:13:sv_rect",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:171:13:sv_heading",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_timezone_view.inc:98:13:stz_button",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:174:13:sv_back",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:545:13:input_reset",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "alarm.inc:28:13:alarm_cancel_input",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableTouch.h:134:20:portable_touch_open$isra$49.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:52:6:portable_adapter_retain_silent",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableAlarmTerminalClient.h:60:20:portable_alarm_result.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "PortableAlarmTerminalClient.h:93:20:portable_alarm_status.constprop",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "alarm.inc:134:13:alarm_audio_pump_unleased",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:55:6:portable_adapter_retained",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "nova.inc:215:33:springboard_presentation_get",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "paper.inc:109:27:paper_presentation_get",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1258:6:portable_paper_frame_idle",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1328:6:portable_paper_frame_drain",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1065:13:clear_color",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "nova.inc:81:13:np_begin",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "paper.inc:4:13:pp_begin",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1074:13:clear",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:170:13:sv_begin",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_view.inc:383:13:sv_switch",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:408:13:settings_render",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:1854:20:paper_apply_flip",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "native_custody_adapter.inc:262:13:custody_launch",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "resident_adapter.inc:85:28:portable_app_ui_active",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "resident_adapter.inc:101:17:resident_policy_flags",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "resident_adapter.inc:118:13:resident_policy_ready",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2836:21:t5_ui_get_api",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2842:26:t5_battery_get_api",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2848:26:t5_storage_get_api",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:2852:24:t5_video_get_api",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:3144:45:app_module_fini",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:3287:44:app_module_init",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "stdlib.h:74:5:abs",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "adapter.c:809:13:input_take",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.inc:925:16:settings_touch",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings.c:24:13:next_category",
+      "bytes": 32,
+      "kind": "static"
+    },
+    {
+      "source": "settings_native_entry.c:7:45:app_main",
+      "bytes": 32,
+      "kind": "static"
+    }
+  ],
+  "source_commit": "1e721cc10327691ddf76907f48866a71a2eb02b6"
+}

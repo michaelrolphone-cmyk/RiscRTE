@@ -69,7 +69,7 @@ class NativeSdCompletion final {
  Result retainedNativeResult()const{return state()==State::Retained?actual_:Result{};}
  private:
  static bool knownIdentity(const C::Identity&i){uint8_t lineage=0;for(uint8_t b:i.lineage)lineage|=b;return i.known&&lineage;}
- NativeSdAttempt*attempt_=nullptr;void*context_;bool(*worker_)(void*);Execute execute_;NativeReplicaJob job_;
+ NativeSdAttempt*attempt_=nullptr;void*context_;bool(*worker_)(void*);Execute execute_;NativeReplicaControlJob job_;
  std::atomic<State>state_{State::Idle};std::atomic<bool>lost_{false},cancelled_{false};Evidence evidence_{};
  NativeSdAttempt::Binding binding_{};uint64_t epoch_=0,closed_=0,token_=0;Result actual_{};
  void retain(){attempt_->retain();state_.store(State::Retained,std::memory_order_release);}

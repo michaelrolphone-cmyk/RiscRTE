@@ -1,0 +1,15 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+legacy
+00000118 000000b0 B native_sd_attempt_size
+00000000 00000020 B native_sd_graph_pin_size
+00000020 000000f8 B native_sd_port_attempt_size
+5639cb2185ab2677c803ebf5465593190729b92f46d3b83bae2b371096a4f1ce  /tmp/native-runtime-bridge-target-adapter-qualified/probe-legacy.o
+cohort
+00000118 000000b0 B native_sd_attempt_size
+00000000 00000020 B native_sd_graph_pin_size
+00000020 000000f8 B native_sd_port_attempt_size
+2aab3cf0307f4a1a74f533a712d9a7eb4fc0af27a237a82e569d701695a4a784  /tmp/native-runtime-bridge-target-adapter-qualified/probe-cohort.o

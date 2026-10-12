@@ -1,0 +1,69 @@
+PRECONDITION: explicitly synthetic matching empty native/SD baseline, generation 19; no first-boot/product policy claim
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native preferences; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+Actual Settings controller: seven explicit Saves, stale draft rejection, queued and in-flight cancellation through checked native worker PASS
+payload_budget namespace=1 phase=controller-edits live=2554 peak=12714 peak_default_heap_request=12754 peak_blocks=5 allocated_total=64808 allocations=40
+payload_budget namespace=1 phase=sync live=597 peak=179658 peak_default_heap_request=179690 peak_blocks=4 allocated_total=336101 allocations=18
+payload_budget namespace=1 phase=after-all-scopes live=0 peak=179658 peak_default_heap_request=179690 peak_blocks=4 allocated_total=336698 allocations=19
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+PRECONDITION: explicitly synthetic matching empty native/SD baseline, generation 19; no first-boot/product policy claim
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated controller: copied Save, connected Remember, in-flight committed cancellation and queued revocation PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+payload_budget namespace=6 phase=controller-edits live=1640 peak=7464 peak_default_heap_request=7504 peak_blocks=5 allocated_total=12552 allocations=10
+payload_budget namespace=6 phase=sync live=880 peak=178744 peak_default_heap_request=178776 peak_blocks=4 allocated_total=332032 allocations=18
+payload_budget namespace=6 phase=after-all-scopes live=0 peak=178744 peak_default_heap_request=178776 peak_blocks=4 allocated_total=332912 allocations=19
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+Verified pinned System namespace 1 closure: 75 files at 5636756db893d682ad42a595625b226f40bbba4d
+Verified pinned System namespace 6 closure: 63 files at a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89
+normal SIMULATED FULL UPDATE ERASURE: 6 native files including both NVS witnesses deleted; SD SHA-256 d50d31bd5bd071b0b6e3d7aa65cadfdf37f39eabbdb57507bf581cf1621d6324
+payload_budget namespace=1 phase=restore live=341 peak=176972 peak_default_heap_request=176996 peak_blocks=3 allocated_total=318198 allocations=13
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native preferences; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+Actual Settings controller: seven preferences reloaded through fresh checked native store and Runtime facade PASS
+payload_budget namespace=1 phase=restored-readers live=341 peak=1071 peak_default_heap_request=1095 peak_blocks=3 allocated_total=1412 allocations=4
+payload_budget namespace=1 phase=after-all-scopes live=0 peak=1071 peak_default_heap_request=1095 peak_blocks=3 allocated_total=1412 allocations=4
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+payload_budget namespace=6 phase=restore live=624 peak=176972 peak_default_heap_request=176996 peak_blocks=3 allocated_total=319896 allocations=13
+integrated controller: both saved profiles reload through a new checked store, coordinator and Runtime PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+payload_budget namespace=6 phase=restored-readers live=624 peak=1920 peak_default_heap_request=1944 peak_blocks=3 allocated_total=2544 allocations=4
+payload_budget namespace=6 phase=after-all-scopes live=0 peak=1920 peak_default_heap_request=1944 peak_blocks=3 allocated_total=2544 allocations=4
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+PRECONDITION: explicitly synthetic matching empty native/SD baseline, generation 19; no first-boot/product policy claim
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native preferences; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+Actual Settings controller: seven explicit Saves, stale draft rejection, queued and in-flight cancellation through checked native worker PASS
+payload_budget namespace=1 phase=controller-edits live=2554 peak=12714 peak_default_heap_request=12754 peak_blocks=5 allocated_total=64808 allocations=40
+payload_budget namespace=1 phase=sync live=2810 peak=179658 peak_default_heap_request=179690 peak_blocks=4 allocated_total=333020 allocations=13
+payload_budget namespace=1 phase=sync-recovery live=597 peak=179914 peak_default_heap_request=179946 peak_blocks=4 allocated_total=384401 allocations=13
+payload_budget namespace=1 phase=after-all-scopes live=0 peak=179914 peak_default_heap_request=179946 peak_blocks=4 allocated_total=384998 allocations=14
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+PRECONDITION: explicitly synthetic matching empty native/SD baseline, generation 19; no first-boot/product policy claim
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated controller: copied Save, connected Remember, in-flight committed cancellation and queued revocation PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+payload_budget namespace=6 phase=controller-edits live=1640 peak=7464 peak_default_heap_request=7504 peak_blocks=5 allocated_total=12552 allocations=10
+payload_budget namespace=6 phase=sync live=1896 peak=178744 peak_default_heap_request=178776 peak_blocks=4 allocated_total=327536 allocations=13
+payload_budget namespace=6 phase=sync-recovery live=880 peak=179000 peak_default_heap_request=179032 peak_blocks=4 allocated_total=385816 allocations=13
+payload_budget namespace=6 phase=after-all-scopes live=0 peak=179000 peak_default_heap_request=179032 peak_blocks=4 allocated_total=386696 allocations=14
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+interrupted SIMULATED FULL UPDATE ERASURE: 6 native files including both NVS witnesses deleted; SD SHA-256 d50d31bd5bd071b0b6e3d7aa65cadfdf37f39eabbdb57507bf581cf1621d6324
+payload_budget namespace=1 phase=restore live=341 peak=176972 peak_default_heap_request=176996 peak_blocks=3 allocated_total=318198 allocations=13
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native preferences; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+Actual Settings controller: seven preferences reloaded through fresh checked native store and Runtime facade PASS
+payload_budget namespace=1 phase=restored-readers live=341 peak=1071 peak_default_heap_request=1095 peak_blocks=3 allocated_total=1412 allocations=4
+payload_budget namespace=1 phase=after-all-scopes live=0 peak=1071 peak_default_heap_request=1095 peak_blocks=3 allocated_total=1412 allocations=4
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+payload_budget namespace=6 phase=restore live=624 peak=176972 peak_default_heap_request=176996 peak_blocks=3 allocated_total=319896 allocations=13
+integrated controller: both saved profiles reload through a new checked store, coordinator and Runtime PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+payload_budget namespace=6 phase=restored-readers live=624 peak=1920 peak_default_heap_request=1944 peak_blocks=3 allocated_total=2544 allocations=4
+payload_budget namespace=6 phase=after-all-scopes live=0 peak=1920 peak_default_heap_request=1944 peak_blocks=3 allocated_total=2544 allocations=4
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+FULL SETTINGS/WIFI SD ROUNDTRIP PASS: namespaces 1 and 6, complete native erasure, fresh controllers, unchanged ordinary file and USB admission

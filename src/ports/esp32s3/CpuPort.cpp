@@ -1,5 +1,8 @@
 #include "CpuPort.h"
 #include "HciBounds.h"
+#if RISC_NATIVE_STORAGE_CUSTODY
+#include <RiscStorageSessionAdmissionV1.h>
+#endif
 #include <cstring>
 namespace RiscCpu {
 namespace {

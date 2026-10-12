@@ -1,0 +1,39 @@
+PRECONDITION: explicitly synthetic matching native/SD baseline (optional encoded preset seed), generation 19; no first-boot/product policy claim
+Additional actual controller: fresh production decoders plus Runtime/provider KV1 and byte-exact KV2 read-through PASS
+Actual BLE: alias/clear, failed physical enable with receipt-bound DELETE rollback, successful enable; six exact intents PASS
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+PRECONDITION: explicitly synthetic matching native/SD baseline (optional encoded preset seed), generation 19; no first-boot/product policy claim
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated controller: copied Save, connected Remember, in-flight committed cancellation and queued revocation PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+Verified pinned System namespace 1 closure: 18 files at 472036f0c52e8fc88f0ccefb262e25734e6eda39
+Verified pinned System namespace 6 closure: 63 files at a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89
+normal SIMULATED FULL UPDATE ERASURE: 6 native files including both NVS witnesses deleted; SD SHA-256 9c35c734ea89482f5aab3b02eeea4a9e1de0472d295790c163696c920da31d2d
+Additional actual controller: fresh production decoders plus Runtime/provider KV1 and byte-exact KV2 read-through PASS
+Actual BLE: fresh alias/tombstone and radio policy readers restore real-broker values PASS
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+integrated controller: both saved profiles reload through a new checked store, coordinator and Runtime PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+PRECONDITION: explicitly synthetic matching native/SD baseline (optional encoded preset seed), generation 19; no first-boot/product policy claim
+Additional actual controller: fresh production decoders plus Runtime/provider KV1 and byte-exact KV2 read-through PASS
+Actual BLE: alias/clear, failed physical enable with receipt-bound DELETE rollback, successful enable; six exact intents PASS
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+PRECONDITION: explicitly synthetic matching native/SD baseline (optional encoded preset seed), generation 19; no first-boot/product policy claim
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated controller: copied Save, connected Remember, in-flight committed cancellation and queued revocation PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+interrupted SIMULATED FULL UPDATE ERASURE: 6 native files including both NVS witnesses deleted; SD SHA-256 9c35c734ea89482f5aab3b02eeea4a9e1de0472d295790c163696c920da31d2d
+Additional actual controller: fresh production decoders plus Runtime/provider KV1 and byte-exact KV2 read-through PASS
+Actual BLE: fresh alias/tombstone and radio policy readers restore real-broker values PASS
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+integrated controller: both saved profiles reload through a new checked store, coordinator and Runtime PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+FULL ADDITIONAL CONTROLLER/WIFI SD ROUNDTRIP PASS: namespaces 1 and 6, complete native erasure, fresh controllers, unchanged ordinary file and USB admission

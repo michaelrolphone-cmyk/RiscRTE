@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "base_runtime_commit": "456a8402dd472de99f848d01d5b052b7e79884ac",
+  "external_x4_commit": "c7404623bb7b175ab3d2452d7803ed4613e0cb35",
+  "drivers_commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+  "reader_commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+  "core_sources": {
+    "experimental/native_replica/NativeRuntimeStoragePin.h": "b14d1ae2401a7051340abd0906f746b0bc7aaeccb41b6e069d042507490e5879",
+    "experimental/native_replica/NativeSdAttempt.h": "e2dc01026529a78c176e413d28a946c097a27ccaa9185e0d97244e1d6eed22d9",
+    "experimental/native_replica/NativeSdPortAttempt.h": "77b37e09f22ca75f74f2e8e85a7ca98f4f133a96b2e51a03307a866c513d0dc9",
+    "sdk/driver/RiscStorageSessionAdmissionV1.h": "eccf8e59cba6ec58a2456d00bcbd07131d1e4ec8d5ac36f23b35f793a33284fc",
+    "src/ports/esp32s3/CpuPort.h": "7c27b5c619b3a7abe5bcac7790863b600fb7ce65c02a772f9ca8e2458bb57d19",
+    "src/ports/esp32s3/CpuPort.cpp": "df6b136ba07c7a102401acffc42013515acf37106ecb2408489d213aacbf8a35",
+    "src/ports/esp32s3/CpuStorageWork.inc": "a7672c72322d220f890523392f301e8cf2de8e1de88606c2192ee5e822925237"
+  },
+  "passed": {
+    "real_runtime_graph_cases": 29,
+    "source_pinned_full_graph_x4_fatfs_port_cases": 16,
+    "modes": [
+      "normal",
+      "undefined",
+      "address,undefined"
+    ],
+    "port_custody": "Fresh and checked-warm suffix/locks/mailbox/task/raw/USB/sleep/epochs/retention plus recursive callback and mutable-exclusion regressions",
+    "original_provider_regressions": "NativeSdAttempt and all typed SD consumers passed ASan+UBSan against c8004c5c8362b142ebb35a0e1c5d266532a11581",
+    "selected_regressions": [
+      "storage_work_port",
+      "storage_work_acquire",
+      "sdmmc_port",
+      "provider_sync",
+      "usb_phy",
+      "light_sleep",
+      "deep_sleep"
+    ],
+    "default_regressions": [
+      "runtime",
+      "board",
+      "watch"
+    ],
+    "xtensa": "Bridge and actual CpuPort compiled in legacy and 40-provider/64-app configurations"
+  },
+  "fixed_findings": [
+    "Pin requires completed installed-registry reservation, not only prepared_ flag",
+    "Recursive USB-idle callback cannot replace a native attachment; exclusions rechecked after callback",
+    "Detached inner attempt is inert after safe refusal; owner predicate checks lease",
+    "Owner predicate precedes mutable owner-state reads",
+    "Checked begin rejects nonzero refused-session tokens and zero success-session tokens with sticky retention"
+  ],
+  "target_sizes_bytes": {
+    "graph_pin": 32,
+    "attempt": 176,
+    "port_wrapper": 248,
+    "port_default_legacy": 7464,
+    "port_selected_legacy": 7680,
+    "port_default_cohort": 9304,
+    "port_selected_cohort": 9704
+  },
+  "default_target_object_comparison": {
+    "legacy": "byte-identical to prior qualified native seam",
+    "cohort": "byte-identical to prior qualified native seam"
+  },
+  "sanitizer_environment": {
+    "ASAN_OPTIONS": "detect_leaks=0",
+    "reason": "LeakSanitizer cannot run under this ptrace-restricted executor"
+  },
+  "resource_order_audit": "Documented independent background-resource/namespace leases; settings pump must not wait for providerServicesReady or providerStorageSafe while holding its own lease/SD attachment",
+  "artifacts": {
+    "composition-asan-ubsan-source-manifest.json": "8e6dee75051e42f11579c9b0fc7c14bbd9e76cf6afb208a13a85efa499c79a4f",
+    "composition-asan-ubsan.log": "4456d16d4012c9beda5a79a04c073e94875b9a941a1204705ee8c74d4a95fdf9",
+    "composition-normal-source-manifest.json": "90065eb6bc1447463221d2fbc606c50e8eb29471791cd0f9293dba805791a527",
+    "composition-normal.log": "4456d16d4012c9beda5a79a04c073e94875b9a941a1204705ee8c74d4a95fdf9",
+    "composition-ubsan-source-manifest.json": "535342ca173f9070a28840b2cb7792fa59ee9f72af460e6d4d572488cb7f07fd",
+    "composition-ubsan.log": "4456d16d4012c9beda5a79a04c073e94875b9a941a1204705ee8c74d4a95fdf9",
+    "default-regressions.log": "9e35093116968c32b0f63896cbe2c9b4e79e6790c8bf55b70402fe4b89842385",
+    "graph-asan-ubsan.log": "f231cdd6a1cf7f4ffa981b2f79fc96d5b69b8168cb2d13d44de5cb9604b6065f",
+    "graph-normal.log": "26c90bbb288cda93c136adbbe9cb7df10227921f26b759f46f13023dff095a21",
+    "graph-source-manifest.json": "5e50bc332e22607ca9b08299a3d36f43dfc7da620b8c3b42b84abb1b26a3b820",
+    "graph-ubsan.log": "74308f6d86b707cb4e702fb97e2ad725e7f667b60050d8b300b92bcc5d4e6ca9",
+    "original-attempt-asan-ubsan.log": "230b43a25de6fc5e8c1ee94b48c17ebe9d03de6d1ef4a5f104bd77bef8dada93",
+    "original-consumers-asan-ubsan.log": "03f5c8ca81d92dec6e5da978dcbacd58e3e438dd285c39ee94bb745d6eceab63",
+    "port-asan-ubsan.log": "9b1dc1d9531359e2c129c3591c3682aea84a71c603f6dae8cd8b7f4d59941af7",
+    "port-normal.log": "c34bb4aca3d71aa131855318d1407d20342bfcbdd428fa5bbc5a52237cf61fef",
+    "port-ubsan.log": "5ec8b5da7bc8fdfbccdce3c3223ff05af7d33f7dc2fd32cda9873c6624152603",
+    "selected-regressions.log": "5c9b12f7b4ac7db4b2cbb282c926aa997dd7493f6fcb1d65a50b0a623ace5563",
+    "target-adapter.log": "a931cfe87e38e77675e6ec6fdac8fa7380edc63502db193fa962aebb192bf038",
+    "target-port.log": "88b6c2b0991a876f6ff4ea46b43786701d3601c91c153c937261eec5b2a0b7d6",
+    "target-sha256.txt": "966bc8fb8ab363b274c2d7535780dc08f40972de11b08e3b264bb14cbc5d4ee5"
+  },
+  "production_policy_enabled": false,
+  "published": false,
+  "hardware_tested": false,
+  "limits": [
+    "Source-pinned host composition uses a sector hardware model and power-ready dependency fixture",
+    "Target compile/layout evidence is not whole-product RAM, stack, worker or startup admission",
+    "Private LittleFS/backend policy and the native settings coordinator remain separate integration gates",
+    "No physical SD/removal/power-loss/electrical qualification",
+    "Watch remains default-off; no SD policy is added"
+  ]
+}

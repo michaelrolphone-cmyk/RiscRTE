@@ -1,0 +1,23 @@
+actual lifecycle/Runtime/X4/FatFs maintenance happy PASS; control=33272; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance idle PASS; control=33272; polls=0
+captured app revision + automatic older SD acknowledgement -> explicit STALE, no silent rebase PASS
+actual lifecycle/Runtime/X4/FatFs maintenance stale-capture PASS; control=33272; polls=111
+ordinary atomic-grant release and normal app exit are custody-safe but DO NOT flush both pending groups to SD PASS
+actual lifecycle/Runtime/X4/FatFs maintenance save-exit PASS; control=33272; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance persisted-incarnation PASS; control=33272; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance foreign PASS; control=33272; polls=76
+actual lifecycle/Runtime/X4/FatFs maintenance usb-before PASS; control=33272; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance no-incarnation PASS; control=33272; polls=78
+actual lifecycle/Runtime/X4/FatFs maintenance cancel PASS; control=33272; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance terminal retention PASS
+actual lifecycle/Runtime/X4/FatFs maintenance restore PASS; control=33272; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance restore-resume PASS; control=33272; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance restore-single PASS; control=33272; polls=119
+actual lifecycle pre-app restore-no-source refuses unchanged PASS
+actual lifecycle pre-app restore-conflict refuses unchanged PASS
+actual lifecycle pre-app restore-cancel refuses unchanged PASS
+actual pre-app restore retention PASS
+actual lifecycle/Runtime/X4/FatFs maintenance first PASS; control=33272; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance first-conflict PASS; control=33272; polls=12
+actual lifecycle/Runtime/X4/FatFs maintenance first-cancel PASS; control=33272; polls=119
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: happy, idle, stale-capture, save-exit, persisted-incarnation, foreign, usb-before, no-incarnation, cancel, retained, restore, restore-resume, restore-single, restore-no-source, restore-conflict, restore-cancel, restore-retained, first, first-conflict, first-cancel

@@ -113,3 +113,11 @@ const unsigned char fresh_layout_factory[sizeof(FreshFactoryProbe)]={};
 const unsigned char fresh_layout_store[sizeof(RiscExperimental::CheckedNativeReplicaStore)]={};
 const unsigned char fresh_layout_inspector[sizeof(RiscExperimental::CheckedFreshInitArtifacts)]={};
 }
+
+#include "experimental/native_replica/NativeAtomicKeyValue.h"
+void atomic_key_value_target_probe(RiscExperimental::NativeReplicaCore&core,
+ RiscExperimental::NativeAtomicKeyValue::Guard guard){
+ RiscExperimental::NativeAtomicKeyValue endpoint(core,guard);auto api=endpoint.api();
+ risc_key_value_atomic_state_v1 state{};state.struct_size=sizeof(state);
+ (void)api.state(api.context,&state);(void)endpoint.workerStep();(void)endpoint.exitSafe();
+}

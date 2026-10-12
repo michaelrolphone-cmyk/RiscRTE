@@ -1,0 +1,31 @@
+coordinator: real checked store/NVS composition; owner-only zero-I/O polls; native namespace exclusion; terminal collection; 40000 concurrent idle read releases PASS
+coordinator: four-client bound; foreign/stale leases; native maintenance Retained reaches atomic state/get/submit/exit PASS
+coordinator: queued revoke keeps lease until collected without mutation; completed cancellation preserves committed receipt PASS
+coordinator: actual AppData write blocked concurrently; cancellation/exit/native contention cannot release or delete running work PASS
+coordinator: actual checked close failure sticks Retained, namespace/background lease and native references PASS
+actual ESP binding: bounded two registrations, exact namespace/backend identity, foreign owner/ISR, internal allocation and failure rollback PASS
+actual ESP binding: legacy single namespace lookup and worker guards remain compatible PASS
+actual ESP binding: two real checked stores, concurrent polling, 20000 owner reads, 32 copied writes, native background contention and namespace isolation PASS
+actual ESP binding: namespace 1 blocked native write, cancellation and cross-namespace contention preserve both workers until checked collection PASS
+actual ESP binding: namespace 6 blocked native write, cancellation and cross-namespace contention preserve both workers until checked collection PASS
+actual ESP binding: namespace 1 checked-close Retained blocks aggregate exit and other namespace I/O; no task deletion/free PASS
+actual ESP binding: namespace 6 checked-close Retained blocks aggregate exit and other namespace I/O; no task deletion/free PASS
+SD transport: 1025 opaque keys, immutable complete snapshot, exact captured frontier, newer edit survives, checked close before worker-only acknowledgement PASS
+SD transport: absent/not-ready/unreadable/foreign/older/newer/divergent/corrupt SD cannot change native reads or consume intents; unknown base refuses all SD work PASS
+SD transport: 360 cancel/removal/USB-lease revocation/restart boundaries, exact replay and no pending-edit loss PASS
+SD transport: 436 reached before/after returned-error/power-cut filesystem calls, torn pages, checked read/sync/close/replace and exact restart replay PASS
+SD transport: expired tickets, late removal/retention, ambiguous native acknowledgement, restart with newer edits and pre-replacement race fail closed PASS
+SD transport: interrupted replacement backup recovery, foreign recovered base refusal, empty-map tombstone and snapshot-allocation failure PASS
+DISCONNECTED HOST TRANSPORT ONLY: no port, ABI, migration, .90 routing, Wi-Fi resolver or hardware qualification
+Catalog: complete/partial bounded inventory, valid metadata retained after limit, malformed names/duplicates, parent absence check, order independence and artifact classification PASS
+Catalog: exact fixed-name backup-only recovery, present+backup preservation and no unknown artifact recovery PASS
+Catalog: 1016 queued/completed scan/reader cancel/removal/export/restart boundaries preserve native intents and files PASS
+Catalog: 604 reached before/after directory/file/recovery/checked-close faults and power cuts; retained custody stays sticky PASS
+Catalog: retry/worker/allocation admission, X4 active-session UNAVAILABLE refusal, late retained+lease transfer/cancel and allocation wiping PASS
+Catalog: 504 absent-root/parent, empty-namespace and artifact-only faults/power cuts refuse unproved vacancy without native loss PASS
+Catalog: actual Running cancellation/checked directory close, BUSY/PENDING custody, parent budget/obstruction and post-end retained priority PASS
+Catalog: sensitive classification prefixes wiped after summary, transfer, cancel, retention and destruction PASS
+Catalog memory: entries=128 inventory=36864 peak_allocated=102376 catalog_object=15376 report_object=464 entry=144 child_storage=9752 bytes (host ABI)
+Catalog memory: entries=256 inventory=73728 peak_allocated=139240 catalog_object=15376 report_object=464 entry=144 child_storage=9752 bytes (host ABI)
+Catalog union: 8 RTENR03 capacity/preconstruction cases; exact 65,028-byte replica/V2 and 52-byte V1 budgets, one-byte excess refusals, preserved groups prevent over-capacity adoption, no-native-write invariants and bounded v3 peak PASS
+DISCONNECTED CATALOG ONLY: historical evidence; no creation/adoption permit, native mutation, defaults, cleanup, production activation or hardware claim

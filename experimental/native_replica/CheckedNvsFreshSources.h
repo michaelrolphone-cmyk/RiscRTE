@@ -33,6 +33,12 @@ class CheckedNvsFreshSources final {
   A::FreshAbsenceV1,
   [](void*p,uint32_t ns,const C::FreshInitReceipt&r,A::Witness*out){return static_cast<CheckedNvsFreshSources*>(p)->collect(ns,out,&r,true);}};}
  private:
+ friend class CheckedSdNativeRestore;
+ // Private bridge: the checked restore controller computes the receipt digest
+ // from this collector's original absence witness and exact checked SD image.
+ struct SdCheck {const C::SdInitReceipt*receipt;const uint8_t*fingerprint;const uint8_t*image;uint32_t imageBytes;};
+ int sdInventory(const SdCheck&sd,bool allowReceipt,A::Witness*out){return collect(ns_,out,nullptr,allowReceipt,&sd);}
+ A::Witness sdOriginalWitness()const{return witness();}
  uint32_t ns_;CheckedFreshInitArtifacts&artifacts_;Hooks hooks_;uint8_t owner_[16]{};
  bool entered_=false,retained_=false,opened_=false;nvs_handle_t handle_=0;nvs_iterator_t iterator_=nullptr;
  struct Entry {bool&v;explicit Entry(bool&b):v(b){v=true;}~Entry(){v=false;}};
@@ -89,10 +95,10 @@ class CheckedNvsFreshSources final {
   // there are no unencoded variable rows and no entropy/hash-service dependency.
   std::memcpy(w.fingerprint,"RTENFV1",8);put(w.fingerprint+8,ns_);put(w.fingerprint+12,1);std::memcpy(w.fingerprint+16,owner_,16);return w;
  }
- int metadata(bool allowReceipt,const C::FreshInitReceipt*receipt,bool*attempt,uint64_t*sequence){
-  *attempt=false;*sequence=0;int rc=open("rnr");if(rc==C::Missing)return receipt?int(C::Conflict):int(C::Ok);if(rc)return cleanup(rc);
+ int metadata(bool allowReceipt,const C::FreshInitReceipt*receipt,bool*attempt,uint64_t*sequence,const SdCheck*sd=nullptr){
+  *attempt=false;*sequence=0;int rc=open("rnr");if(rc==C::Missing)return (receipt||(sd&&sd->receipt))?int(C::Conflict):int(C::Ok);if(rc)return cleanup(rc);
   size_t before=0,after=0;esp_err_t got=nvs_get_used_entry_count(handle_,&before);rc=check();if(rc||got!=ESP_OK)return cleanup(rc?rc:int(C::Io));
-  if(!before)return cleanup(receipt?int(C::Conflict):int(C::Ok));
+  if(!before)return cleanup((receipt||(sd&&sd->receipt))?int(C::Conflict):int(C::Ok));
   if(!allowReceipt)return cleanup(C::Conflict);
   char name[12]{};std::snprintf(name,sizeof name,"rnr%08x",unsigned(ns_));iterator_=nvs_entry_find("nvs",name,NVS_TYPE_ANY);rc=check();
   if(rc||!iterator_)return cleanup(rc?rc:int(C::Io));
@@ -110,8 +116,9 @@ class CheckedNvsFreshSources final {
   if(rc)return cleanup(rc);
   if(!hasRoot||mask!=(1u|(hasNext?2u:0u)))return cleanup(C::Conflict);
   const auto expected=witness();
-  if(std::memcmp(root,"RTENFI1",8)||word(root+8)!=ns_||std::memcmp(root+12,expected.fingerprint,32)||word(root+44)!=crc(root,44))return cleanup(C::Conflict);
+  if(std::memcmp(root,sd?"RTENSI1":"RTENFI1",8)||word(root+8)!=ns_||std::memcmp(root+12,sd?sd->fingerprint:expected.fingerprint,32)||word(root+44)!=crc(root,44))return cleanup(C::Conflict);
   if(receipt&&(!receipt->valid()||receipt->namespaceId()!=ns_||std::memcmp(receipt->fingerprint(),root+12,32)))return cleanup(C::Conflict);
+  if(sd&&sd->receipt&&(!sd->receipt->valid()||sd->receipt->namespaceId()!=ns_||std::memcmp(sd->receipt->fingerprint(),root+12,32)))return cleanup(C::Conflict);
   if(hasNext){if(std::memcmp(next,"RTENSEQ",8)||word(next+16)||word(next+20)!=crc(next,20)||!wide(next+8)||wide(next+8)>UINT64_MAX/2)return cleanup(C::Io);*sequence=wide(next+8);}
   got=nvs_get_used_entry_count(handle_,&after);rc=check();if(rc||got!=ESP_OK||before!=after)return cleanup(rc?rc:int(C::Conflict));
   rc=cleanup(C::Ok);if(!rc)*attempt=true;return rc;
@@ -121,7 +128,7 @@ class CheckedNvsFreshSources final {
   std::memset(p,0,484);std::memcpy(p,"RTENR03",8);put(p+8,ns_);p[16]=1;put(p+108,484);
   std::memcpy(p+384,"RTENBP1",8);put(p+392,ns_);put(p+396,1);put(p+476,crc(p+384,92));put(p+480,crc(p,480));
  }
- int collect(uint32_t ns,A::Witness*out,const C::FreshInitReceipt*receipt,bool allowReceipt){
+ int collect(uint32_t ns,A::Witness*out,const C::FreshInitReceipt*receipt,bool allowReceipt,const SdCheck*sd=nullptr){
   if(out)*out={};
   if(retained())return retain();
   if(entered_)return C::Busy;
@@ -130,12 +137,13 @@ class CheckedNvsFreshSources final {
   // Any native row, format-1 journal, format-2 anchor/delta or unknown key is a
   // competing source. Empty namespaces are harmless; no payload is read/logged.
   for(const char*prefix:{"rte","kvj","kvd"}){rc=empty(prefix);if(rc)return rc;}
-  bool attempt=false;uint64_t sequence=0;rc=metadata(allowReceipt,receipt,&attempt,&sequence);if(rc)return rc;
-  if(attempt&&sequence){uint8_t image[484]{};Wipe wipe{image,sizeof image};canonical(image);rc=artifacts_.inspectAttempt(image,sizeof image,sequence);}
+  bool attempt=false;uint64_t sequence=0;rc=metadata(allowReceipt,receipt,&attempt,&sequence,sd);if(rc)return rc;
+  if(attempt&&sequence&&sd)rc=artifacts_.inspectSdAttempt(sd->image,sd->imageBytes,sequence);
+  else if(attempt&&sequence){uint8_t image[484]{};Wipe wipe{image,sizeof image};canonical(image);rc=artifacts_.inspectAttempt(image,sizeof image,sequence);}
   else rc=artifacts_.inspectAbsent();
   if(rc)return rc==C::Retained?retain():rc;
   // Recheck metadata and all competing sources after filesystem callbacks.
-  bool current=false;uint64_t currentSequence=0;rc=metadata(allowReceipt,receipt,&current,&currentSequence);if(rc)return rc;
+  bool current=false;uint64_t currentSequence=0;rc=metadata(allowReceipt,receipt,&current,&currentSequence,sd);if(rc)return rc;
   if(current!=attempt||currentSequence!=sequence)return C::Conflict;
   for(const char*prefix:{"rte","kvj","kvd"}){rc=empty(prefix);if(rc)return rc;}
   rc=check();if(rc)return rc;*out=witness();return C::Ok;

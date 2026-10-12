@@ -1,6 +1,7 @@
 #pragma once
 #include "NativeSdAttempt.h"
 #include "NativeReplicaJob.h"
+#include "SdReplicaStage.h"
 namespace RiscExperimental {
 // A typed, private child of one exact native attempt. This is deliberately not
 // a storage.volume table: OwnedSession never becomes a manufactured READY.
@@ -69,13 +70,15 @@ class NativeSdSession final {
   // still performs its checked release. Retained custody can never drop it.
   const bool valid=a.boundary();
   if(!valid&&a.state_==NativeSdAttempt::State::Retained)return C::Retained;
-  --a.clientPins_;pinned_=false;C::wipe(firstPrefix_,sizeof firstPrefix_);firstPages_=0;firstBound_=false;
+  --a.clientPins_;pinned_=false;C::wipe(firstPrefix_,sizeof firstPrefix_);C::wipe(checkpointStage_,sizeof checkpointStage_);firstPages_=0;firstBound_=false;
   return valid?C::Ok:a.state_==NativeSdAttempt::State::Unavailable?C::Io:C::Conflict;
  }
  private:
- friend class NativeSdPreparation;friend class CheckedFirstSdCheckpoint;
+ friend class NativeSdPreparation;friend class CheckedFirstSdCheckpoint;friend class CheckedSdReplicaCheckpoint;
  NativeSdAttempt*attempt_=nullptr;Role role_=Role::ReplicaReader;bool pinned_=false;
  char firstPrefix_[85]{};uint32_t firstPages_=0;bool firstBound_=false;
+ char checkpointStage_[SdReplicaStage::PathBytes]{};
+ bool bindCheckpointStage(const C::Identity&id){return attempt_&&pinned_&&role_==Role::Checkpoint&&!checkpointStage_[0]&&SdReplicaStage::makePath(checkpointStage_,sizeof checkpointStage_,attempt_->binding_.namespaceId,id);}
  bool enter(){if(!attempt_||!pinned_||!owner()||attempt_->dispatchOwner_||attempt_->call_!=NativeSdAttempt::Call::None)return false;attempt_->dispatchOwner_=this;return true;}
  void leave(){attempt_->dispatchOwner_=nullptr;}
  bool directory(const char*p,bool root=true)const{
@@ -107,10 +110,14 @@ class NativeSdSession final {
   if(!attempt_->path(p,false))return false;
   const char*name=std::strrchr(p,'/');if(!name||name!=p+16)return false;++name;
   if(legacy)return !std::strcmp(name,"settings.index")||!std::strcmp(name,"settings.kv")||!std::strncmp(name,"kv-",3);
-  return !std::strcmp(name,"replica.index")||!std::strncmp(name,"nr-",3)||(role_==Role::Checkpoint&&!std::strcmp(name,".replica.next"));
+  return !std::strcmp(name,"replica.index")||!std::strncmp(name,"nr-",3)||(role_==Role::ReplicaReader&&!std::strcmp(name,"replica.index.risc-replace"))||(role_==Role::Checkpoint&&(checkpointStage_[0]?!std::strcmp(p,checkpointStage_):!std::strcmp(name,".replica.next")));
  }
  bool allowed(const risc_storage_async_request_v1&q)const{
   if(!attempt_)return false;
+  if(role_==Role::Checkpoint){
+   if(q.operation==RISC_STORAGE_ASYNC_OPEN_DIRECTORY)return directory(q.path,false)&&std::strlen(q.path)==16;
+   if(q.operation==RISC_STORAGE_ASYNC_NEXT_ENTRY||q.operation==RISC_STORAGE_ASYNC_CLOSE_DIRECTORY)return true;
+  }
   if(role_==Role::FirstCheckpoint){
    if(q.operation==RISC_STORAGE_ASYNC_OPEN_DIRECTORY)return directory(q.path);
    if(q.operation==RISC_STORAGE_ASYNC_NEXT_ENTRY||q.operation==RISC_STORAGE_ASYNC_CLOSE_DIRECTORY)return true;
@@ -118,7 +125,12 @@ class NativeSdSession final {
    if(q.operation==RISC_STORAGE_ASYNC_REMOVE_FILE)return firstStage(n);
    return q.operation==RISC_STORAGE_ASYNC_READ_SMALL_FILE&&n&&(firstStage(n)||!std::strcmp(n,"replica.index")||!std::strcmp(n,"settings.index")||!std::strcmp(n,"settings.kv"));
   }
-  if(role_==Role::Catalog)return q.operation==RISC_STORAGE_ASYNC_OPEN_DIRECTORY||q.operation==RISC_STORAGE_ASYNC_NEXT_ENTRY||q.operation==RISC_STORAGE_ASYNC_CLOSE_DIRECTORY;
+  if(role_==Role::Catalog){
+   if(q.operation==RISC_STORAGE_ASYNC_OPEN_DIRECTORY||q.operation==RISC_STORAGE_ASYNC_NEXT_ENTRY||q.operation==RISC_STORAGE_ASYNC_CLOSE_DIRECTORY)return true;
+   const char*n=firstFile(q.path);
+   C::Identity staged{};
+   return q.operation==RISC_STORAGE_ASYNC_READ_SMALL_FILE&&n&&(!std::strcmp(n,".replica.next")||!std::strcmp(n,"replica.index.risc-replace")||SdReplicaStage::parseName(n,&staged));
+  }
   if(q.operation!=RISC_STORAGE_ASYNC_READ_SMALL_FILE&&(role_!=Role::Checkpoint||q.operation!=RISC_STORAGE_ASYNC_REMOVE_FILE))return false;
   return file(q.path,role_==Role::LegacyReader);
  }
@@ -169,7 +181,7 @@ class NativeSdPreparation final {
   attempt_->nativePin_=false;state_.store(State::Collected,std::memory_order_release);return result.status?result.status:cancelled_.load(std::memory_order_acquire)?C::Stale:C::Ok;
  }
  private:
- void*context_;bool(*worker_)(void*);Prepare prepare_;NativeReplicaJob job_;NativeSdAttempt*attempt_=nullptr;
+ void*context_;bool(*worker_)(void*);Prepare prepare_;NativeReplicaControlJob job_;NativeSdAttempt*attempt_=nullptr;
  std::atomic<State>state_{State::Idle};std::atomic<bool>cancelled_{false};uint64_t token_=0;
  void retain(){attempt_->retain();state_.store(State::Retained,std::memory_order_release);}
  static NativeReplicaJob::Result run(void*p,uint32_t action,const void*,uint32_t){

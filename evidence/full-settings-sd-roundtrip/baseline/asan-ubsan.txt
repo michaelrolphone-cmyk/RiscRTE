@@ -1,0 +1,23 @@
+PRECONDITION: explicitly synthetic matching empty native/SD baseline, generation 19; no first-boot/product policy claim
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native preferences; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+Actual Settings controller: seven explicit Saves, stale draft rejection, queued and in-flight cancellation through checked native worker PASS
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+PRECONDITION: explicitly synthetic matching empty native/SD baseline, generation 19; no first-boot/product policy claim
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated controller: copied Save, connected Remember, in-flight committed cancellation and queued revocation PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> checkpoint; Files-style file and USB preserved PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native preferences; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+Actual Settings controller: seven preferences reloaded through fresh checked native store and Runtime facade PASS
+namespace 1: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+integrated controller: both saved profiles reload through a new checked store, coordinator and Runtime PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+namespace 6: actual controller/Runtime/checked native -> Runtime/CpuPort/X4/FatFs -> typed SD restore + fresh actual readers PASS
+Verified pinned System namespace 1 closure: 75 files at 5636756db893d682ad42a595625b226f40bbba4d
+Verified pinned System namespace 6 closure: 63 files at a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89
+SIMULATED FULL UPDATE ERASURE: 6 native files including both NVS witnesses deleted; SD SHA-256 f003bb59eea72f0fc7325c581984c5c333909a2b422d7ef4b8c36b8da4f68f6c
+FULL SETTINGS/WIFI SD ROUNDTRIP PASS: namespaces 1 and 6, complete native erasure, fresh controllers, unchanged ordinary file and USB admission

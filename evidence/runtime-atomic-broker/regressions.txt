@@ -1,0 +1,17 @@
+Default-off regressions on the broker tree:
+- run_runtime_test.sh: PASS
+- run_bound_key_value_test.sh: PASS
+- run_key_value_v2_test.sh: PASS
+- run_resident_shell_test.sh: all 29 recorded resident/policy cases PASS
+- run_native_atomic_key_value_test.sh: PASS, plain and ASan/UBSan
+- run_key_value_multi_test.sh: dynamic suites PASS (53 default, 53 explicit-16 and 55 explicit-17 cases); wrapper exits 1 at obsolete negative-compile diagnostic grep. Existing AppPolicyLimits accepts 16/17/18/24, while this script still expects only 16/17. Both files are unchanged from base 68e6cefc.
+- run_key_value_test.sh: Runtime/namespace/persistence portion PASS; native NVS follow-on compilation is blocked by pre-existing -Werror=misleading-indentation in unchanged NvsScalableSettings.h on host GCC 14.
+
+Primary broker/controller ASan/UBSan tests and strict Xtensa Runtime source compilation are separately recorded. LeakSanitizer was disabled because it is unsupported under this executor's ptrace; no hardware/device qualification is claimed.
+
+Baseline reproduction on a fresh git archive of exact commit 68e6cefc10f16fe82b6f365dfe5daffd7f768d72, same host c++/cc from host-compiler.txt:
+- bash test/run_key_value_multi_test.sh: same three passing dynamic suites, wrapper_exit=1 at obsolete diagnostic grep (base-multi.log).
+- bash test/run_key_value_test.sh: same passing Runtime checks followed by identical NvsScalableSettings.h warnings/errors (base-kv1.log).
+- Direct compile of every remaining negative-wrapper scenario, on base and current: 0/15/32 reject with the current 16/17/18/24 diagnostic; 18 is accepted by both because it is a supported selection (base-limits.log, current-limits.log). No unsupported bound was silently accepted. Commands: printf '#include "bootstrap/AppPolicyLimits.h"\n' | c++ -x c++ -Isrc -DRISC_APP_POLICY_ROWS=N -c -o temporary.o -
+
+No unrelated warning or old-wrapper cleanup is included in this source increment.

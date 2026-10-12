@@ -1,0 +1,11 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+000034d0 00000058 B compact_control_job_size
+00002430 00000048 B compact_control_worker_size
+00000000 00002430 B compact_default_worker_size
+00003528 00002998 B compact_first_checkpoint_size
+00002478 00001058 B compact_payload_job_size
+ba5529eb81529286f1f037644a146fbaac1aa094f08ff09de69ef793398eeafc  /workspace/shared/x4-settings-persistence-evidence-20261012/compact-native-jobs/target-compact/compact-jobs.o

@@ -8,6 +8,7 @@ namespace RiscExperimental {
 class NativeBaselineAdmission;
 class CheckedNativeReplicaStore;
 class CheckedFirstSdCheckpoint;
+class CheckedSdNativeRestore;
 class NativeReplicaCore {
  public:
  enum Result { Ok=0, Missing=-1, Invalid=-2, NoMemory=-3, NoSpace=-4,
@@ -25,6 +26,8 @@ class NativeReplicaCore {
   void(*release)(void*,void*);
  };
  class FreshInitReceipt;
+ class ImportInitReceipt;
+ class SdInitReceipt;
  class Initialization;
  // Backend requirements: fresh immutable object IDs; checked bounds; no ID
  // reuse; root replacement is one atomic durable record (old OR new on failure).
@@ -45,6 +48,14 @@ class NativeReplicaCore {
   int(*readInitialization)(void*,FreshInitReceipt*)=nullptr;
   int(*beginFreshInitialization)(void*,const Initialization&)=nullptr;
   void(*endFreshInitialization)(void*)=nullptr;
+  // Distinct, opt-in checked legacy import protocol. Never reuse Fresh receipts.
+  int(*readImportedInitialization)(void*,ImportInitReceipt*)=nullptr;
+  int(*beginImportedInitialization)(void*,const Initialization&)=nullptr;
+  void(*endImportedInitialization)(void*)=nullptr;
+  // Distinct checked-SD restoration; neither Fresh nor legacy-import receipts apply.
+  int(*readSdInitialization)(void*,SdInitReceipt*)=nullptr;
+  int(*beginSdInitialization)(void*,const Initialization&)=nullptr;
+  void(*endSdInitialization)(void*)=nullptr;
  };
  struct Ticket { uint64_t serial=0, revision=0, through=0; uint32_t mapCrc=0; };
  enum class Origin:uint32_t {Unclassified=0,FreshEmpty=1,ImportedLegacy=2};
@@ -56,7 +67,7 @@ class NativeReplicaCore {
   const uint8_t*sourceFingerprint()const{return bytes_+24;}
   const uint8_t*mapDigest()const{return bytes_+56;}
   bool archiveObligation()const{return NativeReplicaCore::word(bytes_+88)!=0;}
-  private:friend class NativeReplicaCore;friend class NativeBaselineAdmission;uint8_t bytes_[96]{};
+  private:friend class NativeReplicaCore;friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;friend class CheckedSdNativeRestore;uint8_t bytes_[96]{};
  };
  // A receipt is evidence only while its exact bytes are selected by its bound
  // store. No public decoder, setter, or caller-provided recovery argument.
@@ -66,7 +77,30 @@ class NativeReplicaCore {
   uint32_t namespaceId()const{return valid()?NativeReplicaCore::word(bytes_+8):0;}
   const uint8_t*fingerprint()const{return bytes_+12;}
   private:
-  friend class NativeReplicaCore;friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;
+  friend class NativeReplicaCore;friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;friend class CheckedSdNativeRestore;
+  uint8_t bytes_[48]{};void*backendContext_=nullptr;
+ };
+ // RTENLI1 commits the exact source witness and its versioned, deterministic
+ // UnanchoredNativeV1 canonical materializer, including archive obligation.
+ // A store-selected receipt can only be constructed by the checked backend.
+ class ImportInitReceipt {
+  public:
+  bool valid()const{return backendContext_&&NativeReplicaCore::validImportReceipt(bytes_);}
+  uint32_t namespaceId()const{return valid()?NativeReplicaCore::word(bytes_+8):0;}
+  const uint8_t*fingerprint()const{return bytes_+12;}
+  private:
+  friend class NativeReplicaCore;friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;friend class CheckedSdNativeRestore;
+  uint8_t bytes_[48]{};void*backendContext_=nullptr;
+ };
+ // The digest commits the checked native absence witness and the complete
+ // canonical known-SD image. Only the selected checked store can decode it.
+ class SdInitReceipt {
+  public:
+  bool valid()const{return backendContext_&&NativeReplicaCore::validSdReceipt(bytes_);}
+  uint32_t namespaceId()const{return valid()?NativeReplicaCore::word(bytes_+8):0;}
+  const uint8_t*fingerprint()const{return bytes_+12;}
+  private:
+  friend class NativeReplicaCore;friend class CheckedSdNativeRestore;friend class CheckedNativeReplicaStore;
   uint8_t bytes_[48]{};void*backendContext_=nullptr;
  };
  // Native-only one-shot capability. Only the bound inventory factory can fill
@@ -81,16 +115,18 @@ class NativeReplicaCore {
   const uint8_t*map()const{return valid()?map_:nullptr;}
   uint32_t mapSize()const{return valid()?mapBytes_:0;}
   uint32_t count()const{return valid()?count_:0;}
-  void reset(){if(map_){NativeReplicaCore::wipe(map_,capacity_);alloc_.release(alloc_.context,map_);}map_=nullptr;capacity_=mapBytes_=count_=namespace_=0;prepared_=consumed_=activating_=false;core_=nullptr;factory_=owner_=backendContext_=nullptr;revalidate_=nullptr;freshCustody_=nullptr;complete_=nullptr;leaseEpoch_=serial_=0;NativeReplicaCore::wipe(&baseline_,sizeof baseline_);NativeReplicaCore::wipe(sourceFingerprint_,32);sourceState_=sourceKind_=0;sourceRevision_=0;mode_=Mode::None;receipt_={};}
+  void reset(){if(map_){NativeReplicaCore::wipe(map_,capacity_);alloc_.release(alloc_.context,map_);}map_=nullptr;capacity_=mapBytes_=count_=namespace_=0;prepared_=consumed_=activating_=false;core_=nullptr;factory_=owner_=backendContext_=nullptr;revalidate_=nullptr;freshCustody_=nullptr;importCustody_=nullptr;sdCustody_=nullptr;complete_=nullptr;leaseEpoch_=serial_=0;NativeReplicaCore::wipe(&baseline_,sizeof baseline_);NativeReplicaCore::wipe(sourceFingerprint_,32);sourceState_=sourceKind_=0;sourceRevision_=0;mode_=Mode::None;receipt_={};importReceipt_={};sdReceipt_={};sdIdentity_={};}
   private:
-  friend class NativeReplicaCore;friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;
-  enum class Mode:uint32_t {None=0,CreateFresh=1,ResumeFresh=2,Imported=3};
+  friend class NativeReplicaCore;friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;friend class CheckedSdNativeRestore;
+  enum class Mode:uint32_t {None=0,CreateFresh=1,ResumeFresh=2,Imported=3,CreateImport=4,ResumeImport=5,CreateSd=6,ResumeSd=7};
   Allocator alloc_{};NativeReplicaCore*core_=nullptr;void*factory_=nullptr;void*owner_=nullptr;
-  void*backendContext_=nullptr;Mode mode_=Mode::None;FreshInitReceipt receipt_{};
+  void*backendContext_=nullptr;Mode mode_=Mode::None;FreshInitReceipt receipt_{};ImportInitReceipt importReceipt_{};SdInitReceipt sdReceipt_{};Identity sdIdentity_{};
   int(*revalidate_)(void*,Initialization&,NativeReplicaCore&)=nullptr;void(*complete_)(void*,int)=nullptr;
   // Private operation-lifetime check. A selected receipt requests complete
   // normalized source revalidation; null observes custody/lease only.
   int(*freshCustody_)(void*,const Initialization&,const FreshInitReceipt*)=nullptr;
+  int(*importCustody_)(void*,const Initialization&,const ImportInitReceipt*)=nullptr;
+  int(*sdCustody_)(void*,const Initialization&,const SdInitReceipt*)=nullptr;
   uint8_t*map_=nullptr;uint32_t capacity_=0,mapBytes_=0,count_=0,namespace_=0;Baseline baseline_{};
   uint64_t leaseEpoch_=0,serial_=0,sourceRevision_=0;uint32_t sourceState_=0,sourceKind_=0;uint8_t sourceFingerprint_[32]{};
   bool prepared_=false,consumed_=false,activating_=false;
@@ -152,11 +188,14 @@ class NativeReplicaCore {
  NativeReplicaCore&operator=(const NativeReplicaCore&)=delete;
  bool ready()const{return bytes_&&!uncertain_;}
  uint32_t namespaceId()const{return ns_;}
+ // Read-only exact native composition check; it grants no initialization authority.
+ bool usesBackend(const Backend&b)const{return b_.context==b.context&&b_.readRoot==b.readRoot&&b_.reserve==b.reserve&&b_.write==b.write&&b_.read==b.read&&b_.seal==b.seal&&b_.replaceRoot==b.replaceRoot&&b_.retire==b.retire&&b_.readInitialization==b.readInitialization&&b_.beginFreshInitialization==b.beginFreshInitialization&&b_.endFreshInitialization==b.endFreshInitialization&&b_.readImportedInitialization==b.readImportedInitialization&&b_.beginImportedInitialization==b.beginImportedInitialization&&b_.endImportedInitialization==b.endImportedInitialization&&b_.readSdInitialization==b.readSdInitialization&&b_.beginSdInitialization==b.beginSdInitialization&&b_.endSdInitialization==b.endSdInitialization;}
  uint32_t imageCapacity()const{return limits_.imageBytes;}
  uint32_t headerSize()const{return ready()?imageHeader(bytes_):0;}
  uint32_t formatVersion()const{return ready()?imageVersion(bytes_):0;}
  Baseline baseline()const{return ready()?baselineAt(bytes_):Baseline{};}
  bool pendingOnlyAdoptionAllowed()const{return ready()&&(identity().known||baseline().origin()==Origin::FreshEmpty);}
+ bool exportIncarnationRequired()const{return ready()&&(headerSize()==Header||zero(bytes_+112,16));}
  bool exportPrepared()const{return ready()&&headerSize()>=HeaderV2&&!zero(bytes_+Header,MarkerBytes);}
  uint64_t revision()const{return ready()?wide(bytes_+16):0;}
  uint64_t sequence()const{return ready()?wide(bytes_+24):0;}
@@ -194,6 +233,7 @@ class NativeReplicaCore {
  }
  int initializeFreshEmpty(Initialization&admission){return initializeAdmitted(admission,Origin::FreshEmpty);}
  int initializeImportedBaseline(Initialization&admission){return initializeAdmitted(admission,Origin::ImportedLegacy);}
+ int initializeCheckedSd(Initialization&admission){return initializeSdAdmitted(admission);}
  int get(const char*key,void*out,uint32_t capacity,uint32_t*size)const{
   if(admissionBusy_)return Busy;
   if(size)*size=0;
@@ -376,7 +416,7 @@ class NativeReplicaCore {
    if(wide(bytes_+at)>after){*id=wide(bytes_+at);*size=word(bytes_+at+24);if(cap<*size)return BufferSmall;std::memcpy(out,bytes_+at+GroupHeader+word(bytes_+at+28),*size);return Ok;}at+=n;}return Missing;
  }
  private:
- friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;friend class CheckedFirstSdCheckpoint;
+ friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;friend class CheckedSdNativeRestore;friend class CheckedFirstSdCheckpoint;
  // Separate first-create purpose. Only the checked creator can arm it after a
  // live vacant inventory. V4 carries the immutable captured map in every native
  // publication, so inactive-bank reuse and newer edits cannot destroy recovery.
@@ -422,19 +462,38 @@ class NativeReplicaCore {
  bool admissionBusy_=false;
  struct AdmissionScope {bool&busy;explicit AdmissionScope(bool&b):busy(b){busy=true;}~AdmissionScope(){busy=false;}};
  struct AdmissionCompletion {Initialization&admission;int&result;~AdmissionCompletion(){admission.complete_(admission.factory_,result);}};
- struct FreshScope {Backend&backend;bool started=false;~FreshScope(){if(started)backend.endFreshInitialization(backend.context);}};
+ struct FreshScope {Backend&backend;bool started=false,imported=false;~FreshScope(){if(started){if(imported)backend.endImportedInitialization(backend.context);else backend.endFreshInitialization(backend.context);}}};
+ struct SdScope {Backend&backend;bool started=false;~SdScope(){if(started)backend.endSdInitialization(backend.context);}};
+ int initializeSdAdmitted(Initialization&a){
+  if(admissionBusy_)return Busy;
+  if(!validConfiguration()||!sdHooks()||!a.valid()||a.core_!=this||a.backendContext_!=b_.context||a.namespace_!=ns_||!a.factory_||!a.owner_||!a.revalidate_||!a.complete_||!a.sdCustody_||!a.sdIdentity_.known||!validIdentity(a.sdIdentity_)||(a.mode_!=Initialization::Mode::CreateSd&&a.mode_!=Initialization::Mode::ResumeSd))return Invalid;
+  AdmissionScope scope(admissionBusy_);a.consumed_=true;int rc=Ok;AdmissionCompletion complete{a,rc};SdScope permit{b_};
+  rc=a.sdCustody_(a.factory_,a,nullptr);if(rc)return rc;
+  if(bytes_)return rc=Conflict;
+  const uint64_t total=uint64_t(Header)+a.mapBytes_+4;if(!fits(total))return rc=NoSpace;
+  auto*p=allocate(uint32_t(total));if(!p)return rc=NoMemory;
+  makeSdImage(p,ns_,a.sdIdentity_,a.map_,a.mapBytes_,a.count_);
+  if(!validate(p,uint32_t(total))){drop(p);return rc=Invalid;}
+  rc=a.revalidate_(a.factory_,a,*this);if(rc){drop(p);return rc;}
+  permit.started=true;{AdmissionScope activation(a.activating_);rc=b_.beginSdInitialization(b_.context,a);}
+  if(rc){drop(p);return rc;}
+  return rc=publish(p,uint32_t(total));
+ }
+ static void makeSdImage(uint8_t*p,uint32_t ns,const Identity&id,const uint8_t*map,uint32_t bytes,uint32_t count){
+  const uint32_t total=Header+bytes+4;std::memset(p,0,Header);std::memcpy(p,"RTENR01",8);putWord(p+8,ns);putWord(p+12,1);putWide(p+16,1);putWide(p+40,id.generation);std::memcpy(p+48,id.lineage,16);std::memcpy(p+64,id.digest,32);putWord(p+96,count);putWord(p+104,bytes);putWord(p+108,total);if(bytes)std::memcpy(p+Header,map,bytes);finish(p,total);
+ }
  int initializeAdmitted(Initialization&a,Origin origin){
   if(admissionBusy_)return Busy;
   if(!validConfiguration()||!a.valid()||a.core_!=this||a.backendContext_!=b_.context||a.namespace_!=ns_||!a.factory_||!a.owner_||!a.revalidate_||!a.complete_||a.baseline_.origin()!=origin)return Invalid;
   if(origin!=Origin::FreshEmpty&&origin!=Origin::ImportedLegacy)return Invalid;
-  const bool fresh=origin==Origin::FreshEmpty;
-  if(fresh?(a.mapBytes_||a.count_||!freshHooks()||!a.freshCustody_||(a.mode_!=Initialization::Mode::CreateFresh&&a.mode_!=Initialization::Mode::ResumeFresh)):a.mode_!=Initialization::Mode::Imported)return Invalid;
+  const bool fresh=origin==Origin::FreshEmpty,checkedImport=a.mode_==Initialization::Mode::CreateImport||a.mode_==Initialization::Mode::ResumeImport;
+  if(fresh?(a.mapBytes_||a.count_||!freshHooks()||!a.freshCustody_||(a.mode_!=Initialization::Mode::CreateFresh&&a.mode_!=Initialization::Mode::ResumeFresh)):checkedImport?(!importHooks()||!a.importCustody_):a.mode_!=Initialization::Mode::Imported)return Invalid;
   AdmissionScope scope(admissionBusy_);a.consumed_=true;
-  int rc=Ok;AdmissionCompletion complete{a,rc};FreshScope permit{b_};
+  int rc=Ok;AdmissionCompletion complete{a,rc};FreshScope permit{b_};permit.imported=checkedImport;
   // Observe Retained before allocation/ordinary errors. Fresh allocation and
   // canonical construction precede the final full source/root revalidation.
-  rc=fresh?a.freshCustody_(a.factory_,a,nullptr):a.revalidate_(a.factory_,a,*this);if(rc)return rc;
-  if(!fresh){uint8_t root[RootBytes]{};rc=b_.readRoot(b_.context,root,sizeof root);if(rc!=Missing)return rc=rc?rc:int(Conflict);}
+  rc=fresh?a.freshCustody_(a.factory_,a,nullptr):checkedImport?a.importCustody_(a.factory_,a,nullptr):a.revalidate_(a.factory_,a,*this);if(rc)return rc;
+  if(!fresh&&!checkedImport){uint8_t root[RootBytes]{};rc=b_.readRoot(b_.context,root,sizeof root);if(rc!=Missing)return rc=rc?rc:int(Conflict);}
   const uint64_t total=uint64_t(HeaderV3)+a.mapBytes_+4;if(!fits(total))return rc=NoSpace;
   auto*p=allocate(uint32_t(total));if(!p)return rc=NoMemory;
   if(fresh)makeFreshEmpty(p,ns_);
@@ -445,12 +504,12 @@ class NativeReplicaCore {
    finish(p,uint32_t(total));
   }
   if(!validate(p,uint32_t(total))){drop(p);return rc=Invalid;}
-  if(fresh){
+  if(fresh||checkedImport){
    rc=a.revalidate_(a.factory_,a,*this);if(rc){drop(p);return rc;}
    // The immutable, consumed admission is live only for this hook invocation.
    // end also runs after a failed begin: volatile cleanup never retires receipt.
    permit.started=true;
-   {AdmissionScope activation(a.activating_);rc=b_.beginFreshInitialization(b_.context,a);}
+   {AdmissionScope activation(a.activating_);rc=checkedImport?b_.beginImportedInitialization(b_.context,a):b_.beginFreshInitialization(b_.context,a);}
    if(rc){drop(p);return rc;}
   }
   return rc=publish(p,uint32_t(total));
@@ -463,6 +522,8 @@ class NativeReplicaCore {
  static void putWide(uint8_t*p,uint64_t v){putWord(p,uint32_t(v));putWord(p+4,uint32_t(v>>32));}
  static uint32_t crc(const void*v,uint32_t n){auto*p=static_cast<const uint8_t*>(v);uint32_t c=~0u;while(n--){c^=*p++;for(unsigned i=0;i<8;++i)c=(c>>1)^((c&1)?0xedb88320u:0);}return ~c;}
  static bool validFreshReceipt(const uint8_t*p){return !std::memcmp(p,"RTENFI1",8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
+ static bool validSdReceipt(const uint8_t*p){return !std::memcmp(p,"RTENSI1",8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
+ static bool validImportReceipt(const uint8_t*p){return !std::memcmp(p,"RTENLI1",8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
  static void makeFreshEmpty(uint8_t*p,uint32_t ns){
   std::memset(p,0,HeaderV3+4);std::memcpy(p,"RTENR03",8);putWord(p+8,ns);putWide(p+16,1);putWord(p+108,HeaderV3+4);
   auto*b=p+HeaderV2;std::memcpy(b,"RTENBP1",8);putWord(b+8,ns);putWord(b+12,uint32_t(Origin::FreshEmpty));putWord(b+92,crc(b,92));finish(p,HeaderV3+4);
@@ -517,6 +578,8 @@ class NativeReplicaCore {
  static bool validValues(const Value*v,uint32_t n){if(n&&!v)return false;for(uint32_t i=0;i<n;++i){if(!validKey(v[i].key)||!v[i].data||!v[i].size||v[i].size>ValueMax)return false;for(uint32_t j=0;j<i;++j)if(!std::strcmp(v[i].key,v[j].key))return false;}return true;}
  static bool validMutations(const Mutation*m,uint32_t n){if(!n||!m)return false;for(uint32_t i=0;i<n;++i){if(!validKey(m[i].key)||(m[i].kind!=Put&&m[i].kind!=Delete)||(m[i].kind==Put&&(!m[i].data||!m[i].size||m[i].size>ValueMax))||(m[i].kind==Delete&&(m[i].size||m[i].data)))return false;for(uint32_t j=0;j<i;++j)if(!std::strcmp(m[i].key,m[j].key))return false;}return true;}
  bool validConfiguration()const{return ns_&&limits_.imageBytes>=Header+4&&limits_.groupBytes>=GroupHeader+25&&limits_.intentBytes&&limits_.intentBytes<=limits_.groupBytes&&alloc_.allocate&&alloc_.release&&b_.readRoot&&b_.reserve&&b_.write&&b_.read&&b_.seal&&b_.replaceRoot;}
+ bool sdHooks()const{return ns_<=INT32_MAX&&b_.context&&b_.readSdInitialization&&b_.beginSdInitialization&&b_.endSdInitialization;}
+ bool importHooks()const{return ns_<=INT32_MAX&&b_.context&&b_.readImportedInitialization&&b_.beginImportedInitialization&&b_.endImportedInitialization;}
  bool freshHooks()const{return ns_<=INT32_MAX&&b_.context&&b_.readInitialization&&b_.beginFreshInitialization&&b_.endFreshInitialization;}
  bool fits(uint64_t n)const{return n<=UINT32_MAX&&n<=limits_.imageBytes&&n>=Header+4;}
  uint8_t*allocate(uint32_t n){return alloc_.allocate?static_cast<uint8_t*>(alloc_.allocate(alloc_.context,n)):nullptr;}

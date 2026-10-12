@@ -1,0 +1,7 @@
+actual X4/FatFs checked native SD restore, 130 generations/261 directory entries, happy PASS
+actual X4/FatFs checked native SD restore, 130 generations/261 directory entries, conflict PASS
+actual X4/FatFs checked native SD restore, 130 generations/261 directory entries, cancel PASS
+actual X4/FatFs checked native SD restore, 130 generations/261 directory entries, running-cancel PASS
+actual X4/FatFs checked native SD restore, 130 generations/261 directory entries, native-retained PASS
+actual X4/FatFs checked native SD restore, 130 generations/261 directory entries, late-retained PASS
+Actual X4/FatFs checked native restore composition PASS; external source inputs: 249

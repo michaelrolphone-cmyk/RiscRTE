@@ -1,0 +1,13 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+default-0
+00000000 00001d28 B atomic_cpu_port_size
+00001d28 0000006c B atomic_runtime_port_size
+00001d94 000351d8 B atomic_runtime_size
+cohort-0
+00000000 00002458 B atomic_cpu_port_size
+00002458 0000006c B atomic_runtime_port_size
+000024c4 0004e2a0 B atomic_runtime_size

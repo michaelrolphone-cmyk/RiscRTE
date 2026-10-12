@@ -1,0 +1,22 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+00000000 00001128 B native_settings_coordinator_size
+000032a0 00000010 B native_settings_binding_alignment
+000032b0 000032af B native_settings_binding_allocation_size
+00000000 000032a0 B native_settings_binding_size
+00006560 00000010 B native_settings_registry_size
+0000a820 0000656e B native_settings_two_bindings_permanent_size
+00006570 00004000 B native_settings_two_bindings_stack_size
+0000a570 000002b0 B native_settings_two_bindings_task_control_size
+         U _ZN7RiscCpu27nativeBackgroundResourceEndEv
+         U _ZN7RiscCpu27nativeBackgroundResourceTryEv
+         U heap_caps_malloc
+         U vTaskDelay
+         U xTaskCreateStaticPinnedToCore
+21ee71b26916f3b4c2631695ad9e260fb2dd921f4a2beb9a9b9aabe891a976ab  .build/two-settings-target/native-settings-worker-default-off.o
+de40321643661bb2a4edc6d77fb5e1b2811df82a6d1a507b494e83806f367235  .build/two-settings-target/native-settings-worker-layout.o
+66e2e3265b1148c4a101c5f632a221e8fb47a9e2ba0e7c6cdced0ec7343c7290  .build/two-settings-target/native-settings-worker-probe.o
+50c09d3ffdb4e488cddd7bd9887bb75cd091ab2f612698343934abb9e021404c  .build/two-settings-target/native-settings-worker.o

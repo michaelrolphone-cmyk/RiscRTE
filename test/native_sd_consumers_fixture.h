@@ -6,6 +6,7 @@ extern "C" {
 void consumers_seed_begin(void);
 void consumers_seed_file(const char*,const void*,unsigned);
 void consumers_seed_save(const char*);
+void consumers_seed_rename(const char*,const char*);
 void consumers_seed_load(const char*);
 void consumers_trace_enable(void);
 unsigned consumers_observations(void);

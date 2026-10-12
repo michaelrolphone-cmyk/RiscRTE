@@ -1,0 +1,1 @@
+Checked SD restore: 134 process-death cuts initial/resume, including partial files and root publication, exact reread source recovery PASS

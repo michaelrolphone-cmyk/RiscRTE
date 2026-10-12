@@ -1,0 +1,15 @@
+Runtime atomic exact app/namespace/API admission and trusted registration PASS
+Real Runtime atomic grants: owner/worker, copied inputs, exact receipt, cancel races, stale tables, handoff and fresh invocation PASS
+Runtime atomic pending/terminal custody pins invocation and rejects stale API PASS
+Runtime atomic pending/terminal custody pins invocation and rejects stale API PASS
+Runtime atomic pending/terminal custody pins invocation and rejects stale API PASS
+Runtime atomic pending/terminal custody pins invocation and rejects stale API PASS
+Runtime atomic pending/terminal custody pins invocation and rejects stale API PASS
+Runtime atomic pending/terminal custody pins invocation and rejects stale API PASS
+Runtime atomic pending/terminal custody pins invocation and rejects stale API PASS
+Real Runtime atomic grants: owner/worker, copied inputs, exact receipt, cancel races, stale tables, handoff and fresh invocation PASS
+Runtime atomic read-through: exact app/provider KV1/KV2 reads, bounds, Busy, denied legacy writes and unrelated namespace PASS
+Real Runtime atomic grants: owner/worker, copied inputs, exact receipt, cancel races, stale tables, handoff and fresh invocation PASS
+Actual Runtime broker + System controller: Save, connected Remember and queued cancellation PASS
+Actual Runtime broker + System controller: two profiles survive native reload PASS
+Real Runtime atomic grants: owner/worker, copied inputs, exact receipt, cancel races, stale tables, handoff and fresh invocation PASS

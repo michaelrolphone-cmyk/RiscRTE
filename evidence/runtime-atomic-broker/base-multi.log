@@ -1,0 +1,7 @@
+Policy rows=16 Runtime bytes=286120 metadata per app=1984
+Multiple explicit KV namespaces: 53 admission/lifecycle/owner/isolation/retention cases PASS
+Policy rows=16 Runtime bytes=286120 metadata per app=1984
+Multiple explicit KV namespaces: 53 admission/lifecycle/owner/isolation/retention cases PASS
+Policy rows=17 Runtime bytes=286120 metadata per app=2064
+Multiple explicit KV namespaces: 55 admission/lifecycle/owner/isolation/retention cases PASS
+wrapper_exit=1

@@ -41,7 +41,7 @@ struct Sd {
  Files&files;RiscStorage::Worker worker;risc_storage_worker_v1 native{};
  risc_storage_volume_api_v1_download download{};risc_storage_async_adapter_v1 adapter{};
  bool executing=false,nativeWorker=true,lease=true,available=true,writing=false,retained=false,terminalBusy=false;
- std::string opened;size_t offset=0;unsigned io=0,mutations=0,ends=0,indexReplacements=0;
+ std::string opened,directory;std::vector<risc_storage_dirent_v1> entries;size_t cursor=0;bool dirError=false;size_t offset=0;unsigned io=0,mutations=0,ends=0,indexReplacements=0;
  unsigned fault=0;bool crash=false,after=false,hit=false;std::vector<std::string> operations;
  static Sd&self(void*p){return *static_cast<Sd*>(p);}
  bool point(const char*op){assert(executing);++io;operations.emplace_back(op);bool match=io==fault;if(match){hit=true;if(crash&&!after)throw Cut{};}return match;}
@@ -56,10 +56,13 @@ struct Sd {
   v.file_read=[](void*p,uint32_t,void*out,size_t n)->size_t{auto&s=self(p);bool fail=s.point("read");if(fail&&!s.after){s.finish(true);return 0;}auto&b=s.files.at(s.opened);n=std::min(n,b.size()-s.offset);memcpy(out,b.data()+s.offset,n);s.offset+=n;return s.finish(fail)?0:n;};
   v.file_open_write=[](void*p,const char*path)->uint32_t{auto&s=self(p);s.path(path);bool fail=s.point("open-write");if(fail&&!s.after){s.finish(true);return 0;}assert(s.opened.empty());if(s.files.count(path))return 0;s.files[path]={};++s.mutations;s.opened=path;s.offset=0;s.writing=true;if(s.finish(fail)){s.opened.clear();return 0;}return 1;};
   v.file_write=[](void*p,uint32_t,const void*data,size_t n)->size_t{auto&s=self(p);bool fail=s.point("write");size_t wrote=fail&&!s.after?n/2:n;auto&b=s.files.at(s.opened);b.insert(b.end(),(const uint8_t*)data,(const uint8_t*)data+wrote);return s.finish(fail)?wrote==n?0:wrote:wrote;};
+  v.dir_open=[](void*p,const char*path)->uint32_t{auto&s=self(p);assert(std::string(path)=="/RTECFG/00000006");bool fail=s.point("dir-open");if(fail&&!s.after){s.finish(true);return 0;}assert(s.directory.empty());s.directory=path;s.entries.clear();s.cursor=0;s.dirError=false;const std::string prefix=s.directory+"/";for(const auto&file:s.files){if(file.first.rfind(prefix,0))continue;const auto leaf=file.first.substr(prefix.size());assert(leaf.find('/')==std::string::npos&&leaf.size()<128);risc_storage_dirent_v1 e{};strcpy(e.name,leaf.c_str());e.size=file.second.size();s.entries.push_back(e);}if(s.finish(fail)){s.directory.clear();return 0;}return 2;};
+  v.dir_next=[](void*p,uint32_t h,risc_storage_dirent_v1*out){auto&s=self(p);assert(h==2&&!s.directory.empty());bool fail=s.point("dir-next");if(fail&&!s.after){s.finish(true);s.dirError=true;return false;}if(s.cursor==s.entries.size()){if(s.finish(fail))s.dirError=true;return false;}*out=s.entries[s.cursor++];if(s.finish(fail)){s.dirError=true;return false;}return true;};
+  ext.dir_close_checked=[](void*p,uint32_t h){auto&s=self(p);assert(h==2&&!s.directory.empty());bool fail=s.point("dir-close");if(fail&&!s.after){s.finish(true);s.retained=true;return false;}s.directory.clear();if(s.finish(fail)){s.retained=true;return false;}return true;};
   ext.file_sync=[](void*p,uint32_t){auto&s=self(p);return !s.finish(s.point("sync"));};
   v.file_close=[](void*p,uint32_t,bool commit){auto&s=self(p);bool fail=s.point("close");if(fail&&!s.after){s.finish(true);s.retained=true;return false;}assert(!s.opened.empty());if(s.writing&&!commit)s.files.erase(s.opened);s.opened.clear();s.writing=false;if(s.finish(fail)){s.retained=true;return false;}return true;};
   v.remove=[](void*p,const char*path){auto&s=self(p);s.path(path);bool fail=s.point("remove");if(fail&&!s.after){s.finish(true);return false;}++s.mutations;bool erased=s.files.erase(path)>0;return !s.finish(fail)&&erased;};
-  ext.handle_error=[](void*p,uint32_t,bool)->uint32_t{auto&s=self(p);return s.finish(s.point("handle-error"))?1:0;};
+  ext.handle_error=[](void*p,uint32_t,bool directory)->uint32_t{auto&s=self(p);return s.finish(s.point("handle-error"))||(directory&&s.dirError)?1:0;};
   fs.state.state_tag=RISC_STORAGE_STATE_TAG;fs.state.state_version=1;
   fs.state.observe=[](void*p)->int32_t{auto&s=self(p);return s.retained?RISC_STORAGE_STATE_RETAINED:s.available?RISC_STORAGE_STATE_READY:RISC_STORAGE_STATE_UNAVAILABLE;};
   fs.fs_tag=RISC_STORAGE_FS_TAG;fs.fs_version=1;

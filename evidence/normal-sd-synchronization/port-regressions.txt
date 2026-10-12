@@ -1,0 +1,17 @@
+Runtime graph + actual X4/FatFs + real CpuPort fresh-warm PASS
+Runtime graph + actual X4/FatFs + real CpuPort busy-session PASS
+Runtime graph + actual X4/FatFs + real CpuPort busy-handle PASS
+Runtime graph + actual X4/FatFs + real CpuPort busy-worker PASS
+Runtime graph + actual X4/FatFs + real CpuPort busy-export PASS
+Runtime graph + actual X4/FatFs + real CpuPort busy-sleep PASS
+Runtime graph + actual X4/FatFs + real CpuPort busy-sync PASS
+Runtime graph + actual X4/FatFs + real CpuPort gates PASS
+Runtime graph + actual X4/FatFs + real CpuPort cancel-running PASS
+Runtime graph + actual X4/FatFs + real CpuPort: sticky retention PASS
+Runtime graph + actual X4/FatFs + real CpuPort: sticky retention PASS
+Runtime graph + actual X4/FatFs + real CpuPort: sticky retention PASS
+Runtime graph retains actual X4 module/dependencies after failed hardware cleanup PASS
+Runtime graph + actual X4/FatFs + real CpuPort wrapper-lifetime PASS
+Runtime graph + actual X4/FatFs + real CpuPort: sticky retention PASS
+Runtime graph + actual X4/FatFs + real CpuPort: sticky retention PASS
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: fresh-warm, busy-session, busy-handle, busy-worker, busy-export, busy-sleep, busy-sync, gates, cancel-running, read-retained, provider-retained, adapter-retained, cleanup-retained, wrapper-lifetime, contract-busy-token, contract-ok-zero

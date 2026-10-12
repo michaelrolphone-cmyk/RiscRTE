@@ -1,0 +1,17 @@
+Actual Runtime/Port/X4/FatFs normal, ASan/UBSan and Port commands are fully recorded
+in their source-manifest JSONs, including external pins and sanitizer environment.
+
+SYSTEM_ROOT=/workspace/shared/persistence-recovery-20261011/repos/System bash test/run_native_durable_export_test.sh
+SYSTEM_ROOT=/workspace/shared/persistence-recovery-20261011/repos/System SANITIZE=1 SANITIZERS=address,undefined ASAN_OPTIONS=detect_leaks=0 bash test/run_native_durable_export_test.sh
+bash test/run_native_replica_sd_test.sh
+SANITIZE=1 SANITIZERS=address,undefined ASAN_OPTIONS=detect_leaks=0 bash test/run_native_replica_sd_test.sh
+SYSTEM_ROOT=/workspace/shared/persistence-recovery-20261011/repos/System bash test/run_native_export_retained_test.sh
+bash test/run_native_replica_core_test.sh
+bash test/run_native_replica_export_marker_test.sh
+bash test/run_native_settings_coordinator_test.sh
+bash test/run_native_settings_worker_binding_test.sh
+bash test/run_native_settings_catalog_test.sh
+bash test/compile_native_sd_synchronization_target.sh /workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages .build/sync-unique-target-final
+
+The durable script enforces System Apps c564dd665072db141fc42d55be3be52511750719.
+No binaries are included in this evidence commit.

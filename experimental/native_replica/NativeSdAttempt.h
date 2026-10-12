@@ -1,20 +1,22 @@
 #pragma once
 #include <RiscStoragePackageAsyncV1.h>
+#include <RiscStorageSessionAdmissionV1.h>
 #include <RiscStorageVolumeAsyncV1.h>
 #include <RiscStorageWorkerV1.h>
 #include <cstdint>
 #include <cstring>
 namespace RiscExperimental {
-// Disconnected native authority model. No application/SDK entry point or Port
-// binding. Hooks model native pins, task identity and lifecycle gates; integration
-// must implement them before this can protect a physical provider.
+// Native authority controller with no application/SDK entry point. Hooks must
+// establish exact graph, task and lifecycle custody. NativeSdPortAttempt supplies
+// the explicitly selected Runtime/CpuPort binding; it is not a startup policy.
 class NativeSdAttempt final {
  public:
  enum class State {Idle,Admission,OwnedSession,Closing,ReadyClosed,Unavailable,Cancelled,Failed,Released,Retained};
+ enum class Profile {Fresh,CheckedWarm};
  enum class Call {None,Begin,Submit,Package,Collect,End};
  enum class Scope {Healthy,Unavailable,Retained};
  static constexpr int Context=-30,Lost=-31,Unsupported=-32;
- struct Binding {uint32_t namespaceId;uint64_t device,grant,scope;const risc_storage_volume_api_v1*volume;};
+ struct Binding {uint32_t namespaceId;uint64_t device,grant,scope;const risc_storage_volume_api_v1*volume;Profile profile=Profile::Fresh;};
  struct Hooks {
   void* context;
   bool(*owner)(void*); // exact owner task, excluding ISR
@@ -23,6 +25,7 @@ class NativeSdAttempt final {
   bool(*held)(void*,const Binding&);
   void(*fence)(void*,bool);
   Scope(*snapshot)(void*,uint64_t*); // only after actual completion fence
+  bool(*checkedWarm)(void*,const Binding&)=nullptr; // idle attached native fence, exact pinned suffix
  };
  explicit NativeSdAttempt(Binding b,Hooks h):binding_(b),hooks_(h){}
  NativeSdAttempt(const NativeSdAttempt&)=delete;NativeSdAttempt&operator=(const NativeSdAttempt&)=delete;
@@ -33,11 +36,15 @@ class NativeSdAttempt final {
  bool receiptPinned()const{return nativePin_;}
  int acquire(const risc_storage_volume_api_v1*volume){
   if(!owner()||state_!=State::Idle||call_!=Call::None)return Context;
-  if(!binding_.namespaceId||!binding_.device||!binding_.grant||!binding_.scope||volume!=binding_.volume||!hooks_.freshExclusive||!hooks_.idle||!hooks_.held||!hooks_.fence||!hooks_.snapshot)return Unsupported;
+  if(!binding_.namespaceId||!binding_.device||!binding_.grant||!binding_.scope||volume!=binding_.volume||!hooks_.idle||!hooks_.held||!hooks_.fence||!hooks_.snapshot)return Unsupported;
   api_=risc_storage_volume_packages(volume);if(!api_||!risc_storage_volume_download(volume))return Unsupported;
+  if(binding_.profile==Profile::CheckedWarm){
+   admission_=risc_storage_volume_session_admission(volume);
+   if(!admission_||!hooks_.checkedWarm)return Unsupported;
+  }else if(binding_.profile!=Profile::Fresh||!hooks_.freshExclusive)return Unsupported;
   volume_=volume;
   const int observed=observe();if(observed==RISC_STORAGE_STATE_RETAINED){retain();return RISC_STORAGE_ASYNC_RETAINED;}
-  if(!hooks_.freshExclusive(hooks_.context,binding_))return Unsupported;
+  if(binding_.profile==Profile::Fresh?!hooks_.freshExclusive(hooks_.context,binding_):!hooks_.checkedWarm(hooks_.context,binding_))return Unsupported;
   if(!hooks_.idle(hooks_.context)||!held())return RISC_STORAGE_ASYNC_BUSY;
   fenced_=true;hooks_.fence(hooks_.context,true);
   const int rc=begin();
@@ -45,7 +52,7 @@ class NativeSdAttempt final {
   if(rc!=RISC_STORAGE_ASYNC_OK){retain();return RISC_STORAGE_ASYNC_RETAINED;}
   state_=State::Admission;return 0;
  }
- // The fresh-only profile always runs one real REFRESH during admission. Public
+ // Both explicit profiles run exactly one real REFRESH during admission. Public
  // observe may truthfully report UNAVAILABLE throughout that owned session.
  int refresh(){
   if(!owner()||call_!=Call::None||state_!=State::Admission||refreshSent_)return Context;
@@ -65,6 +72,7 @@ class NativeSdAttempt final {
  }
  int package(const risc_storage_package_request_v1&q){return packageImpl(q,false);}
  private:
+ friend class CheckedSdNativeRestore;
  // Only the typed first-checkpoint dispatch may create its exact parent.
  // Raw package callers retain the existing namespace-only path restriction.
  int packageImpl(const risc_storage_package_request_v1&q,bool firstParent){
@@ -163,6 +171,7 @@ class NativeSdAttempt final {
  bool clientAccess()const{return !clientPins_||dispatchOwner_;}
  bool sessionAccess()const{return clientAccess()&&childOwner_==dispatchOwner_;}
  Binding binding_;Hooks hooks_;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
+ const risc_storage_volume_api_v1_admission*admission_=nullptr;
  State state_=State::Idle;Call call_=Call::None;uint64_t session_=0,operation_=0,epoch_=0,closed_=0,minted_=0;
  const void*request_=nullptr;uint32_t requestSize_=0;
  bool fenced_=false,credit_=false,rawSubmitted_=false,rawFinished_=false,cleanup_=false;
@@ -205,9 +214,12 @@ class NativeSdAttempt final {
  bool rawReady()const{return owner()&&fenced_&&call_!=Call::None&&!credit_;}
  int begin(){
   if(!arm(Call::Begin))return Context;
-  const int rc=api_->base.begin(volume_->context,&session_);
+  uint64_t session=0;
+  const int rc=admission_?admission_->begin_checked(volume_->context,&session):api_->base.begin(volume_->context,&session);
   if(!disarm())return RISC_STORAGE_ASYNC_RETAINED;
-  if(!rc&&!session_){retain();return RISC_STORAGE_ASYNC_RETAINED;}return rc;
+  if((!rc&&!session)||(rc&&session)){retain();return RISC_STORAGE_ASYNC_RETAINED;}
+  if(!rc)session_=session;
+  return rc;
  }
  int submitImpl(const risc_storage_async_request_v1&q){
   if(operation_||!session_||!live()||!arm(Call::Submit,&q,sizeof q))return Context;

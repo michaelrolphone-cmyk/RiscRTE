@@ -1,0 +1,621 @@
+AppStreamsRuntime.inc:8:6:static bool RiscBoot::Runtime::streamBindingValid(void*, const RuntimeStreams::AppStreamBinding&, bool)	32	static
+AppStreamsRuntime.inc:21:6:static void RiscBoot::Runtime::streamYield(void*)	32	static
+RemovableAppsRuntime.inc:75:86:static constexpr int RiscBoot::Runtime::openDriverImage(void*, const char*, const void*)::<lambda(void*, const char*, elf_file_t*)>::_FUN(void*, const char*, elf_file_t*)	32	static
+AppDataExportRuntime.inc:48:6:static bool RiscBoot::Runtime::appDataExportOwner(void*)	32	static
+Allocator.hpp:30:8:virtual void ArduinoJson::V742PB22::detail::DefaultAllocator::deallocate(void*)	32	static
+FileOpenRuntime.inc:54:6:bool RiscBoot::{anonymous}::fileOpenMatches(const RiscBoot::FileOpenMetadata&, const char*)	32	static
+Runtime.cpp:126:6:bool RiscBoot::{anonymous}::elfPath(const char*)	32	static
+Allocator.hpp:34:9:virtual void* ArduinoJson::V742PB22::detail::DefaultAllocator::reallocate(void*, size_t)	32	static
+Allocator.hpp:26:9:virtual void* ArduinoJson::V742PB22::detail::DefaultAllocator::allocate(size_t)	32	static
+RemovableAppsRuntime.inc:23:15:static void RiscBoot::Runtime::loadRemovableApp(const RiscBoot::Runtime::AppPolicy&)::<lambda(void*)>::_FUN(void*)	32	static
+Runtime.cpp:66:6:bool {anonymous}::keyValueKey(const char*)	32	static
+Runtime.cpp:754:6:static void RiscBoot::Runtime::revokeProvider(void*)	32	static
+RemovableAppsRuntime.inc:47:98:static constexpr int RiscBoot::Runtime::loadRemovableApp(const RiscBoot::Runtime::AppPolicy&)::<lambda(void*, const char*, elf_file_t*)>::_FUN(void*, const char*, elf_file_t*)	32	static
+Runtime.cpp:1378:5:RiscBoot::Runtime::runOne(const char*)::ControlLifetime::~ControlLifetime()	32	static
+InstallationSettingsRuntime.inc:5:60:static constexpr int RiscBoot::Runtime::settingsJournal()::<lambda(void*, uint32_t, void*, uint32_t, uint32_t*)>::_FUN(void*, uint32_t, void*, uint32_t, uint32_t*)	32	static
+InstallationSettingsRuntime.inc:6:54:static constexpr int RiscBoot::Runtime::settingsJournal()::<lambda(void*, uint32_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const void*, uint32_t)	32	static
+InstallationSettingsRuntime.inc:7:86:static constexpr int RiscBoot::Runtime::settingsJournal()::<lambda(void*, uint32_t, const char*, void*, uint32_t, uint32_t*)>::_FUN(void*, uint32_t, const char*, void*, uint32_t, uint32_t*)	32	static
+InstallationSettingsRuntime.inc:8:59:static constexpr int RiscBoot::Runtime::settingsJournal()::<lambda(void*, uint32_t, bool*)>::_FUN(void*, uint32_t, bool*)	32	static
+CohortRuntime.inc:122:72:RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(const RiscUpdate::NativeAppDataExportCohortV1&, const RiscUpdate::CohortIdentity&)>::<lambda(const char*, const char*, size_t)>	32	static
+CohortRuntime.inc:121:61:RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(const RiscUpdate::NativeAppDataExportCohortV1&, const RiscUpdate::CohortIdentity&)>	32	static
+CohortRuntime.inc:172:63:RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(const RiscBoot::Runtime::AppGrantPolicy&, const RiscBoot::Runtime::AppGrantPolicy&)>	32	static
+RemovableAppsRuntime.inc:22:23:static void* RiscBoot::Runtime::loadRemovableApp(const RiscBoot::Runtime::AppPolicy&)::<lambda(size_t)>::_FUN(size_t)	32	static
+Runtime.cpp:1249:80:RiscBoot::Runtime::grantUsage() const::<lambda(const RiscBoot::Runtime::Invocation&, size_t&, size_t&)>	32	static
+Runtime.cpp:1352:36:RiscBoot::Runtime::appExitBarrier(bool)::<lambda(RiscBoot::Runtime::Invocation&)>	32	static
+PackageJsonGuard.h:63:8:bool RuntimePackages::PackageJsonGuard::unicode(uint16_t*)	32	static
+SdFirstKeyValue.h:23:15:static bool RiscStorage::SdFirstKeyValue::keyValid(const char*)	32	static
+PackageIdentity.h:25:13:bool RuntimePackages::safeId(const char*)	32	static
+PackageIdentity.h:56:13:bool RuntimePackages::safeVersion(const char*)	32	static
+Version.h:6:13:bool RiscUpdate::parseVersion(const char*, uint32_t (&)[3])	32	static
+pgmspace_generic.hpp:59:5:T ArduinoJson::V742PB22::detail::pgm_ptr<T>::operator[](intptr_t) const [with T = double]	48	static
+CohortRuntime.inc:183:33:RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(uint32_t)>	32	static
+CohortRuntime.inc:188:36:RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(uint32_t)>	32	static
+basic_string.tcc:132:5:std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::pointer std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_M_create(std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::size_type&, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::size_type) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]	32	static
+JsonDeserializer.hpp:579:22:static bool ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::canBeInNumber(char) [with TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	32	static
+JsonDeserializer.hpp:588:22:static bool ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::canBeInNonQuotedString(char) [with TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	32	static
+RemovableAppsRuntime.inc:68:67:static void RiscBoot::Runtime::openDriverImage(void*, const char*, const void*)::<lambda(void*)>::_FUN(void*)	32	static
+RemovableAppsRuntime.inc:68:23:static void* RiscBoot::Runtime::openDriverImage(void*, const char*, const void*)::<lambda(size_t)>::_FUN(size_t)	32	static
+VariantCompare.hpp:37:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::Comparer<T, typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, void>::type>::visit(ArduinoJson::V742PB22::detail::nullptr_t) [with T = char*]	32	static
+VariantCompare.hpp:37:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::Comparer<T, typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, void>::type>::visit(ArduinoJson::V742PB22::detail::nullptr_t) [with T = const char*]	32	static
+BoundAppDataRuntime.inc:2:6:bool RiscBoot::{anonymous}::providerFileName(const char*)	32	static
+StringPool.hpp:73:15:ArduinoJson::V742PB22::detail::StringNode* ArduinoJson::V742PB22::detail::StringPool::get(const TAdaptedString&) const [with TAdaptedString = ArduinoJson::V742PB22::detail::RamString]	32	static
+CohortRuntime.inc:147:72:RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(const RiscUpdate::NativeAppDataExportCohortV1&, const RiscUpdate::CohortIdentity&)>::<lambda(const char*, const char*, size_t)>	32	static
+CohortRuntime.inc:146:61:RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(const RiscUpdate::NativeAppDataExportCohortV1&, const RiscUpdate::CohortIdentity&)>	32	static
+StringNode.hpp:35:22:static ArduinoJson::V742PB22::detail::StringNode* ArduinoJson::V742PB22::detail::StringNode::create(size_t, ArduinoJson::V742PB22::Allocator*)	32	static
+StringNode.hpp:65:15:static void ArduinoJson::V742PB22::detail::StringNode::destroy(ArduinoJson::V742PB22::detail::StringNode*, ArduinoJson::V742PB22::Allocator*)	32	static
+JsonString.hpp:24:3:ArduinoJson::V742PB22::JsonString::JsonString(const char*, bool)	32	static
+VariantData.hpp:301:14:ArduinoJson::V742PB22::JsonString ArduinoJson::V742PB22::detail::VariantData::asString() const	64	static
+VariantData.hpp:407:15:static bool ArduinoJson::V742PB22::detail::VariantData::isNull(const ArduinoJson::V742PB22::detail::VariantData*)	32	static
+ResourceManager.hpp:99:15:ArduinoJson::V742PB22::detail::StringNode* ArduinoJson::V742PB22::detail::ResourceManager::resizeString(ArduinoJson::V742PB22::detail::StringNode*, size_t)	32	static
+JsonDocument.hpp:24:12:ArduinoJson::V742PB22::JsonDocument::JsonDocument(ArduinoJson::V742PB22::Allocator*)	32	static
+EscapeSequence.hpp:23:15:static char ArduinoJson::V742PB22::detail::EscapeSequence::unescapeChar(char)	32	static
+FloatParts.hpp:56:19:ArduinoJson::V742PB22::detail::FloatParts ArduinoJson::V742PB22::detail::decomposeFloat(ArduinoJson::V742PB22::JsonFloat, int8_t)	80	static
+StringBuilder.hpp:17:3:ArduinoJson::V742PB22::detail::StringBuilder::~StringBuilder()	32	static
+StringBuilder.hpp:22:8:void ArduinoJson::V742PB22::detail::StringBuilder::startString()	32	static
+StringBuilder.hpp:61:8:void ArduinoJson::V742PB22::detail::StringBuilder::append(char)	32	static
+Utf16.hpp:36:8:bool ArduinoJson::V742PB22::detail::Utf16::Codepoint::append(uint16_t)	32	static
+parseNumber.hpp:105:15:ArduinoJson::V742PB22::detail::Number ArduinoJson::V742PB22::detail::parseNumber(const char*)	48	static
+PackageJsonGuard.h:42:8:void RuntimePackages::PackageJsonGuard::skipWhitespace()	32	static
+PackageJsonGuard.h:50:8:bool RuntimePackages::PackageJsonGuard::take(char)	32	static
+PackageJsonGuard.h:75:8:bool RuntimePackages::PackageJsonGuard::string(bool, size_t*, size_t*)	64	static
+PackageJsonGuard.h:108:8:bool RuntimePackages::PackageJsonGuard::literal(const char*)	32	static
+PackageJsonGuard.h:115:8:bool RuntimePackages::PackageJsonGuard::digits()	32	static
+PackageJsonGuard.h:122:8:bool RuntimePackages::PackageJsonGuard::number()	32	static
+PackageJsonGuard.h:181:8:bool RuntimePackages::PackageJsonGuard::array()	32	static
+PackageJsonGuard.h:139:8:bool RuntimePackages::PackageJsonGuard::value()	32	static
+PackageJsonGuard.h:153:8:bool RuntimePackages::PackageJsonGuard::object()	64	static
+Json.h:21:13:bool RiscBoot::utf8(const char*, size_t)	32	static
+FileOpenRuntime.inc:26:6:bool RiscBoot::{anonymous}::fileOpenExtension(const char*, char (&)[16])	32	static
+Json.h:36:13:bool RiscBoot::text(ArduinoJson::V742PB22::JsonVariantConst, char*, size_t)	80	static
+Json.h:49:13:bool RiscBoot::path(const char*, const char*, char*, size_t)	48	static
+CohortRuntime.inc:290:32:RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(const char*)>	304	static
+InstalledFiles.h:35:8:bool RiscBoot::InstalledFiles::end()	32	static
+InstalledFiles.h:99:15:static bool RiscBoot::InstalledFiles::valid(const char*, bool)	32	static
+InstalledFilesRuntime.inc:8:37:RiscBoot::Runtime::configureInstalledFiles(ArduinoJson::V742PB22::JsonObjectConst)::<lambda(const char*)>	32	static
+InstalledFiles.h:111:15:static bool RiscBoot::InstalledFiles::copy(char*, size_t, const char*)	32	static
+InstalledFiles.h:114:8:bool RiscBoot::InstalledFiles::admitted(const char*) const	32	static
+InstalledFiles.h:115:8:bool RiscBoot::InstalledFiles::isDirectory(const char*) const	48	static
+InstalledFiles.h:120:8:bool RiscBoot::InstalledFiles::inspect(const char*, stat&)	560	static
+InstalledFiles.h:54:8:bool RiscBoot::InstalledFiles::dirNext(uint32_t, risc_storage_dirent_v1*)	608	static
+InstalledFiles.h:130:15:static bool RiscBoot::InstalledFiles::same(const stat&, const stat&)	32	static
+InstalledFiles.h:81:10:size_t RiscBoot::InstalledFiles::fileRead(uint32_t, void*, size_t)	1264	static
+AppDataExportImpl.h:16:13:static bool RiscStorage::AppDataExport::validPath(const char*, bool)	32	static
+AppDataExportImpl.h:27:13:static bool RiscStorage::AppDataExport::validEntries(const RiscStorage::AppDataExport::Entry*, size_t)	64	static
+AppDataExportRuntime.inc:99:122:RiscBoot::Runtime::validateAppDataExportCohort(const RiscBoot::Runtime&, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, bool) const::<lambda(const RiscBoot::Runtime::AppPolicy&, const char*, const RiscStorage::AppDataExport::Entry*, size_t)>	48	static
+AppDataExportImpl.h:44:23:static RiscStorage::AppDataExport* RiscStorage::AppDataExport::resolve(void*)	32	static
+AppDataExportImpl.h:49:16:int32_t RiscStorage::AppDataExport::status(int32_t)	32	static
+AppDataExportImpl.h:54:13:bool RiscStorage::AppDataExport::enter()	32	static
+AppDataExportImpl.h:64:13:bool RiscStorage::AppDataExport::leave(int32_t)	32	static
+AppDataExportImpl.h:79:12:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*)>	32	static
+AppDataExportImpl.h:79:12:static bool RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*)>::_FUN(void*)	32	static
+AppDataExportImpl.h:80:12:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*)>	32	static
+AppDataExportImpl.h:80:12:static bool RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*)>::_FUN(void*)	32	static
+AppDataExportImpl.h:81:32:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, char*, size_t)>	32	static
+AppDataExportImpl.h:81:32:static bool RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, char*, size_t)>::_FUN(void*, char*, size_t)	32	static
+AppDataExportImpl.h:87:42:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, void*, size_t)>	48	static
+AppDataExportImpl.h:87:42:static size_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, void*, size_t)>::_FUN(void*, uint32_t, void*, size_t)	32	static
+AppDataExportImpl.h:89:48:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, const void*, size_t)>	48	static
+AppDataExportImpl.h:89:48:static size_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, const void*, size_t)>::_FUN(void*, uint32_t, const void*, size_t)	32	static
+AppDataExportImpl.h:91:30:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, char*, size_t)>	32	static
+AppDataExportImpl.h:91:30:static bool RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, char*, size_t)>::_FUN(void*, char*, size_t)	32	static
+AppDataExportImpl.h:93:51:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, bool)>	32	static
+AppDataExportImpl.h:93:51:static uint32_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, bool)>::_FUN(void*, uint32_t, bool)	32	static
+AppDataExportImpl.h:102:42:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t)>	32	static
+AppDataExportImpl.h:102:42:static int32_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t)>::_FUN(void*, uint32_t)	32	static
+AppDataExportImpl.h:103:73:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, risc_app_data_export_entry_v1*)>	32	static
+AppDataExportImpl.h:103:73:static int32_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, risc_app_data_export_entry_v1*)>::_FUN(void*, uint32_t, risc_app_data_export_entry_v1*)	32	static
+AppDataExportImpl.h:116:36:const RiscStorage::AppDataExport::Entry* RiscStorage::AppDataExport::find(const char*) const	48	static
+AppDataExportImpl.h:121:13:bool RiscStorage::AppDataExport::directory(const char*) const	48	static
+AppDataExportImpl.h:83:28:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*)>	32	static
+AppDataExportImpl.h:83:28:static uint32_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*)>::_FUN(void*, const char*)	32	static
+AppDataExportImpl.h:127:16:int32_t RiscStorage::AppDataExport::statRevision(const char*, uint32_t*, uint64_t*)	64	static
+AppDataExportImpl.h:68:13:bool RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)	240	static
+AppDataExportImpl.h:97:67:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint32_t*, uint64_t*)>	32	static
+AppDataExportImpl.h:97:67:static int32_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint32_t*, uint64_t*)>::_FUN(void*, const char*, uint32_t*, uint64_t*)	32	static
+AppDataExportImpl.h:82:43:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint64_t*, bool*)>	48	static
+AppDataExportImpl.h:82:43:static bool RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint64_t*, bool*)>::_FUN(void*, const char*, uint64_t*, bool*)	32	static
+AppDataExportImpl.h:139:16:int32_t RiscStorage::AppDataExport::readRevision(const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)	96	static
+AppDataExportImpl.h:100:100:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)>	48	static
+AppDataExportImpl.h:100:100:static int32_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)>::_FUN(void*, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)	48	static
+AppDataExportImpl.h:156:16:int32_t RiscStorage::AppDataExport::replaceRevision(const char*, uint64_t, const void*, uint32_t)	64	static
+AppDataExportImpl.h:101:83:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint64_t, const void*, uint32_t)>	32	static
+AppDataExportImpl.h:101:83:static int32_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint64_t, const void*, uint32_t)>::_FUN(void*, const char*, uint64_t, const void*, uint32_t)	48	static
+AppDataExportImpl.h:177:13:bool RiscStorage::AppDataExport::dirNext(uint32_t, risc_storage_dirent_v1*)	240	static
+AppDataExportImpl.h:84:48:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, risc_storage_dirent_v1*)>	32	static
+AppDataExportImpl.h:84:48:static bool RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, risc_storage_dirent_v1*)>::_FUN(void*, uint32_t, risc_storage_dirent_v1*)	32	static
+AppDataExportImpl.h:195:13:bool RiscStorage::AppDataExport::dirClose(uint32_t)	32	static
+AppDataExportImpl.h:92:44:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t)>	32	static
+AppDataExportImpl.h:92:44:static bool RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t)>::_FUN(void*, uint32_t)	32	static
+AppDataExportImpl.h:85:23:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t)>	32	static
+AppDataExportImpl.h:85:23:static void RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t)>::_FUN(void*, uint32_t)	32	static
+AppDataExportImpl.h:199:13:void RiscStorage::AppDataExport::dropRead()	32	static
+AppDataExportImpl.h:200:13:void RiscStorage::AppDataExport::dropWrite()	32	static
+AppDataExportImpl.h:10:8:RiscStorage::AppDataExport::~AppDataExport()	32	static
+AppDataExportImpl.h:201:17:uint32_t RiscStorage::AppDataExport::openRead(const char*, uint64_t*)	96	static
+AppDataExportImpl.h:86:39:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint64_t*)>	32	static
+AppDataExportImpl.h:86:39:static uint32_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*, uint64_t*)>::_FUN(void*, const char*, uint64_t*)	32	static
+AppDataExportImpl.h:222:17:uint32_t RiscStorage::AppDataExport::openWrite(const char*)	48	static
+AppDataExportImpl.h:88:28:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*)>	32	static
+AppDataExportImpl.h:88:28:static uint32_t RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, const char*)>::_FUN(void*, const char*)	32	static
+AppDataExportImpl.h:242:13:bool RiscStorage::AppDataExport::close(uint32_t, bool)	48	static
+AppDataExportImpl.h:90:35:RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, bool)>	32	static
+AppDataExportImpl.h:90:35:static bool RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::<lambda(void*, uint32_t, bool)>::_FUN(void*, uint32_t, bool)	32	static
+SdFirstKeyValue.h:23:15:static bool RiscStorage::SdFirstKeyValue::keyValid(const char*)	32	static
+SdFirstKeyValue.h:33:19:static uint32_t RiscStorage::SdFirstKeyValue::crc(const uint8_t*, unsigned int)	32	static
+SdFirstKeyValue.h:34:15:static void RiscStorage::SdFirstKeyValue::makeWord(uint8_t*, uint32_t)	32	static
+SdFirstKeyValue.h:35:19:static uint32_t RiscStorage::SdFirstKeyValue::makeWord(const uint8_t*)	32	static
+SdFirstKeyValue.h:36:19:static unsigned int RiscStorage::SdFirstKeyValue::encode(const RiscStorage::SdFirstKeyValue::State&, uint32_t, bool, uint8_t*)	48	static
+SdFirstKeyValue.h:43:15:static bool RiscStorage::SdFirstKeyValue::decode(RiscStorage::SdFirstKeyValue::State&, uint32_t, const char*, const void*, unsigned int, bool&)	64	static
+SdFirstKeyValue.h:57:18:static int32_t RiscStorage::SdFirstKeyValue::restore(RiscStorage::SdFirstKeyValue::State&, RiscStorage::SdFirstKeyValue::Workspace&, const RiscStorage::SdFirstKeyValue::Journal&, uint32_t, const char*, const void*, unsigned int, bool)	80	static
+SdFirstKeyValue.h:82:18:static int32_t RiscStorage::SdFirstKeyValue::put(RiscStorage::SdFirstKeyValue::State&, RiscStorage::SdFirstKeyValue::Workspace&, const RiscStorage::SdFirstKeyValue::Journal&, uint32_t, const char*, const void*, unsigned int)	64	static
+SdFirstKeyValue.h:97:18:static int32_t RiscStorage::SdFirstKeyValue::get(RiscStorage::SdFirstKeyValue::State&, RiscStorage::SdFirstKeyValue::Workspace&, const RiscStorage::SdFirstKeyValue::Journal&, uint32_t, const char*, void*, unsigned int, uint32_t*)	160	static
+ScalableSettings.h:34:8:void RiscStorage::ScalableSettings::State::clear()	32	static
+ScalableSettings.h:46:8:void RiscStorage::ScalableSettings::Collection::clear()	32	static
+ScalableSettings.h:47:8:bool RiscStorage::ScalableSettings::Collection::create(size_t)	48	static
+ScalableSettings.h:51:14:static bool RiscStorage::ScalableSettings::key(const char*)	32	static
+ScalableSettings.h:53:18:static uint32_t RiscStorage::ScalableSettings::makeWord(const uint8_t*)	32	static
+ScalableSettings.h:54:14:static void RiscStorage::ScalableSettings::makeWord(uint8_t*, uint32_t)	32	static
+ScalableSettings.h:55:18:static uint64_t RiscStorage::ScalableSettings::wide(const uint8_t*)	32	static
+ScalableSettings.h:56:14:static void RiscStorage::ScalableSettings::wide(uint8_t*, uint64_t)	32	static
+ScalableSettings.h:57:18:static uint32_t RiscStorage::ScalableSettings::crc(const void*, uint32_t)	32	static
+ScalableSettings.h:58:16:static RiscStorage::ScalableSettings::Entry** RiscStorage::ScalableSettings::find(RiscStorage::ScalableSettings::State&, const char*)	32	static
+ScalableSettings.h:59:17:static int32_t RiscStorage::ScalableSettings::assign(RiscStorage::ScalableSettings::State&, const char*, const void*, uint32_t)	48	static
+ScalableSettings.h:66:17:static int32_t RiscStorage::ScalableSettings::get(RiscStorage::ScalableSettings::State&, const char*, void*, uint32_t, uint32_t*)	48	static
+ScalableSettings.h:72:17:static int32_t RiscStorage::ScalableSettings::put(RiscStorage::ScalableSettings::State&, const RiscStorage::ScalableSettings::Backend&, uint32_t, const char*, const void*, uint32_t)	2112	static
+ScalableSettings.h:85:14:static void RiscStorage::ScalableSettings::header(uint8_t*, uint32_t, const RiscStorage::ScalableSettings::State&, uint32_t, uint32_t)	32	static
+ScalableSettings.h:88:14:static bool RiscStorage::ScalableSettings::validHeader(const uint8_t*, uint32_t, const char*)	32	static
+ScalableSettings.h:101:17:static int32_t RiscStorage::ScalableSettings::advanceRestore(RiscStorage::ScalableSettings::State&, const RiscStorage::ScalableSettings::Backend&, uint32_t)	2144	static
+ScalableSettings.h:118:17:static int32_t RiscStorage::ScalableSettings::restore(RiscStorage::ScalableSettings::State&, const RiscStorage::ScalableSettings::Backend&, uint32_t, const char*, const void*, uint32_t, bool)	4624	static
+ScalableSettings.h:164:17:static int32_t RiscStorage::ScalableSettings::acknowledge(RiscStorage::ScalableSettings::State&, const RiscStorage::ScalableSettings::Backend&, uint32_t, uint64_t)	2432	static
+RetainedWake.h:30:13:bool RiscRetainedWake::valid(const risc_retained_wake_record_v1&)	32	static
+RetainedWake.h:69:7:bool RiscRetainedWake::Store::stageBytes(const RiscRetainedWake::Identity&, uint32_t, uint32_t, const void*, uint32_t)	48	static
+RetainedWake.h:76:7:void RiscRetainedWake::Store::cancel()	32	static
+PackageIdentity.h:40:13:bool RuntimePackages::safeArtifact(const char*)	32	static
+NativeProviderPolicyV1.h:39:13:bool RuntimeProviders::nativePolicyName(const char*, size_t)	32	static
+NativeProviderPolicyV1.h:55:13:bool RuntimeProviders::nativeProviderPolicyValid(const RuntimeProviders::NativeProviderPolicyV1&)	48	static
+NativeProviderPolicyV1.h:82:13:bool RuntimeProviders::nativeProviderPolicySetValid(const RuntimeProviders::NativeProviderPolicySetV1&)	32	static
+ProviderGraphV2.h:75:8:bool RuntimeProviders::GraphV2::lifecycleBusy() const	32	static
+Runtime.h:213:8:bool RiscBoot::Runtime::active() const	32	static
+Runtime.cpp:75:39:const risc_runtime_api_v1* risc_runtime_get_api(uint32_t)	32	static
+Runtime.cpp:85:52:static uint32_t risc_runtime_get_api(uint32_t)::<lambda(uint32_t, uint32_t, uint32_t)>::_FUN(uint32_t, uint32_t, uint32_t)	32	static
+Runtime.cpp:637:9:static int32_t RiscBoot::Runtime::randomFill(void*, void*, uint32_t)	32	static
+Runtime.cpp:644:9:static int32_t RiscBoot::Runtime::memoryHeapSnapshot(void*, risc_memory_heap_snapshot_v1*)	64	static
+AppStreamsRuntime.inc:62:76:static int32_t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::<lambda(uint64_t, uint64_t, risc_stream_client_info_v1*)>::_FUN(uint64_t, uint64_t, risc_stream_client_info_v1*)	48	static
+AppStreamsRuntime.inc:55:90:static int32_t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::<lambda(uint64_t, uint64_t, const void*, uint32_t, uint32_t*)>::_FUN(uint64_t, uint64_t, const void*, uint32_t, uint32_t*)	64	static
+AppStreamsRuntime.inc:48:88:static int32_t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::<lambda(uint64_t, uint64_t, void*, uint32_t, uint32_t*)>::_FUN(uint64_t, uint64_t, void*, uint32_t, uint32_t*)	64	static
+AppStreamsRuntime.inc:42:56:static int32_t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::<lambda(uint64_t, uint64_t, uint32_t)>::_FUN(uint64_t, uint64_t, uint32_t)	48	static
+AppStreamsRuntime.inc:35:136:static int32_t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::<lambda(uint64_t, uint64_t, const void*, uint32_t, uint32_t, void*, uint32_t, uint32_t*)>::_FUN(uint64_t, uint64_t, const void*, uint32_t, uint32_t, void*, uint32_t, uint32_t*)	80	static
+InstallationProvidersRuntime.inc:2:6:static bool RiscBoot::Runtime::installationAvailable(void*, const char*, uint32_t, uint64_t)	64	static
+InstallationSettingsRuntime.inc:23:10:static uint32_t RiscBoot::Runtime::installationSharedSettingsNamespace(void*, uint32_t)	32	static
+Runtime.h:262:8:bool RiscBoot::Runtime::fail(const char*)	32	static
+RemovableAppImage.h:21:8:bool RiscBoot::RemovableAppImage::read(const risc_storage_volume_api_v1*, const char*, RiscBoot::RemovableAppImage::Hooks)	64	static
+NativeProviderPolicySnapshotV1.h:24:16:static void* RuntimeProviders::NativeProviderPolicySnapshotV1::allocate(size_t)	32	static
+NativeProviderPolicySnapshotV1.h:39:15:static bool RuntimeProviders::NativeProviderPolicySnapshotV1::copy(char*, size_t, const char*)	32	static
+NativeProviderPolicySnapshotV1.h:44:15:static void RuntimeProviders::NativeProviderPolicySnapshotV1::destroy(RuntimeProviders::NativeProviderPolicySnapshotV1*)	32	static
+NativeProviderPolicySnapshotV1.h:14:10:constexpr RuntimeProviders::NativeProviderPolicySnapshotV1::Row::Row()	32	static
+NativeProviderPolicySnapshotV1.h:49:42:static RuntimeProviders::NativeProviderPolicySnapshotV1* RuntimeProviders::NativeProviderPolicySnapshotV1::capture(const RuntimeProviders::NativeProviderPolicySetV1&)	80	static
+KeyValueGeneration.h:6:14:void* RiscBoot::nextKeyValueContext(uintptr_t&)	32	static
+Version.h:6:13:bool RiscUpdate::parseVersion(const char*, uint32_t (&)[3])	32	static
+Cohort.h:12:13:bool RiscUpdate::hex(const char*, size_t)	32	static
+Cohort.h:17:13:bool RiscUpdate::repository(const char*)	48	static
+CohortMigration.h:35:13:bool RiscUpdate::sameCohortIdentity(const RiscUpdate::CohortIdentity&, const RiscUpdate::CohortIdentity&)	32	static
+ScopedBufferWipe.h:12:3:RiscRuntime::ScopedBufferWipe::~ScopedBufferWipe()	32	static
+Runtime.cpp:97:17:bool risc_runtime_reclaim_app_images()	32	static
+FailureEvidenceRuntime.inc:38:6:void RiscBoot::Runtime::failureBreadcrumb(uint32_t, const char*)	32	static
+DiagnosticCheckpointRuntime.inc:2:6:bool RiscBoot::Runtime::diagnosticCheckpointToken(uint64_t) const	32	static
+DiagnosticCheckpointRuntime.inc:8:6:bool RiscBoot::Runtime::diagnosticCheckpointClient(risc_diagnostic_checkpoint_client_v1*)	32	static
+Runtime.cpp:92:49:static bool risc_runtime_get_api(uint32_t)::<lambda(risc_diagnostic_checkpoint_client_v1*)>::_FUN(risc_diagnostic_checkpoint_client_v1*)	32	static
+DiagnosticCheckpointRuntime.inc:19:9:int32_t RiscBoot::Runtime::diagnosticCheckpointWrite(uint64_t, const char*, uint32_t)	48	static
+DiagnosticCheckpointRuntime.inc:14:55:static int32_t RiscBoot::Runtime::diagnosticCheckpointClient(risc_diagnostic_checkpoint_client_v1*)::<lambda(uint64_t, const char*, uint32_t)>::_FUN(uint64_t, const char*, uint32_t)	32	static
+FileOpenRuntime.inc:59:28:static const t5_file_open_api_v1* RiscBoot::Runtime::fileOpenApi()	32	static
+FileOpenRuntime.inc:125:6:bool RiscBoot::Runtime::fileOpenAfterRun(bool)	32	static
+Runtime.cpp:174:6:bool RiscBoot::Runtime::selected(uint64_t) const	32	static
+Runtime.cpp:178:6:bool RiscBoot::Runtime::uses(uint64_t, const char*, uint32_t) const	48	static
+Runtime.cpp:183:6:bool RiscBoot::Runtime::registerPlatform(const char*, uint32_t, RiscBoot::Runtime::Scope, uint64_t, const void*)	64	static
+Runtime.cpp:220:6:bool RiscBoot::Runtime::validateGraph()	1728	static
+Runtime.cpp:766:6:void RiscBoot::Runtime::revokeProviders()	32	static
+AppStreamsRuntime.inc:2:6:bool RiscBoot::Runtime::streamBinding(const risc_runtime_capability_v1*, RuntimeStreams::AppStreamBinding&) const	32	static
+AppStreamsRuntime.inc:27:143:static int32_t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::<lambda(uint64_t, const risc_runtime_capability_v1*, const void*, uint32_t, uint32_t, risc_stream_opened_v1*)>::_FUN(uint64_t, const risc_runtime_capability_v1*, const void*, uint32_t, uint32_t, risc_stream_opened_v1*)	80	static
+AppStreamsRuntime.inc:22:6:bool RiscBoot::Runtime::streamClient(risc_stream_client_v1*)	32	static
+Runtime.cpp:88:34:static bool risc_runtime_get_api(uint32_t)::<lambda(risc_stream_client_v1*)>::_FUN(risc_stream_client_v1*)	32	static
+InstalledFiles.h:16:7:constexpr RiscBoot::InstalledFiles::InstalledFiles()	32	static
+InstalledFilesRuntime.inc:34:28:risc_storage_volume_api_v1 RiscBoot::Runtime::volumeTable(void*)	32	static
+AppDataRuntime.inc:1:6:bool RiscBoot::Runtime::appDataBusy() const	32	static
+AppDataRuntime.inc:2:6:bool RiscBoot::Runtime::appDataExitSafe() const	32	static
+Runtime.cpp:730:6:bool RiscBoot::Runtime::providerStorageSafe() const	32	static
+FileOpenRuntime.inc:69:6:bool RiscBoot::Runtime::fileOpenReady() const	32	static
+FileOpenRuntime.inc:61:8:static bool RiscBoot::Runtime::fileOpenApi()::<lambda()>::_FUN()	32	static
+FileOpenRuntime.inc:74:10:uint32_t RiscBoot::Runtime::fileHandlerCount(const char*) const	64	static
+FileOpenRuntime.inc:62:29:static uint32_t RiscBoot::Runtime::fileOpenApi()::<lambda(const char*)>::_FUN(const char*)	32	static
+FileOpenRuntime.inc:81:6:bool RiscBoot::Runtime::fileHandlerGet(const char*, uint32_t, t5_file_handler_t*) const	80	static
+FileOpenRuntime.inc:63:64:static bool RiscBoot::Runtime::fileOpenApi()::<lambda(const char*, uint32_t, t5_file_handler_t*)>::_FUN(const char*, uint32_t, t5_file_handler_t*)	32	static
+FileOpenRuntime.inc:112:6:bool RiscBoot::Runtime::fileOpenTakeResult(int32_t*, uint64_t*)	32	static
+FileOpenRuntime.inc:65:39:static bool RiscBoot::Runtime::fileOpenApi()::<lambda(int32_t*, uint64_t*)>::_FUN(int32_t*, uint64_t*)	32	static
+FileOpenRuntime.inc:119:6:bool RiscBoot::Runtime::fileSourcePathGet(char*, size_t) const	32	static
+FileOpenRuntime.inc:66:33:static bool RiscBoot::Runtime::fileOpenApi()::<lambda(char*, size_t)>::_FUN(char*, size_t)	32	static
+Runtime.cpp:736:6:static bool RiscBoot::Runtime::beginProvider(void*)	32	static
+Runtime.cpp:769:27:static RiscBoot::Runtime::ProviderStorage* RiscBoot::Runtime::providerContext(void*)	32	static
+InstalledFilesRuntime.inc:28:10:static RiscBoot::Runtime* RiscBoot::Runtime::volumeContext(void*, bool)	32	static
+InstalledFilesRuntime.inc:48:29:static bool RiscBoot::Runtime::volumeTable(void*)::<lambda(void*, char*, size_t)>::_FUN(void*, char*, size_t)	32	static
+InstalledFilesRuntime.inc:46:38:static bool RiscBoot::Runtime::volumeTable(void*)::<lambda(void*, risc_storage_file_t, bool)>::_FUN(void*, risc_storage_file_t, bool)	32	static
+InstalledFilesRuntime.inc:44:54:static size_t RiscBoot::Runtime::volumeTable(void*)::<lambda(void*, risc_storage_file_t, void*, size_t)>::_FUN(void*, risc_storage_file_t, void*, size_t)	32	static
+InstalledFilesRuntime.inc:43:38:static risc_storage_file_t RiscBoot::Runtime::volumeTable(void*)::<lambda(void*, const char*, uint64_t*)>::_FUN(void*, const char*, uint64_t*)	32	static
+InstalledFilesRuntime.inc:42:32:static void RiscBoot::Runtime::volumeTable(void*)::<lambda(void*, risc_storage_dir_t)>::_FUN(void*, risc_storage_dir_t)	32	static
+InstalledFilesRuntime.inc:41:59:static bool RiscBoot::Runtime::volumeTable(void*)::<lambda(void*, risc_storage_dir_t, risc_storage_dirent_v1*)>::_FUN(void*, risc_storage_dir_t, risc_storage_dirent_v1*)	32	static
+InstalledFilesRuntime.inc:40:27:static risc_storage_dir_t RiscBoot::Runtime::volumeTable(void*)::<lambda(void*, const char*)>::_FUN(void*, const char*)	32	static
+InstalledFilesRuntime.inc:39:42:static bool RiscBoot::Runtime::volumeTable(void*)::<lambda(void*, const char*, uint64_t*, bool*)>::_FUN(void*, const char*, uint64_t*, bool*)	96	static
+InstalledFilesRuntime.inc:38:29:static bool RiscBoot::Runtime::volumeTable(void*)::<lambda(void*, char*, size_t)>::_FUN(void*, char*, size_t)	32	static
+InstalledFilesRuntime.inc:37:11:static bool RiscBoot::Runtime::volumeTable(void*)::<lambda(void*)>::_FUN(void*)	32	static
+InstalledFilesRuntime.inc:36:11:static bool RiscBoot::Runtime::volumeTable(void*)::<lambda(void*)>::_FUN(void*)	32	static
+RemovableAppsRuntime.inc:1:7:void* RiscBoot::Runtime::loadRemovableApp(const RiscBoot::Runtime::AppPolicy&)	128	static
+RemovableAppsRuntime.inc:24:20:static bool RiscBoot::Runtime::loadRemovableApp(const RiscBoot::Runtime::AppPolicy&)::<lambda(void*)>::_FUN(void*)	48	static
+RemovableAppsRuntime.inc:61:7:static void* RiscBoot::Runtime::openDriverImage(void*, const char*, const void*)	112	static
+RemovableAppsRuntime.inc:69:19:static constexpr bool RiscBoot::Runtime::openDriverImage(void*, const char*, const void*)::<lambda(void*)>::_FUN(void*)	32	static
+AppDataExportRuntime.inc:55:6:static bool RiscBoot::Runtime::appDataExportSafe(void*)	32	static
+EntropyRuntime.inc:8:9:static int32_t RiscBoot::Runtime::entropyFill(void*, void*, uint32_t)	96	static
+CohortRuntime.inc:312:69:RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(void*)>	32	static
+CohortRuntime.inc:312:69:static constexpr bool RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const::<lambda(void*)>::_FUN(void*)	32	static
+CohortRuntime.inc:8:6:bool RiscBoot::{anonymous}::cohortInventory(const char*, const char*, RiscBoot::{anonymous}::CohortName*, size_t, size_t&, unsigned int, bool (*)(void*), void*)	864	static
+FailureEvidenceRuntime.inc:2:6:bool RiscBoot::Runtime::failureEvidenceToken(uint64_t, bool) const	32	static
+FailureEvidenceRuntime.inc:14:6:bool RiscBoot::Runtime::failureEvidenceClient(risc_failure_evidence_client_v1*)	32	static
+Runtime.cpp:91:44:static bool risc_runtime_get_api(uint32_t)::<lambda(risc_failure_evidence_client_v1*)>::_FUN(risc_failure_evidence_client_v1*)	32	static
+FailureEvidenceRuntime.inc:29:9:int32_t RiscBoot::Runtime::failureEvidenceRead(uint64_t, risc_failure_evidence_v1*)	32	static
+FailureEvidenceRuntime.inc:21:55:static int32_t RiscBoot::Runtime::failureEvidenceClient(risc_failure_evidence_client_v1*)::<lambda(uint64_t, risc_failure_evidence_v1*)>::_FUN(uint64_t, risc_failure_evidence_v1*)	32	static
+FailureEvidenceRuntime.inc:34:9:int32_t RiscBoot::Runtime::failureEvidenceAcknowledge(uint64_t, uint32_t, uint32_t)	32	static
+FailureEvidenceRuntime.inc:24:54:static int32_t RiscBoot::Runtime::failureEvidenceClient(risc_failure_evidence_client_v1*)::<lambda(uint64_t, uint32_t, uint32_t)>::_FUN(uint64_t, uint32_t, uint32_t)	32	static
+AppDataRuntime.inc:3:10:static RiscBoot::Runtime* RiscBoot::Runtime::appDataContext(void*)	32	static
+AppDataRuntime.inc:9:9:static int32_t RiscBoot::Runtime::appDataStat(void*, const char*, uint32_t*, uint64_t*)	32	static
+AppDataRuntime.inc:18:9:static int32_t RiscBoot::Runtime::appDataRead(void*, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)	64	static
+AppDataRuntime.inc:27:9:static int32_t RiscBoot::Runtime::appDataReplace(void*, const char*, uint64_t, const void*, uint32_t)	48	static
+AppDataExportRuntime.inc:44:6:bool RiscBoot::Runtime::appDataExportExitSafe() const	32	static
+AppDataExportRuntime.inc:76:6:bool RiscBoot::Runtime::endAppDataExport()	32	static
+AppDataExportRuntime.inc:83:6:bool RiscBoot::Runtime::needsAppDataExportDelegation(const RiscBoot::Runtime&) const	64	static
+AppDataExportRuntime.inc:92:6:bool RiscBoot::Runtime::validateAppDataExportCohort(const RiscBoot::Runtime&, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, bool) const	160	static
+BoundAppDataRuntime.inc:38:6:static bool RiscBoot::Runtime::providerFileSafe(void*)	32	static
+TcpListenerRuntime.inc:10:6:static bool RiscBoot::Runtime::providerResourcesSafe(void*)	32	static
+RetainedWakeRuntime.inc:1:10:static RiscBoot::Runtime* RiscBoot::Runtime::retainedWakeContext(void*)	32	static
+RetainedWakeRuntime.inc:8:6:bool RiscBoot::Runtime::retainedWakeIdentity(RiscRetainedWake::Identity&) const	32	static
+RetainedWakeRuntime.inc:12:9:static int32_t RiscBoot::Runtime::retainedWakeRead(void*, uint32_t, uint32_t, risc_retained_wake_record_v1*, uint32_t*)	736	static
+RetainedWakeRuntime.inc:18:9:static int32_t RiscBoot::Runtime::retainedWakeStage(void*, const risc_retained_wake_record_v1*)	720	static
+RetainedWakeRuntime.inc:24:9:static int32_t RiscBoot::Runtime::retainedWakeClear(void*)	720	static
+RetainedWakeRuntime.inc:29:9:static int32_t RiscBoot::Runtime::retainedWakeReadBytes(void*, uint32_t, uint32_t, void*, uint32_t, uint32_t*, uint32_t*)	736	static
+RetainedWakeRuntime.inc:35:9:static int32_t RiscBoot::Runtime::retainedWakeStageBytes(void*, uint32_t, uint32_t, const void*, uint32_t)	720	static
+RealtimeRuntime.inc:1:6:bool RiscBoot::Runtime::registerRealtime(const risc_realtime_control_api_v1*)	32	static
+RealtimeRuntime.inc:6:6:bool RiscBoot::Runtime::registerProviderRealtime()	64	static
+RealtimeRuntime.inc:30:10:static RiscBoot::Runtime* RiscBoot::Runtime::realtimeContext(void*, bool)	32	static
+RealtimeRuntime.inc:40:9:static int32_t RiscBoot::Runtime::realtimeSeed(void*, int64_t, uint32_t)	32	static
+RealtimeRuntime.inc:50:9:int32_t RiscBoot::Runtime::readRealtime(risc_realtime_snapshot_v1*)	80	static
+RealtimeRuntime.inc:16:9:static int32_t RiscBoot::Runtime::providerRealtimeRead(void*, risc_realtime_snapshot_v1*)	32	static
+RealtimeRuntime.inc:46:9:static int32_t RiscBoot::Runtime::realtimeRead(void*, risc_realtime_snapshot_v1*)	32	static
+TcpListenerRuntime.inc:1:6:bool RiscBoot::Runtime::registerTcpListener(const RiscBoot::TcpListenerBackend*)	48	static
+TcpListenerRuntime.inc:16:27:static RiscBoot::Runtime::ProviderStorage* RiscBoot::Runtime::tcpContext(void*, bool)	32	static
+TcpListenerRuntime.inc:29:9:int32_t RiscBoot::Runtime::tcpResult(int32_t)	32	static
+TcpListenerRuntime.inc:33:9:static int32_t RiscBoot::Runtime::tcpListen(void*, const risc_tcp_listen_v1*, uint64_t*)	32	static
+TcpListenerRuntime.inc:39:9:static int32_t RiscBoot::Runtime::tcpAccept(void*, uint64_t, uint64_t*)	48	static
+TcpListenerRuntime.inc:45:9:static int32_t RiscBoot::Runtime::tcpRead(void*, uint64_t, void*, uint32_t, uint32_t*)	64	static
+TcpListenerRuntime.inc:51:9:static int32_t RiscBoot::Runtime::tcpWrite(void*, uint64_t, const void*, uint32_t, uint32_t*)	64	static
+TcpListenerRuntime.inc:57:9:static int32_t RiscBoot::Runtime::tcpClose(void*, uint64_t)	32	static
+TcpListenerRuntime.inc:63:9:static int32_t RiscBoot::Runtime::tcpConnect(void*, const risc_tcp_listen_v1*, uint64_t*)	32	static
+TcpListenerRuntime.inc:70:9:static int32_t RiscBoot::Runtime::tcpConnected(void*, uint64_t)	32	static
+EntropyRuntime.inc:1:6:bool RiscBoot::Runtime::registerEntropy(const RiscBoot::EntropyBackend*)	48	static
+ProviderPromotionRuntime.inc:1:6:bool RiscBoot::Runtime::promotionSafe() const	32	static
+ResidentShellRuntime.inc:37:6:bool RiscBoot::Runtime::residentAllowed(const char*) const	48	static
+Runtime.cpp:1633:25:RiscBoot::Runtime::run()::<lambda()>	32	static
+ResidentShellRuntime.inc:41:6:bool RiscBoot::Runtime::residentLegacyAllowed(const char*) const	48	static
+FileOpenRuntime.inc:90:6:bool RiscBoot::Runtime::fileOpenRequest(const char*, const char*, uint64_t)	96	static
+FileOpenRuntime.inc:64:57:static bool RiscBoot::Runtime::fileOpenApi()::<lambda(const char*, const char*, uint64_t)>::_FUN(const char*, const char*, uint64_t)	32	static
+ResidentShellRuntime.inc:45:6:bool RiscBoot::Runtime::residentToken(uint64_t, uint32_t, bool) const	48	static
+ResidentShellRuntime.inc:50:6:bool RiscBoot::Runtime::residentClient(risc_resident_client_v1*)	32	static
+Runtime.cpp:90:36:static bool risc_runtime_get_api(uint32_t)::<lambda(risc_resident_client_v1*)>::_FUN(risc_resident_client_v1*)	32	static
+ResidentShellRuntime.inc:108:6:void RiscBoot::Runtime::recordResidentFailure(uint32_t, int32_t, const char*, uint64_t)	48	static
+ResidentShellRuntime.inc:119:6:bool RiscBoot::Runtime::residentFailure(uint64_t, risc_resident_failure_v1*)	32	static
+ResidentShellRuntime.inc:66:59:static bool RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::<lambda(uint64_t, risc_resident_failure_v1*)>::_FUN(uint64_t, risc_resident_failure_v1*)	32	static
+ResidentShellRuntime.inc:229:9:int32_t RiscBoot::Runtime::residentExit(uint64_t)	32	static
+ResidentShellRuntime.inc:65:25:static int32_t RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::<lambda(uint64_t)>::_FUN(uint64_t)	32	static
+Runtime.cpp:995:6:bool RiscBoot::Runtime::registerNativeProvider(const RiscBoot::Runtime::Driver&, RuntimeProviders::SpecV2&, const RuntimeProviders::NativeProviderPolicyV1&)	48	static
+Runtime.cpp:1053:49:const RuntimeProviders::NativeProviderPolicyV1* RiscBoot::Runtime::nativeProviderPolicyForImage(const char*) const	48	static
+Runtime.cpp:1068:6:bool RiscBoot::Runtime::inspectImages(bool (*)(void*, const char*, bool), void*) const	48	static
+Runtime.cpp:1134:6:bool RiscBoot::Runtime::exitRequested() const	32	static
+Runtime.cpp:94:8:static bool risc_runtime_get_api(uint32_t)::<lambda()>::_FUN()	32	static
+Runtime.cpp:1135:6:bool RiscBoot::Runtime::health(risc_runtime_health_v1*)	32	static
+Runtime.cpp:77:33:static bool risc_runtime_get_api(uint32_t)::<lambda(risc_runtime_health_v1*)>::_FUN(risc_runtime_health_v1*)	32	static
+Runtime.cpp:1136:6:bool RiscBoot::Runtime::monotonicMs(uint32_t*)	160	static
+Runtime.cpp:93:21:static bool risc_runtime_get_api(uint32_t)::<lambda(uint32_t*)>::_FUN(uint32_t*)	32	static
+Runtime.cpp:1301:41:static unsigned int RiscBoot::Runtime::yield(uint32_t)::<lambda()>::_FUN()	48	static
+Runtime.cpp:1143:6:bool RiscBoot::Runtime::launchDefault()	32	static
+Runtime.cpp:89:8:static bool risc_runtime_get_api(uint32_t)::<lambda()>::_FUN()	32	static
+Runtime.cpp:1158:6:bool RiscBoot::Runtime::confirmBoot()	32	static
+Runtime.cpp:83:8:static bool risc_runtime_get_api(uint32_t)::<lambda()>::_FUN()	32	static
+Runtime.cpp:1213:8:size_t RiscBoot::Runtime::appInventoryCount() const	32	static
+Runtime.cpp:1243:21:RiscBoot::Runtime::GrantUsage RiscBoot::Runtime::grantUsage() const	48	static
+Runtime.cpp:1277:6:void RiscBoot::Runtime::serviceProviders()	32	static
+Runtime.cpp:1320:6:bool RiscBoot::Runtime::diagnostic(const char*)	32	static
+Runtime.cpp:79:24:static bool risc_runtime_get_api(uint32_t)::<lambda(const char*)>::_FUN(const char*)	32	static
+Runtime.cpp:1327:6:bool RiscBoot::Runtime::appExitBarrier(bool)	240	static
+AppStreamsRuntime.inc:16:6:static void RiscBoot::Runtime::streamRetain(void*)	32	static
+BoundAppDataRuntime.inc:42:9:int32_t RiscBoot::Runtime::providerFileResult(int32_t)	32	static
+BoundAppDataRuntime.inc:42:9:int32_t RiscBoot::Runtime::providerFileResult(int32_t)	32	static
+BoundAppDataRuntime.inc:51:27:static RiscBoot::Runtime::ProviderStorage* RiscBoot::Runtime::providerFileContext(void*, int32_t&)	32	static
+BoundAppDataRuntime.inc:109:9:static int32_t RiscBoot::Runtime::boundAppDataCollectReplace(void*, uint64_t, int32_t*)	48	static
+BoundAppDataRuntime.inc:63:9:static int32_t RiscBoot::Runtime::boundAppDataStat(void*, const char*, uint32_t*, uint64_t*)	64	static
+BoundAppDataRuntime.inc:74:9:static int32_t RiscBoot::Runtime::boundAppDataRead(void*, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)	96	static
+BoundAppDataRuntime.inc:85:9:static int32_t RiscBoot::Runtime::boundAppDataReplace(void*, const char*, uint64_t, const void*, uint32_t)	80	static
+BoundAppDataRuntime.inc:95:9:static int32_t RiscBoot::Runtime::boundAppDataBeginReplace(void*, const char*, uint64_t, const void*, uint32_t, uint64_t*)	96	static
+ProviderPromotionRuntime.inc:6:9:static int32_t RiscBoot::Runtime::promoteProviders(void*)	64	static
+ResidentShellRuntime.inc:69:9:int32_t RiscBoot::Runtime::registerShell(uint64_t, const risc_resident_callbacks_v1*)	32	static
+ResidentShellRuntime.inc:56:69:static int32_t RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::<lambda(uint64_t, const risc_resident_callbacks_v1*)>::_FUN(uint64_t, const risc_resident_callbacks_v1*)	32	static
+ResidentShellRuntime.inc:80:6:bool RiscBoot::Runtime::selectInvocation(RiscBoot::Runtime::Invocation&)	32	static
+ResidentShellRuntime.inc:90:9:int32_t RiscBoot::Runtime::residentLoading(const char*)	240	static
+ResidentShellRuntime.inc:159:33:RiscBoot::Runtime::runForeground(uint64_t, const char*, risc_resident_result_v1*)::<lambda()>	32	static
+ResidentShellRuntime.inc:233:9:int32_t RiscBoot::Runtime::residentCheckpoint(uint64_t, const risc_resident_request_v1*, risc_resident_reply_v1*)	80	static
+ResidentShellRuntime.inc:62:95:static int32_t RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::<lambda(uint64_t, const risc_resident_request_v1*, risc_resident_reply_v1*)>::_FUN(uint64_t, const risc_resident_request_v1*, risc_resident_reply_v1*)	32	static
+Runtime.cpp:1290:6:void RiscBoot::Runtime::yield(uint32_t)	32	static
+Runtime.cpp:78:19:static void risc_runtime_get_api(uint32_t)::<lambda(uint32_t)>::_FUN(uint32_t)	32	static
+Runtime.cpp:1321:6:bool RiscBoot::Runtime::retainInvocation()	32	static
+Runtime.cpp:84:8:static bool risc_runtime_get_api(uint32_t)::<lambda()>::_FUN()	32	static
+Runtime.cpp:862:6:bool RiscBoot::Runtime::revokeApp()	48	static
+Runtime.cpp:822:6:bool RiscBoot::Runtime::release(risc_runtime_capability_v1*)	96	static
+Runtime.cpp:82:41:static bool risc_runtime_get_api(uint32_t)::<lambda(risc_runtime_capability_v1*)>::_FUN(risc_runtime_capability_v1*)	32	static
+Runtime.cpp:1372:6:bool RiscBoot::Runtime::runOne(const char*)	80	static
+Runtime.cpp:1536:6:bool RiscBoot::Runtime::reclaimAppImages()	32	static
+Runtime.cpp:1548:6:bool RiscBoot::Runtime::run()	496	static
+InstallationRuntime.inc:73:6:bool RiscBoot::Runtime::installationNamespaceRangeSafe() const	48	static
+InstallationRuntime.inc:85:6:bool RiscBoot::Runtime::installationMutable(size_t) const	32	static
+InstallationRuntime.inc:185:9:static int32_t RiscBoot::Runtime::installationForget(void*, const char*, bool)	320	static
+Runtime.h:326:10:RiscBoot::Runtime::ProviderStorage& RiscBoot::Runtime::ProviderStorage::operator=(RiscBoot::Runtime::ProviderStorage&&)	32	static
+InstallationSettingsRuntime.inc:2:39:RiscStorage::SdFirstKeyValue::Journal RiscBoot::Runtime::settingsJournal()	32	static
+InstallationSettingsRuntime.inc:10:39:RiscStorage::ScalableSettings::State* RiscBoot::Runtime::scalableSettingsState(uint32_t) const	32	static
+Runtime.cpp:658:9:static int32_t RiscBoot::Runtime::keyValueGet(void*, const char*, void*, uint32_t, uint32_t*)	2144	static
+Runtime.cpp:687:9:static int32_t RiscBoot::Runtime::keyValuePut(void*, const char*, const void*, uint32_t)	96	static
+Runtime.cpp:785:9:static int32_t RiscBoot::Runtime::boundKeyValueGet(void*, const char*, void*, uint32_t, uint32_t*)	2112	static
+Runtime.cpp:806:9:static int32_t RiscBoot::Runtime::boundKeyValuePut(void*, const char*, const void*, uint32_t)	48	static
+Runtime.cpp:1085:30:RiscBoot::Runtime::installedLaunchPath(const char*, char*, size_t, bool*) const::<lambda(size_t)>	64	static
+Runtime.cpp:1082:6:bool RiscBoot::Runtime::installedLaunchPath(const char*, char*, size_t, bool*) const	80	static
+Runtime.cpp:1117:6:bool RiscBoot::Runtime::launch(const char*)	304	static
+Runtime.cpp:80:24:static bool risc_runtime_get_api(uint32_t)::<lambda(const char*)>::_FUN(const char*)	32	static
+InstallationSettingsRuntime.inc:16:10:uint32_t RiscBoot::Runtime::settingsNamespace(uint32_t) const	32	static
+InstallationSettingsRuntime.inc:28:10:static uint32_t RiscBoot::Runtime::installationSettingsStatus(void*, uint32_t)	32	static
+InstallationSettingsRuntime.inc:34:9:static int32_t RiscBoot::Runtime::installationSettingsRestore(void*, uint32_t, const char*, const void*, uint32_t, bool)	128	static
+InstallationSettingsRuntime.inc:46:9:static int32_t RiscBoot::Runtime::installationSettingsSnapshot(void*, uint32_t, void*, uint32_t, uint32_t*, uint64_t*)	48	static
+InstallationSettingsRuntime.inc:55:9:static int32_t RiscBoot::Runtime::installationSettingsAck(void*, uint32_t, uint64_t)	80	static
+MemoryPoolList.hpp:117:8:void ArduinoJson::V742PB22::detail::MemoryPoolList<T>::clear(ArduinoJson::V742PB22::Allocator*) [with T = ArduinoJson::V742PB22::detail::ResourceManager::SlotData]	32	static
+ResourceManager.hpp:34:3:ArduinoJson::V742PB22::detail::ResourceManager::~ResourceManager()	32	static
+ResourceManager.hpp:114:8:void ArduinoJson::V742PB22::detail::ResourceManager::clear()	32	static
+MemoryPoolList.hpp:140:8:void ArduinoJson::V742PB22::detail::MemoryPoolList<T>::shrinkToFit(ArduinoJson::V742PB22::Allocator*) [with T = ArduinoJson::V742PB22::detail::ResourceManager::SlotData]	32	static
+VariantCompare.hpp:184:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::VariantComparer::reverseResult(TComparer&) [with TComparer = ArduinoJson::V742PB22::detail::RawComparer]	48	static
+VariantCompare.hpp:184:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::VariantComparer::reverseResult(TComparer&) [with TComparer = ArduinoJson::V742PB22::detail::NullComparer]	48	static
+MemoryPoolList.hpp:108:6:T* ArduinoJson::V742PB22::detail::MemoryPoolList<T>::getSlot(ArduinoJson::V742PB22::detail::SlotId) const [with T = ArduinoJson::V742PB22::detail::ResourceManager::SlotData]	32	static
+CollectionImpl.hpp:28:33:ArduinoJson::V742PB22::detail::CollectionData::iterator ArduinoJson::V742PB22::detail::CollectionData::createIterator(const ArduinoJson::V742PB22::detail::ResourceManager*) const	48	static
+JsonObjectConst.hpp:59:12:ArduinoJson::V742PB22::JsonObjectConst::iterator ArduinoJson::V742PB22::JsonObjectConst::begin() const	64	static
+JsonArrayConst.hpp:26:12:ArduinoJson::V742PB22::JsonArrayConst::iterator ArduinoJson::V742PB22::JsonArrayConst::begin() const	64	static
+CollectionImpl.hpp:20:13:void ArduinoJson::V742PB22::detail::CollectionIterator::next(const ArduinoJson::V742PB22::detail::ResourceManager*)	32	static
+ArrayImpl.hpp:13:28:ArduinoJson::V742PB22::detail::CollectionData::iterator ArduinoJson::V742PB22::detail::ArrayData::at(size_t, const ArduinoJson::V742PB22::detail::ResourceManager*) const	48	static
+VariantData.hpp:319:16:ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::VariantData::getElement(size_t, const ArduinoJson::V742PB22::detail::ResourceManager*) const	48	static
+JsonPair.hpp:46:3:ArduinoJson::V742PB22::JsonPairConst::JsonPairConst(ArduinoJson::V742PB22::detail::CollectionData::iterator, const ArduinoJson::V742PB22::detail::ResourceManager*)	48	static
+JsonObjectIterator.hpp:72:28:ArduinoJson::V742PB22::JsonObjectConstIterator& ArduinoJson::V742PB22::JsonObjectConstIterator::operator++()	32	static
+CollectionImpl.hpp:130:15:size_t ArduinoJson::V742PB22::detail::CollectionData::size(const ArduinoJson::V742PB22::detail::ResourceManager*) const	48	static
+JsonArrayConst.hpp:91:10:size_t ArduinoJson::V742PB22::JsonArrayConst::size() const	32	static
+JsonVariantConst.hpp:64:10:size_t ArduinoJson::V742PB22::JsonVariantConst::size() const	32	static
+JsonArrayIterator.hpp:86:27:ArduinoJson::V742PB22::JsonArrayConstIterator& ArduinoJson::V742PB22::JsonArrayConstIterator::operator++()	32	static
+VariantImpl.hpp:65:32:const ArduinoJson::V742PB22::detail::VariantExtension* ArduinoJson::V742PB22::detail::VariantData::getExtension(const ArduinoJson::V742PB22::detail::ResourceManager*) const	32	static
+CollectionImpl.hpp:60:13:void ArduinoJson::V742PB22::detail::CollectionData::clear(ArduinoJson::V742PB22::detail::ResourceManager*)	32	static
+VariantImpl.hpp:48:13:void ArduinoJson::V742PB22::detail::VariantData::clear(ArduinoJson::V742PB22::detail::ResourceManager*)	32	static
+VariantRefBaseImpl.hpp:138:13:bool ArduinoJson::V742PB22::detail::VariantRefBase<TDerived>::doSet(const T&, ArduinoJson::V742PB22::detail::false_type) const [with TConverter = ArduinoJson::V742PB22::Converter<std::nullptr_t>; T = std::nullptr_t; TDerived = ArduinoJson::V742PB22::JsonVariant]	32	static
+VariantData.hpp:530:8:void ArduinoJson::V742PB22::detail::VariantData::setTinyString(const TAdaptedString&) [with TAdaptedString = ArduinoJson::V742PB22::detail::RamString]	32	static
+StringBuilder.hpp:28:8:void ArduinoJson::V742PB22::detail::StringBuilder::save(ArduinoJson::V742PB22::detail::VariantData*)	48	static
+StringAdapter.hpp:33:24:ArduinoJson::V742PB22::detail::AdaptedString<TString> ArduinoJson::V742PB22::detail::adaptString(TString&&) [with TString = ArduinoJson::V742PB22::JsonString&]	48	static
+JsonVariantConst.hpp:85:8:bool ArduinoJson::V742PB22::JsonVariantConst::is() const [with T = ArduinoJson::V742PB22::JsonArrayConst; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_same<typename ArduinoJson::V742PB22::detail::function_traits<decltype (& ArduinoJson::V742PB22::Converter<T>::fromJson)>::arg1_type, ArduinoJson::V742PB22::JsonVariantConst>::value, int>::type <anonymous> = 0]	32	static
+JsonVariantConst.hpp:72:5:T ArduinoJson::V742PB22::JsonVariantConst::as() const [with T = const char*; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_same<typename ArduinoJson::V742PB22::detail::function_traits<decltype (& ArduinoJson::V742PB22::Converter<T>::fromJson)>::arg1_type, ArduinoJson::V742PB22::JsonVariantConst>::value, int>::type <anonymous> = 0]	48	static
+Json.h:42:13:bool RiscBoot::eq(ArduinoJson::V742PB22::JsonVariantConst, const char*)	80	static
+MetadataArray.h:20:36:RiscBoot::MetadataArray<T> RiscBoot::metadataArray(size_t) [with T = RiscBoot::InstalledFiles::Name]	32	static
+unique_ptr.h:533:7:std::unique_ptr<_Tp [], _Dp>::~unique_ptr() [with _Tp = RiscBoot::InstalledFiles::Name; _Dp = RiscBoot::MetadataDelete<RiscBoot::InstalledFiles::Name>]	32	static
+InstalledFiles.h:20:8:bool RiscBoot::InstalledFiles::configure(const char*, const RiscBoot::InstalledFiles::Name*, size_t)	64	static
+Runtime.h:520:10:RiscBoot::Runtime::Invocation::~Invocation()	32	static
+unique_ptr.h:533:7:std::unique_ptr<_Tp [], _Dp>::~unique_ptr() [with _Tp = RiscBoot::Runtime::ProviderFile; _Dp = RiscBoot::MetadataDelete<RiscBoot::Runtime::ProviderFile>]	32	static
+InstallationProvidersRuntime.inc:34:3:RiscBoot::Runtime::installationProviders(void*, const risc_install_provider_v1*, uint32_t, bool)::Rollback::~Rollback()	32	static
+unique_ptr.h:533:7:std::unique_ptr<_Tp [], _Dp>::~unique_ptr() [with _Tp = RiscBoot::Runtime::AppPolicy; _Dp = RiscBoot::MetadataDelete<RiscBoot::Runtime::AppPolicy>]	32	static
+unique_ptr.h:533:7:std::unique_ptr<_Tp [], _Dp>::~unique_ptr() [with _Tp = RiscBoot::Runtime::InstalledAppMetadata; _Dp = RiscBoot::MetadataDelete<RiscBoot::Runtime::InstalledAppMetadata>]	32	static
+unique_ptr.h:533:7:std::unique_ptr<_Tp [], _Dp>::~unique_ptr() [with _Tp = RiscBoot::FileOpenMetadata; _Dp = RiscBoot::MetadataDelete<RiscBoot::FileOpenMetadata>]	32	static
+Runtime.cpp:115:1:RiscBoot::Runtime::~Runtime()	32	static
+JsonDocument.hpp:76:5:T ArduinoJson::V742PB22::JsonDocument::as() [with T = ArduinoJson::V742PB22::JsonObjectConst]	48	static
+JsonArrayConst.hpp:50:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonArrayConst::operator[](T) const [with T = unsigned int; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_integral<T>::value, int>::type <anonymous> = 0]	48	static
+JsonVariantConst.hpp:72:5:T ArduinoJson::V742PB22::JsonVariantConst::as() const [with T = ArduinoJson::V742PB22::JsonArrayConst; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_same<typename ArduinoJson::V742PB22::detail::function_traits<decltype (& ArduinoJson::V742PB22::Converter<T>::fromJson)>::arg1_type, ArduinoJson::V742PB22::JsonVariantConst>::value, int>::type <anonymous> = 0]	48	static
+JsonVariantConst.hpp:85:8:bool ArduinoJson::V742PB22::JsonVariantConst::is() const [with T = unsigned int; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_same<typename ArduinoJson::V742PB22::detail::function_traits<decltype (& ArduinoJson::V742PB22::Converter<T>::fromJson)>::arg1_type, ArduinoJson::V742PB22::JsonVariantConst>::value, int>::type <anonymous> = 0]	32	static
+MetadataArray.h:20:36:RiscBoot::MetadataArray<T> RiscBoot::metadataArray(size_t) [with T = RiscBoot::Runtime::AppPolicy]	64	static
+JsonVariantConst.hpp:72:5:T ArduinoJson::V742PB22::JsonVariantConst::as() const [with T = ArduinoJson::V742PB22::JsonObjectConst; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_same<typename ArduinoJson::V742PB22::detail::function_traits<decltype (& ArduinoJson::V742PB22::Converter<T>::fromJson)>::arg1_type, ArduinoJson::V742PB22::JsonVariantConst>::value, int>::type <anonymous> = 0]	48	static
+MetadataArray.h:20:36:RiscBoot::MetadataArray<T> RiscBoot::metadataArray(size_t) [with T = RiscBoot::FileOpenMetadata]	48	static
+JsonVariantConst.hpp:85:8:bool ArduinoJson::V742PB22::JsonVariantConst::is() const [with T = bool; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_same<typename ArduinoJson::V742PB22::detail::function_traits<decltype (& ArduinoJson::V742PB22::Converter<T>::fromJson)>::arg1_type, ArduinoJson::V742PB22::JsonVariantConst>::value, int>::type <anonymous> = 0]	32	static
+JsonVariantConst.hpp:72:5:T ArduinoJson::V742PB22::JsonVariantConst::as() const [with T = bool; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_same<typename ArduinoJson::V742PB22::detail::function_traits<decltype (& ArduinoJson::V742PB22::Converter<T>::fromJson)>::arg1_type, ArduinoJson::V742PB22::JsonVariantConst>::value, int>::type <anonymous> = 0]	32	static
+JsonVariantConst.hpp:106:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](T) const [with T = unsigned int; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_integral<T>::value, int>::type <anonymous> = 0]	48	static
+unique_ptr.h:380:7:void std::unique_ptr<_Tp, _Dp>::reset(std::unique_ptr<_Tp, _Dp>::pointer) [with _Tp = RiscBoot::InstalledFiles; _Dp = std::default_delete<RiscBoot::InstalledFiles>]	32	static
+MetadataArray.h:20:36:RiscBoot::MetadataArray<T> RiscBoot::metadataArray(size_t) [with T = RiscStorage::AppDataExport::Entry]	48	static
+MetadataArray.h:20:36:RiscBoot::MetadataArray<T> RiscBoot::metadataArray(size_t) [with T = unsigned char]	32	static
+AppDataExportRuntime.inc:59:6:bool RiscBoot::Runtime::acquireAppDataExport()	64	static
+Runtime.cpp:506:6:bool RiscBoot::Runtime::acquire(const char*, uint32_t, uint64_t, risc_runtime_capability_v1*)	80	static
+Runtime.cpp:81:90:static bool risc_runtime_get_api(uint32_t)::<lambda(const char*, uint32_t, uint64_t, risc_runtime_capability_v1*)>::_FUN(const char*, uint32_t, uint64_t, risc_runtime_capability_v1*)	48	static
+AppDataExportRuntime.inc:70:29:static void* RiscBoot::Runtime::acquireAppDataExport()::<lambda(size_t)>::_FUN(size_t)	48	static
+unique_ptr.h:380:7:void std::unique_ptr<_Tp, _Dp>::reset(std::unique_ptr<_Tp, _Dp>::pointer) [with _Tp = RiscBoot::Runtime::Invocation; _Dp = std::default_delete<RiscBoot::Runtime::Invocation>]	32	static
+ResidentShellRuntime.inc:123:9:int32_t RiscBoot::Runtime::runForeground(uint64_t, const char*, risc_resident_result_v1*)	336	static
+ResidentShellRuntime.inc:59:74:static int32_t RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::<lambda(uint64_t, const char*, risc_resident_result_v1*)>::_FUN(uint64_t, const char*, risc_resident_result_v1*)	32	static
+MetadataArray.h:20:36:RiscBoot::MetadataArray<T> RiscBoot::metadataArray(size_t) [with T = RiscBoot::Runtime::InstalledAppMetadata]	32	static
+Runtime.cpp:1681:6:bool RiscBoot::Runtime::reserveInstalledApps(size_t)	48	static
+JsonDocument.hpp:76:5:T ArduinoJson::V742PB22::JsonDocument::as() [with T = ArduinoJson::V742PB22::JsonArrayConst]	48	static
+MetadataArray.h:20:36:RiscBoot::MetadataArray<T> RiscBoot::metadataArray(size_t) [with T = RiscBoot::Runtime::Driver]	48	static
+MetadataArray.h:20:36:RiscBoot::MetadataArray<T> RiscBoot::metadataArray(size_t) [with T = RuntimeProviders::SpecV2]	48	static
+basic_string.h:218:7:void std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_M_dispose() [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]	32	static
+MemoryPoolList.hpp:160:11:ArduinoJson::V742PB22::detail::Slot<T> ArduinoJson::V742PB22::detail::MemoryPoolList<T>::allocFromLastPool() [with T = ArduinoJson::V742PB22::detail::ResourceManager::SlotData]	48	static
+MemoryPoolList.hpp:82:11:ArduinoJson::V742PB22::detail::Slot<T> ArduinoJson::V742PB22::detail::MemoryPoolList<T>::allocSlot(ArduinoJson::V742PB22::Allocator*) [with T = ArduinoJson::V742PB22::detail::ResourceManager::SlotData]	48	static
+ResourceManagerImpl.hpp:14:26:ArduinoJson::V742PB22::detail::Slot<ArduinoJson::V742PB22::detail::VariantData> ArduinoJson::V742PB22::detail::ResourceManager::allocVariant()	48	static
+ArrayImpl.hpp:23:21:ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::ArrayData::addElement(ArduinoJson::V742PB22::detail::ResourceManager*)	48	static
+JsonArray.hpp:48:5:T ArduinoJson::V742PB22::JsonArray::add() const [with T = ArduinoJson::V742PB22::JsonObject; typename ArduinoJson::V742PB22::detail::enable_if<(! ArduinoJson::V742PB22::detail::is_same<T, ArduinoJson::V742PB22::JsonVariant>::value), int>::type <anonymous> = 0]	48	static
+ObjectImpl.hpp:71:21:ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::ObjectData::addPair(ArduinoJson::V742PB22::detail::VariantData**, ArduinoJson::V742PB22::detail::ResourceManager*)	48	static
+ResourceManagerImpl.hpp:33:31:ArduinoJson::V742PB22::detail::Slot<ArduinoJson::V742PB22::detail::VariantExtension> ArduinoJson::V742PB22::detail::ResourceManager::allocExtension()	48	static
+MemberProxy.hpp:50:3:ArduinoJson::V742PB22::detail::MemberProxy< <template-parameter-1-1>, <template-parameter-1-2> >::MemberProxy(const ArduinoJson::V742PB22::detail::MemberProxy< <template-parameter-1-1>, <template-parameter-1-2> >&) [with TUpstream = ArduinoJson::V742PB22::JsonDocument&; AdaptedString = ArduinoJson::V742PB22::detail::RamString]	32	static
+ObjectImpl.hpp:14:21:ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::ObjectData::getMember(TAdaptedString, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TAdaptedString = ArduinoJson::V742PB22::detail::RamString]	80	static
+ObjectData.hpp:26:23:static ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::ObjectData::getMember(const ArduinoJson::V742PB22::detail::ObjectData*, TAdaptedString, const ArduinoJson::V742PB22::detail::ResourceManager*) [with TAdaptedString = ArduinoJson::V742PB22::detail::RamString]	48	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [5]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [13]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [3]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [8]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+CohortMigration.h:32:13:bool RiscUpdate::migrationTarget(ArduinoJson::V742PB22::JsonObjectConst, const RiscUpdate::CohortIdentity&)	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [9]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [4]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [23]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+Json.h:9:13:bool RiscBoot::keys(ArduinoJson::V742PB22::JsonObjectConst, std::initializer_list<const char*>, std::initializer_list<const char*>)	144	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [11]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [12]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [15]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [10]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [6]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+FileOpenRuntime.inc:4:6:bool RiscBoot::{anonymous}::fileOpenMetadata(ArduinoJson::V742PB22::JsonObjectConst, RiscBoot::FileOpenMetadata&)	128	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [18]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [16]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [7]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonObjectConst.hpp:103:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonObjectConst::operator[](const TString&) const [with TString = char [17]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+VariantData.hpp:336:23:static ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::VariantData::getMember(const ArduinoJson::V742PB22::detail::VariantData*, TAdaptedString, const ArduinoJson::V742PB22::detail::ResourceManager*) [with TAdaptedString = ArduinoJson::V742PB22::detail::RamString]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [9]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+InstalledFilesRuntime.inc:1:6:bool RiscBoot::Runtime::configureInstalledFiles(ArduinoJson::V742PB22::JsonObjectConst)	112	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [16]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [6]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [4]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [5]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [11]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [7]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [15]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [10]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [3]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+JsonVariantConst.hpp:116:20:ArduinoJson::V742PB22::JsonVariantConst ArduinoJson::V742PB22::JsonVariantConst::operator[](const TString&) const [with TString = char [12]; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, int>::type <anonymous> = 0]	64	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<double> >]	64	static
+VariantCompare.hpp:184:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::VariantComparer::reverseResult(TComparer&) [with TComparer = ArduinoJson::V742PB22::detail::Comparer<double>]	48	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<long long int> >]	64	static
+VariantCompare.hpp:162:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::VariantComparer::visit(ArduinoJson::V742PB22::JsonInteger)	48	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<long long unsigned int> >]	64	static
+VariantCompare.hpp:167:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::VariantComparer::visit(ArduinoJson::V742PB22::JsonUInt)	48	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<bool> >]	64	static
+VariantCompare.hpp:172:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::VariantComparer::visit(bool)	48	static
+basic_string.h:335:7:static void std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_S_copy(_CharT*, const _CharT*, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::size_type) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]	32	static
+basic_string.tcc:310:5:void std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_M_mutate(std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::size_type, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::size_type, const _CharT*, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::size_type) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]	64	static
+basic_string.tcc:359:5:std::__cxx11::basic_string<_CharT, _Traits, _Allocator>& std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::_M_append(const _CharT*, std::__cxx11::basic_string<_CharT, _Traits, _Alloc>::size_type) [with _CharT = char; _Traits = std::char_traits<char>; _Alloc = std::allocator<char>]	32	static
+VariantData.hpp:239:5:T ArduinoJson::V742PB22::detail::VariantData::asIntegral(const ArduinoJson::V742PB22::detail::ResourceManager*) const [with T = long long int]	48	static
+Json.h:45:13:bool RiscBoot::integer(ArduinoJson::V742PB22::JsonVariantConst, int64_t, int64_t, int64_t&)	48	static
+Cohort.h:35:13:bool RiscUpdate::readCohort(const char*, RiscUpdate::CohortIdentity&, bool*)	592	static
+Runtime.cpp:330:6:bool RiscBoot::Runtime::appPolicies(ArduinoJson::V742PB22::JsonVariantConst, ArduinoJson::V742PB22::JsonVariantConst, size_t)	1952	static
+Runtime.cpp:710:6:bool RiscBoot::Runtime::providerPolicy(ArduinoJson::V742PB22::JsonObjectConst, RiscBoot::Runtime::ProviderStorage&)	192	static
+AppDataExportRuntime.inc:4:6:bool RiscBoot::Runtime::configureAppDataExports(ArduinoJson::V742PB22::JsonVariantConst)	240	static
+BoundAppDataRuntime.inc:13:6:bool RiscBoot::Runtime::providerFilePolicy(ArduinoJson::V742PB22::JsonObjectConst, RiscBoot::Runtime::ProviderStorage&)	176	static
+VariantData.hpp:239:5:T ArduinoJson::V742PB22::detail::VariantData::asIntegral(const ArduinoJson::V742PB22::detail::ResourceManager*) const [with T = long long unsigned int]	48	static
+StringPool.hpp:45:15:ArduinoJson::V742PB22::detail::StringNode* ArduinoJson::V742PB22::detail::StringPool::add(TAdaptedString, ArduinoJson::V742PB22::Allocator*) [with TAdaptedString = ArduinoJson::V742PB22::detail::RamString]	48	static
+VariantImpl.hpp:22:13:bool ArduinoJson::V742PB22::detail::VariantData::setString(TAdaptedString, ArduinoJson::V742PB22::detail::ResourceManager*) [with TAdaptedString = ArduinoJson::V742PB22::detail::RamString]	64	static
+VariantData.hpp:514:15:static void ArduinoJson::V742PB22::detail::VariantData::setString(ArduinoJson::V742PB22::detail::VariantData*, TAdaptedString, ArduinoJson::V742PB22::detail::ResourceManager*) [with TAdaptedString = ArduinoJson::V742PB22::detail::RamString]	48	static
+JsonVariantVisitor.hpp:41:15:ArduinoJson::V742PB22::detail::VisitorAdapter<TVisitor>::result_type ArduinoJson::V742PB22::detail::VisitorAdapter<TVisitor>::visit(const T&) [with T = ArduinoJson::V742PB22::JsonString; TVisitor = ArduinoJson::V742PB22::detail::JsonVariantCopier]	80	static
+ConverterImpl.hpp:156:15:static void ArduinoJson::V742PB22::Converter<const char*>::toJson(const char*, ArduinoJson::V742PB22::JsonVariant)	64	static
+parseNumber.hpp:234:10:T ArduinoJson::V742PB22::detail::parseNumber(const char*) [with T = unsigned int]	48	static
+VariantData.hpp:239:5:T ArduinoJson::V742PB22::detail::VariantData::asIntegral(const ArduinoJson::V742PB22::detail::ResourceManager*) const [with T = unsigned int]	32	static
+JsonVariantConst.hpp:72:5:T ArduinoJson::V742PB22::JsonVariantConst::as() const [with T = unsigned int; typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::is_same<typename ArduinoJson::V742PB22::detail::function_traits<decltype (& ArduinoJson::V742PB22::Converter<T>::fromJson)>::arg1_type, ArduinoJson::V742PB22::JsonVariantConst>::value, int>::type <anonymous> = 0]	32	static
+ResidentShellRuntime.inc:2:6:bool RiscBoot::Runtime::residentPolicy(ArduinoJson::V742PB22::JsonVariantConst)	592	static
+Runtime.cpp:129:6:bool RiscBoot::Runtime::manifest(ArduinoJson::V742PB22::JsonObjectConst, RiscBoot::Runtime::Driver&)	1072	static
+MemberProxy.hpp:58:16:ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::MemberProxy< <template-parameter-1-1>, <template-parameter-1-2> >::getData() const [with TUpstream = ArduinoJson::V742PB22::JsonDocument&; AdaptedString = ArduinoJson::V742PB22::detail::RamString]	32	static
+VariantRefBaseImpl.hpp:20:10:T ArduinoJson::V742PB22::detail::VariantRefBase<TDerived>::as() const [with T = ArduinoJson::V742PB22::JsonVariantConst; TDerived = ArduinoJson::V742PB22::detail::MemberProxy<ArduinoJson::V742PB22::detail::MemberProxy<ArduinoJson::V742PB22::JsonDocument&, ArduinoJson::V742PB22::detail::RamString>, ArduinoJson::V742PB22::detail::RamString>]	48	static
+VariantRefBaseImpl.hpp:20:10:T ArduinoJson::V742PB22::detail::VariantRefBase<TDerived>::as() const [with T = ArduinoJson::V742PB22::JsonVariantConst; TDerived = ArduinoJson::V742PB22::detail::MemberProxy<ArduinoJson::V742PB22::detail::ElementProxy<ArduinoJson::V742PB22::detail::MemberProxy<ArduinoJson::V742PB22::JsonDocument&, ArduinoJson::V742PB22::detail::RamString> >, ArduinoJson::V742PB22::detail::RamString>]	48	static
+Runtime.cpp:1205:6:bool RiscBoot::Runtime::appManifestPath(size_t, char*, size_t) const	480	static
+Runtime.cpp:1224:6:bool RiscBoot::Runtime::appInventory(size_t, void*, size_t, uint32_t*) const	512	static
+Runtime.cpp:1224:6:bool RiscBoot::Runtime::appInventory(size_t, void*, size_t, uint32_t*) const	32	static
+Runtime.cpp:1216:6:bool RiscBoot::Runtime::appInventoryEntry(size_t, void*, size_t, uint32_t*) const	32	static
+VariantRefBaseImpl.hpp:20:10:T ArduinoJson::V742PB22::detail::VariantRefBase<TDerived>::as() const [with T = ArduinoJson::V742PB22::JsonVariantConst; TDerived = ArduinoJson::V742PB22::detail::MemberProxy<ArduinoJson::V742PB22::JsonDocument&, ArduinoJson::V742PB22::detail::RamString>]	48	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<int, void> >]	64	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<unsigned int, void> >]	64	static
+VariantCompare.hpp:27:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::Comparer<T, typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, void>::type>::visit(ArduinoJson::V742PB22::JsonString) [with T = ArduinoJson::V742PB22::JsonString]	80	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<ArduinoJson::V742PB22::JsonString> >]	48	static
+VariantCompare.hpp:152:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::VariantComparer::visit(ArduinoJson::V742PB22::JsonString)	80	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<ArduinoJson::V742PB22::JsonVariantConst, void> >]	48	static
+VariantCompare.hpp:206:15:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::compare(ArduinoJson::V742PB22::JsonVariantConst, const T&) [with T = ArduinoJson::V742PB22::JsonVariantConst]	64	static
+VariantOperators.hpp:67:15:bool ArduinoJson::V742PB22::detail::operator==(const T&, const TVariant&) [with T = ArduinoJson::V742PB22::JsonVariantConst; TVariant = ArduinoJson::V742PB22::JsonVariantConst]	32	static
+CohortMigration.h:7:13:bool RiscUpdate::validCohortMigration(ArduinoJson::V742PB22::JsonVariantConst)	544	static
+JsonVariantVisitor.hpp:32:15:ArduinoJson::V742PB22::detail::VisitorAdapter<TVisitor>::result_type ArduinoJson::V742PB22::detail::VisitorAdapter<TVisitor>::visit(const ArduinoJson::V742PB22::detail::ArrayData&) [with TVisitor = ArduinoJson::V742PB22::detail::ArrayComparer]	96	static
+VariantCompare.hpp:184:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::VariantComparer::reverseResult(TComparer&) [with TComparer = ArduinoJson::V742PB22::detail::ArrayComparer]	64	static
+JsonObjectConst.hpp:147:13:bool ArduinoJson::V742PB22::operator==(ArduinoJson::V742PB22::JsonObjectConst, ArduinoJson::V742PB22::JsonObjectConst)	160	static
+VariantCompare.hpp:184:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::VariantComparer::reverseResult(TComparer&) [with TComparer = ArduinoJson::V742PB22::detail::ObjectComparer]	48	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<ArduinoJson::V742PB22::detail::MemberProxy<ArduinoJson::V742PB22::JsonDocument&, ArduinoJson::V742PB22::detail::RamString>, void> >]	48	static
+VariantData.hpp:351:16:ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::VariantData::getOrAddMember(TAdaptedString, ArduinoJson::V742PB22::detail::ResourceManager*) [with TAdaptedString = ArduinoJson::V742PB22::detail::RamString]	96	static
+MemberProxy.hpp:64:16:ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::MemberProxy< <template-parameter-1-1>, <template-parameter-1-2> >::getOrCreateData() const [with TUpstream = ArduinoJson::V742PB22::JsonDocument&; AdaptedString = ArduinoJson::V742PB22::detail::RamString]	32	static
+VariantRefBaseImpl.hpp:103:20:ArduinoJson::V742PB22::JsonVariant ArduinoJson::V742PB22::detail::VariantRefBase<TDerived>::getOrCreateVariant() const [with TDerived = ArduinoJson::V742PB22::detail::MemberProxy<ArduinoJson::V742PB22::JsonObject, ArduinoJson::V742PB22::detail::RamString>]	48	static
+VariantRefBase.hpp:79:8:bool ArduinoJson::V742PB22::detail::VariantRefBase<TDerived>::set(const T&) const [with T = unsigned int; TDerived = ArduinoJson::V742PB22::detail::MemberProxy<ArduinoJson::V742PB22::JsonObject, ArduinoJson::V742PB22::detail::RamString>]	48	static
+CountingDecorator.hpp:20:8:void ArduinoJson::V742PB22::detail::CountingDecorator<TWriter>::write(const uint8_t*, size_t) [with TWriter = ArduinoJson::V742PB22::detail::StaticStringWriter]	32	static
+TextFormatter.hpp:152:8:void ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeRaw(const char*) [with TWriter = ArduinoJson::V742PB22::detail::StaticStringWriter]	32	static
+TextFormatter.hpp:120:38:ArduinoJson::V742PB22::detail::enable_if_t<ArduinoJson::V742PB22::detail::is_unsigned<TOut>::value> ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeInteger(T) [with T = long long unsigned int; TWriter = ArduinoJson::V742PB22::detail::StaticStringWriter]	80	static
+CountingDecorator.hpp:16:8:void ArduinoJson::V742PB22::detail::CountingDecorator<TWriter>::write(uint8_t) [with TWriter = ArduinoJson::V742PB22::detail::StaticStringWriter]	32	static
+TextFormatter.hpp:47:8:void ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeString(const char*, size_t) [with TWriter = ArduinoJson::V742PB22::detail::StaticStringWriter]	32	static
+TextFormatter.hpp:107:36:ArduinoJson::V742PB22::detail::enable_if_t<ArduinoJson::V742PB22::detail::is_signed<TOut>::value> ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeInteger(T) [with T = long long int; TWriter = ArduinoJson::V742PB22::detail::StaticStringWriter]	32	static
+JsonDeserializer.hpp:46:8:char ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::current() [with TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	32	static
+JsonDeserializer.hpp:604:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::skipSpacesAndComments() [with TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	32	static
+JsonDeserializer.hpp:670:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::skipKeyword(const char*) [with TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	32	static
+JsonDeserializer.hpp:46:8:char ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::current() [with TReader = ArduinoJson::V742PB22::detail::Reader<const char*, void>]	32	static
+JsonDeserializer.hpp:604:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::skipSpacesAndComments() [with TReader = ArduinoJson::V742PB22::detail::Reader<const char*, void>]	32	static
+JsonDeserializer.hpp:670:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::skipKeyword(const char*) [with TReader = ArduinoJson::V742PB22::detail::Reader<const char*, void>]	32	static
+VariantCompare.hpp:27:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::Comparer<T, typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, void>::type>::visit(ArduinoJson::V742PB22::JsonString) [with T = const char*]	64	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<const char*, void> >]	48	static
+VariantOperators.hpp:73:15:bool ArduinoJson::V742PB22::detail::operator==(const TVariant&, T*) [with T = const char; TVariant = ArduinoJson::V742PB22::JsonVariantConst]	48	static
+VariantOperators.hpp:94:15:bool ArduinoJson::V742PB22::detail::operator!=(const TVariant&, T*) [with T = const char; TVariant = ArduinoJson::V742PB22::JsonVariantConst]	48	static
+JsonDeserializer.hpp:46:8:char ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::current() [with TReader = ArduinoJson::V742PB22::detail::Reader<char*, void>]	32	static
+JsonDeserializer.hpp:604:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::skipSpacesAndComments() [with TReader = ArduinoJson::V742PB22::detail::Reader<char*, void>]	32	static
+JsonDeserializer.hpp:670:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::skipKeyword(const char*) [with TReader = ArduinoJson::V742PB22::detail::Reader<char*, void>]	32	static
+VariantImpl.hpp:124:42:ArduinoJson::V742PB22::detail::enable_if_t<ArduinoJson::V742PB22::detail::is_unsigned<T>::value, bool> ArduinoJson::V742PB22::detail::VariantData::setInteger(T, ArduinoJson::V742PB22::detail::ResourceManager*) [with T = long long unsigned int]	48	static
+ConverterImpl.hpp:61:15:static bool ArduinoJson::V742PB22::Converter<T, typename ArduinoJson::V742PB22::detail::enable_if<((ArduinoJson::V742PB22::detail::is_integral<T>::value && (! ArduinoJson::V742PB22::detail::is_same<bool, T>::value)) && (! ArduinoJson::V742PB22::detail::is_same<char, T>::value)), void>::type>::toJson(T, ArduinoJson::V742PB22::JsonVariant) [with T = long long unsigned int]	48	static
+VariantCompare.hpp:27:17:ArduinoJson::V742PB22::detail::CompareResult ArduinoJson::V742PB22::detail::Comparer<T, typename ArduinoJson::V742PB22::detail::enable_if<ArduinoJson::V742PB22::detail::IsString<TString>::value, void>::type>::visit(ArduinoJson::V742PB22::JsonString) [with T = char*]	64	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::Comparer<char*, void> >]	48	static
+TextFormatter.hpp:72:8:void ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeFloat(ArduinoJson::V742PB22::JsonFloat, int8_t) [with TWriter = ArduinoJson::V742PB22::detail::StaticStringWriter]	80	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::JsonSerializer<ArduinoJson::V742PB22::detail::StaticStringWriter>]	48	static
+serialize.hpp:34:68:ArduinoJson::V742PB22::detail::enable_if_t<TSerializer<ArduinoJson::V742PB22::detail::StaticStringWriter>::producesText, unsigned int> ArduinoJson::V742PB22::detail::serialize(ArduinoJson::V742PB22::JsonVariantConst, void*, size_t) [with TSerializer = ArduinoJson::V742PB22::detail::JsonSerializer]	64	static
+InstallationRuntime.inc:2:6:bool RiscBoot::Runtime::configureInstallation(ArduinoJson::V742PB22::JsonVariantConst)	448	static
+Runtime.cpp:902:6:bool RiscBoot::Runtime::prepare(const char*)	1680	static
+CountingDecorator.hpp:20:8:void ArduinoJson::V742PB22::detail::CountingDecorator<TWriter>::write(const uint8_t*, size_t) [with TWriter = ArduinoJson::V742PB22::detail::Writer<std::__cxx11::basic_string<char>, void>]	32	static
+TextFormatter.hpp:152:8:void ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeRaw(const char*) [with TWriter = ArduinoJson::V742PB22::detail::Writer<std::__cxx11::basic_string<char>, void>]	32	static
+TextFormatter.hpp:120:38:ArduinoJson::V742PB22::detail::enable_if_t<ArduinoJson::V742PB22::detail::is_unsigned<TOut>::value> ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeInteger(T) [with T = long long unsigned int; TWriter = ArduinoJson::V742PB22::detail::Writer<std::__cxx11::basic_string<char>, void>]	80	static
+JsonDeserializer.hpp:54:8:bool ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::eat(char) [with TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	32	static
+VariantImpl.hpp:101:40:ArduinoJson::V742PB22::detail::enable_if_t<ArduinoJson::V742PB22::detail::is_signed<T>::value, bool> ArduinoJson::V742PB22::detail::VariantData::setInteger(T, ArduinoJson::V742PB22::detail::ResourceManager*) [with T = long long int]	48	static
+VariantImpl.hpp:74:35:ArduinoJson::V742PB22::detail::enable_if_t<(sizeof (T) == 8), bool> ArduinoJson::V742PB22::detail::VariantData::setFloat(T, ArduinoJson::V742PB22::detail::ResourceManager*) [with T = double]	64	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::VisitorAdapter<ArduinoJson::V742PB22::detail::JsonVariantCopier>]	80	static
+ArrayImpl.hpp:60:13:bool ArduinoJson::V742PB22::detail::ArrayData::addValue(const T&, ArduinoJson::V742PB22::detail::ResourceManager*) [with T = ArduinoJson::V742PB22::JsonVariantConst]	64	static
+JsonVariantVisitor.hpp:32:15:ArduinoJson::V742PB22::detail::VisitorAdapter<TVisitor>::result_type ArduinoJson::V742PB22::detail::VisitorAdapter<TVisitor>::visit(const ArduinoJson::V742PB22::detail::ArrayData&) [with TVisitor = ArduinoJson::V742PB22::detail::JsonVariantCopier]	64	static
+JsonObject.hpp:89:8:bool ArduinoJson::V742PB22::JsonObject::set(ArduinoJson::V742PB22::JsonObjectConst)	192	static
+JsonVariantVisitor.hpp:36:15:ArduinoJson::V742PB22::detail::VisitorAdapter<TVisitor>::result_type ArduinoJson::V742PB22::detail::VisitorAdapter<TVisitor>::visit(const ArduinoJson::V742PB22::detail::ObjectData&) [with TVisitor = ArduinoJson::V742PB22::detail::JsonVariantCopier]	80	static
+JsonDeserializer.hpp:507:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseNumericValue(ArduinoJson::V742PB22::detail::VariantData&) [with TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	48	static
+JsonDeserializer.hpp:507:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseNumericValue(ArduinoJson::V742PB22::detail::VariantData&) [with TReader = ArduinoJson::V742PB22::detail::Reader<const char*, void>]	48	static
+JsonDeserializer.hpp:507:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseNumericValue(ArduinoJson::V742PB22::detail::VariantData&) [with TReader = ArduinoJson::V742PB22::detail::Reader<char*, void>]	48	static
+JsonDeserializer.hpp:54:8:bool ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::eat(char) [with TReader = ArduinoJson::V742PB22::detail::Reader<const char*, void>]	32	static
+JsonDeserializer.hpp:54:8:bool ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::eat(char) [with TReader = ArduinoJson::V742PB22::detail::Reader<char*, void>]	32	static
+Utf8.hpp:13:13:void ArduinoJson::V742PB22::detail::Utf8::encodeCodepoint(uint32_t, TStringBuilder&) [with TStringBuilder = ArduinoJson::V742PB22::detail::StringBuilder]	48	static
+JsonDeserializer.hpp:396:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseQuotedString() [with TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	48	static
+JsonDeserializer.hpp:396:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseQuotedString() [with TReader = ArduinoJson::V742PB22::detail::Reader<const char*, void>]	48	static
+JsonDeserializer.hpp:396:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseQuotedString() [with TReader = ArduinoJson::V742PB22::detail::Reader<char*, void>]	48	static
+MemberProxy.hpp:64:16:ArduinoJson::V742PB22::detail::VariantData* ArduinoJson::V742PB22::detail::MemberProxy< <template-parameter-1-1>, <template-parameter-1-2> >::getOrCreateData() const [with TUpstream = ArduinoJson::V742PB22::detail::MemberProxy<ArduinoJson::V742PB22::JsonDocument&, ArduinoJson::V742PB22::detail::RamString>; AdaptedString = ArduinoJson::V742PB22::detail::RamString]	32	static
+CountingDecorator.hpp:16:8:void ArduinoJson::V742PB22::detail::CountingDecorator<TWriter>::write(uint8_t) [with TWriter = ArduinoJson::V742PB22::detail::Writer<std::__cxx11::basic_string<char>, void>]	32	static
+TextFormatter.hpp:72:8:void ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeFloat(ArduinoJson::V742PB22::JsonFloat, int8_t) [with TWriter = ArduinoJson::V742PB22::detail::Writer<std::__cxx11::basic_string<char>, void>]	80	static
+TextFormatter.hpp:47:8:void ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeString(const char*, size_t) [with TWriter = ArduinoJson::V742PB22::detail::Writer<std::__cxx11::basic_string<char>, void>]	32	static
+TextFormatter.hpp:107:36:ArduinoJson::V742PB22::detail::enable_if_t<ArduinoJson::V742PB22::detail::is_signed<TOut>::value> ArduinoJson::V742PB22::detail::TextFormatter<TWriter>::writeInteger(T) [with T = long long int; TWriter = ArduinoJson::V742PB22::detail::Writer<std::__cxx11::basic_string<char>, void>]	32	static
+VariantData.hpp:54:34:typename TVisitor::result_type ArduinoJson::V742PB22::detail::VariantData::accept(TVisitor&, const ArduinoJson::V742PB22::detail::ResourceManager*) const [with TVisitor = ArduinoJson::V742PB22::detail::JsonSerializer<ArduinoJson::V742PB22::detail::Writer<std::__cxx11::basic_string<char>, void> >]	48	static
+JsonDeserializer.hpp:588:22:static bool ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::canBeInNonQuotedString(char) [with TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	32	static
+JsonDeserializer.hpp:234:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseObject(ArduinoJson::V742PB22::detail::ObjectData&, TFilter, ArduinoJson::V742PB22::DeserializationOption::NestingLimit) [with TFilter = ArduinoJson::V742PB22::detail::AllowAllFilter; TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	64	static
+JsonDeserializer.hpp:62:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseVariant(ArduinoJson::V742PB22::detail::VariantData&, TFilter, ArduinoJson::V742PB22::DeserializationOption::NestingLimit) [with TFilter = ArduinoJson::V742PB22::detail::AllowAllFilter; TReader = ArduinoJson::V742PB22::detail::BoundedReader<const char*>]	32	static
+Json.h:62:13:bool RiscBoot::parse(const char*, size_t, ArduinoJson::V742PB22::JsonDocument&)	672	static
+Runtime.cpp:1162:6:bool RiscBoot::Runtime::appUpdate(const char*, const void*, size_t, RiscBoot::Runtime::UpdateApp&) const	864	static
+JsonDeserializer.hpp:588:22:static bool ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::canBeInNonQuotedString(char) [with TReader = ArduinoJson::V742PB22::detail::Reader<const char*, void>]	32	static
+JsonDeserializer.hpp:234:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseObject(ArduinoJson::V742PB22::detail::ObjectData&, TFilter, ArduinoJson::V742PB22::DeserializationOption::NestingLimit) [with TFilter = ArduinoJson::V742PB22::detail::AllowAllFilter; TReader = ArduinoJson::V742PB22::detail::Reader<const char*, void>]	64	static
+JsonDeserializer.hpp:62:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseVariant(ArduinoJson::V742PB22::detail::VariantData&, TFilter, ArduinoJson::V742PB22::DeserializationOption::NestingLimit) [with TFilter = ArduinoJson::V742PB22::detail::AllowAllFilter; TReader = ArduinoJson::V742PB22::detail::Reader<const char*, void>]	32	static
+deserialize.hpp:63:22:>::type>::value), int>::type <anonymous> = 0]	128	static
+CohortRuntime.inc:57:6:bool RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t, const RiscUpdate::NativeAppDataExportPolicyV1*, const RiscUpdate::NativeAppDataExportPolicyV2*) const	2208	static
+CohortRuntime.inc:42:6:bool RiscBoot::Runtime::validateCohort(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscBoot::Runtime::AppDataExportDelegation*, size_t) const	48	static
+CohortRuntime.inc:47:6:bool RiscBoot::Runtime::validateNativeCohort(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscUpdate::NativeAppDataExportPolicyV1&) const	48	static
+CohortRuntime.inc:52:6:bool RiscBoot::Runtime::validateNativeCohort(RiscBoot::Runtime&, const char*, bool (*)(void*, const char*, bool), void*, const RiscUpdate::NativeAppDataExportPolicyV2&) const	48	static
+Runtime.cpp:1695:6:bool RiscBoot::Runtime::admitInstalledAppAt(const char*, const char*, size_t)	3088	static
+Runtime.cpp:1692:6:bool RiscBoot::Runtime::admitInstalledApp(const char*, const char*)	32	static
+JsonDeserializer.hpp:588:22:static bool ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::canBeInNonQuotedString(char) [with TReader = ArduinoJson::V742PB22::detail::Reader<char*, void>]	32	static
+JsonDeserializer.hpp:234:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseObject(ArduinoJson::V742PB22::detail::ObjectData&, TFilter, ArduinoJson::V742PB22::DeserializationOption::NestingLimit) [with TFilter = ArduinoJson::V742PB22::detail::AllowAllFilter; TReader = ArduinoJson::V742PB22::detail::Reader<char*, void>]	64	static
+JsonDeserializer.hpp:62:30:ArduinoJson::V742PB22::DeserializationError::Code ArduinoJson::V742PB22::detail::JsonDeserializer<TReader>::parseVariant(ArduinoJson::V742PB22::detail::VariantData&, TFilter, ArduinoJson::V742PB22::DeserializationOption::NestingLimit) [with TFilter = ArduinoJson::V742PB22::detail::AllowAllFilter; TReader = ArduinoJson::V742PB22::detail::Reader<char*, void>]	32	static
+deserialize.hpp:63:22:>::type>::value), int>::type <anonymous> = 0]	128	static
+InstallationProvidersRuntime.inc:16:9:static int32_t RiscBoot::Runtime::installationProviders(void*, const risc_install_provider_v1*, uint32_t, bool)	1248	static
+InstallationRuntime.inc:90:9:static int32_t RiscBoot::Runtime::installationAdmit(void*, const char*, const char*, char*, uint32_t)	928	static
+InstallationRuntime.inc:210:9:static int32_t RiscBoot::Runtime::installationTransaction(void*, const risc_install_candidate_v1*, uint32_t, risc_install_result_v1*, bool, bool, const uint32_t*)	336	static
+InstallationRuntime.inc:200:9:static int32_t RiscBoot::Runtime::installationCommit(void*, const risc_install_candidate_v1*, uint32_t, risc_install_result_v1*, bool)	48	static
+InstallationRuntime.inc:203:9:static int32_t RiscBoot::Runtime::installationCheck(void*, const risc_install_candidate_v1*, uint32_t, risc_install_result_v1*, bool)	48	static
+InstallationRuntime.inc:206:9:static int32_t RiscBoot::Runtime::installationNamespaced(void*, const risc_install_candidate_v1*, const uint32_t*, uint32_t, risc_install_result_v1*, bool, bool)	48	static

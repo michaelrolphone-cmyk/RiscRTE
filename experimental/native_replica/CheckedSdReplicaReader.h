@@ -19,9 +19,12 @@ class CheckedSdReplicaReader {
   uint32_t mapSize()const{return valid_?size_:0;}
   const uint8_t*map()const{return valid_?bytes_:nullptr;}
   C::Identity identity()const{return valid_?identity_:C::Identity{};}
-  void reset(){if(bytes_){C::wipe(bytes_,capacity_);alloc_.release(alloc_.context,bytes_);}bytes_=nullptr;capacity_=size_=count_=namespace_=0;valid_=false;C::wipe(&identity_,sizeof identity_);}
+  void reset(){if(bytes_){C::wipe(bytes_,capacity_);alloc_.release(alloc_.context,bytes_);}bytes_=nullptr;capacity_=size_=count_=namespace_=0;valid_=false;restoreQualified_=false;sourceBackup_=false;sourceCore_=nullptr;sourceAttempt_=nullptr;sourceEpoch_=sourceClosed_=0;C::wipe(&identity_,sizeof identity_);}
   private:
-  friend class CheckedSdReplicaReader;
+  friend class CheckedSdReplicaReader;friend class CheckedSdNativeRestore;friend class CheckedSdSettingsCatalog;
+  void transferTo(Candidate&out){out.alloc_=alloc_;out.bytes_=bytes_;out.capacity_=capacity_;out.size_=size_;out.count_=count_;out.namespace_=namespace_;out.valid_=valid_;out.identity_=identity_;out.sourceCore_=sourceCore_;out.sourceAttempt_=sourceAttempt_;out.sourceEpoch_=sourceEpoch_;out.sourceClosed_=sourceClosed_;out.restoreQualified_=restoreQualified_;out.sourceBackup_=sourceBackup_;bytes_=nullptr;reset();}
+  bool restoreQualified_=false,sourceBackup_=false;
+  const C*sourceCore_=nullptr;NativeSdAttempt*sourceAttempt_=nullptr;uint64_t sourceEpoch_=0,sourceClosed_=0;
   C::Allocator alloc_{};uint8_t*bytes_=nullptr;uint32_t capacity_=0,size_=0,count_=0,namespace_=0;bool valid_=false;C::Identity identity_{};
  };
  // Bind actual configured native capacity, not a remote-advertised size. This
@@ -84,7 +87,8 @@ class CheckedSdReplicaReader {
   if(custody==C::Retained){retain();return C::Retained;}
   if(custody){reason_=custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable;finish(State::Failed,custody);return error_;}
   if(io_.pinned()){const int released=io_.release();if(released){if(released==C::Retained)retain();else finish(State::Failed,released);return error_;}}
-  out->alloc_=candidate_.alloc_;out->bytes_=candidate_.bytes_;out->capacity_=candidate_.capacity_;out->size_=candidate_.size_;out->count_=candidate_.count_;out->namespace_=namespace_;out->identity_=candidate_.identity_;out->valid_=true;
+  out->alloc_=candidate_.alloc_;out->bytes_=candidate_.bytes_;out->capacity_=candidate_.capacity_;out->size_=candidate_.size_;out->count_=candidate_.count_;out->namespace_=namespace_;out->identity_=candidate_.identity_;out->valid_=true;out->sourceBackup_=backupSelected_;
+  if(io_.native()&&!verificationOnly_){out->sourceCore_=&core_;out->sourceAttempt_=io_.attempt();out->sourceEpoch_=io_.attempt()->epoch();out->sourceClosed_=io_.attempt()->closedSequence();}
   candidate_.bytes_=nullptr;candidate_.reset();state_=State::Done;return C::Ok;
  }
  void step(){
@@ -107,7 +111,12 @@ class CheckedSdReplicaReader {
   if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
-  if(rc==RISC_STORAGE_ASYNC_NOT_FOUND){if(phase_==ReadIndex&&!recovered_){recovered_=true;phase_=Recover;return;}fail(phase_==ReadIndex?C::Missing:C::Io,phase_==ReadIndex?Reason::CheckpointMissing:Reason::ReadFailure);return;}
+  if(rc==RISC_STORAGE_ASYNC_NOT_FOUND){
+   if(phase_==CheckPrimaryAbsent){phase_=Closing;return;}
+   if(phase_==ReadIndex&&backupAllowed_&&!backupSelected_){backupSelected_=true;return;}
+   if(phase_==ReadIndex&&recoverAllowed_&&!recovered_){recovered_=true;phase_=Recover;return;}
+   fail(phase_==ReadIndex?C::Missing:C::Io,phase_==ReadIndex?Reason::CheckpointMissing:Reason::ReadFailure);return;
+  }
   if(rc!=RISC_STORAGE_ASYNC_OK){fail(C::Io,rc==RISC_STORAGE_ASYNC_INVALID?Reason::InvalidContent:Reason::ReadFailure);return;}
   switch(phase_){
    case Refresh:phase_=ReadIndex;break;
@@ -118,7 +127,8 @@ class CheckedSdReplicaReader {
     std::memcpy(candidate_.bytes_+at,result_.data,n);
     if(!hash_.update(hash_.context,result_.data,n)){fail(C::Io,Reason::ReadFailure);break;}
     ++page_;if(uint64_t(page_)*4096>=candidate_.size_)finishDigest();break;}
-   case Recheck:if(result_.size!=sizeof indexBytes_||std::memcmp(result_.data,indexBytes_,sizeof indexBytes_))fail(C::Conflict,Reason::InvalidContent);else phase_=Closing;break;
+   case Recheck:if(result_.size!=sizeof indexBytes_||std::memcmp(result_.data,indexBytes_,sizeof indexBytes_))fail(C::Conflict,Reason::InvalidContent);else phase_=backupSelected_?CheckPrimaryAbsent:Closing;break;
+   case CheckPrimaryAbsent:fail(C::Conflict,Reason::InvalidContent);break;
    default:fail(C::Invalid,Reason::InvalidContent);break;
   }
   C::wipe(&result_,sizeof result_);
@@ -127,7 +137,8 @@ class CheckedSdReplicaReader {
  friend class CheckedSdSettingsCatalog;
  CheckedSdReplicaReader(const C&core,uint32_t ns,uint32_t capacity,uint32_t header,Digest digest,Guard guard,C::Allocator allocator)
   :core_(core),namespace_(ns),nativeCapacity_(capacity),hash_(digest),guard_(guard),alloc_(allocator),prep_(this,preparationWorker,prepareCallback){preparedHeader_=header;}
- int startPreparedNative(NativeSdAttempt&attempt,const NativeSdSession&parent){
+ int startPreparedNative(NativeSdAttempt&attempt,const NativeSdSession&parent,bool recover=true,bool backup=false){
+  recoverAllowed_=recover;backupAllowed_=backup;
   const int rc=io_.bind(attempt,NativeSdSession::Role::ReplicaReader,namespace_,&parent);if(rc)return rc;
   preparedStart_=true;const int started=start(attempt.binding().volume);preparedStart_=false;
   if(started){const int released=io_.release();if(released==C::Retained){retain();return released;}}return started;
@@ -143,7 +154,7 @@ class CheckedSdReplicaReader {
   return observed==RISC_STORAGE_STATE_READY?C::Ok:C::Io;
  }
  bool retainedCustody(){return io_.native()?io_.custody()==C::Retained:api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED;}
- enum Phase{Begin,Refresh,ReadIndex,Recover,ReadPage,Grammar,Recheck,Closing};
+ enum Phase{Begin,Refresh,ReadIndex,Recover,ReadPage,Grammar,Recheck,CheckPrimaryAbsent,Closing};
  friend class CheckedNativeExportRecovery;
  // Recovery verifies the exact prior publication without importing that map.
  // A previous v1 base can exceed today's v2 map budget after local deletion;
@@ -157,7 +168,7 @@ class CheckedSdReplicaReader {
  const C&core_;bool verificationOnly_=false;
  uint32_t namespace_,nativeCapacity_,budget_=0;Digest hash_;Guard guard_;C::Allocator alloc_;Candidate candidate_;
  const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
- NativeSdSession io_;NativeSdPreparation prep_;bool preparedStart_=false;uint32_t preparedHeader_=C::Header;
+ NativeSdSession io_;NativeSdPreparation prep_;bool preparedStart_=false,recoverAllowed_=true,backupAllowed_=false,backupSelected_=false;uint32_t preparedHeader_=C::Header;
  State state_=State::Idle;Reason reason_=Reason::None;Phase phase_=Begin;int error_=0;bool cancelled_=false,recovered_=false,rowOpen_=false;
  uint64_t session_=0,operation_=0;uint32_t page_=0,row_=0,at_=0,prior_=0,rowSize_=0;
  uint8_t indexBytes_[CheckedSdReplicaCheckpoint::IndexBytes]{};char directory_[32]{},index_[64]{},path_[160]{};risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};
@@ -207,7 +218,7 @@ class CheckedSdReplicaReader {
  void submit(){
   int rc;
   if(phase_==Recover){C::wipe(&request_,sizeof request_);request_.operation=RISC_STORAGE_PACKAGE_RECOVER;std::strcpy(request_.path,index_);rc=io_.native()?io_.package(request_,&operation_):api_->submit_package(volume_->context,session_,&request_,&operation_);C::wipe(&request_,sizeof request_);}
-  else {risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:RISC_STORAGE_ASYNC_READ_SMALL_FILE;const char*p=index_;if(phase_==ReadPage){pagePath();p=path_;}std::strcpy(q.path,p);rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);}
+  else {risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:RISC_STORAGE_ASYNC_READ_SMALL_FILE;const char*p=index_;if(phase_==ReadPage){pagePath();p=path_;}else if(backupSelected_&&(phase_==ReadIndex||phase_==Recheck)){std::snprintf(path_,sizeof path_,"%s.risc-replace",index_);p=path_;}std::strcpy(q.path,p);rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);}
   if(rc==RISC_STORAGE_ASYNC_BUSY)return;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
   if(rc!=RISC_STORAGE_ASYNC_OK)fail(C::Io,Reason::ReadFailure);

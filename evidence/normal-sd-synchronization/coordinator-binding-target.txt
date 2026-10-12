@@ -1,0 +1,23 @@
+coordinator: real checked store/NVS composition; owner-only zero-I/O polls; native namespace exclusion; terminal collection; 40000 concurrent idle read releases PASS
+coordinator: four-client bound; foreign/stale leases; native maintenance Retained reaches atomic state/get/submit/exit PASS
+coordinator: queued revoke keeps lease until collected without mutation; completed cancellation preserves committed receipt PASS
+coordinator: actual AppData write blocked concurrently; cancellation/exit/native contention cannot release or delete running work PASS
+coordinator: actual checked close failure sticks Retained, namespace/background lease and native references PASS
+actual ESP binding: bounded two registrations, exact namespace/backend identity, foreign owner/ISR, internal allocation and failure rollback PASS
+actual ESP binding: legacy single namespace lookup and worker guards remain compatible PASS
+actual ESP binding: two real checked stores, concurrent polling, 20000 owner reads, 32 copied writes, native background contention and namespace isolation PASS
+actual ESP binding: namespace 1 blocked native write, cancellation and cross-namespace contention preserve both workers until checked collection PASS
+actual ESP binding: namespace 6 blocked native write, cancellation and cross-namespace contention preserve both workers until checked collection PASS
+actual ESP binding: namespace 1 checked-close Retained blocks aggregate exit and other namespace I/O; no task deletion/free PASS
+actual ESP binding: namespace 6 checked-close Retained blocks aggregate exit and other namespace I/O; no task deletion/free PASS
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+legacy
+00000000 00003b98 B native_sd_synchronization_size
+e9a4607b8c793f04d15796d96538e4245e997ece176a0240c2eddd2f3085e992  .build/sync-files-target/probe-legacy.o
+cohort
+00000000 00003b98 B native_sd_synchronization_size
+bbe7adb24938ab80959b10dfc529c3cb0fae0c07fd1544f8ed31d9993c9c296b  .build/sync-files-target/probe-cohort.o
