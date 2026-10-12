@@ -1,0 +1,8 @@
+first create: known lineage, unknown imported/empty baseline, durable-before-pages and newer native edit preservation PASS
+first create: legacy/new/unknown/orphan/backup preservation, unclassified provenance, missing entropy/custody and stale capture refusals PASS
+first create: 15 exact marker-owned torn-prefix repairs, reboot with repeated newer edits, stable lineage and nonprefix conflicts PASS
+first create: 476 worker before/after error/power cuts resume with fresh inventory/full readback/close and preserve newer edits PASS
+first create: 13 repaired-checksum purpose/capture/envelope corruptions, doubled-map native capacity, SD reservation and bounded inventory refusals PASS
+first create: ambiguous native arm/ack old-or-new reload and retained verification refuses acknowledgement PASS
+first create: explicitly selected complete empty dataset publishes only index PASS
+EXPERIMENTAL STRICT-GUARD HOST PROOF ONLY: no production binding or hardware qualification

@@ -7,6 +7,7 @@
 namespace RiscExperimental {
 class NativeBaselineAdmission;
 class CheckedNativeReplicaStore;
+class CheckedFirstSdCheckpoint;
 class NativeReplicaCore {
  public:
  enum Result { Ok=0, Missing=-1, Invalid=-2, NoMemory=-3, NoSpace=-4,
@@ -118,13 +119,14 @@ class NativeReplicaCore {
   friend class NativeReplicaCore;
   uint8_t*bytes_=nullptr;uint32_t size_=0;Allocator alloc_{};Ticket ticket_{};const NativeReplicaCore*owner_=nullptr;
  };
- static constexpr uint32_t Header=128, HeaderV2=384, HeaderV3=480, ProvenanceBytes=96, MarkerBytes=256, GroupHeader=88, RootBytes=48, ValueMax=2048;
+ static constexpr uint32_t Header=128, HeaderV2=384, HeaderV3=480, HeaderV4=512, ProvenanceBytes=96, MarkerBytes=256, GroupHeader=88, RootBytes=48, ValueMax=2048;
  // A copied handle has authority only while these exact bytes are selected by
  // this native root. There is deliberately no decoder/import setter API.
  class ExportMarker {
   public:
   bool valid()const{return NativeReplicaCore::validMarkerEncoding(bytes_);}
   const uint8_t*encoded()const{return bytes_;}
+  bool firstCreation()const{return valid()&&!std::memcmp(bytes_,"RTENEX02",8);}
   uint32_t namespaceId()const{return NativeReplicaCore::word(bytes_+8);}
   const uint8_t*incarnation()const{return bytes_+16;}
   uint64_t capturedRevision()const{return NativeReplicaCore::wide(bytes_+32);}
@@ -302,12 +304,13 @@ class NativeReplicaCore {
   if(!validIdentity(verifiedTarget)||!verifiedTarget.known)return Invalid;
   if(!sameIdentity(expected.target(),verifiedTarget))return Conflict;
   if(revision()==UINT64_MAX)return NoSpace;
-  const uint32_t mapBytes=word(bytes_+104),removed=expected.prefixBytes(),total=size_-removed;
+  const uint32_t mapBytes=word(bytes_+104),removed=expected.prefixBytes(),oldHeader=headerSize();
+  const uint32_t newHeader=expected.firstCreation()?HeaderV3:oldHeader,total=size_-removed-oldHeader+newHeader;
   auto*p=allocate(total);if(!p)return NoMemory;
-  makeHeader(p,revision()+1,sequence(),expected.through(),verifiedTarget,word(bytes_+96),pendingCount()-expected.prefixCount(),mapBytes,total);
-  std::memset(p+Header,0,MarkerBytes);std::memcpy(p+headerSize(),bytes_+headerSize(),mapBytes);
-  const uint32_t groupsAt=headerSize()+mapBytes;
-  std::memcpy(p+groupsAt,bytes_+groupsAt+removed,size_-groupsAt-removed-4);finish(p,total);
+  makeHeader(p,revision()+1,sequence(),expected.through(),verifiedTarget,word(bytes_+96),pendingCount()-expected.prefixCount(),mapBytes,total,newHeader);
+  std::memset(p+Header,0,MarkerBytes);std::memcpy(p+newHeader,bytes_+oldHeader,mapBytes);
+  const uint32_t groupsAt=oldHeader+mapBytes;
+  std::memcpy(p+newHeader+mapBytes,bytes_+groupsAt+removed,size_-groupsAt-removed-4);finish(p,total);
   const int rc=publish(p,total);if(rc==Ok)ticketLive_=false;return rc;
  }
  // Caller freshly verified the exact previous base under the same held lease.
@@ -317,7 +320,7 @@ class NativeReplicaCore {
   if(!ready())return Uncertain;
   if(!selectedMarker(expected))return Stale;
   if(!validIdentity(verifiedBase)||!verifiedBase.known)return Invalid;
-  if(!sameIdentity(expected.base(),verifiedBase))return Conflict;
+  if(expected.firstCreation()||!sameIdentity(expected.base(),verifiedBase))return Conflict;
   if(revision()==UINT64_MAX)return NoSpace;
   auto*p=allocate(size_);if(!p)return NoMemory;
   std::memcpy(p,bytes_,size_);putWide(p+16,revision()+1);std::memset(p+Header,0,MarkerBytes);finish(p,size_);
@@ -373,7 +376,49 @@ class NativeReplicaCore {
    if(wide(bytes_+at)>after){*id=wide(bytes_+at);*size=word(bytes_+at+24);if(cap<*size)return BufferSmall;std::memcpy(out,bytes_+at+GroupHeader+word(bytes_+at+28),*size);return Ok;}at+=n;}return Missing;
  }
  private:
- friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;
+ friend class NativeBaselineAdmission;friend class CheckedNativeReplicaStore;friend class CheckedFirstSdCheckpoint;
+ // Separate first-create purpose. Only the checked creator can arm it after a
+ // live vacant inventory. V4 carries the immutable captured map in every native
+ // publication, so inactive-bank reuse and newer edits cannot destroy recovery.
+ int prepareFirstExport(const Snapshot&s,const Identity&target,const uint8_t*incarnation,ExportMarker*out){
+  if(admissionBusy_)return Busy;
+  if(!ready())return Uncertain;
+  if(!out||!s.valid())return Invalid;
+  if(exportPrepared())return Busy;
+  if(s.owner_!=this||!ticketLive_||!sameTicket(s.ticket_,ticket_)||s.size_!=size_||s.ticket_.revision!=revision()||s.ticket_.through!=sequence()||std::memcmp(s.bytes_,bytes_,size_))return Stale;
+  const auto base=identity();
+  if(!validIdentity(target)||!target.known)return Invalid;
+  if(base.known?(base.generation==UINT64_MAX||target.generation!=base.generation+1||std::memcmp(base.lineage,target.lineage,16)):(target.generation!=1||baseline().origin()==Origin::Unclassified))return Conflict;
+  if(headerSize()==Header||zero(bytes_+112,16)){if(!incarnation||zero(incarnation,16))return Invalid;}
+  else if(incarnation&&std::memcmp(incarnation,bytes_+112,16))return Conflict;
+  if(revision()==UINT64_MAX)return NoSpace;
+  const uint32_t mapBytes=s.mapSize(),newHeader=HeaderV4+mapBytes;
+  const uint64_t total=uint64_t(size_)-headerSize()+newHeader;
+  if(!fits(total))return NoSpace;
+  auto*p=allocate(uint32_t(total));if(!p)return NoMemory;
+  makeHeader(p,revision()+1,sequence(),wide(bytes_+32),base,s.count(),pendingCount(),mapBytes,uint32_t(total),newHeader);
+  if(headerSize()==Header||zero(bytes_+112,16))std::memcpy(p+112,incarnation,16);
+  if(headerSize()<HeaderV3){auto*b=p+HeaderV2;std::memcpy(b,"RTENBP1",8);putWord(b+8,ns_);putWord(b+92,crc(b,92));}
+  putWord(p+HeaderV3,mapBytes);if(mapBytes)std::memcpy(p+HeaderV4,s.map(),mapBytes);
+  auto*m=p+Header;std::memcpy(m,"RTENEX02",8);putWord(m+8,ns_);putWord(m+12,2);std::memcpy(m+16,p+112,16);
+  const uint32_t groups=size_-headerSize()-mapBytes-4;
+  putWide(m+32,revision());putWide(m+40,sequence());putWide(m+48,wide(bytes_+32));putWord(m+56,pendingCount());putWord(m+60,groups);
+  putWord(m+64,mapBytes);putWord(m+68,s.count());putMarkerIdentity(m+72,base);putMarkerIdentity(m+136,target);
+  putWord(m+200,crc(bytes_+headerSize()+mapBytes,groups));putWord(m+204,crc(s.map(),mapBytes));putWord(m+252,crc(m,252));
+  std::memcpy(p+newHeader,bytes_+headerSize(),size_-headerSize()-4);finish(p,uint32_t(total));
+  const int rc=publish(p,uint32_t(total));if(!rc){ticketLive_=false;std::memcpy(out->bytes_,bytes_+Header,MarkerBytes);}return rc;
+ }
+ int firstExportSnapshot(const ExportMarker&m,Snapshot*out){
+  if(admissionBusy_)return Busy;
+  if(!ready())return Uncertain;
+  if(!out||out->valid())return Invalid;
+  if(!selectedMarker(m)||!m.firstCreation()||formatVersion()!=4)return Stale;
+  const uint32_t total=Header+m.mapSize()+4;auto*p=allocate(total);if(!p)return NoMemory;
+  makeHeader(p,m.capturedRevision(),m.through(),m.previousAck(),m.base(),m.count(),0,m.mapSize(),total,Header);
+  if(m.mapSize())std::memcpy(p+Header,bytes_+HeaderV4,m.mapSize());
+  finish(p,total);
+  out->bytes_=p;out->size_=total;out->alloc_=alloc_;out->owner_=this;return Ok;
+ }
  bool admissionBusy_=false;
  struct AdmissionScope {bool&busy;explicit AdmissionScope(bool&b):busy(b){busy=true;}~AdmissionScope(){busy=false;}};
  struct AdmissionCompletion {Initialization&admission;int&result;~AdmissionCompletion(){admission.complete_(admission.factory_,result);}};
@@ -429,9 +474,9 @@ class NativeReplicaCore {
  static bool sameIdentity(const Identity&a,const Identity&b){return a.known==b.known&&a.generation==b.generation&&!std::memcmp(a.lineage,b.lineage,16)&&!std::memcmp(a.digest,b.digest,32);}
  static bool sameTicket(const Ticket&a,const Ticket&b){return a.serial==b.serial&&a.revision==b.revision&&a.through==b.through&&a.mapCrc==b.mapCrc;}
  static Identity identityAt(const uint8_t*p){Identity i{};i.known=word(p+12)!=0;i.generation=wide(p+40);std::memcpy(i.lineage,p+48,16);std::memcpy(i.digest,p+64,32);return i;}
- static uint32_t imageVersion(const uint8_t*p){return !std::memcmp(p,"RTENR01",8)?1:!std::memcmp(p,"RTENR02",8)?2:!std::memcmp(p,"RTENR03",8)?3:0;}
- static uint32_t imageHeader(const uint8_t*p){const uint32_t v=imageVersion(p);return v==1?Header:v==2?HeaderV2:v==3?HeaderV3:0;}
- static Baseline baselineAt(const uint8_t*p){Baseline result;if(imageHeader(p)==HeaderV3)std::memcpy(result.bytes_,p+HeaderV2,ProvenanceBytes);return result;}
+ static uint32_t imageVersion(const uint8_t*p){return !std::memcmp(p,"RTENR01",8)?1:!std::memcmp(p,"RTENR02",8)?2:!std::memcmp(p,"RTENR03",8)?3:!std::memcmp(p,"RTENR04",8)?4:0;}
+ static uint32_t imageHeader(const uint8_t*p){const uint32_t v=imageVersion(p);return v==1?Header:v==2?HeaderV2:v==3?HeaderV3:v==4?HeaderV4+word(p+HeaderV3):0;}
+ static Baseline baselineAt(const uint8_t*p){Baseline result;if(imageVersion(p)>=3)std::memcpy(result.bytes_,p+HeaderV2,ProvenanceBytes);return result;}
  bool validBaseline(const uint8_t*p)const{
   if(std::memcmp(p,"RTENBP1",8)||word(p+8)!=ns_||word(p+12)>uint32_t(Origin::ImportedLegacy)||word(p+92)!=crc(p,92))return false;
   if(word(p+12)!=uint32_t(Origin::ImportedLegacy))return zero(p+16,76);
@@ -441,10 +486,12 @@ class NativeReplicaCore {
  static Identity markerIdentity(const uint8_t*p){Identity i{};i.known=word(p)!=0;i.generation=wide(p+8);std::memcpy(i.lineage,p+16,16);std::memcpy(i.digest,p+32,32);return i;}
  static void putMarkerIdentity(uint8_t*p,const Identity&i){putWord(p,i.known?1:0);putWord(p+4,0);putWide(p+8,i.generation);std::memcpy(p+16,i.lineage,16);std::memcpy(p+32,i.digest,32);}
  static bool validMarkerEncoding(const uint8_t*m){
-  if(std::memcmp(m,"RTENEX01",8)||!word(m+8)||word(m+12)!=1||zero(m+16,16)||!wide(m+32)||wide(m+48)>wide(m+40)||
-     !zero(m+208,44)||word(m+252)!=crc(m,252)||word(m+72)!=1||word(m+136)!=1||!zero(m+76,4)||!zero(m+140,4))return false;
+  const bool first=!std::memcmp(m,"RTENEX02",8);
+  if((!first&&std::memcmp(m,"RTENEX01",8))||!word(m+8)||word(m+12)!=(first?2u:1u)||zero(m+16,16)||!wide(m+32)||wide(m+48)>wide(m+40)||
+     !zero(m+208,44)||word(m+252)!=crc(m,252)||word(m+72)>1||(!first&&word(m+72)!=1)||word(m+136)!=1||!zero(m+76,4)||!zero(m+140,4))return false;
   const Identity base=markerIdentity(m+72),target=markerIdentity(m+136);
-  if(!validIdentity(base)||!validIdentity(target)||base.generation==UINT64_MAX||target.generation!=base.generation+1||std::memcmp(base.lineage,target.lineage,16))return false;
+  if(!validIdentity(base)||!validIdentity(target))return false;
+  if(base.known?(base.generation==UINT64_MAX||target.generation!=base.generation+1||std::memcmp(base.lineage,target.lineage,16)):(!first||target.generation!=1))return false;
   if((!word(m+56))!=(!word(m+60))||uint64_t(word(m+56))*(GroupHeader+25)>word(m+60)||
      (!word(m+68))!=(!word(m+64))||uint64_t(word(m+68))*21>word(m+64))return false;
   return true;
@@ -452,6 +499,9 @@ class NativeReplicaCore {
  // Image/map/groups have already passed bounds/encoding validation here.
  bool validSelectedMarker(const uint8_t*p,uint32_t n)const{
   const auto*m=p+Header;
+  const bool first=!std::memcmp(m,"RTENEX02",8);
+  if(first!=(imageVersion(p)==4))return false;
+  if(first&&(word(p+HeaderV3)!=word(m+64)||word(m+204)!=crc(p+HeaderV4,word(m+64))||(!markerIdentity(m+72).known&&baselineAt(p).origin()==Origin::Unclassified)))return false;
   if(!validMarkerEncoding(m)||word(m+8)!=ns_||std::memcmp(m+16,p+112,16)||wide(m+32)>=wide(p+16)||
      wide(m+40)>wide(p+24)||wide(m+48)!=wide(p+32)||!sameIdentity(markerIdentity(m+72),identityAt(p))||
      wide(p+16)-wide(m+32)-1!=wide(p+24)-wide(m+40)||word(m+56)>word(p+100)||
@@ -476,13 +526,14 @@ class NativeReplicaCore {
  static uint32_t writeValue(uint8_t*p,uint32_t at,const Value&v){std::memset(p+at,0,20);std::strcpy(reinterpret_cast<char*>(p+at),v.key);putWord(p+at+16,v.size);std::memcpy(p+at+20,v.data,v.size);return at+20+v.size;}
  void makeHeader(uint8_t*p,uint64_t rev,uint64_t seq,uint64_t ack,const Identity&base,uint32_t entries,uint32_t groups,uint32_t mapBytes,uint32_t total,uint32_t header=0){
   if(!header)header=headerSize();
-  std::memset(p,0,header);std::memcpy(p,header==HeaderV3?"RTENR03":header==HeaderV2?"RTENR02":"RTENR01",7);
-  if(header>=HeaderV2&&bytes_&&imageHeader(bytes_)>=HeaderV2){std::memcpy(p+112,bytes_+112,HeaderV2-112);if(header==HeaderV3&&imageHeader(bytes_)==HeaderV3)std::memcpy(p+HeaderV2,bytes_+HeaderV2,ProvenanceBytes);}
+  std::memset(p,0,header);std::memcpy(p,header>=HeaderV4?"RTENR04":header==HeaderV3?"RTENR03":header==HeaderV2?"RTENR02":"RTENR01",7);
+  if(header>=HeaderV2&&bytes_&&imageHeader(bytes_)>=HeaderV2){std::memcpy(p+112,bytes_+112,HeaderV2-112);if(header>=HeaderV3&&imageVersion(bytes_)>=3)std::memcpy(p+HeaderV2,bytes_+HeaderV2,ProvenanceBytes);if(header>=HeaderV4&&imageVersion(bytes_)==4&&header==headerSize())std::memcpy(p+HeaderV3,bytes_+HeaderV3,header-HeaderV3);}
   putWord(p+8,ns_);putWord(p+12,base.known?1:0);putWide(p+16,rev);putWide(p+24,seq);putWide(p+32,ack);putWide(p+40,base.generation);std::memcpy(p+48,base.lineage,16);std::memcpy(p+64,base.digest,32);putWord(p+96,entries);putWord(p+100,groups);putWord(p+104,mapBytes);putWord(p+108,total);}
  static void finish(uint8_t*p,uint32_t n){putWord(p+n-4,crc(p,n-4));}
  static uint32_t groupSize(const uint8_t*p){return GroupHeader+word(p+24)+word(p+28);}
  bool validate(const uint8_t*p,uint32_t n)const{
   if(!fits(n))return false;
+  if(imageVersion(p)==4&&(n<HeaderV4+4||word(p+HeaderV3)>n-HeaderV4-4||!zero(p+HeaderV3+4,28)||zero(p+Header,MarkerBytes)))return false;
   const uint32_t header=imageHeader(p);
   if(!header||n<header+4||word(p+8)!=ns_||word(p+12)>1||!wide(p+16)||wide(p+32)>wide(p+24)||word(p+108)!=n||(header==Header?!zero(p+112,16):header==HeaderV2?zero(p+112,16):(!validBaseline(p+HeaderV2)||(!zero(p+Header,MarkerBytes)&&zero(p+112,16))))||word(p+n-4)!=crc(p,n-4)||!validIdentity(identityAt(p))||word(p+104)>n-header-4)return false;
   uint32_t at=header;const uint32_t mapEnd=header+word(p+104);
