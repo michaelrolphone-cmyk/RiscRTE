@@ -123,13 +123,28 @@ namespace RiscBoot {void testRuntimeRun(Port&p){
  if(mode=="long")model.until=65537;
  if(mode=="cancel-maintenance")model.until=5;
  if(mode=="retained")model.retained=true;
+ const unsigned oldDelays=delays;
  const bool safe=p.nativeOwnerCheckpoint(true);
  if(mode=="retained"){assert(!safe&&!L::exitSafe()&&!p.exitSafe()&&!p.storageSafe());return;}
- assert(safe&&L::exitSafe()&&p.exitSafe()&&p.storageSafe());
+ assert(safe&&delays==oldDelays);
+ if(mode=="busy"){assert(!model.polls&&!L::retained()&&L::exitSafe());model.busy=false;assert(p.nativeOwnerCheckpoint(true));}
+ assert(L::continuing()&&!L::discovering()&&!L::exitSafe()&&p.exitSafe()&&p.storageSafe());
+ // Even an unleased sibling cannot publish a stale draft while a sweep runs.
+ for(auto&s:services){risc_key_value_atomic_state_v1 v{};v.struct_size=sizeof(v);assert(s->endpoint().state(&v)==RISC_ATOMIC_BUSY);}
+ if(mode=="shutdown-maintenance"){
+  assert(p.nativeSettingsShutdown()&&L::exitSafe()&&!model.cancels&&model.polls==model.until);
+  assert(delays==oldDelays+model.until-1);return;
+ }
+ while(L::continuing()){
+  const unsigned old=model.polls;
+  assert(p.nativeDiscoveryCheckpoint());assert(model.polls==old+1&&delays==oldDelays);
+  if(L::continuing())for(auto&s:services){risc_key_value_atomic_state_v1 v{};v.struct_size=sizeof(v);assert(s->endpoint().state(&v)==RISC_ATOMIC_BUSY);}
+ }
+ assert(L::exitSafe()&&p.exitSafe()&&p.storageSafe());
  if(mode=="cancel-maintenance")assert(model.cancels==1&&model.polls==5&&L::timing().cancellationRequested);
- if(mode=="busy"){assert(!model.polls&&!L::retained());model.busy=false;assert(p.nativeOwnerCheckpoint(true));}
- const auto timing=L::timing();assert(timing.lastPolls==model.until&&timing.lastBlockedMs==model.until-1&&timing.maxBlockedMs>=timing.lastBlockedMs);
- printf("checkpoint timing: polls=%u synthetic_blocked_ms=%llu\n",timing.lastPolls,(unsigned long long)timing.lastBlockedMs);
+ for(auto&s:services){risc_key_value_atomic_state_v1 v{};v.struct_size=sizeof(v);assert(!s->endpoint().state(&v));}
+ const auto timing=L::timing();assert(timing.lastPolls==model.until&&!timing.lastBlockedMs);
+ printf("bounded checkpoint timing: polls=%u synthetic_blocked_ms=%llu\n",timing.lastPolls,(unsigned long long)timing.lastBlockedMs);
  }}
 int main(int argc,char**argv){assert(argc==3);mode=argv[1];NF::rootPath=argv[2];NF::empty();
  {NF::Fixture one(1),six(6);C::Value v1{"setting","one",3},v6{"setting","six",3};assert(!one.core.initialize(&v1,1,{}));one.store.finishOperation();if(mode!="missing-native"&&mode.rfind("preapp-",0)!=0){assert(!six.core.initialize(&v6,1,{}));six.store.finishOperation();}}
@@ -147,7 +162,7 @@ int main(int argc,char**argv){assert(argc==3);mode=argv[1];NF::rootPath=argv[2];
  NF::onWorker=false;NF::lease=false;const auto before=NF::nvs;
  setup();if(mode!="preapp-loaded")assert(NF::nvs==before); // startup only reads; no default repair or native writes
  const bool ran=std::find(calls.begin(),calls.end(),"run")!=calls.end();
- const bool expected=mode=="normal"||mode=="busy"||mode=="long"||mode=="retained"||mode=="cancel-maintenance"||mode.rfind("preapp-",0)==0||mode=="initializing";
+ const bool expected=mode=="normal"||mode=="busy"||mode=="long"||mode=="retained"||mode=="cancel-maintenance"||mode=="shutdown-maintenance"||mode.rfind("preapp-",0)==0||mode=="initializing";
  assert(ran==expected);
  if(ran){assert(registered==1);const auto read=std::find(calls.begin(),calls.end(),"read1");assert(read<std::find(calls.begin(),calls.end(),"prepare"));const auto begins=model.begins,diagnostics=diagnosticsPolls;loop();assert(model.begins==begins);if(L::retained())assert(diagnosticsPolls==diagnostics);}
  else assert(!model.begins&&!L::ready());
@@ -180,7 +195,7 @@ class NativeSettingsStartup(unittest.TestCase):
    includes=[folder,ROOT,ROOT/'src',ROOT/'sdk/app',ROOT/'sdk/driver',ROOT/'sdk/hardware',ROOT/'test/native_nvs_shim',ROOT/'test/native_settings_worker_shim']
    command=['c++',*flags,*['-I'+str(p) for p in includes],str(folder/'main.cpp'),str(folder/'lifecycle.cpp'),str(folder/'harness.cpp'),str(ROOT/'src/runtime/storage/AppDataFiles.cpp'),'-Wl,--wrap=read,--wrap=write,--wrap=fsync,--wrap=close,--wrap=rename','-o',str(folder/'test')]
    subprocess.run(command,check=True)
-   for mode in ('normal','busy','long','retained','missing-admission','missing-native','corrupt-native','wrong-namespace','duplicate-writer','second-fail','cancel-load','cancel-load-complete','cancel-maintenance','preapp-deferred','preapp-false-success','preapp-pending','preapp-loaded','preapp-runtime-retained','initializing','external-control','external-core'):
+   for mode in ('normal','busy','long','retained','missing-admission','missing-native','corrupt-native','wrong-namespace','duplicate-writer','second-fail','cancel-load','cancel-load-complete','cancel-maintenance','shutdown-maintenance','preapp-deferred','preapp-false-success','preapp-pending','preapp-loaded','preapp-runtime-retained','initializing','external-control','external-core'):
     subprocess.run([str(folder/'test'),mode,str(folder/mode)],check=True)
    # An absent native selector symbol must link and fail closed, not initialize.
    subprocess.run([command[0],'-DNO_ADMISSION',*command[1:]],check=True)

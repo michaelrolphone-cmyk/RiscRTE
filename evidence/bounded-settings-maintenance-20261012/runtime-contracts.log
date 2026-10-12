@@ -1,0 +1,10 @@
+=== test/run_native_settings_owner_checkpoint_test.sh
+actual Runtime checkpoint: scheduler-only drain, reentry refusal, no yield admission and resumed app acquisition PASS
+=== test/run_native_settings_resident_draft_fence_test.sh
+Resident settings draft fence host: cross-invocation admission, accepted drain, ordinary provider service, pre-grant/release/revoke boundaries PASS
+Resident settings draft fence foreground: cross-invocation admission, accepted drain, ordinary provider service, pre-grant/release/revoke boundaries PASS
+Resident settings draft fence host-return: cross-invocation admission, accepted drain, ordinary provider service, pre-grant/release/revoke boundaries PASS
+Resident settings draft fence foreground-return: cross-invocation admission, accepted drain, ordinary provider service, pre-grant/release/revoke boundaries PASS
+=== test/run_native_settings_availability_test.sh
+Availability: exact version/namespace grants, RAM defaults, no writes, pending authority, legacy/atomic/provider fences, generation and stale contexts PASS
+Availability: exact version/namespace grants, RAM defaults, no writes, pending authority, legacy/atomic/provider fences, generation and stale contexts PASS

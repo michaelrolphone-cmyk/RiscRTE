@@ -112,6 +112,7 @@ manifest['requires'].append(dict(capability='platform.storage-worker', api=1))
 run([cc, '-std=c11', *flags, '-shared', '-fPIC', a.output/'app.c', '-o', a.output/'default.elf'])
 cases = a.cases or ['happy','idle','draft-fence','pre-capture','save-exit','implicit-exit','absent','persisted-incarnation','foreign','usb-before','no-incarnation','cancel','retained','restore','restore-concurrent','restore-resume','restore-single','restore-no-source','restore-conflict','restore-cancel','restore-retained','first','first-concurrent','first-conflict','first-cancel']
 if not a.cases:
+    cases += ['bounded-'+s for s in ('save','shutdown','cancel','retained','app-retained')]
     cases += ['unavailable-'+s for s in ('absent','recover','conflict','cancel','return','retained','app-retained')]
     cases += ['bootstrap-'+s for s in ('fresh','fresh-restore','fresh-concurrent','legacy','legacy-concurrent','fresh-absent','legacy-absent','fresh-busy','legacy-busy','fresh-retained','legacy-conflict','legacy-corrupt','native-error','bare-init','fresh-resume','fresh-resume-stage','fresh-resume-rename','legacy-resume','legacy-resume-stage','legacy-resume-rename')]
 if a.assembly and not a.cases:

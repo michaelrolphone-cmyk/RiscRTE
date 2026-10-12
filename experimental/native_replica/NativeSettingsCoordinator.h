@@ -58,6 +58,14 @@ class NativeSettingsCoordinator final {
  }
  bool nativeWorker(uint32_t slot)const{return workerWithLease()&&slot&&slot<=count_&&holder_.load(std::memory_order_acquire)==slot;}
  bool nativeOwner(const Lease&lease)const{return owner()&&valid(lease)&&!retained();}
+ // Owner-only sweep fence. It blocks new atomic snapshots/edits in every
+ // participating namespace, including one not yet leased or already finished.
+ // Native clients keep their existing leases and complete through collection.
+ // Pausing is not custody and does not make an otherwise idle client unsafe.
+ bool pauseAtomic(bool paused){
+  if(!owner()||retained()||!atomic_.exitSafe()||holder_.load(std::memory_order_acquire)==Atomic)return false;
+  atomicPaused_=paused;return true;
+ }
  bool retained()const{return retained_.load(std::memory_order_acquire)||(hooks_.externalRetained&&hooks_.externalRetained(hooks_.context));}
  void retainFromWorker(){if(hooks_.worker&&hooks_.worker(hooks_.context))retain();}
  // Owner-only, before activate(), and no live operation. Table is copied and
@@ -126,6 +134,7 @@ class NativeSettingsCoordinator final {
  friend struct NativeSettingsCoordinatorTestAccess;
  #endif
  std::atomic<uint32_t>holder_{None};std::atomic<bool>active_{false},retained_{false};
+ bool atomicPaused_=false; // owner-only; worker execution never consults it
  NativeAtomicKeyValue atomic_;
  bool valid(const Lease&lease)const{return lease.slot&&lease.slot<=count_&&lease.serial&&lease.serial==serial_&&holder_.load(std::memory_order_acquire)==lease.slot;}
  void retain(){retained_.store(true,std::memory_order_release);}
@@ -141,7 +150,7 @@ class NativeSettingsCoordinator final {
  NativeAtomicKeyValue::Guard atomicGuard(){return {this,
   [](void*p){return static_cast<NativeSettingsCoordinator*>(p)->owner();},
   [](void*p){auto&s=*static_cast<NativeSettingsCoordinator*>(p);return s.workerWithLease()&&s.holder_.load(std::memory_order_acquire)==Atomic;},
-  [](void*p){return static_cast<NativeSettingsCoordinator*>(p)->acquire(Atomic);},
+  [](void*p){auto&s=*static_cast<NativeSettingsCoordinator*>(p);return !s.atomicPaused_&&s.acquire(Atomic);},
   [](void*p){auto&s=*static_cast<NativeSettingsCoordinator*>(p);if(!s.owner()||s.retained()||s.holder_.load()!=Atomic||!s.atomic_.nativeReleaseSafe())return false;s.release();return true;},
   [](void*p){auto&s=*static_cast<NativeSettingsCoordinator*>(p);if(!s.workerWithLease())return int(C::Retained);s.store_.finishOperation();if(s.store_.exitSafe())return int(C::Ok);s.retain();return int(C::Retained);},
   [](void*p){return static_cast<NativeSettingsCoordinator*>(p)->retained();}};}

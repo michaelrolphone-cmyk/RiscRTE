@@ -51,6 +51,10 @@ bool clientsSafe(){return W::exitSafe()&&state.admission.exitSafe(state.admissio
 bool cancellationRequested(){return (state.hooks.cancelRequested&&state.hooks.cancelRequested())||(state.admission.cancelRequested&&state.admission.cancelRequested(state.admission.context));}
 void measure(uint32_t&previous){const uint32_t now=state.hooks.millis();state.time.lastBlockedMs+=uint32_t(now-previous);previous=now;state.clockAt=now;if(state.time.lastBlockedMs>state.time.maxBlockedMs)state.time.maxBlockedMs=state.time.lastBlockedMs;}
 void startTiming(){state.time.lastBlockedMs=0;state.time.lastPolls=0;state.time.cancellationRequested=false;state.clockAt=state.hooks.millis();}
+bool pauseAtomic(bool paused){
+ for(auto&load:state.loads)if(!load.service->pauseAtomic(paused)){state.terminal=true;return false;}
+ return true;
+}
 bool drain(){
  uint32_t previous=state.clockAt;
  while(state.active){
@@ -63,7 +67,7 @@ bool drain(){
   if(progress==Progress::Retained||selectedRetained()){state.terminal=true;measure(previous);return false;}
   // A terminal reply does not surrender uncollected custody. Keep draining.
   // In particular, Busy and a slow vendor call are not Retained or cancellation.
-  if(progress!=Progress::Pending&&clientsSafe()){state.active=false;break;}
+  if(progress!=Progress::Pending&&clientsSafe()){state.active=false;if(!state.discovery&&!pauseAtomic(false))return false;break;}
   state.hooks.schedulerDelay(1);measure(previous);
  }
  measure(previous);return true;
@@ -98,9 +102,26 @@ bool pollDiscovery(){
  }
  return true;
 }
+bool pollMaintenance(){
+ if(!state.active)return true;
+ uint32_t previous=state.hooks.millis();
+ if(selectedRetained()){state.terminal=true;return false;}
+ if(!state.time.cancellationRequested&&cancellationRequested()){
+  state.time.cancellationRequested=true;state.admission.cancel(state.admission.context);
+ }
+ const auto progress=state.admission.poll(state.admission.context);
+ if(state.time.lastPolls!=UINT32_MAX)++state.time.lastPolls;
+ measure(previous);
+ if(progress==Progress::Retained||selectedRetained()){state.terminal=true;return false;}
+ // Neither a terminal reply nor a cancellation surrenders uncollected custody.
+ if(progress!=Progress::Pending&&clientsSafe()){
+  state.active=false;if(!pauseAtomic(false))return false;
+ }
+ return true;
+}
 bool discover(){
  if(state.stopping)return true;
- if(state.active)return state.discovery?pollDiscovery():true;
+ if(state.active)return state.discovery?pollDiscovery():pollMaintenance();
  reconcile();
  if(!unresolved()||!state.admission.beginPreApp||!clientsSafe()||cancellationRequested()||
     int32_t(state.hooks.millis()-state.nextRetry)<0)return true;
@@ -186,7 +207,7 @@ bool checkpoint(bool admitNew){
  if(!owner()||!state.attached||state.entered)return !selectedRetained();
  if(selectedRetained())return false;
  Entry entry;
- if(state.active){if(state.discovery){if(!pollDiscovery())return false;reconcile();return true;}return drain();}
+ if(state.active){if(state.discovery){if(!pollDiscovery())return false;reconcile();return true;}return pollMaintenance();}
  if(unresolved()){
   reconcile();
   // Only the explicit post-entry discovery checkpoint can start discovery.
@@ -197,23 +218,35 @@ bool checkpoint(bool admitNew){
  }
  if(!admitNew||state.stopping)return true;
  if(!clientsSafe()||(cancellationRequested()))return true;
+ // Both namespaces stay BUSY to new atomic snapshots until this complete
+ // sweep is collected. Existing draft grants already fence admission in Runtime.
+ if(!pauseAtomic(true))return false;
  startTiming();const auto result=state.admission.begin(state.admission.context,*state.runtime,*state.port);
  if(result==Progress::Retained||selectedRetained()){state.terminal=true;return false;}
  // A clean Busy/no-work refusal leaves ordinary Files/USB/app admission intact.
- // If the callback acquired custody despite its result, drain that exact work.
- state.active=result==Progress::Pending||!clientsSafe();if(state.active)return drain();uint32_t previous=state.clockAt;measure(previous);return true;
+ // Custody acquired despite a terminal result still needs later collection.
+ state.active=result==Progress::Pending||!clientsSafe();
+ uint32_t previous=state.clockAt;measure(previous);
+ return state.active||pauseAtomic(false);
 }
 bool discoveryCheckpoint(){
  if(!owner()||!state.attached||state.entered)return !selectedRetained();
  if(selectedRetained())return false;
  Entry entry;const bool ok=discover();if(ok)reconcile();return ok;
 }
-void cooperate(){if(owner()&&state.active&&!state.entered){Entry entry;if(state.discovery)(void)pollDiscovery();else (void)drain();}}
+void cooperate(){if(owner()&&state.active&&!state.entered){Entry entry;if(state.discovery)(void)pollDiscovery();else (void)pollMaintenance();}}
+bool continuing(){return owner()&&state.hydrated&&state.active&&!selectedRetained();}
 bool discovering(){return owner()&&state.hydrated&&state.discovery&&state.active&&!selectedRetained();}
 bool shutdown(){
  if(!owner()||state.entered||selectedRetained())return false;
  Entry entry;state.stopping=true;
- if(state.active){state.admission.cancel(state.admission.context);state.time.cancellationRequested=true;if(!drain())return false;state.discovery=false;}
+ if(state.active){
+  // Discovery has no durable-save obligation. Accepted maintenance must finish
+  // its existing SD acknowledgment before final graph teardown, unless an
+  // explicit cancellation latch requests cancellation during the drain.
+  if(state.discovery){state.admission.cancel(state.admission.context);state.time.cancellationRequested=true;}
+  state.clockAt=state.hooks.millis();if(!drain())return false;state.discovery=false;
+ }
  return clientsSafe();
 }
 int32_t availability(uint32_t ns,risc_key_value_availability_state_v1*out){

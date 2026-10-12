@@ -152,7 +152,7 @@ class Port final {
   bool nativeStorageBoundTo(const RiscBoot::Runtime&r) const {return nativeStorageOwner()&&bound_&&runtime_==&r;}
   bool nativeStorageAttached() const; // out-of-line native/host layout boundary
   // App/UI continuation only during externally verified healthy settings
-  // discovery. Global shutdown/restart and raw storage use keep normal barriers.
+  // discovery/maintenance. Global shutdown/restart and raw storage keep barriers.
   bool nativeDiscoveryProviderSafe() const;
   bool nativeDiscoveryAppExitSafe() const;
  #endif

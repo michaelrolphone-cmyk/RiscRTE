@@ -56,5 +56,6 @@ Unrelated Runtime retention freezes discovery, preserving its graph pin and all
 uncollected custody. No timeout, cancellation result, or UI transition fabricates
 safe cleanup of a stuck hardware call.
 
-Normal initialized-native maintenance retains its original scheduler-only drain
-and atomic-draft fence. The nonblocking exception applies only to discovery.
+Initialized-native maintenance also advances one bounded accepted step per
+owner call. Its paired atomic snapshot fence and final shutdown drain are
+described in [bounded maintenance](NATIVE_SETTINGS_BOUNDED_MAINTENANCE.md).

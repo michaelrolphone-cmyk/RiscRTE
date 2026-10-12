@@ -54,10 +54,18 @@ void basics(){
  assert(!service.workerStep());assert(service.activate()==0&&service.activate()==C::Busy);
  assert(service.registerNative(native.client(),&other)==C::Busy);Runner worker(service,false);
  context.deny=true;risc_key_value_atomic_state_v1 state{sizeof(state),0,0,0,0,0,0,0,0};assert(service.endpoint().state(&state)==RISC_ATOMIC_BUSY&&service.exitSafe());context.deny=false;
+ // A sweep can reserve atomic admission without claiming a native lease.
+ assert(service.pauseAtomic(true)&&service.exitSafe());
+ assert(service.endpoint().state(&state)==RISC_ATOMIC_BUSY);
+ uint64_t refused=9;assert(service.endpoint().submit(f.core.revision(),nullptr,0,"intent",6,&refused)==RISC_ATOMIC_BUSY&&!refused);
+ Coordinator::Lease reserved;assert(!service.acquireNative(native.slot,&reserved));
+ assert(!service.releaseNative(reserved)&&service.endpoint().state(&state)==RISC_ATOMIC_BUSY);
+ assert(service.pauseAtomic(false));
  const unsigned beforeNvs=nvsTotal,beforeFs=fsTotal;const auto token=submit(service,f.core.revision());
+ assert(!service.pauseAtomic(true)); // never fence an accepted atomic operation
  Coordinator::Lease lease;assert(service.acquireNative(native.slot,&lease)==C::Busy&&!lease.slot);
  risc_key_value_atomic_receipt_v1 receipt{sizeof(receipt),0,0,0};for(unsigned i=0;i<1000;++i)assert(service.endpoint().collect(token,&receipt)==RISC_ATOMIC_PENDING);
- assert(nvsTotal==beforeNvs&&fsTotal==beforeFs&&context.ends==0&&!service.workerStep());
+ assert(nvsTotal==beforeNvs&&fsTotal==beforeFs&&context.ends==1&&!service.workerStep());
  worker.enabled.store(true);receipt=collect(service,token);assert(!receipt.status&&receipt.operation_id==1&&service.exitSafe());
  assert(service.endpoint().scratchCleared()&&nvsTotal>beforeNvs&&fsTotal>beforeFs);
  assert(service.acquireNative(native.slot,&lease)==0&&!service.exitSafe());const auto oldLease=lease;
@@ -69,7 +77,7 @@ void basics(){
  const unsigned idleNvs=nvsTotal,idleFs=fsTotal;
  for(unsigned i=0;i<20000;++i){assert(service.endpoint().state(&state)==0);char out[20];uint32_t n=0;assert(service.endpoint().get(state.revision,"wifi.commit",out,sizeof out,&n)==0&&n==8);}
  assert(nvsTotal==idleNvs&&fsTotal==idleFs&&!service.retained()&&service.exitSafe()&&context.acquires==context.ends);
- std::thread intruder([&]{Coordinator::Lease bad;risc_key_value_atomic_state_v1 s{};s.struct_size=sizeof s;assert(service.endpoint().state(&s)==RISC_ATOMIC_INVALID);assert(service.acquireNative(native.slot,&bad)==C::Invalid);assert(!service.workerStep());});intruder.join();
+ std::thread intruder([&]{Coordinator::Lease bad;risc_key_value_atomic_state_v1 s{};s.struct_size=sizeof s;assert(service.endpoint().state(&s)==RISC_ATOMIC_INVALID);assert(service.acquireNative(native.slot,&bad)==C::Invalid);assert(!service.workerStep()&&!service.pauseAtomic(true));});intruder.join();
  puts("coordinator: real checked store/NVS composition; owner-only zero-I/O polls; native namespace exclusion; terminal collection; 40000 concurrent idle read releases PASS");
 }
 void bounds(){

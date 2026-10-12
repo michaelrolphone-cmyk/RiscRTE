@@ -104,13 +104,13 @@ struct Port {
   bool (*controlExitRequested)()=nullptr;
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   // Explicit native owner checkpoint. Runs outside provider service leases;
-  // false means observed terminal custody, never temporary Busy. Must drain any
-  // accepted maintenance before returning to app acquisition or dispatch.
+  // false means observed terminal custody, never temporary Busy. Accepted work
+  // advances one step; the native coordinator fences new atomic snapshots.
   // admitNew=false fences new work while a host/foreground atomic grant can
-  // hold an edit snapshot. It never suppresses draining accepted custody.
+  // hold an edit snapshot. It never suppresses polling accepted custody.
   bool (*nativeOwnerCheckpoint)(bool admitNew)=nullptr;
-  // Separately qualified bounded discovery only: ordinary yield must never
-  // admit synchronous maintenance. Shutdown drains before any graph teardown.
+  // Bounded accepted-work/discovery polling: ordinary yield never starts
+  // maintenance. Shutdown drains before any graph teardown.
   bool (*nativeDiscoveryCheckpoint)()=nullptr;
   bool (*nativeSettingsShutdown)()=nullptr;
 #endif

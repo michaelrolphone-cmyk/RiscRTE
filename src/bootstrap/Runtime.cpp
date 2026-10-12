@@ -545,7 +545,8 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.availabilityNamespace=allowed->instance;grant.api=&grant.availability;
   } else if(allowed->driver==AtomicKeyValueDriver){
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-    // Drain old pending work before publishing the first draft-capable grant.
+    // Start/poll old work before publishing the first draft-capable grant.
+    // An accepted sweep fences atomic state/get/submit until full collection.
     // Existing host/foreground grants fence admission inside this checkpoint.
     serviceNativeSettings();
     if(!active() || retained_)return false;
@@ -1317,7 +1318,7 @@ void Runtime::yield(uint32_t ms) {
   struct Guard { bool& flag; ~Guard(){flag=false;} } guard{yielding_};
   if(!retained_) {
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-    serviceNativeSettings(true); // bounded discovery only, never maintenance
+    serviceNativeSettings(true); // accepted work/discovery only; never starts maintenance
     if(retained_){if(port_.retainedDelay)port_.retainedDelay(ms<1?1:ms>50?50:ms);return;}
 #endif
     // Poll work is bounded separately; each admitted yield cooperates once.

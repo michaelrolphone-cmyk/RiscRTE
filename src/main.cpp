@@ -120,7 +120,7 @@ void schedulerDelay(uint32_t ms) {
 void cooperate(uint32_t ms) {
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   // This callback never starts work. Runtime separately admits bounded discovery
-  // at its post-entry owner checkpoint; ordinary maintenance still drains.
+  // at its post-entry owner checkpoint; accepted maintenance also advances one step.
   RiscCpu::NativeSettingsLifecycle::cooperate();
   if(RiscCpu::NativeSettingsLifecycle::retained()){schedulerDelay(ms);return;}
 #endif
@@ -143,8 +143,8 @@ bool bindPlatforms(RiscBoot::Runtime& runtime){
 }
 bool appExitSafe(){return
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
-  (RiscCpu::NativeSettingsLifecycle::discovering()?cpu.nativeDiscoveryAppExitSafe():cpu.appExitSafe())
-  && (RiscCpu::NativeSettingsLifecycle::discovering()||RiscCpu::NativeSettingsLifecycle::exitSafe())
+  (RiscCpu::NativeSettingsLifecycle::continuing()?cpu.nativeDiscoveryAppExitSafe():cpu.appExitSafe())
+  && (RiscCpu::NativeSettingsLifecycle::continuing()||RiscCpu::NativeSettingsLifecycle::exitSafe())
 #else
   cpu.appExitSafe()
 #endif
@@ -157,7 +157,7 @@ bool appExitSafe(){return
   ;}
 bool providerStorageSafe(){return
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
- (RiscCpu::NativeSettingsLifecycle::discovering()?cpu.nativeDiscoveryProviderSafe():cpu.providerStorageSafe())
+ (RiscCpu::NativeSettingsLifecycle::continuing()?cpu.nativeDiscoveryProviderSafe():cpu.providerStorageSafe())
  && !RiscCpu::NativeSettingsLifecycle::retained()
 #else
  cpu.providerStorageSafe()

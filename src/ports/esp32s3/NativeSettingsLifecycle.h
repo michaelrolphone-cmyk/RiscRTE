@@ -61,16 +61,17 @@ bool bind(RiscBoot::Runtime&); // before Runtime::prepare
 bool hydrate(RiscBoot::Runtime&,Port&); // after graph prepare, before any app invocation
 bool attachOwner(RiscBoot::Runtime&,Port&);
 // Ordinary maintenance is admitted only at Runtime's non-reentrant owner
-// checkpoint and drains with scheduler-only waits, without forced unwind or
-// callback reentry. Accepted discovery advances one nonblocking step instead.
+// checkpoint. Each call begins one sweep or polls one accepted step, without
+// scheduler waits, forced unwind or callback reentry. Shutdown still drains.
 bool checkpoint(bool admitNew=true);
-// One nonblocking discovery step at Runtime's owner boundary. May be used at a
-// yield; it never begins ordinary maintenance and never executes app callbacks.
+// One nonblocking accepted-work/discovery step at Runtime's owner boundary.
+// A yield never begins ordinary maintenance or executes app callbacks.
 bool discoveryCheckpoint();
+bool continuing(); // exact healthy discovery/maintenance custody, not general Busy
 bool discovering(); // exact healthy discovery custody, not general Busy
 bool shutdown(); // cancel and collect native-owned work before graph teardown
 int32_t availability(uint32_t,risc_key_value_availability_state_v1*);
-void cooperate(); // drain maintenance / one discovery poll; never starts work
+void cooperate(); // one accepted step; never starts work
 bool exitSafe();  // all namespaces, including complete-but-uncollected custody
 bool retained();
 bool ready(); // boot/UI usable; consult availability for durable namespace authority

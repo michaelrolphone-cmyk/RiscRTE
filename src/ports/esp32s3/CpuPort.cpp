@@ -82,7 +82,7 @@ bool Port::appExitSafe() const {
 }
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
 bool Port::nativeDiscoveryBusy() const {
-  return NativeSettingsLifecycle::discovering()&&nativeStorageAttached()&&nativeDiscoveryProviderSafe();
+  return NativeSettingsLifecycle::continuing()&&nativeStorageAttached()&&nativeDiscoveryProviderSafe();
 }
 #endif
 #if RISC_NATIVE_STORAGE_CUSTODY

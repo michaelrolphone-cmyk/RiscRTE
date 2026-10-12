@@ -1,0 +1,32 @@
+bounded checkpoint timing: polls=3 synthetic_blocked_ms=0
+actual startup + checked load: normal PASS
+bounded checkpoint timing: polls=3 synthetic_blocked_ms=0
+actual startup + checked load: busy PASS
+bounded checkpoint timing: polls=65537 synthetic_blocked_ms=0
+actual startup + checked load: long PASS
+actual startup + checked load: retained PASS
+actual startup + checked load: missing-admission PASS
+actual startup + checked load: missing-native PASS
+actual startup + checked load: corrupt-native PASS
+actual startup + checked load: wrong-namespace PASS
+actual startup + checked load: duplicate-writer PASS
+actual startup + checked load: second-fail PASS
+actual startup + checked load: cancel-load PASS
+actual startup + checked load: cancel-load-complete PASS
+bounded checkpoint timing: polls=5 synthetic_blocked_ms=0
+actual startup + checked load: cancel-maintenance PASS
+actual startup + checked load: shutdown-maintenance PASS
+actual startup + checked load: preapp-deferred PASS
+actual startup + checked load: preapp-false-success PASS
+actual startup + checked load: preapp-pending PASS
+actual startup + checked load: preapp-loaded PASS
+actual startup + checked load: preapp-runtime-retained PASS
+actual startup + checked load: initializing PASS
+actual startup + checked load: external-control PASS
+actual startup + checked load: external-core PASS
+actual startup + checked load: missing-admission PASS
+.
+----------------------------------------------------------------------
+Ran 1 test in 16.472s
+
+OK
