@@ -1,0 +1,109 @@
+     NativeRadioAsync::join,NativeRadioAsync::state,NativeRadioAsync::leave,NativeRadioAsync::addresses,NativeRadioAsync::scanStart,NativeRadioAsync::scanPoll,NativeRadioAsync::scanCancel,NativeRadioAsync::idle};
+   hardware.spiBeginThreeWire=spiBeginThreeWire;
+   configureSchedulerWait(hardware);
+-  static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
+-  radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
++  static risc_native_wifi_station_v1 radioAsync=*risc_native_wifi_station_get_v1(NativeRadioAsync::table());
++  radioAsync.base.tryShared=nativeRadioResourceTry;radioAsync.base.endShared=nativeRadioResourceEnd;
+   // Under a nested owner lease, test the phase without refusing our own lease.
+-  radioAsync.sharedReady=nativeRadioResourceReady;
+-  hardware.radioAsync=&radioAsync;hardware.radioAsyncPrepare=NativeRadioAsync::provision;
++  radioAsync.base.sharedReady=nativeRadioResourceReady;
++  hardware.radioAsync=&radioAsync.base;hardware.radioAsyncPrepare=NativeRadioAsync::provision;
+ #if RISC_NATIVE_ENTROPY
+   NativeEntropy::configure(hardware.owner,[](){
+     // Read only while the shared native lease excludes worker SDK changes.
+diff --git a/src/ports/esp32s3/NativeRadio.h b/src/ports/esp32s3/NativeRadio.h
+index f215b3c..6bc8cfe 100644
+--- a/src/ports/esp32s3/NativeRadio.h
++++ b/src/ports/esp32s3/NativeRadio.h
+@@ -6,6 +6,7 @@
+  * RF scans never block for completion, but synchronous SDK control/cleanup
+  * calls have no cancellation API or enforceable 100-ms wall-clock bound. */
+ #include <RiscRadioScanV1.h>
++#include <RiscWifiStationV1.h>
+ #include "diagnostics/StageLog.h"
+ #include <esp_event.h>
+ #include <esp_heap_caps.h>
+@@ -29,7 +30,7 @@ enum Stage : uint32_t { Probe=1, NetifInit, LoopCreate, NetifNew, Attach,
+   Defaults, Register, Init, Storage, Mode, Config, Start, Connect, ApInfo,
+   NetifUp, IpInfo, ScanStart, Records, ScanStop, ListClear, Disconnect,
+   ConfigClear, Stop, Deinit, Unregister, DriverClear, DriverConfigClear,
+-  LoopDelete, DhcpStop, NetifStop, NetifDestroy, LogSet, LogGet };
++  LoopDelete, DhcpStop, NetifStop, NetifDestroy, LogSet, LogGet, StaticAddress, StaticDns };
+ template<class F> inline auto sdkCall(Stage stage,F function)->decltype(function()){
+   if(asyncExecuting && stageSink)stageSink(stage,0,true);
+   auto result=function();
+@@ -132,8 +133,9 @@ inline bool restoreLogs(){
+ static bool netifInitialized=false;
+ static uint32_t nextGeneration=0;
+ static std::atomic<uint32_t> generation{0},eventOperation{None},scanEvent{0},joinFailed{0};
++static std::atomic<uint32_t> disconnectReason{0},stationAssociated{0},connectedScan{0},joinTimedOut{0};
+ #if RISC_STAGE_LOGS
+-static std::atomic<uint32_t> disconnectReason{0},scanStatus{0};
++static std::atomic<uint32_t> scanStatus{0};
+ #endif
+ inline void wipe(void* data,size_t count){auto* p=static_cast<volatile uint8_t*>(data);while(count--)*p++=0;}
+ inline size_t boundedLength(const char* value,size_t maximum){
+@@ -145,13 +147,12 @@ inline void event(void* argument,esp_event_base_t base,int32_t id,void* data){
+   if(cancelRequested.load(std::memory_order_acquire) || !token || token!=generation.load(std::memory_order_acquire) || base!=WIFI_EVENT)return;
+   const auto operation=eventOperation.load(std::memory_order_acquire);
+   if(operation==Join && id==WIFI_EVENT_STA_DISCONNECTED){
+-#if RISC_STAGE_LOGS
+-    // Save only the numeric SDK reason, never SSID/BSSID from the event.
++    // UI and logs use only the numeric event reason; no callback borrows data.
+     disconnectReason.store(data?static_cast<const wifi_event_sta_disconnected_t*>(data)->reason:0,std::memory_order_relaxed);
+-#endif
+     joinFailed.store(1,std::memory_order_release);
+   }
+-  if(operation==Scan && id==WIFI_EVENT_SCAN_DONE && data){
++  if(operation==Join && id==WIFI_EVENT_STA_CONNECTED)stationAssociated.store(1,std::memory_order_release);
++  if((operation==Scan || (operation==Join && connectedScan.load(std::memory_order_acquire))) && id==WIFI_EVENT_SCAN_DONE && data){
+     const auto* done=static_cast<const wifi_event_sta_scan_done_t*>(data);
+ #if RISC_STAGE_LOGS
+     scanStatus.store(done->status,std::memory_order_relaxed);
+@@ -261,8 +262,10 @@ inline bool begin(Operation operation){
+   const uint32_t token=++nextGeneration;
+   generation.store(token,std::memory_order_release);eventOperation.store(operation,std::memory_order_release);
+   scanEvent.store(0,std::memory_order_release);joinFailed.store(0,std::memory_order_release);
++  disconnectReason.store(0,std::memory_order_relaxed);stationAssociated.store(0,std::memory_order_relaxed);
++  connectedScan.store(0,std::memory_order_relaxed);joinTimedOut.store(0,std::memory_order_relaxed);
+ #if RISC_STAGE_LOGS
+-  disconnectReason.store(0,std::memory_order_relaxed);scanStatus.store(0,std::memory_order_relaxed);
++  scanStatus.store(0,std::memory_order_relaxed);
+ #endif
+   if(!sdk("event-register",sdkCall(Register,[&](){return esp_event_handler_instance_register(WIFI_EVENT,ESP_EVENT_ANY_ID,event,reinterpret_cast<void*>(uintptr_t(token)),&s.handler);})) || !continueSetup()){leave();return false;}
+   wifi_init_config_t config=WIFI_INIT_CONFIG_DEFAULT();config.nvs_enable=false;
+@@ -273,7 +276,18 @@ inline bool begin(Operation operation){
+   if(!sdk("station-mode",sdkCall(Mode,[](){return esp_wifi_set_mode(WIFI_MODE_STA);})) || !continueSetup()){leave();return false;}
+   RADIO_STAGE_LOG("radio wifi begin result=ready operation=%s",operation==Join?"connect":"scan");return true;
+ }
+-inline bool join(const char* ssid,const char* password){
++inline bool configureIpv4(const risc_wifi_station_config_v1 *settings){
++  if(!settings || !settings->static_ipv4)return true;
++  esp_err_t stopped=sdkCall(DhcpStop,[](){return esp_netif_dhcpc_stop(s.netif);});
++  if(stopped!=ESP_OK && stopped!=ESP_ERR_ESP_NETIF_DHCP_ALREADY_STOPPED)return sdkFailure("static-dhcp-stop",stopped);
++  if(!continueSetup())return false;
++  esp_netif_ip_info_t ip{};
++  std::memcpy(&ip.ip.addr,settings->address,4);std::memcpy(&ip.gw.addr,settings->gateway,4);std::memcpy(&ip.netmask.addr,settings->netmask,4);
++  if(!sdk("static-address",sdkCall(StaticAddress,[&](){return esp_netif_set_ip_info(s.netif,&ip);})) || !continueSetup())return false;
++  esp_netif_dns_info_t dns{};dns.ip.type=ESP_IPADDR_TYPE_V4;std::memcpy(&dns.ip.u_addr.ip4.addr,settings->dns,4);
++  return sdk("static-dns",sdkCall(StaticDns,[&](){return esp_netif_set_dns_info(s.netif,ESP_NETIF_DNS_MAIN,&dns);})) && continueSetup();
++}
++inline bool joinConfigured(const char* ssid,const char* password,const risc_wifi_station_config_v1 *settings){
+   const size_t ssidLength=boundedLength(ssid,32),passwordLength=boundedLength(password,63);
+   if(!ssidLength || ssidLength>32 || passwordLength>63 || (passwordLength && passwordLength<8) || !idle())return false;
+   // Copy before any SDK/task activity. No borrowed caller buffer survives.
+@@ -281,7 +295,19 @@ inline bool join(const char* ssid,const char* password){
+   if(passwordLength)std::memcpy(config.sta.password,password,passwordLength);
+   config.sta.threshold.authmode=passwordLength?WIFI_AUTH_WPA_PSK:WIFI_AUTH_OPEN;
+   config.sta.pmf_cfg.capable=true;config.sta.pmf_cfg.required=false;
++  if(settings){
++    if(!risc_wifi_config_valid(settings) || ((settings->security==GARDEN_RADIO_AUTH_OPEN)!=(passwordLength==0))){wipe(&config,sizeof(config));return false;}
++    switch(settings->security){
++      case GARDEN_RADIO_AUTH_OPEN:config.sta.threshold.authmode=WIFI_AUTH_OPEN;break;
++      case GARDEN_RADIO_AUTH_WPA3_PSK:config.sta.threshold.authmode=WIFI_AUTH_WPA3_PSK;config.sta.pmf_cfg.required=true;break;
++      case GARDEN_RADIO_AUTH_WPA_PSK:case GARDEN_RADIO_AUTH_WPA_WPA2_PSK:config.sta.threshold.authmode=WIFI_AUTH_WPA_PSK;break;
++      default:config.sta.threshold.authmode=WIFI_AUTH_WPA2_PSK;break;
++    }
++    config.sta.channel=settings->channel;
