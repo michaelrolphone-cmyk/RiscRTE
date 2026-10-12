@@ -139,6 +139,12 @@ class CheckedSdSettingsCatalog {
   if(rc!=RISC_STORAGE_ASYNC_OK){s.status=rc==RISC_STORAGE_ASYNC_INVALID?Directory::Invalid:Directory::Unreadable;phase_=EndScan;C::wipe(&result_,sizeof result_);return;}
   if(phase_==RefreshScan)phase_=OpenScan;else if(phase_==OpenScan)phase_=NextScan;else if(phase_==NextScan)admitEntry();else fail(C::Invalid,Reason::ReadFailure);
   C::wipe(&result_,sizeof result_);
+  // A collected native directory result has surrendered its operation token.
+  // Queue at most one next entry now, rather than spending a scheduler turn on
+  // that submission alone. This never executes provider work or loops through
+  // entries; BUSY retries on a later owner poll and cancellation still drains
+  // the single accepted operation before checked close/release.
+  if(io_.native()&&phase_==NextScan&&!cancelled_&&!error_)submit();
  }
  private:
  int prepareMode(NativeSdAttempt&attempt,Limits limits,bool restore,bool synchronize=false){
