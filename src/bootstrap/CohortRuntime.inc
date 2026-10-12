@@ -60,6 +60,11 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
                                 const RiscUpdate::NativeAppDataExportPolicyV1* nativePolicy,
                                 const RiscUpdate::NativeAppDataExportPolicyV2* nativeV2) const {
   if(&candidate==this || !attempted_ || !port_.owner() || !providerStorageSafe() || !root || !admit || candidate.attempted_ || candidate.metadataCloseRetained_)return false;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  // Staged authority comes only from this trusted source Runtime. A preseeded
+  // candidate must not mix its own endpoints or writer identities with ours.
+  if(candidate.atomicBindingCount_)return false;
+#endif
   // All metadata opened for this admission, including source comparisons,
   // belongs to the candidate's native session. Keep its close failure visible
   // even when validation stops before candidate.prepare() is reached.
@@ -102,6 +107,18 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
   // Reuse the running graph's already scoped native tables with an identical
   // hardware/port declaration. Never bind the staged board into the CPU owner.
   candidate.port_=port_;candidate.port_.bindPlatforms=nullptr;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  // Re-register exact permanent native endpoints and RAM-only availability
+  // callbacks. The registration guards reject pending/retained custody. Never
+  // rebind the native lifecycle or copy active grants/invocation generations.
+  for(size_t i=0;i<atomicBindingCount_;++i){const auto& b=atomicBindings_[i];
+    if(!b.endpoint || !(b.app[0]
+        ?candidate.registerAtomicKeyValue(b.app,b.nameSpace,*b.endpoint)
+        :candidate.registerAtomicKeyValueReadThrough(b.nameSpace,*b.endpoint)))return false;
+    if(b.availability.snapshot &&
+       !candidate.registerKeyValueAvailability(b.nameSpace,b.availability))return false;
+  }
+#endif
   if(realtimeBackend_ && !candidate.registerRealtime(realtimeBackend_))return false;
   if(tcpBackend_ && !candidate.registerTcpListener(tcpBackend_))return false;
   if(entropyBackend_ && !candidate.registerEntropy(entropyBackend_))return false;

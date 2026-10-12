@@ -11,6 +11,7 @@ on:
       - 'sdk/app/RiscKeyValue*'
       - 'test/native_*settings*'
       - 'test/run_native_*settings*'
+      - 'test/*atomic_key_value*'
       - '.github/workflows/experimental-settings.yml'
 permissions:
   contents: read
@@ -46,6 +47,8 @@ jobs:
           bash test/run_file_source_storage_test.sh
           bash test/run_file_source_runtime_test.sh
           bash test/run_native_atomic_key_value_test.sh
+          bash test/run_atomic_key_value_runtime_test.sh
+          bash test/run_atomic_key_value_cohort_test.sh
           bash test/run_native_settings_coordinator_test.sh
           bash test/run_native_first_sd_checkpoint_test.sh
           bash test/run_native_settings_availability_test.sh
