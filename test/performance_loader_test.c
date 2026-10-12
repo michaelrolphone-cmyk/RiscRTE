@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include "esp_elf.h"
 #include "private/elf_platform.h"
 #include "freertos/task.h"
@@ -20,6 +21,10 @@ static int arch_result, publish_result;
 static unsigned delay_step = 1;
 static unsigned read_step, read_calls;
 static size_t since_yield, max_between_yields;
+static unsigned stat_calls, seek_calls, fail_seek_call;
+static bool fail_stat, nonregular_stat, override_size;
+static off_t stat_size;
+static int stat_errno = ENOSYS;
 #if !TEST_ABSENT_HOOK
 void risc_perf_loader_event(uint32_t phase, uint32_t value) {
     assert(event_count < 32);
@@ -39,6 +44,19 @@ ssize_t risc_test_read(int fd, void *bytes, size_t n) {
     const ssize_t result=read(fd, bytes, n);++read_calls;ticks+=read_step;
     if(result>0)since_yield+=(size_t)result;
     return result;
+}
+int risc_test_fstat(int fd, struct stat *info) {
+    ++stat_calls;
+    if (fail_stat) { errno = stat_errno; return -1; }
+    const int result = fstat(fd, info);
+    if (!result && nonregular_stat) info->st_mode = S_IFCHR;
+    if (!result && override_size) info->st_size = stat_size;
+    return result;
+}
+off_t risc_test_lseek(int fd, off_t offset, int whence) {
+    ++seek_calls;
+    if (seek_calls == fail_seek_call) { errno = EIO; return -1; }
+    return lseek(fd, offset, whence);
 }
 void *esp_elf_malloc(uint32_t n, bool exec) {
     (void)exec;
@@ -70,6 +88,7 @@ int esp_elf_arch_flush(esp_elf_t *elf) {
 static void reset(void) {
     event_count = 0; ticks = 0; delays = 0;read_calls=0;
     since_yield=max_between_yields=0;
+    stat_calls=seek_calls=0;
 }
 static void expect(const uint32_t *phases, unsigned n) {
 #if TEST_ABSENT_HOOK
@@ -101,6 +120,7 @@ int main(int argc, char **argv) {
     elf_file_t file = {0};
     reset();
     assert(esp_elf_open(&file, argv[1]) == 0);
+    assert(stat_calls == 1 && seek_calls == 0);
     EXPECT(40, 41, 45, 46);
     assert(delays == file.size / (32 * 1024));
 #if !TEST_ABSENT_HOOK
@@ -129,6 +149,37 @@ int main(int argc, char **argv) {
     fail_allocation = false;
     esp_elf_close(&file);
     assert(allocations == 0);
+
+    // fstat is a replacement size query, not a new filesystem requirement.
+    for (unsigned mode = 0; mode < 2; ++mode) {
+        reset(); fail_stat = mode == 0; nonregular_stat = mode == 1;
+        assert(!esp_elf_open(&file, argv[1]));
+        assert(stat_calls == 1 && seek_calls == 2);
+        EXPECT(40, 41, 45, 46);
+        esp_elf_close(&file); assert(!allocations);
+    }
+    nonregular_stat = false;
+    reset(); fail_stat = true; stat_errno = ENOMEM; errno = 0;
+    assert(esp_elf_open(&file, argv[2]) == -1 && errno == 0);
+    assert(stat_calls == 1 && seek_calls == 2 && !allocations);
+    EXPECT(40, 41, 45, 44);
+    stat_errno = ENOSYS;
+    for (unsigned call = 1; call <= 2; ++call) {
+        reset(); fail_stat = true; fail_seek_call = call;
+        assert(esp_elf_open(&file, argv[1]) == -1 && errno == EIO);
+        assert(stat_calls == 1 && seek_calls == call && !read_calls && !allocations);
+        EXPECT(40, 44);
+    }
+    fail_stat = false; fail_seek_call = 0; override_size = true;
+    const off_t rejected_sizes[] = {-1, 0, 51, 8 * 1024 * 1024 + 1};
+    for (unsigned i = 0; i < sizeof(rejected_sizes) / sizeof(rejected_sizes[0]); ++i) {
+        reset(); stat_size = rejected_sizes[i];
+        assert(esp_elf_open(&file, argv[1]) == -1 && errno == EFBIG);
+        assert(stat_calls == 1 && !seek_calls && !read_calls && !allocations);
+        EXPECT(40, 44);
+    }
+    override_size = false;
+    puts("ELF size query: regular fstat avoids both seeks; unsupported/nonregular fallback, seek failures and existing size limits PASS");
 
     reset();
     assert(esp_elf_open(&file, "/nonexistent/riscrte-performance-test.elf") == -1);
