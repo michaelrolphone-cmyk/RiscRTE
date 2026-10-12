@@ -84,6 +84,33 @@ Host injected-fault tests are not physical flash/power-loss qualification.
 - Existing `test/run_file_open_test.sh` and `test/run_resident_legacy_test.sh`
   continue to cover the unchanged older handoff and resident behavior.
 
-No firmware image, flash, serial session, merge or release is part of this
-source checkpoint. Target/native-fault and product integration evidence must
-be reported separately from these host results.
+Additional integration checks:
+
+- `FILES_ROOT=/path/to/System SCENARIOS=controller bash
+  test/run_file_source_runtime_test.sh` loads the actual production Files
+  controller fixture from System, streams 12 MiB+123 bytes through a loaded
+  volume provider, unloads Files, reads/seeks in the receiver and reloads Files
+  to consume its source result. Repeat with SANITIZE=1.
+- `test/run_native_app_data_mount_test.py` materializes the hash-pinned vendor
+  objects and tests the shared fence. `MOUNT_ROOT=$PWD MOUNT_BUILD=/its/build
+  python3 test/run_native_file_source_mount_test.py` uses those actual VFS
+  objects for NativeFileSource healthy, flash open/read fault and failed-close
+  cases. Specify SANITIZE=1 consistently for both builds. Faults are modeled
+  flash errors, never device or power-loss qualification.
+- `test/compile_native_file_source_target.sh PACKAGES_DIR OUTPUT_DIR` compiles
+  the Runtime/API target layout and selected source binding on Xtensa, and
+  verifies the disabled binding emits no symbols.
+
+Selected product profiles must retain the allocated `risc_file_source_abi=1`
+marker with `-Wl,-u,risc_file_source_abi` and add all seven required wrappers:
+`esp_vfs_register`, `esp_vfs_unregister`, `esp_partition_read`,
+`esp_partition_write`, `esp_partition_erase_range`, `esp_littlefs_format`, and
+`esp_littlefs_format_partition`, each as `-Wl,--wrap=NAME`.
+
+The mount dependency is imported unchanged from 0a5e5a6548fb22725b4fec04902c5d35b72f816a
+and 1b984c11be253d4fc91f81032677385080601cad. Its default-off NativeAppData
+parity and actual pinned-VFS evidence are included under evidence/native-private-mount-20261012.
+
+Internal full native builds may be used for cohort admission. Deliverables are
+source and test evidence only. No flash, serial session, merge, release or
+hardware qualification is part of this work.

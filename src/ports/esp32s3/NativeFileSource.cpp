@@ -4,6 +4,7 @@
 #include "NativeAppDataMount.h"
 #include "NativeRadioResources.h"
 #include "runtime/storage/FileSourceFiles.h"
+extern "C" const uint32_t risc_file_source_abi __attribute__((used))=1;
 namespace RiscFileSource { namespace {
 bool(*ownerTask)()=nullptr;
 bool(*operationSafe)()=nullptr;
