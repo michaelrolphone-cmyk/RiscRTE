@@ -11,6 +11,8 @@ void fixture_retain(void);
 void fixture_absent(bool);
 void fixture_open_failure(bool);
 void fixture_unavailable(void);
+void fixture_adapter_retain(void);
+void fixture_corrupt_operation(void);
 unsigned fixture_reads(void);
 unsigned fixture_writes(void);
 void fixture_rejected_calls(void);

@@ -1,0 +1,10 @@
+Legacy reader: 1025-key V2, V1 fixed tails, permitted padding, empty/unsorted/max values, page/CRC boundary framing, owned canonical map and exact-source SHA PASS
+Legacy reader: 45 recomputed-CRC malformed namespace/owner/header/row/anchor/duplicate/count/length/page/index cases fail closed PASS
+Legacy reader: exact native capacity, fixed V1 overhead, independent source selection/no fallback, missing/unavailable/unreadable and allocator/hash/worker admission PASS
+Legacy reader: 584 queued/completed worker cancel/removal/export/restart boundaries preserve all native intents and source bytes PASS
+Legacy reader: 472 reached before/after read/recovery/close faults and power cuts; backup-only recovery and sticky retained custody PASS
+Legacy reader: 12 source races including unchanged-index replacement, final reread/close lease loss, late removal/export/retention and post-transfer ownership PASS
+Legacy reader: 7 digest failure sites, reentrant callbacks, corrupt recovery, padding provenance and exact 4096-byte single-file limit PASS
+Legacy reader: start-time RTENR02 envelope after preconstructed-v1 upgrade, exact v2 capacity and untouched active export marker PASS
+Legacy reader: actual running-worker cancellation waits through repeated pending close; transient begin/submit BUSY and closing BUSY/PENDING preserve custody PASS
+DISCONNECTED LEGACY READER ONLY: no migration, adoption, defaults, native writes, cleanup, public ABI or hardware claim

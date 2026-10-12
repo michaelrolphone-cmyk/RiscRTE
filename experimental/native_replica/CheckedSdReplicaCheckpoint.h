@@ -1,5 +1,7 @@
 #pragma once
 #include "NativeReplicaCore.h"
+#include "NativeSdSession.h"
+#include "NativeSdCompletion.h"
 #include <RiscStoragePackageAsyncV1.h>
 #include <cstdio>
 namespace RiscExperimental {
@@ -19,14 +21,14 @@ class CheckedSdReplicaCheckpoint {
  // worker additionally proves native storage worker + native serialization lease.
  struct Guard {void*context;bool(*held)(void*);bool(*worker)(void*);};
  static constexpr uint32_t IndexBytes=84,MapMax=65512;
- explicit CheckedSdReplicaCheckpoint(Digest hash,Guard guard):hash_(hash),guard_(guard){}
+ explicit CheckedSdReplicaCheckpoint(Digest hash,Guard guard):preparation_(this,preparationWorker,prepareRun),completion_(this,preparationWorker,completeRun),hash_(hash),guard_(guard){}
  ~CheckedSdReplicaCheckpoint(){C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  CheckedSdReplicaCheckpoint(const CheckedSdReplicaCheckpoint&)=delete;
  CheckedSdReplicaCheckpoint&operator=(const CheckedSdReplicaCheckpoint&)=delete;
- State state()const{return state_;}
- int error()const{return error_;}
- Reason reason()const{return reason_;}
- bool exitSafe()const{return !session_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
+ State state()const{return preparation_.retained()?State::Retained:preparation_.pending()?State::Running:state_;}
+ int error()const{return preparation_.retained()?C::Retained:preparation_.pending()?C::Busy:error_;}
+ Reason reason()const{return preparation_.retained()?Reason::Retained:preparation_.pending()?Reason::None:reason_;}
+ bool exitSafe()const{return !preparation_.pending()&&!io_.pinned()&&!session_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
  // Worker-only preparation copies the entire native image before returning.
  // A missing/unknown base is not permission to initialize a card or merge data.
  int start(C&core,const risc_storage_volume_api_v1*volume){return startInternal(core,volume,false,nullptr);}
@@ -34,19 +36,62 @@ class CheckedSdReplicaCheckpoint {
  // when upgrading v1 or enabling a zero-incarnation v3 image. Ordinary native
  // settings remain entropy-free.
  int startDurable(C&core,const risc_storage_volume_api_v1*volume,const uint8_t*newIncarnation=nullptr){return startInternal(core,volume,true,newIncarnation);}
+ // Owner queues native preparation; worker captures snapshot/marker, and owner
+ // must collect the copied result before any child session or SD call.
+ int prepareNative(C&core,NativeSdAttempt&attempt,bool durable=false,const uint8_t*newIncarnation=nullptr){
+  if(io_.native()||state_!=State::Idle)return C::Invalid;
+  const int rc=io_.bind(attempt,NativeSdSession::Role::Checkpoint,attempt.binding().namespaceId);if(rc)return rc;
+  preparationCore_=&core;preparationDurable_=durable;hasIncarnation_=newIncarnation!=nullptr;
+  if(newIncarnation)std::memcpy(preparationIncarnation_,newIncarnation,16);
+  const int bound=completion_.bind(attempt);if(bound){const int released=io_.release();return released==C::Retained?released:bound;}
+  const int queued=preparation_.begin(io_);if(queued){const int released=io_.release();return released==C::Retained?released:queued;}return queued;
+ }
+ bool preparationWorkerStep(){return preparation_.workerStep();}
+ int collectPreparation(){
+  if(!io_.native()||!io_.owner())return C::Busy;
+  if(!preparation_.pending())return C::Stale;
+  const int rc=preparation_.collect();if(rc==C::Busy&&preparation_.pending())return rc;
+  C::wipe(preparationIncarnation_,sizeof preparationIncarnation_);
+  if(rc==C::Retained){retain();return rc;}
+  if(rc){finish(rc==C::Stale?State::Cancelled:State::Failed,rc);return error_;}
+  return rc;
+ }
+ int issueNativeCompletion(){
+  if(!io_.native()||!io_.owner()||preparation_.pending()||state_!=State::Verified)return C::Stale;
+  if(completionIssued_)return C::Busy;
+  const int check=io_.custody();if(check){if(check==C::Retained)retain();else finish(State::Failed,check);return error_;}
+  NativeSdCompletion::Evidence e{};e.action=durable_?2:1;e.count=snapshot_.count();e.mapBytes=snapshot_.mapSize();e.coreRevision=snapshot_.ticket().revision;e.frontier=snapshot_.ticket().through;e.identity=confirmed_;
+  const int rc=completion_.issue(e);if(!rc)completionIssued_=true;else if(rc==C::Retained)retain();else if(rc!=C::Busy)finish(State::Failed,rc);return rc&&rc!=C::Busy?error_:rc;
+ }
+ bool nativeCompletionWorkerStep(){return completion_.workerStep();}
+ int collectNativeCompletion(){
+  if(!io_.native()||!io_.owner()||!completionIssued_)return C::Invalid;
+  NativeReplicaJob::Result result{};const int rc=completion_.collect(&result);if(rc==C::Busy)return rc;
+  if(rc==C::Retained){retain();return rc;}
+  completionIssued_=false;const bool cancelled=completion_.cancelRequested();
+  if(result.status==C::Busy&&!cancelled){
+   if(completion_.resetCollected()!=C::Ok){retain();return C::Retained;}
+   const int retry=issueNativeCompletion();return retry?retry:C::Busy;
+  }
+  const bool refused=cancelled&&(result.status==C::Stale||result.status==C::Busy);
+  reason_=result.status&&!refused?Reason::NativeFailure:Reason::None;
+  finish(refused?State::Cancelled:result.status?State::Failed:State::Done,refused?C::Stale:result.status);return error_;
+ }
  private:
  int startInternal(C&core,const risc_storage_volume_api_v1*volume,bool durable,const uint8_t*newIncarnation){
+  if(io_.native()&&!preparation_.workerClaimed())return C::Busy;
   if(state_!=State::Idle||!guard_.held||!guard_.worker||!hash_.begin||!hash_.update||!hash_.finish)return C::Invalid;
   reason_=Reason::None;
   if(!guard_.worker(guard_.context))return C::Busy;
-  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
+  if(!preparation_.workerClaimed()&&!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
   if(!risc_storage_volume_download(volume))return C::Invalid;
+  if(io_.native()&&core.namespaceId()!=io_.attempt()->binding().namespaceId)return C::Conflict;
   if(!core.ready())return C::Uncertain;
   if(core.exportPrepared()){reason_=Reason::PendingExport;return C::Busy;}
   if(!core.identity().known){reason_=Reason::UnknownBase;return C::Conflict;}
   if(core.identity().generation==UINT64_MAX)return C::NoSpace;
   int rc=core.captureSnapshot(&snapshot_);if(rc)return rc;
-  if(snapshot_.namespaceId()>INT32_MAX||snapshot_.mapSize()>MapMax){snapshot_.reset();return C::NoSpace;}
+  if(snapshot_.namespaceId()>INT32_MAX||snapshot_.mapSize()>MapMax||(io_.native()&&snapshot_.namespaceId()!=io_.attempt()->binding().namespaceId)){snapshot_.reset();return C::NoSpace;}
   core_=&core;volume_=volume;api_=risc_storage_volume_packages(volume);confirmed_=snapshot_.base();++confirmed_.generation;
   if(!hashBegin(snapshot_.namespaceId(),snapshot_.count(),snapshot_.mapSize()))return startFailed();
   for(uint32_t at=0;at<snapshot_.mapSize();){const uint32_t n=chunk(snapshot_.mapSize()-at);if(!hash_.update(hash_.context,snapshot_.map()+at,n))return startFailed();at+=n;}
@@ -64,8 +109,13 @@ class CheckedSdReplicaCheckpoint {
  }
  public:
  void cancel(){
+  if(io_.native()){
+   if(!io_.owner())return;
+   if(preparation_.pending()){preparation_.cancel();return;}
+   if(completionIssued_){completion_.cancel();return;}
+  }
   if(state_==State::Verified){
-   if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   if(io_.native()?io_.custody()==C::Retained:api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
    finish(State::Cancelled,C::Ok);return;
   }
   if(state_!=State::Running)return;
@@ -74,6 +124,7 @@ class CheckedSdReplicaCheckpoint {
  // Explicit worker-only final step. SD close and exact verification alone do
  // not remove native intents. Newer native operations survive acknowledgement.
  int acknowledgeNative(){
+  if(io_.native())return C::Invalid; // use the owner receipt/native worker API
   if(state_!=State::Verified)return C::Stale;
   if(!guard_.worker(guard_.context))return C::Busy;
   const int observed=api_->base.fs.state.observe(volume_->context);
@@ -86,26 +137,33 @@ class CheckedSdReplicaCheckpoint {
   reason_=rc?Reason::NativeFailure:Reason::None;finish(rc?State::Failed:State::Done,rc);return rc;
  }
  void step(){
+  if(io_.native()&&(!io_.owner()||preparation_.pending()||completionIssued_))return;
   if(state_!=State::Running)return;
-  const int observed=api_->base.fs.state.observe(volume_->context);
-  if(observed==RISC_STORAGE_STATE_RETAINED){retain();return;}
-  if(!cancelled_&&!error_){
-   if(!guard_.held(guard_.context))fail(C::Conflict,Reason::CustodyLost);
-   else if(observed!=RISC_STORAGE_STATE_READY)fail(C::Io,Reason::MediaUnavailable);
+  if(io_.native()){
+   const int rc=io_.custody();if(rc==C::Busy)return;if(rc==C::Retained){retain();return;}
+   if(!cancelled_&&!error_&&rc)fail(rc,rc==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable);
+  }else{
+   const int observed=api_->base.fs.state.observe(volume_->context);
+   if(observed==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   if(!cancelled_&&!error_){
+    if(!guard_.held(guard_.context))fail(C::Conflict,Reason::CustodyLost);
+    else if(observed!=RISC_STORAGE_STATE_READY)fail(C::Io,Reason::MediaUnavailable);
+   }
   }
   if(phase_==Closing){
-   if(session_){const int rc=api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK){retain();return;}session_=operation_=0;}
+   if(session_){const int rc=io_.native()?io_.end():api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK&&(!io_.native()||rc!=NativeSdAttempt::Lost)){retain();return;}session_=operation_=0;if(rc)fail(C::Conflict,Reason::CustodyLost);}
    // End OK fences adapter cleanup; provider custody can become visible only now.
-   if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   if(io_.native()){const int rc=io_.custody();if(rc==C::Busy)return;if(rc==C::Retained){retain();return;}if(rc&&!error_)fail(rc,Reason::CustodyLost);}
+   else if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
    if(cancelled_)finish(State::Cancelled,C::Ok);
    else if(error_)finish(State::Failed,error_);
    else state_=State::Verified;
    return;
   }
-  if(phase_==Begin){const int rc=api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io);return;}phase_=Refresh;return;}
+  if(phase_==Begin){const int rc=io_.native()?io_.begin(&session_):api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io);return;}phase_=io_.native()?ReadIndex:Refresh;return;}
   if(!operation_){submit();return;}
   result_.status=INT32_MIN;
-  const int rc=api_->base.collect(volume_->context,session_,operation_,&result_);
+  const int rc=io_.native()?io_.collect(&result_):api_->base.collect(volume_->context,session_,operation_,&result_);
   // The package adapter can finish an operation with BUSY in its copied result.
   // Only an uncollected BUSY is a poll; a collected BUSY has consumed the token.
   if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
@@ -117,7 +175,7 @@ class CheckedSdReplicaCheckpoint {
    if(phase_==RemoveTemp){phase_=WriteTemp;return;}
    fail(phase_==ReadIndex?C::Missing:C::Io,phase_==ReadIndex?Reason::CheckpointMissing:Reason::ReadFailure);return;
   }
-  if(rc!=RISC_STORAGE_ASYNC_OK){if(phase_==ExistingPage&&(rc==RISC_STORAGE_ASYNC_IO||rc==RISC_STORAGE_ASYNC_INVALID)){phase_=RemoveOrphan;return;}fail(C::Io,reading()?Reason::ReadFailure:Reason::StorageFailure);return;}
+  if(rc!=RISC_STORAGE_ASYNC_OK){if(phase_==ExistingPage&&((!io_.native()&&rc==RISC_STORAGE_ASYNC_IO)||rc==RISC_STORAGE_ASYNC_INVALID)){phase_=RemoveOrphan;return;}fail(C::Io,reading()?Reason::ReadFailure:Reason::StorageFailure);return;}
   switch(phase_){
    case Refresh:phase_=ReadIndex;break;
    case ReadIndex:readIndex();break;
@@ -158,6 +216,16 @@ class CheckedSdReplicaCheckpoint {
  }
  private:
  enum Phase {Begin,Refresh,ReadIndex,ReadBase,RecoverMissing,Recover,CheckRecovered,ExistingPage,WritePage,VerifyPage,RemoveOrphan,RemoveTemp,WriteTemp,VerifyTemp,CheckBase,Replace,ReadFinal,ReadFinalPage,CheckFinal,Closing};
+ NativeSdSession io_;NativeSdPreparation preparation_;C*preparationCore_=nullptr;bool preparationDurable_=false,hasIncarnation_=false;uint8_t preparationIncarnation_[16]{};
+ NativeSdCompletion completion_;bool completionIssued_=false;
+ static bool preparationWorker(void*p){auto&s=*static_cast<CheckedSdReplicaCheckpoint*>(p);return s.guard_.worker&&s.guard_.worker(s.guard_.context);}
+ static int prepareRun(void*p){auto&s=*static_cast<CheckedSdReplicaCheckpoint*>(p);return s.startInternal(*s.preparationCore_,s.io_.attempt()->binding().volume,s.preparationDurable_,s.hasIncarnation_?s.preparationIncarnation_:nullptr);}
+ static NativeReplicaJob::Result completeRun(void*p,const NativeSdCompletion::Evidence&e){
+  auto&s=*static_cast<CheckedSdReplicaCheckpoint*>(p);
+  if(e.action!=(s.durable_?2u:1u)||e.count!=s.snapshot_.count()||e.mapBytes!=s.snapshot_.mapSize()||e.coreRevision!=s.snapshot_.ticket().revision||e.frontier!=s.snapshot_.ticket().through||!same(e.identity,s.confirmed_))return {C::Retained,0,0};
+  const int rc=s.durable_?s.core_->acknowledgeExport(s.marker_,s.confirmed_):s.core_->acknowledge(s.snapshot_.ticket(),s.confirmed_);
+  return {rc,s.core_->pendingCount(),s.core_->revision()};
+ }
  Digest hash_;Guard guard_;C::Snapshot snapshot_;C::ExportMarker marker_{};bool durable_=false;C*core_=nullptr;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
  C::Identity confirmed_{},remote_{};State state_=State::Idle;Phase phase_=Begin;int error_=0;Reason reason_=Reason::None;bool cancelled_=false,recoveredMissing_=false;uint64_t session_=0,operation_=0;uint32_t page_=0,remoteSize_=0;
  uint8_t candidate_[IndexBytes]{},previous_[IndexBytes]{};char directory_[32]{},index_[64]{},temporary_[64]{},pagePath_[160]{};
@@ -177,7 +245,7 @@ class CheckedSdReplicaCheckpoint {
  void retain(){state_=State::Retained;error_=C::Retained;reason_=Reason::Retained;}
  void fail(int rc,Reason reason=Reason::StorageFailure){error_=rc;reason_=reason;phase_=Closing;}
  int startFailed(){reason_=Reason::StorageFailure;finish(State::Failed,C::Io);return C::Io;}
- void finish(State state,int rc){state_=state;error_=rc;snapshot_.reset();C::wipe(&marker_,sizeof marker_);C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
+ void finish(State state,int rc){if(io_.native()&&!preparation_.workerClaimed()&&io_.pinned()){const int released=io_.release();if(released==C::Retained){retain();return;}if(released){state=State::Failed;rc=released;reason_=released==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable;}}state_=state;error_=rc;snapshot_.reset();C::wipe(&marker_,sizeof marker_);C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  void finishBase(){uint8_t digest[32]{};const bool ok=hash_.finish(hash_.context,digest)&&!std::memcmp(digest,remote_.digest,32);C::wipe(digest,sizeof digest);if(!ok)fail(C::Io,Reason::InvalidContent);else phase_=Recover;}
  void readIndex(){
   const auto*p=result_.data;
@@ -198,13 +266,13 @@ class CheckedSdReplicaCheckpoint {
    risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:(phase_==RemoveOrphan||phase_==RemoveTemp)?RISC_STORAGE_ASYNC_REMOVE_FILE:RISC_STORAGE_ASYNC_READ_SMALL_FILE;
    const char*p=index_;if(phase_==RemoveTemp||phase_==VerifyTemp)p=temporary_;
    if(phase_==ReadBase||phase_==ExistingPage||phase_==VerifyPage||phase_==RemoveOrphan||phase_==ReadFinalPage){path(phase_==ReadBase?remote_:confirmed_);p=pagePath_;}
-   std::strcpy(q.path,p);rc=api_->base.submit(volume_->context,session_,&q,&operation_);
+   std::strcpy(q.path,p);rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);
   }else{
    request_.operation=(phase_==Recover||phase_==RecoverMissing)?RISC_STORAGE_PACKAGE_RECOVER:phase_==Replace?RISC_STORAGE_PACKAGE_REPLACE:RISC_STORAGE_PACKAGE_WRITE_SMALL;
    const char*p=index_;
    if(phase_==WritePage){path(confirmed_);p=pagePath_;request_.size=pageSize(snapshot_.mapSize());std::memcpy(request_.data,snapshot_.map()+uint64_t(page_)*4096,request_.size);}
    if(phase_==WriteTemp||phase_==Replace){p=temporary_;std::strcpy(request_.destination,index_);request_.size=IndexBytes;std::memcpy(request_.data,candidate_,IndexBytes);}
-   std::strcpy(request_.path,p);rc=api_->submit_package(volume_->context,session_,&request_,&operation_);
+   std::strcpy(request_.path,p);rc=io_.native()?io_.package(request_,&operation_):api_->submit_package(volume_->context,session_,&request_,&operation_);
    C::wipe(&request_,sizeof request_);
   }
   if(rc==RISC_STORAGE_ASYNC_BUSY)return;

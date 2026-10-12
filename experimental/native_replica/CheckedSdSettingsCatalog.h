@@ -35,47 +35,72 @@ class CheckedSdSettingsCatalog {
   uint8_t initialBackups_=0,finalBackups_=0,recovered_=0;Slot slots_[3]{};Artifacts artifacts_{};
  };
  CheckedSdSettingsCatalog(const C&core,Digest digest,Guard guard,C::Allocator allocator=C::heap())
-  :core_(core),hash_(digest),guard_(guard),alloc_(allocator){}
+  :core_(core),hash_(digest),guard_(guard),alloc_(allocator),namespace_(core.namespaceId()),prep_(this,preparationWorker,prepareCallback){}
  ~CheckedSdSettingsCatalog(){destroyChild();releaseEntries();wipeScratch();}
  CheckedSdSettingsCatalog(const CheckedSdSettingsCatalog&)=delete;CheckedSdSettingsCatalog&operator=(const CheckedSdSettingsCatalog&)=delete;
- State state()const{return state_;}Reason reason()const{return reason_;}int error()const{return error_;}
- bool exitSafe()const{return !session_&&!child_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
+ State state()const{return prep_.retained()?State::Retained:prep_.pending()?State::Running:state_;}Reason reason()const{return prep_.retained()?Reason::Retained:prep_.pending()?Reason::None:reason_;}int error()const{return prep_.retained()?C::Retained:prep_.pending()?C::Busy:error_;}
+ bool exitSafe()const{return !prep_.pending()&&!io_.pinned()&&!session_&&!child_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
+ // Capture core framing on the native worker, then transfer ownership through
+ // collection before owner scans or child construction can begin.
+ int prepareNative(NativeSdAttempt&attempt,Limits limits){
+  if(prep_.pending()||io_.native()||state_!=State::Idle)return C::Invalid;
+  const int rc=io_.bind(attempt,NativeSdSession::Role::Catalog,namespace_);if(rc)return rc;
+  limits_=limits;const int queued=prep_.begin(io_);if(queued){const int released=io_.release();return released==C::Retained?released:queued;}return C::Ok;
+ }
+ int prepareNative(NativeSdAttempt&attempt){return prepareNative(attempt,Limits{});}
+ bool preparationWorkerStep(){return prep_.workerStep();}
+ int collectPreparation(){
+  if(!io_.native()||!io_.owner())return C::Invalid;
+  if(prep_.retained()){retain();return C::Retained;}
+  if(!prep_.pending())return C::Stale;
+  const int rc=prep_.collect();if(rc==C::Busy&&prep_.pending())return rc;
+  if(rc==C::Retained){retain();return rc;}if(rc){finish(rc==C::Stale?State::Cancelled:State::Failed,rc);return error_;}return C::Ok;
+ }
  int start(const risc_storage_volume_api_v1*volume,Limits limits){
+  if(io_.native()&&!prep_.workerClaimed())return C::Busy;
   if(entered_)return C::Busy;
   EntryLock lock(entered_);
   if(state_!=State::Idle||!core_.namespaceId()||core_.namespaceId()>INT32_MAX||!limits.entries||limits.entries>256||!limits.nameBytes||limits.nameBytes>32768||!guard_.held||!guard_.worker||!alloc_.allocate||!alloc_.release||!hash_.begin||!hash_.update||!hash_.finish||!risc_storage_volume_download(volume))return C::Invalid;
   const auto*ext=risc_storage_volume_extension(volume);if(!volume->dir_open||!volume->dir_next||!ext->dir_close_checked||!ext->handle_error)return C::Invalid;
-  reason_=Reason::None;error_=0;if(!guard_.worker(guard_.context))return C::Busy;if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
+  reason_=Reason::None;error_=0;if(!guard_.worker(guard_.context))return C::Busy;if(!prep_.workerClaimed()&&!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
   limits_=limits;entryBytes_=2*limits.entries*sizeof(Entry);entries_=static_cast<Entry*>(alloc_.allocate(alloc_.context,entryBytes_));if(!entries_){reason_=Reason::Allocation;return C::NoMemory;}std::memset(entries_,0,entryBytes_);
   volume_=volume;api_=risc_storage_volume_packages(volume);report_.namespace_=core_.namespaceId();std::snprintf(namespaceName_,sizeof namespaceName_,"%08X",unsigned(core_.namespaceId()));std::snprintf(directory_,sizeof directory_,"/RTECFG/%s",namespaceName_);
   state_=State::Running;phase_=BeginScan;return C::Ok;
  }
  int start(const risc_storage_volume_api_v1*volume){return start(volume,Limits{});}
- void cancel(){if(entered_)return;EntryLock lock(entered_);if(state_==State::Verified){if(observe()==RISC_STORAGE_STATE_RETAINED){retain();return;}finish(State::Cancelled,C::Ok);return;}if(state_==State::Running){cancelled_=true;if(child_)cancelChild();else phase_=EndScan;}}
+ void cancel(){if(io_.native()&&!io_.owner())return;
+  if(prep_.pending()){prep_.cancel();return;}if(entered_)return;EntryLock lock(entered_);if(state_==State::Verified){if(retainedCustody()){retain();return;}finish(State::Cancelled,C::Ok);return;}if(state_==State::Running){cancelled_=true;if(child_)cancelChild();else phase_=EndScan;}}
  int take(Report*out){
+  if(prep_.pending()||(io_.native()&&!io_.owner()))return C::Busy;
   if(entered_)return C::Busy;
   EntryLock lock(entered_);if(!out||out->valid())return C::Invalid;if(state_!=State::Verified)return C::Stale;
-  const int observed=observe();if(observed==RISC_STORAGE_STATE_RETAINED){retain();return C::Retained;}
-  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;finish(State::Failed,C::Conflict);return C::Conflict;}if(observed!=RISC_STORAGE_STATE_READY){reason_=Reason::MediaUnavailable;finish(State::Failed,C::Io);return C::Io;}
+  const int custody=checkCustody();if(custody==C::Busy)return custody;if(custody==C::Retained){retain();return custody;}
+  if(custody){reason_=custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable;finish(State::Failed,custody);return error_;}
+  if(io_.pinned()){const int released=io_.release();if(released){if(released==C::Retained)retain();else finish(State::Failed,released);return error_;}}
   *out=report_;out->valid_=true;report_.reset();wipeScratch();state_=State::Done;return C::Ok;
  }
  void step(){
+  if(prep_.pending()||(io_.native()&&!io_.owner()))return;
   if(entered_||state_!=State::Running)return;
   EntryLock lock(entered_);
-  const int observed=observe();if(observed==RISC_STORAGE_STATE_RETAINED){retain();return;}
-  if(!cancelled_&&!error_){if(!guard_.held(guard_.context))fail(C::Conflict,Reason::CustodyLost);else if(observed!=RISC_STORAGE_STATE_READY)fail(C::Io,Reason::MediaUnavailable);}
+  // A child has its own exact session. Let it drain/check custody; the catalog
+  // must neither observe the provider nor stall on its sibling-session Busy.
+  if(io_.native()&&child_){stepChild();return;}
+  const int custody=checkCustody(!cancelled_&&!error_);if(custody==C::Busy)return;if(custody==C::Retained){retain();return;}
+  if(!cancelled_&&!error_&&custody)fail(custody,custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable);
   if(child_){stepChild();return;}
+  if(cancelled_)phase_=EndScan;
   if(phase_==EndScan){
-   if(session_){const int rc=api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK){retain();return;}session_=operation_=0;}
-   if(observe()==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   if(session_){const int rc=io_.native()?io_.end():api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK&&(!io_.native()||rc!=NativeSdAttempt::Lost)){retain();return;}session_=operation_=0;if(rc==NativeSdAttempt::Lost){const int lost=io_.custody();if(lost==C::Retained){retain();return;}fail(lost==C::Io?C::Io:C::Conflict,lost==C::Io?Reason::MediaUnavailable:Reason::CustodyLost);}}
+   if(retainedCustody()){retain();return;}
    if(cancelled_||error_){finish(cancelled_?State::Cancelled:State::Failed,error_);return;}
    if(scan_==0){phase_=StartChild;return;}prepareReport();return;
   }
   if(phase_==Summarize){summarizeStep();return;}
   if(phase_==StartChild){startChild();return;}
-  if(phase_==BeginScan){const int rc=api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::ReadFailure);return;}phase_=RefreshScan;return;}
+  if(phase_==BeginScan){const int rc=io_.native()?io_.begin(&session_):api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::ReadFailure);return;}phase_=io_.native()?OpenScan:RefreshScan;return;}
   if(!operation_){submit();return;}
-  result_.status=INT32_MIN;const int rc=api_->base.collect(volume_->context,session_,operation_,&result_);
+  result_.status=INT32_MIN;const int rc=io_.native()?io_.collect(&result_):api_->base.collect(volume_->context,session_,operation_,&result_);
   if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
@@ -93,12 +118,22 @@ class CheckedSdSettingsCatalog {
  enum Phase {BeginScan,RefreshScan,OpenScan,NextScan,EndScan,StartChild,Child,Summarize};
  const C&core_;Digest hash_;Guard guard_;C::Allocator alloc_;Limits limits_{};Report report_;Scan scans_[2]{};Entry*entries_=nullptr;size_t entryBytes_=0;
  const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;uint64_t session_=0,operation_=0;
+ uint32_t namespace_=0,nativeCapacity_=0,nativeHeader_=0;NativeSdSession io_;NativeSdPreparation prep_;
  State state_=State::Idle;Reason reason_=Reason::None;Phase phase_=BeginScan;int error_=0;bool entered_=false,cancelled_=false;unsigned scan_=0,source_=0,child_=0;
  unsigned summaryStage_=0,summaryScan_=0;uint32_t summaryAt_=0;char pagePrefix_[2][96]{};
  char namespaceName_[9]{},directory_[32]{};risc_storage_async_result_v1 result_{};
  alignas(R) alignas(L) uint8_t childBytes_[sizeof(R)>sizeof(L)?sizeof(R):sizeof(L)]{};
  R*reader(){return reinterpret_cast<R*>(childBytes_);}L*legacy(){return reinterpret_cast<L*>(childBytes_);}
- int observe()const{return api_->base.fs.state.observe(volume_->context);}
+ static bool preparationWorker(void*p){auto&self=*static_cast<CheckedSdSettingsCatalog*>(p);return self.guard_.worker&&self.guard_.worker(self.guard_.context);}
+ static int prepareCallback(void*p){auto&self=*static_cast<CheckedSdSettingsCatalog*>(p);self.nativeCapacity_=self.core_.imageCapacity();self.nativeHeader_=self.core_.headerSize()?self.core_.headerSize():C::Header;return self.start(self.io_.attempt()->binding().volume,self.limits_);}
+ int checkCustody(bool checkLease=true){
+  if(io_.native())return io_.custody();
+  const int observed=api_->base.fs.state.observe(volume_->context);if(observed==RISC_STORAGE_STATE_RETAINED)return C::Retained;
+  if(!checkLease)return C::Ok;
+  if(!guard_.held(guard_.context))return C::Conflict;
+  return observed==RISC_STORAGE_STATE_READY?C::Ok:C::Io;
+ }
+ bool retainedCustody(){return io_.native()?io_.custody()==C::Retained:api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED;}
  static bool wait(int rc){return rc==RISC_STORAGE_ASYNC_PENDING||rc==RISC_STORAGE_ASYNC_BUSY;}
  static const char*name(unsigned n){return n==0?"replica.index":n==1?"settings.index":"settings.kv";}
  static bool foldEqual(const char*a,const char*b){for(;*a&&*b;++a,++b){unsigned x=uint8_t(*a),y=uint8_t(*b);if(x>='A'&&x<='Z')x+=32;if(y>='A'&&y<='Z')y+=32;if(x!=y)return false;}return !*a&&!*b;}
@@ -109,8 +144,8 @@ class CheckedSdSettingsCatalog {
  void wipeScratch(){C::wipe(&result_,sizeof result_);C::wipe(pagePrefix_,sizeof pagePrefix_);}
  void retain(){state_=State::Retained;reason_=Reason::Retained;error_=C::Retained;wipeScratch();}
  void fail(int rc,Reason reason){error_=rc;reason_=reason;if(child_)cancelChild();else phase_=EndScan;}
- void finish(State state,int rc){destroyChild();releaseEntries();report_.reset();wipeScratch();state_=state;error_=rc;}
- void submit(){risc_storage_async_request_v1 q{};q.operation=phase_==RefreshScan?RISC_STORAGE_ASYNC_REFRESH:phase_==OpenScan?RISC_STORAGE_ASYNC_OPEN_DIRECTORY:RISC_STORAGE_ASYNC_NEXT_ENTRY;const unsigned level=scans_[scan_].level;std::strcpy(q.path,level==0?directory_:level==1?"/RTECFG":"/");const int rc=api_->base.submit(volume_->context,session_,&q,&operation_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){scans_[scan_].status=Directory::Unreadable;phase_=EndScan;}}
+ void finish(State state,int rc){if(io_.pinned()){const int released=io_.release();if(released==C::Retained){retain();return;}if(released){state=State::Failed;rc=released;}}destroyChild();releaseEntries();report_.reset();wipeScratch();state_=state;error_=rc;}
+ void submit(){risc_storage_async_request_v1 q{};q.operation=phase_==RefreshScan?RISC_STORAGE_ASYNC_REFRESH:phase_==OpenScan?RISC_STORAGE_ASYNC_OPEN_DIRECTORY:RISC_STORAGE_ASYNC_NEXT_ENTRY;const unsigned level=scans_[scan_].level;std::strcpy(q.path,level==0?directory_:level==1?"/RTECFG":"/");const int rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){scans_[scan_].status=Directory::Unreadable;phase_=EndScan;}}
  void admitEntry(){
   auto&s=scans_[scan_];const auto&e=result_.entry;const char*end=static_cast<const char*>(std::memchr(e.name,0,sizeof e.name));
   if(!end||end==e.name||e.is_directory>1||std::strchr(e.name,'/')||std::strchr(e.name,'\\')){s.status=Directory::Invalid;phase_=EndScan;return;}
@@ -123,9 +158,12 @@ class CheckedSdSettingsCatalog {
   if(s.level&&foldEqual(e.name,s.level==1?namespaceName_:"RTECFG")){s.status=e.is_directory?Directory::Unreadable:Directory::Invalid;phase_=EndScan;}
  }
  void startChild(){
-  if(!guard_.worker(guard_.context))return;
-  if(source_==0){new(childBytes_)R(core_,hash_,guard_,alloc_);child_=1;}else{new(childBytes_)L(core_,hash_,guard_,alloc_);child_=2;}
-  int rc=child_==1?reader()->start(volume_):legacy()->start(volume_,source_==1?L::Source::PagedV2:L::Source::SingleFile);
+  if(!io_.native()&&!guard_.worker(guard_.context))return;
+  if(source_==0){if(io_.native())new(childBytes_)R(core_,namespace_,nativeCapacity_,nativeHeader_,hash_,guard_,alloc_);else new(childBytes_)R(core_,hash_,guard_,alloc_);child_=1;}
+  else{if(io_.native())new(childBytes_)L(core_,namespace_,nativeCapacity_,nativeHeader_,hash_,guard_,alloc_);else new(childBytes_)L(core_,hash_,guard_,alloc_);child_=2;}
+  const auto source=source_==1?L::Source::PagedV2:L::Source::SingleFile;
+  const int rc=io_.native()?(child_==1?reader()->startPreparedNative(*io_.attempt(),io_):legacy()->startPreparedNative(*io_.attempt(),source,io_)):(child_==1?reader()->start(volume_):legacy()->start(volume_,source));
+  if(rc==C::Retained){retain();return;}
   if(rc==C::Busy){destroyChild();return;}
   if(rc){destroyChild();fail(rc,rc==C::NoMemory?Reason::Allocation:Reason::ReadFailure);return;}phase_=Child;
  }
@@ -134,7 +172,8 @@ class CheckedSdSettingsCatalog {
   if(child_==1){reader()->step();running=reader()->state()==R::State::Running;retained=reader()->state()==R::State::Retained;verified=reader()->state()==R::State::Verified;safe=reader()->exitSafe();}
   else{legacy()->step();running=legacy()->state()==L::State::Running;retained=legacy()->state()==L::State::Retained;verified=legacy()->state()==L::State::Verified;safe=legacy()->exitSafe();}
   if(retained){retain();return;}if(running)return;
-  if(observe()==RISC_STORAGE_STATE_RETAINED){retain();return;}
+  if(retainedCustody()){retain();return;}
+  if(io_.native()){const int custody=checkCustody();if(custody==C::Busy)return;if(custody){if(custody==C::Retained){retain();return;}error_=custody;reason_=custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable;}}
   if(cancelled_||error_){if(verified){cancelChild();safe=child_==1?reader()->exitSafe():legacy()->exitSafe();}if(!safe){retain();return;}finish(cancelled_?State::Cancelled:State::Failed,error_);return;}
   auto&slot=report_.slots_[source_];
   if(verified){

@@ -53,18 +53,18 @@ class NativeSdAttempt final {
   const int rc=submitImpl(q);if(!rc)refreshSent_=true;return rc;
  }
  int openChild(){
-  if(!owner()||call_!=Call::None||state_!=State::ReadyClosed||nativePin_||!boundary())return Context;
-  const int rc=begin();if(!rc)state_=State::OwnedSession;else if(rc!=RISC_STORAGE_ASYNC_BUSY)retain();return rc;
+  if(!owner()||call_!=Call::None||state_!=State::ReadyClosed||nativePin_||!clientAccess()||!boundary())return Context;
+  const int rc=begin();if(!rc){state_=State::OwnedSession;childOwner_=dispatchOwner_;}else if(rc!=RISC_STORAGE_ASYNC_BUSY)retain();return rc;
  }
  int submit(const risc_storage_async_request_v1&q){
-  if(!owner()||call_!=Call::None||state_!=State::OwnedSession||nativePin_||q.operation==RISC_STORAGE_ASYNC_REFRESH)return Context;
+  if(!owner()||call_!=Call::None||state_!=State::OwnedSession||nativePin_||!sessionAccess()||q.operation==RISC_STORAGE_ASYNC_REFRESH)return Context;
   if(q.operation!=RISC_STORAGE_ASYNC_NEXT_ENTRY&&q.operation!=RISC_STORAGE_ASYNC_CLOSE_DIRECTORY&&
      !path(q.path,q.operation==RISC_STORAGE_ASYNC_OPEN_DIRECTORY))return Context;
   if(q.operation==RISC_STORAGE_ASYNC_RENAME&&!path(q.destination,false))return Context;
   return submitImpl(q);
  }
  int package(const risc_storage_package_request_v1&q){
-  if(!owner()||call_!=Call::None||state_!=State::OwnedSession||operation_||!live())return Context;
+  if(!owner()||call_!=Call::None||state_!=State::OwnedSession||operation_||nativePin_||!sessionAccess()||!live())return Context;
   if(q.operation==RISC_STORAGE_PACKAGE_VALIDATE||q.operation==RISC_STORAGE_PACKAGE_VALIDATE_DRIVER)return Context;
   if(q.operation!=RISC_STORAGE_PACKAGE_WRITE_CHUNK&&q.operation!=RISC_STORAGE_PACKAGE_CLOSE_WRITE&&!path(q.path,false))return Context;
   if(q.operation==RISC_STORAGE_PACKAGE_REPLACE&&!path(q.destination,false))return Context;
@@ -72,19 +72,20 @@ class NativeSdAttempt final {
   uint64_t token=0;const int rc=api_->submit_package(volume_->context,session_,&q,&token);
   if(!disarm())return RISC_STORAGE_ASYNC_RETAINED;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return rc;}
+  if(rc==RISC_STORAGE_ASYNC_IO){failed_=true;state_=State::Closing;}
   if(!rc){if(!token||token!=minted_){retain();return RISC_STORAGE_ASYNC_RETAINED;}operation_=token;}
   return rc;
  }
  int collect(risc_storage_async_result_v1*out){
-  if(!owner()||call_!=Call::None||!out||!session_||!operation_||state_==State::Closing||state_==State::Retained)return Context;
+  if(!owner()||call_!=Call::None||!out||!sessionAccess()||!session_||!operation_||state_==State::Closing||state_==State::Retained)return Context;
   if(!arm(Call::Collect))return Context;
   out->status=INT32_MIN;const int rc=api_->base.collect(volume_->context,session_,operation_,out);
   if(!disarm())return RISC_STORAGE_ASYNC_RETAINED;
-  if(rc==RISC_STORAGE_ASYNC_PENDING)return rc;
+  if(rc==RISC_STORAGE_ASYNC_PENDING){if(out->status!=INT32_MIN){retain();return RISC_STORAGE_ASYNC_RETAINED;}return rc;}
   // A copied BUSY is terminal; it consumed this operation token.
-  if(rc==RISC_STORAGE_ASYNC_BUSY&&out->status!=RISC_STORAGE_ASYNC_BUSY)return rc;
+  if(rc==RISC_STORAGE_ASYNC_BUSY&&out->status!=RISC_STORAGE_ASYNC_BUSY){if(out->status!=INT32_MIN){retain();return RISC_STORAGE_ASYNC_RETAINED;}return rc;}
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return rc;}
-  if(out->status!=rc){retain();return RISC_STORAGE_ASYNC_RETAINED;}
+  if(out->status!=rc||rc<RISC_STORAGE_ASYNC_RETAINED||rc>RISC_STORAGE_ASYNC_NOT_FOUND||out->size>sizeof(out->data)){retain();return RISC_STORAGE_ASYNC_RETAINED;}
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_IO){failed_=true;state_=State::Closing;}
   if(state_==State::Admission){refreshOk_=rc==RISC_STORAGE_ASYNC_OK;state_=State::Closing;if(!refreshOk_)failed_=true;}
@@ -92,20 +93,20 @@ class NativeSdAttempt final {
   return rc;
  }
  void cancel(){
-  if(!owner()||call_!=Call::None||state_==State::Retained||state_==State::Released||state_==State::Idle||nativePin_)return;
+  if(!owner()||call_!=Call::None||state_==State::Retained||state_==State::Released||state_==State::Idle||nativePin_||!sessionAccess())return;
   cancelled_=true;if(session_)state_=State::Closing;else {if(boundary())state_=State::Cancelled;}
  }
  // End OK never directly permits release: observe and a fenced native snapshot
  // have precedence over cancellation, operation IO and simultaneous lease loss.
  int close(){
-  if(!owner()||call_!=Call::None||!session_||state_==State::Retained||nativePin_)return Context;
+  if(!owner()||call_!=Call::None||!session_||state_==State::Retained||nativePin_||!sessionAccess())return Context;
   state_=State::Closing;
   if(!arm(Call::End))return Context;
   const int rc=api_->base.end(volume_->context,session_);
   if(!disarm())return RISC_STORAGE_ASYNC_RETAINED;
   if(rc==RISC_STORAGE_ASYNC_PENDING||rc==RISC_STORAGE_ASYNC_BUSY)return rc;
   if(rc!=RISC_STORAGE_ASYNC_OK){retain();return RISC_STORAGE_ASYNC_RETAINED;}
-  session_=operation_=0;cleanup_=false;
+  session_=operation_=0;cleanup_=false;childOwner_=nullptr;
   if(!boundary(true))return state_==State::Retained?RISC_STORAGE_ASYNC_RETAINED:Lost;
   if(closed_==UINT64_MAX){retain();return RISC_STORAGE_ASYNC_RETAINED;}++closed_;
   if(cancelled_)state_=State::Cancelled;
@@ -115,7 +116,7 @@ class NativeSdAttempt final {
   return 0;
  }
  int release(){
-  if(!owner()||call_!=Call::None||session_||nativePin_||state_==State::Retained||!fenced_)return Context;
+  if(!owner()||call_!=Call::None||session_||nativePin_||clientPins_||state_==State::Retained||!fenced_)return Context;
   if(!boundary(false,false))return state_==State::Retained?RISC_STORAGE_ASYNC_RETAINED:Lost;
   unfence();state_=State::Released;return 0;
  }
@@ -151,7 +152,10 @@ class NativeSdAttempt final {
   rawFinished_=true;return true;
  }
  private:
- friend class NativeSdCompletion;
+ friend class NativeSdCompletion;friend class NativeSdSession;friend class NativeSdPreparation;
+ const void*childOwner_=nullptr;const void*dispatchOwner_=nullptr;uint32_t clientPins_=0;
+ bool clientAccess()const{return !clientPins_||dispatchOwner_;}
+ bool sessionAccess()const{return clientAccess()&&childOwner_==dispatchOwner_;}
  Binding binding_;Hooks hooks_;const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
  State state_=State::Idle;Call call_=Call::None;uint64_t session_=0,operation_=0,epoch_=0,closed_=0,minted_=0;
  const void*request_=nullptr;uint32_t requestSize_=0;
@@ -204,6 +208,7 @@ class NativeSdAttempt final {
   uint64_t token=0;const int rc=api_->base.submit(volume_->context,session_,&q,&token);
   if(!disarm())return RISC_STORAGE_ASYNC_RETAINED;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return rc;}
+  if(rc==RISC_STORAGE_ASYNC_IO){failed_=true;state_=State::Closing;}
   if(!rc){if(!token||token!=minted_){retain();return RISC_STORAGE_ASYNC_RETAINED;}operation_=token;}return rc;
  }
 };

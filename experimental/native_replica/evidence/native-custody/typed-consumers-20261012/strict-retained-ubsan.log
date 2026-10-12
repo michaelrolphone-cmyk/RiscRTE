@@ -1,0 +1,5 @@
+late retention: 8 durable/volatile writer acknowledgement/cancellation cases preserve native map, all intents and custody even with lost lease PASS
+late retention: 16 target-prefix/old-base recovery completion/cancellation cases preserve selected marker and custody despite lost lease/quiescence PASS
+late retention: target/base recovery transfer immediately after successful checked close keeps Retained despite simultaneous lost lease PASS
+terminal retention: 130 actual adapter end-OK success/IO/queued/completed/running-cancel/lease/strict-observer cases retain all four consumers before safe exit, output or native acknowledgement PASS
+EXPERIMENTAL HOST PROOF ONLY: late Retained is terminal custody; no native acknowledgement, cancellation escape, production or hardware activation

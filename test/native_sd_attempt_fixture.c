@@ -42,3 +42,6 @@ bool fixture_scope_open(void){return native_opened;}
 
 uint64_t fixture_foreign_begin(void){uint64_t s=0;assert(async_begin(NULL,&s)==0);return s;}
 bool fixture_foreign_end(uint64_t s){return async_end(NULL,s)==0;}
+
+void fixture_adapter_retain(void){async_adapter.retained=true;}
+void fixture_corrupt_operation(void){assert(async_adapter.operation);++async_adapter.operation;}

@@ -1,5 +1,6 @@
 #pragma once
 #include "CheckedSdReplicaCheckpoint.h"
+#include "NativeSdSession.h"
 namespace RiscExperimental {
 // Read-only native candidate admission over the existing copied SD worker.
 // No core writes, implicit initialization, base selection or app semantics.
@@ -26,19 +27,36 @@ class CheckedSdReplicaReader {
  // Bind actual configured native capacity, not a remote-advertised size. This
  // does not reserve room for pending groups; rebase must perform that admission.
  CheckedSdReplicaReader(const C&core,Digest digest,Guard guard,C::Allocator allocator=C::heap())
-  :core_(core),namespace_(core.namespaceId()),nativeCapacity_(core.imageCapacity()),hash_(digest),guard_(guard),alloc_(allocator){}
+  :core_(core),namespace_(core.namespaceId()),nativeCapacity_(core.imageCapacity()),hash_(digest),guard_(guard),alloc_(allocator),prep_(this,preparationWorker,prepareCallback){}
  ~CheckedSdReplicaReader(){C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  CheckedSdReplicaReader(const CheckedSdReplicaReader&)=delete;CheckedSdReplicaReader&operator=(const CheckedSdReplicaReader&)=delete;
- State state()const{return state_;}Reason reason()const{return reason_;}int error()const{return error_;}
- bool exitSafe()const{return !session_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
+ State state()const{return prep_.retained()?State::Retained:prep_.pending()?State::Running:state_;}Reason reason()const{return prep_.retained()?Reason::Retained:prep_.pending()?Reason::None:reason_;}int error()const{return prep_.retained()?C::Retained:prep_.pending()?C::Busy:error_;}
+ bool exitSafe()const{return !prep_.pending()&&!io_.pinned()&&!session_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
+ // Native preparation is executed only by the native settings worker. Owner
+ // polling cannot touch this context until its copied result has been collected.
+ int prepareNative(NativeSdAttempt&attempt){
+  if(prep_.pending()||io_.native()||state_!=State::Idle)return C::Invalid;
+  const int rc=io_.bind(attempt,NativeSdSession::Role::ReplicaReader,namespace_);if(rc)return rc;
+  const int queued=prep_.begin(io_);if(queued){const int released=io_.release();return released==C::Retained?released:queued;}return C::Ok;
+ }
+ bool preparationWorkerStep(){return prep_.workerStep();}
+ int collectPreparation(){
+  if(!io_.native()||!io_.owner())return C::Invalid;
+  if(prep_.retained()){retain();return C::Retained;}
+  if(!prep_.pending())return C::Stale;
+  const int rc=prep_.collect();if(rc==C::Busy&&prep_.pending())return rc;
+  if(rc==C::Retained){retain();return rc;}
+  if(rc){finish(rc==C::Stale?State::Cancelled:State::Failed,rc);return error_;}return C::Ok;
+ }
  // Worker-only admission reserves at most native image capacity minus framing,
  // capped by the format's existing bound. No allocation follows untrusted size.
  int start(const risc_storage_volume_api_v1*volume){
-  const uint32_t nativeHeader=core_.headerSize()?core_.headerSize():C::Header;
+  if(io_.native()&&!preparedStart_&&!prep_.workerClaimed())return C::Busy;
+  const uint32_t nativeHeader=preparedStart_?preparedHeader_:(core_.headerSize()?core_.headerSize():C::Header);
   if(state_!=State::Idle||!namespace_||namespace_>INT32_MAX||nativeCapacity_<nativeHeader+4||!alloc_.allocate||!alloc_.release||!guard_.held||!guard_.worker||!hash_.begin||!hash_.update||!hash_.finish||!risc_storage_volume_download(volume))return C::Invalid;
   reason_=Reason::None;
-  if(!guard_.worker(guard_.context))return C::Busy;
-  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
+  if(!preparedStart_&&!guard_.worker(guard_.context))return C::Busy;
+  if(!preparedStart_&&!prep_.workerClaimed()&&!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
   budget_=verificationOnly_?CheckedSdReplicaCheckpoint::MapMax:nativeCapacity_-nativeHeader-4;
   if(budget_>CheckedSdReplicaCheckpoint::MapMax)budget_=CheckedSdReplicaCheckpoint::MapMax;
   if(budget_){candidate_.bytes_=static_cast<uint8_t*>(alloc_.allocate(alloc_.context,budget_));if(!candidate_.bytes_)return C::NoMemory;std::memset(candidate_.bytes_,0,budget_);}
@@ -48,8 +66,10 @@ class CheckedSdReplicaReader {
   state_=State::Running;phase_=Begin;return C::Ok;
  }
  void cancel(){
+  if(io_.native()&&!io_.owner())return;
+  if(prep_.pending()){prep_.cancel();return;}
   if(state_==State::Verified){
-   if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   if(retainedCustody()){retain();return;}
    finish(State::Cancelled,C::Ok);return;
   }
   if(state_==State::Running){cancelled_=true;phase_=Closing;}
@@ -57,31 +77,33 @@ class CheckedSdReplicaReader {
  // Transfer is possible only after checked close, and rechecks the same lease.
  // It proves historical content, not permission to adopt that generation.
  int take(Candidate*out){
+  if(prep_.pending()||(io_.native()&&!io_.owner()))return C::Busy;
   if(!out||out->valid_||out->bytes_)return C::Invalid;
   if(state_!=State::Verified)return C::Stale;
-  const int observed=api_->base.fs.state.observe(volume_->context);
-  // Retained provider custody outranks a simultaneous lost-lease refusal.
-  if(observed==RISC_STORAGE_STATE_RETAINED){retain();return C::Retained;}
-  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;finish(State::Failed,C::Conflict);return C::Conflict;}
-  if(observed!=RISC_STORAGE_STATE_READY){reason_=Reason::MediaUnavailable;finish(State::Failed,C::Io);return C::Io;}
+  const int custody=checkCustody();if(custody==C::Busy)return custody;
+  if(custody==C::Retained){retain();return C::Retained;}
+  if(custody){reason_=custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable;finish(State::Failed,custody);return error_;}
+  if(io_.pinned()){const int released=io_.release();if(released){if(released==C::Retained)retain();else finish(State::Failed,released);return error_;}}
   out->alloc_=candidate_.alloc_;out->bytes_=candidate_.bytes_;out->capacity_=candidate_.capacity_;out->size_=candidate_.size_;out->count_=candidate_.count_;out->namespace_=namespace_;out->identity_=candidate_.identity_;out->valid_=true;
   candidate_.bytes_=nullptr;candidate_.reset();state_=State::Done;return C::Ok;
  }
  void step(){
+  if(prep_.pending()||(io_.native()&&!io_.owner()))return;
   if(state_!=State::Running)return;
-  const int observed=api_->base.fs.state.observe(volume_->context);
-  if(observed==RISC_STORAGE_STATE_RETAINED){retain();return;}
-  if(!cancelled_&&!error_){if(!guard_.held(guard_.context))fail(C::Conflict,Reason::CustodyLost);else if(observed!=RISC_STORAGE_STATE_READY)fail(C::Io,Reason::MediaUnavailable);}
+  const int custody=checkCustody(!cancelled_&&!error_);if(custody==C::Busy)return;
+  if(custody==C::Retained){retain();return;}
+  if(!cancelled_&&!error_&&custody)fail(custody,custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable);
+  if(cancelled_)phase_=Closing;
   if(phase_==Closing){
-   if(session_){const int rc=api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK){retain();return;}session_=operation_=0;}
+   if(session_){const int rc=io_.native()?io_.end():api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK&&(!io_.native()||rc!=NativeSdAttempt::Lost)){retain();return;}session_=operation_=0;if(rc==NativeSdAttempt::Lost){const int lost=io_.custody();if(lost==C::Retained){retain();return;}fail(lost==C::Io?C::Io:C::Conflict,lost==C::Io?Reason::MediaUnavailable:Reason::CustodyLost);}}
    // End OK fences adapter cleanup; provider custody can become visible only now.
-   if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   if(retainedCustody()){retain();return;}
    if(cancelled_)finish(State::Cancelled,C::Ok);else if(error_)finish(State::Failed,error_);else state_=State::Verified;return;
   }
-  if(phase_==Begin){const int rc=api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::ReadFailure);return;}phase_=Refresh;return;}
+  if(phase_==Begin){const int rc=io_.native()?io_.begin(&session_):api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::ReadFailure);return;}phase_=io_.native()?ReadIndex:Refresh;return;}
   if(phase_==Grammar){grammarStep();return;}
   if(!operation_){submit();return;}
-  result_.status=INT32_MIN;const int rc=api_->base.collect(volume_->context,session_,operation_,&result_);
+  result_.status=INT32_MIN;const int rc=io_.native()?io_.collect(&result_):api_->base.collect(volume_->context,session_,operation_,&result_);
   if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
@@ -102,15 +124,40 @@ class CheckedSdReplicaReader {
   C::wipe(&result_,sizeof result_);
  }
  private:
+ friend class CheckedSdSettingsCatalog;
+ CheckedSdReplicaReader(const C&core,uint32_t ns,uint32_t capacity,uint32_t header,Digest digest,Guard guard,C::Allocator allocator)
+  :core_(core),namespace_(ns),nativeCapacity_(capacity),hash_(digest),guard_(guard),alloc_(allocator),prep_(this,preparationWorker,prepareCallback){preparedHeader_=header;}
+ int startPreparedNative(NativeSdAttempt&attempt,const NativeSdSession&parent){
+  const int rc=io_.bind(attempt,NativeSdSession::Role::ReplicaReader,namespace_,&parent);if(rc)return rc;
+  preparedStart_=true;const int started=start(attempt.binding().volume);preparedStart_=false;
+  if(started){const int released=io_.release();if(released==C::Retained){retain();return released;}}return started;
+ }
+ static bool preparationWorker(void*p){auto&self=*static_cast<CheckedSdReplicaReader*>(p);return self.guard_.worker&&self.guard_.worker(self.guard_.context);}
+ static int prepareCallback(void*p){auto&self=*static_cast<CheckedSdReplicaReader*>(p);self.nativeCapacity_=self.core_.imageCapacity();return self.start(self.io_.attempt()->binding().volume);}
+ int checkCustody(bool checkLease=true){
+  if(io_.native())return io_.custody();
+  const int observed=api_->base.fs.state.observe(volume_->context);
+  if(observed==RISC_STORAGE_STATE_RETAINED)return C::Retained;
+  if(!checkLease)return C::Ok;
+  if(!guard_.held(guard_.context))return C::Conflict;
+  return observed==RISC_STORAGE_STATE_READY?C::Ok:C::Io;
+ }
+ bool retainedCustody(){return io_.native()?io_.custody()==C::Retained:api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED;}
  enum Phase{Begin,Refresh,ReadIndex,Recover,ReadPage,Grammar,Recheck,Closing};
  friend class CheckedNativeExportRecovery;
  // Recovery verifies the exact prior publication without importing that map.
  // A previous v1 base can exceed today's v2 map budget after local deletion;
  // allow the fixed SD format ceiling only through this private recovery path.
  int startVerification(const risc_storage_volume_api_v1*volume){verificationOnly_=true;return start(volume);}
+ int prepareVerificationNative(NativeSdAttempt&attempt){verificationOnly_=true;return prepareNative(attempt);}
+ int bindPreparedNative(NativeSdAttempt&attempt,NativeSdSession::Role role,const NativeSdSession&parent){
+  if(prep_.pending()||io_.native()||state_!=State::Running||phase_!=Begin||session_||operation_)return C::Invalid;
+  return io_.bind(attempt,role,namespace_,&parent);
+ }
  const C&core_;bool verificationOnly_=false;
  uint32_t namespace_,nativeCapacity_,budget_=0;Digest hash_;Guard guard_;C::Allocator alloc_;Candidate candidate_;
  const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
+ NativeSdSession io_;NativeSdPreparation prep_;bool preparedStart_=false;uint32_t preparedHeader_=C::Header;
  State state_=State::Idle;Reason reason_=Reason::None;Phase phase_=Begin;int error_=0;bool cancelled_=false,recovered_=false,rowOpen_=false;
  uint64_t session_=0,operation_=0;uint32_t page_=0,row_=0,at_=0,prior_=0,rowSize_=0;
  uint8_t indexBytes_[CheckedSdReplicaCheckpoint::IndexBytes]{};char directory_[32]{},index_[64]{},path_[160]{};risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};
@@ -122,7 +169,7 @@ class CheckedSdReplicaReader {
  static void put(uint8_t*p,uint32_t n){for(unsigned i=0;i<4;++i)p[i]=uint8_t(n>>(8*i));}
  void retain(){state_=State::Retained;reason_=Reason::Retained;error_=C::Retained;C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  void fail(int rc,Reason reason){error_=rc;reason_=reason;phase_=Closing;}
- void finish(State state,int rc){state_=state;error_=rc;candidate_.reset();C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
+ void finish(State state,int rc){if(io_.pinned()){const int released=io_.release();if(released==C::Retained){retain();return;}if(released){state=State::Failed;rc=released;}}state_=state;error_=rc;candidate_.reset();C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  void admitIndex(){
   const uint8_t*p=result_.data;constexpr uint32_t n=CheckedSdReplicaCheckpoint::IndexBytes;
   if(result_.size!=n||std::memcmp(p,"RTENSD1",8)||word(p+8)!=namespace_||word(p+20)||word(p+80)!=crc(p,80)){fail(C::Invalid,Reason::InvalidContent);return;}
@@ -159,8 +206,8 @@ class CheckedSdReplicaReader {
  void pagePath(){char digest[65];for(unsigned i=0;i<32;++i)std::snprintf(digest+2*i,3,"%02x",unsigned(candidate_.identity_.digest[i]));std::snprintf(path_,sizeof path_,"%s/nr-%08x%08x-%s-%08x",directory_,unsigned(candidate_.identity_.generation>>32),unsigned(candidate_.identity_.generation),digest,unsigned(page_));}
  void submit(){
   int rc;
-  if(phase_==Recover){C::wipe(&request_,sizeof request_);request_.operation=RISC_STORAGE_PACKAGE_RECOVER;std::strcpy(request_.path,index_);rc=api_->submit_package(volume_->context,session_,&request_,&operation_);C::wipe(&request_,sizeof request_);}
-  else {risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:RISC_STORAGE_ASYNC_READ_SMALL_FILE;const char*p=index_;if(phase_==ReadPage){pagePath();p=path_;}std::strcpy(q.path,p);rc=api_->base.submit(volume_->context,session_,&q,&operation_);}
+  if(phase_==Recover){C::wipe(&request_,sizeof request_);request_.operation=RISC_STORAGE_PACKAGE_RECOVER;std::strcpy(request_.path,index_);rc=io_.native()?io_.package(request_,&operation_):api_->submit_package(volume_->context,session_,&request_,&operation_);C::wipe(&request_,sizeof request_);}
+  else {risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:RISC_STORAGE_ASYNC_READ_SMALL_FILE;const char*p=index_;if(phase_==ReadPage){pagePath();p=path_;}std::strcpy(q.path,p);rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);}
   if(rc==RISC_STORAGE_ASYNC_BUSY)return;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
   if(rc!=RISC_STORAGE_ASYNC_OK)fail(C::Io,Reason::ReadFailure);

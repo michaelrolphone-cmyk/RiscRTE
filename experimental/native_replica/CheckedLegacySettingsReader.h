@@ -1,5 +1,6 @@
 #pragma once
 #include "CheckedSdReplicaCheckpoint.h"
+#include "NativeSdSession.h"
 namespace RiscExperimental {
 // Disconnected legacy-content reader. Selection is internal product admission,
 // not a prompt or adoption authority. Only missing-source checked recovery can
@@ -33,19 +34,38 @@ class CheckedLegacySettingsReader {
  // Bound to the configured core capacity. Pending-group bytes must be admitted
  // separately by the receiver. No allocation is driven by an on-card length.
  CheckedLegacySettingsReader(const C&core,Digest digest,Guard guard,C::Allocator allocator=C::heap())
-  :core_(core),namespace_(core.namespaceId()),nativeCapacity_(core.imageCapacity()),nativeHeader_(C::Header),hash_(digest),guard_(guard),alloc_(allocator){}
+  :core_(core),namespace_(core.namespaceId()),nativeCapacity_(core.imageCapacity()),nativeHeader_(C::Header),hash_(digest),guard_(guard),alloc_(allocator),prep_(this,preparationWorker,prepareCallback){}
  ~CheckedLegacySettingsReader(){C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  CheckedLegacySettingsReader(const CheckedLegacySettingsReader&)=delete;CheckedLegacySettingsReader&operator=(const CheckedLegacySettingsReader&)=delete;
- State state()const{return state_;}Reason reason()const{return reason_;}int error()const{return error_;}
- bool exitSafe()const{return !session_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
+ State state()const{return prep_.retained()?State::Retained:prep_.pending()?State::Running:state_;}Reason reason()const{return prep_.retained()?Reason::Retained:prep_.pending()?Reason::None:reason_;}int error()const{return prep_.retained()?C::Retained:prep_.pending()?C::Busy:error_;}
+ bool exitSafe()const{return !prep_.pending()&&!io_.pinned()&&!session_&&(state_==State::Idle||state_==State::Done||state_==State::Failed||state_==State::Cancelled);}
+ // Native preparation is executed only by the native settings worker. Owner
+ // polling cannot touch this context until its copied result has been collected.
+ int prepareNative(NativeSdAttempt&attempt,Source source){
+  if(prep_.pending()||io_.native()||state_!=State::Idle)return C::Invalid;
+  if(source!=Source::PagedV2&&source!=Source::SingleFile)return C::Invalid;
+  preparedSource_=source;
+  const int rc=io_.bind(attempt,NativeSdSession::Role::LegacyReader,namespace_);if(rc)return rc;
+  const int queued=prep_.begin(io_);if(queued){const int released=io_.release();return released==C::Retained?released:queued;}return C::Ok;
+ }
+ bool preparationWorkerStep(){return prep_.workerStep();}
+ int collectPreparation(){
+  if(!io_.native()||!io_.owner())return C::Invalid;
+  if(prep_.retained()){retain();return C::Retained;}
+  if(!prep_.pending())return C::Stale;
+  const int rc=prep_.collect();if(rc==C::Busy&&prep_.pending())return rc;
+  if(rc==C::Retained){retain();return rc;}
+  if(rc){finish(rc==C::Stale?State::Cancelled:State::Failed,rc);return error_;}return C::Ok;
+ }
  int start(const risc_storage_volume_api_v1*volume,Source source){
+  if(io_.native()&&!preparedStart_&&!prep_.workerClaimed())return C::Busy;
   if(entered_)return C::Busy;
   Entry entry(entered_);
   if(state_!=State::Idle||!namespace_||namespace_>INT32_MAX||!alloc_.allocate||!alloc_.release||!guard_.held||!guard_.worker||!hash_.begin||!hash_.update||!hash_.finish||!risc_storage_volume_download(volume)||(source!=Source::PagedV2&&source!=Source::SingleFile))return C::Invalid;
   reason_=Reason::None;error_=C::Ok;
-  if(!guard_.worker(guard_.context))return C::Busy;
-  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
-  nativeHeader_=core_.headerSize()?core_.headerSize():C::Header;
+  if(!preparedStart_&&!guard_.worker(guard_.context))return C::Busy;
+  if(!preparedStart_&&!prep_.workerClaimed()&&!guard_.held(guard_.context)){reason_=Reason::CustodyLost;return C::Conflict;}
+  if(!preparedStart_)nativeHeader_=core_.headerSize()?core_.headerSize():C::Header;
   if(nativeCapacity_<nativeHeader_+4)return C::Invalid;
   budget_=nativeCapacity_-nativeHeader_-4;if(budget_>CheckedSdReplicaCheckpoint::MapMax)budget_=CheckedSdReplicaCheckpoint::MapMax;
   uint32_t capacity=budget_+132;
@@ -56,38 +76,42 @@ class CheckedLegacySettingsReader {
   std::snprintf(directory_,sizeof directory_,"/RTECFG/%08X",unsigned(namespace_));std::snprintf(selected_,sizeof selected_,"%s/%s",directory_,source==Source::PagedV2?"settings.index":"settings.kv");
   std::snprintf(owner_,sizeof owner_,"shared-%08x",unsigned(namespace_));state_=State::Running;phase_=Begin;return C::Ok;
  }
- void cancel(){if(entered_)return;Entry entry(entered_);if(state_==State::Verified){if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}finish(State::Cancelled,C::Ok);return;}if(state_==State::Running){cancelled_=true;phase_=Closing;}}
+ void cancel(){if(io_.native()&&!io_.owner())return;
+  if(prep_.pending()){prep_.cancel();return;}if(entered_)return;Entry entry(entered_);if(state_==State::Verified){if(retainedCustody()){retain();return;}finish(State::Cancelled,C::Ok);return;}if(state_==State::Running){cancelled_=true;phase_=Closing;}}
  int take(Candidate*out){
+  if(prep_.pending()||(io_.native()&&!io_.owner()))return C::Busy;
   if(entered_)return C::Busy;
   Entry entry(entered_);
   if(!out||out->valid_||out->bytes_)return C::Invalid;
   if(state_!=State::Verified)return C::Stale;
-  const int observed=api_->base.fs.state.observe(volume_->context);
-  if(observed==RISC_STORAGE_STATE_RETAINED){retain();return C::Retained;}
-  if(!guard_.held(guard_.context)){reason_=Reason::CustodyLost;finish(State::Failed,C::Conflict);return C::Conflict;}
-  if(observed!=RISC_STORAGE_STATE_READY){reason_=Reason::MediaUnavailable;finish(State::Failed,C::Io);return C::Io;}
+  const int custody=checkCustody();if(custody==C::Busy)return custody;
+  if(custody==C::Retained){retain();return C::Retained;}
+  if(custody){reason_=custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable;finish(State::Failed,custody);return error_;}
+  if(io_.pinned()){const int released=io_.release();if(released){if(released==C::Retained)retain();else finish(State::Failed,released);return error_;}}
   out->alloc_=candidate_.alloc_;out->bytes_=candidate_.bytes_;out->capacity_=candidate_.capacity_;out->size_=candidate_.size_;out->count_=candidate_.count_;out->namespace_=namespace_;out->sourceSize_=candidate_.sourceSize_;out->generation_=candidate_.generation_;out->source_=candidate_.source_;out->format_=candidate_.format_;std::memcpy(out->digest_,candidate_.digest_,32);out->valid_=true;
   candidate_.bytes_=nullptr;candidate_.reset();state_=State::Done;return C::Ok;
  }
  void step(){
+  if(prep_.pending()||(io_.native()&&!io_.owner()))return;
   if(entered_)return;
   Entry entry(entered_);
   if(state_!=State::Running)return;
-  const int observed=api_->base.fs.state.observe(volume_->context);
-  if(observed==RISC_STORAGE_STATE_RETAINED){retain();return;}
-  if(!cancelled_&&!error_){if(!guard_.held(guard_.context))fail(C::Conflict,Reason::CustodyLost);else if(observed!=RISC_STORAGE_STATE_READY)fail(C::Io,Reason::MediaUnavailable);}
+  const int custody=checkCustody(!cancelled_&&!error_);if(custody==C::Busy)return;
+  if(custody==C::Retained){retain();return;}
+  if(!cancelled_&&!error_&&custody)fail(custody,custody==C::Conflict?Reason::CustodyLost:Reason::MediaUnavailable);
+  if(cancelled_)phase_=Closing;
   if(phase_==Closing){
-   if(session_){const int rc=api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK){retain();return;}session_=operation_=0;}
+   if(session_){const int rc=io_.native()?io_.end():api_->base.end(volume_->context,session_);if(wait(rc))return;if(rc!=RISC_STORAGE_ASYNC_OK&&(!io_.native()||rc!=NativeSdAttempt::Lost)){retain();return;}session_=operation_=0;if(rc==NativeSdAttempt::Lost){const int lost=io_.custody();if(lost==C::Retained){retain();return;}fail(lost==C::Io?C::Io:C::Conflict,lost==C::Io?Reason::MediaUnavailable:Reason::CustodyLost);}}
    // End OK fences adapter cleanup; provider custody can become visible only now.
-   if(api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED){retain();return;}
+   if(retainedCustody()){retain();return;}
    if(cancelled_)finish(State::Cancelled,C::Ok);else if(error_)finish(State::Failed,error_);else {C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);state_=State::Verified;}return;
   }
-  if(phase_==Begin){const int rc=api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::ReadFailure);return;}phase_=Refresh;return;}
+  if(phase_==Begin){const int rc=io_.native()?io_.begin(&session_):api_->base.begin(volume_->context,&session_);if(rc==RISC_STORAGE_ASYNC_BUSY)return;if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}if(rc){fail(C::Io,Reason::ReadFailure);return;}phase_=io_.native()?ReadSource:Refresh;return;}
   if(phase_==Grammar){grammarStep();return;}
   if(phase_==Hash){hashStep();return;}
   if(phase_==Compact){compactStep();return;}
   if(!operation_){submit();return;}
-  result_.status=INT32_MIN;const int rc=api_->base.collect(volume_->context,session_,operation_,&result_);
+  result_.status=INT32_MIN;const int rc=io_.native()?io_.collect(&result_):api_->base.collect(volume_->context,session_,operation_,&result_);
   if(rc==RISC_STORAGE_ASYNC_PENDING||(rc==RISC_STORAGE_ASYNC_BUSY&&result_.status!=RISC_STORAGE_ASYNC_BUSY))return;
   operation_=0;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
@@ -110,10 +134,30 @@ class CheckedLegacySettingsReader {
   C::wipe(&result_,sizeof result_);
  }
  private:
+ friend class CheckedSdSettingsCatalog;
+ CheckedLegacySettingsReader(const C&core,uint32_t ns,uint32_t capacity,uint32_t header,Digest digest,Guard guard,C::Allocator allocator)
+  :core_(core),namespace_(ns),nativeCapacity_(capacity),nativeHeader_(header),hash_(digest),guard_(guard),alloc_(allocator),prep_(this,preparationWorker,prepareCallback){preparedHeader_=header;}
+ int startPreparedNative(NativeSdAttempt&attempt,Source source,const NativeSdSession&parent){
+  const int rc=io_.bind(attempt,NativeSdSession::Role::LegacyReader,namespace_,&parent);if(rc)return rc;
+  preparedStart_=true;const int started=start(attempt.binding().volume,source);preparedStart_=false;
+  if(started){const int released=io_.release();if(released==C::Retained){retain();return released;}}return started;
+ }
+ static bool preparationWorker(void*p){auto&self=*static_cast<CheckedLegacySettingsReader*>(p);return self.guard_.worker&&self.guard_.worker(self.guard_.context);}
+ static int prepareCallback(void*p){auto&self=*static_cast<CheckedLegacySettingsReader*>(p);self.nativeCapacity_=self.core_.imageCapacity();return self.start(self.io_.attempt()->binding().volume,self.preparedSource_);}
+ int checkCustody(bool checkLease=true){
+  if(io_.native())return io_.custody();
+  const int observed=api_->base.fs.state.observe(volume_->context);
+  if(observed==RISC_STORAGE_STATE_RETAINED)return C::Retained;
+  if(!checkLease)return C::Ok;
+  if(!guard_.held(guard_.context))return C::Conflict;
+  return observed==RISC_STORAGE_STATE_READY?C::Ok:C::Io;
+ }
+ bool retainedCustody(){return io_.native()?io_.custody()==C::Retained:api_->base.fs.state.observe(volume_->context)==RISC_STORAGE_STATE_RETAINED;}
  struct Entry {bool&entered;explicit Entry(bool&v):entered(v){entered=true;}~Entry(){entered=false;}};
  enum Phase{Begin,Refresh,ReadSource,Recover,ReadPage,Grammar,Hash,RecheckPage,Recheck,Compact,Closing};
  const C&core_;uint32_t namespace_,nativeCapacity_,nativeHeader_,budget_=0;Digest hash_;Guard guard_;C::Allocator alloc_;Candidate candidate_;
  const risc_storage_volume_api_v1*volume_=nullptr;const risc_storage_volume_api_v1_packages*api_=nullptr;
+ NativeSdSession io_;NativeSdPreparation prep_;bool preparedStart_=false;uint32_t preparedHeader_=C::Header;Source preparedSource_=Source::PagedV2;
  State state_=State::Idle;Reason reason_=Reason::None;Phase phase_=Begin;int error_=0;bool entered_=false,cancelled_=false,recovered_=false,rowOpen_=false;
  uint64_t session_=0,operation_=0;uint32_t page_=0,row_=0,at_=0,prior_=0,rowSize_=0,out_=0,hashed_=0;
  uint8_t indexBytes_[28]{};char directory_[32]{},selected_[64]{},owner_[32]{},path_[96]{};risc_storage_package_request_v1 request_{};risc_storage_async_result_v1 result_{};
@@ -127,7 +171,7 @@ class CheckedLegacySettingsReader {
  uint32_t stride(uint32_t at)const{return candidate_.format_==Format::V1?84:20+word(candidate_.bytes_+at+16);}
  void retain(){state_=State::Retained;reason_=Reason::Retained;error_=C::Retained;C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  void fail(int rc,Reason reason){error_=rc;reason_=reason;phase_=Closing;}
- void finish(State state,int rc){state_=state;error_=rc;candidate_.reset();C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
+ void finish(State state,int rc){if(io_.pinned()){const int released=io_.release();if(released==C::Retained){retain();return;}if(released){state=State::Failed;rc=released;}}state_=state;error_=rc;candidate_.reset();C::wipe(&request_,sizeof request_);C::wipe(&result_,sizeof result_);}
  void admitSource(){
   const uint8_t*p=result_.data;const uint32_t n=result_.size;
   if(candidate_.source_==Source::SingleFile){
@@ -183,8 +227,8 @@ class CheckedLegacySettingsReader {
  }
  void submit(){
   int rc;
-  if(phase_==Recover){C::wipe(&request_,sizeof request_);request_.operation=RISC_STORAGE_PACKAGE_RECOVER;std::strcpy(request_.path,selected_);rc=api_->submit_package(volume_->context,session_,&request_,&operation_);C::wipe(&request_,sizeof request_);}
-  else {risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:RISC_STORAGE_ASYNC_READ_SMALL_FILE;const char*p=selected_;if(phase_==ReadPage||phase_==RecheckPage){const uint64_t gen=wide(indexBytes_+12);std::snprintf(path_,sizeof path_,"%s/kv-%08x%08x-%08x",directory_,unsigned(gen>>32),unsigned(gen),unsigned(page_));p=path_;}std::strcpy(q.path,p);rc=api_->base.submit(volume_->context,session_,&q,&operation_);}
+  if(phase_==Recover){C::wipe(&request_,sizeof request_);request_.operation=RISC_STORAGE_PACKAGE_RECOVER;std::strcpy(request_.path,selected_);rc=io_.native()?io_.package(request_,&operation_):api_->submit_package(volume_->context,session_,&request_,&operation_);C::wipe(&request_,sizeof request_);}
+  else {risc_storage_async_request_v1 q{};q.operation=phase_==Refresh?RISC_STORAGE_ASYNC_REFRESH:RISC_STORAGE_ASYNC_READ_SMALL_FILE;const char*p=selected_;if(phase_==ReadPage||phase_==RecheckPage){const uint64_t gen=wide(indexBytes_+12);std::snprintf(path_,sizeof path_,"%s/kv-%08x%08x-%08x",directory_,unsigned(gen>>32),unsigned(gen),unsigned(page_));p=path_;}std::strcpy(q.path,p);rc=io_.native()?io_.submit(q,&operation_):api_->base.submit(volume_->context,session_,&q,&operation_);}
   if(rc==RISC_STORAGE_ASYNC_BUSY)return;
   if(rc==RISC_STORAGE_ASYNC_RETAINED){retain();return;}
   if(rc!=RISC_STORAGE_ASYNC_OK)fail(C::Io,Reason::ReadFailure);

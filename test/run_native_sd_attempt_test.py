@@ -33,7 +33,7 @@ for name,source,extra in [('fixture',ROOT/'test/native_sd_attempt_fixture.c',['-
     obj=a.output/(name+'.o');run([cc,'-std=c11',*flags,*inc,*extra,'-c',str(source),'-o',str(obj)]);objects.append(str(obj))
 binary=a.output/'native-sd-attempt-test'
 run([cxx,'-std=c++17',*flags,*inc,'-pthread',str(ROOT/'test/native_sd_attempt_test.cpp'),*objects,'-o',str(binary)])
-for case in ['happy','reentry','package','foreign-session','wrong-binding','warm','wrong-task','clean-unavailable','closed-unavailable','snapshot-retained','scope-retained','absent','cancel-running','cancel-queued','cancel-complete','late-retained','native-happy','native-cancel','native-running','native-retained','native-loss','native-preloss','native-result-retained','native-result-uncertain']:
+for case in ['happy','cleanup-padding','submit-retained','package-retained','uncopied-invalid','malformed-size','malformed-status','reentry','package','foreign-session','wrong-binding','warm','wrong-task','clean-unavailable','closed-unavailable','snapshot-retained','scope-retained','absent','cancel-running','cancel-queued','cancel-complete','late-retained','native-happy','native-cancel','native-running','native-retained','native-loss','native-preloss','native-result-retained','native-result-uncertain']:
     run([str(binary),case])
 (a.output/'source-manifest.json').write_text(json.dumps({'external_sources':records,'commands':commands,'sanitizers':a.sanitize,'limits':'Disconnected native seams; no Port/graph/product or hardware qualification'},indent=2)+'\n')
 print('Actual X4/FatFs native custody composition PASS; external source inputs:',len(records))

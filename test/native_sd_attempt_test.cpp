@@ -13,7 +13,7 @@ using W=RiscStorage::Worker;
 enum class Task {Other,Owner,ProviderIo,NativeSettings};
 static thread_local Task task=Task::Other;
 static W worker;static A*attempt;static bool fenceHeld,fresh=true,lease=true,scopeFault;
-static uint64_t epoch=1;static unsigned credits,denials,nativeCalls,reentries;static bool injectReentry;static int nativeStatus=C::Ok;
+static uint64_t epoch=1;static unsigned credits,denials,nativeCalls,reentries;static bool injectReentry,cleanupPadding,malformedSize,malformedStatus;static unsigned paddedEnds;static int nativeStatus=C::Ok;
 static std::mutex gate;static std::condition_variable cv;static bool blockRead,enteredRead,allowRead;
 static bool blockNative,enteredNative,allowNative,lateRetain,retainOnSnapshot;
 extern "C" {
@@ -23,9 +23,19 @@ bool fixture_sync_admission(){if(task!=Task::Owner)return false;if(!attempt)retu
 bool fixture_provider_worker(){return task==Task::ProviderIo;}
 bool fixture_raw_io_allowed(){return task==Task::ProviderIo||(!fenceHeld&&task==Task::Owner);}
 int fixture_worker_bind(risc_storage_work_execute_v1 fn,void*c){assert(task==Task::Owner&&!fenceHeld);return worker.bind(fn,c);}
-int fixture_worker_submit(const void*p,uint32_t n,uint64_t*out){assert(!attempt->rawSubmit(99,p,n));assert(!fixture_sync_admission());if(task!=Task::Owner||!attempt||!attempt->rawSubmit(71,p,n))return RISC_STORAGE_WORK_CONTEXT;const int rc=worker.submit(p,n,out);attempt->submitted(71,rc,rc==0?*out:0);return rc;}
-int fixture_worker_collect(uint64_t t,void*p,uint32_t n,uint32_t*size,int32_t*status){assert(!attempt->rawCollect(99,t));assert(!fixture_sync_admission());if(task!=Task::Owner||!attempt||!attempt->rawCollect(71,t))return RISC_STORAGE_WORK_CONTEXT;const int rc=worker.collect(t,p,n,size,status);if(rc==0&&lateRetain&&attempt->dispatch()==A::Call::End){fixture_retain();lease=false;}return rc;}
-int fixture_worker_cancel(uint64_t t){assert(!attempt->rawCancel(99,t));assert(!fixture_sync_admission());if(task!=Task::Owner||!attempt||!attempt->rawCancel(71,t))return RISC_STORAGE_WORK_CONTEXT;return worker.cancel(t);}
+int fixture_worker_submit(const void*p,uint32_t n,uint64_t*out){
+ assert(!attempt->rawSubmit(99,p,n));assert(!fixture_sync_admission());
+ risc_storage_async_request_v1 padded;
+ if(cleanupPadding&&attempt->dispatch()==A::Call::End){std::memset(&padded,0xff,sizeof padded);padded.operation=0;std::memset(padded.path,0,sizeof padded.path);std::memset(padded.destination,0,sizeof padded.destination);p=&padded;++paddedEnds;}
+ if(task!=Task::Owner||!attempt)return RISC_STORAGE_WORK_CONTEXT;
+ assert(!attempt->rawSubmit(71,p,n-1));
+ if(attempt->dispatch()!=A::Call::End){unsigned char other[RISC_STORAGE_WORKER_BYTES]{};assert(!attempt->rawSubmit(71,other,n));}
+ if(!attempt->rawSubmit(71,p,n))return RISC_STORAGE_WORK_CONTEXT;
+ assert(!attempt->rawSubmit(71,p,n));
+ const int rc=worker.submit(p,n,out);attempt->submitted(71,rc,rc==0?*out:0);return rc;
+}
+int fixture_worker_collect(uint64_t t,void*p,uint32_t n,uint32_t*size,int32_t*status){assert(!attempt->rawCollect(99,t));assert(!attempt->rawCollect(71,t+1));assert(!fixture_sync_admission());if(task!=Task::Owner||!attempt||!attempt->rawCollect(71,t))return RISC_STORAGE_WORK_CONTEXT;const int rc=worker.collect(t,p,n,size,status);if(rc==0&&malformedSize)--*size;if(rc==0&&malformedStatus)static_cast<risc_storage_async_result_v1*>(p)->status=27;if(rc==0&&lateRetain&&attempt->dispatch()==A::Call::End){fixture_retain();lease=false;}return rc;}
+int fixture_worker_cancel(uint64_t t){assert(!attempt->rawCancel(99,t));assert(!attempt->rawCancel(71,t+1));assert(!fixture_sync_admission());if(task!=Task::Owner||!attempt||!attempt->rawCancel(71,t))return RISC_STORAGE_WORK_CONTEXT;return worker.cancel(t);}
 int fixture_worker_unbind(){assert(task==Task::Owner&&!fenceHeld);return worker.unbind();}
 void fixture_before_read(){std::unique_lock<std::mutex> lock(gate);if(!blockRead)return;enteredRead=true;cv.notify_all();cv.wait(lock,[]{return allowRead;});}
 }
@@ -77,6 +87,7 @@ int main(int argc,char**argv){
   close(a);assert(a.state()==A::State::Cancelled);assert(a.release()==0);attempt=nullptr;fixture_stop();return 0;
  }
  if(!std::strcmp(mode,"reentry"))injectReentry=true;
+ if(!std::strcmp(mode,"cleanup-padding"))cleanupPadding=true;
  bootstrap(a,v);
  if(!std::strcmp(mode,"snapshot-retained")){retainOnSnapshot=true;assert(a.release()==RISC_STORAGE_ASYNC_RETAINED&&a.state()==A::State::Retained&&!a.exitSafe());return 0;}
  if(!std::strcmp(mode,"scope-retained")){scopeFault=true;lease=false;assert(a.release()==RISC_STORAGE_ASYNC_RETAINED&&!a.exitSafe());return 0;}
@@ -106,6 +117,8 @@ int main(int argc,char**argv){
   assert(nativeCalls==(!std::strcmp(mode,"native-cancel")?0u:1u));assert(a.release()==0);
  }else{
   assert(a.openChild()==0&&a.state()==A::State::OwnedSession);assert(fixture_observe()==RISC_STORAGE_STATE_UNAVAILABLE);
+  if(!std::strcmp(mode,"submit-retained")){fixture_adapter_retain();risc_storage_async_request_v1 q{};q.operation=RISC_STORAGE_ASYNC_OPEN_DIRECTORY;std::strcpy(q.path,"/");assert(a.submit(q)==RISC_STORAGE_ASYNC_RETAINED&&a.state()==A::State::Retained&&!a.exitSafe());return 0;}
+  if(!std::strcmp(mode,"package-retained")){fixture_adapter_retain();risc_storage_package_request_v1 p{};p.operation=RISC_STORAGE_PACKAGE_RECOVER;std::strcpy(p.path,"/RTECFG/00000003/replica.index");assert(a.package(p)==RISC_STORAGE_ASYNC_RETAINED&&a.state()==A::State::Retained&&!a.exitSafe());return 0;}
   if(!std::strcmp(mode,"package")){
    risc_storage_package_request_v1 p{};p.operation=RISC_STORAGE_PACKAGE_RECOVER;std::strcpy(p.path,"/RTECFG/00000003/replica.index");assert(a.package(p)==0);step();risc_storage_async_result_v1 result{};const int rc=a.collect(&result);assert(rc==0||rc==RISC_STORAGE_ASYNC_IO);close(a);assert(a.release()==0);attempt=nullptr;fixture_stop();return 0;
   }
@@ -114,6 +127,10 @@ int main(int argc,char**argv){
   std::strcpy(q.path,"/RTECFG/00000003/../escape");assert(a.submit(q)==A::Context);
   std::memset(q.path,'x',sizeof q.path);assert(a.submit(q)==A::Context);
   std::memset(q.path,0,sizeof q.path);std::strcpy(q.path,"/");assert(a.submit(q)==0);
+  if(!std::strcmp(mode,"uncopied-invalid")){fixture_corrupt_operation();risc_storage_async_result_v1 r{};assert(a.collect(&r)==RISC_STORAGE_ASYNC_RETAINED&&a.state()==A::State::Retained&&!a.exitSafe());return 0;}
+  if(!std::strcmp(mode,"malformed-size")||!std::strcmp(mode,"malformed-status")){
+   step();malformedSize=!std::strcmp(mode,"malformed-size");malformedStatus=!std::strcmp(mode,"malformed-status");risc_storage_async_result_v1 r{};assert(a.collect(&r)==RISC_STORAGE_ASYNC_RETAINED&&a.state()==A::State::Retained&&!a.exitSafe());return 0;
+  }
   if(!std::strcmp(mode,"cancel-queued")){a.cancel();close(a);assert(a.state()==A::State::Cancelled);}
   else{
    step();risc_storage_async_result_v1 r{};assert(a.collect(&r)==0);
@@ -127,6 +144,7 @@ int main(int argc,char**argv){
   assert(a.release()==0);
  }
  if(injectReentry)assert(reentries==credits);
+ if(cleanupPadding)assert(paddedEnds);
  assert(!fenceHeld&&a.exitSafe()&&credits&&denials);attempt=nullptr;fixture_stop();
  std::printf("native SD attempt %s PASS (one-use credits=%u, rejected calls=%u)\n",mode,credits,denials);
 }
