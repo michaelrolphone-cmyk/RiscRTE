@@ -597,3 +597,5 @@ makes it an explicit, default-off composition option and adds owner-scoped
 allocation-pressure reclamation. See the
 [cache ownership, replacement lifecycle and measured operation counts](docs/APP_IMAGE_CACHE.md).
 Cold reads also use [bounded byte/time yield checkpoints](docs/ELF_READ_CHECKPOINTS.md).
+Boot metadata reads use [bounded cooperation checkpoints](docs/METADATA_READ_CHECKPOINTS.md)
+while preserving full graph admission and read/close failure handling.

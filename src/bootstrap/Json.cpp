@@ -20,10 +20,24 @@ bool readJson(const char* filename, JsonDocument& doc, bool* closeRetained) {
   if (!data) { close(); return false; }
   size_t n=0; bool good=true;
   const auto start=std::chrono::steady_clock::now();
+#ifdef ESP_PLATFORM
+  auto yieldedAt=start;
+  size_t sinceYield=0;
+#endif
   while (n<=limit) {
+    if (std::chrono::steady_clock::now()-start>std::chrono::seconds(5)) { good=false; break; }
     size_t got=fread(data+n,1,(limit+1-n)>512?512:limit+1-n,f); n+=got;
 #ifdef ESP_PLATFORM
-    {RiscPerf::AggregateScope wait(33,1);vTaskDelay(1);}
+    // Preserve bounded reads and the total deadline without forcing a scheduler
+    // tick after every 512 bytes. The final remainder checkpoint also bounds
+    // consecutive small metadata files; admission still reads/parses each one.
+    sinceYield+=got;
+    const auto now=std::chrono::steady_clock::now();
+    if (sinceYield>=32*1024 || now-yieldedAt>=std::chrono::milliseconds(2) ||
+        ((!got || n>limit) && sinceYield)) {
+      {RiscPerf::AggregateScope wait(33,1);vTaskDelay(1);}
+      yieldedAt=std::chrono::steady_clock::now();sinceYield=0;
+    }
 #endif
     if (std::chrono::steady_clock::now()-start>std::chrono::seconds(5)) { good=false; break; }
     if (!got) { good=feof(f) && !ferror(f); break; }

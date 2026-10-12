@@ -93,6 +93,8 @@ jobs:
           bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
           bash test/run_metadata_read_test.sh
           SANITIZE=1 bash test/run_metadata_read_test.sh
+          bash test/run_metadata_checkpoint_test.sh
+          SANITIZE=1 bash test/run_metadata_checkpoint_test.sh
           bash test/run_provider_exit_lifecycle_test.sh
           SANITIZE=1 bash test/run_provider_exit_lifecycle_test.sh
           bash test/run_retained_yield_test.sh
