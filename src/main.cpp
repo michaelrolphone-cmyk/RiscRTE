@@ -55,6 +55,7 @@ extern "C" void risc_perf_loader_event(uint32_t phase,uint32_t value) {
 }
 #ifdef RISC_PAIRED_APP_DATA
 #include "ports/esp32s3/NativeAppData.h"
+#include "ports/esp32s3/NativeFileSource.h"
 #endif
 #ifdef RISC_PAIRED_BANKS
 #include "ports/esp32s3/NativeBankStore.h"
@@ -127,16 +128,25 @@ bool bindPlatforms(RiscBoot::Runtime& runtime){
   return RiscDiagnostics::bindNativeSource(runtime);
 }
 bool appExitSafe(){return cpu.appExitSafe()
+#if RISC_NATIVE_FILE_SOURCE
+ && RiscFileSource::exitSafe()
+#endif
 #ifdef RISC_PAIRED_BANKS
   && RiscBankStore::exitSafe()
 #endif
   ;}
 bool providerStorageSafe(){return cpu.providerStorageSafe()
+#if RISC_NATIVE_FILE_SOURCE
+ && RiscFileSource::exitSafe()
+#endif
 #ifdef RISC_PAIRED_APP_DATA
  && RiscAppData::custodySafe()
 #endif
  ;}
 bool restartSafe(){return cpu.restartResourcesSafe()
+#if RISC_NATIVE_FILE_SOURCE
+ && RiscFileSource::resetSafe()
+#endif
 #ifdef RISC_PAIRED_APP_DATA
  && RiscAppData::exitSafe()
 #endif
@@ -161,9 +171,17 @@ bool priorFailure(risc_resident_failure_v1* out){
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
+#if RISC_NATIVE_FILE_SOURCE
+,RiscFileSource::backend()
+#endif
+});
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested});
+RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
+#if RISC_NATIVE_FILE_SOURCE
+,RiscFileSource::backend()
+#endif
+});
 #endif
 }
 void setup() {
@@ -266,6 +284,11 @@ void setup() {
   }
   RISC_STAGE_LOG("boot app-data end result=%s elapsed_us=%llu",appDataReady?"ok":"unavailable",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
+#if RISC_NATIVE_FILE_SOURCE
+  if(appDataReady&&!RiscFileSource::prepare(isOwner,[](){return cpu.providerStorageSafe()&&RiscBankStore::exitSafe();}))
+    diagnosticLine("RTE_STORAGE unavailable=file-source scratch=/appdata/.risc-file-source");
+  if(!RiscFileSource::exitSafe()){diagnosticLine("RTE_STORAGE file-source=retained restart-required");return;}
+#endif
 #endif
   // Read-only owner input, before any app/driver binding. No configured fresh
   // time source means offline installed boot, never a stale timestamp bypass.
@@ -303,6 +326,9 @@ void setup() {
     ,nullptr
 #endif
     ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
+#if RISC_NATIVE_FILE_SOURCE
+    ,RiscFileSource::backend()
+#endif
   });
   if(!retainedRuntime){
     RISC_STAGE_LOG("boot failed reason=runtime-metadata-psram");

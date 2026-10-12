@@ -15,6 +15,7 @@
 #include "runtime/storage/SdFirstKeyValue.h"
 #include "runtime/storage/ScalableSettings.h"
 #include "FileOpenState.h"
+#include "FileSourceBackend.h"
 #include "FailureEvidenceBackend.h"
 #include "runtime/sleep/RetainedWake.h"
 #include <memory>
@@ -95,6 +96,7 @@ struct Port {
   void (*controlBegin)(bool child)=nullptr;
   bool (*controlEnd)()=nullptr;
   bool (*controlExitRequested)()=nullptr;
+  const FileSourceBackend* fileSource=nullptr;
 };
 class Runtime final {
  public:
@@ -193,7 +195,7 @@ class Runtime final {
   bool retained() const { return retained_; }
   // Compiled-in reset/deep-sleep admission. A suspended native stack has no
   // durable checkpoint; the foreground must finish before RAM can be lost.
-  bool residentResetSafe() const {return appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
+  bool residentResetSafe() const {return fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
   // by their native store owner, which must retain its mount/session.
@@ -324,7 +326,7 @@ class Runtime final {
     // Runtime is nonmovable and provider metadata is immutable after prepare.
     const char* capability=nullptr;
     uint32_t api=0; uint64_t instance=0;
-    PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false;
+    PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false, fileOpenSource=false;
     char sharedFile[RISC_APP_DATA_NAME_MAX+1]{};
   };
 #if UINTPTR_MAX == UINT32_MAX
@@ -437,6 +439,31 @@ class Runtime final {
   bool fileOpenTakeResult(int32_t*,uint64_t*);
   bool fileSourcePathGet(char*,size_t) const;
   bool fileOpenAfterRun(bool);
+  static const risc_file_open_source_api_v1* fileOpenSourceApi();
+  bool fileSourceReady() const;
+  bool fileSourceExitSafe() const;
+  bool fileSourceSupported(size_t) const;
+  bool fileSourceSupported(const char*) const;
+  uint32_t fileSourceHandlerCount(const char*) const;
+  bool fileSourceHandlerGet(const char*,uint32_t,t5_file_handler_t*) const;
+  bool fileSourceOwned(uint64_t) const;
+  int32_t fileSourceBegin(const char*,uint64_t,uint64_t*);
+  int32_t fileSourceWrite(uint64_t,const void*,uint32_t,uint32_t*);
+  int32_t fileSourceFinish(uint64_t);
+  int32_t fileSourceDiscard(uint64_t);
+  bool fileSourceRequest(uint64_t,const char*,uint64_t);
+  bool fileSourceTakeResult(int32_t*,uint64_t*);
+  int32_t fileSourceInfo(risc_file_open_source_info_v1*) const;
+  int32_t fileSourceRead(uint64_t,uint64_t,void*,uint32_t,uint32_t*);
+  int32_t fileSourceStatus(int32_t);
+  bool fileSourceCleanup();
+  struct SourceState {
+    char name[RISC_FILE_OPEN_SOURCE_NAME_MAX]{};
+    uint64_t token=0,size=0,written=0,ownerInvocation=0;
+    PolicyIndex owner=-1;
+    bool sealed=false;
+  } fileSource_;
+  uint64_t fileSourceGeneration_=0,fileSourceDiscarded_=0,fileSourceDiscardedOwner_=0;
   size_t policyCount_=0;
   struct AppGrant {
     RuntimeProviders::GrantV2 provider{}; const void* api=nullptr;

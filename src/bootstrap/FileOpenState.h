@@ -13,6 +13,8 @@ struct FileOpenState {
   enum class Phase : uint8_t { Idle, Requested, Receiving, Result };
   char source[T5_FILE_OPEN_PATH_MAX]{};
   uint64_t cookie=0;
+  // Nonzero identifies the separate Runtime-owned source broker.
+  uint64_t sourceToken=0;
   int32_t result=0;
   int8_t caller=-1, receiver=-1;
   Phase phase=Phase::Idle;

@@ -107,6 +107,7 @@ Runtime::~Runtime() {
   // Native owners retain the entire metadata candidate after lost I/O custody.
   // As with GraphV2, destruction is a caller contract violation, never cleanup.
   if(retainedNativeProviderRead_ || retainedNativeProviderBytes_)std::abort();
+  if(!fileSourceExitSafe() || fileSource_.token)std::abort();
   revokeProviders();
   RuntimeProviders::NativeProviderPolicySnapshotV1::destroy(nativePolicies_);
 }
@@ -115,6 +116,7 @@ bool elfPath(const char* p) { size_t n=strlen(p); return n>4 && !strcmp(p+n-4,".
 }
 #include "AppCatalogRuntime.inc"
 #include "FileOpenRuntime.inc"
+#include "FileSourceRuntime.inc"
 bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   if (!keys(m,{"type","id","version","driver_abi","architecture","file_name","requires","provides"},
         {"hardware_compatibility","status","notes","description","display_name","physical_verification","part","legacy_manual_only"}) ||
@@ -437,6 +439,11 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         } else if (!strcmp(capability,RISC_MEMORY_HEAP_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || !port_.memoryHeap)return fail("memory heap capability unavailable");
           grant.driver=MemoryHeapDriver;grant.capability=RISC_MEMORY_HEAP_CAPABILITY;
+        } else if (!strcmp(capability,RISC_FILE_OPEN_SOURCE_CAPABILITY)) {
+          const auto* source=port_.fileSource;
+          if(grant.api!=1 || grant.instance || !source || !source->begin || !source->write || !source->finish ||
+             !source->readAt || !source->discard || !source->exitSafe)return fail("file-source backend/authority unavailable");
+          grant.fileOpenSource=true;grant.capability=RISC_FILE_OPEN_SOURCE_CAPABILITY;
         } else if (!strcmp(capability,"file.open")) {
           if(grant.api!=T5_FILE_OPEN_API_VERSION || grant.instance)return fail("invalid file-open authority");
           grant.fileOpen=true;grant.capability="file.open";
@@ -565,6 +572,8 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     invocation_->retainedWakeTable_={1,sizeof(invocation_->retainedWakeTable_),context,retainedWakeRead,retainedWakeStage,retainedWakeClear};
 #endif
     grant.api=&invocation_->retainedWakeTable_;
+  } else if (allowed->fileOpenSource) {
+    grant.api=fileOpenSourceApi();
   } else if (allowed->fileOpen) {
     grant.api=fileOpenApi();
   } else if (allowed->driver==AppDataExportDriver) {
@@ -1263,7 +1272,7 @@ bool Runtime::appExitBarrier(bool exiting) {
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
+  if(graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());
@@ -1449,7 +1458,8 @@ bool Runtime::runOne(const char* name) {
     // A child cannot replace native exit with a different app handoff. Every
     // fini/grant/allocation/image barrier has completed before Home is queued.
     strcpy(invocation_->queued_,default_);
-    invocation_->fileOpen_={};residentContinuation_[0]=0;
+    if(!fileSourceCleanup())return false;
+    invocation_->fileOpen_={};residentContinuation_[0]=0;residentTransferFileOpen_={};
     port_.log("RTE_CONTROL crown=exit cleanup=complete action=home");
   }
   unloadTrace.result(1);
@@ -1555,7 +1565,9 @@ bool Runtime::run() {
     };
     // A file receiver always returns to its fresh caller, including load/init
     // failure and when the receiver happens to be the configured default.
-    if(fileOpenAfterRun(completed)) { resumeHost();error_[0]=0;port_.delay(1);continue; }
+    const bool fileCaller=fileOpenAfterRun(completed);
+    if(retained_){ok=false;break;}
+    if(fileCaller) { resumeHost();error_[0]=0;port_.delay(1);continue; }
     if(!completed && isDefault) { ok=false; break; }
     if(residentEnabled_ && isDefault && residentContinuation_[0]) {
       ok=fail("resident host did not consume pending continuation");break;
@@ -1568,6 +1580,7 @@ bool Runtime::run() {
     // Default reload is a fresh invocation: no ELF pointers/static state survive.
     error_[0]=0; port_.delay(1);
   }
+  if(!retained_ && !fileSourceCleanup())ok=false;
   if(!retained_) {
     for(size_t i=driverCount_;i--;) if(grants_[i].slot && !graph_.release(grants_[i])) {
       retained_=true;
