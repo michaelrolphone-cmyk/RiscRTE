@@ -17,7 +17,7 @@ struct HciRadioLease {
 uint64_t pinBit(int pin){return pin>=0 && pin<=48?uint64_t(1)<<pin:0;}
 void pinsFor(const RiscBoot::Board::Device& d,uint64_t& input,uint64_t& output,uint64_t& pullup){
   if(!strcmp(d.type,"display.spi")){
-    const auto& c=d.config.display;input|=pinBit(c.busy);output|=pinBit(c.dc)|pinBit(c.reset)|pinBit(c.backlight);
+    const auto& c=d.display();input|=pinBit(c.busy);output|=pinBit(c.dc)|pinBit(c.reset)|pinBit(c.backlight);
     for(unsigned i=0;i<c.power_count;++i)output|=pinBit(c.power_pins[i]);
   } else if(!strcmp(d.type,"touch.i2c")){
     const auto& c=d.touch();input|=pinBit(c.irq);output|=pinBit(c.reset);if(c.irq_pull_up)pullup|=pinBit(c.irq);
@@ -140,7 +140,7 @@ bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Dev
     if(!strcmp(selected.type,"display.spi") && !runtime.uses(gpio.instance,"spi.bus",1)){
       // Explicit platform.gpio without spi.bus selects one bit-banged owner.
       // Preserve normal SPI scopes; reject selected peers before any I/O.
-      const auto& config=selected.config.display;
+      const auto& config=selected.display();
       const auto& board=runtime.board();
       for(size_t i=0;i<board.deviceCount();++i){
         const auto& other=*board.deviceAt(i);
@@ -293,10 +293,17 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       const bool radio=!strcmp(d.type,"radio.lora");
       if(spiCount_==8 || (!radio && strcmp(d.type,"display.spi")))return false;
       auto& c=spis_[spiCount_++];c.port=this;
-      c.bus=radio?d.lora().bus:d.config.display.bus;
-      c.cs=radio?d.lora().cs:d.config.display.cs;
+      c.bus=radio?d.lora().bus:d.display().bus;
+      c.cs=radio?d.lora().cs:d.display().cs;
       int physical=board.physicalController(c.bus.instance_id);if(physical<2 || physical>3)return false;c.physical=physical;
-      c.api={1,sizeof(c.api),&c,spiClaim,spiBegin,spiTransfer,spiEnd,idleClocks,spiRelease,spiClaimThreeWire};
+      c.api.base={1,sizeof(c.api.base),&c,spiClaim,spiBegin,spiTransfer,spiEnd,idleClocks,spiRelease,spiClaimThreeWire};
+      if(!radio && d.hardware.config_version==2) {
+        c.data2=d.config.displayQuad.data2;c.data3=d.config.displayQuad.data3;
+        if(hw_.spiOpenQuad && hw_.spiTransferQuad) {
+          c.api.base.struct_size=sizeof(c.api);c.api.quad_tag=RISC_SPI_QUAD_TAG;c.api.quad_version=RISC_SPI_QUAD_VERSION;
+          c.api.claim_quad=spiClaimQuad;c.api.exchange_quad=spiTransferQuad;
+        }
+      }
       if(!runtime.registerPlatform("spi.bus",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
   }
@@ -990,33 +997,40 @@ bool Port::spiClaim(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t 
 bool Port::spiClaimThreeWire(void* context,uint8_t sclk,uint8_t mosi,uint8_t cs,uint64_t* out){
   return spiClaimImpl(context,sclk,mosi,-1,cs,out,true);
 }
-bool Port::spiClaimImpl(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t cs,uint64_t* out,bool threeWire){
+bool Port::spiClaimQuad(void* context,uint8_t sclk,uint8_t d0,uint8_t d1,uint8_t d2,uint8_t d3,uint8_t cs,uint64_t* out){
+  if(out)*out=0;
+  auto& c=*static_cast<Spi*>(context);
+  if(c.data2!=d2 || c.data3!=d3 || !c.port->hw_.spiOpenQuad || !c.port->hw_.spiTransferQuad)return false;
+  return spiClaimImpl(context,sclk,d0,d1,cs,out,false,true);
+}
+bool Port::spiClaimImpl(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t cs,uint64_t* out,bool threeWire,bool quad){
   if(out)*out=0;
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
   if(!out || !p.available() || c.token || bus.closing || sclk!=c.bus.sclk || mosi!=c.bus.mosi || miso!=c.bus.miso || cs!=c.cs ||
-     (threeWire && !p.hw_.spiBeginThreeWire) || (bus.refs && bus.instance!=c.bus.instance_id) || !p.reserve(cs,&c))return false;
+     (quad!=(c.data2>=0 && c.data3>=0)) || (threeWire && !p.hw_.spiBeginThreeWire) || (bus.refs && (bus.instance!=c.bus.instance_id || bus.quad!=quad)) || !p.reserve(cs,&c))return false;
   uint64_t token=p.token();
   if(!token || !p.hw_.gpioOpen(cs,true,true,false)){if(!p.hw_.gpioClose(cs))p.poisoned_=true;else p.unreserve(cs,&c);return false;}
   if(!bus.refs){
-    bool reserved=p.reserve(sclk,&bus) && p.reserve(mosi,&bus) && p.reserve(miso,&bus);
-    if(!reserved || !p.hw_.spiOpen(c.physical,sclk,mosi,miso)){
+    bool reserved=p.reserve(sclk,&bus) && p.reserve(mosi,&bus) && p.reserve(miso,&bus) &&
+        (!quad || (p.reserve(c.data2,&bus) && p.reserve(c.data3,&bus)));
+    if(!reserved || !(quad?p.hw_.spiOpenQuad(c.physical,sclk,mosi,miso,c.data2,c.data3):p.hw_.spiOpen(c.physical,sclk,mosi,miso))){
       if(reserved && !p.hw_.spiClose(c.physical))p.poisoned_=true;
-      if(!p.poisoned_){p.unreserve(sclk,&bus);p.unreserve(mosi,&bus);p.unreserve(miso,&bus);}
+      if(!p.poisoned_){p.unreserve(sclk,&bus);p.unreserve(mosi,&bus);p.unreserve(miso,&bus);if(quad){p.unreserve(c.data2,&bus);p.unreserve(c.data3,&bus);}}
       if(!p.hw_.gpioClose(cs))p.poisoned_=true;else p.unreserve(cs,&c);return false;
     }
-    bus.instance=c.bus.instance_id;
+    bus.instance=c.bus.instance_id;bus.quad=quad;
   }
-  ++bus.refs;c.threeWire=threeWire;c.ready=false;c.closing=false;c.token=token;*out=token;return true;
+  ++bus.refs;c.threeWire=threeWire;c.quad=quad;c.ready=false;c.closing=false;c.token=token;*out=token;return true;
 }
 bool Port::spiBegin(void* context,uint64_t token,uint32_t hz,uint8_t mode,uint32_t ms){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
   if(!p.available() || !token || c.token!=token || c.closing || bus.closing || bus.held || !hz || hz>c.bus.frequency_hz || mode!=c.bus.mode || !ms || ms>1000)return false;
   c.deadline=p.hw_.now()+ms;
-  if(c.threeWire){
+  if(c.threeWire || c.quad){
     // Backend mode/pad changes are fallible. Retain the whole transaction
     // before entering it, so even a failed begin has an explicit end path.
     bus.held=&c;c.ready=false;
-    c.ready=p.hw_.spiBeginThreeWire(c.physical,c.cs,hz,mode,ms);
+    c.ready=c.threeWire?p.hw_.spiBeginThreeWire(c.physical,c.cs,hz,mode,ms):p.hw_.spiBegin(c.physical,c.cs,hz,mode,ms);
     return c.ready;
   }
   if(!p.hw_.spiBegin(c.physical,c.cs,hz,mode,ms))return false;
@@ -1026,30 +1040,41 @@ bool Port::spiTransfer(void* context,uint64_t token,const uint8_t* tx,uint8_t* r
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
   uint64_t now=p.hw_.now();
   if(!p.available() || !token || c.token!=token || bus.held!=&c || !count || count>512 || now>=c.deadline)return false;
-  if(c.threeWire && (!c.ready || bool(tx)==bool(rx)))return false;
+  if((c.threeWire || c.quad) && (!c.ready || bool(tx)==bool(rx)))return false;
+  if(c.quad && (!tx || rx))return false;
   uint32_t remaining=uint32_t(c.deadline-now);
-  if(c.threeWire && remaining>8)remaining=8;
+  if((c.threeWire || c.quad) && remaining>8)remaining=8;
   const bool result=p.hw_.spiTransfer(c.physical,tx,rx,count,remaining);
-  if(c.threeWire && !result)c.ready=false;
+  if((c.threeWire || c.quad) && !result)c.ready=false;
+  return result;
+}
+bool Port::spiTransferQuad(void* context,uint64_t token,const uint8_t* tx,size_t count){
+  auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
+  const uint64_t now=p.hw_.now();
+  if(!p.available() || !token || c.token!=token || !c.quad || !c.ready || bus.held!=&c ||
+      !tx || !count || count>512 || now>=c.deadline)return false;
+  uint32_t remaining=uint32_t(c.deadline-now);if(remaining>8)remaining=8;
+  const bool result=p.hw_.spiTransferQuad(c.physical,tx,count,remaining);
+  if(!result)c.ready=false;
   return result;
 }
 bool Port::spiEnd(void* context,uint64_t token){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
   if(!p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || !token || c.token!=token || bus.held!=&c)return false;
   uint64_t now=p.hw_.now();uint32_t remaining=now<c.deadline?uint32_t(c.deadline-now):0;
-  if(c.threeWire){c.ready=false;if(remaining>8)remaining=8;}
+  if(c.threeWire || c.quad){c.ready=false;if(remaining>8)remaining=8;}
   if(!p.hw_.spiEnd(c.physical,c.cs,remaining))return false;
   bus.held=nullptr;c.deadline=0;c.ready=false;return true;
 }
 bool Port::spiRelease(void* context,uint64_t token){
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
   if(!p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || !token || c.token!=token || bus.held || (bus.closing && bus.closing!=&c))return false;
-  if(c.threeWire){c.closing=true;bus.closing=&c;}
+  if(c.threeWire || c.quad){c.closing=true;bus.closing=&c;}
   if(bus.refs==1 && !p.hw_.spiClose(c.physical))return false;
   if(!p.hw_.gpioClose(c.cs))return false;
   p.unreserve(c.cs,&c);
-  if(--bus.refs==0){p.unreserve(c.bus.sclk,&bus);p.unreserve(c.bus.mosi,&bus);p.unreserve(c.bus.miso,&bus);bus.instance=0;}
+  if(--bus.refs==0){p.unreserve(c.bus.sclk,&bus);p.unreserve(c.bus.mosi,&bus);p.unreserve(c.bus.miso,&bus);if(c.quad){p.unreserve(c.data2,&bus);p.unreserve(c.data3,&bus);}bus.instance=0;bus.quad=false;}
   if(bus.closing==&c)bus.closing=nullptr;
-  c.token=0;c.threeWire=false;c.ready=false;c.closing=false;return true;
+  c.token=0;c.threeWire=false;c.quad=false;c.ready=false;c.closing=false;return true;
 }
 }

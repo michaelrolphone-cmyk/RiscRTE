@@ -194,6 +194,7 @@ Hardware nativeHardware(bool (*owner)()){
     },NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadioAsync::join,NativeRadioAsync::state,NativeRadioAsync::leave,NativeRadioAsync::addresses,NativeRadioAsync::scanStart,NativeRadioAsync::scanPoll,NativeRadioAsync::scanCancel,NativeRadioAsync::idle};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
+  hardware.spiOpenQuad=spiOpenQuad;hardware.spiTransferQuad=spiTransferQuad;
   configureSchedulerWait(hardware);
   static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
   radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;

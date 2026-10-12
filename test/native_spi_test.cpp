@@ -16,7 +16,7 @@ static Hardware hardware(){
   h.gpioClose=NativeShim::gpioClose;h.gpioPwm=[](uint8_t,uint32_t,uint16_t,uint16_t){return false;};
   h.i2cOpen=[](uint8_t,uint8_t,uint8_t,uint32_t){return false;};h.i2cTransfer=[](uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t){return false;};h.i2cClose=[](uint8_t){return true;};
   h.spiOpen=NativeShim::spiOpen;h.spiBegin=NativeShim::spiBegin;h.spiTransfer=NativeShim::spiTransfer;
-  h.spiEnd=NativeShim::spiEnd;h.spiClose=NativeShim::spiClose;h.spiBeginThreeWire=NativeShim::spiBeginThreeWire;return h;
+  h.spiEnd=NativeShim::spiEnd;h.spiClose=NativeShim::spiClose;h.spiBeginThreeWire=NativeShim::spiBeginThreeWire;h.spiOpenQuad=NativeShim::spiOpenQuad;h.spiTransferQuad=NativeShim::spiTransferQuad;return h;
 }
 static RiscBoot::Port runtime(){return {[](){return model.owner;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},[](RiscBoot::Runtime& r){return current->bind(r);}};}
 static void stage(const std::string& root,int miso=-1,unsigned physical=2){
@@ -35,6 +35,7 @@ struct Fixture {
   }
   ~Fixture(){assert(p.quiescent() && !model.initialized && !model.device.live && !model.pending);}
 };
+#include "native_quad_test.inc"
 struct LegacySpi {
   uint32_t api_version,struct_size;void* context;
   bool (*claim)(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*);
@@ -45,9 +46,9 @@ struct LegacySpi {
 static_assert(offsetof(garden_spi_v1,claim_three_wire)==sizeof(LegacySpi),"Legacy SPI layout moved");
 static_assert(GARDEN_SPI_THREE_WIRE_V1_SIZE==sizeof(garden_spi_v1),"Suffix size does not cover callback");
 int main(int argc,char** argv){
-  assert(argc==2);std::string root=argv[1];
+  assert(argc==2);std::string root=argv[1];quad_tests(root);
   for(unsigned physical:{2u,3u}){
-    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& b=f.p.spis_[1].api;auto& g=f.p.gpios_[0].api.base;
+    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api.base;auto& b=f.p.spis_[1].api.base;auto& g=f.p.gpios_[0].api.base;
     assert(a.api_version==1 && a.struct_size>=GARDEN_SPI_THREE_WIRE_V1_SIZE && a.claim_three_wire);
     uint64_t t=99,u=0,dc=0;
     for(uint8_t pin:{4,5,7,11,12})assert(!g.claim(g.context,pin,true,false,false,&t) && !t && !model.calls);
@@ -92,7 +93,7 @@ int main(int argc,char** argv){
   // register replies, with a low GPIO latch and real ROM output-enable side
   // effect. Each RX must leave MOSI released, input-routed and pulled up.
   for(unsigned physical:{2u,3u}){
-    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api;auto& g=f.p.gpios_[0].api.base;
+    Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api.base;auto& g=f.p.gpios_[0].api.base;
     uint64_t token=0,dc=0;assert(a.claim_three_wire(a.context,4,5,7,&token));
     assert(g.claim(g.context,8,true,false,false,&dc));assert(!model.level[5]);
     for(unsigned pass=0;pass<2;++pass){
@@ -112,7 +113,7 @@ int main(int argc,char** argv){
     model.rxData.clear();assert(a.release(a.context,token));assert(g.release(g.context,dc));
   }
   for(bool supported:{true,false}){
-    Fixture f(root,supported?6:-1,supported);auto& a=f.p.spis_[0].api;uint64_t t=99;
+    Fixture f(root,supported?6:-1,supported);auto& a=f.p.spis_[0].api.base;uint64_t t=99;
     assert(!a.claim_three_wire(a.context,4,5,7,&t) && !t && !model.calls);
     if(supported){
       uint8_t tx=0x42,rx=0;auto& g=f.p.gpios_[0].api.base;
@@ -126,7 +127,7 @@ int main(int argc,char** argv){
   // Begin failure retains both the actual CPU bus owner and native cleanup
   // path, including mode-switch errors before the pin configuration runs.
   for(Fault fault:{Fault::Remove,Fault::Add,Fault::Pulldown,Fault::Pullup,Fault::Direction,Fault::CsLow}){
-    Fixture f(root);auto& a=f.p.spis_[0].api;auto& b=f.p.spis_[1].api;uint64_t t=0,u=0;
+    Fixture f(root);auto& a=f.p.spis_[0].api.base;auto& b=f.p.spis_[1].api.base;uint64_t t=0,u=0;
     assert(a.claim_three_wire(a.context,4,5,7,&t));assert(b.claim(b.context,4,5,-1,11,&u));
     assert(b.begin(b.context,u,2000000,0,1000));assert(b.end(b.context,u));model.fault=fault;
     assert(!a.begin(a.context,t,2000000,0,1000) && f.p.spiBuses_[0].held==&f.p.spis_[0] && NativeShim::spi[0].held);
@@ -138,7 +139,7 @@ int main(int argc,char** argv){
   // Pending RX lives in native storage. End retries never use the caller RX
   // pointer, nor raise CS or free the SDK device before completion is proved.
   for(bool receive:{false,true}){
-    Fixture f(root);auto& a=f.p.spis_[0].api;uint64_t t=0;assert(a.claim_three_wire(a.context,4,5,7,&t));assert(a.begin(a.context,t,2000000,0,1000));
+    Fixture f(root);auto& a=f.p.spis_[0].api.base;uint64_t t=0;assert(a.claim_three_wire(a.context,4,5,7,&t));assert(a.begin(a.context,t,2000000,0,1000));
     uint8_t tx[4]{1,2,3,4},rx[4]{9,9,9,9};model.fault=Fault::Drain;
     assert(!a.exchange(a.context,t,receive?nullptr:tx,receive?rx:nullptr,4) && !model.level[7] && model.pending);
     assert(rx[0]==9 && model.pending->tx_buffer!=tx && model.pending->rx_buffer!=rx);
@@ -151,22 +152,22 @@ int main(int argc,char** argv){
     assert(model.events[model.events.size()-2]=="drain" && model.events.back()=="high");assert(a.release(a.context,t));
   }
   for(Fault fault:{Fault::Direction,Fault::Queue}){
-    Fixture f(root);auto& a=f.p.spis_[0].api;uint64_t t=0;uint8_t tx=1;
+    Fixture f(root);auto& a=f.p.spis_[0].api.base;uint64_t t=0;uint8_t tx=1;
     assert(a.claim_three_wire(a.context,4,5,7,&t));assert(a.begin(a.context,t,2000000,0,1000));model.fault=fault;
     assert(!a.exchange(a.context,t,&tx,nullptr,1) && !model.level[7]);model.fault=Fault::None;
     assert(!a.exchange(a.context,t,&tx,nullptr,1));assert(a.end(a.context,t));assert(a.release(a.context,t));
   }
   for(Fault fault:{Fault::Remove,Fault::Free,Fault::ClosePin}){
-    Fixture f(root);auto& a=f.p.spis_[0].api;uint64_t t=0;
+    Fixture f(root);auto& a=f.p.spis_[0].api.base;uint64_t t=0;
     assert(a.claim_three_wire(a.context,4,5,7,&t));assert(a.begin(a.context,t,2000000,0,20));assert(a.end(a.context,t));
     model.fault=fault;assert(!a.release(a.context,t) && f.p.spis_[0].token==t && f.p.pins_[4].owner && f.p.pins_[7].owner);
     const unsigned calls=model.calls;assert(!a.begin(a.context,t,2000000,0,20) && model.calls==calls);
-    uint64_t other=99;auto& b=f.p.spis_[1].api;
+    uint64_t other=99;auto& b=f.p.spis_[1].api.base;
     assert(!b.claim(b.context,4,5,-1,11,&other) && !other && model.calls==calls);
     model.fault=Fault::None;assert(a.release(a.context,t));
   }
   for(bool shared:{false,true}){
-    Fixture f(root);auto& a=f.p.spis_[0].api;auto& b=f.p.spis_[1].api;uint64_t t=0,u=0;
+    Fixture f(root);auto& a=f.p.spis_[0].api.base;auto& b=f.p.spis_[1].api.base;uint64_t t=0,u=0;
     assert(a.claim_three_wire(a.context,4,5,7,&t));if(shared)assert(b.claim(b.context,4,5,-1,11,&u));
     assert(a.begin(a.context,t,2000000,0,20));assert(a.end(a.context,t));
     model.fault=Fault::ClosePin;model.faultPin=7;assert(!a.release(a.context,t));

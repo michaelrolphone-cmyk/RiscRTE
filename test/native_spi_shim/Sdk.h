@@ -11,10 +11,11 @@ using spi_host_device_t=int;
 using gpio_num_t=int;
 constexpr int ESP_OK=0,ESP_FAIL=-1,SPI2_HOST=1,SPI3_HOST=2,SPI_DMA_CH_AUTO=3;
 constexpr int SPI_DEVICE_3WIRE=1<<2,SPI_DEVICE_HALFDUPLEX=1<<4,SPICOMMON_BUSFLAG_GPIO_PINS=1<<2;
+constexpr int SPI_TRANS_MODE_QIO=1<<1,SPICOMMON_BUSFLAG_QUAD=1<<5;
 constexpr int GPIO_MODE_INPUT=1,GPIO_MODE_INPUT_OUTPUT=3,FSPID_OUT_IDX=103,SPI3_D_OUT_IDX=68,SIG_GPIO_OUT_IDX=256;
 struct spi_bus_config_t {int sclk_io_num,mosi_io_num,miso_io_num,quadwp_io_num,quadhd_io_num,max_transfer_sz;uint32_t flags;};
 struct spi_device_interface_config_t {int clock_speed_hz;uint8_t mode;int spics_io_num,queue_size;uint32_t flags;};
-struct spi_transaction_t {size_t length,rxlength;const void* tx_buffer;void* rx_buffer;};
+struct spi_transaction_t {uint32_t flags;size_t length,rxlength;const void* tx_buffer;void* rx_buffer;};
 struct Device {bool live=false;spi_device_interface_config_t config{};};
 using spi_device_handle_t=Device*;
 enum class Fault {None,Initialize,Add,Remove,Pullup,Pulldown,Direction,Queue,Drain,CsLow,CsHigh,Free,ClosePin};
@@ -84,7 +85,11 @@ inline int spi_device_queue_trans(spi_device_handle_t device,spi_transaction_t* 
       assert(model.inputSignal[model.bus.mosi_io_num]==FSPID_OUT_IDX || model.inputSignal[model.bus.mosi_io_num]==SPI3_D_OUT_IDX);
       assert(model.signal[model.bus.mosi_io_num]==SIG_GPIO_OUT_IDX);
     }
-  } else assert(transaction->tx_buffer && transaction->rx_buffer && transaction->length>0);
+  } else if(device->config.flags&SPI_DEVICE_HALFDUPLEX) {
+    assert(model.bus.quadwp_io_num>=0 && model.bus.quadhd_io_num>=0);
+    assert(transaction->tx_buffer && !transaction->rx_buffer && transaction->length>0 && !transaction->rxlength);
+    assert(!transaction->flags || transaction->flags==SPI_TRANS_MODE_QIO);
+  } else assert(transaction->tx_buffer && transaction->rx_buffer && transaction->length>0 && !transaction->flags);
   model.pending=transaction;model.us+=int64_t(model.queueDelay)*1000;model.events.push_back("queue");return ESP_OK;
 }
 inline int spi_device_get_trans_result(spi_device_handle_t device,spi_transaction_t** result,TickType_t wait){

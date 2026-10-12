@@ -2,8 +2,8 @@
 // regression includes this exact implementation against a narrow SDK shim.
 struct SpiState {
   bool initialized=false,held=false,pending=false,ready=false;
-  bool threeWire=false,managedMosi=false;uint32_t hz=0;uint8_t mode=0;
-  int sclk=-1,mosi=-1,miso=-1;spi_device_handle_t device=nullptr;
+  bool threeWire=false,quad=false,managedMosi=false;uint32_t hz=0;uint8_t mode=0;
+  int sclk=-1,mosi=-1,miso=-1,data2=-1,data3=-1;spi_device_handle_t device=nullptr;
   spi_transaction_t transaction{};
   alignas(4) uint8_t tx[512]{},rx[512]{};
 } spi[2];
@@ -14,17 +14,25 @@ bool drain(SpiState& state,uint32_t ms){
   if(completed!=&state.transaction)return false;
   state.pending=false;return true;
 }
-bool spiOpen(uint8_t physical,int16_t sclk,int16_t mosi,int16_t miso){
+bool spiOpenPins(uint8_t physical,int16_t sclk,int16_t mosi,int16_t miso,int16_t data2,int16_t data3){
   auto& state=spi[physical-2];if(state.initialized)return false;
-  state.sclk=sclk;state.mosi=mosi;state.miso=miso;
+  state.sclk=sclk;state.mosi=mosi;state.miso=miso;state.data2=data2;state.data3=data3;state.quad=data2>=0&&data3>=0;
   spi_bus_config_t config{};config.sclk_io_num=sclk;config.mosi_io_num=mosi;config.miso_io_num=miso;
-  config.quadwp_io_num=-1;config.quadhd_io_num=-1;config.max_transfer_sz=512;
+  config.quadwp_io_num=data2;config.quadhd_io_num=data3;config.max_transfer_sz=512;
   // A no-MISO bus may later opt into shared-MOSI reads. Route it through the
   // matrix from initialization, so its SDK timing model matches direction
   // changes. Ordinary claims still use their original full-duplex semantics.
-  if(miso==-1)config.flags=SPICOMMON_BUSFLAG_GPIO_PINS;
+  if(state.quad)config.flags=SPICOMMON_BUSFLAG_QUAD;
+  else if(miso==-1)config.flags=SPICOMMON_BUSFLAG_GPIO_PINS;
   if(spi_bus_initialize(host(physical),&config,SPI_DMA_CH_AUTO)!=ESP_OK)return false;
   state.initialized=true;return true;
+}
+bool spiOpen(uint8_t physical,int16_t sclk,int16_t mosi,int16_t miso){
+  return spiOpenPins(physical,sclk,mosi,miso,-1,-1);
+}
+bool spiOpenQuad(uint8_t physical,int16_t sclk,int16_t d0,int16_t d1,int16_t d2,int16_t d3){
+  if(d0<0 || d1<0 || d2<0 || d3<0)return false;
+  return spiOpenPins(physical,sclk,d0,d1,d2,d3);
 }
 bool spiMosiDirection(uint8_t physical,SpiState& state,bool output){
   if(gpio_set_direction(static_cast<gpio_num_t>(state.mosi),output?GPIO_MODE_INPUT_OUTPUT:GPIO_MODE_INPUT)!=ESP_OK)return false;
@@ -40,9 +48,9 @@ bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool thre
   auto& state=spi[physical-2];if(!state.initialized || state.held || state.pending)return false;
   // In the explicit mode every attempted begin has a cleanup path, including
   // failures before CS goes low or while changing SDK device/pad state.
-  if(threeWire)state.held=true;
+  if(threeWire || state.quad)state.held=true;
   state.ready=false;
-  if(threeWire && state.miso!=-1)return false;
+  if(threeWire && (state.miso!=-1 || state.quad))return false;
   if(state.device && (state.hz!=hz || state.mode!=mode || state.threeWire!=threeWire)){
     if(spi_bus_remove_device(state.device)!=ESP_OK)return false;
     state.device=nullptr;
@@ -50,6 +58,7 @@ bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool thre
   if(!state.device){
     spi_device_interface_config_t config{};config.clock_speed_hz=hz;config.mode=mode;config.spics_io_num=-1;config.queue_size=1;
     if(threeWire)config.flags=SPI_DEVICE_3WIRE|SPI_DEVICE_HALFDUPLEX;
+    else if(state.quad)config.flags=SPI_DEVICE_HALFDUPLEX;
     if(spi_bus_add_device(host(physical),&config,&state.device)!=ESP_OK)return false;
     state.hz=hz;state.mode=mode;state.threeWire=threeWire;
   }
@@ -72,9 +81,10 @@ bool spiBegin(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,uint32_t){
 bool spiBeginThreeWire(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,uint32_t){
   return spiBeginMode(physical,cs,hz,mode,true);
 }
-bool spiTransfer(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t count,uint32_t ms){
+bool spiTransferLanes(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t count,uint32_t ms,bool quadData){
   auto& state=spi[physical-2];if(!state.held || !state.ready || state.pending || !count || count>sizeof(state.tx))return false;
   if(state.threeWire && bool(tx)==bool(rx))return false;
+  if((quadData && !state.quad) || (state.quad && (!tx || rx)))return false;
   state.transaction={};
   if(state.threeWire){
     if(ms>8)ms=8;
@@ -84,6 +94,11 @@ bool spiTransfer(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t count,uin
     if(!spiMosiDirection(physical,state,tx!=nullptr))return false;
     if(tx){memcpy(state.tx,tx,count);state.transaction.length=count*8;state.transaction.tx_buffer=state.tx;}
     else {state.transaction.rxlength=count*8;state.transaction.rx_buffer=state.rx;}
+  } else if(state.quad) {
+    if(ms>8)ms=8;
+    state.ready=false;
+    memcpy(state.tx,tx,count);state.transaction.length=count*8;state.transaction.tx_buffer=state.tx;
+    if(quadData)state.transaction.flags=SPI_TRANS_MODE_QIO;
   } else {
     if(tx)memcpy(state.tx,tx,count);else memset(state.tx,0xff,count);
     state.transaction.length=count*8;state.transaction.tx_buffer=state.tx;state.transaction.rx_buffer=state.rx;
@@ -96,11 +111,17 @@ bool spiTransfer(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t count,uin
   if(rx)memcpy(rx,state.rx,count);
   state.ready=true;return true;
 }
+bool spiTransfer(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t count,uint32_t ms){
+  return spiTransferLanes(physical,tx,rx,count,ms,false);
+}
+bool spiTransferQuad(uint8_t physical,const uint8_t* tx,size_t count,uint32_t ms){
+  return spiTransferLanes(physical,tx,nullptr,count,ms,true);
+}
 bool spiEnd(uint8_t physical,uint8_t cs,uint32_t ms){
   auto& state=spi[physical-2];if(!state.held)return false;
   // CpuPort applies this cap even when a mode-switch failed and the cached
   // device still has legacy flags. This additional cap protects direct use.
-  if(state.threeWire){state.ready=false;if(ms>8)ms=8;}
+  if(state.threeWire || state.quad){state.ready=false;if(ms>8)ms=8;}
   if(!drain(state,ms) || !gpioWrite(cs,true))return false;
   state.held=false;state.ready=false;return true;
 }
@@ -109,6 +130,6 @@ bool spiClose(uint8_t physical){
   if(state.device){if(spi_bus_remove_device(state.device)!=ESP_OK)return false;
     state.device=nullptr;}
   if(state.initialized){if(spi_bus_free(host(physical))!=ESP_OK)return false;state.initialized=false;}
-  for(int pin:{state.sclk,state.mosi,state.miso})if(pin>=0 && !gpioClose(pin))return false;
+  for(int pin:{state.sclk,state.mosi,state.miso,state.data2,state.data3})if(pin>=0 && !gpioClose(pin))return false;
   state={};return true;
 }

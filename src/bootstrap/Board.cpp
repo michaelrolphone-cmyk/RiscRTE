@@ -51,7 +51,7 @@ uint64_t Board::deviceBus(uint64_t id) const {
   if (!strcmp(d->type,"controller.i2c")) return d->config.i2cController.bus.instance_id;
   if (!strcmp(d->type,"peripheral.i2c")) return d->config.peripheral.bus.instance_id;
   if (!strcmp(d->type,"power.axp2101")) return d->config.power.device.bus.instance_id;
-  if (!strcmp(d->type,"display.spi")) return d->config.display.bus.instance_id;
+  if (!strcmp(d->type,"display.spi")) return d->display().bus.instance_id;
   if (!strcmp(d->type,"touch.i2c")) return d->touch().bus.instance_id;
   if (!strcmp(d->type,"storage.sd-spi")) return d->config.sd.bus.instance_id;
   if (!strcmp(d->type,"radio.lora")) return d->lora().bus.instance_id;
@@ -197,12 +197,21 @@ bool Board::materialize(JsonObjectConst c,Device& d) {
     return true;
   }
   if (!strcmp(d.type,"display.spi")) {
-    if (!keys(c,{"bus_instance_id","width","height","offset_x","offset_y","rotation","cs","dc","reset","backlight","busy","reset_active_high","busy_active_high","backlight_active_high","power_pins","power_active_high","reset_assert_ms","reset_recovery_ms"}) || b->kind!=RISC_HW_BUS_SPI) return false;
-    auto& x=d.config.display; x={}; x.struct_size=sizeof(x); x.bus=*b;
+    const bool quad=d.hardware.config_version==2;
+    if (b->kind!=RISC_HW_BUS_SPI) return false;
+    if (quad) {
+      if (!keys(c,{"bus_instance_id","width","height","offset_x","offset_y","rotation","cs","dc","reset","backlight","busy","reset_active_high","busy_active_high","backlight_active_high","power_pins","power_active_high","reset_assert_ms","reset_recovery_ms","data2","data3"}) || b->miso<0) return false;
+      d.config.displayQuad={};
+    } else {
+      if (!keys(c,{"bus_instance_id","width","height","offset_x","offset_y","rotation","cs","dc","reset","backlight","busy","reset_active_high","busy_active_high","backlight_active_high","power_pins","power_active_high","reset_assert_ms","reset_recovery_ms"})) return false;
+      d.config.display={};
+    }
+    auto& x=quad?d.config.displayQuad.base:d.config.display;
+    x.struct_size=quad?sizeof(d.config.displayQuad):sizeof(x); x.bus=*b;
     if (!number(c["width"],1,4096,x.width) || !number(c["height"],1,4096,x.height) ||
         !number(c["offset_x"],0,4095,x.offset_x) || !number(c["offset_y"],0,4095,x.offset_y) || !number(c["rotation"],0,3,x.rotation) ||
-        !pin(c["cs"],x.cs) || !pin(c["dc"],x.dc) || !pin(c["reset"],x.reset,true) || !pin(c["backlight"],x.backlight,true) || !pin(c["busy"],x.busy,true) ||
-        !claim(x.cs) || !claim(x.dc) || !claim(x.reset,true) || !claim(x.backlight,true) || !claim(x.busy,true) ||
+        !pin(c["cs"],x.cs) || !pin(c["dc"],x.dc,quad) || !pin(c["reset"],x.reset,true) || !pin(c["backlight"],x.backlight,true) || !pin(c["busy"],x.busy,true) ||
+        !claim(x.cs) || !claim(x.dc,quad) || !claim(x.reset,true) || !claim(x.backlight,true) || !claim(x.busy,true) ||
         !flag(c["reset_active_high"],x.reset_active_high) || !flag(c["busy_active_high"],x.busy_active_high) || !flag(c["backlight_active_high"],x.backlight_active_high) ||
         !number(c["reset_assert_ms"],x.reset<0?0:1,x.reset<0?0:500,x.reset_assert_ms) || !number(c["reset_recovery_ms"],x.reset<0?0:1,x.reset<0?0:500,x.reset_recovery_ms)) return false;
     if (!c["power_pins"].is<JsonArrayConst>() || !c["power_active_high"].is<JsonArrayConst>()) return false;
@@ -210,7 +219,12 @@ bool Board::materialize(JsonObjectConst c,Device& d) {
     if (pins.size()>4 || pins.size()!=high.size()) return false;
     x.power_count=pins.size();
     for (size_t i=0;i<pins.size();++i) if (!pin(pins[i],x.power_pins[i]) || !claim(x.power_pins[i]) || !flag(high[i],x.power_active_high[i])) return false;
-    d.hardware.config=&x; d.hardware.config_size=sizeof(x); return true;
+    if (quad) {
+      auto& v=d.config.displayQuad;
+      if (!pin(c["data2"],v.data2) || !pin(c["data3"],v.data3) || !claim(v.data2) || !claim(v.data3)) return false;
+      d.hardware.config=&v;d.hardware.config_size=sizeof(v);
+    } else {d.hardware.config=&x;d.hardware.config_size=sizeof(x);}
+    return true;
   }
   return false; // Extension types require their exact registered materializer.
 }
@@ -269,7 +283,7 @@ bool Board::load(JsonObjectConst root) {
     if (!number(record["instance_id"],1,INT32_MAX,h.instance_id) || device(h.instance_id) ||
         !keys(chip,{"vendor","model","revision"}) || !text(chip["vendor"],vendor,sizeof(vendor)) || !text(chip["model"],model,sizeof(model)) ||
         !text(chip["revision"],d.revision,sizeof(d.revision)) || !text(record["compatible"],d.compatible,sizeof(d.compatible)) ||
-        !text(record["config_type"],d.type,sizeof(d.type)) || !number(record["config_version"],1,(!strcmp(d.type,"radio.lora") || !strcmp(d.type,"touch.i2c"))?2:1,h.config_version) ||
+        !text(record["config_type"],d.type,sizeof(d.type)) || !number(record["config_version"],1,(!strcmp(d.type,"radio.lora") || !strcmp(d.type,"touch.i2c") || !strcmp(d.type,"display.spi"))?2:1,h.config_version) ||
         !materialize(record["config"],d)) return fail("invalid/unsupported/conflicting device config");
     if (!record["bindings"].isNull()) {
       if (!record["bindings"].is<JsonObjectConst>() || record["bindings"].size()>16) return fail("invalid bindings");
