@@ -19,8 +19,9 @@ using N=RiscExperimental::CheckedNvsFreshSources;
 namespace Async=RiscCpu::NativeRadioAsync;
 using Bytes=std::vector<uint8_t>;
 namespace {
-const auto workerThread=std::this_thread::get_id();int workerIdentity;
-uint64_t leaseEpoch=1,rootEpoch=1,writerEpoch=1,redirectEpoch=1;
+const auto workerThread=std::this_thread::get_id();int workerIdentity,coordinatorIdentity,foreignIdentity;
+const void*liveWorker=&workerIdentity;const void*liveCoordinator=&coordinatorIdentity;uint32_t liveNamespace=6;
+uint64_t leaseEpoch=1,custodyEpoch=1,rootEpoch=1,writerEpoch=1,redirectEpoch=1;
 unsigned competing=0,nested=0;bool proceed=true,armed=false;int observed=C::Ok;
 unsigned callbacks=0,callbackCut=0,ioEvents=0,ioCut=0,reentries=0;std::string transition;
 I*active=nullptr;
@@ -40,6 +41,11 @@ void change(){
  else if(transition=="cancel")proceed=false;
  else if(transition=="mount")++redirectEpoch;
  else if(transition=="epoch")++leaseEpoch;
+ else if(transition=="custody")++custodyEpoch;
+ else if(transition=="worker")liveWorker=&foreignIdentity;
+ else if(transition=="coordinator")liveCoordinator=&foreignIdentity;
+ else if(transition=="namespace")liveNamespace=1;
+ else if(transition=="reacquire"){Async::endShared();assert(Async::tryShared());++leaseEpoch;++custodyEpoch;}
  else if(transition=="root")++rootEpoch;
  else if(transition=="writer")++writerEpoch;
  else if(transition=="nested")++nested;
@@ -52,7 +58,8 @@ void io(void*,native_lfs_fixture_operation op,native_lfs_fixture_phase phase){
  trace.push_back(op);if(++ioEvents==ioCut)change();
 }
 I::Mount snapshot(){I::Mount m{};m.profile=I::PinnedProfile;m.partitionAddress=native_lfs_fixture_partition_address();m.partitionBytes=native_lfs_fixture_partition_bytes();m.encrypted=native_lfs_fixture_partition_encrypted();
- m.vfs=native_lfs_fixture_context();m.partition=native_lfs_fixture_partition();m.worker=std::this_thread::get_id()==workerThread?&workerIdentity:nullptr;
+ m.vfs=native_lfs_fixture_context();m.partition=native_lfs_fixture_partition();m.worker=std::this_thread::get_id()==workerThread?liveWorker:nullptr;
+ m.coordinator=liveCoordinator;m.nameSpace=liveNamespace;m.custodyEpoch=custodyEpoch;
  m.mountEpoch=native_lfs_fixture_mount_generation();m.rootEpoch=rootEpoch;m.leaseEpoch=leaseEpoch;m.writerFenceEpoch=writerEpoch;m.redirectEpoch=redirectEpoch;
  m.nativeLease=Async::sharedLease.load(std::memory_order_acquire);m.competingWriters=competing;m.nestedMounts=nested;
  strcpy(m.mountPath,native_lfs_fixture_mount());strcpy(m.privateRoot,"/private");return m;
@@ -67,7 +74,7 @@ I::Port port(){return {nullptr,
  [](void*,const void*v,const char*p){assert(v==native_lfs_fixture_context()&&held());return native_lfs_fixture_opendir(p);},
  [](void*,const void*v,void*d,I::Entry*out){assert(v==native_lfs_fixture_context()&&held());native_lfs_fixture_entry entry{};int rc=native_lfs_fixture_readdir(d,&entry);memcpy(out->name,entry.name,sizeof out->name);return rc;},
  [](void*,const void*v,void*d){assert(v==native_lfs_fixture_context()&&held());return native_lfs_fixture_closedir(d);}};}
-void fresh(){armed=false;native_lfs_fixture_hook(nullptr,nullptr);native_lfs_fixture_clear_faults();Async::endShared();assert(native_lfs_fixture_reset()==0);assert(Async::tryShared());++leaseEpoch;rootEpoch=writerEpoch=redirectEpoch=1;competing=nested=0;proceed=true;observed=C::Ok;callbacks=callbackCut=ioEvents=ioCut=reentries=0;transition.clear();trace.clear();observerTrace.clear();readRequests.clear();native_lfs_fixture_clear_counters();native_lfs_fixture_hook(io,nullptr);nvs.clear();nvHandles.clear();failReceipt=false;}
+void fresh(){armed=false;native_lfs_fixture_hook(nullptr,nullptr);native_lfs_fixture_clear_faults();Async::endShared();assert(native_lfs_fixture_reset()==0);assert(Async::tryShared());++leaseEpoch;++custodyEpoch;liveWorker=&workerIdentity;liveCoordinator=&coordinatorIdentity;liveNamespace=6;rootEpoch=writerEpoch=redirectEpoch=1;competing=nested=0;proceed=true;observed=C::Ok;callbacks=callbackCut=ioEvents=ioCut=reentries=0;transition.clear();trace.clear();observerTrace.clear();readRequests.clear();native_lfs_fixture_clear_counters();native_lfs_fixture_hook(io,nullptr);nvs.clear();nvHandles.clear();failReceipt=false;}
 void seed(const char*name,const Bytes&p){assert(!armed&&held());std::string path="/private/n00000006/";path+=name;assert(!native_lfs_fixture_seed(path.c_str(),p.data(),p.size()));}
 int inspect(I&i,uint64_t next=1,bool attempt=true,const Bytes*given=nullptr){auto bytes=image();if(given)bytes=*given;active=&i;armed=true;const int rc=attempt?i.inspectAttempt(bytes.data(),bytes.size(),next):i.inspectAbsent();armed=false;active=nullptr;return rc;}
 uint64_t operationCount(){native_lfs_fixture_counters c{};native_lfs_fixture_get_counters(&c);uint64_t n=0;for(auto v:c.calls)n+=v;return n;}
@@ -78,6 +85,22 @@ void basics(){fresh();assert(!native_lfs_fixture_has_link_callback());seed(".pen
  const auto before=operationCount();unsigned excluded=0;for(unsigned k=0;k<4;++k)if(!Async::tryShared())++excluded;assert(excluded==4&&before==operationCount());
  int other=C::Ok;std::thread t([&]{other=inspect(i);});t.join();assert(other==C::Busy&&i.exitSafe());
  puts("Pinned actual ESP VFS/LittleFS: zero identity/link metadata, absent hard-link callback, actual native shared-lease exclusion and wrong-worker refusal PASS");}
+void generations(){
+ fresh();I::Mount construction=snapshot();construction.worker=construction.coordinator=nullptr;
+ construction.nameSpace=construction.nativeLease=0;construction.leaseEpoch=construction.custodyEpoch=0;
+ I wifi(6,construction,port()),preferences(1,construction,port());
+ assert(wifi.boundTo(6,"/appdata/private")==!strcmp(construction.mountPath,"/appdata"));
+ for(unsigned n=0;n<64;++n){
+  liveNamespace=6;assert(inspect(wifi,0,false)==C::Ok&&wifi.exitSafe());
+  assert(preferences.inspectAbsent()==C::Busy&&preferences.exitSafe());
+  Async::endShared();const auto before=operationCount();assert(inspect(wifi,0,false)==C::Busy&&operationCount()==before);
+  assert(Async::tryShared());++leaseEpoch;++custodyEpoch;
+  liveNamespace=1;assert(preferences.inspectAbsent()==C::Ok&&preferences.exitSafe());
+  assert(inspect(wifi,0,false)==C::Busy&&wifi.exitSafe());
+  Async::endShared();assert(Async::tryShared());++leaseEpoch;++custodyEpoch;
+ }
+ puts("Pinned VFS inspector: construction without worker/lease; 128 later generations, two exact namespaces, release refusal and safe reacquisition PASS");
+}
 void directoryMetadata(){
  // lfs_info.size is unspecified for directories. Exercise differing values
  // deterministically instead of depending on compiler stack reuse or ASan.
@@ -113,8 +136,8 @@ void refusals(){unsigned cases=0;for(unsigned n=0;n<=508;++n){fresh();auto p=obj
 void faults(){fresh();seed("replica-a.bin",object());seed(".pending",object(4));Bytes initialFlash(native_lfs_fixture_flash_size());assert(native_lfs_fixture_snapshot(initialFlash.data(),initialFlash.size())==initialFlash.size());unsigned total=0,totalCb=0;std::vector<bool> observerBaseline;std::vector<native_lfs_fixture_operation> baseline;native_lfs_fixture_counters counts{};
  {I i(6,snapshot(),port());native_lfs_fixture_clear_counters();assert(inspect(i,2)==C::Ok);total=ioEvents;totalCb=callbacks;baseline=trace;observerBaseline=observerTrace;native_lfs_fixture_get_counters(&counts);}
  Bytes finalFlash(initialFlash.size());assert(native_lfs_fixture_snapshot(finalFlash.data(),finalFlash.size())==finalFlash.size()&&initialFlash==finalFlash);assert(!counts.calls[NATIVE_LFS_FLASH_PROG]&&!counts.calls[NATIVE_LFS_FLASH_ERASE]);
- unsigned cases=0;for(const char*kind:{"lease","retained","io","cancel","epoch","mount","root","reentry"})for(unsigned cut=1;cut<=total;++cut){fresh();seed("replica-a.bin",object());seed(".pending",object(4));transition=kind;ioCut=cut;I i(6,snapshot(),port());const int rc=inspect(i,2);if(transition=="reentry")assert(rc==C::Ok&&reentries==1);else if(transition=="io")assert(rc==C::Io);else if(transition=="retained")assert(rc==C::Retained);else if(transition=="cancel")assert(rc==C::Busy||rc==C::Ok);else {if(rc!=C::Busy&&rc!=C::Retained)fprintf(stderr,"fault %s cut %u rc %d\n",kind,cut,rc);assert(rc==C::Busy||rc==C::Retained);}terminal(i,rc);++cases;}
- for(const char*kind:{"lease","retained","io","cancel","epoch"})for(unsigned cut=1;cut<=totalCb;++cut){if(std::string(kind)=="io"&&!observerBaseline[cut-1])continue;fresh();seed("replica-a.bin",object());seed(".pending",object(4));transition=kind;callbackCut=cut;I i(6,snapshot(),port());const int rc=inspect(i,2);if(transition=="io")assert(rc==C::Io);else if(transition=="retained")assert(rc==C::Retained);else if(transition=="cancel")assert(rc==C::Busy||rc==C::Ok);else assert(rc==C::Busy||rc==C::Retained);terminal(i,rc);++cases;}
+ unsigned cases=0;for(const char*kind:{"lease","retained","io","cancel","epoch","custody","worker","coordinator","namespace","reacquire","mount","root","reentry"})for(unsigned cut=1;cut<=total;++cut){fresh();seed("replica-a.bin",object());seed(".pending",object(4));transition=kind;ioCut=cut;I i(6,snapshot(),port());const int rc=inspect(i,2);if(transition=="reentry")assert(rc==C::Ok&&reentries==1);else if(transition=="io")assert(rc==C::Io);else if(transition=="retained")assert(rc==C::Retained);else if(transition=="cancel")assert(rc==C::Busy||rc==C::Ok);else {if(rc!=C::Busy&&rc!=C::Retained)fprintf(stderr,"fault %s cut %u rc %d\n",kind,cut,rc);assert(rc==C::Busy||rc==C::Retained);}terminal(i,rc);++cases;}
+ for(const char*kind:{"lease","retained","io","cancel","epoch"})for(unsigned cut=1;cut<=totalCb;++cut){if(std::string(kind)=="io"&&!observerBaseline[cut-1])continue;fresh();seed("replica-a.bin",object());seed(".pending",object(4));transition=kind;callbackCut=cut;I i(6,snapshot(),port());const int rc=inspect(i,2);if(transition=="io")assert(rc==C::Io);else if(transition=="retained")assert(rc==C::Retained);else if(transition=="cancel"||(transition=="epoch"&&cut<=2))assert(rc==C::Busy||rc==C::Ok);else assert(rc==C::Busy||rc==C::Retained);terminal(i,rc);++cases;}
  for(unsigned op=0;op<NATIVE_LFS_OPERATION_COUNT;++op)for(uint64_t at=1;at<=counts.calls[op];++at)for(auto mode:{NATIVE_LFS_FAIL_BEFORE,NATIVE_LFS_FAIL_AFTER}){
   // A fake failed open after successful acquisition is not a valid API model.
   if((op==NATIVE_LFS_OPEN||op==NATIVE_LFS_OPENDIR)&&mode==NATIVE_LFS_FAIL_AFTER)continue;
@@ -377,7 +400,7 @@ void inventories(){
  }
  puts("Actual VFS profile: missing namespace recheck/root epoch, early enumeration EOF and duplicate-entry refusal PASS");
 }
-void admission(){for(unsigned mode=0;mode<12;++mode){fresh();I::Mount m=snapshot();if(mode==0)++m.profile;if(mode==1)m.vfs=&workerIdentity;if(mode==2)m.partition=&workerIdentity;if(mode==3)++m.partitionAddress;if(mode==4)m.partitionBytes*=2;if(mode==5)m.encrypted=true;if(mode==6)strcpy(m.mountPath,"/other");if(mode==7)strcpy(m.privateRoot,"/other");if(mode==8)++m.mountEpoch;if(mode==9)++m.leaseEpoch;if(mode==10)m.nestedMounts=1;if(mode==11)m.competingWriters=1;const auto before=operationCount();I i(6,m,port());const int rc=inspect(i);assert((rc==C::Invalid||rc==C::Busy)&&i.exitSafe()&&before==operationCount());}
+void admission(){for(unsigned mode=0;mode<12;++mode){fresh();I::Mount m=snapshot();if(mode==0)++m.profile;if(mode==1)m.vfs=&workerIdentity;if(mode==2)m.partition=&workerIdentity;if(mode==3)++m.partitionAddress;if(mode==4)m.partitionBytes*=2;if(mode==5)m.encrypted=true;if(mode==6)strcpy(m.mountPath,"/other");if(mode==7)strcpy(m.privateRoot,"/other");if(mode==8)++m.mountEpoch;if(mode==9)++m.rootEpoch;if(mode==10)m.nestedMounts=1;if(mode==11)m.competingWriters=1;const auto before=operationCount();I i(6,m,port());const int rc=inspect(i);assert((rc==C::Invalid||rc==C::Busy)&&i.exitSafe()&&before==operationCount());}
  fresh();const auto m=snapshot();Async::endShared();assert(native_lfs_fixture_reset()==0);assert(Async::tryShared());I stale(6,m,port());assert(inspect(stale)==C::Busy&&stale.exitSafe());puts("Explicit target admission: wrong source/profile/mount/partition/root/epoch/writer/nested binding refuses before I/O; actual remount invalidates old admission PASS");}
 }
-int main(){setbuf(stdout,nullptr);basics();admission();inventories();directoryMetadata();prefixes();refusals();faults();restoreArtifacts();restoreShapeRefusals();restoreFaults();adapterIdentity();composition();mutationFaults();armed=false;native_lfs_fixture_hook(nullptr,nullptr);native_lfs_fixture_clear_faults();native_lfs_fixture_shutdown();Async::endShared();assert(nvHandles.empty()&&iterators.empty());printf("Experimental profile host size=%zu, typed injection=%zu. Production profile unselected; NVS model only; no hardware/power-loss qualification.\n",sizeof(I),sizeof(RiscExperimental::FreshInitArtifactInspector));}
+int main(){setbuf(stdout,nullptr);basics();generations();admission();inventories();directoryMetadata();prefixes();refusals();faults();restoreArtifacts();restoreShapeRefusals();restoreFaults();adapterIdentity();composition();mutationFaults();armed=false;native_lfs_fixture_hook(nullptr,nullptr);native_lfs_fixture_clear_faults();native_lfs_fixture_shutdown();Async::endShared();assert(nvHandles.empty()&&iterators.empty());printf("Experimental profile host size=%zu, typed injection=%zu. Production profile unselected; NVS model only; no hardware/power-loss qualification.\n",sizeof(I),sizeof(RiscExperimental::FreshInitArtifactInspector));}

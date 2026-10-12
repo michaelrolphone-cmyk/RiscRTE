@@ -10,7 +10,7 @@ bool native_settings_worker_probe(RiscExperimental::NativeReplicaCore&core,RiscE
  auto&endpoint=c->endpoint();auto api=endpoint.api();(void)api;
  RiscExperimental::NativeSettingsCoordinator::Lease lease;
  (void)c->acquireNative(slot,&lease);(void)c->releaseNative(lease);
- return exitSafe()&&!isWorker()&&!workerWithLease();
+ Custody accepted{};return !custody(core.namespaceId(),&accepted)&&exitSafe()&&!isWorker()&&!workerWithLease();
 }
 
 bool native_settings_worker_two_namespace_probe(RiscExperimental::NativeReplicaCore&preferences,RiscExperimental::CheckedNativeReplicaStore&preferencesStore,RiscExperimental::NativeReplicaCore&wifi,RiscExperimental::CheckedNativeReplicaStore&wifiStore,bool(*owner)()){

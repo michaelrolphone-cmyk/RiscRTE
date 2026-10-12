@@ -17,6 +17,14 @@ bool prepare(uint32_t namespaceId,RiscExperimental::NativeReplicaCore&,RiscExper
 Coordinator*coordinator(uint32_t namespaceId); // exact owner task only
 bool workerWithLease(uint32_t namespaceId);
 bool isWorker(uint32_t namespaceId);
+struct Custody {
+ const Coordinator*coordinator=nullptr;const void*worker=nullptr;
+ uint64_t generation=0;uint32_t nameSpace=0,holder=0;
+};
+// Worker-only, RAM-only snapshot of the real immutable registration and current
+// accepted lease. Returns false before registration/acquisition, after release,
+// on a different namespace/task or on retained custody. Never grants authority.
+bool custody(uint32_t namespaceId,Custody*);
 // Single-namespace compatibility. The no-argument lookups fail closed once a
 // second binding exists; a store guard must use its exact namespace overload.
 bool prepare(RiscExperimental::NativeReplicaCore&,RiscExperimental::CheckedNativeReplicaStore&,bool(*owner)());

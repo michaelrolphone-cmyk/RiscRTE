@@ -1,0 +1,24 @@
+{
+  "base_commit": "2d362e8958f2938a3b6ad290b2cb2c75744d8f83",
+  "default_off": true,
+  "hardware_claim": false,
+  "vendor_mutations": false,
+  "all_reached_program_erase_and_sampled_read_fault_attempts": 440,
+  "retained_faults": 440,
+  "sha256": {
+    "src/ports/esp32s3/NativeAppData.h": "4b661ba1d4f3f7dce8160873a4d79e6a787081eceacad2f11736a1d959460ed7",
+    "src/ports/esp32s3/NativeAppDataMount.cpp": "ab51ac0ca4b0db121e2225dc1b5d66f0403d0516b96b7b1de2ea850b4cae8523",
+    "src/ports/esp32s3/NativeAppData.cpp": "26b88a6bf56323a19102b557e6ab9860712e5ea9a244b8df3c89f848ac3b76d4",
+    "src/ports/esp32s3/NativeAppDataMount.h": "4ce9b367f0a023f7957bbe64a1e2f3ca3e35f07b8f0787abf388f58f898e1ff5",
+    "experimental/native_replica/pinned_littlefs/littlefs_api.h": "cc806a02463db1516ed1a144189bc9267168b6cd79b543e95fb12099eeed18c2",
+    "experimental/native_replica/pinned_littlefs/LICENSE-esp-littlefs.txt": "81dfefa7711672ea4a8b17e577d6a834881028d64c26fe3b56a07cc384a52866",
+    "experimental/native_replica/pinned_littlefs/README.md": "20bfad0200f2ab2dc65270fbe6bc08a1065468ad7d2ec685c8d957539863762c",
+    "experimental/native_replica/pinned_littlefs/LICENSE-littlefs.txt": "476f73294dbc49831e404c07268e040cb1f61c7b780bd7170a9de82ea0db09e1",
+    "experimental/native_replica/pinned_littlefs/littlefs/lfs_util.h": "03e912a6e9894c9d10c61f5da22b89ebe0bb778af67972d7b67a5f160731bf72",
+    "experimental/native_replica/pinned_littlefs/littlefs/lfs.h": "a8c8d70f0863fbbc46ce17c5dc7673b40f1b3c9e7e10f3bf33fd28f03dc67703",
+    "test/native_app_data_mount_posix.cpp": "a96513dc2babb5d565f70e800ef81b2b4684db34b78e4ddf09d3bd2d7cb051cf",
+    "test/compile_native_app_data_mount_target.sh": "d0ec5959562e84ef36798e353608a2bc4f937f5520364b6050e89e73e4618475",
+    "test/run_native_app_data_mount_test.py": "93f429c71dd65f53c38505397f59d1a7f89b1dce5d7f26a8a18df1d27e4575e9",
+    "test/native_app_data_mount_test.cpp": "54a9738e8d815756331ef35e859940d9828b2cd8828ea1fa76c08658cbbe180d"
+  }
+}

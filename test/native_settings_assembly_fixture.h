@@ -61,8 +61,9 @@ static bool assembleMaintenance(){
  if(scenario=="littlefs-assembly-only"||scenario.rfind("assembly-littlefs-",0)==0){
   using Little=RiscExperimental::CheckedLittleFsFreshInitArtifacts;
   Little::Mount mount{};mount.profile=Little::PinnedProfile;mount.partitionAddress=0x10000;mount.partitionBytes=0x80000;
-  mount.vfs=&a->files;mount.partition=&a->metadata;mount.worker=a;mount.nativeLease=2;
-  mount.mountEpoch=mount.rootEpoch=mount.leaseEpoch=mount.writerFenceEpoch=mount.redirectEpoch=1;
+  mount.vfs=&a->files;mount.partition=&a->metadata;// Construction precedes registration: there is no worker or accepted lease.
+  assert(!mount.worker&&!mount.coordinator&&!mount.leaseEpoch&&!mount.custodyEpoch&&!mount.nativeLease);
+  mount.mountEpoch=mount.rootEpoch=mount.writerFenceEpoch=mount.redirectEpoch=1;
   static const std::string fullRoot="/tmp/lfs-assembly-"+std::to_string(getpid());
   std::filesystem::create_directory(fullRoot);
   strcpy(mount.mountPath,"/tmp");strcpy(mount.privateRoot,fullRoot.c_str()+4);

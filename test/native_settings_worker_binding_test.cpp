@@ -15,6 +15,7 @@
 namespace W=RiscCpu::NativeSettingsWorker;
 namespace NF=NativeFixture;
 using Coordinator=W::Coordinator;
+using Inspector=RiscExperimental::CheckedLittleFsFreshInitArtifacts;
 namespace Shim {
 thread_local char taskAnchor;
 thread_local TaskHandle_t taskHandle=&taskAnchor;
@@ -75,12 +76,24 @@ struct BoundStore {
  const uint32_t ns;
  RiscStorage::AppDataFiles files{{nullptr,NF::now,NF::cooperate,NF::secureAlloc,NF::secureFree}};
  N metadata{{this,allowed,[](void*){return ESP_OK;}}};
+ Inspector inspector;uint64_t seenGeneration=0;
+ static Inspector::Mount mount(BoundStore*p){Inspector::Mount m{};m.profile=Inspector::PinnedProfile;m.partitionAddress=0x10000;m.partitionBytes=0x80000;m.vfs=&p->files;m.partition=&p->metadata;m.mountEpoch=m.rootEpoch=m.writerFenceEpoch=m.redirectEpoch=1;strcpy(m.mountPath,"/test");strcpy(m.privateRoot,"/private");return m;}
+ static Inspector::Port port(BoundStore*p){return {p,
+  [](void*p,Inspector::Mount*out){auto&s=*static_cast<BoundStore*>(p);W::Custody live{};if(!W::custody(s.ns,&live))return int(C::Busy);*out=mount(&s);out->worker=live.worker;out->coordinator=live.coordinator;out->nameSpace=live.nameSpace;out->leaseEpoch=out->custodyEpoch=live.generation;out->nativeLease=2;return int(C::Ok);},
+  [](void*){return int(C::Ok);},[](void*){return true;},
+  [](void*,const void*,const char*path,struct stat*out){if(!strcmp(path,"/private")){*out={};out->st_mode=S_IFDIR;return 0;}errno=ENOENT;return -1;},
+  [](void*,const void*,const char*){assert(false);return -1;},
+  [](void*,const void*,int,void*,size_t)->ptrdiff_t{assert(false);return -1;},
+  [](void*,const void*,int){assert(false);return -1;},
+  [](void*,const void*,const char*)->void*{assert(false);return nullptr;},
+  [](void*,const void*,void*,Inspector::Entry*){assert(false);return -1;},
+  [](void*,const void*,void*){assert(false);return -1;}};}
  S store;C core;
- explicit BoundStore(uint32_t id):ns(id),store(id,files,metadata.api(),{this,allowed,NF::space}),core(id,store.backend(),S::limits(),C::heap()){assert(files.configure(NF::rootPath.c_str()));}
- static bool allowed(void*p){return W::workerWithLease(static_cast<BoundStore*>(p)->ns);}
+ explicit BoundStore(uint32_t id):ns(id),inspector(id,mount(this),port(this)),store(id,files,metadata.api(),{this,allowed,NF::space}),core(id,store.backend(),S::limits(),C::heap()){assert(files.configure(NF::rootPath.c_str()));}
+ static bool allowed(void*p){auto&s=*static_cast<BoundStore*>(p);W::Custody live{};const bool allowed=W::workerWithLease(s.ns);assert(W::custody(s.ns,&live)==allowed);if(allowed){assert(live.nameSpace==s.ns&&live.worker==xTaskGetCurrentTaskHandle()&&live.generation>=s.seenGeneration);s.seenGeneration=live.generation;}return allowed;}
 };
 struct NativeJob {
- BoundStore&f;Coordinator*service=nullptr;uint32_t slot=0;uint64_t token=0;bool dual=true;
+ BoundStore&f;Coordinator*service=nullptr;uint32_t slot=0;uint64_t token=0,expectedGeneration=0;bool dual=true;
  RiscExperimental::NativeReplicaControlJob job{run,this};std::atomic<bool>retained{false};
  explicit NativeJob(BoundStore&b,bool two=true):f(b),dual(two){}
  Coordinator::NativeClient client(){return {this,sizeof(*this),
@@ -89,13 +102,16 @@ struct NativeJob {
   [](void*p){auto&s=*static_cast<NativeJob*>(p);return !s.token&&s.job.exitSafe();},
   [](void*p){return static_cast<NativeJob*>(p)->retained.load();}};}
  void bind(){service=W::coordinator(f.ns);assert(service&&!service->registerNative(client(),&slot));}
- int begin(Coordinator::Lease&lease,uint32_t action){assert(!service->acquireNative(slot,&lease));return job.begin(action,nullptr,0,&token);}
+ int begin(Coordinator::Lease&lease,uint32_t action){assert(!service->acquireNative(slot,&lease));expectedGeneration=lease.serial;return job.begin(action,nullptr,0,&token);}
  int collect(){J::Result result{};int rc=job.collect(token,&result);if(rc==RISC_STORAGE_WORK_OK){token=0;if(result.status==C::Retained)retained.store(true);return result.status;}return rc;}
  static J::Result run(void*p,uint32_t action,const void*,uint32_t){
   auto&s=*static_cast<NativeJob*>(p);assert(W::isWorker(s.f.ns)&&W::workerWithLease(s.f.ns)&&!W::coordinator(s.f.ns));
   assert(!W::isWorker(s.f.ns==1?6:1)&&!W::workerWithLease(s.f.ns==1?6:1));
   assert(W::isWorker()==!s.dual&&W::workerWithLease()==!s.dual);
   assert(!W::exitSafe());
+  W::Custody live{},wrong{};assert(W::custody(s.f.ns,&live)&&live.coordinator==s.service&&live.worker==xTaskGetCurrentTaskHandle()&&live.nameSpace==s.f.ns&&live.holder==s.slot&&live.generation==s.expectedGeneration);
+  assert(!W::custody(s.f.ns==1?6:1,&wrong)&&!wrong.generation&&!W::custody(s.f.ns,nullptr));
+  assert(s.f.inspector.inspectAbsent()==C::Ok&&s.f.inspector.exitSafe());
   int rc=action==1?s.f.core.initialize(nullptr,0,{}):s.f.core.load();s.f.store.finishOperation();if(!s.f.store.exitSafe())rc=C::Retained;return {rc,0,s.f.core.revision()};
  }
 };
@@ -112,6 +128,7 @@ void deniedOperations(Coordinator&s,uint64_t revision){
 void registration(){
  auto*a=new BoundStore(1);auto*b=new BoundStore(6);auto*c=new BoundStore(3);auto*duplicate=new BoundStore(1);
  assert(W::exitSafe()&&!W::coordinator()&&!W::coordinator(1)&&!W::isWorker()&&!W::workerWithLease());
+ W::Custody unpublished{};assert(!W::custody(1,&unpublished)&&!unpublished.worker&&!unpublished.generation&&a->inspector.inspectAbsent()==C::Busy);
  assert(!W::prepare(0,a->core,a->store,owner)&&!W::prepare(UINT32_MAX,a->core,a->store,owner));
  assert(!W::prepare(6,a->core,a->store,owner)&&!W::prepare(1,a->core,b->store,owner));
  assert(!W::prepare(1,a->core,duplicate->store,owner));
@@ -132,7 +149,7 @@ void registration(){
  Shim::allocationHook=[&]{assert(!W::prepare(6,b->core,b->store,owner));};
  assert(W::prepare(a->core,a->store,owner));Shim::allocationHook=nullptr;auto*first=W::coordinator();assert(first==W::coordinator(1));
  const auto calls=Shim::heapCalls;assert(!W::prepare(a->core,a->store,owner)&&!W::prepare(duplicate->core,duplicate->store,owner)&&!W::prepare(alias,a->store,owner));assert(Shim::heapCalls==calls);
- std::thread foreign([&]{assert(!W::prepare(b->core,b->store,owner)&&!W::coordinator(1)&&!W::coordinator()&&!W::exitSafe());risc_key_value_atomic_state_v1 state{};state.struct_size=sizeof state;assert(first->endpoint().state(&state)==RISC_ATOMIC_INVALID&&first->activate()==C::Invalid);});foreign.join();
+ std::thread foreign([&]{W::Custody foreign{};assert(!W::custody(1,&foreign)&&!foreign.coordinator);assert(!W::prepare(b->core,b->store,owner)&&!W::coordinator(1)&&!W::coordinator()&&!W::exitSafe());risc_key_value_atomic_state_v1 state{};state.struct_size=sizeof state;assert(first->endpoint().state(&state)==RISC_ATOMIC_INVALID&&first->activate()==C::Invalid);});foreign.join();
  auto*job=new NativeJob(*a,false);Shim::deny(job,sizeof(*job));uint32_t slot=99;assert(first->registerNative(job->client(),&slot)==C::Invalid&&!slot);Shim::allow();job->bind();assert(!job->service->activate());initialize(*job);
  Shim::park();const auto pending=submit(*a,*first);assert(!W::prepare(6,b->core,b->store,owner)&&!W::exitSafe());assert(first->endpoint().cancel(pending)==RISC_ATOMIC_PENDING);Shim::resume();assert(collect(*first,pending).status==RISC_ATOMIC_CANCELLED);
  Shim::failTask=true;assert(!W::prepare(6,b->core,b->store,owner));Shim::failTask=false;assert(W::coordinator()==first&&W::exitSafe());

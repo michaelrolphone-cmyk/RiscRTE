@@ -20,4 +20,12 @@ flags=(-std=gnu++17 -Wall -Wextra -Werror -fno-exceptions -fno-rtti -DESP_PLATFO
 "$nm" -u "$out/native-settings-worker.o" | grep -E 'xTaskCreateStaticPinnedToCore|nativeBackgroundResource|heap_caps_malloc|vTaskDelay'
 if "$nm" -u "$out/native-settings-worker.o" | grep -E 'vTaskDelete|esp_vfs_littlefs|nvs_flash_init'; then echo 'Unexpected task deletion or mount/init dependency' >&2; exit 1; fi
 if test -n "$("$nm" "$out/native-settings-worker-default-off.o")"; then echo 'Default-off object is not empty' >&2; exit 1; fi
+# An integrated mount checkout may be supplied independently while both changes
+# are developed. This still compiles one target translation unit at a time.
+if [[ -n "${NATIVE_SETTINGS_MOUNT_ROOT:-}" ]]; then
+ "$compiler" "${flags[@]}" "${includes[@]}" -I"$NATIVE_SETTINGS_MOUNT_ROOT/src/ports/esp32s3" -DRISC_PAIRED_APP_DATA -DRISC_NATIVE_APP_DATA_MOUNT=1 -c "$root/src/ports/esp32s3/NativeSettingsWorker.cpp" -o "$out/native-settings-worker-mount.o"
+fi
+for object in "$out"/*.o; do
+ if "$nm" -u "$object" | grep -E '__atomic_[[:alnum:]_]*_8|__sync_[[:alnum:]_]*_8'; then echo 'Non-lock-free 64-bit atomic dependency' >&2; exit 1; fi
+done
 sha256sum "$out"/*.o

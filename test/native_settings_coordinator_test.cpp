@@ -1,11 +1,15 @@
 #define NATIVE_FIXTURE_THREADED 1
 #include "native_replica_checked_fixture.h"
+#define RISC_NATIVE_SETTINGS_COORDINATOR_TEST 1
 #include "experimental/native_replica/NativeSettingsCoordinator.h"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 using namespace NativeFixture;
 using Coordinator=RiscExperimental::NativeSettingsCoordinator;
+namespace RiscExperimental {struct NativeSettingsCoordinatorTestAccess {
+ static void nearExhaustion(NativeSettingsCoordinator&s){assert(s.exitSafe());s.serial_=s.MaxGeneration-1;s.epoch_.store(s.serial_,std::memory_order_release);}
+};}
 struct Context {
  std::thread::id owner=std::this_thread::get_id();std::atomic<unsigned>acquires{0},ends{0};
  bool deny=false,denyControl=false;
@@ -33,7 +37,9 @@ struct Maintenance {
 };
 struct Runner {
  Coordinator&service;std::atomic<bool>stop{false},enabled{true};std::atomic<unsigned>polls{0};std::thread task;
- explicit Runner(Coordinator&s,bool run=true):service(s),enabled(run),task([this]{onWorker=true;while(!stop.load()){if(enabled.load()){service.workerStep();++polls;}std::this_thread::yield();}onWorker=false;}){}
+ explicit Runner(Coordinator&s,bool run=true):service(s),enabled(run),task([this]{onWorker=true;uint64_t previous=0;while(!stop.load()){if(enabled.load()){
+ Coordinator::Custody live{};if(service.workerCustody(&live)){assert(live.coordinator==&service&&live.nameSpace==service.namespaceId()&&live.generation>=previous&&live.generation<=Coordinator::MaxGeneration);previous=live.generation;}
+ service.workerStep();++polls;}std::this_thread::yield();}onWorker=false;}){}
  ~Runner(){stop.store(true);task.join();}
  void several(){const unsigned n=polls.load()+1000;while(polls.load()<n)std::this_thread::yield();}
 };
@@ -82,6 +88,36 @@ void bounds(){
  assert(endpoint.nativeRetained()&&!endpoint.exitSafe()&&context.acquires==context.ends);
  puts("coordinator: four-client bound; foreign/stale leases; native maintenance Retained reaches atomic state/get/submit/exit PASS");
 }
+void generations(){
+ for(bool atomic:{false,true}){
+  empty();Fixture f;initialize(f);Context context;Coordinator service(f.core,f.store,context.hooks());Maintenance client(f);client.coordinator=&service;
+  assert(!service.registerNative(client.client(),&client.slot)&&!service.activate());
+  Coordinator::Custody live{};assert(!service.workerCustody(&live)&&!live.generation);
+  uint64_t previous=0;Coordinator::Lease stale;
+  for(unsigned n=0;n<128;++n){
+   Coordinator::Lease held;assert(!service.acquireNative(client.slot,&held)&&held.serial==previous+1);previous=held.serial;
+   assert(!service.workerCustody(&live));onWorker=true;assert(service.workerCustody(&live)&&live.coordinator==&service&&live.nameSpace==f.core.namespaceId()&&live.holder==held.slot&&live.generation==held.serial);onWorker=false;
+   if(stale.serial)assert(!service.nativeOwner(stale)&&service.releaseNative(stale)==C::Invalid);
+   assert(!service.releaseNative(held));stale=held;
+   onWorker=true;assert(!service.workerCustody(&live)&&!live.generation);onWorker=false;
+   risc_key_value_atomic_state_v1 state{sizeof(state),0,0,0,0,0,0,0,0};assert(!service.endpoint().state(&state));++previous;
+  }
+  RiscExperimental::NativeSettingsCoordinatorTestAccess::nearExhaustion(service);
+  Coordinator::Lease held;uint64_t token=0;
+  if(atomic)token=submit(service,f.core.revision());else assert(!service.acquireNative(client.slot,&held)&&held.serial==Coordinator::MaxGeneration);
+  onWorker=true;assert(service.workerCustody(&live)&&live.generation==Coordinator::MaxGeneration);
+  if(atomic)assert(service.workerStep());
+  onWorker=false;
+  if(atomic)assert(!collect(service,token).status);else assert(!service.releaseNative(held));
+  const auto before=context.acquires.load();const auto fs=fsTotal,nv=nvsTotal;
+  assert(service.acquireNative(client.slot,&held)==C::NoSpace&&!held.serial&&!held.slot);
+  risc_key_value_atomic_state_v1 state{sizeof(state),0,0,0,0,0,0,0,0};assert(service.endpoint().state(&state)==RISC_ATOMIC_BUSY);
+  assert(service.endpoint().submit(f.core.revision(),nullptr,0,"intent",6,&token)==RISC_ATOMIC_BUSY&&!token);
+  onWorker=true;assert(!service.workerCustody(&live)&&!live.generation);onWorker=false;
+  assert(context.acquires==before&&fs==fsTotal&&nv==nvsTotal&&service.exitSafe());
+ }
+ puts("coordinator: coherent custody, 256 native release/reacquire generations interleaved with atomic reads; both final atomic/native generations saturate without I/O or resource acquisition PASS");
+}
 void cancellation(){
  empty();Fixture f;initialize(f);Context context;Coordinator service(f.core,f.store,context.hooks());assert(!service.activate());Runner worker(service,false);
  const auto revision=f.core.revision();auto token=submit(service,revision);const unsigned beforeNvs=nvsTotal,beforeFs=fsTotal;
@@ -111,4 +147,4 @@ void retention(){
  Coordinator::Lease rejected;assert(service.acquireNative(native.slot,&rejected)==C::Retained);assert(service.endpoint().cancel(token)==RISC_ATOMIC_RETAINED);worker.several();
  assert(context.ends==0);puts("coordinator: actual checked close failure sticks Retained, namespace/background lease and native references PASS");
 }
-int main(int argc,char**argv){assert(argc==2);rootPath=argv[1];std::filesystem::create_directories(rootPath);basics();bounds();cancellation();inFlight();retention();assert(handles.empty());}
+int main(int argc,char**argv){assert(argc==2);rootPath=argv[1];std::filesystem::create_directories(rootPath);basics();bounds();generations();cancellation();inFlight();retention();assert(handles.empty());}

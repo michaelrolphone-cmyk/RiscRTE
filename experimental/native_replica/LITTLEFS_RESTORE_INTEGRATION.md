@@ -72,9 +72,10 @@ default-off AppDataFiles is byte-identical to the integration base. The original
 inspector still emits identical normal/ESP unsupported objects with no filesystem
 imports. These are compile checks, not a linked or activated product.
 
-The target inspector remains 456 bytes, concrete adapter 8 bytes (host 16), and
+With live custody binding, the target inspector is 504 bytes (+48), the concrete
+adapter remains 8 bytes (host 16), and
 permanent assembly controls total 50,568 bytes (host 52,176). LittleFS file scratch
-uses a 656-byte compiler frame; inventory is 752, authority check 464 and inspect
+uses a 656-byte compiler frame; inventory is 752, authority check 528 and inspect
 96 bytes. These nested frames exclude vendor/callback costs and are not a stack
 high-water qualification.
 
@@ -83,10 +84,11 @@ high-water qualification.
 1. An actual native mount owner must bind the registered VFS/partition and a
    dedicated inaccessible settings root. Ordinary AppData namespace 1 is already
    used by Timecard; `/appdata/n00000001` cannot be appropriated for settings.
-2. Construction and lifetime of a permanent inspector must be reconciled with
-   workers created later and real per-operation lease epochs. This inspector
-   retains immutable worker/epoch binding and refuses tuple changes. Constant
-   invented epochs or synthetic host snapshots cannot satisfy production custody.
+2. Construction/worker ordering is resolved by [live custody binding](LIVE_SETTINGS_CUSTODY.md):
+   immutable mount identity is construction-bound and real registered worker/
+   coordinator/lease/mount-enter custody is captured for each inspection.
+   Production adapters must use those witnesses; invented identities/epochs
+   cannot satisfy this contract.
 3. The store's POSIX mutations must remain under that same retained mount owner,
    with every writer, cleanup owner, mount manager and redirect fenced.
 4. The separately documented 8,192-byte vendor program-failure assertion and

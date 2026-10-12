@@ -12,9 +12,9 @@ class CheckedLittleFsFreshInitArtifacts final {
  static constexpr uint32_t PinnedProfile=0x41873c20u;
  struct Mount {
   uint32_t profile=0,partitionAddress=0,partitionBytes=0;
-  const void*vfs=nullptr;const void*partition=nullptr;const void*worker=nullptr;
-  uint64_t mountEpoch=0,rootEpoch=0,leaseEpoch=0,writerFenceEpoch=0,redirectEpoch=0;
-  uint32_t nativeLease=0,competingWriters=0,nestedMounts=0;
+  const void*vfs=nullptr;const void*partition=nullptr;const void*worker=nullptr;const void*coordinator=nullptr;
+  uint64_t mountEpoch=0,rootEpoch=0,leaseEpoch=0,custodyEpoch=0,writerFenceEpoch=0,redirectEpoch=0;
+  uint32_t nameSpace=0,nativeLease=0,competingWriters=0,nestedMounts=0;
   bool encrypted=false;
   char mountPath[32]{},privateRoot[96]{};
  };
@@ -34,8 +34,11 @@ class CheckedLittleFsFreshInitArtifacts final {
   int(*readdir)(void*,const void*,void*,Entry*)=nullptr; // 1 row, 0 EOF, -1 error
   int(*closedir)(void*,const void*,void*)=nullptr;
  };
- // Exact expected mount values come from trusted native construction, not app
- // arguments. Private-root ownership and all-writer fencing require port proof.
+ // Immutable mount/partition/private-root values are construction-bound before
+ // worker registration. Dynamic worker/coordinator/namespace/lease/custody
+ // values in bound are deliberately NOT construction authority. Each inspection
+ // obtains and latches them from two matching live port snapshots, then checks
+ // them across every operation. Private-root/all-writer fencing needs port proof.
  CheckedLittleFsFreshInitArtifacts(uint32_t ns,const Mount&bound,Port port)
   :ns_(ns),bound_(bound),port_(port),encoding_(ns,nullptr,{}){}
  CheckedLittleFsFreshInitArtifacts(const CheckedLittleFsFreshInitArtifacts&)=delete;
@@ -46,7 +49,7 @@ class CheckedLittleFsFreshInitArtifacts final {
  // Store paths include the registered mount; VFS callbacks receive paths
  // relative to that exact mount. This comparison is RAM-only, not admission.
  bool boundTo(uint32_t ns,const char*root)const{
-  if(ns_!=ns||!root||!valid(bound_))return false;
+  if(ns_!=ns||!root||!validBinding(bound_))return false;
   char full[sizeof bound_.mountPath+sizeof bound_.privateRoot]{};
   std::snprintf(full,sizeof full,"%s%s",bound_.mountPath,bound_.privateRoot);
   return !std::strcmp(root,full);
@@ -59,7 +62,9 @@ class CheckedLittleFsFreshInitArtifacts final {
  int inspectSdAttempt(const uint8_t*p,uint32_t n,uint64_t next){return inspect(p,n,next,Attempt::Sd);}
  private:
  uint32_t ns_;Mount bound_;Port port_;CheckedFreshInitArtifacts encoding_;
- bool entered_=false,retained_=false;int fd_=-1;void*dir_=nullptr;
+ bool entered_=false,retained_=false,captured_=false;int fd_=-1;void*dir_=nullptr;
+ struct Custody {const void*worker=nullptr;const void*coordinator=nullptr;uint64_t leaseEpoch=0,custodyEpoch=0;};
+ Custody custody_{};
  using Canonical=CheckedFreshInitArtifacts::Canonical;
  using Attempt=CheckedFreshInitArtifacts::Attempt;
  struct Enter {bool&v;explicit Enter(bool&b):v(b){v=true;}~Enter(){v=false;}};
@@ -74,19 +79,22 @@ class CheckedLittleFsFreshInitArtifacts final {
    at=e+1;
   }return true;
  }
- static bool valid(const Mount&m){
-  return m.profile==PinnedProfile&&m.vfs&&m.partition&&m.worker&&m.partitionBytes==0x80000&&
+ static bool validBinding(const Mount&m){
+  return m.profile==PinnedProfile&&m.vfs&&m.partition&&m.partitionBytes==0x80000&&
    m.partitionAddress&&m.partitionAddress%4096==0&&!m.encrypted&&m.mountEpoch&&m.rootEpoch&&
-   m.leaseEpoch&&m.writerFenceEpoch&&m.redirectEpoch&&m.nativeLease==2&&
+   m.writerFenceEpoch&&m.redirectEpoch&&
    !m.competingWriters&&!m.nestedMounts&&path(m.mountPath,sizeof m.mountPath)&&path(m.privateRoot,sizeof m.privateRoot);
  }
- static bool same(const Mount&a,const Mount&b){
-  return valid(b)&&a.profile==b.profile&&a.partitionAddress==b.partitionAddress&&a.partitionBytes==b.partitionBytes&&
-   a.vfs==b.vfs&&a.partition==b.partition&&a.worker==b.worker&&a.mountEpoch==b.mountEpoch&&
-   a.rootEpoch==b.rootEpoch&&a.leaseEpoch==b.leaseEpoch&&a.writerFenceEpoch==b.writerFenceEpoch&&
+ static bool sameBinding(const Mount&a,const Mount&b){
+  return validBinding(b)&&a.profile==b.profile&&a.partitionAddress==b.partitionAddress&&a.partitionBytes==b.partitionBytes&&
+   a.vfs==b.vfs&&a.partition==b.partition&&a.mountEpoch==b.mountEpoch&&
+   a.rootEpoch==b.rootEpoch&&a.writerFenceEpoch==b.writerFenceEpoch&&
    a.redirectEpoch==b.redirectEpoch&&!std::strcmp(a.mountPath,b.mountPath)&&!std::strcmp(a.privateRoot,b.privateRoot);
  }
- bool configured()const{return valid(bound_)&&ns_&&ns_<=INT32_MAX&&port_.snapshot&&port_.observe&&port_.cooperate&&port_.stat&&port_.open&&port_.read&&port_.close&&port_.opendir&&port_.readdir&&port_.closedir;}
+ bool validCustody(const Mount&m)const{return m.nameSpace==ns_&&m.worker&&m.coordinator&&m.leaseEpoch&&m.custodyEpoch&&m.nativeLease==2;}
+ static bool sameCustody(const Mount&a,const Mount&b){return a.worker==b.worker&&a.coordinator==b.coordinator&&a.leaseEpoch==b.leaseEpoch&&a.custodyEpoch==b.custodyEpoch;}
+ bool accepted(const Mount&m)const{return !captured_||(custody_.worker==m.worker&&custody_.coordinator==m.coordinator&&custody_.leaseEpoch==m.leaseEpoch&&custody_.custodyEpoch==m.custodyEpoch);}
+ bool configured()const{return validBinding(bound_)&&ns_&&ns_<=INT32_MAX&&port_.snapshot&&port_.observe&&port_.cooperate&&port_.stat&&port_.open&&port_.read&&port_.close&&port_.opendir&&port_.readdir&&port_.closedir;}
  int check(bool yield=false){
   if(retained_)return C::Retained;
   int rc=port_.observe(port_.context);if(rc==C::Retained)return retain();
@@ -94,11 +102,12 @@ class CheckedLittleFsFreshInitArtifacts final {
   int middle=port_.observe(port_.context);if(a==C::Retained||middle==C::Retained)return retain();
   const int b=port_.snapshot(port_.context,&last);
   if(b==C::Retained)return retain();
-  if(a||b||!same(bound_,first)||!same(bound_,last)){
+  if(a||b||!sameBinding(bound_,first)||!sameBinding(bound_,last)||!validCustody(first)||!validCustody(last)||!sameCustody(first,last)||!accepted(first)||!accepted(last)){
    if(port_.observe(port_.context)==C::Retained)return retain();
    return handles()?retain():int(C::Busy);
   }
   if(rc||middle)return rc?rc:middle;
+  if(!captured_){custody_={first.worker,first.coordinator,first.leaseEpoch,first.custodyEpoch};captured_=true;}
   if(!yield)return C::Ok;
   const bool proceed=port_.cooperate(port_.context);rc=check();return rc?rc:proceed?int(C::Ok):int(C::Busy);
  }
@@ -177,7 +186,7 @@ class CheckedLittleFsFreshInitArtifacts final {
  int inspect(const uint8_t*p,uint32_t n,uint64_t next,Attempt mode){
   if(retained_)return C::Retained;
   if(entered_)return C::Busy;
-  Enter enter(entered_);
+  Enter enter(entered_);captured_=false;
   if(!configured())return C::Invalid;
   int rc=check();if(rc)return rc;
   const bool attempt=mode!=Attempt::Absent;

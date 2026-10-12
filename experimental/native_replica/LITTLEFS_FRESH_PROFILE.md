@@ -8,8 +8,10 @@ before filesystem I/O on ESP and unsupported targets.
 
 ## Separate admission and injection
 
-`CheckedLittleFsFreshInitArtifacts` is explicitly constructed with one immutable
-`Mount` and one trusted-native `Port`. `FreshInitArtifactInspector` is a narrow
+`CheckedLittleFsFreshInitArtifacts` is explicitly constructed with an immutable
+mount/partition/private-root binding and one trusted-native `Port`. Dynamic
+worker/coordinator/namespace/lease/mount-custody fields are obtained only when an
+inspection begins, after actual worker registration and lease acceptance. `FreshInitArtifactInspector` is a narrow
 value adapter accepted by the checked store and NVS source collector. Only the
 existing Linux/unsupported inspector and the new concrete pinned inspector have
 constructors in that adapter; there is no generic success callback constructor.
@@ -46,13 +48,18 @@ The port's coherent snapshot must bind:
 
 - Exact pinned VFS profile, captured VFS context and partition object
 - Expected aligned partition address, exact 512 KiB size and no encryption
-- Exact mount path, provisioned firmware-private root and worker identity
-- Nonzero mount, private-root, native-lease, all-writer-fence and VFS-redirection
-  epochs, with no wrap/reuse within the lifetime of any borrowed inspector
+- Exact construction-bound mount path and provisioned firmware-private root
+- Nonzero immutable mount/private-root/all-writer-fence/VFS-redirection epochs
+- The real registered worker, exact coordinator/namespace, nonzero accepted
+  native-lease generation and current mount-enter custody generation
 - The actual native shared lease in held state, zero competing writers and zero
   nested mounts affecting the private root
 
-Every observation/cooperation boundary rechecks the complete immutable tuple.
+Every inspection first obtains two coherent matching live custody snapshots.
+It latches their dynamic identity only for that inspection; safe release and
+reacquisition therefore permit the same permanent inspector to run again under
+later generations. Every observation/cooperation boundary rechecks both the
+construction-bound immutable tuple and that inspection's captured custody.
 Filesystem calls use the captured VFS context directly; they never resolve a
 new global VFS route. The same all-writer and mount-manager exclusion must also
 cover the checked store's POSIX mutation route. The last authority check is a
@@ -60,14 +67,17 @@ coherent snapshot, so an observation callback cannot revoke the lease after the
 last check and allow an I/O call. A lost tuple with an open handle is sticky
 `Retained`; without a handle it is `Busy`. Observed Retained has priority.
 
-The production gate is deliberately still open: `NativeAppData.cpp` currently
+At the original profile checkpoint, `NativeAppData.cpp`
 provisions only public `/appdata`, while the background resource API provides no
 private-root/mount-registration/worker epoch witness. A production port must
 establish the private root, capture the actual registration and partition,
 exclude remount/nested registration and every native writer/cleanup owner, and
 retain that state for the full factory/store operation. Merely supplying these
-fields or callbacks does not prove those obligations. No such production adapter
-is supplied or selected here.
+fields or callbacks does not prove those obligations. The independently developed default-off mount owner now supplies the actual
+registration and mount-enter generations. Its composition with the real worker
+is tested separately in [live custody binding](LIVE_SETTINGS_CUSTODY.md). A
+production source/selector still needs explicit integration; this inspector
+change enables no profile.
 
 ## What zero metadata means
 

@@ -1,5 +1,6 @@
 #if defined(ESP_PLATFORM) && defined(RISC_PAIRED_APP_DATA)
 #include "NativeAppData.h"
+#include "NativeAppDataMount.h"
 #include "NativeRadioResources.h"
 #include "runtime/storage/AppDataFiles.h"
 #include "runtime/storage/AsyncAppDataReplace.h"
@@ -11,6 +12,27 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 namespace RiscAppData { namespace {
+#if RISC_NATIVE_APP_DATA_MOUNT
+template<class F>int32_t mounted(RiscCpu::NativeRadioResourceGuard*lease,F operation){
+ if(RiscAppDataMount::retained()){if(lease)lease->held=false;return RISC_APP_DATA_RETAINED;}
+ int32_t result=RISC_APP_DATA_BUSY;
+ {RiscAppDataMount::Guard custody(RiscAppDataMount::Access::AppData);
+  if(!custody.held){
+   if(RiscAppDataMount::retained()){if(lease)lease->held=false;return RISC_APP_DATA_RETAINED;}
+   return RISC_APP_DATA_BUSY;
+  }
+  result=operation();
+  if(result==RISC_APP_DATA_RETAINED)RiscAppDataMount::retain();
+ }
+ if(RiscAppDataMount::retained()){if(lease)lease->held=false;return RISC_APP_DATA_RETAINED;}
+ return result;
+}
+#define APPDATA_CALL(lease,call) mounted(lease,[&](){return call;})
+#define APPDATA_RETAINED (asyncRetained||RiscAppDataMount::retained())
+#else
+#define APPDATA_CALL(lease,call) (call)
+#define APPDATA_RETAINED asyncRetained
+#endif
 RiscStorage::AsyncAppDataReplace*asyncWriter=nullptr;TaskHandle_t asyncTask=nullptr;
 bool backgroundLease=false,asyncRetained=false;
 bool pending(){return asyncWriter&&asyncWriter->pending();}
@@ -31,14 +53,14 @@ bool prepareWriter(){
  asyncWriter=new(memory)RiscStorage::AsyncAppDataReplace(bytes,RISC_APP_DATA_FILE_MAX,
   [](void*,uint32_t ns,const char*name,uint64_t expected,const void*data,uint32_t size)->int32_t{
    if(!worker())return RISC_APP_DATA_CONTEXT;
-   return files.replace(ns,name,expected,data,size);
+   return APPDATA_CALL(nullptr,files.replace(ns,name,expected,data,size));
   },nullptr);
  if(xTaskCreate(work,"appdata-writer",8192,nullptr,1,&asyncTask)==pdPASS)return true;
  asyncWriter->~AsyncAppDataReplace();asyncWriter=nullptr;asyncTask=nullptr;free(allocation);free(bytes);return false;
 }
 int32_t beginReplace(void*,uint32_t ns,const char*name,uint64_t expected,const void*bytes,uint32_t size,uint64_t*token){
  if(token)*token=0;
- if(!safe()||asyncRetained)return asyncRetained?RISC_APP_DATA_RETAINED:RISC_APP_DATA_UNAVAILABLE;
+ if(!safe()||APPDATA_RETAINED)return APPDATA_RETAINED?RISC_APP_DATA_RETAINED:RISC_APP_DATA_UNAVAILABLE;
  if(pending())return RISC_APP_DATA_BUSY;
  if(!files.exitSafe())return RISC_APP_DATA_RETAINED;
  if(!prepareWriter())return RISC_APP_DATA_NO_SPACE;
@@ -51,16 +73,19 @@ int32_t collectReplace(void*,uint64_t token,int32_t*result){
  if(!ownerTask||!ownerTask()||!asyncWriter)return RISC_APP_DATA_CONTEXT;
  int32_t rc=asyncWriter->collect(token,result);
  if(rc==RISC_APP_DATA_OK){
+#if RISC_NATIVE_APP_DATA_MOUNT
+  if(RiscAppDataMount::retained())*result=RISC_APP_DATA_RETAINED;
+#endif
   if(*result==RISC_APP_DATA_RETAINED)asyncRetained=true;
   else if(backgroundLease){backgroundLease=false;RiscCpu::nativeBackgroundResourceEnd();}
  }
  return rc;
 }
 const RiscBoot::AppDataBackend api={nullptr,
- [](void*,uint32_t n,const char*p,uint32_t*s,uint64_t*r)->int32_t{if(s)*s=0;if(r)*r=0;if(asyncRetained)return RISC_APP_DATA_RETAINED;if(pending())return RISC_APP_DATA_BUSY;if(!safe())return RISC_APP_DATA_UNAVAILABLE;RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_APP_DATA_BUSY;return files.stat(n,p,s,r);},
- [](void*,uint32_t n,const char*p,uint64_t v,void*b,uint32_t c,uint32_t*s,uint64_t*r)->int32_t{if(s)*s=0;if(r)*r=0;if(asyncRetained)return RISC_APP_DATA_RETAINED;if(pending())return RISC_APP_DATA_BUSY;if(!safe())return RISC_APP_DATA_UNAVAILABLE;RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_APP_DATA_BUSY;return files.read(n,p,v,b,c,s,r);},
- [](void*,uint32_t n,const char*p,uint64_t v,const void*b,uint32_t s)->int32_t{if(asyncRetained)return RISC_APP_DATA_RETAINED;if(pending())return RISC_APP_DATA_BUSY;if(!safe())return RISC_APP_DATA_UNAVAILABLE;RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_APP_DATA_BUSY;return files.replace(n,p,v,b,s);},
- [](void*){return !asyncRetained&&(pending()||files.exitSafe());},beginReplace,collectReplace,
+ [](void*,uint32_t n,const char*p,uint32_t*s,uint64_t*r)->int32_t{if(s)*s=0;if(r)*r=0;if(APPDATA_RETAINED)return RISC_APP_DATA_RETAINED;if(pending())return RISC_APP_DATA_BUSY;if(!safe())return RISC_APP_DATA_UNAVAILABLE;RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_APP_DATA_BUSY;return APPDATA_CALL(&lease,files.stat(n,p,s,r));},
+ [](void*,uint32_t n,const char*p,uint64_t v,void*b,uint32_t c,uint32_t*s,uint64_t*r)->int32_t{if(s)*s=0;if(r)*r=0;if(APPDATA_RETAINED)return RISC_APP_DATA_RETAINED;if(pending())return RISC_APP_DATA_BUSY;if(!safe())return RISC_APP_DATA_UNAVAILABLE;RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_APP_DATA_BUSY;return APPDATA_CALL(&lease,files.read(n,p,v,b,c,s,r));},
+ [](void*,uint32_t n,const char*p,uint64_t v,const void*b,uint32_t s)->int32_t{if(APPDATA_RETAINED)return RISC_APP_DATA_RETAINED;if(pending())return RISC_APP_DATA_BUSY;if(!safe())return RISC_APP_DATA_UNAVAILABLE;RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return RISC_APP_DATA_BUSY;return APPDATA_CALL(&lease,files.replace(n,p,v,b,s));},
+ [](void*){return !APPDATA_RETAINED&&(pending()||files.exitSafe());},beginReplace,collectReplace,
  [](void*){return pending();}};
 }
 bool prepare(bool (*owner)(),bool (*operationSafe)()){
@@ -71,12 +96,26 @@ bool prepare(bool (*owner)(),bool (*operationSafe)()){
  if(!p || p->encrypted || p->address!=0x270000 || p->size!=0x80000)return false;
  esp_vfs_littlefs_conf_t conf{};conf.base_path="/appdata";conf.partition_label="appdata";
  conf.format_if_mount_failed=false;conf.grow_on_mount=false;conf.read_only=false;conf.dont_mount=false;
+#if RISC_NATIVE_APP_DATA_MOUNT
+ RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return false;
+ if(!RiscAppDataMount::prepare(p))return false;
+ if(esp_vfs_littlefs_register(&conf)!=ESP_OK||!RiscAppDataMount::finish()){
+  if(RiscAppDataMount::retained())lease.held=false;
+  return false;
+ }
+ RiscAppDataMount::Guard custody(RiscAppDataMount::Access::AppData);if(!custody.held)return false;
+#else
  if(esp_vfs_littlefs_register(&conf)!=ESP_OK)return false;
+#endif
  // Keep mount/provider state alive until reset, including allocation failure.
- return files.configure("/appdata");
+ const bool configured=files.configure("/appdata");
+#if RISC_NATIVE_APP_DATA_MOUNT
+ if(RiscAppDataMount::retained())lease.held=false;
+#endif
+ return configured;
 }
 const RiscBoot::AppDataBackend* backend(){return &api;}
-bool custodySafe(){return !asyncRetained&&(pending()||files.exitSafe());}
-bool exitSafe(){return !asyncRetained&&!pending()&&files.exitSafe();}
+bool custodySafe(){return !APPDATA_RETAINED&&(pending()||files.exitSafe());}
+bool exitSafe(){return !APPDATA_RETAINED&&!pending()&&files.exitSafe();}
 }
 #endif

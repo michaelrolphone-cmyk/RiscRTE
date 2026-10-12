@@ -206,3 +206,32 @@ is not leak qualification. Target results are compile-only, not firmware link,
 private-mount provisioning, physical SD, task stack, power-cut or hardware
 qualification. No Watch policy, boot manifest, legacy-put intent conversion,
 conflict merge policy, GitHub publication or production admission is included.
+
+
+## Live custody generations and optional private mount
+
+`custody(namespace, out)` is worker-only and returns the actual permanent
+coordinator, registered task handle, namespace, holder and accepted generation.
+There is no worker or accepted epoch before registration/acquisition. Every
+accepted native and atomic lease consumes one nonzero generation, including
+synchronous atomic reads. Generation `UINT32_MAX` is the last accepted value;
+subsequent native acquisitions return `NoSpace` and atomic acquisitions refuse
+`Busy` without acquiring the background resource. No generation wraps. Native
+lease structures retain their existing 64-bit serial representation, but only
+lock-free 32-bit atomics publish the generation and holder across tasks.
+
+With explicit `RISC_NATIVE_APP_DATA_MOUNT`, an accepted-custody dispatch obtains
+`Access::Settings` and holds it across the complete coordinator worker step.
+Lease-held probes waiting on owner-side SD phases may enter/leave this RAM-only
+guard; no-custody idle probes never do. Normal completion checks fixed store
+custody and the mount's no-live-descriptor rule before releasing the mount.
+Store/source completion remains inside the concrete native callbacks. Failed
+close/vendor custody remains retained. The mount's sticky atomic failure is an
+immediate coordinator predicate, including during owner terminal collection.
+Only RAM checks and guard release occur after a mailbox has published completion;
+no terminal tail calls I/O or a reconstructible native-client object.
+
+See [live custody qualification](LIVE_SETTINGS_CUSTODY.md). The target coordinator,
+Binding, registry and assembly sizes above remain unchanged; the permanent
+LittleFS inspector increases from 456 to 504 target bytes. This optional path
+does not enable a product selector or alter Watch SD behavior.

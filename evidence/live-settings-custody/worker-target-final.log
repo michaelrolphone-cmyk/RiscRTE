@@ -1,0 +1,23 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+00000000 00001128 B native_settings_coordinator_size
+000032a0 00000010 B native_settings_binding_alignment
+000032b0 000032af B native_settings_binding_allocation_size
+00000000 000032a0 B native_settings_binding_size
+00006560 00000010 B native_settings_registry_size
+0000a820 0000656e B native_settings_two_bindings_permanent_size
+00006570 00004000 B native_settings_two_bindings_stack_size
+0000a570 000002b0 B native_settings_two_bindings_task_control_size
+         U _ZN7RiscCpu27nativeBackgroundResourceEndEv
+         U _ZN7RiscCpu27nativeBackgroundResourceTryEv
+         U heap_caps_malloc
+         U vTaskDelay
+         U xTaskCreateStaticPinnedToCore
+21ee71b26916f3b4c2631695ad9e260fb2dd921f4a2beb9a9b9aabe891a976ab  /workspace/shared/x4-settings-live-custody-evidence-20261012/worker-target-final/native-settings-worker-default-off.o
+cd6065bc33267cdf7c843cb42232f89ee6587b7fe85dfcda54d45ec17f087827  /workspace/shared/x4-settings-live-custody-evidence-20261012/worker-target-final/native-settings-worker-layout.o
+ee2b939b75721abfb4407ae09f163035b4714be8f387ed906ecfa8f075e233bf  /workspace/shared/x4-settings-live-custody-evidence-20261012/worker-target-final/native-settings-worker-mount.o
+888e27b1edbc0a885779eda93bb490f614999ae38c38fc8a5e8e238265c262b8  /workspace/shared/x4-settings-live-custody-evidence-20261012/worker-target-final/native-settings-worker-probe.o
+cac8b3e0caf6117f652ecbcbd6b5ac883521683389c94d2c115b235260a3a196  /workspace/shared/x4-settings-live-custody-evidence-20261012/worker-target-final/native-settings-worker.o

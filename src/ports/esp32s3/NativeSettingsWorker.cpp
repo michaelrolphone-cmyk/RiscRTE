@@ -1,6 +1,9 @@
 #include "NativeSettingsWorker.h"
 #if defined(ESP_PLATFORM) && RISC_NATIVE_SETTINGS_WORKER
 #include "NativeRadioResources.h"
+#if RISC_NATIVE_APP_DATA_MOUNT
+#include "NativeAppDataMount.h"
+#endif
 #include <esp_heap_caps.h>
 #include <soc/soc_memory_types.h>
 #include <freertos/FreeRTOS.h>
@@ -22,7 +25,13 @@ struct Binding {
    [](void*p){auto&s=*static_cast<Binding*>(p);return !xPortInIsrContext()&&xTaskGetCurrentTaskHandle()==s.ownerTask&&s.ownerCheck&&s.ownerCheck();},
    [](void*p){auto&s=*static_cast<Binding*>(p);return !xPortInIsrContext()&&xTaskGetCurrentTaskHandle()==s.workerTask.load(std::memory_order_acquire);},
    [](void*){return nativeBackgroundResourceTry();},[](void*){nativeBackgroundResourceEnd();},
-   [](void*,const void*p,size_t n){return internal(p,n);}}){}
+   [](void*,const void*p,size_t n){return internal(p,n);},
+   #if RISC_NATIVE_APP_DATA_MOUNT
+   [](void*){return RiscAppDataMount::retained();}
+   #else
+   nullptr
+   #endif
+   }){}
 };
 struct Registry {
  std::atomic_flag preparing=ATOMIC_FLAG_INIT;
@@ -43,7 +52,31 @@ Binding*find(uint32_t ns){
 }
 Binding*single(){return registry.count.load(std::memory_order_acquire)==1?registry.bindings[0]:nullptr;}
 bool onWorker(Binding*s){return s&&!xPortInIsrContext()&&xTaskGetCurrentTaskHandle()==s->workerTask.load(std::memory_order_acquire);}
-void run(void*p){auto&s=*static_cast<Binding*>(p);s.workerTask.store(xTaskGetCurrentTaskHandle(),std::memory_order_release);for(;;){s.service.workerStep();vTaskDelay(1);}}
+void dispatch(Binding&s){
+ #if RISC_NATIVE_APP_DATA_MOUNT
+ // The accepted lease can span owner-side SD phases. These probes may acquire
+ // only the RAM custody guard while that lease waits; no idle/no-lease entry.
+ Coordinator::Custody accepted{};if(!s.service.workerCustody(&accepted))return;
+ if(!RiscAppDataMount::enter(RiscAppDataMount::Access::Settings)){
+  if(RiscAppDataMount::retained())s.service.retainFromWorker();
+  return;
+ }
+ s.service.workerStep();
+ // Client callbacks finish/check their store and sources before returning.
+ // Mailbox publication may already have happened: only permanent store/mount
+ // RAM custody is touched here, never I/O or reconstructible client controls.
+ // The mount's sticky failure is also an immediate coordinator fence, so owner
+ // collection cannot release an unsafe native lease while this tail unwinds.
+ if(!s.store.exitSafe()||s.service.retained()){
+  RiscAppDataMount::retain();s.service.retainFromWorker();return;
+ }
+ RiscAppDataMount::leave(); // refuses and retains any still-live descriptor
+ if(RiscAppDataMount::retained())s.service.retainFromWorker();
+ #else
+ s.service.workerStep();
+ #endif
+}
+void run(void*p){auto&s=*static_cast<Binding*>(p);s.workerTask.store(xTaskGetCurrentTaskHandle(),std::memory_order_release);for(;;){dispatch(s);vTaskDelay(1);}}
 }
 bool prepare(uint32_t ns,C&core,S&store,bool(*owner)()){
  if(xPortInIsrContext()||!owner||!owner()||!ns||ns>INT32_MAX)return false;
@@ -72,6 +105,12 @@ bool prepare(C&core,S&store,bool(*owner)()){return prepare(core.namespaceId(),co
 Coordinator*coordinator(uint32_t ns){auto*s=find(ns);return s&&s->service.owner()?&s->service:nullptr;}
 bool isWorker(uint32_t ns){return onWorker(find(ns));}
 bool workerWithLease(uint32_t ns){auto*s=find(ns);return s&&s->service.workerWithLease();}
+bool custody(uint32_t ns,Custody*out){
+ if(out)*out={};
+ auto*s=find(ns);if(!out||!onWorker(s))return false;
+ Coordinator::Custody accepted{};if(!s->service.workerCustody(&accepted)||accepted.nameSpace!=ns||accepted.coordinator!=&s->service)return false;
+ *out={accepted.coordinator,s->workerTask.load(std::memory_order_acquire),accepted.generation,accepted.nameSpace,accepted.holder};return true;
+}
 Coordinator*coordinator(){auto*s=single();return s&&s->service.owner()?&s->service:nullptr;}
 bool isWorker(){return onWorker(single());}
 bool workerWithLease(){auto*s=single();return s&&s->service.workerWithLease();}
