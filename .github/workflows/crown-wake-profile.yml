@@ -1,0 +1,82 @@
+name: Crown wake timing qualification
+on:
+  push:
+    branches: [fix/deep-wake-native-startup-20261012]
+  pull_request:
+    paths:
+      - '.github/workflows/crown-wake-profile.yml'
+      - 'crown-wake-profile.ini'
+      - 'test/test_crown_wake_profile.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: crown-wake-profile-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
+jobs:
+  host:
+    name: Bounded stage and performance diagnostics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Profile selection and bounded diagnostic transport
+        run: |
+          python3 test/test_crown_wake_profile.py
+          bash test/run_stage_log_test.sh
+          SANITIZE=1 bash test/run_stage_log_test.sh
+          bash test/run_performance_recorder_test.sh
+          SANITIZE=1 bash test/run_performance_recorder_test.sh
+          bash test/run_performance_native_test.sh
+          SANITIZE=1 bash test/run_performance_native_test.sh
+      - name: Runtime lifecycle with both observers
+        run: |
+          STAGE_LOGS=1 bash test/run_performance_runtime_test.sh
+          STAGE_LOGS=1 SANITIZE=1 bash test/run_performance_runtime_test.sh
+          bash test/run_crown_recovery_test.sh
+          SANITIZE=1 SANITIZERS=undefined bash test/run_crown_recovery_test.sh
+          bash test/run_deep_sleep_test.sh
+          SANITIZE=1 bash test/run_deep_prepare_test.sh
+          bash test/run_light_sleep_test.sh
+          SANITIZE=1 bash test/run_light_sleep_test.sh
+      - name: Metadata deadlines and retained admission
+        run: |
+          bash test/run_metadata_checkpoint_test.sh
+          SANITIZE=1 bash test/run_metadata_checkpoint_test.sh
+          bash test/run_metadata_read_test.sh
+          SANITIZE=1 bash test/run_metadata_read_test.sh
+  target:
+    name: Exact-source Watch stage and performance target
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned compiler tooling
+        run: python -m pip install -r requirements-ci.txt
+      - name: Compile explicit diagnostic crown profile and prove IQ boundaries
+        run: pio run -c crown-wake-profile.ini -e crown-wake-profile -j 1
+      - name: Archive exact qualification sources
+        run: git archive --format=tar.gz -o crown-wake-runtime-source.tar.gz HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crown-wake-native-qualification-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            .pio/build/crown-wake-profile/firmware.bin
+            .pio/build/crown-wake-profile/firmware.elf
+            .pio/build/crown-wake-profile/radio-iq-proof.json
+            crown-build.ini
+            crown-wake-profile.ini
+            crown-wake-runtime-source.tar.gz
+          if-no-files-found: error
+          retention-days: 14
