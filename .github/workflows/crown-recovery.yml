@@ -1,7 +1,7 @@
 name: Crown recovery qualification
 on:
   push:
-    branches: [fix/host-owned-crown-exit, work/watch-crown-wake-20261012]
+    branches: [fix/host-owned-crown-exit, work/watch-crown-wake-20261012, work/watch-json-read-checkpoints-20261012]
   pull_request:
     paths:
       - '.github/workflows/crown-recovery.yml'
@@ -13,6 +13,8 @@ on:
       - 'src/runtime/control/CrownRecovery.h'
       - 'test/*crown*'
       - 'test/native_crown_shim/**'
+      - 'src/bootstrap/Json.cpp'
+      - 'test/*metadata*'
   workflow_dispatch:
 permissions:
   contents: read
@@ -43,6 +45,12 @@ jobs:
         run: |
           bash test/run_runtime_test.sh
           SANITIZE=1 bash test/run_runtime_test.sh
+      - name: Metadata cooperation and retained admission
+        run: |
+          bash test/run_metadata_checkpoint_test.sh
+          SANITIZE=1 bash test/run_metadata_checkpoint_test.sh
+          bash test/run_metadata_read_test.sh
+          SANITIZE=1 bash test/run_metadata_read_test.sh
   target:
     name: Explicit AXP2101 recovery target
     runs-on: ubuntu-24.04
