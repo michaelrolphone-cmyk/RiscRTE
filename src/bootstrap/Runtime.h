@@ -506,7 +506,7 @@ class Runtime final {
     PolicyIndex owner=-1;
     bool sealed=false;
   } fileSource_;
-  uint64_t fileSourceGeneration_=0;
+  uint64_t fileSourceGeneration_=0,fileSourceDiscarded_=0,fileSourceDiscardedOwner_=0;
   size_t policyCount_=0;
   struct AppGrant {
     RuntimeProviders::GrantV2 provider{}; const void* api=nullptr;

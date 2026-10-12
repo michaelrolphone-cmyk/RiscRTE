@@ -1,5 +1,6 @@
 #include "bootstrap/Runtime.h"
 #include "runtime/storage/FileSourceFiles.h"
+#include <RiscStorageVolumeV1.h>
 #include <array>
 #include <cassert>
 #include <cerrno>
@@ -33,11 +34,13 @@ void provision(){
  std::ofstream(root+"/board.json")<<R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})";
  std::ofstream(root+"/original.obj")<<"preserve user data";
  JsonDocument boot;boot["board"]="board.json";boot["default_app"]="host.elf";boot["drivers"].to<JsonArray>();auto policies=boot["app_capabilities"].to<JsonArray>();
+ if(has("controller")){boot["drivers"].as<JsonArray>().add<JsonObject>()["manifest"]="volume.json";std::ofstream(root+"/volume.json")<<R"({"type":"driver","id":"source-test-volume","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"volume.elf","requires":[],"provides":[{"capability":"storage.test-volume","api":1}]})";}
  for(unsigned i=0;i<4;++i){
   const char* name=i==0?"host":i==1?"caller":i==2?"viewer":"unsupported";
   JsonDocument d;d["id"]=name;d["type"]="application";d["version"]="1.0.0";d["architecture"]="xtensa-esp32s3";d["file_name"]=std::string(name)+".elf";d["entry"]="app_main";
   auto req=d["requires"].to<JsonArray>();auto p=policies.add<JsonObject>();p["manifest"]=std::string(name)+".json";auto g=p["grants"].to<JsonArray>();
   if(i){auto a=req.add<JsonObject>();a["capability"]="file.open";a["api"]=1;auto b=g.add<JsonObject>();b["capability"]="file.open";b["api"]=1;b["instance_id"]=0;}
+  if(i==1&&has("controller")){auto a=req.add<JsonObject>();a["capability"]="storage.test-volume";a["api"]=1;auto b=g.add<JsonObject>();b["capability"]="storage.test-volume";b["api"]=1;b["instance_id"]=0;}
   if(i==1||i==2){auto a=req.add<JsonObject>();a["capability"]="file.open.source";a["api"]=1;auto b=g.add<JsonObject>();b["capability"]="file.open.source";b["api"]=1;b["instance_id"]=0;}
   if(i>=2){d["supported_file_types"].to<JsonArray>().add(".obj");d["display_name"]=i==2?"Object viewer":"Legacy viewer";}
   save((std::string(name)+".json").c_str(),d);
@@ -47,6 +50,8 @@ void provision(){
   for(const char* app:{"caller","viewer"}){const bool old=(has("legacy-caller")&&!strcmp(app,"caller"))||(has("legacy-viewer")&&!strcmp(app,"viewer"));(old?legacy:fg).add(std::string(app)+".elf");}
   fg.add("unsupported.elf");
  }
+ if(is("bad-instance"))boot["app_capabilities"][1]["grants"][1]["instance_id"]=1;
+ if(is("bad-version")){boot["app_capabilities"][1]["grants"][1]["api"]=2;JsonDocument d;assert(readJson((root+"/caller.json").c_str(),d));d["requires"][1]["api"]=2;save("caller.json",d);}
  save("boot.json",boot);
  if(has("load-failure"))std::filesystem::remove(root+"/viewer.elf");
 }
@@ -59,6 +64,24 @@ void negatives(const risc_file_open_source_api_v1* s){
  char* bad=mem+page-128;memset(bad,'a',128);uint64_t t=99;assert(s->begin(bad,0,&t)==RISC_FILE_SOURCE_INVALID&&!t);assert(!s->handler_count(bad));munmap(mem,page*2);
  assert(s->handler_count("Original.OBJ")==2);t5_file_handler_t h{};assert(s->handler_get("Original.OBJ",0,&h)&&!strcmp(h.app_id,"viewer"));assert(s->handler_get("Original.OBJ",1,&h)&&!strcmp(h.app_id,"unsupported"));
  assert(s->handler_supported("viewer")&&!s->handler_supported("unsupported")&&!s->handler_supported("invented"));
+}
+bool directoryOpen=false,fileOpen=false,directoryRead=false;uint64_t readOffset=0;
+risc_storage_volume_api_v1_ext controllerVolume(){
+ risc_storage_volume_api_v1_ext v{};v.base.api_version=1;v.base.struct_size=sizeof(v);
+ v.base.refresh=[](void*){return true;};v.base.ready=[](void*){return true;};
+ v.base.label=[](void*,char* o,size_t n){if(n<8)return false;strcpy(o,"Fixture");return true;};
+ v.base.stat=[](void*,const char* p,uint64_t* z,bool* d){if(!z||!d)return false;*d=!strcmp(p,"/");*z=*d?0:size;return *d||!strcmp(p,"/Original.OBJ");};
+ v.base.dir_open=[](void*,const char* p)->risc_storage_dir_t{assert(!directoryOpen&&!strcmp(p,"/"));directoryOpen=true;directoryRead=false;return 1;};
+ v.base.dir_next=[](void*,risc_storage_dir_t d,risc_storage_dirent_v1* out){assert(directoryOpen&&d==1);if(directoryRead)return false;directoryRead=true;*out={};strcpy(out->name,"Original.OBJ");out->size=size;return true;};
+ v.base.dir_close=[](void*,risc_storage_dir_t d){assert(directoryOpen&&d==1);directoryOpen=false;};
+ v.base.file_open_read=[](void*,const char* p,uint64_t* z)->risc_storage_file_t{assert(!fileOpen&&!strcmp(p,"/Original.OBJ"));fileOpen=true;readOffset=0;*z=size;return 2;};
+ v.base.file_read=[](void*,risc_storage_file_t f,void* out,size_t cap)->size_t{assert(fileOpen&&f==2&&cap<=4096);size_t n=size-readOffset<cap?size_t(size-readOffset):cap;for(size_t i=0;i<n;++i)static_cast<unsigned char*>(out)[i]=value(readOffset+i);readOffset+=n;return n;};
+ v.base.file_close=[](void*,risc_storage_file_t f,bool){assert(fileOpen&&f==2);fileOpen=false;return true;};
+ v.base.file_open_write=[](void*,const char*)->risc_storage_file_t{return 0;};v.base.file_write=[](void*,risc_storage_file_t,const void*,size_t)->size_t{return 0;};v.base.remove=[](void*,const char*){return false;};
+ v.base.last_error=[](void*,char* out,size_t cap){if(!out||!cap)return false;*out=0;return true;};
+ v.dir_close_checked=[](void*,risc_storage_dir_t d){assert(directoryOpen&&d==1);directoryOpen=false;return true;};v.handle_error=[](void*,uint32_t,bool)->uint32_t{return 0;};
+ v.file_info=[](void*,risc_storage_file_t f,uint64_t* z,uint64_t* at){assert(fileOpen&&f==2);*z=size;*at=readOffset;return true;};
+ return v;
 }
 int32_t dispatch(void*,const risc_resident_request_v1*,risc_resident_reply_v1*){return RISC_RESIDENT_OK;}
 int32_t loading(void*,const char* path){
@@ -74,8 +97,16 @@ extern "C" int __real_unlink(const char*);
 extern "C" int __wrap_close(int fd){++closes;int rc=__real_close(fd);if(failClose){failClose=false;errno=EIO;return -1;}return rc;}
 extern "C" ssize_t __wrap_write(int fd,const void* p,size_t n){if(!budget){errno=ENOSPC;return -1;}if(n>budget)n=size_t(budget);ssize_t got=__real_write(fd,p,n);if(got>0)budget-=uint64_t(got);return got;}
 extern "C" int __wrap_unlink(const char* p){++unlinks;if(failDelete){errno=EIO;return -1;}return __real_unlink(p);}
+extern "C" const void* source_browser_volume(){static auto volume=controllerVolume();return &volume;}
+extern "C" bool source_browser_volume_safe(){return !directoryOpen&&!fileOpen;}
+extern "C" unsigned source_browser_visit(){return entries[1];}
+extern "C" void source_browser_event(const char* event){
+ if(!strcmp(event,"main"))++entries[1];
+ else if(!strcmp(event,"fini")){assert(!directoryOpen&&!fileOpen);++finis[1];}
+ else if(!strcmp(event,"result")){assert(entries[1]==2&&entries[2]==1&&!std::filesystem::exists(scratch));}
+}
 extern "C" int source_test_init(unsigned role){
- if(role==2){auto* s=source();risc_file_open_source_info_v1 info{};info.struct_size=sizeof(info);assert(s->source_info(&info)==0&&info.size==size&&!strcmp(info.name,"Original.OBJ"));assert(finis[1]==entries[1]);if(has("init-failure"))return -1;}
+ if(role==2){auto* s=source();risc_file_open_source_info_v1 info{};info.struct_size=sizeof(info);assert(s->source_info(&info)==0&&info.size==size&&!strcmp(info.name,"Original.OBJ"));assert(finis[1]==entries[1]);if(has("controller"))oldToken=info.token;if(has("init-failure"))return -1;}
  return 0;
 }
 extern "C" void source_test_fini(unsigned role){++finis[role];}
@@ -103,10 +134,10 @@ extern "C" void source_test_main(unsigned role,char* name){
   std::array<unsigned char,4096> bytes{};uint64_t at=0;
   if(is("full-storage"))budget=123;
   while(at<size){const uint32_t want=uint32_t(size-at<bytes.size()?size-at:bytes.size());for(uint32_t i=0;i<want;++i)bytes[i]=value(at+i);uint32_t n=99;const int32_t rc=s->write(token,bytes.data(),want,&n);
-   if(is("full-storage")&&rc){assert(rc==RISC_FILE_SOURCE_NO_SPACE&&!n&&!std::filesystem::exists(scratch));budget=UINT64_MAX;return;}
+   if(is("full-storage")&&rc){assert(rc==RISC_FILE_SOURCE_NO_SPACE&&!n&&!std::filesystem::exists(scratch));assert(s->discard(token)==RISC_FILE_SOURCE_OK);budget=UINT64_MAX;return;}
    assert(rc==0&&n&&n<=want);at+=n;
    if(is("interrupted"))return;
-   if(is("cancel")){assert(s->discard(token)==0&&!std::filesystem::exists(scratch));assert(s->discard(token)==RISC_FILE_SOURCE_CONTEXT);return;}
+   if(is("cancel")){assert(s->discard(token)==0&&!std::filesystem::exists(scratch));assert(s->discard(token)==RISC_FILE_SOURCE_OK);return;}
    if(is("caller-home")){assert(rt->request_default());return;}
   }
   assert(s->finish(token)==0);assert(!s->open_request(token,"unsupported",cookie));assert(!s->open_request(token,"caller",cookie));assert(!s->open_request(token,"../viewer",cookie));
@@ -131,11 +162,14 @@ int main(int argc,char** argv){
  assert(argc==3);root=argv[1];mode=argv[2];scratch=root+"/.risc-file-source";provision();
  auto* files=new RiscStorage::FileSourceFiles({nullptr,[](void*){return ownerOk;},[](void*){return true;}});assert(files->configure(scratch.c_str()));auto* backend=new FileSourceBackend(files->backend());
  Port p{owner,health,delay,log,nullptr,nullptr,exitSafe};p.fileSource=backend;p.controlEnd=controlEnd;
- auto* runtime=new Runtime(p);assert(runtime->prepare(root.c_str()));const bool result=runtime->run();
+ if(is("no-backend"))p.fileSource=nullptr;
+ auto* runtime=new Runtime(p);
+ if(is("no-backend")||is("bad-version")||is("bad-instance")){assert(!runtime->prepare(root.c_str()));assert(!strcmp(runtime->error(),"file-source backend/authority unavailable"));delete runtime;delete backend;delete files;printf("file.open.source admission: %s PASS\n",mode.c_str());return 0;}
+ assert(runtime->prepare(root.c_str()));const bool result=runtime->run();
  if(has("retained")){assert(!result&&runtime->retained()&&std::filesystem::exists(scratch));assert(failedCalls==closes+unlinks);retainedRuntime=runtime;retainedFiles=files;}
  else {assert(result&&!runtime->retained()&&!std::filesystem::exists(scratch));delete runtime;delete backend;delete files;}
  std::ifstream f(root+"/original.obj");std::string contents;std::getline(f,contents);assert(contents=="preserve user data");
- if(is("success")||is("reopen")||is("resident")||is("legacy-caller")||is("legacy-viewer"))assert(entries[1]==(is("reopen")?3u:2u)&&entries[2]==(is("reopen")?2u:1u));
+ if(has("controller")||is("success")||is("reopen")||is("resident")||is("legacy-caller")||is("legacy-viewer"))assert(entries[1]==(is("reopen")?3u:2u)&&entries[2]==(is("reopen")?2u:1u));
  if(has("load-failure"))assert(entries[1]==2&&entries[2]==0);
  if(is("native-home"))assert(entries[1]==1&&entries[2]==0);
  if(stale){uint32_t n=99;char b=1;assert(stale->read_at(oldToken,0,&b,1,&n)==RISC_FILE_SOURCE_CONTEXT&&!n&&b==1);}

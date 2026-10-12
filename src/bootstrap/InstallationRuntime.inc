@@ -84,6 +84,13 @@ bool Runtime::installationNamespaceRangeSafe()const{
 }
 bool Runtime::installationMutable(size_t i)const{
  if(i>=policyCount_)return false;
+ // Source custody and copied source continuations pin the admitted identities
+ // even while caller/receiver images are unloaded or the resident host runs.
+ if(fileSource_.token && fileSource_.owner==int(i))return false;
+ auto sourcePins=[i](const FileOpenState& state){return state.sourceToken &&
+   state.phase!=FileOpenState::Phase::Idle && (state.caller==int(i)||state.receiver==int(i));};
+ if(sourcePins(mainInvocation_.fileOpen_)||sourcePins(residentTransferFileOpen_)||
+    (foreground_&&sourcePins(foreground_->fileOpen_)))return false;
  const auto*p=&policies_[i];
  return (!mainInvocation_.active_ || mainInvocation_.appPolicy_!=p) && (!foreground_ || foreground_->appPolicy_!=p || !foreground_->active_);
 }

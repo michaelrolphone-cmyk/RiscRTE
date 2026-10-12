@@ -28,7 +28,11 @@ typedef struct {
  * No borrowed app pointer survives a callback. Receiver read_at is immutable,
  * bounded and available only to the selected receiver for this generation.
  * Actual capacity is the configured backing store; the API adds no file-size
- * limit. A failed close is terminal RETAINED, never a cleanup retry. */
+ * limit. A failed close is terminal RETAINED, never a cleanup retry.
+ * A non-BUSY capture failure cancels its private stage. discard remains an
+ * idempotent acknowledgement for that token in the same live caller only.
+ * A fresh begin, caller unload or accepted handoff revokes that acknowledgement.
+ * write/read_at may return a short successful count; advance by that count. */
 typedef struct {
  uint32_t api_version,struct_size;
  uint32_t (*handler_count)(const char* name);

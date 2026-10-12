@@ -85,6 +85,7 @@ bool Runtime::fileSourceCleanup() {
     if(!retained_){retained_=true;fail("file source cleanup retained; restart required");(void)appExitBarrier(false);}
     return false;
   }
+  fileSourceDiscarded_=fileSource_.token;fileSourceDiscardedOwner_=fileSource_.ownerInvocation;
   fileSource_={};return true;
 }
 int32_t Runtime::fileSourceBegin(const char* name,uint64_t size,uint64_t* token) {
@@ -99,6 +100,7 @@ int32_t Runtime::fileSourceBegin(const char* name,uint64_t size,uint64_t* token)
   if(fileSourceGeneration_==UINT64_MAX)return RISC_FILE_SOURCE_UNAVAILABLE;
   const int32_t rc=fileSourceStatus(port_.fileSource->begin(port_.fileSource->context,size));
   if(rc)return rc;
+  fileSourceDiscarded_=fileSourceDiscardedOwner_=0;
   fileSource_.token=++fileSourceGeneration_;fileSource_.size=size;fileSource_.ownerInvocation=invocation_->token;
   fileSource_.owner=static_cast<PolicyIndex>(invocation_->appPolicy_-policies_.get());strcpy(fileSource_.name,name);
   *token=fileSource_.token;return RISC_FILE_SOURCE_OK;
@@ -122,7 +124,11 @@ int32_t Runtime::fileSourceFinish(uint64_t token) {
   return rc;
 }
 int32_t Runtime::fileSourceDiscard(uint64_t token) {
-  if(!fileSourceReady() || !fileSourceOwned(token))return RISC_FILE_SOURCE_CONTEXT;
+  if(!fileSourceReady())return RISC_FILE_SOURCE_CONTEXT;
+  // A capture error already removed the private stage. Its same live caller
+  // may still perform checked cancellation; no backend cleanup is retried.
+  if(token && !fileSource_.token && token==fileSourceDiscarded_ && invocation_->token==fileSourceDiscardedOwner_)return RISC_FILE_SOURCE_OK;
+  if(!fileSourceOwned(token))return RISC_FILE_SOURCE_CONTEXT;
   return fileSourceCleanup()?RISC_FILE_SOURCE_OK:RISC_FILE_SOURCE_RETAINED;
 }
 bool Runtime::fileSourceRequest(uint64_t token,const char* id,uint64_t cookie) {
