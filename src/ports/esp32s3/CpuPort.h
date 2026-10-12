@@ -148,6 +148,8 @@ class Port final {
   bool nativeStorageIdle(uint64_t) const;
   NativeStorageState nativeStorageSnapshot(uint64_t,uint64_t*) const;
   bool nativeStorageOwner() const {return hw_.owner && hw_.owner();}
+  bool nativeStorageBoundTo(const RiscBoot::Runtime&r) const {return nativeStorageOwner()&&bound_&&runtime_==&r;}
+  bool nativeStorageAttached() const {return nativeStorageOwner()&&nativeStoragePinned();}
  #endif
  private:
   const RiscBoot::Runtime* runtime_=nullptr;

@@ -7,7 +7,7 @@ namespace RiscExperimental {
 class NativeSdSession final {
  public:
  using C=NativeReplicaCore;
- enum class Role {ReplicaReader,LegacyReader,Checkpoint,Recovery,Catalog};
+ enum class Role {ReplicaReader,LegacyReader,Checkpoint,Recovery,Catalog,FirstCheckpoint};
  NativeSdSession()=default;
  NativeSdSession(const NativeSdSession&)=delete;NativeSdSession&operator=(const NativeSdSession&)=delete;
  bool native()const{return attempt_!=nullptr;}
@@ -57,7 +57,7 @@ class NativeSdSession final {
  int package(const risc_storage_package_request_v1&q,uint64_t*out){
   if(out)*out=0;
   if(!out||!allowed(q)||!enter())return NativeSdAttempt::Context;
-  const int rc=attempt_->package(q);leave();if(!rc)*out=1;return rc;
+  const int rc=attempt_->packageImpl(q,role_==Role::FirstCheckpoint);leave();if(!rc)*out=1;return rc;
  }
  int collect(risc_storage_async_result_v1*out){if(!enter())return NativeSdAttempt::Context;const int rc=attempt_->collect(out);leave();return rc;}
  int end(){if(!enter())return NativeSdAttempt::Context;const int rc=attempt_->close();leave();return rc;}
@@ -69,14 +69,40 @@ class NativeSdSession final {
   // still performs its checked release. Retained custody can never drop it.
   const bool valid=a.boundary();
   if(!valid&&a.state_==NativeSdAttempt::State::Retained)return C::Retained;
-  --a.clientPins_;pinned_=false;
+  --a.clientPins_;pinned_=false;C::wipe(firstPrefix_,sizeof firstPrefix_);firstPages_=0;firstBound_=false;
   return valid?C::Ok:a.state_==NativeSdAttempt::State::Unavailable?C::Io:C::Conflict;
  }
  private:
- friend class NativeSdPreparation;
+ friend class NativeSdPreparation;friend class CheckedFirstSdCheckpoint;
  NativeSdAttempt*attempt_=nullptr;Role role_=Role::ReplicaReader;bool pinned_=false;
+ char firstPrefix_[85]{};uint32_t firstPages_=0;bool firstBound_=false;
  bool enter(){if(!attempt_||!pinned_||!owner()||attempt_->dispatchOwner_||attempt_->call_!=NativeSdAttempt::Call::None)return false;attempt_->dispatchOwner_=this;return true;}
  void leave(){attempt_->dispatchOwner_=nullptr;}
+ bool directory(const char*p,bool root=true)const{
+  if(!attempt_->path(p,true))return false;
+  return (root&&!std::strcmp(p,"/"))||!std::strcmp(p,"/RTECFG")||std::strlen(p)==16;
+ }
+ const char*firstFile(const char*p)const{
+  if(!attempt_->path(p,false))return nullptr;
+  const char*n=std::strrchr(p,'/');return n&&n==p+16?n+1:nullptr;
+ }
+ // Set only by the first-checkpoint controller inside its owned preparation.
+ // Owner/session calls are fenced until that worker result is collected.
+ bool bindFirstCandidate(const C::Identity&id,uint32_t mapBytes){
+  uint8_t lineage=0;for(uint8_t b:id.lineage)lineage|=b;
+  if(!attempt_||!pinned_||role_!=Role::FirstCheckpoint||firstBound_||!id.known||!id.generation||!lineage||mapBytes>65512)return false;
+  const char*hex="0123456789abcdef";std::memcpy(firstPrefix_,"nr-",3);
+  for(unsigned i=0;i<16;++i)firstPrefix_[3+i]=hex[(id.generation>>(60-4*i))&15];
+  firstPrefix_[19]='-';for(unsigned i=0;i<32;++i){firstPrefix_[20+2*i]=hex[id.digest[i]>>4];firstPrefix_[21+2*i]=hex[id.digest[i]&15];}firstPrefix_[84]='-';
+  firstPages_=(mapBytes+4095)/4096;firstBound_=true;return true;
+ }
+ bool firstStage(const char*n)const{
+  if(!firstBound_||!n)return false;
+  if(!std::strcmp(n,".replica.first"))return true;
+  if(std::strlen(n)!=93||std::memcmp(n,firstPrefix_,sizeof firstPrefix_))return false;
+  uint32_t page=0;for(unsigned i=85;i<93;++i){const char c=n[i];if(!((c>='0'&&c<='9')||(c>='a'&&c<='f')))return false;page=(page<<4)|uint32_t(c<='9'?c-'0':c-'a'+10);}
+  return page<firstPages_;
+ }
  bool file(const char*p,bool legacy)const{
   if(!attempt_->path(p,false))return false;
   const char*name=std::strrchr(p,'/');if(!name||name!=p+16)return false;++name;
@@ -85,11 +111,26 @@ class NativeSdSession final {
  }
  bool allowed(const risc_storage_async_request_v1&q)const{
   if(!attempt_)return false;
+  if(role_==Role::FirstCheckpoint){
+   if(q.operation==RISC_STORAGE_ASYNC_OPEN_DIRECTORY)return directory(q.path);
+   if(q.operation==RISC_STORAGE_ASYNC_NEXT_ENTRY||q.operation==RISC_STORAGE_ASYNC_CLOSE_DIRECTORY)return true;
+   const char*n=firstFile(q.path);
+   if(q.operation==RISC_STORAGE_ASYNC_REMOVE_FILE)return firstStage(n);
+   return q.operation==RISC_STORAGE_ASYNC_READ_SMALL_FILE&&n&&(firstStage(n)||!std::strcmp(n,"replica.index")||!std::strcmp(n,"settings.index")||!std::strcmp(n,"settings.kv"));
+  }
   if(role_==Role::Catalog)return q.operation==RISC_STORAGE_ASYNC_OPEN_DIRECTORY||q.operation==RISC_STORAGE_ASYNC_NEXT_ENTRY||q.operation==RISC_STORAGE_ASYNC_CLOSE_DIRECTORY;
   if(q.operation!=RISC_STORAGE_ASYNC_READ_SMALL_FILE&&(role_!=Role::Checkpoint||q.operation!=RISC_STORAGE_ASYNC_REMOVE_FILE))return false;
   return file(q.path,role_==Role::LegacyReader);
  }
  bool allowed(const risc_storage_package_request_v1&q)const{
+  if(attempt_&&role_==Role::FirstCheckpoint){
+   if(q.operation==RISC_STORAGE_PACKAGE_MKDIR)return firstBound_&&directory(q.path,false);
+   const char*n=firstFile(q.path);
+   if(q.operation==RISC_STORAGE_PACKAGE_RECOVER)return n&&!std::strcmp(n,"replica.index");
+   if(q.operation==RISC_STORAGE_PACKAGE_WRITE_SMALL)return firstStage(n);
+   const char*d=firstFile(q.destination);
+   return q.operation==RISC_STORAGE_PACKAGE_REPLACE&&firstBound_&&n&&d&&!std::strcmp(n,".replica.first")&&!std::strcmp(d,"replica.index");
+  }
   if(!attempt_||role_==Role::Catalog||!file(q.path,role_==Role::LegacyReader))return false;
   if(q.operation==RISC_STORAGE_PACKAGE_RECOVER){const char*n=std::strrchr(q.path,'/');return n&&(!std::strcmp(n,"/replica.index")||!std::strcmp(n,"/settings.index")||!std::strcmp(n,"/settings.kv"));}
   return role_==Role::Checkpoint&&(q.operation==RISC_STORAGE_PACKAGE_WRITE_SMALL||(q.operation==RISC_STORAGE_PACKAGE_REPLACE&&file(q.destination,false)));

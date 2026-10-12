@@ -144,9 +144,80 @@ translation unit compiles with warnings-as-errors, no exceptions and no RTTI.
 Host verification and target compilation do not qualify actual FAT replacement,
 physical power loss, entropy, media custody, quotas or lifecycle exclusion.
 
-The create transport still uses the explicit strict-guard interface. Binding it
-to `NativeSdAttempt` and owner-issued/native-worker completion receipts is a
-separate gate; it must not be directly installed on the actual X4 public
-observation API. Production policy selection, complete native source inventory,
+The strict raw interface remains separate from the typed attempt interface below;
+it must not be directly installed on the actual X4 public observation API.
+Production policy selection, complete native source inventory,
 archival legacy migration, application atomic-intent wiring, concurrent caches,
 full erase/selected restore and hardware qualification also remain separate.
+
+## Typed native attempt composition
+
+The additive `prepareNative(NativeSdAttempt&)` entry queues a permanently
+constructed `NativeSdPreparation` mailbox. The native-settings worker captures
+the map and prepares the target identity, SHA-256 and optional incarnation in
+owned RAM. This planned identity does not change the selected core identity.
+For a resumed first-create marker, preparation instead loads and hashes the
+exact durable captured map and reuses the stored target, without fresh entropy.
+The existing raw `start(volume)` and no-argument `prepareNative()` retain their
+strict custody checks and original entropy timing. Direct raw arm or acknowledge
+entry points refuse a typed-bound consumer.
+
+The owner collects preparation before starting any SD child. It checks native
+writer exclusion and staging admission on the owner task, with real custody
+checks before and after authority callbacks. The preparation, arm and ack workers
+never call an SD operation, provider observer, owner custody callback or resource
+admission callback. Their `Guard::worker` must prove the native-settings task and
+core serialization. Entropy and digest contexts belong to the queued preparation.
+
+Three separate evidence stages are preserved:
+
+1. The bounded live empty inventory and exact legacy/index checks finish with
+   checked session close. A private vacancy receipt records namespace, media
+   epoch, that exact child closed sequence and captured revision/frontier/count/
+   size. Catalog history and planned identity cannot manufacture this receipt.
+2. `issueNativeArm()` validates that same closed sequence and owner custody,
+   then issues a distinct first-arm action to a permanent `NativeSdCompletion`.
+   The worker validates the frozen vacancy/snapshot metadata and performs only
+   `prepareFirstExport`. Its exact native capture CAS remains authoritative.
+   The owner must collect the result before resuming SD publication.
+3. Full published index/page/index verification and checked close produce a
+   separate private published receipt. Only then can `issueNativeCompletion()`
+   queue the distinct acknowledgement action. Its revision/frontier come from
+   the selected marker, including restart snapshots whose capture ticket is zero.
+
+Both completion mailboxes use the generic known-identity check unchanged. They
+hold the existing attempt binding, epoch and closed-sequence receipt; the typed
+consumer adds the purpose-specific vacancy or full-readback evidence. They remain
+constructed through idle scheduler polling and terminal Busy retries. Before
+destroying the complete consumer, the native scheduler must be fenced and joined.
+The ESP32-S3 probe reports 50,512 fixed bytes for the complete consumer with its
+three permanent copied mailboxes, before the owned snapshot, core image and
+provider allocations. This is not a task-stack allocation recommendation or a
+qualified target-memory budget; the native owner must explicitly admit storage
+for the complete object and all live allocations.
+
+Queued arm cancellation performs no native mutation. If an already claimed arm
+commits successfully, collection preserves the durable marker and returns the
+actual success in `Cancelled` state, without starting SD publication. Subsequent
+recovery must use the retained marker. Busy arm retries reuse the same target,
+incarnation and vacancy evidence. Cancellation during acknowledgement similarly
+collects the actual native outcome. Retained/uncertain results keep custody pinned;
+late final-release failures propagate to the returned result.
+
+`NativeSdSession::FirstCheckpoint` allows only the required directory inventory,
+legacy conflict reads, exact index recovery and candidate staging operations.
+Preparation privately binds the session to the planned/resumed target generation,
+digest and map page count. Page reads, writes and removes require that exact
+lowercase candidate filename and an in-range page number; there is no public
+candidate setter and an unconfigured session cannot authorize any `nr-` file.
+The purpose-specific stage also requires that binding. The controller separately
+requires the durable selected marker before dispatching any creation or repair.
+It alone can dispatch creation of `/RTECFG` and the exact namespace directory.
+The raw attempt package entry and all pre-existing typed roles retain their path
+limits. Exactly one attempt bootstrap REFRESH precedes these child sessions;
+children do not refresh. An owned session continues to report truthfully
+UNAVAILABLE through the public observer, without manufacturing READY.
+
+This is disconnected native composition, not production Port/graph selection or
+hardware qualification. The existing strict host suites continue to exercise the
+raw interface independently; the target probe compiles both API families.

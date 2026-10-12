@@ -63,10 +63,15 @@ class NativeSdAttempt final {
   if(q.operation==RISC_STORAGE_ASYNC_RENAME&&!path(q.destination,false))return Context;
   return submitImpl(q);
  }
- int package(const risc_storage_package_request_v1&q){
+ int package(const risc_storage_package_request_v1&q){return packageImpl(q,false);}
+ private:
+ // Only the typed first-checkpoint dispatch may create its exact parent.
+ // Raw package callers retain the existing namespace-only path restriction.
+ int packageImpl(const risc_storage_package_request_v1&q,bool firstParent){
   if(!owner()||call_!=Call::None||state_!=State::OwnedSession||operation_||nativePin_||!sessionAccess()||!live())return Context;
   if(q.operation==RISC_STORAGE_PACKAGE_VALIDATE||q.operation==RISC_STORAGE_PACKAGE_VALIDATE_DRIVER)return Context;
-  if(q.operation!=RISC_STORAGE_PACKAGE_WRITE_CHUNK&&q.operation!=RISC_STORAGE_PACKAGE_CLOSE_WRITE&&!path(q.path,false))return Context;
+  const bool parent=firstParent&&dispatchOwner_&&q.operation==RISC_STORAGE_PACKAGE_MKDIR&&!std::strcmp(q.path,"/RTECFG");
+  if(q.operation!=RISC_STORAGE_PACKAGE_WRITE_CHUNK&&q.operation!=RISC_STORAGE_PACKAGE_CLOSE_WRITE&&!parent&&!path(q.path,false))return Context;
   if(q.operation==RISC_STORAGE_PACKAGE_REPLACE&&!path(q.destination,false))return Context;
   if(!arm(Call::Package,&q,sizeof q))return Context;
   uint64_t token=0;const int rc=api_->submit_package(volume_->context,session_,&q,&token);
@@ -76,6 +81,7 @@ class NativeSdAttempt final {
   if(!rc){if(!token||token!=minted_){retain();return RISC_STORAGE_ASYNC_RETAINED;}operation_=token;}
   return rc;
  }
+ public:
  int collect(risc_storage_async_result_v1*out){
   if(!owner()||call_!=Call::None||!out||!sessionAccess()||!session_||!operation_||state_==State::Closing||state_==State::Retained)return Context;
   if(!arm(Call::Collect))return Context;

@@ -89,6 +89,8 @@ template<class Job>static int complete(Job&job,A&a,NativeStore&native,const char
  else {if(strstr(mode,"cancel"))job.cancel();if(strstr(mode,"retained")&&!strstr(mode,"late-retained")&&!strstr(mode,"final-release"))native.retainSeal=true;task=Task::NativeSettings;assert(job.nativeCompletionWorkerStep());task=Task::Owner;}
  before.unchanged();task=Task::NativeSettings;assert(job.collectNativeCompletion()!=C::Ok);job.cancel();task=Task::Owner;assert(a.release()==A::Context);if(strstr(mode,"late-retained")){fixture_retain();lease=false;}if(strstr(mode,"completion-unavailable")){snapshotFaultAt=snapshots+1;snapshotUnavailable=true;}if(strstr(mode,"final-release")){snapshotFaultAt=snapshots+2;snapshotRetained=strstr(mode,"retained");}if(strstr(mode,"cancel")&&!strstr(mode,"running-cancel"))assert(nativeOps==ops);return job.collectNativeCompletion();
 }
+// Test-only reuse of the source-bound fixture helpers.
+#ifndef NATIVE_SD_CONSUMERS_NO_MAIN
 int main(int argc,char**argv){assert(argc==3);const char*mode=argv[1];sourceGeneration=strstr(mode,"zero")?0:7;task=Task::Owner;const auto*v=fixture_start();if(!strncmp(mode,"seed-",5)){consumers_seed_begin();seedReplica(strstr(mode,"corrupt"),strstr(mode,"missing"));seedLegacy();consumers_seed_save(argv[2]);fixture_stop();return 0;}consumers_seed_load(argv[2]);consumers_trace_enable();A a({3,55,7,71,v},controlledHooks());attempt=&a;bootstrap(a,v);assert(consumers_refreshes()==1);NativeStore native;C core(3,native.api(),{65512,4096,1024},C::heap());initialize(core);Hash hash;
  if(!strncmp(mode,"reader",6)){
   C::Allocator allocation=C::heap();if(strstr(mode,"no-memory"))allocation.allocate=[](void*,size_t)->void*{return nullptr;};
@@ -129,3 +131,5 @@ int main(int argc,char**argv){assert(argc==3);const char*mode=argv[1];sourceGene
  }else assert(false);
  printf("typed native SD consumer %s PASS (refreshes=%u, child sessions=%u, native operations=%u)\n",mode,consumers_refreshes(),consumers_begins()-1,nativeOps);
 }
+
+#endif // NATIVE_SD_CONSUMERS_NO_MAIN

@@ -34,6 +34,7 @@
 struct esp_dl_image_cache;
 namespace RuntimeProviders { struct NativeProviderPolicySnapshotV1; }
 namespace RiscUpdate { struct NativeAppDataExportPolicyV1; struct NativeAppDataExportPolicyV2; }
+namespace RiscExperimental { class NativeRuntimeStoragePin; }
 namespace RiscBoot {
 class Runtime;
 // Optional compiled-in backend. Namespace comes only from validated boot policy.
@@ -204,6 +205,7 @@ class Runtime final {
   Board& board() { return board_; }
   const Board& board() const { return board_; }
  private:
+  friend class ::RiscExperimental::NativeRuntimeStoragePin; // compiled-in custody only, never an SDK import
   bool diagnosticCheckpointToken(uint64_t) const;
   bool failureEvidenceToken(uint64_t,bool healthy) const;
   void failureBreadcrumb(uint32_t phase,const char* application=nullptr);
