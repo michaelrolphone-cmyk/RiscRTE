@@ -39,5 +39,15 @@ int main(){
  assert(!restore(migrated,compatibility,3000,"app",nullptr,0,true)&&migrated.count==513);verify(migrated,"key0000",Bytes{'p','e','n','d','i','n','g'});
  auto migratedDisk=snap(migrated,g);ack(migrated,g);assert(!S::put(migrated,compatibility,3000,"key0000","newer",5));
  S::State again;assert(!restore(again,compatibility,3000,"app",migratedDisk.data(),migratedDisk.size(),false));verify(again,"key0000",Bytes{'n','e','w','e','r'});
- assert(original==before);puts("Scalable settings: 513 migrated opaque values, 1027 keys, absent-media journal, concurrent checkpoint, cold recovery, uncertain persistence and CRC rejection PASS");
+ // A full erase must re-anchor a clean SD-only restore. An interrupted
+ // checkpoint may also leave already-covered journal rows to clean.
+ auto complete=snap(again,g);ack(again,g);
+ anchor.clear();deltas.clear();original.clear();
+ S::State erased;assert(!restore(erased,backend,3000,"app",complete.data(),complete.size(),false)&&erased.status==S::Clean);
+ ack(erased,g);assert(!anchor.empty());
+ S::State absent;assert(restore(absent,backend,3000,"app",nullptr,0,true)==RISC_KEY_VALUE_IO);
+ Bytes stale(S::DeltaHeader+5);S::wide(stale.data(),g);memcpy(stale.data()+S::DeltaHeader,"newer",5);deltas["key0000"]=stale;
+ S::State cut;assert(!restore(cut,backend,3000,"app",complete.data(),complete.size(),false)&&cut.status==S::Clean);
+ ack(cut,g);assert(deltas.empty());
+ puts("Scalable settings: 513 migrated opaque values, 1027 keys, absent-media journal, concurrent checkpoint, cold recovery, uncertain persistence and CRC rejection PASS");
 }
