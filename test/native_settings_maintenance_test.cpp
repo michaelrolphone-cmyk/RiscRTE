@@ -15,7 +15,7 @@
 #include <memory>
 namespace F=NativeFixture;namespace L=RiscCpu::NativeSettingsLifecycle;namespace W=RiscCpu::NativeSettingsWorker;
 using B=RiscCpu::NativeSettingsBootstrap;using Sources=B::Sources;using M=RiscCpu::NativeSettingsMaintenance;using Coordinator=RiscExperimental::NativeSettingsCoordinator;
-static std::unique_ptr<Coordinator> services[2];static thread_local unsigned onNamespace=0;static bool concurrentNative=false;static M*maintenance;static Pin*anchorPin;static bool releaseAnchorAtFinal=false;static F::Fixture*stores[2];static std::string scenario;static bool cancelLatch=false,cancellationArmed=false;static unsigned checkpoints=0;
+static std::unique_ptr<Coordinator> services[2];static thread_local unsigned onNamespace=0;static bool concurrentNative=false;static M*maintenance;static Pin*anchorPin;static bool releaseAnchorAtFinal=false;static C*cores[2];static std::string scenario;static bool cancelLatch=false,cancellationArmed=false;static unsigned checkpoints=0;
 struct Iterator {std::string space;std::vector<std::string>keys;size_t at=0;};
 static std::set<Iterator*>iterators;
 extern "C" esp_err_t nvs_get_used_entry_count(nvs_handle_t h,size_t*n){++F::nvsTotal;F::safe();assert(F::handles.count(h));*n=F::nvs[F::handles.at(h).name].size();return ESP_OK;}
@@ -26,7 +26,9 @@ extern "C" void nvs_release_iterator(nvs_iterator_t it){++F::nvsTotal;F::safe();
 static const uint8_t nativeOwner[16]={'R','i','s','c','R','T','E','/','N','a','t','i','v','e','1',0};
 static Sources::Hooks sourceHooks(F::Fixture&f){return {&f,[](void*){return F::onWorker&&F::lease;},[](void*){return ESP_OK;},[](void*p){return static_cast<F::Fixture*>(p)->files.retained()?int(C::Retained):int(C::Ok);}};}
 static void freshBaseline(F::Fixture&f,const char*value){Sources sources(f.core.namespaceId(),nativeOwner,f.inspector,sourceHooks(f));using Factory=RiscExperimental::NativeBaselineAdmission;Factory factory(&sources,f.core,{nullptr,[](void*){return F::onWorker&&F::lease;},[](void*){return uint64_t(1);}},{},sources.sources(),{});C::Initialization admission;assert(!factory.admitFreshEmpty(&admission)&&!f.core.initializeFreshEmpty(admission));f.store.finishOperation();assert(!F::put(f.core,"setting",value));f.store.finishOperation();}
+#if !RISC_NATIVE_SETTINGS_ASSEMBLY
 bool esp_ptr_internal(const void*p){return p!=nullptr;}
+#endif
 namespace RiscCpu {namespace NativeSettingsWorker {
 bool prepare(uint32_t ns,C&core,S&store,bool(*check)()){
  assert(check()&&!core.ready());const unsigned i=ns==6?1:0;
@@ -39,6 +41,9 @@ bool exitSafe(){for(auto&s:services)if(s&&!s->exitSafe())return false;return tru
 }}
 struct Hash {EVP_MD_CTX*ctx=EVP_MD_CTX_new();~Hash(){EVP_MD_CTX_free(ctx);}
  M::Sync::Checkpoint::Digest api(){return {this,[](void*p){return EVP_DigestInit_ex(static_cast<Hash*>(p)->ctx,EVP_sha256(),nullptr)==1;},[](void*p,const void*b,uint32_t n){return EVP_DigestUpdate(static_cast<Hash*>(p)->ctx,b,n)==1;},[](void*p,uint8_t*out){unsigned n=0;return EVP_DigestFinal_ex(static_cast<Hash*>(p)->ctx,out,&n)==1&&n==32;}};}};
+#if RISC_NATIVE_SETTINGS_ASSEMBLY
+#include "native_settings_assembly_fixture.h"
+#endif
 static void saveNvs(){std::ofstream out(F::rootPath+".receipt",std::ios::binary);auto write=[&](uint32_t n){out.write(reinterpret_cast<const char*>(&n),sizeof n);};write(F::nvs.size());for(const auto&space:F::nvs){write(space.first.size());out.write(space.first.data(),space.first.size());write(space.second.size());for(const auto&row:space.second){write(row.first.size());out.write(row.first.data(),row.first.size());write(row.second.size());out.write(reinterpret_cast<const char*>(row.second.data()),row.second.size());}}out.close();assert(out);}
 static void loadNvs(){std::ifstream in(F::rootPath+".receipt",std::ios::binary);auto read=[&](){uint32_t n;in.read(reinterpret_cast<char*>(&n),sizeof n);assert(in);return n;};F::nvs.clear();const auto count=read();assert(count<8);for(unsigned i=0;i<count;++i){auto n=read();assert(n<32);std::string space(n,' ');in.read(space.data(),n);const auto rows=read();assert(rows<8);for(unsigned j=0;j<rows;++j){n=read();assert(n<32);std::string key(n,' ');in.read(key.data(),n);n=read();assert(n<1000);auto&bytes=F::nvs[space][key];bytes.resize(n);in.read(reinterpret_cast<char*>(bytes.data()),n);}}assert(in);}
 static uint64_t ownerScheduleCalls=0,ownerScheduleMs=0,providerWorkerDelayMs=0,hardwareSleepMs=0;
@@ -75,8 +80,8 @@ static void historyEdit(unsigned retained,bool report,bool single=false){
  const auto one=historyValue(1,retained+1),six=historyValue(6,retained+1);
  edit(*static_cast<const risc_key_value_atomic_v1*>(grants[0].api),one.c_str());
  if(!single){edit(*static_cast<const risc_key_value_atomic_v1*>(grants[1].api),six.c_str());assert(api->release(&grants[0]));}
- assert(stores[0]->core.identity().generation==retained&&stores[1]->core.identity().generation==retained);
- assert(stores[0]->core.pendingCount()==1&&stores[1]->core.pendingCount()==(single?0u:1u));
+ assert(cores[0]->identity().generation==retained&&cores[1]->identity().generation==retained);
+ assert(cores[0]->pendingCount()==1&&cores[1]->pendingCount()==(single?0u:1u));
  unsigned before[11]{};for(unsigned i=1;i<=10;++i)before[i]=f->counter(i);
  const unsigned checkpointBefore=checkpoints,nvsBefore=F::nvsTotal,fsBefore=F::fsTotal;
  const uint64_t syntheticBefore=nowMs,schedulerCallsBefore=ownerScheduleCalls,schedulerMsBefore=ownerScheduleMs,workerDelayBefore=providerWorkerDelayMs,hardwareSleepBefore=hardwareSleepMs;const auto wallBefore=std::chrono::steady_clock::now();
@@ -85,8 +90,8 @@ static void historyEdit(unsigned retained,bool report,bool single=false){
  const auto timing=L::timing();
  assert(nowMs-syntheticBefore==ownerScheduleMs-schedulerMsBefore+providerWorkerDelayMs-workerDelayBefore+hardwareSleepMs-hardwareSleepBefore);
  assert(checkpoints==checkpointBefore+1&&L::exitSafe()&&maintenance->exitSafe()&&!port->nativeStorageAttached());
- assert(!stores[0]->core.pendingCount()&&!stores[1]->core.pendingCount());
- assert(stores[0]->core.identity().generation==retained+1&&stores[1]->core.identity().generation==retained+(single?0:1));
+ assert(!cores[0]->pendingCount()&&!cores[1]->pendingCount());
+ assert(cores[0]->identity().generation==retained+1&&cores[1]->identity().generation==retained+(single?0:1));
  assert(maintenance->result(1)==M::Sync::State::Synchronized&&maintenance->result(6)==M::Sync::State::Synchronized);
  if(report){
   printf("HISTORY_METRIC {\"checkpoint_kind\":\"%s\",\"retained_generations_per_namespace\":%u,\"namespace_generations_after\":[%u,%u],\"namespaces\":[1,6],\"keys_per_namespace\":1,\"value_bytes_per_namespace\":1024,\"map_bytes_per_namespace\":1044,\"replica_page_capacity_bytes\":4096,\"replica_file_bytes_per_generation_per_namespace\":1044,\"pages_per_generation_per_namespace\":1,\"owner_polls\":%u,\"raw_async_submit_attempts\":%u,\"raw_async_queued\":%u,\"package_submit_attempts\":%u,\"package_queued\":%u,\"total_queued\":%u,\"owner_scheduler_delay_calls\":%llu,\"owner_scheduler_delay_ms\":%llu,\"modeled_provider_worker_delay_ms\":%llu,\"modeled_hardware_sleep_ms\":%llu,\"synthetic_blocked_ms\":%llu,\"synthetic_elapsed_ms\":%llu,\"host_checkpoint_wall_ns\":%lld,\"card_read_calls\":%u,\"card_write_calls\":%u,\"native_nvs_calls\":%u,\"native_fs_calls\":%u,\"successful_namespaces\":%s,\"unchanged_namespaces\":%s}\n",
@@ -105,12 +110,12 @@ static void historyInventory(unsigned expected,unsigned expectedSix=0){
 
 static void trigger(){const auto*api=risc_runtime_get_api(1);assert(api);risc_runtime_capability_v1 grant{sizeof grant};assert(api->acquire(RISC_KEY_VALUE_CAPABILITY,1,1,&grant));assert(api->release(&grant));assert(L::exitSafe()&&maintenance->exitSafe()&&!port->nativeStorageAttached());}
 extern "C" void test_maintenance_app(){
- assert(L::ready()&&stores[0]->core.ready()&&stores[1]->core.ready());
+ assert(L::ready()&&cores[0]->ready()&&cores[1]->ready());
  if(scenario.rfind("first",0)==0){
-  if(scenario=="first-cancel"){assert(maintenance->result(1)==M::Sync::State::Cancelled&&stores[0]->core.pendingCount());cancelLatch=false;}
+  if(scenario=="first-cancel"){assert(maintenance->result(1)==M::Sync::State::Cancelled&&cores[0]->pendingCount());cancelLatch=false;}
   for(unsigned i=0;i<3;++i)trigger();
-  if(scenario=="first-conflict"){assert(!stores[0]->core.identity().known&&stores[0]->core.pendingCount()&&maintenance->result(1)==M::Sync::State::Conflict);assert(stores[1]->core.identity().generation==1&&!stores[1]->core.pendingCount());ordinaryMaintenance();assert(!anchorPin->release()&&!f);return;}
-  assert(stores[0]->core.identity().generation==1&&stores[1]->core.identity().generation==1&&!stores[0]->core.pendingCount()&&!stores[1]->core.pendingCount());
+  if(scenario=="first-conflict"){assert(!cores[0]->identity().known&&cores[0]->pendingCount()&&maintenance->result(1)==M::Sync::State::Conflict);assert(cores[1]->identity().generation==1&&!cores[1]->pendingCount());ordinaryMaintenance();assert(!anchorPin->release()&&!f);return;}
+  assert(cores[0]->identity().generation==1&&cores[1]->identity().generation==1&&!cores[0]->pendingCount()&&!cores[1]->pendingCount());
  }
  const unsigned reads=f->counter(5),writes=f->counter(6),refresh=f->counter(1),nvs=F::nvsTotal,fs=F::fsTotal;
  for(unsigned i=0;i<8;++i)trigger();
@@ -121,20 +126,20 @@ extern "C" void test_maintenance_app(){
   historyInventory(101,single?100:101);ordinaryMaintenance();assert(!anchorPin->release()&&!f);return;
  }
  if(scenario=="save-exit"||scenario=="absent"){const auto writes=f->counter(6);editPair("final-prefs","final-wifi");assert(L::exitSafe()&&maintenance->exitSafe());
-  if(scenario=="absent"){assert(stores[0]->core.pendingCount()==1&&stores[1]->core.pendingCount()==1&&f->counter(6)==writes&&maintenance->result(1)==M::Sync::State::Deferred&&maintenance->result(6)==M::Sync::State::Deferred);releaseAnchorAtFinal=true;}
-  else {assert(!stores[0]->core.pendingCount()&&!stores[1]->core.pendingCount()&&f->counter(6)>writes);ordinaryMaintenance();assert(!anchorPin->release()&&!f);}return;
+  if(scenario=="absent"){assert(cores[0]->pendingCount()==1&&cores[1]->pendingCount()==1&&f->counter(6)==writes&&maintenance->result(1)==M::Sync::State::Deferred&&maintenance->result(6)==M::Sync::State::Deferred);releaseAnchorAtFinal=true;}
+  else {assert(!cores[0]->pendingCount()&&!cores[1]->pendingCount()&&f->counter(6)>writes);ordinaryMaintenance();assert(!anchorPin->release()&&!f);}return;
  }
- if(scenario=="implicit-exit"){const auto*api=risc_runtime_get_api(1);risc_runtime_capability_v1 grants[2]={{sizeof(risc_runtime_capability_v1)},{sizeof(risc_runtime_capability_v1)}};assert(api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,1,&grants[0])&&api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,6,&grants[1]));edit(*static_cast<const risc_key_value_atomic_v1*>(grants[0].api),"implicit-prefs");edit(*static_cast<const risc_key_value_atomic_v1*>(grants[1].api),"implicit-wifi");assert(stores[0]->core.pendingCount()&&stores[1]->core.pendingCount());releaseAnchorAtFinal=true;return;}
+ if(scenario=="implicit-exit"){const auto*api=risc_runtime_get_api(1);risc_runtime_capability_v1 grants[2]={{sizeof(risc_runtime_capability_v1)},{sizeof(risc_runtime_capability_v1)}};assert(api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,1,&grants[0])&&api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,6,&grants[1]));edit(*static_cast<const risc_key_value_atomic_v1*>(grants[0].api),"implicit-prefs");edit(*static_cast<const risc_key_value_atomic_v1*>(grants[1].api),"implicit-wifi");assert(cores[0]->pendingCount()&&cores[1]->pendingCount());releaseAnchorAtFinal=true;return;}
  if(scenario=="draft-fence"){
   const auto*api=risc_runtime_get_api(1);risc_runtime_capability_v1 grant{sizeof grant};assert(api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,1,&grant));auto endpoint=*static_cast<const risc_key_value_atomic_v1*>(grant.api);
   edit(endpoint,"older-unsynced");risc_key_value_atomic_state_v1 captured{sizeof captured};assert(!endpoint.state(endpoint.context,&captured));
-  trigger();assert(stores[0]->core.pendingCount()==1&&stores[0]->core.revision()==captured.revision);
+  trigger();assert(cores[0]->pendingCount()==1&&cores[0]->revision()==captured.revision);
   risc_key_value_atomic_mutation_v1 mutation{"setting",RISC_ATOMIC_PUT,"new-UI-edit",11};uint64_t token=0;
   assert(!endpoint.submit(endpoint.context,captured.revision,&mutation,1,"captured-intent",16,&token));risc_key_value_atomic_receipt_v1 receipt{sizeof receipt};int rc;do{schedule(1);rc=endpoint.collect(endpoint.context,token,&receipt);}while(rc==RISC_ATOMIC_PENDING);assert(!rc&&!receipt.status);
   token=99;assert(endpoint.submit(endpoint.context,captured.revision,&mutation,1,"stale-captured-intent",21,&token)==RISC_ATOMIC_STALE&&!token);
-  assert(api->release(&grant)&&!stores[0]->core.pendingCount());assert(F::value(stores[0]->core,"setting")=="new-UI-edit");ordinaryMaintenance();assert(!anchorPin->release()&&!f);puts("live atomic draft survives ordinary acquisition; obsolete revision still refuses; final release SD-acks PASS");return;
+  assert(api->release(&grant)&&!cores[0]->pendingCount());assert(F::value(*cores[0],"setting")=="new-UI-edit");ordinaryMaintenance();assert(!anchorPin->release()&&!f);puts("live atomic draft survives ordinary acquisition; obsolete revision still refuses; final release SD-acks PASS");return;
  }
- if(scenario=="pre-capture"){const auto*e=risc_storage_volume_export(f->volume);uint64_t t=0,n=0;uint32_t size=0;assert(!e->export_begin(f->volume->context,&t,&n,&size));editPair("old-prefs","old-wifi");assert(stores[0]->core.pendingCount()&&stores[1]->core.pendingCount());assert(!e->export_end(f->volume->context,t));const auto*api=risc_runtime_get_api(1);risc_runtime_capability_v1 grant{sizeof grant};assert(api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,1,&grant));assert(!stores[0]->core.pendingCount()&&!stores[1]->core.pendingCount());assert(api->release(&grant));ordinaryMaintenance();assert(!anchorPin->release()&&!f);puts("first atomic grant is published after both older namespaces settle on SD PASS");return;}
+ if(scenario=="pre-capture"){const auto*e=risc_storage_volume_export(f->volume);uint64_t t=0,n=0;uint32_t size=0;assert(!e->export_begin(f->volume->context,&t,&n,&size));editPair("old-prefs","old-wifi");assert(cores[0]->pendingCount()&&cores[1]->pendingCount());assert(!e->export_end(f->volume->context,t));const auto*api=risc_runtime_get_api(1);risc_runtime_capability_v1 grant{sizeof grant};assert(api->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,1,&grant));assert(!cores[0]->pendingCount()&&!cores[1]->pendingCount());assert(api->release(&grant));ordinaryMaintenance();assert(!anchorPin->release()&&!f);puts("first atomic grant is published after both older namespaces settle on SD PASS");return;}
  if(scenario=="idle"){ordinaryMaintenance();assert(!anchorPin->release()&&!f);return;}
  const unsigned base=scenario.rfind("first",0)==0?2:scenario=="persisted-incarnation"?21:20;
  for(unsigned generation=base;generation<base+3;++generation){
@@ -143,12 +148,12 @@ extern "C" void test_maintenance_app(){
   if(scenario=="cancel"&&generation==20)cancellationArmed=true;
   if(scenario=="retained"&&generation==20)f->fault(5);
   editPair(generation==20?"prefs-a":generation==21?"prefs-b":"prefs-c",generation==20?"wifi-a":generation==21?"wifi-b":"wifi-c");
-  if(usbToken){assert(stores[0]->core.pendingCount()&&stores[1]->core.pendingCount());assert(!exportApi->export_end(f->volume->context,usbToken));}
-  if(scenario=="cancel"&&generation==20){assert(stores[0]->core.pendingCount()&&L::timing().cancellationRequested&&maintenance->result(1)==M::Sync::State::Cancelled);cancelLatch=false;}
+  if(usbToken){assert(cores[0]->pendingCount()&&cores[1]->pendingCount());assert(!exportApi->export_end(f->volume->context,usbToken));}
+  if(scenario=="cancel"&&generation==20){assert(cores[0]->pendingCount()&&L::timing().cancellationRequested&&maintenance->result(1)==M::Sync::State::Cancelled);cancelLatch=false;}
   trigger();trigger();
-  assert(stores[1]->core.identity().generation==generation&&!stores[1]->core.pendingCount());
-  if(scenario=="foreign"||scenario=="no-incarnation"){assert(stores[0]->core.identity().generation==19&&stores[0]->core.pendingCount()&&maintenance->result(1)==(scenario=="foreign"?M::Sync::State::Conflict:M::Sync::State::Failed));}
-  else assert(stores[0]->core.identity().generation==generation&&!stores[0]->core.pendingCount());
+  assert(cores[1]->identity().generation==generation&&!cores[1]->pendingCount());
+  if(scenario=="foreign"||scenario=="no-incarnation"){assert(cores[0]->identity().generation==19&&cores[0]->pendingCount()&&maintenance->result(1)==(scenario=="foreign"?M::Sync::State::Conflict:M::Sync::State::Failed));}
+  else assert(cores[0]->identity().generation==generation&&!cores[0]->pendingCount());
   ordinaryMaintenance();
  }
  assert(!anchorPin->release()&&!f);
@@ -161,13 +166,18 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
   }
  }
 
- auto*a=new F::Fixture(1);auto*b=new F::Fixture(6);stores[0]=a;stores[1]=b;Hash h1,h6;const uint8_t incarnation1[16]={0x71},incarnation6[16]={0x76};static const L::Writer writers[]={{"maintenance-test",1},{"maintenance-test",6}};
+#if RISC_NATIVE_SETTINGS_ASSEMBLY
+ if(!assembleMaintenance())return 0;
+#else
+ auto*a=new F::Fixture(1);auto*b=new F::Fixture(6);cores[0]=&a->core;cores[1]=&b->core;Hash h1,h6;const uint8_t incarnation1[16]={0x71},incarnation6[16]={0x76};static const L::Writer writers[]={{"maintenance-test",1},{"maintenance-test",6}};
  B*bootstrapClient=nullptr;
  if(scenario.rfind("restore",0)==0||scenario.rfind("first",0)==0){auto*s1=new Sources(1,nativeOwner,a->inspector,sourceHooks(*a));auto*s6=new Sources(6,nativeOwner,b->inspector,sourceHooks(*b));
   B::First::Authority first{nullptr,[](void*){return F::lease.load();},[](void*,uint8_t out[16]){static uint8_t serial=33;memset(out,0,16);out[0]=serial++;return true;},[](void*,uint32_t,uint32_t){return F::lease.load();}};
   bootstrapClient=new B({&a->core,&a->store,h1.api(),C::heap(),scenario=="restore-no-source"?nullptr:s1,first},{&b->core,&b->store,h6.api(),C::heap(),s6,first},9);
  }
  maintenance=new M({&a->core,&a->store,h1.api(),C::heap(),scenario=="no-incarnation"?nullptr:incarnation1},{&b->core,&b->store,h6.api(),C::heap(),incarnation6},9,writers,2,bootstrapClient);
+#endif
+ C&oneCore=*cores[0];C&sixCore=*cores[1];
  F::onWorker=false;F::lease=false;
  assert(L::prepare(&maintenance->admission(),{owner,schedule,[](){return uint32_t(nowMs);},[](){return cancelLatch;}}));
  auto hw=hardware();hw.sleep=[](uint32_t ms){hardwareSleepMs+=ms;nowMs+=ms;};workBackend.delayMs=[](uint32_t ms){providerWorkerDelayMs+=ms;nowMs+=ms;};
@@ -175,25 +185,37 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
  boot.appExitSafe=[](){return port->appExitSafe()&&L::exitSafe();};boot.providerStorageSafe=[](){return port->providerStorageSafe()&&!L::retained();};boot.retainedDelay=schedule;boot.nativeOwnerCheckpoint=[](bool admitNew){++checkpoints;const bool safe=L::checkpoint(admitNew);if(safe&&releaseAnchorAtFinal){assert(admitNew&&!anchorPin->release()&&!f);releaseAnchorAtFinal=false;}return safe;};
  static const RiscBoot::KeyValueBackend forbiddenLegacy{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},[](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},2048};boot.keyValue=&forbiddenLegacy;
  RiscBoot::Runtime runtime(boot);assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());if(scenario!="absent"){P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());}
- if(scenario!="absent"){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));auto remote=oneId;if(scenario=="foreign")remote.lineage[0]^=42;if(scenario.rfind("first",0)!=0||scenario=="first-conflict")seedMaintenance(1,one,remote);if(scenario.rfind("first",0)!=0)seedMaintenance(6,six,sixId);file("/ordinary.txt","keep",4);}else f->fault(8);
+ if(scenario!="absent"){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));auto remote=oneId;if(scenario=="foreign")remote.lineage[0]^=42;if(scenario!="restore-no-checkpoint"){if(scenario.rfind("first",0)!=0||scenario=="first-conflict")seedMaintenance(1,one,remote);if(scenario.rfind("first",0)!=0)seedMaintenance(6,six,sixId);}file("/ordinary.txt","keep",4);}else f->fault(8);
  if(scenario=="restore-conflict")F::nvs["rte00000001"]["valuable"]={1,2,3};
  if(scenario=="restore-resume"){
   const pid_t child=fork();assert(child>=0);if(!child){F::powerCheckpoint=[](const char*at){if(strcmp(at,"nvs-commit-after"))return;saveNvs();std::_Exit(73);};(void)L::hydrate(runtime,cpu);std::_Exit(95);}
-  int status=0;assert(waitpid(child,&status,0)==child&&WIFEXITED(status)&&WEXITSTATUS(status)==73);loadNvs();assert(!a->core.ready());
+  int status=0;assert(waitpid(child,&status,0)==child&&WIFEXITED(status)&&WEXITSTATUS(status)==73);loadNvs();assert(!oneCore.ready());
  }
  concurrentNative=scenario.find("concurrent")!=std::string::npos;std::atomic<bool>stopNative{false};std::thread nativeThreads[2];
  if(concurrentNative)for(unsigned i=0;i<2;++i)nativeThreads[i]=std::thread([&,i]{task=Task::NativeSettings;F::onWorker=true;onNamespace=i?6:1;while(!stopNative.load(std::memory_order_acquire)){services[i]->workerStep();std::this_thread::yield();}});
+ if(scenario=="corrupt-native")F::nvs.at("rnr00000001").at("root")[0]^=1;
  const auto nativeBefore=F::nvs;const auto writesBefore=f->counter(6);
  if(scenario=="restore-cancel")cancellationArmed=true;
  if(scenario=="restore-retained")f->fault(3);
+#if RISC_NATIVE_SETTINGS_ASSEMBLY
+ if(scenario=="payload-failure")failPayload=true;
+ const auto payloadBefore=payloadRequests;
+#endif
  const bool hydrated=L::hydrate(runtime,cpu);
+#if RISC_NATIVE_SETTINGS_ASSEMBLY
+ if(scenario=="payload-failure"){assert(!hydrated&&!L::ready()&&L::exitSafe()&&!L::retained()&&F::nvs==nativeBefore&&payloadRequests>payloadBefore&&!oneCore.ready());ordinaryMaintenance();assert(!anchor.release()&&!f);puts("PSRAM allocation failure refuses hydration without fallback, mutation or retention PASS");std::fflush(stdout);std::_Exit(0);}
+#endif
  if(scenario=="restore-retained"){assert(!hydrated&&L::retained()&&maintenance->retained()&&port->nativeStorageAttached());puts("actual pre-app restore retention PASS");std::fflush(stdout);std::_Exit(0);}
- if(scenario=="restore-no-source"||scenario=="restore-conflict"||scenario=="restore-cancel"){assert(!hydrated&&!L::ready()&&maintenance->exitSafe()&&F::nvs==nativeBefore&&f->counter(6)==writesBefore&&!a->core.ready());ordinaryMaintenance();assert(!anchor.release()&&!f);printf("actual lifecycle pre-app %s refuses unchanged PASS\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);}
+ if(scenario=="restore-no-source"||scenario=="restore-conflict"||scenario=="restore-cancel"||scenario=="restore-no-checkpoint"||scenario=="corrupt-native"){assert(!hydrated&&!L::ready()&&maintenance->exitSafe()&&F::nvs==nativeBefore&&f->counter(6)==writesBefore&&!oneCore.ready());ordinaryMaintenance();assert(!anchor.release()&&!f);printf("actual lifecycle pre-app %s refuses unchanged PASS\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);}
  assert(hydrated&&L::attachOwner(runtime,cpu));
  if(scenario=="first-cancel")cancellationArmed=true;
 if(!runtime.run()){fprintf(stderr,"run: %s\n",runtime.error());assert(false);}assert(checkpoints>((scenario=="first-conflict"||scenario=="draft-fence")?0u:8u)&&L::exitSafe());assert(anchor.exitSafe()&&!f);
- if(scenario=="save-exit"||scenario=="implicit-exit"){assert(!a->core.pendingCount()&&!b->core.pendingCount()&&a->core.identity().generation==20&&b->core.identity().generation==20);puts("last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS");}
- if(scenario=="absent")assert(a->core.pendingCount()==1&&b->core.pendingCount()==1&&L::exitSafe()&&!L::retained());
+ if(scenario=="save-exit"||scenario=="implicit-exit"){assert(!oneCore.pendingCount()&&!sixCore.pendingCount()&&oneCore.identity().generation==20&&sixCore.identity().generation==20);puts("last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS");}
+ if(scenario=="absent")assert(oneCore.pendingCount()==1&&sixCore.pendingCount()==1&&L::exitSafe()&&!L::retained());
  if(concurrentNative){stopNative.store(true,std::memory_order_release);for(auto&t:nativeThreads)t.join();}
+#if RISC_NATIVE_SETTINGS_ASSEMBLY
+ assert(payloadRequests>0&&payloadPeak>0);
+ printf("Factory PSRAM allocator coverage PASS; requests=%u; peak-vendor-bytes=%zu; live-vendor-bytes=%zu\n",payloadRequests,payloadPeak,payloadBytes);
+#endif
  printf("actual lifecycle/Runtime/X4/FatFs maintenance %s PASS; control=%zu; polls=%u\n",scenario.c_str(),sizeof(M),L::timing().lastPolls);std::fflush(stdout);std::_Exit(0);
 }

@@ -56,11 +56,15 @@ passes and target compilation are not hardware or private-filesystem approval.
    root/epoch/serialization binding. Do not substitute a generic POSIX inode
    assumption for the pinned SDK VFS. This blocked work is separate from the
    lifecycle and SD protocols that can be qualified independently.
-2. Supply one compiled-in admission factory with permanent INTERNAL controls,
-   exact namespace 1 and 6 Core/store bindings, qualified payload placement,
-   digest/entropy inputs and typed startup source authority. The existing weak
-   selector has no production implementation. Enabling its flag without that
-   input intentionally refuses boot; it does not initialize empty settings.
+2. Supply the qualified backend inputs and concrete product selector for the
+   implemented `NativeSettingsAssembly`. Its permanent INTERNAL controls now own
+   exact namespace 1 and 6 Core/store, bootstrap and maintenance bindings, enforce
+   the PSRAM-only payload allocator and check injected source/digest/authority
+   composition. The 56-case combined host matrix and target default-off checks
+   pass; this does not construct or qualify private storage. The existing weak
+   selector still has no production implementation. Enabling its flag without
+   that input intentionally refuses boot; it does not initialize empty settings.
+   See `X4_SETTINGS_ASSEMBLY.md` for the owned controls and supplied-backend contract.
 3. Carry the source-qualified controller paths into the actual selected product.
    Attached BLE and two-profile Wi-Fi campaigns pass normal and ASan/UBSan
    through automatic last-release SD acknowledgement, complete native erasure,
@@ -108,6 +112,8 @@ requirement. See the resource and interrupted-catalog evidence for exact bounds.
 ## Measured everyday-history latency concern
 
 The real dispatcher protocol is measured separately from physical-card speed.
+The original benchmark, before bounded collect-and-next scheduling, is retained
+as the comparison baseline:
 With 1, 10 and 100 retained one-page generations in each namespace, the next
 paired checkpoint takes 222, 298 and 1,898 owner polls; total queued SD operations
 are 68, 104 and 876. Synthetic blocked time is 262, 368 and 2,607 milliseconds.
@@ -120,4 +126,12 @@ At 100 generations, 99 historical page names exceed the 64-entry sorted window,
 requiring two full directory traversals for each inventory scan. This is a
 practical latency concern, not a tested capacity failure or a demand for unlimited
 history. Physical SD timing, cancellation and UI/watchdog behavior remain product
-activation gates. Full evidence is in `evidence/native-settings-history/`.
+activation gates. Baseline evidence is in `evidence/native-settings-history/`.
+
+The subsequent bounded native catalog step queues one next entry immediately
+after collection. It adds no loop, fields, I/O, history policy or authority. With
+identical operation counts, the 100-generation single checkpoint now uses 541
+owner polls and 791 synthetic milliseconds; the paired checkpoint uses 1,082
+polls and 1,583 milliseconds. Five normal and sanitized repetitions agree. This
+removes idle scheduler turns but leaves physical-card latency and responsiveness
+unqualified. See `CATALOG_POLL_BUDGET.md` and `evidence/catalog-poll-fusion/`.

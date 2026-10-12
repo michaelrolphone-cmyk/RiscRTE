@@ -1,0 +1,1109 @@
+{
+  "baseline_source_commit": "c441eaf6d421e2cf690c7e04ce0f53733612fc90",
+  "scope": "Real Runtime/CpuPort/X4/FatFs and checked-store host fixture. Paired and single-namespace dirty checkpoints; warm existing volume. No product selection or hardware timing.",
+  "repetitions_per_case": 5,
+  "repetition_case_timeout_seconds": 60.0,
+  "summary": [
+    {
+      "checkpoint_kind": "paired",
+      "retained_generations_per_namespace": 1,
+      "namespace_generations_after": [
+        2,
+        2
+      ],
+      "namespaces": [
+        1,
+        6
+      ],
+      "keys_per_namespace": 1,
+      "value_bytes_per_namespace": 1024,
+      "map_bytes_per_namespace": 1044,
+      "replica_page_capacity_bytes": 4096,
+      "replica_file_bytes_per_generation_per_namespace": 1044,
+      "pages_per_generation_per_namespace": 1,
+      "owner_polls": 210,
+      "raw_async_submit_attempts": 60,
+      "raw_async_queued": 60,
+      "package_submit_attempts": 8,
+      "package_queued": 8,
+      "total_queued": 68,
+      "owner_scheduler_delay_calls": 209,
+      "owner_scheduler_delay_ms": 209,
+      "modeled_provider_worker_delay_ms": 37,
+      "modeled_hardware_sleep_ms": 0,
+      "synthetic_blocked_ms": 246,
+      "synthetic_elapsed_ms": 246,
+      "card_read_calls": 492,
+      "card_write_calls": 56,
+      "native_nvs_calls": 144,
+      "native_fs_calls": 116,
+      "successful_namespaces": [
+        1,
+        6
+      ],
+      "unchanged_namespaces": [],
+      "host_checkpoint_wall_ns_min": 3984061,
+      "host_checkpoint_wall_ns_median": 6106342,
+      "host_checkpoint_wall_ns_max": 14005601
+    },
+    {
+      "checkpoint_kind": "paired",
+      "retained_generations_per_namespace": 10,
+      "namespace_generations_after": [
+        11,
+        11
+      ],
+      "namespaces": [
+        1,
+        6
+      ],
+      "keys_per_namespace": 1,
+      "value_bytes_per_namespace": 1024,
+      "map_bytes_per_namespace": 1044,
+      "replica_page_capacity_bytes": 4096,
+      "replica_file_bytes_per_generation_per_namespace": 1044,
+      "pages_per_generation_per_namespace": 1,
+      "owner_polls": 250,
+      "raw_async_submit_attempts": 96,
+      "raw_async_queued": 96,
+      "package_submit_attempts": 8,
+      "package_queued": 8,
+      "total_queued": 104,
+      "owner_scheduler_delay_calls": 249,
+      "owner_scheduler_delay_ms": 249,
+      "modeled_provider_worker_delay_ms": 59,
+      "modeled_hardware_sleep_ms": 0,
+      "synthetic_blocked_ms": 308,
+      "synthetic_elapsed_ms": 308,
+      "card_read_calls": 1276,
+      "card_write_calls": 50,
+      "native_nvs_calls": 144,
+      "native_fs_calls": 116,
+      "successful_namespaces": [
+        1,
+        6
+      ],
+      "unchanged_namespaces": [],
+      "host_checkpoint_wall_ns_min": 4206425,
+      "host_checkpoint_wall_ns_median": 5998665,
+      "host_checkpoint_wall_ns_max": 10406593
+    },
+    {
+      "checkpoint_kind": "paired",
+      "retained_generations_per_namespace": 100,
+      "namespace_generations_after": [
+        101,
+        101
+      ],
+      "namespaces": [
+        1,
+        6
+      ],
+      "keys_per_namespace": 1,
+      "value_bytes_per_namespace": 1024,
+      "map_bytes_per_namespace": 1044,
+      "replica_page_capacity_bytes": 4096,
+      "replica_file_bytes_per_generation_per_namespace": 1044,
+      "pages_per_generation_per_namespace": 1,
+      "owner_polls": 1082,
+      "raw_async_submit_attempts": 868,
+      "raw_async_queued": 868,
+      "package_submit_attempts": 8,
+      "package_queued": 8,
+      "total_queued": 876,
+      "owner_scheduler_delay_calls": 1081,
+      "owner_scheduler_delay_ms": 1081,
+      "modeled_provider_worker_delay_ms": 502,
+      "modeled_hardware_sleep_ms": 0,
+      "synthetic_blocked_ms": 1583,
+      "synthetic_elapsed_ms": 1583,
+      "card_read_calls": 8866,
+      "card_write_calls": 42,
+      "native_nvs_calls": 144,
+      "native_fs_calls": 116,
+      "successful_namespaces": [
+        1,
+        6
+      ],
+      "unchanged_namespaces": [],
+      "host_checkpoint_wall_ns_min": 9622743,
+      "host_checkpoint_wall_ns_median": 13131056,
+      "host_checkpoint_wall_ns_max": 16587336
+    },
+    {
+      "checkpoint_kind": "single",
+      "retained_generations_per_namespace": 100,
+      "namespace_generations_after": [
+        101,
+        100
+      ],
+      "namespaces": [
+        1,
+        6
+      ],
+      "keys_per_namespace": 1,
+      "value_bytes_per_namespace": 1024,
+      "map_bytes_per_namespace": 1044,
+      "replica_page_capacity_bytes": 4096,
+      "replica_file_bytes_per_generation_per_namespace": 1044,
+      "pages_per_generation_per_namespace": 1,
+      "owner_polls": 541,
+      "raw_async_submit_attempts": 434,
+      "raw_async_queued": 434,
+      "package_submit_attempts": 4,
+      "package_queued": 4,
+      "total_queued": 438,
+      "owner_scheduler_delay_calls": 540,
+      "owner_scheduler_delay_ms": 540,
+      "modeled_provider_worker_delay_ms": 251,
+      "modeled_hardware_sleep_ms": 0,
+      "synthetic_blocked_ms": 791,
+      "synthetic_elapsed_ms": 791,
+      "card_read_calls": 4433,
+      "card_write_calls": 21,
+      "native_nvs_calls": 72,
+      "native_fs_calls": 58,
+      "successful_namespaces": [
+        1
+      ],
+      "unchanged_namespaces": [
+        6
+      ],
+      "host_checkpoint_wall_ns_min": 5100065,
+      "host_checkpoint_wall_ns_median": 7676281,
+      "host_checkpoint_wall_ns_max": 8669657
+    }
+  ],
+  "runs": [
+    {
+      "case": "first-history",
+      "host_process_wall_ns": 953239755,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 1,
+          "namespace_generations_after": [
+            2,
+            2
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 210,
+          "raw_async_submit_attempts": 60,
+          "raw_async_queued": 60,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 68,
+          "owner_scheduler_delay_calls": 209,
+          "owner_scheduler_delay_ms": 209,
+          "modeled_provider_worker_delay_ms": 37,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 246,
+          "synthetic_elapsed_ms": 246,
+          "host_checkpoint_wall_ns": 6651199,
+          "card_read_calls": 492,
+          "card_write_calls": 56,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 10,
+          "namespace_generations_after": [
+            11,
+            11
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 250,
+          "raw_async_submit_attempts": 96,
+          "raw_async_queued": 96,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 104,
+          "owner_scheduler_delay_calls": 249,
+          "owner_scheduler_delay_ms": 249,
+          "modeled_provider_worker_delay_ms": 59,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 308,
+          "synthetic_elapsed_ms": 308,
+          "host_checkpoint_wall_ns": 4206425,
+          "card_read_calls": 1276,
+          "card_write_calls": 50,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            101
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 1082,
+          "raw_async_submit_attempts": 868,
+          "raw_async_queued": 868,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 876,
+          "owner_scheduler_delay_calls": 1081,
+          "owner_scheduler_delay_ms": 1081,
+          "modeled_provider_worker_delay_ms": 502,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 1583,
+          "synthetic_elapsed_ms": 1583,
+          "host_checkpoint_wall_ns": 11399245,
+          "card_read_calls": 8866,
+          "card_write_calls": 42,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        }
+      ]
+    },
+    {
+      "case": "first-history",
+      "host_process_wall_ns": 1288635907,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 1,
+          "namespace_generations_after": [
+            2,
+            2
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 210,
+          "raw_async_submit_attempts": 60,
+          "raw_async_queued": 60,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 68,
+          "owner_scheduler_delay_calls": 209,
+          "owner_scheduler_delay_ms": 209,
+          "modeled_provider_worker_delay_ms": 37,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 246,
+          "synthetic_elapsed_ms": 246,
+          "host_checkpoint_wall_ns": 14005601,
+          "card_read_calls": 492,
+          "card_write_calls": 56,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 10,
+          "namespace_generations_after": [
+            11,
+            11
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 250,
+          "raw_async_submit_attempts": 96,
+          "raw_async_queued": 96,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 104,
+          "owner_scheduler_delay_calls": 249,
+          "owner_scheduler_delay_ms": 249,
+          "modeled_provider_worker_delay_ms": 59,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 308,
+          "synthetic_elapsed_ms": 308,
+          "host_checkpoint_wall_ns": 10406593,
+          "card_read_calls": 1276,
+          "card_write_calls": 50,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            101
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 1082,
+          "raw_async_submit_attempts": 868,
+          "raw_async_queued": 868,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 876,
+          "owner_scheduler_delay_calls": 1081,
+          "owner_scheduler_delay_ms": 1081,
+          "modeled_provider_worker_delay_ms": 502,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 1583,
+          "synthetic_elapsed_ms": 1583,
+          "host_checkpoint_wall_ns": 16439601,
+          "card_read_calls": 8866,
+          "card_write_calls": 42,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        }
+      ]
+    },
+    {
+      "case": "first-history",
+      "host_process_wall_ns": 1157689150,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 1,
+          "namespace_generations_after": [
+            2,
+            2
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 210,
+          "raw_async_submit_attempts": 60,
+          "raw_async_queued": 60,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 68,
+          "owner_scheduler_delay_calls": 209,
+          "owner_scheduler_delay_ms": 209,
+          "modeled_provider_worker_delay_ms": 37,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 246,
+          "synthetic_elapsed_ms": 246,
+          "host_checkpoint_wall_ns": 6106342,
+          "card_read_calls": 492,
+          "card_write_calls": 56,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 10,
+          "namespace_generations_after": [
+            11,
+            11
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 250,
+          "raw_async_submit_attempts": 96,
+          "raw_async_queued": 96,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 104,
+          "owner_scheduler_delay_calls": 249,
+          "owner_scheduler_delay_ms": 249,
+          "modeled_provider_worker_delay_ms": 59,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 308,
+          "synthetic_elapsed_ms": 308,
+          "host_checkpoint_wall_ns": 5956755,
+          "card_read_calls": 1276,
+          "card_write_calls": 50,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            101
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 1082,
+          "raw_async_submit_attempts": 868,
+          "raw_async_queued": 868,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 876,
+          "owner_scheduler_delay_calls": 1081,
+          "owner_scheduler_delay_ms": 1081,
+          "modeled_provider_worker_delay_ms": 502,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 1583,
+          "synthetic_elapsed_ms": 1583,
+          "host_checkpoint_wall_ns": 9622743,
+          "card_read_calls": 8866,
+          "card_write_calls": 42,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        }
+      ]
+    },
+    {
+      "case": "first-history",
+      "host_process_wall_ns": 1224226014,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 1,
+          "namespace_generations_after": [
+            2,
+            2
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 210,
+          "raw_async_submit_attempts": 60,
+          "raw_async_queued": 60,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 68,
+          "owner_scheduler_delay_calls": 209,
+          "owner_scheduler_delay_ms": 209,
+          "modeled_provider_worker_delay_ms": 37,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 246,
+          "synthetic_elapsed_ms": 246,
+          "host_checkpoint_wall_ns": 4956145,
+          "card_read_calls": 492,
+          "card_write_calls": 56,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 10,
+          "namespace_generations_after": [
+            11,
+            11
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 250,
+          "raw_async_submit_attempts": 96,
+          "raw_async_queued": 96,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 104,
+          "owner_scheduler_delay_calls": 249,
+          "owner_scheduler_delay_ms": 249,
+          "modeled_provider_worker_delay_ms": 59,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 308,
+          "synthetic_elapsed_ms": 308,
+          "host_checkpoint_wall_ns": 5998665,
+          "card_read_calls": 1276,
+          "card_write_calls": 50,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            101
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 1082,
+          "raw_async_submit_attempts": 868,
+          "raw_async_queued": 868,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 876,
+          "owner_scheduler_delay_calls": 1081,
+          "owner_scheduler_delay_ms": 1081,
+          "modeled_provider_worker_delay_ms": 502,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 1583,
+          "synthetic_elapsed_ms": 1583,
+          "host_checkpoint_wall_ns": 16587336,
+          "card_read_calls": 8866,
+          "card_write_calls": 42,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        }
+      ]
+    },
+    {
+      "case": "first-history",
+      "host_process_wall_ns": 1071281840,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 1,
+          "namespace_generations_after": [
+            2,
+            2
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 210,
+          "raw_async_submit_attempts": 60,
+          "raw_async_queued": 60,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 68,
+          "owner_scheduler_delay_calls": 209,
+          "owner_scheduler_delay_ms": 209,
+          "modeled_provider_worker_delay_ms": 37,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 246,
+          "synthetic_elapsed_ms": 246,
+          "host_checkpoint_wall_ns": 3984061,
+          "card_read_calls": 492,
+          "card_write_calls": 56,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 10,
+          "namespace_generations_after": [
+            11,
+            11
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 250,
+          "raw_async_submit_attempts": 96,
+          "raw_async_queued": 96,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 104,
+          "owner_scheduler_delay_calls": 249,
+          "owner_scheduler_delay_ms": 249,
+          "modeled_provider_worker_delay_ms": 59,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 308,
+          "synthetic_elapsed_ms": 308,
+          "host_checkpoint_wall_ns": 7243265,
+          "card_read_calls": 1276,
+          "card_write_calls": 50,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        },
+        {
+          "checkpoint_kind": "paired",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            101
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 1082,
+          "raw_async_submit_attempts": 868,
+          "raw_async_queued": 868,
+          "package_submit_attempts": 8,
+          "package_queued": 8,
+          "total_queued": 876,
+          "owner_scheduler_delay_calls": 1081,
+          "owner_scheduler_delay_ms": 1081,
+          "modeled_provider_worker_delay_ms": 502,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 1583,
+          "synthetic_elapsed_ms": 1583,
+          "host_checkpoint_wall_ns": 13131056,
+          "card_read_calls": 8866,
+          "card_write_calls": 42,
+          "native_nvs_calls": 144,
+          "native_fs_calls": 116,
+          "successful_namespaces": [
+            1,
+            6
+          ],
+          "unchanged_namespaces": []
+        }
+      ]
+    },
+    {
+      "case": "first-history-single",
+      "host_process_wall_ns": 1254933598,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "single",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            100
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 541,
+          "raw_async_submit_attempts": 434,
+          "raw_async_queued": 434,
+          "package_submit_attempts": 4,
+          "package_queued": 4,
+          "total_queued": 438,
+          "owner_scheduler_delay_calls": 540,
+          "owner_scheduler_delay_ms": 540,
+          "modeled_provider_worker_delay_ms": 251,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 791,
+          "synthetic_elapsed_ms": 791,
+          "host_checkpoint_wall_ns": 7676281,
+          "card_read_calls": 4433,
+          "card_write_calls": 21,
+          "native_nvs_calls": 72,
+          "native_fs_calls": 58,
+          "successful_namespaces": [
+            1
+          ],
+          "unchanged_namespaces": [
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "case": "first-history-single",
+      "host_process_wall_ns": 926976833,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "single",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            100
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 541,
+          "raw_async_submit_attempts": 434,
+          "raw_async_queued": 434,
+          "package_submit_attempts": 4,
+          "package_queued": 4,
+          "total_queued": 438,
+          "owner_scheduler_delay_calls": 540,
+          "owner_scheduler_delay_ms": 540,
+          "modeled_provider_worker_delay_ms": 251,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 791,
+          "synthetic_elapsed_ms": 791,
+          "host_checkpoint_wall_ns": 5100065,
+          "card_read_calls": 4433,
+          "card_write_calls": 21,
+          "native_nvs_calls": 72,
+          "native_fs_calls": 58,
+          "successful_namespaces": [
+            1
+          ],
+          "unchanged_namespaces": [
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "case": "first-history-single",
+      "host_process_wall_ns": 884708811,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "single",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            100
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 541,
+          "raw_async_submit_attempts": 434,
+          "raw_async_queued": 434,
+          "package_submit_attempts": 4,
+          "package_queued": 4,
+          "total_queued": 438,
+          "owner_scheduler_delay_calls": 540,
+          "owner_scheduler_delay_ms": 540,
+          "modeled_provider_worker_delay_ms": 251,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 791,
+          "synthetic_elapsed_ms": 791,
+          "host_checkpoint_wall_ns": 6110207,
+          "card_read_calls": 4433,
+          "card_write_calls": 21,
+          "native_nvs_calls": 72,
+          "native_fs_calls": 58,
+          "successful_namespaces": [
+            1
+          ],
+          "unchanged_namespaces": [
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "case": "first-history-single",
+      "host_process_wall_ns": 1195511868,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "single",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            100
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 541,
+          "raw_async_submit_attempts": 434,
+          "raw_async_queued": 434,
+          "package_submit_attempts": 4,
+          "package_queued": 4,
+          "total_queued": 438,
+          "owner_scheduler_delay_calls": 540,
+          "owner_scheduler_delay_ms": 540,
+          "modeled_provider_worker_delay_ms": 251,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 791,
+          "synthetic_elapsed_ms": 791,
+          "host_checkpoint_wall_ns": 7767726,
+          "card_read_calls": 4433,
+          "card_write_calls": 21,
+          "native_nvs_calls": 72,
+          "native_fs_calls": 58,
+          "successful_namespaces": [
+            1
+          ],
+          "unchanged_namespaces": [
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "case": "first-history-single",
+      "host_process_wall_ns": 1743514663,
+      "checkpoints": [
+        {
+          "checkpoint_kind": "single",
+          "retained_generations_per_namespace": 100,
+          "namespace_generations_after": [
+            101,
+            100
+          ],
+          "namespaces": [
+            1,
+            6
+          ],
+          "keys_per_namespace": 1,
+          "value_bytes_per_namespace": 1024,
+          "map_bytes_per_namespace": 1044,
+          "replica_page_capacity_bytes": 4096,
+          "replica_file_bytes_per_generation_per_namespace": 1044,
+          "pages_per_generation_per_namespace": 1,
+          "owner_polls": 541,
+          "raw_async_submit_attempts": 434,
+          "raw_async_queued": 434,
+          "package_submit_attempts": 4,
+          "package_queued": 4,
+          "total_queued": 438,
+          "owner_scheduler_delay_calls": 540,
+          "owner_scheduler_delay_ms": 540,
+          "modeled_provider_worker_delay_ms": 251,
+          "modeled_hardware_sleep_ms": 0,
+          "synthetic_blocked_ms": 791,
+          "synthetic_elapsed_ms": 791,
+          "host_checkpoint_wall_ns": 8669657,
+          "card_read_calls": 4433,
+          "card_write_calls": 21,
+          "native_nvs_calls": 72,
+          "native_fs_calls": 58,
+          "successful_namespaces": [
+            1
+          ],
+          "unchanged_namespaces": [
+            6
+          ]
+        }
+      ]
+    }
+  ],
+  "repeat_commands": [
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-repeat-0"
+    ],
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-repeat-1"
+    ],
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-repeat-2"
+    ],
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-repeat-3"
+    ],
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-repeat-4"
+    ],
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history-single",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-single-repeat-0"
+    ],
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history-single",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-single-repeat-1"
+    ],
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history-single",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-single-repeat-2"
+    ],
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history-single",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-single-repeat-3"
+    ],
+    [
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/test",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build",
+      "first-history-single",
+      "/workspace/shared/x4-settings-persistence-evidence-20261012/catalog-poll-fusion/normal-build/native-first-history-single-repeat-4"
+    ]
+  ],
+  "source_manifest_sha256": "ac2e8cffbdc8fda693ba36bac79d1bfdd203ef67d17d54afcc50b1f113d2ac0e",
+  "repeat_script_sha256": "a07e105016b5a349b8f5375b9f9247d6c64fb8e6c01a0d5facff8f861eeb5a26",
+  "binary_sha256": "ad57023481934dc5864932a149d5c5d563105ec87973b42c708665704ca8e29f"
+}

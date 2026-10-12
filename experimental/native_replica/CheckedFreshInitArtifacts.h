@@ -32,6 +32,8 @@ class CheckedFreshInitArtifacts {
  CheckedFreshInitArtifacts&operator=(const CheckedFreshInitArtifacts&)=delete;
  // Intentionally no destructor cleanup: failed close/lost lease keeps custody.
  uint32_t namespaceId()const{return ns_;}
+ // RAM-only exact binding check, never filesystem qualification.
+ bool boundTo(uint32_t ns,const char*root)const{return ns_==ns&&root&&!std::strcmp(root_,root);}
  bool retained()const{return retained_;}
  bool exitSafe()const{return !entered_&&!retained_&&!handles();}
  int inspectAbsent(){return inspect(nullptr,0,0,Attempt::Absent);}

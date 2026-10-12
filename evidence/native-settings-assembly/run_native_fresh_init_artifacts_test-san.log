@@ -1,0 +1,3 @@
+Fresh artifacts: 3054 exact stage prefixes; 125314 prefix corruptions; all bank cuts/bytes, canonical-image checks, aliases/inventory and 1626 I/O/callback fault cases PASS
+Imported artifacts: 2795 exact stage prefixes, 556 corruptions, strict v3/map framing, 65512-byte limit, aliases and 2881 I/O/callback fault cases PASS
+Fresh/imported artifact ESP_PLATFORM: unsupported nonalias metadata refuses before filesystem I/O; Retained precedence PASS

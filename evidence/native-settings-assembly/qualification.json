@@ -1,0 +1,134 @@
+{
+  "scope": "Experimental source qualification only; no private-backend completion, product activation, firmware link, provisioning, flash or hardware qualification.",
+  "tested_local_commit": "469232893c3d1ae57618212a34263794c5bec781",
+  "tested_code_tree": "ebdbc274114c2730f6c8c248c19751ec93f0ef1d",
+  "equivalent_parent_commit": "51bb4c98266e758f18120829c170cf68cd039044",
+  "base": "d3d2ab0a633b546ae0c1c5d11a500d8c682049bb",
+  "factory_commit": "1cf4f9d",
+  "catalog_origin_commit": "3dd409e559f2d526883b54f240a84a5fd54cecb6",
+  "factory_cases": {
+    "normal": 56,
+    "address_undefined": 56
+  },
+  "non_factory_cases": {
+    "normal": 25,
+    "address_undefined": 25
+  },
+  "source_validation": "Every runtime/test input in all four final host manifests and every source in the final target manifest was checked against current code after testing.",
+  "target": {
+    "assembly_control_bytes": 50552,
+    "namespace_core_store_bytes": 544,
+    "assembly_local_frame_bytes": 672,
+    "default_off_assembly": "empty symbol table",
+    "default_off_app_data_files": {
+      "baseline": "d3d2ab0a633b546ae0c1c5d11a500d8c682049bb",
+      "sha256": "0c9ae57d5c7d75a2c2b0e8d710a899a816dc1113a9c557823a1606368948338b",
+      "byte_identical": true
+    },
+    "dependencies": "X4/lifecycle/PSRAM omission rejects compilation",
+    "no_global_constructors_or_destructors": true
+  },
+  "host_model": {
+    "assembly_control_bytes": 52160,
+    "payload_placement": "Actual PSRAM allocator callbacks over a strict capability/range/whole-allocation-wipe vendor shim",
+    "external_backends": "Actual checked AppDataFiles/NvsReplicaMetadata/CheckedFreshInitArtifacts/CheckedNvsFreshSources over host filesystem and NVS shims; permanent controls are process lifetime",
+    "leak_sanitizer": "disabled; process-lifetime and intentionally retained controls are not destructed"
+  },
+  "unit_regressions": [
+    {
+      "script": "test/run_app_data_files_test.sh",
+      "sanitizers": "none",
+      "status": "PASS",
+      "log": "run_app_data_files_test.log"
+    },
+    {
+      "script": "test/run_native_fresh_init_artifacts_test.sh",
+      "sanitizers": "none",
+      "status": "PASS",
+      "log": "run_native_fresh_init_artifacts_test.log"
+    },
+    {
+      "script": "test/run_native_fresh_init_artifacts_test.sh",
+      "sanitizers": "address,undefined",
+      "status": "PASS",
+      "log": "run_native_fresh_init_artifacts_test-san.log"
+    },
+    {
+      "script": "test/run_native_nvs_fresh_sources_test.sh",
+      "sanitizers": "none",
+      "status": "PASS",
+      "log": "run_native_nvs_fresh_sources_test.log"
+    },
+    {
+      "script": "test/run_native_nvs_fresh_sources_test.sh",
+      "sanitizers": "address,undefined",
+      "status": "PASS",
+      "log": "run_native_nvs_fresh_sources_test-san.log"
+    },
+    {
+      "script": "test/run_native_catalog_poll_budget_test.sh",
+      "sanitizers": "none",
+      "status": "PASS",
+      "log": "run_native_catalog_poll_budget_test.log"
+    },
+    {
+      "script": "test/run_native_catalog_poll_budget_test.sh",
+      "sanitizers": "address,undefined",
+      "status": "PASS",
+      "log": "run_native_catalog_poll_budget_test-san.log"
+    },
+    {
+      "script": "test/run_native_settings_payload_allocator_test.sh",
+      "sanitizers": "none",
+      "status": "PASS",
+      "log": "payload-unit.log"
+    },
+    {
+      "script": "test/run_native_settings_payload_allocator_test.sh",
+      "sanitizers": "address,undefined",
+      "status": "PASS",
+      "log": "payload-unit-san.log"
+    }
+  ],
+  "independent_review": {
+    "reviewer": "Parent integration worker",
+    "finding": "Unconditional out-of-line AppDataFiles helper altered default-off object",
+    "resolution": "Move helper definition into the selected assembly translation unit, gate declaration at class end, and compare original/current headers plus source byte-for-byte using the same target flags and source pathname."
+  },
+  "preserved": [
+    "All product flags remain default-off",
+    "No product manifests, packing, Files/USB/OBD/HTTPS/Hollow selection, shared SDK layout, or Watch SD change",
+    "No mount, format, provisioning, fresh-empty fallback, merge policy, or source-choice override",
+    "Paused private-backend worktree untouched"
+  ],
+  "remaining": [
+    "Qualified private filesystem/NVS backend and exact mount/root/epoch/serialization bindings",
+    "Permanent digest/entropy/authority/backends and product selector before lifecycle startup",
+    "Whole-product INTERNAL/PSRAM and full call-chain stack budget",
+    "Selected product cohort, complete Files/USB/update flows, physical power-loss/card/erase-and-restore qualification"
+  ],
+  "logs_sha256": {
+    "asan-ubsan-manifest.json": "86e04929334418d1e7c32f1faa4c95221365207e5248f5016f31d2f9a4efea76",
+    "asan-ubsan-metrics.json": "f4975af71e366ddb78652db174784cd439a106c3dd9d973f048bd824d1270101",
+    "asan-ubsan.log": "3942b701210ae2680c1f656097f22cd5c527775e2954edca6b7b000425cb9bae",
+    "non-assembly-asan-ubsan-manifest.json": "306fbd5cfdc1d375129020b7af4b0453dedd89600cb453e78ee28f62636d4f56",
+    "non-assembly-asan-ubsan.log": "667d5716565e54f3532568f4a79fb0a1d6976a6b1956ef4a1d767fabedc0b315",
+    "non-assembly-normal-manifest.json": "48f18139dc10993c2da620e217fb017ce5f7810262989f62c800045e693dbc41",
+    "non-assembly-normal.log": "667d5716565e54f3532568f4a79fb0a1d6976a6b1956ef4a1d767fabedc0b315",
+    "normal-manifest.json": "6f0c924a4ef1dde0d209aa9d13798ef1a84416ac6f3b1a8970c75060d2cb1ab2",
+    "normal-metrics.json": "1398b1475c21ee39193acebde3d599ee430aacdc91b4123152b6b3acef3f39de",
+    "normal.log": "3942b701210ae2680c1f656097f22cd5c527775e2954edca6b7b000425cb9bae",
+    "payload-unit-san.log": "5d1ecbebd19eb69f88a6cb6a70770537bb49aa4ca1d60ff90e4788de2f052a9b",
+    "payload-unit.log": "5d1ecbebd19eb69f88a6cb6a70770537bb49aa4ca1d60ff90e4788de2f052a9b",
+    "run_app_data_files_test.log": "c38924bd441b629657548dfe07c8cc764d422cc2af81981c7633659a05b468fd",
+    "run_native_catalog_poll_budget_test-san.log": "c306c79944efd8bf67f0087a36f0a9164c68074afdbb9ca50a13891031cc3dc5",
+    "run_native_catalog_poll_budget_test.log": "c306c79944efd8bf67f0087a36f0a9164c68074afdbb9ca50a13891031cc3dc5",
+    "run_native_fresh_init_artifacts_test-san.log": "18ee9ddc40883094464adb542f3cdf942bec6847b3118041d2150b2b2abee479",
+    "run_native_fresh_init_artifacts_test.log": "18ee9ddc40883094464adb542f3cdf942bec6847b3118041d2150b2b2abee479",
+    "run_native_nvs_fresh_sources_test-san.log": "be3f5be251b7ef1816e3e6fd6a7b3326db6ef007ce9d93873290458b2748ed4b",
+    "run_native_nvs_fresh_sources_test.log": "be3f5be251b7ef1816e3e6fd6a7b3326db6ef007ce9d93873290458b2748ed4b",
+    "target-assembly.su": "a648ee5769d9d4c290179d21ddb9b95df8f8c7fc4f5f161f036b4f8c1bb195ec",
+    "target-manifest.json": "ae177f6177dd3c9c20f69f6b52a598810cb26d2b13f1555562ae702f155b55bf",
+    "target.log": "71bf4d146ae21545001949150a518613b64cde890adce615d2c8b1dbff03ca1f"
+  }
+}

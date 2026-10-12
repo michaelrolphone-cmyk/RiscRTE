@@ -38,5 +38,10 @@ class AppDataFiles final {
   int32_t verify(const char*,const void*,uint32_t);
   int32_t quota(const char*,const char*,uint32_t);
   int32_t removeStage(const char*);
+#if defined(RISC_NATIVE_SETTINGS_ASSEMBLY) && RISC_NATIVE_SETTINGS_ASSEMBLY
+ public:
+  // Native composition check only; does not inspect or qualify the filesystem.
+  bool configuredFor(const char* root,Hooks hooks)const;
+#endif
 };
 }

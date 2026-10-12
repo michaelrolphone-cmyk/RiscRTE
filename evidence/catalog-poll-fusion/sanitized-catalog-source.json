@@ -1,0 +1,18 @@
+{
+  "header_sha256_before_after": "a7317c701f790e2069ebeb4bc10d46aa49714d5849a39d9176d62709fecda3a8",
+  "leak_sanitizer": false,
+  "results": [
+    {
+      "suite": "catalog",
+      "exit_code": 0
+    },
+    {
+      "suite": "interrupted",
+      "exit_code": 0
+    },
+    {
+      "suite": "restore",
+      "exit_code": 0
+    }
+  ]
+}

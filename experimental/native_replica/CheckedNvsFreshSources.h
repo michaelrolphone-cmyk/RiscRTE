@@ -24,6 +24,8 @@ class CheckedNvsFreshSources final {
  CheckedNvsFreshSources(const CheckedNvsFreshSources&)=delete;
  CheckedNvsFreshSources&operator=(const CheckedNvsFreshSources&)=delete;
  ~CheckedNvsFreshSources(){C::wipe(owner_,sizeof owner_);}
+ // RAM-only composition identity, not an absence or source receipt.
+ bool boundTo(uint32_t ns,const CheckedFreshInitArtifacts&a)const{return ns_==ns && &artifacts_==&a;}
  bool retained()const{return retained_||artifacts_.retained();}
  bool exitSafe()const{return !entered_&&!retained()&&!opened_&&!iterator_&&artifacts_.exitSafe();}
  A::Sources sources(){return {this,
