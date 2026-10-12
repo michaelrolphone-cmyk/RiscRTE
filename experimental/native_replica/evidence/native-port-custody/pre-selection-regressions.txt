@@ -1,0 +1,40 @@
+=== native_storage_custody_port ===
+native Port custody: fresh bind, idle foreign session refusal, exact gates, closed lifetime, task/ISR, transport serials and retained cleanup PASS
+=== storage_work_port ===
+storage worker scope: exact pins, worker-only transport, owner race rejection, no global transfer fence, retained cleanup PASS
+=== storage_work_acquire ===
+Production Runtime acquisition during copied storage work succeeds; actual exit and native fault fences remain closed PASS
+Production retention fence PASS mode=exit-pending original=no
+Production retention fence PASS mode=poison original=no
+=== sdmmc_port ===
+SDMMC CPU port: legacy ABI, selected bank, pin conflicts, bounded copied API, owner/token checks, stale tokens, failed-open/read/write/sync cleanup and retained-release retry PASS
+=== provider_sync ===
+Provider sync: fixed capacity, owner-only, nonrecursive, scoped/stale tokens, retained cleanup and lifecycle barriers PASS
+Provider sync: exact selected instance binding, distinct contexts, unavailable API and zero hardware I/O PASS
+Real Runtime/Graph/dlopen sync: clean teardown and held-lock app/provider retention PASS
+=== usb_phy ===
+USB PHY: owner/generation/pad exclusion, partial claim, retained release retry, all sleep forms and SD transfer coexistence PASS
+USB PHY global CPU resource: opt-in registration, no selected hardware or bind-time I/O, native-first graph continuity and unavailable backend refusal PASS
+Real Runtime/Graph/CpuPort/pinned HWCDC USB PHY retention lifecycle: lazy PASS
+Real Runtime/Graph/CpuPort/pinned HWCDC USB PHY retention lifecycle: refused PASS
+Real Runtime/Graph/CpuPort/pinned HWCDC USB PHY retention lifecycle: clean PASS
+Real Runtime/Graph/CpuPort/pinned HWCDC USB PHY retention lifecycle: retry PASS
+Real Runtime/Graph/CpuPort/pinned HWCDC USB PHY retention lifecycle: retained PASS
+Real Runtime/Graph/CpuPort/pinned HWCDC USB PHY retention lifecycle: unreleased PASS
+Real Runtime/Graph/CpuPort/pinned HWCDC USB PHY retention lifecycle: partial PASS
+Actual pinned HWCDC: checked clock/reset/PHY/pads, repeated absent-host resume with RX/TX, retained allocation/register failures, lease fences and retry PASS
+Actual pinned HWCDC: checked clock/reset/PHY/pads, repeated absent-host resume with RX/TX, retained allocation/register failures, lease fences and retry PASS
+Actual pinned HWCDC: checked clock/reset/PHY/pads, repeated absent-host resume with RX/TX, retained allocation/register failures, lease fences and retry PASS
+Actual pinned HWCDC: checked clock/reset/PHY/pads, repeated absent-host resume with RX/TX, retained allocation/register failures, lease fences and retry PASS
+=== light_sleep ===
+Actual CPU light sleep: repeated wake, owner/input/stale/foreign tokens, active wake, held SPI/reentrant I2C, failed arm/entry, cleanup retention PASS
+Actual CPU cleanup RETAINED plus deferred USB recovery: native result, claims and exit barrier preserved PASS
+Actual CPU light sleep: repeated wake, owner/input/stale/foreign tokens, active wake, held SPI/reentrant I2C, failed arm/entry, cleanup retention PASS
+Actual CPU SPI: explicit 40MHz, legacy cap, owner/token/mode/deadline and failed-end retention PASS
+=== deep_sleep ===
+Actual CPU deep entry: terminal success, static hold, claimed pulls, refusal/partial rollback, DMA readiness, busy/reentrant and retained failures PASS
+Actual CPU timed sleep: old ABI, absent suffix, bounds, owned input, busy/reentrant, independent partial cleanup, stale timer exclusion and retained/terminal semantics PASS
+Owned wake set: ABI, foreign/stale/output claims, bounds, polarity, both inputs/timer, cleanup isolation, retry, exit barriers, radio exclusion and terminal retention PASS
+Native sleep SDK shim: actual timer/Light/Deep adapters, 64-bit bounds, both sources, wake causes, every-stage faults, cleanup, stack guard and entry PASS
+Native sleep SDK shim: actual timer/Light/Deep adapters, 64-bit bounds, both sources, wake causes, every-stage faults, cleanup, stack guard and entry PASS
+Actual runtime + dynamic provider/app: six timed/untimed terminal deep entries and fresh-process wake boots, fresh BSS/grants, no old-stack resume or deep-entry teardown PASS
