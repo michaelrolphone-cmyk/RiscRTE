@@ -1,0 +1,90 @@
+{
+  "failed_public_commit": "1bb0122040e60105317c3fd7e818f10ac758e938",
+  "failed_run": 38305135065,
+  "failed_jobs": [
+    114997222744,
+    114997223141
+  ],
+  "exact_failure": "test/run_native_settings_heap_budget_test.sh: line 4: 1: Output directory required",
+  "repair": "Workflow passes build/settings-heap-budget to the existing required positional argument. No production source change.",
+  "local_tests": "Every command from the repaired heap-budget point through final startup qualification passed in normal and ASan/UBSan; earlier stages passed in the preceding hosted run.",
+  "sanitizer_options": "ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 SANITIZERS=address,undefined NO_PIE=1",
+  "logs": [
+    {
+      "path": "file-source-0.log",
+      "bytes": 1297,
+      "sha256": "cbca12cb6b021eb149010a37c6cf5e29ab116a7900404f0a1e6f2196e18cad16"
+    },
+    {
+      "path": "file-source-1.log",
+      "bytes": 1297,
+      "sha256": "cbca12cb6b021eb149010a37c6cf5e29ab116a7900404f0a1e6f2196e18cad16"
+    },
+    {
+      "path": "file_source_storage-0.log",
+      "bytes": 333,
+      "sha256": "4483b6e6b48f6c5fdb83d1dadb49506bbe50e26ad9f77093ff01c44cdc2e9925"
+    },
+    {
+      "path": "file_source_storage-1.log",
+      "bytes": 333,
+      "sha256": "4483b6e6b48f6c5fdb83d1dadb49506bbe50e26ad9f77093ff01c44cdc2e9925"
+    },
+    {
+      "path": "heap-0.log",
+      "bytes": 1100,
+      "sha256": "f1520a9d629a7a5580001e412f06e01a7b9544c1ed0b8c8fcca37a4dc1ef0a65"
+    },
+    {
+      "path": "heap-1.log",
+      "bytes": 1100,
+      "sha256": "f1520a9d629a7a5580001e412f06e01a7b9544c1ed0b8c8fcca37a4dc1ef0a65"
+    },
+    {
+      "path": "native_atomic_key_value-0.log",
+      "bytes": 875,
+      "sha256": "ce29fd18c4aee9dd6b6f1bbd2b35737a988df6fcea9070beba246781edb0ff9a"
+    },
+    {
+      "path": "native_atomic_key_value-1.log",
+      "bytes": 875,
+      "sha256": "ce29fd18c4aee9dd6b6f1bbd2b35737a988df6fcea9070beba246781edb0ff9a"
+    },
+    {
+      "path": "native_first_sd_checkpoint-0.log",
+      "bytes": 972,
+      "sha256": "4a2ef88ff42c60d58996e46485a3a564d20fafed76faed61ac26b947a7414478"
+    },
+    {
+      "path": "native_first_sd_checkpoint-1.log",
+      "bytes": 972,
+      "sha256": "4a2ef88ff42c60d58996e46485a3a564d20fafed76faed61ac26b947a7414478"
+    },
+    {
+      "path": "native_settings_availability-0.log",
+      "bytes": 312,
+      "sha256": "5d58e9cb0f216054efdc04c98b6c28cce4cdc255e3a372db841501c59e38d7cd"
+    },
+    {
+      "path": "native_settings_availability-1.log",
+      "bytes": 312,
+      "sha256": "5d58e9cb0f216054efdc04c98b6c28cce4cdc255e3a372db841501c59e38d7cd"
+    },
+    {
+      "path": "native_settings_coordinator-0.log",
+      "bytes": 857,
+      "sha256": "e8303b1a569760de2624ee772e99879a13f8bc75917b147fee37a21dbc28349c"
+    },
+    {
+      "path": "native_settings_coordinator-1.log",
+      "bytes": 857,
+      "sha256": "e8303b1a569760de2624ee772e99879a13f8bc75917b147fee37a21dbc28349c"
+    },
+    {
+      "path": "startup.log",
+      "bytes": 1422,
+      "sha256": "9e0e1d0fa86f76fc8b33bb9ee7e2c3edff6bfc69ef3e80be63396670c4048104"
+    }
+  ],
+  "hardware_tested": false
+}

@@ -42,7 +42,7 @@ jobs:
           bash test/run_native_import_initialization_test.sh
           bash test/run_native_settings_scratch_allocation_test.sh
           bash test/run_native_compact_job_test.sh
-          bash test/run_native_settings_heap_budget_test.sh
+          bash test/run_native_settings_heap_budget_test.sh build/settings-heap-budget
           bash test/run_file_source_storage_test.sh
           bash test/run_file_source_runtime_test.sh
           bash test/run_native_atomic_key_value_test.sh
