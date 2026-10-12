@@ -1,0 +1,156 @@
+diff --git a/docs/WIFI_STATION_MANAGER.md b/docs/WIFI_STATION_MANAGER.md
+new file mode 100644
+index 0000000..816cff3
+--- /dev/null
++++ b/docs/WIFI_STATION_MANAGER.md
+@@ -0,0 +1,41 @@
++# Native station-management extension
++
++Adds copied station configuration/observations to the existing asynchronous Wi-Fi
++worker in Runtime0.2.19, based on the deployed Runtime0.2.18 source
++8d713b52edca004e1d53bf30a1c584859fe33d14. Old radio/async table prefixes, request,
++progress and lease structures remain unchanged. `RiscWifiStationV1.h` and
++`GardenWifiStationV1.h` append separately size/tag/version-checked capabilities.
++NativeHardware copies the complete outer table instead of advertising a suffix
++beyond a copied prefix.
++
++The existing owner token and worker serialize SDK operations. Detailed scans copy
++BSSID alongside the unchanged old scan record. Station observations contain
++actual AP security/channel/RSSI and interface address/gateway/netmask/DNS. Static
++IPv4 is validated before enqueue and applied with DHCP stopped before station
++start. SDK disconnect reasons distinguish authentication/no-AP/link failure;
++association without address times out as address failure. Link rate is not
++invented from RSSI or advertised protocol flags.
++
++A connected worker accepts repeat scans and Internet probes. Monotonic completion
++revisions distinguish new completions even when the caller misses the intermediate
++RUNNING/CHECKING state. HTTP probes use the fixed Google generate_204 endpoint,
++SDK timeout3000ms, no body/credentials/redirect following. Empty204 is reachable;
++200/redirect is a possible portal; other failure is unverified Internet. The GUI
++never blocks on this operation. Cancel returns pending until the worker finishes
++cleanup. Failed HTTP cleanup retains the worker instead of claiming quiescence.
++
++The production provider/CpuPort/native-worker host suite exercises the real code
++against SDK shims. New cases cover malformed configuration, copied scan/BSSID,
++static-IP/DHCP/DNS call order, authentication, address timeout, repeated connected
++scans, repeated probes, portal/failure/cancel and HTTP-cleanup failure. Existing
++setup/teardown, contention, old-prefix and lease cases remain included. These are
++not physical RF results. Run with WATCH_SOURCE pointing at the matching provider:
++
++```
++WATCH_SOURCE=../Watch bash test/run_radio_async_test.sh
++WATCH_SOURCE=../Watch SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_radio_async_test.sh
++```
++
++Product firmware assembly must preserve the deployed board/native storage and
++provider selections. A generic SDK-compiled firmware.bin is not an X4 full0x0
++image. No live network or device flashing is part of these tests.
+diff --git a/platformio.ini b/platformio.ini
+index 0db46df..69476a0 100644
+--- a/platformio.ini
++++ b/platformio.ini
+@@ -2,7 +2,7 @@
+ default_envs = esp32s3
+ data_dir = build/store
+ [riscrte]
+-version = 0.2.18
++version = 0.2.19
+ 
+ [env:esp32s3]
+ platform = espressif32@6.13.0
+diff --git a/sdk/driver/GardenWifiStationV1.h b/sdk/driver/GardenWifiStationV1.h
+new file mode 100644
+index 0000000..a328595
+--- /dev/null
++++ b/sdk/driver/GardenWifiStationV1.h
+@@ -0,0 +1,15 @@
++#pragma once
++#include "GardenRadioAsyncV1.h"
++#include "RiscWifiStationV1.h"
++typedef struct {
++    garden_radio_async_v1 base;
++    uint32_t station_tag, station_version;
++    int32_t (*begin_station)(void *,uint64_t,const risc_wifi_station_request_v1 *,uint32_t *);
++    int32_t (*observe)(void *,uint64_t,uint32_t,risc_wifi_station_observation_v1 *);
++    int32_t (*request)(void *,uint64_t,uint32_t,uint32_t);
++} garden_wifi_station_v1;
++static inline const garden_wifi_station_v1 *garden_wifi_station_get_v1(const garden_radio_v1 *base) {
++    if(!base||base->struct_size<sizeof(garden_wifi_station_v1))return NULL;
++    const garden_wifi_station_v1 *api=(const garden_wifi_station_v1 *)base;
++    return api->station_tag==RISC_WIFI_STATION_TAG&&api->station_version==1&&api->begin_station&&api->observe&&api->request?api:NULL;
++}
+diff --git a/sdk/driver/RiscWifiStationV1.h b/sdk/driver/RiscWifiStationV1.h
+new file mode 100644
+index 0000000..d24d3b9
+--- /dev/null
++++ b/sdk/driver/RiscWifiStationV1.h
+@@ -0,0 +1,79 @@
++#pragma once
++#include "RiscRadioAsyncV1.h"
++/* Optional station-management extension. All inputs/outputs are copied. The
++ * native worker owns SDK work; GUI clients never receive SDK or task pointers.
++ * Existing scan, join, progress, and lease tables keep their exact layouts. */
++#define RISC_WIFI_STATION_TAG UINT32_C(0x57535431)
++#define RISC_WIFI_FEATURE_DETAILS 1u
++#define RISC_WIFI_FEATURE_STATIC_IPV4 2u
++#define RISC_WIFI_FEATURE_CONNECTED_SCAN 4u
++#define RISC_WIFI_FEATURE_INTERNET_CHECK 8u
++#define RISC_WIFI_USE_BSSID 1u
++#define RISC_WIFI_HIDDEN_SSID 2u
++#define RISC_WIFI_OBSERVATION_ASSOCIATED 1u
++#define RISC_WIFI_OBSERVATION_ADDRESSED 2u
++#define RISC_WIFI_OBSERVATION_DETAILS 4u
++#define RISC_WIFI_OBSERVATION_DNS 8u
++#define RISC_WIFI_OBSERVATION_SPEED 16u
++#define RISC_WIFI_COMMAND_SCAN 1u
++#define RISC_WIFI_COMMAND_CHECK_INTERNET 2u
++enum { RISC_WIFI_INTERNET_UNKNOWN, RISC_WIFI_INTERNET_CHECKING,
++       RISC_WIFI_INTERNET_REACHABLE, RISC_WIFI_INTERNET_PORTAL,
++       RISC_WIFI_INTERNET_UNREACHABLE };
++enum { RISC_WIFI_ERROR_NONE, RISC_WIFI_ERROR_AUTH, RISC_WIFI_ERROR_NO_AP,
++       RISC_WIFI_ERROR_ADDRESS, RISC_WIFI_ERROR_TIMEOUT, RISC_WIFI_ERROR_SETUP,
++       RISC_WIFI_ERROR_LINK_LOST };
++typedef struct {
++    uint32_t struct_size, flags;
++    uint8_t security, channel, static_ipv4, reserved;
++    uint8_t bssid[6], reserved2[2];
++    uint8_t address[4], gateway[4], netmask[4], dns[4];
++} risc_wifi_station_config_v1;
++typedef struct {
++    uint32_t struct_size;
++    risc_radio_request_v1 operation;
++    risc_wifi_station_config_v1 config;
++} risc_wifi_station_request_v1;
++typedef struct {
++    uint32_t struct_size, operation_id, features, flags;
++    uint32_t failure, sdk_reason, internet, http_status, link_kbps;
++    uint32_t scan_revision, probe_revision;
++    uint8_t channel, security; int8_t rssi; uint8_t reserved;
++    uint8_t bssid[6], reserved2[2];
++    char ssid[33]; uint8_t reserved3[3];
++    uint8_t address[4], gateway[4], netmask[4], dns[4];
++    garden_radio_scan_result_v1 scan;
++    uint8_t scan_bssid[GARDEN_RADIO_SCAN_MAX][6];
++} risc_wifi_station_observation_v1;
++/* Network-order octets; no platform inet functions or endian assumptions. */
++static inline uint32_t risc_wifi_ip_number(const uint8_t p[4]) {
++    return ((uint32_t)p[0]<<24)|((uint32_t)p[1]<<16)|((uint32_t)p[2]<<8)|p[3];
++}
++static inline bool risc_wifi_unicast(const uint8_t p[4]) { return p[0]&&p[0]!=127&&p[0]<224; }
++static inline bool risc_wifi_static_valid(const risc_wifi_station_config_v1 *p) {
++    uint32_t mask=risc_wifi_ip_number(p->netmask),host=~mask;
++    uint32_t ip=risc_wifi_ip_number(p->address),gateway=risc_wifi_ip_number(p->gateway);
++    return risc_wifi_unicast(p->address)&&risc_wifi_unicast(p->gateway)&&risc_wifi_unicast(p->dns)&&
++        mask&&host>=3&&!(host&(host+1))&&(ip&host)&&(ip&host)!=host&&
++        (gateway&host)&&(gateway&host)!=host&&(ip&mask)==(gateway&mask)&&ip!=gateway;
++}
++static inline bool risc_wifi_config_valid(const risc_wifi_station_config_v1 *p) {
++    if(!p||p->struct_size!=sizeof(*p)||p->flags&~3u||p->channel>14||p->static_ipv4>1||p->reserved||p->reserved2[0]||p->reserved2[1]||p->security>GARDEN_RADIO_AUTH_WPA2_WPA3_PSK)return false;
++    unsigned nonzero=0;for(unsigned i=0;i<6;i++)nonzero|=p->bssid[i];
++    if(p->flags&RISC_WIFI_USE_BSSID){if(!nonzero||(p->bssid[0]&1u))return false;}else if(nonzero)return false;
++    if(p->static_ipv4)return risc_wifi_static_valid(p);
++    for(unsigned i=0;i<4;i++)if(p->address[i]||p->gateway[i]||p->netmask[i]||p->dns[i])return false;
++    return true;
++}
++typedef struct {
++    risc_native_radio_async_v1 base;
