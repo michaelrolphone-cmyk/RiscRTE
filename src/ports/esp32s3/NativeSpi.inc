@@ -24,13 +24,8 @@ bool spiOpenPins(uint8_t physical,int16_t sclk,int16_t mosi,int16_t miso,int16_t
   auto& state=spi[physical-2];if(state.initialized)return false;
   state.sclk=sclk;state.mosi=mosi;state.miso=miso;state.data2=data2;state.data3=data3;state.quad=data2>=0&&data3>=0;
   spi_bus_config_t config{};config.sclk_io_num=sclk;config.mosi_io_num=mosi;config.miso_io_num=miso;
-  config.quadwp_io_num=data2;config.quadhd_io_num=data3;config.max_transfer_sz=512;
-  // A no-MISO bus may later opt into shared-MOSI reads. Route it through the
-  // matrix from initialization, so its SDK timing model matches direction
-  // changes. Ordinary claims still use their original full-duplex semantics.
-  // Match Arduino_ESP32QSPI: do not set SPICOMMON_BUSFLAG_QUAD. That flag can
-  // force peripheral routing that prevents 1-line command/address phases from
-  // reaching the CO5300 even when the transaction flags are correct.
+  config.quadwp_io_num=data2;config.quadhd_io_num=data3;config.max_transfer_sz=4096;
+  // Match Arduino_ESP32QSPI bus init (the path that worked in A/B).
   if(state.quad){
     config.flags=SPICOMMON_BUSFLAG_MASTER|SPICOMMON_BUSFLAG_GPIO_PINS;
     config.data4_io_num=config.data5_io_num=config.data6_io_num=config.data7_io_num=-1;
@@ -48,18 +43,11 @@ bool spiOpenQuad(uint8_t physical,int16_t sclk,int16_t d0,int16_t d1,int16_t d2,
 }
 bool spiMosiDirection(uint8_t physical,SpiState& state,bool output){
   if(gpio_set_direction(static_cast<gpio_num_t>(state.mosi),output?GPIO_MODE_INPUT_OUTPUT:GPIO_MODE_INPUT)!=ESP_OK)return false;
-  // Pinned S3 gpio_ll_output_disable both disables the pad and disconnects
-  // its matrix output. Do not reconnect SIG_GPIO_OUT_IDX on RX: the ROM
-  // routing function enables output again, driving the GPIO latch onto MOSI.
-  // Its input route (spid_in) from bus initialization remains connected.
-  // Output direction setup selects GPIO, so only TX restores SPI routing.
   if(output)esp_rom_gpio_connect_out_signal(state.mosi,physical==2?FSPID_OUT_IDX:SPI3_D_OUT_IDX,false,false);
   return true;
 }
 bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool threeWire){
   auto& state=spi[physical-2];if(!state.initialized || state.held || state.pending)return false;
-  // In the explicit mode every attempted begin has a cleanup path, including
-  // failures before CS goes low or while changing SDK device/pad state.
   if(threeWire || state.quad)state.held=true;
   state.ready=false;
   if(threeWire && (state.miso!=-1 || state.quad))return false;
@@ -72,8 +60,6 @@ bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool thre
     spi_device_interface_config_t config{};config.clock_speed_hz=hz;config.mode=mode;config.spics_io_num=-1;config.queue_size=1;
     if(threeWire)config.flags=SPI_DEVICE_3WIRE|SPI_DEVICE_HALFDUPLEX;
     else if(state.quad){
-      // Match Arduino_ESP32QSPI device defaults so 0x02/0x32 framed transactions
-      // produce the same command/address phases the CO5300 accepts.
       config.flags=SPI_DEVICE_HALFDUPLEX;
       config.command_bits=8;
       config.address_bits=24;
@@ -89,11 +75,6 @@ bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool thre
   } else if(state.managedMosi){
     if(gpio_pullup_dis(static_cast<gpio_num_t>(state.mosi))!=ESP_OK || !spiMosiDirection(physical,state,true))return false;
   }
-  // Quad claims are exclusive to this host and owner task in CpuPort. Match
-  // the verified vendor's SDK ownership while CS is active; no competing SDK
-  // owner to wait for. IDF4 requires portMAX_DELAY for acquire/start. Actual
-  // transfers drain with an 8 ms cap; timeout retains the DMA descriptor.
-  // Legacy/three-wire devices keep their existing queued transport.
   if(state.quad && !state.sdkOwned){
     if(spi_device_acquire_bus(state.device,portMAX_DELAY)!=ESP_OK)return false;
     state.sdkOwned=true;
@@ -114,8 +95,6 @@ bool spiTransferLanes(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t coun
   state.transaction={};
   if(state.threeWire){
     if(ms>8)ms=8;
-    // On failure leave this transaction cleanup-only until end, including a
-    // fallible pin-direction change or an uncertain queued DMA completion.
     state.ready=false;
     if(!spiMosiDirection(physical,state,tx!=nullptr))return false;
     if(tx){memcpy(state.tx,tx,count);state.transaction.length=count*8;state.transaction.tx_buffer=state.tx;}
@@ -144,20 +123,21 @@ bool spiTransferFrame(uint8_t physical,const risc_spi_frame_v1* frame,const uint
   if(ms>8)ms=8;
   state.ready=false;state.framed={};
   auto& t=state.framed;
-  // CO5300 is 1-1-4. Match Arduino_ESP32QSPI exactly:
-  // - 1-line commands: only MULTILINE_CMD|MULTILINE_ADDR (device has the bit counts).
-  // - 4-lane data: MODE_QIO only so the 0x32 header stays 1-line.
-  if(frame->data_lines==4){
-    t.base.flags=SPI_TRANS_MODE_QIO|SPI_TRANS_VARIABLE_CMD|SPI_TRANS_VARIABLE_ADDR|SPI_TRANS_VARIABLE_DUMMY;
-    t.command_bits=frame->command_bits;t.address_bits=frame->address_bits;t.dummy_bits=frame->dummy_bits;
-  } else {
+  // Match the vendor A/B construction exactly.
+  // Short payloads use USE_TXDATA + tx_data[] (as writeC8D8/writeC8D16/write do).
+  // 1-line: MULTILINE_CMD|MULTILINE_ADDR only.
+  // 4-lane: MODE_QIO only (header stays 1-line).
+  if(frame->data_lines==4)
+    t.base.flags=SPI_TRANS_MODE_QIO;
+  else
     t.base.flags=SPI_TRANS_MULTILINE_CMD|SPI_TRANS_MULTILINE_ADDR;
-  }
   t.base.cmd=frame->command;t.base.addr=frame->address;t.base.length=count*8;
-  if(count){memcpy(state.tx,tx,count);t.base.tx_buffer=state.tx;}
-  // Hardware command/address phases and data are submitted together. Splitting
-  // the prefix into an earlier data-only transfer is not equivalent here.
-  // The pre-acquired exclusive SDK lease removes start-side lock contention.
+  if(count && count<=4){
+    t.base.flags|=SPI_TRANS_USE_TXDATA;
+    for(size_t i=0;i<count;i++)t.base.tx_data[i]=tx[i];
+  } else if(count){
+    memcpy(state.tx,tx,count);t.base.tx_buffer=state.tx;
+  }
   const int64_t began=esp_timer_get_time();
   if(spi_device_polling_start(state.device,&t.base,portMAX_DELAY)!=ESP_OK)return false;
   state.pending=true;state.pollingPending=true;
@@ -173,8 +153,6 @@ bool spiTransferQuad(uint8_t physical,const uint8_t* tx,size_t count,uint32_t ms
 }
 bool spiEnd(uint8_t physical,uint8_t cs,uint32_t ms){
   auto& state=spi[physical-2];if(!state.held)return false;
-  // CpuPort applies this cap even when a mode-switch failed and the cached
-  // device still has legacy flags. This additional cap protects direct use.
   if(state.threeWire || state.quad){state.ready=false;if(ms>8)ms=8;}
   if(!drain(state,ms) || !gpioWrite(cs,true))return false;
   if(state.sdkOwned){spi_device_release_bus(state.device);state.sdkOwned=false;}
