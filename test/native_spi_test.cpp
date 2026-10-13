@@ -16,7 +16,7 @@ static Hardware hardware(){
   h.gpioClose=NativeShim::gpioClose;h.gpioPwm=[](uint8_t,uint32_t,uint16_t,uint16_t){return false;};
   h.i2cOpen=[](uint8_t,uint8_t,uint8_t,uint32_t){return false;};h.i2cTransfer=[](uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t){return false;};h.i2cClose=[](uint8_t){return true;};
   h.spiOpen=NativeShim::spiOpen;h.spiBegin=NativeShim::spiBegin;h.spiTransfer=NativeShim::spiTransfer;
-  h.spiEnd=NativeShim::spiEnd;h.spiClose=NativeShim::spiClose;h.spiBeginThreeWire=NativeShim::spiBeginThreeWire;h.spiOpenQuad=NativeShim::spiOpenQuad;h.spiTransferQuad=NativeShim::spiTransferQuad;return h;
+  h.spiEnd=NativeShim::spiEnd;h.spiClose=NativeShim::spiClose;h.spiBeginThreeWire=NativeShim::spiBeginThreeWire;h.spiOpenQuad=NativeShim::spiOpenQuad;h.spiTransferQuad=NativeShim::spiTransferQuad;h.spiTransferFrame=NativeShim::spiTransferFrame;return h;
 }
 static RiscBoot::Port runtime(){return {[](){return model.owner;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},[](RiscBoot::Runtime& r){return current->bind(r);}};}
 static void stage(const std::string& root,int miso=-1,unsigned physical=2){
@@ -36,6 +36,7 @@ struct Fixture {
   ~Fixture(){assert(p.quiescent() && !model.initialized && !model.device.live && !model.pending);}
 };
 #include "native_quad_test.inc"
+#include "native_frame_test.inc"
 struct LegacySpi {
   uint32_t api_version,struct_size;void* context;
   bool (*claim)(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*);
@@ -46,7 +47,7 @@ struct LegacySpi {
 static_assert(offsetof(garden_spi_v1,claim_three_wire)==sizeof(LegacySpi),"Legacy SPI layout moved");
 static_assert(GARDEN_SPI_THREE_WIRE_V1_SIZE==sizeof(garden_spi_v1),"Suffix size does not cover callback");
 int main(int argc,char** argv){
-  assert(argc==2);std::string root=argv[1];quad_tests(root);
+  assert(argc==2);std::string root=argv[1];quad_tests(root);frame_tests(root);
   for(unsigned physical:{2u,3u}){
     Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api.base;auto& b=f.p.spis_[1].api.base;auto& g=f.p.gpios_[0].api.base;
     assert(a.api_version==1 && a.struct_size>=GARDEN_SPI_THREE_WIRE_V1_SIZE && a.claim_three_wire);

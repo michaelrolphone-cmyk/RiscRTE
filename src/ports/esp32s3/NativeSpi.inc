@@ -5,10 +5,16 @@ struct SpiState {
   bool threeWire=false,quad=false,managedMosi=false;uint32_t hz=0;uint8_t mode=0;
   int sclk=-1,mosi=-1,miso=-1,data2=-1,data3=-1;spi_device_handle_t device=nullptr;
   spi_transaction_t transaction{};
+  spi_transaction_ext_t framed{};
+  bool sdkOwned=false,pollingPending=false;
   alignas(4) uint8_t tx[512]{},rx[512]{};
 } spi[2];
 bool drain(SpiState& state,uint32_t ms){
   if(!state.pending)return true;
+  if(state.pollingPending){
+    if(spi_device_polling_end(state.device,ticks(ms))!=ESP_OK)return false;
+    state.pollingPending=false;state.pending=false;return true;
+  }
   spi_transaction_t* completed=nullptr;
   if(spi_device_get_trans_result(state.device,&completed,ticks(ms))!=ESP_OK)return false;
   if(completed!=&state.transaction)return false;
@@ -22,7 +28,10 @@ bool spiOpenPins(uint8_t physical,int16_t sclk,int16_t mosi,int16_t miso,int16_t
   // A no-MISO bus may later opt into shared-MOSI reads. Route it through the
   // matrix from initialization, so its SDK timing model matches direction
   // changes. Ordinary claims still use their original full-duplex semantics.
-  if(state.quad)config.flags=SPICOMMON_BUSFLAG_QUAD;
+  if(state.quad){
+    config.flags=SPICOMMON_BUSFLAG_QUAD|SPICOMMON_BUSFLAG_MASTER|SPICOMMON_BUSFLAG_GPIO_PINS;
+    config.data4_io_num=config.data5_io_num=config.data6_io_num=config.data7_io_num=-1;
+  }
   else if(miso==-1)config.flags=SPICOMMON_BUSFLAG_GPIO_PINS;
   if(spi_bus_initialize(host(physical),&config,SPI_DMA_CH_AUTO)!=ESP_OK)return false;
   state.initialized=true;return true;
@@ -52,6 +61,7 @@ bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool thre
   state.ready=false;
   if(threeWire && (state.miso!=-1 || state.quad))return false;
   if(state.device && (state.hz!=hz || state.mode!=mode || state.threeWire!=threeWire)){
+    if(state.sdkOwned){spi_device_release_bus(state.device);state.sdkOwned=false;}
     if(spi_bus_remove_device(state.device)!=ESP_OK)return false;
     state.device=nullptr;
   }
@@ -69,9 +79,15 @@ bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool thre
   } else if(state.managedMosi){
     if(gpio_pullup_dis(static_cast<gpio_num_t>(state.mosi))!=ESP_OK || !spiMosiDirection(physical,state,true))return false;
   }
-  // IDF4 acquire_bus accepts only an unbounded wait. The CPU port owns this
-  // controller exclusively and serializes every device on its owner task, so
-  // no SDK bus acquisition is needed. Queued transfers retain bounded waits.
+  // Quad claims are exclusive to this host and owner task in CpuPort. Match
+  // the verified vendor's SDK ownership while CS is active; no competing SDK
+  // owner to wait for. IDF4 requires portMAX_DELAY for acquire/start. Actual
+  // transfers drain with an 8 ms cap; timeout retains the DMA descriptor.
+  // Legacy/three-wire devices keep their existing queued transport.
+  if(state.quad && !state.sdkOwned){
+    if(spi_device_acquire_bus(state.device,portMAX_DELAY)!=ESP_OK)return false;
+    state.sdkOwned=true;
+  }
   if(!gpioWrite(cs,false))return false;
   state.held=true;state.ready=true;return true;
 }
@@ -111,6 +127,28 @@ bool spiTransferLanes(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t coun
   if(rx)memcpy(rx,state.rx,count);
   state.ready=true;return true;
 }
+bool spiTransferFrame(uint8_t physical,const risc_spi_frame_v1* frame,const uint8_t* tx,size_t count,uint32_t ms){
+  if(physical<2 || physical>3 || !risc_spi_frame_valid(frame,count) || (count&&!tx) || !ms)return false;
+  auto& state=spi[physical-2];
+  if(!state.quad || !state.sdkOwned || !state.held || !state.ready || state.pending)return false;
+  if(ms>8)ms=8;
+  state.ready=false;state.framed={};
+  auto& t=state.framed;
+  t.base.flags=SPI_TRANS_VARIABLE_CMD|SPI_TRANS_VARIABLE_ADDR|SPI_TRANS_VARIABLE_DUMMY;
+  if(frame->data_lines==4)t.base.flags|=SPI_TRANS_MODE_QIO;
+  t.command_bits=frame->command_bits;t.address_bits=frame->address_bits;t.dummy_bits=frame->dummy_bits;
+  t.base.cmd=frame->command;t.base.addr=frame->address;t.base.length=count*8;
+  if(count){memcpy(state.tx,tx,count);t.base.tx_buffer=state.tx;}
+  // Hardware command/address phases and data are submitted together. Splitting
+  // the prefix into an earlier data-only transfer is not equivalent here.
+  // The pre-acquired exclusive SDK lease removes start-side lock contention.
+  const int64_t began=esp_timer_get_time();
+  if(spi_device_polling_start(state.device,&t.base,portMAX_DELAY)!=ESP_OK)return false;
+  state.pending=true;state.pollingPending=true;
+  const uint32_t elapsed=uint32_t((esp_timer_get_time()-began)/1000);
+  if(!drain(state,elapsed<ms?ms-elapsed:0))return false;
+  state.ready=true;return true;
+}
 bool spiTransfer(uint8_t physical,const uint8_t* tx,uint8_t* rx,size_t count,uint32_t ms){
   return spiTransferLanes(physical,tx,rx,count,ms,false);
 }
@@ -123,11 +161,14 @@ bool spiEnd(uint8_t physical,uint8_t cs,uint32_t ms){
   // device still has legacy flags. This additional cap protects direct use.
   if(state.threeWire || state.quad){state.ready=false;if(ms>8)ms=8;}
   if(!drain(state,ms) || !gpioWrite(cs,true))return false;
+  if(state.sdkOwned){spi_device_release_bus(state.device);state.sdkOwned=false;}
   state.held=false;state.ready=false;return true;
 }
 bool spiClose(uint8_t physical){
   auto& state=spi[physical-2];if(state.held || state.pending)return false;
-  if(state.device){if(spi_bus_remove_device(state.device)!=ESP_OK)return false;
+  if(state.device){
+    if(state.sdkOwned){spi_device_release_bus(state.device);state.sdkOwned=false;}
+    if(spi_bus_remove_device(state.device)!=ESP_OK)return false;
     state.device=nullptr;}
   if(state.initialized){if(spi_bus_free(host(physical))!=ESP_OK)return false;state.initialized=false;}
   for(int pin:{state.sclk,state.mosi,state.miso,state.data2,state.data3})if(pin>=0 && !gpioClose(pin))return false;

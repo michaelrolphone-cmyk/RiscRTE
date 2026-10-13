@@ -112,6 +112,7 @@ struct Hardware {
   // Additive raw quad write transport; no controller command knowledge.
   bool (*spiOpenQuad)(uint8_t,int16_t,int16_t,int16_t,int16_t,int16_t)=nullptr;
   bool (*spiTransferQuad)(uint8_t,const uint8_t*,size_t,uint32_t)=nullptr;
+  bool (*spiTransferFrame)(uint8_t,const risc_spi_frame_v1*,const uint8_t*,size_t,uint32_t)=nullptr;
   bool (*i2sStandardOpen)(const risc_hw_i2s_standard_v1&,uint8_t,uint32_t)=nullptr;
   // Optional native-only deep-entry preparation transaction. Install both or
   // neither. prepare may refuse before terminal entry; cancel must undo every
@@ -233,6 +234,7 @@ class Port final {
   static bool spiClaimImpl(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*,bool,bool=false);
   static bool spiClaimQuad(void*,uint8_t,uint8_t,uint8_t,uint8_t,uint8_t,uint8_t,uint64_t*);
   static bool spiTransferQuad(void*,uint64_t,const uint8_t*,size_t);
+  static bool spiTransferFrame(void*,uint64_t,const risc_spi_frame_v1*,const uint8_t*,size_t);
   static bool spiBegin(void*,uint64_t,uint32_t,uint8_t,uint32_t);
   static bool spiTransfer(void*,uint64_t,const uint8_t*,uint8_t*,size_t);
   static bool spiEnd(void*,uint64_t); static bool spiRelease(void*,uint64_t);

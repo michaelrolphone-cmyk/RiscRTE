@@ -308,8 +308,9 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       if(!radio && d.hardware.config_version==2) {
         c.data2=d.config.displayQuad.data2;c.data3=d.config.displayQuad.data3;
         if(hw_.spiOpenQuad && hw_.spiTransferQuad) {
-          c.api.base.struct_size=sizeof(c.api);c.api.quad_tag=RISC_SPI_QUAD_TAG;c.api.quad_version=RISC_SPI_QUAD_VERSION;
+          c.api.base.struct_size=RISC_SPI_QUAD_RAW_V1_SIZE;c.api.quad_tag=RISC_SPI_QUAD_TAG;c.api.quad_version=RISC_SPI_QUAD_VERSION;
           c.api.claim_quad=spiClaimQuad;c.api.exchange_quad=spiTransferQuad;
+          if(hw_.spiTransferFrame){c.api.exchange_frame=spiTransferFrame;c.api.base.struct_size=sizeof(c.api);}
         }
       }
       if(!runtime.registerPlatform("spi.bus",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
@@ -1100,6 +1101,16 @@ bool Port::spiTransferQuad(void* context,uint64_t token,const uint8_t* tx,size_t
       !tx || !count || count>512 || now>=c.deadline)return false;
   uint32_t remaining=uint32_t(c.deadline-now);if(remaining>8)remaining=8;
   const bool result=p.hw_.spiTransferQuad(c.physical,tx,count,remaining);
+  if(!result)c.ready=false;
+  return result;
+}
+bool Port::spiTransferFrame(void* context,uint64_t token,const risc_spi_frame_v1* frame,const uint8_t* tx,size_t count){
+  auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
+  const uint64_t now=p.hw_.now();
+  if(!p.available() || !token || c.token!=token || !c.quad || !c.ready || bus.held!=&c ||
+      !p.hw_.spiTransferFrame || !risc_spi_frame_valid(frame,count) || (count&&!tx) || now>=c.deadline)return false;
+  uint32_t remaining=uint32_t(c.deadline-now);if(remaining>8)remaining=8;
+  const bool result=p.hw_.spiTransferFrame(c.physical,frame,tx,count,remaining);
   if(!result)c.ready=false;
   return result;
 }

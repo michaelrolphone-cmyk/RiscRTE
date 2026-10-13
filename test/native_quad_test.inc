@@ -24,7 +24,7 @@ static void quad_tests(const std::string& root) {
     assert(!a.claim(a.context,11,4,5,12,&t)&&!model.calls);assert(!a.claim_three_wire(a.context,11,4,12,&t));
     assert(!q.claim_quad(a.context,11,4,5,6,8,12,&t));assert(!q.claim_quad(a.context,11,4,5,6,7,13,&t));
     assert(q.claim_quad(a.context,11,4,5,6,7,12,&t)&&t);
-    assert(model.bus.quadwp_io_num==6&&model.bus.quadhd_io_num==7&&model.bus.flags==NativeShim::SPICOMMON_BUSFLAG_QUAD);
+    assert(model.bus.quadwp_io_num==6&&model.bus.quadhd_io_num==7&&model.bus.flags==(NativeShim::SPICOMMON_BUSFLAG_QUAD|NativeShim::SPICOMMON_BUSFLAG_MASTER|NativeShim::SPICOMMON_BUSFLAG_GPIO_PINS));
     assert(!a.begin(a.context,t,40000001,0,20));assert(a.begin(a.context,t,40000000,0,20));
     assert(model.device.config.flags==NativeShim::SPI_DEVICE_HALFDUPLEX&&!model.level[12]);
     uint8_t command[]={0x32,0,0x2c,0},pixels[513]{};

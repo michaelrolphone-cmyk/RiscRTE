@@ -12,16 +12,20 @@ using gpio_num_t=int;
 constexpr int ESP_OK=0,ESP_FAIL=-1,SPI2_HOST=1,SPI3_HOST=2,SPI_DMA_CH_AUTO=3;
 constexpr int SPI_DEVICE_3WIRE=1<<2,SPI_DEVICE_HALFDUPLEX=1<<4,SPICOMMON_BUSFLAG_GPIO_PINS=1<<2;
 constexpr int SPI_TRANS_MODE_QIO=1<<1,SPICOMMON_BUSFLAG_QUAD=1<<5;
+constexpr int SPICOMMON_BUSFLAG_MASTER=1<<0,SPI_TRANS_VARIABLE_CMD=1<<5,SPI_TRANS_VARIABLE_ADDR=1<<6,SPI_TRANS_VARIABLE_DUMMY=1<<7;
+constexpr TickType_t portMAX_DELAY=UINT32_MAX;
 constexpr int GPIO_MODE_INPUT=1,GPIO_MODE_INPUT_OUTPUT=3,FSPID_OUT_IDX=103,SPI3_D_OUT_IDX=68,SIG_GPIO_OUT_IDX=256;
-struct spi_bus_config_t {int sclk_io_num,mosi_io_num,miso_io_num,quadwp_io_num,quadhd_io_num,max_transfer_sz;uint32_t flags;};
+struct spi_bus_config_t {int sclk_io_num,mosi_io_num,miso_io_num,quadwp_io_num,quadhd_io_num,max_transfer_sz,data4_io_num,data5_io_num,data6_io_num,data7_io_num;uint32_t flags;};
 struct spi_device_interface_config_t {int clock_speed_hz;uint8_t mode;int spics_io_num,queue_size;uint32_t flags;};
-struct spi_transaction_t {uint32_t flags;size_t length,rxlength;const void* tx_buffer;void* rx_buffer;};
+struct spi_transaction_t {uint32_t flags;uint16_t cmd;uint64_t addr;size_t length,rxlength;const void* tx_buffer;void* rx_buffer;};
+struct spi_transaction_ext_t {spi_transaction_t base;uint8_t command_bits,address_bits,dummy_bits;};
 struct Device {bool live=false;spi_device_interface_config_t config{};};
 using spi_device_handle_t=Device*;
-enum class Fault {None,Initialize,Add,Remove,Pullup,Pulldown,Direction,Queue,Drain,CsLow,CsHigh,Free,ClosePin};
+enum class Fault {None,Initialize,Add,Remove,Pullup,Pulldown,Direction,Queue,Drain,CsLow,CsHigh,Free,ClosePin,Acquire,PollStart,PollEnd};
 inline struct Model {
   Fault fault=Fault::None;int faultPin=-1;unsigned calls=0,opens=0,adds=0,removes=0,queues=0,drains=0,frees=0;
   int64_t us=0;uint32_t queueDelay=0;TickType_t queueWait=0,drainWait=0;
+  bool sdkOwned=false,polling=false;unsigned polls=0;
   bool owner=true,initialized=false,level[49]{},pullup[49]{},outputEnabled[49]{};
   int direction[49]{},signal[49]{},inputSignal[49]{};Device device{};spi_transaction_t* pending=nullptr;
   spi_bus_config_t bus{};std::vector<std::string> events;std::vector<uint8_t> rxData;
@@ -44,7 +48,7 @@ inline int spi_bus_add_device(spi_host_device_t,const spi_device_interface_confi
   model.device.live=true;model.device.config=*config;*out=&model.device;return ESP_OK;
 }
 inline int spi_bus_remove_device(spi_device_handle_t device){
-  assert(device==&model.device && device->live && !model.pending);++model.removes;
+  assert(device==&model.device && device->live && !model.pending && !model.sdkOwned);++model.removes;
   if(fails(Fault::Remove))return ESP_FAIL;
   device->live=false;return ESP_OK;
 }
@@ -106,6 +110,31 @@ inline int spi_bus_free(spi_host_device_t){
   assert(model.initialized && !model.device.live && !model.pending);++model.frees;
   if(fails(Fault::Free))return ESP_FAIL;
   model.initialized=false;return ESP_OK;
+}
+inline int spi_device_acquire_bus(spi_device_handle_t device,TickType_t wait){
+  assert(device==&model.device && device->live && !model.sdkOwned && !model.pending && wait==portMAX_DELAY);
+  if(fails(Fault::Acquire))return ESP_FAIL;
+  model.sdkOwned=true;return ESP_OK;
+}
+inline void spi_device_release_bus(spi_device_handle_t device){
+  assert(device==&model.device && model.sdkOwned && !model.pending);model.sdkOwned=false;
+}
+inline int spi_device_polling_start(spi_device_handle_t device,spi_transaction_t* transaction,TickType_t wait){
+  assert(device==&model.device && model.sdkOwned && !model.pending && wait==portMAX_DELAY);
+  if(fails(Fault::PollStart))return ESP_FAIL;
+  assert(device->config.flags==SPI_DEVICE_HALFDUPLEX && !transaction->rx_buffer && !transaction->rxlength);
+  const auto& f=*reinterpret_cast<const spi_transaction_ext_t*>(transaction);
+  assert((transaction->flags & ~SPI_TRANS_MODE_QIO)==(SPI_TRANS_VARIABLE_CMD|SPI_TRANS_VARIABLE_ADDR|SPI_TRANS_VARIABLE_DUMMY));
+  assert(f.command_bits<=16 && f.address_bits<=64 && f.dummy_bits<=32);
+  assert(transaction->length || f.command_bits || f.address_bits);
+  assert(bool(transaction->length)==bool(transaction->tx_buffer));
+  model.pending=transaction;model.polling=true;model.polls++;return ESP_OK;
+}
+inline int spi_device_polling_end(spi_device_handle_t device,TickType_t wait){
+  assert(device==&model.device && model.sdkOwned && model.pending && model.polling && wait<=9);
+  model.drainWait=wait;
+  if(fails(Fault::PollEnd))return ESP_FAIL;
+  model.pending=nullptr;model.polling=false;return ESP_OK;
 }
 #include "ports/esp32s3/NativeSpi.inc"
 }
