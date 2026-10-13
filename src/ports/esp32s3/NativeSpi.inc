@@ -28,8 +28,11 @@ bool spiOpenPins(uint8_t physical,int16_t sclk,int16_t mosi,int16_t miso,int16_t
   // A no-MISO bus may later opt into shared-MOSI reads. Route it through the
   // matrix from initialization, so its SDK timing model matches direction
   // changes. Ordinary claims still use their original full-duplex semantics.
+  // Match Arduino_ESP32QSPI: do not set SPICOMMON_BUSFLAG_QUAD. That flag can
+  // force peripheral routing that prevents 1-line command/address phases from
+  // reaching the CO5300 even when the transaction flags are correct.
   if(state.quad){
-    config.flags=SPICOMMON_BUSFLAG_QUAD|SPICOMMON_BUSFLAG_MASTER|SPICOMMON_BUSFLAG_GPIO_PINS;
+    config.flags=SPICOMMON_BUSFLAG_MASTER|SPICOMMON_BUSFLAG_GPIO_PINS;
     config.data4_io_num=config.data5_io_num=config.data6_io_num=config.data7_io_num=-1;
   }
   else if(miso==-1)config.flags=SPICOMMON_BUSFLAG_GPIO_PINS;
@@ -141,15 +144,15 @@ bool spiTransferFrame(uint8_t physical,const risc_spi_frame_v1* frame,const uint
   if(ms>8)ms=8;
   state.ready=false;state.framed={};
   auto& t=state.framed;
-  // CO5300 is 1-1-4: header always 1-line, payload 1- or 4-line.
-  // Match Arduino_ESP32QSPI: MULTILINE only for 1-line command path;
-  // MODE_QIO only for 4-lane data so the 0x32 header stays 1-line.
-  t.base.flags=SPI_TRANS_VARIABLE_CMD|SPI_TRANS_VARIABLE_ADDR|SPI_TRANS_VARIABLE_DUMMY;
-  if(frame->data_lines==4)
-    t.base.flags|=SPI_TRANS_MODE_QIO;
-  else
-    t.base.flags|=SPI_TRANS_MULTILINE_CMD|SPI_TRANS_MULTILINE_ADDR;
-  t.command_bits=frame->command_bits;t.address_bits=frame->address_bits;t.dummy_bits=frame->dummy_bits;
+  // CO5300 is 1-1-4. Match Arduino_ESP32QSPI exactly:
+  // - 1-line commands: only MULTILINE_CMD|MULTILINE_ADDR (device has the bit counts).
+  // - 4-lane data: MODE_QIO only so the 0x32 header stays 1-line.
+  if(frame->data_lines==4){
+    t.base.flags=SPI_TRANS_MODE_QIO|SPI_TRANS_VARIABLE_CMD|SPI_TRANS_VARIABLE_ADDR|SPI_TRANS_VARIABLE_DUMMY;
+    t.command_bits=frame->command_bits;t.address_bits=frame->address_bits;t.dummy_bits=frame->dummy_bits;
+  } else {
+    t.base.flags=SPI_TRANS_MULTILINE_CMD|SPI_TRANS_MULTILINE_ADDR;
+  }
   t.base.cmd=frame->command;t.base.addr=frame->address;t.base.length=count*8;
   if(count){memcpy(state.tx,tx,count);t.base.tx_buffer=state.tx;}
   // Hardware command/address phases and data are submitted together. Splitting
