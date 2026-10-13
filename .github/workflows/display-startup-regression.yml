@@ -2,122 +2,105 @@ name: Display startup regression
 on:
   push:
     branches: [fix/display-startup-20261012]
-    paths: ['.github/workflows/display-startup-regression.yml', 'test/display_startup*', 'src/ports/esp32s3/**']
+  pull_request:
+    paths: ['src/ports/esp32s3/CpuPort.cpp', 'test/display_startup*', 'test/run_display_startup_test.sh', '.github/workflows/display-startup-regression.yml']
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 jobs:
-  reproduce:
-    runs-on: ubuntu-latest
+  host:
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       RISCRTE_RUNTIME_ROOT: ${{ github.workspace }}/runtime
       RISCRTE_READER_ROOT: ${{ github.workspace }}/reader
+      RISCRTE_X4_ROOT: ${{ github.workspace }}/x4
+      RISCRTE_WATCH_ROOT: ${{ github.workspace }}/watch
     steps:
       - uses: actions/checkout@v4
         with:
           path: runtime
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE
+          ref: 9a510b049483ed20327be2c972b12359d2877323
+          path: runtime-before
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/RiskRTE-XTEINK-X4-PRO
           ref: 8dba3205f63dcb9558d80890b9bf5c4aed16f230
           path: x4
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/T5S3-Reader
           ref: 45cf61ac013fb618e8d7fed63217a35350484d52
           path: reader
-      - name: Prepare additional real-provider startup cases
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('x4/minimal/test/frontlight_cpu_port_test.cpp')
-          source=p.read_text().replace('int main()', 'void baseline_main()', 1)
-          source += r'''
-          static bool busy() { return false; }
-          int main() {
-              std::setvbuf(stdout,nullptr,_IONBF,0);
-              baseline_main();
-              const bool fixed = std::getenv("PAD_HOLD_REPAIRED") != nullptr;
-              for (unsigned kind=0; kind<4; ++kind) {
-                  Fixture f;
-                  auto setBusy=[&](bool value) {
-                      auto callback=value?busy:nullptr;
-                      if(kind==0) f.port.hw_.maintenanceIdle=callback;
-                      if(kind==1) f.port.hw_.usbPhyIdle=callback;
-                      if(kind==2) f.port.hw_.httpIdle=callback;
-                      if(kind==3) f.port.iq_.token=value?77:0;
-                  };
-                  setBusy(true);
-                  const bool began=f.start();
-                  const bool cleaned=driver->quiesce();
-                  std::printf("PAD_HOLD repaired=%d busy_kind=%u start=%d quiesce=%d\n",fixed,kind,began,cleaned);
-                  assert(began==fixed && cleaned==fixed);
-                  // App exit includes native maintenance. The CPU-only restart
-                  // predicate defers that separate bank/app-data check to main.
-                  assert(!f.port.appExitSafe());
-                  if(kind!=0) assert(!f.port.restartResourcesSafe());
-                  setBusy(false);
-                  assert(driver->quiesce()); f.clean();
-                  assert(f.start());
-                  assert(frontlight->set_level(nullptr,1,2));
-                  setBusy(true);
-                  const bool switchedOff=frontlight->set_level(nullptr,0,1);
-                  assert(switchedOff==fixed);
-                  setBusy(false);
-                  assert(driver->quiesce());f.clean();
-              }
-              puts("PAD_HOLD: real-provider startup, shutdown and active-to-off regressions PASS");
-              return 0;
-          }
-          '''
-          p.write_text('#include <cstdlib>\n'+source)
-          PY
-      - name: Prove original failure with the exact logged Runtime
-        run: |
-          test "$(git -C runtime hash-object src/ports/esp32s3/CpuPort.cpp)" = 8377e7d5dbfa4a5e0134efef4a17c7679199ca2f
-          bash x4/minimal/test/run_frontlight_cpu_port_test.sh
-      - name: Apply narrow per-pad repair
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('runtime/src/ports/esp32s3/CpuPort.cpp')
-          source=p.read_text()
-          start=source.index('int32_t Port::gpioDeepSleepHold(')
-          end=source.index('\nbool Port::gpioRetireHeldOutput(', start)
-          old=source[start:end]
-          lines=old.splitlines()
-          a=next(i for i,s in enumerate(lines) if s.strip()=='if(!p.tcpIdle() || !p.entropyIdle())return RISC_DEEP_SLEEP_BUSY;')
-          b=next(i for i,s in enumerate(lines[a:],a) if 'p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()' in s)
-          assert b-a==3
-          lines[a:b+1]=[
-            '  // This changes one owned static pad, not the CPU sleep state.',
-            '  // Unrelated asynchronous app-data, radio or USB work may continue.',
-            '  // Keep full-device idleness checks in actual sleep/restart entry.',
-            '  if(p.sleepRetained_)return RISC_DEEP_SLEEP_RETAINED;',
-            '  if(p.sleeping_ || p.transferring_)return RISC_DEEP_SLEEP_BUSY;',
-            '  // A live storage worker still exclusively owns its own pad scope.',
-            '  if(p.storageLifecycleBusy() && p.storageWork_.gpio==&c)return RISC_DEEP_SLEEP_BUSY;'
-          ]
-          p.write_text(source[:start]+'\n'.join(lines)+'\n'+source[end:])
-          PY
-          git -C runtime diff --check
-          git -C runtime diff --stat
-      - name: Repaired real-provider tests normal and sanitized
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: 86aab52fb085b0e6dc3c467760395a3571e1fbd1
+          path: watch
+          persist-credentials: false
+      - name: Reproduce original X4 failure and Watch resume failure
         env:
-          PAD_HOLD_REPAIRED: '1'
+          RISCRTE_RUNTIME_ROOT: ${{ github.workspace }}/runtime-before
+          PAD_HOLD_EXPECT_BROKEN: '1'
         run: |
-          bash x4/minimal/test/run_frontlight_cpu_port_test.sh
-          SANITIZE=1 bash x4/minimal/test/run_frontlight_cpu_port_test.sh
-      - name: Publish only the tested production patch
-        if: github.ref == 'refs/heads/fix/display-startup-20261012'
+          bash runtime/test/run_display_startup_test.sh
+          python3 runtime/test/display_startup_watch_test.py
+      - name: Repaired production paths and negative custody controls
         run: |
-          cd runtime
-          git diff --check
-          test "$(git diff --name-only)" = src/ports/esp32s3/CpuPort.cpp
-          git config user.name 'michaelrolphone-cmyk'
-          git config user.email 'michael.rol.phone@gmail.com'
-          git add src/ports/esp32s3/CpuPort.cpp
-          git commit -m 'Separate owned GPIO pad retention from unrelated background activity' -m 'Real X4 frontlight and CpuPort reproduce failed start and quiesce under maintenance, USB, HTTP and IQ activity before repair; patched startup and off/cleanup pass normally and with ASan/UBSan. Actual sleep/restart barriers and failed-quiesce retention remain. Hardware confirmation pending.'
-          git push origin HEAD:refs/heads/fix/display-startup-20261012
-          echo "PUBLISHED_REPAIR=$(git rev-parse HEAD)"
+          bash runtime/test/run_display_startup_test.sh
+          python3 runtime/test/display_startup_watch_test.py
+          SANITIZE=1 bash runtime/test/run_display_startup_test.sh
+          SANITIZE=1 python3 runtime/test/display_startup_watch_test.py
+      - name: Existing Watch sleep and panel fault-injection tests
+        run: python3 watch/scripts/test_deep_sleep.py
+      - name: Existing Runtime lifecycle tests
+        working-directory: runtime
+        run: bash test/run_runtime_test.sh
+  target:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x4, watch]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-${{ runner.arch }}-risc-tools-${{ hashFiles('platformio.ini', 'requirements-ci.txt') }}
+      - run: python -m pip install -r requirements-ci.txt
+      - name: Compile native X4 qualification profile
+        if: matrix.target == 'x4'
+        run: pio run -e x4-ci -j 1
+      - name: Compile native Watch qualification profile
+        if: matrix.target == 'watch'
+        run: pio run -c crown-build.ini -e crown-recovery-qualification -j 1
+      - name: Record compilation boundary
+        run: |
+          mkdir -p dist/display-startup
+          git rev-parse HEAD > dist/display-startup/source.txt
+          printf '%s\n' 'Compilation qualification only. Not a complete product recovery image. Do not flash these component BINs as full firmware.' > dist/display-startup/README.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: display-startup-${{ matrix.target }}-compile-only-${{ github.sha }}
+          path: |
+            dist/display-startup/
+            .pio/build/*/firmware.elf
+          if-no-files-found: error
+          retention-days: 14
