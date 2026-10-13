@@ -78,7 +78,7 @@ static unsigned nativeImageVerifications=0,nativeImageDescriptions=0;
 static esp_partition_t table[]={
  {ESP_PARTITION_TYPE_APP,ESP_PARTITION_SUBTYPE_APP_OTA_0,0x10000,RiscUpdate::FirmwareBytes,"app0",false},
  {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,"bootfs0",false},
- {ESP_PARTITION_TYPE_APP,esp_partition_subtype_t(17),0x800000,RiscUpdate::FirmwareBytes,"app1",false},
+ {ESP_PARTITION_TYPE_APP,esp_partition_subtype_t(17),RiscUpdate::FirmwareOffset[1],RiscUpdate::FirmwareBytes,"app1",false},
  {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,RiscUpdate::StoreOffset[1],RiscUpdate::StoreBytes,"bootfs1",false},
  {ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_OTA,0xff0000,0x2000,"otadata",false},
  {ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x40),0xff2000,0x2000,"bank_state",false},
@@ -111,7 +111,7 @@ esp_err_t esp_partition_write(const esp_partition_t* p,size_t off,const void* in
  memcpy(flash.data()+p->address+off,in,n);return writeFailure?-1:0;}
 esp_err_t esp_partition_erase_range(const esp_partition_t* p,size_t off,size_t n){if(!p || off+n>p->size)return -1;++writes;memset(flash.data()+p->address+off,0xff,n);return 0;}
 const esp_partition_t* esp_ota_get_running_partition(){return &table[active*2];}
-esp_err_t esp_ota_get_state_partition(const esp_partition_t* p,esp_ota_img_states_t* s){*s=(rejectedCandidate && p->address==0x800000)?ESP_OTA_IMG_ABORTED:otaState;return 0;}
+esp_err_t esp_ota_get_state_partition(const esp_partition_t* p,esp_ota_img_states_t* s){*s=(rejectedCandidate && p->address==RiscUpdate::FirmwareOffset[1])?ESP_OTA_IMG_ABORTED:otaState;return 0;}
 const esp_app_desc_t* esp_ota_get_app_description(){static esp_app_desc_t d{};strcpy(d.project_name,"arduino-lib-builder");return &d;}
 esp_err_t esp_ota_get_partition_description(const esp_partition_t*,esp_app_desc_t* out){++nativeImageDescriptions;*out=*esp_ota_get_app_description();return 0;}
 esp_err_t esp_ota_set_boot_partition(const esp_partition_t*){++selectorCalls;++writes;return selectFailure?-1:0;}
@@ -383,7 +383,7 @@ int main(int argc,char** argv){
          uint8_t digest[32];SHA256(reinterpret_cast<const uint8_t*>(bootNet.profile.data()),bootNet.profile.size(),digest);
          {std::ofstream f(modelStageRoot+"/"+RiscProvision::StoreFiles::DigestFile,std::ios::binary);f.write(reinterpret_cast<const char*>(digest),32);}
          assert(esp_vfs_spiffs_unregister("bootfs1")==ESP_OK);firmware(1,RISC_BUILD_VERSION);
-         uint8_t candidateFirmware[32],candidateStore[32];SHA256(flash.data()+0x800000,imageSize,candidateFirmware);SHA256(flash.data()+RiscUpdate::StoreOffset[1],RiscUpdate::StoreBytes,candidateStore);
+         uint8_t candidateFirmware[32],candidateStore[32];SHA256(flash.data()+RiscUpdate::FirmwareOffset[1],imageSize,candidateFirmware);SHA256(flash.data()+RiscUpdate::StoreOffset[1],RiscUpdate::StoreBytes,candidateStore);
          auto failedRecord=RiscUpdate::makeRecord(1,imageSize,candidateFirmware,candidateStore);memcpy(flash.data()+RiscUpdate::JournalOffset+4096,&failedRecord,sizeof(failedRecord));
          rejectedCandidate=true;
          if(mode=="bootstrap-changed-profile"){
@@ -639,7 +639,7 @@ int main(int argc,char** argv){
    }
    if(restarting){
      using namespace RiscBankStore;
-     firmware(1,"0.1.12");std::vector<uint8_t> payload(flash.begin()+0x800000,flash.begin()+0x800000+imageSize);
+     firmware(1,"0.1.12");std::vector<uint8_t> payload(flash.begin()+RiscUpdate::FirmwareOffset[1],flash.begin()+RiscUpdate::FirmwareOffset[1]+imageSize);
      risc_bank_image_v1 image{};image.struct_size=sizeof(image);image.size=payload.size();image.store_abi=RiscUpdate::StoreAbi;
      memcpy(image.active_store_sha256,record.storeSha,32);SHA256(payload.data(),payload.size(),image.sha256);
      replacingFirmware=true;uint64_t token=0;assert(transaction->begin(false,image,&token)==RISC_BANK_OK);
