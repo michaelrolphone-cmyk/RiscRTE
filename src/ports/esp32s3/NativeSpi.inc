@@ -134,7 +134,10 @@ bool spiTransferFrame(uint8_t physical,const risc_spi_frame_v1* frame,const uint
   if(ms>8)ms=8;
   state.ready=false;state.framed={};
   auto& t=state.framed;
-  t.base.flags=SPI_TRANS_VARIABLE_CMD|SPI_TRANS_VARIABLE_ADDR|SPI_TRANS_VARIABLE_DUMMY;
+  // CO5300 QSPI command protocol (0x02 opcode + 24-bit address) requires the
+  // multiline command/address flags used by Arduino_ESP32QSPI. VARIABLE_* alone
+  // lets transactions complete but the panel ignores them.
+  t.base.flags=SPI_TRANS_MULTILINE_CMD|SPI_TRANS_MULTILINE_ADDR|SPI_TRANS_VARIABLE_CMD|SPI_TRANS_VARIABLE_ADDR|SPI_TRANS_VARIABLE_DUMMY;
   if(frame->data_lines==4)t.base.flags|=SPI_TRANS_MODE_QIO;
   t.command_bits=frame->command_bits;t.address_bits=frame->address_bits;t.dummy_bits=frame->dummy_bits;
   t.base.cmd=frame->command;t.base.addr=frame->address;t.base.length=count*8;
