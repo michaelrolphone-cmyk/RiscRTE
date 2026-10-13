@@ -13,13 +13,36 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/RiscRTE-System-Apps
-          ref: experimental/x4-settings-persistence-20261012
+          ref: a3504d4f8f342d9d78383978e8b70032d0097c23
+          path: system
           persist-credentials: false
-      - name: Export selected source
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-Utilities
+          ref: 80efb298c9ca8d0f62f9a31840c9e51d380b40f6
+          path: utilities
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/T5S3-Reader
+          ref: 45cf61ac013fb618e8d7fed63217a35350484d52
+          path: reader
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Obtain exact target compiler
+        run: |
+          python -m pip install platformio==6.1.19
+          pio pkg install --global --tool 'espressif/toolchain-xtensa-esp32s3@8.4.0+2021r2-patch5'
+      - name: Export pinned rebuild inputs
         run: |
           mkdir -p out
-          git rev-parse HEAD > out/system-source.txt
-          git archive --format=tar.gz --output=out/system-source.tar.gz HEAD
+          for repo in system utilities reader; do
+            git -C "$repo" rev-parse HEAD > "out/$repo-source.txt"
+            git -C "$repo" archive --format=tar.gz --output="$GITHUB_WORKSPACE/out/$repo-source.tar.gz" HEAD
+          done
+          tar -C "$HOME/.platformio/packages/toolchain-xtensa-esp32s3" -czf out/xtensa-toolchain.tar.gz .
       - uses: actions/upload-artifact@v4
         with:
           name: home-recovery-source
