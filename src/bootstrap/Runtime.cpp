@@ -1,4 +1,5 @@
 #include "Runtime.h"
+#include "AppDeclarations.h"
 #include "RemovableAppImage.h"
 #include "runtime/drivers/DeviceProviderExecutorV2.h"
 #include "runtime/drivers/NativeProviderPolicySnapshotV1.h"
@@ -331,7 +332,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     if (!keys(item,{"manifest","grants"},{"app_data_export","image_source","catalog_authority"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,policy.elf,sizeof(policy.elf)) || (suppliedManifest.isNull() && !readJson(policy.elf,doc,&metadataCloseRetained_))) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=suppliedManifest.isNull()?doc.as<JsonObjectConst>():suppliedManifest.as<JsonObjectConst>(); char filename[128];
-    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","runtime_lifecycle","launcher_visible","min_firmware_version"}) ||
+    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","runtime_lifecycle","launcher_visible","min_firmware_version","optional"}) ||
         !eq(manifest["type"],"application") || !eq(manifest["architecture"],"xtensa-esp32s3") || !eq(manifest["entry"],"app_main") ||
         (!manifest["runtime_lifecycle"].isUnbound() && !eq(manifest["runtime_lifecycle"],"foreground") && !eq(manifest["runtime_lifecycle"],"legacy")) ||
         !text(manifest["id"],policy.id,sizeof(policy.id)) || !RuntimePackages::safeId(policy.id) ||
@@ -339,6 +340,8 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         !text(manifest["file_name"],filename,sizeof(filename)) || !RuntimePackages::safeArtifact(filename) || !elfPath(filename) ||
         !manifest["requires"].is<JsonArrayConst>() || manifest["requires"].size()>MaxAppRequirements ||
         !item["grants"].is<JsonArrayConst>() || item["grants"].size()>MaxAppPolicyGrants) return fail("invalid app identity/declarations");
+    const AppDeclarations declarations(manifest);
+    if(const char* error=declarations.error(MaxAppRequirements))return fail(error);
     appCatalogMetadata(manifest,policy.catalog);
     FileOpenMetadata fileMetadata;
     if(!fileOpenMetadata(manifest,fileMetadata))return fail("invalid app file associations");
@@ -370,7 +373,8 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
       if(policy.sourceDriver<0)return fail("removable app volume unavailable");
       snprintf(policy.sourcePath,sizeof(policy.sourcePath),"/%s",relativeImage);
     }
-    for (JsonObjectConst request:manifest["requires"].as<JsonArrayConst>()) {
+    for (size_t declaration=0;declaration<declarations.size();++declaration) {
+      const JsonObjectConst request=declarations[declaration];
       char requested[96];int64_t api=0;
       if (!keys(request,{"capability","api"}) || !text(request["capability"],requested,sizeof(requested)) ||
           !integer(request["api"],1,UINT32_MAX,api)) return fail("invalid app requirement");
@@ -475,7 +479,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         }
         ++policy.count;
       }
-      if (!matches) return fail("app requirement not uniquely authorized");
+      if (!matches && declarations.required(declaration)) return fail("app requirement not uniquely authorized");
     }
     if (policy.count!=item["grants"].size()) return fail("undeclared app grant");
     if(!replacing)++policyCount_;
@@ -1126,24 +1130,31 @@ bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& 
   if(!parse(static_cast<const char*>(bytes),size,doc))return false;
   JsonObjectConst m=doc.as<JsonObjectConst>();char version[32];
   const char* basename=strrchr(policy->elf,'/');if(!basename)return false;++basename;
-  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","launcher_visible","min_firmware_version"}) ||
+  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","launcher_visible","min_firmware_version","optional"}) ||
      !eq(m["type"],"application") || !eq(m["id"],id) || !eq(m["architecture"],"xtensa-esp32s3") ||
      !eq(m["entry"],"app_main") || !eq(m["file_name"],basename) || !text(m["version"],version,sizeof(version)) ||
-     !RuntimePackages::safeVersion(version) || !m["requires"].is<JsonArrayConst>() ||
-     m["requires"].size()!=required)return false;
+     !RuntimePackages::safeVersion(version))return false;
+  const AppDeclarations declarations(m);
+  if(declarations.error(MaxAppRequirements))return false;
   FileOpenMetadata fileMetadata;
   if(!fileOpenMetadata(m,fileMetadata))return false;
   uint32_t candidate[3],current[3];
   if(!RiscUpdate::parseVersion(version,candidate) || !RiscUpdate::parseVersion(policy->version,current) ||
      RiscUpdate::compareVersion(candidate,current)<=0)return false;
   bool matched[MaxAppPolicyGrants]{};
-  for(JsonObjectConst req:m["requires"].as<JsonArrayConst>()) {
+  size_t matchedDeclarations=0;
+  for(size_t declaration=0;declaration<declarations.size();++declaration) {
+    const JsonObjectConst req=declarations[declaration];
     char name[96];int64_t api;
     if(!keys(req,{"capability","api"}) || !text(req["capability"],name,sizeof(name)) || !integer(req["api"],1,UINT32_MAX,api))return false;
     size_t g=0;for(;g<policy->count;++g)if(!strcmp(name,policy->grants[g].capability) && uint32_t(api)==policy->grants[g].api)break;
-    if(g==policy->count || matched[g])return false;
-    matched[g]=true;
+    if(g==policy->count){if(declarations.required(declaration))return false;continue;}
+    if(matched[g])return false;
+    matched[g]=true;++matchedDeclarations;
   }
+  // Every immutable owner-granted declaration remains represented, including
+  // optional grants. New optional rows never manufacture update authority.
+  if(matchedDeclarations!=required)return false;
   size_t rootLength=strlen(root_);
   if(strncmp(policy->elf,root_,rootLength) || policy->elf[rootLength]!='/' || strlen(policy->elf+rootLength+1)>=sizeof(out.elf))return false;
   strcpy(out.elf,policy->elf+rootLength+1);
@@ -1608,7 +1619,7 @@ bool RiscBoot::Runtime::admitInstalledAppAt(const char* policyJson,const char* m
      strcmp(invocation_->current_,default_) || foregroundRunning_ ||
      (foreground_ && foreground_->active_) || invocation_->streams_.busy()))return false;
   JsonDocument policy,manifest,rows;
-  if(deserializeJson(policy,policyJson) || deserializeJson(manifest,manifestJson) ||
+  if(!parse(policyJson,strlen(policyJson),policy) || !parse(manifestJson,strlen(manifestJson),manifest) ||
      !policy.is<JsonObjectConst>() || !manifest.is<JsonObjectConst>() ||
      policy["image_source"].isNull() || !policy["app_data_export"].isNull())return false;
   rows.to<JsonArray>().add(policy.as<JsonVariantConst>());
