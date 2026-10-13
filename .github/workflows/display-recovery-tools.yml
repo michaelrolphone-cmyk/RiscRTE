@@ -21,6 +21,18 @@ jobs:
           ref: 06da76aa7f074220b74a282badca0ed0061f1643
           path: watch-runtime-source
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiskRTE-XTEINK-X4-PRO
+          ref: experimental/x4-settings-persistence-20261012
+          path: x4-source
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE
+          ref: a91edf3fada6a559ec107186dd163d0c8da10d29
+          path: x4-runtime-source
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -29,11 +41,15 @@ jobs:
         run: |
           mkdir -p out
           python - <<'PY'
-          import elftools,shutil,subprocess,importlib.util
+          import elftools,shutil,subprocess,importlib.util,json
           from pathlib import Path
           shutil.copytree(Path(elftools.__file__).parent,Path('out/elftools'))
           shutil.copytree('vendor/esp-idf-spiffs','out/esp-idf-spiffs')
-          subprocess.run(['git','-C','watch-runtime-source','archive','--format=tar.gz','--output='+str(Path('out/watch-runtime-source.tar.gz').resolve()),'06da76aa7f074220b74a282badca0ed0061f1643'],check=True)
+          sources={}
+          for name in ('watch-runtime-source','x4-source','x4-runtime-source'):
+              sources[name]=subprocess.check_output(['git','-C',name,'rev-parse','HEAD'],text=True).strip()
+              subprocess.run(['git','-C',name,'archive','--format=tar.gz','--output='+str(Path('out/'+name+'.tar.gz').resolve()),'HEAD'],check=True)
+          Path('out/sources.json').write_text(json.dumps(sources,indent=2)+'\n')
           spec=importlib.util.spec_from_file_location('profile','watch-runtime-source/test/run_native_littlefs_profile_test.py')
           profile=importlib.util.module_from_spec(spec);spec.loader.exec_module(profile)
           profile.obtain_inputs(Path('out/pinned-littlefs'),None,None)
