@@ -4,6 +4,7 @@
 #include <TWatchHardwareV1.h>
 #include <RiscTouchI2cV2.h>
 #include <RiscDisplaySpiV2.h>
+#include <RiscI2cFunctionV1.h>
 #include <RiscI2sStandardConfigV1.h>
 namespace RiscBoot {
 class Board final {
@@ -30,6 +31,7 @@ class Board final {
       tw_hw_gpio_controller_v1 gpioController;
       tw_hw_i2c_controller_v1 i2cController;
       tw_hw_i2c_device_v1 peripheral;
+      risc_hw_i2c_function_v1 i2cFunction;
       tw_hw_axp2101_v1 power;
       tw_hw_audio_v1 audio;
       risc_hw_i2s_standard_v1 standardAudio;

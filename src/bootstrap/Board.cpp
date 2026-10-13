@@ -49,6 +49,7 @@ int Board::physicalController(uint64_t id) const {
 uint64_t Board::deviceBus(uint64_t id) const {
   const auto* d=device(id); if (!d) return 0;
   if (!strcmp(d->type,"controller.i2c")) return d->config.i2cController.bus.instance_id;
+  if (!strcmp(d->type,"peripheral.i2c-function")) return d->config.i2cFunction.bus.instance_id;
   if (!strcmp(d->type,"peripheral.i2c")) return d->config.peripheral.bus.instance_id;
   if (!strcmp(d->type,"power.axp2101")) return d->config.power.device.bus.instance_id;
   if (!strcmp(d->type,"display.spi")) return d->display().bus.instance_id;
@@ -73,6 +74,15 @@ bool Board::i2cDevice(JsonObjectConst c,tw_hw_i2c_device_v1& x) {
     pin(c["irq"],x.irq,true) && claim(x.irq,true) && flag(c["irq_active_high"],x.irq_active_high) && flag(c["irq_pull_up"],x.irq_pull_up);
 }
 bool Board::materialize(JsonObjectConst c,Device& d) {
+  if (!strcmp(d.type,"peripheral.i2c-function")) {
+    auto& x=d.config.i2cFunction;x={};x.struct_size=sizeof(x);
+    if (!keys(c,{"parent_instance_id","function_id"}) ||
+        !number(c["parent_instance_id"],1,INT32_MAX,x.parent_instance_id) ||
+        x.parent_instance_id==d.hardware.instance_id ||
+        !number(c["function_id"],0,UINT32_MAX,x.function_id))return false;
+    d.hardware.config=&x;d.hardware.config_size=sizeof(x);return true;
+  }
+
   if (!strcmp(d.type,"gpio.bank")) {
     if (!keys(c,{"pins","active_high","pull_up","debounce_us","long_press_us","click_min_us"})) return false;
     auto& x=d.config.gpio; x={}; x.struct_size=sizeof(x);
@@ -315,6 +325,26 @@ bool Board::load(JsonObjectConst root) {
       }
     }
     ++devicesCount_;
+  }
+  // Resolve function identity only after every physical device was parsed.
+  // JSON order does not decide ownership. Functions cannot parent functions,
+  // select another address, duplicate an existing function or claim pins.
+  for (size_t i=0;i<devicesCount_;++i) {
+    auto& d=devices_[i];
+    if (strcmp(d.type,"peripheral.i2c-function"))continue;
+    auto& x=d.config.i2cFunction;
+    const auto* parent=device(x.parent_instance_id);
+    if (!parent)return fail("I2C function parent missing");
+    const tw_hw_i2c_device_v1* physical=nullptr;
+    if (!strcmp(parent->type,"peripheral.i2c"))physical=&parent->config.peripheral;
+    else if (!strcmp(parent->type,"power.axp2101"))physical=&parent->config.power.device;
+    if (!physical)return fail("I2C function requires physical peripheral parent");
+    for(size_t j=0;j<i;++j)if(!strcmp(devices_[j].type,"peripheral.i2c-function")) {
+      const auto& other=devices_[j].config.i2cFunction;
+      if(other.parent_instance_id==x.parent_instance_id && other.function_id==x.function_id)
+        return fail("duplicate I2C peripheral function");
+    }
+    x.bus=physical->bus;x.address=physical->address;x.chip_id=physical->chip_id;
   }
   for (size_t i=0;i<devicesCount_;++i) {
     const auto& d=devices_[i];
