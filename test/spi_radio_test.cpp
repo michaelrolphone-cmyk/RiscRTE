@@ -55,26 +55,26 @@ int main(int argc,char**argv){
   assert(g.api.base.claim(g.api.base.context,8,true,true,false,&rst));assert(g.api.base.claim(g.api.base.context,9,false,false,false,&busy));assert(g.api.base.claim(g.api.base.context,10,false,false,false,&irq));
   bool value=true;assert(g.api.base.read(g.api.base.context,busy,&value) && !value);assert(!g.api.base.write(g.api.base.context,busy,true));assert(!other.api.base.write(other.api.base.context,rst,true));
   assert(g.api.base.write(g.api.base.context,rst,false));unsigned before=calls;
-  assert(!a.api.claim(a.api.context,4,5,6,11,&token) && !token && calls==before);
-  assert(!a.api.claim(a.api.context,4,5,-1,7,&token) && !token && calls==before);
-  assert(a.api.claim(a.api.context,4,5,6,7,&token) && token);uint64_t first=token;
-  assert(b.api.claim(b.api.context,4,5,6,11,&two) && two);assert(display.api.claim(display.api.context,4,5,6,15,&screen));assert(opens==1);
-  assert(!a.api.begin(a.api.context,two,2000000,0,20));assert(!a.api.begin(a.api.context,token,2000001,0,20));assert(!a.api.begin(a.api.context,token,2000000,1,20));
-  owned=false;assert(!a.api.begin(a.api.context,token,2000000,0,20));owned=true;
-  beginOk=false;assert(!a.api.begin(a.api.context,token,2000000,0,20) && !p.spiBuses_[physical-2].held);beginOk=true;
-  assert(a.api.begin(a.api.context,token,2000000,0,20));assert(!b.api.begin(b.api.context,two,2000000,0,20));assert(!display.api.begin(display.api.context,screen,2000000,0,20));
+  assert(!a.api.base.claim(a.api.base.context,4,5,6,11,&token) && !token && calls==before);
+  assert(!a.api.base.claim(a.api.base.context,4,5,-1,7,&token) && !token && calls==before);
+  assert(a.api.base.claim(a.api.base.context,4,5,6,7,&token) && token);uint64_t first=token;
+  assert(b.api.base.claim(b.api.base.context,4,5,6,11,&two) && two);assert(display.api.base.claim(display.api.base.context,4,5,6,15,&screen));assert(opens==1);
+  assert(!a.api.base.begin(a.api.base.context,two,2000000,0,20));assert(!a.api.base.begin(a.api.base.context,token,2000001,0,20));assert(!a.api.base.begin(a.api.base.context,token,2000000,1,20));
+  owned=false;assert(!a.api.base.begin(a.api.base.context,token,2000000,0,20));owned=true;
+  beginOk=false;assert(!a.api.base.begin(a.api.base.context,token,2000000,0,20) && !p.spiBuses_[physical-2].held);beginOk=true;
+  assert(a.api.base.begin(a.api.base.context,token,2000000,0,20));assert(!b.api.base.begin(b.api.base.context,two,2000000,0,20));assert(!display.api.base.begin(display.api.base.context,screen,2000000,0,20));
   risc_light_sleep_result_v1 wake{sizeof(wake),0};assert(g.api.base.light_sleep(g.api.base.context,irq,true,&wake)==RISC_LIGHT_SLEEP_BUSY);assert(g.api.base.deep_sleep(g.api.base.context,irq,true)==RISC_DEEP_SLEEP_BUSY);
-  uint8_t tx[513]{},rx[513]{};assert(a.api.exchange(a.api.context,token,tx,rx,255) && rx[254]==254);assert(!a.api.exchange(a.api.context,token,tx,rx,513));
-  transferOk=false;assert(!a.api.exchange(a.api.context,token,tx,rx,1));transferOk=true;
-  endOk=false;assert(!a.api.end(a.api.context,token) && p.spiBuses_[physical-2].held==&a);assert(!a.api.release(a.api.context,token));endOk=true;
-  tick=21;assert(!a.api.exchange(a.api.context,token,tx,rx,1));assert(a.api.end(a.api.context,token));
+  uint8_t tx[513]{},rx[513]{};assert(a.api.base.exchange(a.api.base.context,token,tx,rx,255) && rx[254]==254);assert(!a.api.base.exchange(a.api.base.context,token,tx,rx,513));
+  transferOk=false;assert(!a.api.base.exchange(a.api.base.context,token,tx,rx,1));transferOk=true;
+  endOk=false;assert(!a.api.base.end(a.api.base.context,token) && p.spiBuses_[physical-2].held==&a);assert(!a.api.base.release(a.api.base.context,token));endOk=true;
+  tick=21;assert(!a.api.base.exchange(a.api.base.context,token,tx,rx,1));assert(a.api.base.end(a.api.base.context,token));
   assert(g.api.base.light_sleep(g.api.base.context,irq,true,&wake)==RISC_LIGHT_SLEEP_UNSUPPORTED);
-  assert(display.api.begin(display.api.context,screen,2000000,0,20));assert(display.api.end(display.api.context,screen));
-  assert(a.api.release(a.api.context,token));assert(!a.api.begin(a.api.context,first,2000000,0,20));assert(a.api.claim(a.api.context,4,5,6,7,&token) && token!=first && opens==1);
-  assert(a.api.release(a.api.context,token));assert(b.api.release(b.api.context,two));assert(!closes);
-  closeOk=false;assert(!display.api.release(display.api.context,screen) && display.token==screen);closeOk=true;
-  gpioCloseOk=false;assert(!display.api.release(display.api.context,screen) && display.token==screen);gpioCloseOk=true;
-  assert(display.api.release(display.api.context,screen));assert(g.api.base.release(g.api.base.context,rst));assert(g.api.base.release(g.api.base.context,busy));assert(g.api.base.release(g.api.base.context,irq));assert(p.quiescent());
+  assert(display.api.base.begin(display.api.base.context,screen,2000000,0,20));assert(display.api.base.end(display.api.base.context,screen));
+  assert(a.api.base.release(a.api.base.context,token));assert(!a.api.base.begin(a.api.base.context,first,2000000,0,20));assert(a.api.base.claim(a.api.base.context,4,5,6,7,&token) && token!=first && opens==1);
+  assert(a.api.base.release(a.api.base.context,token));assert(b.api.base.release(b.api.base.context,two));assert(!closes);
+  closeOk=false;assert(!display.api.base.release(display.api.base.context,screen) && display.token==screen);closeOk=true;
+  gpioCloseOk=false;assert(!display.api.base.release(display.api.base.context,screen) && display.token==screen);gpioCloseOk=true;
+  assert(display.api.base.release(display.api.base.context,screen));assert(g.api.base.release(g.api.base.context,rst));assert(g.api.base.release(g.api.base.context,busy));assert(g.api.base.release(g.api.base.context,irq));assert(p.quiescent());
  }
  // Config v2 selects only an explicit allowed mask; binding remains inert.
  static_assert(offsetof(tw_hw_lora_v2,base)==0,"v1 prefix moved");
@@ -107,9 +107,9 @@ int main(int argc,char**argv){
  stage("sx1262",2,true,true);reset();{Port p(hardware());current=&p;RiscBoot::Runtime r(runtime());assert(!r.prepare(root.c_str()) && !calls);}
  for(bool cleanup:{true,false}){
   stage("sx1262");reset();Port p(hardware());current=&p;RiscBoot::Runtime r(runtime());assert(r.prepare(root.c_str()));auto& a=p.spis_[0];uint64_t token=99;
-  openOk=false;closeOk=cleanup;assert(!a.api.claim(a.api.context,4,5,6,7,&token) && !token);assert(p.quiescent()==cleanup);
-  if(cleanup){openOk=true;assert(a.api.claim(a.api.context,4,5,6,7,&token));assert(a.api.release(a.api.context,token) && p.quiescent());}
-  else {openOk=closeOk=true;assert(!a.api.claim(a.api.context,4,5,6,7,&token) && p.poisoned_ && !p.quiescent());}
+  openOk=false;closeOk=cleanup;assert(!a.api.base.claim(a.api.base.context,4,5,6,7,&token) && !token);assert(p.quiescent()==cleanup);
+  if(cleanup){openOk=true;assert(a.api.base.claim(a.api.base.context,4,5,6,7,&token));assert(a.api.base.release(a.api.base.context,token) && p.quiescent());}
+  else {openOk=closeOk=true;assert(!a.api.base.claim(a.api.base.context,4,5,6,7,&token) && p.poisoned_ && !p.quiescent());}
  }
  puts("Typed radio SPI/GPIO: real JSON/graph admission, no preflight I/O, both controller mappings, shared display arbitration, scoped pins/tokens, bounds, transfer/end faults, release retry, poison retention and sleep coexistence PASS");
 }

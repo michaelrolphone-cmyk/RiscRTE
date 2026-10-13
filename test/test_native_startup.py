@@ -117,10 +117,10 @@ int main(){
 #ifdef PSRAM_FAIL
  expected.push_back("RTE_BOOT error=runtime-metadata-psram");
 #else
- for(const char* s:{"reserve","prepare","RTE_BOOT board=validated drivers=admitted","run","RTE_BOOT state=idle reason=app-returned"})expected.emplace_back(s);
+ for(const char* s:{"reserve","prepare","RTE_BOOT board=validated drivers=admitted","RTE_SOURCE=test","run","RTE_BOOT state=idle reason=app-returned"})expected.emplace_back(s);
 #endif
 #else
- for(const char* s:{"reserve","prepare","RTE_BOOT board=validated drivers=admitted","run","RTE_BOOT state=idle reason=app-returned"})expected.emplace_back(s);
+ for(const char* s:{"reserve","prepare","RTE_BOOT board=validated drivers=admitted","RTE_SOURCE=test","run","RTE_BOOT state=idle reason=app-returned"})expected.emplace_back(s);
 #endif
  #endif
  #endif
