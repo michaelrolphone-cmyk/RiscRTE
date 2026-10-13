@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/RiscRTE-Utilities
-          ref: 80efb298c9ca8d0f62f9a31840c9e51d380b40f6
+          ref: e80172353fcb9e6519ca9d9b2a4d43c69c1bc91d
           path: utilities
           persist-credentials: false
       - uses: actions/checkout@v4
@@ -38,11 +38,15 @@ jobs:
       - name: Export pinned rebuild inputs
         run: |
           mkdir -p out
-          for repo in system utilities reader; do
-            git -C "$repo" rev-parse HEAD > "out/$repo-source.txt"
-            git -C "$repo" archive --format=tar.gz --output="$GITHUB_WORKSPACE/out/$repo-source.tar.gz" HEAD
-          done
+          git -C system archive --format=tar.gz --output="$GITHUB_WORKSPACE/out/system-source.tar.gz" HEAD
+          git -C system rev-parse HEAD > out/system-source.txt
+          git -C utilities rev-parse HEAD > out/utilities-source.txt
+          tar -C utilities -czf out/utilities-source-with-git.tar.gz .
+          git -C reader rev-parse HEAD > out/reader-source.txt
+          git -C reader ls-files '*.h' '*.hpp' '*.inc' '*normalize_xtensa_relocations.py' '*LICENSE*' > out/reader-files.txt
+          tar -C reader -T "$GITHUB_WORKSPACE/out/reader-files.txt" -czf out/reader-sdk.tar.gz
           tar -C "$HOME/.platformio/packages/toolchain-xtensa-esp32s3" -czf out/xtensa-toolchain.tar.gz .
+          du -h out/*
       - uses: actions/upload-artifact@v4
         with:
           name: home-recovery-source
