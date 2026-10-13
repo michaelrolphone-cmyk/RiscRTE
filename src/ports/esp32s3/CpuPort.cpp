@@ -930,10 +930,13 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
   if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_DEEP_SLEEP_RETAINED;
-  if(!p.tcpIdle() || !p.entropyIdle())return RISC_DEEP_SLEEP_BUSY;
-  if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
-  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
-     (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
+  // This changes one owned static pad, not the CPU sleep state.
+  // Unrelated asynchronous app-data, radio or USB work may continue.
+  // Keep full-device idleness checks in actual sleep/restart entry.
+  if(p.sleepRetained_)return RISC_DEEP_SLEEP_RETAINED;
+  if(p.sleeping_ || p.transferring_)return RISC_DEEP_SLEEP_BUSY;
+  // A live storage worker still exclusively owns its own pad scope.
+  if(p.storageWorkBusy() && p.storageWork_.gpio==&c)return RISC_DEEP_SLEEP_BUSY;
   for(unsigned i=0;i<49;++i){
     auto& pin=p.pins_[i];
     if(!token || pin.owner!=&c || pin.token!=token || !pin.output)continue;
@@ -948,6 +951,7 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   }
   return RISC_DEEP_SLEEP_INVALID;
 }
+
 bool Port::gpioRetireHeldOutput(void* context,uint64_t token){
   if(!context || !token)return false;
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
