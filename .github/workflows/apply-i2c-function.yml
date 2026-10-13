@@ -1,0 +1,33 @@
+name: Apply generic I2C function binding
+on:
+  push:
+    branches: [feat/watch-quad-spi]
+    paths: ['.github/workflows/apply-i2c-function.yml']
+permissions:
+  contents: write
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/watch-quad-spi
+      - name: Apply and test generic descriptor
+        shell: bash
+        run: |
+          python3 scripts/apply_i2c_function.py
+          bash test/run_i2c_function_test.sh
+          SANITIZE=1 bash test/run_i2c_function_test.sh
+          bash test/run_board_test.sh
+          bash test/run_native_spi_test.sh
+          bash test/run_watch_test.sh
+      - name: Commit validated implementation
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src platformio.ini
+          if ! git diff --cached --quiet; then
+            git commit -m 'Materialize generic I2C peripheral functions with explicit parent ownership'
+            git push origin HEAD:feat/watch-quad-spi
+          fi
