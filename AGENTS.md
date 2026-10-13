@@ -13,3 +13,5 @@ migration or implicit package privilege. Preserve source licensing/provenance.
 
 Use single-job target builds. Host tests and target builds do not qualify hardware.
 No serial/device access, flash, merge or release without explicit owner direction.
+
+riscrte is designed to run on boards with available sram, always prefer sram for memory when it doesn't inhibit functionality of a capability
