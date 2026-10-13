@@ -436,3 +436,18 @@ The selected production NVS backend uses format 2 for installed-app private name
 Successful changes commit a per-key native delta with a generation. The catalog writes immutable 4096-byte SD pages, verifies them, replaces a small index atomically, closes the worker, and only then commits the native anchor and retires covered deltas. Newer writes survive older acknowledgements. Missing, exported or failed media cannot redirect writes back into an independent native value store. Cold restore with an anchor requires its SD base; stale original values cannot replace it. Native original values remain a read-only migration backup, not the post-migration read/write backend.
 
 This selection covers private namespaces allocated by the installed-app ledger. It does not grant access to or migrate unrelated shared system, radio, or provider namespaces. Existing ownership/grants remain unchanged. Allocation or native-journal capacity failures return errors without truncation; accepted deltas remain durable. Host models do not qualify hardware.
+
+## Placement capacity fallback (October 13)
+
+The offline dependency planner now keeps each package together on internal
+storage when ready SD lacks enough remaining payload budget. It still pins the
+mount/bootstrap closure internally, uses exact SPIFFS accounting for the entire
+internal selection, and rejects the plan when neither placement fits. This is a
+pre-mutation decision; retained or ambiguous SD I/O is never a fallback trigger.
+Fifteen planner tests cover absent/full/partially available SD, multi-file package
+atomic placement, internal exhaustion, dependencies and path collisions.
+
+This does not make the live single-volume installation ABI multi-volume. The
+selected product has SD volume 9 as its installation authority. Connecting an
+internal executable store requires its own scoped storage capability, native
+admission, worker ownership, durable placement identity and update recovery.
