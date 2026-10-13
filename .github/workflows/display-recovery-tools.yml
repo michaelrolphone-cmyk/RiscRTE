@@ -29,11 +29,14 @@ jobs:
         run: |
           mkdir -p out
           python - <<'PY'
-          import elftools,shutil,subprocess
+          import elftools,shutil,subprocess,importlib.util
           from pathlib import Path
           shutil.copytree(Path(elftools.__file__).parent,Path('out/elftools'))
           shutil.copytree('vendor/esp-idf-spiffs','out/esp-idf-spiffs')
           subprocess.run(['git','-C','watch-runtime-source','archive','--format=tar.gz','--output='+str(Path('out/watch-runtime-source.tar.gz').resolve()),'06da76aa7f074220b74a282badca0ed0061f1643'],check=True)
+          spec=importlib.util.spec_from_file_location('profile','watch-runtime-source/test/run_native_littlefs_profile_test.py')
+          profile=importlib.util.module_from_spec(spec);spec.loader.exec_module(profile)
+          profile.obtain_inputs(Path('out/pinned-littlefs'),None,None)
           PY
       - uses: actions/upload-artifact@v4
         with:
