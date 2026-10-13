@@ -75,6 +75,9 @@ bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool thre
   } else if(state.managedMosi){
     if(gpio_pullup_dis(static_cast<gpio_num_t>(state.mosi))!=ESP_OK || !spiMosiDirection(physical,state,true))return false;
   }
+  // Quad: acquire once and hold for the lifetime of the claim (until spiClose).
+  // Matches the vendor A/B path, which acquires in begin() and never releases
+  // between commands on an exclusive display bus.
   if(state.quad && !state.sdkOwned){
     if(spi_device_acquire_bus(state.device,portMAX_DELAY)!=ESP_OK)return false;
     state.sdkOwned=true;
@@ -123,8 +126,8 @@ bool spiTransferFrame(uint8_t physical,const risc_spi_frame_v1* frame,const uint
   if(ms>8)ms=8;
   state.ready=false;state.framed={};
   auto& t=state.framed;
-  // Match the vendor A/B construction exactly.
-  // Short payloads use USE_TXDATA + tx_data[] (as writeC8D8/writeC8D16/write do).
+  // Match the vendor A/B construction.
+  // Short payloads use USE_TXDATA + tx_data[].
   // 1-line: MULTILINE_CMD|MULTILINE_ADDR only.
   // 4-lane: MODE_QIO only (header stays 1-line).
   if(frame->data_lines==4)
@@ -155,7 +158,11 @@ bool spiEnd(uint8_t physical,uint8_t cs,uint32_t ms){
   auto& state=spi[physical-2];if(!state.held)return false;
   if(state.threeWire || state.quad){state.ready=false;if(ms>8)ms=8;}
   if(!drain(state,ms) || !gpioWrite(cs,true))return false;
-  if(state.sdkOwned){spi_device_release_bus(state.device);state.sdkOwned=false;}
+  // Quad: do not release the SDK bus here. The lease stays held until
+  // spiClose, matching the vendor path that worked in A/B. CS is raised
+  // and the per-transaction held flag is cleared so the next begin can
+  // proceed, but the peripheral ownership does not change.
+  if(state.sdkOwned && !state.quad){spi_device_release_bus(state.device);state.sdkOwned=false;}
   state.held=false;state.ready=false;return true;
 }
 bool spiClose(uint8_t physical){
