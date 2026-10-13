@@ -42,6 +42,7 @@ jobs:
           APP_DATA_TEST=1 bash test/run_paired_bank_test.sh
           EXPANDED_TEST=1 bash test/run_paired_bank_test.sh
           bash test/run_app_catalog_runtime_test.sh
+          bash test/run_optional_app_requirements_test.sh
   target:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -68,6 +69,7 @@ jobs:
           path: |
             .pio/build/watch-expanded/firmware.bin
             .pio/build/watch-expanded/firmware.elf
+            .pio/build/watch-expanded/bootloader.bin
             .pio/build/watch-expanded/partitions.bin
             .pio/build/watch-expanded/radio-iq-proof.json
           if-no-files-found: error
