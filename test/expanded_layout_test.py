@@ -59,6 +59,9 @@ class ExpandedLayout(unittest.TestCase):
         self.assertIn('-Wl,-u,risc_owner_maintenance_target',unflags)
         self.assertIn('-DRISC_PROVIDER_CAPACITY=32',unflags)
         self.assertIn('-DRISC_PROVIDER_CAPACITY=40',text)
+        for key in ('RISC_APP_POLICY_ROWS','RISC_APP_REQUIREMENT_ROWS'):
+            self.assertIn('-D'+key+'=24',unflags)
+            self.assertIn('-D'+key+'=32',text.split('build_flags =')[1])
         self.assertIn('-std=gnu++11',unflags)
         self.assertNotIn('\n  -U',text)
         self.assertNotIn('RISC_INSTALLED_APP_CAPACITY',text)
@@ -79,7 +82,7 @@ class ExpandedLayout(unittest.TestCase):
             key,item=value if isinstance(value,tuple) else (value,True)
             pairs[key]=item;counts[key]=counts.get(key,0)+1
         for key,value in {'RISC_PROVIDER_CAPACITY':40,'RISC_INSTALLED_APP_CAPACITY':64,
-                          'RISC_APP_POLICY_ROWS':24,'RISC_APP_REQUIREMENT_ROWS':24,
+                          'RISC_APP_POLICY_ROWS':32,'RISC_APP_REQUIREMENT_ROWS':32,
                           'RISC_PAIRED_APP_DATA_EXPANDED':1,'RISC_PAIRED_APP_DATA':1,
                           'RISC_NATIVE_RECOVERY_AXP2101':1,'RISC_NATIVE_FILE_SOURCE':1,
                           'RISC_NATIVE_APP_DATA_MOUNT':1}.items():

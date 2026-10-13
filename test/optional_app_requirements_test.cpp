@@ -338,7 +338,10 @@ extern "C" void test_optional_entry() { ++entries;assert(entry);entry(); }
 extern "C" void app_catalog_test_installer(const void* api) { installer=static_cast<const risc_installation_v1*>(api); }
 int main(int argc,char** argv) {
   assert(argc==2);root=argv[1];
-  static_assert(Runtime::MaxAppRequirements==16||Runtime::MaxAppRequirements==24,"Run baseline and expanded admission bounds");
+  static_assert(Runtime::MaxAppRequirements==16||Runtime::MaxAppRequirements==24||Runtime::MaxAppRequirements==32,"Run baseline and expanded admission bounds");
+  static_assert(sizeof(((Runtime::Invocation*)nullptr)->appGrants_)/sizeof(Runtime::AppGrant)==16,"Live invocation handles unchanged");
+  static_assert(RiscLimits::Grants==RiscLimits::Providers+16,"Graph live reserve unchanged");
+  printf("MEMORY rows=%zu policy=%zu grant_row=%zu runtime=%zu invocation=%zu graph_grants=%zu live_handles=16\n",Runtime::MaxAppPolicyGrants,sizeof(Runtime::AppPolicy),sizeof(Runtime::AppGrantPolicy),sizeof(Runtime),sizeof(Runtime::Invocation),RiscLimits::Grants);
   schemaAndAuthority();declarationBounds();ownerGrantBounds();ordinaryProviderValidation();updates();discovery();reservedDiscovery();
   printf("Optional app declarations: %u checks, %u real app entries, prepare/update/discovery and unchanged authority PASS (declaration/grant bounds %zu/%zu)\n",cases,entries,Runtime::MaxAppRequirements,Runtime::MaxAppPolicyGrants);
 }
