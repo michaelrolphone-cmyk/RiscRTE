@@ -1,4 +1,7 @@
+import ast
 import csv
+import os
+import re
 import hashlib
 from pathlib import Path
 import struct
@@ -49,15 +52,42 @@ class ExpandedLayout(unittest.TestCase):
         self.assertEqual(len(state),8192);self.assertEqual(state[96:],b'\xff'*(8192-96))
     def test_profile_is_explicit_and_ordinary(self):
         text=(ROOT/'watch-expanded-profile.ini').read_text()
-        for value in ('extends = env:watch-file-source','partitions-paired-appdata-expanded.csv','-URISC_OWNER_INSTALLER','-DRISC_PAIRED_APP_DATA_EXPANDED=1','esp32s3-16mb-appdata-expanded-iq'):
+        for value in ('extends = env:watch-file-source','partitions-paired-appdata-expanded.csv','-DRISC_PAIRED_APP_DATA_EXPANDED=1','esp32s3-16mb-appdata-expanded-iq'):
             self.assertIn(value,text)
         unflags=text.split('build_unflags =')[1].split('build_flags =')[0]
         self.assertIn('-DRISC_OWNER_INSTALLER=1',unflags)
         self.assertIn('-Wl,-u,risc_owner_maintenance_target',unflags)
         self.assertIn('-DRISC_PROVIDER_CAPACITY=32',unflags)
-        self.assertIn('-URISC_PROVIDER_CAPACITY\n  -DRISC_PROVIDER_CAPACITY=40',text)
+        self.assertIn('-DRISC_PROVIDER_CAPACITY=40',text)
+        self.assertIn('-std=gnu++11',unflags)
+        self.assertNotIn('\n  -U',text)
         self.assertNotIn('RISC_INSTALLED_APP_CAPACITY',text)
         inherited=(ROOT/'platformio.ini').read_text().split('[env:esp32s3-16mb-appdata-iq-sharing]')[1].split('[env:')[0]
         for flag in ('-DRISC_INSTALLED_APP_CAPACITY=64','-DRISC_APP_POLICY_ROWS=24','-DRISC_APP_REQUIREMENT_ROWS=24'):
             self.assertIn(flag,inherited)
+    @unittest.skipUnless(os.environ.get('EXPANDED_ENVDUMP_PATH'), 'optional actual PlatformIO envdump')
+    def test_actual_platformio_compiler_environment(self):
+        text=Path(os.environ['EXPANDED_ENVDUMP_PATH']).read_text()
+        def field(name, wrapper=False):
+            pattern=r"  '"+name+r"': "+(r"deque\((\[.*?\])\)" if wrapper else r"(\[.*?\])")+r",\n"
+            match=re.search(pattern,text,re.S);self.assertIsNotNone(match,name)
+            return ast.literal_eval(match.group(1))
+        cxx=field('CXXFLAGS');self.assertIn('-std=gnu++17',cxx);self.assertNotIn('-std=gnu++11',cxx)
+        defines=field('CPPDEFINES',True)
+        pairs={};counts={}
+        for value in defines:
+            key,item=value if isinstance(value,tuple) else (value,True)
+            pairs[key]=item;counts[key]=counts.get(key,0)+1
+        for key,value in {'RISC_PROVIDER_CAPACITY':40,'RISC_INSTALLED_APP_CAPACITY':64,
+                          'RISC_APP_POLICY_ROWS':24,'RISC_APP_REQUIREMENT_ROWS':24,
+                          'RISC_PAIRED_APP_DATA_EXPANDED':1,'RISC_PAIRED_APP_DATA':1,
+                          'RISC_NATIVE_RECOVERY_AXP2101':1,'RISC_NATIVE_FILE_SOURCE':1,
+                          'RISC_NATIVE_APP_DATA_MOUNT':1}.items():
+            self.assertEqual(pairs[key],value);self.assertEqual(counts[key],1)
+        self.assertEqual(pairs['RISC_TARGET'].replace(chr(92),'').strip('"'),'esp32s3-16mb-appdata-expanded-iq')
+        self.assertEqual(counts['RISC_TARGET'],1);self.assertNotIn('RISC_OWNER_INSTALLER',pairs)
+        self.assertNotIn('-Wl,-u,risc_owner_maintenance_target',field('LINKFLAGS'))
+        cppflags=text.split("  '_CPPDEFFLAGS':",1)[1].split("\n  '",1)[0]
+        self.assertNotIn('-URISC_',cppflags)
+        self.assertIn('[SUCCESS]',text)
 if __name__=='__main__':unittest.main()

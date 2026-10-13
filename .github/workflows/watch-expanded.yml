@@ -1,0 +1,74 @@
+name: Expanded Watch paired layout qualification
+on:
+  push:
+    branches: [work/watch-expanded-paired-layout-20261013]
+  pull_request:
+    paths:
+      - '.github/workflows/watch-expanded.yml'
+      - 'watch-expanded-profile.ini'
+      - 'partitions-paired-appdata-expanded.csv'
+      - 'scripts/radio_iq_proof.py'
+      - 'src/runtime/update/PairedBank.h'
+      - 'test/expanded_layout_test.*'
+      - 'test/run_expanded_layout_test.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: watch-expanded-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Layout rejection, journal recovery and read-only inventory
+        env:
+          SANITIZE: ${{ matrix.sanitize }}
+        run: |
+          python3 -m pip install pyelftools==0.32
+          python3 test/expanded_layout_test.py
+          python3 test/test_radio_iq_proof.py
+          bash test/run_expanded_layout_test.sh
+          bash test/run_paired_bank_test.sh
+          APP_DATA_TEST=1 bash test/run_paired_bank_test.sh
+          EXPANDED_TEST=1 bash test/run_paired_bank_test.sh
+          bash test/run_app_catalog_runtime_test.sh
+  target:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned compiler tooling
+        run: python -m pip install -r requirements-ci.txt
+      - name: Compile explicit ordinary expanded target
+        run: pio run -c watch-expanded-profile.ini -e watch-expanded -j 2
+      - name: Mutate the actual linked IQ target and reject invalid boundaries
+        env:
+          RADIO_IQ_ELF: .pio/build/watch-expanded/firmware.elf
+          RADIO_IQ_EXPANDED: '1'
+        run: python test/test_radio_iq_proof.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: watch-expanded-native-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            .pio/build/watch-expanded/firmware.bin
+            .pio/build/watch-expanded/firmware.elf
+            .pio/build/watch-expanded/partitions.bin
+            .pio/build/watch-expanded/radio-iq-proof.json
+          if-no-files-found: error
+          retention-days: 14

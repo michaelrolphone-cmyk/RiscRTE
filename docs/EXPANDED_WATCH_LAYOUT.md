@@ -29,7 +29,10 @@ Both app slots retain 64 KiB alignment; all partitions retain sector alignment.
 ABI3, the expanded offsets and the new layout string. `watch-expanded-profile.ini`
 inherits the complete recovered `watch-file-source` profile, with the explicit
 expanded CSV and an ordinary-boot override that removes the owner-installer
-mode and its forced linker symbol. GPIO hold, AppData mount recovery, file-source
+mode and its forced linker symbol. The profile preserves `-std=gnu++11` in
+`build_unflags` so the inherited `-std=gnu++17` remains the final C++ dialect.
+Old target/provider definitions are removed through `build_unflags`; do not use
+`-U` overrides because PlatformIO emits them after the replacement `-D` values. GPIO hold, AppData mount recovery, file-source
 hooks and all other inherited capabilities remain source-bound. Provider capacity
 is explicitly raised from 32 to 40 for the complete store; inherited installed-app
 capacity 64 and policy/requirement rows 24 remain unchanged. Final native DRAM
@@ -75,3 +78,17 @@ verify the actual generated partition table and native marker exclusivity,
 check complete provider/app admission and final factory byte custody, and
 retain the factory-erasure warning. No hardware, flash or boot qualification
 is implied by the source tests.
+
+For a bounded profile check without compiling target firmware, run PlatformIO
+with `-c watch-expanded-profile.ini -e watch-expanded -j 1 -t envdump`. Set
+`EXPANDED_ENVDUMP_PATH` to that output when running `test/expanded_layout_test.py`
+to verify final C++ flags, exact surviving target/capacity definitions, ordinary
+boot mode and recovery/file-source capabilities. An INI-only check cannot prove
+PlatformIO's final compiler-argument ordering.
+
+The IQ linker hook selects `radio_iq_proof.prove(data, expanded=True)` only when
+the final compiler definitions contain the expanded-layout flag. This requires
+the exact expanded target and exclusive ordinary ABI3 marker, without changing
+any bank/alias overlap, ROM map, reservation-table or static-memory proof.
+The proof CLI accepts `--expanded`; its legacy default stays unchanged. Run the
+actual linked-ELF mutation tests with `RADIO_IQ_ELF` and `RADIO_IQ_EXPANDED=1`.

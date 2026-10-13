@@ -9,8 +9,13 @@ def require(ok,message):
  if not ok: raise ValueError(message)
 def overlap(start,size,region):
  return bool(size and start<region[1] and start+size>region[0])
-def prove(data):
- require(b'esp32s3-16mb-appdata-iq\0' in data,'missing IQ target identity')
+def prove(data, *, expanded=False):
+ target=b'esp32s3-16mb-appdata-expanded-iq\0' if expanded else b'esp32s3-16mb-appdata-iq\0'
+ require(target in data,'missing IQ target identity')
+ if expanded:
+  require(b'RISC_PAIRED_STORE_ABI:3\0' in data and all(marker not in data for marker in
+   (b'RISC_PAIRED_STORE_ABI:1\0',b'RISC_PAIRED_STORE_ABI:2\0',b'RISC_OWNER_INSTALLER:1\0',b'esp32s3-16mb-appdata-iq\0')),
+   'expanded IQ requires exclusive ordinary ABI3 target')
  e=ELFFile(io.BytesIO(data))
  require(e.elfclass==32 and e.little_endian and e['e_machine']=='EM_XTENSA','not an ELF32 LE Xtensa image')
  symbols={s.name:s for s in e.get_section_by_name('.symtab').iter_symbols()}
@@ -45,7 +50,7 @@ def prove(data):
   'reservation_table':reserved,'allocated_sections':checked,'elf_sha256':hashlib.sha256(data).hexdigest(),
   'scope':'Pre-heap reservation and final linked static-memory proof only; no hardware or RF qualification.'}
 if __name__=='__main__':
- p=argparse.ArgumentParser();p.add_argument('elf',type=Path);p.add_argument('--output',type=Path);a=p.parse_args()
- result=json.dumps(prove(a.elf.read_bytes()),indent=2,sort_keys=True)+'\n'
+ p=argparse.ArgumentParser();p.add_argument('elf',type=Path);p.add_argument('--output',type=Path);p.add_argument('--expanded',action='store_true');a=p.parse_args()
+ result=json.dumps(prove(a.elf.read_bytes(),expanded=a.expanded),indent=2,sort_keys=True)+'\n'
  if a.output:a.output.write_text(result)
  else:print(result,end='')
