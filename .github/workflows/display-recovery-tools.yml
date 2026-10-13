@@ -1,0 +1,35 @@
+name: Display recovery verification tools
+on:
+  push:
+    branches: [fix/display-startup-20261012]
+    paths: ['.github/workflows/display-recovery-tools.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tools:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: 86aab52fb085b0e6dc3c467760395a3571e1fbd1
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pyelftools==0.32
+      - name: Export pure Python verification code
+        run: |
+          mkdir -p out
+          python - <<'PY'
+          import elftools,shutil
+          from pathlib import Path
+          shutil.copytree(Path(elftools.__file__).parent,Path('out/elftools'))
+          shutil.copytree('vendor/esp-idf-spiffs','out/esp-idf-spiffs')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: display-recovery-verification-tools
+          path: out/
+          retention-days: 7
