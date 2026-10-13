@@ -37,6 +37,7 @@ struct Fixture {
 };
 #include "native_quad_test.inc"
 #include "native_frame_test.inc"
+#include "native_lease_test.inc"
 struct LegacySpi {
   uint32_t api_version,struct_size;void* context;
   bool (*claim)(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*);
@@ -47,7 +48,7 @@ struct LegacySpi {
 static_assert(offsetof(garden_spi_v1,claim_three_wire)==sizeof(LegacySpi),"Legacy SPI layout moved");
 static_assert(GARDEN_SPI_THREE_WIRE_V1_SIZE==sizeof(garden_spi_v1),"Suffix size does not cover callback");
 int main(int argc,char** argv){
-  assert(argc==2);std::string root=argv[1];quad_tests(root);frame_tests(root);
+  assert(argc==2);std::string root=argv[1];quad_tests(root);frame_tests(root);lease_tests(root);
   for(unsigned physical:{2u,3u}){
     Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api.base;auto& b=f.p.spis_[1].api.base;auto& g=f.p.gpios_[0].api.base;
     assert(a.api_version==1 && a.struct_size>=GARDEN_SPI_THREE_WIRE_V1_SIZE && a.claim_three_wire);
@@ -84,14 +85,13 @@ int main(int argc,char** argv){
     assert(b.begin(b.context,u,2000000,0,20) && model.device.config.flags==0 && !model.pullup[5]);
     assert(b.exchange(b.context,u,tx,rx,1) && model.queueWait==21);
     assert(b.exchange(b.context,u,nullptr,nullptr,1));
-    assert(static_cast<const uint8_t*>(NativeShim::spi[physical-2].transaction.tx_buffer)[0]==0xff);
+    assert(static_cast<const uint8_t*>(NativeShim::spi[physical-2].transaction.base.tx_buffer)[0]==0xff);
     assert(b.end(b.context,u));
     const uint64_t stale=t;assert(a.release(a.context,t));assert(!a.begin(a.context,stale,2000000,0,20));
     assert(a.claim_three_wire(a.context,4,5,7,&t) && t!=stale);assert(!a.end(a.context,stale));assert(!a.release(a.context,stale));
     assert(a.release(a.context,t));assert(b.release(b.context,u));assert(g.release(g.context,dc));
   }
-  // Same held-CS direction/turnaround as FLG/VER probing: repeat the two
-  // register replies, with a low GPIO latch and real ROM output-enable side
+  // Register replies with a low GPIO latch and the real ROM output-enable side
   // effect. Each RX must leave MOSI released, input-routed and pulled up.
   for(unsigned physical:{2u,3u}){
     Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api.base;auto& g=f.p.gpios_[0].api.base;
@@ -125,8 +125,6 @@ int main(int argc,char** argv){
       assert(a.end(a.context,t));assert(a.release(a.context,t));
     }
   }
-  // Begin failure retains both the actual CPU bus owner and native cleanup
-  // path, including mode-switch errors before the pin configuration runs.
   for(Fault fault:{Fault::Remove,Fault::Add,Fault::Pulldown,Fault::Pullup,Fault::Direction,Fault::CsLow}){
     Fixture f(root);auto& a=f.p.spis_[0].api.base;auto& b=f.p.spis_[1].api.base;uint64_t t=0,u=0;
     assert(a.claim_three_wire(a.context,4,5,7,&t));assert(b.claim(b.context,4,5,-1,11,&u));
@@ -137,8 +135,6 @@ int main(int argc,char** argv){
     assert(a.end(a.context,t));assert(a.begin(a.context,t,2000000,0,1000));assert(a.exchange(a.context,t,&tx,nullptr,1));assert(a.end(a.context,t));
     assert(a.release(a.context,t));assert(b.release(b.context,u));
   }
-  // Pending RX lives in native storage. End retries never use the caller RX
-  // pointer, nor raise CS or free the SDK device before completion is proved.
   for(bool receive:{false,true}){
     Fixture f(root);auto& a=f.p.spis_[0].api.base;uint64_t t=0;assert(a.claim_three_wire(a.context,4,5,7,&t));assert(a.begin(a.context,t,2000000,0,1000));
     uint8_t tx[4]{1,2,3,4},rx[4]{9,9,9,9};model.fault=Fault::Drain;

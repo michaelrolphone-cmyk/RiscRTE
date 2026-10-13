@@ -9,11 +9,11 @@ static void frame_tests(const std::string& root) {
     risc_spi_frame_v1 command={sizeof(command),0x02,8,24,0x1100,0,1,0};
     assert(q.exchange_frame(a.context,t,&command,nullptr,0));
     auto& wire=NativeShim::spi[physical-2].framed;
-    assert(wire.base.cmd==2 && wire.base.addr==0x1100 && wire.command_bits==8 && wire.address_bits==24);
+    assert(wire.base.cmd==2 && wire.base.addr==0x1100 && model.commandBits==8 && model.addressBits==24);
     assert(!wire.base.length && !wire.base.tx_buffer && !wire.base.rx_buffer);
     uint8_t param=0x55;
     command.address=0x3a00;assert(q.exchange_frame(a.context,t,&command,&param,1));
-    assert(wire.base.length==8 && ((const uint8_t*)wire.base.tx_buffer)[0]==0x55);
+    assert(wire.base.length==8 && NativeShim::payload(wire.base)[0]==0x55);
     uint8_t data[512];memset(data,0xa5,sizeof(data));
     risc_spi_frame_v1 pixels={sizeof(pixels),0x32,8,24,0x3c00,0,4,0};
     assert(q.exchange_frame(a.context,t,&pixels,data,sizeof(data)));
@@ -22,7 +22,7 @@ static void frame_tests(const std::string& root) {
     assert(wire.base.tx_buffer!=data && !memcmp(wire.base.tx_buffer,data,512));
     pixels.command=0;pixels.command_bits=0;pixels.address=0;pixels.address_bits=0;
     assert(q.exchange_frame(a.context,t,&pixels,data,308));
-    assert(!wire.command_bits && !wire.address_bits && wire.base.length==2464 && !model.level[12]);
+    assert(!model.commandBits && !model.addressBits && wire.base.length==2464 && !model.level[12]);
     unsigned polls=model.polls;
     assert(!q.exchange_frame(a.context,t,nullptr,data,1));
     assert(!q.exchange_frame(a.context,t,&pixels,nullptr,1));

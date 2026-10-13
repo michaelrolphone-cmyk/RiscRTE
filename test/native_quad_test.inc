@@ -24,12 +24,12 @@ static void quad_tests(const std::string& root) {
     assert(!a.claim(a.context,11,4,5,12,&t)&&!model.calls);assert(!a.claim_three_wire(a.context,11,4,12,&t));
     assert(!q.claim_quad(a.context,11,4,5,6,8,12,&t));assert(!q.claim_quad(a.context,11,4,5,6,7,13,&t));
     assert(q.claim_quad(a.context,11,4,5,6,7,12,&t)&&t);
-    assert(model.bus.quadwp_io_num==6&&model.bus.quadhd_io_num==7&&model.bus.flags==(NativeShim::SPICOMMON_BUSFLAG_QUAD|NativeShim::SPICOMMON_BUSFLAG_MASTER|NativeShim::SPICOMMON_BUSFLAG_GPIO_PINS));
+    assert(model.bus.quadwp_io_num==6&&model.bus.quadhd_io_num==7&&model.bus.flags==(NativeShim::SPICOMMON_BUSFLAG_MASTER|NativeShim::SPICOMMON_BUSFLAG_GPIO_PINS));
     assert(!a.begin(a.context,t,40000001,0,20));assert(a.begin(a.context,t,40000000,0,20));
     assert(model.device.config.flags==NativeShim::SPI_DEVICE_HALFDUPLEX&&!model.level[12]);
     uint8_t command[]={0x32,0,0x2c,0},pixels[513]{};
-    assert(a.exchange(a.context,t,command,nullptr,4));assert(NativeShim::spi[physical-2].transaction.flags==0);
-    assert(q.exchange_quad(a.context,t,pixels,512));assert(NativeShim::spi[physical-2].transaction.flags==NativeShim::SPI_TRANS_MODE_QIO);
+    assert(a.exchange(a.context,t,command,nullptr,4));assert(model.commandBits==0 && model.addressBits==0 && model.dataLines==1);
+    assert(q.exchange_quad(a.context,t,pixels,512));assert(model.commandBits==0 && model.addressBits==0 && model.dataLines==4);
     assert(model.queueWait<=9&&model.drainWait<=9&&!model.pending&&!model.level[12]);
     assert(!q.exchange_quad(a.context,t,pixels,513));assert(!q.exchange_quad(a.context,t,nullptr,4));
     assert(!a.exchange(a.context,t,pixels,pixels,1));assert(!a.release(a.context,t));assert(a.end(a.context,t));
@@ -37,7 +37,6 @@ static void quad_tests(const std::string& root) {
     for(unsigned pin:{4,5,6,7,11,12})assert(!f.p.pins_[pin].owner);
   }
   {QuadFixture f(root,2,false);auto& q=f.p.spis_[0].api;assert(q.base.struct_size==sizeof(garden_spi_v1)&&!q.claim_quad&&!q.exchange_quad);}
-  // A timed-out queued transfer keeps the DMA buffer and CS until end proves drain.
   for(Fault fault:{Fault::Add,Fault::CsLow,Fault::Queue,Fault::Drain,Fault::CsHigh,Fault::Free,Fault::ClosePin}) {
     QuadFixture f(root);auto& q=f.p.spis_[0].api;auto& a=q.base;uint64_t t=0;uint8_t bytes[512]{};
     assert(q.claim_quad(a.context,11,4,5,6,7,12,&t));
