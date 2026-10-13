@@ -19,13 +19,15 @@ bool Port::displayRow(void* context,uint64_t token,uint32_t y,const uint16_t* pi
  if(!p.available() || p.sleepRetained_ || p.transferring_ || !token || token!=c.token || c.closing ||
     !pixels || count!=c.device->display().width || y>=c.device->display().height)return false;
  p.transferring_=true;bool ok=p.hw_.displayBackend->row(y,pixels,count);p.transferring_=false;
- if(!ok)c.closing=true;return ok;
+ if(!ok)c.closing=true;
+ return ok;
 }
 bool Port::displayBrightness(void* context,uint64_t token,uint8_t value){
  auto& c=*static_cast<Display*>(context);auto& p=*c.port;
  if(!p.available() || p.sleepRetained_ || p.transferring_ || !token || token!=c.token || c.closing)return false;
  p.transferring_=true;bool ok=p.hw_.displayBackend->brightness(value);p.transferring_=false;
- if(!ok)c.closing=true;return ok;
+ if(!ok)c.closing=true;
+ return ok;
 }
 bool Port::displayClose(void* context,uint64_t token){
  auto& c=*static_cast<Display*>(context);auto& p=*c.port;
