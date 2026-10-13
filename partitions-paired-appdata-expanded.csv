@@ -1,0 +1,13 @@
+# EXPLICIT NEW 16 MiB app-data-v3 / store ABI3 factory deployment only.
+# Never OTA-repartition. A full 0x0 BIN ERASES CURRENT SETTINGS and app-data.
+# Expands each immutable store by 256 KiB using the previous unallocated gap.
+# Name,Type,SubType,Offset,Size
+nvs,data,nvs,0x9000,0x6000
+app0,app,ota_0,0x10000,0x260000
+appdata,data,0x41,0x270000,0x80000
+bootfs0,data,spiffs,0x2f0000,0x550000
+app1,app,ota_1,0x840000,0x260000
+bootfs1,data,spiffs,0xaa0000,0x550000
+otadata,data,ota,0xff0000,0x2000
+bank_state,data,0x40,0xff2000,0x2000
+# 0xff4000..0x1000000 stays unassigned. No automatic flashing or migration.

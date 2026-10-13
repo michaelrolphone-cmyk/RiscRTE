@@ -12,6 +12,8 @@ EXPECTED={
  'app1':(0,0x11,0x800000,0x300000),'bootfs1':(1,0x82,0xb00000,0x4f0000),
  'otadata':(1,0,0xff0000,0x2000),'bank_state':(1,0x40,0xff2000,0x2000)}
 APP_DATA_EXPECTED={**EXPECTED, 'app0':(0,0x10,0x10000,0x260000), 'app1':(0,0x11,0x800000,0x260000), 'appdata':(1,0x41,0x270000,0x80000), 'bootfs0':(1,0x82,0x2f0000,0x510000), 'bootfs1':(1,0x82,0xae0000,0x510000)}
+EXPANDED_EXPECTED={**APP_DATA_EXPECTED, 'app1':(0,0x11,0x840000,0x260000), 'bootfs0':(1,0x82,0x2f0000,0x550000), 'bootfs1':(1,0x82,0xaa0000,0x550000)}
+
 def partitions(data, expected=EXPECTED):
  require(len(data)==3072,'partition-table length')
  found={};raw=b'';verified=False
@@ -22,7 +24,8 @@ def partitions(data, expected=EXPECTED):
    label=label.split(b'\0')[0].decode();require(label not in found and flags==0,'partition alias/flags')
    found[label]=(kind,subtype,offset,size);raw+=row
   elif magic==0xebeb:
-   require(row[16:]==hashlib.md5(raw).digest(),'partition MD5');verified=True;break
+   require(row[2:16]==b'\xff'*14 and row[16:]==hashlib.md5(raw).digest(),'partition MD5')
+   require(data[at+32:]==b'\xff'*(len(data)-at-32),'partition trailing data');verified=True;break
   else:raise ValueError('missing partition digest')
  require(verified and found==expected,'paired partition layout mismatch')
  return found
