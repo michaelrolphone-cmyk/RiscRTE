@@ -141,6 +141,7 @@ class Runtime final {
   bool residentClient(risc_resident_client_v1*);
   bool diagnosticCheckpointClient(risc_diagnostic_checkpoint_client_v1*);
   int32_t diagnosticCheckpointWrite(uint64_t,const char*,uint32_t);
+  bool takeLaunchFailure(risc_runtime_launch_failure_v1*);
   bool failureEvidenceClient(risc_failure_evidence_client_v1*);
   int32_t failureEvidenceRead(uint64_t,risc_failure_evidence_v1*);
   int32_t failureEvidenceAcknowledge(uint64_t,uint32_t,uint32_t);
@@ -547,6 +548,7 @@ class Runtime final {
   risc_resident_callbacks_v1 shellCallbacks_{};
   uint64_t shellToken_=0;
   risc_resident_failure_v1 lastFailure_{};
+  risc_runtime_launch_failure_v1 launchFailure_{};
 
   RuntimeProviders::GrantV2 grants_[MaxDrivers]{};
   Driver drivers_[MaxDrivers]{};

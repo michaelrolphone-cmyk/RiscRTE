@@ -85,7 +85,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](risc_failure_evidence_client_v1* out){return currentRuntime && currentRuntime->failureEvidenceClient(out);},
     [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && currentRuntime->diagnosticCheckpointClient(out);},
     [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);},
-    [](){return currentRuntime && currentRuntime->exitRequested();}};
+    [](){return currentRuntime && currentRuntime->exitRequested();},
+    [](risc_runtime_launch_failure_v1* out){return currentRuntime && currentRuntime->takeLaunchFailure(out);}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -1477,6 +1478,13 @@ bool Runtime::reclaimAppImages() {
   return false;
 #endif
 }
+bool Runtime::takeLaunchFailure(risc_runtime_launch_failure_v1* out) {
+  if(!out || out->struct_size<sizeof(*out) || !active() || !port_.owner() ||
+     retained_ || invocation_!=&mainInvocation_ || !invocation_->defaultRunning_ ||
+     !invocation_->entryRunning_ || invocation_->queued_[0] || promotionRunning_ ||
+     !graph_.activationSafe() || !launchFailure_.struct_size)return false;
+  *out=launchFailure_;launchFailure_={};return true;
+}
 bool Runtime::run() {
   if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained_) return fail("runtime not launchable");
   prepared_=false; currentRuntime=this;
@@ -1572,7 +1580,19 @@ bool Runtime::run() {
     if(residentEnabled_ && isDefault && residentContinuation_[0]) {
       ok=fail("resident host did not consume pending continuation");break;
     }
-    if(!completed) port_.log("RTE_APP child=failed action=reload-default");
+    if(!completed) {
+      launchFailure_={};launchFailure_.struct_size=sizeof(launchFailure_);
+      for(size_t p=0;p<policyCount_;++p)
+        if(!strcmp(policies_[p].elf,invocation_->current_) && policies_[p].sourceDriver>=0 &&
+           invocation_->failureKind==RISC_RESIDENT_FAILURE_LOAD)
+          launchFailure_.flags=RISC_LAUNCH_FAILURE_EXTERNAL_IMAGE;
+      const char* name=invocation_->current_;
+      const size_t prefix=strlen(root_);
+      if(!strncmp(name,root_,prefix) && name[prefix]=='/')name+=prefix+1;
+      snprintf(launchFailure_.application,sizeof(launchFailure_.application),"%.127s",name);
+      snprintf(launchFailure_.detail,sizeof(launchFailure_.detail),"%.159s",error_);
+      port_.log("RTE_APP child=failed action=reload-default");
+    }
     if(completed && invocation_->queued_[0]) strcpy(invocation_->current_,invocation_->queued_);
     else if(!isDefault) strcpy(invocation_->current_,default_);
     else break;

@@ -26,6 +26,12 @@ typedef struct {
   uint32_t struct_size, slot, generation;
   const void* api;
 } risc_runtime_capability_v1;
+/* Copied recoverable child failure. No borrowed memory or media authority. */
+#define RISC_LAUNCH_FAILURE_EXTERNAL_IMAGE 1u
+typedef struct {
+  uint32_t struct_size, flags;
+  char application[128], detail[160];
+} risc_runtime_launch_failure_v1;
 typedef struct {
   uint32_t api_version, struct_size;
   bool (*health)(risc_runtime_health_v1* out);
@@ -100,6 +106,10 @@ typedef struct {
    * may restart when cleanup/nonresponse exceeds its board-selected deadline.
    * Defaults/Home retain their normal short-key behavior. Check suffix size. */
   bool (*exit_requested)(void);
+  /* Configured default, app_main only, healthy owner. Copies and consumes one
+   * recoverable child failure after complete teardown. False leaves output and
+   * pending evidence unchanged. No record is published across retained custody. */
+  bool (*take_launch_failure)(risc_runtime_launch_failure_v1* out);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
@@ -112,6 +122,7 @@ typedef struct {
 #define RISC_RUNTIME_DIAGNOSTIC_CHECKPOINT_V1_SIZE (offsetof(risc_runtime_api_v1, diagnostic_checkpoint_client) + sizeof(((risc_runtime_api_v1*)0)->diagnostic_checkpoint_client))
 #define RISC_RUNTIME_MONOTONIC_V1_SIZE (offsetof(risc_runtime_api_v1, monotonic_ms) + sizeof(((risc_runtime_api_v1*)0)->monotonic_ms))
 #define RISC_RUNTIME_EXIT_REQUESTED_V1_SIZE (offsetof(risc_runtime_api_v1, exit_requested) + sizeof(((risc_runtime_api_v1*)0)->exit_requested))
+#define RISC_RUNTIME_LAUNCH_FAILURE_V1_SIZE (offsetof(risc_runtime_api_v1, take_launch_failure) + sizeof(((risc_runtime_api_v1*)0)->take_launch_failure))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }
