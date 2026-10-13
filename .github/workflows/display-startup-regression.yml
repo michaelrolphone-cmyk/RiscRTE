@@ -2,17 +2,17 @@ name: Display startup regression
 on:
   push:
     branches: [fix/display-startup-20261012]
-    paths:
-      - '.github/workflows/display-startup-regression.yml'
-      - 'test/display_startup*'
-      - 'src/ports/esp32s3/**'
+    paths: ['.github/workflows/display-startup-regression.yml', 'test/display_startup*', 'src/ports/esp32s3/**']
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   reproduce:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      RISCRTE_RUNTIME_ROOT: ${{ github.workspace }}/runtime
+      RISCRTE_READER_ROOT: ${{ github.workspace }}/reader
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,61 +27,101 @@ jobs:
           repository: michaelrolphone-cmyk/T5S3-Reader
           ref: 45cf61ac013fb618e8d7fed63217a35350484d52
           path: reader
-      - uses: actions/checkout@v4
-        with:
-          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
-          ref: 86aab52fb085b0e6dc3c467760395a3571e1fbd1
-          path: watch
-      - name: Exact source and native guards
+      - name: Prepare additional real-provider startup cases
         run: |
-          for repo in runtime x4 reader watch; do echo "$repo $(git -C "$repo" rev-parse HEAD)"; done
-          grep -R -n -A14 -B3 'bool usbPhyIdle' runtime/src || true
-          grep -R -n -A4 -B2 'bool exitSafe()' runtime/src/ports/esp32s3/NativeBankStore.cpp || true
-          echo 'WATCH DISPLAY SOURCES'
-          find watch -iname '*display*' -o -iname '*panel*' -o -iname '*st7789*'
-          grep -R -n 'deep_sleep_hold\|retire_held_output' watch --include='*.c' --include='*.h' | head -60 || true
-          echo 'PRODUCT NATIVE PROFILES'
-          grep -R -n '9a510b0\|RISC_NATIVE_SETTINGS_LIFECYCLE\|RISC_NATIVE_STORAGE_CUSTODY' x4/minimal watch --include='*.json' --include='*.ini' --include='*.py' | head -80 || true
-      - name: Baseline real frontlight and CpuPort
-        env:
-          RISCRTE_RUNTIME_ROOT: ${{ github.workspace }}/runtime
-          RISCRTE_READER_ROOT: ${{ github.workspace }}/reader
-        run: bash x4/minimal/test/run_frontlight_cpu_port_test.sh
-      - name: Reproduce unrelated maintenance and USB blocking startup
-        env:
-          RISCRTE_RUNTIME_ROOT: ${{ github.workspace }}/runtime
-          RISCRTE_READER_ROOT: ${{ github.workspace }}/reader
-        run: |
+          cp x4/minimal/test/frontlight_cpu_port_test.cpp /tmp/frontlight-original.cpp
           python3 - <<'PY'
           from pathlib import Path
           p=Path('x4/minimal/test/frontlight_cpu_port_test.cpp')
-          source=p.read_text()
-          source=source.replace('int main(', 'int baseline_main(', 1)
-          source+='''
-          int main(int argc, char**) {
-              assert(argc == 1);
-              driver = t5_driver_get(2);
-              assert(driver);
-              Fixture f;
-              f.port.hw_.maintenanceIdle = [](){return false;};
-              const bool began=f.start();
-              const bool cleaned=driver->quiesce();
-              std::printf("REPRO maintenance_busy: start=%d quiesce=%d\\n", began, cleaned);
-              assert(!began && !cleaned);
-              f.port.hw_.maintenanceIdle = nullptr;
-              assert(driver->quiesce());
-              f.clean();
-              f.port.hw_.usbPhyIdle = [](){return false;};
-              const bool usbBegan=f.start();
-              const bool usbCleaned=driver->quiesce();
-              std::printf("REPRO unrelated_usb_busy: start=%d quiesce=%d\\n", usbBegan, usbCleaned);
-              assert(!usbBegan && !usbCleaned);
-              f.port.hw_.usbPhyIdle = nullptr;
-              assert(driver->quiesce());
-              f.clean();
+          source=p.read_text().replace('int main()', 'void baseline_main()', 1)
+          source += r'''
+          static bool busy() { return false; }
+          int main() {
+              baseline_main();
+              const bool fixed = std::getenv("PAD_HOLD_REPAIRED") != nullptr;
+              for (unsigned kind=0; kind<4; ++kind) {
+                  Fixture f;
+                  auto setBusy=[&](bool value) {
+                      auto callback=value?busy:nullptr;
+                      if(kind==0) f.port.hw_.maintenanceIdle=callback;
+                      if(kind==1) f.port.hw_.usbPhyIdle=callback;
+                      if(kind==2) f.port.hw_.httpIdle=callback;
+                      if(kind==3) f.port.iq_.token=value?77:0;
+                  };
+                  setBusy(true);
+                  const bool began=f.start();
+                  const bool cleaned=driver->quiesce();
+                  std::printf("PAD_HOLD repaired=%d busy_kind=%u start=%d quiesce=%d\n",fixed,kind,began,cleaned);
+                  assert(began==fixed && cleaned==fixed);
+                  // Per-pad cleanup must not permit a whole-device shutdown.
+                  assert(!f.port.appExitSafe());
+                  assert(!f.port.restartResourcesSafe());
+                  setBusy(false);
+                  assert(driver->quiesce()); f.clean();
+                  assert(f.start());
+                  assert(frontlight->set_level(nullptr,1,2));
+                  setBusy(true);
+                  const bool switchedOff=frontlight->set_level(nullptr,0,1);
+                  assert(switchedOff==fixed);
+                  setBusy(false);
+                  assert(driver->quiesce());f.clean();
+              }
+              puts("PAD_HOLD: real-provider startup, shutdown and active-to-off regressions PASS");
               return 0;
           }
           '''
-          p.write_text(source)
+          p.write_text('#include <cstdlib>\n'+source)
           PY
+      - name: Prove original failure with the exact logged Runtime
+        run: |
+          test "$(git -C runtime hash-object src/ports/esp32s3/CpuPort.cpp)" = 8377e7d5dbfa4a5e0134efef4a17c7679199ca2f
           bash x4/minimal/test/run_frontlight_cpu_port_test.sh
+      - name: Apply narrow per-pad repair
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('runtime/src/ports/esp32s3/CpuPort.cpp')
+          source=p.read_text()
+          start=source.index('int32_t Port::gpioDeepSleepHold(')
+          end=source.index('\nbool Port::gpioRetireHeldOutput(', start)
+          old=source[start:end]
+          before='''  if(!p.tcpIdle() || !p.entropyIdle())return RISC_DEEP_SLEEP_BUSY;
+            if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
+            if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+               (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;'''
+          # Use exact lines, not whitespace-dependent substring heuristics.
+          lines=old.splitlines()
+          a=next(i for i,s in enumerate(lines) if s.strip()=='if(!p.tcpIdle() || !p.entropyIdle())return RISC_DEEP_SLEEP_BUSY;')
+          b=next(i for i,s in enumerate(lines[a:],a) if 'p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()' in s)
+          assert b-a==3
+          lines[a:b+1]=[
+            '  // This changes one owned static pad, not the CPU sleep state.',
+            '  // Unrelated asynchronous app-data, radio or USB work may continue.',
+            '  // Keep full-device idleness checks in actual sleep/restart entry.',
+            '  if(p.sleepRetained_)return RISC_DEEP_SLEEP_RETAINED;',
+            '  if(p.sleeping_ || p.transferring_)return RISC_DEEP_SLEEP_BUSY;',
+            '  // A live storage worker still exclusively owns its own pad scope.',
+            '  if(p.storageLifecycleBusy() && p.storageWork_.gpio==&c)return RISC_DEEP_SLEEP_BUSY;'
+          ]
+          p.write_text(source[:start]+'\n'.join(lines)+'\n'+source[end:])
+          PY
+          git -C runtime diff --check
+          git -C runtime diff --stat
+      - name: Repaired real-provider tests normal and sanitized
+        env:
+          PAD_HOLD_REPAIRED: '1'
+        run: |
+          bash x4/minimal/test/run_frontlight_cpu_port_test.sh
+          SANITIZE=1 bash x4/minimal/test/run_frontlight_cpu_port_test.sh
+      - name: Publish only the tested production patch
+        if: github.ref == 'refs/heads/fix/display-startup-20261012'
+        run: |
+          cd runtime
+          git diff --check
+          test "$(git diff --name-only)" = src/ports/esp32s3/CpuPort.cpp
+          git config user.name 'michaelrolphone-cmyk'
+          git config user.email 'michael.rol.phone@gmail.com'
+          git add src/ports/esp32s3/CpuPort.cpp
+          git commit -m 'Separate owned GPIO pad retention from unrelated background activity' -m 'Real X4 frontlight and CpuPort reproduce failed start and quiesce under maintenance, USB, HTTP and IQ activity before repair; patched startup and off/cleanup pass normally and with ASan/UBSan. Actual sleep/restart barriers and failed-quiesce retention remain. Hardware confirmation pending.'
+          git push origin HEAD:refs/heads/fix/display-startup-20261012
+          echo "PUBLISHED_REPAIR=$(git rev-parse HEAD)"
