@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fail-closed final Xtensa ELF proof for the opt-in fixed IQ SRAM bank."""
-import argparse, hashlib, io, json, struct
+import argparse, hashlib, io, json, re, struct
 from pathlib import Path
 from elftools.elf.elffile import ELFFile
 BANK=(0x3FCB0000,0x3FCC0000)
@@ -9,8 +9,9 @@ def require(ok,message):
  if not ok: raise ValueError(message)
 def overlap(start,size,region):
  return bool(size and start<region[1] and start+size>region[0])
-def prove(data):
- require(b'esp32s3-16mb-appdata-iq\0' in data,'missing IQ target identity')
+def prove(data,target_identity='esp32s3-16mb-appdata-iq'):
+ require(isinstance(target_identity,str) and re.fullmatch(r'[A-Za-z0-9_-]{1,63}',target_identity),'invalid IQ target identity')
+ require(target_identity.encode()+b'\0' in data,'missing IQ target identity')
  e=ELFFile(io.BytesIO(data))
  require(e.elfclass==32 and e.little_endian and e['e_machine']=='EM_XTENSA','not an ELF32 LE Xtensa image')
  symbols={s.name:s for s in e.get_section_by_name('.symtab').iter_symbols()}
@@ -40,12 +41,12 @@ def prove(data):
  for name,address in {'rom_i2c_readReg':0x40005d48,'rom_i2c_writeReg':0x40005d60,'rom_pbus_rd':0x40005df0,'ets_delay_us':0x40000600}.items():
   require(value(name)==address,'unreviewed ROM entry '+name)
  require(any('reserved_region_risc_radio_iq' in n and s['st_value']>=start and s['st_value']+s['st_size']<=end for n,s in symbols.items()),'named reservation is outside startup table')
- return {'schema':1,'bank_base':BANK[0],'bank_bytes':BANK[1]-BANK[0],'iram_alias':ALIAS[0],
+ return {'schema':1,'target_identity':target_identity,'bank_base':BANK[0],'bank_bytes':BANK[1]-BANK[0],'iram_alias':ALIAS[0],
   'heap_start':value('_heap_start'),'iram_end':value('_iram_end'),'reservation_table_address':start,
   'reservation_table':reserved,'allocated_sections':checked,'elf_sha256':hashlib.sha256(data).hexdigest(),
   'scope':'Pre-heap reservation and final linked static-memory proof only; no hardware or RF qualification.'}
 if __name__=='__main__':
- p=argparse.ArgumentParser();p.add_argument('elf',type=Path);p.add_argument('--output',type=Path);a=p.parse_args()
- result=json.dumps(prove(a.elf.read_bytes()),indent=2,sort_keys=True)+'\n'
+ p=argparse.ArgumentParser();p.add_argument('elf',type=Path);p.add_argument('--output',type=Path);p.add_argument('--target-identity',default='esp32s3-16mb-appdata-iq');a=p.parse_args()
+ result=json.dumps(prove(a.elf.read_bytes(),a.target_identity),indent=2,sort_keys=True)+'\n'
  if a.output:a.output.write_text(result)
  else:print(result,end='')
