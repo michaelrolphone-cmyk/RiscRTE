@@ -15,18 +15,25 @@ jobs:
           repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
           ref: 86aab52fb085b0e6dc3c467760395a3571e1fbd1
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE
+          ref: 06da76aa7f074220b74a282badca0ed0061f1643
+          path: watch-runtime-source
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: python -m pip install pyelftools==0.32
-      - name: Export pure Python verification code
+      - name: Export verification code and exact compiled source
         run: |
           mkdir -p out
           python - <<'PY'
-          import elftools,shutil
+          import elftools,shutil,subprocess
           from pathlib import Path
           shutil.copytree(Path(elftools.__file__).parent,Path('out/elftools'))
           shutil.copytree('vendor/esp-idf-spiffs','out/esp-idf-spiffs')
+          subprocess.run(['git','-C','watch-runtime-source','archive','--format=tar.gz','--output='+str(Path('out/watch-runtime-source.tar.gz').resolve()),'06da76aa7f074220b74a282badca0ed0061f1643'],check=True)
           PY
       - uses: actions/upload-artifact@v4
         with:
