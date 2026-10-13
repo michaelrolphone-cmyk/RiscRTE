@@ -1,6 +1,7 @@
 #pragma once
 #include "bootstrap/Runtime.h"
 #include <GardenPlatformV1.h>
+#include <RiscDisplayBackendV1.h>
 #include <RiscSpiQuadV1.h>
 #include <RiscI2sStandardV1.h>
 #include <GardenRadioAsyncV1.h>
@@ -23,6 +24,13 @@ struct StorageWorkBackend {
 };
 // Lowest hardware boundary. Production uses ESP-IDF; host models emulate only
 // pins, controllers and register/byte transfers, not driver/capability behavior.
+struct DisplayBackend {
+ bool (*accepts)(const risc_hardware_device_v1&,uint8_t);
+ bool (*open)(const risc_hardware_device_v1&,uint8_t);
+ bool (*row)(uint32_t,const uint16_t*,size_t);
+ bool (*brightness)(uint8_t);
+ bool (*close)();
+};
 struct Hardware {
   bool (*owner)(); uint64_t (*now)(); void (*sleep)(uint32_t);
   bool (*gpioOpen)(uint8_t,bool,bool,bool);
@@ -120,6 +128,7 @@ struct Hardware {
   // Successful terminal entry and an unexpected terminal return never cancel.
   bool (*deepPrepare)()=nullptr;
   bool (*deepCancel)()=nullptr;
+  const DisplayBackend* displayBackend=nullptr;
 };
 class Port final {
  public:
@@ -161,6 +170,13 @@ class Port final {
   struct Sdmmc { Gpio* owner=nullptr; uint64_t token=0,sectors=0; uint8_t clk=0,cmd=0,dat0=0; bool closing=false; } sdmmc_;
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
   struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; bool threeWire=false,quad=false,ready=false,closing=false; int16_t data2=-1,data3=-1; risc_spi_quad_v1 api{}; } spis_[8];
+  struct Display { Port* port=nullptr; const RiscBoot::Board::Device* device=nullptr;
+    uint8_t physical=0;uint64_t token=0;bool closing=false;risc_display_backend_v1 api{};
+  } display_;
+  static bool displayOpen(void*,uint64_t*);
+  static bool displayRow(void*,uint64_t,uint32_t,const uint16_t*,size_t);
+  static bool displayBrightness(void*,uint64_t,uint8_t);
+  static bool displayClose(void*,uint64_t);
   struct SpiBus { uint64_t instance=0; unsigned refs=0; bool quad=false; Spi* held=nullptr; Spi* closing=nullptr; } spiBuses_[2];
   struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; bool standard=false;uint8_t directions=0;risc_hw_i2s_standard_v1 wire{};risc_i2s_standard_api_v1 standardApi{}; } i2ss_[2];
   struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;

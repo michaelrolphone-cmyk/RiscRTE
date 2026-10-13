@@ -38,6 +38,7 @@ struct Fixture {
 #include "native_quad_test.inc"
 #include "native_frame_test.inc"
 #include "native_lease_test.inc"
+#include "native_display_backend_test.inc"
 struct LegacySpi {
   uint32_t api_version,struct_size;void* context;
   bool (*claim)(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*);
@@ -48,7 +49,7 @@ struct LegacySpi {
 static_assert(offsetof(garden_spi_v1,claim_three_wire)==sizeof(LegacySpi),"Legacy SPI layout moved");
 static_assert(GARDEN_SPI_THREE_WIRE_V1_SIZE==sizeof(garden_spi_v1),"Suffix size does not cover callback");
 int main(int argc,char** argv){
-  assert(argc==2);std::string root=argv[1];quad_tests(root);frame_tests(root);lease_tests(root);
+  assert(argc==2);std::string root=argv[1];quad_tests(root);frame_tests(root);lease_tests(root);display_backend_tests(root);
   for(unsigned physical:{2u,3u}){
     Fixture f(root,-1,true,physical);auto& a=f.p.spis_[0].api.base;auto& b=f.p.spis_[1].api.base;auto& g=f.p.gpios_[0].api.base;
     assert(a.api_version==1 && a.struct_size>=GARDEN_SPI_THREE_WIRE_V1_SIZE && a.claim_three_wire);

@@ -41,6 +41,7 @@ bool Port::reserve(int16_t pin,const void* owner){
   pins_[pin].owner=owner;return true;
 }
 void Port::unreserve(int16_t pin,const void* owner){if(pin>=0 && pin<=48 && pins_[pin].owner==owner)pins_[pin]={};}
+#include "CpuDisplayBackend.inc"
 #include "CpuSdmmc.inc"
 #include "CpuStorageWork.inc"
 #include "CpuTcpListener.inc"
@@ -51,6 +52,7 @@ bool Port::radioSharedReady() const {
   return !hw_.radioIdle || hw_.radioIdle();
 }
 bool Port::providerStorageSafe() const {
+  if(display_.closing)return false;
   if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe() || !entropySafe())return false;
   if(hw_.radioAsync && hw_.radioAsync->custodySafe && !hw_.radioAsync->custodySafe())return false;
   if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
@@ -76,6 +78,7 @@ bool Port::appExitSafe() const {
   return true;
 }
 bool Port::restartResourcesSafe() const {
+  if(display_.token)return false;
   if(runtime_ && !runtime_->residentResetSafe())return false;
   if(storageWork_.gpio || storageWorkBusy() || sdmmc_.token || sdmmc_.closing)return false;
   if(!providerStorageSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
@@ -294,6 +297,24 @@ bool Port::bind(RiscBoot::Runtime& runtime){
         c.api.service_begin=radioServiceBegin;c.api.service_end=radioServiceEnd;
       }else hw_.radioAsync=nullptr;
       if(!runtime.registerPlatform("platform.radio",1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
+    }
+    if(runtime.uses(id,RISC_DISPLAY_BACKEND_CAPABILITY,1)){
+      const auto* backend=hw_.displayBackend;
+      if(display_.device || strcmp(d.type,"display.spi") || d.hardware.config_version!=2 ||
+         runtime.uses(id,"spi.bus",1) || !backend || !backend->accepts || !backend->open ||
+         !backend->row || !backend->brightness || !backend->close)return false;
+      const int physical=board.physicalController(d.display().bus.instance_id);
+      if(physical<2 || physical>3 || !backend->accepts(d.hardware,physical))return false;
+      // A native backend owns this complete controller, not a shared SPI device.
+      for(size_t j=0;j<board.deviceCount();++j){
+        const auto& other=*board.deviceAt(j);
+        if(other.hardware.instance_id==id || !runtime.selected(other.hardware.instance_id))continue;
+        const auto* b=board.bus(board.deviceBus(other.hardware.instance_id));
+        if(b && b->kind==RISC_HW_BUS_SPI && board.physicalController(b->instance_id)==physical)return false;
+      }
+      display_.port=this;display_.device=&d;display_.physical=physical;
+      display_.api={1,sizeof(display_.api),&display_,displayOpen,displayRow,displayBrightness,displayClose};
+      if(!runtime.registerPlatform(RISC_DISPLAY_BACKEND_CAPABILITY,1,RiscBoot::Runtime::Scope::Device,id,&display_.api))return false;
     }
     if(runtime.uses(id,"spi.bus",1)){
       // Only explicitly materialized transport types receive their own bus/CS.
@@ -757,6 +778,7 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
+  if(p.display_.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
   // Failed cleanup outranks healthy activity on either selected I2S unit.
   for(const auto& c:p.i2ss_)if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;
@@ -811,6 +833,7 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
   if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
+  if(p.display_.token)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
   // Failed cleanup outranks healthy activity on either selected I2S unit.
   for(const auto& c:p.i2ss_)if(c.closing)return RISC_DEEP_SLEEP_RETAINED;
@@ -903,6 +926,7 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
+  if(p.display_.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& i:p.i2ss_)if(i.closing)return RISC_LIGHT_SLEEP_RETAINED;
   for(const auto& i:p.i2ss_)if(i.token)return RISC_LIGHT_SLEEP_BUSY;
@@ -1052,6 +1076,7 @@ bool Port::spiClaimQuad(void* context,uint8_t sclk,uint8_t d0,uint8_t d1,uint8_t
 bool Port::spiClaimImpl(void* context,uint8_t sclk,uint8_t mosi,int8_t miso,uint8_t cs,uint64_t* out,bool threeWire,bool quad){
   if(out)*out=0;
   auto& c=*static_cast<Spi*>(context);auto& p=*c.port;auto& bus=p.spiBuses_[c.physical-2];
+  if(p.display_.token && p.display_.physical==c.physical)return false;
   if(!out || !p.available() || c.token || bus.closing || sclk!=c.bus.sclk || mosi!=c.bus.mosi || miso!=c.bus.miso || cs!=c.cs ||
      (quad!=(c.data2>=0 && c.data3>=0)) || (threeWire && !p.hw_.spiBeginThreeWire) || (bus.refs && (bus.instance!=c.bus.instance_id || bus.quad!=quad)) || !p.reserve(cs,&c))return false;
   uint64_t token=p.token();

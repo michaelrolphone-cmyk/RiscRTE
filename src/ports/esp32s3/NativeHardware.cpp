@@ -175,6 +175,8 @@ bool nativeRadioResourceReady(){return resourceOwner.ready();}
 bool nativeRadioResourceHeldReady(){return resourceOwner.heldReady();}
 bool nativeBackgroundResourceTry(){return !xPortInIsrContext()&&ownerTask&&ownerTask()&&NativeRadioAsync::tryShared();}
 void nativeBackgroundResourceEnd(){if(!xPortInIsrContext()&&ownerTask&&ownerTask())NativeRadioAsync::endShared();}
+// Optional build-owned implementation; ordinary Runtime has no panel backend.
+const DisplayBackend* selectedDisplayBackend() __attribute__((weak));
 Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   resourceOwner.configure([](){return !xPortInIsrContext() && ownerTask && ownerTask();},NativeRadioAsync::tryShared,NativeRadioAsync::endShared,NativeRadioAsync::sharedPhaseReady,NativeRadioAsync::sharedReady);
@@ -195,6 +197,7 @@ Hardware nativeHardware(bool (*owner)()){
   hardware.deepCancel=[](){NativeCrownRecovery::resume();return true;};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
   hardware.spiOpenQuad=spiOpenQuad;hardware.spiTransferQuad=spiTransferQuad;hardware.spiTransferFrame=spiTransferFrame;
+  if(selectedDisplayBackend)hardware.displayBackend=selectedDisplayBackend();
   configureSchedulerWait(hardware);
   static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
   radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
