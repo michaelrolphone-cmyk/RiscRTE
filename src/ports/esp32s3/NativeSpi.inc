@@ -68,7 +68,14 @@ bool spiBeginMode(uint8_t physical,uint8_t cs,uint32_t hz,uint8_t mode,bool thre
   if(!state.device){
     spi_device_interface_config_t config{};config.clock_speed_hz=hz;config.mode=mode;config.spics_io_num=-1;config.queue_size=1;
     if(threeWire)config.flags=SPI_DEVICE_3WIRE|SPI_DEVICE_HALFDUPLEX;
-    else if(state.quad)config.flags=SPI_DEVICE_HALFDUPLEX;
+    else if(state.quad){
+      // Match Arduino_ESP32QSPI device defaults so 0x02/0x32 framed transactions
+      // produce the same command/address phases the CO5300 accepts.
+      config.flags=SPI_DEVICE_HALFDUPLEX;
+      config.command_bits=8;
+      config.address_bits=24;
+      config.dummy_bits=0;
+    }
     if(spi_bus_add_device(host(physical),&config,&state.device)!=ESP_OK)return false;
     state.hz=hz;state.mode=mode;state.threeWire=threeWire;
   }
@@ -134,11 +141,14 @@ bool spiTransferFrame(uint8_t physical,const risc_spi_frame_v1* frame,const uint
   if(ms>8)ms=8;
   state.ready=false;state.framed={};
   auto& t=state.framed;
-  // CO5300 QSPI command protocol (0x02 opcode + 24-bit address) requires the
-  // multiline command/address flags used by Arduino_ESP32QSPI. VARIABLE_* alone
-  // lets transactions complete but the panel ignores them.
-  t.base.flags=SPI_TRANS_MULTILINE_CMD|SPI_TRANS_MULTILINE_ADDR|SPI_TRANS_VARIABLE_CMD|SPI_TRANS_VARIABLE_ADDR|SPI_TRANS_VARIABLE_DUMMY;
-  if(frame->data_lines==4)t.base.flags|=SPI_TRANS_MODE_QIO;
+  // CO5300 is 1-1-4: header always 1-line, payload 1- or 4-line.
+  // Match Arduino_ESP32QSPI: MULTILINE only for 1-line command path;
+  // MODE_QIO only for 4-lane data so the 0x32 header stays 1-line.
+  t.base.flags=SPI_TRANS_VARIABLE_CMD|SPI_TRANS_VARIABLE_ADDR|SPI_TRANS_VARIABLE_DUMMY;
+  if(frame->data_lines==4)
+    t.base.flags|=SPI_TRANS_MODE_QIO;
+  else
+    t.base.flags|=SPI_TRANS_MULTILINE_CMD|SPI_TRANS_MULTILINE_ADDR;
   t.command_bits=frame->command_bits;t.address_bits=frame->address_bits;t.dummy_bits=frame->dummy_bits;
   t.base.cmd=frame->command;t.base.addr=frame->address;t.base.length=count*8;
   if(count){memcpy(state.tx,tx,count);t.base.tx_buffer=state.tx;}
