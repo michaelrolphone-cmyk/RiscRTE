@@ -7,37 +7,6 @@ on:
 permissions:
   contents: read
 jobs:
-  sources:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: a91edf3fada6a559ec107186dd163d0c8da10d29
-          path: runtime
-          persist-credentials: false
-      - uses: actions/checkout@v4
-        with:
-          repository: michaelrolphone-cmyk/RiskRTE-XTEINK-X4-PRO
-          ref: 3c32f85de9c3c80a6b085753d16744c47712172d
-          path: x4
-          persist-credentials: false
-      - uses: actions/checkout@v4
-        with:
-          repository: michaelrolphone-cmyk/T5S3-Reader
-          ref: 45cf61ac013fb618e8d7fed63217a35350484d52
-          path: reader
-          persist-credentials: false
-      - name: Export source and assembly tools
-        run: |
-          mkdir -p out
-          tar --exclude=.git --exclude=evidence --exclude=.pio --exclude=build --exclude=dist -czf out/recovery-source-tools.tar.gz runtime x4 reader
-          find x4 -iname '*103*' -o -iname '*settings*' -o -iname '*spiffs*' -o -iname '*.ini'
-          find runtime -iname '*.ini'
-      - uses: actions/upload-artifact@v4
-        with:
-          name: display-recovery-source-tools
-          path: out/
-          retention-days: 7
   watch:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -48,12 +17,30 @@ jobs:
         with:
           ref: 64c8e52e46fd91e8fdafd636db04eed88f0c51a9
           fetch-depth: 0
-      - name: Apply only the verified pad-hold repair to delivered Watch native
+      - name: Adapt only the verified pad-hold repair to delivered Watch native
         run: |
           git config user.name 'michaelrolphone-cmyk'
           git config user.email 'michael.rol.phone@gmail.com'
           git switch -c fix/watch-display-recovery-20261012
-          git cherry-pick 0bd447fb9c888f907e1d12a0af0b9820f4153a9f
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          path='src/ports/esp32s3/CpuPort.cpp'
+          p=Path(path); original=p.read_text()
+          fixed=subprocess.check_output(['git','show','a91edf3fada6a559ec107186dd163d0c8da10d29:'+path],text=True)
+          begin='int32_t Port::gpioDeepSleepHold('
+          end='bool Port::gpioRetireHeldOutput('
+          a=original.index(begin);b=original.index(end,a)
+          x=fixed.index(begin);y=fixed.index(end,x)
+          old=original[a:b];new=fixed[x:y].replace('p.storageLifecycleBusy()','p.storageWorkBusy()')
+          loop='  for(unsigned i=0;i<49;++i){'
+          assert old[old.index(loop):].strip()==new[new.index(loop):].strip()
+          assert 'if(p.storageWorkBusy() || p.sleeping_' in old
+          assert 'p.storageWorkBusy() && p.storageWork_.gpio==&c' in new
+          p.write_text(original[:a]+new+original[b:])
+          PY
+          git add src/ports/esp32s3/CpuPort.cpp
+          GIT_AUTHOR_DATE=2026-10-13T01:07:00Z GIT_COMMITTER_DATE=2026-10-13T01:07:00Z git commit -m 'Apply display pad-hold fix on exact Watch 1.1.20 native lineage'
           test "$(git diff --name-only 64c8e52e46fd91e8fdafd636db04eed88f0c51a9 HEAD)" = src/ports/esp32s3/CpuPort.cpp
           git push origin HEAD:refs/heads/fix/watch-display-recovery-20261012
       - uses: actions/setup-python@v5
@@ -77,7 +64,6 @@ jobs:
           cp .pio/build/watch-file-source/firmware.map out/watch/ || true
           git rev-parse HEAD > out/watch/source.txt
           git diff 64c8e52e46fd91e8fdafd636db04eed88f0c51a9 HEAD > out/watch/source.patch
-          pio project config --json-output --project-conf watch-file-source-profile.ini > out/watch/config.json
           tar --exclude=.git --exclude=.pio --exclude=evidence --exclude=build --exclude=out --exclude=dist -czf out/watch-source.tar.gz .
           find ~/.platformio/packages -type f \( -name 'mkspiffs' -o -name 'xtensa-esp32s3-elf-nm' -o -name 'xtensa-esp32s3-elf-objdump' -o -name 'xtensa-esp32s3-elf-objcopy' -o -name 'xtensa-esp32s3-elf-readelf' \) -exec cp {} out/watch/ \;
           sha256sum out/watch/firmware.bin out/watch/firmware.elf
