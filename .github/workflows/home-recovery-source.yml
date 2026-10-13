@@ -1,0 +1,54 @@
+name: Home recovery source
+on:
+  push:
+    branches: [fix/display-startup-20261012]
+    paths: ['.github/workflows/home-recovery-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-System-Apps
+          ref: a3504d4f8f342d9d78383978e8b70032d0097c23
+          path: system
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-Utilities
+          ref: e80172353fcb9e6519ca9d9b2a4d43c69c1bc91d
+          path: utilities
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/T5S3-Reader
+          ref: 45cf61ac013fb618e8d7fed63217a35350484d52
+          path: reader
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Obtain exact target compiler
+        run: |
+          python -m pip install platformio==6.1.19
+          pio pkg install --global --tool 'espressif/toolchain-xtensa-esp32s3@8.4.0+2021r2-patch5'
+      - name: Export pinned rebuild inputs
+        run: |
+          mkdir -p out
+          git -C system archive --format=tar.gz --output="$GITHUB_WORKSPACE/out/system-source.tar.gz" HEAD
+          git -C system rev-parse HEAD > out/system-source.txt
+          git -C utilities rev-parse HEAD > out/utilities-source.txt
+          tar -C utilities -czf out/utilities-source-with-git.tar.gz .
+          git -C reader rev-parse HEAD > out/reader-source.txt
+          git -C reader ls-files '*.h' '*.hpp' '*.inc' '*normalize_xtensa_relocations.py' '*LICENSE*' > out/reader-files.txt
+          tar -C reader -T "$GITHUB_WORKSPACE/out/reader-files.txt" -czf out/reader-sdk.tar.gz
+          tar -C "$HOME/.platformio/packages/toolchain-xtensa-esp32s3" -czf out/xtensa-toolchain.tar.gz .
+          du -h out/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: home-recovery-source
+          path: out/
+          retention-days: 7

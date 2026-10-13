@@ -1,0 +1,78 @@
+name: X4 display recovery native
+on:
+  push:
+    branches: [fix/display-startup-20261012]
+    paths: ['.github/workflows/x4-display-recovery-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  x4:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: a91edf3fada6a559ec107186dd163d0c8da10d29
+          path: runtime
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiskRTE-XTEINK-X4-PRO
+          ref: 3c32f85de9c3c80a6b085753d16744c47712172d
+          path: x4
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: 86aab52fb085b0e6dc3c467760395a3571e1fbd1
+          path: watch-tools
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-${{ runner.arch }}-risc-tools-${{ hashFiles('runtime/platformio.ini', 'runtime/requirements-ci.txt') }}
+      - run: python -m pip install -r runtime/requirements-ci.txt
+      - name: Compose X4 native with preserved transport and settings selection
+        run: |
+          python x4/minimal/scripts/prepare_native_runtime.py prepare --runtime runtime --output composed --runtime-commit a91edf3fada6a559ec107186dd163d0c8da10d29 --environment esp32s3-16mb-appdata-iq-stage --app-policy-rows 24 --app-requirement-rows 24 --installed-app-capacity 64 --provider-capacity 40 --shared-files-transport --usb-phy --retained-wake-bytes 512
+          python - <<'PY'
+          import configparser,hashlib,json
+          from pathlib import Path
+          root=Path('composed');ini=root/'platformio.ini'
+          c=configparser.ConfigParser(interpolation=None);c.read(ini)
+          selected=['BOARD_XTEINK_X4_PRO','RISC_NATIVE_SETTINGS_BACKEND=1','RISC_NATIVE_SETTINGS_STARTUP_ENTROPY=1','RISC_NATIVE_APP_DATA_MOUNT=1','RISC_NATIVE_SETTINGS_ASSEMBLY=1','RISC_NATIVE_SETTINGS_PSRAM_PAYLOAD=1','RISC_NATIVE_SETTINGS_LIFECYCLE=1','RISC_NATIVE_SETTINGS_WORKER=1','RISC_RUNTIME_ATOMIC_KEY_VALUE=1','RISC_NATIVE_STORAGE_CUSTODY=1','RISC_NATIVE_FILE_SOURCE=1']
+          wraps=['esp_vfs_register','esp_vfs_unregister','esp_partition_read','esp_partition_write','esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
+          section='env:esp32s3-16mb-appdata-iq-stage'
+          c[section]['build_flags']+='\n-I.\n'+'\n'.join('-D'+s for s in selected)+'\n'+'\n'.join('-Wl,--wrap='+s+'\n-Wl,-u,__wrap_'+s for s in wraps)+'\n-Wl,-u,risc_file_source_abi'
+          with ini.open('w') as f:c.write(f)
+          rec=root/'x4-native-composition.json';r=json.loads(rec.read_text())
+          r['composed_source_sha256']['platformio.ini']=hashlib.sha256(ini.read_bytes()).hexdigest()
+          r['product_native_selection']={'baseline_full_sha256':'41b3447bbac9d67c82101e6a04730435f753ea5f9404fc4b1c85bae09ed7efa8','settings_defines':selected,'wraps':wraps,'runtime_patch':'0bd447fb9c888f907e1d12a0af0b9820f4153a9f'}
+          del r['composition_sha256']
+          encode=lambda v:(json.dumps(v,sort_keys=True,separators=(',',':'))+'\n').encode()
+          r['composition_sha256']=hashlib.sha256(encode(r)).hexdigest();rec.write_bytes(encode(r))
+          PY
+      - name: Compile exact selected native, one target job
+        working-directory: composed
+        run: pio run -e esp32s3-16mb-appdata-iq-stage -j 1
+      - name: Verify IQ reservation and export compiled components
+        run: |
+          mkdir -p out/x4
+          cp composed/.pio/build/esp32s3-16mb-appdata-iq-stage/{firmware.bin,firmware.elf,firmware.map,bootloader.bin,partitions.bin} out/x4/
+          cp composed/x4-native-composition.json composed/platformio.ini out/x4/
+          python runtime/scripts/radio_iq_proof.py out/x4/firmware.elf --output out/x4/radio-iq-proof.json
+          tar --exclude=.git --exclude=evidence --exclude=.pio --exclude=build --exclude=dist -czf out/watch-tools.tar.gz watch-tools/scripts watch-tools/sdk watch-tools/include watch-tools/tests watch-tools/drivers watch-tools/hardware
+          find ~/.platformio/packages -type f \( -name 'mkspiffs' -o -name 'xtensa-esp32s3-elf-nm' -o -name 'xtensa-esp32s3-elf-objdump' -o -name 'xtensa-esp32s3-elf-objcopy' -o -name 'xtensa-esp32s3-elf-readelf' \) -exec cp {} out/x4/ \;
+          sha256sum out/x4/firmware.bin out/x4/firmware.elf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: display-recovery-x4-native
+          path: out/
+          retention-days: 14
