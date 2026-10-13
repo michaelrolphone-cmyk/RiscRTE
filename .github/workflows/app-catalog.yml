@@ -1,0 +1,37 @@
+name: Read-only app catalog host qualification
+on:
+  push:
+    branches: [work/read-only-app-catalog-20261013]
+  pull_request:
+    paths:
+      - '.github/workflows/app-catalog.yml'
+      - 'sdk/app/RiscAppCatalogV1.h'
+      - 'src/bootstrap/Runtime.*'
+      - 'src/bootstrap/AppCatalogRuntime.inc'
+      - 'src/bootstrap/Installation*Runtime.inc'
+      - 'test/app_catalog_runtime_test.cpp'
+      - 'test/fixtures/app_catalog_*.c'
+      - 'test/run_app_catalog_runtime_test.sh'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: app-catalog-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Native admission, metadata, generation and custody
+        env:
+          SANITIZE: ${{ matrix.sanitize }}
+        run: bash test/run_app_catalog_runtime_test.sh

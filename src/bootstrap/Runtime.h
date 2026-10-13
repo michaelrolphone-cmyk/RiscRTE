@@ -1,6 +1,7 @@
 #pragma once
 #include "RiscMemoryHeapV1.h"
 #include "RiscRandomV1.h"
+#include <RiscAppCatalogV1.h>
 #include <RiscInstallationV1.h>
 #include "Board.h"
 #include "AppPolicyLimits.h"
@@ -334,7 +335,7 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7, SharedDataDriver=-8, MemoryHeapDriver=-9,RandomDriver=-10;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7, SharedDataDriver=-8, MemoryHeapDriver=-9,RandomDriver=-10,AppCatalogDriver=-11;
   static int32_t randomFill(void*,void*,uint32_t);
   static int32_t memoryHeapSnapshot(void*,risc_memory_heap_snapshot_v1*);
   const risc_realtime_control_api_v1* realtimeBackend_=nullptr;
@@ -371,9 +372,23 @@ class Runtime final {
   static int32_t appDataStat(void*,const char*,uint32_t*,uint64_t*);
   static int32_t appDataRead(void*,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*);
   static int32_t appDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
+  struct AppCatalogMetadata {
+    char displayName[96]{}, minFirmware[32]{}, icon[24]{};
+    bool visible=true;
+  };
+  static void appCatalogMetadata(JsonObjectConst,AppCatalogMetadata&);
+  static Runtime* appCatalogEnter(void*,int32_t&);
+  static int32_t appCatalogSnapshot(void*,risc_app_catalog_snapshot_v1*);
+  static int32_t appCatalogGet(void*,uint64_t,uint32_t,risc_app_catalog_entry_v1*);
+  void appCatalogChanged();
+  bool appCatalogRefresh(uint32_t&);
+  uint64_t appCatalogGeneration_=1;
+  // Zero means omitted; one means admitted but launch-unavailable; two ready.
+  uint8_t appCatalogState_[MaxAppPolicies]{};
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
     bool enabled=true, catalogAuthority=false;
+    AppCatalogMetadata catalog{};
     char sourcePath[193]{}; PolicyIndex sourceDriver=-1;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
     const RiscStorage::AppDataExport::Entry* exports=nullptr;
@@ -494,6 +509,9 @@ class Runtime final {
     std::unique_ptr<RiscStorage::AppDataExport,AppDataExportDelete> appDataExport_;
     risc_app_data_export_v1 appDataExportTable_{};
     bool appDataExportEnding_=false;
+    risc_app_catalog_v1 appCatalogTable_{};
+    void* appCatalogContext_=nullptr;
+    bool appCatalogBusy_=false;
     risc_realtime_api_v1 realtimeTable_{};
     void* realtimeContext_=nullptr;
     risc_realtime_control_api_v1 realtimeControlTable_{};

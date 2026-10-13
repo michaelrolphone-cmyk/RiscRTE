@@ -113,6 +113,7 @@ Runtime::~Runtime() {
 namespace {
 bool elfPath(const char* p) { size_t n=strlen(p); return n>4 && !strcmp(p+n-4,".elf"); }
 }
+#include "AppCatalogRuntime.inc"
 #include "FileOpenRuntime.inc"
 #include "FileSourceRuntime.inc"
 bool Runtime::manifest(JsonObjectConst m,Driver& d) {
@@ -332,7 +333,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     if (!keys(item,{"manifest","grants"},{"app_data_export","image_source","catalog_authority"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,policy.elf,sizeof(policy.elf)) || (suppliedManifest.isNull() && !readJson(policy.elf,doc,&metadataCloseRetained_))) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=suppliedManifest.isNull()?doc.as<JsonObjectConst>():suppliedManifest.as<JsonObjectConst>(); char filename[128];
-    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","runtime_lifecycle"}) ||
+    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","runtime_lifecycle","launcher_visible","min_firmware_version"}) ||
         !eq(manifest["type"],"application") || !eq(manifest["architecture"],"xtensa-esp32s3") || !eq(manifest["entry"],"app_main") ||
         (!manifest["runtime_lifecycle"].isUnbound() && !eq(manifest["runtime_lifecycle"],"foreground") && !eq(manifest["runtime_lifecycle"],"legacy")) ||
         !text(manifest["id"],policy.id,sizeof(policy.id)) || !RuntimePackages::safeId(policy.id) ||
@@ -340,6 +341,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         !text(manifest["file_name"],filename,sizeof(filename)) || !RuntimePackages::safeArtifact(filename) || !elfPath(filename) ||
         !manifest["requires"].is<JsonArrayConst>() || manifest["requires"].size()>MaxAppRequirements ||
         !item["grants"].is<JsonArrayConst>() || item["grants"].size()>MaxAppPolicyGrants) return fail("invalid app identity/declarations");
+    appCatalogMetadata(manifest,policy.catalog);
     FileOpenMetadata fileMetadata;
     if(!fileOpenMetadata(manifest,fileMetadata))return fail("invalid app file associations");
     if(fileMetadata.count) {
@@ -427,6 +429,9 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         } else if (!strcmp(capability,RISC_RANDOM_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || !port_.randomBytes)return fail("random bytes capability unavailable");
           grant.driver=RandomDriver;grant.capability=RISC_RANDOM_CAPABILITY;
+        } else if (!strcmp(capability,RISC_APP_CATALOG_CAPABILITY)) {
+          if(grant.api!=RISC_APP_CATALOG_API_V1 || grant.instance)return fail("invalid app catalog authority");
+          grant.driver=AppCatalogDriver;grant.capability=RISC_APP_CATALOG_CAPABILITY;
         } else if (!strcmp(capability,RISC_MEMORY_HEAP_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || !port_.memoryHeap)return fail("memory heap capability unavailable");
           grant.driver=MemoryHeapDriver;grant.capability=RISC_MEMORY_HEAP_CAPABILITY;
@@ -481,13 +486,28 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     }
     if (policy.count!=item["grants"].size()) return fail("undeclared app grant");
     if(!replacing)++policyCount_;
+    appCatalogChanged();
   }
   return true;
 }
 bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
   if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !invocation_->appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
+  const bool catalog=!strcmp(capability,RISC_APP_CATALOG_CAPABILITY);
+  Invocation* const original=invocation_;
+  // A native catalog safety hook cannot claim any still-uncommitted grant
+  // slot recursively, even through a different authorized capability.
+  if(original->appCatalogBusy_)return false;
+  struct CatalogAcquisition {
+    bool* busy;
+    ~CatalogAcquisition(){if(busy)*busy=false;}
+  } catalogCall{catalog?&original->appCatalogBusy_:nullptr};
+  if(catalogCall.busy)*catalogCall.busy=true;
+  auto catalogCustody=[&](){return currentRuntime==this && invocation_==original &&
+    original->active_ && original->entryRunning_ && !retained_ && port_.owner();};
+  auto catalogRetain=[&](){retained_=true;fail("app catalog admission retained");(void)appExitBarrier(false);return false;};
   out->slot=out->generation=0;out->api=nullptr;
   if(!appDataExitSafe()){(void)appExitBarrier(false);return false;}
+  if(catalog && !catalogCustody())return catalogRetain();
   const AppGrantPolicy* allowed=nullptr;
   for (size_t i=0;i<invocation_->appPolicy_->count;++i) {
     const auto& p=invocation_->appPolicy_->grants[i];
@@ -503,7 +523,14 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   size_t slot=0;while(slot<16 && invocation_->appGrants_[slot].live)++slot;
   if (slot==16) return false;
   auto& grant=invocation_->appGrants_[slot];
-  if(allowed->driver==RandomDriver){
+  if(allowed->driver==AppCatalogDriver){
+    if(invocation_->appCatalogContext_ || !invocation_->entryRunning_ || retained_)return false;
+    if(!providerStorageSafe() || !catalogCustody())return catalogRetain();
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    invocation_->appCatalogContext_=context;
+    invocation_->appCatalogTable_={1,sizeof(invocation_->appCatalogTable_),context,appCatalogSnapshot,appCatalogGet};
+    grant.api=&invocation_->appCatalogTable_;
+  } else if(allowed->driver==RandomDriver){
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
     grant.random={1,sizeof(grant.random),context,randomFill};grant.api=&grant.random;
   } else if(allowed->driver==MemoryHeapDriver){
@@ -597,6 +624,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   grant.live=true;grant.generation=++grantGeneration_;grant.invocation=invocation_->streams_.context();
   serviceProviders();
   if(!appExitBarrier(false))return false;
+  if(catalog && !catalogCustody())return catalogRetain();
   out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
 }
 int32_t Runtime::randomFill(void* context,void* bytes,uint32_t length){
@@ -782,6 +810,7 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   }
   if(grant.api==&invocation_->installedVolume_){if(!invocation_->installedFiles_->end()){if(residentEnabled_)(void)appExitBarrier();return false;}invocation_->installedVolumeContext_=nullptr;}
   if(grant.api==&invocation_->appDataTable_){if(!appDataExitSafe()){if(residentEnabled_)(void)appExitBarrier();return false;}invocation_->appDataContext_=nullptr;invocation_->appDataNamespace_=0;invocation_->appDataSharedFile_=nullptr;}
+  if(grant.api==&invocation_->appCatalogTable_)invocation_->appCatalogContext_=nullptr;
   if(grant.api==&invocation_->promotionTable_)invocation_->promotionContext_=nullptr;
   if(grant.api==&invocation_->realtimeTable_)invocation_->realtimeContext_=nullptr;
   if(grant.api==&invocation_->realtimeControlTable_)invocation_->realtimeControlContext_=nullptr;
@@ -805,6 +834,7 @@ bool Runtime::revokeApp() {
       if(!invocation_->installedFiles_->end()){retained_=true;(void)appExitBarrier();return false;}
       invocation_->installedVolumeContext_=nullptr;
     }
+    if(grant.api==&invocation_->appCatalogTable_)invocation_->appCatalogContext_=nullptr;
     if(grant.api==&invocation_->promotionTable_)invocation_->promotionContext_=nullptr;
     if(grant.api==&invocation_->realtimeTable_)invocation_->realtimeContext_=nullptr;
     if(grant.api==&invocation_->realtimeControlTable_)invocation_->realtimeControlContext_=nullptr;
@@ -1105,7 +1135,7 @@ bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& 
   if(!parse(static_cast<const char*>(bytes),size,doc))return false;
   JsonObjectConst m=doc.as<JsonObjectConst>();char version[32];
   const char* basename=strrchr(policy->elf,'/');if(!basename)return false;++basename;
-  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types"}) ||
+  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","launcher_visible","min_firmware_version"}) ||
      !eq(m["type"],"application") || !eq(m["id"],id) || !eq(m["architecture"],"xtensa-esp32s3") ||
      !eq(m["entry"],"app_main") || !eq(m["file_name"],basename) || !text(m["version"],version,sizeof(version)) ||
      !RuntimePackages::safeVersion(version) || !m["requires"].is<JsonArrayConst>() ||
