@@ -136,6 +136,13 @@ static void selectImage(const char* name){
 }
 extern "C" unsigned removable_event(unsigned e,unsigned value) {
   if(e==0){++defaults;if(providerMode())return 0;
+    const auto* feedback=risc_runtime_get_api(1);
+    risc_runtime_launch_failure_v1 record{};record.struct_size=sizeof(record);
+    const bool expected=defaults>1 && (mode=="absent" || mode=="missing" || mode=="busy" || mode=="removed" || mode=="malformed");
+    assert(feedback && feedback->struct_size>=RISC_RUNTIME_LAUNCH_FAILURE_V1_SIZE);
+    assert(feedback->take_launch_failure(&record)==expected);
+    if(expected){assert(record.flags==RISC_LAUNCH_FAILURE_EXTERNAL_IMAGE);assert(!strcmp(record.application,"child.elf") && record.detail[0]);}
+    assert(!feedback->take_launch_failure(&record));
     if(mode=="shared-settings"){if(!sharedHydratedThisRun)sharedSettingsTest();return 0;}
     if(defaults==1 && (mode=="discovery"||catalogMode())) {
       assert(runtime->appCount()==baseCount());
