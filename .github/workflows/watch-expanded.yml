@@ -56,7 +56,7 @@ jobs:
       - name: Install pinned compiler tooling
         run: python -m pip install -r requirements-ci.txt
       - name: Compile explicit ordinary expanded target
-        run: pio run -c watch-expanded-profile.ini -e watch-expanded -j 2
+        run: pio run -c watch-expanded-profile.ini -e watch-expanded -j 1
       - name: Mutate the actual linked IQ target and reject invalid boundaries
         env:
           RADIO_IQ_ELF: .pio/build/watch-expanded/firmware.elf
