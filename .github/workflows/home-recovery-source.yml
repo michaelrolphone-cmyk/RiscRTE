@@ -1,0 +1,27 @@
+name: Home recovery source
+on:
+  push:
+    branches: [fix/display-startup-20261012]
+    paths: ['.github/workflows/home-recovery-source.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-System-Apps
+          ref: experimental/x4-settings-persistence-20261012
+          persist-credentials: false
+      - name: Export selected source
+        run: |
+          mkdir -p out
+          git rev-parse HEAD > out/system-source.txt
+          git archive --format=tar.gz --output=out/system-source.tar.gz HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: home-recovery-source
+          path: out/
+          retention-days: 7
