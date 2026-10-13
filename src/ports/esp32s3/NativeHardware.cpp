@@ -65,7 +65,8 @@ TickType_t ticks(uint32_t ms){return ms?pdMS_TO_TICKS(ms)+1:0;}
 spi_host_device_t host(uint8_t physical){return physical==2?SPI2_HOST:SPI3_HOST;}
 #include "NativePwmStop.inc"
 bool gpioOpen(uint8_t pin,bool output,bool initial,bool pullup){
-  return pin<49 && stopPwm(pin) && NativeSleep::openPin(pin,output,initial,pullup);
+  return pin<49 && stopPwm(pin) && NativeSleep::openPin(pin,output,initial,pullup) &&
+      NativeCrownRecovery::gpioOpened(pin,output);
 }
 bool gpioWrite(uint8_t pin,bool level){
   return stopPwm(pin) && gpio_set_level(static_cast<gpio_num_t>(pin),level)==ESP_OK;
@@ -75,7 +76,8 @@ bool gpioClose(uint8_t pin){
   // A failed post-reset claim may still have a pad held at its retained state.
   // Never claim clean release or unhold it without the requested safe config.
   if(pin>=49 || !NativeSleep::canClose(pin))return false;
-  return stopPwm(pin) && gpio_reset_pin(static_cast<gpio_num_t>(pin))==ESP_OK;
+  return NativeCrownRecovery::gpioClosing(pin) && stopPwm(pin) &&
+      gpio_reset_pin(static_cast<gpio_num_t>(pin))==ESP_OK;
 }
 #include "NativePwm.inc"
 bool gpioPwm(uint8_t pin,uint32_t hz,uint16_t duty,uint16_t maximum){return pwmWrite(pin,hz,duty,maximum);}

@@ -4,9 +4,22 @@
 #ifndef RISC_NATIVE_RECOVERY_AXP2101
 #define RISC_NATIVE_RECOVERY_AXP2101 0
 #endif
+#ifndef RISC_NATIVE_RECOVERY_GPIO
+#define RISC_NATIVE_RECOVERY_GPIO 0
+#endif
+#if RISC_NATIVE_RECOVERY_AXP2101 && RISC_NATIVE_RECOVERY_GPIO
+#error "Select exactly one native recovery input"
+#endif
 namespace RiscCpu { namespace NativeCrownRecovery {
 using Transfer=bool(*)(uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);
-#if RISC_NATIVE_RECOVERY_AXP2101
+#if RISC_NATIVE_RECOVERY_GPIO
+bool gpioOpened(uint8_t pin,bool output);
+bool gpioClosing(uint8_t pin);
+#else
+inline bool gpioOpened(uint8_t,bool){return true;}
+inline bool gpioClosing(uint8_t){return true;}
+#endif
+#if RISC_NATIVE_RECOVERY_AXP2101 || RISC_NATIVE_RECOVERY_GPIO
 bool opened(uint8_t,uint8_t,uint8_t,Transfer);
 bool transact(uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t,Transfer);
 bool closing(uint8_t);
