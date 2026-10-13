@@ -332,6 +332,10 @@ void setup() {
   RiscPerf::emit(59);
   RISC_STAGE_LOG("boot metadata-ready elapsed_us=%llu",(unsigned long long)(RiscDiagnostics::monotonicUs()-bootUs));
   diagnosticLine("RTE_BOOT board=validated drivers=admitted");
+  // Late reprint so a serial capture that misses the early boot lines can
+  // still see which Runtime SHA is running. The COM port on this board
+  // disconnects across reset, so the first RTE_SOURCE is often lost.
+  diagnosticLine(RISC_BUILD_IDENTITY);
   const bool ran=runtime.run();
   RISC_STAGE_LOG("boot app-session returned result=%s reason=%s",ran?"ok":"failed",ran?"app-returned":runtime.error());
   if(!ran) diagnosticFormat("RTE_BOOT error=runtime detail=%s",runtime.error());
