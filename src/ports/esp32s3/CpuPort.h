@@ -1,6 +1,9 @@
 #pragma once
 #include "bootstrap/Runtime.h"
 #include <GardenPlatformV1.h>
+#include <RiscDisplayBackendV1.h>
+#include <RiscSpiQuadV1.h>
+#include <RiscI2sStandardV1.h>
 #include <GardenRadioAsyncV1.h>
 #include <RiscGpioSdmmcV1.h>
 #include <TWatchPlatformV1.h>
@@ -21,6 +24,13 @@ struct StorageWorkBackend {
 };
 // Lowest hardware boundary. Production uses ESP-IDF; host models emulate only
 // pins, controllers and register/byte transfers, not driver/capability behavior.
+struct DisplayBackend {
+ bool (*accepts)(const risc_hardware_device_v1&,uint8_t);
+ bool (*open)(const risc_hardware_device_v1&,uint8_t);
+ bool (*row)(uint32_t,const uint16_t*,size_t);
+ bool (*brightness)(uint8_t);
+ bool (*close)();
+};
 struct Hardware {
   bool (*owner)(); uint64_t (*now)(); void (*sleep)(uint32_t);
   bool (*gpioOpen)(uint8_t,bool,bool,bool);
@@ -107,6 +117,18 @@ struct Hardware {
   const StorageWorkBackend* storageWork=nullptr; // explicit scoped storage worker opt-in
   const RiscBoot::EntropyBackend* entropy=nullptr; // explicit native opt-in
   bool (*schedulerWait)(uint32_t)=nullptr; // owner-only, bounded, scheduler only
+  // Additive raw quad write transport; no controller command knowledge.
+  bool (*spiOpenQuad)(uint8_t,int16_t,int16_t,int16_t,int16_t,int16_t)=nullptr;
+  bool (*spiTransferQuad)(uint8_t,const uint8_t*,size_t,uint32_t)=nullptr;
+  bool (*spiTransferFrame)(uint8_t,const risc_spi_frame_v1*,const uint8_t*,size_t,uint32_t)=nullptr;
+  bool (*i2sStandardOpen)(const risc_hw_i2s_standard_v1&,uint8_t,uint32_t)=nullptr;
+  // Optional native-only deep-entry preparation transaction. Install both or
+  // neither. prepare may refuse before terminal entry; cancel must undo every
+  // attempted preparation, including a partial refusal. No app ABI changes.
+  // Successful terminal entry and an unexpected terminal return never cancel.
+  bool (*deepPrepare)()=nullptr;
+  bool (*deepCancel)()=nullptr;
+  const DisplayBackend* displayBackend=nullptr;
 };
 class Port final {
  public:
@@ -147,9 +169,16 @@ class Port final {
   static int32_t workUnbind(void*);
   struct Sdmmc { Gpio* owner=nullptr; uint64_t token=0,sectors=0; uint8_t clk=0,cmd=0,dat0=0; bool closing=false; } sdmmc_;
   struct I2c { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0; uint64_t token=0; twatch_i2c_controller_v1 api{}; } i2cs_[2];
-  struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; bool threeWire=false,ready=false,closing=false; garden_spi_v1 api{}; } spis_[8];
-  struct SpiBus { uint64_t instance=0; unsigned refs=0; Spi* held=nullptr; Spi* closing=nullptr; } spiBuses_[2];
-  struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; } i2ss_[2];
+  struct Spi { Port* port=nullptr; risc_hw_bus_v1 bus{}; uint8_t physical=0,cs=0; uint64_t token=0,deadline=0; bool threeWire=false,quad=false,ready=false,closing=false; int16_t data2=-1,data3=-1; risc_spi_quad_v1 api{}; } spis_[8];
+  struct Display { Port* port=nullptr; const RiscBoot::Board::Device* device=nullptr;
+    uint8_t physical=0;uint64_t token=0;bool closing=false;risc_display_backend_v1 api{};
+  } display_;
+  static bool displayOpen(void*,uint64_t*);
+  static bool displayRow(void*,uint64_t,uint32_t,const uint16_t*,size_t);
+  static bool displayBrightness(void*,uint64_t,uint8_t);
+  static bool displayClose(void*,uint64_t);
+  struct SpiBus { uint64_t instance=0; unsigned refs=0; bool quad=false; Spi* held=nullptr; Spi* closing=nullptr; } spiBuses_[2];
+  struct I2s { Port* port=nullptr; tw_hw_audio_v1 config{}; uint64_t token=0; bool closing=false; twatch_i2s_controller_v1 api{}; bool standard=false;uint8_t directions=0;risc_hw_i2s_standard_v1 wire{};risc_i2s_standard_api_v1 standardApi{}; } i2ss_[2];
   struct Radio { Port* port=nullptr; risc_hw_radio_v1 config{}; uint64_t token=0;
     bool active=false,closing=false,scanning=false,asyncUnavailable=false; uint32_t operation=0,completed=0,suspendedOperation=0,serviceLease=0,nextServiceLease=0; garden_radio_async_v1 api{}; } radios_[1];
   struct Hci { Port* port=nullptr; uint64_t token=0; bool closing=false; risc_hci_controller_status_v1 api{}; } hci_;
@@ -218,10 +247,14 @@ class Port final {
   static bool i2cClose(void*,uint64_t);
   static bool spiClaim(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*);
   static bool spiClaimThreeWire(void*,uint8_t,uint8_t,uint8_t,uint64_t*);
-  static bool spiClaimImpl(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*,bool);
+  static bool spiClaimImpl(void*,uint8_t,uint8_t,int8_t,uint8_t,uint64_t*,bool,bool=false);
+  static bool spiClaimQuad(void*,uint8_t,uint8_t,uint8_t,uint8_t,uint8_t,uint8_t,uint64_t*);
+  static bool spiTransferQuad(void*,uint64_t,const uint8_t*,size_t);
+  static bool spiTransferFrame(void*,uint64_t,const risc_spi_frame_v1*,const uint8_t*,size_t);
   static bool spiBegin(void*,uint64_t,uint32_t,uint8_t,uint32_t);
   static bool spiTransfer(void*,uint64_t,const uint8_t*,uint8_t*,size_t);
   static bool spiEnd(void*,uint64_t); static bool spiRelease(void*,uint64_t);
+  static bool i2sStandardOpen(void*,uint8_t,uint32_t,uint64_t*);
   static bool i2sOpen(void*,uint8_t,bool,uint8_t,int8_t,uint8_t,uint32_t,uint8_t,uint64_t*);
   static bool i2sWrite(void*,uint64_t,const int16_t*,size_t,size_t*,uint32_t);
   static bool i2sRead(void*,uint64_t,int16_t*,size_t,size_t*,uint32_t);

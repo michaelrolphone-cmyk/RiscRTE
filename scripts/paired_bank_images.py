@@ -13,6 +13,8 @@ import zlib
 
 LAYOUT = 'riscrte-paired-16m-v1'
 APP_DATA_LAYOUT = 'riscrte-paired-appdata-v2'
+APP_DATA_EXPANDED_LAYOUT = 'riscrte-paired-appdata-v3'
+APP_DATA_EXPANDED_STORE_BYTES = 0x550000
 APP_DATA_FIRMWARE_MAX = 0x260000
 APP_DATA_OFFSET = 0x270000
 APP_DATA_BYTES = 0x80000
@@ -22,20 +24,22 @@ BOOTLOADER_SHA256 = '2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849
 FIRMWARE_MAX = 0x300000
 STORE_BYTES = 0x4f0000
 
-def record(bank, firmware, store, app_data=False):
+def record(bank, firmware, store, app_data=False, expanded=False):
+    if expanded and not app_data: raise ValueError("expanded requires app-data")
     maximum = APP_DATA_FIRMWARE_MAX if app_data else FIRMWARE_MAX
-    store_bytes = APP_DATA_STORE_BYTES if app_data else STORE_BYTES
-    abi = 2 if app_data else 1
+    store_bytes = APP_DATA_EXPANDED_STORE_BYTES if expanded else APP_DATA_STORE_BYTES if app_data else STORE_BYTES
+    abi = 3 if expanded else 2 if app_data else 1
     if bank not in (0, 1) or not 32 <= len(firmware) <= maximum or len(store) != store_bytes:
         raise ValueError('paired bank bounds')
     payload = struct.pack('<6I32s32sI', 0x314b4252, 1, bank, len(firmware), len(store), abi,
                           hashlib.sha256(firmware).digest(), hashlib.sha256(store).digest(), 0)
     return payload + struct.pack('<I', zlib.crc32(payload) & 0xffffffff)
 
-def parse_record(data, app_data=False):
+def parse_record(data, app_data=False, expanded=False):
+    if expanded and not app_data: raise ValueError("expanded requires app-data")
     maximum = APP_DATA_FIRMWARE_MAX if app_data else FIRMWARE_MAX
-    store_bytes = APP_DATA_STORE_BYTES if app_data else STORE_BYTES
-    abi = 2 if app_data else 1
+    store_bytes = APP_DATA_EXPANDED_STORE_BYTES if expanded else APP_DATA_STORE_BYTES if app_data else STORE_BYTES
+    abi = 3 if expanded else 2 if app_data else 1
     if len(data) != 96:
         raise ValueError('record length')
     fields = struct.unpack('<6I32s32sII', data)
@@ -50,25 +54,27 @@ def initial_otadata():
     assert len(entry) == 32
     return entry + b'\xff' * (8192-len(entry))
 
-def initial_bank_state(firmware, store, app_data=False):
-    return record(0, firmware, store, app_data) + b'\xff' * (8192-96)
+def initial_bank_state(firmware, store, app_data=False, expanded=False):
+    return record(0, firmware, store, app_data, expanded) + b'\xff' * (8192-96)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--expanded', action='store_true', help='Explicit expanded stores/ABI3; requires --app-data')
     parser.add_argument('--app-data', action='store_true', help='Explicit incompatible app-data layout/ABI2')
     parser.add_argument('--firmware', type=Path, required=True)
     parser.add_argument('--store', type=Path, required=True)
     parser.add_argument('--bootloader', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     args=parser.parse_args()
+    if args.expanded and not args.app_data: parser.error('--expanded requires --app-data')
     loader=args.bootloader.read_bytes()
     if len(loader)!=BOOTLOADER_BYTES or hashlib.sha256(loader).hexdigest()!=BOOTLOADER_SHA256:
         raise ValueError('unverified rollback bootloader')
     fw=args.firmware.read_bytes();store=args.store.read_bytes()
-    marker = b'RISC_PAIRED_STORE_ABI:2\0' if args.app_data else b'RISC_PAIRED_STORE_ABI:1\0'
+    marker = b'RISC_PAIRED_STORE_ABI:3\0' if args.expanded else b'RISC_PAIRED_STORE_ABI:2\0' if args.app_data else b'RISC_PAIRED_STORE_ABI:1\0'
     if marker not in fw or b'RISC_RUNTIME_VERSION:' not in fw:
         raise ValueError('native image lacks compatible runtime markers')
-    state=initial_bank_state(fw,store,args.app_data);parse_record(state[:96],args.app_data)
+    state=initial_bank_state(fw,store,args.app_data,args.expanded);parse_record(state[:96],args.app_data,args.expanded)
     args.output.mkdir(parents=True,exist_ok=True)
     (args.output/'otadata.bin').write_bytes(initial_otadata())
     (args.output/'bank_state.bin').write_bytes(state)

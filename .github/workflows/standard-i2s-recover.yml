@@ -1,0 +1,64 @@
+name: Standard I2S integration recovery
+on:
+  push:
+    branches: [feat/watch-quad-spi]
+    paths: ['.github/workflows/standard-i2s-recover.yml']
+permissions:
+  contents: write
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/watch-quad-spi
+      - name: Decode verified source patch
+        run: |
+          python3 - <<'PY'
+          import re,gzip,base64,hashlib,subprocess
+          from pathlib import Path
+          if not Path('sdk/driver/RiscI2sStandardV1.h').exists():
+              text=Path('.github/workflows/standard-i2s-import.yml').read_text()
+              encoded=re.search(r'PATCH: >-\s+([A-Za-z0-9+/=]+)',text).group(1)
+              encoded=encoded.replace('REHERSVSSbKououTqd','REHERSVSSbKououoTqd')
+              patch=gzip.decompress(base64.b64decode(encoded))
+              assert len(patch)==43808 and hashlib.sha256(patch).hexdigest()=='a9de74e88976259c5d2a0c9c0660c952b7d35dd6722b19279e25a2960e550711'
+              subprocess.run(['git','apply','--check','-'],input=patch,check=True)
+              subprocess.run(['git','apply','-'],input=patch,check=True)
+          PY
+      - name: Validate production transport paths
+        run: |
+          bash test/run_i2s_test.sh
+          SANITIZE=1 bash test/run_i2s_test.sh
+          bash test/run_native_spi_test.sh
+          bash test/run_board_test.sh
+      - name: Commit tested source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add platformio.ini sdk src test docs/STANDARD_I2S.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add standard I2S MCLK duplex transport and universal runtime profile 0.3.0'
+            git push origin HEAD:feat/watch-quad-spi
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile universal ESP32-S3 runtime
+        run: |
+          python -m pip install platformio==6.1.18 pyelftools==0.32
+          pio run -e esp32s3-16mb-appdata-universal
+          git rev-parse HEAD > UNIVERSAL_SOURCE.txt
+          git archive HEAD | gzip > universal-native-source.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: universal-native
+          path: |
+            UNIVERSAL_SOURCE.txt
+            universal-native-source.tar.gz
+            .pio/build/esp32s3-16mb-appdata-universal/firmware.elf
+            .pio/build/esp32s3-16mb-appdata-universal/firmware.bin
+            .pio/build/esp32s3-16mb-appdata-universal/bootloader.bin
+            .pio/build/esp32s3-16mb-appdata-universal/partitions.bin
+          retention-days: 30

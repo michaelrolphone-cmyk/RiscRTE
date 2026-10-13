@@ -4,10 +4,10 @@ repo="$(cd "$(dirname "$0")/.." && pwd)"
 build="$(mktemp -d)";trap 'rm -rf "$build"' EXIT
 flags=(-std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers)
 if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g);fi
-"${CXX:-c++}" "${flags[@]}" -I"$repo/test/native_i2s_shim" -I"$repo/test/native_sleep_shim" -I"$repo/sdk/driver" -I"$repo/src" "$repo/test/native_i2s_test.cpp" -o "$build/native"
-"${CXX:-c++}" "${flags[@]}" -I"$repo/test/native_i2s_shim" -I"$repo/test/native_sleep_shim" -I"$repo/sdk/driver" -I"$repo/src" "$repo/test/native_i2s_rx_test.cpp" -o "$build/native-rx"
-"$build/native-rx"
-"$build/native"
+for suite in native_i2s_test native_i2s_rx_test native_i2s_standard_test; do
+  "${CXX:-c++}" "${flags[@]}" -I"$repo/sdk/hardware" -I"$repo/test/native_i2s_shim" -I"$repo/test/native_sleep_shim" -I"$repo/sdk/driver" -I"$repo/src" "$repo/test/$suite.cpp" -o "$build/$suite"
+  "$build/$suite"
+done
 "${CXX:-c++}" "${flags[@]}" -rdynamic -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
@@ -18,6 +18,11 @@ if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=address,undefined -fno-s
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
  "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/test/i2s_binding_test.cpp" -ldl -o "$build/binding"
 "$build/binding" "$build"
+"${CXX:-c++}" "${flags[@]}" -rdynamic -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
+ "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
+ "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
+ "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/test/i2s_standard_binding_test.cpp" -ldl -o "$build/standard-binding"
+"$build/standard-binding" "$build"
 "${CXX:-c++}" "${flags[@]}" -rdynamic -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \

@@ -7,7 +7,7 @@ from radio_iq_proof import prove
 import json
 def verify(source,target,env):
  path=Path(str(target[0]))
- proof=prove(path.read_bytes())
+ proof=prove(path.read_bytes(),env.GetProjectOption('custom_radio_iq_target_identity',default='esp32s3-16mb-appdata-iq'))
  (path.parent/'radio-iq-proof.json').write_text(json.dumps(proof,indent=2,sort_keys=True)+'\n')
  print('Verified IQ bank reservation and DRAM/IRAM alias exclusion:',hex(proof['bank_base']))
 env.AddPostAction('$BUILD_DIR/${PROGNAME}.elf',verify)

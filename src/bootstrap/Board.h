@@ -3,6 +3,9 @@
 #include <RiscHardwareConfigV1.h>
 #include <TWatchHardwareV1.h>
 #include <RiscTouchI2cV2.h>
+#include <RiscDisplaySpiV2.h>
+#include <RiscI2cFunctionV1.h>
+#include <RiscI2sStandardConfigV1.h>
 namespace RiscBoot {
 class Board final {
  public:
@@ -20,6 +23,7 @@ class Board final {
       risc_hw_quadrature_v1 quadrature;
       risc_hw_pixel_v1 pixel;
       risc_hw_spi_display_v1 display;
+      risc_hw_spi_display_v2 displayQuad;
       risc_hw_i2c_touch_v1 touch;
       risc_hw_i2c_touch_v2 touchPowered;
       risc_hw_sd_spi_v1 sd;
@@ -27,12 +31,15 @@ class Board final {
       tw_hw_gpio_controller_v1 gpioController;
       tw_hw_i2c_controller_v1 i2cController;
       tw_hw_i2c_device_v1 peripheral;
+      risc_hw_i2c_function_v1 i2cFunction;
       tw_hw_axp2101_v1 power;
       tw_hw_audio_v1 audio;
+      risc_hw_i2s_standard_v1 standardAudio;
       tw_hw_lora_v1 lora;
       tw_hw_lora_v2 loraSelectable;
       Config() : display{} {}
     } config;
+    const risc_hw_spi_display_v1& display() const { return hardware.config_version==2?config.displayQuad.base:config.display; }
     const risc_hw_i2c_touch_v1& touch() const { return hardware.config_version==2?config.touchPowered.base:config.touch; }
     const tw_hw_lora_v1& lora() const { return hardware.config_version==2?config.loraSelectable.base:config.lora; }
     Binding bindings[16]{};

@@ -4,13 +4,26 @@
 #ifndef RISC_NATIVE_RECOVERY_AXP2101
 #define RISC_NATIVE_RECOVERY_AXP2101 0
 #endif
+#ifndef RISC_NATIVE_RECOVERY_GPIO
+#define RISC_NATIVE_RECOVERY_GPIO 0
+#endif
+#if RISC_NATIVE_RECOVERY_AXP2101 && RISC_NATIVE_RECOVERY_GPIO
+#error "Select exactly one native recovery input"
+#endif
 namespace RiscCpu { namespace NativeCrownRecovery {
 using Transfer=bool(*)(uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t);
-#if RISC_NATIVE_RECOVERY_AXP2101
+#if RISC_NATIVE_RECOVERY_GPIO
+bool gpioOpened(uint8_t pin,bool output);
+bool gpioClosing(uint8_t pin);
+#else
+inline bool gpioOpened(uint8_t,bool){return true;}
+inline bool gpioClosing(uint8_t){return true;}
+#endif
+#if RISC_NATIVE_RECOVERY_AXP2101 || RISC_NATIVE_RECOVERY_GPIO
 bool opened(uint8_t,uint8_t,uint8_t,Transfer);
 bool transact(uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32_t,Transfer);
 bool closing(uint8_t);
-bool pause();
+bool pause(bool requireQuiet=false);
 void resume(bool gpioWake=false);
 uint32_t shortSequence();
 bool previousEmergency();
@@ -22,7 +35,7 @@ bool exitRequested();
 inline bool opened(uint8_t,uint8_t,uint8_t,Transfer){return true;}
 inline bool transact(uint8_t p,uint8_t a,const uint8_t*t,size_t n,uint8_t*r,size_t z,uint32_t ms,Transfer f){return f(p,a,t,n,r,z,ms);}
 inline bool closing(uint8_t){return true;}
-inline bool pause(){return true;}
+inline bool pause(bool=false){return true;}
 inline void resume(bool=false){}
 inline uint32_t shortSequence(){return 0;}
 inline bool previousEmergency(){return false;}

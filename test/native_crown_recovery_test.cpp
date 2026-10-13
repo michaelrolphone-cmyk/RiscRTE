@@ -2,6 +2,7 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 #include <esp_system.h>
+#include <esp_sleep.h>
 #include <atomic>
 #include <cassert>
 #include <cstdio>
@@ -19,6 +20,7 @@ uint32_t releaseAt=0;
 uint8_t status=0,irqMask=0x80;
 unsigned watchdogFeeds=0;bool watchdogRegistered=false;
 esp_reset_reason_t resetReason=ESP_RST_POWERON;
+esp_sleep_wakeup_cause_t wakeCause=ESP_SLEEP_WAKEUP_UNDEFINED;
 struct Stop{};
 struct Reboot{};
 bool raw(uint8_t port,uint8_t address,const uint8_t* tx,size_t tn,uint8_t* rx,size_t rn,uint32_t){
@@ -45,9 +47,17 @@ int esp_task_wdt_add(void*){watchdogRegistered=true;return 0;}
 int esp_task_wdt_reset(){assert(watchdogRegistered);++watchdogFeeds;return 0;}
 int64_t esp_timer_get_time(){return int64_t(ms.load())*1000;}
 esp_reset_reason_t esp_reset_reason(){return resetReason;}
+esp_sleep_wakeup_cause_t esp_sleep_get_wakeup_cause(){return wakeCause;}
 [[noreturn]] void esp_restart_noos(){++reboots;throw Reboot{};}
 int main(int argc,char**argv){
   assert(argc==2);using namespace RiscCpu::NativeCrownRecovery;
+  const bool deep=!strncmp(argv[1],"deep-",5);
+  if(deep){resetReason=ESP_RST_DEEPSLEEP;wakeCause=ESP_SLEEP_WAKEUP_EXT1;
+    if(!strcmp(argv[1],"deep-ext0"))wakeCause=ESP_SLEEP_WAKEUP_EXT0;
+    if(!strcmp(argv[1],"deep-gpio"))wakeCause=ESP_SLEEP_WAKEUP_GPIO;
+    if(!strcmp(argv[1],"deep-timer"))wakeCause=ESP_SLEEP_WAKEUP_TIMER;
+    if(!strcmp(argv[1],"deep-cold"))resetReason=ESP_RST_POWERON;
+  }
   const bool exitBus=!strcmp(argv[1],"exit-bus-stuck");
   const bool exitTimeout=!strcmp(argv[1],"exit-timeout"),homeShort=!strcmp(argv[1],"home-short"),cleanExit=!strcmp(argv[1],"clean-exit");
   const bool release=!strcmp(argv[1],"release"),failure=!strcmp(argv[1],"bus-error"),sleep=!strcmp(argv[1],"sleep");
@@ -56,6 +66,41 @@ int main(int argc,char**argv){
   const bool openedOk=opened(0,10,11,raw);
   if(failTask||wrongId){assert(!openedOk);puts("Native crown start refuses missing task/wrong chip PASS");return 0;}
   assert(openedOk && worker && irqMask==0x8f);
+  if(deep){
+    uint8_t reg=0x49,value=0,ack[]={0x49,15};
+    const bool fast=!strcmp(argv[1],"deep-fast"),motion=!strcmp(argv[1],"deep-motion");
+    const bool suppress=wakeCause!=ESP_SLEEP_WAKEUP_TIMER && resetReason==ESP_RST_DEEPSLEEP && !motion;
+    status=motion?0:fast?11:2;
+    if(!strcmp(argv[1],"deep-read-failure")){
+      busError=true;assert(!transact(0,0x34,&reg,1,&value,1,40,raw));busError=false;
+    }
+    assert(transact(0,0x34,&reg,1,&value,1,40,raw));
+    assert(transact(0,0x34,ack,2,nullptr,0,40,raw));
+    if(motion){status=2;assert(transact(0,0x34,&reg,1,&value,1,40,raw));}
+    if(!fast){ms=2000;status=9;assert(transact(0,0x34,&reg,1,&value,1,40,raw));}
+    assert(shortSequence()==(suppress?0u:1u));assert(bool(value&8)==!suppress);
+    assert(transact(0,0x34,ack,2,nullptr,0,40,raw));
+    // A provider reopen must not consume a second independent user gesture.
+    assert(closing(0));assert(opened(0,10,11,raw));
+    status=2;assert(transact(0,0x34,&reg,1,&value,1,40,raw));
+    status=9;assert(transact(0,0x34,&reg,1,&value,1,40,raw));
+    assert(value&8);assert(shortSequence()==(suppress?1u:2u));
+    assert(closing(0));puts("Native deep-wake gesture boundary PASS");return 0;
+  }
+  if(!strcmp(argv[1],"prepare-race")){
+    uint8_t reg=0x49,value=0,ack[]={0x49,15};
+    refuseLock=true;assert(!pause(true));refuseLock=false;
+    status=8;assert(transact(0,0x34,&reg,1,&value,1,40,raw));
+    assert(status==0);assert(!pause(true)); // IRQ high, software history still pending.
+    assert(transact(0,0x34,ack,2,nullptr,0,40,raw));
+    status=2;assert(transact(0,0x34,&reg,1,&value,1,40,raw));
+    assert(transact(0,0x34,ack,2,nullptr,0,40,raw));
+    assert(!pause(true)); // Acknowledging history does not release a held crown.
+    status=9;assert(transact(0,0x34,&reg,1,&value,1,40,raw));
+    assert(transact(0,0x34,ack,2,nullptr,0,40,raw));
+    assert(pause(true));resume();assert(pause(true));resume();
+    assert(closing(0));puts("Native deep preparation preserves pending and held keys PASS");return 0;
+  }
   uint8_t mask[]={0x41,8};assert(transact(0,0x34,mask,2,nullptr,0,40,raw)&&irqMask==15);
   // Native polling/ACK and the legacy PMU client see independent histories.
   status=8;uint8_t reg=0x49,value=0;

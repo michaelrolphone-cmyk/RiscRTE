@@ -34,6 +34,14 @@ class RadioIqElf(unittest.TestCase):
  def test_wrong_target(self):
   data=self.data.replace(b'esp32s3-16mb-appdata-iq\0',b'esp32s3-16mb-appdata-xx\0')
   with self.assertRaisesRegex(ValueError,'target identity'):proof.prove(data)
+ def test_explicit_target_preserves_memory_proof(self):
+  data=self.data.replace(b'esp32s3-16mb-appdata-iq\0',b'esp32s3-16mb-appdata-xx\0')
+  result=proof.prove(data,'esp32s3-16mb-appdata-xx')
+  self.assertEqual(result['reservation_table'],self.good['reservation_table'])
+  self.assertEqual(result['allocated_sections'],self.good['allocated_sections'])
+  self.assertEqual(result['target_identity'],'esp32s3-16mb-appdata-xx')
+  for invalid in ('', 'a\0b', 'a b', 'a'*64):
+   with self.assertRaisesRegex(ValueError,'target identity'):proof.prove(data,invalid)
  def test_wrong_reservation(self):
   data=bytearray(self.data);needle=struct.pack('<II',*proof.BANK)
   # Match the actual table location rather than any unrelated constants.

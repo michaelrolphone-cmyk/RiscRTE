@@ -1,4 +1,5 @@
 #include "Runtime.h"
+#include "AppDeclarations.h"
 #include "RemovableAppImage.h"
 #include "runtime/drivers/DeviceProviderExecutorV2.h"
 #include "runtime/drivers/NativeProviderPolicySnapshotV1.h"
@@ -84,7 +85,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](risc_failure_evidence_client_v1* out){return currentRuntime && currentRuntime->failureEvidenceClient(out);},
     [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && currentRuntime->diagnosticCheckpointClient(out);},
     [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);},
-    [](){return currentRuntime && currentRuntime->exitRequested();}};
+    [](){return currentRuntime && currentRuntime->exitRequested();},
+    [](risc_runtime_launch_failure_v1* out){return currentRuntime && currentRuntime->takeLaunchFailure(out);}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -106,13 +108,16 @@ Runtime::~Runtime() {
   // Native owners retain the entire metadata candidate after lost I/O custody.
   // As with GraphV2, destruction is a caller contract violation, never cleanup.
   if(retainedNativeProviderRead_ || retainedNativeProviderBytes_)std::abort();
+  if(!fileSourceExitSafe() || fileSource_.token)std::abort();
   revokeProviders();
   RuntimeProviders::NativeProviderPolicySnapshotV1::destroy(nativePolicies_);
 }
 namespace {
 bool elfPath(const char* p) { size_t n=strlen(p); return n>4 && !strcmp(p+n-4,".elf"); }
 }
+#include "AppCatalogRuntime.inc"
 #include "FileOpenRuntime.inc"
+#include "FileSourceRuntime.inc"
 bool Runtime::manifest(JsonObjectConst m,Driver& d) {
   if (!keys(m,{"type","id","version","driver_abi","architecture","file_name","requires","provides"},
         {"hardware_compatibility","status","notes","description","display_name","physical_verification","part","legacy_manual_only"}) ||
@@ -150,7 +155,7 @@ bool Runtime::manifest(JsonObjectConst m,Driver& d) {
     char compatible[96]{}, type[96]{};
     if (!keys(c,{"compatible","revisions","config_type","config_version"}) ||
         !text(c["compatible"],compatible,96) || !text(c["config_type"],type,96) ||
-        !integer(c["config_version"],1,(!strcmp(type,"radio.lora") || !strcmp(type,"touch.i2c"))?2:1,api) || !c["revisions"].is<JsonArrayConst>()) return fail("invalid hardware compatibility");
+        !integer(c["config_version"],1,(!strcmp(type,"radio.lora") || !strcmp(type,"touch.i2c") || !strcmp(type,"display.spi"))?2:1,api) || !c["revisions"].is<JsonArrayConst>()) return fail("invalid hardware compatibility");
     JsonArrayConst revisions=c["revisions"]; if (!revisions.size() || revisions.size()>16) return false;
     bool revision=false;
     for (JsonVariantConst v:revisions) { char s[96]; if(!text(v,s,96) || strchr(s,'*')) return false; if(!strcmp(s,dev->revision)) revision=true; }
@@ -330,7 +335,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     if (!keys(item,{"manifest","grants"},{"app_data_export","image_source","catalog_authority"}) || !text(item["manifest"],relative,sizeof(relative)) ||
         !path(root_,relative,policy.elf,sizeof(policy.elf)) || (suppliedManifest.isNull() && !readJson(policy.elf,doc,&metadataCloseRetained_))) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=suppliedManifest.isNull()?doc.as<JsonObjectConst>():suppliedManifest.as<JsonObjectConst>(); char filename[128];
-    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","runtime_lifecycle"}) ||
+    if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","runtime_lifecycle","launcher_visible","min_firmware_version","optional"}) ||
         !eq(manifest["type"],"application") || !eq(manifest["architecture"],"xtensa-esp32s3") || !eq(manifest["entry"],"app_main") ||
         (!manifest["runtime_lifecycle"].isUnbound() && !eq(manifest["runtime_lifecycle"],"foreground") && !eq(manifest["runtime_lifecycle"],"legacy")) ||
         !text(manifest["id"],policy.id,sizeof(policy.id)) || !RuntimePackages::safeId(policy.id) ||
@@ -338,6 +343,9 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         !text(manifest["file_name"],filename,sizeof(filename)) || !RuntimePackages::safeArtifact(filename) || !elfPath(filename) ||
         !manifest["requires"].is<JsonArrayConst>() || manifest["requires"].size()>MaxAppRequirements ||
         !item["grants"].is<JsonArrayConst>() || item["grants"].size()>MaxAppPolicyGrants) return fail("invalid app identity/declarations");
+    const AppDeclarations declarations(manifest);
+    if(const char* error=declarations.error(MaxAppRequirements))return fail(error);
+    appCatalogMetadata(manifest,policy.catalog);
     FileOpenMetadata fileMetadata;
     if(!fileOpenMetadata(manifest,fileMetadata))return fail("invalid app file associations");
     if(fileMetadata.count) {
@@ -368,7 +376,8 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
       if(policy.sourceDriver<0)return fail("removable app volume unavailable");
       snprintf(policy.sourcePath,sizeof(policy.sourcePath),"/%s",relativeImage);
     }
-    for (JsonObjectConst request:manifest["requires"].as<JsonArrayConst>()) {
+    for (size_t declaration=0;declaration<declarations.size();++declaration) {
+      const JsonObjectConst request=declarations[declaration];
       char requested[96];int64_t api=0;
       if (!keys(request,{"capability","api"}) || !text(request["capability"],requested,sizeof(requested)) ||
           !integer(request["api"],1,UINT32_MAX,api)) return fail("invalid app requirement");
@@ -425,9 +434,17 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         } else if (!strcmp(capability,RISC_RANDOM_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || !port_.randomBytes)return fail("random bytes capability unavailable");
           grant.driver=RandomDriver;grant.capability=RISC_RANDOM_CAPABILITY;
+        } else if (!strcmp(capability,RISC_APP_CATALOG_CAPABILITY)) {
+          if(grant.api!=RISC_APP_CATALOG_API_V1 || grant.instance)return fail("invalid app catalog authority");
+          grant.driver=AppCatalogDriver;grant.capability=RISC_APP_CATALOG_CAPABILITY;
         } else if (!strcmp(capability,RISC_MEMORY_HEAP_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || !port_.memoryHeap)return fail("memory heap capability unavailable");
           grant.driver=MemoryHeapDriver;grant.capability=RISC_MEMORY_HEAP_CAPABILITY;
+        } else if (!strcmp(capability,RISC_FILE_OPEN_SOURCE_CAPABILITY)) {
+          const auto* source=port_.fileSource;
+          if(grant.api!=1 || grant.instance || !source || !source->begin || !source->write || !source->finish ||
+             !source->readAt || !source->discard || !source->exitSafe)return fail("file-source backend/authority unavailable");
+          grant.fileOpenSource=true;grant.capability=RISC_FILE_OPEN_SOURCE_CAPABILITY;
         } else if (!strcmp(capability,"file.open")) {
           if(grant.api!=T5_FILE_OPEN_API_VERSION || grant.instance)return fail("invalid file-open authority");
           grant.fileOpen=true;grant.capability="file.open";
@@ -470,17 +487,32 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         }
         ++policy.count;
       }
-      if (!matches) return fail("app requirement not uniquely authorized");
+      if (!matches && declarations.required(declaration)) return fail("app requirement not uniquely authorized");
     }
     if (policy.count!=item["grants"].size()) return fail("undeclared app grant");
     if(!replacing)++policyCount_;
+    appCatalogChanged();
   }
   return true;
 }
 bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
   if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !invocation_->appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
+  const bool catalog=!strcmp(capability,RISC_APP_CATALOG_CAPABILITY);
+  Invocation* const original=invocation_;
+  // A native catalog safety hook cannot claim any still-uncommitted grant
+  // slot recursively, even through a different authorized capability.
+  if(original->appCatalogBusy_)return false;
+  struct CatalogAcquisition {
+    bool* busy;
+    ~CatalogAcquisition(){if(busy)*busy=false;}
+  } catalogCall{catalog?&original->appCatalogBusy_:nullptr};
+  if(catalogCall.busy)*catalogCall.busy=true;
+  auto catalogCustody=[&](){return currentRuntime==this && invocation_==original &&
+    original->active_ && original->entryRunning_ && !retained_ && port_.owner();};
+  auto catalogRetain=[&](){retained_=true;fail("app catalog admission retained");(void)appExitBarrier(false);return false;};
   out->slot=out->generation=0;out->api=nullptr;
   if(!appDataExitSafe()){(void)appExitBarrier(false);return false;}
+  if(catalog && !catalogCustody())return catalogRetain();
   const AppGrantPolicy* allowed=nullptr;
   for (size_t i=0;i<invocation_->appPolicy_->count;++i) {
     const auto& p=invocation_->appPolicy_->grants[i];
@@ -496,7 +528,14 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   size_t slot=0;while(slot<16 && invocation_->appGrants_[slot].live)++slot;
   if (slot==16) return false;
   auto& grant=invocation_->appGrants_[slot];
-  if(allowed->driver==RandomDriver){
+  if(allowed->driver==AppCatalogDriver){
+    if(invocation_->appCatalogContext_ || !invocation_->entryRunning_ || retained_)return false;
+    if(!providerStorageSafe() || !catalogCustody())return catalogRetain();
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    invocation_->appCatalogContext_=context;
+    invocation_->appCatalogTable_={1,sizeof(invocation_->appCatalogTable_),context,appCatalogSnapshot,appCatalogGet};
+    grant.api=&invocation_->appCatalogTable_;
+  } else if(allowed->driver==RandomDriver){
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
     grant.random={1,sizeof(grant.random),context,randomFill};grant.api=&grant.random;
   } else if(allowed->driver==MemoryHeapDriver){
@@ -534,6 +573,8 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     invocation_->retainedWakeTable_={1,sizeof(invocation_->retainedWakeTable_),context,retainedWakeRead,retainedWakeStage,retainedWakeClear};
 #endif
     grant.api=&invocation_->retainedWakeTable_;
+  } else if (allowed->fileOpenSource) {
+    grant.api=fileOpenSourceApi();
   } else if (allowed->fileOpen) {
     grant.api=fileOpenApi();
   } else if (allowed->driver==AppDataExportDriver) {
@@ -588,6 +629,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   grant.live=true;grant.generation=++grantGeneration_;grant.invocation=invocation_->streams_.context();
   serviceProviders();
   if(!appExitBarrier(false))return false;
+  if(catalog && !catalogCustody())return catalogRetain();
   out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
 }
 int32_t Runtime::randomFill(void* context,void* bytes,uint32_t length){
@@ -773,6 +815,7 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   }
   if(grant.api==&invocation_->installedVolume_){if(!invocation_->installedFiles_->end()){if(residentEnabled_)(void)appExitBarrier();return false;}invocation_->installedVolumeContext_=nullptr;}
   if(grant.api==&invocation_->appDataTable_){if(!appDataExitSafe()){if(residentEnabled_)(void)appExitBarrier();return false;}invocation_->appDataContext_=nullptr;invocation_->appDataNamespace_=0;invocation_->appDataSharedFile_=nullptr;}
+  if(grant.api==&invocation_->appCatalogTable_)invocation_->appCatalogContext_=nullptr;
   if(grant.api==&invocation_->promotionTable_)invocation_->promotionContext_=nullptr;
   if(grant.api==&invocation_->realtimeTable_)invocation_->realtimeContext_=nullptr;
   if(grant.api==&invocation_->realtimeControlTable_)invocation_->realtimeControlContext_=nullptr;
@@ -796,6 +839,7 @@ bool Runtime::revokeApp() {
       if(!invocation_->installedFiles_->end()){retained_=true;(void)appExitBarrier();return false;}
       invocation_->installedVolumeContext_=nullptr;
     }
+    if(grant.api==&invocation_->appCatalogTable_)invocation_->appCatalogContext_=nullptr;
     if(grant.api==&invocation_->promotionTable_)invocation_->promotionContext_=nullptr;
     if(grant.api==&invocation_->realtimeTable_)invocation_->realtimeContext_=nullptr;
     if(grant.api==&invocation_->realtimeControlTable_)invocation_->realtimeControlContext_=nullptr;
@@ -1096,24 +1140,31 @@ bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& 
   if(!parse(static_cast<const char*>(bytes),size,doc))return false;
   JsonObjectConst m=doc.as<JsonObjectConst>();char version[32];
   const char* basename=strrchr(policy->elf,'/');if(!basename)return false;++basename;
-  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types"}) ||
+  if(!keys(m,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","launcher_visible","min_firmware_version","optional"}) ||
      !eq(m["type"],"application") || !eq(m["id"],id) || !eq(m["architecture"],"xtensa-esp32s3") ||
      !eq(m["entry"],"app_main") || !eq(m["file_name"],basename) || !text(m["version"],version,sizeof(version)) ||
-     !RuntimePackages::safeVersion(version) || !m["requires"].is<JsonArrayConst>() ||
-     m["requires"].size()!=required)return false;
+     !RuntimePackages::safeVersion(version))return false;
+  const AppDeclarations declarations(m);
+  if(declarations.error(MaxAppRequirements))return false;
   FileOpenMetadata fileMetadata;
   if(!fileOpenMetadata(m,fileMetadata))return false;
   uint32_t candidate[3],current[3];
   if(!RiscUpdate::parseVersion(version,candidate) || !RiscUpdate::parseVersion(policy->version,current) ||
      RiscUpdate::compareVersion(candidate,current)<=0)return false;
   bool matched[MaxAppPolicyGrants]{};
-  for(JsonObjectConst req:m["requires"].as<JsonArrayConst>()) {
+  size_t matchedDeclarations=0;
+  for(size_t declaration=0;declaration<declarations.size();++declaration) {
+    const JsonObjectConst req=declarations[declaration];
     char name[96];int64_t api;
     if(!keys(req,{"capability","api"}) || !text(req["capability"],name,sizeof(name)) || !integer(req["api"],1,UINT32_MAX,api))return false;
     size_t g=0;for(;g<policy->count;++g)if(!strcmp(name,policy->grants[g].capability) && uint32_t(api)==policy->grants[g].api)break;
-    if(g==policy->count || matched[g])return false;
-    matched[g]=true;
+    if(g==policy->count){if(declarations.required(declaration))return false;continue;}
+    if(matched[g])return false;
+    matched[g]=true;++matchedDeclarations;
   }
+  // Every immutable owner-granted declaration remains represented, including
+  // optional grants. New optional rows never manufacture update authority.
+  if(matchedDeclarations!=required)return false;
   size_t rootLength=strlen(root_);
   if(strncmp(policy->elf,root_,rootLength) || policy->elf[rootLength]!='/' || strlen(policy->elf+rootLength+1)>=sizeof(out.elf))return false;
   strcpy(out.elf,policy->elf+rootLength+1);
@@ -1222,7 +1273,7 @@ bool Runtime::appExitBarrier(bool exiting) {
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if(graphSafe && otherSafe && hostSafe && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
+  if(graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());
@@ -1408,7 +1459,8 @@ bool Runtime::runOne(const char* name) {
     // A child cannot replace native exit with a different app handoff. Every
     // fini/grant/allocation/image barrier has completed before Home is queued.
     strcpy(invocation_->queued_,default_);
-    invocation_->fileOpen_={};residentContinuation_[0]=0;
+    if(!fileSourceCleanup())return false;
+    invocation_->fileOpen_={};residentContinuation_[0]=0;residentTransferFileOpen_={};
     port_.log("RTE_CONTROL crown=exit cleanup=complete action=home");
   }
   unloadTrace.result(1);
@@ -1425,6 +1477,13 @@ bool Runtime::reclaimAppImages() {
 #else
   return false;
 #endif
+}
+bool Runtime::takeLaunchFailure(risc_runtime_launch_failure_v1* out) {
+  if(!out || out->struct_size<sizeof(*out) || !active() || !port_.owner() ||
+     retained_ || invocation_!=&mainInvocation_ || !invocation_->defaultRunning_ ||
+     !invocation_->entryRunning_ || invocation_->queued_[0] || promotionRunning_ ||
+     !graph_.activationSafe() || !launchFailure_.struct_size)return false;
+  *out=launchFailure_;launchFailure_={};return true;
 }
 bool Runtime::run() {
   if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained_) return fail("runtime not launchable");
@@ -1514,12 +1573,26 @@ bool Runtime::run() {
     };
     // A file receiver always returns to its fresh caller, including load/init
     // failure and when the receiver happens to be the configured default.
-    if(fileOpenAfterRun(completed)) { resumeHost();error_[0]=0;port_.delay(1);continue; }
+    const bool fileCaller=fileOpenAfterRun(completed);
+    if(retained_){ok=false;break;}
+    if(fileCaller) { resumeHost();error_[0]=0;port_.delay(1);continue; }
     if(!completed && isDefault) { ok=false; break; }
     if(residentEnabled_ && isDefault && residentContinuation_[0]) {
       ok=fail("resident host did not consume pending continuation");break;
     }
-    if(!completed) port_.log("RTE_APP child=failed action=reload-default");
+    if(!completed) {
+      launchFailure_={};launchFailure_.struct_size=sizeof(launchFailure_);
+      for(size_t p=0;p<policyCount_;++p)
+        if(!strcmp(policies_[p].elf,invocation_->current_) && policies_[p].sourceDriver>=0 &&
+           invocation_->failureKind==RISC_RESIDENT_FAILURE_LOAD)
+          launchFailure_.flags=RISC_LAUNCH_FAILURE_EXTERNAL_IMAGE;
+      const char* name=invocation_->current_;
+      const size_t prefix=strlen(root_);
+      if(!strncmp(name,root_,prefix) && name[prefix]=='/')name+=prefix+1;
+      snprintf(launchFailure_.application,sizeof(launchFailure_.application),"%.127s",name);
+      snprintf(launchFailure_.detail,sizeof(launchFailure_.detail),"%.159s",error_);
+      port_.log("RTE_APP child=failed action=reload-default");
+    }
     if(completed && invocation_->queued_[0]) strcpy(invocation_->current_,invocation_->queued_);
     else if(!isDefault) strcpy(invocation_->current_,default_);
     else break;
@@ -1527,6 +1600,7 @@ bool Runtime::run() {
     // Default reload is a fresh invocation: no ELF pointers/static state survive.
     error_[0]=0; port_.delay(1);
   }
+  if(!retained_ && !fileSourceCleanup())ok=false;
   if(!retained_) {
     for(size_t i=driverCount_;i--;) if(grants_[i].slot && !graph_.release(grants_[i])) {
       retained_=true;
@@ -1578,7 +1652,7 @@ bool RiscBoot::Runtime::admitInstalledAppAt(const char* policyJson,const char* m
      strcmp(invocation_->current_,default_) || foregroundRunning_ ||
      (foreground_ && foreground_->active_) || invocation_->streams_.busy()))return false;
   JsonDocument policy,manifest,rows;
-  if(deserializeJson(policy,policyJson) || deserializeJson(manifest,manifestJson) ||
+  if(!parse(policyJson,strlen(policyJson),policy) || !parse(manifestJson,strlen(manifestJson),manifest) ||
      !policy.is<JsonObjectConst>() || !manifest.is<JsonObjectConst>() ||
      policy["image_source"].isNull() || !policy["app_data_export"].isNull())return false;
   rows.to<JsonArray>().add(policy.as<JsonVariantConst>());

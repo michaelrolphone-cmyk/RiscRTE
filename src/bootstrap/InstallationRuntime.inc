@@ -84,6 +84,13 @@ bool Runtime::installationNamespaceRangeSafe()const{
 }
 bool Runtime::installationMutable(size_t i)const{
  if(i>=policyCount_)return false;
+ // Source custody and copied source continuations pin the admitted identities
+ // even while caller/receiver images are unloaded or the resident host runs.
+ if(fileSource_.token && fileSource_.owner==int(i))return false;
+ auto sourcePins=[i](const FileOpenState& state){return state.sourceToken &&
+   state.phase!=FileOpenState::Phase::Idle && (state.caller==int(i)||state.receiver==int(i));};
+ if(sourcePins(mainInvocation_.fileOpen_)||sourcePins(residentTransferFileOpen_)||
+    (foreground_&&sourcePins(foreground_->fileOpen_)))return false;
  const auto*p=&policies_[i];
  return (!mainInvocation_.active_ || mainInvocation_.appPolicy_!=p) && (!foreground_ || foreground_->appPolicy_!=p || !foreground_->active_);
 }
@@ -98,7 +105,7 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
  if(strncmp(relative,"Apps/",5)||!slash||slash<=relative+5||strcmp(slash,"/manifest.json")||
     !InstalledFiles::valid(relative,false))return RISC_INSTALL_INVALID;
  JsonDocument manifest,envelope,policy;
- if(deserializeJson(manifest,json)||deserializeJson(envelope,r->installation_[0].grants))return RISC_INSTALL_INVALID;
+ if(!parse(json,strlen(json),manifest)||deserializeJson(envelope,r->installation_[0].grants))return RISC_INSTALL_INVALID;
  char id[96],artifact[128];if(!text(manifest["id"],id,sizeof(id))||!text(manifest["file_name"],artifact,sizeof(artifact)))return RISC_INSTALL_INVALID;
  const auto mode=manifest["runtime_lifecycle"];
  if(!mode.isUnbound()&&!eq(mode,"foreground")&&!eq(mode,"legacy"))return RISC_INSTALL_INVALID;
@@ -106,7 +113,8 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
  if(image.size()>=cap||image.size()>=128)return RISC_INSTALL_INVALID;
  policy["manifest"]=relative;policy["image_source"]["volume_instance"]=r->installation_[0].volume;
  policy["image_source"]["path"]=image;auto grants=policy["grants"].to<JsonArray>();
- if(!manifest["requires"].is<JsonArrayConst>())return RISC_INSTALL_INVALID;
+ const AppDeclarations declarations(manifest.as<JsonObjectConst>());
+ if(declarations.error(MaxAppRequirements))return RISC_INSTALL_INVALID;
  // Immutable boot reservations preserve a legacy identity's exact grants,
  // including multiple shared/private KV namespaces and named shared files.
  // They are never launchable and never confer authority to another identity.
@@ -119,7 +127,8 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
   if(!oldSlash || size_t(oldSlash-authority->sourcePath)!=size_t(slash-relative)+1 ||
      strncmp(authority->sourcePath+1,relative,size_t(slash-relative)))return RISC_INSTALL_DENIED;
  }
- for(JsonObjectConst requirement:manifest["requires"].as<JsonArrayConst>()){
+ for(size_t declaration=0;declaration<declarations.size();++declaration){
+  const JsonObjectConst requirement=declarations[declaration];
   unsigned matches=0;
   if(authority){
    for(size_t g=0;g<authority->count;++g){const auto& allowed=authority->grants[g];
@@ -128,7 +137,7 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
     if(allowed.driver==SharedDataDriver)grant["file"]=allowed.sharedFile;
     ++matches;
    }
-   if(!matches)return RISC_INSTALL_DENIED;
+   if(!matches && declarations.required(declaration))return RISC_INSTALL_DENIED;
   }else{
    for(JsonObjectConst allowed:envelope.as<JsonArrayConst>())
     if(requirement["capability"]==allowed["capability"]&&requirement["api"]==allowed["api"]){
@@ -145,7 +154,7 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
      auto grant=grants.add<JsonObject>();grant["capability"]=provider.provides;grant["api"]=provider.api;grant["instance_id"]=provider.instance;++matches;
     }
    }
-   if(matches!=1)return RISC_INSTALL_DENIED;
+   if(matches>1 || (!matches && declarations.required(declaration)))return RISC_INSTALL_DENIED;
   }
  }
  const uint32_t namespaceSlot=r->installation_[0].namespaceSlot;

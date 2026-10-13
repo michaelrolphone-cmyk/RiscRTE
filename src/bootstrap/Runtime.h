@@ -1,6 +1,7 @@
 #pragma once
 #include "RiscMemoryHeapV1.h"
 #include "RiscRandomV1.h"
+#include <RiscAppCatalogV1.h>
 #include <RiscInstallationV1.h>
 #include "Board.h"
 #include "AppPolicyLimits.h"
@@ -14,6 +15,7 @@
 #include "runtime/storage/SdFirstKeyValue.h"
 #include "runtime/storage/ScalableSettings.h"
 #include "FileOpenState.h"
+#include "FileSourceBackend.h"
 #include "FailureEvidenceBackend.h"
 #include "runtime/sleep/RetainedWake.h"
 #include <memory>
@@ -94,6 +96,7 @@ struct Port {
   void (*controlBegin)(bool child)=nullptr;
   bool (*controlEnd)()=nullptr;
   bool (*controlExitRequested)()=nullptr;
+  const FileSourceBackend* fileSource=nullptr;
 };
 class Runtime final {
  public:
@@ -138,6 +141,7 @@ class Runtime final {
   bool residentClient(risc_resident_client_v1*);
   bool diagnosticCheckpointClient(risc_diagnostic_checkpoint_client_v1*);
   int32_t diagnosticCheckpointWrite(uint64_t,const char*,uint32_t);
+  bool takeLaunchFailure(risc_runtime_launch_failure_v1*);
   bool failureEvidenceClient(risc_failure_evidence_client_v1*);
   int32_t failureEvidenceRead(uint64_t,risc_failure_evidence_v1*);
   int32_t failureEvidenceAcknowledge(uint64_t,uint32_t,uint32_t);
@@ -192,7 +196,7 @@ class Runtime final {
   bool retained() const { return retained_; }
   // Compiled-in reset/deep-sleep admission. A suspended native stack has no
   // durable checkpoint; the foreground must finish before RAM can be lost.
-  bool residentResetSafe() const {return appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
+  bool residentResetSafe() const {return fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
   // by their native store owner, which must retain its mount/session.
@@ -323,7 +327,7 @@ class Runtime final {
     // Runtime is nonmovable and provider metadata is immutable after prepare.
     const char* capability=nullptr;
     uint32_t api=0; uint64_t instance=0;
-    PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false;
+    PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false, fileOpenSource=false;
     char sharedFile[RISC_APP_DATA_NAME_MAX+1]{};
   };
 #if UINTPTR_MAX == UINT32_MAX
@@ -332,7 +336,7 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7, SharedDataDriver=-8, MemoryHeapDriver=-9,RandomDriver=-10;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7, SharedDataDriver=-8, MemoryHeapDriver=-9,RandomDriver=-10,AppCatalogDriver=-11;
   static int32_t randomFill(void*,void*,uint32_t);
   static int32_t memoryHeapSnapshot(void*,risc_memory_heap_snapshot_v1*);
   const risc_realtime_control_api_v1* realtimeBackend_=nullptr;
@@ -369,9 +373,23 @@ class Runtime final {
   static int32_t appDataStat(void*,const char*,uint32_t*,uint64_t*);
   static int32_t appDataRead(void*,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*);
   static int32_t appDataReplace(void*,const char*,uint64_t,const void*,uint32_t);
+  struct AppCatalogMetadata {
+    char displayName[96]{}, minFirmware[32]{}, icon[24]{};
+    bool visible=true;
+  };
+  static void appCatalogMetadata(JsonObjectConst,AppCatalogMetadata&);
+  static Runtime* appCatalogEnter(void*,int32_t&);
+  static int32_t appCatalogSnapshot(void*,risc_app_catalog_snapshot_v1*);
+  static int32_t appCatalogGet(void*,uint64_t,uint32_t,risc_app_catalog_entry_v1*);
+  void appCatalogChanged();
+  bool appCatalogRefresh(uint32_t&);
+  uint64_t appCatalogGeneration_=1;
+  // Zero means omitted; one means admitted but launch-unavailable; two ready.
+  uint8_t appCatalogState_[MaxAppPolicies]{};
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
     bool enabled=true, catalogAuthority=false;
+    AppCatalogMetadata catalog{};
     char sourcePath[193]{}; PolicyIndex sourceDriver=-1;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
     const RiscStorage::AppDataExport::Entry* exports=nullptr;
@@ -422,6 +440,31 @@ class Runtime final {
   bool fileOpenTakeResult(int32_t*,uint64_t*);
   bool fileSourcePathGet(char*,size_t) const;
   bool fileOpenAfterRun(bool);
+  static const risc_file_open_source_api_v1* fileOpenSourceApi();
+  bool fileSourceReady() const;
+  bool fileSourceExitSafe() const;
+  bool fileSourceSupported(size_t) const;
+  bool fileSourceSupported(const char*) const;
+  uint32_t fileSourceHandlerCount(const char*) const;
+  bool fileSourceHandlerGet(const char*,uint32_t,t5_file_handler_t*) const;
+  bool fileSourceOwned(uint64_t) const;
+  int32_t fileSourceBegin(const char*,uint64_t,uint64_t*);
+  int32_t fileSourceWrite(uint64_t,const void*,uint32_t,uint32_t*);
+  int32_t fileSourceFinish(uint64_t);
+  int32_t fileSourceDiscard(uint64_t);
+  bool fileSourceRequest(uint64_t,const char*,uint64_t);
+  bool fileSourceTakeResult(int32_t*,uint64_t*);
+  int32_t fileSourceInfo(risc_file_open_source_info_v1*) const;
+  int32_t fileSourceRead(uint64_t,uint64_t,void*,uint32_t,uint32_t*);
+  int32_t fileSourceStatus(int32_t);
+  bool fileSourceCleanup();
+  struct SourceState {
+    char name[RISC_FILE_OPEN_SOURCE_NAME_MAX]{};
+    uint64_t token=0,size=0,written=0,ownerInvocation=0;
+    PolicyIndex owner=-1;
+    bool sealed=false;
+  } fileSource_;
+  uint64_t fileSourceGeneration_=0,fileSourceDiscarded_=0,fileSourceDiscardedOwner_=0;
   size_t policyCount_=0;
   struct AppGrant {
     RuntimeProviders::GrantV2 provider{}; const void* api=nullptr;
@@ -467,6 +510,9 @@ class Runtime final {
     std::unique_ptr<RiscStorage::AppDataExport,AppDataExportDelete> appDataExport_;
     risc_app_data_export_v1 appDataExportTable_{};
     bool appDataExportEnding_=false;
+    risc_app_catalog_v1 appCatalogTable_{};
+    void* appCatalogContext_=nullptr;
+    bool appCatalogBusy_=false;
     risc_realtime_api_v1 realtimeTable_{};
     void* realtimeContext_=nullptr;
     risc_realtime_control_api_v1 realtimeControlTable_{};
@@ -502,6 +548,7 @@ class Runtime final {
   risc_resident_callbacks_v1 shellCallbacks_{};
   uint64_t shellToken_=0;
   risc_resident_failure_v1 lastFailure_{};
+  risc_runtime_launch_failure_v1 launchFailure_{};
 
   RuntimeProviders::GrantV2 grants_[MaxDrivers]{};
   Driver drivers_[MaxDrivers]{};

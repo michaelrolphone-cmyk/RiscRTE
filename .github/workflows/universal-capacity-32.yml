@@ -1,0 +1,75 @@
+name: Universal watch declaration capacity
+on:
+  push:
+    branches: [feat/watch-quad-spi]
+    paths: ['.github/workflows/universal-capacity-32.yml']
+permissions:
+  contents: write
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/watch-quad-spi
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: c82ee1a9a9f4c457a70e0bd3601dfbf12bb36a46
+          path: .source/twatch
+          persist-credentials: false
+      - name: Extend immutable declaration bounds, not live grants
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for filename,macro in [('AppPolicyLimits.h','RISC_APP_POLICY_ROWS'),('AppRequirementLimits.h','RISC_APP_REQUIREMENT_ROWS')]:
+              p=Path('src/bootstrap')/filename;s=p.read_text()
+              if macro+' != 32' not in s:
+                  s=s.replace(macro+' != 24\n',macro+' != 24 && '+macro+' != 32\n')
+                  s=s.replace('or 24"','24 or 32"')
+                  s=s.replace('#if '+macro+' == 24','#if '+macro+' == 32\n#define '+macro+'_MARKER "'+macro+':32"\n#elif '+macro+' == 24')
+                  p.write_text(s)
+          p=Path('platformio.ini');s=p.read_text();s=s.replace('version = 0.3.1','version = 0.3.2')
+          before,after=s.split('[env:esp32s3-16mb-appdata-universal]',1)
+          after=after.replace('-DRISC_APP_POLICY_ROWS=24','-DRISC_APP_POLICY_ROWS=32').replace('-DRISC_APP_REQUIREMENT_ROWS=24','-DRISC_APP_REQUIREMENT_ROWS=32')
+          p.write_text(before+'[env:esp32s3-16mb-appdata-universal]'+after)
+          PY
+          printf '#include "src/bootstrap/AppPolicyLimits.h"\n#include "src/bootstrap/AppRequirementLimits.h"\nstatic_assert(RISC_APP_POLICY_ROWS==32);static_assert(RISC_APP_REQUIREMENT_ROWS==32);int main(){}\n' > /tmp/capacity.cpp
+          c++ -std=c++17 -I. -DRISC_APP_POLICY_ROWS=32 -DRISC_APP_REQUIREMENT_ROWS=32 /tmp/capacity.cpp -o /tmp/capacity
+          /tmp/capacity
+          bash test/run_board_test.sh
+          bash test/run_i2s_test.sh
+          bash test/run_native_spi_test.sh
+          bash test/run_crown_recovery_test.sh
+      - name: Commit validated native source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add platformio.ini src/bootstrap/AppPolicyLimits.h src/bootstrap/AppRequirementLimits.h
+          if ! git diff --cached --quiet; then
+            git commit -m 'Expand universal declared capability rows to 32 without increasing live grants'
+            git push origin HEAD:feat/watch-quad-spi
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build native profiles with device-local recovery wiring
+        run: |
+          python -m pip install platformio==6.1.18 pyelftools==0.32
+          pio run -e esp32s3-16mb-appdata-universal
+          cp .source/twatch/profiles/shared-watch-native.ini shared-watch-native.ini
+          pio run -c shared-watch-native.ini -e shared-watch-twatch
+          mkdir -p dist/waveshare dist/twatch
+          for f in firmware.elf firmware.bin bootloader.bin partitions.bin; do
+            cp .pio/build/esp32s3-16mb-appdata-universal/$f dist/waveshare/
+            cp .pio/build/shared-watch-twatch/$f dist/twatch/
+          done
+          git rev-parse HEAD > dist/COMMIT.txt
+          git archive HEAD | gzip > dist/source.tar.gz
+          cp shared-watch-native.ini dist/twatch/profile.ini
+          printf '%s\n' 'Native components only; not complete firmware. Both stores require separately bound and validated board-specific providers and one shared default ELF.' > dist/README.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-watch-native-32
+          path: dist
+          retention-days: 30

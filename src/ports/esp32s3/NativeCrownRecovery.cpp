@@ -1,7 +1,16 @@
 #include "NativeCrownRecovery.h"
-#if defined(ESP_PLATFORM) && RISC_NATIVE_RECOVERY_AXP2101
+#if defined(ESP_PLATFORM) && (RISC_NATIVE_RECOVERY_AXP2101 || RISC_NATIVE_RECOVERY_GPIO)
+#if RISC_NATIVE_RECOVERY_AXP2101
 #if !defined(RISC_RECOVERY_I2C_PORT) || !defined(RISC_RECOVERY_SDA) || !defined(RISC_RECOVERY_SCL)
 #error "Recovery requires an explicit trusted native board selection"
+#endif
+#endif
+#if RISC_NATIVE_RECOVERY_GPIO
+#if !defined(RISC_RECOVERY_GPIO_PIN) || !defined(RISC_RECOVERY_GPIO_ACTIVE_HIGH)
+#error "GPIO recovery requires an explicit trusted native pin and polarity"
+#endif
+#include "runtime/control/CrownGpio.h"
+#include <driver/gpio.h>
 #endif
 #include "runtime/control/CrownRecovery.h"
 #include <freertos/FreeRTOS.h>
@@ -11,19 +20,29 @@
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
 #include <esp_system.h>
+#include <esp_sleep.h>
 #include <esp_private/system_internal.h>
 #include <atomic>
 #include <cstring>
 extern "C" const uint32_t risc_native_crown_recovery_abi=1;
 namespace RiscCpu { namespace NativeCrownRecovery { namespace {
+#if RISC_NATIVE_RECOVERY_AXP2101
 constexpr uint8_t Port=RISC_RECOVERY_I2C_PORT, Address=0x34, Status=0x49;
-constexpr uint32_t Magic=0x43524e35;
+
 static_assert(Port<2 && RISC_RECOVERY_SDA<49 && RISC_RECOVERY_SCL<49,"invalid recovery bus");
+#else
+constexpr uint8_t RecoveryPin=RISC_RECOVERY_GPIO_PIN;
+static_assert(RecoveryPin<49,"invalid recovery GPIO");
+RiscControl::CrownGpio gpioEvents;
+#endif
+constexpr uint32_t Magic=0x43524e35;
 RTC_NOINIT_ATTR uint32_t resetMarker[3];
 SemaphoreHandle_t mutex=nullptr;
 TaskHandle_t task=nullptr;
+#if RISC_NATIVE_RECOVERY_AXP2101
 Transfer raw=nullptr;
-bool online=false;
+#endif
+bool online=false,bootWakeApplied=false;
 std::atomic<bool> paused{false};
 std::atomic<bool> wakeBoundary{false};
 RiscControl::CrownEvents events;
@@ -41,14 +60,25 @@ void emergency(uint32_t reason=1){
   esp_restart_noos();
 }
 bool sample(){
+#if RISC_NATIVE_RECOVERY_AXP2101
   uint8_t value=0;
   bool ok=online && raw(Port,Address,&Status,1,&value,1,20);
   const uint8_t keys=value&0x0f;
   if(ok && keys){const uint8_t ack[]={Status,keys};ok=raw(Port,Address,ack,2,nullptr,0,20);}
   if(!ok){events.discontinuity();return false;}
+#else
+  if(!online)return false;
+  if(wakeBoundary.load(std::memory_order_acquire))gpioEvents.reset();
+  const uint8_t keys=gpioEvents.sample((gpio_get_level(static_cast<gpio_num_t>(RecoveryPin))!=0)==bool(RISC_RECOVERY_GPIO_ACTIVE_HIGH),now());
+#endif
   if(wakeBoundary.exchange(false,std::memory_order_acq_rel))events.waking();
   const auto serial=events.shortSequence();
   const bool reboot=events.observe(keys,now());
+#if RISC_NATIVE_RECOVERY_GPIO
+  // The GPIO provider reads the physical level independently; no emulated
+  // PMIC history is exposed or left waiting for an impossible I2C ACK.
+  events.acknowledge(0x0f);
+#endif
   if(events.shortSequence()!=serial)hostExit.press(now());
   if(hostExit.pending() && !(requestEpoch.load(std::memory_order_relaxed)&1u)){
     requestSince.store(now(),std::memory_order_relaxed);
@@ -76,6 +106,7 @@ void supervise(void*){
   }
 }
 }
+#if RISC_NATIVE_RECOVERY_AXP2101
 bool opened(uint8_t port,uint8_t sda,uint8_t scl,Transfer transfer){
   if(port!=Port)return true;
   if(sda!=RISC_RECOVERY_SDA || scl!=RISC_RECOVERY_SCL || !transfer)return false;
@@ -92,6 +123,16 @@ bool opened(uint8_t port,uint8_t sda,uint8_t scl,Transfer transfer){
   if(ok)ok=raw(Port,Address,&enableReg,1,&enable,1,20);
   const uint8_t enableWrite[]={enableReg,uint8_t(enable|0x0f)};
   if(ok)ok=raw(Port,Address,enableWrite,2,nullptr,0,20);
+  if(ok && !bootWakeApplied){
+    // Deep sleep creates a fresh supervisor. Treat any key history present
+    // at an external-wake boundary as the waking gesture, just as light wake
+    // does. A motion-only wake with no key history consumes no later press.
+    const auto cause=esp_sleep_get_wakeup_cause();
+    if(esp_reset_reason()==ESP_RST_DEEPSLEEP &&
+       (cause==ESP_SLEEP_WAKEUP_EXT0 || cause==ESP_SLEEP_WAKEUP_EXT1 || cause==ESP_SLEEP_WAKEUP_GPIO))
+      wakeBoundary.store(true,std::memory_order_release);
+    bootWakeApplied=true;
+  }
   if(ok && !task)ok=xTaskCreatePinnedToCore(supervise,"core-crown",3072,nullptr,
                                           configMAX_PRIORITIES-2,&task,0)==pdPASS;
   if(!ok)online=false;
@@ -102,10 +143,52 @@ bool closing(uint8_t port){
   if(!lock(25))return false;
   online=false;events.discontinuity();unlock();return true;
 }
-bool pause(){
+#else
+bool opened(uint8_t,uint8_t,uint8_t,Transfer){return true;}
+bool closing(uint8_t){return true;}
+bool gpioOpened(uint8_t pin,bool output){
+  if(pin!=RecoveryPin)return true;
+  if(output)return false;
+  if(!mutex)mutex=xSemaphoreCreateMutex();
+  if(!lock(25))return false;
+  gpioEvents.reset();events.discontinuity();online=true;
+  if(!bootWakeApplied){
+    const auto cause=esp_sleep_get_wakeup_cause();
+    if(esp_reset_reason()==ESP_RST_DEEPSLEEP &&
+       (cause==ESP_SLEEP_WAKEUP_EXT0 || cause==ESP_SLEEP_WAKEUP_EXT1 || cause==ESP_SLEEP_WAKEUP_GPIO))
+      wakeBoundary.store(true,std::memory_order_release);
+    bootWakeApplied=true;
+  }
+  const bool ok=task || xTaskCreatePinnedToCore(supervise,"core-crown",3072,nullptr,
+                                              configMAX_PRIORITIES-2,&task,0)==pdPASS;
+  if(!ok)online=false;
+  unlock();return ok;
+}
+bool gpioClosing(uint8_t pin){
+  if(pin!=RecoveryPin || !mutex)return true;
+  if(!lock(25))return false;
+  online=false;events.discontinuity();gpioEvents.reset();unlock();return true;
+}
+#endif
+bool pause(bool requireQuiet){
   if(!mutex)return true;
   if(!lock(25))return false;
-  paused=true;events.discontinuity();unlock();return true;
+#if RISC_NATIVE_RECOVERY_GPIO
+  // Refuse sleep even inside the debounce interval of a newly pressed key.
+  if(requireQuiet && online &&
+     (gpio_get_level(static_cast<gpio_num_t>(RecoveryPin))!=0)==bool(RISC_RECOVERY_GPIO_ACTIVE_HIGH)){
+    unlock();return false;
+  }
+#endif
+  // A sampler may already have acknowledged the physical IRQ since the
+  // application's last status check. Preserve that pending gesture instead
+  // of sleeping behind a now-inactive line. Refusal changes no pause state.
+  if(requireQuiet && (events.sleepPending() || hostExit.pending())){unlock();return false;}
+  paused=true;events.discontinuity();
+#if RISC_NATIVE_RECOVERY_GPIO
+  gpioEvents.reset();
+#endif
+  unlock();return true;
 }
 void resume(bool gpioWake){
   // pause() already drained the sampler and broke hold continuity. Resume
@@ -114,6 +197,7 @@ void resume(bool gpioWake){
   paused.store(false,std::memory_order_release);
 }
 bool transact(uint8_t port,uint8_t address,const uint8_t* tx,size_t tn,uint8_t* rx,size_t rn,uint32_t ms,Transfer transfer){
+#if RISC_NATIVE_RECOVERY_AXP2101
   if(port!=Port)return transfer(port,address,tx,tn,rx,rn,ms);
   if(!lock(ms))return false;
   bool ok=true;
@@ -137,6 +221,9 @@ bool transact(uint8_t port,uint8_t address,const uint8_t* tx,size_t tn,uint8_t* 
     }
   }else ok=transfer(port,address,tx,tn,rx,rn,ms);
   unlock();return ok;
+#else
+  return transfer(port,address,tx,tn,rx,rn,ms);
+#endif
 }
 uint32_t shortSequence(){return shortSerial.load(std::memory_order_acquire);}
 uint32_t previousReason(){

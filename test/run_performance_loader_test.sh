@@ -25,7 +25,8 @@ flags=(-std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -Wno-pointer-to-int-cast
   -I"$repo/test/support/native_registry/stubs"
   -I"$repo/lib/elf_loader/include")
 if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=address,undefined -fno-omit-frame-pointer); fi
-cc "${flags[@]}" -Dread=risc_test_read -c "$repo/lib/elf_loader/src/esp_elf.c" -o "$build/loader.o"
+cc "${flags[@]}" -Dread=risc_test_read -Dfstat=risc_test_fstat -Dlseek=risc_test_lseek \
+  -c "$repo/lib/elf_loader/src/esp_elf.c" -o "$build/loader.o"
 cc "${flags[@]}" -c "$repo/lib/elf_loader/src/esp_elf_validate.c" -o "$build/validate.o"
 for mode in enabled absent; do
   extra=(-DTEST_ABSENT_HOOK=0)

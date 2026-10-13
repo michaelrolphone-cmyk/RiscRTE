@@ -65,7 +65,8 @@ TickType_t ticks(uint32_t ms){return ms?pdMS_TO_TICKS(ms)+1:0;}
 spi_host_device_t host(uint8_t physical){return physical==2?SPI2_HOST:SPI3_HOST;}
 #include "NativePwmStop.inc"
 bool gpioOpen(uint8_t pin,bool output,bool initial,bool pullup){
-  return pin<49 && stopPwm(pin) && NativeSleep::openPin(pin,output,initial,pullup);
+  return pin<49 && stopPwm(pin) && NativeSleep::openPin(pin,output,initial,pullup) &&
+      NativeCrownRecovery::gpioOpened(pin,output);
 }
 bool gpioWrite(uint8_t pin,bool level){
   return stopPwm(pin) && gpio_set_level(static_cast<gpio_num_t>(pin),level)==ESP_OK;
@@ -75,7 +76,8 @@ bool gpioClose(uint8_t pin){
   // A failed post-reset claim may still have a pad held at its retained state.
   // Never claim clean release or unhold it without the requested safe config.
   if(pin>=49 || !NativeSleep::canClose(pin))return false;
-  return stopPwm(pin) && gpio_reset_pin(static_cast<gpio_num_t>(pin))==ESP_OK;
+  return NativeCrownRecovery::gpioClosing(pin) && stopPwm(pin) &&
+      gpio_reset_pin(static_cast<gpio_num_t>(pin))==ESP_OK;
 }
 #include "NativePwm.inc"
 bool gpioPwm(uint8_t pin,uint32_t hz,uint16_t duty,uint16_t maximum){return pwmWrite(pin,hz,duty,maximum);}
@@ -175,6 +177,8 @@ bool nativeRadioResourceReady(){return resourceOwner.ready();}
 bool nativeRadioResourceHeldReady(){return resourceOwner.heldReady();}
 bool nativeBackgroundResourceTry(){return !xPortInIsrContext()&&ownerTask&&ownerTask()&&NativeRadioAsync::tryShared();}
 void nativeBackgroundResourceEnd(){if(!xPortInIsrContext()&&ownerTask&&ownerTask())NativeRadioAsync::endShared();}
+// Optional build-owned implementation; ordinary Runtime has no panel backend.
+const DisplayBackend* selectedDisplayBackend() __attribute__((weak));
 Hardware nativeHardware(bool (*owner)()){
   ownerTask=owner;
   resourceOwner.configure([](){return !xPortInIsrContext() && ownerTask && ownerTask();},NativeRadioAsync::tryShared,NativeRadioAsync::endShared,NativeRadioAsync::sharedPhaseReady,NativeRadioAsync::sharedReady);
@@ -188,12 +192,14 @@ Hardware nativeHardware(bool (*owner)()){
     },gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,
     spiOpen,spiBegin,spiTransfer,spiEnd,spiClose,wakeValid,NativeSleep::lightArm,lightSleep,NativeSleep::lightClear,
     NativeSleep::valid,deepReady,NativeSleep::arm,NativeSleep::clear,[](){
-      if(!NativeCrownRecovery::pause())return;
       NativeRealtime::enter([](){NativeRetainedWake::enter(NativeSleep::enter);});
-      NativeCrownRecovery::resume();
     },NativeSleep::hold,NativeSleep::timerArm,NativeSleep::timerClear,NativeI2s::open,NativeI2s::write,NativeI2s::close,
     NativeRadioAsync::join,NativeRadioAsync::state,NativeRadioAsync::leave,NativeRadioAsync::addresses,NativeRadioAsync::scanStart,NativeRadioAsync::scanPoll,NativeRadioAsync::scanCancel,NativeRadioAsync::idle};
+  hardware.deepPrepare=[](){return NativeCrownRecovery::pause(true);};
+  hardware.deepCancel=[](){NativeCrownRecovery::resume();return true;};
   hardware.spiBeginThreeWire=spiBeginThreeWire;
+  hardware.spiOpenQuad=spiOpenQuad;hardware.spiTransferQuad=spiTransferQuad;hardware.spiTransferFrame=spiTransferFrame;
+  if(selectedDisplayBackend)hardware.displayBackend=selectedDisplayBackend();
   configureSchedulerWait(hardware);
   static risc_native_radio_async_v1 radioAsync=*NativeRadioAsync::table();
   radioAsync.tryShared=nativeRadioResourceTry;radioAsync.endShared=nativeRadioResourceEnd;
@@ -242,7 +248,7 @@ Hardware nativeHardware(bool (*owner)()){
   });
   hardware.tcpListener=NativeTcpListener::backend();
 #endif
-  hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;
+  hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;hardware.i2sStandardOpen=NativeI2s::openStandard;
 #ifdef RISC_ENABLE_HTTP
   NativeHttp::configure(hardware.owner,[](){
     uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;

@@ -62,6 +62,33 @@ struct Fixture {
  int32_t outputHold(bool enable){return Port::gpioDeepSleepHold(context,2,enable);}
 };
 int main(){
+ // A static pad operation must not inherit the whole-device sleep barrier.
+ for(unsigned activity=0;activity<4;++activity){
+  Fixture f;
+  if(activity==0)f.p.usb_.token=44;
+  if(activity==1)f.p.hw_.usbPhyIdle=[](){return false;};
+  if(activity==2)f.p.hw_.httpIdle=[](){return false;};
+  if(activity==3)f.p.hw_.maintenanceIdle=[](){return false;};
+  assert(f.outputHold(true)==0 && holds==1);
+  assert(f.outputHold(false)==0 && unholds==1);
+  assert(f.sleep()==RISC_DEEP_SLEEP_BUSY && !arms && !entries);
+ }
+ {Fixture f;RiscStorage::Worker worker;StorageWorkBackend backend{};
+  backend.mailbox=&worker;f.p.hw_.storageWork=&backend;
+  assert(worker.bind([](void*,const void*,uint32_t,void*,uint32_t,uint32_t*)->int32_t{return 0;},nullptr)==0);
+  uint64_t token=0;unsigned request=1;
+  assert(worker.submit(&request,sizeof(request),&token)==0);
+  f.p.storageWork_.gpio=&f.p.gpios_[1];
+  assert(f.outputHold(true)==0 && f.outputHold(false)==0);
+  assert(f.sleep()==RISC_DEEP_SLEEP_BUSY && !arms && !entries);
+  f.p.storageWork_.gpio=&f.g;
+  const auto prior=holds;assert(f.outputHold(true)==RISC_DEEP_SLEEP_BUSY && holds==prior);
+  assert(worker.cancel(token)==RISC_STORAGE_WORK_CANCELLED);
+  assert(f.outputHold(true)==0);
+ }
+ {Fixture f;f.p.sleepRetained_=true;
+  assert(f.outputHold(true)==RISC_DEEP_SLEEP_RETAINED && !holds);
+ }
  // The previous binary prefix ends immediately before each additive member.
  static_assert(GARDEN_GPIO_LIGHT_SLEEP_V1_SIZE==offsetof(garden_gpio_v1,deep_sleep));
  static_assert(GARDEN_GPIO_DEEP_SLEEP_V1_SIZE==offsetof(garden_gpio_v1,deep_sleep_hold));

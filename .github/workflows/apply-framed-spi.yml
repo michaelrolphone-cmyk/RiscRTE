@@ -1,0 +1,39 @@
+name: Materialize framed SPI transport
+on:
+  push:
+    branches: [feat/watch-quad-spi]
+    paths: ['.github/workflows/apply-framed-spi.yml']
+permissions:
+  contents: write
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/watch-quad-spi
+      - name: Apply readable migration and validate production path
+        run: |
+          python3 scripts/apply_spi_frame_transport.py
+          bash test/run_native_spi_test.sh
+          SANITIZE=1 bash test/run_native_spi_test.sh
+          bash test/run_i2c_function_test.sh
+          bash test/run_watch_test.sh
+      - name: Commit tested final sources
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add sdk src test
+          if ! git diff --cached --quiet; then
+            git commit -m 'Implement framed SPI phases with exclusive CS lifetime and bounded polling cleanup'
+            git push origin HEAD:feat/watch-quad-spi
+          fi
+          git rev-parse HEAD > FRAMED_SPI_COMMIT.txt
+          git archive HEAD | gzip > framed-spi-source.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: framed-spi-source
+          path: |
+            framed-spi-source.tar.gz
+            FRAMED_SPI_COMMIT.txt
+          retention-days: 30
