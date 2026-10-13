@@ -1,0 +1,87 @@
+name: Display startup regression
+on:
+  push:
+    branches: [fix/display-startup-20261012]
+    paths:
+      - '.github/workflows/display-startup-regression.yml'
+      - 'test/display_startup*'
+      - 'src/ports/esp32s3/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: runtime
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiskRTE-XTEINK-X4-PRO
+          ref: 8dba3205f63dcb9558d80890b9bf5c4aed16f230
+          path: x4
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/T5S3-Reader
+          ref: 45cf61ac013fb618e8d7fed63217a35350484d52
+          path: reader
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: 86aab52fb085b0e6dc3c467760395a3571e1fbd1
+          path: watch
+      - name: Exact source and native guards
+        run: |
+          for repo in runtime x4 reader watch; do echo "$repo $(git -C "$repo" rev-parse HEAD)"; done
+          grep -R -n -A14 -B3 'bool usbPhyIdle' runtime/src || true
+          grep -R -n -A4 -B2 'bool exitSafe()' runtime/src/ports/esp32s3/NativeBankStore.cpp || true
+          echo 'WATCH DISPLAY SOURCES'
+          find watch -iname '*display*' -o -iname '*panel*' -o -iname '*st7789*'
+          grep -R -n 'deep_sleep_hold\|retire_held_output' watch --include='*.c' --include='*.h' | head -60 || true
+          echo 'PRODUCT NATIVE PROFILES'
+          grep -R -n '9a510b0\|RISC_NATIVE_SETTINGS_LIFECYCLE\|RISC_NATIVE_STORAGE_CUSTODY' x4/minimal watch --include='*.json' --include='*.ini' --include='*.py' | head -80 || true
+      - name: Baseline real frontlight and CpuPort
+        env:
+          RISCRTE_RUNTIME_ROOT: ${{ github.workspace }}/runtime
+          RISCRTE_READER_ROOT: ${{ github.workspace }}/reader
+        run: bash x4/minimal/test/run_frontlight_cpu_port_test.sh
+      - name: Reproduce unrelated maintenance and USB blocking startup
+        env:
+          RISCRTE_RUNTIME_ROOT: ${{ github.workspace }}/runtime
+          RISCRTE_READER_ROOT: ${{ github.workspace }}/reader
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('x4/minimal/test/frontlight_cpu_port_test.cpp')
+          source=p.read_text()
+          source=source.replace('int main(', 'int baseline_main(', 1)
+          source+='''
+          int main(int argc, char**) {
+              assert(argc == 1);
+              driver = t5_driver_get(2);
+              assert(driver);
+              Fixture f;
+              f.port.hw_.maintenanceIdle = [](){return false;};
+              const bool began=f.start();
+              const bool cleaned=driver->quiesce();
+              std::printf("REPRO maintenance_busy: start=%d quiesce=%d\\n", began, cleaned);
+              assert(!began && !cleaned);
+              f.port.hw_.maintenanceIdle = nullptr;
+              assert(driver->quiesce());
+              f.clean();
+              f.port.hw_.usbPhyIdle = [](){return false;};
+              const bool usbBegan=f.start();
+              const bool usbCleaned=driver->quiesce();
+              std::printf("REPRO unrelated_usb_busy: start=%d quiesce=%d\\n", usbBegan, usbCleaned);
+              assert(!usbBegan && !usbCleaned);
+              f.port.hw_.usbPhyIdle = nullptr;
+              assert(driver->quiesce());
+              f.clean();
+              return 0;
+          }
+          '''
+          p.write_text(source)
+          PY
+          bash x4/minimal/test/run_frontlight_cpu_port_test.sh
