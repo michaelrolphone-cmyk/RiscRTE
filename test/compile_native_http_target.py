@@ -26,7 +26,8 @@ for d in sorted((sdk / 'include').rglob('*')):
                       str(d).endswith(('/include/esp32s3', '/include/xtensa', '/port/xtensa/include'))):
         includes.append(d)
 flags = ['-Wall', '-Wextra', '-Werror', '-Wno-missing-field-initializers', '-Os',
-         '-mlongcalls', '-fstack-usage', '-DESP_PLATFORM', '-DRISC_ENABLE_HTTP=1']
+         '-mlongcalls', '-fstack-usage', '-DESP_PLATFORM', '-DRISC_ENABLE_HTTP=1',
+         '-DMBEDTLS_CONFIG_FILE="mbedtls/esp_config.h"']
 inc = ['-I' + str(d) for d in includes]
 commands = []
 def run(command):
