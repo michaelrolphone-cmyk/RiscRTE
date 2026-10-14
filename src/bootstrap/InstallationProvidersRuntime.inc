@@ -14,6 +14,13 @@ bool Runtime::installationAvailable(void* context,const char* capability,uint32_
  return matches==1;
 }
 int32_t Runtime::installationProviders(void* context,const risc_install_provider_v1* input,uint32_t count,bool check){
+ return installationProviderTransaction(context,input,nullptr,count,check);
+}
+int32_t Runtime::installationProvidersMedia(void*context,const risc_install_provider_v1*input,const uint32_t*media,uint32_t count,bool check){
+ if(count&&!media)return RISC_INSTALL_INVALID;
+ return installationProviderTransaction(context,input,media,count,check);
+}
+int32_t Runtime::installationProviderTransaction(void*context,const risc_install_provider_v1*input,const uint32_t*media,uint32_t count,bool check){
  auto*r=static_cast<Runtime*>(context);
  if(!r||r!=currentRuntime||!r->installation_||!r->installation_[0].providersEnabled||
     !r->active()||!r->port_.owner()||r->retained_)return RISC_INSTALL_DENIED;
@@ -40,6 +47,7 @@ int32_t Runtime::installationProviders(void* context,const risc_install_provider
  r->installation_[0].call=true;
  JsonDocument permissions;if(deserializeJson(permissions,r->installation_[0].providerGrants))return RISC_INSTALL_INVALID;
  for(uint32_t n=0;n<count;++n){
+  if(media&&(media[n]>1||(media[n]==1&&!r->installation_[0].internalEnabled)))return RISC_INSTALL_DENIED;
   const auto&record=input[n];
   if(!record.manifest_json||strnlen(record.manifest_json,4097)>4096||!record.image_path||
      strnlen(record.image_path,193)>192||record.instance>INT32_MAX)return RISC_INSTALL_INVALID;
@@ -63,8 +71,8 @@ int32_t Runtime::installationProviders(void* context,const risc_install_provider
      !r->manifest(document.as<JsonObjectConst>(),d))return RISC_INSTALL_INVALID;
   if(!strncmp(d.provides,"platform.",9)||!strncmp(d.provides,"runtime.",8)||
      !strncmp(d.provides,"storage.app-data",16)||!strcmp(d.provides,"storage.key-value")||!strcmp(d.provides,"spi.bus"))return RISC_INSTALL_DENIED;
-  strcpy(d.sourcePath,record.image_path);d.sourceOwner=r;d.sourceVolume=r->installation_[0].volume;
-  bool same=slot<before&&!strcmp(saved[slot].version,d.version)&&!strcmp(saved[slot].sourcePath,d.sourcePath)&&
+  strcpy(d.sourcePath,record.image_path);d.sourceOwner=r;d.sourceVolume=media&&media[n]==1?r->installation_[0].internalVolume:r->installation_[0].volume;
+  bool same=slot<before&&saved[slot].sourceVolume==d.sourceVolume&&!strcmp(saved[slot].version,d.version)&&!strcmp(saved[slot].sourcePath,d.sourcePath)&&
     !strcmp(saved[slot].provides,d.provides)&&saved[slot].api==d.api&&saved[slot].count==d.count;
   for(size_t j=0;same&&j<d.count;++j)same=saved[slot].requirements[j].api==d.requirements[j].api&&!strcmp(saved[slot].names[j],d.names[j]);
   if(same){d=saved[slot];continue;}

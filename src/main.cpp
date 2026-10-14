@@ -63,6 +63,7 @@ extern "C" void risc_perf_loader_event(uint32_t phase,uint32_t value) {
 }
 #ifdef RISC_PAIRED_APP_DATA
 #include "ports/esp32s3/NativeAppData.h"
+#include "ports/esp32s3/NativePackageVolume.h"
 #include "ports/esp32s3/NativeFileSource.h"
 #endif
 #ifdef RISC_PAIRED_BANKS
@@ -139,9 +140,15 @@ bool bindPlatforms(RiscBoot::Runtime& runtime){
   && RiscBankStore::bind(runtime)
 #endif
   ))return false;
+#if RISC_NATIVE_PACKAGE_VOLUME
+  if(!RiscPackageVolume::bind(runtime,isOwner))return false;
+#endif
   return RiscDiagnostics::bindNativeSource(runtime);
 }
 bool appExitSafe(){return
+#if RISC_NATIVE_PACKAGE_VOLUME
+ RiscPackageVolume::exitSafe() &&
+#endif
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   (RiscCpu::NativeSettingsLifecycle::continuing()?cpu.nativeDiscoveryAppExitSafe():cpu.appExitSafe())
   && (RiscCpu::NativeSettingsLifecycle::continuing()||RiscCpu::NativeSettingsLifecycle::exitSafe())
@@ -156,6 +163,9 @@ bool appExitSafe(){return
 #endif
   ;}
 bool providerStorageSafe(){return
+#if RISC_NATIVE_PACKAGE_VOLUME
+ RiscPackageVolume::exitSafe() &&
+#endif
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
  (RiscCpu::NativeSettingsLifecycle::continuing()?cpu.nativeDiscoveryProviderSafe():cpu.providerStorageSafe())
  && !RiscCpu::NativeSettingsLifecycle::retained()
