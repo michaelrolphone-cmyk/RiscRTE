@@ -1,5 +1,8 @@
 #include "NativeSettingsBootstrap.h"
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
+#ifndef RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK
+#define RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK 0
+#endif
 namespace RiscCpu {
 namespace {using A=RiscExperimental::NativeSdAttempt;}
 NativeSettingsBootstrap::~NativeSettingsBootstrap(){if(!exitSafe())std::abort();destroy();destroyAttempt();}
@@ -95,8 +98,11 @@ NativeSettingsBootstrap::Progress NativeSettingsBootstrap::startAttempt(){
   if(acquired==RISC_STORAGE_ASYNC_RETAINED||!attempt_->exitSafe())return retain();
   destroyAttempt();
   // Complete legacy settings are a usable native source in their own right.
-  // Failed SD admission is NOT an absence witness and cannot create FreshEmpty.
-  if(!firstMode_&&nativeMode_==NativeMode::Import)queueNative();
+  // SD failure is never an absence witness. The selected internal fallback
+  // uses only the independently checked native Fresh witness from inspectNative.
+  // It grants no SD write permission: later SD conflicts remain preserved.
+  if(!firstMode_&&(nativeMode_==NativeMode::Import ||
+     (RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK && nativeMode_==NativeMode::Fresh)))queueNative();
   else finish(acquired==RISC_STORAGE_ASYNC_BUSY?C::Busy:C::Io);
   return Progress::Pending;
  }
@@ -154,8 +160,10 @@ NativeSettingsBootstrap::Progress NativeSettingsBootstrap::poll(){
   if(cancelled_){finish(C::Stale,true);break;}
   if(a->state()!=A::State::ReadyClosed){
    // IO/UNAVAILABLE does not distinguish physical absence from transport or
-   // media failure. Only independent complete legacy data can continue here.
-   if(!firstMode_&&nativeMode_==NativeMode::Import)queueNative();
+   // media failure. Explicit internal fallback may use independent, checked
+   // native emptiness; it must never manufacture an SD vacancy witness.
+   if(!firstMode_&&(nativeMode_==NativeMode::Import ||
+     (RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK && nativeMode_==NativeMode::Fresh)))queueNative();
    else finish(C::Io);
    break;
   }
