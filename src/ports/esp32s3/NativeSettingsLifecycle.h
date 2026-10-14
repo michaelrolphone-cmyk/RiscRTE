@@ -15,6 +15,11 @@
 namespace RiscBoot { class Runtime; }
 namespace RiscExperimental { class NativeReplicaCore; class CheckedNativeReplicaStore; class NativeSettingsCoordinator; }
 namespace RiscCpu { class Port; namespace NativeSettingsLifecycle {
+#ifndef RISC_NATIVE_SETTINGS_MAX_WRITERS
+#define RISC_NATIVE_SETTINGS_MAX_WRITERS 6
+#endif
+static_assert(RISC_NATIVE_SETTINGS_MAX_WRITERS>=2 && RISC_NATIVE_SETTINGS_MAX_WRITERS<=32,"Invalid native settings writer capacity");
+constexpr size_t MaxWriters=RISC_NATIVE_SETTINGS_MAX_WRITERS;
 using Core=RiscExperimental::NativeReplicaCore;
 using Store=RiscExperimental::CheckedNativeReplicaStore;
 using Coordinator=RiscExperimental::NativeSettingsCoordinator;

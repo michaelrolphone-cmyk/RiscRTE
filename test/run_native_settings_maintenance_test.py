@@ -9,6 +9,7 @@ p.add_argument('--sanitize', choices=('none', 'undefined', 'address,undefined'),
 p.add_argument('--dependency-manifest',type=pathlib.Path,help='Use source-verified exported dependencies with recorded commit and file hashes')
 p.add_argument('--current-inputs', action='store_true', help='Verify dependency files against their current Git HEAD and record current product graph hashes')
 p.add_argument('--fresh-internal-fallback', action='store_true', help='Exercise checked fresh internal initialization when SD is unavailable')
+p.add_argument('--writer-capacity',type=int,choices=range(6,33),default=6)
 p.add_argument('--assembly', action='store_true', help='Use the real permanent factory with injected checked backends and PSRAM shim')
 p.add_argument('--case', action='append', dest='cases')
 p.add_argument('--case-timeout', type=float, default=30, help='Bound each case process in seconds')
@@ -98,7 +99,7 @@ source = ['src/bootstrap/Json.cpp', 'src/bootstrap/Board.cpp', 'src/bootstrap/Ru
           'src/runtime/drivers/ProviderGraphV2.cpp', 'src/runtime/drivers/ProviderModuleV2.cpp',
           'src/ports/esp32s3/CpuPort.cpp', 'src/runtime/storage/AppDataFiles.cpp', 'src/ports/esp32s3/NativeSettingsMaintenance.cpp', 'src/ports/esp32s3/NativeSettingsBootstrap.cpp', 'test/native_settings_maintenance_test.cpp']
 exe_flags = ['-fno-pie', '-no-pie'] if 'address' in a.sanitize else []
-selected=['-DBOARD_XTEINK_X4_PRO', '-DRISC_NATIVE_SETTINGS_LIFECYCLE=1', '-DRISC_NATIVE_SETTINGS_WORKER=1', '-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1']
+selected=['-DRISC_NATIVE_SETTINGS_MAX_WRITERS='+str(a.writer_capacity),'-DRISC_RUNTIME_ATOMIC_BINDING_CAPACITY='+str(a.writer_capacity+2),'-DBOARD_XTEINK_X4_PRO', '-DRISC_NATIVE_SETTINGS_LIFECYCLE=1', '-DRISC_NATIVE_SETTINGS_WORKER=1', '-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1']
 if a.fresh_internal_fallback:selected += ['-DRISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK=1']
 run([cxx, '-std=c++17', *flags, *inc, *selected, '-DRISC_NATIVE_STORAGE_CUSTODY=1', '-DESP_PLATFORM', '-I'+str(ROOT/'test/native_nvs_shim'), '-I'+str(ROOT/'test/native_settings_worker_shim'), '-c', ROOT/'src/ports/esp32s3/NativeSettingsLifecycle.cpp', '-o', a.output/'lifecycle.o'])
 assembly_objects=[]
@@ -147,7 +148,7 @@ for case in cases:
 if runtime_sources() != runtime:
     raise SystemExit('Runtime/test input changed during build or execution; rerun with fresh output')
 (a.output / 'source-manifest.json').write_text(json.dumps(dict(external_sources=records, runtime_sources=runtime,
-    commands=commands, cases=cases, assembly=a.assembly, current_inputs=a.current_inputs, fresh_internal_fallback=a.fresh_internal_fallback, case_timeout_seconds=a.case_timeout, sanitizers=a.sanitize, product_graph=dict(source_commit=None if a.current_inputs else "199e231d962c401c5d20617e2f5e4da07bffd780", hashes=product_hashes, scope="Hash-recorded input board; selected SD9/power1 subgraph and installation9. SD source is identified in external_sources; this host test does not reproduce or qualify the deployed SD ELF. Power is an always-ready host precondition."),
+    commands=commands, cases=cases, assembly=a.assembly, writer_capacity=a.writer_capacity, current_inputs=a.current_inputs, fresh_internal_fallback=a.fresh_internal_fallback, case_timeout_seconds=a.case_timeout, sanitizers=a.sanitize, product_graph=dict(source_commit=None if a.current_inputs else "199e231d962c401c5d20617e2f5e4da07bffd780", hashes=product_hashes, scope="Hash-recorded input board; selected SD9/power1 subgraph and installation9. SD source is identified in external_sources; this host test does not reproduce or qualify the deployed SD ELF. Power is an always-ready host precondition."),
     generated_inputs={name: hashlib.sha256((a.output / name).read_bytes()).hexdigest() for name in ('sd.json', 'power.json', 'board.json', 'boot.json', 'sdk/source-hashes.json')},
     binaries={name: hashlib.sha256((a.output / name).read_bytes()).hexdigest() for name in ('driver.elf', 'power.elf', 'default.elf', 'lifecycle.o', 'test', *(['payload.o'] if a.assembly else []))},
     sanitizer_environment={k: os.environ.get(k, '') for k in ('ASAN_OPTIONS', 'UBSAN_OPTIONS', 'LSAN_OPTIONS')},

@@ -1,0 +1,13 @@
+Permanent factory assembly PASS; allocated INTERNAL-control=16952; no selection I/O/payload allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=222; peak-vendor-bytes=195878; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance max-writers PASS; control=7816; polls=0
+Permanent factory assembly PASS; allocated INTERNAL-control=16952; no selection I/O/payload allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=222; peak-vendor-bytes=195878; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance six-writers PASS; control=7816; polls=0
+Assembly assembly-many-writers refuses without backend I/O, payload allocation or registration PASS
+Assembly assembly-duplicate-writer refuses without backend I/O, payload allocation or registration PASS
+Assembly assembly-bad-writer refuses without backend I/O, payload allocation or registration PASS
+Assembly assembly-wrong-writer-namespace refuses without backend I/O, payload allocation or registration PASS
+Permanent factory assembly PASS; allocated INTERNAL-control=16952; no selection I/O/payload allocation; copied writer/entropy inputs
+actual checked startup dispatch bootstrap-fresh-absent PASS; hydrated=1; native sources preserved; SD unchanged
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: max-writers, six-writers, assembly-many-writers, assembly-duplicate-writer, assembly-bad-writer, assembly-wrong-writer-namespace, bootstrap-fresh-absent

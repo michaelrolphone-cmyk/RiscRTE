@@ -2,7 +2,7 @@
 bool Runtime::registerAtomicKeyValue(const char* app,uint32_t ns,RiscExperimental::NativeAtomicKeyValue& endpoint) {
   if(!port_.owner || !port_.owner() || (attempted_ && !registrationOpen_) || !app ||
      strnlen(app,96)>=96 || !RuntimePackages::safeId(app) || !ns || ns>INT32_MAX ||
-     endpoint.namespaceId()!=ns || !endpoint.exitSafe() || atomicBindingCount_==8)return false;
+     endpoint.namespaceId()!=ns || !endpoint.exitSafe() || atomicBindingCount_==RISC_RUNTIME_ATOMIC_BINDING_CAPACITY)return false;
   for(size_t i=0;i<atomicBindingCount_;++i) {
     const auto& b=atomicBindings_[i];
     if((b.nameSpace==ns && (!strcmp(b.app,app) || b.endpoint!=&endpoint)) ||
@@ -13,7 +13,7 @@ bool Runtime::registerAtomicKeyValue(const char* app,uint32_t ns,RiscExperimenta
 }
 bool Runtime::registerAtomicKeyValueReadThrough(uint32_t ns,RiscExperimental::NativeAtomicKeyValue& endpoint) {
   if(!port_.owner || !port_.owner() || (attempted_ && !registrationOpen_) || !ns || ns>INT32_MAX ||
-     endpoint.namespaceId()!=ns || !endpoint.exitSafe() || atomicBindingCount_==8)return false;
+     endpoint.namespaceId()!=ns || !endpoint.exitSafe() || atomicBindingCount_==RISC_RUNTIME_ATOMIC_BINDING_CAPACITY)return false;
   for(size_t i=0;i<atomicBindingCount_;++i) {
     const auto& b=atomicBindings_[i];
     if((b.nameSpace==ns && (!b.app[0] || b.endpoint!=&endpoint)) ||

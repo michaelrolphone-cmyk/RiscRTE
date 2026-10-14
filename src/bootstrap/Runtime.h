@@ -316,7 +316,11 @@ class Runtime final {
     RiscExperimental::NativeAtomicKeyValue* endpoint=nullptr;
     KeyValueAvailability availability{};
   };
-  AtomicBinding atomicBindings_[8]{};size_t atomicBindingCount_=0;
+  #ifndef RISC_RUNTIME_ATOMIC_BINDING_CAPACITY
+#define RISC_RUNTIME_ATOMIC_BINDING_CAPACITY 8
+#endif
+  static_assert(RISC_RUNTIME_ATOMIC_BINDING_CAPACITY>=2 && RISC_RUNTIME_ATOMIC_BINDING_CAPACITY<=64,"Invalid atomic binding capacity");
+  AtomicBinding atomicBindings_[RISC_RUNTIME_ATOMIC_BINDING_CAPACITY]{};size_t atomicBindingCount_=0;
   static constexpr PolicyIndex AtomicKeyValueDriver=-11;
   static constexpr PolicyIndex KeyValueAvailabilityDriver=-12;
   const KeyValueAvailability* keyValueAvailability(uint32_t) const;
