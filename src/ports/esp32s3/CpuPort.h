@@ -9,7 +9,7 @@
 #include <RiscProviderSyncV1.h>
 #include "runtime/storage/StorageWorker.h"
 #include <RiscStorageWorkerAdmissionV1.h>
-#include <RiscHttpClientV1.h>
+#include <RiscHttpTimeV1.h>
 #include <RiscRadioIqResourceV1.h>
 #include <RiscUsbPhyResourceV1.h>
 namespace RiscCpu {
@@ -169,7 +169,7 @@ class Port final {
   size_t syncCount_=0,gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0,iqCount_=0;
   risc_platform_clock_wait_v1 clock_{};
   risc_realtime_control_api_v1 realtime_{};
-  risc_http_client_v1 http_{};
+  risc_http_client_time_v1 http_{};
   RiscBoot::EntropyBackend entropy_{};
   static int32_t entropyFill(void*,uint64_t,void*,uint32_t);
   bool entropyIdle(uint64_t owner=0) const;
@@ -259,6 +259,7 @@ class Port final {
   static bool radioScanPoll(void*,uint64_t,garden_radio_scan_result_v1*);
   static bool radioScanCancel(void*,uint64_t);
   static int32_t httpOpen(void*,const risc_http_request_v1*,uint64_t*);
+  static int32_t httpOpenWithTime(void*,const risc_http_request_v1*,const char*,uint64_t*);
   static int32_t httpRead(void*,uint64_t,void*,uint32_t,uint32_t*);
   static int32_t httpInfo(void*,uint64_t,risc_http_response_v1*);
   static int32_t httpClose(void*,uint64_t);

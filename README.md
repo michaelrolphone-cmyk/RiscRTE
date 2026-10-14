@@ -6,6 +6,10 @@ admission and copied asynchronous storage work. It is not a hardware-qualified
 release. Existing boot profiles do not select the storage worker implicitly.
 See [installed-package integration](docs/INSTALLED_PACKAGES.md).
 
+An optional tagged [HTTP time-bootstrap suffix](docs/HTTP_TIME_BOOTSTRAP.md)
+provides session-only first-start TLS date input from an explicit time server.
+Ordinary valid-UTC HTTP open and all existing capability boundaries remain unchanged.
+
 Runtime 0.2.6 adds an optional tagged `platform.clock` suffix for bounded
 scheduler-only cleanup waits. The legacy clock prefix and sleep behavior remain
 unchanged. See [scheduler-only clock waits](docs/CLOCK_SCHEDULER_WAIT_026.md).

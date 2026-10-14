@@ -105,6 +105,15 @@ int32_t Port::httpOpen(void* context,const risc_http_request_v1* request,uint64_
   if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
   p.transferring_=true;const auto result=p.hw_.httpClient->open(p.hw_.httpClient->context,request,out);p.transferring_=false;return result;
 }
+int32_t Port::httpOpenWithTime(void* context,const risc_http_request_v1* request,const char* server,uint64_t* out){
+  if(out)*out=0;
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available() || p.sleepRetained_ || p.transferring_)return RISC_HTTP_CLOSED;
+  const auto* api=risc_http_client_time_from_v1(p.hw_.httpClient);
+  if(!api)return RISC_HTTP_CLOSED;
+  if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
+  p.transferring_=true;const auto result=api->open_with_time(api->base.context,request,server,out);p.transferring_=false;return result;
+}
 int32_t Port::httpRead(void* context,uint64_t token,void* out,uint32_t size,uint32_t* count){
   if(count)*count=0;
   auto& p=*static_cast<Port*>(context);
@@ -224,8 +233,12 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   if(hw_.httpClient){
     const auto* h=hw_.httpClient;
     if(!hw_.httpIdle || !hw_.httpSafe || h->api_version!=1 || h->struct_size<sizeof(*h) || !h->open || !h->read || !h->info || !h->close)return false;
-    http_={1,sizeof(http_),this,httpOpen,httpRead,httpInfo,httpClose};
-    if(!runtime.registerPlatform(RISC_HTTP_CLIENT_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&http_))return false;
+    http_={};http_.base={1,sizeof(http_.base),this,httpOpen,httpRead,httpInfo,httpClose};
+    if(risc_http_client_time_from_v1(h)){
+      http_.base.struct_size=sizeof(http_);http_.time_tag=RISC_HTTP_TIME_TAG_V1;
+      http_.time_version=RISC_HTTP_TIME_VERSION_V1;http_.open_with_time=httpOpenWithTime;
+    }
+    if(!runtime.registerPlatform(RISC_HTTP_CLIENT_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&http_.base))return false;
   }
   const auto& board=runtime.board();
   for(size_t n=0;n<board.deviceCount();++n){
