@@ -1,0 +1,28 @@
+name: Native package LittleFS interruptions
+on:
+  push:
+    branches: ['feat/sd-first-capacity-fallback-20261013']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  flash-boundaries:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Real pinned LittleFS program and erase interruption matrix
+        env:
+          SANITIZE: ${{ matrix.sanitize }}
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          set -o pipefail
+          python3 test/run_native_app_data_mount_test.py 2>&1 | tee package-littlefs.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: package-littlefs-${{ matrix.sanitize }}
+          path: package-littlefs.log

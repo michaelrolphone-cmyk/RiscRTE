@@ -16,6 +16,7 @@
 #include <thread>
 #include <cstdlib>
 #include "runtime/storage/AppDataFiles.h"
+#include "runtime/storage/PackageFiles.h"
 extern "C" void native_lfs_fixture_select_appdata(void);
 extern "C" void* xTaskGetCurrentTaskHandle(){static thread_local int task;return &task;}
 extern "C" int xPortInIsrContext(){return 0;}
@@ -196,8 +197,48 @@ static void nativeBackend(){
  uint64_t token=7;assert(api->beginReplace(nullptr,1,"other",0,nullptr,0,&token)==RISC_APP_DATA_RETAINED&&token==0);
  blocked();
 }
+
+static void packagePowerCuts(){
+ assert(native_lfs_fixture_mkdir("/.packages")==0);
+ assert(native_lfs_fixture_mkdir("/.packages/Apps")==0);
+ assert(native_lfs_fixture_mkdir("/.packages/Drivers")==0);
+ assert(native_lfs_fixture_mkdir("/.packages/AppData")==0);
+ assert(native_lfs_fixture_mkdir("/.packages/Apps/example")==0);
+ assert(native_lfs_fixture_seed("/.packages/Apps/example/manifest.json","OLD",3)==0);
+ assert(native_lfs_fixture_seed("/.packages/Apps/example/old.elf","OLDIMAGE",8)==0);
+ std::vector<unsigned char>baseline(0x80000);assert(native_lfs_fixture_snapshot(baseline.data(),baseline.size())==baseline.size());
+ struct Cut {unsigned at,seen;bool interrupted;unsigned char image[0x80000];};
+ auto*out=static_cast<Cut*>(mmap(nullptr,sizeof(Cut),PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0));assert(out!=MAP_FAILED);
+ auto run=[&](unsigned cut){
+  assert(native_lfs_fixture_restore(baseline.data(),baseline.size())==0);out->at=cut;out->seen=0;out->interrupted=false;
+  pid_t pid=fork();assert(pid>=0);
+  if(!pid){bind();
+   RiscStorage::PackageFiles store({nullptr,[](void*){return held()||enter(Access::Packages);},[](void*){leave();},[](void*){return retained();},[](void*,uint64_t*t,uint64_t*u){size_t total=0,used=0;bool ok=usage(&total,&used);*t=total;*u=used;return ok;}});
+   assert(store.configure("/appdata/.packages"));auto*v=store.api();auto*fs=risc_storage_volume_fs(v);void*c=v->context;
+   native_lfs_fixture_hook([](void*ctx,native_lfs_fixture_operation op,native_lfs_fixture_phase){
+    auto*p=static_cast<Cut*>(ctx);if(op!=NATIVE_LFS_FLASH_PROG&&op!=NATIVE_LFS_FLASH_ERASE)return;
+    ++p->seen;if(p->at&&p->seen==p->at){p->interrupted=true;assert(native_lfs_fixture_snapshot(p->image,sizeof(p->image))==sizeof(p->image));_exit(0);}
+   },out);
+   assert(v->refresh(c));uint64_t free=0;assert(store.freeBytes(&free)&&free>65536);
+   auto h=v->file_open_write(c,"/Apps/example/new.elf");assert(h);unsigned char data[4096];memset(data,0xa5,sizeof(data));for(unsigned n=0;n<2;++n)assert(v->file_write(c,h,data,sizeof(data))==sizeof(data));assert(v->file_close(c,h,true));
+   h=v->file_open_write(c,"/Apps/example/manifest.install");assert(h&&v->file_write(c,h,"NEW",3)==3&&v->file_close(c,h,true));
+   assert(fs->replace_file(c,"/Apps/example/manifest.install","/Apps/example/manifest.json"));assert(store.exitSafe()&&!held());
+   native_lfs_fixture_hook(nullptr,nullptr);assert(native_lfs_fixture_snapshot(out->image,sizeof(out->image))==sizeof(out->image));_exit(0);
+  }
+  int status=0;assert(waitpid(pid,&status,0)==pid&&WIFEXITED(status)&&WEXITSTATUS(status)==0);
+  assert(native_lfs_fixture_restore(out->image,sizeof(out->image))==0);
+  auto read=[](const char*path,std::vector<unsigned char>&value){int fd=native_lfs_fixture_open(path,O_RDONLY);assert(fd>=0);struct stat st{};assert(native_lfs_fixture_fstat(fd,&st)==0);value.resize(st.st_size);assert(native_lfs_fixture_read(fd,value.data(),value.size())==ptrdiff_t(value.size()));assert(native_lfs_fixture_close(fd)==0);};
+  std::vector<unsigned char>manifest,image;read("/.packages/Apps/example/manifest.json",manifest);assert(manifest==std::vector<unsigned char>({'O','L','D'})||manifest==std::vector<unsigned char>({'N','E','W'}));
+  read("/.packages/Apps/example/old.elf",image);assert(image==std::vector<unsigned char>({'O','L','D','I','M','A','G','E'}));
+  if(manifest[0]=='N'){read("/.packages/Apps/example/new.elf",image);assert(image==std::vector<unsigned char>(8192,0xa5));}
+  if(cut)assert(out->interrupted);
+ };
+ run(0);unsigned boundaries=out->seen;assert(boundaries>10);for(unsigned cut=1;cut<=boundaries;++cut)run(cut);
+ printf("Internal package activation: %u real LittleFS program/erase before/after cuts; old or complete new manifest and image, old image preserved PASS\n",boundaries);
+ assert(munmap(out,sizeof(Cut))==0);
+}
 int main(int argc,char**argv){assert(argc==2);assert(native_lfs_fixture_reset()==0);
- if(!strcmp(argv[1],"healthy"))healthy();else if(!strcmp(argv[1],"recovery"))recovery();else if(!strcmp(argv[1],"close-failure"))closeFailure();else if(!strcmp(argv[1],"lost-custody"))lostCustody();else if(!strcmp(argv[1],"native-backend"))nativeBackend();else fault();
+ if(!strcmp(argv[1],"packages"))packagePowerCuts();else if(!strcmp(argv[1],"healthy"))healthy();else if(!strcmp(argv[1],"recovery"))recovery();else if(!strcmp(argv[1],"close-failure"))closeFailure();else if(!strcmp(argv[1],"lost-custody"))lostCustody();else if(!strcmp(argv[1],"native-backend"))nativeBackend();else fault();
  puts("PASS: native retained mount binding");
  // Process exit models cold power loss; deliberately no runtime teardown.
 }
