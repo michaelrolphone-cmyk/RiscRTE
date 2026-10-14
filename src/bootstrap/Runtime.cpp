@@ -1316,8 +1316,7 @@ bool Runtime::runOne(const char* name) {
     bool finish(){ended=true;return port.controlEnd?port.controlEnd():false;}
     ~ControlLifetime(){if(!retained&&!ended&&port.controlEnd)(void)port.controlEnd();}
   } control{port_,retained_};
-  initialDefaultInvocation_=invocation_==&mainInvocation_ && !strcmp(name,default_) && !firstDefaultStarted_;
-  if(initialDefaultInvocation_)firstDefaultStarted_=true;
+  initialDefaultInvocation_=false;
   invocation_->role=0;
   invocation_->residentPolicyPending_=false;
   invocation_->failureKind=RISC_RESIDENT_FAILURE_NONE;invocation_->status=RISC_RESIDENT_OK;
@@ -1422,6 +1421,8 @@ bool Runtime::runOne(const char* name) {
     port_.log("RTE_APP phase=entry");
     RiscPerf::emit(16);
     failureBreadcrumb(RISC_FAILURE_PHASE_MAIN,name);
+    initialDefaultInvocation_=invocation_==&mainInvocation_ && invocation_->defaultRunning_ && !firstDefaultStarted_;
+    if(initialDefaultInvocation_)firstDefaultStarted_=true;
     entry();
     if(port_.failureEvidence && !appExitBarrier())return false;
     RISC_STAGE_LOG("app entry returned file=%s",name);
