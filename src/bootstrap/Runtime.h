@@ -278,6 +278,7 @@ class Runtime final {
     RuntimeProviders::RequirementV2 requirements[RuntimeProviders::GraphV2::kMaxRequirements]{};
     char names[RuntimeProviders::GraphV2::kMaxRequirements][96]{};
     size_t count=0;
+    bool explicitBinding[RuntimeProviders::GraphV2::kMaxRequirements]{};
     bool coldBootStart=false;
     Runtime* sourceOwner=nullptr;uint64_t sourceVolume=0;int sourceDriver=-1;
     char sourcePath[193]{};bool internalFallback=false;

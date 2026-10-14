@@ -133,6 +133,50 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   rejected("invalid app identity/declarations");
   puts("App policy capacity: 9/16/18 and full bound accepted, overflow rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
 }
+static void softwareBindings(const std::string& root) {
+  JsonDocument config,hw,sw,consumer;
+  assert(parse(manifest,strlen(manifest),hw));sw.set(hw);
+  sw["id"]="singleton";sw["requires"].to<JsonArray>();sw.remove("hardware_compatibility");
+  consumer.set(sw);consumer["id"]="consumer";
+  consumer["provides"][0]["capability"]="test.consumer";
+  auto requirement=consumer["requires"].as<JsonArray>().add<JsonObject>();
+  requirement["capability"]="test.probe";requirement["api"]=1;
+  auto save=[&](const char* name,const JsonDocument& doc){std::string bytes;serializeJson(doc,bytes);write(root+"/"+name,bytes);};
+  save("bound-hw.json",hw);save("bound-sw.json",sw);save("consumer.json",consumer);
+  config["board"]="board.json";config["default_app"]="default.elf";
+  auto drivers=config["drivers"].to<JsonArray>();
+  auto h=drivers.add<JsonObject>();h["manifest"]="bound-hw.json";h["instance_id"]=7;
+  drivers.add<JsonObject>()["manifest"]="bound-sw.json";
+  auto c=drivers.add<JsonObject>();c["manifest"]="consumer.json";
+  auto check=[&](const char* error){
+    save("boot.json",config);const size_t before=lines.size();
+    Runtime runtime({owner,health,delay,logLine});bool ok=runtime.prepare(root.c_str());
+    if(error){if(ok || strcmp(runtime.error(),error))fprintf(stderr,"binding expected %s got %s\n",error,runtime.error());assert(!ok);assert(!strcmp(runtime.error(),error));}
+    else {if(!ok)fprintf(stderr,"binding rejected %s\n",runtime.error());assert(ok);}
+    assert(lines.size()==before);
+  };
+  check("ambiguous dependency");
+  auto bindings=c["bindings"].to<JsonArray>();auto b=bindings.add<JsonObject>();
+  b["capability"]="test.probe";b["api"]=1;b["instance_id"]=7;check(nullptr);
+  b["instance_id"]=0;check(nullptr); // singleton zero is a selection, not wildcard
+  b["instance_id"]=8;check("missing dependency");
+  b["instance_id"]=-1;check("invalid software dependency binding");
+  b["instance_id"]=7;b["api"]=2;check("undeclared/duplicate software dependency binding");
+  b["api"]=1;b["capability"]="test.unknown";check("undeclared/duplicate software dependency binding");
+  b["capability"]="platform.clock";check("invalid software dependency binding");
+  b["capability"]="storage.app-data.bound";check("invalid software dependency binding");
+  b["capability"]="test.probe";b["extra"]=true;check("invalid software dependency binding");b.remove("extra");
+  // Two requirements allow the duplicate to reach semantic validation.
+  auto second=consumer["requires"].as<JsonArray>().add<JsonObject>();second["capability"]="test.consumer";second["api"]=1;save("consumer.json",consumer);
+  bindings.add(b);check("undeclared/duplicate software dependency binding");bindings.remove(1);
+  b["instance_id"]=7;check("driver dependency cycle");
+  consumer["requires"].as<JsonArray>().remove(1);save("consumer.json",consumer);
+  h["bindings"].to<JsonArray>();check("invalid software dependency bindings");h.remove("bindings");
+  c["bindings"].to<JsonObject>();check("invalid software dependency bindings");
+  c.remove("bindings");drivers.remove(1);check(nullptr); // legacy unique match unchanged
+  puts("Software dependency bindings: dual provider, exact zero/nonzero, absent target, malformed/duplicate/private/hardware and cycle admission PASS");
+}
+
 int main(int argc,char** argv){
   assert(argc==2);std::string root=argv[1];
   write(root+"/board.json",board);write(root+"/probe.json",manifest);
@@ -214,6 +258,7 @@ int main(int argc,char** argv){
   {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
   puts("App grants: identity/declaration/exact instance, size/version checks, stale handles, child isolation and automatic revocation PASS");
   appPolicyCapacity(root,grantBoot);
+  softwareBindings(root);
   driverCapacity(root);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"heartbeat.elf","drivers":[]})");
   heartbeatMode=true;generation=0;lines.clear();
