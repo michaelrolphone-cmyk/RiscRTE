@@ -1,3 +1,4 @@
+#include <RiscInternalPackageVolumeV1.h>
 #include "Runtime.h"
 #include "AppDeclarations.h"
 #include "RemovableAppImage.h"
@@ -191,13 +192,18 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
                strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_ENTROPY_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
-               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY) && strcmp(capability,RISC_INSTALLATION_CAPABILITY))) return false;
+               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY) && strcmp(capability,"platform.package-volume") && strcmp(capability,RISC_INSTALLATION_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
   if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
       (header[1]<sizeof(risc_diagnostic_source_api_v1) ||
        !static_cast<const risc_diagnostic_source_api_v1*>(table)->read)) return false;
+  if (!strcmp(capability,RISC_INTERNAL_PACKAGE_VOLUME_CAPABILITY)) {
+    if(api!=1 || scope!=Scope::Global || id || header[1]<sizeof(risc_internal_package_volume_v1))return false;
+    const auto* package=static_cast<const risc_internal_package_volume_v1*>(table);
+    if(!package->exit_safe || !risc_storage_volume_download(package->volume))return false;
+  }
   if (!strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY)) {
     if(api!=RISC_USB_PHY_RESOURCE_API_V1 || scope!=Scope::Global || id || header[1]<sizeof(risc_usb_phy_resource_api_v1))return false;
     const auto* usb=static_cast<const risc_usb_phy_resource_api_v1*>(table);
@@ -302,7 +308,7 @@ bool Runtime::validateGraph() {
   }
   // Source access is a loader dependency, not an extra capability passed to
   // the provider. Keep the entire mount closure internal, even with fallback.
-  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].sourceVolume) {
+  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].sourcePath[0]) {
     auto& d=drivers_[i];
     for(size_t j=0;j<driverCount_;++j)
       if(drivers_[j].instance==d.sourceVolume && drivers_[j].api==1 &&
@@ -366,7 +372,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     }
     if(!item["image_source"].isNull()) {
       auto source=item["image_source"].as<JsonObjectConst>();int64_t instance=0;char relativeImage[192];
-      if(!keys(source,{"volume_instance","path"}) || !integer(source["volume_instance"],1,INT32_MAX,instance) ||
+      if(!keys(source,{"volume_instance","path"}) || !integer(source["volume_instance"],0,INT32_MAX,instance) ||
          !text(source["path"],relativeImage,sizeof(relativeImage)) || !InstalledFiles::valid(relativeImage,false) ||
          !elfPath(relativeImage) || !strcmp(policy.elf,invocation_->current_))return fail("invalid removable app source");
       for(size_t d=0;d<driverCount_;++d)if(drivers_[d].instance==uint64_t(instance) &&

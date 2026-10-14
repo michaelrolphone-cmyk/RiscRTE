@@ -3,6 +3,7 @@
 #include <RiscStorageVolumeAsyncV1.h>
 #include <RiscStoragePackageAsyncV1.h>
 #include <RiscStorageWorkerAdmissionV1.h>
+#include <RiscInternalPackageVolumeV1.h>
 #include <string.h>
 /* Shared provider-side executor. Only the selected native worker calls volume
  * I/O. Owner methods inspect worker-published fields only after collect/cancel
@@ -15,6 +16,7 @@ typedef struct {
  uint64_t serial,session,operation;bool ending,cleanup,retained;
  risc_storage_async_result_v1 cleanup_result; // provider-owned owner output, never app memory
  uint32_t directory,file;bool writing;uint32_t written; // worker-only until completion fence
+ bool(*package_free_bytes)(void*,uint64_t*);
 } risc_storage_async_adapter_v1;
 static inline int32_t risc_storage_package_execute(risc_storage_async_adapter_v1*a,const risc_storage_package_request_v1*q,risc_storage_async_result_v1*r){
  const risc_storage_volume_api_v1*v=a->volume;r->status=RISC_STORAGE_ASYNC_IO;
@@ -32,6 +34,11 @@ static inline int32_t risc_storage_package_execute(risc_storage_async_adapter_v1
   a->file=0;a->writing=false;a->written=0;return r->status=ok?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_IO;
  }
  if(a->directory||a->file)return r->status=RISC_STORAGE_ASYNC_BUSY;
+ if(q->operation==RISC_STORAGE_PACKAGE_FREE_BYTES){
+  uint64_t bytes=0;if(!a->package_free_bytes)return r->status=RISC_STORAGE_ASYNC_INVALID;
+  if(!a->package_free_bytes(v->context,&bytes))return r->status=a->retained?RISC_STORAGE_ASYNC_RETAINED:RISC_STORAGE_ASYNC_IO;
+  memcpy(r->data,&bytes,sizeof(bytes));r->size=sizeof(bytes);return r->status=RISC_STORAGE_ASYNC_OK;
+ }
  if(!memchr(q->path,0,sizeof(q->path))||!q->path[0]||!memchr(q->destination,0,sizeof(q->destination)))return r->status=RISC_STORAGE_ASYNC_INVALID;
  if(q->operation==RISC_STORAGE_PACKAGE_OPEN_WRITE){
   if(!v->file_open_write||!v->file_write||!a->ext->file_sync)return r->status=RISC_STORAGE_ASYNC_INVALID;
@@ -144,7 +151,7 @@ static inline int32_t risc_storage_async_submit(risc_storage_async_adapter_v1*a,
 }
 static inline int32_t risc_storage_package_submit(risc_storage_async_adapter_v1*a,uint64_t session,const risc_storage_package_request_v1*q,uint64_t*out){
  if(out)*out=0;
- if(!out||!q||!session||session!=a->session||q->operation<RISC_STORAGE_PACKAGE_VALIDATE||q->operation>RISC_STORAGE_PACKAGE_MKDIR||!memchr(q->path,0,sizeof(q->path))||!memchr(q->destination,0,sizeof(q->destination)))return RISC_STORAGE_ASYNC_INVALID;
+ if(!out||!q||!session||session!=a->session||q->operation<RISC_STORAGE_PACKAGE_VALIDATE||q->operation>RISC_STORAGE_PACKAGE_FREE_BYTES||!memchr(q->path,0,sizeof(q->path))||!memchr(q->destination,0,sizeof(q->destination)))return RISC_STORAGE_ASYNC_INVALID;
  if(a->ending||a->operation)return RISC_STORAGE_ASYNC_BUSY;
  if(a->retained)return RISC_STORAGE_ASYNC_RETAINED;
  if(a->worker->submit(a->worker->context,q,sizeof(*q),&a->operation)!=RISC_STORAGE_WORK_OK)return RISC_STORAGE_ASYNC_BUSY;

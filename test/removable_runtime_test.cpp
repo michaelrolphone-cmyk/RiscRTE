@@ -22,7 +22,8 @@ static std::map<std::string,std::string> legacySettings;
 static std::vector<uint8_t> payload;
 static unsigned defaults,children,starts,stops,opens,closes,live,previousRuns;
 static bool providerMode(){return mode.find("provider-")==0;}
-static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority"||mode=="catalog-providers"||settingsMode()||mode=="shared-settings";}
+static bool providerCatalog(){return mode=="catalog-providers"||mode=="catalog-media";}
+static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority"||providerCatalog()||settingsMode()||mode=="shared-settings";}
 static unsigned baseCount(){return mode=="catalog-resident"?2:mode=="catalog-authority"?1:0;}
 extern "C" bool removable_is_resident(){return mode=="catalog-resident";}
 static size_t offset;
@@ -33,22 +34,27 @@ extern "C" void removable_installation(const void*api){installer=static_cast<con
 static const char*pluginManifest=R"({"type":"driver","id":"sd-plugin","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"plugin.elf","requires":[],"provides":[{"capability":"test.plugin","api":1}]})";
 static const char*pluginPath="/Drivers/sd-plugin/image-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.elf";
 static std::string pluginUpdate,pluginUpdatePath;
-static unsigned discoveryIo;
+static unsigned discoveryIo,internalOpens;
+static int32_t providerPublication(void*c,const risc_install_provider_v1*rows,uint32_t count,bool check){
+ if(mode!="catalog-media")return installer->providers(c,rows,count,check);
+ auto*m=risc_installation_media(installer);assert(m&&m->media_mask==3);uint32_t media[2]={1,1};assert(count<=2);
+ return m->providers_media(c,rows,media,count,check);
+}
 static void installProviderFixture(){
  assert(installer&&installer->providers&&installer->available);
  assert(!installer->available(installer->context,"test.plugin",1,0));
  risc_install_provider_v1 record{pluginManifest,pluginPath,0};
  const unsigned io=opens+closes+discoveryIo;
- assert(installer->providers(installer->context,&record,1,true)==RISC_INSTALL_OK);
+ assert(providerPublication(installer->context,&record,1,true)==RISC_INSTALL_OK);
  assert(!installer->available(installer->context,"test.plugin",1,0));
  std::string denied=pluginManifest;denied.replace(denied.find("\"requires\":[]"),13,"\"requires\":[{\"capability\":\"platform.installation\",\"api\":1}]");
- record.manifest_json=denied.c_str();assert(installer->providers(installer->context,&record,1,false)==RISC_INSTALL_DENIED);
+ record.manifest_json=denied.c_str();assert(providerPublication(installer->context,&record,1,false)==RISC_INSTALL_DENIED);
  record.manifest_json=pluginManifest;
  risc_install_provider_v1 partial[2]={record,{"{}",pluginPath,0}};
- assert(installer->providers(installer->context,partial,2,false)==RISC_INSTALL_INVALID);
+ assert(providerPublication(installer->context,partial,2,false)==RISC_INSTALL_INVALID);
  assert(!installer->available(installer->context,"test.plugin",1,0));
- assert(installer->providers(installer->context,&record,1,false)==RISC_INSTALL_OK);
- assert(installer->providers(installer->context,&record,1,false)==RISC_INSTALL_OK);
+ assert(providerPublication(installer->context,&record,1,false)==RISC_INSTALL_OK);
+ assert(providerPublication(installer->context,&record,1,false)==RISC_INSTALL_OK);
  assert(installer->available(installer->context,"test.plugin",1,0));
  assert(io==opens+closes+discoveryIo);
  pluginUpdate=pluginManifest;pluginUpdate.replace(pluginUpdate.find("1.0.0"),5,"1.0.1");
@@ -106,15 +112,15 @@ extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
   if(children)assert(kv->get(kv->context,"mode",out,sizeof(out),&n)==0&&n==5&&!memcmp(out,"saved",5));
   assert(kv->put(kv->context,"mode","saved",5)==0);assert(rt->release(&setting));
  }
- if(mode=="catalog-providers"){
+ if(providerCatalog()){
   risc_runtime_capability_v1 plugin{};plugin.struct_size=sizeof(plugin);
   assert(rt->acquire("test.plugin",1,0,&plugin));assert(static_cast<const int*>(plugin.api)[2]==42);
   std::string next=pluginUpdate,nextPath=pluginUpdatePath;
   if(children){next.replace(next.find("1.0.1"),5,"1.0.2");nextPath.replace(nextPath.find("image-")+6,64,std::string(64,'c'));}
   risc_install_provider_v1 update{next.c_str(),nextPath.c_str(),0};
-  assert(installer->providers(installer->context,&update,1,false)==RISC_INSTALL_BUSY);
+  assert(providerPublication(installer->context,&update,1,false)==RISC_INSTALL_BUSY);
   assert(rt->release(&plugin));
-  if(!children)assert(installer->providers(installer->context,&update,1,false)==RISC_INSTALL_OK);
+  if(!children)assert(providerPublication(installer->context,&update,1,false)==RISC_INSTALL_OK);
  }
 
  risc_runtime_capability_v1 grant{};grant.struct_size=sizeof(grant);
@@ -146,10 +152,10 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
     if(mode=="shared-settings"){if(!sharedHydratedThisRun)sharedSettingsTest();return 0;}
     if(defaults==1 && (mode=="discovery"||catalogMode())) {
       assert(runtime->appCount()==baseCount());
-      if(mode=="catalog-providers")installProviderFixture();
+      if(providerCatalog())installProviderFixture();
       const char* manifest=R"({"type":"application","id":"child","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"child.elf","entry":"app_main","requires":[]})";
       std::string dynamicManifest;
-      if(mode=="catalog-providers"){
+      if(providerCatalog()){
        dynamicManifest=manifest;dynamicManifest.replace(dynamicManifest.find("\"requires\":[]"),13,"\"requires\":[{\"capability\":\"test.plugin\",\"api\":1}]");manifest=dynamicManifest.c_str();
       }
       const char* policy=R"({"manifest":"child.json","grants":[],"image_source":{"volume_instance":9,"path":"Apps/child/child.elf"}})";
@@ -235,6 +241,15 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
         changedSlot=129;assert(installer->namespaced(installer->context,&item,&changedSlot,1,&result,false,true)==RISC_INSTALL_INVALID);
         assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
         assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+        {
+         auto*m=risc_installation_media(installer);assert(m);uint32_t media=2;
+         assert(m->namespaced_media(installer->context,&item,&slot,&media,1,&result,true,false)==RISC_INSTALL_DENIED);
+         media=1;
+         if(mode=="catalog-media"){
+          assert(m->namespaced_media(installer->context,&item,&slot,&media,1,&result,true,true)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+          assert(m->namespaced_media(installer->context,&item,&slot,&media,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+         }else assert(m->namespaced_media(installer->context,&item,&slot,&media,1,&result,true,false)==RISC_INSTALL_DENIED);
+        }
         if(mode=="catalog-authority"){
           assert(installer->forget(installer->context,launchName.c_str(),false)==RISC_INSTALL_OK);
           assert(!runtime->launch("child.elf"));
@@ -299,14 +314,15 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
   };
   ext.handle_error=[](void*,uint32_t h,bool dir)->uint32_t{return dir?0:h==2&&manifestFile&&ferror(manifestFile)?1:0;};
   ext.dir_close_checked=[](void*,uint32_t){++discoveryIo;bool ok=closedir(appDirectory)==0;if(ok)appDirectory=nullptr;return ok;};
-  v.file_open_read=[](void*,const char* p,uint64_t* n)->uint32_t {
+  v.file_open_read=[](void*ctx,const char* p,uint64_t* n)->uint32_t {
     if(!strcmp(p,"/Apps/child/manifest.json")){
       ++discoveryIo;manifestFile=fopen((root+p).c_str(),"rb");if(!manifestFile)return 0;
       assert(!fseek(manifestFile,0,SEEK_END));*n=ftell(manifestFile);rewind(manifestFile);return 2;
     }
-    if(mode=="catalog-providers")selectImage(!strncmp(p,"/Drivers/",9)?"plugin.elf":"revision1.elf");
-    assert((mode=="catalog-providers"&&!strncmp(p,"/Drivers/sd-plugin/image-",25)) || !strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")));
+    if(providerCatalog())selectImage(!strncmp(p,"/Drivers/",9)?"plugin.elf":"revision1.elf");
+    assert((providerCatalog()&&!strncmp(p,"/Drivers/sd-plugin/image-",25)) || !strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")));
     if(mode=="missing" || mode=="busy")return 0;
+    if(ctx==reinterpret_cast<void*>(1))++internalOpens;
     ++opens;live=1;offset=0;*n=payload.size();return 1;
   };
   v.file_read=[](void*,uint32_t h,void* out,size_t n)->size_t {
@@ -352,6 +368,7 @@ extern "C" void* esp_dlopen_reader_instance(const char* name,esp_dl_image_reader
   FILE* out=fdopen(fd,"wb");assert(out);assert(fwrite(file.payload,1,file.size,out)==file.size);assert(!fclose(out));
   esp_elf_free(file.payload);void* module=dlopen(temporary,RTLD_NOW|RTLD_LOCAL);unlink(temporary);assert(module);return module;
 }
+extern "C" const risc_storage_volume_api_v1* removable_internal_volume(){static risc_storage_volume_api_v1 table;table=*removable_volume();table.context=reinterpret_cast<void*>(1);table.struct_size=sizeof(table);return &table;}
 int main(int argc,char** argv) {
   assert(argc==3);root=argv[1];mode=argv[2];selectImage("revision1.elf");
   if(providerMode())selectImage("plugin.elf");
@@ -368,7 +385,7 @@ int main(int argc,char** argv) {
   if(catalogMode()){
     JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
     doc["installation"]["volume_instance"]=9;auto grant=doc["installation"]["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=0;
-    if(mode=="catalog-providers")doc["installation"]["provider_grants"].to<JsonArray>();
+    if(providerCatalog())doc["installation"]["provider_grants"].to<JsonArray>();
     if(settingsMode()||mode=="shared-settings"){doc["installation"]["settings_sd"]=true;auto kv=doc["installation"]["grants"].add<JsonObject>();kv["capability"]="storage.key-value";kv["api"]=1;kv["instance_id"]=0;}
     if(mode=="shared-settings"){
      auto list=doc["installation"]["shared_settings"].to<JsonArray>();list.add(1);list.add(6);
@@ -379,6 +396,10 @@ int main(int argc,char** argv) {
      auto child=doc["app_capabilities"].add<JsonObject>();child["manifest"]="shared-child.json";
      auto childKv=child["grants"].add<JsonObject>();childKv["capability"]="storage.key-value";childKv["api"]=1;childKv["instance_id"]=6;
      auto key=doc["drivers"][0]["key_value"].add<JsonObject>();key["key"]="wifi.test";key["namespace"]=6;key["access"]="read-write";
+    }
+    if(mode=="catalog-media"){
+     write("internal.json",R"({"type":"driver","id":"internal-test","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"internal.elf","requires":[],"provides":[{"capability":"storage.volume","api":1}]})");
+     doc["drivers"].add<JsonObject>()["manifest"]="internal.json";doc["installation"]["internal_volume_instance"]=0;
     }
     doc["installation"]["namespace_range"]["first"]=1000;doc["installation"]["namespace_range"]["count"]=128;boot.clear();serializeJson(doc,boot);
     std::ifstream source(root+"/sd.json");std::string raw((std::istreambuf_iterator<char>(source)),{});JsonDocument sd;assert(!deserializeJson(sd,raw));
@@ -475,11 +496,12 @@ int main(int argc,char** argv) {
     puts("Shared settings: actual app/provider namespace 1/6 routing, 1024 opaque keys, native erase/restart, isolation and fail-closed recovery PASS");return 0;
   }
   unsigned inspected=0;
-  assert(runtime->inspectImages([](void* c,const char* p,bool){assert(!strstr(p,"child.elf"));++*static_cast<unsigned*>(c);return true;},&inspected));assert(inspected==(mode=="catalog-resident"?3u:2u));
+  assert(runtime->inspectImages([](void* c,const char* p,bool){assert(!strstr(p,"child.elf"));++*static_cast<unsigned*>(c);return true;},&inspected));assert(inspected==((mode=="catalog-resident"||mode=="catalog-media")?3u:2u));
   const bool retained=mode=="close-retained";
   assert(runtime->run()!=retained);assert(runtime->retained()==retained);
   if(retained){assert(defaults==1 && !children && live && !stops);}
   else {assert(defaults==3 && !live && starts==stops);assert(children==((mode=="normal" || mode=="replacement" || (mode=="discovery"||catalogMode()))?2u:0u));delete runtime;}
   if(catalogMode())assert(privateWrites==2);
+  if(mode=="catalog-media"){assert(internalOpens>=4);puts("Internal medium: actual app/driver module loads, explicit software volume zero, replay/update, live replacement refusal and unselected-media denial PASS");}
   printf("SD Runtime mode=%s defaults=%u children=%u opens=%u closes=%u provider_starts=%u stops=%u PASS\n",mode.c_str(),defaults,children,opens,closes,starts,stops);
 }
