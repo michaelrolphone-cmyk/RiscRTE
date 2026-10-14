@@ -49,7 +49,7 @@ static void setup(){
  downloadApi.download_tag=RISC_STORAGE_DOWNLOAD_TAG;downloadApi.download_version=1;
  adapter.worker=&native.base;adapter.volume=&v;adapter.ext=&ext;adapter.fs=&fs;assert(worker.bind(risc_storage_async_execute,&adapter)==0);
  api.base.async_tag=RISC_STORAGE_ASYNC_TAG;api.base.async_version=3;
- api.base.begin=[](void*,uint64_t*t){return risc_storage_async_begin(&adapter,t);};
+ api.base.begin=[](void*,uint64_t*t)->int32_t{return risc_storage_async_begin(&adapter,t);};
  api.base.submit=[](void*,uint64_t s,const risc_storage_async_request_v1*q,uint64_t*t){return risc_storage_async_submit(&adapter,s,q,t);};
  api.base.collect=[](void*,uint64_t s,uint64_t t,risc_storage_async_result_v1*r){return risc_storage_async_collect(&adapter,s,t,r);};
  api.base.end=[](void*,uint64_t s){return risc_storage_async_end(&adapter,s);};
@@ -77,6 +77,15 @@ int main(){setup();auto*volume=adapter.volume;
   assert(!httpLive&&opened.empty());Download resumed;assert(resumed.start(volume,&http,record,1800000000,true));spins=0;
   while(resumed.state()!=Download::State::Ready){assert(resumed.state()!=Download::State::Failed&&resumed.state()!=Download::State::Retained);tickDownload(resumed);assert(++spins<400);}
   assert(files.at(record.path)==source&&!httpLive&&opened.empty());
+ }
+ // Error/retained acquisition never becomes an unavailable-media fallback.
+ {auto original=api.base.begin;
+  Download::Record record{};strcpy(record.url,"https://example.org/provider.elf");strcpy(record.path,"/Drivers/new/image-0000000000000000000000000000000000000000000000000000000000000000.elf");record.driver=true;record.size=1;
+  api.base.begin=[](void*,uint64_t*t)->int32_t{*t=0;return RISC_STORAGE_ASYNC_RETAINED;};Download retained;assert(retained.start(volume,&http,record,1800000000)&&retained.state()==Download::State::Retained);retained.cancel();retained.step();assert(retained.state()==Download::State::Retained);
+  api.base.begin=[](void*,uint64_t*t)->int32_t{*t=123;return RISC_STORAGE_ASYNC_IO;};Download ambiguous;assert(ambiguous.start(volume,&http,record,1800000000)&&ambiguous.state()==Download::State::Retained);
+  api.base.begin=[](void*,uint64_t*t)->int32_t{*t=0;return RISC_STORAGE_ASYNC_BUSY;};Download busy;assert(!busy.start(volume,&http,record,1800000000)&&busy.state()==Download::State::Idle);
+  api.base.begin=[](void*,uint64_t*t)->int32_t{*t=0;return RISC_STORAGE_ASYNC_OK;};Download missing;assert(missing.start(volume,&http,record,1800000000)&&missing.state()==Download::State::Retained);
+  api.base.begin=original;
  }
  puts("SD download: real HTTP/copy-worker coordinator, 110 interruption/resume boundaries, journal gate and exact size PASS");
  files.clear();directories.clear();
