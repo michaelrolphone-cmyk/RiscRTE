@@ -142,6 +142,20 @@ static void selectImage(const char* name){
 }
 extern "C" unsigned removable_event(unsigned e,unsigned value) {
   if(e==0){++defaults;if(providerMode())return 0;
+    if(mode=="internal-only"){
+      auto*m=risc_installation_media(installer);assert(m&&m->media_mask==2);
+      const char*manifest=R"({"type":"application","id":"child","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"child.elf","entry":"app_main","requires":[]})";
+      risc_install_candidate_v1 item{"Apps/child/manifest.json",manifest};uint32_t slot=1,medium=0;risc_install_result_v1 result{};char path[193];
+      assert(installer->admit(installer->context,item.manifest_path,manifest,path,sizeof path)==RISC_INSTALL_DENIED);
+      assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_DENIED);
+      assert(m->namespaced_media(installer->context,&item,&slot,&medium,1,&result,true,false)==RISC_INSTALL_DENIED);
+      risc_install_provider_v1 provider{pluginManifest,pluginPath,0};
+      assert(installer->providers(installer->context,&provider,1,true)==RISC_INSTALL_DENIED);
+      medium=1;assert(m->providers_media(installer->context,&provider,&medium,1,true)==RISC_INSTALL_OK);
+      assert(m->namespaced_media(installer->context,&item,&slot,&medium,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+      launchName=result.launch_path;return defaults<3;
+    }
+
     const auto* feedback=risc_runtime_get_api(1);
     risc_runtime_launch_failure_v1 record{};record.struct_size=sizeof(record);
     const bool expected=defaults>1 && (mode=="absent" || mode=="missing" || mode=="busy" || mode=="removed" || mode=="malformed");
@@ -381,11 +395,11 @@ int main(int argc,char** argv) {
   std::string boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[{"manifest":"child.json","grants":[],"image_source":{"volume_instance":9,"path":"Apps/child/child.elf"}}]})";
   if(mode=="invalid-path")boot.replace(boot.find("Apps/child/child.elf"),20,"../child.elf");
   if(mode=="default-external")boot.replace(boot.find("default.elf"),11,"child.elf");
-  if(mode=="discovery"||catalogMode())boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[]})";
-  if(catalogMode()){
+  if(mode=="discovery"||catalogMode()||mode=="internal-only")boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[]})";
+  if(catalogMode()||mode=="internal-only"){
     JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
     doc["installation"]["volume_instance"]=9;auto grant=doc["installation"]["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=0;
-    if(providerCatalog())doc["installation"]["provider_grants"].to<JsonArray>();
+    if(providerCatalog()||mode=="internal-only")doc["installation"]["provider_grants"].to<JsonArray>();
     if(settingsMode()||mode=="shared-settings"){doc["installation"]["settings_sd"]=true;auto kv=doc["installation"]["grants"].add<JsonObject>();kv["capability"]="storage.key-value";kv["api"]=1;kv["instance_id"]=0;}
     if(mode=="shared-settings"){
      auto list=doc["installation"]["shared_settings"].to<JsonArray>();list.add(1);list.add(6);
@@ -397,8 +411,13 @@ int main(int argc,char** argv) {
      auto childKv=child["grants"].add<JsonObject>();childKv["capability"]="storage.key-value";childKv["api"]=1;childKv["instance_id"]=6;
      auto key=doc["drivers"][0]["key_value"].add<JsonObject>();key["key"]="wifi.test";key["namespace"]=6;key["access"]="read-write";
     }
-    if(mode=="catalog-media"){
+    if(mode=="catalog-media"||mode=="internal-only"){
      write("internal.json",R"({"type":"driver","id":"internal-test","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"internal.elf","requires":[],"provides":[{"capability":"storage.volume","api":1}]})");
+     if(mode=="internal-only"){
+      doc["drivers"].to<JsonArray>();doc["installation"]["volume_instance"]=0;
+      JsonDocument internal;std::ifstream f(root+"/internal.json");std::string bytes((std::istreambuf_iterator<char>(f)),{});assert(!deserializeJson(internal,bytes));
+      auto need=internal["requires"].add<JsonObject>();need["capability"]=RISC_INSTALLATION_CAPABILITY;need["api"]=1;bytes.clear();serializeJson(internal,bytes);write("internal.json",bytes);
+     }
      doc["drivers"].add<JsonObject>()["manifest"]="internal.json";doc["installation"]["internal_volume_instance"]=0;
     }
     doc["installation"]["namespace_range"]["first"]=1000;doc["installation"]["namespace_range"]["count"]=128;boot.clear();serializeJson(doc,boot);
@@ -463,6 +482,10 @@ int main(int argc,char** argv) {
     write("boot.json",boot);
   }
   if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
+  if(mode=="internal-only"){
+    assert(runtime->run()&&!runtime->retained());assert(defaults==3&&children==2&&internalOpens>=2&&!starts&&!stops&&!live);
+    delete runtime;puts("Internal-only installation: no SD driver, explicit media mask, rejected SD/legacy app and provider publication, actual internal app loads and replay PASS");return 0;
+  }
   if(mode=="discovery")assert(runtime->reserveInstalledApps(4));
   if(providerMode()){
     const bool retained=mode=="provider-retained",required=mode=="provider-required";
