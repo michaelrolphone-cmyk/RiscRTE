@@ -69,7 +69,8 @@ profiles, storage recovery, transport and hardware configuration are unchanged.
 ## Host checks
 
 Run `test/run_app_catalog_runtime_test.sh` and repeat with `SANITIZE=1` for
-AddressSanitizer/UndefinedBehaviorSanitizer. The fixture loads actual host app and
+AddressSanitizer/UndefinedBehaviorSanitizer. The runner covers all four combinations
+of atomic key-value and native settings lifecycle selection. The fixture loads actual host app and
 provider modules through Runtime. It covers explicit admission, denied authority,
 25 installed/23 visible without filename filtering, nested directory identities,
 legacy long-route preservation, optional metadata normalization, malformed/missing
@@ -77,3 +78,8 @@ identity metadata, native admitted inventory changes, settings-readiness
 changes, stale grants, reentry, invocation replacement, retention and zero catalog
 filesystem calls. These checks are source/host evidence, not target or hardware
 qualification.
+
+`test/run_atomic_key_value_runtime_test.sh` also holds real atomic settings and
+catalog grants together and verifies independent tables, reads and revocation.
+Repeat with `NATIVE_SETTINGS_LIFECYCLE=1` for the combined production features.
+See [the dispatch collision regression](APP_CATALOG_ATOMIC_DISPATCH.md).

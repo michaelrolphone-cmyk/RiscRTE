@@ -1,7 +1,7 @@
 name: Read-only app catalog host qualification
 on:
   push:
-    branches: [work/read-only-app-catalog-20261013]
+    branches: [work/read-only-app-catalog-20261013, fix/t063-catalog-acquisition]
   pull_request:
     paths:
       - '.github/workflows/app-catalog.yml'
@@ -12,6 +12,9 @@ on:
       - 'test/app_catalog_runtime_test.cpp'
       - 'test/fixtures/app_catalog_*.c'
       - 'test/run_app_catalog_runtime_test.sh'
+      - 'test/run_app_capability_dispatch_tags_test.sh'
+      - 'test/atomic_key_value_runtime_test.cpp'
+      - 'test/run_atomic_key_value_runtime_test.sh'
   workflow_dispatch:
 permissions:
   contents: read
@@ -34,4 +37,13 @@ jobs:
       - name: Native admission, metadata, generation and custody
         env:
           SANITIZE: ${{ matrix.sanitize }}
-        run: bash test/run_app_catalog_runtime_test.sh
+        run: |
+          bash test/run_app_capability_dispatch_tags_test.sh
+          bash test/run_app_catalog_runtime_test.sh
+      - name: Simultaneous atomic settings and catalog grant isolation
+        env:
+          SANITIZE: ${{ matrix.sanitize }}
+          ASAN_OPTIONS: detect_leaks=0
+        run: |
+          bash test/run_atomic_key_value_runtime_test.sh
+          NATIVE_SETTINGS_LIFECYCLE=1 bash test/run_atomic_key_value_runtime_test.sh

@@ -421,7 +421,23 @@ class Runtime final {
   bool configureInstalledFiles(JsonObjectConst);
   static Runtime* volumeContext(void*,bool diagnostic=false);
   risc_storage_volume_api_v1 volumeTable(void*);
-  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7, SharedDataDriver=-8, MemoryHeapDriver=-9,RandomDriver=-10,AppCatalogDriver=-11;
+  static constexpr PolicyIndex AppDataDriver=-2, RetainedWakeDriver=-3, RealtimeDriver=-4, RealtimeControlDriver=-5, PromotionDriver=-6, AppDataExportDriver=-7, SharedDataDriver=-8, MemoryHeapDriver=-9,RandomDriver=-10,AppCatalogDriver=-13;
+  // These are native dispatch tags, not provider slots or public ABI values.
+  // Optional brokers must never alias a tag used by an always-built service.
+  static_assert([]() constexpr {
+    constexpr PolicyIndex tags[]={AppDataDriver,RetainedWakeDriver,RealtimeDriver,
+      RealtimeControlDriver,PromotionDriver,AppDataExportDriver,SharedDataDriver,
+      MemoryHeapDriver,RandomDriver,AppCatalogDriver,
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+      AtomicKeyValueDriver,KeyValueAvailabilityDriver,
+#endif
+    };
+    for(size_t i=0;i<sizeof(tags)/sizeof(tags[0]);++i) {
+      if(tags[i]>=-1)return false;
+      for(size_t j=0;j<i;++j)if(tags[i]==tags[j])return false;
+    }
+    return true;
+  }(),"Native app capability dispatch tags must be distinct and negative");
   static int32_t randomFill(void*,void*,uint32_t);
   static int32_t memoryHeapSnapshot(void*,risc_memory_heap_snapshot_v1*);
   const risc_realtime_control_api_v1* realtimeBackend_=nullptr;

@@ -15,11 +15,11 @@ for version in 1 2;do
  cc -std=c11 "${flags[@]}" "${incs[@]}" -fPIC -fvisibility=hidden -shared -DATOMIC_READER_VERSION="$version" "$repo/test/fixtures/atomic_key_value_provider.c" -o "$build/reader$version.elf"
 done
 extra=();if [[ -n "${SYSTEM_CONTROLLER_OBJECT:-}" ]];then extra+=("$SYSTEM_CONTROLLER_OBJECT" "${SYSTEM_HASH_OBJECT:?}");fi
-c++ -std=c++17 "${flags[@]}" "${incs[@]}" -DRISC_RUNTIME_ATOMIC_KEY_VALUE=1 -rdynamic -no-pie -pthread \
+c++ -std=c++17 "${flags[@]}" "${incs[@]}" -DRISC_RUNTIME_ATOMIC_KEY_VALUE=1 -DRISC_NATIVE_SETTINGS_LIFECYCLE="${NATIVE_SETTINGS_LIFECYCLE:-0}" -rdynamic -no-pie -pthread \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
  "$repo/test/atomic_key_value_runtime_test.cpp" "${extra[@]}" -ldl -o "$build/test"
-for case in admission normal pending retained state-retained guard-state guard-get guard-submit guard-exit resident readthrough ${SYSTEM_CONTROLLER_OBJECT:+controller};do
+for case in admission normal pending retained state-retained guard-state guard-get guard-submit guard-exit resident readthrough catalog ${SYSTEM_CONTROLLER_OBJECT:+controller};do
  resident=0;if [[ "$case" == resident ]];then resident=1;fi
  cp "$build/0-$resident.elf" "$build/default.elf";cp "$build/1-$resident.elf" "$build/child.elf"
  "$build/test" "$build" "$case"

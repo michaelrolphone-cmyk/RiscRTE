@@ -67,6 +67,25 @@ extern "C" void test_atomic_app(unsigned hook,unsigned child){
  }
  ++entries;
  if(scenario=="controller"){assert(runtime_atomic_wifi_controller);runtime_atomic_wifi_controller(rt,phase);return;}
+ if(scenario=="catalog"){
+  auto atomic=acquire(rt,6);const auto a=*static_cast<const risc_key_value_atomic_v1*>(atomic.api);
+  assert(state(a).namespace_id==6);
+  risc_runtime_capability_v1 catalog{sizeof(catalog)},duplicate{sizeof(duplicate)};
+  assert(rt->acquire(RISC_APP_CATALOG_CAPABILITY,1,0,&catalog));
+  const auto c=*static_cast<const risc_app_catalog_v1*>(catalog.api);
+  assert(c.struct_size==sizeof(c)&&c.context&&c.snapshot&&c.get&&catalog.slot!=atomic.slot);
+  risc_app_catalog_snapshot_v1 snapshot{sizeof(snapshot)};
+  assert(c.snapshot(c.context,&snapshot)==RISC_APP_CATALOG_OK&&snapshot.count==2&&snapshot.generation);
+  risc_app_catalog_entry_v1 entry{sizeof(entry)};
+  assert(c.get(c.context,snapshot.generation,0,&entry)==RISC_APP_CATALOG_OK&&!strcmp(entry.id,"atomic-main"));
+  assert(!rt->acquire(RISC_APP_CATALOG_CAPABILITY,1,0,&duplicate));
+  assert(state(a).namespace_id==6);assert(rt->release(&atomic));invalid(a);
+  assert(c.snapshot(c.context,&snapshot)==RISC_APP_CATALOG_OK);
+  atomic=acquire(rt,6);const auto renewed=*static_cast<const risc_key_value_atomic_v1*>(atomic.api);
+  assert(rt->release(&catalog));assert(c.snapshot(c.context,&snapshot)==RISC_APP_CATALOG_CONTEXT);
+  assert(state(renewed).namespace_id==6);assert(rt->release(&atomic));
+  puts("Runtime atomic+catalog: distinct live tables, exact namespace, metadata reads and independent revocation PASS");return;
+ }
  if(scenario=="readthrough"){
   auto atomic=acquire(rt,6);auto a=*static_cast<const risc_key_value_atomic_v1*>(atomic.api);
   risc_runtime_capability_v1 g[3]{};risc_key_value_v1 kv[3]{};
@@ -143,6 +162,11 @@ static std::string grant(unsigned ns,unsigned api=1){return "{\"capability\":\"s
 static void boot(unsigned ns=6,unsigned api=1,bool multi=true){
  file("app.json",manifest("atomic-main","default.elf",api));file("child.json",manifest("atomic-child","child.elf"));
  file("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":[],\"app_capabilities\":[{\"manifest\":\"app.json\",\"grants\":["+grant(ns,api)+(multi?","+grant(7):"")+ "]},{\"manifest\":\"child.json\",\"grants\":["+grant(7)+"]}]"+(scenario=="resident"?",\"resident_shell\":{\"api\":1,\"host\":\"default.elf\",\"foreground\":[\"child.elf\"]}":"")+"}");
+ if(scenario=="catalog"){
+  auto app=manifest("atomic-main","default.elf",api);
+  app.replace(app.find("\"requires\":[")+12,0,"{\"capability\":\"app.catalog\",\"api\":1},");file("app.json",app);
+  file("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":[],\"app_capabilities\":[{\"manifest\":\"app.json\",\"grants\":[{\"capability\":\"app.catalog\",\"api\":1,\"instance_id\":0},"+grant(ns,api)+","+grant(7)+"]},{\"manifest\":\"child.json\",\"grants\":["+grant(7)+"]}]}");
+ }
 }
 static bool bind(R&r){
  assert(!r.registerAtomicKeyValue("atomic-main",0,*endpoint));assert(!r.registerAtomicKeyValue("atomic-main",7,*endpoint));assert(!r.registerAtomicKeyValue("bad/id",6,*endpoint));
