@@ -50,6 +50,11 @@ void* Runtime::loadRemovableApp(const AppPolicy& policy) {
     retainedAppSource_=grant;retained_=true;fail("SD app volume release retained; restart required");return nullptr;
   }
   if(!read){fail(image.error);return fallback();}
+  // The publisher binds this immutable boot path to the admitted core image.
+  // Verify the owned snapshot, never the mutable source after cleanup.
+  if(policy.internalFallback && !coreAppImageMatches(policy.sourcePath,image.bytes,image.size)) {
+    esp_elf_free(image.bytes);fail("SD core app digest mismatch");return fallback();
+  }
   if(retained_ || !port_.owner() || !providerStorageSafe() || !graph_.activationSafe()) {
     esp_elf_free(image.bytes);retained_=true;fail("SD app load custody lost");return nullptr;
   }

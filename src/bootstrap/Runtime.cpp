@@ -2,6 +2,7 @@
 #include "Runtime.h"
 #include "AppDeclarations.h"
 #include "RemovableAppImage.h"
+#include "CoreAppImageDigest.h"
 #include "runtime/drivers/DeviceProviderExecutorV2.h"
 #include "runtime/drivers/NativeProviderPolicySnapshotV1.h"
 #include <chrono>
@@ -382,6 +383,8 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
       if(!keys(source,{"volume_instance","path"},{"internal_fallback"}) || !integer(source["volume_instance"],0,INT32_MAX,instance) ||
          !text(source["path"],relativeImage,sizeof(relativeImage)) || !InstalledFiles::valid(relativeImage,false) ||
          !elfPath(relativeImage) || (!policy.internalFallback && !strcmp(policy.elf,invocation_->current_)))return fail("invalid removable app source");
+      uint8_t mirrorDigest[32]{};
+      if(policy.internalFallback && !coreAppImageDigest(relativeImage,mirrorDigest))return fail("invalid core app mirror digest path");
       for(size_t d=0;d<driverCount_;++d)if(drivers_[d].instance==uint64_t(instance) &&
           !strcmp(drivers_[d].provides,"storage.volume") && drivers_[d].api==1) {
         if(policy.sourceDriver>=0)return fail("ambiguous removable app volume");

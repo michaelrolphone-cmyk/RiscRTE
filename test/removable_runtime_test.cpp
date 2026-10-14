@@ -16,11 +16,13 @@
 #include <string>
 #include <unistd.h>
 #include <cstdlib>
+#include <openssl/evp.h>
 static std::string mode,root;
 static bool coreMode(){return mode.find("core-")==0;}
 static bool coreDefault(){return mode.find("core-default-")==0;}
 static bool ownerOkay=true,storageOkay=true;
 static unsigned sourceLoads,coreWrites;
+static std::string corePath;
 static bool settingsMode(){return mode=="catalog-settings"||mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable";}
 static std::map<std::string,std::string> legacySettings;
 static std::vector<uint8_t> payload;
@@ -157,11 +159,11 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
   if(coreMode()) {
     if(e==0){
       ++defaults;
-      if(coreDefault()){assert(value==(mode=="core-default-present"?2u:1u));return 0;}
+      if(coreDefault()){assert(value==1u);return 0;}
       return defaults<3;
     }
     if(e==1){assert(!live && ownerOkay && storageOkay);++children;
-      assert(value==((mode=="core-present"||mode=="core-opt-out")?2u:1u));return 0;}
+      assert(value==((mode=="core-opt-out")?2u:1u));return 0;}
   }
   if(e==0){++defaults;if(providerMode())return 0;
     if(mode=="internal-only"){
@@ -321,7 +323,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
   if(e==1){assert(!live && opens==closes);++children;assert(value==(mode=="replacement" && children==2?2u:1u));}
   if(e==6){++previousRuns;assert(value==1);}
   if(e==2)++starts;
-  if(e==3){assert(!live);if(mode=="core-release-retained")return 1;++stops;}
+  if(e==3){assert(!live);if(mode=="core-release-retained" || mode=="core-wrong-hash-release-retained")return 1;++stops;}
   return 0;
 }
 extern "C" void removable_resident_entry(const risc_runtime_api_v1*rt){
@@ -371,7 +373,7 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
     }
     n=std::min(size_t(333),std::min(n,payload.size()-offset));memcpy(out,payload.data()+offset,n);offset+=n;return n;
   };
-  v.file_close=[](void*,uint32_t h,bool){if(h==2){++discoveryIo;bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained" || mode=="provider-retained" || mode=="core-close-retained")return false;live=0;if(mode=="core-close-owner-retained")ownerOkay=false;return true;};
+  v.file_close=[](void*,uint32_t h,bool){if(h==2){++discoveryIo;bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained" || mode=="provider-retained" || mode=="core-close-retained" || mode=="core-wrong-hash-close-retained")return false;live=0;if(mode=="core-close-owner-retained")ownerOkay=false;return true;};
   static risc_storage_worker_v1 workerApi{};static risc_storage_async_adapter_v1 bridge{};
   static bool initialized=false;
   if(!initialized){initialized=true;
@@ -407,17 +409,27 @@ extern "C" void* esp_dlopen_reader_instance(const char* name,esp_dl_image_reader
   assert(!live && ownerOkay && storageOkay);++sourceLoads;elf_file_t file{};assert(reader(context,name,&file)==0);
   char temporary[]="/tmp/riscrte-sd-test-XXXXXX";int fd=mkstemp(temporary);assert(fd>=0);
   FILE* out=fdopen(fd,"wb");assert(out);assert(fwrite(file.payload,1,file.size,out)==file.size);assert(!fclose(out));
-  esp_elf_free(file.payload);void* module=dlopen(temporary,RTLD_NOW|RTLD_LOCAL);unlink(temporary);if(mode!="core-relocation")assert(module);return module;
+  esp_elf_free(file.payload);if(mode=="core-relocation"){unlink(temporary);return nullptr;}
+  void* module=dlopen(temporary,RTLD_NOW|RTLD_LOCAL);unlink(temporary);assert(module);return module;
 }
 extern "C" const risc_storage_volume_api_v1* removable_internal_volume(){static risc_storage_volume_api_v1 table;table=*removable_volume();table.context=reinterpret_cast<void*>(1);table.struct_size=sizeof(table);return &table;}
 int main(int argc,char** argv) {
   assert(argc==3);root=argv[1];mode=argv[2];selectImage("revision1.elf");
   if(coreMode()){
-    selectImage(coreDefault()?"default2.elf":"revision2.elf");
+    selectImage(coreDefault()?"default.elf":"revision1.elf");
+    unsigned digestSize=0;uint8_t digest[32]{};
+    assert(EVP_Digest(payload.data(),payload.size(),digest,&digestSize,EVP_sha256(),nullptr)==1 && digestSize==32);
+    corePath="Apps/child/image-";constexpr char hex[]="0123456789abcdef";
+    for(uint8_t b:digest){corePath+=hex[b>>4];corePath+=hex[b&15];}corePath+=".elf";
+    if(mode=="core-opt-out" || mode=="core-opt-out-absent")selectImage("revision2.elf");
+    if(mode.find("core-wrong-hash")==0){
+      const auto correct=payload;selectImage("revision2.elf");
+      assert(payload.size()==correct.size() && payload!=correct && esp_elf_validate_file(payload.data(),payload.size()));
+    }
     std::ifstream input(root+"/revision1.elf",std::ios::binary);std::ofstream output(root+"/child.elf",std::ios::binary);output<<input.rdbuf();
     if(mode=="core-absent" || mode=="core-default-absent" || mode=="core-internal-missing" || mode=="core-internal-corrupt" || mode=="core-opt-out-absent")present=false;
     if(mode=="core-malformed")payload[0]=0;
-    if(mode=="core-relocation")memset(payload.data()+4,0,payload.size()-4);
+
   }
   if(providerMode())selectImage("plugin.elf");
   if(mode=="provider-fallback" || mode=="provider-required")present=false;
@@ -493,7 +505,7 @@ int main(int argc,char** argv) {
     auto req=m["requires"].add<JsonObject>();req["capability"]="storage.app-data";req["api"]=1;
     raw.clear();serializeJson(m,raw);write("child.json",raw);
     auto p=doc["app_capabilities"][0];
-    p["image_source"]["path"]="Apps/child/image-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.elf";
+    p["image_source"]["path"]=corePath;
     p["image_source"]["internal_fallback"]=mode!="core-opt-out" && mode!="core-opt-out-absent";
     auto g=p["grants"].add<JsonObject>();g["capability"]="storage.app-data";g["api"]=1;g["instance_id"]=77;
     if(coreDefault()) {
@@ -535,7 +547,7 @@ int main(int argc,char** argv) {
   }
   if(mode=="core-policy") {
     JsonDocument original;assert(!deserializeJson(original,boot));
-    for(unsigned bad=0;bad<9;++bad){
+    for(unsigned bad=0;bad<13;++bad){
       JsonDocument doc;doc.set(original);auto source=doc["app_capabilities"][0]["image_source"];
       if(bad==0)source["internal_fallback"]="true";
       if(bad==1)source["internal_fallback"]=1;
@@ -549,6 +561,10 @@ int main(int argc,char** argv) {
         doc["installation"]["volume_instance"]=9;doc["installation"]["grants"].to<JsonArray>();
         doc["app_capabilities"][0]["catalog_authority"]=true;
       }
+      if(bad==9)source["path"]="Apps/child/child.elf";
+      if(bad==10)source["path"]="Apps/child/image-"+std::string(63,'a')+".elf";
+      if(bad==11)source["path"]="Apps/child/image-"+std::string(64,'g')+".elf";
+      if(bad==12)source["path"]="Apps/child/image-"+std::string(64,'a')+"x.elf";
       std::string raw;serializeJson(doc,raw);write("boot.json",raw);
       RiscBoot::Runtime denied(port);assert(!denied.prepare(root.c_str()) && !starts && !opens);
       if(bad==8)assert(!strcmp(denied.error(),"invalid internal app fallback"));
@@ -573,7 +589,7 @@ int main(int argc,char** argv) {
   }
   if(coreMode()) {
     unsigned inspected=0;
-    assert(runtime->inspectImages([](void*c,const char*p,bool){++*static_cast<unsigned*>(c);return !strstr(p,"child.elf") || (mode!="core-internal-missing" && mode!="core-internal-corrupt");},&inspected)==(mode!="core-internal-missing" && mode!="core-internal-corrupt"));
+    assert(runtime->inspectImages([](void*c,const char*p,bool provider){if(strstr(p,"child.elf") || strstr(p,"default.elf"))assert(!provider);++*static_cast<unsigned*>(c);return !strstr(p,"child.elf") || (mode!="core-internal-missing" && mode!="core-internal-corrupt");},&inspected)==(mode!="core-internal-missing" && mode!="core-internal-corrupt"));
     if(mode!="core-internal-missing" && mode!="core-internal-corrupt")assert(inspected==(coreDefault()||mode=="core-opt-out"||mode=="core-opt-out-absent"?2u:3u));
     const bool retained=mode.find("retained")!=std::string::npos;
     const bool noChild=mode=="core-internal-missing" || mode=="core-internal-corrupt" || mode=="core-opt-out-absent";

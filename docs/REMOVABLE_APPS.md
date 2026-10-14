@@ -54,8 +54,11 @@ default, by adding `"internal_fallback": true` to `image_source`:
 }
 ```
 
-The source path is explicit and may be content-addressed by the publisher. The
-loader does not infer a hash or identity from its name. The existing internal
+The source path must end with `image-<64 lowercase SHA-256 hex digits>.elf`. The
+publisher binds that digest to the admitted internal fallback image. Before any
+SD executable is loaded, Runtime hashes its owned snapshot and requires an exact
+match to the digest in the immutable boot path. A different valid ELF, including
+one of the same length, cannot substitute for that mirror. The existing internal
 manifest supplies the unchanged application identity, version, grants, private
 namespaces and internal ELF path. This is a boot-image selection policy, not a
 catalog update or an application privilege. Dynamic admission cannot supply the
@@ -64,7 +67,8 @@ keeps existing behavior. An explicit `false` on a boot-owned non-default row
 also keeps external-only behavior.
 
 Each launch tries a fresh SD snapshot. Absent, busy, removed, truncated or
-malformed media, and ordinary snapshot relocation/import failures, may select
+malformed or digest-mismatched media, and ordinary snapshot relocation/import
+failures, may select
 the internal image only after checked close and provider release succeed. The
 internal path uses the ordinary fresh-instance ELF loader. Both paths pass normal
 loader validation and the same app lifecycle admission. App init/entry failure
@@ -85,7 +89,8 @@ installation restrictions and partition layouts are unchanged.
 
 `test/run_removable_runtime_test.sh` covers real host default/child mappings,
 SD preference, internal fallback, both ELF rejection paths, absent/busy/removal,
-retained close/release/custody, strict boot-only policy, unchanged grants and
+same-length valid-ELF hash substitution, retained close/release/custody, strict
+boot-only digest paths, unchanged grants and
 private namespaces. `test/run_cohort_runtime_test.sh` requires default and
 non-default fallback images during complete inventory admission. Host coverage
 does not execute Xtensa instructions or qualify physical SD hardware.
