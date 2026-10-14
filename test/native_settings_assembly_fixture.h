@@ -48,16 +48,18 @@ static bool assembleMaintenance(){
  assert(!Assembly::admission()&&!Assembly::maintenance());
  auto*a=new AssemblyBackend(1);auto*b=new AssemblyBackend(6);auto*h1=new Hash;auto*h6=new Hash;
  uint8_t incarnation1[16]={0x71},incarnation6[16]={0x76};char writerName[]="maintenance-test";
- L::Writer writers[]={{writerName,1},{writerName,6},{"assembly-writer-2",1},{"assembly-writer-3",1},{"assembly-writer-4",1},{"assembly-writer-5",1}};
+ char writerNames[L::MaxWriters][32]{};L::Writer writers[L::MaxWriters]{};
+ writers[0]={writerName,1};writers[1]={writerName,6};
+ for(size_t n=2;n<L::MaxWriters;n++){snprintf(writerNames[n],sizeof(writerNames[n]),"assembly-writer-%u",unsigned(n));writers[n]={writerNames[n],1};}
  B::First::Authority first{nullptr,[](void*){return F::lease.load();},[](void*,uint8_t out[16]){static uint8_t serial=33;memset(out,0,16);out[0]=serial++;return true;},[](void*,uint32_t,uint32_t){return F::lease.load();}};
  if(startupCase()||scenario=="restore-no-checkpoint")first={};
  Assembly::Inputs input{{a->input(),h1->api(),sizeof(Hash),first,0,scenario=="no-incarnation"?nullptr:incarnation1},
-  {b->input(),h6->api(),sizeof(Hash),first,0,incarnation6},9,writers,scenario=="six-writers"?6u:2u,owner};
+  {b->input(),h6->api(),sizeof(Hash),first,0,incarnation6},9,writers,scenario=="max-writers"?L::MaxWriters:scenario=="six-writers"?6u:2u,owner};
  if(scenario=="assembly-no-owner")input.owner=nullptr;
  if(scenario=="assembly-owner-refuses")input.owner=[](){return false;};
  if(scenario=="assembly-no-device")input.device=0;
  if(scenario=="assembly-no-writers")input.writerCount=0;
- if(scenario=="assembly-many-writers")input.writerCount=7;
+ if(scenario=="assembly-many-writers")input.writerCount=L::MaxWriters+1;
  if(scenario=="assembly-bad-writer")writers[0].app="../bad";
  if(scenario=="assembly-duplicate-writer")writers[1].nameSpace=1;
  if(scenario=="assembly-wrong-writer-namespace")writers[0].nameSpace=3;

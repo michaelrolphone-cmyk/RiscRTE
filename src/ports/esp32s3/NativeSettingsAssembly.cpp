@@ -23,7 +23,7 @@ struct NamespaceControl {Permanent<Store>store;Permanent<C>core;};
 struct State {
  NamespaceControl namespaces[2];Permanent<NativeSettingsBootstrap>bootstrap;
  Permanent<NativeSettingsMaintenance>maintenance;
- char names[6][96]{};NativeSettingsLifecycle::Writer writers[6]{};
+ char names[NativeSettingsLifecycle::MaxWriters][96]{};NativeSettingsLifecycle::Writer writers[NativeSettingsLifecycle::MaxWriters]{};
  NativeSettingsMaintenance*selected=nullptr;
 };
 State*state=nullptr;bool attempted=false;
@@ -52,7 +52,7 @@ Files::Hooks fileHooks(void*p,uint32_t(*now)(void*),bool(*cooperate)(void*)){ret
 const NativeSettingsLifecycle::Admission*assemble(const Inputs&i){
  if(attempted)return nullptr;
  attempted=true; // no reentrant selection or replacement, even on failure
- if(!i.owner||!i.owner()||!i.device||!i.writerCount||i.writerCount>6||!i.writers||
+ if(!i.owner||!i.owner()||!i.device||!i.writerCount||i.writerCount>NativeSettingsLifecycle::MaxWriters||!i.writers||
     !valid(i.preferences,1)||!valid(i.wifi,6))return nullptr;
  for(size_t n=0;n<i.writerCount;++n){const auto&w=i.writers[n];
   if(!w.app||strnlen(w.app,96)>=96||!RuntimePackages::safeId(w.app)||(w.nameSpace!=1&&w.nameSpace!=6))return nullptr;

@@ -22,6 +22,11 @@ namespace RiscCpu { class Port; namespace NativeSettingsLifecycle {
 #endif
 static_assert(RISC_NATIVE_SETTINGS_NAMESPACE_MASK>0 && (RISC_NATIVE_SETTINGS_NAMESPACE_MASK & ~3)==0,"Invalid native settings namespace selection");
 constexpr bool namespaceSelected(unsigned index){return index<2 && (RISC_NATIVE_SETTINGS_NAMESPACE_MASK & (1u<<index));}
+#ifndef RISC_NATIVE_SETTINGS_MAX_WRITERS
+#define RISC_NATIVE_SETTINGS_MAX_WRITERS 6
+#endif
+static_assert(RISC_NATIVE_SETTINGS_MAX_WRITERS>=2 && RISC_NATIVE_SETTINGS_MAX_WRITERS<=32,"Invalid native settings writer capacity");
+constexpr size_t MaxWriters=RISC_NATIVE_SETTINGS_MAX_WRITERS;
 using Core=RiscExperimental::NativeReplicaCore;
 using Store=RiscExperimental::CheckedNativeReplicaStore;
 using Coordinator=RiscExperimental::NativeSettingsCoordinator;

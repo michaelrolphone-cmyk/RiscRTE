@@ -31,7 +31,7 @@ struct Load {
   done=true;token=0;if(rc==RISC_STORAGE_WORK_CANCELLED)result.status=C::Stale;const int release=service->releaseNative(lease);if(release)return release;lease={};return result.status;}
 };
 struct State {
- Admission admission{};Hooks hooks{};Load loads[2];char appIds[6][96]{};uint32_t namespaces[6]{};
+ Admission admission{};Hooks hooks{};Load loads[2];char appIds[MaxWriters][96]{};uint32_t namespaces[MaxWriters]{};
  RiscBoot::Runtime*runtime=nullptr;Port*port=nullptr;
  bool selected=false,prepared=false,bound=false,hydrated=false,attached=false,entered=false,active=false,terminal=false;
  Timing time{};uint32_t clockAt=0,nextRetry=0;
@@ -146,7 +146,7 @@ bool prepare(const Admission*a,Hooks hooks){
  if(state.selected||!hooks.owner||!hooks.owner()||!hooks.schedulerDelay||!hooks.millis)return false;
  state.selected=true;state.hooks=hooks;
  if(!a||!internal(a,sizeof(*a))||!internal(&state,sizeof state)||!a->context||!internal(a->context,a->controlBytes)||
-    !a->registerBeforeActivate||!a->begin||!a->poll||!a->cancel||!a->exitSafe||!a->retained||a->writerCount>6||(a->writerCount&&!a->writers))return false;
+    !a->registerBeforeActivate||!a->begin||!a->poll||!a->cancel||!a->exitSafe||!a->retained||a->writerCount>MaxWriters||(a->writerCount&&!a->writers))return false;
  const Namespace bindings[2]={a->preferences,a->wifi};
  for(unsigned i=0;i<2;++i){const auto&b=bindings[i];const uint32_t ns=i?6:1;
   if(!internal(b.core,sizeof(Core))||!internal(b.store,sizeof(Store))||b.core->namespaceId()!=ns||b.store->namespaceId()!=ns||!b.core->usesBackend(b.store->backend())||b.core->ready()||!b.store->exitSafe())return false;
