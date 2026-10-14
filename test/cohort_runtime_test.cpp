@@ -114,6 +114,25 @@ int main(int argc,char** argv){
  auto manifest=read(next/"driver17/manifest.json");manifest["requires"][0]["capability"]="missing.provider";save(next/"driver17/manifest.json",manifest);check(false);
  store(next,20,18);manifest=read(next/"app19.json");manifest["requires"][2]["capability"]="platform.bank-store";save(next/"app19.json",manifest);check(false);
  store(next,20,18);elfGood=false;check(false);elfGood=true;safe=false;check(false);safe=true;check(true);
+ // SD-preferred core rows remain complete internal cohorts. Neither the
+ // default nor another app's fallback may disappear from inventory/admission.
+ store(next,20,18);
+ auto mirrored=read(next/"boot.json");
+ save(next/"volume/manifest.json",std::string(R"({"type":"driver","id":"volume","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"driver.elf","requires":[],"provides":[{"capability":"storage.volume","api":1}]})"));
+ save(next/"volume/driver.elf",std::string("provider"));
+ mirrored["drivers"].add<JsonObject>()["manifest"]="volume/manifest.json";
+ for(unsigned index:{0u,19u}){
+  auto source=mirrored["app_capabilities"][index]["image_source"].to<JsonObject>();
+  source["volume_instance"]=0;source["path"]="Apps/core/image-"+std::string(64,'a')+".elf";source["internal_fallback"]=true;
+ }
+ save(next/"boot.json",mirrored);check(true);assert(apps==20 && drivers==19);
+ for(unsigned index:{0u,19u}){
+  const auto image=next/("app"+std::to_string(index)+".elf");
+  fs::remove(image);check(false);save(image,std::string("app"));
+ }
+ elfGood=false;check(false);elfGood=true;check(true);
+ auto repointed=mirrored;repointed["app_capabilities"][19]["grants"][1]["instance_id"]=1;
+ save(next/"boot.json",repointed);check(false);save(next/"boot.json",mirrored);
  // Metadata uses exact source/digest/layout, rejects unknown/duplicate fields.
  JsonDocument identity;identity["schema"]="riscrte.cohort";identity["schema_version"]=1;identity["product"]="twatch-s3";identity["version"]="1.0.2";
  identity["runtime_version"]="0.1.33";identity["source_repo"]="owner/repository";identity["source_revision"]=std::string(40,'a');identity["layout"]=RiscUpdate::Layout;

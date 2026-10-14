@@ -13,6 +13,9 @@ struct RemovableAppImage {
     void (*free)(void*);
     bool (*checkpoint)(void*);
     void* context;
+    // Optional custody-only guard, separate from bounded read cancellation.
+    // A timeout may close cleanly; a lost owner/storage lease may not.
+    bool (*cleanupSafe)(void*)=nullptr;
   };
   uint8_t* bytes=nullptr;
   size_t size=0;
@@ -20,8 +23,11 @@ struct RemovableAppImage {
   const char* error="SD app unavailable";
   bool read(const risc_storage_volume_api_v1* v,const char* path,Hooks h) {
     if(!v || v->api_version!=1 || v->struct_size<sizeof(*v) || !v->refresh || !v->ready ||
-       !v->file_open_read || !v->file_read || !v->file_close || !h.allocate || !h.free || !h.checkpoint ||
-       (!v->ready(v->context) && (!v->refresh(v->context) || !v->ready(v->context))))return false;
+       !v->file_open_read || !v->file_read || !v->file_close || !h.allocate || !h.free || !h.checkpoint)return false;
+    const auto safe=[&](){return !h.cleanupSafe || h.cleanupSafe(h.context);};
+    if(!safe())return false;
+    if(!v->ready(v->context) && (!safe() || !v->refresh(v->context) || !safe() || !v->ready(v->context)))return false;
+    if(!safe())return false;
     uint64_t length=0;
     auto file=v->file_open_read(v->context,path,&length);
     if(!file){error="SD app file missing or busy";return false;}
@@ -44,7 +50,7 @@ struct RemovableAppImage {
       else error="SD app read interrupted";
     }
     // Never retry an uncertain close or release its provider underneath it.
-    if(!v->file_close(v->context,file,false)) {
+    if(!safe() || !v->file_close(v->context,file,false)) {
       closeRetained=true;ok=false;error="SD app close retained; restart required";
     }
     if(!ok){if(bytes)h.free(bytes);bytes=nullptr;size=0;}

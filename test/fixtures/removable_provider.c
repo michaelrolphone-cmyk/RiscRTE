@@ -17,7 +17,7 @@ static bool start(const risc_provider_dependency_v1* d,size_t n) {
 }
 static bool quiesce(void){
 #ifndef INTERNAL_PROVIDER
-removable_event(3,0);
+if(removable_event(3,0))return false;
 #endif
 return true;}
 static void stop(void){}
