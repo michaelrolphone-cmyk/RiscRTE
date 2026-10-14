@@ -253,6 +253,15 @@ static void boundedMaintenance(){
  puts("bounded save: native/SD distinction, paused worker, paired snapshot fence, stale drafts, later edit, Files/USB and acknowledgment PASS");
 }
 extern "C" void test_maintenance_app(){
+#if RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK
+ if(scenario=="bootstrap-fresh-absent-save"){
+  const auto writes=f->counter(6);
+  editPair("offline-prefs","offline-wifi");
+  assert(cores[0]->pendingCount()==1&&cores[1]->pendingCount()==1&&L::exitSafe()&&f->counter(6)==writes);
+  releaseAnchorAtFinal=true;return;
+ }
+#endif
+
  if(asyncCase()){unavailableApp();return;}
  settle();
  assert(L::ready()&&cores[0]->ready()&&cores[1]->ready());
@@ -304,7 +313,7 @@ extern "C" void test_maintenance_app(){
  }
  assert(!anchorPin->release()&&!f);
 }
-int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[3];F::empty();const bool initializedHistory=scenario.rfind("history-initialized",0)==0;
+int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[3];if(scenario=="bootstrap-fresh-absent-reload"){F::reset();loadNvs();}else F::empty();const bool initializedHistory=scenario.rfind("history-initialized",0)==0;
  const auto initialOne=initializedHistory?historyValue(1,1):std::string("one"),initialSix=initializedHistory?historyValue(6,1):std::string("six");
  const auto one=map(initialOne.c_str()),six=map(initialSix.c_str());auto oneId=identity(1,one),sixId=identity(6,six);if(initializedHistory)oneId.generation=sixId.generation=1;
  {F::Fixture a(1),b(6);C::Value v1{"setting",initialOne.data(),uint32_t(initialOne.size())},v6{"setting",initialSix.data(),uint32_t(initialSix.size())};
@@ -391,6 +400,20 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
  if(scenario=="restore-no-source"||scenario=="restore-conflict"||scenario=="restore-cancel"||scenario=="corrupt-native"){assert(!hydrated&&maintenance->exitSafe()&&f->counter(6)==writesBefore&&!oneCore.ready());
   if(!bootReady)assert(!L::ready());else assert(L::ready());
   for(const char*ns:{"rnr00000001","rte00000001","kvj00000001"}){const auto before=nativeBefore.find(ns);const auto after=F::nvs.find(ns);assert((before==nativeBefore.end()&&after==F::nvs.end())||(before!=nativeBefore.end()&&after!=F::nvs.end()&&before->second==after->second));}ordinaryMaintenance();assert(!anchor.release()&&!f);printf("actual lifecycle pre-app %s refuses unchanged PASS\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);}
+
+#if RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK
+ if(scenario=="bootstrap-fresh-absent-save"||scenario=="bootstrap-fresh-absent-reload"){
+  assert(hydrated&&L::ready()&&oneCore.ready()&&sixCore.ready());
+  // The startup fence probe covers initialization only; app commits use their own custody path.
+  F::powerCheckpoint={};
+  if(scenario=="bootstrap-fresh-absent-save"){if(!runtime.run()){fprintf(stderr,"offline run: %s\n",runtime.error());assert(false);}assert(!f);}
+  assert(F::value(oneCore,"setting")=="offline-prefs"&&F::value(sixCore,"setting")=="offline-wifi");
+  assert(oneCore.pendingCount()==1&&sixCore.pendingCount()==1);
+  assert(L::exitSafe()&&!L::retained());saveNvs();
+  if(scenario=="bootstrap-fresh-absent-reload"){assert(f->counter(6)==writesBefore);assert(!anchor.release()&&!f);}
+  printf("Internal fallback %s: both namespaces durable, separate-process reload, zero SD writes PASS\n",scenario.c_str());fflush(stdout);std::_Exit(0);
+ }
+#endif
  if(startupCase()||scenario=="restore-no-checkpoint"){
   const bool refused=
 #if !RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK
