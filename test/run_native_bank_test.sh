@@ -77,7 +77,7 @@ fi
 "$build/test" diagnostic-candidate "$build/diagnostic-candidate"
 "$build/test" diagnostic-candidate-absent "$build/diagnostic-candidate-absent"
 if [[ -n "${BOOTLOADER_FILE:-}" ]]; then
- for mode in success odd-chunks interrupt offline-consumed corrupt length download-fail write-fail readback-fail readback-corrupt bad-board bad-elf native-mismatch bad-magic bad-name bad-capacity free-page-programmed extra-file file-mismatch mount-fail unmount-retained admission-close selection-unknown receipt-fail; do
+ for mode in tuples-success tuples-file-mismatch tuples-extra-file tuples-interrupt tuples-selection-unknown success odd-chunks interrupt offline-consumed corrupt length download-fail write-fail readback-fail readback-corrupt bad-board bad-elf native-mismatch bad-magic bad-name bad-capacity free-page-programmed extra-file file-mismatch mount-fail unmount-retained admission-close selection-unknown receipt-fail; do
   "$build/test" "image-$mode" "$BOOTLOADER_FILE" "$build/image-$mode"
  done
  "$build/test" boot-cost "$BOOTLOADER_FILE"

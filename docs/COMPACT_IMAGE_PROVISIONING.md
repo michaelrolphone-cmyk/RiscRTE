@@ -68,7 +68,7 @@ a completion marker. It does not download, publish, flash, or infer package
 dependencies. Image occupancy/decoding does not replace product graph admission.
 
 The existing `profile` command accepts the published inventory and emits owner
-schema 3 automatically. Keep real Wi-Fi credentials and all generated private
+schema 3 automatically, or schema 4 when the object inventory exceeds 16 KiB. Keep real Wi-Fi credentials and all generated private
 outputs outside Git and publication directories:
 
 ```sh
@@ -83,13 +83,34 @@ Do not supply `--base-url` for image mode: its one image URL is already pinned.
 Profile schema 3 contains only `schema`, `schema_version`, `wifi`, `image` and
 `files`. The image has `url`, `bytes`, `sha256`; every inventory file has `path`,
 `bytes`, `sha256`. Mixed fields, unknown keys, duplicate paths/JSON fields,
-noncanonical HTTPS URLs and oversized profiles fail closed. The maximum remains
-128 files and 16 KiB of private profile input.
+noncanonical HTTPS URLs and oversized profiles fail closed.
+
+Runtime 0.2.24 adds schema 4 with the same exact root/image/Wi-Fi fields and
+`files` encoded as `[path, bytes, sha256]` rows. Every row must have exactly three
+elements with the same strict string/integer/lowercase-hash rules as schema 3.
+Mixed object/array rows are rejected, as are duplicate paths, missing required
+files and prefix collisions. Schemas 1–3 remain supported. The fixed maximum is
+160 files, with 16 KiB of private profile input unchanged. Tuple output is
+selected only if schema 3 cannot fit; if neither fits, generation fails without
+trimming the inventory. Names and credentials still affect the byte budget, so
+160 is an entry limit, not a promise that every possible profile fits.
+
+The native `Profile` is under 100 KiB, allocated outside the small native task
+stack. The parser bounds its JSON heap at 64 KiB, including allocation headers
+and transient copies, and wipes every allocation on release. Native input, NVS,
+network chunk bounds, storage layout and complete readback/graph checks are
+unchanged. The lexical guard accepts 160 array items only when explicitly
+selected by the provisioning parser; its default remains 128 for all existing
+metadata consumers.
 
 Use the ordinary `provision_seed.py` and `provision_device.py` first-install
 procedure with the exact supporting native candidate. The private composer
 requires `RISC_PROVISION_IMAGE:1` in both native BIN and ELF, preventing an image
-profile from silently pairing with an older seed. Native provisioning still
+profile from silently pairing with an older seed. Schema 4 and any profile
+containing more than 128 files additionally require `RISC_PROVISION_TUPLES:1`
+in both native assets. This marker covers the new inventory capacity as well as
+tuple decoding; a schema 3 profile with 129 entries also needs supporting native
+firmware. Existing-device input workflows must make the same support check. Native provisioning still
 clones the running firmware and requires the product cohort's exact matching
 native version/length/hash. A firmware with merely the same version is not enough.
 
@@ -97,6 +118,17 @@ The composed full image remains initial-install-only: it replaces NVS and
 initializes app-data. It must never be used to update an existing device.
 
 ## Verification
+
+`test/run_provisioning_test.sh` includes exact 160-tuple parsing, 161-entry
+refusal, malformed rows/types/paths/digests, duplicate fields and paths, default
+JSON-policy isolation, input byte limits and complete output wiping on failure.
+The public-inventory/private-profile tests check deterministic generator/native
+parser parity and fail-closed byte/count bounds. The first-install tests reject
+missing or one-sided native support markers for schemas 2–4. The native image
+harness additionally exercises a 160-file tuple fixture through bootstrap,
+complete inventory/hash/graph/ELF admission, interrupted retry and ambiguous
+selection, with extra-file and final-file-corruption refusal.
+
 
 `test/run_store_image_capacity_test.sh` exercises native/Python parity, geometry,
 corrupt lookup/magic/free pages, exact bounds and short/error reads. The pinned

@@ -36,12 +36,28 @@ invocation mapped. No fallback is launched after a failed close.
 Schema 1 remains supported. Compact schema 2 has exact root fields `schema`,
 `schema_version`, `wifi`, `base_url`, `files`. The base is a canonical HTTPS
 directory URL ending in `/`; each file has exactly `path`, `bytes`, `sha256`.
-Its URL is the base plus the strict relative path. Both schemas allow 3–128
+Its URL is the base plus the strict relative path. All schemas allow 3–160
 files; the owner-input blob remains bounded at 16 KiB. `boot.json`, `board.json`
 and `default.elf` are required. Unknown fields, mixed URL forms, duplicate paths,
 escaped/query/userinfo URLs and bad UTF-8 remain refused. Public examples contain
 no credentials; private owner outputs must remain local and outside Git/artifact
 upload paths.
+
+Runtime 0.2.24 adds image-only schema 4, whose `files` entries are exact
+three-element `[path, bytes, sha256]` arrays. Repeated object field names are
+omitted, but paths, lengths and all 32 hash bytes remain explicit. The generator
+keeps byte-identical schema 3 output whenever it fits and uses schema 4 only when
+needed to remain within 16 KiB. It refuses an inventory that still cannot fit;
+there is no file pruning, truncation, manifest expansion or partition change.
+The fixed native profile holds 160 entries (under 100 KiB); JSON allocations,
+including headers and transient reallocation, are capped at 64 KiB and wiped
+on release. The parser itself also enforces the 16 KiB input limit. Only this
+parser opts into the 160-item lexical array bound; ordinary board/package JSON
+retains its existing 128-item policy. First-install composition requires the
+`RISC_PROVISION_TUPLES:1` marker in both native BIN and ELF for schema 4 or any
+profile with more than 128 entries. Image profiles additionally require the
+existing `RISC_PROVISION_IMAGE:1` marker. Existing devices need the matching
+supporting native firmware before accepting these extended inventories.
 
 Native capacity now uses pinned SPIFFS page/index/write-amplification accounting,
 including the profile digest and four reserved blocks, rather than the earlier

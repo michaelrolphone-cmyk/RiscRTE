@@ -5,6 +5,9 @@ build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
 san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
+c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -I"$repo/src" -I"$repo/lib/ArduinoJson/src" \
+ "$repo/src/runtime/provisioning/Profile.cpp" "$repo/test/provisioning_compact_profile_test.cpp" -o "$build/compact-test"
+"$build/compact-test"
 cc "${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -I"$repo/sdk/app" "$repo/test/fixtures/default.c" -o "$build/default.elf"
 c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic \
  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \

@@ -47,6 +47,7 @@ extern "C" __attribute__((used)) const char risc_paired_store_abi[]=RISC_PAIRED_
 #endif
 extern "C" __attribute__((used)) const char risc_runtime_update_version[]="RISC_RUNTIME_VERSION:" RISC_BUILD_VERSION;
 extern "C" __attribute__((used)) const char risc_provision_image[]="RISC_PROVISION_IMAGE:1";
+extern "C" __attribute__((used)) const char risc_provision_tuples[]="RISC_PROVISION_TUPLES:1";
 // Arduino's weak default confirms before setup(), which is too early.
 extern "C" bool verifyRollbackLater(void){return true;}
 namespace RiscBankStore {
@@ -573,7 +574,7 @@ void rejectBoot(){
 bool provisionAvailable(){
   // Keep the capability marker in the linked native image for offline seed
   // compatibility checks, even when the linker discards unused data sections.
-  asm volatile("" : : "r"(risc_provision_image));
+  asm volatile("" : : "r"(risc_provision_image), "r"(risc_provision_tuples));
   return prepared && confirmed && !pending && !runtime && !provisionFiles && !provisionReadRetained && operationSafe();
 }
 ProvisionIdentity provisionIdentity(const uint8_t (&digest)[32]){

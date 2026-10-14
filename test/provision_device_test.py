@@ -94,6 +94,43 @@ class Device(unittest.TestCase):
              patch.object(d, 'make_nvs', return_value=b'\xa5' * d.NVS_BYTES):
             self.compose('supported-image')
 
+    def test_extended_inventory_marker_required_for_tuple_and_object_profiles(self):
+        record, blobs = self.inputs(True)
+        owner_path = self.root / 'owner/owner.json'
+        profile_path = self.root / 'owner/profile.json'
+        original = p.decode(profile_path.read_bytes())
+        original.pop('base_url')
+        original['image'] = {'url': BASE + 'image.bin', 'bytes': p.LAYOUTS[self.layout], 'sha256': '1' * 64}
+        for schema, count in ((3, 132), (4, 160), (2, 132)):
+            profile = json.loads(json.dumps(original))
+            profile['schema_version'] = schema
+            profile['files'] += [{'path': f'a{n}.json', 'bytes': 1, 'sha256': '1' * 64}
+                                 for n in range(count - 3)]
+            if schema == 4:
+                profile['files'] = [[row[key] for key in ('path', 'bytes', 'sha256')] for row in profile['files']]
+            if schema == 2:
+                del profile['image'];profile['base_url'] = BASE
+            profile_path.write_bytes(p.encode(profile))
+            owner = p.decode(owner_path.read_bytes())
+            owner.update(profile_sha256=p.sha(profile_path.read_bytes()), profile_bytes=profile_path.stat().st_size, file_count=count)
+            owner_path.write_bytes(p.encode(owner))
+            for asset in ('firmware.bin', 'firmware.elf'):
+                blobs[asset] = b'fixture RISC_PROVISION_IMAGE:1\0'
+            with patch.object(d, 'verify_seed', return_value=(record, blobs)), \
+                 patch.object(d, 'make_nvs', return_value=b'\xa5' * d.NVS_BYTES):
+                for asset in ('firmware.bin', 'firmware.elf'):
+                    self.assertRaisesRegex(ValueError, 'extended provisioning', self.compose, f'unsupported-{schema}-{asset}')
+                    blobs[asset] += b'RISC_PROVISION_TUPLES:1\0'
+                self.compose(f'supported-{schema}')
+            if schema == 4:
+                for asset in ('firmware.bin', 'firmware.elf'):
+                    present = blobs[asset]
+                    blobs[asset] = b'RISC_PROVISION_TUPLES:1\0'
+                    with patch.object(d, 'verify_seed', return_value=(record, blobs)), \
+                         patch.object(d, 'make_nvs', return_value=b'\xa5' * d.NVS_BYTES):
+                        self.assertRaisesRegex(ValueError, 'compact image', self.compose, 'missing-image-' + asset)
+                    blobs[asset] = present
+
     def test_abi1_abi2_segments_blank_inactive_and_private_modes(self):
         for app_data in (False, True):
             with self.subTest(app_data=app_data):
