@@ -11,6 +11,7 @@ int main(){
  Hardware h{};h.owner=[](){return owner;};h.now=[]()->uint64_t{return 0;};h.usbPhyIdle=[](){return idle;};
  h.usbPhySuspend=[](){++suspends;if(suspendOk||partial)idle=false;return suspendOk;};
  h.usbPhyResume=[](){++resumes;if(resumeOk)idle=true;return resumeOk;};
+ h.deepHold=[](uint8_t pin,bool){assert(pin==4);return true;};
  h.spiTransfer=[](uint8_t,const uint8_t*,uint8_t*,size_t,uint32_t){++transfers;return true;};
  Port p(h);auto& c=p.usb_;c.port=&p;
  auto refused=[&](){auto calls=suspends;auto held=c.token;uint64_t token=99;assert(!Port::usbPhyClaim(&c,&token)&&!token&&c.token==held&&calls==suspends);};
@@ -24,7 +25,7 @@ int main(){
  assert(p.pins_[19].owner==&c&&p.pins_[20].owner==&c);
  assert(!p.appExitSafe()&&!p.restartResourcesSafe()&&!p.quiescent()&&p.providerStorageSafe());
  refused(); // Existing lease is not overwritten or handed to a second caller.
- auto& g=p.gpios_[0];g.port=&p;p.pins_[4]={&g,90,false};risc_light_sleep_result_v1 wake{sizeof(wake),0};
+ auto& g=p.gpios_[0];g.port=&p;p.pins_[4]={&g,90,true};risc_light_sleep_result_v1 wake{sizeof(wake),0};
  auto sleep=[&](int32_t expected){
   assert(Port::gpioLightSleep(&g,90,false,&wake)==expected);
   assert(Port::gpioDeepSleep(&g,90,false)==expected);
@@ -32,7 +33,8 @@ int main(){
   assert(Port::gpioDeepSleepFor(&g,90,false,10)==expected);
   assert(Port::gpioLightSleepSet(&g,90,false,10,&wake)==expected);
   assert(Port::gpioDeepSleepSet(&g,90,false,10)==expected);
-  assert(Port::gpioDeepSleepHold(&g,90,true)==expected);
+  // Static pad hold is not CPU sleep; current Runtime permits it while USB is active.
+  assert(Port::gpioDeepSleepHold(&g,90,true)==(expected==RISC_LIGHT_SLEEP_BUSY?0:expected));
  };
  sleep(RISC_LIGHT_SLEEP_BUSY);
  // A live USB lease must leave the existing owner's SD/SPI transfer functional.
