@@ -1,3 +1,4 @@
+#include <RiscProvisionRequestV1.h>
 #include <RiscInternalPackageVolumeV1.h>
 #include "Runtime.h"
 #include "AppDeclarations.h"
@@ -192,13 +193,18 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
                strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_ENTROPY_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
-               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY) && strcmp(capability,"platform.package-volume") && strcmp(capability,RISC_INSTALLATION_CAPABILITY))) return false;
+               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY) && strcmp(capability,"platform.package-volume") && strcmp(capability,RISC_PROVISION_REQUEST_CAPABILITY) && strcmp(capability,RISC_INSTALLATION_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
   if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
       (header[1]<sizeof(risc_diagnostic_source_api_v1) ||
        !static_cast<const risc_diagnostic_source_api_v1*>(table)->read)) return false;
+  if (!strcmp(capability,RISC_PROVISION_REQUEST_CAPABILITY)) {
+    if(api!=1 || scope!=Scope::Global || id || header[1]<sizeof(risc_provision_request_api_v1))return false;
+    const auto* request=static_cast<const risc_provision_request_api_v1*>(table);
+    if(!request->status || !request->queue)return false;
+  }
   if (!strcmp(capability,RISC_INTERNAL_PACKAGE_VOLUME_CAPABILITY)) {
     if(api!=1 || scope!=Scope::Global || id || header[1]<sizeof(risc_internal_package_volume_v1))return false;
     const auto* package=static_cast<const risc_internal_package_volume_v1*>(table);

@@ -1,0 +1,95 @@
+Production native bank adapter: markers PASS
+Production native provider bank admission: selected=0 exact bytes/imports, application/extra isolation, provisioning and immutable staged authority PASS; zero mapping/hardware/selection
+Committed-pair boot: both banks, pending/confirmed/deep-wake path, torn commit, prior-pair rollback, invalid OTA states; 96-byte record only PASS
+Production native bank adapter: blank-record PASS
+Production provisioning candidate diagnostic binding: diagnostic-candidate flag=0 metadata-only PASS
+Production provisioning candidate diagnostic binding: diagnostic-candidate-absent flag=0 metadata-only PASS
+Preserving native profile: same-version new image admitted, board/feature changes and forbidden ELF refused, firmware/source preserved PASS
+Preserving native profile: source metadata close retained, no abort/fallback/reset PASS
+Compact image native download, readback, admission and selection: image-success PASS
+Compact image native download, readback, admission and selection: image-odd-chunks PASS
+Compact image native download, readback, admission and selection: image-interrupt PASS
+Compact image consumed profile: offline without transport or writes PASS
+Compact image native download, readback, admission and selection: image-corrupt PASS
+Compact image native download, readback, admission and selection: image-length PASS
+Compact image native download, readback, admission and selection: image-download-fail PASS
+Compact image native download, readback, admission and selection: image-write-fail PASS
+Compact image native download, readback, admission and selection: image-readback-fail PASS
+Compact image native download, readback, admission and selection: image-readback-corrupt PASS
+Compact image native download, readback, admission and selection: image-bad-board PASS
+Compact image native download, readback, admission and selection: image-bad-elf PASS
+Compact image native download, readback, admission and selection: image-native-mismatch PASS
+Compact image native download, readback, admission and selection: image-bad-magic PASS
+Compact image native download, readback, admission and selection: image-bad-name PASS
+Compact image native download, readback, admission and selection: image-bad-capacity PASS
+Compact image native download, readback, admission and selection: image-free-page-programmed PASS
+Compact image native download, readback, admission and selection: image-extra-file PASS
+Compact image native download, readback, admission and selection: image-file-mismatch PASS
+Compact image native download, readback, admission and selection: image-mount-fail PASS
+Compact image native download, readback, admission and selection: image-unmount-retained PASS
+Compact image native download, readback, admission and selection: image-admission-close PASS
+Compact image native download, readback, admission and selection: image-selection-unknown PASS
+Compact image native download, readback, admission and selection: image-receipt-fail PASS
+prepareBoot ABI=2 firmware=8192 store=5308416 explicit_reads=1 explicit_read_bytes=96 sha_starts=0 sha_updates=0 sha_bytes=0 firmware_marker_reads=0 firmware_marker_bytes=0 sdk_image_verifications=0 sdk_image_descriptions=0 yields=0 PASS
+Native cohort API/metadata/new-app-provider/real-ELF/mount/uncertain-write/cleanup/activation, NVS/appdata and old-pair preservation PASS
+Full-cohort receipt carry: legacy/current source, uncertain write/readback, pending/confirmed reboot, rollback and overwritten former source PASS
+Native cohort API/metadata/new-app-provider/real-ELF/mount/uncertain-write/cleanup/activation, NVS/appdata and old-pair preservation PASS
+Full-cohort receipt carry: legacy/current source, uncertain write/readback, pending/confirmed reboot, rollback and overwritten former source PASS
+Native cohort API/metadata/new-app-provider/real-ELF/mount/uncertain-write/cleanup/activation, NVS/appdata and old-pair preservation PASS
+Post-activation live metadata close: invocation retained, cleanup/restart refused, zero resets PASS
+Native cohort API/metadata/new-app-provider/real-ELF/mount/uncertain-write/cleanup/activation, NVS/appdata and old-pair preservation PASS
+Production native bank adapter: boot PASS
+Production native bank adapter: unscanned-store PASS
+Production native bank adapter: bad-layout PASS
+Production native bank adapter: restart PASS
+Production native bank adapter: restart-unknown PASS
+Production native bank adapter: provision PASS
+Production native bank adapter: provision-abort PASS
+Production native bank adapter: provision-corrupt PASS
+Production native bank adapter: provision-unknown PASS
+Production native full-graph/image admission:27 role/import/board/backend/OOM/cohort/IQ lifecycle scenarios PASS; zero provider or hardware execution
+Production native bank adapter: provision-close-retained PASS
+Production bootstrap setup flow: bootstrap-metadata-close-retained PASS
+Production bootstrap setup flow: bootstrap-receipt-matched PASS
+Production bootstrap setup flow: bootstrap-receipt-changed PASS
+Production bootstrap setup flow: bootstrap-receipt-corrupt PASS
+Production bootstrap setup flow: bootstrap-receipt-pending PASS
+Production bootstrap setup flow: bootstrap-rolled-back PASS
+Production bootstrap setup flow: bootstrap-changed-profile PASS
+Production bootstrap setup flow: bootstrap-changed-source PASS
+Production bootstrap setup flow: bootstrap-legacy-attempt PASS
+Production bootstrap setup flow: bootstrap-attempt-malformed PASS
+Production bootstrap setup flow: bootstrap-attempt-torn PASS
+Production bootstrap setup flow: bootstrap-attempt-bank-mismatch PASS
+Production bootstrap setup flow: bootstrap-attempt-store-mismatch PASS
+Production bootstrap setup flow: bootstrap-attempt-firmware-mismatch PASS
+Production bootstrap setup flow: bootstrap-attempt-format PASS
+Production bootstrap setup flow: bootstrap-attempt-read-fail PASS
+Production bootstrap setup flow: bootstrap-attempt-write-fail PASS
+Production bootstrap setup flow: bootstrap-attempt-write-torn PASS
+Production bootstrap setup flow: bootstrap-attempt-write-readback PASS
+Production bootstrap setup flow: bootstrap-pending-bank PASS
+Production bootstrap setup flow: bootstrap-confirmed-bank PASS
+Production bootstrap setup flow: bootstrap-absent PASS
+Production bootstrap setup flow: bootstrap-invalid PASS
+Production bootstrap setup flow: bootstrap-profile-invalid PASS
+Production bootstrap setup flow: bootstrap-no-time PASS
+Production bootstrap setup flow: bootstrap-unchanged PASS
+Production bootstrap setup flow: bootstrap-time-unavailable PASS
+Production bootstrap setup flow: bootstrap-time-stale PASS
+Production bootstrap setup flow: bootstrap-time-future PASS
+Production bootstrap setup flow: bootstrap-time-invalid PASS
+Production bootstrap setup flow: bootstrap-time-timeout PASS
+Production bootstrap setup flow: bootstrap-time-pending PASS
+Production bootstrap setup flow: bootstrap-time-retained PASS
+Production bootstrap setup flow: bootstrap-download-fail PASS
+Production bootstrap setup flow: bootstrap-http-open-fail PASS
+Production bootstrap setup flow: bootstrap-corrupt PASS
+Production bootstrap setup flow: bootstrap-length-mismatch PASS
+Production bootstrap setup flow: bootstrap-http-retained PASS
+Production bootstrap setup flow: bootstrap-radio-retained PASS
+Production bootstrap setup flow: bootstrap-match-close-retained PASS
+Production bootstrap setup flow: bootstrap-native-unsafe PASS
+Production bootstrap setup flow: bootstrap-oom PASS
+Production bootstrap setup flow: bootstrap-success PASS
+Production bootstrap setup flow: bootstrap-selection-unknown PASS

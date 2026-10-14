@@ -42,7 +42,7 @@ bool Runtime::configureInstallation(JsonVariantConst value){
    char cap[96];int64_t api=0,instance=0;
    if(!keys(g,{"capability","api","instance_id"})||!text(g["capability"],cap,sizeof(cap))||
       !integer(g["api"],1,UINT32_MAX,api)||!integer(g["instance_id"],0,INT32_MAX,instance)||
-      !strcmp(cap,RISC_INSTALLATION_CAPABILITY)||!strcmp(cap,RISC_BOUND_KEY_VALUE_CAPABILITY)||
+      !strcmp(cap,RISC_INSTALLATION_CAPABILITY)||!strcmp(cap,RISC_PROVISION_REQUEST_CAPABILITY)||!strcmp(cap,RISC_BOUND_KEY_VALUE_CAPABILITY)||
       !strcmp(cap,RISC_BOUND_APP_DATA_CAPABILITY))return fail("unsupported provider installation grant");
   }
   if(serializeJson(allowed,installation_[0].providerGrants,sizeof(installation_[0].providerGrants))>=sizeof(installation_[0].providerGrants)-1)return false;

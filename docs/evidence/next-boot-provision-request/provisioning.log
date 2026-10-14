@@ -1,0 +1,18 @@
+Provisioning parser, real graph admission/default launch, changed-profile, offline fallback, interruption, corruption, deadline, cleanup and ambiguous activation tests PASS
+Production inactive-store files: bounded writes, streamed/readback hashes, exact inventory, real graph admission, metadata readback, capacity, symlink refusal and interrupted retry PASS
+Owner NVS descriptor/profile input: read-only namespace, bounds/types, torn-size refusal, SHA identity, scratch wiping and no erase recovery PASS
+Owner input artifacts: deterministic, bounded, exact bytes, no overwrite, fixed diagnostics PASS
+SNTP lifecycle success PASS
+SNTP lifecycle v2 PASS
+SNTP lifecycle timeout PASS
+SNTP lifecycle cancel PASS
+SNTP lifecycle range PASS
+SNTP lifecycle stop-fail PASS
+Owner NVS installer: native adapter, legacy input, fault cuts, selection uncertainty, collision refusal and unrelated-key preservation PASS
+Maintenance framing: identity, nonce, bounds, corruption, timeout and payload wiping PASS
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.106s
+
+OK
+RTE_INSTALL INSTALLED
