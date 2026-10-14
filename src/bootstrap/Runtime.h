@@ -141,6 +141,7 @@ class Runtime final {
   bool residentClient(risc_resident_client_v1*);
   bool diagnosticCheckpointClient(risc_diagnostic_checkpoint_client_v1*);
   int32_t diagnosticCheckpointWrite(uint64_t,const char*,uint32_t);
+  bool initialDefault();
   bool takeLaunchFailure(risc_runtime_launch_failure_v1*);
   bool failureEvidenceClient(risc_failure_evidence_client_v1*);
   int32_t failureEvidenceRead(uint64_t,risc_failure_evidence_v1*);
@@ -535,6 +536,7 @@ class Runtime final {
     int32_t status=RISC_RESIDENT_OK;
     void* module=nullptr;
   };
+  bool firstDefaultStarted_=false,initialDefaultInvocation_=false;
   Invocation mainInvocation_;
   Invocation* invocation_=&mainInvocation_;
   std::unique_ptr<Invocation> foreground_;

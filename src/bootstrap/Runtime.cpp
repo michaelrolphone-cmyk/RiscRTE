@@ -86,7 +86,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && currentRuntime->diagnosticCheckpointClient(out);},
     [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);},
     [](){return currentRuntime && currentRuntime->exitRequested();},
-    [](risc_runtime_launch_failure_v1* out){return currentRuntime && currentRuntime->takeLaunchFailure(out);}};
+    [](risc_runtime_launch_failure_v1* out){return currentRuntime && currentRuntime->takeLaunchFailure(out);},
+    [](){return currentRuntime && currentRuntime->initialDefault();}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -1315,6 +1316,7 @@ bool Runtime::runOne(const char* name) {
     bool finish(){ended=true;return port.controlEnd?port.controlEnd():false;}
     ~ControlLifetime(){if(!retained&&!ended&&port.controlEnd)(void)port.controlEnd();}
   } control{port_,retained_};
+  initialDefaultInvocation_=false;
   invocation_->role=0;
   invocation_->residentPolicyPending_=false;
   invocation_->failureKind=RISC_RESIDENT_FAILURE_NONE;invocation_->status=RISC_RESIDENT_OK;
@@ -1419,6 +1421,8 @@ bool Runtime::runOne(const char* name) {
     port_.log("RTE_APP phase=entry");
     RiscPerf::emit(16);
     failureBreadcrumb(RISC_FAILURE_PHASE_MAIN,name);
+    initialDefaultInvocation_=invocation_==&mainInvocation_ && invocation_->defaultRunning_ && !firstDefaultStarted_;
+    if(initialDefaultInvocation_)firstDefaultStarted_=true;
     entry();
     if(port_.failureEvidence && !appExitBarrier())return false;
     RISC_STAGE_LOG("app entry returned file=%s",name);
@@ -1477,6 +1481,11 @@ bool Runtime::reclaimAppImages() {
 #else
   return false;
 #endif
+}
+bool Runtime::initialDefault() {
+  return active() && port_.owner() && !retained_ && invocation_==&mainInvocation_ &&
+    invocation_->defaultRunning_ && invocation_->entryRunning_ && !invocation_->queued_[0] &&
+    !promotionRunning_ && graph_.activationSafe() && initialDefaultInvocation_;
 }
 bool Runtime::takeLaunchFailure(risc_runtime_launch_failure_v1* out) {
   if(!out || out->struct_size<sizeof(*out) || !active() || !port_.owner() ||
