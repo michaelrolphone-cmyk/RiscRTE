@@ -7,6 +7,8 @@ struct InstallTransport {Input input;bool (*set)(void*,const char*,const void*,u
 enum class InstallResult {Installed,Unchanged,InvalidInput,InvalidExisting,Unavailable,StageFailed,SelectionUnknown};
 // Side-effect-free preflight, including allocation/size/schema checks.
 bool validInstallInput(const void*,uint32_t,const void*,uint32_t);
+// Same preflight while retaining the parsed, caller-owned profile.
+bool inspectInstallInput(const void*,uint32_t,const void*,uint32_t,Profile&);
 // Caller supplies a private 16KiB scratch buffer; cleared on every return.
 InstallResult install(InstallTransport,const void* profile,uint32_t profileSize,
                       const void* time,uint32_t timeSize,void* scratch,uint32_t capacity);

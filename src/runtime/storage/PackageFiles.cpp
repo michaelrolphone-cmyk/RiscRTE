@@ -22,7 +22,8 @@ bool PackageFiles::path(const char*p,char*out,size_t capacity){
  for(const char*s=p+1;*s;){const char*e=strchr(s,'/');size_t n=e?size_t(e-s):strlen(s);
   if(!n||(n==1&&*s=='.')||(n==2&&!memcmp(s,"..",2)))return false;
   for(size_t i=0;i<n;++i)if(static_cast<unsigned char>(s[i])<32||s[i]=='\\'||s[i]==127)return false;
-  if(!e)break;s=e+1;if(!*s)return false;
+  if(!e)break;
+  s=e+1;if(!*s)return false;
  }
  if(strcmp(p,"/")&&strncmp(p,"/Apps/",6)&&strcmp(p,"/Apps")&&strncmp(p,"/Drivers/",9)&&strcmp(p,"/Drivers")&&strncmp(p,"/AppData/",9)&&strcmp(p,"/AppData"))return false;
  int n=snprintf(out,capacity,"%s%s",root_,!strcmp(p,"/")?"":p);if(n<0||size_t(n)>=capacity)return false;
@@ -47,12 +48,14 @@ int32_t PackageFiles::metadata(const char*p,risc_storage_metadata_v1*out){
  *out={sizeof(*out),S_ISDIR(st.st_mode)?uint32_t(RISC_STORAGE_DIRECTORY):0u,uint64_t(st.st_size),0};return RISC_STORAGE_FS_OK;
 }
 uint32_t PackageFiles::open(const char*p,bool write,uint64_t*size){
- if(size)*size=0;Call call(*this);char full[512];if(!call.ok||file_||!path(p,full,sizeof(full))||(write&&!mutation(p))||serial_==UINT32_MAX)return 0;
+ if(size)*size=0;
+ Call call(*this);char full[512];if(!call.ok||file_||!path(p,full,sizeof(full))||(write&&!mutation(p))||serial_==UINT32_MAX)return 0;
  int fd=::open(full,write?(O_WRONLY|O_CREAT|O_EXCL):O_RDONLY,0600);if(fd<0){fault(false);return 0;}
  // Publish custody before any further fallible operation.
  descriptor_=fd;file_=next();writing_=write;error_=0;if(write)strcpy(writePath_,full);
  struct stat st{};if(fstat(fd,&st)||!S_ISREG(st.st_mode)){error_=1;close(file_,false);return 0;}
- if(size)*size=uint64_t(st.st_size);return file_;
+ if(size)*size=uint64_t(st.st_size);
+ return file_;
 }
 bool PackageFiles::close(uint32_t token,bool commit){
  Call call(*this);if(!call.ok||!token||token!=file_)return false;
@@ -63,7 +66,8 @@ bool PackageFiles::close(uint32_t token,bool commit){
  writing_=false;writePath_[0]=0;return true;
 }
 bool PackageFiles::freeBytes(uint64_t*out){
- if(out)*out=0;Call call(*this);if(!call.ok||!out||file_||directory_)return false;
+ if(out)*out=0;
+ Call call(*this);if(!call.ok||!out||file_||directory_)return false;
  uint64_t total=0,used=0;if(!hooks_.usage(hooks_.context,&total,&used)||used>total)return fault(false);
  // Leave two maximum catalog copies plus metadata for protected state.
  *out=total-used>139264?total-used-139264:0;return true;

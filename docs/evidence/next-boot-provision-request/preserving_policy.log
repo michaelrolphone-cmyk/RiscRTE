@@ -1,0 +1,9 @@
+Preserving policy: identical/reordered JSON, version increases, shared provider selection and opaque image bytes PASS
+Preserving policy: grants/namespaces, selections, resident/features, media/installation, board and type mutations rejected PASS
+Preserving policy: identity-bound SD content paths only; media authority/fallback/source presence frozen PASS
+Preserving policy: canonical monotonic versions; all semantic and cosmetic manifest changes rejected PASS
+Preserving policy: cohort downgrade/identity/native changes and revision-only substitutions rejected PASS
+Preserving policy: malformed/missing/oversized/duplicate JSON, invalid paths, selection types and bounds rejected PASS
+Preserving policy: installed/candidate metadata open/read/buffer/parser OOM/close matrix, sticky retention and single close PASS
+Preserving SD sources: selected identity and nested fallback inventory hash binding, legacy exclusions, fault matrix and sticky retention PASS
+Preserving policy: 502 checks; every input store unchanged; metadata-only reads; no module loading PASS

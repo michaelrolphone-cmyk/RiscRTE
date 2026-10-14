@@ -176,10 +176,16 @@ def compose(seed_directory, owner_directory, validator, generator, output, new_d
         record, blobs = verify_seed(seed_directory, work, extension_validator)
         require(owner['layout'] == record['layout'], 'owner inventory and seed layout mismatch')
         require(owner['runtime_target'] == record['target'], 'owner inventory and Runtime target mismatch')
-        if decode(profile).get('schema_version') == 3:
+        decoded_profile = decode(profile)
+        profile_version = decoded_profile.get('schema_version')
+        if profile_version in (3, 4):
             require(b'RISC_PROVISION_IMAGE:1\0' in blobs['firmware.bin'] and
                     b'RISC_PROVISION_IMAGE:1\0' in blobs['firmware.elf'],
                     'seed native does not support compact image provisioning')
+        if profile_version == 4 or len(decoded_profile.get('files', [])) > 128:
+            require(b'RISC_PROVISION_TUPLES:1\0' in blobs['firmware.bin'] and
+                    b'RISC_PROVISION_TUPLES:1\0' in blobs['firmware.elf'],
+                    'seed native does not support extended provisioning inventory')
         private_profile = work / 'profile.json'
         write(private_profile, profile)
         run_validator(validator, private_profile, work / 'inputs', owner['time_server'])

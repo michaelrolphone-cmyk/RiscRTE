@@ -1,15 +1,24 @@
 void* Runtime::loadRemovableApp(const AppPolicy& policy) {
 #if defined(ESP_PLATFORM) || defined(RISC_REMOVABLE_APP_TEST)
+  // Fallback uses the same boot-owned identity, policy and normal loader. No
+  // cached removable bytes or dynamically installed identity can select it.
+  auto fallback=[&]()->void* {
+    if(!policy.internalFallback || retained_ || !port_.owner() ||
+       !providerStorageSafe() || !graph_.activationSafe())return nullptr;
+    void* module=esp_dlopen_instance(policy.elf);
+    if(!module)fail("internal app fallback ELF load failed");
+    return module;
+  };
   // Resolve only a provider selected by the complete, validated boot graph.
   // Storage authority here belongs to the loader, not to the launched app.
-  if(policy.sourceDriver<0 || !port_.owner() || !providerStorageSafe() || !graph_.activationSafe()) {
+  if(policy.sourceDriver<0 || retained_ || !port_.owner() || !providerStorageSafe() || !graph_.activationSafe()) {
     fail("SD app volume busy");return nullptr;
   }
   const auto& driver=drivers_[policy.sourceDriver];
   auto grant=graph_.acquireFrom(driver.id,"storage.volume",1,driver.instance);
   if(!grant.slot) {
     if(!graph_.activationSafe())retained_=true;
-    fail("SD app volume unavailable");return nullptr;
+    fail("SD app volume unavailable");return fallback();
   }
   const auto* volume=static_cast<const risc_storage_volume_api_v1*>(graph_.interfaceFor(grant));
   struct ReadContext {
@@ -29,19 +38,30 @@ void* Runtime::loadRemovableApp(const AppPolicy& policy) {
         r->port_.delay(1);c.calls=0;c.lastYield=std::chrono::steady_clock::now();
       }
       return r->port_.owner() && r->providerStorageSafe() && r->graph_.activationSafe();
-    },&context});
+    },&context,[](void* raw)->bool {
+      auto* r=static_cast<ReadContext*>(raw)->runtime;
+      return !r->retained_ && r->port_.owner() && r->providerStorageSafe() && r->graph_.activationSafe();
+    }});
   if(image.closeRetained) {
     retainedAppSource_=grant;retained_=true;fail(image.error);return nullptr;
   }
-  if(!graph_.release(grant)) {
+  if(!port_.owner() || !providerStorageSafe() || !graph_.activationSafe() || !graph_.release(grant)) {
     if(image.bytes)esp_elf_free(image.bytes);
     retainedAppSource_=grant;retained_=true;fail("SD app volume release retained; restart required");return nullptr;
   }
-  if(!read){fail(image.error);return nullptr;}
+  if(!read){fail(image.error);return fallback();}
+  // The publisher binds this immutable boot path to the admitted core image.
+  // Verify the owned snapshot, never the mutable source after cleanup.
+  if(policy.internalFallback && !coreAppImageMatches(policy.sourcePath,image.bytes,image.size)) {
+    esp_elf_free(image.bytes);fail("SD core app digest mismatch");return fallback();
+  }
+  if(retained_ || !port_.owner() || !providerStorageSafe() || !graph_.activationSafe()) {
+    esp_elf_free(image.bytes);retained_=true;fail("SD app load custody lost");return nullptr;
+  }
   // No SD handles or pointers survive this boundary. The normal ELF validator
   // and relocation/import checks still apply; no pathname cache is involved.
   if(!esp_elf_validate_file(image.bytes,image.size)) {
-    esp_elf_free(image.bytes);fail("SD app ELF malformed or incompatible");return nullptr;
+    esp_elf_free(image.bytes);fail("SD app ELF malformed or incompatible");return fallback();
   }
   struct Snapshot {uint8_t* bytes;size_t size;} snapshot{image.bytes,image.size};
   void* module=esp_dlopen_reader_instance(policy.elf,[](void* raw,const char*,elf_file_t* file)->int {
@@ -51,7 +71,7 @@ void* Runtime::loadRemovableApp(const AppPolicy& policy) {
   },&snapshot);
   // A registry allocation/name failure can occur before the reader is called.
   if(snapshot.bytes)esp_elf_free(snapshot.bytes);
-  if(!module)fail("SD app ELF relocation or imports failed");
+  if(!module){fail("SD app ELF relocation or imports failed");return fallback();}
   return module;
 #else
   (void)policy;fail("SD app loading requires the native snapshot loader");return nullptr;

@@ -21,7 +21,11 @@ class SdPackageDownload final {
    for(unsigned i=0;i<32;++i)if(leaf[7+i*2]!=hex[r.sha256[i]>>4]||leaf[8+i*2]!=hex[r.sha256[i]&15])return false;
    if(std::snprintf(partial_,sizeof(partial_),"%s.part",r.path)>=int(sizeof(partial_)))return false;
    record_=&r;volume_=v;http_=h;api_=risc_storage_volume_packages(v);utc_=utc;
-   if(api_->base.begin(v->context,&session_)!=RISC_STORAGE_ASYNC_OK)return false;
+   const int begun=api_->base.begin(v->context,&session_);
+   // A failed begin with an issued handle or retained ownership cannot be
+   // treated as a clean unavailable medium. Keep the coordinator/table alive.
+   if(begun==RISC_STORAGE_ASYNC_RETAINED||(begun!=RISC_STORAGE_ASYNC_OK&&session_)||(begun==RISC_STORAGE_ASYNC_OK&&!session_)){state_=State::Retained;return true;}
+   if(begun!=RISC_STORAGE_ASYNC_OK)return false;
    state_=durable?State::Refresh:State::Journal;return true;
   }
   State state()const{return state_;}

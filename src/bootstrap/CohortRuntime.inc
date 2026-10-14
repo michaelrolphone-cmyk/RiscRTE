@@ -297,7 +297,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
   const size_t prefix=strlen(root)+1;bool defaultFound=false;
   for(size_t p=0;p<candidate.policyCount_;++p){
     if(!text(newBoot["app_capabilities"][p]["manifest"],relative,sizeof(relative)) || !add(relative) ||
-       (candidate.policies_[p].sourceDriver<0 && (!add(candidate.policies_[p].elf+prefix) || !admit(context,candidate.policies_[p].elf,false))))return false;
+       ((candidate.policies_[p].sourceDriver<0 || candidate.policies_[p].internalFallback) && (!add(candidate.policies_[p].elf+prefix) || !admit(context,candidate.policies_[p].elf,false))))return false;
     if(!strcmp(candidate.policies_[p].elf,candidate.default_))defaultFound=true;
   }
   if(!defaultFound)return false;

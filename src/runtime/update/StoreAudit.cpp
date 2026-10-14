@@ -1,4 +1,5 @@
 #include "StoreAudit.h"
+#include "runtime/provisioning/StoreFiles.h"
 #include <dirent.h>
 #include <sys/stat.h>
 #include <cerrno>
@@ -20,14 +21,16 @@ bool namePath(char* out,size_t cap,const char* root,const char* name){int n=snpr
 }
 bool auditStore(const char* active,const char* staged,const char* changedElf,const char* changedManifest,
                 uint8_t* scratch,size_t capacity,void* context,uint32_t (*now)(void*),bool (*checkpoint)(void*)){
-  if(!active || !staged || !safe(changedElf) || !safe(changedManifest) || !strcmp(changedElf,changedManifest) || !scratch || capacity<4096 || !now || !checkpoint)return false;
-  const uint32_t start=now(context);uint32_t total=0;unsigned counts[2]{};bool changed[2][2]{};
+  if(!active || !staged || !safe(changedElf) || !safe(changedManifest) || !strcmp(changedElf,changedManifest) ||
+     !strcmp(changedElf,RiscProvision::StoreFiles::DigestFile) || !strcmp(changedManifest,RiscProvision::StoreFiles::DigestFile) || !scratch || capacity<4096 || !now || !checkpoint)return false;
+  const uint32_t start=now(context);uint32_t total=0;unsigned counts[2]{},payloads[2]{};bool changed[2][2]{};
   for(unsigned pass=0;pass<2;++pass){
     DIR* dir=opendir(pass?staged:active);if(!dir)return false;
     bool ok=true;
     for(;;){errno=0;dirent* item=readdir(dir);if(!item){if(errno)ok=false;break;}
       if(!strcmp(item->d_name,".") || !strcmp(item->d_name,".."))continue;
-      if(++counts[pass]>128 || !safe(item->d_name) || uint32_t(now(context)-start)>30000u || !checkpoint(context)){ok=false;break;}
+      const bool identity=!strcmp(item->d_name,RiscProvision::StoreFiles::DigestFile);
+      if(++counts[pass]>RiscProvision::MaxFiles+1 || (!identity && ++payloads[pass]>RiscProvision::MaxFiles) || !safe(item->d_name) || uint32_t(now(context)-start)>30000u || !checkpoint(context)){ok=false;break;}
       bool skip=false;
       if(!strcmp(item->d_name,changedElf)){changed[pass][0]=true;skip=true;}
       if(!strcmp(item->d_name,changedManifest)){changed[pass][1]=true;skip=true;}
@@ -35,6 +38,9 @@ bool auditStore(const char* active,const char* staged,const char* changedElf,con
       if(!namePath(a,sizeof(a),active,item->d_name) || !namePath(b,sizeof(b),staged,item->d_name)){ok=false;break;}
       struct stat sa{},sb{};
       if(stat(a,&sa) || stat(b,&sb) || !S_ISREG(sa.st_mode) || !S_ISREG(sb.st_mode) || sa.st_size<0 || sb.st_size<0){ok=false;break;}
+      // Streamed provisioning may add one exact-profile digest beyond the
+      // payload inventory. It is immutable metadata, never an app-update target.
+      if(identity && (sa.st_size!=32 || sb.st_size!=32)){ok=false;break;}
       if(skip || pass)continue;
       if(sa.st_size!=sb.st_size || uint64_t(sa.st_size)>0x4f0000u-total){ok=false;break;}
       total+=uint32_t(sa.st_size);

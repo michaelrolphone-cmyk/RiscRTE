@@ -6,6 +6,10 @@
 #include "runtime/update/StoreAudit.h"
 #include "runtime/packages/ElfAdmission.h"
 #include "runtime/provisioning/StoreFiles.h"
+#include "runtime/provisioning/RequestQueue.h"
+#include "runtime/provisioning/PreservingPolicy.h"
+#include "NativeProvisionRequest.h"
+#include "NativePackageVolume.h"
 #include "runtime/provisioning/StoreImageCapacity.h"
 #include "CpuPort.h"
 #include "NativeBoard.h"
@@ -47,6 +51,7 @@ extern "C" __attribute__((used)) const char risc_paired_store_abi[]=RISC_PAIRED_
 #endif
 extern "C" __attribute__((used)) const char risc_runtime_update_version[]="RISC_RUNTIME_VERSION:" RISC_BUILD_VERSION;
 extern "C" __attribute__((used)) const char risc_provision_image[]="RISC_PROVISION_IMAGE:1";
+extern "C" __attribute__((used)) const char risc_provision_tuples[]="RISC_PROVISION_TUPLES:1";
 // Arduino's weak default confirms before setup(), which is too early.
 extern "C" bool verifyRollbackLater(void){return true;}
 namespace RiscBankStore {
@@ -83,7 +88,7 @@ struct ProvisionState {
   const RiscBoot::KeyValueBackend* keyValue;
   const RiscBoot::AppDataBackend* appData;
   uint32_t imageReceived=0;
-  bool imageFailed=false;
+  bool imageFailed=false,preserving=false;
   ProvisionState(RiscProvision::FileBackend io,const RiscCpu::Hardware& h,const RiscBoot::KeyValueBackend* k,const RiscBoot::AppDataBackend* a):files(io),hardware(h),keyValue(k),appData(a){}
 };
 ProvisionState* provisionState=nullptr;
@@ -245,6 +250,9 @@ bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole r
 }
 bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profile){
   if(!operationSafe() || !provisionState || &profile!=provisionProfile || candidateCpu || runtime || provisionReadRetained)return false;
+  if(provisionState->preserving &&
+     (!RiscProvision::preservingPolicy("/bootfs",root,provisionReadRetained) ||
+      !RiscProvision::preservingImageSources(root,profile,provisionReadRetained)))return false;
   // A product cohort must describe the exact Runtime firmware we cloned, not
   // a different release whose update identity would become misleading.
   for(size_t i=0;i<profile.count;++i)if(!strcmp(profile.files[i].path,"cohort.json")){
@@ -510,7 +518,14 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
 bool bindProvisioningCandidate(RiscBoot::Runtime& candidate){
   return candidateCpu && provisionState && prepared && confirmed && !pending && !runtime && operationSafe() &&
     candidateCpu->bind(candidate) && candidate.registerPlatform(RISC_BANK_STORE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&api) &&
-    RiscDiagnostics::bindNativeSource(candidate);
+    RiscDiagnostics::bindNativeSource(candidate)
+#if RISC_NATIVE_PACKAGE_VOLUME
+    && RiscPackageVolume::bindAdmission(candidate)
+#endif
+#if RISC_NATIVE_PROVISION_REQUEST
+    && RiscProvisionRequest::bindAdmission(candidate)
+#endif
+    ;
 }
 bool partition(const esp_partition_t*& out,esp_partition_type_t type,esp_partition_subtype_t subtype,const char* label,uint32_t offset,uint32_t size){
   out=esp_partition_find_first(type,subtype,label);return out && !out->encrypted && out->address==offset && out->size==size;
@@ -570,10 +585,21 @@ void rejectBoot(){
   if(running && esp_ota_get_state_partition(running,&state)==ESP_OK && state==ESP_OTA_IMG_PENDING_VERIFY && esp_ota_check_rollback_is_possible())
     esp_ota_mark_app_invalid_rollback_and_reboot();
 }
+bool provisionRequestSource(RiscProvision::RequestSource& source,risc_bank_status_v1& status,bool requireLive){
+  source={};status={};status.struct_size=sizeof(status);
+  if(!prepared || !confirmed || pending || !operationSafe() || !transaction ||
+     (requireLive && (!runtime || !runtime->active())) || !api.status(nullptr,&status) || status.state!=RISC_BANK_IDLE)return false;
+  source.storeAbi=StoreAbi;source.firmwareSize=scratch->verifiedActiveRecord.firmwareSize;
+  memcpy(source.storeSha,scratch->verifiedActiveRecord.storeSha,32);
+  memcpy(source.firmwareSha,scratch->verifiedActiveRecord.firmwareSha,32);
+  const auto receipt=activeReceipt(source.consumedProfileSha);
+  if(receipt==ReceiptState::Unavailable)return false;
+  source.receiptAvailable=receipt==ReceiptState::Ready;return true;
+}
 bool provisionAvailable(){
   // Keep the capability marker in the linked native image for offline seed
   // compatibility checks, even when the linker discards unused data sections.
-  asm volatile("" : : "r"(risc_provision_image));
+  asm volatile("" : : "r"(risc_provision_image), "r"(risc_provision_tuples));
   return prepared && confirmed && !pending && !runtime && !provisionFiles && !provisionReadRetained && operationSafe();
 }
 ProvisionIdentity provisionIdentity(const uint8_t (&digest)[32]){
@@ -595,7 +621,7 @@ ProvisionHistory provisionHistory(const uint8_t (&digest)[32]){
 }
 bool provisionReady(uint64_t token){return prepared && confirmed && !pending && !runtime && provisionFiles &&
   provisionProfile && token && token==provisionToken && operationSafe();}
-int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&digest)[32],const RiscCpu::Hardware& hardware,const RiscBoot::KeyValueBackend* keyValue,uint64_t* token,const RiscBoot::AppDataBackend* appData){
+int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&digest)[32],const RiscCpu::Hardware& hardware,const RiscBoot::KeyValueBackend* keyValue,uint64_t* token,const RiscBoot::AppDataBackend* appData,bool preserving){
   if(token)*token=0;
   if(!token || !prepared || !confirmed || pending || runtime || provisionFiles || provisionState || !hardware.owner || !hardware.owner() || !operationSafe())return RISC_BANK_UNAVAILABLE;
   if(profile.imageMode()){
@@ -615,6 +641,7 @@ int32_t provisionBegin(const RiscProvision::Profile& profile,const uint8_t (&dig
   if(!memory)return RISC_BANK_UNAVAILABLE;
   provisionState=new(memory) ProvisionState({nullptr,now,[](void*){vTaskDelay(1);return operationSafe();},hashBegin,hashAdd,hashEnd,
     [](void*,const char* root,const RiscProvision::Profile& p){return admitProvisionedStore(root,p);}},hardware,keyValue,appData);
+  provisionState->preserving=preserving;
   provisionFiles=&provisionState->files;provisionProfile=&profile;memcpy(provisionDigest,digest,32);replacingFirmware=false;replacingCohort=false;
   int32_t result=transaction->beginStore(status.active_store_sha256,&provisionToken);*token=provisionToken;
   if(result!=RISC_BANK_OK && !provisionToken){

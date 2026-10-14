@@ -8,8 +8,8 @@ shared_flags=()
 host_flags=(-rdynamic)
 if [[ "$(uname -s)" == Darwin ]]; then shared_flags=(-Wl,-undefined,dynamic_lookup); host_flags=(-Wno-unused-private-field -Wno-unused-but-set-variable); fi
 if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=${SANITIZERS:-address,undefined} -fno-omit-frame-pointer -fno-sanitize-recover=all); fi
-for name in default previous revision1 revision2; do
-  extra=();if [[ "$name" == default ]]; then extra=(-DREMOVABLE_DEFAULT); elif [[ "$name" == previous ]]; then extra=(-DREMOVABLE_PREVIOUS); elif [[ "$name" == revision2 ]]; then extra=(-DIMAGE_REVISION=2); fi
+for name in default default2 previous revision1 revision2; do
+  extra=();if [[ "$name" == default ]]; then extra=(-DREMOVABLE_DEFAULT); elif [[ "$name" == default2 ]]; then extra=(-DREMOVABLE_DEFAULT -DIMAGE_REVISION=2); elif [[ "$name" == previous ]]; then extra=(-DREMOVABLE_PREVIOUS); elif [[ "$name" == revision2 ]]; then extra=(-DIMAGE_REVISION=2); fi
   cc "${flags[@]}" -std=c11 -shared "${shared_flags[@]}" -fPIC -fvisibility=hidden -I"$repo/sdk/app" "${extra[@]}" "$repo/test/fixtures/removable_app.c" -o "$build/$name.elf"
 done
 cc "${flags[@]}" -std=c11 -shared "${shared_flags[@]}" -fPIC -fvisibility=hidden -I"$repo/sdk/app" -I"$repo/sdk/driver" "$repo/test/fixtures/removable_provider.c" -o "$build/sd.elf"
@@ -20,8 +20,8 @@ c++ "${flags[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initialize
   "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" \
   "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
-  "$repo/test/removable_runtime_test.cpp" -ldl -o "$build/test"
+  "$repo/test/removable_runtime_test.cpp" -ldl -lcrypto -o "$build/test"
 cc "${flags[@]}" -std=c11 -shared "${shared_flags[@]}" -fPIC -fvisibility=hidden -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -DFIXTURE_TYPED -DFIXTURE_ID='"sd-plugin"' -DFIXTURE_CAPABILITY='"test.plugin"' "$repo/test/drivers/provider_graph_fixture.c" -o "$build/plugin.elf"
-for mode in internal-only catalog-media shared-settings catalog-settings-scalable catalog-settings-legacy catalog-settings catalog-providers provider-source provider-fallback provider-required provider-retained provider-bootstrap catalog-authority catalog-resident catalog discovery normal replacement absent missing busy removed malformed close-retained invalid-path default-external; do
+for mode in core-wrong-hash core-wrong-hash-close-retained core-wrong-hash-release-retained core-present core-absent core-busy core-removed core-malformed core-relocation core-close-retained core-release-retained core-owner-retained core-storage-retained core-close-owner-retained core-internal-missing core-internal-corrupt core-default-present core-default-absent core-opt-out core-opt-out-absent core-policy core-dynamic internal-only catalog-media shared-settings catalog-settings-scalable catalog-settings-legacy catalog-settings catalog-providers provider-source provider-fallback provider-required provider-retained provider-bootstrap catalog-authority catalog-resident catalog discovery normal replacement absent missing busy removed malformed close-retained invalid-path default-external; do
   "$build/test" "$build" "$mode"
 done

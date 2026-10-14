@@ -65,5 +65,15 @@ int main() {
     assert(!s.bytes && !s.size && s.closeRetained==(mode==7));
     assert(c.closes==(mode<2?0u:1u));
   }
+  { Card c;RemovableAppImage s;auto h=c.hooks();
+    h.cleanupSafe=[](void*){return false;};
+    assert(!s.read(&c.api,"/Apps/core/app.elf",h));
+    assert(!s.closeRetained && !c.opens && !c.closes && !s.bytes);
+  }
+  { Card c;RemovableAppImage s;auto h=c.hooks();
+    h.cleanupSafe=[](void*raw){return static_cast<Card*>(raw)->offset==0;};
+    assert(!s.read(&c.api,"/Apps/core/app.elf",h));
+    assert(s.closeRetained && c.opens==1 && !c.closes && !s.bytes);
+  }
   puts("Removable image: short reads, snapshot isolation, absent/busy media, bounds, truncation, timeout, OOM and close custody PASS");
 }

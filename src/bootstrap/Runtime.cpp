@@ -1,7 +1,9 @@
+#include <RiscProvisionRequestV1.h>
 #include <RiscInternalPackageVolumeV1.h>
 #include "Runtime.h"
 #include "AppDeclarations.h"
 #include "RemovableAppImage.h"
+#include "CoreAppImageDigest.h"
 #include "runtime/drivers/DeviceProviderExecutorV2.h"
 #include "runtime/drivers/NativeProviderPolicySnapshotV1.h"
 #include <chrono>
@@ -192,13 +194,18 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
                strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_ENTROPY_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
-               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY) && strcmp(capability,"platform.package-volume") && strcmp(capability,RISC_INSTALLATION_CAPABILITY))) return false;
+               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY) && strcmp(capability,"platform.package-volume") && strcmp(capability,RISC_PROVISION_REQUEST_CAPABILITY) && strcmp(capability,RISC_INSTALLATION_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
   if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
       (header[1]<sizeof(risc_diagnostic_source_api_v1) ||
        !static_cast<const risc_diagnostic_source_api_v1*>(table)->read)) return false;
+  if (!strcmp(capability,RISC_PROVISION_REQUEST_CAPABILITY)) {
+    if(api!=1 || scope!=Scope::Global || id || header[1]<sizeof(risc_provision_request_api_v1))return false;
+    const auto* request=static_cast<const risc_provision_request_api_v1*>(table);
+    if(!request->status || !request->queue)return false;
+  }
   if (!strcmp(capability,RISC_INTERNAL_PACKAGE_VOLUME_CAPABILITY)) {
     if(api!=1 || scope!=Scope::Global || id || header[1]<sizeof(risc_internal_package_volume_v1))return false;
     const auto* package=static_cast<const risc_internal_package_volume_v1*>(table);
@@ -372,9 +379,18 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     }
     if(!item["image_source"].isNull()) {
       auto source=item["image_source"].as<JsonObjectConst>();int64_t instance=0;char relativeImage[192];
-      if(!keys(source,{"volume_instance","path"}) || !integer(source["volume_instance"],0,INT32_MAX,instance) ||
+      // Only an immutable boot-owned row may select the internal image. A
+      // catalog reservation/dynamically supplied manifest cannot claim it.
+      if(!source["internal_fallback"].isUnbound()) {
+        if(!source["internal_fallback"].is<bool>() || !suppliedManifest.isNull() ||
+           replacing || policy.catalogAuthority)return fail("invalid internal app fallback");
+        policy.internalFallback=source["internal_fallback"].as<bool>();
+      }
+      if(!keys(source,{"volume_instance","path"},{"internal_fallback"}) || !integer(source["volume_instance"],0,INT32_MAX,instance) ||
          !text(source["path"],relativeImage,sizeof(relativeImage)) || !InstalledFiles::valid(relativeImage,false) ||
-         !elfPath(relativeImage) || !strcmp(policy.elf,invocation_->current_))return fail("invalid removable app source");
+         !elfPath(relativeImage) || (!policy.internalFallback && !strcmp(policy.elf,invocation_->current_)))return fail("invalid removable app source");
+      uint8_t mirrorDigest[32]{};
+      if(policy.internalFallback && !coreAppImageDigest(relativeImage,mirrorDigest))return fail("invalid core app mirror digest path");
       for(size_t d=0;d<driverCount_;++d)if(drivers_[d].instance==uint64_t(instance) &&
           !strcmp(drivers_[d].provides,"storage.volume") && drivers_[d].api==1) {
         if(policy.sourceDriver>=0)return fail("ambiguous removable app volume");
@@ -1037,7 +1053,7 @@ bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* contex
   if(!prepared_ || invocation_->active_ || retained_ || metadataCloseRetained_ || !port_.owner() || !inspect)return false;
   if(!inspect(context,default_,false))return false;
   for(size_t i=0;i<policyCount_;++i){
-    if(policies_[i].sourceDriver>=0 || !strcmp(policies_[i].elf,default_))continue;
+    if((policies_[i].sourceDriver>=0 && !policies_[i].internalFallback) || !strcmp(policies_[i].elf,default_))continue;
     if(!port_.owner() || !inspect(context,policies_[i].elf,false))return false;
   }
   for(size_t i=0;i<driverCount_;++i){
@@ -1562,7 +1578,7 @@ bool Runtime::run() {
     }
   }
 #endif
-  // One app at a time; no recursive ELF launch, directory search or fallback.
+  // One app at a time; no recursive ELF launch or implicit image discovery.
   while(ok) {
     invocation_->queued_[0]=0;
     const bool isDefault=!strcmp(invocation_->current_,default_);

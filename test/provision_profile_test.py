@@ -103,6 +103,69 @@ class Profiles(unittest.TestCase):
         self.assertLess(result['profile_bytes'], 16384)
         self.assertRaisesRegex(ValueError, 'one pinned URL', self.build, 'wrong-base', BASE)
 
+    def test_extended_image_profile_160_exact_tuples_and_native_parser(self):
+        record = self.pin(p.MAX_FILES)
+        record['schema_version'] = 2
+        record['image'] = {'url': BASE + 'image.bin', 'bytes': p.LAYOUTS[LAYOUT], 'sha256': '1' * 64}
+        for item in record['files']:
+            del item['url']
+        before = p.encode(record)
+        self.inventory.write_bytes(before)
+        result = self.build(base=None)
+        raw = (self.root / 'owner/profile.json').read_bytes()
+        profile = p.decode(raw)
+        self.assertEqual(profile['schema_version'], 4)
+        self.assertEqual(profile['image'], record['image'])
+        expected = [[entry[key] for key in ('path', 'bytes', 'sha256')] for entry in record['files']]
+        self.assertEqual(profile['files'], expected)
+        self.assertEqual(p.encode(record), before)
+        self.assertEqual(result['file_count'], 160)
+        self.assertLessEqual(len(raw), p.MAX_PROFILE)
+        self.build('again', base=None)
+        self.assertEqual(raw, (self.root / 'again/profile.json').read_bytes())
+        # Even tuple encoding cannot silently truncate an inventory or exceed
+        # the unchanged byte cap. Maximum native names/credentials may not fit.
+        record['files'].append({'path': 'extra.json', 'bytes': 1, 'sha256': '1' * 64})
+        self.assertRaisesRegex(ValueError, 'count', p.profile_bytes, record,
+                               {'ssid': 'dummy', 'password': ''})
+        record['files'].pop()
+        for index, entry in enumerate(record['files']):
+            if entry['path'] not in p.REQUIRED:
+                entry['path'] = f'{index:03d}' + 'x' * 27
+        self.assertRaisesRegex(ValueError, '16 KiB', p.profile_bytes, record,
+                               {'ssid': 'x' * 32, 'password': 'x' * 63})
+
+    @unittest.skipUnless(os.environ.get('PROVISION_RELEASE_STORE_FIXTURE'),
+                         'Set PROVISION_RELEASE_STORE_FIXTURE to the verified 128-file Wave release store')
+    def test_release_store_and_explicitly_augmented_132_file_fixture(self):
+        # The four synthetic entries only exercise inventory/profile capacity.
+        # This is not the unpublished T023 candidate or product qualification.
+        files = p.store_files(Path(os.environ['PROVISION_RELEASE_STORE_FIXTURE']))
+        self.assertEqual(len(files), 128)
+        for augmented in (False, True):
+            if augmented:
+                files.update({f'fixture-extra-{n}.json': b'{}' for n in range(4)})
+            record = {'schema': 'riscrte.provisioning-inventory', 'schema_version': 2,
+                      'layout': 'riscrte-paired-appdata-v3',
+                      'runtime_target': 'esp32s3-16mb-appdata-expanded-iq',
+                      'image': {'url': 'https://' + '.'.join(['a' * 55] * 3 + ['example', 'invalid']) + '/' + 'x' * 180 + '.bin',
+                                'bytes': 0x550000, 'sha256': '1' * 64},
+                      'files': [{'path': name, 'bytes': len(blob), 'sha256': p.sha(blob)}
+                                for name, blob in sorted(files.items())]}
+            raw = p.profile_bytes(record, {'ssid': 'x' * 32, 'password': 'x' * 63})
+            profile = p.decode(raw)
+            self.assertLessEqual(len(raw), p.MAX_PROFILE)
+            self.assertEqual(profile['schema_version'], 4 if augmented else 3)
+            expected = [{key: value for key, value in entry.items()} for entry in record['files']]
+            actual = ([dict(zip(('path', 'bytes', 'sha256'), row)) for row in profile['files']]
+                      if profile['schema_version'] == 4 else profile['files'])
+            self.assertEqual(actual, expected)
+            source = self.root / 'fixture-profile.json';source.write_bytes(raw)
+            subprocess.run([str(self.validator), str(source), str(self.root / f'fixture-{len(files)}')],
+                           check=True, capture_output=True)
+            print(f'Wave release-store {"plus four synthetic entries" if augmented else "fixture"}: '
+                  f'{len(files)} files, schema {profile["schema_version"]}, {len(raw)} bytes')
+
     def test_image_metadata_does_not_relax_file_inventory_guard(self):
         record = self.pin()
         record['files'][0]['bytes'] = 4700000
@@ -169,7 +232,7 @@ class Profiles(unittest.TestCase):
             with self.assertRaises(ValueError):
                 p.validate_inventory(copy)
         self.assertRaises(ValueError, p.decode, b'{"a":1,"a":2}')
-        record = self.pin(128)
+        record = self.pin(p.MAX_FILES)
         self.assertRaisesRegex(ValueError, '16 KiB', p.profile_bytes, record,
                                {'ssid': 'dummy', 'password': ''}, None)
         record['files'].append(record['files'][0])

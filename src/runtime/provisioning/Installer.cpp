@@ -25,9 +25,14 @@ bool write(InstallTransport t,const char* key,const void* bytes,uint32_t size,vo
  return t.set(t.input.context,key,bytes,size)&&t.commit(t.input.context)&&same(t,key,bytes,size,scratch,cap);
 }
 }
+bool inspectInstallInput(const void* bytes,uint32_t size,const void* time,uint32_t timeSize,Profile& profile){
+ profile.clear();
+ if(bytes&&size&&size<=ProfileInputBytes&&parseProfile(static_cast<const char*>(bytes),size,profile)&&timeValid(time,timeSize))return true;
+ profile.clear();return false;
+}
 bool validInstallInput(const void* bytes,uint32_t size,const void* time,uint32_t timeSize){
  auto profile=std::unique_ptr<Profile>(new(std::nothrow) Profile);
- return profile&&bytes&&size&&size<=ProfileInputBytes&&parseProfile(static_cast<const char*>(bytes),size,*profile)&&timeValid(time,timeSize);
+ return profile&&inspectInstallInput(bytes,size,time,timeSize,*profile);
 }
 InstallResult install(InstallTransport t,const void* bytes,uint32_t size,const void* time,uint32_t timeSize,void* scratch,uint32_t capacity){
  Clear wipe{scratch,capacity};
