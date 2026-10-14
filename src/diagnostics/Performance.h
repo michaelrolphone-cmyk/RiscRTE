@@ -7,6 +7,12 @@
 #ifndef RISC_PERFORMANCE_TRACE
 #define RISC_PERFORMANCE_TRACE 0
 #endif
+#ifndef RISC_PERFORMANCE_TRACE_CAPACITY
+#define RISC_PERFORMANCE_TRACE_CAPACITY 128
+#endif
+#if RISC_PERFORMANCE_TRACE_CAPACITY < 16 || RISC_PERFORMANCE_TRACE_CAPACITY > 128
+#error "RISC_PERFORMANCE_TRACE_CAPACITY must be between 16 and 128 records"
+#endif
 namespace RiscPerf {
 enum Phase : uint32_t {
   InteractionBegin=1, Recognized=2, Dispatched=3, FirstDraw=4, PresentSubmit=5,
@@ -37,7 +43,9 @@ class AggregateScope {public:explicit AggregateScope(uint32_t,uint32_t=1){}};
 #else
 // Owner-task-only, fixed-storage recorder. No allocation or transport in emit.
 namespace RiscPerf {
-constexpr uint32_t Capacity=128, PhaseCapacity=64;
+// The source-owned selector changes only bounded history storage. Every phase
+// counter, replay schema, transport budget and application suffix is unchanged.
+constexpr uint32_t Capacity=RISC_PERFORMANCE_TRACE_CAPACITY, PhaseCapacity=64;
 
 struct Record { uint64_t timestamp_us; uint32_t interaction,invocation,phase,value,sequence; };
 struct Data {

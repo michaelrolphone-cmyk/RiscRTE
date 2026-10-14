@@ -1,0 +1,26 @@
+name: Bounded native performance trace
+on:
+  push:
+    branches: [fix/t030-native-trace-capacity]
+  pull_request:
+    paths:
+      - 'src/diagnostics/Performance.h'
+      - 'test/performance_capacity_test.cpp'
+      - 'test/run_performance_capacity_test.sh'
+      - '.github/workflows/performance-capacity.yml'
+permissions:
+  contents: read
+jobs:
+  trace-capacity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: bash test/run_performance_capacity_test.sh
+      - run: SANITIZE=1 bash test/run_performance_capacity_test.sh
+      - run: bash test/run_performance_recorder_test.sh
+      - run: SANITIZE=1 bash test/run_performance_recorder_test.sh
+      - run: bash test/run_performance_runtime_test.sh
+      - run: SANITIZE=1 bash test/run_performance_runtime_test.sh

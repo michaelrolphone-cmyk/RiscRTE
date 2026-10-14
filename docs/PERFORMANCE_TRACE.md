@@ -91,6 +91,21 @@ bounded; IDs/sequences are not reused at exhaustion. Dropped ring records appear
 in `lost`. Phase counts include overwritten events. Aggregates have no individual
 timestamps, so they show total repetition and elapsed cost rather than every wait.
 
+An explicit device build may select `RISC_PERFORMANCE_TRACE_CAPACITY` in 16..128
+records. Omission remains 128. This changes only the live ring and replay snapshot
+history storage; all 64 cumulative phase counters, ABI suffixes, schema 1 and the
+64-byte replay budget stay unchanged. A 64-record build saves 4096 bytes across
+the two 32-byte-record arrays versus 128. It has a shorter overwrite window, which
+is reported by the existing `lost` field. Complete 15-record application summaries
+still fit; decoders must discard any overwritten prefix of a summary. Do not
+infer complete history merely because a snapshot is syntactically complete.
+
+`bash test/run_performance_capacity_test.sh` runs the 64/128 recorder, native
+diagnostic replay and grouped-summary regressions. The sanitized form uses
+`SANITIZE=1`. Invalid capacities reject at compile time. Device builds selecting
+a smaller ring must verify the final ELF's storage sizes and existing reserved
+memory proof; this selector does not move or shrink any reserved hardware bank.
+
 On the diagnostic transport send the exact line `perf` followed by LF or CRLF.
 `RTE_PERF` schema 1 reports a snapshot, ordered ring records, all 64 counters and
 an end marker. A dump cannot be restarted while active. Replay formats only during
