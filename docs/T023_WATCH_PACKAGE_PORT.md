@@ -1,0 +1,5 @@
+# T023 T-Watch native package capability port
+
+Base26a54ff7769f7c9072a2a133790cd293b72abcba preserves the T064 Watch NVS settings and device baseline. Ports4f653b8 and1790560 add confined internal package storage, media-tagged native admission, copied worker reuse and heap-allocated package workspace. Main lifecycle conflicts resolved by adding package exit fences to the existing CPU/file-source/bank checks. No atomic-settings lifecycle or native-capacity extension was imported from the Waveshare branch.
+
+`watch-t023-profile.ini` adds only RISC_NATIVE_PACKAGE_VOLUME=1 to the exact watch-expanded profile. Native target build and native package translation-unit compilation pass. Actual Runtime removable/internal-volume and provider admission suite passes normal and ASan/UBSan, including absence/busy/removal, malformed images, retained close, graph authority and internal media. Product grant/feed composition and complete store admission remain pending. No hardware qualification or firmware release claimed.

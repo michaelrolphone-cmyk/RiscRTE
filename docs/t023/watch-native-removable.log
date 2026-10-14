@@ -1,0 +1,66 @@
+Provider batch: dry-run, atomic rollback, denied native grant, idempotent cache replay, zero I/O PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+Internal medium: actual app/driver module loads, explicit software volume zero, replay/update, live replacement refusal and unselected-media denial PASS
+SD Runtime mode=catalog-media defaults=3 children=2 opens=4 closes=4 provider_starts=1 stops=1 PASS
+Shared settings: actual app/provider namespace 1/6 routing, 1024 opaque keys, native erase/restart, isolation and fail-closed recovery PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-settings-scalable defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-settings-legacy defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-settings defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Provider batch: dry-run, atomic rollback, denied native grant, idempotent cache replay, zero I/O PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-providers defaults=3 children=2 opens=4 closes=4 provider_starts=1 stops=1 PASS
+SD driver source provider-source: actual module load, fallback/custody PASS
+SD driver source provider-fallback: actual module load, fallback/custody PASS
+SD driver source provider-required: actual module load, fallback/custody PASS
+SD driver source provider-retained: actual module load, fallback/custody PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-authority defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-resident defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+SD Runtime mode=discovery defaults=3 children=2 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=normal defaults=3 children=2 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=replacement defaults=3 children=2 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=absent defaults=3 children=0 opens=0 closes=0 provider_starts=2 stops=2 PASS
+SD Runtime mode=missing defaults=3 children=0 opens=0 closes=0 provider_starts=2 stops=2 PASS
+SD Runtime mode=busy defaults=3 children=0 opens=0 closes=0 provider_starts=2 stops=2 PASS
+SD Runtime mode=removed defaults=3 children=0 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=malformed defaults=3 children=0 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=close-retained defaults=1 children=0 opens=1 closes=1 provider_starts=1 stops=0 PASS
+Provider batch: dry-run, atomic rollback, denied native grant, idempotent cache replay, zero I/O PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+Internal medium: actual app/driver module loads, explicit software volume zero, replay/update, live replacement refusal and unselected-media denial PASS
+SD Runtime mode=catalog-media defaults=3 children=2 opens=4 closes=4 provider_starts=1 stops=1 PASS
+Shared settings: actual app/provider namespace 1/6 routing, 1024 opaque keys, native erase/restart, isolation and fail-closed recovery PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-settings-scalable defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-settings-legacy defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-settings defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Provider batch: dry-run, atomic rollback, denied native grant, idempotent cache replay, zero I/O PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-providers defaults=3 children=2 opens=4 closes=4 provider_starts=1 stops=1 PASS
+SD driver source provider-source: actual module load, fallback/custody PASS
+SD driver source provider-fallback: actual module load, fallback/custody PASS
+SD driver source provider-required: actual module load, fallback/custody PASS
+SD driver source provider-retained: actual module load, fallback/custody PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-authority defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog-resident defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+Installed registry: 160 distinct install/remove cycles, update at capacity, failed-update rollback PASS
+SD Runtime mode=catalog defaults=3 children=2 opens=2 closes=2 provider_starts=1 stops=1 PASS
+SD Runtime mode=discovery defaults=3 children=2 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=normal defaults=3 children=2 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=replacement defaults=3 children=2 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=absent defaults=3 children=0 opens=0 closes=0 provider_starts=2 stops=2 PASS
+SD Runtime mode=missing defaults=3 children=0 opens=0 closes=0 provider_starts=2 stops=2 PASS
+SD Runtime mode=busy defaults=3 children=0 opens=0 closes=0 provider_starts=2 stops=2 PASS
+SD Runtime mode=removed defaults=3 children=0 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=malformed defaults=3 children=0 opens=2 closes=2 provider_starts=2 stops=2 PASS
+SD Runtime mode=close-retained defaults=1 children=0 opens=1 closes=1 provider_starts=1 stops=0 PASS
