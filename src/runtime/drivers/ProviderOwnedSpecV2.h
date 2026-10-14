@@ -106,7 +106,7 @@ struct OwnedNodeV2 final {
          !copyString(path, sizeof(path), from.verifiedElfPath)) ||
         from.requirementCount > GraphV2::kMaxRequirements ||
         (from.requirementCount && !from.requirements)) return false;
-    if(bool(from.openImage)!=bool(from.imageProvider) || (from.openImage && (from.requiredOsCpuAbi || !from.imageContext || !from.imageInstance || !copyString(imageProvider,sizeof(imageProvider),from.imageProvider))))return false;
+    if(bool(from.openImage)!=bool(from.imageProvider) || (from.openImage && (from.requiredOsCpuAbi || !from.imageContext || !copyString(imageProvider,sizeof(imageProvider),from.imageProvider))))return false;
     spec = from;
     spec.imageProvider=from.imageProvider?imageProvider:nullptr;
     spec.id = id;

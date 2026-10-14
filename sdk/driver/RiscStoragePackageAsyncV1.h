@@ -40,5 +40,5 @@ typedef struct {
 static inline const risc_storage_volume_api_v1_download*risc_storage_volume_download(const risc_storage_volume_api_v1*v){
  if(!risc_storage_volume_packages(v)||v->struct_size<sizeof(risc_storage_volume_api_v1_download))return NULL;
  const risc_storage_volume_api_v1_download*d=(const risc_storage_volume_api_v1_download*)v;
- return d->download_tag==RISC_STORAGE_DOWNLOAD_TAG&&d->download_version==1?d:NULL;
+ return d->download_tag==RISC_STORAGE_DOWNLOAD_TAG&&(d->download_version==1||d->download_version==2)?d:NULL;
 }

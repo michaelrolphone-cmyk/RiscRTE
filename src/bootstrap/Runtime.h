@@ -2,6 +2,7 @@
 #include "RiscMemoryHeapV1.h"
 #include "RiscRandomV1.h"
 #include <RiscInstallationV1.h>
+#include <RiscInstallationMediaV1.h>
 #include "Board.h"
 #include "AppPolicyLimits.h"
 #include "AppRequirementLimits.h"
@@ -464,7 +465,7 @@ class Runtime final {
   struct InstalledAppMetadata {char manifest[4097]{};uint32_t namespaceSlot=0;};
   MetadataArray<InstalledAppMetadata> installedMetadata_;
   struct InstallationState {
-    risc_installation_v1 api{};uint64_t volume=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
+    risc_installation_media_v1 api{};uint64_t volume=0,internalVolume=0;bool internalEnabled=false;uint32_t medium=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
   };
   MetadataArray<InstallationState> installation_;
   MetadataArray<RiscStorage::SdFirstKeyValue::State> installedSettings_;
@@ -486,9 +487,12 @@ class Runtime final {
   static int32_t installationForget(void*,const char*,bool);
   static int32_t installationCommit(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
   static int32_t installationCheck(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
-  static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool,const uint32_t* slots=nullptr);
+  static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool,const uint32_t* slots=nullptr,const uint32_t* media=nullptr);
   bool installationMutable(size_t)const;
   static int32_t installationProviders(void*,const risc_install_provider_v1*,uint32_t,bool);
+  static int32_t installationProvidersMedia(void*,const risc_install_provider_v1*,const uint32_t*,uint32_t,bool);
+  static int32_t installationProviderTransaction(void*,const risc_install_provider_v1*,const uint32_t*,uint32_t,bool);
+  static int32_t installationNamespacedMedia(void*,const risc_install_candidate_v1*,const uint32_t*,const uint32_t*,uint32_t,risc_install_result_v1*,bool,bool);
   static bool installationAvailable(void*,const char*,uint32_t,uint64_t);
   bool installedLaunchPath(const char*,char*,size_t,bool* settingsPending=nullptr)const;
   void* loadRemovableApp(const AppPolicy&);

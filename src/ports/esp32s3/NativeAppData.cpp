@@ -42,7 +42,12 @@ bool safe(){return ownerTask && ownerTask() && safeOperation && safeOperation();
 RiscStorage::AppDataFiles files({nullptr,[](void*){return uint32_t(esp_timer_get_time()/1000);},
  [](void*){vTaskDelay(1);return worker()||safe();},
  [](size_t size)->void*{return heap_caps_malloc(size,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);},free});
+#if RISC_NATIVE_PACKAGE_VOLUME
+std::atomic<void(*)()> packagePump{nullptr};
+void work(void*){for(;;){asyncWriter->workerStep();auto pump=packagePump.load(std::memory_order_acquire);if(pump)pump();vTaskDelay(1);}}
+#else
 void work(void*){for(;;){asyncWriter->workerStep();vTaskDelay(1);}}
+#endif
 bool prepareWriter(){
  if(asyncWriter)return true;
  void*bytes=heap_caps_malloc(RISC_APP_DATA_FILE_MAX,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
@@ -114,6 +119,10 @@ bool prepare(bool (*owner)(),bool (*operationSafe)()){
 #endif
  return configured;
 }
+#if RISC_NATIVE_PACKAGE_VOLUME
+bool registerPackageWorker(void(*pump)()){if(!safe()||packagePump.load()||!pump||!prepareWriter())return false;packagePump.store(pump,std::memory_order_release);return true;}
+bool onWorker(){return worker();}
+#endif
 const RiscBoot::AppDataBackend* backend(){return &api;}
 bool custodySafe(){return !APPDATA_RETAINED&&(pending()||files.exitSafe());}
 bool exitSafe(){return !APPDATA_RETAINED&&!pending()&&files.exitSafe();}
