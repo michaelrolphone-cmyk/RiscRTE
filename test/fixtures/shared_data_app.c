@@ -22,6 +22,7 @@ __attribute__((visibility("default"))) void app_main(void){
  assert(f->read(f->context,"../data",0,bytes,sizeof(bytes),&n,&v)==RISC_APP_DATA_CONTEXT);
  assert(f->replace(f->context,"other.cfp",0,"bad",3)==RISC_APP_DATA_CONTEXT);
  assert(!rt->acquire(RISC_APP_DATA_CAPABILITY,1,ns,&other));
+ assert(other.struct_size==sizeof(other)&&!other.api&&!other.slot&&!other.generation);
 #ifdef SHARED_CHILD
  assert(f->stat(f->context,"context-fingerprints.cfp",&n,&v)==RISC_APP_DATA_OK && n==4 && v);
  assert(f->read(f->context,"context-fingerprints.cfp",v,bytes,sizeof(bytes),&n,&v)==RISC_APP_DATA_OK && n==4 && !memcmp(bytes,"test",4));
@@ -33,7 +34,21 @@ __attribute__((visibility("default"))) void app_main(void){
  assert(stale.stat(stale.context,"context-fingerprints.cfp",&n,&v)==RISC_APP_DATA_CONTEXT);
  assert(rt->acquire(RISC_APP_DATA_CAPABILITY,1,ns,&other));f=other.api;
  assert(f->stat(f->context,"context-fingerprints.cfp",&n,&v)==RISC_APP_DATA_NOT_FOUND);
- assert(rt->release(&other));shared_test_step();
+ assert(rt->release(&other));
+ /* Spectrum's operation-scoped private table must leave the native slot free
+  * for the next shared fingerprint operation, while old contexts stay dead. */
+ for(unsigned i=0;i<3;i++){
+  g=(risc_runtime_capability_v1){.struct_size=sizeof(g)};
+  assert(rt->acquire(RISC_SHARED_DATA_CAPABILITY,1,3,&g));f=g.api;
+  assert(f->stat(f->context,"context-fingerprints.cfp",&n,&v)==RISC_APP_DATA_OK&&n==4);
+  assert(stale.stat(stale.context,"context-fingerprints.cfp",&n,&v)==RISC_APP_DATA_CONTEXT);
+  assert(rt->release(&g));
+  other=(risc_runtime_capability_v1){.struct_size=sizeof(other)};
+  assert(rt->acquire(RISC_APP_DATA_CAPABILITY,1,ns,&other));f=other.api;
+  assert(f->stat(f->context,"context-fingerprints.cfp",&n,&v)==RISC_APP_DATA_NOT_FOUND);
+  assert(rt->release(&other));
+ }
+ shared_test_step();
 #ifndef SHARED_CHILD
  assert(rt->request_launch("child.elf"));
 #endif
