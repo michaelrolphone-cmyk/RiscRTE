@@ -1,4 +1,5 @@
 #pragma once
+#include "NvsQuarantine.h"
 // Resource proof and native SDK PHY ownership. External ELFs tune/park capture.
 // ROM map / allocator provenance and hardware limits: docs/RADIO_IQ_RESOURCE.md.
 #include <esp_chip_info.h>
@@ -66,6 +67,8 @@ inline bool ready(){
   return !(REG_READ(0x60033D5Cu)&0x80000000u) && !(REG_READ(0x600C101Cu)&0xFu);
 }
 inline bool prepare(){
+  // PHY calibration may access NVS even when Wi-Fi configuration uses RAM.
+  if(RiscNvs::quarantined())return false;
   if(phyPrepared || !ready())return false;
   tracePrepared=tracePending;tracePending=false;
   trace("RTE_IQ stage=modem-init");

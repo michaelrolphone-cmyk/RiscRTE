@@ -1,4 +1,5 @@
 #pragma once
+#include "NvsQuarantine.h"
 // ESP-IDF 4.4 ESP32-S3 VHCI transport. Callback code and locks live in firmware,
 // never in an ELF. The only queue allocation is bounded and owned by this port.
 #include "HciBounds.h"
@@ -94,6 +95,8 @@ inline bool close(){
   return true;
 }
 inline bool open(){
+  // PHY calibration may access NVS even when Wi-Fi configuration uses RAM.
+  if(RiscNvs::quarantined())return false;
   if(!idle()){RISC_STAGE_LOG("radio bluetooth open result=rejected reason=not-idle");return false;}
   RISC_STAGE_LOG("radio bluetooth open begin");
   auto* allocated=static_cast<Buffers*>(heap_caps_calloc(1,sizeof(Buffers),MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT));

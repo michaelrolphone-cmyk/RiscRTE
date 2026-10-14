@@ -1,0 +1,5 @@
+Actual 125-file public feed: ordinary test-only private record 12466 bytes, consumed compaction replacement PASS
+Actual 125-file public feed: maximum-escaped test-only private record 12620 bytes, consumed compaction replacement PASS
+Actual 132-file public feed: ordinary test-only private record 13190 bytes, consumed compaction replacement PASS
+Actual 132-file public feed: maximum-escaped test-only private record 13344 bytes, consumed compaction replacement PASS
+Request compaction: credential-free terminal v2, v1 compatibility, exact replay, wrong-bank fences, all durable-operation cuts, finite entries/max bounds/refusal and retry PASS

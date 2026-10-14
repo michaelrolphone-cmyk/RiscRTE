@@ -3,7 +3,7 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
-flags=(-std=c++17 -Wall -Wextra -Werror -pedantic)
+flags=(-std=c++17 -Wall -Wextra -Werror -Wno-misleading-indentation -pedantic)
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g)
 fi

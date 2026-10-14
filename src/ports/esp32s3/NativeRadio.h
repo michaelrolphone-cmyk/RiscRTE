@@ -1,4 +1,5 @@
 #pragma once
+#include "NvsQuarantine.h"
 /* Generic station/AP IDF 4.4 adapter. Calls are serialized by the CPU port.
  * Exclusive radio/default-event-loop owner; never share with Arduino WiFi.
  * No app strings or code pointers are retained. See native_radio_shim/README.md
@@ -235,6 +236,8 @@ inline bool leave(){
 }
 inline bool continueSetup(){return !cancelled();}
 inline bool begin(Operation operation){
+  // PHY calibration may access NVS even when Wi-Fi configuration uses RAM.
+  if(RiscNvs::quarantined())return false;
   if(!idle() || !continueSetup() || nextGeneration==std::numeric_limits<uint32_t>::max())return false;
   RADIO_STAGE_LOG("radio wifi begin operation=%s",operation==Join?"connect":"scan");
   wifi_mode_t existingMode{};
