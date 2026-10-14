@@ -23,6 +23,7 @@ struct Port {
  RiscProvision::Input input{};
  FreshTime time{};
  const RiscBoot::AppDataBackend* appData=nullptr;
+ bool preserving=false; // native request only; owner profiles retain their existing route
 };
 enum class Outcome {Installed,Stopped};
 enum class Reason {NoProfile,InvalidProfile,InputUnavailable,MemoryUnavailable,PairUnavailable,

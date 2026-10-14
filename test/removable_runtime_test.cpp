@@ -16,7 +16,13 @@
 #include <string>
 #include <unistd.h>
 #include <cstdlib>
+#include <openssl/evp.h>
 static std::string mode,root;
+static bool coreMode(){return mode.find("core-")==0;}
+static bool coreDefault(){return mode.find("core-default-")==0;}
+static bool ownerOkay=true,storageOkay=true;
+static unsigned sourceLoads,coreWrites;
+static std::string corePath;
 static bool settingsMode(){return mode=="catalog-settings"||mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable";}
 static std::map<std::string,std::string> legacySettings;
 static std::vector<uint8_t> payload;
@@ -94,11 +100,20 @@ static void checkpointSettings(){
 }
 
 static RiscBoot::AppDataBackend privateData{nullptr,
- [](void*,uint32_t ns,const char*,uint32_t*n,uint64_t*r)->int32_t{assert(ns==(mode=="catalog-authority"?77u:1000u));*n=0;*r=privateWrites;return RISC_APP_DATA_NOT_FOUND;},
+ [](void*,uint32_t ns,const char*,uint32_t*n,uint64_t*r)->int32_t{assert(ns==((mode=="catalog-authority"||coreMode())?77u:1000u));*n=0;*r=privateWrites;return RISC_APP_DATA_NOT_FOUND;},
  [](void*,uint32_t,const char*,uint64_t,void*,uint32_t,uint32_t*,uint64_t*)->int32_t{return RISC_APP_DATA_NOT_FOUND;},
- [](void*,uint32_t ns,const char*,uint64_t,const void*,uint32_t)->int32_t{assert(ns==(mode=="catalog-authority"?77u:1000u));++privateWrites;return RISC_APP_DATA_OK;},
+ [](void*,uint32_t ns,const char*,uint64_t,const void*,uint32_t)->int32_t{assert(ns==((mode=="catalog-authority"||coreMode())?77u:1000u));++privateWrites;return RISC_APP_DATA_OK;},
  [](void*){return true;}};
 extern "C" void removable_private_data(const risc_runtime_api_v1*rt){
+ if(coreMode()){
+  assert(rt);risc_runtime_capability_v1 grant{};grant.struct_size=sizeof(grant);
+  assert(!rt->acquire("storage.volume",1,9,&grant));
+  assert(!rt->acquire("storage.app-data",1,78,&grant));
+  assert(rt->acquire("storage.app-data",1,77,&grant));
+  auto*api=static_cast<const risc_app_data_v1*>(grant.api);
+  assert(api->replace(api->context,"settings",0,"x",1)==RISC_APP_DATA_OK);
+  ++coreWrites;assert(rt->release(&grant));return;
+ }
  if(!catalogMode())return;
  if(mode=="shared-settings"){risc_runtime_capability_v1 g{};g.struct_size=sizeof(g);assert(rt->acquire("storage.key-value",1,6,&g));const auto*kv=static_cast<const risc_key_value_v1*>(g.api);char out[16];uint32_t n=0;assert(!kv->get(kv->context,"same",out,sizeof out,&n)&&std::string(out,n)=="six");assert(rt->release(&g));return;}
  if(settingsMode()){
@@ -141,7 +156,30 @@ static void selectImage(const char* name){
   std::ifstream f(root+"/"+name,std::ios::binary);payload.assign(std::istreambuf_iterator<char>(f),{});assert(payload.size()>52);
 }
 extern "C" unsigned removable_event(unsigned e,unsigned value) {
+  if(coreMode()) {
+    if(e==0){
+      ++defaults;
+      if(coreDefault()){assert(value==1u);return 0;}
+      return defaults<3;
+    }
+    if(e==1){assert(!live && ownerOkay && storageOkay);++children;
+      assert(value==((mode=="core-opt-out")?2u:1u));return 0;}
+  }
   if(e==0){++defaults;if(providerMode())return 0;
+    if(mode=="internal-only"){
+      auto*m=risc_installation_media(installer);assert(m&&m->media_mask==2);
+      const char*manifest=R"({"type":"application","id":"child","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"child.elf","entry":"app_main","requires":[]})";
+      risc_install_candidate_v1 item{"Apps/child/manifest.json",manifest};uint32_t slot=1,medium=0;risc_install_result_v1 result{};char path[193];
+      assert(installer->admit(installer->context,item.manifest_path,manifest,path,sizeof path)==RISC_INSTALL_DENIED);
+      assert(installer->namespaced(installer->context,&item,&slot,1,&result,true,false)==RISC_INSTALL_DENIED);
+      assert(m->namespaced_media(installer->context,&item,&slot,&medium,1,&result,true,false)==RISC_INSTALL_DENIED);
+      risc_install_provider_v1 provider{pluginManifest,pluginPath,0};
+      assert(installer->providers(installer->context,&provider,1,true)==RISC_INSTALL_DENIED);
+      medium=1;assert(m->providers_media(installer->context,&provider,&medium,1,true)==RISC_INSTALL_OK);
+      assert(m->namespaced_media(installer->context,&item,&slot,&medium,1,&result,true,false)==RISC_INSTALL_OK&&result.status==RISC_INSTALL_OK);
+      launchName=result.launch_path;return defaults<3;
+    }
+
     const auto* feedback=risc_runtime_get_api(1);
     risc_runtime_launch_failure_v1 record{};record.struct_size=sizeof(record);
     const bool expected=defaults>1 && (mode=="absent" || mode=="missing" || mode=="busy" || mode=="removed" || mode=="malformed");
@@ -285,7 +323,7 @@ extern "C" unsigned removable_event(unsigned e,unsigned value) {
   if(e==1){assert(!live && opens==closes);++children;assert(value==(mode=="replacement" && children==2?2u:1u));}
   if(e==6){++previousRuns;assert(value==1);}
   if(e==2)++starts;
-  if(e==3){assert(!live);++stops;}
+  if(e==3){assert(!live);if(mode=="core-release-retained" || mode=="core-wrong-hash-release-retained")return 1;++stops;}
   return 0;
 }
 extern "C" void removable_resident_entry(const risc_runtime_api_v1*rt){
@@ -320,17 +358,22 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
       assert(!fseek(manifestFile,0,SEEK_END));*n=ftell(manifestFile);rewind(manifestFile);return 2;
     }
     if(providerCatalog())selectImage(!strncmp(p,"/Drivers/",9)?"plugin.elf":"revision1.elf");
-    assert((providerCatalog()&&!strncmp(p,"/Drivers/sd-plugin/image-",25)) || !strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")));
-    if(mode=="missing" || mode=="busy")return 0;
+    assert((coreMode() && !strncmp(p,"/Apps/child/image-",18)) || (providerCatalog()&&!strncmp(p,"/Drivers/sd-plugin/image-",25)) || !strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")));
+    if(mode=="missing" || mode=="busy" || mode=="core-busy")return 0;
     if(ctx==reinterpret_cast<void*>(1))++internalOpens;
     ++opens;live=1;offset=0;*n=payload.size();return 1;
   };
   v.file_read=[](void*,uint32_t h,void* out,size_t n)->size_t {
     if(h==2){++discoveryIo;return fread(out,1,n,manifestFile);}
-    assert(live && n<=4096);if(mode=="removed" && offset>1000)return 0;
+    assert(live && n<=4096);
+    if(offset>1000){
+      if(mode=="removed" || mode=="core-removed")return 0;
+      if(mode=="core-owner-retained")ownerOkay=false;
+      if(mode=="core-storage-retained")storageOkay=false;
+    }
     n=std::min(size_t(333),std::min(n,payload.size()-offset));memcpy(out,payload.data()+offset,n);offset+=n;return n;
   };
-  v.file_close=[](void*,uint32_t h,bool){if(h==2){++discoveryIo;bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained" || mode=="provider-retained")return false;live=0;return true;};
+  v.file_close=[](void*,uint32_t h,bool){if(h==2){++discoveryIo;bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained" || mode=="provider-retained" || mode=="core-close-retained" || mode=="core-wrong-hash-close-retained")return false;live=0;if(mode=="core-close-owner-retained")ownerOkay=false;return true;};
   static risc_storage_worker_v1 workerApi{};static risc_storage_async_adapter_v1 bridge{};
   static bool initialized=false;
   if(!initialized){initialized=true;
@@ -363,14 +406,31 @@ extern "C" bool esp_elf_validate_file(const uint8_t* p,size_t n){
 #endif
 }
 extern "C" void* esp_dlopen_reader_instance(const char* name,esp_dl_image_reader reader,void* context){
-  assert(!live);elf_file_t file{};assert(reader(context,name,&file)==0);
+  assert(!live && ownerOkay && storageOkay);++sourceLoads;elf_file_t file{};assert(reader(context,name,&file)==0);
   char temporary[]="/tmp/riscrte-sd-test-XXXXXX";int fd=mkstemp(temporary);assert(fd>=0);
   FILE* out=fdopen(fd,"wb");assert(out);assert(fwrite(file.payload,1,file.size,out)==file.size);assert(!fclose(out));
-  esp_elf_free(file.payload);void* module=dlopen(temporary,RTLD_NOW|RTLD_LOCAL);unlink(temporary);assert(module);return module;
+  esp_elf_free(file.payload);if(mode=="core-relocation"){unlink(temporary);return nullptr;}
+  void* module=dlopen(temporary,RTLD_NOW|RTLD_LOCAL);unlink(temporary);assert(module);return module;
 }
 extern "C" const risc_storage_volume_api_v1* removable_internal_volume(){static risc_storage_volume_api_v1 table;table=*removable_volume();table.context=reinterpret_cast<void*>(1);table.struct_size=sizeof(table);return &table;}
 int main(int argc,char** argv) {
   assert(argc==3);root=argv[1];mode=argv[2];selectImage("revision1.elf");
+  if(coreMode()){
+    selectImage(coreDefault()?"default.elf":"revision1.elf");
+    unsigned digestSize=0;uint8_t digest[32]{};
+    assert(EVP_Digest(payload.data(),payload.size(),digest,&digestSize,EVP_sha256(),nullptr)==1 && digestSize==32);
+    corePath="Apps/child/image-";constexpr char hex[]="0123456789abcdef";
+    for(uint8_t b:digest){corePath+=hex[b>>4];corePath+=hex[b&15];}corePath+=".elf";
+    if(mode=="core-opt-out" || mode=="core-opt-out-absent")selectImage("revision2.elf");
+    if(mode.find("core-wrong-hash")==0){
+      const auto correct=payload;selectImage("revision2.elf");
+      assert(payload.size()==correct.size() && payload!=correct && esp_elf_validate_file(payload.data(),payload.size()));
+    }
+    std::ifstream input(root+"/revision1.elf",std::ios::binary);std::ofstream output(root+"/child.elf",std::ios::binary);output<<input.rdbuf();
+    if(mode=="core-absent" || mode=="core-default-absent" || mode=="core-internal-missing" || mode=="core-internal-corrupt" || mode=="core-opt-out-absent")present=false;
+    if(mode=="core-malformed")payload[0]=0;
+
+  }
   if(providerMode())selectImage("plugin.elf");
   if(mode=="provider-fallback" || mode=="provider-required")present=false;
   if(mode=="malformed")payload[0]=0;
@@ -381,11 +441,11 @@ int main(int argc,char** argv) {
   std::string boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[{"manifest":"child.json","grants":[],"image_source":{"volume_instance":9,"path":"Apps/child/child.elf"}}]})";
   if(mode=="invalid-path")boot.replace(boot.find("Apps/child/child.elf"),20,"../child.elf");
   if(mode=="default-external")boot.replace(boot.find("default.elf"),11,"child.elf");
-  if(mode=="discovery"||catalogMode())boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[]})";
-  if(catalogMode()){
+  if(mode=="discovery"||catalogMode()||mode=="internal-only")boot=R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"sd.json","instance_id":9}],"app_capabilities":[]})";
+  if(catalogMode()||mode=="internal-only"){
     JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
     doc["installation"]["volume_instance"]=9;auto grant=doc["installation"]["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=0;
-    if(providerCatalog())doc["installation"]["provider_grants"].to<JsonArray>();
+    if(providerCatalog()||mode=="internal-only")doc["installation"]["provider_grants"].to<JsonArray>();
     if(settingsMode()||mode=="shared-settings"){doc["installation"]["settings_sd"]=true;auto kv=doc["installation"]["grants"].add<JsonObject>();kv["capability"]="storage.key-value";kv["api"]=1;kv["instance_id"]=0;}
     if(mode=="shared-settings"){
      auto list=doc["installation"]["shared_settings"].to<JsonArray>();list.add(1);list.add(6);
@@ -397,8 +457,13 @@ int main(int argc,char** argv) {
      auto childKv=child["grants"].add<JsonObject>();childKv["capability"]="storage.key-value";childKv["api"]=1;childKv["instance_id"]=6;
      auto key=doc["drivers"][0]["key_value"].add<JsonObject>();key["key"]="wifi.test";key["namespace"]=6;key["access"]="read-write";
     }
-    if(mode=="catalog-media"){
+    if(mode=="catalog-media"||mode=="internal-only"){
      write("internal.json",R"({"type":"driver","id":"internal-test","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"internal.elf","requires":[],"provides":[{"capability":"storage.volume","api":1}]})");
+     if(mode=="internal-only"){
+      doc["drivers"].to<JsonArray>();doc["installation"]["volume_instance"]=0;
+      JsonDocument internal;std::ifstream f(root+"/internal.json");std::string bytes((std::istreambuf_iterator<char>(f)),{});assert(!deserializeJson(internal,bytes));
+      auto need=internal["requires"].add<JsonObject>();need["capability"]=RISC_INSTALLATION_CAPABILITY;need["api"]=1;bytes.clear();serializeJson(internal,bytes);write("internal.json",bytes);
+     }
      doc["drivers"].add<JsonObject>()["manifest"]="internal.json";doc["installation"]["internal_volume_instance"]=0;
     }
     doc["installation"]["namespace_range"]["first"]=1000;doc["installation"]["namespace_range"]["count"]=128;boot.clear();serializeJson(doc,boot);
@@ -434,10 +499,28 @@ int main(int argc,char** argv) {
     if(mode=="provider-bootstrap")doc["drivers"][0]["image_source"].set(source);
     boot.clear();serializeJson(doc,boot);
   }
+  if(coreMode()) {
+    JsonDocument doc,m;assert(!deserializeJson(doc,boot));
+    std::ifstream f(root+"/child.json");std::string raw((std::istreambuf_iterator<char>(f)),{});assert(!deserializeJson(m,raw));
+    auto req=m["requires"].add<JsonObject>();req["capability"]="storage.app-data";req["api"]=1;
+    raw.clear();serializeJson(m,raw);write("child.json",raw);
+    auto p=doc["app_capabilities"][0];
+    p["image_source"]["path"]=corePath;
+    p["image_source"]["internal_fallback"]=mode!="core-opt-out" && mode!="core-opt-out-absent";
+    auto g=p["grants"].add<JsonObject>();g["capability"]="storage.app-data";g["api"]=1;g["instance_id"]=77;
+    if(coreDefault()) {
+      m["id"]="host";m["file_name"]="default.elf";m["requires"].to<JsonArray>();
+      raw.clear();serializeJson(m,raw);write("host.json",raw);
+      p["manifest"]="host.json";p["grants"].to<JsonArray>();
+    }
+    boot.clear();serializeJson(doc,boot);
+    if(mode=="core-internal-missing")assert(!unlink((root+"/child.elf").c_str()));
+    if(mode=="core-internal-corrupt")write("child.elf","invalid");
+  }
   write("boot.json",boot);
   if(mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable")for(unsigned i=0;i<32;++i)legacySettings["key"+std::to_string(i)]="preserved-"+std::to_string(i);
   if(mode=="shared-settings")for(unsigned i=0;i<40;++i){char key[16];snprintf(key,sizeof key,"legacy%04u",i);sharedOriginal[6][key]="opaque-legacy";}
-  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(mode=="catalog-settings-scalable")privateKv.scalableSettings=&scalableBackend;if(settingsMode())port.keyValue=&privateKv;if(mode=="shared-settings")port.keyValue=&sharedKv;runtime=new RiscBoot::Runtime(port);
+  RiscBoot::Port port{[](){return ownerOkay;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.providerStorageSafe=[](){return storageOkay;};port.appData=&privateData;if(mode=="catalog-settings-scalable")privateKv.scalableSettings=&scalableBackend;if(settingsMode())port.keyValue=&privateKv;if(mode=="shared-settings")port.keyValue=&sharedKv;runtime=new RiscBoot::Runtime(port);
   if(mode=="invalid-path" || mode=="default-external" || mode=="provider-bootstrap") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
   if(catalogMode()){
     // Boot cannot reserve any namespace already owned by an app, even before
@@ -462,7 +545,72 @@ int main(int argc,char** argv) {
     }
     write("boot.json",boot);
   }
+  if(mode=="core-policy") {
+    JsonDocument original;assert(!deserializeJson(original,boot));
+    for(unsigned bad=0;bad<13;++bad){
+      JsonDocument doc;doc.set(original);auto source=doc["app_capabilities"][0]["image_source"];
+      if(bad==0)source["internal_fallback"]="true";
+      if(bad==1)source["internal_fallback"]=1;
+      if(bad==2)source["internal_fallback"]=nullptr;
+      if(bad==3)source["path"]="../child.elf";
+      if(bad==4)source["volume_instance"]=8;
+      if(bad==5)source["unknown"]=true;
+      if(bad==6){doc["default_app"]="child.elf";source["internal_fallback"]=false;}
+      if(bad==7){doc["default_app"]="child.elf";source.remove("internal_fallback");}
+      if(bad==8){
+        doc["installation"]["volume_instance"]=9;doc["installation"]["grants"].to<JsonArray>();
+        doc["app_capabilities"][0]["catalog_authority"]=true;
+      }
+      if(bad==9)source["path"]="Apps/child/child.elf";
+      if(bad==10)source["path"]="Apps/child/image-"+std::string(63,'a')+".elf";
+      if(bad==11)source["path"]="Apps/child/image-"+std::string(64,'g')+".elf";
+      if(bad==12)source["path"]="Apps/child/image-"+std::string(64,'a')+"x.elf";
+      std::string raw;serializeJson(doc,raw);write("boot.json",raw);
+      RiscBoot::Runtime denied(port);assert(!denied.prepare(root.c_str()) && !starts && !opens);
+      if(bad==8)assert(!strcmp(denied.error(),"invalid internal app fallback"));
+    }
+    delete runtime;puts("Core source policy: strict opt-in, safe path, selected volume, default fallback and catalog separation PASS");return 0;
+  }
   if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
+  if(mode=="core-dynamic") {
+    assert(runtime->reserveInstalledApps(4));
+    const char* manifest=R"({"type":"application","id":"dynamic","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"dynamic.elf","entry":"app_main","requires":[]})";
+    JsonDocument policy;policy["manifest"]="Apps/dynamic/manifest.json";policy["grants"].to<JsonArray>();
+    auto source=policy["image_source"].to<JsonObject>();source["volume_instance"]=9;source["path"]="Apps/dynamic/dynamic.elf";
+    for(bool enabled:{false,true}){
+      source["internal_fallback"]=enabled;std::string raw;serializeJson(policy,raw);
+      assert(!runtime->admitInstalledApp(raw.c_str(),manifest));assert(runtime->appCount()==1);
+    }
+    source.remove("internal_fallback");std::string raw;serializeJson(policy,raw);
+    assert(runtime->admitInstalledApp(raw.c_str(),manifest));assert(runtime->appCount()==2);
+    JsonDocument owned;assert(!deserializeJson(owned,manifest));owned["id"]="child";owned["file_name"]="child.elf";
+    std::string duplicate;serializeJson(owned,duplicate);assert(!runtime->admitInstalledApp(raw.c_str(),duplicate.c_str()));
+    assert(!opens && !starts);delete runtime;puts("Core dynamic policy: no fallback authority, bundled identity override denied, ordinary admission unchanged PASS");return 0;
+  }
+  if(coreMode()) {
+    unsigned inspected=0;
+    assert(runtime->inspectImages([](void*c,const char*p,bool provider){if(strstr(p,"child.elf") || strstr(p,"default.elf"))assert(!provider);++*static_cast<unsigned*>(c);return !strstr(p,"child.elf") || (mode!="core-internal-missing" && mode!="core-internal-corrupt");},&inspected)==(mode!="core-internal-missing" && mode!="core-internal-corrupt"));
+    if(mode!="core-internal-missing" && mode!="core-internal-corrupt")assert(inspected==(coreDefault()||mode=="core-opt-out"||mode=="core-opt-out-absent"?2u:3u));
+    const bool retained=mode.find("retained")!=std::string::npos;
+    const bool noChild=mode=="core-internal-missing" || mode=="core-internal-corrupt" || mode=="core-opt-out-absent";
+    assert(runtime->run()!=retained);assert(runtime->retained()==retained);
+    if(retained){assert(defaults==1 && !children && !coreWrites && !sourceLoads && !stops);
+      if(mode=="core-owner-retained" || mode=="core-storage-retained")assert(live && !closes);
+      const unsigned before=opens+closes+starts+stops;
+      assert(!runtime->run() && runtime->retained() && !sourceLoads && !children);
+      assert(opens+closes+starts+stops==before);
+    }else{
+      assert(defaults==(coreDefault()?1u:3u));assert(children==(coreDefault()||noChild?0u:2u));
+      assert(coreWrites==children && !live && starts==stops);
+      assert(sourceLoads==((mode=="core-present"||mode=="core-relocation"||mode=="core-opt-out")?2u:mode=="core-default-present"?1u:0u));
+      delete runtime;
+    }
+    printf("Core SD preference %s: exact grants/namespaces, internal loader and custody PASS\n",mode.c_str());return 0;
+  }
+  if(mode=="internal-only"){
+    assert(runtime->run()&&!runtime->retained());assert(defaults==3&&children==2&&internalOpens>=2&&!starts&&!stops&&!live);
+    delete runtime;puts("Internal-only installation: no SD driver, explicit media mask, rejected SD/legacy app and provider publication, actual internal app loads and replay PASS");return 0;
+  }
   if(mode=="discovery")assert(runtime->reserveInstalledApps(4));
   if(providerMode()){
     const bool retained=mode=="provider-retained",required=mode=="provider-required";

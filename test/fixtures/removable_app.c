@@ -21,7 +21,7 @@ __attribute__((visibility("default"))) void app_main(void) {
 #ifdef REMOVABLE_DEFAULT
   const risc_runtime_api_v1* rt=risc_runtime_get_api(1);
   if(removable_is_resident()){removable_resident_entry(rt);return;}
-  if(removable_event(0,0))rt->request_launch(removable_launch_name());
+  if(removable_event(0,IMAGE_REVISION))rt->request_launch(removable_launch_name());
 #elif defined(REMOVABLE_PREVIOUS)
   removable_event(6,counter++);
 #else

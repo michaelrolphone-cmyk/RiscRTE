@@ -474,7 +474,7 @@ class Runtime final {
   uint8_t appCatalogState_[MaxAppPolicies]{};
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
-    bool enabled=true, catalogAuthority=false;
+    bool enabled=true, catalogAuthority=false, internalFallback=false;
     AppCatalogMetadata catalog{};
     char sourcePath[193]{}; PolicyIndex sourceDriver=-1;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;

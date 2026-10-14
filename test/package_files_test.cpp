@@ -20,8 +20,8 @@ int main(){
  auto stage=v->file_open_write(c,"/Apps/example/manifest.install");assert(stage);assert(v->file_write(c,stage,"NEW",3)==3);assert(v->file_close(c,stage,true));assert(f->replace_file(c,"/Apps/example/manifest.install","/Apps/example/manifest.json"));assert(f->recover_replace(c,"/Apps/example/manifest.json"));
  auto aborted=v->file_open_write(c,"/Apps/example/.partial");assert(aborted&&v->file_close(c,aborted,false));risc_storage_metadata_v1 m{sizeof(m),0,0,0};assert(f->metadata(c,"/Apps/example/.partial",&m)==RISC_STORAGE_FS_NOT_FOUND);
  auto d=v->dir_open(c,"/Apps/example");assert(d&&held);risc_storage_dirent_v1 entry{};unsigned count=0;while(v->dir_next(c,d,&entry))++count;assert(count==2&&!e->handle_error(c,d,true));assert(e->dir_close_checked(c,d)&&!held);
- char link[512];snprintf(link,sizeof(link),"%s/Apps/link",root);assert(!symlink("/tmp",link));assert(!v->file_open_write(c,"/Apps/link/escape"));assert(!unlink(link));
+ char link[1024];snprintf(link,sizeof(link),"%s/Apps/link",root);assert(!symlink("/tmp",link));assert(!v->file_open_write(c,"/Apps/link/escape"));assert(!unlink(link));
  assert(v->remove(c,"/Apps/example/image.elf")&&v->remove(c,"/Apps/example/manifest.json"));
- char path[512];for(const char*p:{"/Apps/example","/Apps","/Drivers","/AppData"}){snprintf(path,sizeof(path),"%s%s",root,p);assert(!rmdir(path));}assert(!rmdir(root));
+ char path[1024];for(const char*p:{"/Apps/example","/Apps","/Drivers","/AppData"}){snprintf(path,sizeof(path),"%s%s",root,p);assert(!rmdir(path));}assert(!rmdir(root));
  failed=true;assert(!v->refresh(c));puts("Internal package files: confined paths, real file lifecycle, atomic activation, exclusive custody, abort, stale handles and capacity reserve PASS");
 }

@@ -2,7 +2,9 @@
 #include <cstddef>
 #include <cstdint>
 namespace RiscProvision {
-constexpr size_t MaxFiles=128, ChunkBytes=4096;
+constexpr size_t MaxFiles=160, ChunkBytes=4096;
+constexpr uint32_t ProfileInputBytes=16384;
+constexpr size_t ProfileJsonBytes=64*1024;
 constexpr uint32_t MaxFileBytes=8*1024*1024, MaxStoreBytes=16*1024*1024;
 struct File { char path[193]{}, url[385]{}; uint32_t bytes=0; uint8_t sha256[32]{}; };
 // Trusted owner-supplied profile, never an app grant or a remote authority.
@@ -11,7 +13,7 @@ struct File { char path[193]{}, url[385]{}; uint32_t bytes=0; uint8_t sha256[32]
 struct Profile {
   char ssid[33]{}, password[64]{};
   File files[MaxFiles]{};
-  // Schema 3 downloads one immutable filesystem image; files remain the exact
+  // Schemas 3/4 download one immutable filesystem image; files remain the exact
   // required readback/admission inventory and have no individual URLs.
   File image{};
   size_t count=0;
@@ -24,7 +26,9 @@ struct Profile {
   ~Profile(){clear();}
   void clear();
 };
-// Strict schema 1 (per-file URL), 2 (shared HTTPS base_url), or 3 (store image).
+// Strict schema 1 (per-file URL), 2 (shared HTTPS base_url), 3 (store image),
+// or 4 (store image with exact [path, bytes, sha256] inventory tuples).
+// Every schema uses at most ProfileInputBytes input and ProfileJsonBytes JSON heap.
 // All inventory files have relative paths, exact
 // length and SHA256; boot.json/board.json/default.elf must all be present.
 // On error no usable output or credential data remains in output.

@@ -1,0 +1,1 @@
+Native next-boot bridge: isolated NVS, explicit owner, source/receipt/target-image status, preserving-only input, stale/corrupt/pending fallback suppression, no format/erase, NVS-full preservation and commit-unknown reconciliation PASS

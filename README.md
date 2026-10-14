@@ -263,7 +263,9 @@ The executable is the safe basename `file_name` beside that manifest.
 Paths are explicit relative paths under the single boot store. Absolute paths,
 empty/dot/dot-dot components, backslashes, unknown fields, duplicate JSON keys,
 coerced booleans and invalid UTF-8 identifiers are rejected. There is no directory
-search, SD-first/flash fallback, built-in default app, repair or erase. Missing
+search, implicit SD-first/flash fallback, built-in default app, repair or erase.
+An explicit boot-owned [core image source](docs/REMOVABLE_APPS.md#boot-owned-sd-preferred-core-images)
+may prefer a selected SD mirror while retaining its admitted internal fallback. Missing
 boot config, invalid board, rejected dependency or failed driver activation
 prevents app launch. A missing/corrupt initial default ELF is an error; a missing
 child returns to the intact configured default path.
