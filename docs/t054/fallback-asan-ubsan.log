@@ -1,0 +1,8 @@
+actual checked startup dispatch bootstrap-fresh-absent PASS; hydrated=1; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-fresh-busy PASS; hydrated=1; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-legacy-absent PASS; hydrated=1; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-legacy-conflict PASS; hydrated=0; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-legacy-corrupt PASS; hydrated=0; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-bare-init PASS; hydrated=0; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-native-error PASS; hydrated=0; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-fresh-restore PASS; hydrated=1; native sources preserved; SD unchanged

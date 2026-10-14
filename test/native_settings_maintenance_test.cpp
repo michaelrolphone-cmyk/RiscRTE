@@ -392,7 +392,11 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
   if(!bootReady)assert(!L::ready());else assert(L::ready());
   for(const char*ns:{"rnr00000001","rte00000001","kvj00000001"}){const auto before=nativeBefore.find(ns);const auto after=F::nvs.find(ns);assert((before==nativeBefore.end()&&after==F::nvs.end())||(before!=nativeBefore.end()&&after!=F::nvs.end()&&before->second==after->second));}ordinaryMaintenance();assert(!anchor.release()&&!f);printf("actual lifecycle pre-app %s refuses unchanged PASS\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);}
  if(startupCase()||scenario=="restore-no-checkpoint"){
-  const bool refused=scenario=="bootstrap-fresh-absent"||scenario=="bootstrap-fresh-busy"||scenario=="bootstrap-legacy-conflict"||scenario=="bootstrap-legacy-corrupt"||scenario=="bootstrap-bare-init"||scenario=="bootstrap-native-error";
+  const bool refused=
+#if !RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK
+   scenario=="bootstrap-fresh-absent"||scenario=="bootstrap-fresh-busy"||
+#endif
+   scenario=="bootstrap-legacy-conflict"||scenario=="bootstrap-legacy-corrupt"||scenario=="bootstrap-bare-init"||scenario=="bootstrap-native-error";
   assert(maintenance->exitSafe()&&!L::retained()&&!port->nativeStorageAttached()&&F::handles.empty()&&iterators.empty()&&f->counter(6)==writesBefore);
   if(refused){assert(!hydrated&&!oneCore.ready());
    if(!bootReady)assert(!L::ready());else assert(L::ready());
