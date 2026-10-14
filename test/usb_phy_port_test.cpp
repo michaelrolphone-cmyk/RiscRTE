@@ -35,6 +35,10 @@ int main(){
   assert(Port::gpioDeepSleepSet(&g,90,false,10)==expected);
   // Static pad hold is not CPU sleep; current Runtime permits it while USB is active.
   assert(Port::gpioDeepSleepHold(&g,90,true)==(expected==RISC_LIGHT_SLEEP_BUSY?0:expected));
+  if(expected==RISC_LIGHT_SLEEP_BUSY){
+   assert(!p.providerStorageSafe()); // Held pad is independently retained.
+   assert(Port::gpioDeepSleepHold(&g,90,false)==0);
+  }
  };
  sleep(RISC_LIGHT_SLEEP_BUSY);
  // A live USB lease must leave the existing owner's SD/SPI transfer functional.
