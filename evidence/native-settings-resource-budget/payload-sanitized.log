@@ -1,0 +1,1 @@
+PSRAM-only payload allocator: aligned zero/nonzero/large requests; size overflow before SDK; rejected alignment and range-tail address overflow before predicate; allocation failure without fallback; whole-range rejection; complete payload/header/slack wiping; 2000 concurrent cycles PASS (alignment=16)

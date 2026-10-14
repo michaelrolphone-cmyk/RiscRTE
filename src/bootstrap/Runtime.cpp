@@ -1,3 +1,4 @@
+#include <RiscInternalPackageVolumeV1.h>
 #include "Runtime.h"
 #include "AppDeclarations.h"
 #include "RemovableAppImage.h"
@@ -10,6 +11,9 @@
 #include "diagnostics/Performance.h"
 #include "diagnostics/StageLog.h"
 #include "KeyValueGeneration.h"
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+#include "../../experimental/native_replica/NativeAtomicKeyValue.h"
+#endif
 #include "runtime/update/Version.h"
 #include "runtime/update/CohortMigration.h"
 #include "runtime/update/NativeAppDataExportPolicyV1.h"
@@ -42,6 +46,10 @@ extern "C" void native_app_memory_relocation(bool);
 #endif
 namespace {
 RiscBoot::Runtime* currentRuntime=nullptr;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+// Reject foreign workers before reading mutable Runtime/invocation state.
+std::atomic<bool(*)()> atomicKeyValueOwner{nullptr};
+#endif
 #if RISC_APP_IMAGE_CACHE
 std::atomic<RiscBoot::Runtime*> imagePressureRuntime{nullptr};
 std::atomic<bool(*)()> imagePressureOwner{nullptr};
@@ -105,7 +113,13 @@ extern "C" bool risc_runtime_reclaim_app_images() {
 namespace RiscBoot {
 #include "FailureEvidenceRuntime.inc"
 #include "DiagnosticCheckpointRuntime.inc"
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+#include "AtomicKeyValueRuntime.inc"
+#endif
 Runtime::~Runtime() {
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  if(!atomicExitSafe(true))std::abort();
+#endif
   // Native owners retain the entire metadata candidate after lost I/O custody.
   // As with GraphV2, destruction is a caller contract violation, never cleanup.
   if(retainedNativeProviderRead_ || retainedNativeProviderBytes_)std::abort();
@@ -191,13 +205,18 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
                strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_ENTROPY_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
-               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY) && strcmp(capability,RISC_INSTALLATION_CAPABILITY))) return false;
+               strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY) && strcmp(capability,"platform.package-volume") && strcmp(capability,RISC_INSTALLATION_CAPABILITY))) return false;
   } else if ((scope!=Scope::Device && scope!=Scope::Bus) || !id) return false;
   const auto* header=static_cast<const uint32_t*>(table);
   if (header[0]!=api || header[1]<8) return false;
   if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
       (header[1]<sizeof(risc_diagnostic_source_api_v1) ||
        !static_cast<const risc_diagnostic_source_api_v1*>(table)->read)) return false;
+  if (!strcmp(capability,RISC_INTERNAL_PACKAGE_VOLUME_CAPABILITY)) {
+    if(api!=1 || scope!=Scope::Global || id || header[1]<sizeof(risc_internal_package_volume_v1))return false;
+    const auto* package=static_cast<const risc_internal_package_volume_v1*>(table);
+    if(!package->exit_safe || !risc_storage_volume_download(package->volume))return false;
+  }
   if (!strcmp(capability,RISC_USB_PHY_RESOURCE_CAPABILITY)) {
     if(api!=RISC_USB_PHY_RESOURCE_API_V1 || scope!=Scope::Global || id || header[1]<sizeof(risc_usb_phy_resource_api_v1))return false;
     const auto* usb=static_cast<const risc_usb_phy_resource_api_v1*>(table);
@@ -302,7 +321,7 @@ bool Runtime::validateGraph() {
   }
   // Source access is a loader dependency, not an extra capability passed to
   // the provider. Keep the entire mount closure internal, even with fallback.
-  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].sourceVolume) {
+  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].sourcePath[0]) {
     auto& d=drivers_[i];
     for(size_t j=0;j<driverCount_;++j)
       if(drivers_[j].instance==d.sourceVolume && drivers_[j].api==1 &&
@@ -366,7 +385,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     }
     if(!item["image_source"].isNull()) {
       auto source=item["image_source"].as<JsonObjectConst>();int64_t instance=0;char relativeImage[192];
-      if(!keys(source,{"volume_instance","path"}) || !integer(source["volume_instance"],1,INT32_MAX,instance) ||
+      if(!keys(source,{"volume_instance","path"}) || !integer(source["volume_instance"],0,INT32_MAX,instance) ||
          !text(source["path"],relativeImage,sizeof(relativeImage)) || !InstalledFiles::valid(relativeImage,false) ||
          !elfPath(relativeImage) || !strcmp(policy.elf,invocation_->current_))return fail("invalid removable app source");
       for(size_t d=0;d<driverCount_;++d)if(drivers_[d].instance==uint64_t(instance) &&
@@ -387,6 +406,12 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
       // authorize more than one positive KV namespace, still within MaxAppPolicyGrants
       // total grants; no other capability's uniqueness rule is broadened.
       const bool keyValue=!strcmp(requested,RISC_KEY_VALUE_CAPABILITY);
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+      const bool atomicKeyValue=!strcmp(requested,RISC_KEY_VALUE_ATOMIC_CAPABILITY);
+      const bool availability=!strcmp(requested,RISC_KEY_VALUE_AVAILABILITY_CAPABILITY);
+#else
+      const bool atomicKeyValue=false,availability=false;
+#endif
       const bool sharedData=!strcmp(requested,RISC_SHARED_DATA_CAPABILITY);
       for (size_t i=0;i<policy.count;++i) if (!strcmp(policy.grants[i].capability,requested) &&
           (!keyValue || policy.grants[i].api==uint32_t(api))) return fail("duplicate app requirement");
@@ -399,7 +424,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
         if (!strcmp(capability,RISC_BOUND_APP_DATA_CAPABILITY)) return fail("provider app-data denied to app");
         if (strcmp(capability,requested) || allowedApi!=api) continue;
-        if (++matches>1 && !keyValue && !sharedData) return fail("app requirement not uniquely authorized");
+        if (++matches>1 && !keyValue && !atomicKeyValue && !availability && !sharedData) return fail("app requirement not uniquely authorized");
         if (policy.count==MaxAppPolicyGrants) return fail("too many app grants");
         for (size_t i=0;i<policy.count;++i) {
           const auto& earlier=policy.grants[i];
@@ -408,6 +433,17 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         }
         auto& grant=policy.grants[policy.count];
         grant.api=api;grant.instance=instance;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+        if (availability) {
+          if(grant.api!=1 || !grant.instance || !keyValueAvailability(uint32_t(grant.instance)))
+            return fail("key-value availability namespace unavailable");
+          grant.driver=KeyValueAvailabilityDriver;grant.capability=RISC_KEY_VALUE_AVAILABILITY_CAPABILITY;
+        } else if (atomicKeyValue) {
+          if(grant.api!=1 || !grant.instance || !atomicBinding(policy.id,uint32_t(grant.instance)))
+            return fail("atomic key-value app/backend/namespace unavailable");
+          grant.driver=AtomicKeyValueDriver;grant.capability=RISC_KEY_VALUE_ATOMIC_CAPABILITY;
+        } else
+#endif
         if (keyValue) {
           if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
               port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
@@ -478,6 +514,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
           if (grant.platform<0) return fail("app platform clock unavailable");
           grant.capability=platforms_[grant.platform].capability;
         } else {
+          if (!strcmp(capability,"storage.key-value.atomic"))return fail("atomic key-value broker unavailable");
           if (!strncmp(capability,"platform.",9) || !strcmp(capability,"spi.bus") || !strcmp(capability,"hardware.device")) return fail("raw platform capability denied to app");
           for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
             if (grant.driver>=0) return fail("ambiguous app provider");
@@ -512,6 +549,9 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     original->active_ && original->entryRunning_ && !retained_ && port_.owner();};
   auto catalogRetain=[&](){retained_=true;fail("app catalog admission retained");(void)appExitBarrier(false);return false;};
   out->slot=out->generation=0;out->api=nullptr;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(nativeCheckpointRunning_)return false;
+#endif
   if(!appDataExitSafe()){(void)appExitBarrier(false);return false;}
   if(catalog && !catalogCustody())return catalogRetain();
   const AppGrantPolicy* allowed=nullptr;
@@ -529,6 +569,27 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   size_t slot=0;while(slot<16 && invocation_->appGrants_[slot].live)++slot;
   if (slot==16) return false;
   auto& grant=invocation_->appGrants_[slot];
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  if(allowed->driver==KeyValueAvailabilityDriver){
+    if(!keyValueAvailability(uint32_t(allowed->instance)))return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    grant.availability={1,sizeof(grant.availability),context,keyValueAvailabilitySnapshot};
+    grant.availabilityNamespace=allowed->instance;grant.api=&grant.availability;
+  } else if(allowed->driver==AtomicKeyValueDriver){
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+    // Start/poll old work before publishing the first draft-capable grant.
+    // An accepted sweep fences atomic state/get/submit until full collection.
+    // Existing host/foreground grants fence admission inside this checkpoint.
+    serviceNativeSettings();
+    if(!active() || retained_)return false;
+#endif
+    auto* binding=atomicBinding(invocation_->appPolicy_->id,uint32_t(allowed->instance));
+    if(!binding || retained_ || !invocation_->entryRunning_ || !providerStorageSafe())return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    grant.atomic={1,sizeof(grant.atomic),context,atomicState,atomicGet,atomicSubmit,atomicCollect,atomicCancel};
+    grant.atomicEndpoint=binding->endpoint;grant.api=&grant.atomic;
+  } else
+#endif
   if(allowed->driver==AppCatalogDriver){
     if(invocation_->appCatalogContext_ || !invocation_->entryRunning_ || retained_)return false;
     if(!providerStorageSafe() || !catalogCustody())return catalogRetain();
@@ -537,6 +598,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     invocation_->appCatalogTable_={1,sizeof(invocation_->appCatalogTable_),context,appCatalogSnapshot,appCatalogGet};
     grant.api=&invocation_->appCatalogTable_;
   } else if(allowed->driver==RandomDriver){
+
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
     grant.random={1,sizeof(grant.random),context,randomFill};grant.api=&grant.random;
   } else if(allowed->driver==MemoryHeapDriver){
@@ -656,6 +718,9 @@ int32_t Runtime::memoryHeapSnapshot(void* context,risc_memory_heap_snapshot_v1* 
 }
 int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
   if (outSize) *outSize=0;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return RISC_KEY_VALUE_CONTEXT;
+#endif
   Runtime* r=currentRuntime;
   if (!r || !r->active() || !context || !r->port_.keyValue) return RISC_KEY_VALUE_CONTEXT;
   const AppGrant* matched=nullptr;
@@ -663,6 +728,9 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
   if (!outSize || !keyValueKey(key) || (!buffer && capacity)) return RISC_KEY_VALUE_INVALID;
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  if(r->atomicReadThrough(matched->keyValueNamespace))return r->atomicLegacyGet(matched->keyValueNamespace,key,buffer,capacity,outSize,limit);
+#endif
   if(r->installedSettings_&&matched->keyValueNamespace>=r->installation_[0].namespaceFirst&&matched->keyValueNamespace-r->installation_[0].namespaceFirst<r->installation_[0].namespaceCount&&r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
     auto journal=r->settingsJournal();return RiscStorage::SdFirstKeyValue::get(r->installedSettings_[matched->keyValueNamespace-r->installation_[0].namespaceFirst],r->installedSettingsWorkspace_[0],journal,matched->keyValueNamespace,key,buffer,capacity,outSize);
   }
@@ -678,6 +746,9 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   memcpy(buffer,temp,size);*outSize=size;return RISC_KEY_VALUE_OK;
 }
 int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint32_t size) {
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return RISC_KEY_VALUE_CONTEXT;
+#endif
   Runtime* r=currentRuntime;
   if (!r || !r->active() || !context || !r->port_.keyValue) return RISC_KEY_VALUE_CONTEXT;
   const AppGrant* matched=nullptr;
@@ -685,6 +756,9 @@ int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
   const uint32_t limit=matched->keyValue.api_version==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX;
   if (!keyValueKey(key) || !data || !size || size>limit) return RISC_KEY_VALUE_INVALID;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  if(r->atomicReadThrough(matched->keyValueNamespace))return RISC_KEY_VALUE_CONTEXT;
+#endif
   const auto& backend=*r->port_.keyValue;
   if(auto*state=r->scalableSettingsState(matched->keyValueNamespace))
     return RiscStorage::ScalableSettings::put(*state,*r->port_.keyValue->scalableSettings,matched->keyValueNamespace,key,data,size);
@@ -754,6 +828,9 @@ void Runtime::revokeProviders() {
   for (auto& storage:providerStorage_) revokeProvider(&storage);
 }
 Runtime::ProviderStorage* Runtime::providerContext(void* context) {
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return nullptr;
+#endif
   Runtime* r=currentRuntime;
   if (!r || !context || !r->port_.owner() || !r->port_.keyValue) return nullptr;
   if (r->retained_ || !r->providerStorageSafe()) {
@@ -775,6 +852,9 @@ int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uin
   for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
   if (!matched) return RISC_BOUND_KEY_VALUE_CONTEXT;
   const uint32_t limit=storage->table.api_version==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  if(storage->owner->atomicReadThrough(matched->nameSpace))return storage->owner->atomicLegacyGet(matched->nameSpace,key,buffer,capacity,outSize,limit);
+#endif
   uint8_t temp[RISC_BOUND_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
   const auto& backend=*storage->owner->port_.keyValue;
   auto*state=storage->owner->scalableSettingsState(matched->nameSpace);
@@ -792,6 +872,9 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
   const ProviderKey* matched=nullptr;
   for (size_t i=0;i<storage->count;++i) if (!strcmp(storage->keys[i].key,key)) matched=&storage->keys[i];
   if (!matched || !matched->writable) return RISC_BOUND_KEY_VALUE_CONTEXT;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  if(storage->owner->atomicReadThrough(matched->nameSpace))return RISC_BOUND_KEY_VALUE_CONTEXT;
+#endif
   const auto& backend=*storage->owner->port_.keyValue;
   auto*state=storage->owner->scalableSettingsState(matched->nameSpace);
   const int32_t result=state?RiscStorage::ScalableSettings::put(*state,*backend.scalableSettings,matched->nameSpace,key,data,size):backend.put(backend.context,matched->nameSpace,key,data,size);
@@ -802,6 +885,12 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   if(!appDataExitSafe()){(void)appExitBarrier();return false;}
   auto& grant=invocation_->appGrants_[out->slot-1];
   if (!grant.live || grant.generation!=out->generation || grant.api!=out->api || grant.invocation!=invocation_->streams_.context()) return false;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  if(grant.atomicEndpoint && !grant.atomicEndpoint->exitSafe()) {
+    if(grant.atomicEndpoint->retained())(void)atomicResult(RISC_ATOMIC_RETAINED);
+    return false; // Pending receipt stays collectible by this exact live grant.
+  }
+#endif
   RuntimeStreams::AppStreamBinding binding{grant.invocation,out->slot,grant.generation,grant.api,grant.provider};
   uint64_t providerContext=0;
   const bool streamProvider=grant.provider.slot && graph_.streamSessionsFor(grant.provider,&providerContext);
@@ -821,9 +910,21 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   if(grant.api==&invocation_->realtimeTable_)invocation_->realtimeContext_=nullptr;
   if(grant.api==&invocation_->realtimeControlTable_)invocation_->realtimeControlContext_=nullptr;
   if(grant.api==&invocation_->retainedWakeTable_){port_.retainedWake->cancel();invocation_->retainedWakeContext_=nullptr;}
-  grant={};out->slot=out->generation=0;out->api=nullptr;return true;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE && RISC_RUNTIME_ATOMIC_KEY_VALUE
+  const bool releasedAtomic=grant.atomicEndpoint!=nullptr || (grant.keyValueNamespace && keyValueAvailability(grant.keyValueNamespace) && !keyValueAuthoritative(grant.keyValueNamespace));
+#endif
+  grant={};out->slot=out->generation=0;out->api=nullptr;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE && RISC_RUNTIME_ATOMIC_KEY_VALUE
+  // The last live atomic grant no longer protects a draft. This is a native-only
+  // settled boundary; preserve the existing ordinary provider-service schedule.
+  if(releasedAtomic){serviceNativeSettings();if(retained_)return false;}
+#endif
+  return true;
 }
 bool Runtime::revokeApp() {
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  if(!atomicExitSafe(true)){(void)appExitBarrier();return false;}
+#endif
   if(!invocation_->streams_.closeAll())return false;
   for (auto& grant:invocation_->appGrants_) if (grant.live) {
     if (grant.provider.slot && !graph_.release(grant.provider)) {
@@ -1225,7 +1326,29 @@ Runtime::GrantUsage Runtime::grantUsage() const {
   if(foreground_)count(*foreground_,out.foregroundLive,out.foregroundProviders);
   return out;
 }
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+void Runtime::serviceNativeSettings(bool discoveryOnly) {
+  if(nativeCheckpointRunning_ || (discoveryOnly && !invocation_->entryRunning_))return;
+  if((discoveryOnly?bool(port_.nativeDiscoveryCheckpoint):bool(port_.nativeOwnerCheckpoint)) && currentRuntime==this && port_.owner() &&
+     !retained_ && !promotionRunning_ && !invocation_->streams_.busy() &&
+     !graph_.lifecycleBusy() && appDataExitSafe()) {
+    bool admitNew=true;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+    const auto draft=[](const Invocation&i){for(const auto&g:i.appGrants_)if(g.live&&g.atomicEndpoint)return true;return false;};
+    admitNew=!draft(mainInvocation_)&&(!foreground_||!draft(*foreground_));
+#endif
+    nativeCheckpointRunning_=true;
+    const bool safe=discoveryOnly?port_.nativeDiscoveryCheckpoint():port_.nativeOwnerCheckpoint(admitNew);
+    nativeCheckpointRunning_=false;
+    if(!safe){retained_=true;fail("native settings custody retained; restart required");(void)appExitBarrier();return;}
+  }
+}
+#endif
 void Runtime::serviceProviders() {
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(nativeCheckpointRunning_)return;
+  serviceNativeSettings();
+#endif
   if(port_.providerServicesReady && !port_.providerServicesReady())return;
   if(currentRuntime!=this || !port_.owner() || retained_ || promotionRunning_ ||
      invocation_->streams_.busy() || graph_.lifecycleBusy() || !appDataExitSafe() ||
@@ -1235,11 +1358,19 @@ void Runtime::serviceProviders() {
   graph_.service(RISC_DRIVER_SERVICE_MAX_MS);
 }
 void Runtime::yield(uint32_t ms) {
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  // No app/provider polling while a native checkpoint owns its resources.
+  if(nativeCheckpointRunning_){if(port_.owner()&&port_.retainedDelay)port_.retainedDelay(ms<1?1:ms>50?50:ms);return;}
+#endif
   if(currentRuntime!=this || !port_.owner() || yielding_ || promotionRunning_ ||
      invocation_->streams_.busy() || graph_.lifecycleBusy() || (!invocation_->active_ && !retained_))return;
   yielding_=true;
   struct Guard { bool& flag; ~Guard(){flag=false;} } guard{yielding_};
   if(!retained_) {
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+    serviceNativeSettings(true); // accepted work/discovery only; never starts maintenance
+    if(retained_){if(port_.retainedDelay)port_.retainedDelay(ms<1?1:ms>50?50:ms);return;}
+#endif
     // Poll work is bounded separately; each admitted yield cooperates once.
     if(appDataExitSafe())graph_.poll([](){uint32_t now=0;return currentRuntime->monotonicMs(&now)?now:0;},nullptr);
     // Yield is a display/input polling path. Synchronous provider services may
@@ -1274,7 +1405,11 @@ bool Runtime::appExitBarrier(bool exiting) {
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if(graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
+  if(
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+     atomicExitSafe(exiting) &&
+#endif
+     graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());
@@ -1445,6 +1580,12 @@ bool Runtime::runOne(const char* name) {
   invocation_->active_=false;
   failureBreadcrumb(RISC_FAILURE_PHASE_CLEANUP,name);
   if (retained_ || !revokeApp()) { retained_=true;fail("app grants retained; image retained");(void)appExitBarrier();return false; }
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  // fini is complete and every invocation grant is revoked, but the module and
+  // native allocation custody still exist if the final maintenance retains.
+  serviceNativeSettings();
+  if(retained_ || !appExitBarrier())return false;
+#endif
 #if defined(ESP_PLATFORM) || defined(RISC_NATIVE_APP_MEMORY_TEST)
   if(!native_app_memory_end()) { retained_=true;fail("app memory busy; image retained");(void)appExitBarrier();return false; }
 #endif
@@ -1497,6 +1638,12 @@ bool Runtime::takeLaunchFailure(risc_runtime_launch_failure_v1* out) {
 bool Runtime::run() {
   if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained_) return fail("runtime not launchable");
   prepared_=false; currentRuntime=this;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  atomicKeyValueOwner.store(port_.owner,std::memory_order_release);
+  struct AtomicOwnerLifetime {
+    ~AtomicOwnerLifetime(){atomicKeyValueOwner.store(nullptr,std::memory_order_release);}
+  } atomicOwnerLifetime;
+#endif
   if(residentEnabled_ && port_.priorFailure) {
     risc_resident_failure_v1 prior{};prior.struct_size=sizeof(prior);
     if(port_.priorFailure(&prior) && prior.struct_size==sizeof(prior) && prior.kind==RISC_RESIDENT_FAILURE_PRIOR_RESET) {
@@ -1609,6 +1756,12 @@ bool Runtime::run() {
     // Default reload is a fresh invocation: no ELF pointers/static state survive.
     error_[0]=0; port_.delay(1);
   }
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(!retained_ && port_.nativeSettingsShutdown){
+    nativeCheckpointRunning_=true;const bool safe=port_.nativeSettingsShutdown();nativeCheckpointRunning_=false;
+    if(!safe){retained_=true;ok=fail("native settings shutdown retained; restart required");}
+  }
+#endif
   if(!retained_ && !fileSourceCleanup())ok=false;
   if(!retained_) {
     for(size_t i=driverCount_;i--;) if(grants_[i].slot && !graph_.release(grants_[i])) {

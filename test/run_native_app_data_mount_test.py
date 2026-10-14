@@ -32,8 +32,9 @@ flags=['-std=c++17',*common,*includes,'-DESP_PLATFORM','-DRISC_PAIRED_APP_DATA',
 obj=build/'mount.o';profile.run(['c++',*flags,'-c',str(root/'src/ports/esp32s3/NativeAppDataMount.cpp'),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'native-appdata.o';profile.run(['c++',*flags,'-c',str(root/'src/ports/esp32s3/NativeAppData.cpp'),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'appdata.o';profile.run(['c++',*flags,'-c',str(root/'src/runtime/storage/AppDataFiles.cpp'),'-o',str(obj)]);objects.append(str(obj))
+obj=build/'packages.o';profile.run(['c++',*flags,'-c',str(root/'src/runtime/storage/PackageFiles.cpp'),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'posix.o';profile.run(['c++',*flags,'-c',str(root/'test/native_app_data_mount_posix.cpp'),'-o',str(obj)]);objects.append(str(obj))
 wrapped=['stat','fstat','open','read','write','close','fsync','mkdir','unlink','rename','opendir','readdir','closedir','esp_vfs_register','esp_vfs_unregister','esp_partition_read','esp_partition_write','esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
 exe=build/'test';profile.run(['c++',*flags,str(root/'test/native_app_data_mount_test.cpp'),*objects,'-Wl,'+','.join('--wrap='+f for f in wrapped),'-o',str(exe)])
-for case in ['healthy','fault','close-failure','lost-custody','native-backend','recovery']:profile.run([str(exe),case])
+for case in ['healthy','fault','close-failure','lost-custody','native-backend','recovery','packages']:profile.run([str(exe),case])
 print('PASS: native mount binding real pinned VFS; no firmware activation/hardware claim')

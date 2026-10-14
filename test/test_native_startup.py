@@ -65,6 +65,13 @@ assert(p.kv==RiscNvs::backend());
 assert(p.controlBegin && p.controlEnd && p.controlExitRequested);}Board&board(){return b;}bool prepare(const char*){mark("prepare");return true;}bool run(){mark("run");return true;}const char*error(){return "test";}};
 }
 namespace RiscCpu{
+namespace NativeTlsMemory{inline bool initialize(){mark("tls-allocator");
+#ifdef TLS_ALLOCATOR_FAIL
+return false;
+#else
+return true;
+#endif
+}}
 namespace NativeFailureEvidence{inline void start(){mark("failure-evidence");}inline void*backend(){return nullptr;}}
 inline bool nativeRadioResourceReady(){return true;}inline bool nativeRadioResourceTry(){return true;}inline void nativeRadioResourceEnd(){}
 inline int32_t memoryHeap(risc_memory_heap_snapshot_v1*){return 0;}inline int32_t randomBytes(void*,uint32_t){return 0;}
@@ -108,6 +115,12 @@ int main(){
 #ifdef STARTUP_FAIL
  expected.push_back("RTE_BOOT error=native-startup detail=test-rail-hold");
 #else
+#ifdef RISC_ENABLE_HTTP
+ expected.push_back("tls-allocator");
+#ifdef TLS_ALLOCATOR_FAIL
+ expected.push_back("RTE_HTTP unavailable=tls-psram-allocator");
+#endif
+#endif
  expected.push_back("mount");
 #ifdef SPIFFS_FAIL
  expected.push_back("RTE_BOOT error=storage-mount code=-1");
@@ -131,7 +144,7 @@ int main(){
 
 class NativeStartup(unittest.TestCase):
     def test_production_setup_optional_status(self):
-        headers = ('esp_heap_caps.h', 'ports/esp32s3/NativeRadioResources.h',
+        headers = ('ports/esp32s3/NativeTlsMemory.h', 'esp_heap_caps.h', 'ports/esp32s3/NativeRadioResources.h',
                    'ports/esp32s3/NvsKeyValue.h',
                    'ports/esp32s3/NativeFailureEvidence.h', 'ports/esp32s3/NativeCompute.h',
                    'ports/esp32s3/NativeRuntime.h', 'ports/esp32s3/NativeBootstrap.h',
@@ -153,7 +166,7 @@ class NativeStartup(unittest.TestCase):
             # or evaluating diagnostic arguments.
             for name in ('bootstrap/AppPolicyLimits.h', 'diagnostics/StageLog.h',
                          'ports/esp32s3/NativeDiagnosticBinding.h',
-                         'ports/esp32s3/NativeCrownRecovery.h',
+                         'ports/esp32s3/NativeCrownRecovery.h', 'ports/esp32s3/NativeSettingsLifecycle.h',
                          'runtime/drivers/NativeProviderPolicyV1.h',
                          'runtime/drivers/SelectedNativeProviderPolicyV1.h',
                          'runtime/packages/PackageIdentity.h'):
@@ -167,6 +180,8 @@ class NativeStartup(unittest.TestCase):
             (folder/'main.cpp').write_text(source)
             (folder/'harness.cpp').write_text(HARNESS)
             for name, flags in (('no-hook', []), ('success', ['-DSTARTUP_HOOK']),
+                                ('https', ['-DRISC_ENABLE_HTTP']),
+                                ('https-fail', ['-DRISC_ENABLE_HTTP', '-DTLS_ALLOCATOR_FAIL']),
                                 ('failure', ['-DSTARTUP_HOOK', '-DSTARTUP_FAIL']),
                                 ('psram', ['-DRISC_RUNTIME_METADATA_PSRAM']),
                                 ('psram-failure', ['-DRISC_RUNTIME_METADATA_PSRAM', '-DPSRAM_FAIL']),

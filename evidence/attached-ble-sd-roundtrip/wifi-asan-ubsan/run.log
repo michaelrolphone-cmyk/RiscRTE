@@ -1,0 +1,15 @@
+PRECONDITION: synthetic matching initial generation-19 native/SD maps and initial incarnation
+Actual alias edit deferred under real USB admission, pending before the next BLE capture PASS
+Actual BLE captured revision survives real Runtime HCI-provider acquisition without SD I/O PASS
+Actual BLE terminal atomic release reaches settled Runtime SD acknowledgement PASS
+Actual BLE captured revision survives real Runtime HCI-provider acquisition without SD I/O PASS
+Actual BLE terminal atomic release reaches settled Runtime SD acknowledgement PASS
+Attached BLE: older alias pending, real HCI acquisition, DELETE compensation and settled SD acknowledgement PASS
+Actual Runtime broker + System controller: Save, connected Remember and queued cancellation PASS
+Attached Wi-Fi: actual Save/Remember and queued cancel; final real atomic release acknowledges both profiles to SD PASS
+ATTACHED BLE actual Runtime lifecycle / X4 FatFs / controller capture, compensation and settled SD acknowledgement PASS; checkpoint admissions=22 deferred=8
+Attached BLE: fresh actual alias/radio readers restore typed SD values PASS
+Actual Runtime broker + System controller: two profiles survive native reload PASS
+Attached Wi-Fi: fresh actual controller reads both exact restored profiles PASS
+ATTACHED BLE actual Runtime lifecycle / X4 FatFs / typed pre-app restore after complete native erasure PASS; checkpoint admissions=9 deferred=1
+ATTACHED ACTUAL BLE + TWO WIFI PROFILES -> automatic Runtime maintenance -> full native erase -> typed bootstrap restore PASS; complete SD SHA256 74e44725063d9a190ec2d174be5b94c8fc933193e73780ca6386453611660ded

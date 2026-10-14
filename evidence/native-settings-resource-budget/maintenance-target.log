@@ -1,0 +1,9 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+COMPILE maintenance
+COMPILE maintenance-layout
+00000000 00007ee0 B resource_maintenance
+COMPILE maintenance-off

@@ -1,0 +1,65 @@
+{
+  "runtime-layout-on": {
+    "atomic_cpu_port_size": 9304,
+    "atomic_runtime_port_size": 108,
+    "atomic_runtime_size": 321768
+  },
+  "worker-layout": {
+    "native_settings_binding_alignment": 16,
+    "native_settings_binding_allocation_size": 12975,
+    "native_settings_binding_size": 12960,
+    "native_settings_registry_size": 16,
+    "native_settings_two_bindings_permanent_size": 25966,
+    "native_settings_two_bindings_stack_size": 16384,
+    "native_settings_two_bindings_task_control_size": 688
+  },
+  "runtime-layout-off": {
+    "atomic_cpu_port_size": 9304,
+    "atomic_runtime_port_size": 108,
+    "atomic_runtime_size": 320160
+  },
+  "runtime-layout-lifecycle": {
+    "atomic_cpu_port_size": 9704,
+    "atomic_runtime_port_size": 112,
+    "atomic_runtime_size": 321776
+  },
+  "lifecycle-layout": {
+    "resource_lifecycle_load": 136,
+    "resource_lifecycle_state": 1000
+  },
+  "resources": {
+    "resource_admission": 112,
+    "resource_artifacts": 184,
+    "resource_atomic": 4240,
+    "resource_attempt": 176,
+    "resource_catalog": 15872,
+    "resource_catalog_default_restore_entries": 46080,
+    "resource_catalog_default_scan_entries": 36864,
+    "resource_catalog_entry": 144,
+    "resource_checkpoint": 10776,
+    "resource_coordinator": 4392,
+    "resource_core": 240,
+    "resource_core_image_limit": 65512,
+    "resource_cpu_port": 9704,
+    "resource_digest": 116,
+    "resource_files": 200,
+    "resource_first": 10792,
+    "resource_import_sources": 200,
+    "resource_initialization": 464,
+    "resource_legacy_reader": 9672,
+    "resource_map_max": 65512,
+    "resource_metadata": 12,
+    "resource_port_attempt": 248,
+    "resource_reader": 9792,
+    "resource_recovery": 10840,
+    "resource_restore": 816,
+    "resource_runtime": 321768,
+    "resource_runtime_pin": 32,
+    "resource_snapshot": 64,
+    "resource_store": 304,
+    "resource_synchronization": 15992
+  },
+  "maintenance-layout": {
+    "resource_maintenance": 32480
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "source_commit": "c441eaf6d421e2cf690c7e04ce0f53733612fc90",
+  "normal_manifest": "fence-normal-manifest.json",
+  "asan_ubsan_manifest": "fence-asan-ubsan-manifest.json",
+  "runtime_source_hashes_match_commit": true,
+  "cases": [
+    "happy",
+    "idle",
+    "draft-fence",
+    "pre-capture",
+    "save-exit",
+    "implicit-exit",
+    "absent",
+    "persisted-incarnation",
+    "foreign",
+    "usb-before",
+    "no-incarnation",
+    "cancel",
+    "retained",
+    "restore",
+    "restore-concurrent",
+    "restore-resume",
+    "restore-single",
+    "restore-no-source",
+    "restore-conflict",
+    "restore-cancel",
+    "restore-retained",
+    "first",
+    "first-concurrent",
+    "first-conflict",
+    "first-cancel"
+  ],
+  "normal": "25 passed",
+  "asan_ubsan": "25 passed",
+  "sanitizer_environment": {
+    "ASAN_OPTIONS": "detect_leaks=0",
+    "UBSAN_OPTIONS": "",
+    "LSAN_OPTIONS": ""
+  },
+  "startup": "19 scenarios passed normal and ASan/UBSan",
+  "target": {
+    "result": "Serial selected X4 target compile passed in legacy and cohort layouts; disabled objects empty",
+    "maintenance_control_bytes": 32504,
+    "bootstrap_control_bytes": 16328,
+    "combined_control_bytes": 48832,
+    "commands_manifest_sha256": "436f934b80431526842ad5df445e38cfa07fd9d6b46d49767abdd277b09b1028",
+    "source_hashes": {
+      "test/compile_native_settings_lifecycle_target.py": "a929ef648166db74c2b5464a9aed45b7d8953e7731152ffeb677b6ca3f208140",
+      "test/compare_native_settings_lifecycle_default.py": "3b8d5f3e8e2b75d1eb18cf466067d0c1e5089ac9b33f84d696a5b73ad981518d",
+      "src/main.cpp": "c3a00dce0112436f305f4d4122f2f9d8573a0dd2ca727676838869e9aeccecec",
+      "src/bootstrap/Runtime.cpp": "8f2feeb163bb1cc18e1cd4c69246d6e3aeb403b4d22f0c8ea11988d9a2a3f341",
+      "src/ports/esp32s3/NativeSettingsLifecycle.cpp": "f11c158348abc3def2cf7750da1e78c181a362089403907beebc75ec08de0d5a",
+      "src/ports/esp32s3/NativeSettingsMaintenance.cpp": "cf17c4b33e02baa057d6017bc926117ce520986181a3d1b4fccb505790210788",
+      "src/ports/esp32s3/NativeSettingsBootstrap.cpp": "c74d57035f295ecb306dbb89f241520ae1a943057a252275a060411c476e6fb4"
+    }
+  },
+  "default_off": "Actual main and Runtime objects byte-identical to 3795a60 in legacy/cohort layouts",
+  "review_receipt": "fence-independent-review.json",
+  "sd_acknowledgement": "With available qualified SD, final explicit atomic grant release and implicit app revocation/teardown each settle both dirty namespaces before handoff. No test-side begin invocation. Clean no-work boundaries perform zero SD I/O.",
+  "limitations": [
+    "Host sector model and simulated native NVS; physical SD and private factory/root/mount/epoch qualification remain absent.",
+    "Published SD0.2.21 is replaced only in this opt-in qualification by c7404623 checked-warm source.",
+    "Native receipt and exitSafe establish distinct facts from SD acknowledgement. Absent/busy/conflicted/cancelled SD can leave native pending edits; a forced complete native erase before SD acknowledgement remains unprotected.",
+    "Product selection, native backend authority, INTERNAL control placement, payload resource budget and physical validation remain product gates. No product selector or activation added."
+  ],
+  "final_regressions": {
+    "resident_draft_fence": "All four modes passed normal and ASan/UBSan",
+    "selected_runtime_storage_pin": "All 29 cases passed normal and ASan/UBSan with NATIVE_SETTINGS_CHECKPOINT=1",
+    "atomic_key_value_runtime": "All 11 normal modes passed",
+    "asan_options": "detect_leaks=0; ASan/UBSan does not qualify leak detection"
+  }
+}

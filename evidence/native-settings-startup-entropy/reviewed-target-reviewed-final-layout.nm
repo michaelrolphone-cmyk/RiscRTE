@@ -1,0 +1,93 @@
+         U _Unwind_Resume
+         U _ZN11RiscStorage12AppDataFiles9configureEPKc
+         U _ZN16RiscAppDataMount5enterENS_6AccessE
+         U _ZN16RiscAppDataMount5leaveEv
+         U _ZN16RiscAppDataMount5usageEPjS0_
+         U _ZN16RiscAppDataMount7custodyERNS_7CustodyE
+         U _ZN16RiscAppDataMount8identityERNS_8IdentityE
+         U _ZN16RiscAppDataMount8retainedEv
+00000000 00000017 W _ZN16RiscExperimental17NativeReplicaCore4wipeEPvj
+00000000 00000021 W _ZN16RiscExperimental18NvsReplicaMetadata3mapEi
+00000000 00000053 W _ZN16RiscExperimental18NvsReplicaMetadata4openERNS0_6HandleEj15nvs_open_mode_t
+00000000 000000f2 W _ZN16RiscExperimental18NvsReplicaMetadata4readEjPKcPvj
+00000000 000000fe W _ZN16RiscExperimental18NvsReplicaMetadata5writeEjPKcPKvj
+00000000 00000012 W _ZN16RiscExperimental18NvsReplicaMetadata6HandleD1Ev
+00000000 00000012 W _ZN16RiscExperimental18NvsReplicaMetadata6HandleD2Ev
+00000000 n _ZN16RiscExperimental18NvsReplicaMetadata6HandleD5Ev
+00000000 0000000f W _ZN16RiscExperimental18NvsReplicaMetadata7ScratchD1Ev
+00000000 0000000f W _ZN16RiscExperimental18NvsReplicaMetadata7ScratchD2Ev
+00000000 n _ZN16RiscExperimental18NvsReplicaMetadata7ScratchD5Ev
+00000000 0000004e W _ZN16RiscExperimental25CheckedFreshInitArtifactsC1EjPKcNS0_5HooksE
+00000000 0000004e W _ZN16RiscExperimental25CheckedFreshInitArtifactsC2EjPKcNS0_5HooksE
+00000000 n _ZN16RiscExperimental25CheckedFreshInitArtifactsC5EjPKcNS0_5HooksE
+         U _ZN7RiscCpu20NativeSettingsWorker7custodyEjPNS0_7CustodyE
+00000000 00000b18 b _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_15stateE
+00000000 0000000d t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend11initializedEPv
+00000000 00000018 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend12firstEntropyEPvPh
+00000000 00000035 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend13digestAllowedEPv
+00000000 00000036 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend13ownerOrWorkerEPv
+00000000 0000003b t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend2ioEPvPKv
+00000000 00000019 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend3nowEPv
+00000000 000000d9 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend4heldEPv
+00000000 0000003a t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend5epochEPv
+00000000 000000d1 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend5inputEv
+00000000 00000066 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend5spaceEPvPjS4_
+00000000 00000028 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend7observeEPv
+00000000 000000a4 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend8snapshotEPvPN16RiscExperimental33CheckedLittleFsFreshInitArtifacts5MountE
+00000000 00000028 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend9cooperateEPv
+00000000 000002d6 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17BackendC1EjPFbvERKN16RiscAppDataMount8IdentityERKN16RiscExperimental33CheckedLittleFsFreshInitArtifacts5MountE
+00000000 000002d6 t _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17BackendC2EjPFbvERKN16RiscAppDataMount8IdentityERKN16RiscExperimental33CheckedLittleFsFreshInitArtifacts5MountE
+00000000 00000010 r _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_1L12LogicalOwnerE
+00000000 00000030 r _ZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_1L7WritersE
+00000000 00000008 T _ZN7RiscCpu21NativeSettingsBackend12controlBytesEv
+00000000 000002df T _ZN7RiscCpu21NativeSettingsBackend7prepareEPFbvE
+00000000 0000000d T _ZN7RiscCpu21NativeSettingsBackend9admissionEv
+         U _ZN7RiscCpu22NativeSettingsAssembly8assembleERKNS0_6InputsE
+         U _ZN7RiscCpu22NativeSettingsAssembly9fileHooksEPvPFjS1_EPFbS1_E
+         U _ZN7RiscCpu28NativeSettingsStartupEntropy4takeEjNS0_7PurposeEPvPFbS2_EPh
+         U _ZN7RiscCpu30NativeSettingsPayloadAllocator9allocatorEv
+         U _ZN7RiscNvs20initializationStatusEv
+00000000 00000029 W _ZNK16RiscExperimental18NvsReplicaMetadata5readyEv
+00000000 00000056 t _ZNK16RiscExperimental18NvsReplicaMetadata5validEjPKcj$isra$22
+00000000 00000018 W _ZZN16RiscExperimental18NvsReplicaMetadata3apiEvENKUlPvjPKcPKvjE0_clES1_jS3_S5_j
+00000000 00000018 W _ZZN16RiscExperimental18NvsReplicaMetadata3apiEvENKUlPvjPKcS1_jE_clES1_jS3_S1_j
+00000000 00000018 W _ZZN16RiscExperimental18NvsReplicaMetadata3apiEvENUlPvjPKcPKvjE0_4_FUNES1_jS3_S5_j
+00000000 00000018 W _ZZN16RiscExperimental18NvsReplicaMetadata3apiEvENUlPvjPKcS1_jE_4_FUNES1_jS3_S1_j
+00000000 00000030 t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend12legacyDigestEvENUlPvE_4_FUNES3_
+00000000 0000003d t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend12legacyDigestEvENUlPvPKvjE0_4_FUNES3_S5_j
+00000000 0000003c t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend12legacyDigestEvENUlPvPhE1_4_FUNES3_S4_
+00000000 00000024 t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend4portEvENUlPvPKvPKcE0_4_FUNES3_S5_S7_
+00000000 0000001e t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend4portEvENUlPvPKvPKcE3_4_FUNES3_S5_S7_
+00000000 00000022 t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend4portEvENUlPvPKvPKcP4statE_4_FUNES3_S5_S7_S9_
+00000000 00000022 t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend4portEvENUlPvPKvS3_E5_4_FUNES3_S5_S3_
+00000000 0000007c t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend4portEvENUlPvPKvS3_PN16RiscExperimental33CheckedLittleFsFreshInitArtifacts5EntryEE4_4_FUNES3_S5_S3_S9_
+00000000 00000020 t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend4portEvENUlPvPKviE2_4_FUNES3_S5_i
+00000000 00000024 t _ZZN7RiscCpu21NativeSettingsBackend12_GLOBAL__N_17Backend4portEvENUlPvPKviS3_jE1_4_FUNES3_S5_iS3_j
+         U __divdi3
+         U __errno
+         U __gxx_personality_v0
+         U __stack_chk_fail
+         U __stack_chk_guard
+         U esp_timer_get_time
+         U mbedtls_sha256_finish_ret
+         U mbedtls_sha256_init
+         U mbedtls_sha256_starts_ret
+         U mbedtls_sha256_update_ret
+         U memcmp
+         U memcpy
+         U memset
+         U nvs_close
+         U nvs_commit
+         U nvs_get_blob
+         U nvs_open
+         U nvs_set_blob
+00000000 0000000d W risc_native_settings_admission
+00000000 00000b18 B settings_backend_controls
+00000000 00000588 B settings_namespace_backend
+         U snprintf
+         U strcmp
+         U strcpy
+         U strlen
+         U strnlen
+         U vTaskDelay
+         U xPortInIsrContext

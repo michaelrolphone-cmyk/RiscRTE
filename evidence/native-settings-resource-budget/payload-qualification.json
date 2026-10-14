@@ -1,0 +1,42 @@
+{
+  "source_base": "a9e12766125bb95043e59af132b81b1f5ebf73d0",
+  "source_content_sha256": {
+    "src/ports/esp32s3/NativeSettingsPayloadAllocator.h": "d41996249dbcf4651333e20ebbf5396e93c6cc1bec2195fb813719b29e3fe118",
+    "src/ports/esp32s3/NativeSettingsPayloadAllocator.cpp": "e6b4a980e15b3f3c3d3db54713bdaa90ae4e517d56eddc124475872cf27e5fe4",
+    "test/native_settings_payload_allocator_test.cpp": "18fb4294e7931e4247ce6a414956362cd6b757353c5f4fda7ef212b1c6a9768a",
+    "test/run_native_settings_payload_allocator_test.sh": "69d23ab152b47f325068e0637278b1a856118851ea8e4bcc8d5bb1e38f259c03",
+    "test/native_settings_payload_shim/esp_heap_caps.h": "8de631b6d3212fbcf0dc402b5b6ad11d060c76f980cd014800ef90baca5d51d9",
+    "test/native_settings_payload_shim/soc/soc_memory_types.h": "44923467c819d520537e89949ee05fa4c15ea80b9345a80b017d4808c323fd52",
+    "experimental/native_replica/NativeReplicaCore.h": "2b81b69d8a0f7c5635fc17dadcaa7dc413070d942ddfe890fb2ba8587dc5f4dd",
+    "test/compile_native_settings_resource_target.py": "e0be83e2af20e7f662884f906c4b647c4ba70539a844758d1c12f6a8892aa7bd"
+  },
+  "host_compiler": "c++ (Debian 14.2.0-19) 14.2.0",
+  "host_commands": [
+    "bash test/run_native_settings_payload_allocator_test.sh OUTPUT",
+    "ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash test/run_native_settings_payload_allocator_test.sh OUTPUT"
+  ],
+  "normal": "pass",
+  "asan_ubsan": "pass",
+  "target_default_off_empty": true,
+  "target_alignment": 16,
+  "target_header": 16,
+  "target_sdk_request_overhead": 31,
+  "limits": "Compile/host shim only; no physical PSRAM, device high-water, complete stack, latency, backend or product admission.",
+  "target_allocator_value_bytes": 12,
+  "target_owned_static_data_bytes": 0,
+  "host_test_followup": "Separate allocation-tail pointer overflow rejected and freed before external-RAM predicate; production allocator unchanged.",
+  "independent_review": {
+    "production_defects_found": 0,
+    "normal_and_asan_ubsan": "pass",
+    "default_off_empty_host_object": true,
+    "selected_without_x4_macro": "compile refusal verified",
+    "range_tail_guard_removal_mutant": "updated test assertion fails, exit 134",
+    "production_source_unchanged_from": "549e9fb11e11deedc235ec8296fb4640f18338ec",
+    "remaining_limits": [
+      "physical PSRAM and cache-disabled safety",
+      "fragmentation and target peaks",
+      "complete caller fault-recovery integration",
+      "hardware wipe latency"
+    ]
+  }
+}

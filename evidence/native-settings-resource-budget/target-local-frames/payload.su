@@ -1,0 +1,3 @@
+NativeSettingsPayloadAllocator.cpp:14:6:void* RiscCpu::NativeSettingsPayloadAllocator::{anonymous}::allocate(void*, size_t)	32	static
+NativeSettingsPayloadAllocator.cpp:26:6:void RiscCpu::NativeSettingsPayloadAllocator::{anonymous}::release(void*, void*)	32	static
+NativeSettingsPayloadAllocator.cpp:35:17:RiscExperimental::NativeReplicaCore::Allocator RiscCpu::NativeSettingsPayloadAllocator::allocator()	48	static

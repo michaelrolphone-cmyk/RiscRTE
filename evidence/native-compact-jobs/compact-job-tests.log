@@ -1,0 +1,2 @@
+compact native jobs: zero/full payload bounds, copy/wipe, 10000 threaded generations, retention and result bounds PASS; default Worker=9272, payload job=4200, control job=104
+compact native jobs: zero/full payload bounds, copy/wipe, 10000 threaded generations, retention and result bounds PASS; default Worker=9272, payload job=4200, control job=104

@@ -1,0 +1,12 @@
+Catalog: complete/partial bounded inventory, valid metadata retained after limit, malformed names/duplicates, parent absence check, order independence and artifact classification PASS
+Catalog: exact fixed-name backup-only recovery, present+backup preservation and no unknown artifact recovery PASS
+Catalog: 1016 queued/completed scan/reader cancel/removal/export/restart boundaries preserve native intents and files PASS
+Catalog: 604 reached before/after directory/file/recovery/checked-close faults and power cuts; retained custody stays sticky PASS
+Catalog: retry/worker/allocation admission, X4 active-session UNAVAILABLE refusal, late retained+lease transfer/cancel and allocation wiping PASS
+Catalog: 504 absent-root/parent, empty-namespace and artifact-only faults/power cuts refuse unproved vacancy without native loss PASS
+Catalog: actual Running cancellation/checked directory close, BUSY/PENDING custody, parent budget/obstruction and post-end retained priority PASS
+Catalog: sensitive classification prefixes wiped after summary, transfer, cancel, retention and destruction PASS
+Catalog memory: entries=128 inventory=41112 peak_allocated=115424 catalog_object=3200 report_object=464 entry=144 child_storage=1168 bytes (host ABI)
+Catalog memory: entries=256 inventory=77976 peak_allocated=152288 catalog_object=3200 report_object=464 entry=144 child_storage=1168 bytes (host ABI)
+Catalog union: 8 RTENR03 capacity/preconstruction cases; exact 65,028-byte replica/V2 and 52-byte V1 budgets, one-byte excess refusals, preserved groups prevent over-capacity adoption, no-native-write invariants and bounded v3 peak PASS
+DISCONNECTED CATALOG ONLY: historical evidence; no creation/adoption permit, native mutation, defaults, cleanup, production activation or hardware claim

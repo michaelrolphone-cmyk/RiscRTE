@@ -1,0 +1,11 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+000000e0 00000158 B native_import_admission_size
+00000000 000000e0 B native_import_core_size
+00000238 00000034 B native_import_receipt_size
+00000364 000000c8 B native_import_sources_size
+0000026c 000000f8 B native_import_store_size
+947c1bd5d5d49f92eac2a1486792c74c8ce08b6187355d267cb7e293f44c6b25  /tmp/native-import-target-final/native-import-initialization.o

@@ -1,0 +1,20 @@
+rows=0
+In file included from <stdin>:1:
+src/bootstrap/AppPolicyLimits.h:9:2: error: #error "RISC_APP_POLICY_ROWS must be 16, 17, 18 or 24"
+    9 | #error "RISC_APP_POLICY_ROWS must be 16, 17, 18 or 24"
+      |  ^~~~~
+compile_exit=1
+rows=15
+In file included from <stdin>:1:
+src/bootstrap/AppPolicyLimits.h:9:2: error: #error "RISC_APP_POLICY_ROWS must be 16, 17, 18 or 24"
+    9 | #error "RISC_APP_POLICY_ROWS must be 16, 17, 18 or 24"
+      |  ^~~~~
+compile_exit=1
+rows=18
+compile_exit=0
+rows=32
+In file included from <stdin>:1:
+src/bootstrap/AppPolicyLimits.h:9:2: error: #error "RISC_APP_POLICY_ROWS must be 16, 17, 18 or 24"
+    9 | #error "RISC_APP_POLICY_ROWS must be 16, 17, 18 or 24"
+      |  ^~~~~
+compile_exit=1

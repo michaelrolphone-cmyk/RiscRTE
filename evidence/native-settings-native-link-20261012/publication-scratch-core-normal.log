@@ -1,0 +1,7 @@
+native replica: 1025 opaque keys, atomic PUT/DELETE groups, same-value intent, permanent replica after acknowledgement, newer pending operation and reboot PASS
+native replica: selected known-base edits require explicit resolution; high SD generation does not discard intent; stale candidate rejects concurrent changes; foreign lineage rejected PASS
+native replica: 174 deterministic error/power-cut before/after/torn backend interruption points across apply, acknowledgement and candidate switch PASS
+Publication verification scratch: second-allocation failure preserves all native records before reserve; apply/acknowledge/install/initialize fail closed and successful release wipes every verification byte PASS
+native replica: 96 creation and concurrent-newer-ack error/power-cut interruption points PASS
+native replica: allocation failures, storage exhaustion, bounded group/intent, corruption, wrong namespace, expired acknowledgement and explicit initialization PASS
+UNCONNECTED HOST CORE ONLY: no .90 routing/ABI change, SD/NVS integration or Wi-Fi semantic reconciliation qualified

@@ -1,0 +1,30 @@
+Command: SANITIZE=1 bash test/run_native_runtime_storage_pin_test.sh
+Runtime graph pin happy PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin unprepared PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin invalid-board PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin invalid-graph PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin allocation-failed PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin no-installation PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin wrong-installation PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin wrong-device PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin zero-device PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin wrong-port PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin wrong-runtime PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin wrong-owner PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin missing-image PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin wrong-image PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin start-failed PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin invalid-suffix PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin grant-capacity PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin multiple-grants PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin fresh-generation PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin reentry PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin release-retained: retained mappings and destructor contract PASS
+Runtime graph pin dependency-retained: retained mappings and destructor contract PASS
+Runtime graph pin start-retained: retained mappings and destructor contract PASS
+Runtime graph pin invalid-suffix-retained: retained mappings and destructor contract PASS
+Runtime graph pin destructor-held PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin destructor-retained: retained mappings and destructor contract PASS
+Runtime graph pin destructor-acquiring PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin destructor-releasing PASS (complete prepare, exact module/device, zero media I/O)
+Runtime graph pin destructor-runtime PASS (complete prepare, exact module/device, zero media I/O)

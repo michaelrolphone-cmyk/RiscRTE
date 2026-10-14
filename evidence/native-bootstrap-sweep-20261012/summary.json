@@ -1,0 +1,30 @@
+{
+  "production_commit": "21006fdc028d9a3f83fe3ca74bd3f6d2a559354d",
+  "passed": {
+    "normal_mixed_sweeps": 8,
+    "asan_ubsan_mixed_sweeps": 8,
+    "target_legacy_and_cohort_compile": true,
+    "default_off_empty_objects": true
+  },
+  "test_files": [
+    "test/native_bootstrap_sweep_test.cpp",
+    "test/run_native_bootstrap_sweep_test.py"
+  ],
+  "retained_cancellation": "Both stop before sibling source publication. Retained controls are intentionally kept until process exit.",
+  "exact_status": "Failed outranks Deferred in aggregate, while sourceStatus reads each namespace independently. A missing source adapter and native lease Busy do not starve the sibling.",
+  "limits": [
+    "Hardware sectors, native vendor NVS and scheduling are host models; actual checked sources/stores, Runtime, CpuPort and X4/FatFs execute.",
+    "These tests qualify the narrow dispatcher/status follow-up. The availability worker owns the new nonblocking lifecycle/UI integration and its full test suite.",
+    "No product selection, device access, flash or publication."
+  ],
+  "evidence_sha256": {
+    "asan-ubsan-manifest.json": "dc11d59a050eb83657586cdeb31177a0580e1632a06f3751cd015d8076fd6c84",
+    "asan-ubsan.log": "40a888d593e505735c7b67f6bbc2fa594e5fc143d27af9dcfc85893e0365d474",
+    "normal-manifest.json": "61099f63c1a4f2ac9b53fe83246df938e3b3d37141d2ebc4be07d41cefe0e734",
+    "target-commands.json": "4bec0d1605a82907414cc47d5ebde8d8fc4fa63aa55d32ce801ced980577a2cf",
+    "target.log": "a4c73fa180f919499bacb5f5c6453e8ff42d74fff271d665b8799bf93f7002cc",
+    "NativeSettingsBootstrap-legacy.su": "1e97ce34d58f4ec8b5f1a03db6cedcc064ef393b373d9272aafd23c3ba04d613",
+    "normal.log": "40a888d593e505735c7b67f6bbc2fa594e5fc143d27af9dcfc85893e0365d474",
+    "NativeSettingsBootstrap-cohort.su": "1e97ce34d58f4ec8b5f1a03db6cedcc064ef393b373d9272aafd23c3ba04d613"
+  }
+}

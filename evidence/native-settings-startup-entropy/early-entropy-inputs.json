@@ -1,0 +1,60 @@
+{
+  "inputs": {
+    "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/cores/esp32/main.cpp": "130ee85dbf77f5343ce3b7a4f9b9355316fb293105603af8cd70ebbcaff5d9ff",
+    "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-misc.c": "d6374832d4e7d987e8c9eb71aa36f12e6f03a5d16c298a139a6b222a108788d1",
+    "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/include/bootloader_support/include/bootloader_random.h": "9a3493ffc400bafe40de1009e3ea216f40a14a8ffc4c3124fa7f56f354c43e65",
+    "/workspace/shared/x4-evening-102-product-20261012/minimal/native/X4EarlyBoot.cpp": "8078fa577e1206323006b65975292aa082f451d96ca2a22859ce7829ee2039d5"
+  },
+  "archives": [
+    {
+      "path": "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/opi_qspi/libbootloader_support.a",
+      "sha256": "53a8d1f43573e43222b30b529e97d22f5952f0125916e0197796e53f9cd82ce4",
+      "symbols": [
+        "00000000 T bootloader_random_disable",
+        "00000000 T bootloader_random_enable"
+      ]
+    },
+    {
+      "path": "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/dio_opi/libbootloader_support.a",
+      "sha256": "569a073995d954de64877037de9f211c9f711d3bbe4755b316f8bcf6aab3fc6d",
+      "symbols": [
+        "00000000 T bootloader_random_disable",
+        "00000000 T bootloader_random_enable"
+      ]
+    },
+    {
+      "path": "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/qio_opi/libbootloader_support.a",
+      "sha256": "569a073995d954de64877037de9f211c9f711d3bbe4755b316f8bcf6aab3fc6d",
+      "symbols": [
+        "00000000 T bootloader_random_disable",
+        "00000000 T bootloader_random_enable"
+      ]
+    },
+    {
+      "path": "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/qio_qspi/libbootloader_support.a",
+      "sha256": "569a073995d954de64877037de9f211c9f711d3bbe4755b316f8bcf6aab3fc6d",
+      "symbols": [
+        "00000000 T bootloader_random_disable",
+        "00000000 T bootloader_random_enable"
+      ]
+    },
+    {
+      "path": "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/opi_opi/libbootloader_support.a",
+      "sha256": "53a8d1f43573e43222b30b529e97d22f5952f0125916e0197796e53f9cd82ce4",
+      "symbols": [
+        "00000000 T bootloader_random_disable",
+        "00000000 T bootloader_random_enable"
+      ]
+    },
+    {
+      "path": "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/framework-arduinoespressif32/tools/sdk/esp32s3/dio_qspi/libbootloader_support.a",
+      "sha256": "569a073995d954de64877037de9f211c9f711d3bbe4755b316f8bcf6aab3fc6d",
+      "symbols": [
+        "00000000 T bootloader_random_disable",
+        "00000000 T bootloader_random_enable"
+      ]
+    }
+  ],
+  "Runtime_setup_order_verified": true,
+  "qualification": "Source ordering inspected; unchanged native composition confirmed by product composer. Any pre-setup peripheral or static-constructor change requires renewed review. Physical entropy and final product activation unqualified."
+}

@@ -1,0 +1,81 @@
+typed native SD consumer reader PASS (refreshes=1, child sessions=1, native operations=7)
+PASS reader
+typed native SD consumer legacy PASS (refreshes=1, child sessions=1, native operations=7)
+PASS legacy
+typed native SD consumer legacy-single PASS (refreshes=1, child sessions=1, native operations=7)
+PASS legacy-single
+typed native SD consumer catalog PASS (refreshes=1, child sessions=5, native operations=7)
+PASS catalog
+typed native SD consumer writer PASS (refreshes=1, child sessions=1, native operations=28)
+PASS writer
+typed native SD consumer writer-durable PASS (refreshes=1, child sessions=1, native operations=35)
+PASS writer-durable
+typed native SD consumer writer-cancel PASS (refreshes=1, child sessions=1, native operations=21)
+PASS writer-cancel
+typed native SD consumer writer-running-cancel PASS (refreshes=1, child sessions=1, native operations=28)
+PASS writer-running-cancel
+PASS writer-retained
+PASS reader-io
+PASS reader-retained
+PASS reader-cancel-prep
+PASS reader-cancel
+PASS legacy-io
+PASS catalog-io
+PASS catalog-retained
+typed native SD consumer recovery PASS (refreshes=1, child sessions=2, native operations=35)
+PASS recovery
+typed native SD consumer recovery-retire PASS (refreshes=1, child sessions=1, native operations=35)
+PASS recovery-retire
+typed native SD consumer recovery-cancel PASS (refreshes=1, child sessions=2, native operations=28)
+PASS recovery-cancel
+typed native SD consumer recovery-running-cancel PASS (refreshes=1, child sessions=2, native operations=35)
+PASS recovery-running-cancel
+PASS reader-no-memory
+PASS reader-corrupt
+PASS reader-missing
+PASS reader-cancel-after-prep
+PASS reader-final-unavailable
+PASS reader-final-epoch
+typed native SD consumer catalog-bounded PASS (refreshes=1, child sessions=5, native operations=7)
+PASS catalog-bounded
+PASS catalog-final-unavailable
+PASS writer-io
+PASS writer-hash-failure
+PASS writer-cancel-prep
+PASS writer-cancel-after-prep
+PASS writer-late-retained
+PASS writer-completion-unavailable
+PASS recovery-no-marker
+PASS recovery-io
+PASS recovery-retained
+PASS recovery-late-retained
+PASS recovery-completion-unavailable
+PASS recovery-cancel-prep
+PASS recovery-cancel-after-prep
+PASS reader-prep-retained
+PASS reader-malformed-busy
+PASS writer-prep-retained
+PASS writer-pending-export
+PASS writer-namespace
+typed native SD consumer recovery-retire-zero PASS (refreshes=1, child sessions=1, native operations=35)
+PASS recovery-retire-zero
+typed native SD consumer writer-snapshot PASS (refreshes=1, child sessions=1, native operations=28)
+PASS writer-snapshot
+typed native SD consumer writer-poll PASS (refreshes=1, child sessions=1, native operations=28)
+PASS writer-poll
+typed native SD consumer writer-poll-busy PASS (refreshes=1, child sessions=1, native operations=30)
+PASS writer-poll-busy
+typed native SD consumer recovery-poll PASS (refreshes=1, child sessions=2, native operations=35)
+PASS recovery-poll
+typed native SD consumer recovery-poll-busy PASS (refreshes=1, child sessions=2, native operations=37)
+PASS recovery-poll-busy
+PASS writer-final-release-retained
+PASS writer-final-release-epoch
+PASS recovery-final-release-retained
+PASS recovery-final-release-epoch
+PASS writer-existing-page-io
+PASS recovery-quiet-retained-queue
+PASS recovery-quiet-retained-collect
+PASS recovery-quiet-retained-sd
+PASS recovery-quiet-retained-issue
+Actual X4/FatFs typed native consumer composition PASS; external source inputs: 249

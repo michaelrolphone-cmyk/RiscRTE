@@ -1,0 +1,2 @@
+History capacity: generations=5761 required_entries=1037160 sweeps=180 next_calls=1037340 result=verified allocator_peak=176972 PASS
+History capacity: generations=5762 required_entries=1048866 sweeps=182 next_calls=1048758 result=Conflict allocator_peak=176972 PASS

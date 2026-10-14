@@ -3,6 +3,8 @@
 #include <RiscStorageVolumeAsyncV1.h>
 #include <RiscStoragePackageAsyncV1.h>
 #include <RiscStorageWorkerAdmissionV1.h>
+#include <RiscStorageNativeCapacityV1.h>
+#include <RiscInternalPackageVolumeV1.h>
 #include <string.h>
 /* Shared provider-side executor. Only the selected native worker calls volume
  * I/O. Owner methods inspect worker-published fields only after collect/cancel
@@ -15,6 +17,9 @@ typedef struct {
  uint64_t serial,session,operation;bool ending,cleanup,retained;
  risc_storage_async_result_v1 cleanup_result; // provider-owned owner output, never app memory
  uint32_t directory,file;bool writing;uint32_t written; // worker-only until completion fence
+ int32_t(*native_capacity)(void*,const risc_storage_native_capacity_request_v1*,risc_storage_native_capacity_result_v1*);
+ risc_storage_native_capacity_result_v1 capacity_receipt;uint64_t capacity_serial;
+ bool(*package_free_bytes)(void*,uint64_t*);
 } risc_storage_async_adapter_v1;
 static inline int32_t risc_storage_package_execute(risc_storage_async_adapter_v1*a,const risc_storage_package_request_v1*q,risc_storage_async_result_v1*r){
  const risc_storage_volume_api_v1*v=a->volume;r->status=RISC_STORAGE_ASYNC_IO;
@@ -32,6 +37,11 @@ static inline int32_t risc_storage_package_execute(risc_storage_async_adapter_v1
   a->file=0;a->writing=false;a->written=0;return r->status=ok?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_IO;
  }
  if(a->directory||a->file)return r->status=RISC_STORAGE_ASYNC_BUSY;
+ if(q->operation==RISC_STORAGE_PACKAGE_FREE_BYTES){
+  uint64_t bytes=0;if(!a->package_free_bytes)return r->status=RISC_STORAGE_ASYNC_INVALID;
+  if(!a->package_free_bytes(v->context,&bytes))return r->status=a->retained?RISC_STORAGE_ASYNC_RETAINED:RISC_STORAGE_ASYNC_IO;
+  memcpy(r->data,&bytes,sizeof(bytes));r->size=sizeof(bytes);return r->status=RISC_STORAGE_ASYNC_OK;
+ }
  if(!memchr(q->path,0,sizeof(q->path))||!q->path[0]||!memchr(q->destination,0,sizeof(q->destination)))return r->status=RISC_STORAGE_ASYNC_INVALID;
  if(q->operation==RISC_STORAGE_PACKAGE_OPEN_WRITE){
   if(!v->file_open_write||!v->file_write||!a->ext->file_sync)return r->status=RISC_STORAGE_ASYNC_INVALID;
@@ -75,9 +85,22 @@ static inline int32_t risc_storage_package_execute(risc_storage_async_adapter_v1
 }
 static inline int32_t risc_storage_async_execute(void*context,const void*input,uint32_t n,void*output,uint32_t cap,uint32_t*actual){
  risc_storage_async_adapter_v1*a=(risc_storage_async_adapter_v1*)context;
- if((n!=sizeof(risc_storage_async_request_v1)&&n!=sizeof(risc_storage_package_request_v1))||cap<sizeof(risc_storage_async_result_v1))return RISC_STORAGE_WORK_INVALID;
+ if((n!=sizeof(risc_storage_async_request_v1)&&n!=sizeof(risc_storage_package_request_v1)&&n!=sizeof(risc_storage_native_capacity_request_v1))||cap<sizeof(risc_storage_async_result_v1))return RISC_STORAGE_WORK_INVALID;
  const risc_storage_async_request_v1*q=(const risc_storage_async_request_v1*)input;
  risc_storage_async_result_v1*r=(risc_storage_async_result_v1*)output;memset(r,0,sizeof(*r));*actual=sizeof(*r);r->status=RISC_STORAGE_ASYNC_IO;
+ if(n==sizeof(risc_storage_native_capacity_request_v1)){
+  memset(&a->capacity_receipt,0,sizeof(a->capacity_receipt));
+  if(a->retained)r->status=RISC_STORAGE_ASYNC_RETAINED;
+  else if(a->directory||a->file)r->status=RISC_STORAGE_ASYNC_BUSY;
+  else if(!a->native_capacity||a->capacity_serial==UINT64_MAX)r->status=RISC_STORAGE_ASYNC_INVALID;
+  else {
+   risc_storage_native_capacity_result_v1 facts;memset(&facts,0,sizeof(facts));
+   r->status=a->native_capacity(a->volume->context,(const risc_storage_native_capacity_request_v1*)input,&facts);
+   if(r->status==RISC_STORAGE_ASYNC_RETAINED)a->retained=true;
+   if(r->status==RISC_STORAGE_ASYNC_OK){facts.serial=++a->capacity_serial;a->capacity_receipt=facts;memcpy(r->data,&facts,sizeof(facts));r->size=sizeof(facts);}
+  }
+  return RISC_STORAGE_WORK_OK;
+ }
  if(n==sizeof(risc_storage_package_request_v1)){risc_storage_package_execute(a,(const risc_storage_package_request_v1*)input,r);return RISC_STORAGE_WORK_OK;}
  const risc_storage_volume_api_v1*v=a->volume;
  if(a->retained){r->status=RISC_STORAGE_ASYNC_RETAINED;return RISC_STORAGE_WORK_OK;}
@@ -144,7 +167,15 @@ static inline int32_t risc_storage_async_submit(risc_storage_async_adapter_v1*a,
 }
 static inline int32_t risc_storage_package_submit(risc_storage_async_adapter_v1*a,uint64_t session,const risc_storage_package_request_v1*q,uint64_t*out){
  if(out)*out=0;
- if(!out||!q||!session||session!=a->session||q->operation<RISC_STORAGE_PACKAGE_VALIDATE||q->operation>RISC_STORAGE_PACKAGE_MKDIR||!memchr(q->path,0,sizeof(q->path))||!memchr(q->destination,0,sizeof(q->destination)))return RISC_STORAGE_ASYNC_INVALID;
+ if(!out||!q||!session||session!=a->session||q->operation<RISC_STORAGE_PACKAGE_VALIDATE||q->operation>RISC_STORAGE_PACKAGE_FREE_BYTES||!memchr(q->path,0,sizeof(q->path))||!memchr(q->destination,0,sizeof(q->destination)))return RISC_STORAGE_ASYNC_INVALID;
+ if(a->ending||a->operation)return RISC_STORAGE_ASYNC_BUSY;
+ if(a->retained)return RISC_STORAGE_ASYNC_RETAINED;
+ if(a->worker->submit(a->worker->context,q,sizeof(*q),&a->operation)!=RISC_STORAGE_WORK_OK)return RISC_STORAGE_ASYNC_BUSY;
+ *out=a->operation;return RISC_STORAGE_ASYNC_OK;
+}
+static inline int32_t risc_storage_native_capacity_submit(risc_storage_async_adapter_v1*a,uint64_t session,const risc_storage_native_capacity_request_v1*q,uint64_t*out){
+ if(out)*out=0;
+ if(!out||!q||!session||session!=a->session||q->tag!=RISC_STORAGE_NATIVE_CAPACITY_TAG||q->version!=1u||!risc_storage_native_capacity_required(q->map_bytes,q->pages,512u)||!a->native_capacity)return RISC_STORAGE_ASYNC_INVALID;
  if(a->ending||a->operation)return RISC_STORAGE_ASYNC_BUSY;
  if(a->retained)return RISC_STORAGE_ASYNC_RETAINED;
  if(a->worker->submit(a->worker->context,q,sizeof(*q),&a->operation)!=RISC_STORAGE_WORK_OK)return RISC_STORAGE_ASYNC_BUSY;

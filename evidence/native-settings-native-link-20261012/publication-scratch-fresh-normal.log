@@ -1,0 +1,10 @@
+FreshEmpty: native-only/no SD/no entropy create, callback reentry refusal, distinct Initializing, checked resume and later edit preservation PASS
+FreshEmpty: all 509 exact pending prefixes resume using a NEW monotonically reserved ID, never a bank promotion PASS
+FreshEmpty: 17 foreign/malformed/source/counter/alternate-entry refusals preserve evidence; canonical A never promoted; RTENINIT remains Unclassified PASS
+FreshEmpty: 33 source/journal/epoch and simultaneous Retained+lease-loss callback boundaries refuse publication and recover exact receipt PASS
+FreshEmpty allocations: exactly4 owned image/verification/stage/cache allocations,1984 requested bytes peak; admission/store inspector adds zero heap allocations
+FreshEmpty: stale generic stages cannot seal or replace a newly selected receipt; unprepared backend admission refuses PASS
+FreshEmpty: 8 altered staged image/header/provenance cases refuse at checked canonical seal before any bank publication PASS
+FreshEmpty: missing version/collector/backend hooks refuse Fresh authorization while entropy-free Unclassified initialization remains available; late guard Retained outranks lease loss PASS
+FreshEmpty: 624 checked create/resume crash faults (86 Retained, 156 Uncertain) reload complete root or re-resolve exact receipt, with no defaults/source cleanup PASS
+Host layouts: Core=328 Initialization=528 Receipt=56 Factory=208 Store=392 Inspector=224; receipt48/image484/object508; disconnected host fact collectors only

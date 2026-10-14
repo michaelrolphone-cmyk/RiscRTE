@@ -1,0 +1,242 @@
+{
+  "source_commit": "b71a932f545950c4e6aad296752e7baa41b672cb",
+  "public_exact_source": "6809f505aec0e2fb47fb0b4271597248894a4b12",
+  "tree": "0d9a7e6b1339f16289c7fa3a5f2c03a36bfc6734",
+  "all_source_binary_case_hashes_rechecked": true,
+  "normal_and_asan_ubsan_pass": true,
+  "scope": "Concrete backend, assembly, native worker/coordinator/lifecycle, retained LittleFS mount, Runtime/CpuPort and selected X4/FatFs path. App launch is a compiled host fixture; physical SDK, NVS and scheduler interactions remain modeled. Actual Settings/Home/Wi-Fi/Utilities controllers are qualified separately.",
+  "restored_full_update_partition_sha256": "5f03c248f2de31c4da9ae8d9bc2033df064cee5e37694a9982f70fbb2f1d2ef0",
+  "multiple_wifi_profiles": 3,
+  "normal_sd_generations": "2 through5; full-native-update restoration followed by edit to6",
+  "hardware_tested": false,
+  "runs": [
+    {
+      "flavor": "normal",
+      "cases": [
+        {
+          "case": "normal",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264833 internal_control_heap_peak=32381 payload_live=1298 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "restore",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=1105 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "absent",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264302 internal_control_heap_peak=32381 payload_live=0 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "ambiguous",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264302 internal_control_heap_peak=32381 payload_live=0 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "conflict",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264302 internal_control_heap_peak=32381 payload_live=335 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "interrupt",
+          "exit_code": 73,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=790 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "interruption-restore",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=1105 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "first-cut",
+          "exit_code": 74,
+          "memory": [
+            "MEMORY payload_peak=264833 internal_control_heap_peak=32381 payload_live=14767 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "first-resume",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=17142 internal_control_heap_peak=32381 payload_live=1062 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "no-entropy",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264833 internal_control_heap_peak=32381 payload_live=1062 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "publication-cut",
+          "exit_code": 75,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=14643 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "publication-resume",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=195810 internal_control_heap_peak=32381 payload_live=1106 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "publication-erase",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264560 internal_control_heap_peak=32381 payload_live=1106 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "async-restore",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=1105 internal_control_heap_live=32381"
+          ]
+        }
+      ],
+      "manifest_sha256": "b8e60111f805dc6a85d21617183514ae58cdcff99d249a44d27a67ea4248680d",
+      "binary_sha256": {
+        "wifi.elf": "39c1b3d56af87e7271ff74b25953126c2f691a4aa5688bce179093a3d1a002c4",
+        "test": "e5d9ba83bc7dfa131aadfbaabfb92092795bc400789e367dc86ef9b0fcf472d0",
+        "settings.elf": "eb34bd3c25b8755a9e612355af3360a9adb191b06d79781aa8ef307ae9b86fbb",
+        "power.elf": "2574c9671e172703d4127b38f5c903ba9cdb0062193b79b8abec101674f0ea85",
+        "driver.elf": "403772bcfe69772585a1cb15c3b20af82a754d21fa13b143fc8f491e96ebe47b"
+      },
+      "runtime_layouts": [
+        "LAYOUT Runtime=289064 CpuPort=11776; paired-bank cohort on both host and ESP compilation boundaries"
+      ]
+    },
+    {
+      "flavor": "asan",
+      "cases": [
+        {
+          "case": "normal",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264833 internal_control_heap_peak=32381 payload_live=1298 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "restore",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=1105 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "absent",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264302 internal_control_heap_peak=32381 payload_live=0 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "ambiguous",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264302 internal_control_heap_peak=32381 payload_live=0 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "conflict",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264302 internal_control_heap_peak=32381 payload_live=335 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "interrupt",
+          "exit_code": 73,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=790 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "interruption-restore",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=1105 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "first-cut",
+          "exit_code": 74,
+          "memory": [
+            "MEMORY payload_peak=264833 internal_control_heap_peak=32381 payload_live=14767 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "first-resume",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=17142 internal_control_heap_peak=32381 payload_live=1062 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "no-entropy",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264833 internal_control_heap_peak=32381 payload_live=1062 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "publication-cut",
+          "exit_code": 75,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=14643 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "publication-resume",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=195810 internal_control_heap_peak=32381 payload_live=1106 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "publication-erase",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264560 internal_control_heap_peak=32381 payload_live=1106 internal_control_heap_live=32381"
+          ]
+        },
+        {
+          "case": "async-restore",
+          "exit_code": 0,
+          "memory": [
+            "MEMORY payload_peak=264561 internal_control_heap_peak=32381 payload_live=1105 internal_control_heap_live=32381"
+          ]
+        }
+      ],
+      "manifest_sha256": "7526eab9892f835eec4bdb0fdcda4ed8e0b3456bb7c86d50527d7146b99cb2fc",
+      "binary_sha256": {
+        "wifi.elf": "2d26a785d45e89a9b32d585267202d671addc5e75f838542be0cf9fe8be5904e",
+        "test": "5aa033a29809e11fce5f50f940f9cf55c7b7baa09e566fba403976b43c73f67c",
+        "settings.elf": "a2471d3a159b53885c36a4a484b8d67e62a59518dd0259b25830e923921800a6",
+        "power.elf": "5da66aef372869476d5565fa5f98f4ce6df21d2e0e7cde2930cc988797a50b77",
+        "driver.elf": "268bf2c321aec313c03bfa3ddf5b80f019aa5a19a9d68cf9f4ba7fe53a28c09b"
+      },
+      "runtime_layouts": [
+        "LAYOUT Runtime=289064 CpuPort=11776; paired-bank cohort on both host and ESP compilation boundaries"
+      ]
+    }
+  ]
+}

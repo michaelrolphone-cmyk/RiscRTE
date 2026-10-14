@@ -1,0 +1,8 @@
+{
+  "failed_run": 38306291971,
+  "failed_job": 115001025124,
+  "failure": "Fixture::Fixture assertion files.configure(rootPath.c_str()) with caller-relative output directory",
+  "cause": "AppDataFiles requires an absolute root; earlier local tests passed absolute output paths",
+  "repair": "Normalize the already-created output directory before constructing the native fixture path",
+  "verification": "Exact caller-relative output argument passes normal and ASan/UBSan with all four heap cases; production source unchanged"
+}

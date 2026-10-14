@@ -1,0 +1,14 @@
+AppDataFiles.cpp:27:47:RiscStorage::{anonymous}::Buffer::~Buffer()	32	static
+AppDataFiles.cpp:13:6:bool RiscStorage::{anonymous}::directory(const char*)	96	static
+AppDataFiles.cpp:29:6:static bool RiscStorage::AppDataFiles::validName(const char*)	32	static
+AppDataFiles.cpp:36:6:bool RiscStorage::AppDataFiles::configure(const char*)	32	static
+AppDataFiles.cpp:40:9:int32_t RiscStorage::AppDataFiles::begin(uint32_t, const char*, char*, char*)	112	static
+AppDataFiles.cpp:56:6:bool RiscStorage::AppDataFiles::cooperate()	32	static
+AppDataFiles.cpp:57:9:int32_t RiscStorage::AppDataFiles::inspect(const char*, uint32_t*)	96	static
+AppDataFiles.cpp:68:9:int32_t RiscStorage::AppDataFiles::close(int)	32	static
+AppDataFiles.cpp:69:9:int32_t RiscStorage::AppDataFiles::stat(uint32_t, const char*, uint32_t*, uint64_t*)	560	static
+AppDataFiles.cpp:76:9:int32_t RiscStorage::AppDataFiles::read(uint32_t, const char*, uint64_t, void*, uint32_t, uint32_t*, uint64_t*)	704	static
+AppDataFiles.cpp:96:9:int32_t RiscStorage::AppDataFiles::verify(const char*, const void*, uint32_t)	576	static
+AppDataFiles.cpp:101:9:int32_t RiscStorage::AppDataFiles::quota(const char*, const char*, uint32_t)	320	static
+AppDataFiles.cpp:115:9:int32_t RiscStorage::AppDataFiles::removeStage(const char*)	32	static
+AppDataFiles.cpp:119:9:int32_t RiscStorage::AppDataFiles::replace(uint32_t, const char*, uint64_t, const void*, uint32_t)	896	static

@@ -1,0 +1,89 @@
+{
+  "status": "PASS",
+  "base_head": "18c4771bccdec307f39163111477a0ea83f6724c",
+  "runs": [
+    {
+      "name": "typed-normal",
+      "cases": 59,
+      "runtime_sources": 52,
+      "external_sources": 249,
+      "manifest_sha256": "ee4fd38473d32854eabb44ccae0e5ca2353d6a6cfc306aa4eceb1300bf0b72f5",
+      "log_sha256": "6d755acf062035633085b0406fa9a5805ce9f9ea3b2a1f946d6a61b16e80cf31"
+    },
+    {
+      "name": "typed-asan-ubsan",
+      "cases": 59,
+      "runtime_sources": 52,
+      "external_sources": 249,
+      "manifest_sha256": "97e149e758ff9e29eebc29602b3d0263e7ffc254ba648b951354673e40afd7b8",
+      "log_sha256": "6d755acf062035633085b0406fa9a5805ce9f9ea3b2a1f946d6a61b16e80cf31"
+    },
+    {
+      "name": "checked-normal",
+      "cases": 27,
+      "runtime_sources": 52,
+      "external_sources": 249,
+      "manifest_sha256": "1a6b55d9def927ecb2cab701a4f44915c8cefead83c58379e34fbb2ca141d0fc",
+      "log_sha256": "33724eb0754b3e0b6dae6e68217a71e5711bdad6c286880d8107a0dc3fdf6d6d"
+    },
+    {
+      "name": "checked-asan-ubsan",
+      "cases": 27,
+      "runtime_sources": 52,
+      "external_sources": 249,
+      "manifest_sha256": "5889541b00436a1d41fd8800674e848d97b6304cb07470e0b97fd5e2f6c7a99d",
+      "log_sha256": "33724eb0754b3e0b6dae6e68217a71e5711bdad6c286880d8107a0dc3fdf6d6d"
+    },
+    {
+      "name": "five-consumer-regression-asan-ubsan",
+      "cases": 61,
+      "runtime_sources": 36,
+      "external_sources": 249,
+      "manifest_sha256": "a196630be2ac787f8dcd2778fcaf8a70ebba59406fd1e5bf4ec9536f297cfb15",
+      "log_sha256": "03f5c8ca81d92dec6e5da978dcbacd58e3e438dd285c39ee94bb745d6eceab63"
+    }
+  ],
+  "strict_first_create": {
+    "normal": true,
+    "asan_ubsan": true,
+    "sd_cut_cases": 476,
+    "prefix_repairs": 15
+  },
+  "strict_checked_store": {
+    "normal": true,
+    "asan_ubsan": true,
+    "native_fault_cases": 488,
+    "retained": 16,
+    "uncertain": 48
+  },
+  "source_sha256": {
+    "experimental/native_replica/CheckedFirstSdCheckpoint.h": "645463acd56ca2c0b7a6fa4965291e3c26f3b437266cf068a9988d60a9a23a97",
+    "experimental/native_replica/NativeSdAttempt.h": "c3f1ad33410d1c3565d38bab8e2bb4ed701e0581d344dfd811c6dc5d978b59b2",
+    "experimental/native_replica/NativeSdSession.h": "0ff8fa97000535b7e4f014e6724334a9f5f575cf22970e9e3898f4fb5924cb38",
+    "experimental/native_replica/NativeSdCompletion.h": "213e5f73eeab5488cf56d93efb143ac848cacef87be91b2fca6c9193923a37df",
+    "experimental/native_replica/NativeReplicaCore.h": "cc8d6acc5355a9131c41c2b542378091f1cfa5e6facec3b0c31f19f3aa05273c",
+    "experimental/native_replica/NativeReplicaJob.h": "6c7654796c9824bbc104e81f65e64498db873e469c56856294b608316c6bc430",
+    "src/runtime/storage/StorageWorker.h": "a402ecd14e2c00da069769b6d622e09eb954b5c5bc9d15f10ad0c2a6bdc1d297"
+  },
+  "target": {
+    "first_fixed_bytes": 50512,
+    "first_object_sha256": "9d83692400a674a39478e3caa454dad2c38a5955043d77257be26f3cc6d27850",
+    "session_bytes": 104,
+    "preparation_bytes": 13416,
+    "writer_bytes": 36952,
+    "reader_bytes": 22904,
+    "legacy_bytes": 22816,
+    "catalog_bytes": 41560,
+    "recovery_bytes": 50384,
+    "consumers_object_sha256": "79462ee6ce3cfec089db2c125267421d4d11dba216b9f805d06814087f9552d5"
+  },
+  "limits": [
+    "Experimental source-bound host composition; no product/graph/startup selection or hardware qualification",
+    "Real X4/FatFs; typed native backend is in-memory except explicitly named checked-store runs",
+    "Checked-store composition uses real AppData files with deterministic host NVS and partition-space hooks",
+    "Scheduler must fence and join before destroying permanent consumer; worker guard must serialize its core",
+    "Fixed target layouts are compile measurements, not stack/internal-RAM admission",
+    "LeakSanitizer disabled under executor ptrace; address and undefined sanitizers enabled",
+    "One intermediate strict checked-store run failed while tmpfs was full; after deterministic seed cleanup, unmodified normal and sanitizer reruns passed"
+  ]
+}

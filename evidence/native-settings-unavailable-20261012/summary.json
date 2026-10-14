@@ -1,0 +1,51 @@
+{
+  "source_commits": [
+    "63a02ee",
+    "4c01320",
+    "9a7aa6a"
+  ],
+  "bootstrap_commits": [
+    "ad0153f",
+    "2ec53f3",
+    "21006fd",
+    "4541401"
+  ],
+  "default_off": true,
+  "hardware_access": false,
+  "source_sha256": {
+    "src/bootstrap/AtomicKeyValueRuntime.inc": "18af4a8fd079b564227f35f24361a39c7802ed290d202911671bccd4f002c194",
+    "src/bootstrap/Runtime.cpp": "eee46d074e0a5d7363c9f9627d79e82c5d9aca54d199a0827f4a1b53f220231d",
+    "src/bootstrap/Runtime.h": "62f2608a5b27dd00b7033cc17a90add5b268320d1d4ca1863ad06f13906b4c87",
+    "src/main.cpp": "cb7198f8b569372e80eefe5950d3141b54c33195b008139c8fc6492e3e96ae77",
+    "src/ports/esp32s3/NativeSettingsLifecycle.cpp": "2a01615e2c4328aefd1317d79927f944937d8829e96dd87d7d258cae60458992",
+    "src/ports/esp32s3/NativeSettingsLifecycle.h": "226d5267b4a7414e4029db1d9c25a10d5a6c7f67447aa0b8bcd23d926846ae51",
+    "src/ports/esp32s3/CpuPort.cpp": "3075d79f811c5a71f8d6072da66b122bfa63e8027400c900c6c4c9825a94e5bc",
+    "src/ports/esp32s3/CpuPort.h": "dd9bf589fff3cbeb7ea71b663fcc5c900698aa8dec924937dec69ef877eb38fe",
+    "src/ports/esp32s3/CpuStorageWork.inc": "e2b523537838a97bfe92b032eec11ff132189464ab2421a6d5396f872aeca01e",
+    "src/ports/esp32s3/CpuTcpListener.inc": "0002ecfbc969357d06ed56a6a783b63f49217c0fb2b818ab486ec69be51d2ddd",
+    "src/ports/esp32s3/CpuEntropy.inc": "30384c5a94c2b6b1269ac5061075826c9db201632911a8c005b44873d1aca7e6",
+    "src/ports/esp32s3/CpuRadioAsync.inc": "2defb1d8f712e18361c00f7516e0aeb2ef773d426b594ee318faaf7eaf485c0a",
+    "sdk/app/RiscKeyValueAvailabilityV1.h": "7cf7765c26af74813f86a1a041a0a92495840c883f5e231c391294dd928ad976",
+    "test/native_settings_maintenance_test.cpp": "c10f5f772fe9aa4fe0876994f67756f0f38d19dd701a14b4a786961b92878df3",
+    "test/run_native_settings_maintenance_test.py": "37ba74d72f11d569dce557b3d5fe735cb07bcdbfcd6514b8e2c89c5da2dd6a06",
+    "test/native_attached_ble_sd_roundtrip_test.cpp": "c4e08cb624e741a71a1bf6d06cab8e9d287ee0659057dc8fafcc73f5629ac64c"
+  },
+  "passed": {
+    "actual_runtime_cpu_x4_fatfs_assembly_cases_normal": 93,
+    "actual_runtime_cpu_x4_fatfs_assembly_cases_asan_ubsan": 93,
+    "startup_nonblocking_and_retained_modes": 22,
+    "availability_exact_namespace_data_grant_fences": true,
+    "atomic_runtime_regressions": true,
+    "resident_host_foreground_draft_fences": true,
+    "ordinary_owner_checkpoint_regressions": true,
+    "target_compile_final": true,
+    "default_off_byte_identical_to_a5769d8": true
+  },
+  "sanitizer_environment": {
+    "ASAN_OPTIONS": "detect_leaks=0",
+    "note": "LeakSanitizer unavailable in execution sandbox; AddressSanitizer and UndefinedBehaviorSanitizer active."
+  },
+  "scope": "Host model qualification only. No product activation, filesystem formatting, publication, or hardware access. Raw transport custody faults remain fail-closed. Async no-card/USB-Busy recovery, data-grant reconciliation, independent conflicts, cancellation, app-only return, native retention, unrelated Runtime retention, and global teardown covered.",
+  "target_note": "Exact final source: main/Runtime/lifecycle/worker compile in legacy and cohort layouts; CpuPort compiles; default-off main and Runtime objects byte-identical to a5769d8. Compile-only, no link or hardware claim.",
+  "attached_ble_note": "Round-trip fixture updated to explicitly collect asynchronous discovery before controller entry. Full frozen attached-controller rerun is separate from the 93-case suite."
+}

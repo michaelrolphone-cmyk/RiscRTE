@@ -1,0 +1,127 @@
+{
+  "base": "2d362e8958f2938a3b6ad290b2cb2c75744d8f83",
+  "source_commits": [
+    "b6003f9",
+    "d0c0066"
+  ],
+  "mount_peer_commit": "1b984c11be253d4fc91f81032677385080601cad",
+  "source_sha256": {
+    "experimental/native_replica/CheckedLittleFsFreshInitArtifacts.h": "18ad2a6d2bcaf97ba66c08c362e051d639a3178702ed3fdbb77cc76b4259a12f",
+    "experimental/native_replica/NativeSettingsCoordinator.h": "aeef6565637ce40a2f76c66a039c08e23064de7f8642153b5429185a6011c66e",
+    "src/ports/esp32s3/NativeSettingsWorker.cpp": "9cd114e3f405a7e01c38462176f7c51e9f5379bdb2e9259ef48d61f17e121ab9",
+    "src/ports/esp32s3/NativeSettingsWorker.h": "12ef03967d9aea7d16a4ec88897b43111922e9a75020f0fd426355925f52d9b4",
+    "test/native_settings_assembly_fixture.h": "3040e1cbb381a1e1472767a3099f6425eefec890bf3dfc46588cb428ef7dccb9",
+    "test/native_littlefs_profile_test.cpp": "09229c31360455aadbb49addb927d728f65dae8ecdaba80befa83e9d7c80ec1f",
+    "test/native_settings_coordinator_test.cpp": "e9e2fe1a6fedd10966a4ea0c2499c19999a9fae276e14f358058bab9cff4ce58",
+    "test/native_settings_worker_binding_test.cpp": "7883a1ab56c2569bc0dc2c01b2150657edf8d4c30e773be33d1f3e9757c5f1f8",
+    "test/native_settings_mount_custody_test.cpp": "2bb7ef7e59462d07cace1373787d589b68b8cbcf97c2dfc6688013942804592d",
+    "test/run_native_settings_mount_custody_test.py": "d3b6ae395b35828e8042ea7eedd9bd78adb1610e91b8ab861e38e11cef6ba178",
+    "test/compile_native_settings_worker_target.sh": "873d6eb362652f3ddd773f72beff6c6a125ae9c00e226b68189baf67a11dcde1"
+  },
+  "external_sources": {
+    "X4": "c7404623bb7b175ab3d2452d7803ed4613e0cb35",
+    "Drivers": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+    "Reader": "45cf61ac013fb618e8d7fed63217a35350484d52",
+    "esp_littlefs": "41873c20fb5cdbcf28d7d6cc04e4bcb4a1305317",
+    "littlefs": "f53a0cc961a8acac85f868b431d2f3e58e447ba3"
+  },
+  "checks": {
+    "coordinator": [
+      "normal",
+      "address+undefined",
+      "thread"
+    ],
+    "native_worker": [
+      "normal",
+      "address+undefined",
+      "thread"
+    ],
+    "pinned_inspector": [
+      "normal",
+      "address+undefined"
+    ],
+    "actual_mount_worker": {
+      "modes": [
+        "healthy",
+        "retained physical flash failure",
+        "retained checked close failure"
+      ],
+      "sanitizers": [
+        "normal",
+        "address+undefined",
+        "thread"
+      ]
+    },
+    "factory": {
+      "cases": 64,
+      "variants": [
+        "normal",
+        "address+undefined"
+      ]
+    },
+    "target": [
+      "worker selected",
+      "worker plus actual mount selected",
+      "worker default-off empty",
+      "no 64-bit atomic helper",
+      "inspector",
+      "factory dependencies",
+      "assembly default-off empty",
+      "AppDataFiles byte-identical to base"
+    ],
+    "existing_legacy_regressions": {
+      "run_native_checked_sd_restore_power_test.log": "normal PASS",
+      "run_native_checked_sd_restore_test.log": "normal PASS",
+      "run_native_fresh_init_artifacts_test.log": "normal PASS",
+      "run_native_fresh_initialization_test.log": "normal PASS",
+      "run_native_import_initialization_test.log": "normal PASS",
+      "run_native_nvs_fresh_sources_test.log": "normal PASS"
+    }
+  },
+  "resource_bytes": {
+    "inspector_before": 456,
+    "inspector_after": 504,
+    "inspector_host": 616,
+    "authority_check_frame_before": 464,
+    "authority_check_frame_after": 528,
+    "coordinator": 4392,
+    "binding": 12960,
+    "registry": 16,
+    "two_workers_requested_static": 25966,
+    "assembly": 50568
+  },
+  "evidence_sha256": {
+    "assembly-final-asan-ubsan.log": "48550e8c70e70f6a1d84133a4d7b429218b4a6a59369e407d0280624ebf0d5be",
+    "assembly-final-normal.log": "48550e8c70e70f6a1d84133a4d7b429218b4a6a59369e407d0280624ebf0d5be",
+    "assembly-target-final.log": "4e053ce7dc12a02f92a57a99ea6e8da19ff9ee4ad9afb678fe3012ee5ff899af",
+    "coordinator-final-asan-ubsan.log": "e8303b1a569760de2624ee772e99879a13f8bc75917b147fee37a21dbc28349c",
+    "coordinator-normal.log": "e8303b1a569760de2624ee772e99879a13f8bc75917b147fee37a21dbc28349c",
+    "coordinator-tsan.log": "e8303b1a569760de2624ee772e99879a13f8bc75917b147fee37a21dbc28349c",
+    "inspector-target-final.log": "7975b8e130ccbdb68f0fd4e6ce1dc3481aeb3b7da04256408377a51b9c5fd0e6",
+    "littlefs-asan-ubsan.log": "c5b38aefa9cad8ad745416a5ecd3a47995cde5bca990cc1dd71e1c4629a8bec2",
+    "littlefs-normal.log": "43bdf8959146e04da679eccac51db05b21ba91e579a7a64455230886d91c3c28",
+    "mount-worker-final-asan-ubsan-manifest.json": "a37a87c557232f2c08da5d33884dd52726760cc68e4a192a87ae3a3fe5205b97",
+    "mount-worker-final-asan-ubsan.log": "878931a660681de3788ba83dddd20da528bb5b838470cd869c449001772acbda",
+    "mount-worker-final-normal-manifest.json": "14f55d5cf6aa781a54b58a23699e131b80c695da19bf3d4af15d65197ef51806",
+    "mount-worker-final-normal.log": "a91cf77262f936fb97f5eb64b297e12cbc121895b9e7cf168cd9630c40a690d8",
+    "mount-worker-tsan-manifest.json": "34ff0a67b657861413ead8804e02ed226a31375072b0e0753008ca614018d6fe",
+    "mount-worker-tsan.log": "2642ea29c832360196ae62cc403799c5e08b65977753347e2079fba096093093",
+    "worker-final-asan-ubsan.log": "71d9d7e38465cebec88eca72a4603bd571a49b1312a0f4011d62ad93a129bd9f",
+    "worker-normal.log": "71d9d7e38465cebec88eca72a4603bd571a49b1312a0f4011d62ad93a129bd9f",
+    "worker-target-final.log": "2d7c99ced8d98a743e7c7d228263c70ac3a1beeb4e97f7cdadb91b20fef4e606",
+    "worker-tsan.log": "71d9d7e38465cebec88eca72a4603bd571a49b1312a0f4011d62ad93a129bd9f",
+    "run_native_fresh_initialization_test.log": "f25e0b7788b9f7fd14999d01c25c8fe96b05b13d5406ae4d094bc9aa22201f3e",
+    "run_native_nvs_fresh_sources_test.log": "27b7a60cc41ae0d48e199c3e9fd07e7a668f564454ebf3c9828032708dd17b20",
+    "run_native_fresh_init_artifacts_test.log": "18ee9ddc40883094464adb542f3cdf942bec6847b3118041d2150b2b2abee479",
+    "run_native_checked_sd_restore_power_test.log": "e2a479b0f64ae73e916ee2274fc58d77cb6e0e525795147d0c1d7e03c7d23804",
+    "run_native_checked_sd_restore_test.log": "9c07b923bbca069ff58a2f373b0b3aafc65678f296172f812e17e7560d4e7364",
+    "run_native_import_initialization_test.log": "8dcafac2b260c6889f4dd116a94d370ab156331b56c5176f584ac5977a6b8cc4"
+  },
+  "limitations": [
+    "Default-off software checkpoint only; no product selector enabled",
+    "Host RTOS/radio/flash/metadata boundaries; no physical hardware or power-cut qualification",
+    "No LeakSanitizer claim: detect_leaks=0 for traced execution and deliberate permanent/retained controls",
+    "Resource figures exclude backend/mount controls, allocator bookkeeping, vendor stack and variable payloads",
+    "Concrete backend/source dispatch/first-SD capacity/final product activation remain separate"
+  ]
+}

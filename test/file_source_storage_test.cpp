@@ -9,12 +9,19 @@
 #include <cerrno>
 #include <cstdarg>
 using RiscStorage::FileSourceFiles;
-namespace {bool owner=true,safe=true,closeFailure=false,poisonOpen=false,writeFailure=false,readFailure=false,unsafeClose=false;uint64_t budget=UINT64_MAX,available=UINT64_MAX;unsigned closeCalls=0,writeCalls=0,unlinkCalls=0,openCalls=0;}
+namespace {bool owner=true,safe=true,closeFailure=false,poisonOpen=false,writeFailure=false,readFailure=false,unsafeClose=false;uint64_t budget=UINT64_MAX,available=UINT64_MAX;unsigned closeCalls=0,writeCalls=0,unlinkCalls=0,openCalls=0,readFailures=0,fortifiedReadCalls=0;}
 extern "C" int __real_open(const char*,int,...);
 extern "C" ssize_t __real_read(int,void*,size_t);
 extern "C" int __real_close(int);
 extern "C" int __wrap_open(const char* p,int flags,...){++openCalls;int rc=__real_open(p,flags,0600);if(poisonOpen){poisonOpen=false;errno=EIO;}return rc;}
-extern "C" ssize_t __wrap_read(int fd,void* p,size_t n){if(readFailure){readFailure=false;memset(p,0xcc,n);errno=EIO;return -1;}return __real_read(fd,p,n);}
+static ssize_t failRead(void* p,size_t n){readFailure=false;++readFailures;memset(p,0xcc,n);errno=EIO;return -1;}
+extern "C" ssize_t __wrap_read(int fd,void* p,size_t n){if(readFailure)return failRead(p,n);return __real_read(fd,p,n);}
+#if defined(__GLIBC__)
+// Fortified host builds may replace read with __read_chk, especially under
+// sanitizers. Inject the same failure without bypassing its bounds check.
+extern "C" ssize_t __real___read_chk(int,void*,size_t,size_t);
+extern "C" ssize_t __wrap___read_chk(int fd,void* p,size_t n,size_t size){++fortifiedReadCalls;if(readFailure&&n<=size)return failRead(p,n);return __real___read_chk(fd,p,n,size);}
+#endif
 extern "C" ssize_t __real_write(int,const void*,size_t);
 extern "C" int __real_unlink(const char*);
 extern "C" int __wrap_close(int fd){++closeCalls;int rc=__real_close(fd);if(unsafeClose){unsafeClose=false;safe=false;}if(closeFailure){closeFailure=false;errno=EIO;return -1;}return rc;}
@@ -52,7 +59,8 @@ int main(int argc,char**argv){assert(argc==2);std::filesystem::create_directorie
  assert(shortIo.configure(path.c_str())&&shortIo.begin(4096)==0);
  for(unsigned at=0;at<4096;at+=n)assert(shortIo.write(bytes.data()+at,4096-at,&n)==0&&n==512);
  assert(shortIo.finish()==0);std::array<unsigned char,4096> copied{};assert(shortIo.readAt(0,copied.data(),4096,&n)==0&&n==512);
- readFailure=true;copied.fill(0xAA);assert(shortIo.readAt(0,copied.data(),4096,&n)==RISC_FILE_SOURCE_IO&&!n);for(auto c:copied)assert(c==0xAA);
+ const auto failedReads=readFailures;readFailure=true;copied.fill(0xAA);assert(shortIo.readAt(0,copied.data(),4096,&n)==RISC_FILE_SOURCE_IO&&!n);assert(!readFailure&&readFailures==failedReads+1);for(auto c:copied)assert(c==0xAA);
+ assert(shortIo.readAt(0,copied.data(),4096,&n)==0&&n==512);for(unsigned i=0;i<n;++i)assert(copied[i]==bytes[i]);
  assert(shortIo.discard()==0);
  // Replacing our stage with a symlink cannot read or overwrite another file.
  auto links=files();assert(links.configure(path.c_str())&&links.begin(8)==0);std::filesystem::remove(path);std::filesystem::create_symlink(original,path);
@@ -66,6 +74,7 @@ int main(int argc,char**argv){assert(argc==2);std::filesystem::create_directorie
   else {assert(native.begin(8)==0);if(fault==1){writeFailure=true;const auto c=closeCalls;assert(native.write(bytes.data(),8,&n)==RISC_FILE_SOURCE_RETAINED&&!n&&c==closeCalls);}else{unsafeClose=true;assert(native.write(bytes.data(),8,&n)==RISC_FILE_SOURCE_RETAINED&&!n);safe=true;}}
   const auto c=closeCalls,w=writeCalls,u=unlinkCalls,o=openCalls;assert(native.discard()==RISC_FILE_SOURCE_RETAINED&&native.finish()==RISC_FILE_SOURCE_RETAINED);assert(c==closeCalls&&w==writeCalls&&u==unlinkCalls&&o==openCalls);
  }
+ printf("File source read injection: %u consumed failure; %u fortified read calls PASS\n",readFailures,fortifiedReadCalls);
  puts("File source headroom, short I/O, failed-read privacy, symlink refusal, false-success-open and terminal I/O no-retry PASS");
  puts("File source disk backend: 12 MiB bounded streaming, seek, full disk, interrupted capture, close retention, cold cleanup and reopen PASS");
 }

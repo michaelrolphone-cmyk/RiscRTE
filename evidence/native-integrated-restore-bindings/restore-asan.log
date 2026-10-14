@@ -1,0 +1,9 @@
+Checked SD restore: complete unsorted opaque map, 30 profile records, exact identity, reboot and no selected-native overwrite PASS
+Checked SD restore: 9 native legacy/root/unknown/artifact conflicts preserve both sources PASS
+Checked SD restore: 12 mixed legacy/corrupt/unknown/orphan/stage/backup-only/directory/bounded catalog conflicts refuse source selection PASS
+Checked SD restore: 154 reached native write/read/commit/partial/close errors recover exact image after reset PASS
+Checked SD restore: 12 foreign lineage/generation/map/owner/receipt/native-source/artifact resumes refuse without writes PASS
+Checked SD restore: empty/maximum/over-capacity maps, zero generation, and 209 exact interrupted object prefixes PASS
+Checked SD restore: mid-write competing source/receipt/metadata changes and foreign typed receipt refusal PASS
+Checked SD restore: queued cancellation, task/lease/epoch loss, foreign or stale sessions, detached candidate and late/issue Retained custody PASS
+Checked SD restore host suite PASS

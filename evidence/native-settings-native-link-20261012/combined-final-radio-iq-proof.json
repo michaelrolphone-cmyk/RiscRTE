@@ -1,0 +1,118 @@
+{
+  "allocated_sections": [
+    {
+      "address": 1611653120,
+      "bytes": 33,
+      "name": ".rtc.text"
+    },
+    {
+      "address": 1611653120,
+      "bytes": 33,
+      "name": ".rtc.dummy"
+    },
+    {
+      "address": 1611653156,
+      "bytes": 8,
+      "name": ".rtc.force_fast"
+    },
+    {
+      "address": 1342177280,
+      "bytes": 2792,
+      "name": ".rtc_noinit"
+    },
+    {
+      "address": 1077362688,
+      "bytes": 1027,
+      "name": ".iram0.vectors"
+    },
+    {
+      "address": 1077363716,
+      "bytes": 93343,
+      "name": ".iram0.text"
+    },
+    {
+      "address": 1070104576,
+      "bytes": 77988,
+      "name": ".dram0.dummy"
+    },
+    {
+      "address": 1070182576,
+      "bytes": 25752,
+      "name": ".dram0.data"
+    },
+    {
+      "address": 1070208328,
+      "bytes": 51592,
+      "name": ".dram0.bss"
+    },
+    {
+      "address": 1107296288,
+      "bytes": 1214295,
+      "name": ".flash.text"
+    },
+    {
+      "address": 1006632992,
+      "bytes": 1245184,
+      "name": ".flash_rodata_dummy"
+    },
+    {
+      "address": 1007878176,
+      "bytes": 256,
+      "name": ".flash.appdesc"
+    },
+    {
+      "address": 1007878432,
+      "bytes": 316748,
+      "name": ".flash.rodata"
+    },
+    {
+      "address": 1008195180,
+      "bytes": 15988,
+      "name": ".flash.rodata_noload"
+    },
+    {
+      "address": 1077457059,
+      "bytes": 1,
+      "name": ".iram0.data"
+    }
+  ],
+  "bank_base": 1070268416,
+  "bank_bytes": 65536,
+  "elf_sha256": "a871627a4f05b0819df85902a4193f1cd9da02ceb1755147d79791979e0fc0fe",
+  "heap_start": 1070259920,
+  "iram_alias": 1077542912,
+  "iram_end": 1077457060,
+  "reservation_table": [
+    [
+      1070268416,
+      1070333952
+    ],
+    [
+      1611661296,
+      1611661312
+    ],
+    [
+      1611653120,
+      1611653164
+    ],
+    [
+      1023410176,
+      1040187392
+    ],
+    [
+      1077362688,
+      1077457060
+    ],
+    [
+      1070088192,
+      1070182564
+    ],
+    [
+      1070182576,
+      1070259920
+    ]
+  ],
+  "reservation_table_address": 1008195124,
+  "schema": 1,
+  "scope": "Pre-heap reservation and final linked static-memory proof only; no hardware or RF qualification."
+}

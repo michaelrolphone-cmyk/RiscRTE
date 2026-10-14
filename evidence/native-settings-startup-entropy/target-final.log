@@ -1,0 +1,3 @@
+00000000 00000b18 B settings_backend_controls
+00000000 00000588 B settings_namespace_backend
+PASS: target backend/entrypoint, exact default-off entrypoint after stripping debug line metadata, empty backend-off; no link/hardware qualification

@@ -47,7 +47,25 @@ class PlanTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.run_plan()
     def test_capacity(self):
         with self.assertRaises(ValueError): self.run_plan(internal_bytes=5*4096)
-        with self.assertRaises(ValueError): plan(self.p, ['new-app'], ['sd'], sd_ready=True, sd_bytes=1)
+        with self.assertRaises(ValueError):
+            plan(self.p, ['new-app'], ['sd'], sd_ready=True, sd_bytes=1,
+                 internal_bytes=5*4096)
+    def test_full_sd_internal_fallback(self):
+        r = plan(self.p, ['new-app'], ['sd'], sd_ready=True, sd_bytes=1)
+        self.assertEqual({f['medium'] for f in r['files']}, {'internal'})
+        self.assertEqual(r['sd_payload_bytes'], 0)
+    def test_partial_sd_capacity(self):
+        r = plan(self.p, ['new-app'], ['sd'], sd_ready=True, sd_bytes=4096)
+        self.assertEqual([f['medium'] for f in r['files']],
+                         ['internal', 'internal', 'sd', 'internal'])
+        self.assertEqual(r['sd_payload_bytes'], 4096)
+    def test_package_not_split_between_media(self):
+        self.p[-1]['files'].append(dict(self.p[-1]['files'][0],
+            internal_path='metadata.json', sd_path='Packages/metadata.json', bytes=32))
+        r = plan(self.p, ['new-app'], ['sd'], sd_ready=True, sd_bytes=8192)
+        self.assertEqual([f['medium'] for f in r['files'] if f['package']=='new-app'],
+                         ['internal', 'internal'])
+        self.assertEqual(r['sd_payload_bytes'], 4096)
     def test_duplicate_path(self):
         self.p[-1]['files'][0]['internal_path'] = 'sd.elf'
         with self.assertRaises(ValueError): self.run_plan()

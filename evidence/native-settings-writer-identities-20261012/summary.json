@@ -1,0 +1,117 @@
+{
+  "source_commit": "9cdbc7fc3628a799d823328bd5d50e40cc2a56af",
+  "published_exact_source": "76819829c60f85bd4ec8d14e6d90b98dec41a3ae",
+  "source_tree": "7821044c30dcafb379e4a0e8cd1a929612f0274b",
+  "frozen_test_commit": "1d952dea1899f8fbfdc81dc3c366b0f4722d1012",
+  "hardware_tested": false,
+  "scope": "Concrete Backend/Assembly/Worker/Lifecycle/Runtime/CpuPort/X4/FatFs/retained LittleFS with modeled SDK/NVS/scheduler and compiled host application entry fixtures. Real selected clients are qualified separately.",
+  "tests": [
+    {
+      "flavor": "normal-fixed",
+      "cases": [
+        "writer-identities",
+        "normal",
+        "restore",
+        "absent",
+        "ambiguous",
+        "conflict",
+        "interrupt",
+        "interruption-restore",
+        "first-cut",
+        "first-resume",
+        "no-entropy",
+        "publication-cut",
+        "publication-resume",
+        "publication-erase",
+        "async-restore"
+      ],
+      "binaries": {
+        "home.elf": "c58cdcff1da7e36831609f77f87c0f9f02240880e269a917dfc1d08b85872fd2",
+        "wifi.elf": "823d6692284acadae4b02e562e2b0a85eae378c4ac7735ee5d9f735b12e33116",
+        "test": "fffa95e32f4fb554508f5829121ca6b45faf6738a205d2424ffea0f7e87aacfc",
+        "settings.elf": "af1c060b8755c77e2b39db2c09029fb4aa070fb18e5a0c4a82c99c482023a54e",
+        "battery.elf": "8e541ba2cd015b043ea84e5fa3ba2897ec8ae682de8e2a374d4a89dca273fb91",
+        "scanner.elf": "2255f492a38970eacf08f9297dcff848c66e843d0414068e7250f6954aa01815",
+        "power.elf": "0a2e1aa0e09bfe3d9479c2262dd224b04743e8ace36216a9420225b3a1849ae5",
+        "driver.elf": "f24ed5a157cd7995db7a3fa5df65c0fba5b7543347f2ba72223a268ee3a01585",
+        "contexts.elf": "6ef871e2e88e395e2d9fea22a9b12a7f3f02cd5840683fc86308855f6fc5d348"
+      },
+      "manifest_sha256": "88a71255c08073784dfab49b9e6c20f76dc7c11f9cdca319bd5e9ec36ede6304",
+      "all_source_binary_case_hashes_rechecked": true
+    },
+    {
+      "flavor": "asan-fixed",
+      "cases": [
+        "writer-identities",
+        "normal",
+        "restore",
+        "absent",
+        "ambiguous",
+        "conflict",
+        "interrupt",
+        "interruption-restore",
+        "first-cut",
+        "first-resume",
+        "no-entropy",
+        "publication-cut",
+        "publication-resume",
+        "publication-erase",
+        "async-restore"
+      ],
+      "binaries": {
+        "home.elf": "29ba9301d4af9675883f0511a249cb012b7b92f7957a135178e55e6403f05765",
+        "wifi.elf": "51d9a231f1ffe0be65cf2f9fdfc6be2d9716058c8c265823a4ad4875c30a0238",
+        "test": "a75e12052595d4907f93849f5f527ffc02a19cecbf8c6f98d599f30e5ef9447f",
+        "settings.elf": "5d285e20e203081ae7e346c556535bea146fcfc7d720d687b49cd1cedb6a14d7",
+        "battery.elf": "465b85edbe389e3cc150f0883c7767341d50f531c2c737d968cde41eb5d01bce",
+        "scanner.elf": "d0a295b7e3d7e9726a26732ce1a866f077f04692a20338b11fac625ab18139b2",
+        "power.elf": "ecb7dbe3a25902df27395c61d14d896cc08b452ca989590b55129fa1b1f01e8b",
+        "driver.elf": "9c548be751bd10a56070412f92dc26c3c6398fcb440698894bd51f1d5b7b8398",
+        "contexts.elf": "4f36c1c0ebbc4f093de82d93e2a2c40ca671bd28351d9c2902ec9985ed5eb033"
+      },
+      "manifest_sha256": "ec1d15dd9ae34915c3426ed6103eb8e16087737c396d47eea79b43cb87159093",
+      "all_source_binary_case_hashes_rechecked": true
+    }
+  ],
+  "selected_product_manifest_bindings": [
+    {
+      "manifest": "/workspace/shared/timecard-input-policy-components-20261012/x4/candidate/store/settings.json",
+      "sha256": "2518f483c26b928815b5311e2b3dd1549988ffac4bd2fbd76d06e4da21f29b29",
+      "app_id": "settings",
+      "namespace": 1
+    },
+    {
+      "manifest": "/workspace/shared/timecard-input-policy-components-20261012/x4/candidate/store/default.json",
+      "sha256": "fb600fbe72a1022cfce151c650ce7ef5972e1584395415ea5bd997c854b68bdf",
+      "app_id": "paper_clock",
+      "namespace": 1
+    },
+    {
+      "manifest": "/workspace/shared/timecard-input-policy-components-20261012/x4/candidate/store/battery.json",
+      "sha256": "a0a0ee9ac5490c6007cb5b9cbe826acac2ecd63506d7e99325b99bd5e3811476",
+      "app_id": "battery",
+      "namespace": 1
+    },
+    {
+      "manifest": "/workspace/shared/timecard-input-policy-components-20261012/x4/candidate/store/ble_scanner.json",
+      "sha256": "f5a3c081d1ce39feffb09a332187799bb255bdc60000ffd837724c9268ee8e1e",
+      "app_id": "ble_scanner",
+      "namespace": 1
+    },
+    {
+      "manifest": "/workspace/shared/timecard-input-policy-components-20261012/x4/candidate/store/contexts.json",
+      "sha256": "6ca3a1cf38e0b87a528354e85336defc20ad1405cf8b5270832d024e4b6a3819",
+      "app_id": "contexts",
+      "namespace": 1
+    },
+    {
+      "manifest": "/workspace/shared/timecard-input-policy-components-20261012/x4/candidate/store/wifi_settings.json",
+      "sha256": "74b2c6ccda8f05aa095c0c163401cc601d1037f8e8fbac9d58684111f555aad9",
+      "app_id": "wifi_settings",
+      "namespace": 6
+    }
+  ],
+  "backend_allowlist_matches_actual_product_ids": true,
+  "initial_expected_busy": "First atomic state returned RISC_ATOMIC_BUSY(-9) while accepted maintenance was pending. After normal scheduler collection all six exact writers read valid states.",
+  "baseline_identity_defect": "Old b71 checkpoint with actual wifi_settings manifest fails prepare: atomic key-value app/backend/namespace unavailable. Original failure is preserved."
+}

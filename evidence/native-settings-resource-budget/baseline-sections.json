@@ -1,0 +1,109 @@
+{
+  "elf_sha256": "f6cadeca79d04ebf9c26505358f7a5105a408a6e9f88359be5f9d9cab6b810d4",
+  "composition_receipt_sha256": "91262b2ccdc1809f81f1be61908808789ee28580ed65c2831221f6dbe985ab7e",
+  "map_sha256": "e6a2b30c5cd28c1dfbf393fe57c2812a4d603ac936d244a91f0d0cb41fb6a31a",
+  "sections": [
+    {
+      "section": ".rtc.text",
+      "size": 33,
+      "address": 1611653120
+    },
+    {
+      "section": ".rtc.dummy",
+      "size": 33,
+      "address": 1611653120
+    },
+    {
+      "section": ".rtc.force_fast",
+      "size": 8,
+      "address": 1611653156
+    },
+    {
+      "section": ".rtc_noinit",
+      "size": 2792,
+      "address": 1342177280
+    },
+    {
+      "section": ".rtc.force_slow",
+      "size": 0,
+      "address": 1342180072
+    },
+    {
+      "section": ".iram0.vectors",
+      "size": 1027,
+      "address": 1077362688
+    },
+    {
+      "section": ".iram0.text",
+      "size": 93343,
+      "address": 1077363716
+    },
+    {
+      "section": ".dram0.dummy",
+      "size": 77988,
+      "address": 1070104576
+    },
+    {
+      "section": ".dram0.data",
+      "size": 25752,
+      "address": 1070182576
+    },
+    {
+      "section": ".dram0.bss",
+      "size": 46712,
+      "address": 1070208328
+    },
+    {
+      "section": ".flash.text",
+      "size": 1054367,
+      "address": 1107296288
+    },
+    {
+      "section": ".rtc.entry.literal",
+      "size": 0,
+      "address": 1108350656
+    },
+    {
+      "section": ".flash_rodata_dummy",
+      "size": 1114112,
+      "address": 1006632992
+    },
+    {
+      "section": ".flash.appdesc",
+      "size": 256,
+      "address": 1007747104
+    },
+    {
+      "section": ".flash.rodata",
+      "size": 283676,
+      "address": 1007747360
+    },
+    {
+      "section": ".flash.rodata_noload",
+      "size": 15988,
+      "address": 1008031036
+    },
+    {
+      "section": ".iram0.text_end",
+      "size": 0,
+      "address": 1077457059
+    },
+    {
+      "section": ".iram0.data",
+      "size": 1,
+      "address": 1077457059
+    },
+    {
+      "section": ".iram0.bss",
+      "size": 0,
+      "address": 1077457060
+    },
+    {
+      "section": ".dram0.heap_start",
+      "size": 0,
+      "address": 1070255040
+    }
+  ],
+  "memory_configuration": "Memory Configuration\n\nName             Origin             Length             Attributes\niram0_0_seg      0x0000000040374000 0x0000000000058700 xr\niram0_2_seg      0x0000000042000020 0x00000000007fffe0 xr\ndram0_0_seg      0x000000003fc88000 0x0000000000054700 rw\ndrom0_0_seg      0x000000003c000020 0x0000000001ffffe0 r\nrtc_iram_seg     0x00000000600fe000 0x0000000000001ff0 xrw\nrtc_data_seg     0x00000000600fe000 0x0000000000001ff0 rw\nrtc_slow_seg     0x0000000050000000 0x0000000000002000 rw\n*default*        0x0000000000000000 0xffffffffffffffff",
+  "scope": "Verified baseline static sections only; not runtime free heap, candidate link, stack high-water or target latency."
+}

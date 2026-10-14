@@ -1,0 +1,27 @@
+{
+  "source_input": "c441eaf6d421e2cf690c7e04ce0f53733612fc90",
+  "local_composition": "a09815b744c083e9ea0f9b4d41eda26ee1f730bf",
+  "compile_database_sha256": "27aac708d37dd076a5fdd594fc6cb9c16f52b7556316f76efe980d8c00086198",
+  "target_bytes": {
+    "maintenance": 32504,
+    "bootstrap": 16328,
+    "lifecycle_state": 1000,
+    "two_workers_including_registry_and_request_slack": 25966,
+    "workers_lifecycle_dispatchers_subtotal": 75798,
+    "two_core_store_pairs": 1088,
+    "two_appdata_metadata_digest_sets": 656,
+    "two_inspectors": 368,
+    "two_fresh_sources": 104,
+    "illustrative_total": 78014,
+    "runtime_selected": 321776,
+    "cpu_port_selected": 9704,
+    "runtime_delta": 1616,
+    "cpu_port_delta": 400
+  },
+  "default_off_main_runtime_whole_g0_objects_identical_to": "0817be16ac8c8093cb677c18106ef188e5505686",
+  "compile_helpers_sha256": {
+    "test/compile_native_settings_resource_target.py": "e0be83e2af20e7f662884f906c4b647c4ba70539a844758d1c12f6a8892aa7bd",
+    "test/compare_native_settings_default_off.py": "e25c2b5faa7077d0ef42d7953e1c3a3357ca11488930e84c88de9488b9cee01b"
+  },
+  "limits": "Local compiler frames only; no whole-call-chain stack bound, hardware high-water, free heap, product placement, card latency, selected backend, full firmware link or product activation."
+}

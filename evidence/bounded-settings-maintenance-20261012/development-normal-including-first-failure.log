@@ -1,0 +1,23 @@
+bounded save: native/SD distinction, paused worker, paired snapshot fence, stale drafts, later edit, Files/USB and acknowledgment PASS
+actual lifecycle/Runtime/X4/FatFs maintenance bounded-save PASS; control=7816; polls=0
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+actual lifecycle/Runtime/X4/FatFs maintenance bounded-shutdown PASS; control=7816; polls=211
+bounded save: native/SD distinction, paused worker, paired snapshot fence, stale drafts, later edit, Files/USB and acknowledgment PASS
+actual lifecycle/Runtime/X4/FatFs maintenance bounded-cancel PASS; control=7816; polls=0
+failed maintenance custody revokes app authority and pins native graph PASS
+unrelated Runtime retention freezes accepted maintenance and retains graph custody PASS
+actual lifecycle/Runtime/X4/FatFs maintenance happy PASS; control=7816; polls=0
+live atomic draft survives ordinary acquisition; obsolete revision still refuses; final release SD-acks PASS
+actual lifecycle/Runtime/X4/FatFs maintenance draft-fence PASS; control=7816; polls=0
+first atomic grant is published after both older namespaces settle on SD PASS
+actual lifecycle/Runtime/X4/FatFs maintenance pre-capture PASS; control=7816; polls=0
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+actual lifecycle/Runtime/X4/FatFs maintenance implicit-exit PASS; control=7816; polls=210
+test: /workspace/shared/x4-settings-save-maintenance-20261012/test/native_settings_maintenance_test.cpp:264: void test_maintenance_app(): Assertion `cores[0]->identity().generation==1&&cores[1]->identity().generation==1&&!cores[0]->pendingCount()&&!cores[1]->pendingCount()' failed.
+Traceback (most recent call last):
+  File "/workspace/shared/x4-settings-save-maintenance-20261012/test/run_native_settings_maintenance_test.py", line 126, in <module>
+    result=subprocess.run(command, check=True, timeout=a.case_timeout, text=True, stdout=subprocess.PIPE)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '[PosixPath('/tmp/settings-bounded-integration2/test'), PosixPath('/tmp/settings-bounded-integration2'), 'first-history', PosixPath('/tmp/settings-bounded-integration2/native-first-history')]' died with <Signals.SIGABRT: 6>.

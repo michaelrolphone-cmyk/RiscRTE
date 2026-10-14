@@ -1,0 +1,55 @@
+=== native_nvs_legacy_sources ===
+Legacy NVS: original opaque rows, full v1 journals, exact protocol overlays, empty full journal and v2 deltas import through real admission/store with every original preserved PASS
+Legacy NVS: 30 malformed/unknown/duplicate/anchored/artifact refusals preserve every source; no SD access or stale anchored reconstruction PASS
+Legacy NVS: owner/namespace/schema selection, shadowed source bytes, generations/padding/absence bound; mutation during hash/append and before import revalidation reject publication PASS
+Legacy NVS: exact map capacity, maximum value, allocation/hash failures, and wiped temporary source/map memory PASS
+Legacy NVS: 240 reached inventory/materialization NVS failures reject evidence without writes or leaked handles PASS
+Legacy NVS: all 428 truncated v1 journal/v2 anchor lengths and append failures reject evidence; Retained append is sticky PASS
+Legacy NVS: worker/global-lease/epoch/initialization gates, reentry, late callback lease loss and sticky Retained precedence suppress further I/O PASS
+Collector host size=256; disconnected, no production selection or hardware qualification
+=== native_nvs_fresh_sources ===
+NVS source collector: actual checked factory/create path, all legacy namespaces, stable owner witness and callback reentry refusal PASS
+NVS source collector: 12 competing row/journal/anchor/delta/unknown-key refusals; empty spaces and other namespace isolation PASS
+NVS source collector: checked receipt resume and 8 owner/metadata/type/iterator/source/artifact refusals preserve all bytes PASS
+NVS source collector: all 509 exact checked scratch prefixes resume through actual factory/store without reusing IDs PASS
+NVS source collector: 88 reached read-only NVS failures reject evidence without writes or leaked handles PASS
+NVS source collector: owner-worker/initialization refusal and late guard Retained precedence with zero NVS I/O PASS
+Collector host size=80; no collector-owned heap allocation, no production selection, ESP artifact inspector remains unsupported
+=== native_fresh_initialization ===
+FreshEmpty: native-only/no SD/no entropy create, callback reentry refusal, distinct Initializing, checked resume and later edit preservation PASS
+FreshEmpty: all 509 exact pending prefixes resume using a NEW monotonically reserved ID, never a bank promotion PASS
+FreshEmpty: 17 foreign/malformed/source/counter/alternate-entry refusals preserve evidence; canonical A never promoted; RTENINIT remains Unclassified PASS
+FreshEmpty: 33 source/journal/epoch and simultaneous Retained+lease-loss callback boundaries refuse publication and recover exact receipt PASS
+FreshEmpty allocations: exactly3 owned image/stage/cache allocations,1500 requested bytes peak; admission/store inspector adds zero heap allocations
+FreshEmpty: stale generic stages cannot seal or replace a newly selected receipt; unprepared backend admission refuses PASS
+FreshEmpty: 8 altered staged image/header/provenance cases refuse at checked canonical seal before any bank publication PASS
+FreshEmpty: missing version/collector/backend hooks refuse Fresh authorization while entropy-free Unclassified initialization remains available; late guard Retained outranks lease loss PASS
+FreshEmpty: 624 checked create/resume crash faults (86 Retained, 156 Uncertain) reload complete root or re-resolve exact receipt, with no defaults/source cleanup PASS
+Host layouts: Core=304 Initialization=400 Receipt=56 Factory=208 Store=320 Inspector=224; receipt48/image484/object508; disconnected host fact collectors only
+=== native_replica_core ===
+native replica: 1025 opaque keys, atomic PUT/DELETE groups, same-value intent, permanent replica after acknowledgement, newer pending operation and reboot PASS
+native replica: selected known-base edits require explicit resolution; high SD generation does not discard intent; stale candidate rejects concurrent changes; foreign lineage rejected PASS
+native replica: 174 deterministic error/power-cut before/after/torn backend interruption points across apply, acknowledgement and candidate switch PASS
+native replica: 96 creation and concurrent-newer-ack error/power-cut interruption points PASS
+native replica: allocation failures, storage exhaustion, bounded group/intent, corruption, wrong namespace, expired acknowledgement and explicit initialization PASS
+UNCONNECTED HOST CORE ONLY: no .90 routing/ABI change, SD/NVS integration or Wi-Fi semantic reconciliation qualified
+=== native_replica_store ===
+checked native replica: 1025 small keys, 72-byte NVS payload, 64KiB banks, recovery reserve, oversized-map preservation, namespace isolation, non-reused IDs and export pins PASS
+checked native replica worker: bounded copied owner submission/1000 no-I/O polls, queued cancel, scratch wiping and retained cancellation custody PASS
+checked native replica: actual retained close latches receiver/store/job custody; late abandon/rebegin/direct backend reuse causes no further filesystem or NVS I/O PASS
+checked native replica: lost root with existing banks never initializes defaults PASS
+Checked AppData/NVS adapter: 216 before/after API and every-chunk I/O failure cases preserve complete old/new replica and pending intent PASS
+=== native_first_sd_checkpoint ===
+first create: known lineage, unknown imported/empty baseline, durable-before-pages and newer native edit preservation PASS
+first create: legacy/new/unknown/orphan/backup preservation, unclassified provenance, missing entropy/custody and stale capture refusals PASS
+first create: 15 exact marker-owned torn-prefix repairs, reboot with repeated newer edits, stable lineage and nonprefix conflicts PASS
+first create: 476 worker before/after error/power cuts resume with fresh inventory/full readback/close and preserve newer edits PASS
+first create: 13 repaired-checksum purpose/capture/envelope corruptions, doubled-map native capacity, SD reservation and bounded inventory refusals PASS
+first create: ambiguous native arm/ack old-or-new reload and retained verification refuses acknowledgement PASS
+first create: explicitly selected complete empty dataset publishes only index PASS
+EXPERIMENTAL STRICT-GUARD HOST PROOF ONLY: no production binding or hardware qualification
+=== native_first_sd_checked_store ===
+first checked store capacity: capture=5225 groups=137 v4_header=5737 image=11103 cap=65512 bytes; no-group max capture=(cap-516)/2=32498 bytes
+first checked store: immutable captured map survives repeated physical bank reuse, reboot and acknowledgement; owner SD polling makes no native I/O PASS
+first checked store: 488 reached AppData/NVS arm/ack faults (16 Retained, 48 Uncertain), exact old/new root reload and recovery PASS
+CHECKED HOST STORE PROOF ONLY: synthetic NVS/space and SD, no hardware qualification

@@ -1,5 +1,15 @@
 # RiscRTE
 
+Runtime 0.2.28 forward-ports the PSRAM-backed HTTPS allocator and connection-local
+memory failure handling onto the X4 0.2.24 native lineage. Loader checkpoints,
+ABI, USB, sharing, SD and existing app/provider policies remain unchanged.
+See [native HTTPS memory policy](docs/HTTPS_PSRAM_MEMORY.md).
+
+Runtime 0.2.24 ports the qualified regular-file ELF size query and bounded
+metadata scheduler checkpoints onto the X4-compatible 0.2.22 source base.
+No loader ABI, complete graph admission or lifecycle authority changes.
+See [X4 reader checkpoint provenance](docs/X4_LOADER_CHECKPOINT_PORT.md).
+
 This feature branch develops Runtime 0.2.18: transactional SD provider publication,
 explicit native export-map migration and provider-scoped installed-app
 admission and copied asynchronous storage work. It is not a hardware-qualified

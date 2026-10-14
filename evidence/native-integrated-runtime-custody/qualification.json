@@ -1,0 +1,22 @@
+{
+  "status": "PASS: integrated compact mailboxes, import/atomic source and Runtime/Port warm custody; no product activation",
+  "runtime_commit": "dee84cc3f385f1197a5cf532cebb349a356e82bf",
+  "source_manifest_sha256": "8752f1e784c046481629788eff06c093d18735af0b4ed70bb370cfc049577f2c",
+  "graph_cases": 29,
+  "actual_x4_fatfs_runtime_port_cases": 16,
+  "sanitizers": "address,undefined",
+  "leak_sanitizer": false,
+  "logs": {
+    "full-asan.log": "4456d16d4012c9beda5a79a04c073e94875b9a941a1204705ee8c74d4a95fdf9",
+    "port-asan.log": "503040832d97d827651d70ad966a0e5483ab037bdf38cd551869f691ceec1eb6",
+    "graph-asan.log": "e5b6253801cca57494ee3f7a7e7ca9b40f08b0c405f0d8a596f835ea3ac4742e"
+  },
+  "remaining_gates": [
+    "Production broker and coordinator binding",
+    "Private filesystem artifact admission",
+    "Whole-product memory/stack budget",
+    "Namespace-1 semantic writer migration",
+    "Conflict source decision",
+    "Hardware/update durability qualification"
+  ]
+}

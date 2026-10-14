@@ -1,0 +1,9 @@
+PRECONDITION: synthetic pre-established empty native domain; first-boot/SD source admission is not qualified here
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated controller: copied Save, connected Remember, in-flight committed cancellation and queued revocation PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+integrated controller: both saved profiles reload through a new checked store, coordinator and Runtime PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native profiles; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+Runtime + coordinator + checked filesystem/NVS + pinned System Wi-Fi: complete roundtrip PASS

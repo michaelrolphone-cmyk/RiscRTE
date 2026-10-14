@@ -1,0 +1,64 @@
+NativeCrownRecovery.h:30:13:void RiscCpu::NativeCrownRecovery::beginInvocation(bool)	32	static
+NativeCrownRecovery.h:31:13:bool RiscCpu::NativeCrownRecovery::endInvocation()	32	static
+NativeCrownRecovery.h:32:13:bool RiscCpu::NativeCrownRecovery::exitRequested()	32	static
+main.cpp:91:6:bool {anonymous}::isOwner()	32	static
+main.cpp:367:88:static uint32_t setup()::<lambda()>::_FUN()	32	static
+main.cpp:93:6:bool {anonymous}::monotonicMillis(uint32_t*)	32	static
+main.cpp:164:6:bool {anonymous}::nativeOwnerCheckpoint()	32	static
+NativeCompute.h:8:16:int32_t RiscCpu::randomBytes(void*, uint32_t)	32	static
+NativeCompute.h:12:16:int32_t RiscCpu::memoryHeap(risc_memory_heap_snapshot_v1*)	64	static
+main.cpp:112:6:void {anonymous}::schedulerDelay(uint32_t)	32	static
+main.cpp:130:6:bool {anonymous}::bindPlatforms(RiscBoot::Runtime&)	48	static
+main.cpp:115:6:void {anonymous}::cooperate(uint32_t)	32	static
+main.cpp:94:6:bool {anonymous}::health(risc_runtime_health_v1*)	32	static
+NativeTlsMemory.h:22:13:void RiscCpu::NativeTlsMemory::free(void*)	32	static
+NativeTlsMemory.h:15:14:void* RiscCpu::NativeTlsMemory::calloc(size_t, size_t)	32	static
+main.cpp:126:6:bool {anonymous}::diagnostic(const char*)	32	static
+main.cpp:108:6:)	336	static
+main.cpp:173:6:bool {anonymous}::priorFailure(risc_resident_failure_v1*)	32	static
+main.cpp:166:6:bool {anonymous}::confirmBoot()	32	static
+main.cpp:146:6:bool {anonymous}::providerStorageSafe()	32	static
+main.cpp:306:48:static bool setup()::<lambda()>::_FUN()	32	static
+main.cpp:163:6:bool {anonymous}::updateStorageSafe()	32	static
+main.cpp:154:6:bool {anonymous}::restartSafe()	32	static
+main.cpp:138:6:bool {anonymous}::appExitSafe()	32	static
+Board.h:34:7:RiscBoot::Board::Device::Config::Config()	32	static
+ScalableSettings.h:46:8:void RiscStorage::ScalableSettings::Collection::clear()	32	static
+Board.h:41:3:constexpr RiscBoot::Board::Board()	32	static
+Runtime.h:115:12:RiscBoot::Runtime::Runtime(RiscBoot::Port)	48	static
+CpuPort.h:127:12:RiscCpu::Port::Port(RiscCpu::Hardware)	48	static
+main.cpp:408:30:void __static_initialization_and_destruction_0(int, int)	672	static
+NativeRadioResources.h:15:3:RiscCpu::NativeRadioResourceGuard::NativeRadioResourceGuard()	32	static
+NativeRadioResources.h:16:3:RiscCpu::NativeRadioResourceGuard::~NativeRadioResourceGuard()	32	static
+main.cpp:39:17:void risc_perf_loader_event(uint32_t, uint32_t)	32	static
+NvsBootstrapInput.h:10:73:RiscBootstrap::nvsInput()::<lambda(void*, const char*, void*, uint32_t, uint32_t*)>	64	static
+NvsBootstrapInput.h:10:73:static RiscProvision::InputStatus RiscBootstrap::nvsInput()::<lambda(void*, const char*, void*, uint32_t, uint32_t*)>::_FUN(void*, const char*, void*, uint32_t, uint32_t*)	32	static
+ScopedBufferWipe.h:12:3:RiscRuntime::ScopedBufferWipe::~ScopedBufferWipe()	32	static
+NvsKeyValue.h:13:13:bool RiscNvs::valid(uint32_t, const char*)	32	static
+NvsKeyValue.h:23:3:RiscNvs::Handle::~Handle()	32	static
+NvsKeyValue.h:24:13:esp_err_t RiscNvs::Handle::open(uint32_t, nvs_open_mode_t, bool)	48	static
+NvsKeyValue.h:29:16:int32_t RiscNvs::getUnlocked(void*, uint32_t, const char*, void*, uint32_t, uint32_t*)	2112	static
+NvsKeyValue.h:47:16:int32_t RiscNvs::get(void*, uint32_t, const char*, void*, uint32_t, uint32_t*)	48	static
+NvsScalableSettings.h:63:54:static int RiscNvs::Settings::backend()::<lambda(void*, uint32_t, void*, uint32_t, uint32_t*)>::_FUN(void*, uint32_t, void*, uint32_t, uint32_t*)	32	static
+NvsKeyValue.h:67:66:static int RiscNvs::backend()::<lambda(void*, uint32_t, void*, uint32_t, uint32_t*)>::_FUN(void*, uint32_t, void*, uint32_t, uint32_t*)	32	static
+NvsKeyValue.h:52:16:int32_t RiscNvs::put(void*, uint32_t, const char*, const void*, uint32_t)	2112	static
+NvsKeyValue.h:68:55:static int RiscNvs::backend()::<lambda(void*, uint32_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const void*, uint32_t)	32	static
+NvsScalableSettings.h:5:18:esp_err_t RiscNvs::Settings::open(RiscNvs::Handle&, uint32_t, const char*, nvs_open_mode_t)	48	static
+NvsScalableSettings.h:50:16:int32_t RiscNvs::Settings::erase(void*, uint32_t, const char*)	48	static
+NvsScalableSettings.h:8:16:int32_t RiscNvs::Settings::readRaw(nvs_handle_t, const char*, void*, uint32_t, uint32_t*)	2112	static
+NvsScalableSettings.h:32:16:int32_t RiscNvs::Settings::next(void*, uint32_t, bool, const char*, char*, void*, uint32_t, uint32_t*)	128	static
+NvsScalableSettings.h:16:16:int32_t RiscNvs::Settings::read(void*, uint32_t, void*, uint32_t, uint32_t*)	48	static
+NvsScalableSettings.h:22:16:int32_t RiscNvs::Settings::write(uint32_t, const char*, const char*, const void*, uint32_t)	2128	static
+NvsScalableSettings.h:62:60:static int RiscNvs::Settings::backend()::<lambda(void*, uint32_t, const char*, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, const void*, uint32_t)	32	static
+NvsScalableSettings.h:61:47:static int RiscNvs::Settings::backend()::<lambda(void*, uint32_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const void*, uint32_t)	32	static
+NvsScalableSettings.h:61:47:RiscNvs::Settings::backend()::<lambda(void*, uint32_t, const void*, uint32_t)>	32	static
+NvsScalableSettings.h:62:60:RiscNvs::Settings::backend()::<lambda(void*, uint32_t, const char*, const void*, uint32_t)>	32	static
+NvsScalableSettings.h:63:54:RiscNvs::Settings::backend()::<lambda(void*, uint32_t, void*, uint32_t, uint32_t*)>	32	static
+NvsKeyValue.h:67:66:RiscNvs::backend()::<lambda(void*, uint32_t, void*, uint32_t, uint32_t*)>	32	static
+NvsKeyValue.h:68:55:RiscNvs::backend()::<lambda(void*, uint32_t, const void*, uint32_t)>	32	static
+NvsKeyValue.h:69:40:RiscNvs::backend()::<lambda(void*, uint32_t, bool*)>	48	static
+NvsKeyValue.h:69:40:static int32_t RiscNvs::backend()::<lambda(void*, uint32_t, bool*)>::_FUN(void*, uint32_t, bool*)	32	static
+NvsKeyValue.h:65:41:const RiscBoot::KeyValueBackend* RiscNvs::backend()	32	static
+main.cpp:199:6:void setup()	544	static
+main.cpp:408:6:void loop()	32	static
+main.cpp:408:30:cpp)	32	static

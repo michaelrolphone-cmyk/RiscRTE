@@ -1,0 +1,33 @@
+{
+  "command": [
+    "c++",
+    "-std=c++17",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-Wno-misleading-indentation",
+    "-Wno-deprecated-declarations",
+    "-DESP_PLATFORM",
+    "-DBOARD_XTEINK_X4_PRO",
+    "-DRISC_NATIVE_SETTINGS_BACKEND=1",
+    "-DRISC_NATIVE_SETTINGS_STARTUP_ENTROPY=1",
+    "-I/workspace/shared/x4-settings-startup-entropy-evidence-20261012/entropy-final-normal/stubs",
+    "-I/workspace/shared/x4-settings-startup-entropy-20261012/src",
+    "/workspace/shared/x4-settings-startup-entropy-20261012/test/native_settings_startup_entropy_test.cpp",
+    "-lcrypto",
+    "-no-pie",
+    "-o",
+    "/workspace/shared/x4-settings-startup-entropy-evidence-20261012/entropy-final-normal/test"
+  ],
+  "source_sha256": {
+    "src/ports/esp32s3/NativeSettingsStartupEntropy.h": "688f0f553d917b718d1af6585556a4372fa0030e433b1fef1c2215f4f2733d03",
+    "src/ports/esp32s3/NativeSettingsStartupEntropy.cpp": "4a7b7c98cccd5a33556ca395fbfa0a5a17b83a1d7d103cd83ed0f4bd94b8a210",
+    "test/native_settings_startup_entropy_test.cpp": "b55c1adaa60bbdb457e6cec735a45e7da2cfad08b0a3abb012911a4589326600",
+    "test/run_native_settings_startup_entropy_test.py": "b84a3d4b95f236651ebd1d62c9ef8b48c16e62f10da72d86e29c2a23e348476e"
+  },
+  "limitations": [
+    "RNG and RTOS modeled",
+    "Host OpenSSL implements SHA256",
+    "No physical entropy or firmware activation qualification"
+  ]
+}

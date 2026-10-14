@@ -1,0 +1,55 @@
+{
+  "scope": "Opt-in bounded native ESP settings worker binding for two explicitly registered namespaces; no product enablement",
+  "host_cases": [
+    "registration",
+    "single",
+    "dual",
+    "blocked1",
+    "blocked6",
+    "retained1",
+    "retained6"
+  ],
+  "host_results": {
+    "normal": "PASS",
+    "ubsan": "PASS",
+    "asan_ubsan": "PASS (ASAN_OPTIONS=detect_leaks=0)",
+    "tsan": "PASS"
+  },
+  "additional_normal_regressions": [
+    "native_settings_coordinator",
+    "native_atomic_key_value",
+    "native_atomic_checked_store"
+  ],
+  "host_components": "Actual ESP worker TU, NativeSettingsCoordinator, CheckedNativeReplicaStore, AppDataFiles, NvsReplicaMetadata; only RTOS/heap/shared-resource and NVS SDK/space accounting are host shims.",
+  "identity_checks": "Explicit/Core/store namespace agreement and actual bound backend context plus every callback; duplicate/reused objects, ISR and foreign task rejected.",
+  "legacy_behavior": "No-argument lookups work only with exactly one binding; two registrations fail closed. Same owner task required for both; aggregate exit checks both.",
+  "global_io_serialization": "Both coordinators use unchanged nativeBackgroundResourceTry/End hooks; owner lease remains held through terminal collection or sticky Retained.",
+  "target": {
+    "compiler": "xtensa-esp32s3-elf-g++ esp-2021r2-patch5 GCC 8.4.0",
+    "sdk": "installed Arduino ESP32 2.0.17 / ESP-IDF 4.4",
+    "result": "PASS translation unit/API/layout probes; default-off TU empty; no task-delete, LittleFS mount or NVS-init dependency",
+    "max_bindings": 2,
+    "binding_bytes": 12960,
+    "alignment_bytes": 16,
+    "allocation_request_per_binding_bytes": 12975,
+    "registry_bytes": 16,
+    "maximum_permanent_requested_plus_static_bytes": 25966,
+    "two_stacks_bytes": 16384,
+    "two_coordinators_bytes": 8784,
+    "two_task_control_blocks_bytes": 688,
+    "other_binding_and_padding_bytes": 64,
+    "alignment_slack_bytes": 30,
+    "budget_exclusions": [
+      "heap allocator bookkeeping",
+      "caller-owned permanent Core/store/metadata/native-client controls and dependencies",
+      "variable data/scratch allocations"
+    ]
+  },
+  "limits": [
+    "Not a firmware link or target execution",
+    "No physical SD, power-cut, RAM high-water or timing qualification",
+    "No private mount provisioning, product/Watch policy, LittleFS qualification, source publication or firmware delivery",
+    "Host scheduler stops only after native calls return, never force-deletes a blocked task",
+    "LeakSanitizer disabled; no leak qualification"
+  ]
+}

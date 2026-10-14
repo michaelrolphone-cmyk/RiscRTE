@@ -1,0 +1,50 @@
+2026-10-12T14:35:38.7189807Z ##[group]Run python3 test/run_native_settings_startup_entropy_test.py
+2026-10-12T14:35:38.7190333Z [36;1mpython3 test/run_native_settings_startup_entropy_test.py[0m
+2026-10-12T14:35:38.7190723Z [36;1mbash test/run_native_replica_core_test.sh[0m
+2026-10-12T14:35:38.7191082Z [36;1mbash test/run_native_fresh_initialization_test.sh[0m
+2026-10-12T14:35:38.7191471Z [36;1mbash test/run_native_import_initialization_test.sh[0m
+2026-10-12T14:35:38.7191869Z [36;1mbash test/run_native_settings_scratch_allocation_test.sh[0m
+2026-10-12T14:35:38.7192242Z [36;1mbash test/run_file_source_storage_test.sh[0m
+2026-10-12T14:35:38.7192581Z [36;1mbash test/run_file_source_runtime_test.sh[0m
+2026-10-12T14:35:38.7192908Z [36;1mbash test/run_native_atomic_key_value_test.sh[0m
+2026-10-12T14:35:38.7193258Z [36;1mbash test/run_native_settings_coordinator_test.sh[0m
+2026-10-12T14:35:38.7193628Z [36;1mbash test/run_native_first_sd_checkpoint_test.sh[0m
+2026-10-12T14:35:38.7194051Z [36;1mbash test/run_native_settings_availability_test.sh[0m
+2026-10-12T14:35:38.7194417Z [36;1mpython3 test/test_native_settings_startup.py[0m
+2026-10-12T14:35:38.7257234Z shell: /usr/bin/bash -e {0}
+2026-10-12T14:35:38.7257478Z env:
+2026-10-12T14:35:38.7257663Z   SANITIZE: 1
+2026-10-12T14:35:38.7257877Z   SANITIZERS: address,undefined
+2026-10-12T14:35:38.7258137Z   ASAN_OPTIONS: detect_leaks=0
+2026-10-12T14:35:38.7258394Z   UBSAN_OPTIONS: halt_on_error=1
+2026-10-12T14:35:38.7258634Z   NO_PIE: 1
+2026-10-12T14:35:38.7258824Z ##[endgroup]
+2026-10-12T14:35:39.6252843Z PASS startup entropy: paired early hardware window, 1001 unique IDs, custody/ISR/reentry/hash/counter/zero-source refusals; host controls=44
+2026-10-12T14:35:42.2146036Z native replica: 1025 opaque keys, atomic PUT/DELETE groups, same-value intent, permanent replica after acknowledgement, newer pending operation and reboot PASS
+2026-10-12T14:35:42.2148587Z native replica: selected known-base edits require explicit resolution; high SD generation does not discard intent; stale candidate rejects concurrent changes; foreign lineage rejected PASS
+2026-10-12T14:35:42.2150734Z native replica: 174 deterministic error/power-cut before/after/torn backend interruption points across apply, acknowledgement and candidate switch PASS
+2026-10-12T14:35:42.2153043Z Publication verification scratch: second-allocation failure preserves all native records before reserve; apply/acknowledge/install/initialize fail closed and successful release wipes every verification byte PASS
+2026-10-12T14:35:42.2154933Z native replica: 96 creation and concurrent-newer-ack error/power-cut interruption points PASS
+2026-10-12T14:35:42.2157155Z native replica: allocation failures, storage exhaustion, bounded group/intent, corruption, wrong namespace, expired acknowledgement and explicit initialization PASS
+2026-10-12T14:35:45.7145708Z FreshEmpty: native-only/no SD/no entropy create, callback reentry refusal, distinct Initializing, checked resume and later edit preservation PASS
+2026-10-12T14:35:48.3177053Z FreshEmpty: all 509 exact pending prefixes resume using a NEW monotonically reserved ID, never a bank promotion PASS
+2026-10-12T14:35:48.3363976Z FreshEmpty: 17 foreign/malformed/source/counter/alternate-entry refusals preserve evidence; canonical A never promoted; RTENINIT remains Unclassified PASS
+2026-10-12T14:35:48.4705184Z FreshEmpty: 33 source/journal/epoch and simultaneous Retained+lease-loss callback boundaries refuse publication and recover exact receipt PASS
+2026-10-12T14:35:48.4894990Z FreshEmpty: stale generic stages cannot seal or replace a newly selected receipt; unprepared backend admission refuses PASS
+2026-10-12T14:35:48.5004302Z FreshEmpty: 8 altered staged image/header/provenance cases refuse at checked canonical seal before any bank publication PASS
+2026-10-12T14:35:48.5111936Z FreshEmpty: missing version/collector/backend hooks refuse Fresh authorization while entropy-free Unclassified initialization remains available; late guard Retained outranks lease loss PASS
+2026-10-12T14:35:51.3390095Z FreshEmpty: 624 checked create/resume crash faults (86 Retained, 156 Uncertain) reload complete root or re-resolve exact receipt, with no defaults/source cleanup PASS
+2026-10-12T14:35:56.7721921Z Imported init: exact receipt/source binding resumes original absent or empty rnr state; selected root and later edits cannot be reinitialized PASS
+2026-10-12T14:36:01.8561950Z Imported init: 593 exact pending prefixes and full canonical bank re-reserve monotonically; no staged bank promotion PASS
+2026-10-12T14:36:02.7679106Z Imported init: 628 root/source/owner/sequence/map/artifact mutations and every full-object byte corruption refuse without overwriting evidence PASS
+2026-10-12T14:36:02.7899609Z Imported init: 11 hash/append/post-admission source, receipt, sequence, inventory, epoch and artifact changes prevent publication PASS
+2026-10-12T14:36:02.8051828Z Imported init: 19 explicit-version/backend/collector gates, complete recheck bindings and admitted-map tamper refusals PASS
+2026-10-12T14:36:02.8421185Z Imported init: altered root revision refuses before receipt replacement; create/resume reboot retries remain recoverable PASS
+2026-10-12T14:36:04.2514146Z Imported init: 96 map-digest false plus Retained/lease-loss callback cuts stop hashing and I/O, preserve receipt and recover after reboot PASS
+2026-10-12T14:36:04.5203221Z Imported init: bounded scratch allocation/hash failures unwind and wipe; all shared core/admission/store/source allocations released PASS
+2026-10-12T14:36:05.1095612Z Imported init: 48 shared core/admission/store/AppData/source allocation-failure positions recover exact original bytes after reboot PASS
+2026-10-12T14:36:31.4816773Z Imported init: 1850 reached create/resume NVS and filesystem returned-error cuts (54 Retained, 320 Uncertain); reboot loads selected root or resumes exact source receipt PASS
+2026-10-12T14:36:38.2317561Z Settings scratch: five clients refuse allocation before native/SD I/O or persistent mutation; zero-init, wipe-before-free, no fallback and idempotent release PASS
+2026-10-12T14:36:39.6504815Z test: /home/runner/work/RiscRTE/RiscRTE/test/file_source_storage_test.cpp:55: int main(int, char**): Assertion `shortIo.readAt(0,copied.data(),4096,&n)==RISC_FILE_SOURCE_IO&&!n' failed.
+2026-10-12T14:36:39.8195245Z test/run_file_source_storage_test.sh: line 8:  2793 Aborted                 (core dumped) "$build/test" "$build/data"
+2026-10-12T14:36:39.8214505Z ##[error]Process completed with exit code 134.

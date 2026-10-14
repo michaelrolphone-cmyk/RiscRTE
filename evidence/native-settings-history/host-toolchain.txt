@@ -1,0 +1,5 @@
+x86_64
+c++ (Debian 14.2.0-19) 14.2.0
+cc (Debian 14.2.0-19) 14.2.0
+OpenSSL 3.5.7 9 Jun 2026 (Library: OpenSSL 3.5.7 9 Jun 2026)
+Python 3.12.14

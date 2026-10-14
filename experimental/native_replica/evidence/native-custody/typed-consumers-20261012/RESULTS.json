@@ -1,0 +1,96 @@
+{
+  "status": "PASS: disconnected typed native consumers, no production activation",
+  "base_commit": "4804a7b4411c49e8552ad489f5a233fdad54712d",
+  "normal_cases": 61,
+  "asan_ubsan_cases": 61,
+  "unchanged_external_sources": 249,
+  "runtime_source_records": 35,
+  "sanitizer_limit": "LeakSanitizer disabled: executor ptrace prevents execution; ASan and UBSan enabled",
+  "strict_ubsan_suites": [
+    "native_replica_sd",
+    "native_replica_sd_reader",
+    "native_replica_legacy_reader",
+    "native_settings_catalog",
+    "native_durable_export",
+    "native_export_retained"
+  ],
+  "durable_fault_cases": {
+    "sd_publication": 680,
+    "export_handoffs": 165,
+    "recovery_reader": 164,
+    "recovery_handoffs": 412,
+    "native_marker_and_ack": 1122,
+    "terminal_retained_paths": 130
+  },
+  "target": {
+    "compiler": "xtensa-esp32s3-elf-g++ 8.4.0 esp-2021r2-patch5",
+    "status": "strict compile only",
+    "object_sha256": "eb9b9bde69b2bc41fa4e6aecdf87a67a6be788e111c1fd4c08a1f933fabd925d",
+    "sizeof_bytes": {
+      "NativeSdSession": 12,
+      "NativeSdPreparation": 13416,
+      "CheckedSdReplicaCheckpoint": 36864,
+      "CheckedSdReplicaReader": 22816,
+      "CheckedLegacySettingsReader": 22728,
+      "CheckedSdSettingsCatalog": 41376,
+      "CheckedNativeExportRecovery": 50208
+    }
+  },
+  "remaining_gates": [
+    "Selected native Port/graph pin and lifecycle binding",
+    "Native worker scheduling and actual core serialization",
+    "Native internal-RAM placement and total heap/stack admission",
+    "Physical card/removal/swap and hardware durability qualification",
+    "Product selection/activation"
+  ],
+  "evidence": [
+    {
+      "path": "attempt-asan.log",
+      "sha256": "230b43a25de6fc5e8c1ee94b48c17ebe9d03de6d1ef4a5f104bd77bef8dada93"
+    },
+    {
+      "path": "normal-source-manifest.json",
+      "sha256": "eee45278fa87cee8006f18b0bfe9cf65d8d8de23419e9d45f9547dd439978ad7"
+    },
+    {
+      "path": "normal.log",
+      "sha256": "03f5c8ca81d92dec6e5da978dcbacd58e3e438dd285c39ee94bb745d6eceab63"
+    },
+    {
+      "path": "sanitized-source-manifest.json",
+      "sha256": "7d18de386976abcf68962692fc6e4782fc2242d5ed02b46cadc36feaae6b9695"
+    },
+    {
+      "path": "sanitized.log",
+      "sha256": "03f5c8ca81d92dec6e5da978dcbacd58e3e438dd285c39ee94bb745d6eceab63"
+    },
+    {
+      "path": "strict-catalog-ubsan.log",
+      "sha256": "ee6293a1661c0a9d19fe04979294f917b0e350399d6ea43b7db0c027569ca7a3"
+    },
+    {
+      "path": "strict-durable-ubsan.log",
+      "sha256": "957c18dad610ce6af8d15a46227dfc35e42afb352cb653ffeb4c6f646221df35"
+    },
+    {
+      "path": "strict-legacy-ubsan.log",
+      "sha256": "707fbcdc620a704e144e452994dc06bb85e9e3330e0973a12b44b02da4180667"
+    },
+    {
+      "path": "strict-reader-ubsan.log",
+      "sha256": "dd276d502767ae5e13435a424cd007f078b4ebb6e167af5a78763ae686199cae"
+    },
+    {
+      "path": "strict-retained-ubsan.log",
+      "sha256": "32fce7bdf846edc743d5920ded2d3a3b40e726715786df0ee95fee805138d7c6"
+    },
+    {
+      "path": "strict-writer-ubsan.log",
+      "sha256": "5e7810b54b677af9318ce9dc98b9f7fef8d0441b5dac82b5ea6de29ec1b483c8"
+    },
+    {
+      "path": "target-compile.log",
+      "sha256": "5a84f9555f6812a442582862cb0cf46ec7d40a1cb4eebbf5d0873dca81322fc9"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "restoration": "gzip -dc STORED > ORIGINAL; verify original_sha256. Compression is byte-for-byte reversible.",
+  "files": [
+    {
+      "original": "call-evidence.json",
+      "stored": "call-evidence.json.gz",
+      "original_bytes": 1926752,
+      "stored_bytes": 168263,
+      "original_sha256": "21d147fe8cab1da921fcbba087fa45787c3fedf91d4470c177739437abe4bf4c",
+      "stored_sha256": "64da15b8d0d53ff51c5d24d0505a29ea3f543a53f95c52acd683294cad1c435e"
+    },
+    {
+      "original": "manifest.json",
+      "stored": "manifest.json.gz",
+      "original_bytes": 1836880,
+      "stored_bytes": 145370,
+      "original_sha256": "c6ef9265df22714645c3f2f78e46e515c1ab2b3b10a7469be71978a2ba55d3da",
+      "stored_sha256": "d71fc29ad3d582f1be7679b5ba8ac6a55d21b3ce1b512f3ea25419eaf5c432f1"
+    },
+    {
+      "original": "target-build.log",
+      "stored": "target-build.log.gz",
+      "original_bytes": 659307,
+      "stored_bytes": 33978,
+      "original_sha256": "8c5d69111802830990b49db46e9c535dc96bc05fb4406dc6674b53fd7010316c",
+      "stored_sha256": "475001a8a564e179e9a78b863aeafce9378d839889eea8b13c1f391c375cd8d4"
+    },
+    {
+      "original": "parent-source-parity.json",
+      "stored": "parent-source-parity.json.gz",
+      "original_bytes": 76290,
+      "stored_bytes": 24226,
+      "original_sha256": "4af25ddcac652d036dde5b9adf150e5f5d0e574e45a6f50e0f648e54b47bcc33",
+      "stored_sha256": "b0f3f54e3ca53391ec72d3bb190b76e77edb94e867456f61486436e8a6e58e5f"
+    }
+  ]
+}

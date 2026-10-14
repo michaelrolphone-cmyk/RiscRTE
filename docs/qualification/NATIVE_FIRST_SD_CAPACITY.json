@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "runtime_source_local": "cb1e21131d92b0749d0458c9e24c2fd4b7b9e83c",
+  "x4_source_local": "aa3022cc8d470fdaf14db8c71590d36a03ebee89",
+  "drivers_source_local": "4a6fcb057215e03120862a02e3d3736f3a8b026a",
+  "reader": "45cf61ac013fb618e8d7fed63217a35350484d52",
+  "hardware_tested": false,
+  "product_activation": false,
+  "capacity": "Fresh FAT lower bound, continuous excluded-writer reservation, exact session/operation and mount/receipt custody",
+  "checks": {
+    "first-normal": {
+      "passed": true,
+      "source_manifest_sha256": "c3a48c8867f5d3e34f7cb2b23ad365494edc5147ce2a4021581a7c6f8d50c82e",
+      "cases": 69,
+      "sanitizers": "none"
+    },
+    "first-asan": {
+      "passed": true,
+      "source_manifest_sha256": "f0a31c22c96a6ee2af0de10bb9e74529de64afbdaf3d5e61193fd92f77010ddd",
+      "cases": 69,
+      "sanitizers": "address,undefined"
+    },
+    "consumers-normal": {
+      "passed": true,
+      "source_manifest_sha256": "6e69670a21dee8bdb21c2e106e6502847ed8a851799c0ab59f0c6b37d409f224",
+      "cases": 61,
+      "sanitizers": "none"
+    },
+    "consumers-asan": {
+      "passed": true,
+      "source_manifest_sha256": "a03190d385db5946f42c61b257cdbdafc32b90819f6a421df6dcdda749d18f10",
+      "cases": 61,
+      "sanitizers": "address,undefined"
+    },
+    "attempt-normal": {
+      "passed": true,
+      "source_manifest_sha256": "7091f36a4f908b978e700cc82273c3156188e71ae4c0dfe8a287a66f78318147",
+      "cases": 30,
+      "sanitizers": "none"
+    },
+    "attempt-asan": {
+      "passed": true,
+      "source_manifest_sha256": "11737d6c6320e183bd166901dccecd447d0dade0e3809e2dd3becbb5b488f130",
+      "cases": 30,
+      "sanitizers": "address,undefined"
+    },
+    "store-normal": {
+      "passed": true,
+      "source_manifest_sha256": "3bb11b0d4bf96ec769892c42003cfc2120276c299974d20e2694d361a02be4ca",
+      "cases": 37,
+      "sanitizers": "none"
+    },
+    "store-asan": {
+      "passed": true,
+      "source_manifest_sha256": "a87a31c6aba3c27c0d5500c5d0fb4c661ae9124bb961a779a7a33a95ec54475a",
+      "cases": 37,
+      "sanitizers": "address,undefined"
+    },
+    "ordinary_sd_files_export_sleep": {
+      "passed": true,
+      "cases": 102,
+      "modes": [
+        "normal",
+        "address,undefined"
+      ]
+    },
+    "fat12_fat16": {
+      "passed": true,
+      "modes": [
+        "normal",
+        "address,undefined"
+      ]
+    },
+    "geometry": {
+      "passed": true,
+      "cases": 524104,
+      "modes": [
+        "normal",
+        "address,undefined"
+      ]
+    },
+    "strict_guard_first": {
+      "passed": true,
+      "modes": [
+        "normal",
+        "address,undefined"
+      ]
+    },
+    "checked_store_faults": {
+      "passed": true,
+      "reached_faults": 488
+    },
+    "assembly_target": {
+      "passed": true,
+      "controls_bytes": 50960,
+      "default_off_empty": true,
+      "default_off_files_baseline_identical": true
+    }
+  },
+  "target": {
+    "async": {
+      "bytes": 106996,
+      "sha256": "10880847a604dc7d6b1ea5555fe7e60a47b6859d26d6ed9299c78b293e9bfd46",
+      "imports": [
+        "memchr",
+        "memcmp",
+        "memcpy",
+        "memset",
+        "strchr",
+        "strlen",
+        "strrchr"
+      ],
+      "mapped_relocations": 877
+    },
+    "ordinary": {
+      "bytes": 93348,
+      "sha256": "1c039d9fa478a7ca0c30042a501122e370e0f74a22447c848fb3467d1d9edc6c",
+      "imports": [
+        "memcmp",
+        "memcpy",
+        "memset",
+        "strchr",
+        "strlen",
+        "strrchr"
+      ],
+      "mapped_relocations": 736
+    }
+  },
+  "source_sha256": {
+    "Runtime": {
+      "experimental/native_replica/CheckedFirstSdCheckpoint.h": "3304eb3228ad72c9e8affb5fc1605ed6664075d72fc3fa973b0382fdbd592696",
+      "experimental/native_replica/NativeSdAttempt.h": "41338f9b0bc288ff52ce37c656c8b487be7542b8dd33b964a6f27a1fbd9dc85b",
+      "experimental/native_replica/NativeSdSession.h": "feeeebf21c1394828755db4e5f4dd42c1d38339f1ae30c6344924e08d4ccba5e",
+      "sdk/driver/RiscStorageAsyncAdapterV1.h": "b54a0851f3d6b6f547f98067d686be0a10871cb655fabb3eb22edf85f4efa743",
+      "sdk/driver/RiscStorageNativeCapacityV1.h": "5eabb6202e062cc66d73b8645c0faa25ad7bc9eb57f0ed3e1a59846e3b305db2",
+      "src/ports/esp32s3/NativeSettingsAssembly.cpp": "e3cf6367547df69e6f2a92ae74b731bc98f113fc1a4e90766195e40bb2a021e5",
+      "src/ports/esp32s3/NativeSettingsBootstrap.cpp": "5fd1aefa1633149817838558ecff83dc5744a225e5e2b31a3c10de0023ff0cba"
+    },
+    "X4": {
+      "minimal/drivers/x4pro_sd/BootLog.h": "ed07383add468485b29293403ff4e9353ebcbee1f056153070308277a52edb57",
+      "minimal/drivers/x4pro_sd/README.md": "91d44712ab57e4b7b6cb9285c0f86cb3c37fa93368adabfbb2b4e90a4e3d190e",
+      "minimal/drivers/x4pro_sd/driver.c": "5969ea38fd96ccd3069dfc360b4aa3dcbdf68e88242b6d728c9ea6c893b3b6b7",
+      "minimal/drivers/x4pro_sd/manifest.json": "7ce7be59f6c46351e41eb86a0734d8bac3d7ae5b6830d978b7132c5243030090",
+      "minimal/scripts/build_storage_fs.py": "149fed888606be977793c24e28067a333c5ab07012f93e1dc185344ab84a4ff6"
+    },
+    "Drivers": {
+      "lib/StorageFatFs/README.md": "006b4e8fb5c0f484b6095a88fe7a38820ad5bebb3fddb90c2b820478b77a25af",
+      "lib/StorageFatFs/fatfs/ff.c": "69d24a03aa19a212cb827f978b3de5abcfd7a533a62d97eb0f44381b3fbd75d5",
+      "lib/StorageFatFs/fatfs/ff.h": "2a5ea07637ee8863b20d73a7a51a24d715b964dba52c82c7368bb60b09dbf1a0",
+      "lib/StorageFatFs/fs_extensions.inc": "22643739ad2a9a5c3d07c2b19c76926f126270388d9774ffe61448486ae725fc",
+      "lib/StorageFatFs/volume.c": "4f99ec31ad9e7848fdabd3d642e64c24a4facf4c64765d5724fce1ecd8d8e86c",
+      "test/fatfs_native_capacity_test.c": "29d1c8574d2c90f77d884d10d1c583195143b72d3e31c635d5d5e010dda9b733",
+      "test/run_fatfs_native_capacity_test.sh": "21f6ba6b5d74d909a32726362e03748717db53f53fabde7706cd2a92c783ce86"
+    }
+  },
+  "limits": [
+    "No physical SD/hot-swap/power-loss qualification",
+    "No new USB-stack integration run",
+    "No product activation",
+    "ASAN leak detector disabled on traced host"
+  ]
+}

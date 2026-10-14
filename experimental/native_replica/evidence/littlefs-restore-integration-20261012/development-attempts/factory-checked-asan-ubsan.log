@@ -1,0 +1,192 @@
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance happy PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=6; peak-vendor-bytes=856; live-vendor-bytes=404
+actual lifecycle/Runtime/X4/FatFs maintenance idle PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+live atomic draft survives ordinary acquisition; obsolete revision still refuses; final release SD-acks PASS
+Factory PSRAM allocator coverage PASS; requests=34; peak-vendor-bytes=177940; live-vendor-bytes=668
+actual lifecycle/Runtime/X4/FatFs maintenance draft-fence PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+first atomic grant is published after both older namespaces settle on SD PASS
+Factory PSRAM allocator coverage PASS; requests=52; peak-vendor-bytes=178054; live-vendor-bytes=927
+actual lifecycle/Runtime/X4/FatFs maintenance pre-capture PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+Factory PSRAM allocator coverage PASS; requests=52; peak-vendor-bytes=178060; live-vendor-bytes=931
+actual lifecycle/Runtime/X4/FatFs maintenance save-exit PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+Factory PSRAM allocator coverage PASS; requests=52; peak-vendor-bytes=178069; live-vendor-bytes=937
+actual lifecycle/Runtime/X4/FatFs maintenance implicit-exit PASS; control=33296; polls=210
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=16; peak-vendor-bytes=2021; live-vendor-bytes=700
+actual lifecycle/Runtime/X4/FatFs maintenance absent PASS; control=33296; polls=8
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance persisted-incarnation PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=174; peak-vendor-bytes=178459; live-vendor-bytes=1078
+actual lifecycle/Runtime/X4/FatFs maintenance foreign PASS; control=33296; polls=63
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance usb-before PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=185; peak-vendor-bytes=178459; live-vendor-bytes=1078
+actual lifecycle/Runtime/X4/FatFs maintenance no-incarnation PASS; control=33296; polls=63
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance cancel PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+last atomic release drains to terminal SD retention PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=164; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=164; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore-concurrent PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=164; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore-resume PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=154; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance restore-single PASS; control=33296; polls=0
+RAM-only assembly restore-no-source refuses without backend I/O, allocation or registration PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app restore-conflict refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app restore-cancel refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual pre-app restore retention PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=178633; live-vendor-bytes=1115
+actual lifecycle/Runtime/X4/FatFs maintenance first PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=178633; live-vendor-bytes=1115
+actual lifecycle/Runtime/X4/FatFs maintenance first-concurrent PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=32; peak-vendor-bytes=5150; live-vendor-bytes=1108
+actual lifecycle/Runtime/X4/FatFs maintenance first-conflict PASS; control=33296; polls=93
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=166; peak-vendor-bytes=178633; live-vendor-bytes=1115
+actual lifecycle/Runtime/X4/FatFs maintenance first-cancel PASS; control=33296; polls=0
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+PSRAM allocation failure refuses hydration without fallback, mutation or retention PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app restore-no-checkpoint refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+actual lifecycle pre-app corrupt-native refuses unchanged PASS
+Permanent factory assembly PASS; static-control=52176; no selection I/O/allocation; copied writer/entropy inputs
+Factory PSRAM allocator coverage PASS; requests=144; peak-vendor-bytes=178441; live-vendor-bytes=923
+actual lifecycle/Runtime/X4/FatFs maintenance six-writers PASS; control=33296; polls=0
+RAM-only LittleFS factory: exact full mount/root, concrete identity and permanent range compose without I/O or activation PASS
+RAM-only assembly assembly-no-owner refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-owner-refuses refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-device refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-writers refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-many-writers refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-bad-writer refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-duplicate-writer refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-wrong-writer-namespace refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-files-root refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-files-hooks refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-files-allocator refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-files-context refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-artifact-namespace refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-source-namespace refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-missing-source refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-metadata refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-metadata-range refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-guard-range refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-guard refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-space refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-no-digest refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-digest-range refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-partial-first refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-first-range refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-zero-incarnation refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-external-control refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-external-tail refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-artifact-identity refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-artifact-missing refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-artifact-tail refuses without backend I/O, allocation or registration PASS
+RAM-only assembly assembly-littlefs-identity refuses without backend I/O, allocation or registration PASS
+=================================================================
+==395==ERROR: AddressSanitizer: stack-use-after-scope on address 0x7f4c67b004fd at pc 0x7f4c6a9ca866 bp 0x7ffcc7a366a0 sp 0x7ffcc7a35e60
+READ of size 18 at 0x7f4c67b004fd thread T0
+    #0 0x7f4c6a9ca865 in strnlen ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:405
+    #1 0x8de657 in valid /workspace/shared/x4-littlefs-restore-integration-20261012/src/ports/esp32s3/NativeSettingsAssembly.cpp:35
+    #2 0x8e03f3 in RiscCpu::NativeSettingsAssembly::assemble(RiscCpu::NativeSettingsAssembly::Inputs const&) /workspace/shared/x4-littlefs-restore-integration-20261012/src/ports/esp32s3/NativeSettingsAssembly.cpp:53
+    #3 0x85be9f in assembleMaintenance /workspace/shared/x4-littlefs-restore-integration-20261012/test/native_settings_assembly_fixture.h:98
+    #4 0x86a6d9 in main /workspace/shared/x4-littlefs-restore-integration-20261012/test/native_settings_maintenance_test.cpp:170
+    #5 0x7f4c697b3ca7  (/lib/x86_64-linux-gnu/libc.so.6+0x29ca7) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+    #6 0x7f4c697b3d64 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x29d64) (BuildId: 5e5b51f4c39af9ac589408c1dc432ba390a273cc)
+    #7 0x4ade10 in _start (/workspace/shared/x4-littlefs-restore-integration-evidence-20261012/factory-checked-asan-ubsan/test+0x4ade10) (BuildId: bfaf91e5054ecc6b088fb944a31675035ef18926)
+
+Address 0x7f4c67b004fd is located in stack of thread T0 at offset 1277 in frame
+    #0 0x8593c8 in assembleMaintenance /workspace/shared/x4-littlefs-restore-integration-20261012/test/native_settings_assembly_fixture.h:34
+
+  This frame has 20 object(s):
+    [32, 33) '<unknown>'
+    [48, 64) 'incarnation1' (line 37)
+    [80, 96) 'incarnation6' (line 37)
+    [112, 128) '<unknown>'
+    [144, 160) '<unknown>'
+    [176, 192) '<unknown>'
+    [208, 224) '<unknown>'
+    [240, 256) '<unknown>'
+    [272, 288) '<unknown>'
+    [304, 320) '<unknown>'
+    [336, 353) 'writerName' (line 37)
+    [400, 432) 'first' (line 39)
+    [464, 496) '<unknown>'
+    [528, 568) '<unknown>'
+    [608, 704) 'writers' (line 38)
+    [736, 872) '<unknown>'
+    [944, 1080) '<unknown>'
+    [1152, 1376) 'mount' (line 63) <== Memory access at offset 1277 is inside this variable
+    [1440, 1952) 'input' (line 40)
+    [2016, 2528) '<unknown>'
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-use-after-scope ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:405 in strnlen
+Shadow bytes around the buggy address:
+  0x7f4c67b00200: f2 f2 f8 f8 f8 f8 f8 f2 f2 f2 f2 f2 00 00 00 00
+  0x7f4c67b00280: 00 00 00 00 00 00 00 00 f2 f2 f2 f2 00 00 00 00
+  0x7f4c67b00300: 00 00 00 00 00 00 00 00 00 00 00 00 00 f2 f2 f2
+  0x7f4c67b00380: f2 f2 f2 f2 f2 f2 00 00 00 00 00 00 00 00 00 00
+  0x7f4c67b00400: 00 00 00 00 00 00 00 f2 f2 f2 f2 f2 f2 f2 f2 f2
+=>0x7f4c67b00480: f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8[f8]
+  0x7f4c67b00500: f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f8 f2 f2 f2 f2
+  0x7f4c67b00580: f2 f2 f2 f2 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7f4c67b00600: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7f4c67b00680: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x7f4c67b00700: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==395==ABORTING
+Traceback (most recent call last):
+  File "/workspace/shared/x4-littlefs-restore-integration-20261012/test/run_native_settings_maintenance_test.py", line 122, in <module>
+    result=subprocess.run(command, check=True, timeout=a.case_timeout, text=True, stdout=subprocess.PIPE)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '[PosixPath('/workspace/shared/x4-littlefs-restore-integration-evidence-20261012/factory-checked-asan-ubsan/test'), PosixPath('/workspace/shared/x4-littlefs-restore-integration-evidence-20261012/factory-checked-asan-ubsan'), 'assembly-littlefs-root', PosixPath('/workspace/shared/x4-littlefs-restore-integration-evidence-20261012/factory-checked-asan-ubsan/native-assembly-littlefs-root')]' returned non-zero exit status 1.

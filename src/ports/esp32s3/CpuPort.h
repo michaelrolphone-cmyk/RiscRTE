@@ -15,6 +15,9 @@
 #include <RiscHttpClientV1.h>
 #include <RiscRadioIqResourceV1.h>
 #include <RiscUsbPhyResourceV1.h>
+#ifndef RISC_NATIVE_STORAGE_CUSTODY
+#define RISC_NATIVE_STORAGE_CUSTODY 0
+#endif
 namespace RiscCpu {
 struct StorageWorkBackend {
  RiscStorage::Worker*mailbox;
@@ -130,6 +133,17 @@ struct Hardware {
   bool (*deepCancel)()=nullptr;
   const DisplayBackend* displayBackend=nullptr;
 };
+// Compiled-in custody seam only. No SDK export, application grant or default
+// selection. Hooks run only on the native owner and must outlive attachment.
+struct NativeStorageCustody {
+ void* context;
+ bool (*sync)(void*,uint64_t);
+ bool (*submit)(void*,uint64_t,const void*,uint32_t);
+ void (*submitted)(void*,uint64_t,int32_t,uint64_t);
+ bool (*collect)(void*,uint64_t,uint64_t);
+ bool (*cancel)(void*,uint64_t,uint64_t);
+ bool (*releasable)(void*);
+};
 class Port final {
  public:
   explicit Port(Hardware hardware):hw_(hardware){}
@@ -147,17 +161,56 @@ class Port final {
   // Actual native cleanup failure retains the existing storage safety barrier.
   bool providerStorageSafe() const;
   bool radioSharedReady() const;
+ #if RISC_NATIVE_STORAGE_CUSTODY
+  enum class NativeStorageState {Context,Busy,Healthy,Unavailable,Retained};
+  bool nativeStorageAttach(uint64_t,const NativeStorageCustody&,uint64_t*,uint64_t*);
+  bool nativeStorageAttachCheckedWarm(uint64_t,const risc_storage_volume_api_v1*,const NativeStorageCustody&,uint64_t*,uint64_t*);
+  bool nativeStorageDetach(uint64_t);
+  bool nativeStorageHeld(uint64_t) const;
+  bool nativeStorageFresh(uint64_t) const;
+  bool nativeStorageIdle(uint64_t) const;
+  NativeStorageState nativeStorageSnapshot(uint64_t,uint64_t*) const;
+  bool nativeStorageOwner() const {return hw_.owner && hw_.owner();}
+  bool nativeStorageBoundTo(const RiscBoot::Runtime&r) const {return nativeStorageOwner()&&bound_&&runtime_==&r;}
+  bool nativeStorageAttached() const; // out-of-line native/host layout boundary
+  // App/UI continuation only during externally verified healthy settings
+  // discovery/maintenance. Global shutdown/restart and raw storage keep barriers.
+  bool nativeDiscoveryProviderSafe() const;
+  bool nativeDiscoveryAppExitSafe() const;
+ #endif
  private:
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  bool nativeDiscoveryBusy() const;
+#endif
   const RiscBoot::Runtime* runtime_=nullptr;
   struct Sync {
     Port* port=nullptr; uint64_t instance=0;
+ #if RISC_NATIVE_STORAGE_CUSTODY
+    uint64_t ownerCalls=0;
+ #endif
     struct Lock { uint64_t token=0; bool held=false; } locks[RISC_PROVIDER_SYNC_MAX_LOCKS]{};
     risc_provider_sync_api_v1 api{};
   } syncs_[RuntimeProviders::GraphV2::kMaxModules];
   struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{}; } gpios_[16];
   struct StorageWork {Gpio*gpio=nullptr;risc_storage_work_scope_v1 scope{};
+ #if RISC_NATIVE_STORAGE_CUSTODY
+    uint64_t serial=0,bindOwnerCalls=0;uint32_t bindings=0;bool submitted=false,touched=false;
+ #endif
     risc_storage_work_io_v1 io{};risc_storage_worker_admission_v2 api{};uint64_t sectors=0;bool opened=false,fault=false,powerClaimed=false;} storageWork_;
   bool storageWorkBusy()const {return hw_.storageWork&&hw_.storageWork->mailbox&&!hw_.storageWork->mailbox->idle();}
+ #if RISC_NATIVE_STORAGE_CUSTODY
+  NativeStorageCustody nativeStorageCustody_{};
+  uint64_t nativeStorageLease_=0,storageScopeSerial_=0,storageTransportSerial_=0;
+  bool nativeStoragePinned() const {return nativeStorageLease_!=0;}
+  Sync* storageSync(uint64_t);
+  const Sync* storageSync(uint64_t) const;
+  bool nativeStorageAttachImpl(uint64_t,const NativeStorageCustody&,uint64_t*,uint64_t*,bool);
+  bool transportChanged();
+ #else
+  bool nativeStoragePinned() const {return false;}
+  bool transportChanged(){return true;}
+ #endif
+  bool storageLifecycleBusy() const {return nativeStoragePinned() || storageWorkBusy();}
   bool configureStorageWork(Gpio&);
   static bool workIoAllowed(void*);
   static int32_t workClaim(void*,const risc_storage_work_scope_v1*);
@@ -189,6 +242,9 @@ class Port final {
   // against the current full token and scope before any read/write. Zero is empty.
   uint8_t gpioWritePins_[64]{};
   Hardware hw_; uint64_t serial_=0; bool bound_=false,poisoned_=false,sleeping_=false,sleepRetained_=false,transferring_=false;
+ #if RISC_NATIVE_STORAGE_CUSTODY
+  bool nativeStorageAttaching_=false;
+ #endif
   size_t syncCount_=0,gpioCount_=0,i2cCount_=0,spiCount_=0,i2sCount_=0,radioCount_=0,hciCount_=0,iqCount_=0;
   risc_platform_clock_wait_v1 clock_{};
   risc_realtime_control_api_v1 realtime_{};

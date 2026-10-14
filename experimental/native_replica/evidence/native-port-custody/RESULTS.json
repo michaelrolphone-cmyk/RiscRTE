@@ -1,0 +1,16 @@
+{
+  "status": "unselected native Port seam; no production persistence claim",
+  "normal_test": "passed after final token/cancel additions",
+  "sanitizers": "ASan+UBSan passed after final token/cancel additions; detect_leaks=0; no-PIE",
+  "target": "actual CpuPort.cpp compiles for legacy/cohort and feature0/1",
+  "unselected_layout_matches": "Runtime0.2.28 1c1ed866",
+  "sha256": {
+    "src/ports/esp32s3/CpuPort.h": "03efe567bbfd0efebe7957c6e79dc518c9d829bc5ce493bf95c9579e5cfe2caa",
+    "src/ports/esp32s3/CpuPort.cpp": "0d644d358a002a0086ff9fb1181b2345beaa496a3b773d122df9fbfea49a12c8",
+    "src/ports/esp32s3/CpuStorageWork.inc": "60aff36277086f08d7f9ae79099e8c58b35dba511174c3783b301a0df963baaf",
+    "test/native_storage_custody_port_test.cpp": "581c46b12bba63d2754c96f7a370e4a9e6a431330352e8f25561624a98928848",
+    "test/run_native_storage_custody_port_test.sh": "35a37d6b3963a2079fd719484bfdafef7a78b3ddd307823126630eeea3e8ef8b",
+    "test/native_storage_custody_target_probe.cpp": "cf13dd5d13de83c2572fe359927be28304ff981644d88736002140c39e763acf",
+    "test/compile_native_storage_custody_target.sh": "3a8a8fdc062af8c79de79551c9bbbd216d6fc57be11e4db66ef431c61b3fceb4"
+  }
+}

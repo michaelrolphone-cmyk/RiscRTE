@@ -1,0 +1,3 @@
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator happy PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator native-close Retained PASS
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: happy, native-close

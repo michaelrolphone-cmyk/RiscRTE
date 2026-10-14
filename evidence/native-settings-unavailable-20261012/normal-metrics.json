@@ -1,0 +1,467 @@
+[
+  {
+    "case": "happy",
+    "host_process_wall_ns": 90290661,
+    "checkpoints": []
+  },
+  {
+    "case": "idle",
+    "host_process_wall_ns": 12677306,
+    "checkpoints": []
+  },
+  {
+    "case": "draft-fence",
+    "host_process_wall_ns": 15597182,
+    "checkpoints": []
+  },
+  {
+    "case": "pre-capture",
+    "host_process_wall_ns": 25837428,
+    "checkpoints": []
+  },
+  {
+    "case": "save-exit",
+    "host_process_wall_ns": 13884260,
+    "checkpoints": []
+  },
+  {
+    "case": "implicit-exit",
+    "host_process_wall_ns": 19114143,
+    "checkpoints": []
+  },
+  {
+    "case": "absent",
+    "host_process_wall_ns": 154120373,
+    "checkpoints": []
+  },
+  {
+    "case": "persisted-incarnation",
+    "host_process_wall_ns": 252433136,
+    "checkpoints": []
+  },
+  {
+    "case": "foreign",
+    "host_process_wall_ns": 742145123,
+    "checkpoints": []
+  },
+  {
+    "case": "usb-before",
+    "host_process_wall_ns": 394444140,
+    "checkpoints": []
+  },
+  {
+    "case": "no-incarnation",
+    "host_process_wall_ns": 218179319,
+    "checkpoints": []
+  },
+  {
+    "case": "cancel",
+    "host_process_wall_ns": 22916676,
+    "checkpoints": []
+  },
+  {
+    "case": "retained",
+    "host_process_wall_ns": 14239700,
+    "checkpoints": []
+  },
+  {
+    "case": "restore",
+    "host_process_wall_ns": 219540374,
+    "checkpoints": []
+  },
+  {
+    "case": "restore-concurrent",
+    "host_process_wall_ns": 57666487,
+    "checkpoints": []
+  },
+  {
+    "case": "restore-resume",
+    "host_process_wall_ns": 231372751,
+    "checkpoints": []
+  },
+  {
+    "case": "restore-single",
+    "host_process_wall_ns": 58247350,
+    "checkpoints": []
+  },
+  {
+    "case": "restore-no-source",
+    "host_process_wall_ns": 14920387,
+    "checkpoints": []
+  },
+  {
+    "case": "restore-conflict",
+    "host_process_wall_ns": 202775357,
+    "checkpoints": []
+  },
+  {
+    "case": "restore-cancel",
+    "host_process_wall_ns": 24612977,
+    "checkpoints": []
+  },
+  {
+    "case": "restore-retained",
+    "host_process_wall_ns": 33060349,
+    "checkpoints": []
+  },
+  {
+    "case": "first",
+    "host_process_wall_ns": 69955324,
+    "checkpoints": []
+  },
+  {
+    "case": "first-concurrent",
+    "host_process_wall_ns": 862741092,
+    "checkpoints": []
+  },
+  {
+    "case": "first-conflict",
+    "host_process_wall_ns": 46389961,
+    "checkpoints": []
+  },
+  {
+    "case": "first-cancel",
+    "host_process_wall_ns": 252480999,
+    "checkpoints": []
+  },
+  {
+    "case": "unavailable-absent",
+    "host_process_wall_ns": 1111481844,
+    "checkpoints": []
+  },
+  {
+    "case": "unavailable-recover",
+    "host_process_wall_ns": 213693404,
+    "checkpoints": []
+  },
+  {
+    "case": "unavailable-conflict",
+    "host_process_wall_ns": 83438109,
+    "checkpoints": []
+  },
+  {
+    "case": "unavailable-cancel",
+    "host_process_wall_ns": 26103602,
+    "checkpoints": []
+  },
+  {
+    "case": "unavailable-return",
+    "host_process_wall_ns": 110443007,
+    "checkpoints": []
+  },
+  {
+    "case": "unavailable-retained",
+    "host_process_wall_ns": 32537849,
+    "checkpoints": []
+  },
+  {
+    "case": "unavailable-app-retained",
+    "host_process_wall_ns": 18019103,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-fresh",
+    "host_process_wall_ns": 17031612,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-fresh-restore",
+    "host_process_wall_ns": 393558595,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-fresh-concurrent",
+    "host_process_wall_ns": 33087475,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-legacy",
+    "host_process_wall_ns": 21544491,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-legacy-concurrent",
+    "host_process_wall_ns": 30547293,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-fresh-absent",
+    "host_process_wall_ns": 9161002,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-legacy-absent",
+    "host_process_wall_ns": 24552162,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-fresh-busy",
+    "host_process_wall_ns": 11103592,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-legacy-busy",
+    "host_process_wall_ns": 20967830,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-fresh-retained",
+    "host_process_wall_ns": 11268975,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-legacy-conflict",
+    "host_process_wall_ns": 9848155,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-legacy-corrupt",
+    "host_process_wall_ns": 15741493,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-native-error",
+    "host_process_wall_ns": 9557416,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-bare-init",
+    "host_process_wall_ns": 14522583,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-fresh-resume",
+    "host_process_wall_ns": 14100150,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-fresh-resume-stage",
+    "host_process_wall_ns": 17878086,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-fresh-resume-rename",
+    "host_process_wall_ns": 16225966,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-legacy-resume",
+    "host_process_wall_ns": 27943011,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-legacy-resume-stage",
+    "host_process_wall_ns": 29878422,
+    "checkpoints": []
+  },
+  {
+    "case": "bootstrap-legacy-resume-rename",
+    "host_process_wall_ns": 32649957,
+    "checkpoints": []
+  },
+  {
+    "case": "payload-failure",
+    "host_process_wall_ns": 9405410,
+    "checkpoints": []
+  },
+  {
+    "case": "restore-no-checkpoint",
+    "host_process_wall_ns": 13566521,
+    "checkpoints": []
+  },
+  {
+    "case": "corrupt-native",
+    "host_process_wall_ns": 9839412,
+    "checkpoints": []
+  },
+  {
+    "case": "six-writers",
+    "host_process_wall_ns": 33695267,
+    "checkpoints": []
+  },
+  {
+    "case": "littlefs-assembly-only",
+    "host_process_wall_ns": 8009570,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-no-owner",
+    "host_process_wall_ns": 11170283,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-owner-refuses",
+    "host_process_wall_ns": 6681239,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-no-device",
+    "host_process_wall_ns": 7324440,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-no-writers",
+    "host_process_wall_ns": 7819726,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-many-writers",
+    "host_process_wall_ns": 7623551,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-bad-writer",
+    "host_process_wall_ns": 10564533,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-duplicate-writer",
+    "host_process_wall_ns": 6589519,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-wrong-writer-namespace",
+    "host_process_wall_ns": 6083013,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-files-root",
+    "host_process_wall_ns": 10845879,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-files-hooks",
+    "host_process_wall_ns": 16233408,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-files-allocator",
+    "host_process_wall_ns": 9327085,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-files-context",
+    "host_process_wall_ns": 10306662,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-artifact-namespace",
+    "host_process_wall_ns": 10299293,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-source-namespace",
+    "host_process_wall_ns": 8717896,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-legacy-namespace",
+    "host_process_wall_ns": 15781735,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-legacy-tail",
+    "host_process_wall_ns": 8658718,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-missing-source",
+    "host_process_wall_ns": 9418047,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-no-metadata",
+    "host_process_wall_ns": 10984996,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-metadata-range",
+    "host_process_wall_ns": 10074333,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-guard-range",
+    "host_process_wall_ns": 8500708,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-no-guard",
+    "host_process_wall_ns": 132027535,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-no-space",
+    "host_process_wall_ns": 57368380,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-no-digest",
+    "host_process_wall_ns": 9220385,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-digest-range",
+    "host_process_wall_ns": 7731751,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-partial-first",
+    "host_process_wall_ns": 15087342,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-first-range",
+    "host_process_wall_ns": 10624340,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-zero-incarnation",
+    "host_process_wall_ns": 6767584,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-external-control",
+    "host_process_wall_ns": 8638083,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-external-tail",
+    "host_process_wall_ns": 6346401,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-artifact-identity",
+    "host_process_wall_ns": 9213312,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-artifact-missing",
+    "host_process_wall_ns": 11859989,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-artifact-tail",
+    "host_process_wall_ns": 10408016,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-littlefs-identity",
+    "host_process_wall_ns": 12218468,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-littlefs-root",
+    "host_process_wall_ns": 12185723,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-littlefs-type",
+    "host_process_wall_ns": 9222868,
+    "checkpoints": []
+  },
+  {
+    "case": "assembly-littlefs-tail",
+    "host_process_wall_ns": 11429170,
+    "checkpoints": []
+  }
+]

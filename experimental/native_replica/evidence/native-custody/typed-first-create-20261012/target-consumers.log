@@ -1,0 +1,13 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+000177c0 0000a258 B native_sd_catalog_size
+00011ea0 00005920 B native_sd_legacy_size
+00000068 00003468 B native_sd_preparation_size
+0000c528 00005978 B native_sd_reader_size
+00021a18 0000c4d0 B native_sd_recovery_size
+00000000 00000068 B native_sd_session_size
+000034d0 00009058 B native_sd_writer_size
+79462ee6ce3cfec089db2c125267421d4d11dba216b9f805d06814087f9552d5  evidence/native-first-typed/all-consumers-target/native-sd-consumers.o

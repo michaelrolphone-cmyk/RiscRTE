@@ -1,0 +1,8 @@
+actual lifecycle/Runtime/X4/FatFs maintenance happy PASS; control=33256; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance idle PASS; control=33256; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance foreign PASS; control=33256; polls=76
+actual lifecycle/Runtime/X4/FatFs maintenance usb-before PASS; control=33256; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance no-incarnation PASS; control=33256; polls=78
+actual lifecycle/Runtime/X4/FatFs maintenance cancel PASS; control=33256; polls=119
+actual lifecycle/Runtime/X4/FatFs maintenance terminal retention PASS
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: happy, idle, foreign, usb-before, no-incarnation, cancel, retained

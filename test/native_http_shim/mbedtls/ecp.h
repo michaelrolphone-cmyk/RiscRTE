@@ -1,0 +1,2 @@
+#pragma once
+#define MBEDTLS_ERR_ECP_ALLOC_FAILED -0x4D80

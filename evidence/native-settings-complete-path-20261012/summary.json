@@ -1,0 +1,328 @@
+{
+  "schema": "native-settings-complete-path-qualification-v1",
+  "completed_utc": "2026-10-12T14:02:15.579397+00:00",
+  "source_commit": "459ca4f05a86c054dc018965527f432b6bc1a334",
+  "same_source_normal_and_sanitized": true,
+  "result": "PASS",
+  "runs": {
+    "normal": {
+      "sanitizers": "none",
+      "source_commit": "459ca4f05a86c054dc018965527f432b6bc1a334",
+      "source_clean": true,
+      "manifest_sha256": "b7f06ece40012d025fec05b88ff1cea9bd9f034caa4c126ce486ee59c0c22804",
+      "case_count": 14,
+      "cases": [
+        {
+          "case": "normal",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633823,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "absent",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 540672
+        },
+        {
+          "case": "ambiguous",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 544768
+        },
+        {
+          "case": "conflict",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633562,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interrupt",
+          "expected_exit": 73,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633819,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interruption-restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "first-cut",
+          "expected_exit": 74,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633883,
+          "allocated_artifact_bytes": 552960
+        },
+        {
+          "case": "first-resume",
+          "expected_exit": 0,
+          "payload_peak_bytes": 16611,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "no-entropy",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "publication-cut",
+          "expected_exit": 75,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633815,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "publication-resume",
+          "expected_exit": 0,
+          "payload_peak_bytes": 195810,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633813,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "publication-erase",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264560,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633812,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "async-restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        }
+      ],
+      "max_payload_bytes": 264833,
+      "max_internal_control_heap_bytes": 40141
+    },
+    "asan": {
+      "sanitizers": "address,undefined",
+      "source_commit": "459ca4f05a86c054dc018965527f432b6bc1a334",
+      "source_clean": true,
+      "manifest_sha256": "95073c169b5a8b84cf497d19a6ba3c385923f27cac36d3f4d0a78d21b5ea072e",
+      "case_count": 14,
+      "cases": [
+        {
+          "case": "normal",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633823,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "absent",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 540672
+        },
+        {
+          "case": "ambiguous",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633156,
+          "allocated_artifact_bytes": 544768
+        },
+        {
+          "case": "conflict",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264302,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633562,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interrupt",
+          "expected_exit": 73,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633819,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "interruption-restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "first-cut",
+          "expected_exit": 74,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633883,
+          "allocated_artifact_bytes": 552960
+        },
+        {
+          "case": "first-resume",
+          "expected_exit": 0,
+          "payload_peak_bytes": 16611,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "no-entropy",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264833,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633821,
+          "allocated_artifact_bytes": 548864
+        },
+        {
+          "case": "publication-cut",
+          "expected_exit": 75,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633815,
+          "allocated_artifact_bytes": 561152
+        },
+        {
+          "case": "publication-resume",
+          "expected_exit": 0,
+          "payload_peak_bytes": 195810,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633813,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "publication-erase",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264560,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633812,
+          "allocated_artifact_bytes": 565248
+        },
+        {
+          "case": "async-restore",
+          "expected_exit": 0,
+          "payload_peak_bytes": 264561,
+          "internal_control_heap_peak_bytes": 40141,
+          "logical_artifact_bytes": 67633814,
+          "allocated_artifact_bytes": 561152
+        }
+      ],
+      "max_payload_bytes": 264833,
+      "max_internal_control_heap_bytes": 40141
+    }
+  },
+  "source_map": {
+    "runtime_base": "488844645cbfdb7a2e987613e24bcdb57332ed8b",
+    "availability_source": "63a02ee",
+    "availability_layout_fixes": [
+      "4c01320",
+      "9a7aa6a"
+    ],
+    "availability_qualification": [
+      "20e05aa",
+      "2ea546b"
+    ],
+    "namespace_dispatch": [
+      "21006fdc028d9a3f83fe3ca74bd3f6d2a559354d",
+      "45414018df1f85413ce82735d87a14c01c385758"
+    ],
+    "entropy_and_first_guard": "25e57dc27aeea090cd6310fad291a0e2caf594e4",
+    "memory_repair": {
+      "upstream": "dc0ba0e41900f713e7477b87477a077af7a75c49",
+      "local": "045da70"
+    },
+    "target_worker_destructor": {
+      "upstream": "7d1fb43bac6eed97e3cd2aca2aade0b596b97552",
+      "local": "459ca4f05a86c054dc018965527f432b6bc1a334"
+    },
+    "harness": [
+      "8cf6471",
+      "df3f65d",
+      "edd28a5"
+    ],
+    "x4": {
+      "published": "3c32f85de9c3c80a6b085753d16744c47712172d",
+      "local": "0a10bd15e3693768683fd41870f5d438ed57ccfe"
+    },
+    "drivers": {
+      "published": "11bc45d263f830c70cea53a8c8749e4fcf17b041",
+      "local": "ee244590d3c835af012776ce2480e47b25e23477"
+    }
+  },
+  "layout": {
+    "runtime_host_and_selected_consumer_bytes": 288848,
+    "cpu_port_host_and_selected_consumer_bytes": 11776,
+    "cohort_selection": "RISC_PAIRED_BANKS for every translation unit"
+  },
+  "update_class": {
+    "product_image": "/workspace/shared/x4-evening-102-reproduction-20261012/X4-0.1.102-FULL-INITIAL-ERASES-DATA.bin",
+    "bytes": 16777216,
+    "full_sha256": "7fd53280019ea8d4d00821c89b512fce58d01186c4dbe3f1e47f0c5b15171bc2",
+    "nvs": {
+      "offset": 36864,
+      "bytes": 24576,
+      "all_erased_ff": true
+    },
+    "appdata": {
+      "offset": 2555904,
+      "bytes": 524288,
+      "sha256": "5f03c248f2de31c4da9ae8d9bc2033df064cee5e37694a9982f70fbb2f1d2ef0",
+      "contents": "exact pinned empty LittleFS disk2.1 initial provisioning image"
+    },
+    "source_product_commit": "8dba3205f63dcb9558d80890b9bf5c4aed16f230",
+    "recipe": "minimal/scripts/build_test_bundle.py:416-441",
+    "routine_ota": "minimal/scripts/update_artifacts.py:83 payload is firmware+store only; no appdata or NVS",
+    "covered_update_class": "Full16MiB initial/destructive image replacement, with preserved external SD. The test mounts the exact empty appdata segment and uses fresh modeled NVS. Not raw erased-flash mount; not physical flashing."
+  },
+  "boundaries": [
+    "Source-bound host qualification; no product selection or hardware/device access.",
+    "Real factory, backend, native settings worker/coordinator, mount, LittleFS, Runtime/CpuPort, X4 driver and FatFs; SDK NVS, entropy, RTOS schedule and physical devices are explicit models.",
+    "Synthetic Settings/Wi-Fi test applications through real Runtime grants; not System UI/codec or complete product cohort.",
+    "NVS torn-write/wear/capacity and physical flash/SD faults are not qualified.",
+    "Failed entropy resumes an existing exact durable first marker and refuses a genuinely new SD lineage.",
+    "Full image reset mounts exact .102 empty LittleFS bytes; raw erased appdata is not mounted/formatted on boot.",
+    "Heap numbers describe selected host-model allocations, not target BSS/task-stack/heap headroom.",
+    "LeakSanitizer disabled for intentionally permanent controls and abrupt process-loss tests. ASan and UBSan otherwise halt on findings."
+  ]
+}

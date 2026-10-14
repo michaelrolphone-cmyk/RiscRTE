@@ -1,0 +1,33 @@
+{
+  "base_commit": "c1d93bcc4d6c6755b7ad23a12d1df35d909278f8",
+  "identity_prerequisite_commit": "667fbefe1432c3a73434b02bfec2816471cabc29",
+  "integration_note": "Use the checked SD restore worker identity accessors when integrating; they additionally compare all new SD initialization hooks.",
+  "sources": {
+    "src/ports/esp32s3/NativeSettingsWorker.h": "5fb35f5d4830d2e3b893db2b9e0a01bd4f41103e00396aafcacfad1a6241335c",
+    "src/ports/esp32s3/NativeSettingsWorker.cpp": "07757db96085f97da329b0b588993ffc2c56de2abfa04e3bc8e2a6f94b8bae47",
+    "src/ports/esp32s3/NativeRadioResources.h": "c67319ae24eb24dde7c809f8513700d2e6314d50fb3f5edeb96a8a9dc80a8d17",
+    "experimental/native_replica/NativeSettingsCoordinator.h": "cfdc0124cd35d68b00d2ddfa53e29c13f544d485fff4b61e996c7dca4fc0ba08",
+    "experimental/native_replica/NativeAtomicKeyValue.h": "7152a52cb225b7777c45ab74df2285099ab7c3fbb0e61be500c1ccaec4aa24a1",
+    "experimental/native_replica/NativeReplicaCore.h": "a7a1c8c1dc9baac3a1637242604c7dbc3cd381da2565a746fe44def6eba92ed3",
+    "experimental/native_replica/CheckedNativeReplicaStore.h": "c6e73c3a446e6b45017b3b4a2285768ef4b7166e5bee63ce0d20c0b1da0d6577",
+    "experimental/native_replica/NvsReplicaMetadata.h": "33c5b5d2658c3a08674baf3177e4c4e8bddf7d9756fe7d86c0f447e7a6a2d1f8",
+    "experimental/native_replica/NativeReplicaJob.h": "754bf13c4144702b224cc93ad1d7302f4b72e127dcf391bcc99b0da0c0ab9f78",
+    "experimental/native_replica/CheckedFreshInitArtifacts.h": "dddced395fdc628d47ee6698c4abec4003ceadb3ce24a3d3626769e2e52c4183",
+    "experimental/native_replica/NativeRebaseCandidate.h": "9988f9b652e0955bbd4792ca3bbd08be9d3a65f999be01a97f657515031eb67c",
+    "src/runtime/storage/AppDataFiles.cpp": "cdf022200c59f85d148ae4806416507e8b2a72e5612bc41684f61a9cea409f55",
+    "src/runtime/storage/AppDataFiles.h": "d8ea5b33d0cc33b721396867a59eeaf60b26358f042a96e17a624bc0579cd935",
+    "src/runtime/storage/StorageWorker.h": "07b9ef437436e5e51f52ad13fc11da3bdcdb08628b39203b68146bd786e90430",
+    "sdk/app/RiscKeyValueAtomicV1.h": "552b0be1890eced2c688700671832bbd1ec15b3663801d59ae946173f94313c5",
+    "test/native_replica_checked_fixture.h": "7b36ac4b4843cb21c31909683324415906234a500978b25068bb053108d38e09",
+    "test/native_settings_worker_binding_test.cpp": "03d2a7a09540c74f203e7b083114417f836b625feb6525cfe621e0e411ccce0d",
+    "test/run_native_settings_worker_binding_test.sh": "6614c564cfa2858ac56c4f8ce904f5fdf0184d5bc665f6c2c294a9fec020ae04",
+    "test/compile_native_settings_worker_target.sh": "6be2c9a06c5d0b78167b2862dbdf752ec7b8a4d7f0b80c75660e4fcb8f8063ed",
+    "test/native_settings_worker_target_probe.cpp": "b0b429efd4339f014eb7a1ebf5e43f3eabd8cc99903729eb7eef0fc09d675346",
+    "test/native_settings_worker_layout_probe.cpp": "c0a81a338f95e75b119ee8227b720e000b21339c190d776bce1982430e1f5fd2",
+    "test/native_settings_worker_shim/esp_heap_caps.h": "fa2628ce1e05d1fbf68a0e58793df8af8bd53983d91260f8c55fea5f1b53e3c8",
+    "test/native_settings_worker_shim/freertos/FreeRTOS.h": "1b308ba2af4d5caa99132b56d7ae3bfda531039fc836f1720a4afc29e27b324f",
+    "test/native_settings_worker_shim/freertos/task.h": "56ebccce6057d1865568b27b2622e76b1a9fe72ad815d53e617e25a8941d9770",
+    "test/native_settings_worker_shim/soc/soc_memory_types.h": "250cba4c2f27baa57423ef6b38ff1d09b7f836b15480925efba9c5093dc89cd9",
+    "test/native_nvs_shim/nvs.h": "8083ba93fe83b97c00d2240194bc9652d7a5b8c372ca75ac8f8dc5508588b2f1"
+  }
+}

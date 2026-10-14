@@ -1,0 +1,5 @@
+coordinator: real checked store/NVS composition; owner-only zero-I/O polls; native namespace exclusion; terminal collection; 40000 concurrent idle read releases PASS
+coordinator: four-client bound; foreign/stale leases; native maintenance Retained reaches atomic state/get/submit/exit PASS
+coordinator: queued revoke keeps lease until collected without mutation; completed cancellation preserves committed receipt PASS
+coordinator: actual AppData write blocked concurrently; cancellation/exit/native contention cannot release or delete running work PASS
+coordinator: actual checked close failure sticks Retained, namespace/background lease and native references PASS

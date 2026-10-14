@@ -1,0 +1,15 @@
+Imported init: exact receipt/source binding resumes original absent or empty rnr state; selected root and later edits cannot be reinitialized PASS
+Imported init: 593 exact pending prefixes and full canonical bank re-reserve monotonically; no staged bank promotion PASS
+Imported init: 628 root/source/owner/sequence/map/artifact mutations and every full-object byte corruption refuse without overwriting evidence PASS
+Imported init: 11 hash/append/post-admission source, receipt, sequence, inventory, epoch and artifact changes prevent publication PASS
+Imported init: 19 explicit-version/backend/collector gates, complete recheck bindings and admitted-map tamper refusals PASS
+Imported init: altered root revision refuses before receipt replacement; create/resume reboot retries remain recoverable PASS
+Imported init: 96 map-digest false plus Retained/lease-loss callback cuts stop hashing and I/O, preserve receipt and recover after reboot PASS
+Imported init allocations (84-byte map create): 25 allocations, 939476 requested bytes total, 191444 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init allocations (84-byte map resume): 25 allocations, 816516 requested bytes total, 191444 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init allocations (65028-byte map create): 25 allocations, 2569700 requested bytes total, 591332 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init allocations (65028-byte map resume): 25 allocations, 2436516 requested bytes total, 591332 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init: bounded scratch allocation/hash failures unwind and wipe; all shared core/admission/store/source allocations released PASS
+Imported init: 46 shared core/admission/store/AppData/source allocation-failure positions recover exact original bytes after reboot PASS
+Imported init: 1850 reached create/resume NVS and filesystem returned-error cuts (54 Retained, 320 Uncertain); reboot loads selected root or resumes exact source receipt PASS
+Imported initialization remains disconnected; host fault evidence is not ESP filesystem/hardware qualification

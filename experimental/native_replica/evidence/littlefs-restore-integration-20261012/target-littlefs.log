@@ -1,0 +1,39 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+         U __ashldi3
+         U __errno
+         U memchr
+         U memcmp
+         U memcpy
+         U memset
+         U snprintf
+         U strcmp
+         U strcpy
+
+/workspace/shared/x4-littlefs-restore-integration-evidence-20261012/target-littlefs/native-littlefs-profile.o:     file format elf32-xtensa-le
+
+Contents of section .rodata:
+ 0000 0e000000 1c000000 2a000000 c8010000  ........*.......
+ 0010 08000000 b8000000                    ........        
+CheckedFreshInitArtifacts.h:96:10:uint8_t RiscExperimental::CheckedFreshInitArtifacts::expectedAt(uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:112:11:uint32_t RiscExperimental::CheckedFreshInitArtifacts::expectedCrc(uint32_t, uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:140:18:static uint32_t RiscExperimental::CheckedFreshInitArtifacts::word(const uint8_t*)	32	static
+CheckedFreshInitArtifacts.h:141:14:static bool RiscExperimental::CheckedFreshInitArtifacts::zero(const uint8_t*, uint32_t)	32	static
+CheckedFreshInitArtifacts.h:142:18:static uint32_t RiscExperimental::CheckedFreshInitArtifacts::crc(const uint8_t*, uint32_t)	32	static
+CheckedFreshInitArtifacts.h:143:7:bool RiscExperimental::CheckedFreshInitArtifacts::validImported(const uint8_t*, uint32_t) const	64	static
+CheckedFreshInitArtifacts.h:162:7:bool RiscExperimental::CheckedFreshInitArtifacts::validSd(const uint8_t*, uint32_t) const	64	static
+CheckedLittleFsFreshInitArtifacts.h:69:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::path(const char*, size_t)	32	static
+CheckedLittleFsFreshInitArtifacts.h:77:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::valid(const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:83:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::same(const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&, const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:90:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::check(bool)	464	static
+CheckedLittleFsFreshInitArtifacts.h:105:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::cleanup(int)	32	static
+CheckedLittleFsFreshInitArtifacts.h:120:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::metadata(const stat&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:122:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::sameStat(const stat&, const stat&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:124:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::stat(const char*, stat*)	32	static
+CheckedLittleFsFreshInitArtifacts.h:131:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::file(const char*, const stat&, const Canonical&, uint64_t, bool)	656	static
+CheckedLittleFsFreshInitArtifacts.h:146:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::inventory(const Canonical&, uint64_t, bool)	752	static
+CheckedLittleFsFreshInitArtifacts.h:177:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::inspect(const uint8_t*, uint32_t, uint64_t, RiscExperimental::CheckedLittleFsFreshInitArtifacts::Attempt)	96	static
+native_littlefs_profile_target_probe.cpp:3:16:int checked_littlefs_profile_target(I&, const uint8_t*)	48	static
+native_littlefs_profile_target_probe.cpp:4:16:int checked_littlefs_import_target(I&, const uint8_t*, unsigned int)	48	static
+native_littlefs_profile_target_probe.cpp:5:16:int checked_littlefs_sd_target(I&, const uint8_t*, unsigned int)	48	static
+05b70ed4a57dc2af238509ce251506228d98305fa976c468ad2e313f5d8ea2ee  /workspace/shared/x4-littlefs-restore-integration-evidence-20261012/target-littlefs/native-littlefs-profile.o
+PASS: separately supplied profile compiles; no production mount adapter or selection

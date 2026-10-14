@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo="$(cd "$(dirname "$0")/.." && pwd)"
+build="$(mktemp -d)"
+trap 'rm -rf "$build"' EXIT
+flags=(-DRISC_NATIVE_STORAGE_CUSTODY=1 -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers)
+if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=${SANITIZERS:-undefined} -fno-sanitize-recover=all -fno-omit-frame-pointer  -g);fi
+if [[ "${NO_PIE:-0}" == 1 ]]; then flags+=(-fno-pie -no-pie);fi
+"${CXX:-c++}" "${flags[@]}" -rdynamic -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs" \
+ "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
+ "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
+ "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/test/native_storage_custody_port_test.cpp" -ldl -o "$build/test"
+"$build/test" "$build"

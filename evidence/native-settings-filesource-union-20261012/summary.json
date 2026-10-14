@@ -1,0 +1,22 @@
+{
+  "runtime_source": "1b4df3b02566acc3e65d486cff2cc91628307d3c",
+  "system_source": "cf695a3be54ad70c211d3aafda8667dc82da3d48",
+  "file_source_cases_per_mode": 29,
+  "normal_and_asan_ubsan": true,
+  "additional_checks": [
+    "file source storage privacy, capacity, short I/O, false-success and retention",
+    "five-client scratch allocation failure before persistent mutation",
+    "actual Runtime availability with data-grant reconciliation fences"
+  ],
+  "logs": {
+    "run_native_settings_scratch_allocation_test.sh-asan.log": "029b413927e4e0ef293f5038c14e986066a4a9aacb6a71db97bf14e41a5a66d7",
+    "run_file_source_storage_test.sh-normal.log": "c1c9f98c809f6277ef37dbe130b4692dceae59a2c4fdb6ade91af349f39109d6",
+    "run_file_source_storage_test.sh-asan.log": "c1c9f98c809f6277ef37dbe130b4692dceae59a2c4fdb6ade91af349f39109d6",
+    "runtime-asan.log": "e1c8152e6c80309514d77b371cdf078b010d30fd3591eeb5081a4023ad77b991",
+    "run_native_settings_availability_test.sh-asan.log": "5d58e9cb0f216054efdc04c98b6c28cce4cdc255e3a372db841501c59e38d7cd",
+    "run_native_settings_availability_test.sh-normal.log": "5d58e9cb0f216054efdc04c98b6c28cce4cdc255e3a372db841501c59e38d7cd",
+    "run_native_settings_scratch_allocation_test.sh-normal.log": "029b413927e4e0ef293f5038c14e986066a4a9aacb6a71db97bf14e41a5a66d7",
+    "runtime-normal.log": "e1c8152e6c80309514d77b371cdf078b010d30fd3591eeb5081a4023ad77b991"
+  },
+  "limits": "Host qualification only. Full settings/FileSource combined normal+ASan evidence is separately frozen after the later publication stack repair."
+}

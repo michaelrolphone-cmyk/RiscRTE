@@ -1,0 +1,2 @@
+test: /workspace/shared/x4-settings-catalog-latency-20261012/test/native_catalog_poll_budget_test.cpp:63: void boundedPolls(): Assertion `probe.fused&&card==before&&!s.sd.mutations&&F::nvs.empty()' failed.
+test/run_native_catalog_poll_budget_test.sh: line 10:    18 Aborted                 "$build/test" "$build/native"

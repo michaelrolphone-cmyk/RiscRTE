@@ -1,0 +1,24 @@
+         U _Unwind_Resume
+00000000 00000017 t _ZN7RiscCpu28NativeSettingsStartupEntropy12_GLOBAL__N_14LockD1Ev
+00000000 00000017 t _ZN7RiscCpu28NativeSettingsStartupEntropy12_GLOBAL__N_14LockD2Ev
+00000000 0000001a t _ZN7RiscCpu28NativeSettingsStartupEntropy12_GLOBAL__N_14wordEPhj
+00000000 0000002c b _ZN7RiscCpu28NativeSettingsStartupEntropy12_GLOBAL__N_15stateE
+00000000 00000018 t _ZN7RiscCpu28NativeSettingsStartupEntropy12_GLOBAL__N_17ScratchD1Ev
+00000000 00000018 t _ZN7RiscCpu28NativeSettingsStartupEntropy12_GLOBAL__N_17ScratchD2Ev
+00000000 00000007 T _ZN7RiscCpu28NativeSettingsStartupEntropy12controlBytesEv
+00000000 0000027b T _ZN7RiscCpu28NativeSettingsStartupEntropy4takeEjNS0_7PurposeEPvPFbS2_EPh
+00000000 000001d7 T _ZN7RiscCpu28NativeSettingsStartupEntropy7captureEPFbvE
+         U __gxx_personality_v0
+         U __stack_chk_fail
+         U __stack_chk_guard
+         U bootloader_random_disable
+         U bootloader_random_enable
+         U esp_fill_random
+         U mbedtls_sha256_finish_ret
+         U mbedtls_sha256_free
+         U mbedtls_sha256_init
+         U mbedtls_sha256_starts_ret
+         U mbedtls_sha256_update_ret
+         U memcpy
+         U memset
+         U xPortInIsrContext

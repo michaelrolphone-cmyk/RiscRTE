@@ -1,0 +1,4 @@
+BASELINE DEBUG admitted=0 initialized=0
+BASELINE DEBUG admitted=0 initialized=0
+FIRST DEBUG gen=0/0 pending=1/1 result=7/7 error=-2/-2
+test-baseline: /workspace/shared/x4-settings-save-maintenance-20261012/test/native_settings_maintenance_test.cpp:265: void test_maintenance_app(): Assertion `cores[0]->identity().generation==1&&cores[1]->identity().generation==1&&!cores[0]->pendingCount()&&!cores[1]->pendingCount()' failed.

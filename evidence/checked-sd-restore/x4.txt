@@ -1,0 +1,7 @@
+actual X4/FatFs checked native SD restore happy PASS
+actual X4/FatFs checked native SD restore conflict PASS
+actual X4/FatFs checked native SD restore cancel PASS
+actual X4/FatFs checked native SD restore running-cancel PASS
+actual X4/FatFs checked native SD restore native-retained PASS
+actual X4/FatFs checked native SD restore late-retained PASS
+Actual X4/FatFs checked native restore composition PASS; external source inputs: 249

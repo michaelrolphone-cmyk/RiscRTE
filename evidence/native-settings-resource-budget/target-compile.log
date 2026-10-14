@@ -1,0 +1,71 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+COMPILE runtime-off
+COMPILE runtime-layout-off
+00000000 00002458 B atomic_cpu_port_size
+00000000 0000006c B atomic_runtime_port_size
+00000000 0004e2a0 B atomic_runtime_size
+COMPILE worker-off
+COMPILE runtime-on
+COMPILE runtime-layout-on
+00000000 00002458 B atomic_cpu_port_size
+00000000 0000006c B atomic_runtime_port_size
+00000000 0004e8e8 B atomic_runtime_size
+COMPILE worker-on
+COMPILE worker-layout
+00000000 00000010 B native_settings_binding_alignment
+00000000 000032af B native_settings_binding_allocation_size
+00000000 000032a0 B native_settings_binding_size
+00000000 00000010 B native_settings_registry_size
+00000000 0000656e B native_settings_two_bindings_permanent_size
+00000000 00004000 B native_settings_two_bindings_stack_size
+00000000 000002b0 B native_settings_two_bindings_task_control_size
+COMPILE resources
+00000000 00000070 B resource_admission
+00000000 000000b8 B resource_artifacts
+00000000 00001090 B resource_atomic
+00000000 000000b0 B resource_attempt
+00000000 00003e00 B resource_catalog
+00000000 0000b400 B resource_catalog_default_restore_entries
+00000000 00009000 B resource_catalog_default_scan_entries
+00000000 00000090 B resource_catalog_entry
+00000000 00002a18 B resource_checkpoint
+00000000 00001128 B resource_coordinator
+00000000 000000f0 B resource_core
+00000000 0000ffe8 B resource_core_image_limit
+00000000 000025e8 B resource_cpu_port
+00000000 00000074 B resource_digest
+00000000 000000c8 B resource_files
+00000000 00002a28 B resource_first
+00000000 000000c8 B resource_import_sources
+00000000 000001d0 B resource_initialization
+00000000 000025c8 B resource_legacy_reader
+00000000 0000ffe8 B resource_map_max
+00000000 0000000c B resource_metadata
+00000000 000000f8 B resource_port_attempt
+00000000 00002640 B resource_reader
+00000000 00002a58 B resource_recovery
+00000000 00000330 B resource_restore
+00000000 0004e8e8 B resource_runtime
+00000000 00000020 B resource_runtime_pin
+00000000 00000040 B resource_snapshot
+00000000 00000130 B resource_store
+00000000 00003e78 B resource_synchronization
+COMPILE consumers
+COMPILE first
+COMPILE import
+COMPILE main-lifecycle
+COMPILE runtime-lifecycle
+COMPILE runtime-layout-lifecycle
+00000000 000025e8 B atomic_cpu_port_size
+00000000 00000070 B atomic_runtime_port_size
+00000000 0004e8f0 B atomic_runtime_size
+COMPILE lifecycle
+COMPILE lifecycle-layout
+00000000 00000088 B resource_lifecycle_load
+00000000 000003e8 B resource_lifecycle_state
+COMPILE lifecycle-off
+COMPILE appdata

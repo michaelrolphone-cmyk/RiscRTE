@@ -121,6 +121,9 @@ bool Runtime::residentFailure(uint64_t token,risc_resident_failure_v1* out) {
   *out=lastFailure_;out->struct_size=sizeof(*out);return out->kind!=RISC_RESIDENT_FAILURE_NONE;
 }
 int32_t Runtime::runForeground(uint64_t token,const char* relative,risc_resident_result_v1* out) {
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(nativeCheckpointRunning_)return RISC_RESIDENT_BUSY;
+#endif
   if(!out || out->struct_size<sizeof(*out))return RISC_RESIDENT_INVALID;
   *out={};out->struct_size=sizeof(*out);
   auto refuse=[out](int32_t status){out->status=status;return status;};
@@ -230,6 +233,9 @@ int32_t Runtime::residentExit(uint64_t token) {
   foregroundExit_=true;return RISC_RESIDENT_OK;
 }
 int32_t Runtime::residentCheckpoint(uint64_t token,const risc_resident_request_v1* request,risc_resident_reply_v1* reply) {
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(nativeCheckpointRunning_)return RISC_RESIDENT_BUSY;
+#endif
   if(!residentToken(token,RISC_RESIDENT_ROLE_FOREGROUND) || !foregroundRunning_ || !shellToken_)return RISC_RESIDENT_DENIED;
   if(shellDispatching_ || yielding_ || promotionRunning_ || graph_.lifecycleBusy() || mainInvocation_.streams_.busy())return RISC_RESIDENT_BUSY;
   constexpr uint32_t pollFlags=RISC_RESIDENT_POLL_ACTIVITY|RISC_RESIDENT_POLL_INHIBIT_IDLE|RISC_RESIDENT_POLL_INHIBIT_POLICY;

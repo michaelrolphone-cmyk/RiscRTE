@@ -1,0 +1,8 @@
+Related interrupted artifacts: complete/partial/empty stage, prior backup, backup-only rollback source, same/newer/zero orphan generations restore without SD mutation PASS
+Hostile artifacts: foreign/malformed stage and backup, corrupt primary never fallback, legacy mixture, unknown names and impossible/case-aliased pages remain closed with bytes preserved PASS
+Sync inventory: stage descriptors remain read-only after marker retirement; malformed CRC refuses and no cleanup authority is minted PASS
+Target-bound stage v2: maximum-length grammar, complete/empty/partial/current/older descriptors, 20 retained targets; foreign/name/content/CRC mismatches refuse without selection or mutation PASS
+Sync catalog: prior large v1 base verified after smaller v2 marker capture; verification candidate cannot authorize native restore PASS
+Artifact reads: 60 queued/active/closed cancellation, epoch/lease/media loss and Retained boundaries mint no candidate and preserve all bytes PASS
+Interrupted writer: 218 before/after cuts; backup-only=2 staged=28 published-with-backup=2 empty-pages=4; erase/restore and restart exact, every SD byte preserved PASS
+Interrupted SD catalog suite PASS

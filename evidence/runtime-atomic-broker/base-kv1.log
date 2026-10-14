@@ -1,0 +1,63 @@
+Volatile scratch wipe: full fixed buffer, all early/success exits, bounds and unique scope ownership PASS
+Real runtime + dynamic app key-value grants/handoff/fresh boot PASS
+Real runtime + dynamic app key-value grants/handoff/fresh boot PASS
+Capability policy denial, owner/live-generation enforcement, namespace isolation, bounds/faults and persistent fresh-process boot PASS
+In file included from /workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsKeyValue.h:64,
+                 from /workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/test/native_nvs_test.cpp:3:
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h: In function ‘int32_t RiscNvs::Settings::write(uint32_t, const char*, const char*, const void*, uint32_t)’:
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:30:2: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   30 |  if(readRaw(check.value,k,bytes,sizeof bytes,&n)||n!=size||std::memcmp(bytes,data,size))return RISC_KEY_VALUE_IO;return 0;
+      |  ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:30:114: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   30 |  if(readRaw(check.value,k,bytes,sizeof bytes,&n)||n!=size||std::memcmp(bytes,data,size))return RISC_KEY_VALUE_IO;return 0;
+      |                                                                                                                  ^~~~~~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h: In function ‘int32_t RiscNvs::Settings::next(void*, uint32_t, bool, const char*, char*, void*, uint32_t, uint32_t*)’:
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:33:2: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   33 |  if(!after||!key||!n||!out||!valid(ns,"probe"))return RISC_KEY_VALUE_INVALID;*n=0;key[0]=0;
+      |  ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:33:78: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   33 |  if(!after||!key||!n||!out||!valid(ns,"probe"))return RISC_KEY_VALUE_INVALID;*n=0;key[0]=0;
+      |                                                                              ^
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:37:2: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   37 |  if(rc==ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_NOT_FOUND;if(rc!=ESP_OK)return RISC_KEY_VALUE_IO;
+      |  ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:37:63: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   37 |  if(rc==ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_NOT_FOUND;if(rc!=ESP_OK)return RISC_KEY_VALUE_IO;
+      |                                                               ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:48:2: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   48 |  if(!key[0])return RISC_KEY_VALUE_NOT_FOUND;return readRaw(h.value,key,out,cap,n);
+      |  ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:48:45: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   48 |  if(!key[0])return RISC_KEY_VALUE_NOT_FOUND;return readRaw(h.value,key,out,cap,n);
+      |                                             ^~~~~~
+cc1plus: all warnings being treated as errors
+In file included from /workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsKeyValue.h:64,
+                 from /workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsKeyValue.cpp:2:
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h: In function ‘int32_t RiscNvs::Settings::write(uint32_t, const char*, const char*, const void*, uint32_t)’:
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:30:2: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   30 |  if(readRaw(check.value,k,bytes,sizeof bytes,&n)||n!=size||std::memcmp(bytes,data,size))return RISC_KEY_VALUE_IO;return 0;
+      |  ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:30:114: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   30 |  if(readRaw(check.value,k,bytes,sizeof bytes,&n)||n!=size||std::memcmp(bytes,data,size))return RISC_KEY_VALUE_IO;return 0;
+      |                                                                                                                  ^~~~~~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h: In function ‘int32_t RiscNvs::Settings::next(void*, uint32_t, bool, const char*, char*, void*, uint32_t, uint32_t*)’:
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:33:2: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   33 |  if(!after||!key||!n||!out||!valid(ns,"probe"))return RISC_KEY_VALUE_INVALID;*n=0;key[0]=0;
+      |  ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:33:78: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   33 |  if(!after||!key||!n||!out||!valid(ns,"probe"))return RISC_KEY_VALUE_INVALID;*n=0;key[0]=0;
+      |                                                                              ^
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:37:2: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   37 |  if(rc==ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_NOT_FOUND;if(rc!=ESP_OK)return RISC_KEY_VALUE_IO;
+      |  ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:37:63: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   37 |  if(rc==ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_NOT_FOUND;if(rc!=ESP_OK)return RISC_KEY_VALUE_IO;
+      |                                                               ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:48:2: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   48 |  if(!key[0])return RISC_KEY_VALUE_NOT_FOUND;return readRaw(h.value,key,out,cap,n);
+      |  ^~
+/workspace/shared/x4-runtime-atomic-broker-20261012/.build/base/src/ports/esp32s3/NvsScalableSettings.h:48:45: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   48 |  if(!key[0])return RISC_KEY_VALUE_NOT_FOUND;return readRaw(h.value,key,out,cap,n);
+      |                                             ^~~~~~
+cc1plus: all warnings being treated as errors
+wrapper_exit=1

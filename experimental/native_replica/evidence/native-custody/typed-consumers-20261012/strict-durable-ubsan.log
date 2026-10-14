@@ -1,0 +1,9 @@
+durable export chain: live and reboot recovery acknowledge exactly 8 captured groups while newer Wi-Fi overwrite/opaque intents and complete current map survive PASS
+durable export chain: verified exact old base retires marker only, preserves every newer edit and recaptures without retaining the old map PASS
+durable export chain: exact identity/content, writer quiescence, held same-medium lease, cancellation and newer-during-verification guards PASS
+durable export chain: 65,360-byte prior v1 base remains verifiable for retirement after v2 upgrade while ordinary reader enforces current 65,124-byte import budget PASS
+durable export chain: v2 held receiver counts real captured header/groups, admits exact byte limit, rejects one-byte excess before staging and retains original pending intent PASS
+durable export chain: 680 SD publication returned-error/power cuts and 165 cancel/lease/restart handoffs recover with newer native writes and exact prefix authority PASS
+durable export chain: 164 recovery-reader failures (10 retained) and 412 cancel/lease/quiescence/reset handoffs preserve selected marker until fresh checked evidence PASS
+durable export chain: 1122 actual native marker-arm/retire/prefix-ack failures (24 retained, 72 uncertain) recover old/new roots with original/newer map and prefix membership intact PASS
+DISCONNECTED DURABLE-EXPORT PROOF: fixed synthetic incarnation source only; no initial dataset creation, migration, SDK/UI/.90/port or hardware qualification

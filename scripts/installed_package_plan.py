@@ -25,7 +25,10 @@ def plan(packages, core, bootstrap, *, native=(), bindings=None, sd_ready=False,
     Missing/ambiguous providers and cycles reject before any output is returned.
     A package has id, kind, requires, provides, files. Each file explicitly pins
     internal_path, sd_path, bytes, sha256, url. All packages are SD-preferred
-    except bootstrap and its transitive dependency closure.
+    except bootstrap and its transitive dependency closure. A package that does
+    not fit the remaining SD payload budget stays together on internal storage;
+    the existing SPIFFS accounting must still admit the complete internal set.
+    This selection occurs before mutation, never as an I/O-error retry.
     """
     require(isinstance(packages, list) and len(packages) <= 128, 'catalog bound')
     require(type(sd_ready) is bool and type(sd_bytes) is int and sd_bytes >= 0, 'media state')
@@ -98,7 +101,9 @@ def plan(packages, core, bootstrap, *, native=(), bindings=None, sd_ready=False,
         pin(ident)
     files, paths, sizes, sd_used = [], set(), list(base_internal_sizes), 0
     for ident in order:
-        medium = 'internal' if ident in internal or not sd_ready else 'sd'
+        package_bytes = sum(f['bytes'] for f in entries[ident]['files'])
+        medium = ('internal' if ident in internal or not sd_ready or
+                  package_bytes > sd_bytes - sd_used else 'sd')
         for f in entries[ident]['files']:
             path = f['internal_path'] if medium == 'internal' else f['sd_path']
             require(not any(m == medium and (p == path or p.startswith(path + '/') or path.startswith(p + '/'))

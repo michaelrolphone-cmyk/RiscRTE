@@ -1,5 +1,11 @@
 #include "CpuPort.h"
 #include "HciBounds.h"
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#include "NativeSettingsLifecycle.h"
+#endif
+#if RISC_NATIVE_STORAGE_CUSTODY
+#include <RiscStorageSessionAdmissionV1.h>
+#endif
 #include <cstring>
 namespace RiscCpu {
 namespace {
@@ -53,6 +59,7 @@ bool Port::radioSharedReady() const {
 }
 bool Port::providerStorageSafe() const {
   if(display_.closing)return false;
+  if(nativeStoragePinned())return false;
   if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe() || !entropySafe())return false;
   if(hw_.radioAsync && hw_.radioAsync->custodySafe && !hw_.radioAsync->custodySafe())return false;
   if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
@@ -77,6 +84,41 @@ bool Port::appExitSafe() const {
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   return true;
 }
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+bool Port::nativeDiscoveryBusy() const {
+  return NativeSettingsLifecycle::continuing()&&nativeStorageAttached()&&nativeDiscoveryProviderSafe();
+}
+#endif
+#if RISC_NATIVE_STORAGE_CUSTODY
+bool Port::nativeDiscoveryProviderSafe() const {
+  if(!nativeStoragePinned())return providerStorageSafe();
+  if(!nativeStorageHeld(nativeStorageLease_))return false;
+  if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe() || !entropySafe())return false;
+  if(hw_.radioAsync && hw_.radioAsync->custodySafe && !hw_.radioAsync->custodySafe())return false;
+  if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
+  for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
+  if(hw_.httpSafe && !hw_.httpSafe())return false;
+  for(const auto& pin:pins_)if(pin.held && !pin.retiredHeld)return false;
+  for(const auto& c:i2ss_)if(c.closing)return false;
+  for(const auto& c:radios_)if(c.closing)return false;
+  if(hci_.closing || (hw_.hciSafe && !hw_.hciSafe()))return false;
+  return true;
+}
+bool Port::nativeDiscoveryAppExitSafe() const {
+  if(!nativeStoragePinned())return appExitSafe();
+  if(!nativeStorageHeld(nativeStorageLease_))return false;
+  // Healthy HCI is entirely firmware/provider-owned, with no app callbacks or
+  // borrowed app storage; it survives navigation. Restart/sleep still drain it.
+  if(!nativeDiscoveryProviderSafe() || iq_.token || usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
+  for(const auto& pin:pins_)if(pin.wakeModes)return false;
+  if(!tcpIdle() || !entropyIdle())return false;
+  if(hw_.httpIdle && !hw_.httpIdle())return false;
+  for(const auto& c:i2ss_)if(c.token)return false;
+  for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
+  if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
+  return true;
+}
+#endif
 bool Port::restartResourcesSafe() const {
   if(display_.token)return false;
   if(runtime_ && !runtime_->residentResetSafe())return false;
@@ -107,6 +149,9 @@ int32_t Port::httpOpen(void* context,const risc_http_request_v1* request,uint64_
   if(out)*out=0;
   auto& p=*static_cast<Port*>(context);
   if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClient)return RISC_HTTP_CLOSED;
+  #if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(p.nativeDiscoveryBusy())return RISC_HTTP_BUSY;
+#endif
   if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
   p.transferring_=true;const auto result=p.hw_.httpClient->open(p.hw_.httpClient->context,request,out);p.transferring_=false;return result;
 }
@@ -114,6 +159,9 @@ int32_t Port::httpRead(void* context,uint64_t token,void* out,uint32_t size,uint
   if(count)*count=0;
   auto& p=*static_cast<Port*>(context);
   if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClient)return RISC_HTTP_CLOSED;
+  #if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(p.nativeDiscoveryBusy())return RISC_HTTP_BUSY;
+#endif
   if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
   p.transferring_=true;const auto result=p.hw_.httpClient->read(p.hw_.httpClient->context,token,out,size,count);p.transferring_=false;return result;
 }
@@ -348,7 +396,7 @@ bool Port::usbPhyClaim(void* context,uint64_t* out){
   if(out)*out=0;
   if(!context || !out)return false;
   auto& c=*static_cast<UsbPhy*>(context);if(!c.port)return false;auto& p=*c.port;
-  if(!usbPhyOwner(context) || p.transferring_ || c.token || c.closing ||
+  if(!usbPhyOwner(context) || p.nativeStoragePinned() || p.transferring_ || c.token || c.closing ||
      !p.hw_.usbPhyIdle || !p.hw_.usbPhySuspend || !p.hw_.usbPhyResume || !p.hw_.usbPhyIdle() ||
      p.pins_[19].owner || p.pins_[20].owner || p.serial_==UINT64_MAX)return false;
   // CPU pin ownership excludes ordinary GPIO/bus clients for the lease.
@@ -667,13 +715,23 @@ bool Port::radioScanCancel(void* context,uint64_t token){
 #include "CpuRadioAsync.inc"
 bool Port::syncOwner(void* context){
   if(!context)return false;
-  const auto& c=*static_cast<Sync*>(context);
-  return c.port && c.port->available() && !c.port->sleepRetained_;
+  auto& c=*static_cast<Sync*>(context);
+  if(!c.port || !c.port->available() || c.port->sleepRetained_)return false;
+ #if RISC_NATIVE_STORAGE_CUSTODY
+  if(c.ownerCalls==UINT64_MAX)return false;
+  ++c.ownerCalls;
+  auto&p=*c.port;
+  return !p.nativeStoragePinned() || !p.storageWork_.gpio || c.instance!=p.storageWork_.gpio->instance ||
+         p.nativeStorageCustody_.sync(p.nativeStorageCustody_.context,c.instance);
+ #else
+  return true;
+ #endif
 }
 bool Port::syncCreate(void* context,uint64_t* out){
   if(out)*out=0;
-  if(!out || !syncOwner(context))return false;
+  if(!context)return false;
   auto& c=*static_cast<Sync*>(context);
+  if(!out || !c.port || (c.port->nativeStoragePinned() && c.port->storageWork_.gpio && c.instance==c.port->storageWork_.gpio->instance) || !syncOwner(context))return false;
   for(auto& lock:c.locks)if(!lock.token){
     const uint64_t token=c.port->token();if(!token)return false;
     lock={token,false};*out=token;return true;
@@ -681,8 +739,9 @@ bool Port::syncCreate(void* context,uint64_t* out){
   return false;
 }
 bool Port::syncTryLock(void* context,uint64_t token){
-  if(!token || !syncOwner(context))return false;
+  if(!context)return false;
   auto& c=*static_cast<Sync*>(context);
+  if(!token || !c.port || (c.port->nativeStoragePinned() && c.port->storageWork_.gpio && c.instance==c.port->storageWork_.gpio->instance) || !syncOwner(context))return false;
   for(auto& lock:c.locks)if(lock.token==token){
     if(lock.held)return false;
     lock.held=true;return true;
@@ -692,14 +751,16 @@ bool Port::syncTryLock(void* context,uint64_t token){
 bool Port::syncUnlock(void* context,uint64_t token){
   if(!context || !token)return false;
   auto& c=*static_cast<Sync*>(context);
-  if(!c.port || !c.port->hw_.owner || !c.port->hw_.owner() || c.port->sleeping_)return false;
+  if(!c.port || !c.port->hw_.owner || !c.port->hw_.owner() || c.port->sleeping_ ||
+     (c.port->nativeStoragePinned() && c.port->storageWork_.gpio && c.instance==c.port->storageWork_.gpio->instance))return false;
   for(auto& lock:c.locks)if(lock.token==token && lock.held){lock.held=false;return true;}
   return false;
 }
 bool Port::syncDestroy(void* context,uint64_t token){
   if(!context || !token)return false;
   auto& c=*static_cast<Sync*>(context);
-  if(!c.port || !c.port->hw_.owner || !c.port->hw_.owner() || c.port->sleeping_)return false;
+  if(!c.port || !c.port->hw_.owner || !c.port->hw_.owner() || c.port->sleeping_ ||
+     (c.port->nativeStoragePinned() && c.port->storageWork_.gpio && c.instance==c.port->storageWork_.gpio->instance))return false;
   for(auto& lock:c.locks)if(lock.token==token && !lock.held){lock={};return true;}
   return false;
 }
@@ -776,7 +837,7 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_LIGHT_SLEEP_RETAINED;
   if(!p.tcpIdle() || !p.entropyIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
-  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.display_.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
@@ -831,7 +892,7 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(!p.tcpIdle() || !p.entropyIdle())return RISC_DEEP_SLEEP_BUSY;
   if(p.runtime_ && !p.runtime_->residentResetSafe())return RISC_DEEP_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
-  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   if(p.display_.token)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
@@ -897,7 +958,7 @@ int32_t Port::gpioWakeSource(void* context,uint64_t token,bool high,uint32_t mod
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_ || p.sleepRetained_)return RISC_LIGHT_SLEEP_RETAINED;
-  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_)return RISC_LIGHT_SLEEP_BUSY;
+  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_)return RISC_LIGHT_SLEEP_BUSY;
   unsigned count=0;for(const auto& pin:p.pins_)if(pin.wakeModes)++count;
   for(unsigned i=0;i<49;++i){auto& pin=p.pins_[i];
     if(pin.owner!=&c || pin.token!=token || pin.output)continue;
@@ -924,7 +985,7 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   if(!p.tcpIdle() || !p.entropyIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(deep && p.runtime_ && !p.runtime_->residentResetSafe())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
-  if(p.storageWorkBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.display_.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
@@ -994,7 +1055,7 @@ int32_t Port::gpioDeepSleepHold(void* context,uint64_t token,bool enable){
   if(p.sleepRetained_)return RISC_DEEP_SLEEP_RETAINED;
   if(p.sleeping_ || p.transferring_)return RISC_DEEP_SLEEP_BUSY;
   // A live storage worker still exclusively owns its own pad scope.
-  if(p.storageWorkBusy() && p.storageWork_.gpio==&c)return RISC_DEEP_SLEEP_BUSY;
+  if(p.storageLifecycleBusy() && p.storageWork_.gpio==&c)return RISC_DEEP_SLEEP_BUSY;
   for(unsigned i=0;i<49;++i){
     auto& pin=p.pins_[i];
     if(!token || pin.owner!=&c || pin.token!=token || !pin.output)continue;

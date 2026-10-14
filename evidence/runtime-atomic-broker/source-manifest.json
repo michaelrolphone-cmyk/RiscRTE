@@ -1,0 +1,93 @@
+{
+  "base_commit": "68e6cefc10f16fe82b6f365dfe5daffd7f768d72",
+  "system_commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89",
+  "source_files": [
+    {
+      "path": "src/bootstrap/AtomicKeyValueConfig.h",
+      "sha256": "2fc3bb605ac374708ab4369f5be2403c651136a0dd294974e9f6b37093bb2ce5"
+    },
+    {
+      "path": "src/bootstrap/AtomicKeyValueRuntime.inc",
+      "sha256": "b2823bcd6a0f766558c78c1c6510ac860016118c6832f4be126e6fe12c492eb2"
+    },
+    {
+      "path": "src/bootstrap/Runtime.h",
+      "sha256": "2157b5fcf03b8871f2504a856cc7067c8faf617679d43dc6cba8cb7c6740bd65"
+    },
+    {
+      "path": "src/bootstrap/Runtime.cpp",
+      "sha256": "e2b70931ee70037ba96138f1ae95103c390844c360a967c3e699b6ee880591fd"
+    },
+    {
+      "path": "experimental/native_replica/NativeAtomicKeyValue.h",
+      "sha256": "7152a52cb225b7777c45ab74df2285099ab7c3fbb0e61be500c1ccaec4aa24a1"
+    },
+    {
+      "path": "test/atomic_key_value_runtime_test.cpp",
+      "sha256": "ab4b9fb3dcccde7a24d7a0aa11b6553b4879c81b01d781a162b5cbcc2cf97abf"
+    },
+    {
+      "path": "test/runtime_atomic_wifi_controller.c",
+      "sha256": "5c64f8fb618821f9d71131a285d23e986ae10876b6af63753e9c589ff351145e"
+    },
+    {
+      "path": "test/fixtures/atomic_key_value_app.c",
+      "sha256": "71c6c2e527bbc56c0a9bcbf9189329a6c1de7cbf9ef094517c9d28783bff31bd"
+    },
+    {
+      "path": "test/fixtures/atomic_key_value_provider.c",
+      "sha256": "6f228c8f53a6228b6a8ecf95466ce94777da9f18c7584b9b92bc78342b3377b9"
+    },
+    {
+      "path": "test/run_atomic_key_value_runtime_test.sh",
+      "sha256": "9fe30727493faced44c395171b74b69fba0043e0d57cf38cfce492bb754687c3"
+    },
+    {
+      "path": "test/run_runtime_atomic_wifi_controller_test.sh",
+      "sha256": "926f767fa991774b631a998a4a984a1cacd77d843f292360dc6e732f56a096ba"
+    },
+    {
+      "path": "test/compile_atomic_key_value_runtime_target.py",
+      "sha256": "719353f90bd3d177c34effd05b4bae015b5221148b56f4cfcc05482e2f1cd89b"
+    },
+    {
+      "path": "test/atomic_key_value_target_probe.cpp",
+      "sha256": "e5c27ca972f54d95cd6e34d287102f156e52383fba1cca0c0057b3bab81b475a"
+    }
+  ],
+  "system_files": [
+    {
+      "path": "Apps/wifi_atomic.inc",
+      "sha256": "b84ae8354e12a0839ed756bb3284c18922932c57088e8fa13f3ab734c357aa16"
+    },
+    {
+      "path": "test/native_apps/wifi_workflow_test.c",
+      "sha256": "675f02b202b1321af1bdaf9339fb1a5e377a8890436179faacc9f85ae7215bf7"
+    },
+    {
+      "path": "test/native_apps/portable_wifi_test.c",
+      "sha256": "340ac972f9f132c616ebe3f475c2b369b3524a04b915e0b024c5d035525e2ef0"
+    },
+    {
+      "path": "lib/PortableApps/include/PortableWifiAtomic.h",
+      "sha256": "e3d6f411a9ccae3f19f9b20b3d91fe4e99dc8e4746661210213a0c135abdc9fa"
+    },
+    {
+      "path": "lib/PortableApps/include/PortableWifiCredentials.h",
+      "sha256": "a6fd61ac64d3607de04b01185633fe9653678df73a467c22e458f9cc43393d29"
+    },
+    {
+      "path": "lib/RemoteFiles/vendor/tinydtls_sha2/sha2.c",
+      "sha256": "1635a91007f60c9bfc8c42dde1ed7d4f6134240bf0289583b51bfd614d49ebc5"
+    }
+  ],
+  "sanitizers": "address,undefined; ASAN_OPTIONS=detect_leaks=0 because executor ptrace prevents LeakSanitizer",
+  "limits": "No product enablement, native private-mount admission, firmware link/flash, hardware qualification or automatic dataset merge.",
+  "commands": [
+    "ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 SYSTEM_ROOT=/workspace/shared/x4-system-atomic-wifi-20261012 bash test/run_runtime_atomic_wifi_controller_test.sh",
+    "ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 SANITIZERS=address,undefined bash test/run_native_atomic_key_value_test.sh",
+    "python3 test/compile_atomic_key_value_runtime_target.py /workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages .build/atomic-target"
+  ],
+  "shared_native_header": "Includes coordinated Guard.retained/nativeRetained/nativePending/nativeReleaseSafe changes from native worker increment; retained() delegates shared nativeRetained().",
+  "native_worker_commit": "a4343499a1a0d6cc377f56147c08e7199616fe5d"
+}

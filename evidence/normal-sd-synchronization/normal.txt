@@ -1,0 +1,18 @@
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator happy PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator foreign PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator changed PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator same-generation PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator legacy PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator unknown PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator usb-before PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator unavailable PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator cancel-admission PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator cancel-preparation PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator cancel-write PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator cancel-ack PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator running-cancel PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator remove Retained PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator sd-close Retained PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator native-close Retained PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator late-retained Retained PASS
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: happy, foreign, changed, same-generation, legacy, unknown, usb-before, unavailable, cancel-admission, cancel-preparation, cancel-write, cancel-ack, running-cancel, remove, sd-close, native-close, late-retained

@@ -1,0 +1,81 @@
+{
+  "scope": "Non-runnable address-relocation probe only; final ELF is read via --just-symbols, never modified. Proves all seven identical --wrap options map external API references to the exact strong wrapper addresses in the selected firmware. Does not claim a format call occurs at runtime.",
+  "elf_sha256": "a871627a4f05b0819df85902a4193f1cd9da02ceb1755147d79791979e0fc0fe",
+  "commands": [
+    [
+      "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-g++",
+      "-fdata-sections",
+      "-c",
+      "build/native-resource/wrap-proof/wrap-probe.cpp",
+      "-o",
+      "build/native-resource/wrap-proof/wrap-probe.o"
+    ],
+    [
+      "/workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-ld",
+      "-r",
+      "-R",
+      "build/native-resource/selected-psram/firmware.elf",
+      "--wrap=esp_vfs_register",
+      "--wrap=esp_vfs_unregister",
+      "--wrap=esp_partition_read",
+      "--wrap=esp_partition_write",
+      "--wrap=esp_partition_erase_range",
+      "--wrap=esp_littlefs_format",
+      "--wrap=esp_littlefs_format_partition",
+      "build/native-resource/wrap-proof/wrap-probe.o",
+      "-o",
+      "build/native-resource/wrap-proof/wrap-probe-bound.o"
+    ]
+  ],
+  "bindings": [
+    {
+      "api": "esp_vfs_register",
+      "resolved_symbol": "__wrap_esp_vfs_register",
+      "address": 1107496816,
+      "offset": 0,
+      "relocation_type": 1
+    },
+    {
+      "api": "esp_vfs_unregister",
+      "resolved_symbol": "__wrap_esp_vfs_unregister",
+      "address": 1107497352,
+      "offset": 4,
+      "relocation_type": 1
+    },
+    {
+      "api": "esp_partition_read",
+      "resolved_symbol": "__wrap_esp_partition_read",
+      "address": 1107497424,
+      "offset": 8,
+      "relocation_type": 1
+    },
+    {
+      "api": "esp_partition_write",
+      "resolved_symbol": "__wrap_esp_partition_write",
+      "address": 1107497460,
+      "offset": 12,
+      "relocation_type": 1
+    },
+    {
+      "api": "esp_partition_erase_range",
+      "resolved_symbol": "__wrap_esp_partition_erase_range",
+      "address": 1107497532,
+      "offset": 16,
+      "relocation_type": 1
+    },
+    {
+      "api": "esp_littlefs_format",
+      "resolved_symbol": "__wrap_esp_littlefs_format",
+      "address": 1107497600,
+      "offset": 20,
+      "relocation_type": 1
+    },
+    {
+      "api": "esp_littlefs_format_partition",
+      "resolved_symbol": "__wrap_esp_littlefs_format_partition",
+      "address": 1107497636,
+      "offset": 24,
+      "relocation_type": 1
+    }
+  ]
+}

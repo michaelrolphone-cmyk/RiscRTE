@@ -1,0 +1,20 @@
+{
+  "product_image": "/workspace/shared/x4-evening-102-reproduction-20261012/X4-0.1.102-FULL-INITIAL-ERASES-DATA.bin",
+  "bytes": 16777216,
+  "full_sha256": "7fd53280019ea8d4d00821c89b512fce58d01186c4dbe3f1e47f0c5b15171bc2",
+  "nvs": {
+    "offset": 36864,
+    "bytes": 24576,
+    "all_erased_ff": true
+  },
+  "appdata": {
+    "offset": 2555904,
+    "bytes": 524288,
+    "sha256": "5f03c248f2de31c4da9ae8d9bc2033df064cee5e37694a9982f70fbb2f1d2ef0",
+    "contents": "exact pinned empty LittleFS disk2.1 initial provisioning image"
+  },
+  "source_product_commit": "8dba3205f63dcb9558d80890b9bf5c4aed16f230",
+  "recipe": "minimal/scripts/build_test_bundle.py:416-441",
+  "routine_ota": "minimal/scripts/update_artifacts.py:83 payload is firmware+store only; no appdata or NVS",
+  "covered_update_class": "Full16MiB initial/destructive image replacement, with preserved external SD. The test mounts the exact empty appdata segment and uses fresh modeled NVS. Not raw erased-flash mount; not physical flashing."
+}

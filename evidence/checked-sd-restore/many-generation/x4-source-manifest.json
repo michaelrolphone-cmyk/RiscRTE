@@ -1,0 +1,1844 @@
+{
+  "external_sources": [
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "Drivers/x4pro_board/x4pro_proto.h",
+      "sha256": "daa7efef2ceace7df6edd31c356bc1fc58830b0b9b3880c096d7b565a6e5f945"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/drivers/x4pro_sd/BootLog.h",
+      "sha256": "f2ed275113f48fcb8ab30df44295cffe946cb8837ea12a3ce8eb7686fc3c5ce2"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/drivers/x4pro_sd/Export.h",
+      "sha256": "4424ee6b9efd2c9fb6f85946c1800605ed3e6b699344741d85d3499c26a5cd2a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/drivers/x4pro_sd/README.md",
+      "sha256": "e8ec9b0dc53b2eb457ea340914f1312f937d8acd9103f48ceedfe51166d6dcd9"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/drivers/x4pro_sd/driver.c",
+      "sha256": "ba86f49ccf3ea8b4958ebf9497650a7c63a9f92ffa8ec1f679b6e75526d85a1a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/drivers/x4pro_sd/manifest.json",
+      "sha256": "aaaccae4bdc50e42cd5300a543a03a476f3b8ff14cb34c5cb88cd83a929464ae"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/drivers/x4pro_sd/shared-volume-hooks.patch",
+      "sha256": "d01d645850ce20888bfd2148f10bd4ef55bc676662746d142106851422d09af9"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/interfaces/RiscDisplayOutputFrontlightV1.h",
+      "sha256": "80add72493af301d89b521cd1987dbc3e17c618c5c56415ddf345aff50f4d18d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/interfaces/RiscDisplayOutputMetricsV1.h",
+      "sha256": "5be17adbae2ec26a855894e0d6443ac29572002c21efe53b2a913a5a0f0c642d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/interfaces/RiscDisplayOutputSettledV1.h",
+      "sha256": "18bfd89f3fa01d35e74f83c28ace60f16ca42fa0f678d7dc1fdc16e163fccc4f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/interfaces/RiscDisplayOutputSnapshotV1.h",
+      "sha256": "b835fd1a3600551d54efb2806cbe8dd3ecc512a538572dc853aaf11f4e2490b6"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/interfaces/RiscFrontlightToneV1.h",
+      "sha256": "7c9956bdb5d0f7cccf91146b4bbb42b41745e9fa547fdf0a46850f30203f2872"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/interfaces/RiscStorageVolumeStateV1.h",
+      "sha256": "1f2f7dbfe9ec7ac27a57149ac720cf7f3a4801d6d34b5532f77c77db252b87a1"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/scripts/prepare_sd_wire_fixture.py",
+      "sha256": "0341f2f829808f6a2a35c809ef5d9aaab3762ae561d4f4763b89dc47a97f3175"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/scripts/prepare_sdk.py",
+      "sha256": "bda5434649785277392ba4b281be564c5e1f50dd7914113827814a351a8aa33a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/app_bundle_grants_test.py",
+      "sha256": "f88db4f6f0a86314245fb22a59c4de7b322a5ccb7adb59dec814c335149ddc03"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/battery_test.c",
+      "sha256": "4a468cfc832721220849139061d5d85da9b7872e0e07cb82802defcf89ae0038"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/board_keepalive_cpu_test.cpp",
+      "sha256": "845cc8223a47c36024558f70bd2317744a849c35f75726a52ff6d677f705a073"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/board_keepalive_validation.json",
+      "sha256": "e81ef24edf5e4bcc0888fc71918556033d931b0f43b1e58f1f41113e6d062082"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/board_power_test.c",
+      "sha256": "71f7fe71608c8f04d29d2dff7504ae5f660d03840603f3bef59214dc90daa314"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/boot_logging_profile_test.py",
+      "sha256": "8e7509094e026c605a53f0c3a562f56fcb14f341900d84c5e11732abffe0c803"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/latency_test.cpp",
+      "sha256": "7de9ad9cec0fbc9e05db62a0285275a4317aa81684596cae640d0c22ced6cc40"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/logger_test.cpp",
+      "sha256": "d491430fa093a5a7600f9ae120e527d431061c9f132214811a82feaeda385c10"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/make_stubs.py",
+      "sha256": "ae381cd06423385f7ceaee9401e3918f36c328d253fafb76907c5aabafef08c9"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/X4NativeBuildIdentity.h",
+      "sha256": "c41fce49d2c20eaf54480da22e9fecb81fd27b03b22e73365b39073b0e37f8dd"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/driver/gpio.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/driver/rtc_io.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/esp_attr.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/esp_heap_caps.h",
+      "sha256": "9cf0ffe107312704339b1f8fc86f564c7d8275965ef67e8ab140fe7ac09c8837"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/esp_sleep.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/esp_system.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/esp_timer.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/hal/gpio_ll.h",
+      "sha256": "d4c14993b07700b1be712a8cf88a197ccfdd39851a4bb1bafad4d667709f8bda"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/mock.h",
+      "sha256": "f4b11dc88e94319877e5b79c1126e7806d595a587213ebbec4be175697a82452"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/nvs.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/nvs_flash.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/rom/rtc.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/soc/gpio_reg.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/soc/gpio_sig_map.h",
+      "sha256": "b995c8940d6699ae80eaf5f903cd0b2157c62923761664d9c02a08be0b76efda"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/soc/io_mux_reg.h",
+      "sha256": "b995c8940d6699ae80eaf5f903cd0b2157c62923761664d9c02a08be0b76efda"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/soc/rtc_cntl_reg.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/stubs/soc/soc.h",
+      "sha256": "a2d5a223bc9c7e82a46894c253f63df1cc8e2c0e3255ff6d036f571effe2cc84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/test_recovery.py",
+      "sha256": "0d6b4d00f0730041e2485549971276d9c01c823ea5b5cb477003ae0ca0d875d5"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bootlog/usb_fixture.cpp",
+      "sha256": "19459f48921dc82ef1a1b553276956dfc4fe09fe031c4aa45c4fae7da5de9ea7"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/bundle_identity_test.py",
+      "sha256": "f7875b9300e24ce6447834c3581f78e127aa9008b51a09328a5390f224f3d3de"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/buttons_test.c",
+      "sha256": "adb44c3b4118ed1e08b509a285ab9029eb6207772af9abc762112f76152a70a3"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/clock_sleep_test.c",
+      "sha256": "0b66591ad233384738ae5116a0ce55264744ccd2cc5f6c79913b115b05abdb1b"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/contexts_cohort_test.py",
+      "sha256": "0a0419ebc13108b97156ef72e4444cbe35b51e8b4a2be7bbca82cc195c9c456e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/contexts_update_route_test.py",
+      "sha256": "65837f2a159fe938d12276c5783a27c7c981985b5618ffbf9d718a2644be0a72"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/crash_report_sd_integration.c",
+      "sha256": "c9c9c2d21f355fff066cf8aae446c0921a04833b703a7b35d6fde152e6ab3860"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/deployment_payload_test.cpp",
+      "sha256": "8a934a52f6b928ff7bc621a3753f10d1540e22ce63e658571940b5f558bbce39"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/desk_clock_bundle_test.py",
+      "sha256": "0ca22793e05c078a24369d45bd0a9fc24d13d46e629e5e9fe253a23772739f4e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/desk_clock_sleep_test.c",
+      "sha256": "10ee8c132092a8d35f383d147a93404f7e96124eb617d4d9d794d33b4850538f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/desk_clock_typed_app_test.c",
+      "sha256": "a5943f38a27e068ca1b1a9131d5e60a010a6da83448313496cf7285e49bb58c6"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/diagnostic_source_fixture.h",
+      "sha256": "90b75a95fd366f3984ba7a356ad548484ffe5777f4a9f013f7365b34d3d2cd45"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/early_native_boot_test.cpp",
+      "sha256": "7eae99621337d292bbdc653acb71b78f4c2578dc608b6b346d28eafa35b5567a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/early_native_fake/driver/gpio.h",
+      "sha256": "0367b9044390df69e9e51dfbe3d805f275312793f5b7e369dcc5cae7fc5d142b"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/early_native_fake/driver/rtc_io.h",
+      "sha256": "28081bc0ba593213f6972dfeb17a9b398d1afa7a7a4a91fda95df8f11cc9667d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/early_native_fake/hal/gpio_ll.h",
+      "sha256": "e997afcd4bc8ab58a1b3800a6289eca6b8014b5288d2998e13eef0997674d3a7"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/early_native_fake/soc/gpio_sig_map.h",
+      "sha256": "b995c8940d6699ae80eaf5f903cd0b2157c62923761664d9c02a08be0b76efda"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/early_native_fake/soc/io_mux_reg.h",
+      "sha256": "b995c8940d6699ae80eaf5f903cd0b2157c62923761664d9c02a08be0b76efda"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/file_browser_admission_test.py",
+      "sha256": "d6abc2fd5c5aba3f55ee4e332d8bc45c5125f5c16b4e027acb18b41d3583892f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/frontlight_cpu_port_test.cpp",
+      "sha256": "ac53bde0a64a8264dc732458386b5ee046dd40d37a1036ad4b886612acbb4cb3"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/frontlight_test.c",
+      "sha256": "57aa0f8475e416875f5287212a891443d90b71aa816e3286e565c180e5447e44"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/frontlight_tone_discovery_test.c",
+      "sha256": "9bd8a61df5437b46bfad305a3211f824de71bc1dafbc474f4c88e44ad7f8ee99"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/gt911_multicontact_test.c",
+      "sha256": "819d0815f159249d57f22f58c1354e2fe0964b40d629560083ba5b7e9a5cdaad"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/gt911_test.c",
+      "sha256": "538377486bf3be4b9a0f166590f89e850e518b793e8118864973c3d591cdfdc1"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/hid_gt911_backend.c",
+      "sha256": "26e30a1f72fd2b5d7f546238a068072f13a5976351a899cd32c49275040b5002"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/i2c_test.c",
+      "sha256": "20349a6e4a43ecadfbf24e68c168dc65d14084864c94aa47923a8740adf1b88e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/idle_alarm_sleep_test.c",
+      "sha256": "6a5fa2e97af3272d56a562778bafeef8775bc040c0da70b43ecf504bca90241d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/idle_cohort_test.py",
+      "sha256": "36b0d60162ff8ff691d73953991274a2efa57b3e870c00b2772a7480e974df3e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/idle_grant_app.c",
+      "sha256": "6537810349003398c9404d1f5f18cf7585bde5fb61af885676eef309e4fc74df"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/idle_grant_provider.c",
+      "sha256": "fca7402ead36a9cde4ec209dcbf6cb3785eff105691a979651b7265ae621fee6"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/idle_grant_runtime.cpp",
+      "sha256": "74196671f044b49bae0cf758c14ae6c785fc985b4d6251b2a70782386c98ad04"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/idle_panel_policy.inc",
+      "sha256": "a27dcd7540f66d31c687e47aedae633ede1cde14779f2af327b81ed9cd5febcf"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/idle_policy_grants_test.py",
+      "sha256": "6eebc0f04ede97c12bca62569302be05bd00f782f69b6ecbb23eea0eeaaf9984"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/native_bundle_composition_test.py",
+      "sha256": "4f8c3714a543acabdbf597bdded2b4b845e0f88592f0ad1ecb6047e511139a07"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/native_composition_test.py",
+      "sha256": "e4fcd1d9d975d12a5cccb64ddb22021552386265ca759fb4953ba549f5077b71"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/native_failure_evidence_test.py",
+      "sha256": "62be5914fbc9b06334bf99530302e674b2cda7aa433867d7e8bfc27b81d5a1c3"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/native_flash_profile_test.py",
+      "sha256": "b8b0ccdba5f7bf1f24f4874ff14b4fcc00a5f94e2dd29e148909f4621a6881cc"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/native_gpio_readback.cpp",
+      "sha256": "08cfe700b172f3d393d90bdd763ef5c116e3f8dddaadf3367b8f53929219d1b9"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/native_retained_options_test.py",
+      "sha256": "2025aa9aa26368c802faf7e490b33b9bc14fe3f550042a7bb06007e52f6fef71"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/native_time_cohort_test.py",
+      "sha256": "177c99cb2f946a9f68f8f08ffebea48cbb69636b74fabdbd0e8951ebff05fd2a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/native_xtensa_calls_test.py",
+      "sha256": "6c65f7e6208e7db3002315ef94a9e766c0f2e26ad918ca81c04dabba42ef6a0f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/ordinary-driver-sources.lock.json",
+      "sha256": "fee0d7e0496454047e36ee7dbb1c94ed674129ab6857b2850dcea94f50f168be"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/panel_cadence/adapter_bridge.c",
+      "sha256": "9fed8973bb4ff4ed76d5341b1ab3c76ab8da68e6a3cb2adf69854a4bf57307b5"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/panel_cadence/modules.c",
+      "sha256": "27b6549ba57c552e218120af13446209c198493ab5864192410138a2fa8cb6dd"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/panel_cadence/panel_model.c",
+      "sha256": "a7bc939f2de04fdb8befa195814d94553bef9a3784e85357323b6b5f5b84f209"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/panel_cadence/runtime_bridge.cpp",
+      "sha256": "7349229541f0e764c18c9e2ef7d821c417abba2d934f8bc9c988ed6a00ccff63"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/panel_test.c",
+      "sha256": "4852fa709ccae39a5bb0837ea7cd1359af3fb6030145e46c3914bcb837f0f36e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/power_deep_test.c",
+      "sha256": "7420e937df782c79b77026325423ed757e84e49766e47a2eda868208897eb277"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/power_navigation_test.c",
+      "sha256": "8458e3919a12341a3df4548f8585ef729d935f2a91574218d0fc3dedcd762103"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/power_test.c",
+      "sha256": "0eef9993d36e07e59a19ced2c313196cdc44f1a143807a0c8d4cdf4b42c1e591"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/prepare_sdk_test.py",
+      "sha256": "68b6ec534d9cd29d951e9e73ba827e4389540bce0df5808154837b7994b89f29"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/preserving_serial_qualification.py",
+      "sha256": "bf8d9aacba6b0c6dde4875407ea19c9fbb4442d7908342f7ea4b9810b92262ae"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/profile_materialize.cpp",
+      "sha256": "0e389436415b7313e5aaba0109150dee0529a7042458707a5a67d0e31fb69528"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/provision_seed_extension_target_test.py",
+      "sha256": "343d96f90e721062c389cfb295301ce29b7db6e9ca700df1c41f40649ad295e8"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/provision_seed_extension_test.py",
+      "sha256": "4fd4f609be88536945ad19b23ac43bf679ba88ac1be4cb1ac23dbefb05ffe647"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/provisioning_profile_test.py",
+      "sha256": "5af25f9c0d41901e69355f8e57e6e91b056be0c5137c4d4a38686d3a491291e3"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/qualified_update_service_test.cpp",
+      "sha256": "d51013dd37f5418237a94aca5dca55b94586a3eff12609c3466980913b0a659f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/resident_cohort_policy_test.py",
+      "sha256": "0510c4425daad9415b220ee4c6bd1fc8892bac9fdd298c7903ea3ff7448a1d3a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/resident_native_test.py",
+      "sha256": "719012f09e3c639d9198485ec2c82127097cb735d192198f8bedb400703338d6"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/rtc_test.c",
+      "sha256": "5d66b747a0bf7665bd1a42ebd4eb0efa49e2d215d9447a898e080b074ae3b8af"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_battery_test.sh",
+      "sha256": "068b5a56d00e8e18c1cfd636d2203c0fd879219c3a690f75894deb43c320b79b"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_board_keepalive_cpu_test.sh",
+      "sha256": "712115ec7ab5d6a68bb46a533162e6935e1a15f4e74aae73012174ce4669e59f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_board_power_test.sh",
+      "sha256": "536b91c962825f64b88afe029facfc6dc5010ba708f4c3d7a924f40f0a8dbabf"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_bootlog_latency_test.sh",
+      "sha256": "d2bf15d9e6ca490ecaa887fd6292dc8c72d3daa322188addd6167e7bd98d0cd1"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_bootlog_test.sh",
+      "sha256": "a26ff1c06261c658cc63a4492aecccd1d529b0aa8cce8bae30f5f2dee60959eb"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_buttons_test.sh",
+      "sha256": "59c4cd3a07b1e6ae42d1218c8fec8af144412ed4f7d7c035d32ea2422c419cb7"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_clock_sleep_test.sh",
+      "sha256": "d7d9cef70aef336b9aa7aa9d4657b97b643acdac5d08cf58a6e9fe354024afb2"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_desk_clock_sleep_test.sh",
+      "sha256": "ca7d7163a451abed2ffb28dc2d2a72d659f7bfe62528730a93a99c4e9d80f44f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_desk_clock_typed_app_test.sh",
+      "sha256": "f5413aaa4d2ff931eac449de6429d39a65e42aaca3bc561607fe02357ee3bc5c"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_early_native_boot_test.sh",
+      "sha256": "173fe7efaed6b13681cacce2ceee83e6853ef44f23944ecf69c5359662ac5483"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_frontlight_cpu_port_test.sh",
+      "sha256": "679f23f52d754bfe7a58198d6074210f62e751398811d9a1695978f1c405b647"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_frontlight_test.sh",
+      "sha256": "3c20947149f98c98ac27806f99a4b4329bf8b2f3586f777afb44fba0e82f671b"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_frontlight_tone_discovery_test.sh",
+      "sha256": "1931dc2514ecce622b4b0adfe4f1057e78dfc8adcbf3e9b9bcb7b8768c57737b"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_gt911_test.sh",
+      "sha256": "cd05bab60488a413a595d96c97b306ae37247dbec409dda7a9de6a1b42e6fd80"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_hid_gt911_test.py",
+      "sha256": "7b1ae5a354600ee4811857e2eeb8fba4037fbcc9f77b33801bed507cb707f86f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_i2c_test.sh",
+      "sha256": "3de95384c85eeac994041790e491ff2c29b4a5de2c7c0c83e4e2ced5f782181d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_idle_alarm_sleep_test.py",
+      "sha256": "1f0ae7875152fa15af844a3d1ee30861ecf9037bd677de84005f7741bf8848d5"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_idle_grant_runtime_test.py",
+      "sha256": "ad7ae36a05312c7b0ddb7c400d0c5d83c12cde82d6e027eabec8cb83262ecb37"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_idle_panel_policy_test.py",
+      "sha256": "5ec9aea5ad0d24fa28b8c11c507aa53cfc932638875144e242c409949e3f0192"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_light_buttons_target_test.sh",
+      "sha256": "601804ec62dd10cbf0e5a14bc82685cd2b4922630afaa76ee22707f1d579db97"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_native_gpio_readback_test.sh",
+      "sha256": "c66ce36da2265b54841a712c849df8fc0f0cf35504f9a19145760d6801e876c7"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_panel_cadence_test.py",
+      "sha256": "7dac5ce5a6cfebbd1f2eaf71df1f904bf19c6d57e35cde434dd9711f2b4e3fac"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_panel_target_test.sh",
+      "sha256": "dc5a5765404c392c219521dba22ef9fc0578d4a5248cc300c7db8067ff501b3d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_panel_test.sh",
+      "sha256": "db693fed47e69327887ee23b96c071fff512b9721acd33852aa24b6529bb1d41"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_pinned_early_boot_test.py",
+      "sha256": "123d908771b1c7fb8ea76e1093fa95fa982ca397517ce901abfd60d885838075"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_power_navigation_test.sh",
+      "sha256": "6c48da9f51cf86a09a99a3a1125aa8246840f4caca3f0430adc64d67671442bb"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_power_test.sh",
+      "sha256": "c4532af00e16df9b6b98db57aafd35f6cbeab0295057380801e5712e4d84bfdc"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_profile_test.sh",
+      "sha256": "aa81d55d09133bf28e959a30472785d18735093bf22730ece330d481d878c238"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_qualified_update_service.sh",
+      "sha256": "4ff4f1305d19da30a72d1b52d8e9f4b8add65957b342329508168cbfa721cde0"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_rtc_test.sh",
+      "sha256": "fb517ea7f1b300f9a476e3a2942cfd0f92a1bba3d0fffb18e7bc855cd77b8771"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_sd_target_test.sh",
+      "sha256": "d38e67231e05d985e8ee2582bca8abaf7105dbe51b546d9b04d8a63a6b85607d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_sd_test.sh",
+      "sha256": "346926d26b3be69e118562b96ca492901a1931365067281630d4398726507b69"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_sd_usb_test.sh",
+      "sha256": "1f57c32b65b5d49683fe234ba71f3f0726b5a3004aa6685f0506c19224578c7a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_sparse_desk_clock_compatibility_test.sh",
+      "sha256": "7e3c002b4c48951596226052ae06e439202411710f6f69304a05ae91b841eece"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_sparse_desk_clock_sleep_test.sh",
+      "sha256": "387c279a66ad5202f48272491213b55b02b2f5c076682739d0886d1576a6bbe9"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_springboard_display_test.py",
+      "sha256": "f7fe3a87f00dff1acd6bd43a261dca92d3b3f45ea540102cf26ce730bae4087d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_tagged_alarm_sleep_owner_test.sh",
+      "sha256": "220a2ca0b485bcfa08a6e6f807a404ca9846ffe714b6f7836ae9ad1d6e373f7b"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_telemetry_runtime.py",
+      "sha256": "65a2b6aae0cd6fecd2e284767e81b0b68a5513cb46a287253d61017025c7bd97"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_uc8279_fast_cadence_test.py",
+      "sha256": "40f0d4605b46afbb193405af41cbee75721836ff6810b83a2797c3098bee5836"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_uc8279_fast_target_test.sh",
+      "sha256": "0d721df47c10b9c01b12eb8b1b6f13265696117920490d495bdb892a8a916343"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/run_uc8279_fast_test.sh",
+      "sha256": "05da8e77a769c2b7a0354d8e34018871fd1b89e828c5835f0bbc866feb58a599"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_async_test.c",
+      "sha256": "2603965c48f4d1806d81c071a6a31c2b3c6078014d79dc50142c9a7941a11d31"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_export_test.inc",
+      "sha256": "ce7553f0de751f0ddc4c3469d427fc60ffcd7960ddc2978141dbdc37f3602ad5"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_filesystem_extensions.inc",
+      "sha256": "5e528167cb991a5ea1a88c65107e49318092961505960f4d6a4e257f78af00a6"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_first_placement_test.py",
+      "sha256": "60ae59e8d593b74b5a181197f4194168ebeb2ecce9dcc9ea4a35a79c36a3970c"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_provider_selection/README.md",
+      "sha256": "5161044b5b4da7c04acbc2d612d5e616142ac41b4f064d19653c0ae3e6cd0a0e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_provider_selection/default.c",
+      "sha256": "c84690ea911fbbbcea7b0f38475be62ee6da08796209d504ccee38af80dd3b34"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_provider_selection/run.sh",
+      "sha256": "19734a514dedb15ab1f63fb4240080552deaba1c21a7f4b30540d450556a00c5"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_provider_selection/run_cases.py",
+      "sha256": "bdcbf08e8d1315c9be5083ac2bc4e841df9e8d52fa805ec5603dba637477dbfc"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_provider_selection/sd_provider.c",
+      "sha256": "0b554bd2e007fe2acebc1fdbf86444f00303efe60fe4da876d4467cfe402acee"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_provider_selection/selected_image_test.cpp",
+      "sha256": "604e29d02811b666ea43cbe54ca9549551719de624b6a259bc13c30e53133d8c"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_test.c",
+      "sha256": "000d430d18e8922e2e0e2c86117ee196ec02efcd45d775a781dafabe31fc16ae"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sd_usb_test.c",
+      "sha256": "8bfec30a4cc06d245e02701252c85aff8633dab6947a8b583bf46bf5c0c9e387"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sdmmc_storage_test.inc",
+      "sha256": "1739f02751536b9c1208b7a1a316bbeea51aa1e1d8c7545ebe05db1991d6be13"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/settings_power_profile_test.py",
+      "sha256": "25a9bc7965d8ec8e466642063b94d59cc384d6f037a9a21acff051ae04b890bd"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/shared_settings_composition_test.py",
+      "sha256": "f348485517126be1d51b915c80c6e3d64c6bdae4687567ece11cadd59a091224"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sleep_profile_test.py",
+      "sha256": "3135a3fdae14e2d1aafb9187b2a0d6da02237f555306388b2f9a5ce637c8cea6"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sparse_app_grants_test.py",
+      "sha256": "d644125777f8053e52bc4e4f63109e5f76bf043acdd132ec394b0d717f83d2bd"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sparse_clock_profile_test.py",
+      "sha256": "a72adbc312396a516f75b165f6bcba2900c59e84742237bc35c6a788fbb86114"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/sparse_desk_clock_sleep_test.c",
+      "sha256": "284115fcfb270d1dfeacf3f0258fcda51d93852919c9addbfb545eb1e955c7fe"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/springboard_display/adapter_bridge.c",
+      "sha256": "d7e3f9881359050f44868a29fbae1471669156fb9a2e49e0866a65ea958d3f4a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/springboard_display/modules.c",
+      "sha256": "2b15da4f3344e8997625caab61ee233108f3ad1033fb49a138453040021b4d0e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/springboard_display/panel_model.c",
+      "sha256": "b47d638f7397267205385a58d0fd9c2b30d964e7e6c5a12896d2ac2a3c124ed2"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/springboard_display/runtime_bridge.cpp",
+      "sha256": "441de3e85e48ade1a5d966ca0ccb673a12b3b09ac299c74714a72352ea3843b4"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/tagged_alarm_sleep_owner_test.c",
+      "sha256": "e28714ab087cb866cac36aa306e880d0158447fd292244736675b26178054d97"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/telemetry/app.c",
+      "sha256": "a40806844c0f009b7126f31f135a834a75cfd2d91c2a99267f1e9fc468eb9c98"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/telemetry/provider.c",
+      "sha256": "67bcfdf954ea0bf21a26af76f9362230ffb7fc48826d4b03e0ffa56cb449aa12"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/telemetry/runtime.cpp",
+      "sha256": "9c093cc32fa58ebea68445a702f0474110d76d8e66f997c579f99afe2fca46df"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/telemetry_cohort_test.py",
+      "sha256": "0f20e2dbd09980283e86b089fc068a86daf672f35e020559634ab0032d9431e5"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/test_daily_digest_integration.py",
+      "sha256": "e40da2da66f8446ad937ec7adf196558c8e65ba62d4d2148078d415797062bf4"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/test_native_binary_exports.py",
+      "sha256": "fdf5872af7e8326ad5e504d845ef7c6f180c8d237179a9f0594722f8f2dbeb00"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/test_tagged_alarm_sleep_target.py",
+      "sha256": "6e561e3d987ea50f43541f98538fb434ec29001ecf369dc99e675b8ffa065b42"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/test_usb_transfer_app.py",
+      "sha256": "588da58791434a988fec3717a401cc09315677a6674a02ba1ed1f3eeb8cc5923"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/uc8279_fast_cadence/adapter_bridge.c",
+      "sha256": "6f96f1c74fa9651902e4d19a95be329a55fcea2c141b276f6c9180f5679c06e4"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/uc8279_fast_cadence/modules.c",
+      "sha256": "e3d2e98170905f66aa4d1e4df6b00d275e885bad964bf4cf236cc0cfd1fa4c8f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/uc8279_fast_cadence/panel_model.c",
+      "sha256": "508c83817878d181187bf03caf6e0dc7cffa6a4d1458669485f5b3d1417ae9a0"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/uc8279_fast_cadence/runtime_bridge.cpp",
+      "sha256": "45c00d95ffc56ea47e9c4a558049c9e96c79c5c0787924467440e486e6dd9df8"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/uc8279_fast_profile_test.py",
+      "sha256": "c8370c2409ad66b03c86c95c75946be46b28e3506d23a8156e247a7f43dea462"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/uc8279_fast_settled.inc",
+      "sha256": "d0af5781f87eb279fd666e097feb695a32e0e71db78972419a584bd1da12a66e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/uc8279_fast_test.c",
+      "sha256": "6f8aaf35a0aaec660a84d4109afe0c386cf7bc0a28c8ab027b11923c552a1d84"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/update_artifacts_test.py",
+      "sha256": "aae58c3328c8a225e5c79c9ee8f7561292ac1cbbd8cbffc903f40260342f40f9"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/verify_early_boot_target.py",
+      "sha256": "1507ba7698f2e53a6a845d91c1a2172af4695398cecde59869853606de9f3c92"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/X4",
+      "commit": "c8004c5c8362b142ebb35a0e1c5d266532a11581",
+      "path": "minimal/test/webdav_sd_integration.cpp",
+      "sha256": "17e7e3f797b305b49fce3549c66e4d43f2a11e9e0285abe1e14fda29fa8a2d37"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/README.md",
+      "sha256": "6e24c13215054ccfab9353b917490611614eac65cad9e3f373fc6aaf33cf57b5"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/UPSTREAM.json",
+      "sha256": "fc48e148ae17c51518a1ca50b817b98d640fefbeeaa44db69cf998a393101ccb"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/fatfs/LICENSE.txt",
+      "sha256": "b896e32fb2cdb3fc8b3b6fd854706fca4ac55619fbb6d5eb2429cb05ee338966"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/fatfs/README.md",
+      "sha256": "71f25ff5d78cbb7a5fe2bafd3f4545e5e80f70a283cf69892d49bde403b31ceb"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/fatfs/diskio.h",
+      "sha256": "901d6670aeea2c4fcc6e1c2f38866e142069627a95c9b023eb7a4bf991e47a04"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/fatfs/ff.c",
+      "sha256": "5082e1150cd9128a2b1494dcdd1db2f0a225459116f7531b054b25bd457e856d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/fatfs/ff.h",
+      "sha256": "a8640c45c29eb939707e23bcaef57237ee773a6b99a9d109fb1d48d9f7043c88"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/fatfs/ffconf.h",
+      "sha256": "760941150f5ed2e0c466db3816e1bfdc86d444fe714445f5e124f95bc9324395"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/fatfs/ffunicode.c",
+      "sha256": "6cd4dc4a664386ebd108e56d367582c35f005fc20381486366b5d77ac58119bd"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/fs_extensions.inc",
+      "sha256": "599f3ead76c0f3bb2e488a4dfaad698eafc6e2e751621e92b68523a5702d7301"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/sd_protocol.h",
+      "sha256": "1590b7009fde866a0b944c8ecb2d613de90961a811440d8215886ff58860dd5d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Drivers",
+      "commit": "281609a0d2ae514f107d2ef67b6e8b4d25c72fb8",
+      "path": "lib/StorageFatFs/volume.c",
+      "sha256": "9298c96e7a6310964b92330e29cd399f2300c49c75fc594f784bb26be960482b"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "Drivers/x4pro_board/x4pro_mmio.h",
+      "sha256": "13eaddbbbf0baab7cc334633161645268d543677d5a8cd0172ae77891f22cd26"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "Drivers/x4pro_board/x4pro_pins.h",
+      "sha256": "b31b36b9a13f49e43581df97bc2551a269ad621efd7477ebd8786f5405c15e76"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "Drivers/x4pro_board/x4pro_proto.h",
+      "sha256": "daa7efef2ceace7df6edd31c356bc1fc58830b0b9b3880c096d7b565a6e5f945"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscArchiveZipV1.h",
+      "sha256": "5909fdfe34a457895e4e4112b80bf0fbba98cc01a405fa62ee0171387b84ca05"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscBatteryGaugeV1.h",
+      "sha256": "b756b190c40a24cc019d09f0dd8c37140b14770c8c7c2c65ef04118bac6fa6f8"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscBq25896ProfileV1.h",
+      "sha256": "04e33c1b5a3385c2bedf275b85aa62a5dbfbec8cb38c2f3879ebb413e70a0c98"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscCameraCaptureV1.h",
+      "sha256": "7ad066a782e017361093f4a32780b7f2d7b720c72989ed1aa6babb2872170d88"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscCameraEsp32s3ProfileV1.h",
+      "sha256": "4a47e72f77a5c44d77f83a1e00fa4f3528c4263147d8d1a539f504eb77cbdcbc"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscCpuCacheV2.h",
+      "sha256": "dc575f444775e3b3523ed7b330e6f6c8a9d7a8c37e02921a4f78ae59008ee572"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscCpuDmaV3.h",
+      "sha256": "99312ac098d645ccff4493cc169573e398015fd6dc34458a3d39d7c6e11acd50"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscCpuWorkerV2.h",
+      "sha256": "96c76f4d26bfc148686d5d5ad1ef99542798ec6ae4f2afd8ea99a504de80d102"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscDisplayOutputPowerV1.h",
+      "sha256": "e9c7d3bd3ddf9bce128503aafb5669734db09424149f45b3a6f735cd5a7c8667"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscDisplayOutputV1.h",
+      "sha256": "99b682ba34f07e7868dec8e78dfb816c067fdc184e647033bc6ed8d489b9c9a2"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscDisplayPowerV1.h",
+      "sha256": "097c226f2e9f5a222115dd226b30b303231cd009a8401acf6d311a61a000d027"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscFirmwareI2cCompatV1.h",
+      "sha256": "4abe4c6d4b83432bd76ca8fdbf9502dfbab25f5579ae0acd6de367cc133bb0ef"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscFirmwareSpiCompatV1.h",
+      "sha256": "8556e7dea8d6f83dbc47c68a363cc785182ef78343589e3c9573ad2fd08f2942"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscFrontlightV1.h",
+      "sha256": "86272e0189dc5329d1ace67dfd64e2ee71768f1685e004faac6b4252bf6ba3f6"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscGpioExpanderV1.h",
+      "sha256": "110f0b141842e7cdc6798519cc5cd61c371cfe0d3e0af59a3f19c12598242f55"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscI2cBusV1.h",
+      "sha256": "651d470d29618654dc59af98feae504ff135c37324a11e650c966cd79b151fb5"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscInputNavigationV1.h",
+      "sha256": "022ab46c1a94372524c519d04db42d34e06e814171fa1b4bd17f85a8ee217ef2"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscMspFetV1.h",
+      "sha256": "883879ee0ce2ac3ff5df42eb549a856557132a4da5a1dfe22edff8ad8c4e015b"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscPackageResourcesV1.h",
+      "sha256": "8aff53415cf68a46e8e492dd02d12bde802ce2a1d69629dd4f3b0aad5794e459"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscPlatformClockV1.h",
+      "sha256": "41a12f6529f38731ee874f8bc166e1cf89fe376a1448fe5a4dd4c9abac90e5e2"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscProgramMspV1.h",
+      "sha256": "fd1a7c6ebdfdaeb951c3b82abf2baca6f84f4a4e533841c12d2eb81ff2e0166f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscProviderV2.h",
+      "sha256": "62478822fa8943ddfd1607f8923de52d7b5b6fc8a0db2df6ca07c65c95c62d41"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscReaderTypographyV1.h",
+      "sha256": "74505fcfb76664d076c1562ed91f0c63d503595f5ea86b6d19e9fda49d9ec6c4"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscRtcCalendarV2.h",
+      "sha256": "4cc86a4faa64a268908c1a073caadeddd205c2eca28f4e2658fde9b8f2ea865f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscRtcClockV2.h",
+      "sha256": "7c5d0b540c681e70875abec1eefc4f412a47d020033cf54f3556a1abf5cd3af7"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscSerialPortV1.h",
+      "sha256": "7f00311161a071c6575be8b65e7aba30ebef7a8f1a45f9c0bf9168bc25e05700"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscSpiBusV1.h",
+      "sha256": "f6c972e5dedb44e55422754d6b43af9b15cad039caac64f7a59266cc9ce6913a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscStlinkV1.h",
+      "sha256": "1261bd3a8ed77646d03a686cb13b72461ca9ca040ef81d48329e92228461ed8d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscStorageExportV1.h",
+      "sha256": "74ae82f05a916ca0d2df1bb251bc66cc0ac33dde38757ced7c8e864374d43c8a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscStorageVolumeV1.h",
+      "sha256": "d477167a06004640b2c07c05d662c103be6e1b9e4a4d866f6fce13e754ef02f5"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscStreamProviderV1.h",
+      "sha256": "0fe306e060321387c816bb70ec4370a501a423f4fe19a20c9be80aa1b98f3432"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscTextInputV1.h",
+      "sha256": "32f2a6cda3b7a4fef8487cc046ceb891261e483feafed32908cbd924112a1a77"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscTouchPowerV1.h",
+      "sha256": "82c6faed9b7e26788e3a226cd3532b1d2c3b59447c8abdc25b5e407ef0399dd0"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscTouchV1.h",
+      "sha256": "fe18fab3ac20fda95747388f1428408b7795e5da3511c7a9fff07c16ddfd2c7d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscUsbControllerV1.h",
+      "sha256": "226f083493085ecdcaa21a7c3bf1c269640b7d1ebaa099e7217fb64124f1dbed"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscUsbDeviceMscV1.h",
+      "sha256": "d55a9340c3ff64e8679c4d9332812f073c30b8aa08ae3e3fb04f9010cf517ed6"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscUsbDiscoveryDiagnosticsV1.h",
+      "sha256": "b0a2652e3724f5cb3003485397fae860a6f49a38092d5f30345573ec8931c4d7"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscUsbGamepadDiagnosticsV1.h",
+      "sha256": "b58df5e7618f8a0e3e58ae023fd034c96ff9f7d04b6c35080a4b6661a064ae0a"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscUsbHidV1.h",
+      "sha256": "5b5549c4cb718dec55f2aca8bc93f401b2d5a703d30aaa1a78d1bcdd26755b5c"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscUsbInterruptV1.h",
+      "sha256": "bfdd4644feaf3f4dc5d06070f052104579d3fb902e27e707f27943d7bf22815e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscUsbPhyResourceV1.h",
+      "sha256": "fe668ff8e8f83ea454eafd059c61c633d2213bc2a77504d8794a64c1dc11b016"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscUsbProviderV1.h",
+      "sha256": "65bbde81bf4159918392d9525dc0dfd5a075bf028a693d9a4d9981b1cecf516e"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/RiscUsbVbusV1.h",
+      "sha256": "9936cde4d585e7ff6ae2d5441d746b47e14cf800806ce49c5a269d37eb84e110"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/T5DisplayProviderV1.h",
+      "sha256": "e16678232c244043656f00d152da2f5abd8dbf06a53d125edd0f7b090d7cb64f"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/T5DriverApi.h",
+      "sha256": "e0960f0b2e2579d7b7245734b593182841806c5eb7b7d67af4194ac8eb0c4b55"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/T5GnssProvider.h",
+      "sha256": "f093ed0f5707b1cbe12caa5086f248e884fb5f69c7fbcf1f6f6a3ce911747116"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "sdk/driver/T5UsbClassDriver.h",
+      "sha256": "64a6a3a8081509ce9ab8e15c15095578174d9d7afb4343672576b89b4f65300d"
+    },
+    {
+      "root": "/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "commit": "45cf61ac013fb618e8d7fed63217a35350484d52",
+      "path": "test/storage_volume/fake/x4pro_mmio.h",
+      "sha256": "cec81bab38e32c82068670daf8f0150aed219d420d7241f568b3a01049d65231"
+    }
+  ],
+  "runtime_sources": [
+    {
+      "path": "experimental/native_replica/CheckedFirstSdCheckpoint.h",
+      "sha256": "645463acd56ca2c0b7a6fa4965291e3c26f3b437266cf068a9988d60a9a23a97"
+    },
+    {
+      "path": "experimental/native_replica/CheckedFreshInitArtifacts.h",
+      "sha256": "7cc40f877e837fa7adb26a5bdfcc1507de927ff03789742f1f02487ea36904e8"
+    },
+    {
+      "path": "experimental/native_replica/CheckedLegacySettingsReader.h",
+      "sha256": "047520ea22232fa193eef03ceb27144884e80fc1a0a3ab14328881f879a5b296"
+    },
+    {
+      "path": "experimental/native_replica/CheckedNativeExportRecovery.h",
+      "sha256": "e70df0f4a9aa9724a0a167dc867ecc9b343e9cb557dce38be552177d4b9f3284"
+    },
+    {
+      "path": "experimental/native_replica/CheckedNativeReplicaStore.h",
+      "sha256": "86c3e8eeb8516edafae3a88b27e59b8e700c169e2f5d42b00d4b4465ade2e87b"
+    },
+    {
+      "path": "experimental/native_replica/CheckedNvsFreshSources.h",
+      "sha256": "5bae96eb2ebd866b659e58f1dc387006461e83ceee63676d71c97fc9a82cc01e"
+    },
+    {
+      "path": "experimental/native_replica/CheckedNvsLegacySources.h",
+      "sha256": "5724a72849b2a13e620d3c40dd062ec2108a2ef35c46255a74250b1ec07a5d28"
+    },
+    {
+      "path": "experimental/native_replica/CheckedSdNativeRestore.h",
+      "sha256": "769f2b7294f2044cfd6a1351cd551896cf6ccbea2c67bc46fc4e10bfb9651e0d"
+    },
+    {
+      "path": "experimental/native_replica/CheckedSdReplicaCheckpoint.h",
+      "sha256": "44c3dcb01ed973ca491f9e2a321ac0eef35bac861705fac5a96ee53f127c4d71"
+    },
+    {
+      "path": "experimental/native_replica/CheckedSdReplicaReader.h",
+      "sha256": "dbb381b70ba29f370dfde258bc5eb4255e9843ca584956a03c28b1d9681624b6"
+    },
+    {
+      "path": "experimental/native_replica/CheckedSdSettingsCatalog.h",
+      "sha256": "98fb9986bacab6bea7d88eb570ac67b88defda59db3b09dd258cc735107a7218"
+    },
+    {
+      "path": "experimental/native_replica/MbedTlsReplicaDigest.h",
+      "sha256": "c9c7fe4f91d3ad99fa28864bafb590b19e96d7695d0131434918140bbb1fc355"
+    },
+    {
+      "path": "experimental/native_replica/NativeAtomicKeyValue.h",
+      "sha256": "c18e2e5378c8a467c691c3a845aa0c0d6062be10d1c0a6b82a9583ee21bdb326"
+    },
+    {
+      "path": "experimental/native_replica/NativeBaselineAdmission.h",
+      "sha256": "3e51bcda634847e2e9e92c0714bb64de2e5b4ab1b66977841e50c71f42fb0e96"
+    },
+    {
+      "path": "experimental/native_replica/NativeRebaseCandidate.h",
+      "sha256": "9988f9b652e0955bbd4792ca3bbd08be9d3a65f999be01a97f657515031eb67c"
+    },
+    {
+      "path": "experimental/native_replica/NativeReplicaCore.h",
+      "sha256": "9f4676f4afe3057be96796a40f94069c025c24c34f8247378787c7765847ad9d"
+    },
+    {
+      "path": "experimental/native_replica/NativeReplicaJob.h",
+      "sha256": "754bf13c4144702b224cc93ad1d7302f4b72e127dcf391bcc99b0da0c0ab9f78"
+    },
+    {
+      "path": "experimental/native_replica/NativeRuntimeStoragePin.h",
+      "sha256": "b14d1ae2401a7051340abd0906f746b0bc7aaeccb41b6e069d042507490e5879"
+    },
+    {
+      "path": "experimental/native_replica/NativeSdAttempt.h",
+      "sha256": "36b9d4e411dcfc0fd6199483ea6b5bc58f867775ae5b3d8461263b0844251173"
+    },
+    {
+      "path": "experimental/native_replica/NativeSdCompletion.h",
+      "sha256": "afc3b4f09afb77e2daf88ef88b66ccc74d867eddf06cc927cb7bc2e91e9d23b8"
+    },
+    {
+      "path": "experimental/native_replica/NativeSdPortAttempt.h",
+      "sha256": "77b37e09f22ca75f74f2e8e85a7ca98f4f133a96b2e51a03307a866c513d0dc9"
+    },
+    {
+      "path": "experimental/native_replica/NativeSdSession.h",
+      "sha256": "909a8cf76acb9a667e6608f56e00aedb3c2d7da8dcfeb0a1850a3970167b83e0"
+    },
+    {
+      "path": "experimental/native_replica/NativeSettingsCoordinator.h",
+      "sha256": "cfdc0124cd35d68b00d2ddfa53e29c13f544d485fff4b61e996c7dca4fc0ba08"
+    },
+    {
+      "path": "experimental/native_replica/NvsReplicaMetadata.h",
+      "sha256": "33c5b5d2658c3a08674baf3177e4c4e8bddf7d9756fe7d86c0f447e7a6a2d1f8"
+    },
+    {
+      "path": "sdk/driver/RiscStorageAsyncAdapterV1.h",
+      "sha256": "2b90ba70e6c44d112a28ce4d9a4d9272baeaf277f233d127181c1eff1515c1c6"
+    },
+    {
+      "path": "sdk/driver/RiscStorageExportV1.h",
+      "sha256": "74ae82f05a916ca0d2df1bb251bc66cc0ac33dde38757ced7c8e864374d43c8a"
+    },
+    {
+      "path": "sdk/driver/RiscStoragePackageAsyncV1.h",
+      "sha256": "c0b4a025fcbbc6ec55913dce2f99553c14cd7a96ae104f8eebc8d0dfd33ddf97"
+    },
+    {
+      "path": "sdk/driver/RiscStorageSessionAdmissionV1.h",
+      "sha256": "eccf8e59cba6ec58a2456d00bcbd07131d1e4ec8d5ac36f23b35f793a33284fc"
+    },
+    {
+      "path": "sdk/driver/RiscStorageVolumeAsyncV1.h",
+      "sha256": "e395dccfa5c89e1585acaed0e5c8932d8487940261759741e3e60b483aafcaec"
+    },
+    {
+      "path": "sdk/driver/RiscStorageVolumeFsV1.h",
+      "sha256": "e487352157e3c3d5c10a28a16fdfcce76db693bf45c612ff4e2f31ee83e9a329"
+    },
+    {
+      "path": "sdk/driver/RiscStorageVolumeStateV1.h",
+      "sha256": "1f2f7dbfe9ec7ac27a57149ac720cf7f3a4801d6d34b5532f77c77db252b87a1"
+    },
+    {
+      "path": "sdk/driver/RiscStorageWorkerAdmissionV1.h",
+      "sha256": "013322a0db332ee9e7b124399ac12dfe050c53fd4b018feb7c278edd2ef8d8bd"
+    },
+    {
+      "path": "sdk/driver/RiscStorageWorkerV1.h",
+      "sha256": "9e859235403292a0108fd10b8122218d72c1c2d1dd460d94304d919f77b83b6f"
+    },
+    {
+      "path": "src/runtime/storage/AppDataFiles.cpp",
+      "sha256": "cdf022200c59f85d148ae4806416507e8b2a72e5612bc41684f61a9cea409f55"
+    },
+    {
+      "path": "src/runtime/storage/AppDataFiles.h",
+      "sha256": "d8ea5b33d0cc33b721396867a59eeaf60b26358f042a96e17a624bc0579cd935"
+    },
+    {
+      "path": "src/runtime/storage/StorageWorker.h",
+      "sha256": "07b9ef437436e5e51f52ad13fc11da3bdcdb08628b39203b68146bd786e90430"
+    },
+    {
+      "path": "test/NATIVE_SD_CONSUMERS.md",
+      "sha256": "dd5a0942210c2c08c31cf38097043f2a10bdf76fcf9a4f7356130b022eb73988"
+    },
+    {
+      "path": "test/native_checked_sd_restore_x4_test.cpp",
+      "sha256": "d419b5f6df83561061a738e9601d5b159cb06923cfab8e7cb69bcd858a8c9792"
+    },
+    {
+      "path": "test/native_nvs_shim/esp_partition.h",
+      "sha256": "ca3c8e389714a0c433d31ff3994053bd8a06819cd7ca5acbfa04c4eb6894ce51"
+    },
+    {
+      "path": "test/native_nvs_shim/nvs.h",
+      "sha256": "8083ba93fe83b97c00d2240194bc9652d7a5b8c372ca75ac8f8dc5508588b2f1"
+    },
+    {
+      "path": "test/native_nvs_shim/nvs_flash.h",
+      "sha256": "f954c75d3b87bd9e559e40eeff9ca6d6b5f42d860cdfb1fb3576df9a597fdf68"
+    },
+    {
+      "path": "test/native_replica_checked_fixture.h",
+      "sha256": "7b36ac4b4843cb21c31909683324415906234a500978b25068bb053108d38e09"
+    },
+    {
+      "path": "test/native_sd_attempt_fixture.c",
+      "sha256": "2562d780ce1ab1e6b56e9bdac6f62b65df34638d3c71e49259afc1ae9f22a149"
+    },
+    {
+      "path": "test/native_sd_attempt_fixture.h",
+      "sha256": "6fc45756997b068bd10befdbe1ed7accd3ec36e1f5a9a31cc794aacae919b0cf"
+    },
+    {
+      "path": "test/native_sd_attempt_test.cpp",
+      "sha256": "772cec58b81368a049720f110b3ae4f6655fbabf6dd84cd09fcfe836d7f9df21"
+    },
+    {
+      "path": "test/native_sd_consumers_fixture.c",
+      "sha256": "9d65851d7d7351fd5c5bdc3a795822527e7376d7c466bccf2222336e6e573a8b"
+    },
+    {
+      "path": "test/native_sd_consumers_fixture.h",
+      "sha256": "96fb4c91c6f67c17a0a8be8a92795b71e6b8a91bed97c02725b5cc1698eb0306"
+    },
+    {
+      "path": "test/native_sd_port_fixture.c",
+      "sha256": "af5a34daa70e62476b7bd596cb59ef94532ab4e681744ea63e48e828723e84ce"
+    },
+    {
+      "path": "test/native_sd_port_fixture.h",
+      "sha256": "5c1cba7ef7317389257a4cb090ab849ef1322a088f3a07b9376b2c01ac7b666f"
+    },
+    {
+      "path": "test/native_sd_port_power_fixture.c",
+      "sha256": "1bb5dba108dcfa5ffd32d9e710ec8fb0eb05648848cc2cfc3a5bf0ca8b28d5b7"
+    },
+    {
+      "path": "test/run_native_checked_sd_restore_x4_test.py",
+      "sha256": "8ccf4f060f636883c3246f1b8cd996b42a29a2a79f27d0fe4729d27d79e9d208"
+    }
+  ],
+  "commands": [
+    [
+      "cc",
+      "-std=c11",
+      "-O1",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wno-overflow",
+      "-fno-omit-frame-pointer",
+      "-I/tmp/checked-sd-many-final/x4-final/sdk",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Drivers/lib/StorageFatFs",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Reader/Drivers/x4pro_board",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "-I/workspace/shared/x4-checked-sd-restore-20261012",
+      "-I/workspace/shared/x4-checked-sd-restore-20261012/src",
+      "-DX4PRO_SD_ALLOW_LEGACY_GPIO=1",
+      "-DX4_SD_TEST_SOURCE=\"/workspace/shared/persistence-recovery-20261011/repos/X4/minimal/test/sd_test.c\"",
+      "-c",
+      "/workspace/shared/x4-checked-sd-restore-20261012/test/native_sd_consumers_fixture.c",
+      "-o",
+      "/tmp/checked-sd-many-final/x4-final/fixture.o"
+    ],
+    [
+      "cc",
+      "-std=c11",
+      "-O1",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wno-overflow",
+      "-fno-omit-frame-pointer",
+      "-I/tmp/checked-sd-many-final/x4-final/sdk",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Drivers/lib/StorageFatFs",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Reader/Drivers/x4pro_board",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "-I/workspace/shared/x4-checked-sd-restore-20261012",
+      "-I/workspace/shared/x4-checked-sd-restore-20261012/src",
+      "-c",
+      "/workspace/shared/persistence-recovery-20261011/repos/Drivers/lib/StorageFatFs/fatfs/ff.c",
+      "-o",
+      "/tmp/checked-sd-many-final/x4-final/ff.o"
+    ],
+    [
+      "cc",
+      "-std=c11",
+      "-O1",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wno-overflow",
+      "-fno-omit-frame-pointer",
+      "-I/tmp/checked-sd-many-final/x4-final/sdk",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Drivers/lib/StorageFatFs",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Reader/Drivers/x4pro_board",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "-I/workspace/shared/x4-checked-sd-restore-20261012",
+      "-I/workspace/shared/x4-checked-sd-restore-20261012/src",
+      "-c",
+      "/workspace/shared/persistence-recovery-20261011/repos/Drivers/lib/StorageFatFs/fatfs/ffunicode.c",
+      "-o",
+      "/tmp/checked-sd-many-final/x4-final/ffunicode.o"
+    ],
+    [
+      "c++",
+      "-std=c++17",
+      "-O1",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wno-overflow",
+      "-fno-omit-frame-pointer",
+      "-I/tmp/checked-sd-many-final/x4-final/sdk",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Drivers/lib/StorageFatFs",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Reader/Drivers/x4pro_board",
+      "-I/workspace/shared/persistence-recovery-20261011/repos/Reader",
+      "-I/workspace/shared/x4-checked-sd-restore-20261012",
+      "-I/workspace/shared/x4-checked-sd-restore-20261012/src",
+      "-pthread",
+      "-I/workspace/shared/x4-checked-sd-restore-20261012/test/native_nvs_shim",
+      "/workspace/shared/x4-checked-sd-restore-20261012/test/native_checked_sd_restore_x4_test.cpp",
+      "/workspace/shared/x4-checked-sd-restore-20261012/src/runtime/storage/AppDataFiles.cpp",
+      "/tmp/checked-sd-many-final/x4-final/fixture.o",
+      "/tmp/checked-sd-many-final/x4-final/ff.o",
+      "/tmp/checked-sd-many-final/x4-final/ffunicode.o",
+      "-Wl,--wrap=read,--wrap=write,--wrap=fsync,--wrap=close,--wrap=rename",
+      "-lcrypto",
+      "-o",
+      "/tmp/checked-sd-many-final/x4-final/native-checked-sd-restore-test"
+    ],
+    [
+      "/tmp/checked-sd-many-final/x4-final/native-checked-sd-restore-test",
+      "seed",
+      "/tmp/checked-sd-many-final/x4-final/card.img",
+      "/tmp/checked-sd-many-final/x4-final/unused"
+    ],
+    [
+      "/tmp/checked-sd-many-final/x4-final/native-checked-sd-restore-test",
+      "happy",
+      "/tmp/checked-sd-many-final/x4-final/card.img",
+      "/tmp/checked-sd-many-final/x4-final/native-happy"
+    ],
+    [
+      "/tmp/checked-sd-many-final/x4-final/native-checked-sd-restore-test",
+      "conflict",
+      "/tmp/checked-sd-many-final/x4-final/card.img",
+      "/tmp/checked-sd-many-final/x4-final/native-conflict"
+    ],
+    [
+      "/tmp/checked-sd-many-final/x4-final/native-checked-sd-restore-test",
+      "cancel",
+      "/tmp/checked-sd-many-final/x4-final/card.img",
+      "/tmp/checked-sd-many-final/x4-final/native-cancel"
+    ],
+    [
+      "/tmp/checked-sd-many-final/x4-final/native-checked-sd-restore-test",
+      "running-cancel",
+      "/tmp/checked-sd-many-final/x4-final/card.img",
+      "/tmp/checked-sd-many-final/x4-final/native-running-cancel"
+    ],
+    [
+      "/tmp/checked-sd-many-final/x4-final/native-checked-sd-restore-test",
+      "native-retained",
+      "/tmp/checked-sd-many-final/x4-final/card.img",
+      "/tmp/checked-sd-many-final/x4-final/native-native-retained"
+    ],
+    [
+      "/tmp/checked-sd-many-final/x4-final/native-checked-sd-restore-test",
+      "late-retained",
+      "/tmp/checked-sd-many-final/x4-final/card.img",
+      "/tmp/checked-sd-many-final/x4-final/native-late-retained"
+    ]
+  ],
+  "sanitizers": "none",
+  "sanitizer_environment": {},
+  "limits": "Actual checked NVS/AppData/native restore and coordinator with real X4/FatFs; SDK calls and partition accounting use host seams; no private-mount/product/hardware qualification"
+}

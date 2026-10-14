@@ -1,0 +1,103 @@
+{
+  "condition": "Fresh-initialization resume with a canonical existing replica-a.bin or .pending artifact; file validation yields then rechecks snapshot custody. inspectAttempt is inlined at inspectFreshArtifacts in this exact ELF. Source-bound function pointers supply only run->bootstrap client, publish->seal callback and check->snapshot edges. All other edges are linked direct calls.",
+  "frames": [
+    {
+      "address": "0x4205dadc",
+      "name": "RiscCpu::NativeSettingsWorker::(anonymous namespace)::run(void*)",
+      "frame": 80
+    },
+    {
+      "address": "0x4205623c",
+      "name": "RiscCpu::NativeSettingsBootstrap::registerBeforeActivate(RiscExperimental::NativeSettingsCoordinator&, RiscExperimental::NativeSettingsCoordinator&)::{lambda(void*)#1}::_FUN(void*)",
+      "frame": 32
+    },
+    {
+      "address": "0x420560d4",
+      "name": "RiscCpu::NativeSettingsBootstrap::workerStep()",
+      "frame": 48
+    },
+    {
+      "address": "0x42050428",
+      "name": "RiscCpu::NativeSettingsBootstrap::initializeNative()",
+      "frame": 96
+    },
+    {
+      "address": "0x4204583c",
+      "name": "RiscExperimental::NativeReplicaCore::initializeAdmitted(RiscExperimental::NativeReplicaCore::Initialization&, RiscExperimental::NativeReplicaCore::Origin)",
+      "frame": 176
+    },
+    {
+      "address": "0x42045574",
+      "name": "RiscExperimental::NativeReplicaCore::publish(unsigned char*, unsigned int)",
+      "frame": 4256
+    },
+    {
+      "address": "0x4203f914",
+      "name": "RiscExperimental::CheckedNativeReplicaStore::backend()::{lambda(void*, unsigned long long)#5}::_FUN(void*, unsigned long long)",
+      "frame": 32
+    },
+    {
+      "address": "0x4203f674",
+      "name": "RiscExperimental::CheckedNativeReplicaStore::seal(unsigned long long)",
+      "frame": 128
+    },
+    {
+      "address": "0x4203dd2c",
+      "name": "RiscExperimental::CheckedNativeReplicaStore::checkFreshReceiptAndArtifacts()",
+      "frame": 160
+    },
+    {
+      "address": "0x4203dc14",
+      "name": "RiscExperimental::CheckedNativeReplicaStore::inspectFreshArtifacts()",
+      "frame": 560
+    },
+    {
+      "address": "0x4203d4b8",
+      "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::inspect(unsigned char const*, unsigned int, unsigned long long, RiscExperimental::CheckedFreshInitArtifacts::Attempt)",
+      "frame": 112
+    },
+    {
+      "address": "0x4203d11c",
+      "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::inventory(RiscExperimental::CheckedFreshInitArtifacts::Canonical const&, unsigned long long, bool)",
+      "frame": 768
+    },
+    {
+      "address": "0x4203ce34",
+      "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::file(char const*, stat const&, RiscExperimental::CheckedFreshInitArtifacts::Canonical const&, unsigned long long, bool)",
+      "frame": 672
+    },
+    {
+      "address": "0x4203cabc",
+      "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::check(bool)",
+      "frame": 544
+    },
+    {
+      "address": "0x4203cabc",
+      "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::check(bool)",
+      "frame": 544
+    },
+    {
+      "address": "0x42042f40",
+      "name": "RiscCpu::NativeSettingsBackend::(anonymous namespace)::Backend::snapshot(void*, RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount*)",
+      "frame": 80
+    },
+    {
+      "address": "0x42042e38",
+      "name": "RiscCpu::NativeSettingsBackend::(anonymous namespace)::Backend::held(void*)",
+      "frame": 128
+    },
+    {
+      "address": "0x4205dcd8",
+      "name": "RiscCpu::NativeSettingsWorker::custody(unsigned int, RiscCpu::NativeSettingsWorker::Custody*)",
+      "frame": 64
+    },
+    {
+      "address": "0x4205da14",
+      "name": "RiscExperimental::NativeSettingsCoordinator::workerCustody(RiscExperimental::NativeSettingsCoordinator::Custody*) const",
+      "frame": 32
+    }
+  ],
+  "entry_frame_lower_bound": 8512,
+  "worker_stack_bytes": 8192,
+  "scope": "A feasible static nested ENTRY-frame lower bound, excluding interrupt/window-spill, ROM and untraced callee overhead. Not physical high-water or a worst-case upper bound."
+}

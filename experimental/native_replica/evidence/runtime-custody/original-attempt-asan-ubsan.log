@@ -1,0 +1,9 @@
+native SD attempt happy PASS (one-use credits=109, rejected calls=147)
+native SD attempt cleanup-padding PASS (one-use credits=109, rejected calls=147)
+native SD attempt reentry PASS (one-use credits=109, rejected calls=4616)
+native SD attempt cancel-queued PASS (one-use credits=107, rejected calls=145)
+native SD attempt cancel-complete PASS (one-use credits=109, rejected calls=147)
+native SD attempt native-happy PASS (one-use credits=104, rejected calls=143)
+native SD attempt native-cancel PASS (one-use credits=104, rejected calls=143)
+native SD attempt native-running PASS (one-use credits=104, rejected calls=143)
+Actual X4/FatFs native custody composition PASS; external source inputs: 249

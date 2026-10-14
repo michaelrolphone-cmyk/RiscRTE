@@ -1,0 +1,41 @@
+native_replica_core
+native replica: 1025 opaque keys, atomic PUT/DELETE groups, same-value intent, permanent replica after acknowledgement, newer pending operation and reboot PASS
+native replica: selected known-base edits require explicit resolution; high SD generation does not discard intent; stale candidate rejects concurrent changes; foreign lineage rejected PASS
+native replica: 174 deterministic error/power-cut before/after/torn backend interruption points across apply, acknowledgement and candidate switch PASS
+native replica: 96 creation and concurrent-newer-ack error/power-cut interruption points PASS
+native replica: allocation failures, storage exhaustion, bounded group/intent, corruption, wrong namespace, expired acknowledgement and explicit initialization PASS
+UNCONNECTED HOST CORE ONLY: no .90 routing/ABI change, SD/NVS integration or Wi-Fi semantic reconciliation qualified
+native_replica_export_marker
+durable marker: entropy-free v1 compatibility, explicit v2 upgrade, empty prefix, exact target and 256-byte capacity overhead PASS
+durable marker: exact live capture CAS, reboot, current map preservation, original-prefix carry-forward, two-bank reuse and stale handles PASS
+durable marker: 32 repaired-outer-checksum format, CRC, namespace/incarnation, base, map and original-prefix corruption refusals PASS
+durable marker: arm/ack/retire allocation and storage admission failures leave selected root unchanged PASS
+durable marker: 162 before/after/torn error/power-cut arm/ack/retire cases and 9 Retained root cases; complete old/new reload and safe completion PASS
+UNCONNECTED NATIVE CORE PROOF ONLY: synthetic IDs/data, no SD evidence implementation or production/hardware qualification
+native_settings_coordinator
+coordinator: real checked store/NVS composition; owner-only zero-I/O polls; native namespace exclusion; terminal collection; 40000 concurrent idle read releases PASS
+coordinator: four-client bound; foreign/stale leases; native maintenance Retained reaches atomic state/get/submit/exit PASS
+coordinator: queued revoke keeps lease until collected without mutation; completed cancellation preserves committed receipt PASS
+coordinator: actual AppData write blocked concurrently; cancellation/exit/native contention cannot release or delete running work PASS
+coordinator: actual checked close failure sticks Retained, namespace/background lease and native references PASS
+native_settings_worker_binding
+actual ESP binding: bounded two registrations, exact namespace/backend identity, foreign owner/ISR, internal allocation and failure rollback PASS
+actual ESP binding: legacy single namespace lookup and worker guards remain compatible PASS
+actual ESP binding: two real checked stores, concurrent polling, 20000 owner reads, 32 copied writes, native background contention and namespace isolation PASS
+actual ESP binding: namespace 1 blocked native write, cancellation and cross-namespace contention preserve both workers until checked collection PASS
+actual ESP binding: namespace 6 blocked native write, cancellation and cross-namespace contention preserve both workers until checked collection PASS
+actual ESP binding: namespace 1 checked-close Retained blocks aggregate exit and other namespace I/O; no task deletion/free PASS
+actual ESP binding: namespace 6 checked-close Retained blocks aggregate exit and other namespace I/O; no task deletion/free PASS
+native_settings_catalog
+Catalog: complete/partial bounded inventory, valid metadata retained after limit, malformed names/duplicates, parent absence check, order independence and artifact classification PASS
+Catalog: exact fixed-name backup-only recovery, present+backup preservation and no unknown artifact recovery PASS
+Catalog: 1016 queued/completed scan/reader cancel/removal/export/restart boundaries preserve native intents and files PASS
+Catalog: 604 reached before/after directory/file/recovery/checked-close faults and power cuts; retained custody stays sticky PASS
+Catalog: retry/worker/allocation admission, X4 active-session UNAVAILABLE refusal, late retained+lease transfer/cancel and allocation wiping PASS
+Catalog: 504 absent-root/parent, empty-namespace and artifact-only faults/power cuts refuse unproved vacancy without native loss PASS
+Catalog: actual Running cancellation/checked directory close, BUSY/PENDING custody, parent budget/obstruction and post-end retained priority PASS
+Catalog: sensitive classification prefixes wiped after summary, transfer, cancel, retention and destruction PASS
+Catalog memory: entries=128 inventory=36864 peak_allocated=102376 catalog_object=16088 report_object=464 entry=144 child_storage=9888 bytes (host ABI)
+Catalog memory: entries=256 inventory=73728 peak_allocated=139240 catalog_object=16088 report_object=464 entry=144 child_storage=9888 bytes (host ABI)
+Catalog union: 8 RTENR03 capacity/preconstruction cases; exact 65,028-byte replica/V2 and 52-byte V1 budgets, one-byte excess refusals, preserved groups prevent over-capacity adoption, no-native-write invariants and bounded v3 peak PASS
+DISCONNECTED CATALOG ONLY: historical evidence; no creation/adoption permit, native mutation, defaults, cleanup, production activation or hardware claim

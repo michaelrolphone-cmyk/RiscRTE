@@ -1,0 +1,9 @@
+Native catalog poll budget: mode=0 polls=1762 fused_next=1616 max_submit=1 max_collect=1 PASS
+Native catalog poll budget: mode=1 polls=1763 fused_next=1616 max_submit=1 max_collect=1 PASS
+Native catalog poll budget: mode=2 polls=30 fused_next=1 max_submit=1 max_collect=1 PASS
+Native catalog poll budget: mode=3 polls=30 fused_next=1 max_submit=1 max_collect=1 PASS
+Native catalog poll budget: mode=4 polls=232 fused_next=202 max_submit=1 max_collect=1 PASS
+Native catalog poll budget: mode=5 polls=30 fused_next=1 max_submit=1 max_collect=1 PASS
+Native catalog poll budget: mode=6 polls=232 fused_next=202 max_submit=1 max_collect=1 PASS
+Native catalog poll budget: mode=7 polls=232 fused_next=202 max_submit=1 max_collect=1 PASS
+Native catalog bounded poll suite PASS

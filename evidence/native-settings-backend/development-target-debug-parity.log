@@ -1,0 +1,7 @@
+00000000 00000968 B settings_backend_controls
+00000000 000004b0 B settings_namespace_backend
+Traceback (most recent call last):
+  File "/workspace/shared/x4-settings-native-backend-20261012/test/compile_native_settings_backend_target.py", line 31, in <module>
+    assert hashes[0]==hashes[1],hashes
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: ['51bee5c3e17b38228108403b2a93942f2bb83547108482f96beb8cfe3d10e2c3', '7e120a1774ffbc695c846cf23fdb14121312eca66e6f315d80af6fe0d40927a0']

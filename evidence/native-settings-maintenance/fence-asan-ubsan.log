@@ -1,0 +1,30 @@
+actual lifecycle/Runtime/X4/FatFs maintenance happy PASS; control=33296; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance idle PASS; control=33296; polls=0
+live atomic draft survives ordinary acquisition; obsolete revision still refuses; final release SD-acks PASS
+actual lifecycle/Runtime/X4/FatFs maintenance draft-fence PASS; control=33296; polls=0
+first atomic grant is published after both older namespaces settle on SD PASS
+actual lifecycle/Runtime/X4/FatFs maintenance pre-capture PASS; control=33296; polls=0
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+actual lifecycle/Runtime/X4/FatFs maintenance save-exit PASS; control=33296; polls=0
+last explicit atomic release / implicit final app teardown acknowledge BOTH namespaces on available SD PASS
+actual lifecycle/Runtime/X4/FatFs maintenance implicit-exit PASS; control=33296; polls=222
+actual lifecycle/Runtime/X4/FatFs maintenance absent PASS; control=33296; polls=8
+actual lifecycle/Runtime/X4/FatFs maintenance persisted-incarnation PASS; control=33296; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance foreign PASS; control=33296; polls=65
+actual lifecycle/Runtime/X4/FatFs maintenance usb-before PASS; control=33296; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance no-incarnation PASS; control=33296; polls=65
+actual lifecycle/Runtime/X4/FatFs maintenance cancel PASS; control=33296; polls=0
+last atomic release drains to terminal SD retention PASS
+actual lifecycle/Runtime/X4/FatFs maintenance restore PASS; control=33296; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance restore-concurrent PASS; control=33296; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance restore-resume PASS; control=33296; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance restore-single PASS; control=33296; polls=0
+actual lifecycle pre-app restore-no-source refuses unchanged PASS
+actual lifecycle pre-app restore-conflict refuses unchanged PASS
+actual lifecycle pre-app restore-cancel refuses unchanged PASS
+actual pre-app restore retention PASS
+actual lifecycle/Runtime/X4/FatFs maintenance first PASS; control=33296; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance first-concurrent PASS; control=33296; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance first-conflict PASS; control=33296; polls=93
+actual lifecycle/Runtime/X4/FatFs maintenance first-cancel PASS; control=33296; polls=0
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: happy, idle, draft-fence, pre-capture, save-exit, implicit-exit, absent, persisted-incarnation, foreign, usb-before, no-incarnation, cancel, retained, restore, restore-concurrent, restore-resume, restore-single, restore-no-source, restore-conflict, restore-cancel, restore-retained, first, first-concurrent, first-conflict, first-cancel

@@ -1,0 +1,156 @@
+RUN native_fresh_initialization
+FreshEmpty: native-only/no SD/no entropy create, callback reentry refusal, distinct Initializing, checked resume and later edit preservation PASS
+FreshEmpty: all 509 exact pending prefixes resume using a NEW monotonically reserved ID, never a bank promotion PASS
+FreshEmpty: 17 foreign/malformed/source/counter/alternate-entry refusals preserve evidence; canonical A never promoted; RTENINIT remains Unclassified PASS
+FreshEmpty: 33 source/journal/epoch and simultaneous Retained+lease-loss callback boundaries refuse publication and recover exact receipt PASS
+FreshEmpty allocations: exactly3 owned image/stage/cache allocations,1500 requested bytes peak; admission/store inspector adds zero heap allocations
+FreshEmpty: stale generic stages cannot seal or replace a newly selected receipt; unprepared backend admission refuses PASS
+FreshEmpty: 8 altered staged image/header/provenance cases refuse at checked canonical seal before any bank publication PASS
+FreshEmpty: missing version/collector/backend hooks refuse Fresh authorization while entropy-free Unclassified initialization remains available; late guard Retained outranks lease loss PASS
+FreshEmpty: 624 checked create/resume crash faults (86 Retained, 156 Uncertain) reload complete root or re-resolve exact receipt, with no defaults/source cleanup PASS
+Host layouts: Core=328 Initialization=528 Receipt=56 Factory=208 Store=384 Inspector=224; receipt48/image484/object508; disconnected host fact collectors only
+RUN native_import_initialization
+Imported init: exact receipt/source binding resumes original absent or empty rnr state; selected root and later edits cannot be reinitialized PASS
+Imported init: 593 exact pending prefixes and full canonical bank re-reserve monotonically; no staged bank promotion PASS
+Imported init: 628 root/source/owner/sequence/map/artifact mutations and every full-object byte corruption refuse without overwriting evidence PASS
+Imported init: 11 hash/append/post-admission source, receipt, sequence, inventory, epoch and artifact changes prevent publication PASS
+Imported init: 19 explicit-version/backend/collector gates, complete recheck bindings and admitted-map tamper refusals PASS
+Imported init: altered root revision refuses before receipt replacement; create/resume reboot retries remain recoverable PASS
+Imported init: 96 map-digest false plus Retained/lease-loss callback cuts stop hashing and I/O, preserve receipt and recover after reboot PASS
+Imported init allocations (84-byte map create): 25 allocations, 939476 requested bytes total, 191444 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init allocations (84-byte map resume): 25 allocations, 816516 requested bytes total, 191444 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init allocations (65028-byte map create): 25 allocations, 2569700 requested bytes total, 591332 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init allocations (65028-byte map resume): 25 allocations, 2436516 requested bytes total, 591332 bytes peak; complete original-source rematerialization is repeated at custody checks
+Imported init: bounded scratch allocation/hash failures unwind and wipe; all shared core/admission/store/source allocations released PASS
+Imported init: 46 shared core/admission/store/AppData/source allocation-failure positions recover exact original bytes after reboot PASS
+Imported init: 1850 reached create/resume NVS and filesystem returned-error cuts (54 Retained, 320 Uncertain); reboot loads selected root or resumes exact source receipt PASS
+Imported initialization remains disconnected; host fault evidence is not ESP filesystem/hardware qualification
+RUN native_import_power_cut
+Imported initialization: 196 process-death cuts (initial/resume, originally absent/empty rnr), including partial writes, no destructors, exact-source reboot recovery PASS
+RUN native_nvs_fresh_sources
+NVS source collector: actual checked factory/create path, all legacy namespaces, stable owner witness and callback reentry refusal PASS
+NVS source collector: 12 competing row/journal/anchor/delta/unknown-key refusals; empty spaces and other namespace isolation PASS
+NVS source collector: checked receipt resume and 8 owner/metadata/type/iterator/source/artifact refusals preserve all bytes PASS
+NVS source collector: all 509 exact checked scratch prefixes resume through actual factory/store without reusing IDs PASS
+NVS source collector: 88 reached read-only NVS failures reject evidence without writes or leaked handles PASS
+NVS source collector: owner-worker/initialization refusal and late guard Retained precedence with zero NVS I/O PASS
+Collector host size=80; no collector-owned heap allocation, no production selection, ESP artifact inspector remains unsupported
+RUN native_nvs_legacy_sources
+Legacy NVS: original opaque rows, full v1 journals, exact protocol overlays, empty full journal and v2 deltas import through real admission/store with every original preserved PASS
+Legacy NVS: 30 malformed/unknown/duplicate/anchored/artifact refusals preserve every source; no SD access or stale anchored reconstruction PASS
+Legacy NVS: owner/namespace/schema selection, shadowed source bytes, generations/padding/absence bound; mutation during hash/append and before import revalidation reject publication PASS
+Legacy NVS: exact map capacity, maximum value, allocation/hash failures, and wiped temporary source/map memory PASS
+Legacy NVS: 240 reached inventory/materialization NVS failures reject evidence without writes or leaked handles PASS
+Legacy NVS: all 428 truncated v1 journal/v2 anchor lengths and append failures reject evidence; Retained append is sticky PASS
+Legacy NVS: worker/global-lease/epoch/initialization gates, reentry, late callback lease loss and sticky Retained precedence suppress further I/O PASS
+Collector host size=256; disconnected, no production selection or hardware qualification
+RUN native_baseline_admission
+test/run_native_baseline_admission_test.sh: line 4: SYSTEM_ROOT: Set SYSTEM_ROOT to System Apps c564dd665072db141fc42d55be3be52511750719
+RUN native_baseline_admission
+baseline provenance: FreshEmpty uses native inventory with no SD provider, import/digest hooks or entropy; existing and newly appeared native legacy rows/journals/banks and orphan metadata block publication PASS
+baseline provenance: entropy-free FreshEmpty, actual Wi-Fi Save/update/Forget adoption, all original groups retained, v3 durable marker/newer edit/ack/retire/reboot preserve exact origin PASS
+baseline provenance: v3 published-prefix acknowledgement and exact-old-base retirement recover after reboot/newer edits with byte-identical provenance PASS
+baseline provenance: imported untouched rows and later intents cannot be discarded by receiver, direct installResolved, volatile acknowledgement or FreshEmpty initializer; empty imported origin remains imported PASS
+baseline provenance: unclassified empty/deleted maps stay unclassified; purpose/core/serial/lease/source/root binding, one-shot use and source callback reentry refusals PASS
+baseline provenance: 22 repaired-outer-checksum semantic corruptions refuse; old unknown v2 remains Unclassified; 484-byte minimum and exact 65,028-byte payload boundaries PASS
+baseline provenance: 9 materialization/hash/source/epoch/reentry/copy-integrity failures, factory/core allocator refusals and owned-byte wiping preserve native absence and original sources PASS
+baseline provenance: source callbacks and Core allocation observe in-flight factory custody; completed admission becomes exit-safe PASS
+baseline provenance: late guard-observed retention outranks simultaneous lease loss/epoch change during admission and consumption PASS
+baseline provenance: 526 checked fresh/import initializer faults (52 retained, 108 uncertain), complete map+origin roots; 255 interrupted FreshEmpty receipts resumed through fresh source/lease admission; zero source cleanup PASS
+DISCONNECTED PROVENANCE CORE: synthetic source inventory only; first SD creation, whole imported-baseline disposition and product activation remain deferred; host FreshEmpty receipt recovery is explicitly checked
+RUN native_replica_core
+native replica: 1025 opaque keys, atomic PUT/DELETE groups, same-value intent, permanent replica after acknowledgement, newer pending operation and reboot PASS
+native replica: selected known-base edits require explicit resolution; high SD generation does not discard intent; stale candidate rejects concurrent changes; foreign lineage rejected PASS
+native replica: 174 deterministic error/power-cut before/after/torn backend interruption points across apply, acknowledgement and candidate switch PASS
+native replica: 96 creation and concurrent-newer-ack error/power-cut interruption points PASS
+native replica: allocation failures, storage exhaustion, bounded group/intent, corruption, wrong namespace, expired acknowledgement and explicit initialization PASS
+UNCONNECTED HOST CORE ONLY: no .90 routing/ABI change, SD/NVS integration or Wi-Fi semantic reconciliation qualified
+RUN native_replica_store
+checked native replica: 1025 small keys, 72-byte NVS payload, 64KiB banks, recovery reserve, oversized-map preservation, namespace isolation, non-reused IDs and export pins PASS
+checked native replica worker: bounded copied owner submission/1000 no-I/O polls, queued cancel, scratch wiping and retained cancellation custody PASS
+checked native replica: actual retained close latches receiver/store/job custody; late abandon/rebegin/direct backend reuse causes no further filesystem or NVS I/O PASS
+checked native replica: lost root with existing banks never initializes defaults PASS
+Checked AppData/NVS adapter: 216 before/after API and every-chunk I/O failure cases preserve complete old/new replica and pending intent PASS
+RUN native_fresh_init_artifacts
+Fresh artifacts: 3054 exact stage prefixes; 125314 prefix corruptions; all bank cuts/bytes, canonical-image checks, aliases/inventory and 1626 I/O/callback fault cases PASS
+Imported artifacts: 2795 exact stage prefixes, 556 corruptions, strict v3/map framing, 65512-byte limit, aliases and 2881 I/O/callback fault cases PASS
+Fresh/imported artifact ESP_PLATFORM: unsupported nonalias metadata refuses before filesystem I/O; Retained precedence PASS
+RUN native_replica_sd_reader
+SD reader: 1025 keys, owned immutable candidate after checked close, actual native-capacity allocation, no native I/O/mutation, post-export custody and wiping PASS
+SD reader: 22 valid-digest malformed map/index cases reject grammar, padding, duplicate keys, zero/oversize/truncated values, count, framing and SHA mismatches PASS
+SD reader: missing/unavailable/unreadable distinguishable, high/foreign generation gives no adoption authority, capacity/allocator failure and empty map PASS
+SD reader: 424 real queued/completed worker cancel/removal/export/restart boundaries preserve native intents and candidate custody PASS
+SD reader: 220 reached before/after read/recovery/close failures and power cuts, backup-only replacement recovery and sticky retention PASS
+SD reader: changed-index recheck, late removal/export and late retained-close custody block candidate exposure PASS
+SD reader: four late-retained transfer/cancel cases, including concurrent lease loss, keep sticky custody and expose no candidate or native mutation PASS
+DISCONNECTED VERIFIED READER ONLY: no adoption, defaults, native mutation, migration, public ABI or hardware claim
+RUN native_replica_legacy_reader
+Legacy reader: 1025-key V2, V1 fixed tails, permitted padding, empty/unsorted/max values, page/CRC boundary framing, owned canonical map and exact-source SHA PASS
+Legacy reader: 45 recomputed-CRC malformed namespace/owner/header/row/anchor/duplicate/count/length/page/index cases fail closed PASS
+Legacy reader: exact native capacity, fixed V1 overhead, independent source selection/no fallback, missing/unavailable/unreadable and allocator/hash/worker admission PASS
+Legacy reader: 584 queued/completed worker cancel/removal/export/restart boundaries preserve all native intents and source bytes PASS
+Legacy reader: 472 reached before/after read/recovery/close faults and power cuts; backup-only recovery and sticky retained custody PASS
+Legacy reader: 12 source races including unchanged-index replacement, final reread/close lease loss, late removal/export/retention and post-transfer ownership PASS
+Legacy reader: 7 digest failure sites, reentrant callbacks, corrupt recovery, padding provenance and exact 4096-byte single-file limit PASS
+Legacy reader: start-time RTENR02 envelope after preconstructed-v1 upgrade, exact v2 capacity and untouched active export marker PASS
+Legacy reader: actual running-worker cancellation waits through repeated pending close; transient begin/submit BUSY and closing BUSY/PENDING preserve custody PASS
+DISCONNECTED LEGACY READER ONLY: no migration, adoption, defaults, native writes, cleanup, public ABI or hardware claim
+RUN native_settings_catalog
+Catalog: complete/partial bounded inventory, valid metadata retained after limit, malformed names/duplicates, parent absence check, order independence and artifact classification PASS
+Catalog: exact fixed-name backup-only recovery, present+backup preservation and no unknown artifact recovery PASS
+Catalog: 1016 queued/completed scan/reader cancel/removal/export/restart boundaries preserve native intents and files PASS
+Catalog: 604 reached before/after directory/file/recovery/checked-close faults and power cuts; retained custody stays sticky PASS
+Catalog: retry/worker/allocation admission, X4 active-session UNAVAILABLE refusal, late retained+lease transfer/cancel and allocation wiping PASS
+Catalog: 504 absent-root/parent, empty-namespace and artifact-only faults/power cuts refuse unproved vacancy without native loss PASS
+Catalog: actual Running cancellation/checked directory close, BUSY/PENDING custody, parent budget/obstruction and post-end retained priority PASS
+Catalog: sensitive classification prefixes wiped after summary, transfer, cancel, retention and destruction PASS
+Catalog memory: entries=128 inventory=36864 peak_allocated=102376 catalog_object=15376 report_object=464 entry=144 child_storage=9752 bytes (host ABI)
+Catalog memory: entries=256 inventory=73728 peak_allocated=139240 catalog_object=15376 report_object=464 entry=144 child_storage=9752 bytes (host ABI)
+Catalog union: 8 RTENR03 capacity/preconstruction cases; exact 65,028-byte replica/V2 and 52-byte V1 budgets, one-byte excess refusals, preserved groups prevent over-capacity adoption, no-native-write invariants and bounded v3 peak PASS
+DISCONNECTED CATALOG ONLY: historical evidence; no creation/adoption permit, native mutation, defaults, cleanup, production activation or hardware claim
+RUN native_first_sd_checked_store
+first checked store capacity: capture=5225 groups=137 v4_header=5737 image=11103 cap=65512 bytes; no-group max capture=(cap-516)/2=32498 bytes
+first checked store: immutable captured map survives repeated physical bank reuse, reboot and acknowledgement; owner SD polling makes no native I/O PASS
+first checked store: 488 reached AppData/NVS arm/ack faults (16 Retained, 48 Uncertain), exact old/new root reload and recovery PASS
+CHECKED HOST STORE PROOF ONLY: synthetic NVS/space and SD, no hardware qualification
+RUN native_first_sd_checkpoint
+first create: known lineage, unknown imported/empty baseline, durable-before-pages and newer native edit preservation PASS
+first create: legacy/new/unknown/orphan/backup preservation, unclassified provenance, missing entropy/custody and stale capture refusals PASS
+first create: 15 exact marker-owned torn-prefix repairs, reboot with repeated newer edits, stable lineage and nonprefix conflicts PASS
+first create: 476 worker before/after error/power cuts resume with fresh inventory/full readback/close and preserve newer edits PASS
+first create: 13 repaired-checksum purpose/capture/envelope corruptions, doubled-map native capacity, SD reservation and bounded inventory refusals PASS
+first create: ambiguous native arm/ack old-or-new reload and retained verification refuses acknowledgement PASS
+first create: explicitly selected complete empty dataset publishes only index PASS
+EXPERIMENTAL STRICT-GUARD HOST PROOF ONLY: no production binding or hardware qualification
+RUN native_atomic_checked_store
+Native atomic endpoint + checked AppDataFiles/NvsReplicaMetadata: 1000 owner polls without backend I/O, worker publication/cleanup, complete map+intent reboot PASS
+RUN native_settings_coordinator
+coordinator: real checked store/NVS composition; owner-only zero-I/O polls; native namespace exclusion; terminal collection; 40000 concurrent idle read releases PASS
+coordinator: four-client bound; foreign/stale leases; native maintenance Retained reaches atomic state/get/submit/exit PASS
+coordinator: queued revoke keeps lease until collected without mutation; completed cancellation preserves committed receipt PASS
+coordinator: actual AppData write blocked concurrently; cancellation/exit/native contention cannot release or delete running work PASS
+coordinator: actual checked close failure sticks Retained, namespace/background lease and native references PASS
+RUN native_rebase_roundtrip
+checked full chain: 149 keys, 33 surviving networks, 8 offline Save/update/Forget/unchanged intents, checked SD ack, full native erase and exact verified restore PASS
+checked full chain: 9 staged-prefix abandon/reboot boundaries retain original intents and successfully re-resolve/export PASS
+checked full chain: 7 verified corruption/lineage/rollback/divergence/schema/capacity refusals plus concurrent frontier preserve native state PASS
+checked full chain: 156 reader returned-error/power-cut cases expose only verified bytes and no native mutation; backup-only index and fresh acquisition recover PASS
+checked full chain: actual AppData partition/recovery-reserve capacity refusal preserves held resolved candidate and permits explicit finish retry PASS
+checked full chain: 680 reached SD returned-error/power-cut boundaries recover exact captured map through actual native acknowledgement PASS
+checked full chain: 165 SD cancel/lease-loss/restart handoffs preserve every native intent until verified acknowledgement PASS
+checked full chain: 688 actual native finish/ack faults, 16 retained and 48 uncertain outcomes, complete old/new reload and final recovery PASS
+checked full chain: live captured ack retains later edit; post-restart divergent replay and superseded intermediate intent fail closed (durable-prefix recovery remains outside proof) PASS
+DISCONNECTED HOST PROOF ONLY: explicit test restore authority; no creation/migration, product coordinator, port, SDK, UI, .90 activation or hardware qualification
+RUN native_settings_catalog (after narrow historical-page admission)
+Catalog: complete/partial bounded inventory, valid metadata retained after limit, malformed names/duplicates, parent absence check, order independence and artifact classification PASS
+Catalog: exact fixed-name backup-only recovery, present+backup preservation and no unknown artifact recovery PASS
+Catalog: 1016 queued/completed scan/reader cancel/removal/export/restart boundaries preserve native intents and files PASS
+Catalog: 604 reached before/after directory/file/recovery/checked-close faults and power cuts; retained custody stays sticky PASS
+Catalog: retry/worker/allocation admission, X4 active-session UNAVAILABLE refusal, late retained+lease transfer/cancel and allocation wiping PASS
+Catalog: 504 absent-root/parent, empty-namespace and artifact-only faults/power cuts refuse unproved vacancy without native loss PASS
+Catalog: actual Running cancellation/checked directory close, BUSY/PENDING custody, parent budget/obstruction and post-end retained priority PASS
+Catalog: sensitive classification prefixes wiped after summary, transfer, cancel, retention and destruction PASS
+Catalog memory: entries=128 inventory=36864 peak_allocated=102376 catalog_object=15376 report_object=464 entry=144 child_storage=9752 bytes (host ABI)
+Catalog memory: entries=256 inventory=73728 peak_allocated=139240 catalog_object=15376 report_object=464 entry=144 child_storage=9752 bytes (host ABI)
+Catalog union: 8 RTENR03 capacity/preconstruction cases; exact 65,028-byte replica/V2 and 52-byte V1 budgets, one-byte excess refusals, preserved groups prevent over-capacity adoption, no-native-write invariants and bounded v3 peak PASS
+DISCONNECTED CATALOG ONLY: historical evidence; no creation/adoption permit, native mutation, defaults, cleanup, production activation or hardware claim

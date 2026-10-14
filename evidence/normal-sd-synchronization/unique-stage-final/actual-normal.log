@@ -1,0 +1,32 @@
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator happy PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator concurrent PASS
+actual X4 durable A interruption, native reload, app edit B, publication/reload acknowledgement preserves both page sets and old stage PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator page-prefix PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator page-empty PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator page-mismatch PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator page-oversize PASS
+normal durable SD owner recovery-published exact selected-marker restart PASS
+normal durable SD owner recovery-newer exact selected-marker restart PASS
+normal durable SD owner recovery-unpublished exact selected-marker restart PASS
+normal durable SD owner recovery-mismatch exact selected-marker restart PASS
+normal durable SD owner recovery-legacy exact selected-marker restart PASS
+normal durable SD owner recovery-cancel-ack exact selected-marker restart PASS
+normal durable SD owner recovery-running-cancel exact selected-marker restart PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator no-incarnation PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator foreign PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator changed PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator same-generation PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator legacy PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator unknown PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator usb-before PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator unavailable PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator cancel-admission PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator cancel-preparation PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator cancel-write PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator cancel-ack PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator running-cancel PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator remove Retained PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator sd-close Retained PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator native-close Retained PASS
+normal SD owner actual Runtime/Port/X4/FatFs/coordinator late-retained Retained PASS
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: happy, concurrent, abandoned-A-B, page-prefix, page-empty, page-mismatch, page-oversize, recovery-published, recovery-newer, recovery-unpublished, recovery-mismatch, recovery-legacy, recovery-cancel-ack, recovery-running-cancel, no-incarnation, foreign, changed, same-generation, legacy, unknown, usb-before, unavailable, cancel-admission, cancel-preparation, cancel-write, cancel-ack, running-cancel, remove, sd-close, native-close, late-retained

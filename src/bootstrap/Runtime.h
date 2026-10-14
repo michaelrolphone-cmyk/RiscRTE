@@ -3,11 +3,18 @@
 #include "RiscRandomV1.h"
 #include <RiscAppCatalogV1.h>
 #include <RiscInstallationV1.h>
+#include <RiscInstallationMediaV1.h>
 #include "Board.h"
 #include "AppPolicyLimits.h"
 #include "AppRequirementLimits.h"
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
+#include "AtomicKeyValueConfig.h"
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+#include <RiscKeyValueAtomicV1.h>
+#include <RiscKeyValueAvailabilityV1.h>
+namespace RiscExperimental { class NativeAtomicKeyValue; }
+#endif
 #include <RiscBoundAppDataAsyncV1.h>
 #include "TcpListenerBackend.h"
 #include "EntropyBackend.h"
@@ -36,6 +43,7 @@
 struct esp_dl_image_cache;
 namespace RuntimeProviders { struct NativeProviderPolicySnapshotV1; }
 namespace RiscUpdate { struct NativeAppDataExportPolicyV1; struct NativeAppDataExportPolicyV2; }
+namespace RiscExperimental { class NativeRuntimeStoragePin; }
 namespace RiscBoot {
 class Runtime;
 // Optional compiled-in backend. Namespace comes only from validated boot policy.
@@ -96,6 +104,19 @@ struct Port {
   void (*controlBegin)(bool child)=nullptr;
   bool (*controlEnd)()=nullptr;
   bool (*controlExitRequested)()=nullptr;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  // Explicit native owner checkpoint. Runs outside provider service leases;
+  // false means observed terminal custody, never temporary Busy. Accepted work
+  // advances one step; the native coordinator fences new atomic snapshots.
+  // admitNew=false fences new work while a host/foreground atomic grant can
+  // hold an edit snapshot. It never suppresses polling accepted custody.
+  bool (*nativeOwnerCheckpoint)(bool admitNew)=nullptr;
+  // Bounded accepted-work/discovery polling: ordinary yield never starts
+  // maintenance. Shutdown drains before any graph teardown.
+  bool (*nativeDiscoveryCheckpoint)()=nullptr;
+  bool (*nativeSettingsShutdown)()=nullptr;
+#endif
+  // Optional native-owned private scratch, never an app-selected path.
   const FileSourceBackend* fileSource=nullptr;
 };
 class Runtime final {
@@ -113,6 +134,25 @@ class Runtime final {
   // Compiled-in port registration only, never exported to apps/driver ELFs.
   // Tables/contexts must remain valid until successful runtime shutdown.
   bool registerPlatform(const char* capability, uint32_t api, Scope scope, uint64_t id, const void* table);
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  // Trusted firmware only, before prepare or in bindPlatforms. Copies app ID;
+  // endpoint/namespace gate must outlive all invocations and successful shutdown.
+  bool registerAtomicKeyValue(const char* appId,uint32_t nameSpace,RiscExperimental::NativeAtomicKeyValue&);
+  // Optional namespace routing for already-admitted KV1/KV2 readers. All
+  // legacy writes into that namespace are denied; no implicit intent/fallback.
+  bool registerAtomicKeyValueReadThrough(uint32_t nameSpace,RiscExperimental::NativeAtomicKeyValue&);
+  struct KeyValueAvailability {
+    void* context=nullptr;
+    int32_t (*snapshot)(void*,uint32_t,risc_key_value_availability_state_v1*)=nullptr;
+  };
+  // Optional RAM-only availability gate, bound before prepare to an exact
+  // read-through namespace. Missing registration preserves the old contract.
+  bool registerKeyValueAvailability(uint32_t nameSpace,KeyValueAvailability);
+  // Owner checkpoint only, no callbacks/I/O. Includes host, foreground and
+  // bound-provider KV grants. Status-only grants never hold a data snapshot.
+  bool keyValueReconciliationSafe(uint32_t nameSpace) const;
+  bool keyValueRetentionObserved() const; // out-of-line native/host boundary
+#endif
   bool registerEntropy(const EntropyBackend*); // provider-only, no generation during admission
   bool registerTcpListener(const TcpListenerBackend*); // compiled-in opt-in only
   bool registerRealtime(const risc_realtime_control_api_v1*); // compiled-in backend only
@@ -193,11 +233,22 @@ class Runtime final {
                             bool (*admit)(void*,const char*,bool),void* context,
                             const RiscUpdate::NativeAppDataExportPolicyV2&) const;
   bool appInventory(size_t index,void*,size_t,uint32_t*) const;
-  bool active() const { return invocation_->active_ && !invocation_->streams_.busy() && port_.owner(); }
+  bool active() const { return
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+    !nativeCheckpointRunning_ &&
+#endif
+    invocation_->active_ && !invocation_->streams_.busy() && port_.owner(); }
   bool retained() const { return retained_; }
   // Compiled-in reset/deep-sleep admission. A suspended native stack has no
   // durable checkpoint; the foreground must finish before RAM can be lost.
-  bool residentResetSafe() const {return fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
+  bool residentResetSafe() const {return
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+    !nativeCheckpointRunning_ &&
+#endif
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+    atomicExitSafe(true) &&
+#endif
+    fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
   // by their native store owner, which must retain its mount/session.
@@ -209,6 +260,7 @@ class Runtime final {
   Board& board() { return board_; }
   const Board& board() const { return board_; }
  private:
+  friend class ::RiscExperimental::NativeRuntimeStoragePin; // compiled-in custody only, never an SDK import
   bool diagnosticCheckpointToken(uint64_t) const;
   bool failureEvidenceToken(uint64_t,bool healthy) const;
   void failureBreadcrumb(uint32_t phase,const char* application=nullptr);
@@ -236,6 +288,9 @@ class Runtime final {
   bool validateGraph();
   static void* openDriverImage(void*,const char*,const void*);
   void serviceProviders();
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  void serviceNativeSettings(bool discoveryOnly=false);
+#endif
   bool runOne(const char*);
   bool residentPolicy(JsonVariantConst);
   bool residentAllowed(const char*) const;
@@ -259,6 +314,31 @@ class Runtime final {
   static void streamYield(void*);
   bool providerStorageSafe() const;
   bool appManifestPath(size_t,char*,size_t) const;
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  struct AtomicBinding {
+    char app[96]{};uint32_t nameSpace=0;
+    RiscExperimental::NativeAtomicKeyValue* endpoint=nullptr;
+    KeyValueAvailability availability{};
+  };
+  AtomicBinding atomicBindings_[8]{};size_t atomicBindingCount_=0;
+  static constexpr PolicyIndex AtomicKeyValueDriver=-11;
+  static constexpr PolicyIndex KeyValueAvailabilityDriver=-12;
+  const KeyValueAvailability* keyValueAvailability(uint32_t) const;
+  bool keyValueAuthoritative(uint32_t) const;
+  static int32_t keyValueAvailabilitySnapshot(void*,risc_key_value_availability_state_v1*);
+  AtomicBinding* atomicBinding(const char*,uint32_t);
+  RiscExperimental::NativeAtomicKeyValue* atomicReadThrough(uint32_t) const;
+  int32_t atomicLegacyGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t);
+  bool atomicExitSafe(bool exiting) const;
+  struct AppGrant;
+  static AppGrant* atomicContext(void*);
+  int32_t atomicResult(int32_t);
+  static int32_t atomicState(void*,risc_key_value_atomic_state_v1*);
+  static int32_t atomicGet(void*,uint64_t,const char*,void*,uint32_t,uint32_t*);
+  static int32_t atomicSubmit(void*,uint64_t,const risc_key_value_atomic_mutation_v1*,uint32_t,const void*,uint32_t,uint64_t*);
+  static int32_t atomicCollect(void*,uint64_t,risc_key_value_atomic_receipt_v1*);
+  static int32_t atomicCancel(void*,uint64_t);
+#endif
   static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
   static int32_t keyValuePut(void*,const char*,const void*,uint32_t);
   struct ProviderKey {
@@ -402,7 +482,7 @@ class Runtime final {
   struct InstalledAppMetadata {char manifest[4097]{};uint32_t namespaceSlot=0;};
   MetadataArray<InstalledAppMetadata> installedMetadata_;
   struct InstallationState {
-    risc_installation_v1 api{};uint64_t volume=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
+    risc_installation_media_v1 api{};uint64_t volume=0,internalVolume=0;bool internalEnabled=false;uint32_t medium=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
   };
   MetadataArray<InstallationState> installation_;
   MetadataArray<RiscStorage::SdFirstKeyValue::State> installedSettings_;
@@ -424,9 +504,12 @@ class Runtime final {
   static int32_t installationForget(void*,const char*,bool);
   static int32_t installationCommit(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
   static int32_t installationCheck(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
-  static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool,const uint32_t* slots=nullptr);
+  static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool,const uint32_t* slots=nullptr,const uint32_t* media=nullptr);
   bool installationMutable(size_t)const;
   static int32_t installationProviders(void*,const risc_install_provider_v1*,uint32_t,bool);
+  static int32_t installationProvidersMedia(void*,const risc_install_provider_v1*,const uint32_t*,uint32_t,bool);
+  static int32_t installationProviderTransaction(void*,const risc_install_provider_v1*,const uint32_t*,uint32_t,bool);
+  static int32_t installationNamespacedMedia(void*,const risc_install_candidate_v1*,const uint32_t*,const uint32_t*,uint32_t,risc_install_result_v1*,bool,bool);
   static bool installationAvailable(void*,const char*,uint32_t,uint64_t);
   bool installedLaunchPath(const char*,char*,size_t,bool* settingsPending=nullptr)const;
   void* loadRemovableApp(const AppPolicy&);
@@ -473,6 +556,13 @@ class Runtime final {
     uint32_t generation=0; bool live=false;
     uint32_t keyValueNamespace=0; risc_key_value_v1 keyValue{};
     risc_memory_heap_api_v1 memoryHeap{};risc_random_api_v1 random{};
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+    risc_key_value_atomic_v1 atomic{};
+    risc_key_value_availability_v1 availability{};
+    uint32_t availabilityNamespace=0;
+    RiscExperimental::NativeAtomicKeyValue* atomicEndpoint=nullptr;
+    uint64_t atomicOperation=0;
+#endif
   };
   uint32_t grantGeneration_=0;
   bool providerFileRetained_=false;
@@ -482,6 +572,9 @@ class Runtime final {
   } platforms_[MaxPlatforms]{};
   size_t platformCount_=0;
   Port port_;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  bool nativeCheckpointRunning_=false;
+#endif
   RuntimeProviders::NativeProviderPolicySnapshotV1* nativePolicies_=nullptr;
   FILE* retainedNativeProviderRead_=nullptr; // Deliberately never closed after lost native custody.
   uint8_t* retainedNativeProviderBytes_=nullptr; // May remain borrowed by uncertain native I/O.

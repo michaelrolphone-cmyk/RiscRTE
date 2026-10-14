@@ -14,8 +14,16 @@ extern "C" const char risc_app_requirement_rows[]=RISC_APP_REQUIREMENT_ROWS_MARK
 #endif
 #include "ports/esp32s3/CpuPort.h"
 #include "ports/esp32s3/NativeRadioResources.h"
+#include "ports/esp32s3/NativeSettingsLifecycle.h"
+#if RISC_NATIVE_SETTINGS_BACKEND
+#include "ports/esp32s3/NativeSettingsBackend.h"
+#include "ports/esp32s3/NativeSettingsStartupEntropy.h"
+#endif
 #include "ports/esp32s3/NativeRetainedWake.h"
 #include "ports/esp32s3/NativeRealtime.h"
+#ifdef RISC_ENABLE_HTTP
+#include "ports/esp32s3/NativeTlsMemory.h"
+#endif
 #include "ports/esp32s3/NativeBoard.h"
 #include "ports/esp32s3/CooperativeDelay.h"
 #include "ports/esp32s3/SleepDiagnostics.h"
@@ -55,6 +63,7 @@ extern "C" void risc_perf_loader_event(uint32_t phase,uint32_t value) {
 }
 #ifdef RISC_PAIRED_APP_DATA
 #include "ports/esp32s3/NativeAppData.h"
+#include "ports/esp32s3/NativePackageVolume.h"
 #include "ports/esp32s3/NativeFileSource.h"
 #endif
 #ifdef RISC_PAIRED_BANKS
@@ -110,6 +119,12 @@ void schedulerDelay(uint32_t ms) {
   vTaskDelay(RiscCpu::cooperativeDelayTicks(ms,configTICK_RATE_HZ));
 }
 void cooperate(uint32_t ms) {
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  // This callback never starts work. Runtime separately admits bounded discovery
+  // at its post-entry owner checkpoint; accepted maintenance also advances one step.
+  RiscCpu::NativeSettingsLifecycle::cooperate();
+  if(RiscCpu::NativeSettingsLifecycle::retained()){schedulerDelay(ms);return;}
+#endif
 #if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::poll();
 #endif
@@ -125,17 +140,38 @@ bool bindPlatforms(RiscBoot::Runtime& runtime){
   && RiscBankStore::bind(runtime)
 #endif
   ))return false;
+#if RISC_NATIVE_PACKAGE_VOLUME
+  if(!RiscPackageVolume::bind(runtime,isOwner))return false;
+#endif
   return RiscDiagnostics::bindNativeSource(runtime);
 }
-bool appExitSafe(){return cpu.appExitSafe()
+bool appExitSafe(){return
+#if RISC_NATIVE_PACKAGE_VOLUME
+ RiscPackageVolume::exitSafe() &&
+#endif
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  (RiscCpu::NativeSettingsLifecycle::continuing()?cpu.nativeDiscoveryAppExitSafe():cpu.appExitSafe())
+  && (RiscCpu::NativeSettingsLifecycle::continuing()||RiscCpu::NativeSettingsLifecycle::exitSafe())
+#else
+  cpu.appExitSafe()
+#endif
 #if RISC_NATIVE_FILE_SOURCE
- && RiscFileSource::exitSafe()
+  && RiscFileSource::exitSafe()
 #endif
 #ifdef RISC_PAIRED_BANKS
   && RiscBankStore::exitSafe()
 #endif
   ;}
-bool providerStorageSafe(){return cpu.providerStorageSafe()
+bool providerStorageSafe(){return
+#if RISC_NATIVE_PACKAGE_VOLUME
+ RiscPackageVolume::exitSafe() &&
+#endif
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+ (RiscCpu::NativeSettingsLifecycle::continuing()?cpu.nativeDiscoveryProviderSafe():cpu.providerStorageSafe())
+ && !RiscCpu::NativeSettingsLifecycle::retained()
+#else
+ cpu.providerStorageSafe()
+#endif
 #if RISC_NATIVE_FILE_SOURCE
  && RiscFileSource::exitSafe()
 #endif
@@ -147,10 +183,19 @@ bool restartSafe(){return cpu.restartResourcesSafe()
 #if RISC_NATIVE_FILE_SOURCE
  && RiscFileSource::resetSafe()
 #endif
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+ && RiscCpu::NativeSettingsLifecycle::exitSafe()
+#endif
 #ifdef RISC_PAIRED_APP_DATA
  && RiscAppData::exitSafe()
 #endif
  ;}
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+bool updateStorageSafe(){return providerStorageSafe() && RiscCpu::NativeSettingsLifecycle::exitSafe();}
+bool nativeOwnerCheckpoint(bool admitNew){return RiscCpu::NativeSettingsLifecycle::checkpoint(admitNew);}
+bool nativeDiscoveryCheckpoint(){return RiscCpu::NativeSettingsLifecycle::discoveryCheckpoint();}
+bool nativeSettingsShutdown(){return RiscCpu::NativeSettingsLifecycle::shutdown();}
+#endif
 bool confirmBoot(){
 #ifdef RISC_PAIRED_BANKS
   return cpu.providerStorageSafe() && RiscBankStore::confirmBoot();
@@ -172,12 +217,18 @@ bool priorFailure(risc_resident_failure_v1* out){
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
 RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+,nativeOwnerCheckpoint,nativeDiscoveryCheckpoint,nativeSettingsShutdown
+#endif
 #if RISC_NATIVE_FILE_SOURCE
 ,RiscFileSource::backend()
 #endif
 });
 #else
 RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+,nativeOwnerCheckpoint,nativeDiscoveryCheckpoint,nativeSettingsShutdown
+#endif
 #if RISC_NATIVE_FILE_SOURCE
 ,RiscFileSource::backend()
 #endif
@@ -186,6 +237,9 @@ RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,Ris
 }
 void setup() {
   owner=xTaskGetCurrentTaskHandle();
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+  (void)RiscCpu::NativeSettingsStartupEntropy::capture(isOwner);
+#endif
   RiscCpu::NativeFailureEvidence::start();
 #if RISC_STAGE_LOGS
   const auto bootUs=uint64_t(esp_timer_get_time());
@@ -217,6 +271,12 @@ void setup() {
     const char* failure=risc_native_startup_error();
     if(failure) { diagnosticFormat("RTE_BOOT error=native-startup detail=%s",failure);return; }
   }
+#ifdef RISC_ENABLE_HTTP
+  // Arduino has initialized PSRAM before setup. Install before any bootstrap
+  // or application can start networking; an unavailable hook disables HTTPS.
+  if(!RiscCpu::NativeTlsMemory::initialize())
+    diagnosticLine("RTE_HTTP unavailable=tls-psram-allocator");
+#endif
 #ifndef RISC_EMBEDDED_BOOTSTORE
   if(RiscNvs::initializationStatus()!=ESP_OK) diagnosticFormat("RTE_STORAGE unavailable=nvs code=%d erase_recovery=disabled",RiscNvs::initializationStatus());
 #endif
@@ -234,7 +294,13 @@ void setup() {
   stageUs=RiscDiagnostics::monotonicUs();
 #endif
   RISC_STAGE_LOG("boot bank-selection begin");
-  {RiscPerf::Scope phase(51,52);bankReady=RiscBankStore::prepareBoot(isOwner,restartSafe,providerStorageSafe);}
+  {RiscPerf::Scope phase(51,52);bankReady=RiscBankStore::prepareBoot(isOwner,restartSafe,
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+    updateStorageSafe
+#else
+    providerStorageSafe
+#endif
+  );}
   RISC_STAGE_LOG("boot bank-selection end result=%s elapsed_us=%llu",bankReady?"ok":"failed",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
   if(!bankReady) {
@@ -290,6 +356,13 @@ void setup() {
   if(!RiscFileSource::exitSafe()){diagnosticLine("RTE_STORAGE file-source=retained restart-required");return;}
 #endif
 #endif
+#if RISC_NATIVE_SETTINGS_BACKEND
+  // Explicit pre-app provisioning/binding is separate from the RAM-only
+  // selector below. The existing mount owner never formats or grows storage.
+  if(!appDataReady || !RiscCpu::NativeSettingsBackend::prepare(isOwner)) {
+    diagnosticLine("RTE_BOOT error=native-settings-backend");return;
+  }
+#endif
   // Read-only owner input, before any app/driver binding. No configured fresh
   // time source means offline installed boot, never a stale timestamp bypass.
   RiscPerf::emit(57);
@@ -326,6 +399,9 @@ void setup() {
     ,nullptr
 #endif
     ,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+    ,nativeOwnerCheckpoint,nativeDiscoveryCheckpoint,nativeSettingsShutdown
+#endif
 #if RISC_NATIVE_FILE_SOURCE
     ,RiscFileSource::backend()
 #endif
@@ -341,6 +417,15 @@ void setup() {
   }
   auto& runtime=*retainedRuntime;
 #endif
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  // An independent qualified native backend admission is required. This hook
+  // performs no mount, format, source import, default initialization or SD I/O.
+  const auto* settings=risc_native_settings_admission?risc_native_settings_admission():nullptr;
+  if(!RiscCpu::NativeSettingsLifecycle::prepare(settings,{isOwner,schedulerDelay,[]()->uint32_t{return uint32_t(millis());},RiscCpu::NativeCrownRecovery::exitRequested}) ||
+     !RiscCpu::NativeSettingsLifecycle::bind(runtime)) {
+    diagnosticLine("RTE_BOOT error=native-settings-admission");return;
+  }
+#endif
   RiscCpu::reserveNativePins(runtime.board());
 #if RISC_STAGE_LOGS
   stageUs=RiscDiagnostics::monotonicUs();
@@ -355,6 +440,15 @@ void setup() {
     if(!runtime.retained() && !runtime.metadataCloseRetained() && appExitSafe())RiscBankStore::rejectBoot();
 #endif
     return; }
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  // Worker-only native load precedes every app. Missing/initializing roots
+  // remain temporarily unavailable while a qualified dispatcher retries later.
+  // Corrupt roots stop here. This binding never synthesizes a baseline.
+  if(!RiscCpu::NativeSettingsLifecycle::hydrate(runtime,cpu) ||
+     !RiscCpu::NativeSettingsLifecycle::attachOwner(runtime,cpu)) {
+    diagnosticLine("RTE_BOOT error=native-settings-hydration");return;
+  }
+#endif
   RiscPerf::emit(59);
   RISC_STAGE_LOG("boot metadata-ready elapsed_us=%llu",(unsigned long long)(RiscDiagnostics::monotonicUs()-bootUs));
   diagnosticLine("RTE_BOOT board=validated drivers=admitted");

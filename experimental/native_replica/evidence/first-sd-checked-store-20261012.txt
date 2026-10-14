@@ -1,0 +1,4 @@
+first checked store capacity: capture=5225 groups=137 v4_header=5737 image=11103 cap=65512 bytes; no-group max capture=(cap-516)/2=32498 bytes
+first checked store: immutable captured map survives repeated physical bank reuse, reboot and acknowledgement; owner SD polling makes no native I/O PASS
+first checked store: 488 reached AppData/NVS arm/ack faults (16 Retained, 48 Uncertain), exact old/new root reload and recovery PASS
+CHECKED HOST STORE PROOF ONLY: synthetic NVS/space and SD, no hardware qualification

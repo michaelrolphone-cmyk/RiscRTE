@@ -1,0 +1,8 @@
+Legacy NVS: original opaque rows, full v1 journals, exact protocol overlays, empty full journal and v2 deltas import through real admission/store with every original preserved PASS
+Legacy NVS: 30 malformed/unknown/duplicate/anchored/artifact refusals preserve every source; no SD access or stale anchored reconstruction PASS
+Legacy NVS: owner/namespace/schema selection, shadowed source bytes, generations/padding/absence bound; mutation during hash/append and before import revalidation reject publication PASS
+Legacy NVS: exact map capacity, maximum value, allocation/hash failures, and wiped temporary source/map memory PASS
+Legacy NVS: 240 reached inventory/materialization NVS failures reject evidence without writes or leaked handles PASS
+Legacy NVS: all 428 truncated v1 journal/v2 anchor lengths and append failures reject evidence; Retained append is sticky PASS
+Legacy NVS: worker/global-lease/epoch/initialization gates, reentry, late callback lease loss and sticky Retained precedence suppress further I/O PASS
+Collector host size=264; disconnected, no production selection or hardware qualification

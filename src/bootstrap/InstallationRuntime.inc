@@ -1,11 +1,17 @@
 namespace RiscBoot {
 bool Runtime::configureInstallation(JsonVariantConst value){
  if(value.isUnbound())return true;
- if(!value.is<JsonObjectConst>() || !keys(value.as<JsonObjectConst>(),{"volume_instance","grants"},{"namespace_range","provider_grants","settings_sd","shared_settings"}) ||
+ if(!value.is<JsonObjectConst>() || !keys(value.as<JsonObjectConst>(),{"volume_instance","grants"},{"namespace_range","provider_grants","settings_sd","shared_settings","internal_volume_instance"}) ||
     !value["grants"].is<JsonArrayConst>() || value["grants"].size()>MaxAppPolicyGrants)return fail("invalid installation envelope");
  int64_t volume=0;if(!integer(value["volume_instance"],1,INT32_MAX,volume))return fail("invalid installation volume");
  bool found=false;for(size_t i=0;i<driverCount_;++i)if(drivers_[i].instance==uint64_t(volume)&&!strcmp(drivers_[i].provides,"storage.volume")&&drivers_[i].api==1)found=true;
  if(!found)return fail("installation volume unavailable");
+ int64_t internal=0;bool internalEnabled=!value["internal_volume_instance"].isUnbound();
+ if(internalEnabled){
+  if(!integer(value["internal_volume_instance"],0,INT32_MAX,internal)||internal==volume)return fail("invalid internal installation volume");
+  unsigned matches=0;for(size_t i=0;i<driverCount_;++i)if(drivers_[i].instance==uint64_t(internal)&&!strcmp(drivers_[i].provides,"storage.volume")&&drivers_[i].api==1&&!drivers_[i].sourcePath[0])++matches;
+  if(matches!=1)return fail("internal installation volume unavailable");
+ }
  int64_t first=0,count=0;
  if(!value["namespace_range"].isUnbound()){
   auto range=value["namespace_range"].as<JsonObjectConst>();
@@ -67,7 +73,10 @@ bool Runtime::configureInstallation(JsonVariantConst value){
   }
  }
  installation_[0].volume=uint64_t(volume);installation_[0].namespaceFirst=uint32_t(first);installation_[0].namespaceCount=uint32_t(count);
- installation_[0].api={1,sizeof(risc_installation_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),uint32_t((installedSettings_||scalableSettings_)?count:0),installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,scalableSettings_?2u:1u,uint32_t(sharedSettings_.count),installationSharedSettingsNamespace};
+ installation_[0].internalEnabled=internalEnabled;installation_[0].internalVolume=uint64_t(internal);
+ installation_[0].api.base={1,sizeof(risc_installation_media_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),uint32_t((installedSettings_||scalableSettings_)?count:0),installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,scalableSettings_?2u:1u,uint32_t(sharedSettings_.count),installationSharedSettingsNamespace};
+ installation_[0].api.media_tag=RISC_INSTALLATION_MEDIA_TAG;installation_[0].api.media_version=1;installation_[0].api.media_mask=internalEnabled?3u:1u;
+ installation_[0].api.namespaced_media=installationNamespacedMedia;installation_[0].api.providers_media=installationProvidersMedia;
  return registerPlatform(RISC_INSTALLATION_CAPABILITY,1,Scope::Global,0,&installation_[0].api);
 }
 bool Runtime::installationNamespaceRangeSafe()const{
@@ -100,6 +109,7 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
     r->graph_.lifecycleBusy()||!r->providerStorageSafe()||!relative||!json||!out||cap<2)return RISC_INSTALL_DENIED;
  if(r->installation_[0].call)return RISC_INSTALL_BUSY;
  if(strnlen(relative,193)>192||strnlen(json,4097)>4096)return RISC_INSTALL_INVALID;
+ const uint64_t selectedVolume=r->installation_[0].medium==RISC_INSTALL_MEDIA_INTERNAL?r->installation_[0].internalVolume:r->installation_[0].volume;
  // Exact managed-directory manifest only; grants and volume never come from SD.
  const char*slash=strrchr(relative,'/');
  if(strncmp(relative,"Apps/",5)||!slash||slash<=relative+5||strcmp(slash,"/manifest.json")||
@@ -111,7 +121,7 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
  if(!mode.isUnbound()&&!eq(mode,"foreground")&&!eq(mode,"legacy"))return RISC_INSTALL_INVALID;
  std::string image(relative,size_t(slash-relative)+1);image+=artifact;
  if(image.size()>=cap||image.size()>=128)return RISC_INSTALL_INVALID;
- policy["manifest"]=relative;policy["image_source"]["volume_instance"]=r->installation_[0].volume;
+ policy["manifest"]=relative;policy["image_source"]["volume_instance"]=selectedVolume;
  policy["image_source"]["path"]=image;auto grants=policy["grants"].to<JsonArray>();
  const AppDeclarations declarations(manifest.as<JsonObjectConst>());
  if(declarations.error(MaxAppRequirements))return RISC_INSTALL_INVALID;
@@ -121,7 +131,7 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
  const AppPolicy* authority=nullptr;
  for(size_t i=0;i<r->bootPolicyCount_;++i)if(r->policies_[i].catalogAuthority&&!strcmp(r->policies_[i].id,id))authority=&r->policies_[i];
  if(authority){
-  if(authority->sourceDriver<0 || r->drivers_[authority->sourceDriver].instance!=r->installation_[0].volume)return RISC_INSTALL_DENIED;
+  if(authority->sourceDriver<0 || r->drivers_[authority->sourceDriver].instance!=selectedVolume)return RISC_INSTALL_DENIED;
   // A migrated identity remains pinned to its original managed directory.
   const char* oldSlash=strrchr(authority->sourcePath,'/');
   if(!oldSlash || size_t(oldSlash-authority->sourcePath)!=size_t(slash-relative)+1 ||
@@ -167,11 +177,11 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
   if(existing>=r->bootPolicyCount_&&r->installedMetadata_[existing].namespaceSlot&&r->installedMetadata_[existing].namespaceSlot!=namespaceSlot)return RISC_INSTALL_DENIED;
   // A discovered identity cannot redirect or override a bootstrap entry.
   if(existing<r->bootPolicyCount_){
-   if(old.sourceDriver<0||strcmp(old.sourcePath+1,image.c_str()))return RISC_INSTALL_DENIED;
+   if(old.sourceDriver<0||r->drivers_[old.sourceDriver].instance!=selectedVolume||strcmp(old.sourcePath+1,image.c_str()))return RISC_INSTALL_DENIED;
    const char*launch=old.elf+strlen(r->root_)+1;if(strlen(launch)>=cap)return RISC_INSTALL_INVALID;
    strcpy(out,launch);return RISC_INSTALL_OK;
   }
-  if(!strcmp(old.sourcePath+1,image.c_str()) && !strcmp(r->installedMetadata_[existing].manifest,json) && old.enabled){
+  if(old.sourceDriver>=0 && r->drivers_[old.sourceDriver].instance==selectedVolume && !strcmp(old.sourcePath+1,image.c_str()) && !strcmp(r->installedMetadata_[existing].manifest,json) && old.enabled){
    const char*launch=old.elf+strlen(r->root_)+1;if(strlen(launch)>=cap)return RISC_INSTALL_INVALID;
    strcpy(out,launch);return RISC_INSTALL_OK;
   }
@@ -216,11 +226,16 @@ int32_t Runtime::installationNamespaced(void*ctx,const risc_install_candidate_v1
  if(count&&!slots)return RISC_INSTALL_INVALID;
  return installationTransaction(ctx,items,count,out,replace,check,slots);
 }
-int32_t Runtime::installationTransaction(void*ctx,const risc_install_candidate_v1*items,uint32_t count,risc_install_result_v1*out,bool replace,bool check,const uint32_t*slots){
+int32_t Runtime::installationNamespacedMedia(void*ctx,const risc_install_candidate_v1*items,const uint32_t*slots,const uint32_t*media,uint32_t count,risc_install_result_v1*out,bool replace,bool check){
+ if(count&&(!slots||!media))return RISC_INSTALL_INVALID;
+ return installationTransaction(ctx,items,count,out,replace,check,slots,media);
+}
+int32_t Runtime::installationTransaction(void*ctx,const risc_install_candidate_v1*items,uint32_t count,risc_install_result_v1*out,bool replace,bool check,const uint32_t*slots,const uint32_t*media){
  auto*r=static_cast<Runtime*>(ctx);
  if(!r||r!=currentRuntime||!r->installation_||!r->active()||!r->port_.owner()||r->retained_||
     r->graph_.lifecycleBusy()||count>64||(count&&(!items||!out)))return RISC_INSTALL_DENIED;
  for(uint32_t i=0;i<count;++i){
+  if(media&&(media[i]>1||(media[i]==1&&!r->installation_[0].internalEnabled)))return RISC_INSTALL_DENIED;
   if(!items[i].manifest_path||!items[i].manifest_json||(slots&&slots[i]>r->installation_[0].namespaceCount))return RISC_INSTALL_INVALID;
   JsonDocument a;if(deserializeJson(a,items[i].manifest_json))return RISC_INSTALL_INVALID;
   for(uint32_t j=0;j<i;++j){
@@ -244,10 +259,10 @@ int32_t Runtime::installationTransaction(void*ctx,const risc_install_candidate_v
    r->policies_[i].enabled=false;
   }
  }
- for(uint32_t i=0;status==RISC_INSTALL_OK&&i<count;++i){r->installation_[0].namespaceSlot=slots?slots[i]:0;out[i]={};out[i].status=installationAdmit(ctx,items[i].manifest_path,items[i].manifest_json,out[i].launch_path,sizeof(out[i].launch_path));
+ for(uint32_t i=0;status==RISC_INSTALL_OK&&i<count;++i){r->installation_[0].namespaceSlot=slots?slots[i]:0;r->installation_[0].medium=media?media[i]:0;out[i]={};out[i].status=installationAdmit(ctx,items[i].manifest_path,items[i].manifest_json,out[i].launch_path,sizeof(out[i].launch_path));
   if(out[i].status==RISC_INSTALL_BUSY||out[i].status==RISC_INSTALL_FULL){status=out[i].status;break;}
  }
- r->installation_[0].namespaceSlot=0;
+ r->installation_[0].namespaceSlot=0;r->installation_[0].medium=0;
  if(status==RISC_INSTALL_OK&&replace)for(size_t i=r->bootPolicyCount_;i<r->policyCount_;++i){
   bool found=false;const char*path=r->policies_[i].elf+strlen(r->root_)+1;
   for(uint32_t j=0;j<count;++j)found=found||(out[j].status==RISC_INSTALL_OK&&!strcmp(path,out[j].launch_path));

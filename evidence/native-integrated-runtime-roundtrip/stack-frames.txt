@@ -1,0 +1,7 @@
+Pinned Xtensa GCC 8.4.0, -Os; local frames only, not whole-call-chain qualification.
+Runtime-cohort-1.su: AtomicKeyValueRuntime.inc:29:9:int32_t RiscBoot::Runtime::atomicLegacyGet(uint32_t, const char*, void*, uint32_t, uint32_t*, uint32_t)	2176	static
+Runtime-cohort-1.su: NativeAtomicKeyValue.h:46:6:int RiscExperimental::NativeAtomicKeyValue::submit(uint64_t, const risc_key_value_atomic_mutation_v1*, uint32_t, const void*, uint32_t, uint64_t*)	4176	static
+Runtime-cohort-1.su: AtomicKeyValueRuntime.inc:83:9:static int32_t RiscBoot::Runtime::atomicSubmit(void*, uint64_t, const risc_key_value_atomic_mutation_v1*, uint32_t, const void*, uint32_t, uint64_t*)	64	static
+Runtime-default-1.su: AtomicKeyValueRuntime.inc:29:9:int32_t RiscBoot::Runtime::atomicLegacyGet(uint32_t, const char*, void*, uint32_t, uint32_t*, uint32_t)	2176	static
+Runtime-default-1.su: NativeAtomicKeyValue.h:46:6:int RiscExperimental::NativeAtomicKeyValue::submit(uint64_t, const risc_key_value_atomic_mutation_v1*, uint32_t, const void*, uint32_t, uint64_t*)	4176	static
+Runtime-default-1.su: AtomicKeyValueRuntime.inc:83:9:static int32_t RiscBoot::Runtime::atomicSubmit(void*, uint64_t, const risc_key_value_atomic_mutation_v1*, uint32_t, const void*, uint32_t, uint64_t*)	64	static

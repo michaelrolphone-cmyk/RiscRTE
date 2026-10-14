@@ -1,0 +1,1 @@
+atomic_key_value_target_probe.cpp:10:6:bool atomic_registration_probe(RiscBoot::Runtime&, RiscExperimental::NativeAtomicKeyValue&)	32	static

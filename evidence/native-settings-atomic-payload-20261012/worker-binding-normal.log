@@ -1,0 +1,7 @@
+actual ESP binding: bounded two registrations, exact namespace/backend identity, foreign owner/ISR, internal allocation and failure rollback PASS
+actual ESP binding: legacy single namespace lookup and worker guards remain compatible PASS
+actual ESP binding: two real checked stores, concurrent polling, 20000 owner reads, 32 copied writes, native background contention and namespace isolation PASS
+actual ESP binding: namespace 1 blocked native write, cancellation and cross-namespace contention preserve both workers until checked collection PASS
+actual ESP binding: namespace 6 blocked native write, cancellation and cross-namespace contention preserve both workers until checked collection PASS
+actual ESP binding: namespace 1 checked-close Retained blocks aggregate exit and other namespace I/O; no task deletion/free PASS
+actual ESP binding: namespace 6 checked-close Retained blocks aggregate exit and other namespace I/O; no task deletion/free PASS

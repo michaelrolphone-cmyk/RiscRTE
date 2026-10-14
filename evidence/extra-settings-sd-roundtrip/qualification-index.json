@@ -1,0 +1,414 @@
+{
+  "schema": 1,
+  "groups": [
+    {
+      "case": "settings",
+      "actual_controllers": "Seven actual Settings preferences plus two saved Wi-Fi profiles",
+      "builds": [
+        {
+          "manifest": "evidence/full-settings-sd-roundtrip/lifecycle-integrated/normal/source-manifest.json",
+          "sha256": "810f1e5020a0a329c8a1032a90fb9d7cb79183e3e2e8464f76bbcc9e339fdae9",
+          "sanitizers": "none",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "5636756db893d682ad42a595625b226f40bbba4d"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        },
+        {
+          "manifest": "evidence/full-settings-sd-roundtrip/lifecycle-integrated/asan-ubsan/source-manifest.json",
+          "sha256": "4921993425775aed14af46ca26d7eda3b615cf80dff11576b45fe5d25cea5e15",
+          "sanitizers": "address,undefined",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "5636756db893d682ad42a595625b226f40bbba4d"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        }
+      ],
+      "campaigns": [
+        "normal",
+        "interrupted-before-native-acknowledgement"
+      ],
+      "complete_sd_sha256": "d50d31bd5bd071b0b6e3d7aa65cadfdf37f39eabbdb57507bf581cf1621d6324"
+    },
+    {
+      "case": "quick",
+      "actual_controllers": "quick plus two saved Wi-Fi profiles",
+      "builds": [
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/final-quick-normal/source-manifest.json",
+          "sha256": "2a10a95107b3d44df15aa9f9d2c27139b81a6128f22d8bd9d2ed88dc0ff1047f",
+          "sanitizers": "none",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "1e721cc10327691ddf76907f48866a71a2eb02b6"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        },
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/final-quick-asan-ubsan/source-manifest.json",
+          "sha256": "5f7c9b5bb5ec99ec51c11c34de3d103db06a3c666169323e3a585c3052eefa8a",
+          "sanitizers": "address,undefined",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "1e721cc10327691ddf76907f48866a71a2eb02b6"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        }
+      ],
+      "campaigns": [
+        "normal",
+        "interrupted-before-native-acknowledgement"
+      ],
+      "complete_sd_sha256": "1d82a0cf06b9d710ab8ca3a67e872e47e9231e7d40ee84bbc1aafd140def6197"
+    },
+    {
+      "case": "home-low-battery",
+      "actual_controllers": "home-low-battery plus two saved Wi-Fi profiles",
+      "builds": [
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/final-home-low-battery-normal/source-manifest.json",
+          "sha256": "1e8aa1cd0ed4563adf86bc43d626831f8c4f8c579e90249d602770541692ca3b",
+          "sanitizers": "none",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "1e721cc10327691ddf76907f48866a71a2eb02b6"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        },
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/final-home-low-battery-asan-ubsan/source-manifest.json",
+          "sha256": "511c29e8c94161ee5185884a8cfb9c5f088c6279821669d8e3897fb8a17a63bd",
+          "sanitizers": "address,undefined",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "1e721cc10327691ddf76907f48866a71a2eb02b6"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        }
+      ],
+      "campaigns": [
+        "normal",
+        "interrupted-before-native-acknowledgement"
+      ],
+      "complete_sd_sha256": "66a3405051e3ad5f2c91b3c38c61b2b927b6ab2c66227a200367c92a5845fc7d"
+    },
+    {
+      "case": "home-rules",
+      "actual_controllers": "home-rules plus two saved Wi-Fi profiles",
+      "builds": [
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/final-home-rules-normal/source-manifest.json",
+          "sha256": "2039df59cab8d72babc5fa019ef661b324b13db421d5441aa262f1557dba1b0d",
+          "sanitizers": "none",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "1e721cc10327691ddf76907f48866a71a2eb02b6"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        },
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/final-home-rules-asan-ubsan/source-manifest.json",
+          "sha256": "8fe59d5136662c720dc84673007b627ebe435c967ed1dd21a11730637b014222",
+          "sanitizers": "address,undefined",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "1e721cc10327691ddf76907f48866a71a2eb02b6"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        }
+      ],
+      "campaigns": [
+        "normal",
+        "interrupted-before-native-acknowledgement"
+      ],
+      "complete_sd_sha256": "a1246fe0f305b30c8d8add593fd46c969437d417c528b8ecd58e5f5bf420349d"
+    },
+    {
+      "case": "home-preset",
+      "actual_controllers": "home-preset plus two saved Wi-Fi profiles",
+      "builds": [
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/home-preset-normal/source-manifest.json",
+          "sha256": "2de53f50bdb82c54945566b0147de8c71cf57ee89710eaa6b720df872b495c23",
+          "sanitizers": "none",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "1e721cc10327691ddf76907f48866a71a2eb02b6"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        },
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/home-preset-asan-ubsan/source-manifest.json",
+          "sha256": "18c0b404253cec6e7c179b16b3ea95b6f2d60307df766a990c9a32e472837481",
+          "sanitizers": "address,undefined",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "1e721cc10327691ddf76907f48866a71a2eb02b6"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": []
+        }
+      ],
+      "campaigns": [
+        "normal",
+        "interrupted-before-native-acknowledgement"
+      ],
+      "complete_sd_sha256": "86602760fcf0f82ee3ca3f0a9713003365a786ad5d63e4dc37ac59102c58d215"
+    },
+    {
+      "case": "utility-battery",
+      "actual_controllers": "utility-battery plus two saved Wi-Fi profiles",
+      "builds": [
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/utility-battery-normal/source-manifest.json",
+          "sha256": "634806a05d57466e1ab8f26d8783ac1740414fe2e29bf5904b761b902b742ba0",
+          "sanitizers": "none",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "472036f0c52e8fc88f0ccefb262e25734e6eda39"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": [
+            "fb9da4c531c954e41169509b04debdc30977f387"
+          ]
+        },
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/utility-battery-asan-ubsan/source-manifest.json",
+          "sha256": "3a782692f2ea4c50cb905d1429d81911aabad18c2bf7d734bca837fbe45f13d3",
+          "sanitizers": "address,undefined",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "472036f0c52e8fc88f0ccefb262e25734e6eda39"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": [
+            "fb9da4c531c954e41169509b04debdc30977f387"
+          ]
+        }
+      ],
+      "campaigns": [
+        "normal",
+        "interrupted-before-native-acknowledgement"
+      ],
+      "complete_sd_sha256": "d0d02c8a6e9ef6c98b20efe32c84a05c417260647d35182b19c102ce31ae1d05"
+    },
+    {
+      "case": "utility-ble",
+      "actual_controllers": "utility-ble plus two saved Wi-Fi profiles",
+      "builds": [
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/utility-ble-normal/source-manifest.json",
+          "sha256": "925cf98ce072263d5280b4840d031b04438b2d21844698c4dfe4e7bbc5681a38",
+          "sanitizers": "none",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "472036f0c52e8fc88f0ccefb262e25734e6eda39"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": [
+            "fb9da4c531c954e41169509b04debdc30977f387"
+          ]
+        },
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/utility-ble-asan-ubsan/source-manifest.json",
+          "sha256": "fce5321483b943850c7129f3fd7db080f773e8a8557904fd14a0e7013e25b860",
+          "sanitizers": "address,undefined",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "472036f0c52e8fc88f0ccefb262e25734e6eda39"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": [
+            "fb9da4c531c954e41169509b04debdc30977f387"
+          ]
+        }
+      ],
+      "campaigns": [
+        "normal",
+        "interrupted-before-native-acknowledgement"
+      ],
+      "complete_sd_sha256": "9c35c734ea89482f5aab3b02eeea4a9e1de0472d295790c163696c920da31d2d"
+    },
+    {
+      "case": "utility-contexts",
+      "actual_controllers": "utility-contexts plus two saved Wi-Fi profiles",
+      "builds": [
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/utility-contexts-normal/source-manifest.json",
+          "sha256": "eab306d2b0181ace8b97d869218bfe51f10424c3072f79be8d917c70800e17eb",
+          "sanitizers": "none",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "472036f0c52e8fc88f0ccefb262e25734e6eda39"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": [
+            "fb9da4c531c954e41169509b04debdc30977f387"
+          ]
+        },
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/utility-contexts-asan-ubsan/source-manifest.json",
+          "sha256": "90d415118696f09ccfcade62ff6ffbcdec0e9956eb82668c3682bad865d20723",
+          "sanitizers": "address,undefined",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "472036f0c52e8fc88f0ccefb262e25734e6eda39"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": [
+            "fb9da4c531c954e41169509b04debdc30977f387"
+          ]
+        }
+      ],
+      "campaigns": [
+        "normal",
+        "interrupted-before-native-acknowledgement"
+      ],
+      "complete_sd_sha256": "ec38364da5736e28b536423ff6a5a11268a66c3e0d4ba5a6330cc5bcb116fa98"
+    },
+    {
+      "case": "utility-contexts-automatic",
+      "actual_controllers": "utility-contexts-automatic plus two saved Wi-Fi profiles",
+      "builds": [
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/utility-contexts-automatic-normal/source-manifest.json",
+          "sha256": "18608d7ec3bb3e50ac4928c4ee7a3a001e9c7d84a4db423c729266dcc3a5528b",
+          "sanitizers": "none",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "472036f0c52e8fc88f0ccefb262e25734e6eda39"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": [
+            "fb9da4c531c954e41169509b04debdc30977f387"
+          ]
+        },
+        {
+          "manifest": "evidence/extra-settings-sd-roundtrip/utility-contexts-automatic-asan-ubsan/source-manifest.json",
+          "sha256": "af85759c25e0bcc0a9a105a671ae5bad6d912e41b9e5b619380e536579563a43",
+          "sanitizers": "address,undefined",
+          "system_pins": [
+            {
+              "namespace": 1,
+              "commit": "472036f0c52e8fc88f0ccefb262e25734e6eda39"
+            },
+            {
+              "namespace": 6,
+              "commit": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89"
+            }
+          ],
+          "utility_pins": [
+            "fb9da4c531c954e41169509b04debdc30977f387"
+          ]
+        }
+      ],
+      "campaigns": [
+        "normal",
+        "interrupted-before-native-acknowledgement"
+      ],
+      "complete_sd_sha256": "316b1340f58837142df5762df6f68fac028a7503966f175e75ffd341f3fd4ccd"
+    }
+  ],
+  "group_count": 9,
+  "build_count": 18,
+  "campaign_count": 36,
+  "scope": "Source-bound host controller composition; exact native map and entire SD-sector-image comparison. No target firmware, actual Files app, physical SD/RTC or product activation. Initial media/entropy, UI/radio/service observations, SDK NVS and hardware sector transport are explicit synthetic seams.",
+  "sanitizer_limit": "ASan/UBSan passed with leak detection disabled; LeakSanitizer is not qualified. Contexts C controllers use upstream O1 under sanitizers; Runtime/harness use O0.",
+  "runtime_cohort_limit": "Each manifest records exact source hashes. Home groups retain their frozen pre-lifecycle Runtime source cohort; Settings and Utilities groups were requalified after lifecycle source integration. Lifecycle/dispatcher selection is not enabled by these controller compositions."
+}

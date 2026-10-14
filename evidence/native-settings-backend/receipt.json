@@ -1,0 +1,38 @@
+{
+  "source_base": "d8e913bf468684fbb99462345f0e07d6ebb3a548",
+  "source_sha256": {
+    "src/main.cpp": "29c2d594e21e5aec3c7e6fe47cf73e071832b87564ecae30681489e17b29b9df",
+    "src/ports/esp32s3/NativeSettingsBackend.h": "d52f46f0004d841d6feadd80d6ca820c765e6cc921ec4f3596fac71241a7dc77",
+    "src/ports/esp32s3/NativeSettingsBackend.cpp": "6ece3b5b78f78f49b78c9e377eff016e0e3f1511469e2ee61c53df09bdc00118",
+    "test/native_settings_backend_test.cpp": "15331f04d4e72e560a780150c478d1639290e543bd9dca20da0928271d557989",
+    "test/run_native_settings_backend_test.py": "787fdc970bc2857a62d64e5a76a2774ffcc4ddd958f18a6ae1a7c70261891589",
+    "test/compile_native_settings_backend_target.py": "620fe1ff2842af3afd1253d7ce3263343dda83a86b225ff13650e919ff8b0ab3"
+  },
+  "case_count": 9,
+  "normal_pass": true,
+  "asan_ubsan_pass": true,
+  "leak_sanitizer": false,
+  "actual_hardware": false,
+  "target_backend_bytes": 2808,
+  "host_backend_bytes": 3360,
+  "target_prepare_local_frame": 608,
+  "default_off_main": "Byte-identical after stripping debug line metadata",
+  "evidence": {
+    "startup-settings.log": "59ce6e691b8cb18c92f341bcfa53addcdb085587486312997f139126805b8498",
+    "asan-ubsan.log": "d084e772362b5bda9d2877cf83ea60916aea5917c1c4248581b0b72af458a8a7",
+    "target-layout.nm": "60f6d0fbf325dacf116f89ab8ff39eeda319ecf5741c74004efaa4f2890930de",
+    "target-main.su": "c2dab7f84f152037665ec3a97ad86b7002202b4f4b807f0b24c55808be5d3794",
+    "target-manifest.json.gz": "1bedbb34929b212b9de6a7db9bd168b79d7bec7d1d10147bc74695e3198df81a",
+    "target.log": "1ec0eb0a8deabc93ebe4e0348f01e26f8acd4bf6bc0bbb29b131f99fd2d1dd21",
+    "development-dirent-compile.log": "5d308c0cb34981f87adaabbf8d952e9f35ae41a7d18789b488fa19c5c2c92c2a",
+    "development-target-identity-path.log": "b5f5ba65bd1effe7a9197652a15b6f029b254ac6e03dd5358795353fbe4fa5d9",
+    "target-backend.su": "4f7202f872c53b75b3b48d2e45937dcba43df59a064bc17041c4c30b9a548b2c",
+    "development-fault-mapping.log": "30a23a22599ab78582e9b43985cb2bcd6f8a25b8069d55f9df95e9f48b204459",
+    "development-target-arduino-macros.log": "3fce934c4c748b3113ea750ed0cba58ebd4e359c5f407b2da5d89af929270b45",
+    "startup-default.log": "b292192aa8e8803dd20db2ec6f79224c959c4171acbf15b95e6154e1a6cecad5",
+    "development-fault-result.log": "b01dd4fc8bd15a849a95092f38d5e298f8273883958051801ea67620ef4e97a0",
+    "development-target-include-order.log": "42da8509cc3c93b2962714575f0b206d31b76bf246ed52d0b4f74f139ef8b3a1",
+    "normal.log": "2e27fba2ebde1ed3c8602720b234a6c8b634098cd67c4e23dfd57fece34d3446",
+    "development-target-debug-parity.log": "fe78453bae0e4eedf457af313fcfae4234b78a0d30b387a406a1ac4ae12bee43"
+  }
+}

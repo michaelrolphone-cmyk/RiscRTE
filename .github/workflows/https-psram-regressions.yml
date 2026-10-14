@@ -1,0 +1,37 @@
+name: HTTPS PSRAM regressions
+on:
+  push:
+    branches: [fix/https-psram-20261011, fix/x4-https-psram-20261012]
+  pull_request:
+    paths:
+      - 'src/main.cpp'
+      - 'src/ports/esp32s3/NativeHttp.h'
+      - 'src/ports/esp32s3/NativeTlsMemory.h'
+      - 'test/native_http*'
+      - 'test/native_http_shim/**'
+      - 'test/native_tls_memory*'
+      - 'test/run_http_test.sh'
+      - 'test/run_native_tls_memory_test.sh'
+      - 'test/test_native_startup.py'
+      - '.github/workflows/https-psram-regressions.yml'
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Allocation policy and production HTTP adapter
+        run: |
+          bash test/run_native_tls_memory_test.sh
+          SANITIZE=1 bash test/run_native_tls_memory_test.sh
+          bash test/run_http_test.sh
+          SANITIZE=1 bash test/run_http_test.sh
+          python3 test/test_native_startup.py
+          python3 test/test_metadata_targets.py
+          bash test/native_tls_async/run_async_fdset.sh
+          bash test/native_tls_cleanup/run_checked_cleanup.sh

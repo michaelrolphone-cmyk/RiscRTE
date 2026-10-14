@@ -1,0 +1,2 @@
+#pragma once
+#define MBEDTLS_ERR_ASN1_ALLOC_FAILED -0x006A

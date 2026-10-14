@@ -1,0 +1,1 @@
+INVALID AS A RESOURCE BOUND: this exploratory graph-only output includes unreachable float/assert/unwind paths and omitted callbacks. Use stack-chains-before/after.json instead.

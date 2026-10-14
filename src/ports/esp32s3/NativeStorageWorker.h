@@ -17,6 +17,7 @@ static StorageWorkBackend backend{nullptr,prepare,isWorker,delayMs,admitApplicat
 static bool idle(){return !backend.mailbox||backend.mailbox->idle();}
 static void run(void*){for(;;){backend.mailbox->workerStep();delayMs(1);}}
 static bool prepare(){
+ using Worker=RiscStorage::Worker; // Keep the explicit failure-path destructor in scope.
  if(taskHandle)return true;
  void*allocation=heap_caps_malloc(sizeof(RiscStorage::Worker)+7,MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT);
  if(!allocation)return false;

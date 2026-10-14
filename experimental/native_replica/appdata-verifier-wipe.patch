@@ -1,0 +1,19 @@
+diff --git a/src/runtime/storage/AppDataFiles.cpp b/src/runtime/storage/AppDataFiles.cpp
+index 7a244cd..053260e 100644
+--- a/src/runtime/storage/AppDataFiles.cpp
++++ b/src/runtime/storage/AppDataFiles.cpp
+@@ -1,4 +1,5 @@
+ #include "AppDataFiles.h"
++#include "runtime/resources/ScopedBufferWipe.h"
+ #include <sys/stat.h>
+ #include <fcntl.h>
+ #include <unistd.h>
+@@ -94,7 +95,7 @@ int32_t AppDataFiles::read(uint32_t space,const char*name,uint64_t expected,void
+  *size=actual;*revision=revision_;return RISC_APP_DATA_OK;
+ }
+ int32_t AppDataFiles::verify(const char*path,const void*bytes,uint32_t size){
+- int fd=openFile(path,O_RDONLY);if(fd<0)return error(errno);uint8_t scratch[512];bool ok=true;
++ int fd=openFile(path,O_RDONLY);if(fd<0)return error(errno);uint8_t scratch[512];RiscRuntime::ScopedBufferWipe wipe(scratch);bool ok=true;
+  for(uint32_t at=0;ok && at<size;){uint32_t n=size-at;if(n>sizeof(scratch))n=sizeof(scratch);ssize_t got=::read(fd,scratch,n);ok=got==n && !memcmp(scratch,static_cast<const char*>(bytes)+at,n) && cooperate();at+=n;}
+  ok=ok && ::read(fd,scratch,1)==0;int32_t status=close(fd);return status?status:ok?RISC_APP_DATA_OK:RISC_APP_DATA_IO;
+ }

@@ -1,0 +1,17 @@
+xtensa-esp32s3-elf-g++ (crosstool-NG esp-2021r2-patch5) 8.4.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+legacy-0 00000000 00001d28 B native_storage_port_size
+d0c7d999cf7064e13f889f0a33009c1b03e81e56686c5461702a1a824a2d56a6  /workspace/shared/x4-settings-persistence-evidence-20261012/compact-native-jobs/target-port/CpuPort-legacy-0.o
+6fafa274cd7aef8cbc4e91be8a7f1bb9828e4bec5dee1a923d96dcdfcb3920dd  /workspace/shared/x4-settings-persistence-evidence-20261012/compact-native-jobs/target-port/probe-legacy-0.o
+legacy-1 00000000 00001e00 B native_storage_port_size
+0459339ec2ff292e8a3140f7c9e95c033f8125315421144f2758024344eaf55b  /workspace/shared/x4-settings-persistence-evidence-20261012/compact-native-jobs/target-port/CpuPort-legacy-1.o
+e15139d79fb97d6d16a0886af2ccb8fe1850f9fdb656aec3a822d821a7e3598e  /workspace/shared/x4-settings-persistence-evidence-20261012/compact-native-jobs/target-port/probe-legacy-1.o
+cohort-0 00000000 00002458 B native_storage_port_size
+df982dd6104acc498fb996e8d5d34c9c671c4f5df7d49ec4e844d34dc5c1913e  /workspace/shared/x4-settings-persistence-evidence-20261012/compact-native-jobs/target-port/CpuPort-cohort-0.o
+3600345ac29a2a5d5e286e1c7304c1e431f465c34786ba0f12dcc9eb6e743916  /workspace/shared/x4-settings-persistence-evidence-20261012/compact-native-jobs/target-port/probe-cohort-0.o
+cohort-1 00000000 000025e8 B native_storage_port_size
+96ad6f2c4c65e0a1b9993aff13bd2f2efcb2173b9db76936b397fc76237ad79a  /workspace/shared/x4-settings-persistence-evidence-20261012/compact-native-jobs/target-port/CpuPort-cohort-1.o
+64cc575bd87aeb7ea823a112adc9846a6a994baee27b8c1f9d215d45fc60c2bb  /workspace/shared/x4-settings-persistence-evidence-20261012/compact-native-jobs/target-port/probe-cohort-1.o

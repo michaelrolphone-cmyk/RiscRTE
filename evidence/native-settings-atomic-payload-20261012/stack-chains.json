@@ -1,0 +1,378 @@
+{
+  "scope": "Feasible static nested ENTRY-frame lower bounds. Source-bound callbacks are explicit. No dynamic stack, interrupt/window-spill, ROM or untraced callee overhead is counted. Not measured high-water and not a whole-program upper bound.",
+  "fresh_resume": {
+    "condition": "Fresh-initialization resume with canonical replica-a.bin or .pending; file validation calls check(true), which nests check(false) and snapshot custody. inspectAttempt is inlined in this exact route.",
+    "frames": [
+      {
+        "address": "0x4205ee34",
+        "name": "RiscCpu::NativeSettingsWorker::(anonymous namespace)::run(void*)",
+        "frame": 80
+      },
+      {
+        "address": "0x42053dbc",
+        "name": "RiscCpu::NativeSettingsBootstrap::registerBeforeActivate(RiscExperimental::NativeSettingsCoordinator&, RiscExperimental::NativeSettingsCoordinator&)::{lambda(void*)#1}::_FUN(void*)",
+        "frame": 32
+      },
+      {
+        "address": "0x42053c54",
+        "name": "RiscCpu::NativeSettingsBootstrap::workerStep()",
+        "frame": 48
+      },
+      {
+        "address": "0x42051630",
+        "name": "RiscCpu::NativeSettingsBootstrap::initializeNative()",
+        "frame": 96
+      },
+      {
+        "address": "0x420469e4",
+        "name": "RiscExperimental::NativeReplicaCore::initializeAdmitted(RiscExperimental::NativeReplicaCore::Initialization&, RiscExperimental::NativeReplicaCore::Origin)",
+        "frame": 192
+      },
+      {
+        "address": "0x4204672c",
+        "name": "RiscExperimental::NativeReplicaCore::publish(unsigned char*, unsigned int, RiscExperimental::NativeReplicaCore::PublicationScratch*)",
+        "frame": 192
+      },
+      {
+        "address": "0x4204318c",
+        "name": "RiscExperimental::CheckedNativeReplicaStore::backend()::{lambda(void*, unsigned long long)#5}::_FUN(void*, unsigned long long)",
+        "frame": 32
+      },
+      {
+        "address": "0x42042eec",
+        "name": "RiscExperimental::CheckedNativeReplicaStore::seal(unsigned long long)",
+        "frame": 128
+      },
+      {
+        "address": "0x4203eefc",
+        "name": "RiscExperimental::CheckedNativeReplicaStore::checkFreshReceiptAndArtifacts()",
+        "frame": 160
+      },
+      {
+        "address": "0x4203ede4",
+        "name": "RiscExperimental::CheckedNativeReplicaStore::inspectFreshArtifacts()",
+        "frame": 560
+      },
+      {
+        "address": "0x4203e688",
+        "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::inspect(unsigned char const*, unsigned int, unsigned long long, RiscExperimental::CheckedFreshInitArtifacts::Attempt)",
+        "frame": 112
+      },
+      {
+        "address": "0x4203e2ec",
+        "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::inventory(RiscExperimental::CheckedFreshInitArtifacts::Canonical const&, unsigned long long, bool)",
+        "frame": 768
+      },
+      {
+        "address": "0x4203e004",
+        "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::file(char const*, stat const&, RiscExperimental::CheckedFreshInitArtifacts::Canonical const&, unsigned long long, bool)",
+        "frame": 672
+      },
+      {
+        "address": "0x4203dc8c",
+        "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::check(bool)",
+        "frame": 544
+      },
+      {
+        "address": "0x4203dc8c",
+        "name": "RiscExperimental::CheckedLittleFsFreshInitArtifacts::check(bool)",
+        "frame": 544
+      },
+      {
+        "address": "0x420440bc",
+        "name": "RiscCpu::NativeSettingsBackend::(anonymous namespace)::Backend::snapshot(void*, RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount*)",
+        "frame": 80
+      },
+      {
+        "address": "0x42043fb4",
+        "name": "RiscCpu::NativeSettingsBackend::(anonymous namespace)::Backend::held(void*)",
+        "frame": 128
+      },
+      {
+        "address": "0x4205f030",
+        "name": "RiscCpu::NativeSettingsWorker::custody(unsigned int, RiscCpu::NativeSettingsWorker::Custody*)",
+        "frame": 64
+      },
+      {
+        "address": "0x4205ed6c",
+        "name": "RiscExperimental::NativeSettingsCoordinator::workerCustody(RiscExperimental::NativeSettingsCoordinator::Custody*) const",
+        "frame": 32
+      }
+    ],
+    "edges": [
+      {
+        "kind": "source-bound-callback",
+        "source": "NativeSettingsBootstrap.cpp registerBeforeActivate installs lambda #1 as NativeClient.step; NativeSettingsCoordinator.h workerStep calls that accepted client.",
+        "unresolved_call_sites": [
+          "0x4205ee96",
+          "0x4205eeb9",
+          "0x4205eee5",
+          "0x4205ef41"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42053dc1"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42053cf7"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42051704"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42046cc5"
+        ]
+      },
+      {
+        "kind": "source-bound-callback",
+        "source": "CheckedNativeReplicaStore.h backend() installs seal lambda #5; NativeReplicaCore.h publish calls b_.seal.",
+        "unresolved_call_sites": [
+          "0x420467c3",
+          "0x4204681b",
+          "0x4204682d",
+          "0x4204683b",
+          "0x4204685f",
+          "0x4204687f",
+          "0x420468ad",
+          "0x42046932",
+          "0x4204694f",
+          "0x420469c5"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42043195"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42043032"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4203ef6f"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4203ee9f"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4203e77d"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4203e663"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4203e083",
+          "0x4203e0a3",
+          "0x4203e10f",
+          "0x4203e239",
+          "0x4203e27f"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4203de5b"
+        ]
+      },
+      {
+        "kind": "source-bound-callback",
+        "source": "NativeSettingsBackend.cpp Backend::port installs snapshot; CheckedLittleFsFreshInitArtifacts.h check calls port_.snapshot.",
+        "unresolved_call_sites": [
+          "0x4203dcb6",
+          "0x4203dd08",
+          "0x4203dd13",
+          "0x4203dd35",
+          "0x4203ddee",
+          "0x4203de4f"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x420440e8"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42043fe1"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4205f06d"
+        ]
+      }
+    ],
+    "entry_frame_lower_bound": 4464,
+    "worker_stack_bytes": 8192
+  },
+  "atomic_quota": {
+    "condition": "Atomic saved settings mutation: publication seals a bank through AppDataFiles replace/quota, then snprintf(\"%s/%s\"). Do not append floating-point dtoa or unreachable assert paths.",
+    "frames": [
+      {
+        "address": "0x4205ee34",
+        "name": "RiscCpu::NativeSettingsWorker::(anonymous namespace)::run(void*)",
+        "frame": 80
+      },
+      {
+        "address": "0x4205f5c0",
+        "name": "RiscExperimental::NativeReplicaJobT<4096u>::run(void*, void const*, unsigned int, void*, unsigned int, unsigned int*)",
+        "frame": 48
+      },
+      {
+        "address": "0x4205eb3c",
+        "name": "RiscExperimental::NativeAtomicKeyValue::execute(void*, unsigned int, void const*, unsigned int)",
+        "frame": 352
+      },
+      {
+        "address": "0x4205e5f4",
+        "name": "RiscExperimental::NativeReplicaCore::apply(unsigned long long, RiscExperimental::NativeReplicaCore::Mutation const*, unsigned int, void const*, unsigned int)",
+        "frame": 224
+      },
+      {
+        "address": "0x4204672c",
+        "name": "RiscExperimental::NativeReplicaCore::publish(unsigned char*, unsigned int, RiscExperimental::NativeReplicaCore::PublicationScratch*)",
+        "frame": 192
+      },
+      {
+        "address": "0x4204318c",
+        "name": "RiscExperimental::CheckedNativeReplicaStore::backend()::{lambda(void*, unsigned long long)#5}::_FUN(void*, unsigned long long)",
+        "frame": 32
+      },
+      {
+        "address": "0x42042eec",
+        "name": "RiscExperimental::CheckedNativeReplicaStore::seal(unsigned long long)",
+        "frame": 128
+      },
+      {
+        "address": "0x4206654c",
+        "name": "RiscStorage::AppDataFiles::replace(unsigned int, char const*, unsigned long long, void const*, unsigned int)",
+        "frame": 896
+      },
+      {
+        "address": "0x420663e0",
+        "name": "RiscStorage::AppDataFiles::quota(char const*, char const*, unsigned int)",
+        "frame": 320
+      },
+      {
+        "address": "0x4210ba50",
+        "name": "snprintf",
+        "frame": 192
+      },
+      {
+        "address": "0x4210e074",
+        "name": "_svfprintf_r",
+        "frame": 784
+      }
+    ],
+    "edges": [
+      {
+        "kind": "source-bound-callback",
+        "source": "NativeReplicaJob.h installs run into the copied worker job, consumed by NativeSettingsCoordinator::workerStep/Worker::workerStep.",
+        "unresolved_call_sites": [
+          "0x4205ee96",
+          "0x4205eeb9",
+          "0x4205eee5",
+          "0x4205ef41"
+        ]
+      },
+      {
+        "kind": "source-bound-callback",
+        "source": "NativeAtomicKeyValue.h constructs job_(execute,this); NativeReplicaJob.h run calls self.fn_.",
+        "unresolved_call_sites": [
+          "0x4205f5e7"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4205ece6"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4205eb21"
+        ]
+      },
+      {
+        "kind": "source-bound-callback",
+        "source": "CheckedNativeReplicaStore.h backend() installs seal lambda #5; NativeReplicaCore.h publish calls b_.seal.",
+        "unresolved_call_sites": [
+          "0x420467c3",
+          "0x4204681b",
+          "0x4204682d",
+          "0x4204683b",
+          "0x4204685f",
+          "0x4204687f",
+          "0x420468ad",
+          "0x42046932",
+          "0x4204694f",
+          "0x420469c5"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42043195"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42043119"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x42066681"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x420664be"
+        ]
+      },
+      {
+        "kind": "linked-direct",
+        "call_sites": [
+          "0x4210baa9"
+        ]
+      }
+    ],
+    "entry_frame_lower_bound": 3248,
+    "worker_stack_bytes": 8192
+  }
+}

@@ -1,0 +1,6 @@
+atomic endpoint: copied inputs, owner/worker boundary, busy reads, receipt lifetime, same-value intent, stale refusal PASS
+atomic endpoint: cancel-before-claim zero mutation; cancel-after-commit preserves committed receipt PASS
+atomic endpoint: cancellation during native publication cannot discard committed receipt PASS
+atomic endpoint: duplicate/bad keys, capacity and custody refusals do not mutate; explicit DELETE group PASS
+atomic endpoint: failed native terminal cleanup retains namespace gate and suppresses unsafe success PASS
+atomic endpoint: 21 before/after/torn native backend failures recover complete old or new map+intent; 6 uncertain receipts PASS

@@ -1,0 +1,121 @@
+NativeSettingsAssembly.cpp:31:6:void RiscCpu::NativeSettingsAssembly::{anonymous}::release(void*)	48	static
+NativeSettingsAssembly.cpp:30:6:void* RiscCpu::NativeSettingsAssembly::{anonymous}::allocate(size_t)	48	static
+CheckedNativeReplicaStore.h:93:6:int RiscExperimental::CheckedNativeReplicaStore::mapped(int)	32	static
+CheckedNativeReplicaStore.h:321:6:int RiscExperimental::CheckedNativeReplicaStore::write(uint64_t, uint32_t, const void*, uint32_t)	32	static
+NativeSettingsAssembly.cpp:28:6:bool RiscCpu::NativeSettingsAssembly::{anonymous}::internal(const void*, size_t)	32	static
+NativeSettingsAssembly.cpp:29:6:bool RiscCpu::NativeSettingsAssembly::{anonymous}::context(const void*, size_t)	32	static
+NativeReplicaCore.h:182:14:static void RiscExperimental::NativeReplicaCore::wipe(void*, size_t)	32	static
+CheckedNativeReplicaStore.h:40:12:static void RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*)>::_FUN(void*)	32	static
+CheckedNativeReplicaStore.h:43:12:static void RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*)>::_FUN(void*)	32	static
+CheckedNativeReplicaStore.h:46:12:static void RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*)>::_FUN(void*)	32	static
+NativeReplicaCore.h:519:18:static uint32_t RiscExperimental::NativeReplicaCore::word(const uint8_t*)	32	static
+NativeReplicaCore.h:520:14:static void RiscExperimental::NativeReplicaCore::putWord(uint8_t*, uint32_t)	32	static
+NativeReplicaCore.h:523:18:static uint32_t RiscExperimental::NativeReplicaCore::crc(const void*, uint32_t)	32	static
+NativeReplicaCore.h:525:14:static bool RiscExperimental::NativeReplicaCore::validSdReceipt(const uint8_t*)	32	static
+NativeReplicaCore.h:527:14:static void RiscExperimental::NativeReplicaCore::makeFreshEmpty(uint8_t*, uint32_t)	32	static
+NativeReplicaCore.h:533:14:static bool RiscExperimental::NativeReplicaCore::zero(const uint8_t*, uint32_t)	32	static
+NativeReplicaCore.h:525:14:static bool RiscExperimental::NativeReplicaCore::validSdReceipt(const uint8_t*)	32	static
+NativeReplicaCore.h:99:8:bool RiscExperimental::NativeReplicaCore::SdInitReceipt::valid() const	32	static
+NativeReplicaCore.h:526:14:static bool RiscExperimental::NativeReplicaCore::validImportReceipt(const uint8_t*)	32	static
+NativeReplicaCore.h:88:8:bool RiscExperimental::NativeReplicaCore::ImportInitReceipt::valid() const	32	static
+NativeReplicaCore.h:76:8:bool RiscExperimental::NativeReplicaCore::FreshInitReceipt::valid() const	32	static
+CheckedFreshInitArtifacts.h:67:6:int RiscExperimental::CheckedFreshInitArtifacts::check(bool)	32	static
+CheckedFreshInitArtifacts.h:96:10:uint8_t RiscExperimental::CheckedFreshInitArtifacts::expectedAt(uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:112:11:uint32_t RiscExperimental::CheckedFreshInitArtifacts::expectedCrc(uint32_t, uint32_t, const RiscExperimental::CheckedFreshInitArtifacts::Canonical&) const	32	static
+CheckedFreshInitArtifacts.h:115:12:RiscExperimental::CheckedFreshInitArtifacts::Canonical RiscExperimental::CheckedFreshInitArtifacts::canonical() const	32	static
+CheckedFreshInitArtifacts.h:140:18:static uint32_t RiscExperimental::CheckedFreshInitArtifacts::word(const uint8_t*)	32	static
+CheckedFreshInitArtifacts.h:141:14:static bool RiscExperimental::CheckedFreshInitArtifacts::zero(const uint8_t*, uint32_t)	32	static
+CheckedFreshInitArtifacts.h:142:18:static uint32_t RiscExperimental::CheckedFreshInitArtifacts::crc(const uint8_t*, uint32_t)	32	static
+CheckedFreshInitArtifacts.h:143:7:bool RiscExperimental::CheckedFreshInitArtifacts::validImported(const uint8_t*, uint32_t) const	64	static
+CheckedFreshInitArtifacts.h:162:7:bool RiscExperimental::CheckedFreshInitArtifacts::validSd(const uint8_t*, uint32_t) const	64	static
+CheckedFreshInitArtifacts.h:178:6:int RiscExperimental::CheckedFreshInitArtifacts::inspect(const uint8_t*, uint32_t, uint64_t, RiscExperimental::CheckedFreshInitArtifacts::Attempt)	64	static
+CheckedLittleFsFreshInitArtifacts.h:69:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::path(const char*, size_t)	32	static
+CheckedLittleFsFreshInitArtifacts.h:77:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::valid(const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:83:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::same(const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&, const RiscExperimental::CheckedLittleFsFreshInitArtifacts::Mount&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:90:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::check(bool)	480	static
+CheckedLittleFsFreshInitArtifacts.h:105:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::cleanup(int)	32	static
+CheckedLittleFsFreshInitArtifacts.h:120:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::metadata(const stat&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:122:14:static bool RiscExperimental::CheckedLittleFsFreshInitArtifacts::sameStat(const stat&, const stat&)	32	static
+CheckedLittleFsFreshInitArtifacts.h:124:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::stat(const char*, stat*)	32	static
+CheckedLittleFsFreshInitArtifacts.h:131:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::file(const char*, const stat&, const Canonical&, uint64_t, bool)	672	static
+CheckedLittleFsFreshInitArtifacts.h:146:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::inventory(const Canonical&, uint64_t, bool)	768	static
+CheckedLittleFsFreshInitArtifacts.h:177:6:int RiscExperimental::CheckedLittleFsFreshInitArtifacts::inspect(const uint8_t*, uint32_t, uint64_t, RiscExperimental::CheckedLittleFsFreshInitArtifacts::Attempt)	112	static
+FreshInitArtifactInspector.h:16:11:RiscExperimental::FreshInitArtifactInspector::operator bool() const	32	static
+FreshInitArtifactInspector.h:22:11:uint32_t RiscExperimental::FreshInitArtifactInspector::namespaceId() const	32	static
+FreshInitArtifactInspector.h:24:7:bool RiscExperimental::FreshInitArtifactInspector::retained() const	32	static
+FreshInitArtifactInspector.h:25:7:bool RiscExperimental::FreshInitArtifactInspector::exitSafe() const	32	static
+FreshInitArtifactInspector.h:26:6:int RiscExperimental::FreshInitArtifactInspector::inspectAbsent()	48	static
+CheckedNativeReplicaStore.h:40:12:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*)>	32	static
+CheckedNativeReplicaStore.h:43:12:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*)>	32	static
+CheckedNativeReplicaStore.h:46:12:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*)>	32	static
+CheckedNativeReplicaStore.h:81:37:RiscExperimental::CheckedNativeReplicaStore::Scratch::~Scratch()	32	static
+CheckedNativeReplicaStore.h:129:7:bool RiscExperimental::CheckedNativeReplicaStore::canonicalFresh(const uint8_t*, uint32_t) const	528	static
+CheckedNativeReplicaStore.h:82:18:static uint32_t RiscExperimental::CheckedNativeReplicaStore::word(const uint8_t*)	32	static
+CheckedNativeReplicaStore.h:125:7:bool RiscExperimental::CheckedNativeReplicaStore::validImportReceipt(const uint8_t*) const	32	static
+CheckedNativeReplicaStore.h:124:7:bool RiscExperimental::CheckedNativeReplicaStore::validSdReceipt(const uint8_t*) const	32	static
+CheckedNativeReplicaStore.h:83:18:static uint64_t RiscExperimental::CheckedNativeReplicaStore::wide(const uint8_t*)	32	static
+CheckedNativeReplicaStore.h:84:14:static void RiscExperimental::CheckedNativeReplicaStore::putWord(uint8_t*, uint32_t)	32	static
+CheckedNativeReplicaStore.h:86:18:static uint32_t RiscExperimental::CheckedNativeReplicaStore::crc(const void*, uint32_t)	32	static
+CheckedNativeReplicaStore.h:87:14:static bool RiscExperimental::CheckedNativeReplicaStore::zeros(const uint8_t*, uint32_t)	32	static
+CheckedNativeReplicaStore.h:92:7:void RiscExperimental::CheckedNativeReplicaStore::release(uint8_t*&, uint32_t&)	32	static
+CheckedNativeReplicaStore.h:78:7:void RiscExperimental::CheckedNativeReplicaStore::clearBuffers()	32	static
+CheckedNativeReplicaStore.h:69:7:void RiscExperimental::CheckedNativeReplicaStore::finishOperation()	32	static
+CheckedNativeReplicaStore.h:37:24:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint64_t)>	32	static
+CheckedNativeReplicaStore.h:37:24:static void RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint64_t)>::_FUN(void*, uint64_t)	32	static
+CheckedNativeReplicaStore.h:101:7:bool RiscExperimental::CheckedNativeReplicaStore::validRoot(const uint8_t*, bool) const	32	static
+CheckedNativeReplicaStore.h:126:7:bool RiscExperimental::CheckedNativeReplicaStore::validFreshReceipt(const uint8_t*) const	32	static
+CheckedNativeReplicaStore.h:109:6:int RiscExperimental::CheckedNativeReplicaStore::readRootRecord(void*, uint32_t)	112	static
+CheckedNativeReplicaStore.h:130:6:int RiscExperimental::CheckedNativeReplicaStore::sequence(uint64_t*, bool*)	80	static
+CheckedNativeReplicaStore.h:131:6:int RiscExperimental::CheckedNativeReplicaStore::inspectFreshArtifacts()	560	static
+CheckedNativeReplicaStore.h:137:6:int RiscExperimental::CheckedNativeReplicaStore::freshCustody(const RiscExperimental::NativeReplicaCore::FreshInitReceipt*)	32	static
+CheckedNativeReplicaStore.h:141:6:int RiscExperimental::CheckedNativeReplicaStore::checkFreshReceiptAndArtifacts()	160	static
+CheckedNativeReplicaStore.h:179:6:int RiscExperimental::CheckedNativeReplicaStore::importCustody(const RiscExperimental::NativeReplicaCore::ImportInitReceipt*)	32	static
+CheckedNativeReplicaStore.h:183:7:bool RiscExperimental::CheckedNativeReplicaStore::canonicalImported(const uint8_t*, uint32_t) const	560	static
+CheckedNativeReplicaStore.h:202:6:int RiscExperimental::CheckedNativeReplicaStore::checkImportReceiptAndArtifacts()	160	static
+CheckedNativeReplicaStore.h:242:6:int RiscExperimental::CheckedNativeReplicaStore::sdCustody(const RiscExperimental::NativeReplicaCore::SdInitReceipt*)	32	static
+CheckedNativeReplicaStore.h:91:6:int RiscExperimental::CheckedNativeReplicaStore::admission()	32	static
+CheckedNativeReplicaStore.h:222:6:int RiscExperimental::CheckedNativeReplicaStore::beginImportedInitialization(const RiscExperimental::NativeReplicaCore::Initialization&)	128	static
+CheckedNativeReplicaStore.h:42:38:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, const RiscExperimental::NativeReplicaCore::Initialization&)>	32	static
+CheckedNativeReplicaStore.h:42:38:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, const RiscExperimental::NativeReplicaCore::Initialization&)>::_FUN(void*, const RiscExperimental::NativeReplicaCore::Initialization&)	32	static
+CheckedNativeReplicaStore.h:214:6:int RiscExperimental::CheckedNativeReplicaStore::readImportedInitialization(RiscExperimental::NativeReplicaCore::ImportInitReceipt*)	96	static
+CheckedNativeReplicaStore.h:41:37:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, RiscExperimental::NativeReplicaCore::ImportInitReceipt*)>	32	static
+CheckedNativeReplicaStore.h:41:37:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, RiscExperimental::NativeReplicaCore::ImportInitReceipt*)>::_FUN(void*, RiscExperimental::NativeReplicaCore::ImportInitReceipt*)	32	static
+CheckedNativeReplicaStore.h:159:6:int RiscExperimental::CheckedNativeReplicaStore::beginFreshInitialization(const RiscExperimental::NativeReplicaCore::Initialization&)	128	static
+CheckedNativeReplicaStore.h:39:38:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, const RiscExperimental::NativeReplicaCore::Initialization&)>	32	static
+CheckedNativeReplicaStore.h:39:38:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, const RiscExperimental::NativeReplicaCore::Initialization&)>::_FUN(void*, const RiscExperimental::NativeReplicaCore::Initialization&)	32	static
+CheckedNativeReplicaStore.h:151:6:int RiscExperimental::CheckedNativeReplicaStore::readInitialization(RiscExperimental::NativeReplicaCore::FreshInitReceipt*)	96	static
+CheckedNativeReplicaStore.h:38:36:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, RiscExperimental::NativeReplicaCore::FreshInitReceipt*)>	32	static
+CheckedNativeReplicaStore.h:38:36:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, RiscExperimental::NativeReplicaCore::FreshInitReceipt*)>::_FUN(void*, RiscExperimental::NativeReplicaCore::FreshInitReceipt*)	32	static
+CheckedNativeReplicaStore.h:105:6:int RiscExperimental::CheckedNativeReplicaStore::root(void*, uint32_t)	32	static
+CheckedNativeReplicaStore.h:31:32:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, void*, uint32_t)>	32	static
+CheckedNativeReplicaStore.h:31:32:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, void*, uint32_t)>::_FUN(void*, void*, uint32_t)	32	static
+CheckedNativeReplicaStore.h:33:64:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint64_t, uint32_t, const void*, uint32_t)>::_FUN(void*, uint64_t, uint32_t, const void*, uint32_t)	48	static
+CheckedNativeReplicaStore.h:33:64:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint64_t, uint32_t, const void*, uint32_t)>	48	static
+CheckedNativeReplicaStore.h:246:7:bool RiscExperimental::CheckedNativeReplicaStore::canonicalSd(const uint8_t*, uint32_t) const	192	static
+CheckedNativeReplicaStore.h:254:6:int RiscExperimental::CheckedNativeReplicaStore::checkSdReceiptAndArtifacts()	160	static
+CheckedNativeReplicaStore.h:266:6:int RiscExperimental::CheckedNativeReplicaStore::readSdInitialization(RiscExperimental::NativeReplicaCore::SdInitReceipt*)	96	static
+CheckedNativeReplicaStore.h:44:33:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, RiscExperimental::NativeReplicaCore::SdInitReceipt*)>	32	static
+CheckedNativeReplicaStore.h:44:33:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, RiscExperimental::NativeReplicaCore::SdInitReceipt*)>::_FUN(void*, RiscExperimental::NativeReplicaCore::SdInitReceipt*)	32	static
+CheckedNativeReplicaStore.h:274:6:int RiscExperimental::CheckedNativeReplicaStore::beginSdInitialization(const RiscExperimental::NativeReplicaCore::Initialization&)	128	static
+CheckedNativeReplicaStore.h:45:38:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, const RiscExperimental::NativeReplicaCore::Initialization&)>	32	static
+CheckedNativeReplicaStore.h:45:38:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, const RiscExperimental::NativeReplicaCore::Initialization&)>::_FUN(void*, const RiscExperimental::NativeReplicaCore::Initialization&)	32	static
+CheckedNativeReplicaStore.h:294:6:int RiscExperimental::CheckedNativeReplicaStore::reserve(uint32_t, uint64_t*)	176	static
+CheckedNativeReplicaStore.h:32:35:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint32_t, uint64_t*)>	32	static
+CheckedNativeReplicaStore.h:32:35:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint32_t, uint64_t*)>::_FUN(void*, uint32_t, uint64_t*)	32	static
+CheckedNativeReplicaStore.h:341:6:int RiscExperimental::CheckedNativeReplicaStore::loadBank(uint64_t, bool)	96	static
+CheckedNativeReplicaStore.h:326:6:int RiscExperimental::CheckedNativeReplicaStore::seal(uint64_t)	128	static
+CheckedNativeReplicaStore.h:35:24:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint64_t)>	32	static
+CheckedNativeReplicaStore.h:35:24:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint64_t)>::_FUN(void*, uint64_t)	32	static
+CheckedNativeReplicaStore.h:353:6:int RiscExperimental::CheckedNativeReplicaStore::read(uint64_t, uint32_t, void*, uint32_t)	48	static
+CheckedNativeReplicaStore.h:34:56:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint64_t, uint32_t, void*, uint32_t)>	48	static
+CheckedNativeReplicaStore.h:34:56:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, uint64_t, uint32_t, void*, uint32_t)>::_FUN(void*, uint64_t, uint32_t, void*, uint32_t)	48	static
+CheckedNativeReplicaStore.h:361:6:int RiscExperimental::CheckedNativeReplicaStore::replaceRoot(const void*, uint32_t)	96	static
+CheckedNativeReplicaStore.h:36:40:RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, const void*, uint32_t)>	32	static
+CheckedNativeReplicaStore.h:36:40:static int RiscExperimental::CheckedNativeReplicaStore::backend()::<lambda(void*, const void*, uint32_t)>::_FUN(void*, const void*, uint32_t)	32	static
+NativeSettingsAssembly.cpp:11:6:bool RiscStorage::AppDataFiles::configuredFor(const char*, RiscStorage::AppDataFiles::Hooks) const	32	static
+NativeSettingsAssembly.cpp:32:6:bool RiscCpu::NativeSettingsAssembly::{anonymous}::valid(const RiscCpu::NativeSettingsAssembly::Namespace&, uint32_t)	208	static
+NativeSettingsAssembly.cpp:49:14:RiscStorage::AppDataFiles::Hooks RiscCpu::NativeSettingsAssembly::fileHooks(void*, uint32_t (*)(void*), bool (*)(void*))	32	static
+NativeSettingsAssembly.cpp:50:42:const RiscCpu::NativeSettingsLifecycle::Admission* RiscCpu::NativeSettingsAssembly::assemble(const RiscCpu::NativeSettingsAssembly::Inputs&)	688	static
+NativeSettingsAssembly.cpp:75:42:const RiscCpu::NativeSettingsLifecycle::Admission* RiscCpu::NativeSettingsAssembly::admission()	32	static
+NativeSettingsAssembly.cpp:76:27:RiscCpu::NativeSettingsMaintenance* RiscCpu::NativeSettingsAssembly::maintenance()	32	static
+NativeSettingsAssembly.cpp:77:8:size_t RiscCpu::NativeSettingsAssembly::controlBytes()	32	static

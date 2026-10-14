@@ -1,0 +1,8 @@
+SD transport: 1025 opaque keys, immutable complete snapshot, exact captured frontier, newer edit survives, checked close before worker-only acknowledgement PASS
+durable SD collision gate: sparse directory APIs refused before marker/I/O; exact full bytes reused without remove, empty/exact prefixes repaired, nonprefix/oversize target page and stage bytes preserved PASS
+SD transport: absent/not-ready/unreadable/foreign/older/newer/divergent/corrupt SD cannot change native reads or consume intents; unknown base refuses all SD work PASS
+SD transport: 360 cancel/removal/USB-lease revocation/restart boundaries, exact replay and no pending-edit loss PASS
+SD transport: 436 reached before/after returned-error/power-cut filesystem calls, torn pages, checked read/sync/close/replace and exact restart replay PASS
+SD transport: expired tickets, late removal/retention, ambiguous native acknowledgement, restart with newer edits and pre-replacement race fail closed PASS
+SD transport: interrupted replacement backup recovery, foreign recovered base refusal, empty-map tombstone and snapshot-allocation failure PASS
+DISCONNECTED HOST TRANSPORT ONLY: no port, ABI, migration, .90 routing, Wi-Fi resolver or hardware qualification

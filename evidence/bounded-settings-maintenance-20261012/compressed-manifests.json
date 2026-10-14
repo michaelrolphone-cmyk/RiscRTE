@@ -1,0 +1,23 @@
+[
+  {
+    "original": "normal/source-manifest.json",
+    "stored": "normal-source-manifest.json.gz",
+    "bytes": 162724,
+    "sha256": "d6857e9038a8292362a6c10849bc7ac210cf7ae2c5fede81a0700c0b562a9356",
+    "stored_sha256": "b7c9f2d802abe4995a9e711c6ce5b467782ee1937369a593e62687a5c2452d91"
+  },
+  {
+    "original": "asan/source-manifest.json",
+    "stored": "asan-source-manifest.json.gz",
+    "bytes": 163064,
+    "sha256": "2a03de8be4cdd8103b8c2c05770e55b7db510e857afc34f51cf60f6d73f35609",
+    "stored_sha256": "730cc146db84f985ee8978f3f9ffe286233aa3f75c4d4084983b04c5205c94e0"
+  },
+  {
+    "original": "target/commands-with-layout.json",
+    "stored": "target-commands-with-layout.json.gz",
+    "bytes": 567403,
+    "sha256": "2ad90231aba96d598fac8eba75085c39487628983894cfb0d147f67f14e06da9",
+    "stored_sha256": "d0b3617450c0b5bc04c7b43ad31be08596f6575890431c3e71ae02d003c819a8"
+  }
+]

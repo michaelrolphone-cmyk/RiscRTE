@@ -1,0 +1,30 @@
+[
+  {
+    "source": "src/main.cpp",
+    "layout": "legacy",
+    "baseline": "3795a60",
+    "sha256": "085a2fd5009166de77e5efed1b8cc114eeac2d4cc769816c8e93133e5456ab22",
+    "byte_identical": true
+  },
+  {
+    "source": "src/main.cpp",
+    "layout": "cohort",
+    "baseline": "3795a60",
+    "sha256": "1756f9751a726291a581a223ae58ff03cfc6e9c0147b45a1fb24a6991c31fe04",
+    "byte_identical": true
+  },
+  {
+    "source": "src/bootstrap/Runtime.cpp",
+    "layout": "legacy",
+    "baseline": "3795a60",
+    "sha256": "1b4d54b4a56ce184a1703e3f52b094d86451f43eefe430fce2b32f961d6af297",
+    "byte_identical": true
+  },
+  {
+    "source": "src/bootstrap/Runtime.cpp",
+    "layout": "cohort",
+    "baseline": "3795a60",
+    "sha256": "da96092482c117d9c168e9ddb80aa11557342655386f47461ae71ae79c07b500",
+    "byte_identical": true
+  }
+]

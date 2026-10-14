@@ -1,0 +1,140 @@
+{
+  "base_commit": "d2857270c5de5026a8803c74d67856810af21634",
+  "scope": "Default-off initialized settings maintenance: real Runtime/CpuPort/X4/FatFs and checked-native-store host models. No first-creation, selected complete-path, hardware, product activation or full target-link qualification.",
+  "source_hashes": {
+    "experimental/native_replica/NativeSettingsCoordinator.h": "2574e0b8b8ffe34be30d43a6b60320dd7eda4c08fc192759c0e6d6f3b0d8c65a",
+    "src/bootstrap/Runtime.cpp": "34a92e9eb62320a98999ace5dd294e44dd4995a879d14cf8aca05a44ff97edc3",
+    "src/bootstrap/Runtime.h": "7adacea9b18b402bff798dda92ed8b143ba33d1dccbfb395e31d97932c74e5ff",
+    "src/main.cpp": "9e96640677acba44a8c16d00a924bb5f96e6e7b1e6cd2f56bc9efd936132309b",
+    "src/ports/esp32s3/CpuPort.cpp": "a4344da584d13735846c5549d134188e80a6a6dbe1b2cd71be055360b0a09d4a",
+    "src/ports/esp32s3/CpuPort.h": "872db826d371ffb1cdb1a97c3abcd8cc065a90c374308fdfef4c56f36834c35c",
+    "src/ports/esp32s3/NativeSettingsLifecycle.cpp": "9aa64230f9df93ebadd3a0633198449c724c3dd73b32a72587cc0dc9b92f6485",
+    "src/ports/esp32s3/NativeSettingsLifecycle.h": "4266d20639aaebe5b7811a6963d597b262e2e303fab82952413200c1e61ebaa3",
+    "test/native_settings_complete_path_test.cpp": "2849e58a60636cedb1311c02d8c9fca029d9b3968898defe9995d1d44093025c",
+    "test/native_settings_coordinator_test.cpp": "3114bb6a2c4f5d0f1c19c997c7075bf865b02b402863237b2b554b6227515b05",
+    "test/native_settings_maintenance_test.cpp": "e16c43245e1ae0dc595f9d8af9c3a1bd5087e2f76dabe470943910f75db571b1",
+    "test/run_native_settings_maintenance_test.py": "df4529527a82ebba93a769ecbd4f577cb4fe7da589d21abc1bfb640243e12135",
+    "test/test_native_settings_startup.py": "d305f5209214dacb66ec9b7504584825de3ff814aa699864b934147160076dcc"
+  },
+  "cases": [
+    "bounded-save",
+    "bounded-shutdown",
+    "bounded-cancel",
+    "bounded-retained",
+    "bounded-app-retained",
+    "happy",
+    "draft-fence",
+    "pre-capture",
+    "implicit-exit",
+    "absent",
+    "usb-before",
+    "cancel",
+    "retained",
+    "unavailable-recover",
+    "history-initialized",
+    "history-initialized-single"
+  ],
+  "normal": "passed",
+  "asan_ubsan": "passed",
+  "startup_normal_asan_ubsan": "passed",
+  "coordinator_normal_asan_ubsan": "passed",
+  "runtime_contracts": "owner checkpoint; resident host/foreground/return draft fences; availability native/legacy/provider passed normally",
+  "target": "Single-job compile-only main, Runtime, lifecycle, worker, maintenance, bootstrap in legacy and cohort layouts passed; default-off objects empty. Coordinator remains 320 bytes. No full firmware link or hardware execution.",
+  "target_static_frames_bytes": {
+    "checkpoint": 64,
+    "pollMaintenance": 48,
+    "pauseAtomic": 32,
+    "cooperate": 32
+  },
+  "history_100": [
+    {
+      "checkpoint_kind": "paired",
+      "retained_generations_per_namespace": 100,
+      "namespace_generations_after": [
+        101,
+        101
+      ],
+      "namespaces": [
+        1,
+        6
+      ],
+      "keys_per_namespace": 1,
+      "value_bytes_per_namespace": 1024,
+      "map_bytes_per_namespace": 1044,
+      "replica_page_capacity_bytes": 4096,
+      "replica_file_bytes_per_generation_per_namespace": 1044,
+      "pages_per_generation_per_namespace": 1,
+      "release_polls": 0,
+      "release_scheduler_delay_calls": 0,
+      "owner_polls": 1082,
+      "raw_async_submit_attempts": 868,
+      "raw_async_queued": 868,
+      "package_submit_attempts": 8,
+      "package_queued": 8,
+      "total_queued": 876,
+      "owner_scheduler_delay_calls": 1082,
+      "owner_scheduler_delay_ms": 1082,
+      "modeled_provider_worker_delay_ms": 518,
+      "modeled_hardware_sleep_ms": 0,
+      "synthetic_blocked_ms": 0,
+      "synthetic_elapsed_ms": 1600,
+      "host_checkpoint_wall_ns": 11270128,
+      "card_read_calls": 9352,
+      "card_write_calls": 44,
+      "native_nvs_calls": 144,
+      "native_fs_calls": 108,
+      "successful_namespaces": [
+        1,
+        6
+      ],
+      "unchanged_namespaces": []
+    },
+    {
+      "checkpoint_kind": "single",
+      "retained_generations_per_namespace": 100,
+      "namespace_generations_after": [
+        101,
+        100
+      ],
+      "namespaces": [
+        1,
+        6
+      ],
+      "keys_per_namespace": 1,
+      "value_bytes_per_namespace": 1024,
+      "map_bytes_per_namespace": 1044,
+      "replica_page_capacity_bytes": 4096,
+      "replica_file_bytes_per_generation_per_namespace": 1044,
+      "pages_per_generation_per_namespace": 1,
+      "release_polls": 0,
+      "release_scheduler_delay_calls": 0,
+      "owner_polls": 541,
+      "raw_async_submit_attempts": 434,
+      "raw_async_queued": 434,
+      "package_submit_attempts": 4,
+      "package_queued": 4,
+      "total_queued": 438,
+      "owner_scheduler_delay_calls": 541,
+      "owner_scheduler_delay_ms": 541,
+      "modeled_provider_worker_delay_ms": 259,
+      "modeled_hardware_sleep_ms": 0,
+      "synthetic_blocked_ms": 0,
+      "synthetic_elapsed_ms": 800,
+      "host_checkpoint_wall_ns": 5437429,
+      "card_read_calls": 4676,
+      "card_write_calls": 22,
+      "native_nvs_calls": 72,
+      "native_fs_calls": 54,
+      "successful_namespaces": [
+        1
+      ],
+      "unchanged_namespaces": [
+        6
+      ]
+    }
+  ],
+  "history_limit": "One initialized synthetic seed per namespace, then actual successful saves. Same poll/queue counts as prior first-history report; media allocation and synthetic elapsed time are not identical. No physical latency claim.",
+  "preexisting_first_fixture": "Older runner X4 c7404623 lacks native-capacity admission. Both unchanged and bounded lifecycle return Invalid before first generation. First-creation test failure preserved, not counted as pass.",
+  "complete_path": "Test-only continuation and explicit await adaptation prepared; not executed here. Parent to reconcile against X4 3c32f85de9c3c80a6b085753d16744c47712172d and Drivers 11bc45d263f830c70cea53a8c8749e4fcf17b041.",
+  "external_evidence": "/workspace/shared/x4-settings-save-maintenance-evidence-20261012"
+}

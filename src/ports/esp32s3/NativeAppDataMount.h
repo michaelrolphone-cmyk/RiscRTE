@@ -12,7 +12,7 @@
 #include <esp_vfs.h>
 namespace RiscAppDataMount {
 // No construction authority for inspectors/workers or invented lease epochs.
-enum class Access { AppData, Settings, FileSource };
+enum class Access { AppData, Settings, FileSource, Packages };
 struct Identity {
  const void* context;
  const esp_vfs_t* vfs; // fenced table only; never the unguarded vendor table

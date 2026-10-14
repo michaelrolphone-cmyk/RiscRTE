@@ -1,0 +1,1 @@
+Runtime 0.2.28 baseline target Port sizes: legacy 0x1d28 (7464); cohort40 0x2458 (9304). Both equal unselected checkpoint layouts.

@@ -1,0 +1,87 @@
+{
+  "schema": "x4.native-settings-startup-lifecycle",
+  "schema_version": 1,
+  "base": "3795a60",
+  "initial_source_checkpoint": "aeda21c1d7b34e658305ff931eb3b647a1711b4b",
+  "selected_in_product": false,
+  "watch_selected": false,
+  "private_filesystem_qualified": false,
+  "actual_sd_restore_dispatcher_supplied": false,
+  "firmware_linked": false,
+  "hardware_tested": false,
+  "host": {
+    "startup_process_cases": 18,
+    "startup_non_x4_selection_rejected": true,
+    "startup_modes": [
+      "normal",
+      "address,undefined"
+    ],
+    "actual_runtime_checkpoint_modes": [
+      "normal",
+      "address,undefined"
+    ],
+    "actual_runtime_graph_checkpoint_modes": [
+      "normal",
+      "address,undefined"
+    ],
+    "old_graph_cases_normal": 29,
+    "actual_native_worker_cases_normal": 7,
+    "default_off_startup_normal": true,
+    "atomic_runtime_regression_normal": true,
+    "leak_sanitizer_enabled": false
+  },
+  "target": {
+    "compiler": "xtensa-esp32s3-elf-g++ GCC8.4.0 esp-2021r2-patch5",
+    "sdk": "Arduino2.0.17 ESP-IDF4.4",
+    "compile_only_layouts": [
+      "legacy",
+      "40-provider/64-app cohort"
+    ],
+    "actual_translation_units": [
+      "main.cpp",
+      "Runtime.cpp",
+      "NativeSettingsLifecycle.cpp",
+      "NativeSettingsWorker.cpp"
+    ],
+    "native_graph_wrapper_compiled": true,
+    "lifecycle_state_bytes": 1000,
+    "load_control_bytes": 136,
+    "two_workers_request_and_static_bytes_excluding_allocator_overhead": 25966,
+    "default_off_lifecycle_empty": true,
+    "local_frames_only": {
+      "prepare": 128,
+      "hydrate": 112,
+      "checkpoint": 48,
+      "drain": 48,
+      "load_execute": 48
+    },
+    "default_off_main_runtime_byte_identical_to_3795a60": true
+  },
+  "synthetic_timing": {
+    "long": {
+      "polls": 65537,
+      "blocked_ms": 65536
+    },
+    "accepted_cancel": {
+      "polls": 5,
+      "blocked_ms": 4,
+      "cancel_requests": 1
+    },
+    "actual_sd_latency_qualified": false,
+    "deadline_abandonment": false
+  },
+  "source_sha256": {
+    "src/main.cpp": "19f66f73a763a5e7a2528b01857e5763365057c45d8c1c52ddc49c3133630a0c",
+    "src/bootstrap/Runtime.cpp": "e229a2eeebe49e8acd51beebc8790d393202cdff374aa93a623295cb224de7a0",
+    "src/bootstrap/Runtime.h": "d1afc455a6b95673a0f128b55c74f87e300399ffb45bca2bf41fe3c37e4893e7",
+    "src/bootstrap/ResidentShellRuntime.inc": "bea2ea7ccb7247f648f4b92b9c407e9e8332901a7149f981c3ceba7a6adb487c",
+    "src/ports/esp32s3/NativeSettingsLifecycle.cpp": "02a5e1dea23d40f5eb81f550bab4b8d76281bd80e3e2206ae3989a5bfadbe9f3",
+    "src/ports/esp32s3/NativeSettingsLifecycle.h": "d81753f14424a9a269fe82ed48add10066290444a8d88bc243dce0619034c647",
+    "experimental/native_replica/NativeRuntimeStoragePin.h": "6f34d67667fe2673e689a88a238bd0766a414defbda0c211bcaa06d3917a8c13",
+    "test/test_native_settings_startup.py": "add0c617df7c5f8a37b1ea1f1f85acba40067d452a805843932afd398f936e36",
+    "test/native_settings_owner_checkpoint_test.cpp": "5dc3fd1cc2ef3a44ba3703bd3c1bfc1489d613f7cd19af8cc25ac449281a5d23",
+    "test/native_runtime_storage_pin_test.cpp": "520e6e49ccc6b0ab23c1eff71e5d2bc7a79d8cb0d8e2cee5017b4313e41047e0",
+    "test/compile_native_settings_lifecycle_target.py": "6aa8c26133f90a8b1bf08dec8d46d3c7a9b03643288d17c0ef81136834d6f077",
+    "test/compare_native_settings_lifecycle_default.py": "3b8d5f3e8e2b75d1eb18cf466067d0c1e5089ac9b33f84d696a5b73ad981518d"
+  }
+}

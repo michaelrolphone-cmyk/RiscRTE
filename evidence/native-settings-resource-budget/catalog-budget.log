@@ -1,0 +1,3 @@
+Catalog memory: entries=128 inventory=36864 peak_allocated=102376 catalog_object=16088 report_object=464 entry=144 child_storage=9888 bytes (host ABI)
+Catalog memory: entries=256 inventory=73728 peak_allocated=139240 catalog_object=16088 report_object=464 entry=144 child_storage=9888 bytes (host ABI)
+Catalog union: 8 RTENR03 capacity/preconstruction cases; exact 65,028-byte replica/V2 and 52-byte V1 budgets, one-byte excess refusals, preserved groups prevent over-capacity adoption, no-native-write invariants and bounded v3 peak PASS

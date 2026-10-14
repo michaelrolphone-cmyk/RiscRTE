@@ -1,0 +1,8 @@
+PRECONDITION: synthetic pre-established empty native domain; first-boot/SD source admission is not qualified here
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native preferences; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+Actual Settings controller: seven explicit Saves, stale draft rejection, queued and in-flight cancellation through checked native worker PASS
+integrated legacy readers: actual app/provider KV1 decode and KV2 byte-exact native preferences; no old-backend reads/writes PASS
+integrated owner polling: 1000 pending polls and 40000 idle state/get calls do no filesystem/NVS I/O; native/background exclusion PASS
+Actual Settings controller: seven preferences reloaded through fresh checked native store and Runtime facade PASS
+Runtime + coordinator + checked filesystem/NVS + pinned System Settings: seven preferences, stale/cancel and fresh reload PASS

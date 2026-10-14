@@ -1,0 +1,39 @@
+{
+  "status": "disconnected-native-and-system-local-source-checkpoint",
+  "runtime_base": "0b6c948314fae71ec1ce627a0b64b80ebe3b0bf8",
+  "system_source": "a5bd60fc5b7e7b62e3e08531860ce7e8ec855b89",
+  "system_product_baseline": "49752a02746b38afbcc403bb92189be5a8356c9d",
+  "qualification": {
+    "native_endpoint_host": "pass",
+    "native_endpoint_address_undefined": "pass",
+    "native_checked_appdata_nvs_host": "pass",
+    "native_checked_appdata_nvs_address_undefined": "pass",
+    "system_c_codec_native_bridge": "pass",
+    "system_c_codec_native_bridge_address_undefined": "pass",
+    "native_target_compile_only": "pass",
+    "system_atomic_x4_resident_elf": "pass",
+    "system_controller_cases": 23,
+    "legacy_workflow_cases": 56,
+    "legacy_profile_collection": 50,
+    "native_backend_fault_points": 21,
+    "uncertain_receipts": 6,
+    "existing_native_core_power_error_points": 270,
+    "old_kv_abi_unchanged": true,
+    "default_system_elf_byte_identical": true,
+    "default_system_elf_sha256": "4dac600f176febb6eb25da52b8afff8fca9aacbe03669342cc92f363b2c94294"
+  },
+  "limitations": [
+    "No production broker registration or shared_settings selection",
+    "No hardware qualification, flash or publication",
+    "LeakSanitizer unavailable under ptrace; ASan/UBSan used with detect_leaks=0",
+    "Namespace gate, worker finish callback and task identity predicates require trusted native broker binding"
+  ],
+  "source_sha256": {
+    "sdk/app/RiscKeyValueAtomicV1.h": "552b0be1890eced2c688700671832bbd1ec15b3663801d59ae946173f94313c5",
+    "experimental/native_replica/NativeAtomicKeyValue.h": "441f278211b23c3baf3b05581715e7b27e3f8d85488b7317797b56a02d0aa956",
+    "test/native_atomic_key_value_test.cpp": "c12803aaa60ac6c7189c2a27636b3d1336372ab4b929dc335549f6b27b6894a2",
+    "test/native_atomic_checked_store_test.cpp": "8c86fee8f61b1a7003e46054e5ae59c0a8c56bca075fc1cc079afff1694b07a3",
+    "test/native_atomic_wifi_bridge.c": "f501e05bf892f73f77e99e9f946e7c7c45a0d5040d54413b51c350b1138ef0f7",
+    "test/native_atomic_wifi_bridge_test.cpp": "c760bbaefdbd0e67d64fe1960af49fbc66a938624a564f0955aecb53affffa78"
+  }
+}

@@ -1,0 +1,106 @@
+name: Display startup regression
+on:
+  push:
+    branches: [fix/display-startup-20261012]
+  pull_request:
+    paths: ['src/ports/esp32s3/CpuPort.cpp', 'test/display_startup*', 'test/run_display_startup_test.sh', '.github/workflows/display-startup-regression.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      RISCRTE_RUNTIME_ROOT: ${{ github.workspace }}/runtime
+      RISCRTE_READER_ROOT: ${{ github.workspace }}/reader
+      RISCRTE_X4_ROOT: ${{ github.workspace }}/x4
+      RISCRTE_WATCH_ROOT: ${{ github.workspace }}/watch
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: runtime
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE
+          ref: 9a510b049483ed20327be2c972b12359d2877323
+          path: runtime-before
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiskRTE-XTEINK-X4-PRO
+          ref: 8dba3205f63dcb9558d80890b9bf5c4aed16f230
+          path: x4
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/T5S3-Reader
+          ref: 45cf61ac013fb618e8d7fed63217a35350484d52
+          path: reader
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
+          ref: 86aab52fb085b0e6dc3c467760395a3571e1fbd1
+          path: watch
+          persist-credentials: false
+      - name: Reproduce original X4 failure and Watch resume failure
+        env:
+          RISCRTE_RUNTIME_ROOT: ${{ github.workspace }}/runtime-before
+          PAD_HOLD_EXPECT_BROKEN: '1'
+        run: |
+          bash runtime/test/run_display_startup_test.sh
+          python3 runtime/test/display_startup_watch_test.py
+      - name: Repaired production paths and negative custody controls
+        run: |
+          bash runtime/test/run_display_startup_test.sh
+          python3 runtime/test/display_startup_watch_test.py
+          SANITIZE=1 bash runtime/test/run_display_startup_test.sh
+          SANITIZE=1 python3 runtime/test/display_startup_watch_test.py
+      - name: Existing Watch sleep and panel fault-injection tests
+        run: python3 watch/scripts/test_deep_sleep.py
+      - name: Existing Runtime lifecycle tests
+        working-directory: runtime
+        run: bash test/run_runtime_test.sh
+  target:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x4, watch]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: ${{ runner.os }}-${{ runner.arch }}-risc-tools-${{ hashFiles('platformio.ini', 'requirements-ci.txt') }}
+      - run: python -m pip install -r requirements-ci.txt
+      - name: Compile native X4 qualification profile
+        if: matrix.target == 'x4'
+        run: pio run -e x4-ci -j 1
+      - name: Compile native Watch qualification profile
+        if: matrix.target == 'watch'
+        run: pio run -c crown-build.ini -e crown-recovery-qualification -j 1
+      - name: Record compilation boundary
+        run: |
+          mkdir -p dist/display-startup
+          git rev-parse HEAD > dist/display-startup/source.txt
+          printf '%s\n' 'Compilation qualification only. Not a complete product recovery image. Do not flash these component BINs as full firmware.' > dist/display-startup/README.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: display-startup-${{ matrix.target }}-compile-only-${{ github.sha }}
+          path: |
+            dist/display-startup/
+            .pio/build/*/firmware.elf
+          if-no-files-found: error
+          retention-days: 14

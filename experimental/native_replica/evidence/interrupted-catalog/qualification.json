@@ -1,0 +1,66 @@
+{
+  "sources": [
+    {
+      "path": "experimental/native_replica/CheckedSdSettingsCatalog.h",
+      "sha256": "f020f636bdf38c03668f43eedac88c67f78a09ec1dae48ecde4f3a498462b631"
+    },
+    {
+      "path": "experimental/native_replica/CheckedSdReplicaReader.h",
+      "sha256": "42a6d72c2338efcd0feda406b38f00fc1b6bd600d4ea1f5bb631e6fd5a065ee9"
+    },
+    {
+      "path": "experimental/native_replica/NativeSdSession.h",
+      "sha256": "a649d3949a27e2d2878a9d6a0f6eb19f4093cd0c19d5554406490bf2851dff92"
+    },
+    {
+      "path": "experimental/native_replica/SdReplicaStage.h",
+      "sha256": "2e2169797a498f59cfa8f4d74c4a6e53c3cba73bcde58dc6ac9d1234af4e18f1"
+    },
+    {
+      "path": "test/native_interrupted_sd_catalog_test.cpp",
+      "sha256": "c7759ee3c590cbdb189b37bad66253a08038b2d52b9c513b6e1a5986ae6d3f5e"
+    },
+    {
+      "path": "test/native_checked_sd_restore_test.cpp",
+      "sha256": "87531d7dbef94aee9aa13270d158f213b75810c777109cd24ddfcdc338fc71a5"
+    },
+    {
+      "path": "test/native_checked_sd_restore_x4_test.cpp",
+      "sha256": "4d5518b62b0429f89dbfae1d916ef3026d75a6bfd45b03c2e127bfbe7d56d9c9"
+    },
+    {
+      "path": "test/run_native_interrupted_sd_catalog_test.sh",
+      "sha256": "68d8e75e01b2603192ac08bdb7a0d8869a2f871a0877a5c3cba22dbaf69e66b6"
+    },
+    {
+      "path": "test/run_native_checked_sd_restore_x4_test.py",
+      "sha256": "cfba4d48b6ff2c16f45d6d7709479b28d2a1c4ee89eeb64be7002126f9c02f13"
+    }
+  ],
+  "x4_manifests": [
+    {
+      "path": "/workspace/shared/x4-interrupted-sd-catalog-evidence-20261012/x4-final-normal/source-manifest.json",
+      "sha256": "890725e3f45b3d3c09532f5465c6320b86c593d56784b5f9f27062c07e421352"
+    },
+    {
+      "path": "/workspace/shared/x4-interrupted-sd-catalog-evidence-20261012/x4-final-asan/source-manifest.json",
+      "sha256": "3a7bcd92426d4aaa27e4d4c690294f472e66c8cb72806a998d3dde2349ed6ef5"
+    }
+  ],
+  "capacity": {
+    "window": 64,
+    "work_limit": 1048576,
+    "verified_generations": 5761,
+    "verified_admitted_entries": 1037160,
+    "verified_sweeps": 180,
+    "verified_next_calls": 1037340,
+    "refused_generations": 5762,
+    "refused_required_entries": 1048866,
+    "refused_sweeps": 182,
+    "refused_next_calls": 1048758,
+    "allocator_peak_bytes": 176972,
+    "native_writes": 0,
+    "sd_writes": 0
+  },
+  "qualification": "Host state-machine power cuts; pinned actual X4/FatFs reads/restore; no physical media, private mount, product selection or firmware delivery qualification. Optional old-fixture replacement probe is explicitly not passed."
+}

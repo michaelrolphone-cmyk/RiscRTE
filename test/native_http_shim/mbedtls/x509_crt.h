@@ -5,3 +5,5 @@
 #define MBEDTLS_X509_BADCERT_EXPIRED 2
 struct mbedtls_x509_time {int year,mon,day,hour,min,sec;};
 struct mbedtls_x509_crt {mbedtls_x509_time valid_from{},valid_to{};};
+
+#define MBEDTLS_ERR_X509_ALLOC_FAILED -0x2880
