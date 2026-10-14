@@ -50,17 +50,21 @@ void setup(){
 extern "C" bool test_home_quiesce(){++quiesces;return false;}
 extern "C" int test_file_init(unsigned role){
  ++inits[role];cached=risc_runtime_get_api(1);assert(cached && cached->struct_size>=RISC_RUNTIME_DEFAULT_REQUEST_V1_SIZE);
+ assert(!cached->initial_default());
  assert(!cached->request_default()); // app_main only, including receiver init.
  if(abandoned.api){auto old=abandoned;assert(!cached->release(&old));abandoned={};}
  if(role==2 && inits[2]==2 && mode=="default-init-failure")return -1;
  return 0;
 }
 extern "C" void test_file_fini(unsigned role){
- ++finis[role];assert(cached && !cached->request_default());
+ ++finis[role];assert(!cached->initial_default());assert(cached && !cached->request_default());
  if(role==1 && mode=="fini-retained")exitSafe=false;
 }
 extern "C" void test_file_main(unsigned role,const risc_runtime_api_v1* api,char* source,char* id){
  ++visits[role];assert(visits[role]<4);
+ unsigned home=mode=="default-caller"?0:mode=="default-receiver"?1:2;
+ assert(api->initial_default()==(role==home && visits[role]==1));
+ ownerOk=false;assert(!api->initial_default());ownerOk=true;
  ownerOk=false;assert(!api->request_default());ownerOk=true;
  exitSafe=false;assert(!api->request_default());exitSafe=true;
  if(role==2){if(visits[2]==1)assert(api->request_launch("role-0.elf"));return;}
