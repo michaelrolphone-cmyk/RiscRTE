@@ -1,0 +1,10 @@
+Native NVS global quarantine: getters, probes, writes, journal, settings and bootstrap make zero NVS calls; repeated startup cannot reset or erase PASS
+Native NVS adapter: namespace isolation, bounds, probes, missing/type/size faults, atomic output, every-stage IO and exact readback PASS
+Native NVS initialization: ok, real status latched, one attempt, no erase PASS
+Native NVS initialization: no-free-pages, real status latched, one attempt, no erase PASS
+Native NVS initialization: new-version, real status latched, one attempt, no erase PASS
+Native NVS initialization: fail, real status latched, one attempt, no erase PASS
+Native NVS initialization: no-mem, real status latched, one attempt, no erase PASS
+Native NVS initialization: invalid-state, real status latched, one attempt, no erase PASS
+Native NVS initialization: not-initialized, real status latched, one attempt, no erase PASS
+Native NVS embedded-mode exclusion: PASS

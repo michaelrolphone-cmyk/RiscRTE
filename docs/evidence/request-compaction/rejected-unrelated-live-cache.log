@@ -1,0 +1,161 @@
+baa45db8310d5732cd2e423cc0da407fa395ece65d893d6766902b4b5468fca1  /workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/runtime/provisioning/RequestQueue.cpp
+62940d06a2fc1433045f514d19a6c900f436a7bbb9f010ca65c287cf18d93c3f  /workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/runtime/provisioning/RequestQueue.h
+95693c8777e87a7819839e9ea696c3a0c1d341c264b519df5c5f378b9678f199  /workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h
+7dabb24cc14121e8660442e4f2b322a09c8adb139ffda59f8b8030a4dc04ac03  /workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/unrelated_review.cpp
+6bc74bfee2cb4a7c3612222fdf4c82495fa7643d7362d2ce07b4ac893acdf948  /workspace/shared/watch-request-compaction-20261014/test/fixtures/request-profile-watch-125.json
+067511a62215624487f902548309dbdbf62c2d126765a00947b1183d6e429a09  /workspace/shared/watch-request-compaction-20261014/test/fixtures/request-profile-wave-132.json
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_simple.hpp:9,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_partition_manager.hpp:9,
+                 from /workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/isolated_unrelated_review.cpp:5:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_iterator_base_funcs.h:66,
+                 from /usr/include/c++/14/string:47,
+                 from /usr/include/c++/14/bits/locale_classes.h:40,
+                 from /usr/include/c++/14/bits/ios_base.h:41,
+                 from /usr/include/c++/14/ios:44,
+                 from /usr/include/c++/14/istream:40,
+                 from /usr/include/c++/14/sstream:40,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/tools/catch/catch.hpp:74,
+                 from /workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/isolated_unrelated_review.cpp:2:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/isolated_unrelated_review.cpp:8:
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h: In function ‘RiscProvision::InputStatus RiscProvisionRequestStorage::read(nvs_handle_t, const char*, void*, uint32_t, uint32_t*)’:
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:20:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   20 |  if(actual)*actual=0;if(!out||!actual||(!receipt(key)&&!payload(key)&&!marker(key)))return InputStatus::Invalid;
+      |  ^~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:20:22: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   20 |  if(actual)*actual=0;if(!out||!actual||(!receipt(key)&&!payload(key)&&!marker(key)))return InputStatus::Invalid;
+      |                      ^~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:22:3: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   22 |   if(cap<1)return InputStatus::Invalid;uint8_t value=0;auto rc=nvs_get_u8(h,key,&value);
+      |   ^~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:22:40: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   22 |   if(cap<1)return InputStatus::Invalid;uint8_t value=0;auto rc=nvs_get_u8(h,key,&value);
+      |                                        ^~~~~~~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:29:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   29 |  if(rc==ESP_ERR_NVS_NOT_FOUND)return InputStatus::Missing;if(rc!=ESP_OK)return InputStatus::Unavailable;
+      |  ^~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:29:59: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   29 |  if(rc==ESP_ERR_NVS_NOT_FOUND)return InputStatus::Missing;if(rc!=ESP_OK)return InputStatus::Unavailable;
+      |                                                           ^~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:38:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   38 |  if(!n||n>cap)return InputStatus::Invalid;size_t expected=n;rc=nvs_get_blob(h,key,out,&n);
+      |  ^~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:38:43: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   38 |  if(!n||n>cap)return InputStatus::Invalid;size_t expected=n;rc=nvs_get_blob(h,key,out,&n);
+      |                                           ^~~~~~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:39:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   39 |  if(rc!=ESP_OK||n!=expected)return InputStatus::Invalid;*actual=uint32_t(n);return InputStatus::Ready;
+      |  ^~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:39:57: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   39 |  if(rc!=ESP_OK||n!=expected)return InputStatus::Invalid;*actual=uint32_t(n);return InputStatus::Ready;
+      |                                                         ^
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h: In function ‘bool RiscProvisionRequestStorage::erase(nvs_handle_t, const char*)’:
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:55:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   55 |  if(!receipt(key)&&!payload(key))return false;auto rc=nvs_erase_key(h,key);return rc==ESP_OK||rc==ESP_ERR_NVS_NOT_FOUND;
+      |  ^~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/marker-source/src/ports/esp32s3/NvsProvisionRequestStorage.h:55:47: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   55 |  if(!receipt(key)&&!payload(key))return false;auto rc=nvs_erase_key(h,key);return rc==ESP_OK||rc==ESP_ERR_NVS_NOT_FOUND;
+      |                                               ^~~~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/isolated_unrelated_review.cpp: In function ‘void ____C_A_T_C_H____T_E_S_T____109()’:
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/isolated_unrelated_review.cpp:116:2: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  116 |  for(unsigned i=0;i<4;i++)REQUIRE(n.status(current)==InputStatus::Invalid);REQUIRE(n.payloadReads==reads);n.reboot();REQUIRE(n.status(current)==InputStatus::Invalid);REQUIRE(n.payloadReads==reads);n.verifyOther(90);
+      |  ^~~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/isolated_unrelated_review.cpp:116:76: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  116 |  for(unsigned i=0;i<4;i++)REQUIRE(n.status(current)==InputStatus::Invalid);REQUIRE(n.payloadReads==reads);n.reboot();REQUIRE(n.status(current)==InputStatus::Invalid);REQUIRE(n.payloadReads==reads);n.verifyOther(90);
+      |                                                                            ^~~~~~~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/isolated_unrelated_review.cpp: In function ‘void ____C_A_T_C_H____T_E_S_T____132()’:
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/isolated_unrelated_review.cpp:140:4: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+  140 |    if(result==RISC_PROVISION_REQUEST_OK)published(n,pending);REQUIRE(q.queue(n)==RISC_PROVISION_REQUEST_OK);published(n,pending);n.verifyOther();
+      |    ^~
+/workspace/shared/watch-t023-feeds-20261014/build/request-protocol-review/unrelated/isolated_unrelated_review.cpp:140:62: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+  140 |    if(result==RISC_PROVISION_REQUEST_OK)published(n,pending);REQUIRE(q.queue(n)==RISC_PROVISION_REQUEST_OK);published(n,pending);n.verifyOther();
+      |                                                              ^~~~~~~
+UNRELATED immediate watch filler=90 cut=5073/5201 result=-5
+UNRELATED immediate string rc=0
+UNRELATED immediate key0 rc=4354
+UNRELATED immediate key1 rc=4354
+UNRELATED immediate key2 rc=4354
+UNRELATED immediate key3 rc=4354
+UNRELATED immediate key4 rc=4354
+UNRELATED immediate key5 rc=4354
+UNRELATED immediate key6 rc=4354
+UNRELATED immediate key7 rc=4354
+UNRELATED immediate key8 rc=4354
+UNRELATED immediate key9 rc=4354
+UNRELATED immediate key10 rc=4354
+UNRELATED immediate key11 rc=4354
+UNRELATED immediate key12 rc=4354
+UNRELATED immediate key13 rc=4354
+UNRELATED immediate key14 rc=4354
+UNRELATED immediate key15 rc=4354
+UNRELATED immediate key16 rc=4354
+UNRELATED immediate key17 rc=4354
+UNRELATED immediate key18 rc=4354
+UNRELATED immediate key19 rc=4354
+UNRELATED immediate key20 rc=4354
+UNRELATED immediate key21 rc=4354
+UNRELATED immediate key22 rc=4354
+UNRELATED immediate key23 rc=4354
+UNRELATED immediate key24 rc=4354
+UNRELATED immediate key25 rc=4354
+UNRELATED immediate key26 rc=4354
+UNRELATED immediate key27 rc=4354
+UNRELATED immediate key28 rc=4354
+UNRELATED immediate key29 rc=4354
+UNRELATED immediate key30 rc=4354
+UNRELATED immediate key31 rc=4354
+UNRELATED immediate key32 rc=4354
+UNRELATED immediate key33 rc=4354
+UNRELATED immediate key34 rc=4354
+UNRELATED immediate key35 rc=4354
+UNRELATED immediate key36 rc=4354
+UNRELATED immediate key37 rc=4354
+UNRELATED immediate key38 rc=4354
+UNRELATED immediate key39 rc=4354
+UNRELATED immediate key40 rc=4354
+UNRELATED immediate key41 rc=4354
+UNRELATED immediate key42 rc=4354
+UNRELATED immediate key43 rc=4354
+UNRELATED immediate key44 rc=4354
+UNRELATED immediate key45 rc=4354
+UNRELATED immediate key46 rc=4354
+UNRELATED immediate key47 rc=4354
+UNRELATED immediate key48 rc=4354
+UNRELATED immediate key49 rc=4354
+UNRELATED immediate key50 rc=4354
+UNRELATED immediate key51 rc=4354
+UNRELATED immediate key52 rc=4354
+UNRELATED immediate key53 rc=4354
+UNRELATED immediate key54 rc=4354
+UNRELATED immediate key55 rc=4354
+UNRELATED immediate key56 rc=4354
+UNRELATED immediate key57 rc=4354
+UNRELATED immediate key58 rc=4354
+UNRELATED immediate key59 rc=4354
+UNRELATED immediate key60 rc=4354
+UNRELATED immediate key61 rc=4354
+UNRELATED immediate key62 rc=4354
+UNRELATED immediate key63 rc=4354
+UNRELATED immediate key64 rc=4354
+UNRELATED immediate key65 rc=4354
+UNRELATED immediate key66 rc=4354
+UNRELATED immediate key67 rc=4354
+UNRELATED immediate key68 rc=4354
+UNRELATED immediate key69 rc=4354
+UNRELATED immediate key70 rc=4354
+UNRELATED immediate key71 rc=4354
+UNRELATED immediate key72 rc=4354
+UNRELATED immediate key73 rc=4354
+UNRELATED immediate key74 rc=4354
+UNRELATED immediate key75 rc=4354
+UNRELATED immediate key76 rc=4354
+UNRELATED immediate key77 rc=4354
+UNRELATED SUMMARY watch filler=90 isolated-boundaries=1 immediate-errors=78 immediate-missing=0 all raw-reboot blobs/strings/u32 preserved
+===============================================================================
+All tests passed (230 assertions in 1 test case)
+

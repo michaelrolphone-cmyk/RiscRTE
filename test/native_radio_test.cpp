@@ -225,6 +225,13 @@ int main(){
 #endif
  assert(netifInitCount==1);assert(!state(nullptr,nullptr) && !addresses(nullptr,nullptr));
  unsigned char bytes[99];memset(bytes,0xff,sizeof(bytes));wipe(bytes,sizeof(bytes));assert(zero(bytes,sizeof(bytes)));
+ // A failed queue mutation blocks new indirect PHY/NVS startup, but retains
+ // the existing session's cleanup path. Test-only flag reset models boot.
+ assert(join("quarantine-cleanup","12345678"));RiscNvs::detail::mutationQuarantined.store(true);
+ assert(leave()&&idle());calls.clear();
+ assert(!join("blocked","")&&!accessPoint("blocked","12345678")&&!scanStart());
+ assert(calls.empty()&&idle()&&!scanAllocation);RiscNvs::detail::mutationQuarantined.store(false);
+ puts("Native Wi-Fi quarantine: station/AP/scan start makes zero SDK calls; active cleanup remains available PASS");
  puts("Native radio adapter: lazy station-only RAM config, copied/wiped credentials, IPv4 status/address octets, no reconnect, bounded async scans, owned queue stale-event isolation and staged cleanup fault retries PASS");
 }
 

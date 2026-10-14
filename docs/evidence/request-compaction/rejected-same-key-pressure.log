@@ -1,0 +1,149 @@
+BEFORE-READ device=watch generation=0 filler=80 result=-5 nvs=0x1105
+FULL device=watch generation=0 filler=80 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=watch generation=0 filler=90 result=-5 nvs=0x1105
+FULL device=watch generation=0 filler=90 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=watch generation=0 filler=100 result=-5 nvs=0x1105
+FULL device=watch generation=0 filler=100 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=watch generation=0 filler=150 result=-5 nvs=0x1105
+FULL device=watch generation=0 filler=150 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=watch generation=0 filler=200 result=-5 nvs=0x1105
+FULL device=watch generation=0 filler=200 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=watch generation=0 filler=210 result=-5 nvs=0x1105
+FULL device=watch generation=0 filler=210 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=watch generation=0 filler=220 result=-5 nvs=0x1105
+FULL device=watch generation=0 filler=220 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=watch generation=1 filler=80 result=0 nvs=0x0
+FULL device=watch generation=1 filler=80 result=0 nvs=0x0 present=1 valid=1 terminal=0 bytes=16928
+AFTER-REBOOT present=1 valid=1 bytes=16928
+BEFORE-READ device=watch generation=1 filler=90 result=-5 nvs=0x1105
+FULL device=watch generation=1 filler=90 result=-5 nvs=0x1105 present=0 valid=0 terminal=0 bytes=288
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+nvs-capacity-target is a Catch v1.5.6 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+full-capacity refusal preserves confirmed receipt and unrelated keys
+-------------------------------------------------------------------------------
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:84
+...............................................................................
+
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( valid )
+with expansion:
+  false
+
+AFTER-REBOOT present=0 valid=0 bytes=288
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( recoveredValid )
+with expansion:
+  false
+
+BEFORE-READ device=watch generation=1 filler=100 result=-5 nvs=0x1105
+FULL device=watch generation=1 filler=100 result=-5 nvs=0x1105 present=0 valid=0 terminal=0 bytes=288
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( valid )
+with expansion:
+  false
+
+AFTER-REBOOT present=0 valid=0 bytes=288
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( recoveredValid )
+with expansion:
+  false
+
+BEFORE-READ device=watch generation=1 filler=150 result=-5 nvs=0x1105
+FULL device=watch generation=1 filler=150 result=-5 nvs=0x1105 present=0 valid=0 terminal=0 bytes=288
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( valid )
+with expansion:
+  false
+
+AFTER-REBOOT present=0 valid=0 bytes=288
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( recoveredValid )
+with expansion:
+  false
+
+BEFORE-READ device=watch generation=1 filler=200 result=-5 nvs=0x1105
+FULL device=watch generation=1 filler=200 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=watch generation=1 filler=210 result=-5 nvs=0x1105
+FULL device=watch generation=1 filler=210 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=watch generation=1 filler=220 result=-5 nvs=0x1105
+FULL device=watch generation=1 filler=220 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=wave generation=0 filler=80 result=0 nvs=0x0
+FULL device=wave generation=0 filler=80 result=0 nvs=0x0 present=1 valid=1 terminal=0 bytes=16928
+AFTER-REBOOT present=1 valid=1 bytes=16928
+BEFORE-READ device=wave generation=0 filler=90 result=-5 nvs=0x1105
+FULL device=wave generation=0 filler=90 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=wave generation=0 filler=100 result=-5 nvs=0x1105
+FULL device=wave generation=0 filler=100 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=wave generation=0 filler=150 result=-5 nvs=0x1105
+FULL device=wave generation=0 filler=150 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=wave generation=0 filler=200 result=-5 nvs=0x1105
+FULL device=wave generation=0 filler=200 result=-5 nvs=0x1105 present=1 valid=1 terminal=0 bytes=13191
+AFTER-REBOOT present=1 valid=1 bytes=13191
+BEFORE-READ device=wave generation=0 filler=208 result=-5 nvs=0x1105
+FULL device=wave generation=0 filler=208 result=-5 nvs=0x1105 present=1 valid=1 terminal=0 bytes=13191
+AFTER-REBOOT present=1 valid=1 bytes=13191
+BEFORE-READ device=wave generation=0 filler=208 result=-5 nvs=0x1105
+FULL device=wave generation=0 filler=208 result=-5 nvs=0x1105 present=1 valid=1 terminal=0 bytes=13191
+AFTER-REBOOT present=1 valid=1 bytes=13191
+BEFORE-READ device=wave generation=1 filler=80 result=0 nvs=0x0
+FULL device=wave generation=1 filler=80 result=0 nvs=0x0 present=1 valid=1 terminal=0 bytes=16928
+AFTER-REBOOT present=1 valid=1 bytes=16928
+BEFORE-READ device=wave generation=1 filler=90 result=-5 nvs=0x1105
+FULL device=wave generation=1 filler=90 result=-5 nvs=0x1105 present=0 valid=0 terminal=0 bytes=288
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( valid )
+with expansion:
+  false
+
+AFTER-REBOOT present=0 valid=0 bytes=288
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( recoveredValid )
+with expansion:
+  false
+
+BEFORE-READ device=wave generation=1 filler=100 result=-5 nvs=0x1105
+FULL device=wave generation=1 filler=100 result=-5 nvs=0x1105 present=0 valid=0 terminal=0 bytes=288
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( valid )
+with expansion:
+  false
+
+AFTER-REBOOT present=0 valid=0 bytes=288
+/workspace/shared/watch-nvs-capacity-20261014/queue_harness.cpp:90: FAILED:
+  CHECK( recoveredValid )
+with expansion:
+  false
+
+BEFORE-READ device=wave generation=1 filler=150 result=-5 nvs=0x1105
+FULL device=wave generation=1 filler=150 result=-5 nvs=0x1105 present=1 valid=1 terminal=1 bytes=288
+AFTER-REBOOT present=1 valid=1 bytes=288
+BEFORE-READ device=wave generation=1 filler=200 result=-5 nvs=0x1105
+FULL device=wave generation=1 filler=200 result=-5 nvs=0x1105 present=1 valid=1 terminal=0 bytes=13191
+AFTER-REBOOT present=1 valid=1 bytes=13191
+BEFORE-READ device=wave generation=1 filler=208 result=-5 nvs=0x1105
+FULL device=wave generation=1 filler=208 result=-5 nvs=0x1105 present=1 valid=1 terminal=0 bytes=13191
+AFTER-REBOOT present=1 valid=1 bytes=13191
+BEFORE-READ device=wave generation=1 filler=208 result=-5 nvs=0x1105
+FULL device=wave generation=1 filler=208 result=-5 nvs=0x1105 present=1 valid=1 terminal=0 bytes=13191
+AFTER-REBOOT present=1 valid=1 bytes=13191
+===============================================================================
+test cases:     1 |     0 passed |  1 failed
+assertions: 17430 | 17420 passed | 10 failed
+

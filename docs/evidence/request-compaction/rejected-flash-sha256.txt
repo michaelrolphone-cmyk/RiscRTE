@@ -1,0 +1,4 @@
+960d529b26961fe800d654fbc8b3e8e17a5c3bde73a65cf6f99a5b562796db90  fixtures/full-watch-g1-f90.bin
+1c9ded4cf849b99888541c8e4c0c46a85125722562b919d09a23c99ece1d3bb4  fixtures/full-watch-g1-f100.bin
+170d7fd527efd9edc0c9c206f06b0701057e8a94d48f4963e22164d4151eaf14  fixtures/full-wave-g1-f90.bin
+61885e7fbae2dcc4e83c739004d0df5678a2b1d8ab21471dc0d96ec793fbfb47  fixtures/full-wave-g1-f100.bin

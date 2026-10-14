@@ -1,0 +1,10 @@
+Native Wi-Fi quarantine: station/AP/scan start makes zero SDK calls; active cleanup remains available PASS
+Native radio adapter: lazy station-only RAM config, copied/wiped credentials, IPv4 status/address octets, no reconnect, bounded async scans, owned queue stale-event isolation and staged cleanup fault retries PASS
+Native BLE quarantine: controller start makes zero SDK/init/allocation calls; active cleanup remains available PASS
+Native HCI: exact SDK lifecycle, bounded copied RX/TX, deadline, overflow, stale callback and retained uncertainty PASS
+Native IQ quarantine: PHY start makes zero SDK/MMIO calls; active cleanup remains available PASS
+Native IQ: SDK modem/power/PHY balance, cold and post-Bluetooth claims, rejection and retained cleanup retry, bounded trace PASS
+Native IQ: unsupported actual ROM rejected before MMIO PASS
+Native IQ: unsupported actual ROM rejected before MMIO PASS
+Native IQ: static bank overlap rejected before MMIO PASS
+Native IQ: static bank overlap rejected before MMIO PASS

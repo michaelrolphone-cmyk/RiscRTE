@@ -1,0 +1,31 @@
+{
+  "command_input": {
+    "cmd": "python3 test/compile_native_provision_request_target.py --packages /workspace/scratch/c744abbbbd60/watch-build-tools/platformio-core/packages --output /tmp/request-final-target > /tmp/request-final-target.log 2>&1",
+    "workdir": "/workspace/shared/watch-request-compaction-20261014",
+    "yield_time_ms": 1000,
+    "max_output_tokens": 1000
+  },
+  "original_start_output": {
+    "chunk_id": "c614f3",
+    "wall_time_seconds": 1.000397117,
+    "session_id": 1296,
+    "original_token_count": 0,
+    "output": ""
+  },
+  "poll_input": {
+    "session_id": 1296,
+    "chars": "",
+    "yield_time_ms": 1000,
+    "max_output_tokens": 300
+  },
+  "original_completion_output": {
+    "chunk_id": "af6f67",
+    "wall_time_seconds": 1.9469e-05,
+    "exit_code": 0,
+    "original_token_count": 0,
+    "output": ""
+  },
+  "redirected_command_output": "PASS: target request queue, native bridge, boot adapter, paired-store adapter, inert package volume, input preflight, Runtime graph and policy compiled; no device qualification\n",
+  "separate_lifecycle_error": null,
+  "lifecycle_note": "No separate lifecycle error was delivered in this worker. These are the command arguments and exact result fields received, copied from the tool responses, not a replacement execution."
+}

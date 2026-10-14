@@ -1,0 +1,1 @@
+PASS: actual ESP32-S3 NativeHardware translation unit compiled with Wi-Fi/BLE/IQ quarantine gates enabled; no device qualification

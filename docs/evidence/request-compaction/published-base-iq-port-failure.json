@@ -1,0 +1,31 @@
+{
+  "base": "0f42274ba8d091712a1f875f18851a6f3a996a66",
+  "command_input": {
+    "cmd": "git rev-parse HEAD; git status --short; bash test/run_radio_iq_test.sh",
+    "workdir": "/workspace/shared/watch-request-base-iq-20261014",
+    "yield_time_ms": 1000,
+    "max_output_tokens": 1000
+  },
+  "start_output": {
+    "chunk_id": "fc4268",
+    "wall_time_seconds": 1.000645201,
+    "session_id": 44663,
+    "original_token_count": 11,
+    "output": "0f42274ba8d091712a1f875f18851a6f3a996a66\n"
+  },
+  "completion": {
+    "args": {
+      "session_id": 44663,
+      "chars": "",
+      "yield_time_ms": 1000,
+      "max_output_tokens": 1500
+    },
+    "result": {
+      "chunk_id": "9c87e6",
+      "wall_time_seconds": 0.000021212,
+      "exit_code": 134,
+      "original_token_count": 68,
+      "output": "port: /workspace/shared/watch-request-base-iq-20261014/test/radio_iq_port_test.cpp:45: main()::<lambda(int32_t)>: Assertion `Port::gpioDeepSleepHold(&g,90,true)==expected' failed.\ntest/run_radio_iq_test.sh: line 10:    34 Aborted                 \"$build/$name\" \"$build\"\n"
+    }
+  }
+}

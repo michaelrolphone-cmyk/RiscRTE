@@ -120,5 +120,10 @@ int main(){
  p.serial_=UINT64_MAX;calls.clear();uint64_t exhausted=99;
  assert(!Port::radioIqClaim(&c,&exhausted) && !exhausted && !c.token && !p.poisoned_ && !phyPrepared && calls.size()==6);released();
 #endif
+ assert(prepare());RiscNvs::detail::mutationQuarantined.store(true);
+ assert(cleanup());released();calls.clear();const auto priorReads=reads;
+ assert(!prepare()&&calls.empty()&&reads==priorReads);
+ RiscNvs::detail::mutationQuarantined.store(false); // test-only ordinary boot
+ puts("Native IQ quarantine: PHY start makes zero SDK/MMIO calls; active cleanup remains available PASS");
  puts("Native IQ: SDK modem/power/PHY balance, cold and post-Bluetooth claims, rejection and retained cleanup retry, bounded trace PASS");
 }

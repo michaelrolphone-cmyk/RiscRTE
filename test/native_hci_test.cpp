@@ -58,6 +58,12 @@ int main(){
  assert(NativeHci::open());failure="send-fault";assert(!NativeHci::send(1,command,3,0));clean();
  assert(NativeHci::open());status=ESP_BT_CONTROLLER_STATUS_IDLE;assert(!NativeHci::safe() && !NativeHci::close());status=ESP_BT_CONTROLLER_STATUS_ENABLED;clean();
  failure="enable";failureResult=0x3131;assert(!NativeHci::open());clean();failureResult=ESP_FAIL;
+ // Quarantine prevents PHY initialization while preserving active teardown.
+ assert(NativeHci::open());RiscNvs::detail::mutationQuarantined.store(true);clean();
+ const auto beforeQuarantineStarts=initializations,beforeQuarantineAllocations=allocations;
+ assert(!NativeHci::open()&&initializations==beforeQuarantineStarts&&allocations==beforeQuarantineAllocations);
+ RiscNvs::detail::mutationQuarantined.store(false); // test-only ordinary boot
+ puts("Native BLE quarantine: controller start makes zero SDK/init/allocation calls; active cleanup remains available PASS");
  // SDK early-init failures can own PHY resources even while reporting IDLE.
  failure="init";assert(!NativeHci::open() && status==ESP_BT_CONTROLLER_STATUS_IDLE && !NativeHci::idle() && !NativeHci::safe());
  failure.clear();assert(!NativeHci::close() && NativeHci::buffers && !NativeHci::open());

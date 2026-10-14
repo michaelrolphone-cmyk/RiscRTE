@@ -1,0 +1,28 @@
+NativeProvisionRequest.cpp:20:6:bool RiscProvisionRequest::{anonymous}::owner()	32	static
+NativeProvisionRequest.cpp:80:47:static constexpr int32_t RiscProvisionRequest::{anonymous}::<lambda(void*, risc_provision_request_status_v1*)>::_FUN(void*, risc_provision_request_status_v1*)	32	static
+NativeProvisionRequest.cpp:81:55:static constexpr int32_t RiscProvisionRequest::{anonymous}::<lambda(void*, const risc_provision_request_v1*, uint8_t*)>::_FUN(void*, const risc_provision_request_v1*, uint8_t*)	32	static
+NativeProvisionRequest.cpp:83:83:static constexpr RiscProvision::InputStatus RiscProvisionRequest::{anonymous}::unavailable()::<lambda(void*, const char*, void*, uint32_t, uint32_t*)>::_FUN(void*, const char*, void*, uint32_t, uint32_t*)	32	static
+NativeProvisionRequest.cpp:21:6:bool RiscProvisionRequest::{anonymous}::hash(const void*, uint32_t, uint8_t*)	144	static
+NativeProvisionRequest.cpp:26:38:RiscProvisionRequest::{anonymous}::Buffer::Buffer()	32	static
+NativeProvisionRequest.cpp:27:2:RiscProvisionRequest::{anonymous}::Buffer::~Buffer()	32	static
+NativeProvisionRequest.cpp:58:9:int32_t RiscProvisionRequest::{anonymous}::queue(void*, const risc_provision_request_v1*, uint8_t*)	352	static
+NativeProvisionRequest.cpp:71:12:static bool RiscProvisionRequest::{anonymous}::queue(void*, const risc_provision_request_v1*, uint8_t*)::<lambda(void*)>::_FUN(void*)	32	static
+NvsProvisionRequestStorage.h:67:13:bool RiscProvisionRequestStorage::set(nvs_handle_t, const char*, const void*, uint32_t)	624	static
+NativeProvisionRequest.cpp:31:13:RiscProvision::InputStatus RiscProvisionRequest::{anonymous}::load(RiscProvisionRequest::{anonymous}::Buffer&, uint32_t&)	48	static
+NativeProvisionRequest.cpp:38:9:int32_t RiscProvisionRequest::{anonymous}::status(void*, risc_provision_request_status_v1*)	576	static
+NvsProvisionRequestStorage.h:10:13:bool RiscProvisionRequestStorage::receipt(const char*)	32	static
+NvsProvisionRequestStorage.h:11:13:bool RiscProvisionRequestStorage::payload(const char*)	32	static
+NativeProvisionRequest.cpp:72:25:static bool RiscProvisionRequest::{anonymous}::queue(void*, const risc_provision_request_v1*, uint8_t*)::<lambda(void*, const char*)>::_FUN(void*, const char*)	32	static
+NvsProvisionRequestStorage.h:12:13:bool RiscProvisionRequestStorage::marker(const char*)	32	static
+NvsProvisionRequestStorage.h:16:20:RiscProvision::InputStatus RiscProvisionRequestStorage::kind(nvs_handle_t, const char*, nvs_type_t&)	80	static
+NativeProvisionRequest.cpp:73:25:static RiscProvision::InputStatus RiscProvisionRequest::{anonymous}::queue(void*, const risc_provision_request_v1*, uint8_t*)::<lambda(void*, const char*)>::_FUN(void*, const char*)	48	static
+NvsProvisionRequestStorage.h:53:23:RiscProvisionRequestStorage::read(nvs_handle_t, const char*, void*, uint32_t, uint32_t*)::<lambda(char)>	32	static
+NvsProvisionRequestStorage.h:53:23:static constexpr int RiscProvisionRequestStorage::read(nvs_handle_t, const char*, void*, uint32_t, uint32_t*)::<lambda(char)>::_FUN(char)	32	static
+NvsProvisionRequestStorage.h:33:20:RiscProvision::InputStatus RiscProvisionRequestStorage::read(nvs_handle_t, const char*, void*, uint32_t, uint32_t*)	640	static
+NativeProvisionRequest.cpp:28:13:RiscProvision::InputStatus RiscProvisionRequest::{anonymous}::read(void*, const char*, void*, uint32_t, uint32_t*)	32	static
+NvsProvisionRequestStorage.h:67:13:bool RiscProvisionRequestStorage::set(nvs_handle_t, const char*, const void*, uint32_t)	48	static
+NativeProvisionRequest.cpp:70:49:static bool RiscProvisionRequest::{anonymous}::queue(void*, const risc_provision_request_v1*, uint8_t*)::<lambda(void*, const char*, const void*, uint32_t)>::_FUN(void*, const char*, const void*, uint32_t)	32	static
+NativeProvisionRequest.cpp:85:6:bool RiscProvisionRequest::bind(RiscBoot::Runtime&, bool (*)())	48	static
+NativeProvisionRequest.cpp:86:6:bool RiscProvisionRequest::bindAdmission(RiscBoot::Runtime&)	48	static
+NativeProvisionRequest.cpp:98:6:void RiscProvisionRequest::releaseBootInput()	32	static
+NativeProvisionRequest.cpp:87:7:RiscProvision::Input RiscProvisionRequest::bootInput(RiscProvision::Input, bool&)	320	static

@@ -1,0 +1,32 @@
+{
+  "finding": "Real NVS string CRC rejection removes receipt, allowing repeated/reboot selection to become Missing and Native bootInput to select legacy input",
+  "verified_with": "new production readRequest and NvsProvisionRequestStorage adapter; clean compile of pinned upstream NVS",
+  "idf_commit": "38eeba213aa695aabfd6d89aa9f5078dbe5a94c3",
+  "partition_bytes": 24576,
+  "fixture_receipt_bytes": 288,
+  "fixture_receipt_sha256": "c60220ef32414a0671f6457e5792a3a9411558cdc9a3cc39bf32d87f5214f1a5",
+  "fixture_checksum_verified": true,
+  "fault": "one cleared data bit in an otherwise valid577-byte NVS terminal string; payload absent",
+  "observed": [
+    "first readRequest Invalid",
+    "receipt probe Missing",
+    "second readRequest Missing",
+    "reboot readRequest Missing"
+  ],
+  "legacy_mapping": "NativeProvisionRequest.cpp bootInput returns original input with preserving=false when load returns Missing",
+  "unrelated_sentinel_preserved": true,
+  "assertions": 22,
+  "test_files": {
+    "receipt_crc_review.cpp": "9aa69142f1959b09c52d1b0c98cf8a8fdb903a33daa5a23c0fc05635bf48a7ba",
+    "build.sh": "5a1ab21aa26cf70b83f5961c0449096008313d2662947f803c4f8f0d44b6cbd8",
+    "result.log": "76e0c732e23bb7cd6a94f9f94403835530760f7e534226cbcdeeea637cbe15a4"
+  },
+  "reviewed_source_hashes": {
+    "src/runtime/provisioning/RequestQueue.cpp": "a7498659186e50478635868e5f2f4e1ab44c9e1aa55095212af6514ebebf02d7",
+    "src/runtime/provisioning/RequestQueue.h": "6c5057f3e25101b0c79b447aa1b7389714f53cbef03c7323a22ff5956fb31062",
+    "src/ports/esp32s3/NvsProvisionRequestStorage.h": "1aff0e074ee7a5daa6233c97e85650eccd50fdfc74ffc99f11f6f8fa4bdb2dd7",
+    "src/ports/esp32s3/NativeProvisionRequest.cpp": "91feca8a79dd7414a85c44240c6cad9dd7ce1817736a3551b8f38fce65852efb"
+  },
+  "source_modified_by_reviewer": false,
+  "hardware_qualification": false
+}

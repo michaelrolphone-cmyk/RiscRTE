@@ -1,0 +1,256 @@
+baa45db8310d5732cd2e423cc0da407fa395ece65d893d6766902b4b5468fca1  /workspace/shared/watch-request-compaction-20261014/src/runtime/provisioning/RequestQueue.cpp
+62940d06a2fc1433045f514d19a6c900f436a7bbb9f010ca65c287cf18d93c3f  /workspace/shared/watch-request-compaction-20261014/src/runtime/provisioning/RequestQueue.h
+95693c8777e87a7819839e9ea696c3a0c1d341c264b519df5c5f378b9678f199  /workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h
+ad89feff7247cfab1e5649d05d284c702713b75acbadccae3b1349c88da78be4  /workspace/shared/watch-request-compaction-20261014/test/request_queue_nvs_test.cpp
+6bc74bfee2cb4a7c3612222fdf4c82495fa7643d7362d2ce07b4ac893acdf948  /workspace/shared/watch-request-compaction-20261014/test/fixtures/request-profile-watch-125.json
+067511a62215624487f902548309dbdbf62c2d126765a00947b1183d6e429a09  /workspace/shared/watch-request-compaction-20261014/test/fixtures/request-profile-wave-132.json
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_page.hpp:17,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs.hpp:12,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_api.cpp:7:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_construct.h:61,
+                 from /usr/include/c++/14/bits/stl_tempbuf.h:61,
+                 from /usr/include/c++/14/memory:66,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs.hpp:9:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_page.hpp:17,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_page.cpp:6:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_algobase.h:65,
+                 from /usr/include/c++/14/algorithm:60,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_types.hpp:12,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_page.hpp:10:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_page.hpp:17,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_pagemanager.hpp:20,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_pagemanager.cpp:6:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_construct.h:61,
+                 from /usr/include/c++/14/bits/stl_tempbuf.h:61,
+                 from /usr/include/c++/14/memory:66,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_pagemanager.hpp:17:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_page.hpp:17,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs.hpp:12,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_storage.hpp:12,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_storage.cpp:6:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_construct.h:61,
+                 from /usr/include/c++/14/bits/stl_tempbuf.h:61,
+                 from /usr/include/c++/14/memory:66,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_storage.hpp:9:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_item_hash_list.hpp:13,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_item_hash_list.cpp:15:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_algobase.h:65,
+                 from /usr/include/c++/14/algorithm:60,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_types.hpp:12,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_item_hash_list.hpp:11:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_simple.hpp:9,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_partition_manager.hpp:9,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_simple.cpp:16:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_iterator_base_funcs.h:66,
+                 from /usr/include/c++/14/string:47,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/include/nvs_handle.hpp:4,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_simple.cpp:15:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_simple.hpp:9,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_locked.hpp:17,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_locked.cpp:14:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_algobase.h:65,
+                 from /usr/include/c++/14/bits/hashtable_policy.h:36,
+                 from /usr/include/c++/14/bits/hashtable.h:35,
+                 from /usr/include/c++/14/bits/unordered_map.h:33,
+                 from /usr/include/c++/14/unordered_map:41,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:10:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_simple.hpp:9,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_partition_manager.hpp:9,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_partition_manager.cpp:7:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_algobase.h:65,
+                 from /usr/include/c++/14/bits/hashtable_policy.h:36,
+                 from /usr/include/c++/14/bits/hashtable.h:35,
+                 from /usr/include/c++/14/bits/unordered_map.h:33,
+                 from /usr/include/c++/14/unordered_map:41,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:10:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_partition.hpp:11,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_partition.cpp:16:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_algobase.h:65,
+                 from /usr/include/c++/14/bits/hashtable_policy.h:36,
+                 from /usr/include/c++/14/bits/hashtable.h:35,
+                 from /usr/include/c++/14/bits/unordered_map.h:33,
+                 from /usr/include/c++/14/unordered_map:41,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:10:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_partition.hpp:11,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_encrypted_partition.hpp:20,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_encrypted_partition.cpp:8:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_algobase.h:65,
+                 from /usr/include/c++/14/bits/hashtable_policy.h:36,
+                 from /usr/include/c++/14/bits/hashtable.h:35,
+                 from /usr/include/c++/14/bits/unordered_map.h:33,
+                 from /usr/include/c++/14/unordered_map:41,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:10:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_simple.hpp:9,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_partition_manager.hpp:9,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_cxx_api.cpp:14:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_algobase.h:65,
+                 from /usr/include/c++/14/bits/hashtable_policy.h:36,
+                 from /usr/include/c++/14/bits/hashtable.h:35,
+                 from /usr/include/c++/14/bits/unordered_map.h:33,
+                 from /usr/include/c++/14/unordered_map:41,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:10:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_handle_simple.hpp:9,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_partition_manager.hpp:9,
+                 from /workspace/shared/watch-request-compaction-20261014/test/request_queue_nvs_test.cpp:5:
+/workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/intrusive_list.h:33:34: warning: ‘template<class _Category, class _Tp, class _Distance, class _Pointer, class _Reference> struct std::iterator’ is deprecated [-Wdeprecated-declarations]
+   33 |     class iterator : public std::iterator<std::forward_iterator_tag, T>
+      |                                  ^~~~~~~~
+In file included from /usr/include/c++/14/bits/stl_iterator_base_funcs.h:66,
+                 from /usr/include/c++/14/string:47,
+                 from /usr/include/c++/14/bits/locale_classes.h:40,
+                 from /usr/include/c++/14/bits/ios_base.h:41,
+                 from /usr/include/c++/14/ios:44,
+                 from /usr/include/c++/14/istream:40,
+                 from /usr/include/c++/14/sstream:40,
+                 from /workspace/shared/watch-nvs-capacity-20261014/esp-idf/tools/catch/catch.hpp:74,
+                 from /workspace/shared/watch-request-compaction-20261014/test/request_queue_nvs_test.cpp:2:
+/usr/include/c++/14/bits/stl_iterator_base_types.h:127:34: note: declared here
+  127 |     struct _GLIBCXX17_DEPRECATED iterator
+      |                                  ^~~~~~~~
+In file included from /workspace/shared/watch-request-compaction-20261014/test/request_queue_nvs_test.cpp:8:
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h: In function ‘RiscProvision::InputStatus RiscProvisionRequestStorage::read(nvs_handle_t, const char*, void*, uint32_t, uint32_t*)’:
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:20:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   20 |  if(actual)*actual=0;if(!out||!actual||(!receipt(key)&&!payload(key)&&!marker(key)))return InputStatus::Invalid;
+      |  ^~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:20:22: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   20 |  if(actual)*actual=0;if(!out||!actual||(!receipt(key)&&!payload(key)&&!marker(key)))return InputStatus::Invalid;
+      |                      ^~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:22:3: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   22 |   if(cap<1)return InputStatus::Invalid;uint8_t value=0;auto rc=nvs_get_u8(h,key,&value);
+      |   ^~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:22:40: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   22 |   if(cap<1)return InputStatus::Invalid;uint8_t value=0;auto rc=nvs_get_u8(h,key,&value);
+      |                                        ^~~~~~~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:29:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   29 |  if(rc==ESP_ERR_NVS_NOT_FOUND)return InputStatus::Missing;if(rc!=ESP_OK)return InputStatus::Unavailable;
+      |  ^~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:29:59: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   29 |  if(rc==ESP_ERR_NVS_NOT_FOUND)return InputStatus::Missing;if(rc!=ESP_OK)return InputStatus::Unavailable;
+      |                                                           ^~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:38:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   38 |  if(!n||n>cap)return InputStatus::Invalid;size_t expected=n;rc=nvs_get_blob(h,key,out,&n);
+      |  ^~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:38:43: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   38 |  if(!n||n>cap)return InputStatus::Invalid;size_t expected=n;rc=nvs_get_blob(h,key,out,&n);
+      |                                           ^~~~~~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:39:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   39 |  if(rc!=ESP_OK||n!=expected)return InputStatus::Invalid;*actual=uint32_t(n);return InputStatus::Ready;
+      |  ^~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:39:57: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   39 |  if(rc!=ESP_OK||n!=expected)return InputStatus::Invalid;*actual=uint32_t(n);return InputStatus::Ready;
+      |                                                         ^
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h: In function ‘bool RiscProvisionRequestStorage::erase(nvs_handle_t, const char*)’:
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:55:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   55 |  if(!receipt(key)&&!payload(key))return false;auto rc=nvs_erase_key(h,key);return rc==ESP_OK||rc==ESP_ERR_NVS_NOT_FOUND;
+      |  ^~
+/workspace/shared/watch-request-compaction-20261014/src/ports/esp32s3/NvsProvisionRequestStorage.h:55:47: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   55 |  if(!receipt(key)&&!payload(key))return false;auto rc=nvs_erase_key(h,key);return rc==ESP_OK||rc==ESP_ERR_NVS_NOT_FOUND;
+      |                                               ^~~~
+/workspace/shared/watch-request-compaction-20261014/test/request_queue_nvs_test.cpp: In function ‘void ____C_A_T_C_H____T_E_S_T____109()’:
+/workspace/shared/watch-request-compaction-20261014/test/request_queue_nvs_test.cpp:116:2: warning: this ‘for’ clause does not guard... [-Wmisleading-indentation]
+  116 |  for(unsigned i=0;i<4;i++)REQUIRE(n.status(current)==InputStatus::Invalid);REQUIRE(n.payloadReads==reads);n.reboot();REQUIRE(n.status(current)==InputStatus::Invalid);REQUIRE(n.payloadReads==reads);n.verifyOther(90);
+      |  ^~~
+/workspace/shared/watch-request-compaction-20261014/test/request_queue_nvs_test.cpp:116:76: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘for’
+  116 |  for(unsigned i=0;i<4;i++)REQUIRE(n.status(current)==InputStatus::Invalid);REQUIRE(n.payloadReads==reads);n.reboot();REQUIRE(n.status(current)==InputStatus::Invalid);REQUIRE(n.payloadReads==reads);n.verifyOther(90);
+      |                                                                            ^~~~~~~
+/workspace/shared/watch-request-compaction-20261014/src/runtime/provisioning/RequestQueue.cpp: In function ‘RiscProvision::InputStatus RiscProvision::readRequest(Input, void*, uint32_t, uint32_t*, bool*)’:
+/workspace/shared/watch-request-compaction-20261014/src/runtime/provisioning/RequestQueue.cpp:43:2: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   43 |  if(controlled)*controlled=false;if(size)*size=0;
+      |  ^~
+/workspace/shared/watch-request-compaction-20261014/src/runtime/provisioning/RequestQueue.cpp:43:34: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   43 |  if(controlled)*controlled=false;if(size)*size=0;
+      |                                  ^~
+/workspace/shared/watch-request-compaction-20261014/src/runtime/provisioning/RequestQueue.cpp:48:3: warning: this ‘if’ clause does not guard... [-Wmisleading-indentation]
+   48 |   if(controlled)*controlled=true;return state;
+      |   ^~
+/workspace/shared/watch-request-compaction-20261014/src/runtime/provisioning/RequestQueue.cpp:48:34: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   48 |   if(controlled)*controlled=true;return state;
+      |                                  ^~~~~~
+test: /workspace/shared/watch-nvs-capacity-20261014/esp-idf/components/nvs_flash/src/nvs_storage.cpp:489: esp_err_t nvs::Storage::readMultiPageBlob(uint8_t, const char*, void*, size_t): Assertion `offset == dataSize' failed.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+test is a Catch v1.5.6 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+every flash boundary preserves selection and reconciliation
+-------------------------------------------------------------------------------
+/workspace/shared/watch-request-compaction-20261014/test/request_queue_nvs_test.cpp:89
+...............................................................................
+
+/workspace/shared/watch-request-compaction-20261014/test/request_queue_nvs_test.cpp:89: FAILED:
+  {Unknown expression after the reported line}
+due to a fatal error condition:
+  device=watch generation=0 filler=0 cut=4609/4612 abrupt=0
+  SIGABRT - Abort (abnormal termination) signal
+
+===============================================================================
+test cases:      1 |      0 passed | 1 failed
+assertions: 208172 | 208171 passed | 1 failed
+

@@ -37,7 +37,10 @@ typedef struct {
  int32_t (*status)(void*,risc_provision_request_status_v1*);
  /* Copies and validates before persistence. Repeating identical profile/time
   * on the same source is idempotent. Different pending requests are refused.
-  * UNKNOWN requires read-only reconciliation; never erase or blindly retry. */
+  * UNKNOWN fences queue and status until the next ordinary boot reinitializes
+  * storage selection. Same-boot status refresh must not read payloads or clear
+  * ambiguity. Native NVS and new PHY starts are quarantined; cleanup remains
+  * available. Never erase, reset NVS, or blindly retry to recover. */
  int32_t (*queue)(void*,const risc_provision_request_v1*,uint8_t request_sha256[32]);
 } risc_provision_request_api_v1;
 #ifdef __cplusplus
