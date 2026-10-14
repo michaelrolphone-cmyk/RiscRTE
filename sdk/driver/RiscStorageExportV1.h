@@ -51,7 +51,9 @@ typedef struct {
 } risc_storage_volume_api_v1_export;
 static inline const risc_storage_volume_api_v1_export *risc_storage_volume_export(
     const risc_storage_volume_api_v1 *api) {
-    if (!risc_storage_volume_sleep(api) ||
+    /* Optional export is independent of optional power/sleep callbacks.
+     * Earlier suffix storage reserves layout, not mandatory functionality. */
+    if (!api || api->api_version != RISC_STORAGE_VOLUME_API_V1 ||
         api->struct_size < sizeof(risc_storage_volume_api_v1_export)) return NULL;
     const risc_storage_volume_api_v1_export *p = (const risc_storage_volume_api_v1_export *)api;
     return p->export_tag == RISC_STORAGE_EXPORT_TAG && p->export_version == 1u &&
