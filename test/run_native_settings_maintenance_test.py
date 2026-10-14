@@ -6,6 +6,9 @@ p = argparse.ArgumentParser(description=__doc__)
 for key in ('x4', 'drivers', 'reference-reader', 'product-store', 'output'):
     p.add_argument('--' + key, type=lambda x: pathlib.Path(x).resolve(), required=True)
 p.add_argument('--sanitize', choices=('none', 'undefined', 'address,undefined'), default='none')
+p.add_argument('--dependency-manifest',type=pathlib.Path,help='Use source-verified exported dependencies with recorded commit and file hashes')
+p.add_argument('--current-inputs', action='store_true', help='Verify dependency files against their current Git HEAD and record current product graph hashes')
+p.add_argument('--fresh-internal-fallback', action='store_true', help='Exercise checked fresh internal initialization when SD is unavailable')
 p.add_argument('--assembly', action='store_true', help='Use the real permanent factory with injected checked backends and PSRAM shim')
 p.add_argument('--case', action='append', dest='cases')
 p.add_argument('--case-timeout', type=float, default=30, help='Bound each case process in seconds')
@@ -20,7 +23,11 @@ pins = ((a.x4, 'c7404623bb7b175ab3d2452d7803ed4613e0cb35',
         (a.drivers, '281609a0d2ae514f107d2ef67b6e8b4d25c72fb8', ('lib/StorageFatFs',)),
         (a.reference_reader, '45cf61ac013fb618e8d7fed63217a35350484d52',
          ('sdk/driver', 'Drivers/x4pro_board', 'test/storage_volume/fake')))
+if a.current_inputs and not a.dependency_manifest:
+    pins=tuple((root,subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD'],text=True).strip(),paths) for root,commit,paths in pins)
 product_hashes={'boot.json':'407360631dc10b73168701013a95ce19f846ae76e7a89b84db267870d8290446','board.json':'d06f9ea76fae9005f4e4c9e7f0c144b20ddc94e203d6cc53efae0b0504844f6a','sd/manifest.json':'644f64933e5e003041884d4254186dcecb21baae151084af4bbfc0245608f854'}
+if a.current_inputs:
+    product_hashes={name:hashlib.sha256((a.product_store/name).read_bytes()).hexdigest() for name in product_hashes}
 for name,digest in product_hashes.items():
     if hashlib.sha256((a.product_store/name).read_bytes()).hexdigest()!=digest:
         raise SystemExit('Frozen .99 graph input changed: '+name)
@@ -30,15 +37,22 @@ assert product_boot['installation']['volume_instance']==9
 sd_device=next(d for d in product_board['devices'] if d['instance_id']==9)
 assert sd_device['bindings']['board.power.ready']==1 and sd_device['config']['pins']==[5,41,42,40]
 records = []
-for root, commit, paths in pins:
-    names = subprocess.check_output(['git', '-C', str(root), 'ls-tree', '-r', '--name-only', commit, '--', *paths], text=True).splitlines()
-    if not names:
-        raise SystemExit('Missing pinned inputs: ' + str(root))
-    for name in names:
-        data = (root / name).read_bytes()
-        if data != subprocess.check_output(['git', '-C', str(root), 'show', commit + ':' + name]):
-            raise SystemExit('Pinned input changed: ' + str(root / name))
-        records.append(dict(root=str(root), commit=commit, path=name, sha256=hashlib.sha256(data).hexdigest()))
+if a.dependency_manifest:
+    roots={'x4':a.x4,'drivers':a.drivers,'reader':a.reference_reader}
+    for row in json.loads(a.dependency_manifest.read_text()):
+        path=roots[row['dependency']]/row['path']
+        if hashlib.sha256(path.read_bytes()).hexdigest()!=row['sha256']:raise SystemExit('Exported input changed: '+str(path))
+        records.append(dict(root=str(roots[row['dependency']]),commit=row['commit'],path=row['path'],sha256=row['sha256']))
+else:
+    for root, commit, paths in pins:
+        names = subprocess.check_output(['git', '-C', str(root), 'ls-tree', '-r', '--name-only', commit, '--', *paths], text=True).splitlines()
+        if not names:
+            raise SystemExit('Missing pinned inputs: ' + str(root))
+        for name in names:
+            data = (root / name).read_bytes()
+            if data != subprocess.check_output(['git', '-C', str(root), 'show', commit + ':' + name]):
+                raise SystemExit('Pinned input changed: ' + str(root / name))
+            records.append(dict(root=str(root), commit=commit, path=name, sha256=hashlib.sha256(data).hexdigest()))
 def module(name):
     spec = importlib.util.spec_from_file_location(name, a.x4 / 'minimal/scripts' / (name + '.py'))
     mod = importlib.util.module_from_spec(spec)
@@ -85,6 +99,7 @@ source = ['src/bootstrap/Json.cpp', 'src/bootstrap/Board.cpp', 'src/bootstrap/Ru
           'src/ports/esp32s3/CpuPort.cpp', 'src/runtime/storage/AppDataFiles.cpp', 'src/ports/esp32s3/NativeSettingsMaintenance.cpp', 'src/ports/esp32s3/NativeSettingsBootstrap.cpp', 'test/native_settings_maintenance_test.cpp']
 exe_flags = ['-fno-pie', '-no-pie'] if 'address' in a.sanitize else []
 selected=['-DBOARD_XTEINK_X4_PRO', '-DRISC_NATIVE_SETTINGS_LIFECYCLE=1', '-DRISC_NATIVE_SETTINGS_WORKER=1', '-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1']
+if a.fresh_internal_fallback:selected += ['-DRISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK=1']
 run([cxx, '-std=c++17', *flags, *inc, *selected, '-DRISC_NATIVE_STORAGE_CUSTODY=1', '-DESP_PLATFORM', '-I'+str(ROOT/'test/native_nvs_shim'), '-I'+str(ROOT/'test/native_settings_worker_shim'), '-c', ROOT/'src/ports/esp32s3/NativeSettingsLifecycle.cpp', '-o', a.output/'lifecycle.o'])
 assembly_objects=[]
 if a.assembly:
@@ -120,7 +135,7 @@ if a.assembly and not a.cases:
     cases += ['assembly-'+s for s in ('control-oom','control-range','no-owner','owner-refuses','no-device','no-writers','many-writers','bad-writer','duplicate-writer','wrong-writer-namespace','files-root','files-hooks','files-allocator','files-context','artifact-namespace','source-namespace','legacy-namespace','legacy-tail','missing-source','no-metadata','metadata-range','guard-range','no-guard','no-space','no-digest','digest-range','partial-first','first-range','zero-incarnation','external-control','external-tail','artifact-identity','artifact-missing','artifact-tail','littlefs-identity','littlefs-root','littlefs-type','littlefs-tail')]
 case_metrics=[]
 for case in cases:
-    command=[a.output / 'test', a.output, case, a.output / ('native-'+case)]
+    command=[a.output / 'test', a.output, case, a.output / ('native-offline' if case in ('bootstrap-fresh-absent-save','bootstrap-fresh-absent-reload') else 'native-'+case)]
     commands.append([str(x) for x in command])
     before=time.perf_counter_ns()
     result=subprocess.run(command, check=True, timeout=a.case_timeout, text=True, stdout=subprocess.PIPE)
@@ -132,7 +147,7 @@ for case in cases:
 if runtime_sources() != runtime:
     raise SystemExit('Runtime/test input changed during build or execution; rerun with fresh output')
 (a.output / 'source-manifest.json').write_text(json.dumps(dict(external_sources=records, runtime_sources=runtime,
-    commands=commands, cases=cases, assembly=a.assembly, case_timeout_seconds=a.case_timeout, sanitizers=a.sanitize, product_graph=dict(source_commit="199e231d962c401c5d20617e2f5e4da07bffd780",hashes=product_hashes, scope="Full frozen .99 board; selected SD9/power1 subgraph and installation9 from frozen boot. Additive c7404623 checked-warm SD replaces frozen SD0.2.21; power is an always-ready host precondition."),
+    commands=commands, cases=cases, assembly=a.assembly, current_inputs=a.current_inputs, fresh_internal_fallback=a.fresh_internal_fallback, case_timeout_seconds=a.case_timeout, sanitizers=a.sanitize, product_graph=dict(source_commit=None if a.current_inputs else "199e231d962c401c5d20617e2f5e4da07bffd780", hashes=product_hashes, scope="Hash-recorded input board; selected SD9/power1 subgraph and installation9. SD source is identified in external_sources; this host test does not reproduce or qualify the deployed SD ELF. Power is an always-ready host precondition."),
     generated_inputs={name: hashlib.sha256((a.output / name).read_bytes()).hexdigest() for name in ('sd.json', 'power.json', 'board.json', 'boot.json', 'sdk/source-hashes.json')},
     binaries={name: hashlib.sha256((a.output / name).read_bytes()).hexdigest() for name in ('driver.elf', 'power.elf', 'default.elf', 'lifecycle.o', 'test', *(['payload.o'] if a.assembly else []))},
     sanitizer_environment={k: os.environ.get(k, '') for k in ('ASAN_OPTIONS', 'UBSAN_OPTIONS', 'LSAN_OPTIONS')},

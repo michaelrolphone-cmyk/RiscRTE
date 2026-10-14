@@ -1,0 +1,17 @@
+actual checked startup dispatch bootstrap-fresh-absent PASS; hydrated=1; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-fresh-busy PASS; hydrated=1; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-legacy-absent PASS; hydrated=1; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-legacy-conflict PASS; hydrated=0; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-legacy-corrupt PASS; hydrated=0; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-bare-init PASS; hydrated=0; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-native-error PASS; hydrated=0; native sources preserved; SD unchanged
+actual checked startup dispatch bootstrap-fresh-restore PASS; hydrated=1; native sources preserved; SD unchanged
+Internal fallback bootstrap-fresh-absent-save: both namespaces durable, separate-process reload, zero SD writes PASS
+Internal fallback bootstrap-fresh-absent-reload: both namespaces durable, separate-process reload, zero SD writes PASS
+Returning card bootstrap-fresh-busy-return: explicit edits preserved and checkpoint/conflict verified PASS
+Returning card bootstrap-fresh-busy-return-conflict: explicit edits preserved and checkpoint/conflict verified PASS
+actual lifecycle/Runtime/X4/FatFs maintenance first PASS; control=7816; polls=0
+actual lifecycle/Runtime/X4/FatFs maintenance first-conflict PASS; control=7816; polls=97
+actual lifecycle/Runtime/X4/FatFs maintenance foreign PASS; control=7816; polls=63
+actual lifecycle/Runtime/X4/FatFs maintenance usb-before PASS; control=7816; polls=0
+Actual X4/FatFs + Runtime graph + CpuPort custody PASS: bootstrap-fresh-absent, bootstrap-fresh-busy, bootstrap-legacy-absent, bootstrap-legacy-conflict, bootstrap-legacy-corrupt, bootstrap-bare-init, bootstrap-native-error, bootstrap-fresh-restore, bootstrap-fresh-absent-save, bootstrap-fresh-absent-reload, bootstrap-fresh-busy-return, bootstrap-fresh-busy-return-conflict, first, first-conflict, foreign, usb-before
