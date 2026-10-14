@@ -58,6 +58,10 @@ retains its existing 128-item policy. First-install composition requires the
 profile with more than 128 entries. Image profiles additionally require the
 existing `RISC_PROVISION_IMAGE:1` marker. Existing devices need the matching
 supporting native firmware before accepting these extended inventories.
+Ordinary app-update audits use the same 160-payload bound and additionally allow
+only the optional unchanged 32-byte `.provision-sha256` identity created by
+streamed provisioning. That identity cannot be an app-update target; extra or
+missing objects and changes to any other file still fail closed.
 
 Native capacity now uses pinned SPIFFS page/index/write-amplification accounting,
 including the profile digest and four reserved blocks, rather than the earlier
