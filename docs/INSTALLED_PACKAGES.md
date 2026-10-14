@@ -312,17 +312,31 @@ path: "Drivers/<package>/<image>.elf", internal_fallback: true}`. Manifests
 and the complete graph stay internal. Runtime resolves the exact selected volume
 and rejects an external image anywhere in its transitive mount closure before
 provider execution. Privileged native-policy providers remain internal. The graph
-pins the source provider with mapped module custody; the loader reads one snapshot,
-closes it, then performs ordinary relocation/entry validation without a checksum
-pass. A clean unavailable volume can use the explicit admitted internal image.
-Uncertain close retains source/dependencies and forbids fallback. This source
+pins the source provider with mapped module custody; the loader reads one snapshot
+and closes it before ordinary relocation/entry validation. A boot-owned core
+mirror with `internal_fallback: true` and an exact lower-case
+`image-<64 SHA-256 hex digits>.elf` leaf hashes that owned snapshot against its
+filename before relocation. A different valid, same-size ELF is rejected and may
+use the admitted internal image only after clean source cleanup. The preserving
+core-cohort policy separately binds that filename digest to the internal inventory.
+Legacy non-content-addressed paths and external-only driver sources retain their
+existing contract without a new digest requirement.
+
+A clean unavailable volume can use the explicit admitted internal image.
+Uncertain close or lost owner/storage custody retains source/dependencies and
+forbids fallback. No release is attempted inside the image callback: the graph
+keeps its existing source dependency pin through module lifetime. This source
 checkpoint retains internal images for existing whole-store admission and fallback;
 it does not yet implement package download, SD publication, or graph activation.
 
 The actual host Runtime fixture now loads a provider from SD, tests clean offline
 fallback and required-SD failure, rejects an SD-backed mount closure without I/O,
-and retains the source after failed close. Existing dynamic app registration and
-launch tests continue to pass under UBSan. Hardware remains unqualified.
+and retains the source after failed close. It also exercises matching core-driver
+digests, same-size valid-ELF substitution, lost custody during reads/after close,
+no retry after retention, and unchanged legacy/external-only behavior. Existing
+dynamic app registration and launch tests remain covered. The extended suite
+passes normal and ASan/UBSan host runs; focused ESP32-S3 Runtime compilation passes.
+Hardware remains unqualified.
 
 ## Copied SD download checkpoint (0.2.13)
 

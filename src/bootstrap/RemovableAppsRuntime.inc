@@ -88,16 +88,29 @@ void* Runtime::openDriverImage(void* raw,const char* path,const void* table) {
     [](size_t n)->void*{return esp_elf_malloc(n,false);},[](void*p){esp_elf_free(p);},
     [](void*raw)->bool{auto&c=*static_cast<Context*>(raw);
       if(!c.r->port_.owner() || !c.r->providerStorageSafe() || std::chrono::steady_clock::now()-c.start>std::chrono::seconds(30))return false;
-      c.r->port_.delay(1);return c.r->port_.owner() && c.r->providerStorageSafe();},&context});
+      c.r->port_.delay(1);return c.r->port_.owner() && c.r->providerStorageSafe();},&context,
+    [](void*raw)->bool{auto*r=static_cast<Context*>(raw)->r;
+      return !r->retained_ && r->port_.owner() && r->providerStorageSafe();}});
   if(image.closeRetained){r->retained_=true;r->providerFileRetained_=true;r->fail("SD provider close retained");return nullptr;}
+  if(r->retained_ || !r->port_.owner() || !r->providerStorageSafe()) {
+    if(image.bytes)esp_elf_free(image.bytes);
+    r->retained_=true;r->providerFileRetained_=true;r->fail("SD provider source custody lost");return nullptr;
+  }
+  // Core mirrors share the app mirror's exact content-addressed leaf grammar.
+  // Preserve legacy external/ordinary driver paths. The graph owns and keeps
+  // the source dependency pinned throughout this callback and module lifetime.
+  uint8_t expected[32]{};
+  const bool pinned=d.internalFallback && coreAppImageDigest(d.sourcePath,expected);
+  const bool matching=!pinned || (read && coreAppImageMatches(d.sourcePath,image.bytes,image.size));
+  if(read && !matching)r->fail("SD core driver digest mismatch");
   void* module=nullptr;
-  if(read && esp_elf_validate_file(image.bytes,image.size)) {
+  if(read && matching && esp_elf_validate_file(image.bytes,image.size)) {
     module=esp_dlopen_reader_instance(path,[](void*raw,const char*,elf_file_t*file)->int{
       auto&s=*static_cast<RemovableAppImage*>(raw);file->payload=s.bytes;file->size=s.size;s.bytes=nullptr;return 0;
     },&image);
   }
   if(image.bytes)esp_elf_free(image.bytes);
-  if(module || !r->providerStorageSafe())return module;
+  if(module || r->retained_ || !r->port_.owner() || !r->providerStorageSafe())return module;
   return d.internalFallback?esp_dlopen_instance(path):nullptr;
 #else
   (void)raw;(void)path;(void)table;return nullptr;

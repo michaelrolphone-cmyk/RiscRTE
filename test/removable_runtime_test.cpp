@@ -28,6 +28,8 @@ static std::map<std::string,std::string> legacySettings;
 static std::vector<uint8_t> payload;
 static unsigned defaults,children,starts,stops,opens,closes,live,previousRuns;
 static bool providerMode(){return mode.find("provider-")==0;}
+static bool coreDriverMode(){return mode.find("provider-core-")==0;}
+static std::string coreDriverPath;
 static bool providerCatalog(){return mode=="catalog-providers"||mode=="catalog-media";}
 static bool catalogMode(){return mode=="catalog"||mode=="catalog-resident"||mode=="catalog-authority"||providerCatalog()||settingsMode()||mode=="shared-settings";}
 static unsigned baseCount(){return mode=="catalog-resident"?2:mode=="catalog-authority"?1:0;}
@@ -358,7 +360,7 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
       assert(!fseek(manifestFile,0,SEEK_END));*n=ftell(manifestFile);rewind(manifestFile);return 2;
     }
     if(providerCatalog())selectImage(!strncmp(p,"/Drivers/",9)?"plugin.elf":"revision1.elf");
-    assert((coreMode() && !strncmp(p,"/Apps/child/image-",18)) || (providerCatalog()&&!strncmp(p,"/Drivers/sd-plugin/image-",25)) || !strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")));
+    assert((coreMode() && !strncmp(p,"/Apps/child/image-",18)) || (providerCatalog()&&!strncmp(p,"/Drivers/sd-plugin/image-",25)) || !strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")) || (coreDriverMode() && !strcmp(p+1,coreDriverPath.c_str())));
     if(mode=="missing" || mode=="busy" || mode=="core-busy")return 0;
     if(ctx==reinterpret_cast<void*>(1))++internalOpens;
     ++opens;live=1;offset=0;*n=payload.size();return 1;
@@ -368,12 +370,12 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
     assert(live && n<=4096);
     if(offset>1000){
       if(mode=="removed" || mode=="core-removed")return 0;
-      if(mode=="core-owner-retained")ownerOkay=false;
-      if(mode=="core-storage-retained")storageOkay=false;
+      if(mode=="core-owner-retained" || mode=="provider-core-substitute-owner-retained")ownerOkay=false;
+      if(mode=="core-storage-retained" || mode=="provider-core-substitute-storage-retained")storageOkay=false;
     }
     n=std::min(size_t(333),std::min(n,payload.size()-offset));memcpy(out,payload.data()+offset,n);offset+=n;return n;
   };
-  v.file_close=[](void*,uint32_t h,bool){if(h==2){++discoveryIo;bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained" || mode=="provider-retained" || mode=="core-close-retained" || mode=="core-wrong-hash-close-retained")return false;live=0;if(mode=="core-close-owner-retained")ownerOkay=false;return true;};
+  v.file_close=[](void*,uint32_t h,bool){if(h==2){++discoveryIo;bool ok=fclose(manifestFile)==0;if(ok)manifestFile=nullptr;return ok;}assert(live);++closes;if(mode=="close-retained" || mode=="provider-retained" || mode=="core-close-retained" || mode=="core-wrong-hash-close-retained" || mode=="provider-core-substitute-close-retained")return false;live=0;if(mode=="core-close-owner-retained" || mode=="provider-core-substitute-close-owner-retained")ownerOkay=false;if(mode=="provider-core-substitute-close-storage-retained")storageOkay=false;return true;};
   static risc_storage_worker_v1 workerApi{};static risc_storage_async_adapter_v1 bridge{};
   static bool initialized=false;
   if(!initialized){initialized=true;
@@ -432,6 +434,16 @@ int main(int argc,char** argv) {
 
   }
   if(providerMode())selectImage("plugin.elf");
+  if(coreDriverMode()){
+    unsigned digestSize=0;uint8_t digest[32]{};
+    assert(EVP_Digest(payload.data(),payload.size(),digest,&digestSize,EVP_sha256(),nullptr)==1 && digestSize==32);
+    coreDriverPath="Drivers/plugin/image-";constexpr char hex[]="0123456789abcdef";
+    for(uint8_t b:digest){coreDriverPath+=hex[b>>4];coreDriverPath+=hex[b&15];}coreDriverPath+=".elf";
+    if(mode!="provider-core-match"){
+      const auto correct=payload;selectImage("plugin2.elf");
+      assert(payload.size()==correct.size() && payload!=correct && esp_elf_validate_file(payload.data(),payload.size()));
+    }
+  }
   if(mode=="provider-fallback" || mode=="provider-required")present=false;
   if(mode=="malformed")payload[0]=0;
   if(mode=="absent")present=false;
@@ -495,7 +507,8 @@ int main(int argc,char** argv) {
     write("plugin.json",R"({"type":"driver","id":"sd-plugin","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"plugin.elf","requires":[],"provides":[{"capability":"test.plugin","api":1}]})");
     JsonDocument doc;assert(!deserializeJson(doc,boot));doc["provider_activation"]="eager";
     auto d=doc["drivers"].add<JsonObject>();d["manifest"]="plugin.json";
-    auto source=d["image_source"].to<JsonObject>();source["volume_instance"]=9;source["path"]="Drivers/plugin/plugin.elf";source["internal_fallback"]=mode!="provider-required";
+    auto source=d["image_source"].to<JsonObject>();source["volume_instance"]=9;source["path"]="Drivers/plugin/plugin.elf";source["internal_fallback"]=mode!="provider-required" && mode!="provider-core-external";
+    if(coreDriverMode() && mode!="provider-core-legacy")source["path"]=coreDriverPath;
     if(mode=="provider-bootstrap")doc["drivers"][0]["image_source"].set(source);
     boot.clear();serializeJson(doc,boot);
   }
@@ -612,6 +625,24 @@ int main(int argc,char** argv) {
     delete runtime;puts("Internal-only installation: no SD driver, explicit media mask, rejected SD/legacy app and provider publication, actual internal app loads and replay PASS");return 0;
   }
   if(mode=="discovery")assert(runtime->reserveInstalledApps(4));
+  if(coreDriverMode()){
+    const bool retained=mode.find("retained")!=std::string::npos;
+    assert(runtime->run()!=retained);assert(runtime->retained()==retained);
+    assert(opens==1);
+    if(retained){
+      assert(!defaults && !sourceLoads && !stops);
+      if(mode=="provider-core-substitute-owner-retained" || mode=="provider-core-substitute-storage-retained")assert(live && !closes);
+      else assert(closes==1);
+      const unsigned before=opens+closes+starts+stops;
+      assert(!runtime->run() && runtime->retained() && !sourceLoads);
+      assert(opens+closes+starts+stops==before);
+    }else{
+      assert(defaults==1 && closes==1 && !live && starts==stops);
+      assert(sourceLoads==(mode=="provider-core-substitute"?0u:1u));
+      delete runtime;
+    }
+    printf("Core driver %s: actual snapshot digest, same-size valid substitution, custody and legacy behavior PASS\n",mode.c_str());return 0;
+  }
   if(providerMode()){
     const bool retained=mode=="provider-retained",required=mode=="provider-required";
     const bool ran=runtime->run();
