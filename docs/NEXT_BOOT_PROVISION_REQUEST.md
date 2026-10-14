@@ -214,14 +214,15 @@ assumed here.
 
 ## Evidence and remaining qualification
 
-This source checkpoint is published with exhaustive qualification explicitly
-pending. Normal/sanitized core, bridge, native NVS and focused PHY tests pass;
-ESP32-S3 target compilation and the assertion-enabled real-NVS sanitized
-capacity/repeat/CRC suite pass. The frozen target/assertion cut matrices continue
-unchanged and are not represented as complete. See
-`docs/evidence/request-compaction/README.md` for exact completed and partial
-evidence. Product or hardware qualification must not infer completion from the
-source publication.
+Source checkpoint `f7df4ee2ce8d718d48b124bf011f6e07d5f66ce3` was published with
+exhaustive qualification pending. Both unchanged frozen host/SDK matrices later
+passed: target configuration 22,762,489 assertions, strengthened NVS assertions
+22,750,891 assertions, each across 114,074 injected flash boundaries. Normal and
+sanitized core/bridge/NVS/PHY checks, the real-NVS sanitized capacity/repeat/CRC
+suite, and ESP32-S3 compilation also pass. See
+`docs/evidence/request-compaction/completed-qualification.json` for source and
+log hashes and `README.md` there for limits. These results do not qualify later
+source changes or physical hardware power loss.
 
 - `test/run_request_queue_test.sh`: corrupt every record byte, copied inputs,
   source binding, replay, pending refusal, consumed replacement, torn/uncertain

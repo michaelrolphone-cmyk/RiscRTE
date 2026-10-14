@@ -1,0 +1,189 @@
+{
+  "qualified_source_commit": "f7df4ee2ce8d718d48b124bf011f6e07d5f66ce3",
+  "qualified_source_tree": "e00505180235c0454d864b6a1d2fa8bd889321d3",
+  "source_unchanged": true,
+  "recorded_utc": "2026-10-14T21:15:47.190078+00:00",
+  "idf_commit": "38eeba213aa695aabfd6d89aa9f5078dbe5a94c3",
+  "partition_bytes": 24576,
+  "physical_device_qualification": false,
+  "runs": [
+    {
+      "log": "nvs-target-complete.log",
+      "log_sha256": "62b4e2cad58bd8817591e271d906c3da134651e586311d3f5ab756a0e3360688",
+      "assertions": 22762489,
+      "test_cases": 7,
+      "injected_boundaries": 114074,
+      "matrices": [
+        "PRODUCTION CUT PASS watch generation=0 filler=0 fits=1 boundaries=11142 success=2 immediate-unavailable=5570",
+        "PRODUCTION CUT PASS watch generation=0 filler=90 fits=0 boundaries=10404 success=0 immediate-unavailable=5202",
+        "PRODUCTION CUT PASS watch generation=1 filler=0 fits=1 boundaries=10444 success=2 immediate-unavailable=5221",
+        "PRODUCTION CUT PASS watch generation=1 filler=90 fits=0 boundaries=9158 success=0 immediate-unavailable=4579",
+        "PRODUCTION CUT PASS wave generation=0 filler=0 fits=1 boundaries=10732 success=2 immediate-unavailable=5365",
+        "PRODUCTION CUT PASS wave generation=0 filler=90 fits=0 boundaries=9994 success=0 immediate-unavailable=4997",
+        "PRODUCTION CUT PASS wave generation=1 filler=0 fits=1 boundaries=9164 success=2 immediate-unavailable=4581",
+        "PRODUCTION CUT PASS wave generation=1 filler=90 fits=0 boundaries=12260 success=0 immediate-unavailable=6130",
+        "PRODUCTION initial READY boundaries=20 PASS",
+        "PRODUCTION FIRST watch maximum=0 boundaries=6458 PASS",
+        "PRODUCTION FIRST watch maximum=1 boundaries=8734 PASS",
+        "PRODUCTION FIRST wave maximum=0 boundaries=6830 PASS",
+        "PRODUCTION FIRST wave maximum=1 boundaries=8734 PASS"
+      ],
+      "source_hashes": [
+        {
+          "path": "src/runtime/provisioning/RequestQueue.cpp",
+          "sha256": "baa45db8310d5732cd2e423cc0da407fa395ece65d893d6766902b4b5468fca1"
+        },
+        {
+          "path": "src/runtime/provisioning/RequestQueue.h",
+          "sha256": "62940d06a2fc1433045f514d19a6c900f436a7bbb9f010ca65c287cf18d93c3f"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsProvisionRequestStorage.h",
+          "sha256": "8b55f7ccf5a1c348812399123c63d75e51a54569ad0a6be4f76c406dad84131e"
+        },
+        {
+          "path": "src/ports/esp32s3/NativeProvisionRequest.cpp",
+          "sha256": "345144fd8c3d0d6f887d46860e397f4ecbc89be9535c92da8778742ae80d3128"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsKeyValue.cpp",
+          "sha256": "ea12bc98dbfbe4f46de6eae6c8259bb4173ec8dcbe4fa64c7b2a365e3ef5d67b"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsKeyValue.h",
+          "sha256": "d6dfc3792c6c86c8ae7ad69e3b5b328515a75f33f3878f637131b053ab0232a6"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsQuarantine.h",
+          "sha256": "20848e84139008e3ee7b5e99f446221d19dbccd6e3669cfeba5839e4a7d4e2f4"
+        },
+        {
+          "path": "src/ports/esp32s3/NativeRadio.h",
+          "sha256": "227da374eb5cc7d56eac78f74259b2b9bae4c6959777b41cb65adc85cf24aa57"
+        },
+        {
+          "path": "src/ports/esp32s3/NativeHci.h",
+          "sha256": "c072e4ad2ccc10bd9114a6a801a948497d6bc300dddd702a21a6378443acb697"
+        },
+        {
+          "path": "src/ports/esp32s3/NativeRadioIq.h",
+          "sha256": "11a84f138b17f1c288187a7e7643822fb8490af35819a935f4514b36d4d85227"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsScalableSettings.h",
+          "sha256": "95c1eec671580160eeee9b93caa822d984698082bb02e068ff263019e2cfbc80"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsBootstrapInput.h",
+          "sha256": "98e6e54e907fd6e1bc387faf15d0d5aa2e098637eca8e25aa7b5977b70dec3b8"
+        },
+        {
+          "path": "src/ports/esp32s3/OwnerNvsInstaller.cpp",
+          "sha256": "8f1cabc3663059447691fba5df0dd280e4114b471d2d1c4c2a136ee2217b427e"
+        },
+        {
+          "path": "test/request_queue_nvs_test.cpp",
+          "sha256": "250aafe43688d5801c0f485a931e510fe14aa423a44ff080f6e8401f4509ca76"
+        },
+        {
+          "path": "test/fixtures/request-profile-watch-125.json",
+          "sha256": "6bc74bfee2cb4a7c3612222fdf4c82495fa7643d7362d2ce07b4ac893acdf948"
+        },
+        {
+          "path": "test/fixtures/request-profile-wave-132.json",
+          "sha256": "067511a62215624487f902548309dbdbf62c2d126765a00947b1183d6e429a09"
+        }
+      ],
+      "exit_code": 0
+    },
+    {
+      "log": "nvs-assert-complete.log",
+      "log_sha256": "86ddaa63eefb0ede0cee64e97b47f124998039c4182628377ec45070b5284ee8",
+      "assertions": 22750891,
+      "test_cases": 5,
+      "injected_boundaries": 114074,
+      "matrices": [
+        "PRODUCTION CUT PASS watch generation=0 filler=0 fits=1 boundaries=11142 success=2 immediate-unavailable=5570",
+        "PRODUCTION CUT PASS watch generation=0 filler=90 fits=0 boundaries=10404 success=0 immediate-unavailable=5202",
+        "PRODUCTION CUT PASS watch generation=1 filler=0 fits=1 boundaries=10444 success=2 immediate-unavailable=5221",
+        "PRODUCTION CUT PASS watch generation=1 filler=90 fits=0 boundaries=9158 success=0 immediate-unavailable=4579",
+        "PRODUCTION CUT PASS wave generation=0 filler=0 fits=1 boundaries=10732 success=2 immediate-unavailable=5365",
+        "PRODUCTION CUT PASS wave generation=0 filler=90 fits=0 boundaries=9994 success=0 immediate-unavailable=4997",
+        "PRODUCTION CUT PASS wave generation=1 filler=0 fits=1 boundaries=9164 success=2 immediate-unavailable=4581",
+        "PRODUCTION CUT PASS wave generation=1 filler=90 fits=0 boundaries=12260 success=0 immediate-unavailable=6130",
+        "PRODUCTION initial READY boundaries=20 PASS",
+        "PRODUCTION FIRST watch maximum=0 boundaries=6458 PASS",
+        "PRODUCTION FIRST watch maximum=1 boundaries=8734 PASS",
+        "PRODUCTION FIRST wave maximum=0 boundaries=6830 PASS",
+        "PRODUCTION FIRST wave maximum=1 boundaries=8734 PASS"
+      ],
+      "source_hashes": [
+        {
+          "path": "src/runtime/provisioning/RequestQueue.cpp",
+          "sha256": "baa45db8310d5732cd2e423cc0da407fa395ece65d893d6766902b4b5468fca1"
+        },
+        {
+          "path": "src/runtime/provisioning/RequestQueue.h",
+          "sha256": "62940d06a2fc1433045f514d19a6c900f436a7bbb9f010ca65c287cf18d93c3f"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsProvisionRequestStorage.h",
+          "sha256": "8b55f7ccf5a1c348812399123c63d75e51a54569ad0a6be4f76c406dad84131e"
+        },
+        {
+          "path": "src/ports/esp32s3/NativeProvisionRequest.cpp",
+          "sha256": "345144fd8c3d0d6f887d46860e397f4ecbc89be9535c92da8778742ae80d3128"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsKeyValue.cpp",
+          "sha256": "ea12bc98dbfbe4f46de6eae6c8259bb4173ec8dcbe4fa64c7b2a365e3ef5d67b"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsKeyValue.h",
+          "sha256": "d6dfc3792c6c86c8ae7ad69e3b5b328515a75f33f3878f637131b053ab0232a6"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsQuarantine.h",
+          "sha256": "20848e84139008e3ee7b5e99f446221d19dbccd6e3669cfeba5839e4a7d4e2f4"
+        },
+        {
+          "path": "src/ports/esp32s3/NativeRadio.h",
+          "sha256": "227da374eb5cc7d56eac78f74259b2b9bae4c6959777b41cb65adc85cf24aa57"
+        },
+        {
+          "path": "src/ports/esp32s3/NativeHci.h",
+          "sha256": "c072e4ad2ccc10bd9114a6a801a948497d6bc300dddd702a21a6378443acb697"
+        },
+        {
+          "path": "src/ports/esp32s3/NativeRadioIq.h",
+          "sha256": "11a84f138b17f1c288187a7e7643822fb8490af35819a935f4514b36d4d85227"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsScalableSettings.h",
+          "sha256": "95c1eec671580160eeee9b93caa822d984698082bb02e068ff263019e2cfbc80"
+        },
+        {
+          "path": "src/ports/esp32s3/NvsBootstrapInput.h",
+          "sha256": "98e6e54e907fd6e1bc387faf15d0d5aa2e098637eca8e25aa7b5977b70dec3b8"
+        },
+        {
+          "path": "src/ports/esp32s3/OwnerNvsInstaller.cpp",
+          "sha256": "8f1cabc3663059447691fba5df0dd280e4114b471d2d1c4c2a136ee2217b427e"
+        },
+        {
+          "path": "test/request_queue_nvs_test.cpp",
+          "sha256": "250aafe43688d5801c0f485a931e510fe14aa423a44ff080f6e8401f4509ca76"
+        },
+        {
+          "path": "test/fixtures/request-profile-watch-125.json",
+          "sha256": "6bc74bfee2cb4a7c3612222fdf4c82495fa7643d7362d2ce07b4ac893acdf948"
+        },
+        {
+          "path": "test/fixtures/request-profile-wave-132.json",
+          "sha256": "067511a62215624487f902548309dbdbf62c2d126765a00947b1183d6e429a09"
+        }
+      ],
+      "exit_code": 0
+    }
+  ]
+}

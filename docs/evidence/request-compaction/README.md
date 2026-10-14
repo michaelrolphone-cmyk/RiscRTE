@@ -2,15 +2,24 @@
 
 The production protocol uses a separate terminal string, permanent READY/ACTIVE
 scalar, and boot-lifetime native NVS/PHY quarantine after an ambiguous mutation.
-The final source snapshot is bound by `frozen-source-sha256.txt`. Normal and
-ASan/UBSan queue, compaction, native bridge, global-NVS and focused native PHY
-regressions pass. Actual ESP32-S3 queue/bridge and NativeHardware compilation
-passes. The exact-snapshot assertion-enabled real-NVS sanitized capacity,
-repeat and CRC suite passes **11,920 assertions / 4 cases**. **Exhaustive qualification is pending at this source checkpoint.** Frozen
-target and assertion-enabled cut matrices continue unchanged after publication;
-this commit does not claim their completion. Their timestamped partial logs are
-`pending-frozen-target.log` and `pending-frozen-assert.log`. Publication is a
-source checkpoint, not hardware or exhaustive power-cut qualification.
+Source commit `f7df4ee2ce8d718d48b124bf011f6e07d5f66ce3` was published with
+exhaustive qualification pending. **Both unchanged frozen matrices subsequently
+passed**, as bound by `completed-qualification.json` and exact tool records:
+
+- Target NVS configuration: **22,762,489 assertions / 7 cases**.
+- Strengthened NVS assertions: **22,750,891 assertions / 5 cases**.
+- Each: **114,074 injected flash boundaries** (83,298 replacement, 20 legacy
+  READY initialization, 30,756 first enqueue). Combined: **228,148 boundaries**.
+- Assertion-enabled real-NVS ASan/UBSan repeat/capacity/CRC: **11,920 assertions /
+  4 cases**.
+- Normal and ASan/UBSan core/bridge/global-NVS/native-PHY tests pass; actual
+  ESP32-S3 queue/bridge and NativeHardware compilation passes.
+
+Final logs are `nvs-target-complete.log` and `nvs-assert-complete.log`. The earlier
+`pending-frozen-*.log` snapshots and their timestamp remain unchanged historical
+evidence of publication status. No source or running test inputs changed during
+the frozen runs. This is host/SDK qualification, not physical-device power-loss
+qualification or qualification of later source changes.
 
 ## Rejected designs and preserved findings
 

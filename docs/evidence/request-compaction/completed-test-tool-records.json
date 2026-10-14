@@ -1,0 +1,167 @@
+[
+  {
+    "name": "final-native",
+    "start": {
+      "args": {
+        "cmd": "bash test/run_native_provision_request_test.sh > /tmp/request-frozen-native-request.log 2>&1 && bash test/native_nvs_shim/run_test.sh > /tmp/request-frozen-native-nvs.log 2>&1 && bash test/run_request_queue_test.sh > /tmp/request-frozen-queue.log 2>&1 && bash test/run_request_queue_compaction_test.sh > /tmp/request-frozen-compaction.log 2>&1",
+        "workdir": "/workspace/shared/watch-request-compaction-20261014",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1000
+      },
+      "result": {
+        "chunk_id": "8b35c1",
+        "wall_time_seconds": 1.085110851,
+        "session_id": 94273,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    "completion": {
+      "args": {
+        "session_id": 94273,
+        "chars": "",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1500
+      },
+      "result": {
+        "chunk_id": "08e954",
+        "wall_time_seconds": 0.000021152,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    }
+  },
+  {
+    "name": "final-sanitizers",
+    "start": {
+      "args": {
+        "cmd": "ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash test/run_native_provision_request_test.sh > /tmp/request-frozen-native-request-sanitized.log 2>&1 && ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash test/native_nvs_shim/run_test.sh > /tmp/request-frozen-native-nvs-sanitized.log 2>&1 && ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash test/run_request_queue_test.sh > /tmp/request-frozen-queue-sanitized.log 2>&1 && ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash test/run_request_queue_compaction_test.sh > /tmp/request-frozen-compaction-sanitized.log 2>&1",
+        "workdir": "/workspace/shared/watch-request-compaction-20261014",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1000
+      },
+      "result": {
+        "chunk_id": "6b13c5",
+        "wall_time_seconds": 1.001678538,
+        "session_id": 99994,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    "completion": {
+      "args": {
+        "session_id": 99994,
+        "chars": "",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1500
+      },
+      "result": {
+        "chunk_id": "ccb54e",
+        "wall_time_seconds": 0.000018779,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    }
+  },
+  {
+    "name": "final-real-target",
+    "start": {
+      "args": {
+        "cmd": "ESP_IDF=/workspace/shared/watch-nvs-capacity-20261014/esp-idf bash test/run_request_queue_nvs_test.sh > /tmp/request-frozen-nvs-target.log 2>&1",
+        "workdir": "/workspace/shared/watch-request-compaction-20261014",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1000
+      },
+      "result": {
+        "chunk_id": "ceeed3",
+        "wall_time_seconds": 1.000786904,
+        "session_id": 14343,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    "completion": {
+      "args": {
+        "session_id": 14343,
+        "chars": "",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1000
+      },
+      "result": {
+        "chunk_id": "04bdc8",
+        "wall_time_seconds": 0.000018548,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    }
+  },
+  {
+    "name": "final-real-assert",
+    "start": {
+      "args": {
+        "cmd": "ESP_IDF=/workspace/shared/watch-nvs-capacity-20261014/esp-idf NVS_ASSERTIONS=1 bash test/run_request_queue_nvs_test.sh '[cuts],[scalar-init],[crc],[first]' > /tmp/request-frozen-nvs-assert-cuts.log 2>&1",
+        "workdir": "/workspace/shared/watch-request-compaction-20261014",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1000
+      },
+      "result": {
+        "chunk_id": "5ded86",
+        "wall_time_seconds": 1.000512756,
+        "session_id": 95101,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    "completion": {
+      "args": {
+        "session_id": 95101,
+        "chars": "",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1000
+      },
+      "result": {
+        "chunk_id": "172847",
+        "wall_time_seconds": 0.000025208,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    }
+  },
+  {
+    "name": "final-real-sanitize",
+    "start": {
+      "args": {
+        "cmd": "ESP_IDF=/workspace/shared/watch-nvs-capacity-20261014/esp-idf NVS_ASSERTIONS=1 SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_request_queue_nvs_test.sh '[repeat],[capacity],[crc]' > /tmp/request-frozen-nvs-sanitized.log 2>&1",
+        "workdir": "/workspace/shared/watch-request-compaction-20261014",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1000
+      },
+      "result": {
+        "chunk_id": "49ceff",
+        "wall_time_seconds": 1.001058554,
+        "session_id": 73608,
+        "original_token_count": 0,
+        "output": ""
+      }
+    },
+    "completion": {
+      "args": {
+        "session_id": 73608,
+        "chars": "",
+        "yield_time_ms": 1000,
+        "max_output_tokens": 1000
+      },
+      "result": {
+        "chunk_id": "01d076",
+        "wall_time_seconds": 0.000027031,
+        "exit_code": 0,
+        "original_token_count": 0,
+        "output": ""
+      }
+    }
+  }
+]
