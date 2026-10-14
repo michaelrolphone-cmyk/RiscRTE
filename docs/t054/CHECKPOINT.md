@@ -9,3 +9,13 @@ Eight actual Runtime/maintenance/lifecycle + Wave SD/FatFs cases pass ASan/UBSan
 No T054 firmware is built/published and no device has been accessed.
 
 Cold-process evidence uses the actual Wave Runtime candidate and Wave SD/FatFs adapter. The same test source is retained on the X4 Runtime candidate, but this is not a separate X4 backend run or hardware qualification. Startup-only fence instrumentation is cleared before app edits; normal final provider release is exercised.
+
+## Returning media and offline update planner
+
+The Wave Runtime/actual SD-FatFs campaign now passes 12 ASan/UBSan cases. After fresh internal initialization while exported, explicit edits in both namespaces checkpoint when vacant media becomes available. A conflicting returning checkpoint remains unchanged and both edits remain pending. This is host integration, not hardware qualification; the copied X4 test has not independently passed its provider build.
+
+`scripts/prepare_preserving_update.py` creates a fresh-readback-bound inactive-bank plan for exact ABI2/ABI3 partition layouts. It checks the caller-supplied published baseline SHA-256, confirmed active OTA selection, active pair hashes, candidate pair hashes, unchanged bootloader/partition bytes, and all protected erase ranges. It stages native/store/bank record first and emits OTA selection separately for verification and selection LAST. It never accesses a device. No layout migration, erase_flash or full-image write is permitted by this route.
+
+`test/preserving_update_test.py` passes on exact published X4 0.1.118, Wave 0.1.35 and Watch 1.1.31 images: both active banks, all staged sector boundaries, 33 selection byte cuts, source/candidate corruption refusals, preservation of NVS/app-data/active pair, and the existing rollback selection model. Candidate store bytes in this test are synthetic, not executable firmware. This qualifies the offline plan, not ROM transport or physical update execution.
+
+Product writer migration, a cumulative executable candidate, source-bound X4 provider qualification and final update instructions remain outstanding. No T054 firmware has been published.

@@ -1,0 +1,78 @@
+{
+  "hardware_tested": false,
+  "synthetic_candidate": true,
+  "results": [
+    {
+      "baseline_sha256": "f51d47e4a0b38a5969e4bf1af833537debe01d28a0d59a7cf7a1d39dfa71c72d",
+      "store_abi": 2,
+      "cases": [
+        {
+          "source_bank": 0,
+          "sector_boundaries": 1702,
+          "selection_cuts": 33,
+          "preservation": true,
+          "candidate_integrity": true,
+          "invalid_inputs_rejected": true,
+          "rollback_model": true
+        },
+        {
+          "source_bank": 1,
+          "sector_boundaries": 1702,
+          "selection_cuts": 33,
+          "preservation": true,
+          "candidate_integrity": true,
+          "invalid_inputs_rejected": true,
+          "rollback_model": true
+        }
+      ]
+    },
+    {
+      "baseline_sha256": "485f6ba1ae4e36100a5e6ad857400fb0f8206d11d9f46cacc67fc7da7504bd25",
+      "store_abi": 3,
+      "cases": [
+        {
+          "source_bank": 0,
+          "sector_boundaries": 1777,
+          "selection_cuts": 33,
+          "preservation": true,
+          "candidate_integrity": true,
+          "invalid_inputs_rejected": true,
+          "rollback_model": true
+        },
+        {
+          "source_bank": 1,
+          "sector_boundaries": 1777,
+          "selection_cuts": 33,
+          "preservation": true,
+          "candidate_integrity": true,
+          "invalid_inputs_rejected": true,
+          "rollback_model": true
+        }
+      ]
+    },
+    {
+      "baseline_sha256": "5895c631a9e1181de86ad14a0e7cf95b409de04c30a9d45da12b50d456189b67",
+      "store_abi": 3,
+      "cases": [
+        {
+          "source_bank": 0,
+          "sector_boundaries": 1719,
+          "selection_cuts": 33,
+          "preservation": true,
+          "candidate_integrity": true,
+          "invalid_inputs_rejected": true,
+          "rollback_model": true
+        },
+        {
+          "source_bank": 1,
+          "sector_boundaries": 1719,
+          "selection_cuts": 33,
+          "preservation": true,
+          "candidate_integrity": true,
+          "invalid_inputs_rejected": true,
+          "rollback_model": true
+        }
+      ]
+    }
+  ]
+}

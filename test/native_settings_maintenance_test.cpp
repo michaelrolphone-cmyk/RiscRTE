@@ -27,6 +27,8 @@ static const uint8_t nativeOwner[16]={'R','i','s','c','R','T','E','/','N','a','t
 static Sources::Hooks sourceHooks(F::Fixture&f){return {&f,[](void*){return F::onWorker&&F::lease;},[](void*){return ESP_OK;},[](void*p){return static_cast<F::Fixture*>(p)->files.retained()?int(C::Retained):int(C::Ok);}};}
 [[maybe_unused]] static LegacySources::Hooks legacyHooks(F::Fixture&f){return {&f,[](void*){return F::onWorker&&F::lease;},[](void*){return uint64_t(1);},[](void*){return F::initialized?ESP_OK:ESP_ERR_NVS_NOT_INITIALIZED;},[](void*p){return static_cast<F::Fixture*>(p)->files.retained()?int(C::Retained):int(C::Ok);}};}
 static bool asyncCase(){return scenario.rfind("unavailable-",0)==0;}
+static uint64_t returningExport=0;
+static bool returningCard(){return scenario.rfind("bootstrap-fresh-busy-return",0)==0;}
 static bool startupCase(){return scenario.rfind("bootstrap-",0)==0;}
 static bool noCard(){return scenario=="absent"||scenario=="unavailable-absent"||(startupCase()&&scenario.find("absent")!=std::string::npos);}
 static bool importCase(){return startupCase()&&scenario.find("legacy")!=std::string::npos;}
@@ -254,6 +256,20 @@ static void boundedMaintenance(){
 }
 extern "C" void test_maintenance_app(){
 #if RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK
+ if(returningCard()){
+  const auto writes=f->counter(6);
+  editPair("return-prefs","return-wifi");
+  assert(cores[0]->pendingCount()==1&&cores[1]->pendingCount()==1&&f->counter(6)==writes);
+  assert(!risc_storage_volume_export(f->volume)->export_end(f->volume->context,returningExport));
+  const bool conflict=scenario=="bootstrap-fresh-busy-return-conflict";
+  trigger();trigger();
+  for(auto*c:cores){assert(F::value(*c,"setting")==std::string(c->namespaceId()==1?"return-prefs":"return-wifi"));assert(c->pendingCount()==unsigned(conflict));}
+  if(conflict){assert(f->counter(6)==writes);assert(maintenance->result(1)==M::Sync::State::Conflict&&maintenance->result(6)==M::Sync::State::Conflict);}
+  else {assert(cores[0]->identity().generation==1&&cores[1]->identity().generation==1&&f->counter(6)>writes);}
+  ordinaryMaintenance();assert(!anchorPin->release()&&!f);return;
+ }
+#endif
+#if RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK
  if(scenario=="bootstrap-fresh-absent-save"){
   const auto writes=f->counter(6);
   editPair("offline-prefs","offline-wifi");
@@ -336,7 +352,7 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
   const auto d1=h1.api(),d6=h6.api();
   auto*l1=new LegacySources(1,nativeOwner,"shared-00000001",S::ImageMax-C::HeaderV3-4,a->inspector,{d1.context,d1.begin,d1.update,d1.finish},legacyHooks(*a));
   auto*l6=new LegacySources(6,nativeOwner,"shared-00000006",S::ImageMax-C::HeaderV3-4,b->inspector,{d6.context,d6.begin,d6.update,d6.finish},legacyHooks(*b));
-  if(startupCase())first={}; // no fake capacity authority for native-only tests
+  if(startupCase()&&!returningCard())first={}; // no fake capacity authority for native-only tests
   bootstrapClient=new B({&a->core,&a->store,h1.api(),C::heap(),scenario=="restore-no-source"?nullptr:s1,first,l1},{&b->core,&b->store,h6.api(),C::heap(),s6,first,l6},9);
  }
  maintenance=new M({&a->core,&a->store,h1.api(),C::heap(),scenario=="no-incarnation"?nullptr:incarnation1},{&b->core,&b->store,h6.api(),C::heap(),incarnation6},9,writers,2,bootstrapClient);
@@ -351,7 +367,7 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
  boot.nativeSettingsShutdown=[](){const bool ok=L::shutdown();if(ok&&(asyncCase()||releaseAnchorAtFinal)){assert(!anchorPin->release()&&!f);releaseAnchorAtFinal=false;}return ok;};boot.retainedDelay=schedule;boot.nativeOwnerCheckpoint=[](bool admitNew){++checkpoints;const bool safe=L::checkpoint(admitNew);if(safe&&L::exitSafe()&&releaseAnchorAtFinal){assert(admitNew&&!anchorPin->release()&&!f);releaseAnchorAtFinal=false;}return safe;};
  static const RiscBoot::KeyValueBackend forbiddenLegacy{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},[](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},2048};boot.keyValue=&forbiddenLegacy;
  RiscBoot::Runtime runtime(boot);assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());if(!noCard()){P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());}
- if(!noCard()){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));auto remote=oneId;if(scenario=="foreign")remote.lineage[0]^=42;if(scenario!="restore-no-checkpoint"&&(!startupCase()||scenario=="bootstrap-legacy-conflict"||scenario=="bootstrap-fresh-restore")){if(scenario.rfind("first",0)!=0||scenario=="first-conflict")seedMaintenance(1,one,remote);if(scenario.rfind("first",0)!=0)seedMaintenance(6,six,sixId);}file("/ordinary.txt","keep",4);}else f->fault(8);
+ if(!noCard()){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));auto remote=oneId;if(scenario=="foreign")remote.lineage[0]^=42;if(scenario!="restore-no-checkpoint"&&(!startupCase()||scenario=="bootstrap-legacy-conflict"||scenario=="bootstrap-fresh-restore"||scenario=="bootstrap-fresh-busy-return-conflict")){if(scenario.rfind("first",0)!=0||scenario=="first-conflict")seedMaintenance(1,one,remote);if(scenario.rfind("first",0)!=0)seedMaintenance(6,six,sixId);}file("/ordinary.txt","keep",4);}else f->fault(8);
  if(scenario=="restore-conflict"||scenario=="unavailable-conflict")F::nvs["rte00000001"]["valuable"]={1,2,3};
  if(scenario=="restore-resume"||(startupCase()&&scenario.find("resume")!=std::string::npos)){
   const pid_t child=fork();assert(child>=0);if(!child){F::powerCheckpoint=[](const char*at){
@@ -366,7 +382,8 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
  if(concurrentNative)for(unsigned i=0;i<2;++i)nativeThreads[i]=std::thread([&,i]{task=Task::NativeSettings;F::onWorker=true;onNamespace=i?6:1;while(!stopNative.load(std::memory_order_acquire)){services[i]->workerStep();std::this_thread::yield();}});
  if(scenario=="corrupt-native")F::nvs.at("rnr00000001").at("root")[0]^=1;
  uint64_t startupExport=0;
- if(scenario=="bootstrap-fresh-busy"||scenario=="bootstrap-legacy-busy"){uint64_t sectors=0;uint32_t size=0;assert(!risc_storage_volume_export(f->volume)->export_begin(f->volume->context,&startupExport,&sectors,&size));}
+ if(scenario=="bootstrap-fresh-busy"||scenario=="bootstrap-legacy-busy"||returningCard()){uint64_t sectors=0;uint32_t size=0;assert(!risc_storage_volume_export(f->volume)->export_begin(f->volume->context,&startupExport,&sectors,&size));}
+ returningExport=startupExport;
  const auto nativeBefore=F::nvs;const auto writesBefore=f->counter(6);
  if(scenario=="restore-cancel")cancellationArmed=true;
  if(scenario=="restore-retained")f->fault(3);
@@ -401,6 +418,14 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
   if(!bootReady)assert(!L::ready());else assert(L::ready());
   for(const char*ns:{"rnr00000001","rte00000001","kvj00000001"}){const auto before=nativeBefore.find(ns);const auto after=F::nvs.find(ns);assert((before==nativeBefore.end()&&after==F::nvs.end())||(before!=nativeBefore.end()&&after!=F::nvs.end()&&before->second==after->second));}ordinaryMaintenance();assert(!anchor.release()&&!f);printf("actual lifecycle pre-app %s refuses unchanged PASS\n",scenario.c_str());std::fflush(stdout);std::_Exit(0);}
 
+#if RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK
+ if(returningCard()){
+  assert(hydrated&&L::ready());F::powerCheckpoint={};
+  if(!runtime.run()){fprintf(stderr,"returning card: %s\n",runtime.error());assert(false);}
+  assert(L::exitSafe()&&!L::retained()&&!f);
+  printf("Returning card %s: explicit edits preserved and checkpoint/conflict verified PASS\n",scenario.c_str());fflush(stdout);std::_Exit(0);
+ }
+#endif
 #if RISC_NATIVE_SETTINGS_FRESH_INTERNAL_FALLBACK
  if(scenario=="bootstrap-fresh-absent-save"||scenario=="bootstrap-fresh-absent-reload"){
   assert(hydrated&&L::ready()&&oneCore.ready()&&sixCore.ready());
