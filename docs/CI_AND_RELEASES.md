@@ -1,5 +1,25 @@
 # Integration and firmware publication
 
+## Current native release routing
+
+Runtime 0.4.0 is published only through the guarded exact-artifact
+[`native-idf61-release.yml` transport](native-idf61/RELEASE_TRANSPORT.md).
+The default-branch `release.yml` now runs **Historical Arduino regression**
+with read-only permissions and no publication job. Its push and manual
+integration paths remain available. `scripts/publish_firmware.py` rejects
+every invocation before reading artifacts, credentials or contacting GitHub.
+Arduino outputs built from current source must never claim the native version.
+
+For exact historical replay, the pre-migration source remains
+`4107eaeedd8c801eeaf7deb1c7bc4a943cd27342`; it is not changed by this routing
+retirement. Historical replay does not authorize a release or hardware action.
+Run `python3 -B test/test_release_routing.py` for the current routing guards.
+
+## Historical publication design
+
+The description below records the retired Arduino publisher and its original
+artifact format. It does not grant publication authority on current source.
+
 This repository follows Reader's source-version, verified-artifact and
 GitHub-token publication model, narrowed to one headless firmware product.
 Reference: Reader `3d9bc4f373679f5ae8dd184db6a8d0afa5a40231`,

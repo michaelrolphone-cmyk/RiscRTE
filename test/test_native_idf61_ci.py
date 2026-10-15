@@ -2,6 +2,7 @@
 """Host regression coverage for controlled native CI input verification."""
 import importlib.util
 import json
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -115,6 +116,38 @@ class NativeCiInputs(unittest.TestCase):
         sd.write_bytes(b'partial SD archive')
         with self.assertRaisesRegex(ValueError, 'archive bytes'):
             ci.verify_baselines(*args, *extra)
+
+
+class NativeCiWorkflow(unittest.TestCase):
+    def workflow(self):
+        return (Path(__file__).resolve().parents[1] / '.github/workflows/native-idf6.yml').read_text()
+
+    def test_publication_only_ignores_are_exact_and_bounded(self):
+        workflow = self.workflow()
+        ignored = workflow.split('    paths-ignore:\n', 1)[1].split('  workflow_dispatch:', 1)[0]
+        paths = re.findall(r'^      - (.+)$', ignored, re.M)
+        self.assertEqual(set(paths), {
+            '.github/workflows/native-idf61-release.yml',
+            'scripts/publish_native_idf61_release.py',
+            'test/test_publish_native_idf61_release.py',
+            'docs/native-idf61/runtime-0.4.0-release.json',
+            'docs/native-idf61/RELEASE_TRANSPORT.md',
+        })
+        self.assertEqual(len(paths), 5)
+        self.assertNotIn('.github/workflows/native-idf6.yml', paths)
+
+    def test_generated_input_custody_and_release_routing_are_retained(self):
+        workflow = self.workflow()
+        self.assertIn('          python test/test_release_routing.py\n', workflow)
+        self.assertIn('          python tests/test_native_idf61_candidate.py\n', workflow)
+        self.assertIn('          python tests/test_native_idf61_provenance.py\n', workflow)
+        self.assertIn('            python tests/test_native_display_archive.py\n', workflow)
+        paths = workflow.split('          path: |\n', 1)[1]
+        for name in ('project_elf_src_esp32s3.c', 'bootloader/project_elf_src_esp32s3.c',
+                     'x509_crt_bundle.S', 'esp-idf/mbedtls/x509_crt_bundle',
+                     'esp-idf/runtime/RiscBuildIdentity.h'):
+            self.assertIn('            ${{ env.NATIVE_ROOT }}/build/' + name + '\n', paths)
+        self.assertIn('            ${{ env.NATIVE_ROOT }}/build/x4-native-idf61/\n', paths)
 
 
 if __name__ == '__main__':

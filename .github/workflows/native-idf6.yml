@@ -26,21 +26,21 @@ jobs:
             source: ''
           - product: twatch
             repository: RiscRTE-T-Watch-S3
-            source: 2a456525f9fbbfcbe1eb2a722a6c6469d3dbcf69
+            source: 74f7491dc470b92dfa41fce41bf0c500f3714a94
             candidate_version: 1.1.40
             target: esp32s3-16mb-appdata-expanded-iq
             factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-launch-brightness-1.1.39/TWatch-1.1.39-Launch-Brightness-factory-erases-data-0x0.bin
             factory_sha256: 0194fe7095edd50ee4e82b8077a9d154fddf5323143f3219f070bde952424370
           - product: waveshare
             repository: RiscRTE-Wavshare-S3-Touch-AMOLED-2.06
-            source: 610e51770a68174d8b7a0825fc08d186acb9ffdd
+            source: 25c7151a1ac47e1a19a55b93c4cc3eaf2d4a4298
             candidate_version: 0.1.49
             target: esp32s3-16mb-waveshare-expanded
             factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-launch-brightness-0.1.48/Waveshare-0.1.48-Launch-Brightness-factory-erases-data-0x0.bin
             factory_sha256: 868933ecf2cb468b8d487333fbc6150641035015b58b62c884024fc8d8fc06da
           - product: x4
             repository: RiscRTE-XTEINK-X4-PRO
-            source: 60debd16526d13a3e5697d0dcb16fedb1e316908
+            source: a9009a5d774ae7060b9f298fdcbc81be6c22cc17
             candidate_version: 0.1.122
             target: esp32s3-16mb-appdata-iq
             factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO/releases/download/test-t064-crash-0.1.121/X4-0.1.121-T064-Crash-Reports-factory-erases-data-0x0.bin
@@ -52,7 +52,7 @@ jobs:
       PRODUCT: ${{ matrix.product }}
       PRODUCT_REPOSITORY: ${{ matrix.repository }}
       PRODUCT_SOURCE: ${{ matrix.source }}
-      IMAGE_HELPER_SOURCE: 2a456525f9fbbfcbe1eb2a722a6c6469d3dbcf69
+      IMAGE_HELPER_SOURCE: 74f7491dc470b92dfa41fce41bf0c500f3714a94
       SYSTEM_SOURCE: 755cc5174a6deaee120d108cbffe67ae809e1e6f
       DRIVERS_SOURCE: 5890721073ebabd781d5d278e447c761947a5c58
       SDK_SOURCE: fff9895c82d744c7237be8847347bdd1b07c6643
@@ -172,6 +172,7 @@ jobs:
           . "$IDF_PATH/export.sh"
           cd "$NATIVE_ROOT/sources/runtime"
           python test/test_native_idf61_ci.py
+          python test/test_release_routing.py
           python test/test_native_startup.py
           python test/test_native_product_profile.py
           bash test/run_native_sdmmc_test.sh
@@ -222,6 +223,18 @@ jobs:
           NATIVE_PROVIDER_TEST_ABI=2 APP_DATA_TEST=1 NATIVE_DIAGNOSTIC_OBSERVER=1 \
             BOOTLOADER_FILE="$NATIVE_ROOT/build/bootloader/bootloader.bin" \
             SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_native_bank_test.sh
+      - name: Controlled product source and provenance contracts
+        if: matrix.product != 'generic'
+        run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/product-contracts.log") 2>&1
+          . "$IDF_PATH/export.sh"
+          cd "$NATIVE_ROOT/sources/product"
+          python tests/test_native_idf61_candidate.py
+          python tests/test_native_idf61_provenance.py
+          if [[ "$PRODUCT" == waveshare ]]; then
+            python tests/test_native_display_archive.py
+          fi
       - name: Fresh controlled product build and same-process qualification
         if: matrix.product != 'generic'
         env:
@@ -318,6 +331,10 @@ jobs:
             ${{ env.NATIVE_ROOT }}/build/sdkconfig*
             ${{ env.NATIVE_ROOT }}/build/compile_commands.json
             ${{ env.NATIVE_ROOT }}/build/project_description.json
+            ${{ env.NATIVE_ROOT }}/build/project_elf_src_esp32s3.c
+            ${{ env.NATIVE_ROOT }}/build/x509_crt_bundle.S
+            ${{ env.NATIVE_ROOT }}/build/esp-idf/mbedtls/x509_crt_bundle
+            ${{ env.NATIVE_ROOT }}/build/esp-idf/runtime/RiscBuildIdentity.h
             ${{ env.NATIVE_ROOT }}/build/flasher_args.json
             ${{ env.NATIVE_ROOT }}/build/flash_args
             ${{ env.NATIVE_ROOT }}/build/CMakeCache.txt
@@ -333,6 +350,7 @@ jobs:
             ${{ env.NATIVE_ROOT }}/build/bootloader/bootloader.*
             ${{ env.NATIVE_ROOT }}/build/bootloader/compile_commands.json
             ${{ env.NATIVE_ROOT }}/build/bootloader/project_description.json
+            ${{ env.NATIVE_ROOT }}/build/bootloader/project_elf_src_esp32s3.c
             ${{ env.NATIVE_ROOT }}/build/bootloader/CMakeCache.txt
             ${{ env.NATIVE_ROOT }}/build/bootloader/build.ninja
             ${{ env.NATIVE_ROOT }}/build/bootloader/.ninja_deps

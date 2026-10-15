@@ -1,61 +1,38 @@
 #!/usr/bin/env python3
-"""Version-gated publication, only after verified integration artifacts exist.
-Uses GitHub Actions' GITHUB_TOKEN; never overwrites a published version.
+"""Retired Arduino publisher; historical version checks remain testable offline.
+
+Current native versions use publish_native_idf61_release.py with exact original
+CI artifacts. This entry point has no publication or network authority.
 """
-import argparse,json,os,subprocess,tempfile
-from pathlib import Path
-from release_assets import ROOT,OUTPUT,verify,require,file_bytes
+import argparse
+
 from check_versions import version
 
-def gh(*args):
-    return subprocess.check_output(['gh',*args],cwd=ROOT,text=True,timeout=120)
-def decision(record,releases):
-    previous=[r for r in releases if r['tag_name'].startswith('firmware-v')]
-    for r in previous:
-        v=r['tag_name'].removeprefix('firmware-v');version(v)
-        if version(v)>version(record['version']):raise ValueError('source version is older than an existing release')
-    matches=[r for r in previous if r['tag_name']==record['tag']]
-    require(len(matches)<=1,'duplicate release tag')
+
+def decision(record, releases):
+    """Retain the historical immutable-version decision as a pure regression."""
+    previous = [r for r in releases if r['tag_name'].startswith('firmware-v')]
+    for release in previous:
+        value = release['tag_name'].removeprefix('firmware-v')
+        if version(value) > version(record['version']):
+            raise ValueError('source version is older than an existing release')
+    matches = [r for r in previous if r['tag_name'] == record['tag']]
+    if len(matches) > 1:
+        raise ValueError('duplicate release tag')
     return matches[0] if matches else None
 
+
 def main(source):
-    record=verify(source);repo=os.environ['GITHUB_REPOSITORY']
-    repository=json.loads(gh('api',f'repos/{repo}'))
-    require(os.environ.get('GITHUB_REF')==f'refs/heads/{repository["default_branch"]}' and repository['default_branch'] in ('main','master'),'publication requires current default main/master branch')
-    require(os.environ.get('GITHUB_EVENT_NAME') in ('push','workflow_dispatch'),'publication requires push/manual event')
-    releases=[r for page in json.loads(gh('api',f'repos/{repo}/releases?per_page=100','--paginate','--slurp')) for r in page]
-    existing=decision(record,releases)
-    if existing:
-        with tempfile.TemporaryDirectory() as temp:
-            gh('release','download',record['tag'],'--repo',repo,'--dir',temp)
-            prior=json.loads(file_bytes(Path(temp)/'release.json'))
-            require(prior['source_fingerprint']==record['source_fingerprint'],'existing version contains different source; increment firmware version')
-            if not existing['draft']:
-                # Already published immutable version: verify its own full asset inventory/hash record.
-                from release_assets import sha,names,validate_payloads
-                require(all(prior[k]==record[k] for k in ('schema','product','version','target','tag')),'existing release identity mismatch')
-                require(set(prior['assets'])==set(names(record['version']).values()),'existing release asset names mismatch')
-                require(set(p.name for p in Path(temp).iterdir())==set(prior['assets'])|{'release.json','SHA256SUMS'},'existing release incomplete/unexpected assets')
-                for name,meta in prior['assets'].items():
-                    data=file_bytes(Path(temp)/name);require(meta=={'bytes':len(data),'sha256':sha(data)},'existing release asset corrupt')
-                checks={**prior['assets'],'release.json':{'sha256':sha(file_bytes(Path(temp)/'release.json'))}}
-                sums=''.join(f'{meta["sha256"]}  {name}\n' for name,meta in sorted(checks.items()))
-                require((Path(temp)/'SHA256SUMS').read_text()==sums,'existing release checksum manifest mismatch')
-                validate_payloads(Path(temp),prior['version'],prior['source_sha'])
-                print('Version already published unchanged; no release modified:',record['tag']);return
-            require(prior==record,'draft belongs to a different candidate; explicit review required')
-            verify(source,Path(temp))
-    else:
-        notes=ROOT/'build/release-notes.md';notes.parent.mkdir(exist_ok=True)
-        notes.write_text(f'RiscRTE {record["version"]} — {record["target"]}\n\nSource: `{source}`. Built and integration-tested in GitHub Actions.\n\nApp-only image offset: `0x10000`. Merged **new-deployment** image offset: `0x0`; includes partition table and bootfs, so never apply it over user storage without separate deployment approval. Debug ELF is not flashable. `default.elf` is the heartbeat module. See `release.json` and `SHA256SUMS` for exact bytes and provenance. No release publication flashes hardware.\n')
-        gh('release','create',record['tag'],*map(str,sorted(OUTPUT.iterdir())),'--repo',repo,'--target',source,'--title',f'RiscRTE {record["version"]}','--notes-file',str(notes),'--draft')
-        with tempfile.TemporaryDirectory() as temp:
-            gh('release','download',record['tag'],'--repo',repo,'--dir',temp)
-            verify(source,Path(temp))
-    # Last mutation: expose the complete verified draft; never use --clobber.
-    gh('release','edit',record['tag'],'--repo',repo,'--draft=false')
-    published=json.loads(gh('api',f'repos/{repo}/releases/tags/{record["tag"]}'))
-    require(not published['draft'],'GitHub did not confirm publication')
-    print('Published:',published['html_url'])
-if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--source-sha',required=True);a=p.parse_args();main(a.source_sha)
+    # Fail before artifact reads, credential access, subprocesses or network.
+    raise ValueError(
+        'Legacy Arduino publication is retired on this source. '
+        'Use the guarded exact-artifact native-idf61-release.yml transport; '
+        'historical Arduino builds are regression-only.'
+    )
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source-sha', required=True)
+    args = parser.parse_args()
+    main(args.source_sha)
