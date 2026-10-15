@@ -1,18 +1,27 @@
 #pragma once
-/* Generic nonblocking TLS/HTTP transport for IDF4.4. A single native-owned
- * session has bounded PSRAM metadata and no app pointers/tasks/callbacks.
+/* Generic nonblocking TLS/HTTP transport for pinned IDF4.4 and IDF6.1.
+ * A single native-owned session has bounded PSRAM metadata and no app
+ * pointers/tasks/callbacks.
  * SDK DNS may take its configured resolver timeout; all later TLS/read/write
  * calls are nonblocking. Each caller step yields through the runtime. */
 #include "HttpResponse.h"
 #include "NativeTlsMemory.h"
 #include "diagnostics/StageLog.h"
 #include <esp_tls.h>
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
+// Pinned SDK layout is required for checked socket detachment: the public
+// setter rejects -1 and mbedtls_net_free discards the underlying close error.
+#include <esp_tls_private.h>
+#endif
 #include <esp_crt_bundle.h>
 #include <esp_heap_caps.h>
 #include <esp_timer.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/asn1.h>
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
+#include <psa/crypto.h>
+#else
 #include <mbedtls/bignum.h>
 #include <mbedtls/cipher.h>
 #include <mbedtls/dhm.h>
@@ -20,6 +29,7 @@
 #include <mbedtls/md.h>
 #include <mbedtls/pem.h>
 #include <mbedtls/pk.h>
+#endif
 #include <new>
 #include <cstdio>
 #include <unistd.h>
@@ -77,10 +87,18 @@ inline esp_err_t attachBundle(void* raw){
   // Pinned IDF ignores the bundle callback's return value. Record its failure
   // ourselves so a failed allocation cannot proceed without our verifier.
   if(attached!=ESP_OK){s->error=attached==ESP_ERR_NO_MEM?RISC_HTTP_MEMORY:RISC_HTTP_TRANSPORT;return attached;}
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
+  s->verify=conf->MBEDTLS_PRIVATE(f_vrfy);s->verifyContext=conf->MBEDTLS_PRIVATE(p_vrfy);
+#else
   s->verify=conf->f_vrfy;s->verifyContext=conf->p_vrfy;
+#endif
   if(!s->verify){s->error=RISC_HTTP_TRANSPORT;return ESP_FAIL;}
   mbedtls_ssl_conf_verify(conf,verifyCertificate,s);
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
+  mbedtls_ssl_conf_min_tls_version(conf,MBEDTLS_SSL_VERSION_TLS1_2);
+#else
   mbedtls_ssl_conf_min_version(conf,MBEDTLS_SSL_MAJOR_VERSION_3,MBEDTLS_SSL_MINOR_VERSION_3);
+#endif
   return ESP_OK;
 }
 inline bool prepare(Session& s){
@@ -148,16 +166,22 @@ inline int32_t info(void*,uint64_t token,risc_http_response_v1* out){
   out->status_code=session->decoder.status;out->content_length=session->decoder.length;out->received_bytes=session->decoder.received;
   return session->retained?RISC_HTTP_RETAINED:session->error;
 }
-// MbedTLS composes a high-level error and an optional low-level cause.
 // IDF stores positive -ret, while read/write may return a negative raw value.
+// Decode each selected mbedTLS generation using its own error representation.
 inline bool allocationError(int code){
   const uint32_t magnitude=code<0?0u-static_cast<uint32_t>(code):static_cast<uint32_t>(code);
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
+  // MbedTLS4/TF-PSA returns the PSA allocation status directly, including
+  // SSL/X.509 allocation failures. It is not an IDF4 high/low error bitfield.
+  return magnitude==uint32_t(-PSA_ERROR_INSUFFICIENT_MEMORY);
+#else
   const uint32_t high=magnitude&0x7f80u,low=magnitude&0x7fu;
   return high==uint32_t(-MBEDTLS_ERR_SSL_ALLOC_FAILED) || high==uint32_t(-MBEDTLS_ERR_X509_ALLOC_FAILED) ||
     high==uint32_t(-MBEDTLS_ERR_PK_ALLOC_FAILED) || high==uint32_t(-MBEDTLS_ERR_PEM_ALLOC_FAILED) ||
     high==uint32_t(-MBEDTLS_ERR_MD_ALLOC_FAILED) || high==uint32_t(-MBEDTLS_ERR_CIPHER_ALLOC_FAILED) ||
     high==uint32_t(-MBEDTLS_ERR_ECP_ALLOC_FAILED) || high==uint32_t(-MBEDTLS_ERR_DHM_ALLOC_FAILED) ||
     low==uint32_t(-MBEDTLS_ERR_MPI_ALLOC_FAILED) || low==uint32_t(-MBEDTLS_ERR_ASN1_ALLOC_FAILED);
+#endif
 }
 inline int32_t transportError(Session& s,int direct=0){
   int code=0,flags=0;
@@ -177,7 +201,7 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
   if(!s->budget.alive(now()))return s->error=RISC_HTTP_TIMEOUT;
   if(!networkReady || !networkReady())return s->error=RISC_HTTP_NETWORK;
   if(s->phase==Phase::Connect){
-    // Pinned IDF4.4 reuses select()'s output fd_sets across asynchronous calls.
+    // Both pinned IDF4.4 and IDF6.1 reuse select()'s output fd_sets across asynchronous calls.
     // A timeout clears them. Re-arm the SDK-owned connecting socket before
     // polling again; otherwise ordinary Internet RTTs can stall until timeout.
     if(s->tls->conn_state==ESP_TLS_CONNECTING){

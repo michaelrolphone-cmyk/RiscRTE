@@ -1,6 +1,10 @@
 #pragma once
-// Process-wide mbedTLS policy, installed once after PSRAM startup and before
-// bootstrap/apps can open HTTPS. Never swap allocators around a live session.
+// Process-wide mbedTLS policy, checked before bootstrap/apps can open HTTPS.
+// IDF4 installs its hook after PSRAM startup; IDF6 uses the SDK startup policy.
+// Never swap allocators around live TLS or PSA objects.
+#if __has_include(<esp_idf_version.h>)
+#include <esp_idf_version.h>
+#endif
 #include <esp_heap_caps.h>
 #include <mbedtls/platform.h>
 #include <cstddef>
@@ -25,7 +29,21 @@ inline bool initialize(){
   if(state!=State::Uninitialized)return ready();
   state=State::Unavailable;
   if(!heap_caps_get_total_size(ExternalCaps))return false;
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
+  // IDF6 initializes PSA crypto before app_main. Its allocator must therefore
+  // be PSRAM-only from system startup, not replaced while PSA objects exist.
+  // The selected SDK's esp_mem.c implements this policy without any fallback.
+#if !defined(CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC) || !CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC || \
+    defined(CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC) || defined(CONFIG_MBEDTLS_CUSTOM_MEM_ALLOC) || \
+    defined(CONFIG_MBEDTLS_IRAM_8BIT_MEM_ALLOC)
+  return false;
+#endif
+#if !defined(MBEDTLS_PLATFORM_MEMORY) || defined(MBEDTLS_PLATFORM_CALLOC_MACRO) || defined(MBEDTLS_PLATFORM_FREE_MACRO)
+  return false; // An alternate compile-time allocator is not this policy.
+#endif
+#else
   if(mbedtls_platform_set_calloc_free(calloc,free)!=0)return false;
+#endif
   state=State::Ready;
   return true;
 }

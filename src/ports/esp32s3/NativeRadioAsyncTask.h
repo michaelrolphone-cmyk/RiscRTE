@@ -11,6 +11,7 @@ constexpr uint32_t WorkerStackBytes=8192;
 static TaskHandle_t workerTask=nullptr;
 inline void task(void*){for(;;){step();vTaskDelay(pdMS_TO_TICKS(20)?pdMS_TO_TICKS(20):1);}}
 inline bool provision(){
+  if(!internalAtomicsReady())return false;
   if(ready)return true;
   if(workerTask)return false;
   if(!allocateBuffers())return false;

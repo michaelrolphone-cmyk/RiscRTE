@@ -3,7 +3,7 @@
 import pathlib,os,subprocess,tempfile,hashlib,json
 root=pathlib.Path(__file__).resolve().parents[1];out=pathlib.Path(os.environ.get('BUILD_DIR',tempfile.mkdtemp(prefix='settings-startup-entropy-')));out.mkdir(parents=True,exist_ok=True)
 stubs=out/'stubs'
-files={'bootloader_random.h':'#pragma once\nextern "C" void bootloader_random_enable();\nextern "C" void bootloader_random_disable();\n','esp_random.h':'#pragma once\n#include <stddef.h>\nextern "C" void esp_fill_random(void*,size_t);\n','freertos/FreeRTOS.h':'#pragma once\n','freertos/task.h':'#pragma once\nextern "C" int xPortInIsrContext();\n','soc/soc_memory_types.h':'#pragma once\nbool esp_ptr_internal(const void*);\n','mbedtls/sha256.h':'''#pragma once
+files={'bootloader_random.h':'#pragma once\nextern "C" void bootloader_random_enable();\nextern "C" void bootloader_random_disable();\n','esp_random.h':'#pragma once\n#include <stddef.h>\nextern "C" void esp_fill_random(void*,size_t);\n','freertos/FreeRTOS.h':'#pragma once\n','freertos/task.h':'#pragma once\nextern "C" int xPortInIsrContext();\n','soc/soc_memory_types.h':'#pragma once\nbool esp_ptr_internal(const void*);\nbool esp_ptr_in_dram(const void*);\n','mbedtls/sha256.h':'''#pragma once
 #include <openssl/sha.h>
 #include <cstring>
 bool entropy_test_hash_fail();

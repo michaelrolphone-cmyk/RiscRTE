@@ -42,7 +42,7 @@ int32_t AppDataFiles::begin(uint32_t space,const char*name,char*folder,char*path
  if(!ready_)return RISC_APP_DATA_UNAVAILABLE;
  if(busy_ || !space || space>INT32_MAX || !validName(name))return RISC_APP_DATA_INVALID;
  if(!directory(root_))return RISC_APP_DATA_UNAVAILABLE;
- if(snprintf(folder,PathMax,"%s/n%08x",root_,space)>=int(PathMax) || snprintf(path,PathMax,"%s/%s",folder,name)>=int(PathMax))return RISC_APP_DATA_INVALID;
+ if(snprintf(folder,PathMax,"%s/n%08lx",root_,static_cast<unsigned long>(space))>=int(PathMax) || snprintf(path,PathMax,"%s/%s",folder,name)>=int(PathMax))return RISC_APP_DATA_INVALID;
  struct stat s{};
 #ifdef ESP_PLATFORM
  int result=::stat(folder,&s);

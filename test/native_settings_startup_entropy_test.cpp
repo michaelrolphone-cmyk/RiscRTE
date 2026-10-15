@@ -5,8 +5,10 @@
 #include <set>
 namespace E=RiscCpu::NativeSettingsStartupEntropy;
 static bool ownerNow=true,isr=false,inside=false,zero=false,lose=false,hashFail=false,allow=true,reenter=false,external=false;
+static const void* rejectedAtomicAddress=nullptr;
 static unsigned enables=0,disables=0,fills=0,authCalls=0;
 bool esp_ptr_internal(const void*p){return p&&!external;}
+bool esp_ptr_in_dram(const void*p){return p&&!external&&p!=rejectedAtomicAddress;}
 extern "C" int xPortInIsrContext(){return isr;}
 static bool owner(){return ownerNow;}
 extern "C" void bootloader_random_enable(){assert(!inside);inside=true;++enables;}
@@ -14,7 +16,7 @@ extern "C" void bootloader_random_disable(){assert(inside);inside=false;++disabl
 extern "C" void esp_fill_random(void*p,size_t n){assert(inside&&n==32);++fills;memset(p,zero?0:0x37,n);if(lose)ownerNow=false;}
 bool entropy_test_hash_fail(){return hashFail;}
 static bool auth(void*){++authCalls;if(reenter){reenter=false;uint8_t out[16]{};assert(!E::take(1,E::Purpose::Incarnation,nullptr,auth,out));}return allow;}
-static void reset(){E::wipe(E::state.seed,32);E::state.busy.store(0);E::state.counter=0;E::state.attempted=E::state.ready=false;ownerNow=allow=true;isr=inside=zero=lose=hashFail=reenter=external=false;enables=disables=fills=authCalls=0;}
+static void reset(){E::wipe(E::state.seed,32);E::state.busy.store(0);E::state.counter=0;E::state.attempted=E::state.ready=false;ownerNow=allow=true;isr=inside=zero=lose=hashFail=reenter=external=false;enables=disables=fills=authCalls=0;rejectedAtomicAddress=nullptr;}
 static void unchanged(const uint8_t*p){for(unsigned i=0;i<16;++i)assert(p[i]==0x91);}
 int main(){
  uint8_t out[16];memset(out,0x91,16);assert(!E::take(1,E::Purpose::Incarnation,nullptr,auth,out));unchanged(out);
@@ -30,7 +32,9 @@ int main(){
  reset();zero=true;assert(!E::capture(owner)&&fills==1&&enables==disables&&!inside&&!E::state.ready);assert(!E::capture(owner));
  reset();lose=true;assert(!E::capture(owner)&&fills==1&&enables==disables&&!inside&&!E::state.ready);
  reset();ownerNow=false;assert(!E::capture(owner)&&!fills&&!enables);
- reset();external=true;assert(!E::capture(owner)&&!fills&&!enables);
+ reset();rejectedAtomicAddress=reinterpret_cast<const uint8_t*>(&E::state)+sizeof(E::state)-1;assert(!E::capture(owner)&&!fills&&!enables&&!E::state.attempted);
+ reset();external=true;assert(!E::capture(owner)&&!fills&&!enables&&!E::state.attempted&&E::state.busy.load()==0);
+ reset();assert(E::capture(owner));external=true;const auto before=E::state.counter;memset(out,0x91,16);assert(!E::take(1,E::Purpose::Incarnation,nullptr,auth,out)&&E::state.counter==before&&E::state.busy.load()==0);unchanged(out);
  reset();isr=true;assert(!E::capture(owner)&&!E::state.attempted&&!fills);isr=false;assert(E::capture(owner));
  printf("PASS startup entropy: paired early hardware window, 1001 unique IDs, custody/ISR/reentry/hash/counter/zero-source refusals; host controls=%zu\n",E::controlBytes());
 }

@@ -24,6 +24,8 @@ jobs:
         shell: bash
         run: |
           . "$IDF_PATH/export.sh"
+          apt-get update
+          apt-get install -y --no-install-recommends libssl-dev
           python test/test_native_startup.py
           bash test/run_native_i2s_idf6_test.sh
           bash test/run_native_platform_test.sh
@@ -31,6 +33,11 @@ jobs:
           bash test/run_native_sha256_test.sh
           bash test/run_elf_time32_test.sh
           bash test/native_nvs_shim/run_test.sh
+          bash test/run_native_internal_atomics_test.sh
+          python test/run_native_settings_startup_entropy_test.py
+          bash test/run_native_http_idf6_test.sh
+          bash test/run_native_tls_memory_idf6_test.sh
+          bash test/run_image_pressure_realloc_test.sh
       - name: Build native candidate with one compiler job
         shell: bash
         run: |
@@ -38,6 +45,13 @@ jobs:
           cd idf
           idf.py reconfigure
           cmake --build build -- -j1
+      - name: Qualify native target custody and placement
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          python test/native_internal_atomics_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/atomics
+          python test/native_http_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/http
+          python test/native_failure_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/failure
       - name: Reject Arduino runtime linkage
         shell: bash
         run: |
@@ -55,4 +69,5 @@ jobs:
             idf/build/project_description.json
             idf/build/config/sdkconfig.json
             idf/build/log/
+            idf/build/qualification/
           if-no-files-found: warn

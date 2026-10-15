@@ -6,9 +6,24 @@
  * Core State is worker-only during async ownership; idle legacy calls retain
  * their old serialized blocking contract. No SDK task is ever deleted. */
 namespace RiscCpu { namespace NativeRadioAsync {
-static_assert(ATOMIC_INT_LOCK_FREE==2,"32-bit mailbox atomics must be lock-free");
-static std::atomic_flag mailbox=ATOMIC_FLAG_INIT;
-static std::atomic<uint32_t> activeId{0}, finishedId{0}, phase{RISC_RADIO_IDLE},sharedLease{0};
+static RISC_NATIVE_ATOMIC_DRAM std::atomic_flag mailbox=ATOMIC_FLAG_INIT;
+static RISC_NATIVE_ATOMIC_DRAM std::atomic<uint32_t> activeId{0}, finishedId{0}, phase{RISC_RADIO_IDLE},sharedLease{0};
+static RISC_NATIVE_ATOMIC_DRAM std::atomic<bool> restoring{false};
+#if RISC_STAGE_LOGS
+static RISC_NATIVE_ATOMIC_DRAM std::atomic<uint32_t> recordWrite{0},recordRead{0},lost{0};
+static RISC_NATIVE_ATOMIC_DRAM std::atomic<uint32_t> latestSeq{0},latestOperation{0},latestStage{0},latestResult{0},latestBegin{0},latestLow{0},latestHigh{0};
+#endif
+inline bool internalAtomicsReady(){
+  using NativeInternalAtomics::internal;
+  return NativeRadio::internalAtomicsReady() && internal(mailbox) && internal(activeId) &&
+    internal(finishedId) && internal(phase) && internal(sharedLease) && internal(restoring)
+#if RISC_STAGE_LOGS
+    && internal(recordWrite) && internal(recordRead) && internal(lost) && internal(latestSeq) &&
+    internal(latestOperation) && internal(latestStage) && internal(latestResult) &&
+    internal(latestBegin) && internal(latestLow) && internal(latestHigh)
+#endif
+    ;
+}
 static bool ready=false; // initialized by owner before exposing table
 static uint32_t nextId=0; // owner-only; exhausted IDs never wrap
 static uint32_t workerId=0; // worker-only
@@ -31,6 +46,7 @@ struct Buffers {
 // terminal cleanup failure. No app/provider memory or PSRAM is borrowed.
 static Buffers* buffers=nullptr;
 inline bool allocateBuffers(){
+  if(!internalAtomicsReady())return false;
   if(buffers)return true;
   void* memory=heap_caps_calloc(1,sizeof(Buffers),MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT);
   if(!memory)return false;
@@ -41,16 +57,14 @@ inline void releaseUnstartedBuffers(){
   buffers->~Buffers();NativeRadio::wipe(buffers,sizeof(Buffers));
   heap_caps_free(buffers);buffers=nullptr;
 }
-inline bool lock(){return !mailbox.test_and_set(std::memory_order_acquire);}
-inline void unlock(){mailbox.clear(std::memory_order_release);}
+inline bool lock(){return internalAtomicsReady() && !mailbox.test_and_set(std::memory_order_acquire);}
+inline void unlock(){if(internalAtomicsReady())mailbox.clear(std::memory_order_release);}
 #if RISC_STAGE_LOGS
-static std::atomic<uint32_t> recordWrite{0},recordRead{0},lost{0};
 // An all-atomic latest-stage record survives queue overflow. This is not a
 // seqlock over ordinary fields: each word is independently atomic, including
 // the two timestamp halves, and the owner makes one bounded coherent attempt.
-static std::atomic<uint32_t> latestSeq{0},latestOperation{0},latestStage{0},latestResult{0},latestBegin{0},latestLow{0},latestHigh{0};
 inline void capture(uint32_t stage,int32_t result,bool begin){
-  if(!buffers)return;
+  if(!buffers || !internalAtomicsReady())return;
   const uint64_t captured=uint64_t(esp_timer_get_time());
   latestSeq.fetch_add(1,std::memory_order_seq_cst);
   latestOperation.store(workerId,std::memory_order_seq_cst);latestStage.store(stage,std::memory_order_seq_cst);
@@ -63,7 +77,7 @@ inline void capture(uint32_t stage,int32_t result,bool begin){
   recordWrite.store(write+1,std::memory_order_release);
 }
 inline void drain(){
-  if(!buffers)return;
+  if(!buffers || !internalAtomicsReady())return;
   for(unsigned n=0;n<8;++n){
     const auto read=recordRead.load(std::memory_order_relaxed);
     if(read==recordWrite.load(std::memory_order_acquire))break;
@@ -90,7 +104,6 @@ inline void drain(){
 inline void capture(uint32_t,int32_t,bool){}
 inline void drain(){}
 #endif
-static std::atomic<bool> restoring{false};
 inline bool valid(const risc_radio_request_v1* in){
   if(!in || in->struct_size!=sizeof(*in) || (in->flags & ~RISC_RADIO_TEMPORARY) || in->reserved[0] || in->reserved[1] || in->reserved[2])return false;
   if(in->kind==RISC_RADIO_REQUEST_SCAN){
@@ -103,26 +116,28 @@ inline bool valid(const risc_radio_request_v1* in){
   const size_t sn=NativeRadio::boundedLength(in->ssid,32),pn=NativeRadio::boundedLength(in->password,63);
   return sn && sn<=32 && pn<=63 && ((!pn && in->kind==RISC_RADIO_REQUEST_JOIN) || pn>=8);
 }
-inline bool idle(){return !activeId.load(std::memory_order_acquire) && NativeRadio::idle();}
+inline bool idle(){return internalAtomicsReady() && !activeId.load(std::memory_order_acquire) && NativeRadio::idle();}
 inline bool sharedPhaseReady(){
+  if(!internalAtomicsReady())return false;
   if(!activeId.load(std::memory_order_acquire))return NativeRadio::idle() || (NativeRadio::s.wifi && NativeRadio::s.startAttempted && !NativeRadio::s.closing);
   if(NativeRadio::cancelRequested.load(std::memory_order_acquire))return false;
   const auto current=phase.load(std::memory_order_acquire);
   return current==RISC_RADIO_SCANNING || current==RISC_RADIO_JOINING || current==RISC_RADIO_CONNECTED || current==RISC_RADIO_RESULTS;
 }
-inline bool sharedReady(){return !sharedLease.load(std::memory_order_acquire) && sharedPhaseReady();}
+inline bool sharedReady(){return internalAtomicsReady() && !sharedLease.load(std::memory_order_acquire) && sharedPhaseReady();}
 inline bool tryShared(){
+  if(!internalAtomicsReady())return false;
   uint32_t expected=0;
   if(!sharedLease.compare_exchange_strong(expected,2,std::memory_order_acq_rel))return false;
   if(!sharedPhaseReady()){sharedLease.store(0,std::memory_order_release);return false;}
   return true;
 }
-inline void endShared(){sharedLease.store(0,std::memory_order_release);}
-inline bool custodySafe(){return phase.load(std::memory_order_acquire)!=RISC_RADIO_CLEANUP_FAILED;}
+inline void endShared(){if(internalAtomicsReady())sharedLease.store(0,std::memory_order_release);}
+inline bool custodySafe(){return internalAtomicsReady() && phase.load(std::memory_order_acquire)!=RISC_RADIO_CLEANUP_FAILED;}
 inline int32_t begin(const risc_radio_request_v1* in,uint32_t* out){
   if(out)*out=0;
   if(!out || !valid(in))return RISC_RADIO_INVALID;
-  if(!ready || !buffers)return RISC_RADIO_UNAVAILABLE;
+  if(!internalAtomicsReady() || !ready || !buffers)return RISC_RADIO_UNAVAILABLE;
   const bool suspend=activeId.load(std::memory_order_acquire)!=0;
   if(suspend && (!(in->flags&RISC_RADIO_TEMPORARY) || phase.load()!=RISC_RADIO_CONNECTED ||
      NativeRadio::cancelRequested.load() || buffers->suspended.operation_id || buffers->activeCredentials.kind!=RISC_RADIO_REQUEST_JOIN || buffers->activeCredentials.flags))return RISC_RADIO_BUSY;
@@ -157,6 +172,7 @@ inline void acknowledge(){
 }
 inline int32_t poll(uint32_t id,risc_radio_progress_v1* out){
   if(!id || !out || out->struct_size<sizeof(*out))return RISC_RADIO_INVALID;
+  if(!internalAtomicsReady())return RISC_RADIO_UNAVAILABLE;
   drain();
   if(id!=activeId.load(std::memory_order_acquire)){
     if(id!=finishedId.load(std::memory_order_acquire))return RISC_RADIO_STALE;
@@ -175,6 +191,7 @@ inline int32_t poll(uint32_t id,risc_radio_progress_v1* out){
 }
 inline int32_t cancel(uint32_t id){
   if(!id)return RISC_RADIO_INVALID;
+  if(!internalAtomicsReady())return RISC_RADIO_UNAVAILABLE;
   drain();
   if(id!=activeId.load(std::memory_order_acquire))return id==finishedId.load(std::memory_order_acquire)?RISC_RADIO_QUIESCENT:RISC_RADIO_STALE;
   if(restoring.load())return RISC_RADIO_PENDING;
@@ -201,6 +218,7 @@ inline bool publish(){
   unlock();return true;
 }
 inline void cleanup(uint32_t reason){
+  if(!internalAtomicsReady())return;
   buffers->working.phase=RISC_RADIO_STOPPING;buffers->working.failure=reason;
   buffers->working.station_state=0;buffers->working.rssi=-127;NativeRadio::wipe(buffers->working.station,sizeof(buffers->working.station));
   buffers->working.scan={};buffers->working.scan.struct_size=sizeof(buffers->working.scan);
@@ -221,7 +239,7 @@ inline void cleanup(uint32_t reason){
 // One worker iteration. Its caller is a permanent firmware task. Test shims
 // invoke this same implementation under deterministic SDK gates.
 inline void step(){
-  if(!buffers)return;
+  if(!buffers || !internalAtomicsReady())return;
   const uint32_t id=activeId.load(std::memory_order_acquire);
   if(!id)return;
   uint32_t expected=0;
@@ -277,29 +295,29 @@ inline void step(){
   (void)publish();
 }
 // Legacy synchronous prefix never enters SDK concurrently with the worker.
-inline bool join(const char* a,const char* b){return !activeId.load(std::memory_order_acquire) && NativeRadio::join(a,b);}
-inline bool scanStart(){return !activeId.load(std::memory_order_acquire) && NativeRadio::scanStart();}
-inline bool leave(){return !activeId.load(std::memory_order_acquire) && NativeRadio::leave();}
+inline bool join(const char* a,const char* b){return internalAtomicsReady() && !activeId.load(std::memory_order_acquire) && NativeRadio::join(a,b);}
+inline bool scanStart(){return internalAtomicsReady() && !activeId.load(std::memory_order_acquire) && NativeRadio::scanStart();}
+inline bool leave(){return internalAtomicsReady() && !activeId.load(std::memory_order_acquire) && NativeRadio::leave();}
 inline bool scanCancel(){return leave();}
-inline bool scanPoll(garden_radio_scan_result_v1* out){return !activeId.load(std::memory_order_acquire) && NativeRadio::scanPoll(out);}
+inline bool scanPoll(garden_radio_scan_result_v1* out){return internalAtomicsReady() && !activeId.load(std::memory_order_acquire) && NativeRadio::scanPoll(out);}
 inline bool state(uint8_t* state,int8_t* rssi){
-  if(!state || !rssi)return false;
+  if(!state || !rssi || !internalAtomicsReady())return false;
   *state=0;*rssi=-127;
   if(!activeId.load(std::memory_order_acquire))return NativeRadio::state(state,rssi);
   if(NativeRadio::cancelRequested.load(std::memory_order_acquire) || !lock())return false;
   *state=buffers->snapshot.station_state;*rssi=buffers->snapshot.rssi;const bool ok=buffers->snapshot.phase!=RISC_RADIO_CLEANUP_FAILED;unlock();return ok;
 }
 inline bool addresses(uint8_t* station,uint8_t* ap){
-  if(!station || !ap)return false;
+  if(!station || !ap || !internalAtomicsReady())return false;
   if(!activeId.load(std::memory_order_acquire))return NativeRadio::addresses(station,ap);
   memset(station,0,12);memset(ap,0,12);
   if(NativeRadio::cancelRequested.load(std::memory_order_acquire) || !lock())return false;
   memcpy(station,buffers->snapshot.station,12);const bool ok=buffers->snapshot.phase!=RISC_RADIO_CLEANUP_FAILED;unlock();return ok;
 }
-inline bool provisioned(){if(!buffers)return false;NativeRadio::stageSink=capture;ready=true;return true;}
+inline bool provisioned(){if(!internalAtomicsReady() || !buffers)return false;NativeRadio::stageSink=capture;ready=true;return true;}
 inline const risc_native_radio_async_v1* table(){
   static const risc_native_radio_async_v1 value{sizeof(value),RISC_RADIO_ASYNC_TAG,RISC_RADIO_ASYNC_VERSION,begin,poll,cancel,sharedReady,custodySafe,tryShared,endShared};
   return &value;
 }
-inline const risc_native_radio_async_v1* api(){return ready?table():nullptr;}
+inline const risc_native_radio_async_v1* api(){return ready && internalAtomicsReady()?table():nullptr;}
 } }

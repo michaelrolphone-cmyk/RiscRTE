@@ -41,7 +41,11 @@ static inline void *risc_image_calloc(size_t count,size_t size) {
     return p;
 }
 static inline void *risc_image_realloc(void *pointer,size_t size) {
+    /* Keep the freeing zero-size case outside the failure/retry path. Besides
+     * making ownership explicit, this lets GCC 15 prove the retry is valid. */
+    if(!size)return realloc(pointer,0);
     void *p=realloc(pointer,size);
-    if(!p && size && risc_image_pressure_reclaim())p=realloc(pointer,size);
-    return p;
+    if(p)return p;
+    if(!risc_image_pressure_reclaim())return NULL;
+    return realloc(pointer,size);
 }

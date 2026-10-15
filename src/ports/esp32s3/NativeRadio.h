@@ -14,14 +14,14 @@
 #include <esp_wifi.h>
 #include <esp_wifi_default.h>
 #include <esp_timer.h>
-#include <atomic>
+#include "NativeInternalAtomics.h"
 #include <cstdint>
 #include <cstring>
 #include <limits>
 namespace RiscCpu { namespace NativeRadio {
 // Firmware-only worker hooks. Configured once before admitting asynchronous
 // work; never contain application/provider functions or borrowed storage.
-static std::atomic<bool> cancelRequested{false};
+static RISC_NATIVE_ATOMIC_DRAM std::atomic<bool> cancelRequested{false};
 static bool asyncExecuting=false; // worker-owned while asynchronous work exists
 using StageSink=void (*)(uint32_t,int32_t,bool);
 static StageSink stageSink=nullptr;
@@ -42,7 +42,8 @@ template<class F> inline void sdkVoid(Stage stage,F function){
   if(asyncExecuting && stageSink)stageSink(stage,0,false);
 }
 #define RADIO_STAGE_LOG(...) do { if(!asyncExecuting) RISC_STAGE_LOG(__VA_ARGS__); } while(0)
-inline bool cancelled(){return asyncExecuting && cancelRequested.load(std::memory_order_acquire);}
+inline bool internalAtomicsReady();
+inline bool cancelled(){return !internalAtomicsReady() || (asyncExecuting && cancelRequested.load(std::memory_order_acquire));}
 
 constexpr int64_t ScanTimeoutUs=INT64_C(10000000);
 constexpr int64_t JoinTimeoutUs=INT64_C(30000000);
@@ -131,16 +132,26 @@ inline bool restoreLogs(){
 // station interface or app callback after leave; keep its one-time init flag.
 static bool netifInitialized=false;
 static uint32_t nextGeneration=0;
-static std::atomic<uint32_t> generation{0},eventOperation{None},scanEvent{0},joinFailed{0};
+static RISC_NATIVE_ATOMIC_DRAM std::atomic<uint32_t> generation{0},eventOperation{None},scanEvent{0},joinFailed{0};
 #if RISC_STAGE_LOGS
-static std::atomic<uint32_t> disconnectReason{0},scanStatus{0};
+static RISC_NATIVE_ATOMIC_DRAM std::atomic<uint32_t> disconnectReason{0},scanStatus{0};
 #endif
+inline bool internalAtomicsReady(){
+  using NativeInternalAtomics::internal;
+  return internal(cancelRequested) && internal(generation) && internal(eventOperation) &&
+    internal(scanEvent) && internal(joinFailed)
+#if RISC_STAGE_LOGS
+    && internal(disconnectReason) && internal(scanStatus)
+#endif
+    ;
+}
 inline void wipe(void* data,size_t count){auto* p=static_cast<volatile uint8_t*>(data);while(count--)*p++=0;}
 inline size_t boundedLength(const char* value,size_t maximum){
   if(!value)return maximum+1;
   size_t n=0;while(n<=maximum && value[n])++n;return n;
 }
 inline void event(void* argument,esp_event_base_t base,int32_t id,void* data){
+  if(!internalAtomicsReady())return;
   const uint32_t token=uint32_t(reinterpret_cast<uintptr_t>(argument));
   if(cancelRequested.load(std::memory_order_acquire) || !token || token!=generation.load(std::memory_order_acquire) || base!=WIFI_EVENT)return;
   const auto operation=eventOperation.load(std::memory_order_acquire);
@@ -160,9 +171,10 @@ inline void event(void* argument,esp_event_base_t base,int32_t id,void* data){
   }
   // Never reconnect, copy credentials, call SDK functions or touch s here.
 }
-inline bool idle(){return !s.loop && !s.wifi && !s.netif && !s.handler && !s.closing && !s.savedLogCount && !s.result;}
+inline bool idle(){return internalAtomicsReady() && !s.loop && !s.wifi && !s.netif && !s.handler && !s.closing && !s.savedLogCount && !s.result;}
 inline bool wifiAbsent(esp_err_t result){return result==ESP_OK || result==ESP_ERR_WIFI_NOT_INIT || result==ESP_ERR_WIFI_NOT_STARTED;}
 inline bool leave(){
+  if(!internalAtomicsReady())return false;
   const bool active=!idle();(void)active;
   if(active)RADIO_STAGE_LOG("radio wifi cleanup begin");
   // Revoke event authority before touching the SDK. A failed cleanup remains
@@ -320,7 +332,7 @@ inline bool accessPoint(const char* ssid,const char* password){
   return true;
 }
 inline bool state(uint8_t* status,int8_t* rssi){
-  if(!status || !rssi)return false;
+  if(!status || !rssi || !internalAtomicsReady())return false;
   *status=0;*rssi=0;
   if(s.closing)return false;
   if(s.operation==AccessPoint && s.wifi && s.startAttempted){*status=sdkCall(NetifUp,[&](){return esp_netif_is_netif_up(s.netif);})?2:1;if(*status==1&&esp_timer_get_time()>=s.joinDeadline){*status=0;return leave();}return true;}
@@ -391,7 +403,7 @@ inline bool scanStart(){
   return true;
 }
 inline bool scanPoll(garden_radio_scan_result_v1* result){
-  if(!result || result->struct_size<sizeof(*result) || s.closing)return false;
+  if(!internalAtomicsReady() || !result || result->struct_size<sizeof(*result) || s.closing)return false;
   if(s.operation!=Scan){*result={};result->struct_size=sizeof(*result);return true;}
   if(!s.result)return false;
   if(s.result->state==GARDEN_RADIO_SCAN_RUNNING){

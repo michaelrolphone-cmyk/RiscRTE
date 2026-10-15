@@ -10,6 +10,7 @@ idf_component_register(SRCS ${runtime_sources}
              esp_driver_ledc esp_driver_sdmmc esp_driver_sdspi esp_driver_spi
              esp_driver_uart esp_driver_usb_serial_jtag esp_hal_usb)
 set_target_properties(${COMPONENT_LIB} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+target_compile_options(${COMPONENT_LIB} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++17>")
 target_compile_definitions(${COMPONENT_LIB} PUBLIC RISC_NATIVE_ESP_IDF=1
     RISC_CONSOLE_USB_SERIAL_JTAG=1 RISC_RUNTIME_METADATA_PSRAM=1
     RISC_TARGET="esp32s3-native-idf61")
