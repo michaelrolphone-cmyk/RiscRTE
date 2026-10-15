@@ -4,8 +4,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include "../../../lib/elf_loader/include/private/esp_privileged_cohort.h"
 #if defined(ESP_PLATFORM) || defined(RISC_NATIVE_PROVIDER_ADMISSION_TEST)
 extern "C" bool esp_elf_privileged_selected_import_supported_with_diagnostics_v1(const char*, uint32_t);
+extern "C" bool esp_elf_privileged_selected_import_supported_with_diagnostics_v2(const char*, uint32_t);
 #endif
 
 namespace RuntimeProviders {
@@ -55,7 +57,7 @@ inline bool nativePolicyPath(const char* s) {
 inline bool nativeProviderPolicyValid(const NativeProviderPolicyV1& p) {
   if (!nativePolicyPath(p.relativeElfPath) || !RuntimePackages::safeId(p.driverId) ||
       !RuntimePackages::safeVersion(p.version) || !nativePolicyName(p.capability,96) ||
-      !p.api || p.osCpuAbi!=1 || p.diagnosticAbi>1 || !p.elfLength || p.elfLength>8u*1024u*1024u ||
+      !p.api || !esp_elf_privileged_os_cpu_abi_supported(p.osCpuAbi) || p.diagnosticAbi>1 || !p.elfLength || p.elfLength>8u*1024u*1024u ||
       !p.imports || p.importCount>128 || p.requirementCount>16 ||
       (p.requirementCount && !p.requirements)) return false;
   bool digest=false; for (uint8_t byte:p.sha256) digest=digest || byte;
@@ -69,7 +71,11 @@ inline bool nativeProviderPolicyValid(const NativeProviderPolicyV1& p) {
     hasDiagnostic=hasDiagnostic || !std::strcmp(p.imports[i],"printf") ||
       !std::strcmp(p.imports[i],"puts") || !std::strcmp(p.imports[i],"putchar");
 #if defined(ESP_PLATFORM) || defined(RISC_NATIVE_PROVIDER_ADMISSION_TEST)
+    #if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
+    if (!esp_elf_privileged_selected_import_supported_with_diagnostics_v2(p.imports[i], p.diagnosticAbi)) return false;
+#else
     if (!esp_elf_privileged_selected_import_supported_with_diagnostics_v1(p.imports[i], p.diagnosticAbi)) return false;
+#endif
 #endif
   }
   if(p.diagnosticAbi && !hasDiagnostic)return false;

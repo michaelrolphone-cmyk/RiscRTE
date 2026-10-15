@@ -14,6 +14,14 @@
 #include <string>
 #include <vector>
 
+#if RISC_NATIVE_ESP_IDF
+#define TEST_PRIVATE_ABI 2u
+#define esp_elf_privileged_selected_import_supported_with_diagnostics_v1 esp_elf_privileged_selected_import_supported_with_diagnostics_v2
+#define esp_elf_relocate_privileged_selected_diagnostics_v1 esp_elf_relocate_privileged_selected_diagnostics_v2
+#else
+#define TEST_PRIVATE_ABI 1u
+#endif
+
 using namespace RuntimeProviders;
 using RuntimePackages::DeviceProviderExecutorV2;
 namespace {
@@ -126,17 +134,24 @@ void registerOwned(GraphV2& graph,const std::vector<uint8_t>& fixture,unsigned s
   NativeProviderRequirementV1 approvedRequirements[]={{requiredCap,1}};
   NativeProviderPolicyV1 policy;
   policy.relativeElfPath=path;policy.driverId=id;policy.version=version;
-  policy.capability=capability;policy.api=1;policy.osCpuAbi=1;policy.elfLength=bytes.size();
+  policy.capability=capability;policy.api=1;policy.osCpuAbi=TEST_PRIVATE_ABI;policy.elfLength=bytes.size();
   policy.imports=importNames;policy.importCount=2;
   policy.requirements=slot?approvedRequirements:nullptr;policy.requirementCount=slot?1:0;
   unsigned n=0;assert(EVP_Digest(bytes.data(),bytes.size(),policy.sha256,&n,EVP_sha256(),nullptr)==1 && n==32);
   SpecV2 spec{id,nullptr,capability,1,slot?requirements:nullptr,slot?1u:0u};
-  spec.requiredOsCpuAbi=1;spec.verifiedElfBytes=bytes.data();spec.verifiedElfLength=bytes.size();
+  spec.requiredOsCpuAbi=TEST_PRIVATE_ABI;spec.verifiedElfBytes=bytes.data();spec.verifiedElfLength=bytes.size();
   spec.declaredImports=importNames;spec.declaredImportCount=2;
   std::memcpy(spec.contentSha256,policy.sha256,32);spec.lease={&providers[slot],begin,revoke};
   callerInputs.insert(bytes.data());callerInputs.insert(importNames);
   callerInputs.insert(requirements);callerInputs.insert(&policy);
   assert(!graph.addVerified(spec)); // Matching public arguments do not authorize.
+  const auto priorAllocations=allocations.size();
+  auto wrongPolicy=policy; wrongPolicy.osCpuAbi=3-TEST_PRIVATE_ABI;
+  assert(!DeviceProviderExecutorV2::registerNativePolicy(graph,spec,wrongPolicy));
+  auto wrongSpec=spec; wrongSpec.requiredOsCpuAbi=3-TEST_PRIVATE_ABI;
+  assert(!DeviceProviderExecutorV2::registerNativePolicy(graph,wrongSpec,policy));
+  assert(!DeviceProviderExecutorV2::registerNativePolicy(graph,wrongSpec,wrongPolicy));
+  assert(allocations.size()==priorAllocations && mapped.empty());
   assert(DeviceProviderExecutorV2::registerNativePolicy(graph,spec,policy));
   assert(graph.hasProvider(ids[slot],caps[slot],1) && mapped.empty());
   std::memset(bytes.data(),0xa5,bytes.size());

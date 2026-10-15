@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#define RISC_PRIVILEGED_OS_CPU_ABI_V1 1u
+#include "esp_privileged_cohort.h"
 #define RISC_PROVIDER_DIAGNOSTIC_ABI_V1 1u
 
 /* No runtime/task authority is granted by this availability query. */
@@ -39,6 +39,15 @@ bool esp_elf_privileged_os_cpu_scope_owned_v1(void);
 /* Only the owning task can resolve names; other tasks always get zero. */
 uintptr_t esp_elf_privileged_os_cpu_lookup_v1(const char *symbol);
 size_t esp_elf_privileged_os_cpu_symbol_count_v1(void);
+/* ABI 2 has no whole-inventory admission entry. Exact selection is mandatory. */
+bool esp_elf_privileged_os_cpu_begin_selected_diagnostics_v2(
+    const char *const *imports, size_t count, uint32_t diagnostic_abi);
+uintptr_t esp_elf_privileged_os_cpu_lookup_v2(const char *symbol);
+size_t esp_elf_privileged_os_cpu_symbol_count_v2(void);
+/* Resolver-internal dispatch. The v1-named ownership/one-shot hooks below
+ * version the scope mechanism, not its inventory; they guard either cohort.
+ * Explicit lookup_v1/lookup_v2 never resolve the other inventory. */
+uintptr_t esp_elf_privileged_os_cpu_lookup_current(const char *symbol);
 
 /* One-shot module-specific authorization, private to trusted ELF admission.
  * After successful esp_elf_init and BEFORE calling esp_elf_relocate, authorize

@@ -7,7 +7,12 @@
 #include "ports/esp32s3/SleepDiagnostics.h"
 #include "private/esp_privileged_os_cpu.h"
 #include "private/elf_platform.h"
+#if RISC_NATIVE_ESP_IDF
+#include "provider_diagnostic_native_shim/Fixture.h"
+#include "ports/esp32s3/NativePlatform.h"
+#else
 #include <Arduino.h>
+#endif
 #ifdef TEST_CONTROLLER_POLICY_HEADER
 #include TEST_CONTROLLER_POLICY_HEADER
 #endif
@@ -20,9 +25,28 @@
 #include <set>
 #include <string>
 #include <vector>
+#if RISC_NATIVE_ESP_IDF
+#define TEST_PRIVATE_ABI 2u
+#define esp_elf_privileged_selected_import_supported_v1 esp_elf_privileged_selected_import_supported_v2
+#define esp_elf_privileged_selected_import_supported_with_diagnostics_v1 esp_elf_privileged_selected_import_supported_with_diagnostics_v2
+#define esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1 esp_elf_privileged_os_cpu_begin_selected_diagnostics_v2
+#define esp_elf_privileged_os_cpu_begin_selected_v1(i,n) esp_elf_privileged_os_cpu_begin_selected_diagnostics_v2(i,n,0)
+#define esp_elf_relocate_privileged_selected_diagnostics_v1 esp_elf_relocate_privileged_selected_diagnostics_v2
+#define esp_elf_relocate_privileged_selected_v1(e,b,n,i,c) esp_elf_relocate_privileged_selected_diagnostics_v2(e,b,n,i,c,0)
+#else
+#define TEST_PRIVATE_ABI 1u
+#endif
+
 using namespace RuntimeProviders;
 using RuntimePackages::DeviceProviderExecutorV2;
 namespace {
+auto& testConsole(){
+#if RISC_NATIVE_ESP_IDF
+ return ProviderDiagnosticTest::console;
+#else
+ return Serial;
+#endif
+}
 std::set<void*> allocations;
 unsigned relocated=0,starts=0,stops=0,observed=0,drains=0;
 std::string last;
@@ -58,7 +82,7 @@ std::vector<uint8_t> read(const char* path){
 }
 NativeProviderPolicyV1 policy(const std::vector<uint8_t>& bytes){
  NativeProviderPolicyV1 p;p.relativeElfPath="diagnostics.elf";p.driverId="fixture-diagnostic";p.version="1.0.0";
- p.capability="cap.diagnostic";p.api=p.osCpuAbi=p.diagnosticAbi=1;p.elfLength=bytes.size();p.imports=fixtureImports;p.importCount=5;
+ p.capability="cap.diagnostic";p.api=p.diagnosticAbi=1;p.osCpuAbi=TEST_PRIVATE_ABI;p.elfLength=bytes.size();p.imports=fixtureImports;p.importCount=5;
  assert(nativeProviderDigest(bytes.data(),bytes.size(),p.sha256));return p;
 }
 void scopes(){
@@ -67,9 +91,13 @@ void scopes(){
   assert(esp_elf_privileged_selected_import_supported_with_diagnostics_v1(name,1));
   assert(!esp_elf_privileged_selected_import_supported_with_diagnostics_v1(name,0));
   assert(!esp_elf_privileged_selected_import_supported_with_diagnostics_v1(name,2));}
+#if RISC_NATIVE_ESP_IDF
+ assert(!esp_elf_privileged_os_cpu_begin_v1());
+#else
  assert(esp_elf_privileged_os_cpu_begin_v1());
  for(const char* name:diagnostics)assert(!elf_find_sym(name));
  assert(esp_elf_privileged_os_cpu_end_v1());
+#endif
  assert(!esp_elf_privileged_os_cpu_begin_selected_v1(diagnostics,3));
  assert(!esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(diagnostics,3,2));
  assert(esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(diagnostics,3,1));
@@ -91,7 +119,7 @@ void compose(std::vector<uint8_t>& bytes){
  auto invalid=p;invalid.diagnosticAbi=0;assert(!nativeProviderPolicyValid(invalid));invalid.diagnosticAbi=2;assert(!nativeProviderPolicyValid(invalid));
  auto* snapshot=NativeProviderPolicySnapshotV1::capture({&p,1});assert(snapshot && snapshot->entries[0].diagnosticAbi==1);
  p.diagnosticAbi=0;assert(snapshot->entries[0].diagnosticAbi==1);p.diagnosticAbi=1;NativeProviderPolicySnapshotV1::destroy(snapshot);
- SpecV2 spec{p.driverId,nullptr,p.capability,1,nullptr,0};spec.requiredOsCpuAbi=1;
+ SpecV2 spec{p.driverId,nullptr,p.capability,1,nullptr,0};spec.requiredOsCpuAbi=TEST_PRIVATE_ABI;
  spec.verifiedElfBytes=bytes.data();spec.verifiedElfLength=bytes.size();spec.declaredImports=fixtureImports;spec.declaredImportCount=5;
  std::memcpy(spec.contentSha256,p.sha256,32);
  {GraphV2 graph;assert(!graph.addVerified(spec));assert(!DeviceProviderExecutorV2::registerNativePolicy(graph,spec,invalid));
@@ -106,10 +134,29 @@ void compose(std::vector<uint8_t>& bytes){
  failArch=inject=true;assert(esp_elf_relocate_privileged_selected_diagnostics_v1(&module,bytes.data(),bytes.size(),fixtureImports,5,1)==-ENOSYS);
  failArch=inject=false;assert(allocations.empty() && !esp_elf_privileged_os_cpu_scope_owned_v1());
 }
+void sinkTransport(){
+ const unsigned beforeObserved=observed,beforeDrains=drains;
+ task=reinterpret_cast<void*>(2);
+ assert(risc_provider_diagnostic_puts("wrong owner")==-1);
+ task=reinterpret_cast<void*>(1);diagnosticIsr=true;
+ assert(risc_provider_diagnostic_puts("interrupt")==-1);diagnosticIsr=false;
+ assert(observed==beforeObserved && drains==beforeDrains && testConsole().output.empty());
+ testConsole().connected=true;testConsole().space=128;
+ assert(risc_provider_diagnostic_puts("host sink")==9);
+ assert(last=="host sink" && testConsole().output=="host sink\n" && testConsole().writes==1);
+ assert(observed==beforeObserved+1 && drains==beforeDrains+1);
+ testConsole().connected=false;testConsole().space=0;
+}
 void controller(const char* path){
  auto bytes=read(path);uint8_t digest[32];assert(nativeProviderDigest(bytes.data(),bytes.size(),digest));
  char digestText[65];for(size_t i=0;i<32;++i)std::snprintf(digestText+2*i,3,"%02x",digest[i]);
+#if RISC_NATIVE_ESP_IDF
+ const char* expectedVersion="0.1.25";const size_t expectedImports=44;
+ assert(!std::strcmp(digestText,"9de7e76d83bd984c76263b863de715cc5058d6fc21387fb728c5aa3a1441e294"));
+#else
+ const char* expectedVersion="0.1.24";const size_t expectedImports=47;
  assert(!std::strcmp(digestText,"d0864938e573ac933fefc106991cfb033ec9599cb09902a518c53ffcaf57926c"));
+#endif
  assert(esp_elf_validate_file(bytes.data(),bytes.size()));
  const auto* h=reinterpret_cast<const elf32_hdr_t*>(bytes.data());
  const auto* sections=reinterpret_cast<const elf32_shdr_t*>(bytes.data()+h->shoff);
@@ -118,24 +165,24 @@ void controller(const char* path){
   const auto* symbols=reinterpret_cast<const elf32_sym_t*>(bytes.data()+sh.offset);
   const char* strings=reinterpret_cast<const char*>(bytes.data()+sections[sh.link].offset);
   for(size_t n=0;n<sh.size/sizeof(*symbols);++n)if(symbols[n].shndx==SHN_UNDEF && symbols[n].name)names.emplace(strings+symbols[n].name);}
- std::vector<const char*> imports;for(const auto& name:names)imports.push_back(name.c_str());assert(imports.size()==47);
+ std::vector<const char*> imports;for(const auto& name:names)imports.push_back(name.c_str());assert(imports.size()==expectedImports);
  auto p=policy(bytes);p.imports=imports.data();p.importCount=imports.size();
- p.relativeElfPath="driver.elf";p.driverId="usb-controller-esp32s3";p.version="0.1.24";p.capability="usb.controller";
+ p.relativeElfPath="driver.elf";p.driverId="usb-controller-esp32s3";p.version=expectedVersion;p.capability="usb.controller";
  const NativeProviderRequirementV1 requirements[]={{"board.power.vbus",1},{"platform.usb.phy.resource",1}};
- p.requirements=requirements;p.requirementCount=2;
+ p.requirements=requirements;p.requirementCount=RISC_NATIVE_ESP_IDF?1:2;
 #ifdef TEST_CONTROLLER_POLICY_HEADER
  const auto selected=selectedNativeProviderPoliciesV1();assert(selected.count==1 && selected.entries);
  p=selected.entries[0];
  assert(!std::strcmp(p.relativeElfPath,"driver.elf") && !std::strcmp(p.driverId,"usb-controller-esp32s3") &&
-        !std::strcmp(p.version,"0.1.24") && !std::strcmp(p.capability,"usb.controller") && p.diagnosticAbi==1);
- assert(p.requirementCount==2 && !std::strcmp(p.requirements[0].capability,"board.power.vbus") &&
-        !std::strcmp(p.requirements[1].capability,"platform.usb.phy.resource"));
+        !std::strcmp(p.version,expectedVersion) && !std::strcmp(p.capability,"usb.controller") && p.diagnosticAbi==1);
+ assert(p.requirementCount==(RISC_NATIVE_ESP_IDF?1u:2u) && !std::strcmp(p.requirements[0].capability,"board.power.vbus"));
+ if(!RISC_NATIVE_ESP_IDF)assert(!std::strcmp(p.requirements[1].capability,"platform.usb.phy.resource"));
 #endif
  assert(nativeProviderImageValid(p,bytes.data(),bytes.size()));p.diagnosticAbi=0;assert(!nativeProviderImageValid(p,bytes.data(),bytes.size()));
  esp_elf_t module{};p.diagnosticAbi=1;currentImports=p.imports;currentImportCount=p.importCount;activeBytes=bytes.data();inject=true;
  assert(!esp_elf_relocate_privileged_selected_diagnostics_v1(&module,bytes.data(),bytes.size(),p.imports,p.importCount,p.diagnosticAbi));
  inject=false;esp_elf_deinit(&module);assert(allocations.empty());
- std::puts("Actual pinned controller: 47 exact imports resolve in explicit diagnostic ABI 1; ABI 0 rejects; Xtensa execution not tested");
+ std::printf("Actual pinned controller: %zu exact imports resolve in private ABI %u / diagnostic ABI 1; diagnostic ABI 0 rejects; Xtensa execution not tested\n",expectedImports,TEST_PRIVATE_ABI);
 }
 }
 extern "C" void* diagnostic_test_task(){return task;}
@@ -163,9 +210,14 @@ extern "C" int esp_elf_arch_relocate(esp_elf_t* elf,const elf32_rela_t*,const el
  return failArch?-ENOSYS:0;
 }
 int main(int argc,char** argv){
- assert(argc==2 || argc==3);RiscDiagnostics::start();Serial.space=0;
- scopes();auto bytes=read(argv[1]);compose(bytes);assert(observed==3 && drains==3 && Serial.output.empty());
+ assert(argc==2 || argc==3);
+#if RISC_NATIVE_ESP_IDF
+ RiscPlatform::console.begin(115200);
+#endif
+ RiscDiagnostics::start();testConsole().space=0;
+ scopes();auto bytes=read(argv[1]);compose(bytes);assert(observed==3 && drains==3 && testConsole().output.empty());
+ sinkTransport();
  if(argc==3)controller(argv[2]);
  assert(allocations.empty());
- std::puts("Diagnostic composition: real owned graph/module/loader/formatter/sink, exact ABI policy and isolated resolution PASS");
+ std::printf("Diagnostic composition private ABI %u: real owned graph/module/loader/formatter/sink, exact ABI policy and isolated resolution PASS\n",TEST_PRIVATE_ABI);
 }

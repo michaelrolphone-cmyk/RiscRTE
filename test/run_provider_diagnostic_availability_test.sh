@@ -10,7 +10,7 @@ sys.path.insert(0,str(repo/'test'))
 from make_scoped_provider_elf import image
 (build/'diagnostics.elf').write_bytes(image(['printf','putchar','puts']))
 (build/'ordinary.elf').write_bytes(image(['memcpy']))
-names=re.findall(r'^RISC_OS_CPU_SYMBOL\((\w+)\)',(repo/'lib/elf_loader/include/private/privileged_os_cpu_symbols_v1.def').read_text(),re.M)
+names=sorted(set(re.findall(r'^RISC_OS_CPU_SYMBOL\((\w+)\)', ''.join(p.read_text() for p in (repo/'lib/elf_loader/include/private').glob('privileged_os_cpu_symbols_v*.def')), re.M)))
 real={'abort','__stack_chk_fail','xTaskGetCurrentTaskHandle','xTaskGetTickCount','vTaskDelay'}
 (build/'inventory.c').write_text(''.join('const unsigned char test_native_'+n+'[] __asm__("'+n+'") = {0};\n' for n in names if n not in real))
 PY
@@ -25,6 +25,8 @@ flags=(-std=c11 -D_GNU_SOURCE -O1 -Wall -Wextra -Werror
 if [[ "${SANITIZE:-0}" == 1 ]];then
   flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -fno-pie -no-pie -g)
 fi
+for cohort in ${PRIVATE_ABI_COHORTS:-0 1};do
+flags+=(-URISC_NATIVE_ESP_IDF -DRISC_NATIVE_ESP_IDF="$cohort")
 for source in esp_elf esp_elf_symbol esp_elf_validate esp_privileged_elf esp_privileged_os_cpu esp_privileged_imports esp_privileged_manifest_imports;do
   "${CC:-cc}" "${flags[@]}" -c "$repo/lib/elf_loader/src/$source.c" -o "$build/$source.o"
 done
@@ -49,4 +51,5 @@ for profile in enabled disabled marker_zero query_zero marker_unknown query_unkn
     "$repo/test/provider_diagnostic_availability_test.c" "$build"/*.o -o "$build/test"
   "$build/test" "$build/diagnostics.elf" "$build/ordinary.elf"
   echo "provider diagnostic real-loader availability=$profile PASS"
+done
 done

@@ -8,6 +8,9 @@
 #include "freertos/task.h"
 #include "private/esp_privileged_os_cpu.h"
 #include "private/esp_privileged_elf.h"
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(ESP_PLATFORM)
+#include "private/esp_privileged_cohort_target.h"
+#endif
 
 /* Optional native diagnostics never become global libc hooks. Availability
  * requires all three substitutions and the exact linked diagnostic ABI. */
@@ -35,6 +38,13 @@ bool esp_elf_privileged_diagnostic_abi_supported_v1(uint32_t abi)
 #include "private/privileged_os_cpu_symbols_v1.def"
 #undef RISC_OS_CPU_SYMBOL
 
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
+#define RISC_OS_CPU_SYMBOL(name) \
+    extern const unsigned char risc_os_cpu_link_##name[] __asm__(#name);
+#include "private/privileged_os_cpu_symbols_v2.def"
+#undef RISC_OS_CPU_SYMBOL
+#endif
+
 typedef struct {
     const char *name;
     const void *address;
@@ -45,6 +55,14 @@ static const risc_os_cpu_symbol_v1 s_privileged_symbols_v1[] = {
 #include "private/privileged_os_cpu_symbols_v1.def"
 #undef RISC_OS_CPU_SYMBOL
 };
+
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
+static const risc_os_cpu_symbol_v1 s_privileged_symbols_v2[] = {
+#define RISC_OS_CPU_SYMBOL(name) { #name, risc_os_cpu_link_##name },
+#include "private/privileged_os_cpu_symbols_v2.def"
+#undef RISC_OS_CPU_SYMBOL
+};
+#endif
 
 /* A private task-owned non-reentrant relocation scope. The module pointer is
  * a one-shot authorization: the normal esp_elf_relocate entry validates it
@@ -59,9 +77,11 @@ static bool s_relocation_consumed = false;
 static const char *const *s_selected_imports = NULL;
 static size_t s_selected_count = 0;
 static uint32_t s_diagnostic_abi = 0;
+static uint32_t s_os_cpu_abi = 0;
 
-static bool begin_scope(const char *const *imports, size_t count, uint32_t diagnostic_abi)
+static bool begin_scope(const char *const *imports, size_t count, uint32_t diagnostic_abi, uint32_t abi)
 {
+    if (!esp_elf_privileged_os_cpu_abi_supported(abi)) return false;
     TaskHandle_t caller = xTaskGetCurrentTaskHandle();
     if (caller == NULL) return false;
     bool acquired = false;
@@ -73,6 +93,7 @@ static bool begin_scope(const char *const *imports, size_t count, uint32_t diagn
         s_selected_imports = imports;
         s_selected_count = count;
         s_diagnostic_abi = diagnostic_abi;
+        s_os_cpu_abi = abi;
         s_scope_owner = caller;
         acquired = true;
     }
@@ -82,7 +103,7 @@ static bool begin_scope(const char *const *imports, size_t count, uint32_t diagn
 
 bool esp_elf_privileged_os_cpu_begin_v1(void)
 {
-    return begin_scope(NULL, 0, 0);
+    return begin_scope(NULL, 0, 0, 1);
 }
 
 bool esp_elf_privileged_os_cpu_begin_selected_v1(
@@ -91,19 +112,27 @@ bool esp_elf_privileged_os_cpu_begin_selected_v1(
     return esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(imports, count, 0);
 }
 
-bool esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(
-    const char *const *imports, size_t count, uint32_t diagnostic_abi)
+static bool begin_selected(
+    const char *const *imports, size_t count, uint32_t diagnostic_abi, uint32_t abi)
 {
-    if (!imports || count > 128 ||
+    if (!esp_elf_privileged_os_cpu_abi_supported(abi) || !imports || count > 128 ||
         !esp_elf_privileged_diagnostic_abi_supported_v1(diagnostic_abi)) return false;
     for (size_t i = 0; i < count; ++i) {
         if (!imports[i] || !imports[i][0] || strnlen(imports[i], 128) > 127 ||
             (i && strcmp(imports[i - 1], imports[i]) >= 0) ||
-            !esp_elf_privileged_selected_import_supported_with_diagnostics_v1(imports[i], diagnostic_abi))
+            !(abi == 1 ? esp_elf_privileged_selected_import_supported_with_diagnostics_v1(imports[i], diagnostic_abi) :
+              esp_elf_privileged_selected_import_supported_with_diagnostics_v2(imports[i], diagnostic_abi)))
             return false;
     }
-    return begin_scope(imports, count, diagnostic_abi);
+    return begin_scope(imports, count, diagnostic_abi, abi);
 }
+
+bool esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(
+    const char *const *imports, size_t count, uint32_t diagnostic_abi)
+{ return begin_selected(imports, count, diagnostic_abi, 1); }
+bool esp_elf_privileged_os_cpu_begin_selected_diagnostics_v2(
+    const char *const *imports, size_t count, uint32_t diagnostic_abi)
+{ return begin_selected(imports, count, diagnostic_abi, 2); }
 
 bool esp_elf_privileged_os_cpu_end_v1(void)
 {
@@ -116,6 +145,7 @@ bool esp_elf_privileged_os_cpu_end_v1(void)
         s_selected_imports = NULL;
         s_selected_count = 0;
         s_diagnostic_abi = 0;
+        s_os_cpu_abi = 0;
         s_scope_owner = NULL;
         released = true;
     }
@@ -210,7 +240,7 @@ bool esp_elf_privileged_os_cpu_relocation_leave_v1(const void *module)
     return released;
 }
 
-uintptr_t esp_elf_privileged_os_cpu_lookup_v1(const char *symbol)
+uintptr_t esp_elf_privileged_os_cpu_lookup_current(const char *symbol)
 {
     if (symbol == NULL || symbol[0] == '\0' ||
         !esp_elf_privileged_os_cpu_import_allowed_v1(symbol)) return 0;
@@ -221,6 +251,15 @@ uintptr_t esp_elf_privileged_os_cpu_lookup_v1(const char *symbol)
         if (strcmp(symbol, "puts") == 0) return (uintptr_t)&risc_provider_diagnostic_puts;
         if (strcmp(symbol, "putchar") == 0) return (uintptr_t)&risc_provider_diagnostic_putchar;
     }
+    #if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
+    if (s_os_cpu_abi == 2) {
+        for (size_t i = 0; i < sizeof(s_privileged_symbols_v2)/sizeof(*s_privileged_symbols_v2); ++i)
+            if (!strcmp(symbol, s_privileged_symbols_v2[i].name))
+                return (uintptr_t)s_privileged_symbols_v2[i].address;
+        return 0;
+    }
+#endif
+    if (s_os_cpu_abi != 1) return 0;
     for (size_t i = 0; i < sizeof(s_privileged_symbols_v1) /
                            sizeof(s_privileged_symbols_v1[0]); ++i) {
         if (strcmp(symbol, s_privileged_symbols_v1[i].name) == 0)
@@ -232,4 +271,23 @@ uintptr_t esp_elf_privileged_os_cpu_lookup_v1(const char *symbol)
 size_t esp_elf_privileged_os_cpu_symbol_count_v1(void)
 {
     return sizeof(s_privileged_symbols_v1) / sizeof(s_privileged_symbols_v1[0]);
+}
+
+uintptr_t esp_elf_privileged_os_cpu_lookup_v1(const char *symbol)
+{
+    if (!esp_elf_privileged_os_cpu_scope_owned_v1() || s_os_cpu_abi != 1) return 0;
+    return esp_elf_privileged_os_cpu_lookup_current(symbol);
+}
+uintptr_t esp_elf_privileged_os_cpu_lookup_v2(const char *symbol)
+{
+    if (!esp_elf_privileged_os_cpu_scope_owned_v1() || s_os_cpu_abi != 2) return 0;
+    return esp_elf_privileged_os_cpu_lookup_current(symbol);
+}
+size_t esp_elf_privileged_os_cpu_symbol_count_v2(void)
+{
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
+    return sizeof(s_privileged_symbols_v2)/sizeof(*s_privileged_symbols_v2);
+#else
+    return 0;
+#endif
 }

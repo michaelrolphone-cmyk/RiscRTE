@@ -43,7 +43,12 @@ static const char* unavailableImport=nullptr;
 #ifdef RISC_NATIVE_BANK_PROVIDER_TEST
 // Resolver availability is the native I/O boundary in this adapter harness.
 // The separate scoped-loader suite exercises the real target resolver table.
-extern "C" bool esp_elf_privileged_selected_import_supported_with_diagnostics_v1(const char* name,uint32_t diagnosticAbi){
+#if RISC_NATIVE_ESP_IDF
+extern "C" bool esp_elf_privileged_selected_import_supported_with_diagnostics_v2(
+#else
+extern "C" bool esp_elf_privileged_selected_import_supported_with_diagnostics_v1(
+#endif
+const char* name,uint32_t diagnosticAbi){
   if(diagnosticAbi>1)return false;
   if(name && (!strcmp(name,"printf") || !strcmp(name,"puts") || !strcmp(name,"putchar")))
     return diagnosticAbi==1 && (!unavailableImport || strcmp(name,unavailableImport));

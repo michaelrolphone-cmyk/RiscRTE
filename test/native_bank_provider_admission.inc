@@ -45,6 +45,11 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
  for(unsigned b=0;b<2;++b)for(unsigned r=0;r<2;++r)parts[b][r]=&table[b*2+r];
  assert(!admitElf(nativeElf.data(),nativeElf.size(),ElfRole::Driver));
  assert(admitElf(nativeElf.data(),nativeElf.size(),ElfRole::Driver,&policy));
+ auto wrongCohort=policy;wrongCohort.osCpuAbi=3-policy.osCpuAbi;
+ assert(!nativeProviderPolicyValid(wrongCohort));
+ assert(!admitElf(nativeElf.data(),nativeElf.size(),ElfRole::Driver,&wrongCohort));
+ wrongCohort.osCpuAbi=99;
+ assert(!admitElf(nativeElf.data(),nativeElf.size(),ElfRole::Driver,&wrongCohort));
  assert(!admitElf(nativeElf.data(),nativeElf.size(),ElfRole::Either,&policy));
  assert(!admitElf(nativeElf.data(),nativeElf.size(),ElfRole::Application,&policy));
  // Native authority never follows the bytes into an application role, even

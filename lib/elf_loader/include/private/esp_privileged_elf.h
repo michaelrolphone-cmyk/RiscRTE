@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "esp_elf.h"
+#include "esp_privileged_cohort.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,6 +51,14 @@ int esp_elf_relocate_privileged_selected_v1(esp_elf_t *module,
 
 /* Same exact policy path, with independent diagnostic ABI opt-in. */
 int esp_elf_relocate_privileged_selected_diagnostics_v1(esp_elf_t *module,
+    const uint8_t *verified_bytes, size_t verified_length,
+    const char *const *imports, size_t import_count, uint32_t diagnostic_abi);
+
+/* Separate native cohort: no widening of any v1 inventory or entry point. */
+bool esp_elf_privileged_selected_import_supported_v2(const char *symbol);
+bool esp_elf_privileged_selected_import_supported_with_diagnostics_v2(
+    const char *symbol, uint32_t diagnostic_abi);
+int esp_elf_relocate_privileged_selected_diagnostics_v2(esp_elf_t *module,
     const uint8_t *verified_bytes, size_t verified_length,
     const char *const *imports, size_t import_count, uint32_t diagnostic_abi);
 

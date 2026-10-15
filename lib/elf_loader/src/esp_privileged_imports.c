@@ -22,23 +22,41 @@ static const char *const s_privileged[] = {
 #undef RISC_OS_CPU_SYMBOL
 };
 
+static const char *const s_public_libc_v2[] = {
+#define RISC_PUBLIC_LIBC_COMPAT_SYMBOL(name) #name,
+#include "private/privileged_public_libc_compat_v2.def"
+#undef RISC_PUBLIC_LIBC_COMPAT_SYMBOL
+    "printf", "puts", "putchar" /* availability requires diagnostic ABI 1 */
+};
+static const char *const s_privileged_v2[] = {
+#define RISC_OS_CPU_SYMBOL(name) #name,
+#include "private/privileged_os_cpu_symbols_v2.def"
+#undef RISC_OS_CPU_SYMBOL
+};
+
 static bool within(size_t length, uint32_t start, uint32_t size)
 {
     return start <= length && size <= length - start;
 }
 
-static bool permitted(const char *name)
+static bool permitted(const char *name, uint32_t abi)
 {
-    for (size_t i = 0; i < sizeof(s_public_libc) / sizeof(s_public_libc[0]); ++i)
-        if (strcmp(name, s_public_libc[i]) == 0) return true;
-    for (size_t i = 0; i < sizeof(s_privileged) / sizeof(s_privileged[0]); ++i)
-        if (strcmp(name, s_privileged[i]) == 0) return true;
+    const char *const *libc = abi == 1 ? s_public_libc : s_public_libc_v2;
+    const size_t libc_count = abi == 1 ? sizeof(s_public_libc)/sizeof(*s_public_libc) :
+        sizeof(s_public_libc_v2)/sizeof(*s_public_libc_v2);
+    const char *const *priv = abi == 1 ? s_privileged : s_privileged_v2;
+    const size_t priv_count = abi == 1 ? sizeof(s_privileged)/sizeof(*s_privileged) :
+        sizeof(s_privileged_v2)/sizeof(*s_privileged_v2);
+    for (size_t i = 0; i < libc_count; ++i)
+        if (strcmp(name, libc[i]) == 0) return true;
+    for (size_t i = 0; i < priv_count; ++i)
+        if (strcmp(name, priv[i]) == 0) return true;
     return false;
 }
 
 static bool symbol_table_ok(const uint8_t *image, size_t length,
                             const elf32_shdr_t *sections, uint32_t section_count,
-                            const elf32_shdr_t *table)
+                            const elf32_shdr_t *table, uint32_t abi)
 {
     /* The relocator dereferences the symbol table named by each RELA section,
      * which may be .symtab (type 2), NOT just .dynsym (type 11). Validate both
@@ -66,12 +84,12 @@ static bool symbol_table_ok(const uint8_t *image, size_t length,
         const char *name = (const char *)image + names->offset + sym->name;
         const size_t remaining = names->size - sym->name;
         if (!name[0] || !memchr(name, 0, remaining < 1024 ? remaining : 1024) ||
-            !permitted(name)) return false;
+            !permitted(name, abi)) return false;
     }
     return true;
 }
 
-bool esp_elf_privileged_imports_valid_v1(const uint8_t *image, size_t length)
+static bool imports_valid(const uint8_t *image, size_t length, uint32_t abi)
 {
     /* Also bound every read here: a future caller must not be able to skip
      * structural validation and use this routine to read out of bounds. */
@@ -89,7 +107,7 @@ bool esp_elf_privileged_imports_valid_v1(const uint8_t *image, size_t length)
         const elf32_shdr_t *section = &sections[i];
         if (section->type == SHT_SYNSYM || section->type == SHT_SYMTAB) {
             if (section->type == SHT_SYNSYM && ++dynamic_tables != 1) return false;
-            if (!symbol_table_ok(image, length, sections, header->shnum, section))
+            if (!symbol_table_ok(image, length, sections, header->shnum, section, abi))
                 return false;
         } else if (section->type == SHT_RELA) {
             if (section->link >= header->shnum ||
@@ -112,3 +130,8 @@ bool esp_elf_privileged_imports_valid_v1(const uint8_t *image, size_t length)
     }
     return dynamic_tables == 1;
 }
+
+bool esp_elf_privileged_imports_valid_v1(const uint8_t *image, size_t length)
+{ return imports_valid(image, length, 1); }
+bool esp_elf_privileged_imports_valid_v2(const uint8_t *image, size_t length)
+{ return imports_valid(image, length, 2); }

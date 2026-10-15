@@ -305,7 +305,12 @@ bool ModuleV2::loadVerifiedBytes(const uint8_t* candidateBytes, size_t length,
     return false;
   }
   trace(expectedId, "elf-relocate-begin");
-  const int result = esp_elf_relocate_privileged_selected_diagnostics_v1(
+  const int result =
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
+      esp_elf_relocate_privileged_selected_diagnostics_v2(
+#else
+      esp_elf_relocate_privileged_selected_diagnostics_v1(
+#endif
       image, snapshot, length, ownedPolicy_->imports, ownedPolicy_->importCount,
       ownedPolicy_->diagnosticAbi);
   heap_caps_free(snapshot);

@@ -7,6 +7,7 @@ san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
 cc "${san[@]}" -std=c11 -I"$repo/test/native_bank_stubs" -I"$repo/lib/elf_loader/include" -c "$repo/lib/elf_loader/src/esp_elf_validate.c" -o "$build/validate.o"
 extra=(-DARDUINO_USB_CDC_ON_BOOT=1 -DRISC_NATIVE_DIAGNOSTIC_OBSERVER="${NATIVE_DIAGNOSTIC_OBSERVER:-0}");if [[ "${APP_DATA_TEST:-0}" == 1 ]];then extra+=(-DRISC_PAIRED_APP_DATA=1);fi
+if [[ "${NATIVE_PROVIDER_TEST_ABI:-1}" == 2 ]];then extra+=(-DRISC_NATIVE_ESP_IDF=1);fi
 native_objects=()
 if [[ -z "${BOOT_BASELINE_REF:-}" ]];then
  extra+=(-DRISC_NATIVE_PROVIDER_ADMISSION_TEST=1 -DRISC_NATIVE_BANK_PROVIDER_TEST=1 -Wl,--wrap=fread,--wrap=fgetc)

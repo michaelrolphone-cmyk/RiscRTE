@@ -12,6 +12,18 @@
 #include "private/esp_privileged_elf.h"
 #include "private/esp_privileged_os_cpu.h"
 
+#if RISC_NATIVE_ESP_IDF
+#define TEST_PRIVATE_ABI 2u
+#define esp_elf_privileged_selected_import_supported_v1 esp_elf_privileged_selected_import_supported_v2
+#define esp_elf_privileged_selected_import_supported_with_diagnostics_v1 esp_elf_privileged_selected_import_supported_with_diagnostics_v2
+#define esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1 esp_elf_privileged_os_cpu_begin_selected_diagnostics_v2
+#define esp_elf_privileged_os_cpu_begin_selected_v1(i,n) esp_elf_privileged_os_cpu_begin_selected_diagnostics_v2(i,n,0)
+#define esp_elf_relocate_privileged_selected_diagnostics_v1 esp_elf_relocate_privileged_selected_diagnostics_v2
+#define esp_elf_relocate_privileged_selected_v1(e,b,n,i,c) esp_elf_relocate_privileged_selected_diagnostics_v2(e,b,n,i,c,0)
+#else
+#define TEST_PRIVATE_ABI 1u
+#endif
+
 #ifndef TEST_MARKER_ABI
 #define TEST_MARKER_ABI 1
 #endif
@@ -88,9 +100,13 @@ static void scopes(void) {
         assert(esp_elf_privileged_selected_import_supported_with_diagnostics_v1(diagnostics[i], 1) == TEST_AVAILABLE);
         assert(!esp_elf_privileged_selected_import_supported_with_diagnostics_v1(diagnostics[i], 2));
     }
+#if RISC_NATIVE_ESP_IDF
+    assert(!esp_elf_privileged_os_cpu_begin_v1());
+#else
     assert(esp_elf_privileged_os_cpu_begin_v1());
     for (size_t i = 0; i < 3; ++i) assert(!elf_find_sym(diagnostics[i]));
     assert(esp_elf_privileged_os_cpu_end_v1());
+#endif
     assert(!esp_elf_privileged_os_cpu_begin_selected_v1(diagnostics, 3));
     assert(!esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(diagnostics, 3, 2));
     assert(esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(diagnostics, 3, 1) == TEST_AVAILABLE);

@@ -7,15 +7,16 @@
 #define MAX_MANIFEST_IMPORTS 128u
 #define MAX_IMPORT_NAME 127u
 
-bool esp_elf_privileged_manifest_imports_match_v1(
+static bool imports_match(
     const uint8_t *image, size_t length,
-    const char *const *declared, size_t declared_count)
+    const char *const *declared, size_t declared_count, uint32_t abi)
 {
     /* An empty import list is legitimate ONLY for an ELF with no undefined
      * symbols in either table. Keep a nonnull metadata pointer so a missing
      * declaration remains distinguishable from an intentional empty list. */
     if (!image || !declared || declared_count > MAX_MANIFEST_IMPORTS ||
-        !esp_elf_privileged_imports_valid_v1(image, length)) return false;
+        !(abi == 1 ? esp_elf_privileged_imports_valid_v1(image, length) :
+          esp_elf_privileged_imports_valid_v2(image, length))) return false;
 
     for (size_t i = 0; i < declared_count; ++i) {
         if (!declared[i]) return false;
@@ -53,3 +54,10 @@ bool esp_elf_privileged_manifest_imports_match_v1(
         if (!seen[i]) return false;
     return true;
 }
+
+bool esp_elf_privileged_manifest_imports_match_v1(const uint8_t *image, size_t length,
+    const char *const *declared, size_t count)
+{ return imports_match(image, length, declared, count, 1); }
+bool esp_elf_privileged_manifest_imports_match_v2(const uint8_t *image, size_t length,
+    const char *const *declared, size_t count)
+{ return imports_match(image, length, declared, count, 2); }

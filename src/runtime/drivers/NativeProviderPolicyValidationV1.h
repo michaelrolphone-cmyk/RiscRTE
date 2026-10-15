@@ -61,7 +61,11 @@ inline bool nativeProviderImageValid(const NativeProviderPolicyV1& p,const uint8
   return nativeProviderPolicyValid(p) && bytes && length==p.elfLength &&
       nativeProviderDigest(bytes,length,digest) && !std::memcmp(digest,p.sha256,32) &&
       esp_elf_validate_file(bytes,length) && nativeProviderEntryValid(bytes) &&
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
+      esp_elf_privileged_manifest_imports_match_v2(bytes,length,p.imports,p.importCount);
+#else
       esp_elf_privileged_manifest_imports_match_v1(bytes,length,p.imports,p.importCount);
+#endif
 #else
   (void)p;(void)bytes;(void)length;return false;
 #endif

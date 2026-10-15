@@ -76,7 +76,8 @@ struct OwnedNodeV2 final {
 
   bool snapshotPolicy(const NativeProviderPolicyV1& from) {
     // The trusted policy and candidate must still match AFTER candidate copy.
-    if (!nativePolicyMatchesModule(from,spec.verifiedElfBytes,spec.verifiedElfLength,
+    if (from.osCpuAbi != spec.requiredOsCpuAbi ||
+        !nativePolicyMatchesModule(from,spec.verifiedElfBytes,spec.verifiedElfLength,
           spec.contentSha256,spec.declaredImports,spec.declaredImportCount,
           spec.id,spec.provides,spec.api) || from.requirementCount!=spec.requirementCount)
       return false;

@@ -21,6 +21,14 @@ class GraphV2 {
   }
 };
 }
+#if RISC_NATIVE_ESP_IDF
+#define TEST_PRIVATE_ABI 2u
+#define esp_elf_privileged_selected_import_supported_with_diagnostics_v1 esp_elf_privileged_selected_import_supported_with_diagnostics_v2
+#define esp_elf_relocate_privileged_selected_diagnostics_v1 esp_elf_relocate_privileged_selected_diagnostics_v2
+#else
+#define TEST_PRIVATE_ABI 1u
+#endif
+
 using namespace RuntimeProviders;
 namespace {
 std::vector<std::string> events;
@@ -72,7 +80,7 @@ std::vector<uint8_t> read(const char* path){
 NativeProviderPolicyV1 policyFor(const std::vector<uint8_t>& bytes){
   NativeProviderPolicyV1 p;
   p.relativeElfPath="fixture-selected.elf";p.driverId="fixture-selected";
-  p.version="1.0.0";p.capability="cap.selected";p.api=1;p.osCpuAbi=1;
+  p.version="1.0.0";p.capability="cap.selected";p.api=1;p.osCpuAbi=TEST_PRIVATE_ABI;
   p.elfLength=bytes.size();p.imports=imports;p.importCount=2;
   unsigned n=0;assert(EVP_Digest(bytes.data(),bytes.size(),p.sha256,&n,EVP_sha256(),nullptr)==1 && n==32);
   return p;

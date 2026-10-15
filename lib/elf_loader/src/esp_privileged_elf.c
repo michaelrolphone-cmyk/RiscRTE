@@ -15,6 +15,7 @@ int esp_elf_relocate_privileged_verified_v1(esp_elf_t *module,
                                             const char *const *signed_imports,
                                             size_t signed_import_count)
 {
+    if (!esp_elf_privileged_os_cpu_abi_supported(1)) return -ENOTSUP;
     /* Zero imports is a real exact declaration. The matcher verifies that no
      * undefined symbol occurs in either ELF symbol table; nullptr still
      * rejects missing metadata, regardless of the declared count. */
@@ -52,20 +53,25 @@ int esp_elf_relocate_privileged_selected_v1(esp_elf_t *module,
         verified_bytes, verified_length, imports, import_count, 0);
 }
 
-int esp_elf_relocate_privileged_selected_diagnostics_v1(esp_elf_t *module,
+static int relocate_selected(esp_elf_t *module,
     const uint8_t *verified_bytes, size_t verified_length,
-    const char *const *imports, size_t import_count, uint32_t diagnostic_abi)
+    const char *const *imports, size_t import_count, uint32_t diagnostic_abi, uint32_t abi)
 {
+    if (!esp_elf_privileged_os_cpu_abi_supported(abi)) return -ENOTSUP;
     if (!module || !verified_bytes || !imports || import_count > 128 ||
         !esp_elf_validate_file(verified_bytes, verified_length) ||
-        !esp_elf_privileged_manifest_imports_match_v1(
-            verified_bytes, verified_length, imports, import_count))
+        !(abi == 1 ? esp_elf_privileged_manifest_imports_match_v1(
+            verified_bytes, verified_length, imports, import_count) :
+          esp_elf_privileged_manifest_imports_match_v2(
+            verified_bytes, verified_length, imports, import_count)))
         return -EINVAL;
     for (size_t i = 0; i < import_count; ++i)
-        if (!esp_elf_privileged_selected_import_supported_with_diagnostics_v1(imports[i], diagnostic_abi))
+        if (!(abi == 1 ? esp_elf_privileged_selected_import_supported_with_diagnostics_v1(imports[i], diagnostic_abi) :
+              esp_elf_privileged_selected_import_supported_with_diagnostics_v2(imports[i], diagnostic_abi)))
             return -EINVAL;
     if (!esp_elf_privileged_diagnostic_abi_supported_v1(diagnostic_abi)) return -EINVAL;
-    if (!esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(imports, import_count, diagnostic_abi))
+    if (!(abi == 1 ? esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(imports, import_count, diagnostic_abi) :
+          esp_elf_privileged_os_cpu_begin_selected_diagnostics_v2(imports, import_count, diagnostic_abi)))
         return -EBUSY;
     int result = esp_elf_init(module);
     if (result == 0) {
@@ -81,3 +87,12 @@ int esp_elf_relocate_privileged_selected_diagnostics_v1(esp_elf_t *module,
     }
     return result;
 }
+
+int esp_elf_relocate_privileged_selected_diagnostics_v1(esp_elf_t *module,
+    const uint8_t *bytes, size_t length, const char *const *imports,
+    size_t count, uint32_t diagnostic_abi)
+{ return relocate_selected(module, bytes, length, imports, count, diagnostic_abi, 1); }
+int esp_elf_relocate_privileged_selected_diagnostics_v2(esp_elf_t *module,
+    const uint8_t *bytes, size_t length, const char *const *imports,
+    size_t count, uint32_t diagnostic_abi)
+{ return relocate_selected(module, bytes, length, imports, count, diagnostic_abi, 2); }

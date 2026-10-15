@@ -110,7 +110,9 @@ bool GraphV2::addChecked(const SpecV2& spec, const NativeProviderPolicyV1* polic
                        spec.verifiedElfLength == 0 &&
                        spec.declaredImports == nullptr &&
                        spec.declaredImportCount == 0 && emptyDigest;
-  const bool privileged = spec.requiredOsCpuAbi == 1 &&
+  const bool privileged = esp_elf_privileged_os_cpu_abi_supported(spec.requiredOsCpuAbi) &&
+                          policy && policy->osCpuAbi == spec.requiredOsCpuAbi &&
+                          nativeProviderPolicyValid(*policy) &&
                           spec.verifiedElfBytes != nullptr &&
                           spec.verifiedElfLength > 0 &&
                           spec.verifiedElfLength <= 8u * 1024u * 1024u &&

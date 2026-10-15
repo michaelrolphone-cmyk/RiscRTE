@@ -13,8 +13,10 @@ if [[ "${SANITIZE:-0}" == 1 ]];then common+=(-fsanitize=address,undefined -fno-s
 for source in esp_elf_validate esp_privileged_imports esp_privileged_manifest_imports;do
   cc -std=c11 "${common[@]}" -c "$repo/lib/elf_loader/src/$source.c" -o "$build/$source.o"
 done
-c++ -std=c++17 -DESP_PLATFORM=1 "${common[@]}" \
+for cohort in 0 1;do
+c++ -std=c++17 -DESP_PLATFORM=1 -DRISC_NATIVE_ESP_IDF="$cohort" "${common[@]}" \
   "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/src/runtime/drivers/ProviderGraphV2.cpp" \
   "$repo/test/scoped_provider_graph_module_test.cpp" \
   "$build"/*.o -lcrypto -ldl -o "$build/test"
 "$build/test" "$build/selected.elf"
+done

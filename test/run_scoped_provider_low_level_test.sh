@@ -4,11 +4,19 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
 python3 "$repo/test/make_scoped_provider_elf.py" "$build"
+PYTHONPATH="$repo/test" python3 - "$build" <<'PY2'
+import pathlib,sys,struct
+from make_scoped_provider_elf import image
+out=pathlib.Path(sys.argv[1]);names=['_frxt_setup_switch','esp_log','esp_rom_delay_us','periph_rcc_enter','periph_rcc_exit','xTaskGetCoreID']
+(out/'native-six.elf').write_bytes(image(names))
+b=image(names,'xTaskGenericNotify');shoff=struct.unpack_from('<I',b,32)[0];offset=struct.unpack_from('<I',b,shoff+6*40+16)[0];b[offset+16+12]=0x20
+(out/'native-weak-hidden.elf').write_bytes(b)
+PY2
 # The inventory's code addresses are linked, not executed. Real test RTOS hooks
 # and libc symbols retain their native host definitions.
-python3 - "$repo/lib/elf_loader/include/private/privileged_os_cpu_symbols_v1.def" "$build/inventory.c" <<'PY'
+python3 - "$repo/lib/elf_loader/include/private" "$build/inventory.c" <<'PY'
 import pathlib,re,sys
-names=re.findall(r'^RISC_OS_CPU_SYMBOL\((\w+)\)',pathlib.Path(sys.argv[1]).read_text(),re.M)
+names=sorted(set(re.findall(r'^RISC_OS_CPU_SYMBOL\((\w+)\)', ''.join(p.read_text() for p in pathlib.Path(sys.argv[1]).glob('privileged_os_cpu_symbols_v*.def')), re.M)))
 real={'abort','__stack_chk_fail','xTaskGetCurrentTaskHandle','xTaskGetTickCount','vTaskDelay'}
 pathlib.Path(sys.argv[2]).write_text(''.join('const unsigned char test_native_'+n+'[] __asm__("'+n+'") = {0};\n' for n in names if n not in real))
 PY
@@ -21,9 +29,11 @@ flags=(-std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -Wno-pointer-to-int-cast
   -I"$repo/test/image_pressure_stubs" -I"$repo/test/support/native_registry/stubs"
   -I"$repo/lib/elf_loader/include")
 if [[ "${SANITIZE:-0}" == 1 ]];then flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer);fi
-cc "${flags[@]}" "$repo/test/scoped_provider_low_level_test.c" "$build/inventory.c" \
+for cohort in 0 1;do
+cc -DRISC_NATIVE_ESP_IDF="$cohort" "${flags[@]}" "$repo/test/scoped_provider_low_level_test.c" "$build/inventory.c" \
   "$repo/lib/elf_loader/src/esp_elf.c" "$repo/lib/elf_loader/src/esp_elf_symbol.c" \
   "$repo/lib/elf_loader/src/esp_elf_validate.c" "$repo/lib/elf_loader/src/esp_privileged_elf.c" \
   "$repo/lib/elf_loader/src/esp_privileged_os_cpu.c" "$repo/lib/elf_loader/src/esp_privileged_imports.c" \
   "$repo/lib/elf_loader/src/esp_privileged_manifest_imports.c" -o "$build/test"
 "$build/test" "$build"
+done
