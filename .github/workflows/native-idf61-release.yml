@@ -1,0 +1,48 @@
+name: Publish exact native ESP-IDF 6.1 evidence
+on:
+  push:
+    branches: [work/native-idf-6.1]
+    paths:
+      - docs/native-idf61/runtime-0.4.0-release.json
+      - scripts/publish_native_idf61_release.py
+      - test/test_publish_native_idf61_release.py
+      - .github/workflows/native-idf61-release.yml
+permissions:
+  contents: read
+concurrency:
+  group: runtime-native-idf61-release-0.4.0
+  cancel-in-progress: false
+jobs:
+  guard:
+    if: github.repository == 'michaelrolphone-cmyk/RiscRTE' && github.ref == 'refs/heads/work/native-idf-6.1' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      enabled: ${{ steps.manifest.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Run offline publication guard tests
+        run: python3 -B test/test_publish_native_idf61_release.py
+      - name: Validate exact release request
+        id: manifest
+        run: python3 -B scripts/publish_native_idf61_release.py check-manifest --github-output "$GITHUB_OUTPUT"
+  publish:
+    needs: guard
+    if: needs.guard.outputs.enabled == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify original CI ZIPs and publish a new redownload-verified release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/publish_native_idf61_release.py publish

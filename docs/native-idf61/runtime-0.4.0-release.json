@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "enabled": false,
+  "repository": "michaelrolphone-cmyk/RiscRTE",
+  "version": "0.4.0",
+  "tag": "firmware-v0.4.0",
+  "publication_branch": "work/native-idf-6.1",
+  "disabled_reason": "Await exact successful official four-product CI run, immutable source locks, original ZIP IDs/digests, and reviewed complete member inventories."
+}

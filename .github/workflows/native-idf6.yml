@@ -2,6 +2,14 @@ name: Native ESP-IDF 6.1 migration
 on:
   push:
     branches: [main, work/native-idf-6.1]
+    # Publication transports already qualified bytes. Do not rebuild firmware
+    # merely because its release manifest or transport-only guard changes.
+    paths-ignore:
+      - .github/workflows/native-idf61-release.yml
+      - scripts/publish_native_idf61_release.py
+      - test/test_publish_native_idf61_release.py
+      - docs/native-idf61/runtime-0.4.0-release.json
+      - docs/native-idf61/RELEASE_TRANSPORT.md
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,21 +26,21 @@ jobs:
             source: ''
           - product: twatch
             repository: RiscRTE-T-Watch-S3
-            source: c11f354ca5278174332e0a91cbc1ad7ef0514d00
+            source: 2a456525f9fbbfcbe1eb2a722a6c6469d3dbcf69
             candidate_version: 1.1.40
             target: esp32s3-16mb-appdata-expanded-iq
             factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-launch-brightness-1.1.39/TWatch-1.1.39-Launch-Brightness-factory-erases-data-0x0.bin
             factory_sha256: 0194fe7095edd50ee4e82b8077a9d154fddf5323143f3219f070bde952424370
           - product: waveshare
             repository: RiscRTE-Wavshare-S3-Touch-AMOLED-2.06
-            source: d51a2dac2e0912d91476d0ec997ac24894db0304
+            source: 610e51770a68174d8b7a0825fc08d186acb9ffdd
             candidate_version: 0.1.49
             target: esp32s3-16mb-waveshare-expanded
             factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-launch-brightness-0.1.48/Waveshare-0.1.48-Launch-Brightness-factory-erases-data-0x0.bin
             factory_sha256: 868933ecf2cb468b8d487333fbc6150641035015b58b62c884024fc8d8fc06da
           - product: x4
             repository: RiscRTE-XTEINK-X4-PRO
-            source: 2747c4d17a02359940122f190983eb0d11d80fdd
+            source: 60debd16526d13a3e5697d0dcb16fedb1e316908
             candidate_version: 0.1.122
             target: esp32s3-16mb-appdata-iq
             factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO/releases/download/test-t064-crash-0.1.121/X4-0.1.121-T064-Crash-Reports-factory-erases-data-0x0.bin
@@ -44,7 +52,7 @@ jobs:
       PRODUCT: ${{ matrix.product }}
       PRODUCT_REPOSITORY: ${{ matrix.repository }}
       PRODUCT_SOURCE: ${{ matrix.source }}
-      IMAGE_HELPER_SOURCE: c11f354ca5278174332e0a91cbc1ad7ef0514d00
+      IMAGE_HELPER_SOURCE: 2a456525f9fbbfcbe1eb2a722a6c6469d3dbcf69
       SYSTEM_SOURCE: 755cc5174a6deaee120d108cbffe67ae809e1e6f
       DRIVERS_SOURCE: 5890721073ebabd781d5d278e447c761947a5c58
       SDK_SOURCE: fff9895c82d744c7237be8847347bdd1b07c6643
