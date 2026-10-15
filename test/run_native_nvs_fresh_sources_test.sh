@@ -3,6 +3,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 build="$(mktemp -d)"; trap 'rm -rf "$build"' EXIT
 flags=(-std=c++17 -Wall -Wextra -Werror)
+if [[ "${NATIVE_IDF6:-0}" == 1 ]]; then flags+=(-DRISC_NATIVE_ESP_IDF=1); fi
 if [[ "${SANITIZE:-0}" == 1 ]]; then flags+=(-fsanitize=${SANITIZERS:-undefined} -fno-sanitize-recover=all -fno-omit-frame-pointer -fno-pie -no-pie); fi
 "${CXX:-c++}" "${flags[@]}" -I"$root" -I"$root/src" -I"$root/sdk/app" -I"$root/sdk/driver" -I"$root/sdk/hardware" -I"$root/test/native_nvs_shim" \
  "$root/test/native_nvs_fresh_sources_test.cpp" "$root/src/runtime/storage/AppDataFiles.cpp" \

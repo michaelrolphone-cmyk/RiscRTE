@@ -21,7 +21,7 @@ static std::set<Iterator*> iterators;
 extern "C" esp_err_t nvs_get_used_entry_count(nvs_handle_t h,size_t*n){
  ++F::nvsTotal;F::safe();if(F::hit("nvs-count"))return ESP_FAIL;assert(F::handles.count(h));*n=0;for(auto&r:F::nvs.at(F::handles.at(h).name))*n+=2+(r.second.size()+31)/32;return ESP_OK;
 }
-extern "C" nvs_iterator_t nvs_entry_find(const char*partition,const char*space,nvs_type_t type){
+static nvs_iterator_t fixture_entry_find(const char*partition,const char*space,nvs_type_t type){
  ++F::nvsTotal;F::safe();assert(!strcmp(partition,"nvs")&&type==NVS_TYPE_ANY);
  if(hideFind||F::hit("nvs-find"))return nullptr;
  auto found=F::nvs.find(space);if(found==F::nvs.end()||found->second.empty())return nullptr;
@@ -30,10 +30,10 @@ extern "C" nvs_iterator_t nvs_entry_find(const char*partition,const char*space,n
  if(duplicateInfo)i->keys.push_back(i->keys.front());
  return i;
 }
-extern "C" nvs_iterator_t nvs_entry_next(nvs_iterator_t it){
+static nvs_iterator_t fixture_entry_next(nvs_iterator_t it){
  ++F::nvsTotal;F::safe();auto*i=static_cast<Iterator*>(it);assert(iterators.count(i));if(++i->at<i->keys.size())return i;iterators.erase(i);delete i;return nullptr;
 }
-extern "C" void nvs_entry_info(nvs_iterator_t it,nvs_entry_info_t*out){
+static void fixture_entry_info(nvs_iterator_t it,nvs_entry_info_t*out){
  ++F::nvsTotal;F::safe();auto*i=static_cast<Iterator*>(it);assert(iterators.count(i));*out={};strcpy(out->namespace_name,i->space.c_str());strcpy(out->key,i->keys.at(i->at).c_str());out->type=NVS_TYPE_BLOB;
  if(corruptInfo==1)out->type=NVS_TYPE_U8;
  if(corruptInfo==2)memset(out->key,'a',16);
@@ -41,6 +41,7 @@ extern "C" void nvs_entry_info(nvs_iterator_t it,nvs_entry_info_t*out){
  if(corruptInfo==4)out->namespace_name[3]='9';
  if(corruptInfo==5)memset(out->namespace_name,'a',16);
 }
+#include "native_nvs_iterator_fixture.inc"
 extern "C" void nvs_release_iterator(nvs_iterator_t it){++F::nvsTotal;F::safe();auto*i=static_cast<Iterator*>(it);if(!i)return;assert(iterators.erase(i));delete i;}
 struct Hash {
  EVP_MD_CTX*ctx=EVP_MD_CTX_new();unsigned calls=0,failAt=0;bool changeAfterFinish=false,retainAfterFinish=false;
@@ -173,4 +174,21 @@ static void custody(){
  reset();seed();F::Fixture f;Hash h;h.retainAfterFinish=true;Sources s(6,Owner,LegacyOwner,30000,f.inspector,h.api(),hooks());A::Witness w;assert(s.inventory(&w)==C::Retained&&!s.exitSafe());F::lease=true;retained=false;
  puts("Legacy NVS: worker/global-lease/epoch/initialization gates, reentry, late callback lease loss and sticky Retained precedence suppress further I/O PASS");
 }
-int main(int argc,char**argv){assert(argc==2);F::rootPath=argv[1];setbuf(stdout,nullptr);maps();rejected();bindings();capacities();faults();truncations();custody();reset();printf("Collector host size=%zu; disconnected, no production selection or hardware qualification\n",sizeof(Sources));return 0;}
+#if RISC_NATIVE_ESP_IDF
+static void sdk6IteratorErrors(){
+ for(unsigned fault=1;fault<=7;++fault){
+  reset();seed();F::Fixture f;Hash h;Sources s(6,Owner,LegacyOwner,30000,f.inspector,h.api(),hooks());A::Witness w;
+  const auto before=F::nvs;sdk6IteratorFault=fault;assert(s.inventory(&w)==C::Io&&!w.namespaceId);
+  sdk6IteratorFault=0;assert(s.exitSafe()&&F::nvs==before&&F::handles.empty()&&iterators.empty());
+ }
+ reset();F::nvs["rte00000006"]={};F::Fixture f;Hash h;Sources s(6,Owner,LegacyOwner,30000,f.inspector,h.api(),hooks());A::Witness w;
+ sdk6IteratorFault=1;assert(s.inventory(&w)==C::Io&&!w.namespaceId);sdk6IteratorFault=0;
+ assert(s.exitSafe()&&F::handles.empty()&&iterators.empty());
+ puts("SDK6 legacy-source find/next/info errors, including empty namespace, never become EOF/absence PASS");
+}
+#endif
+int main(int argc,char**argv){assert(argc==2);F::rootPath=argv[1];setbuf(stdout,nullptr);
+#if RISC_NATIVE_ESP_IDF
+sdk6IteratorErrors();
+#endif
+maps();rejected();bindings();capacities();faults();truncations();custody();reset();printf("Collector host size=%zu; disconnected, no production selection or hardware qualification\n",sizeof(Sources));return 0;}

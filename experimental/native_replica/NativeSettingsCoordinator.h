@@ -1,6 +1,9 @@
 #pragma once
 #include "NativeAtomicKeyValue.h"
 #include "CheckedNativeReplicaStore.h"
+#if RISC_NATIVE_ESP_IDF
+#include "../../src/ports/esp32s3/NativeInternalAtomics.h"
+#endif
 namespace RiscExperimental {
 // Native-only, fixed-registration scheduler. This object, core/store and every
 // registered client remain constructed for the lifetime of the polling task.
@@ -13,7 +16,9 @@ class NativeSettingsCoordinator final {
  // Every accepted lease (including synchronous atomic reads) consumes one
  // nonzero generation. Saturation refuses further acquisition for this boot;
  // it never wraps or reuses a stale lease. Only lock-free 32-bit publication.
+ #if !RISC_NATIVE_ESP_IDF
  static_assert(ATOMIC_INT_LOCK_FREE==2,"Settings custody requires lock-free 32-bit atomics");
+ #endif
  struct Hooks {
   void*context;
   bool(*owner)(void*);bool(*worker)(void*);
@@ -38,18 +43,28 @@ class NativeSettingsCoordinator final {
  NativeSettingsCoordinator(const NativeSettingsCoordinator&)=delete;
  NativeSettingsCoordinator&operator=(const NativeSettingsCoordinator&)=delete;
  NativeAtomicKeyValue&endpoint(){return atomic_;} // trusted Runtime registration only
- risc_key_value_atomic_v1 api(){return atomic_.api();}
- uint32_t namespaceId()const{return core_.namespaceId();}
- bool binds(const C&core,const CheckedNativeReplicaStore&store)const{return &core_==&core && &store_==&store;}
- bool owner()const{return hooks_.owner&&hooks_.owner(hooks_.context);}
- bool workerWithLease()const{return hooks_.worker&&hooks_.worker(hooks_.context)&&holder_.load(std::memory_order_acquire)!=None&&!retained();}
+ risc_key_value_atomic_v1 api(){return internalAtomicsReady()?atomic_.api():risc_key_value_atomic_v1{};}
+ // Check immutable placement before any operation, including an idle probe.
+ // The embedded endpoint's mailbox and phase also stay in this DRAM span.
+ bool internalAtomicsReady()const{
+ #if RISC_NATIVE_ESP_IDF
+  using RiscCpu::NativeInternalAtomics::internal;
+  return internal(*this)&&internal(epoch_)&&internal(holder_)&&internal(active_)&&internal(retained_)&&internal(atomic_);
+ #else
+  return true;
+ #endif
+ }
+ uint32_t namespaceId()const{return internalAtomicsReady()?core_.namespaceId():0;}
+ bool binds(const C&core,const CheckedNativeReplicaStore&store)const{return internalAtomicsReady() && &core_==&core && &store_==&store;}
+ bool owner()const{return internalAtomicsReady()&&hooks_.owner&&hooks_.owner(hooks_.context);}
+ bool workerWithLease()const{return internalAtomicsReady()&&hooks_.worker&&hooks_.worker(hooks_.context)&&holder_.load(std::memory_order_acquire)!=None&&!retained();}
  // Worker-only, coherent accepted custody. The owner publishes generation
  // before holder. Seeing the new generation therefore cannot see the previous
  // holder, and seeing a newly published holder cannot pair with an old epoch.
  // Release clears holder before a subsequent generation can be published.
  bool workerCustody(Custody*out)const{
   if(out)*out={};
-  if(!out||!hooks_.worker||!hooks_.worker(hooks_.context)||retained())return false;
+  if(!internalAtomicsReady()||!out||!hooks_.worker||!hooks_.worker(hooks_.context)||retained())return false;
   const uint32_t first=epoch_.load(std::memory_order_acquire);
   const uint32_t holder=holder_.load(std::memory_order_acquire);
   const uint32_t last=epoch_.load(std::memory_order_acquire);
@@ -66,8 +81,8 @@ class NativeSettingsCoordinator final {
   if(!owner()||retained()||!atomic_.exitSafe()||holder_.load(std::memory_order_acquire)==Atomic)return false;
   atomicPaused_=paused;return true;
  }
- bool retained()const{return retained_.load(std::memory_order_acquire)||(hooks_.externalRetained&&hooks_.externalRetained(hooks_.context));}
- void retainFromWorker(){if(hooks_.worker&&hooks_.worker(hooks_.context))retain();}
+ bool retained()const{return !internalAtomicsReady()||retained_.load(std::memory_order_acquire)||(hooks_.externalRetained&&hooks_.externalRetained(hooks_.context));}
+ void retainFromWorker(){if(internalAtomicsReady()&&hooks_.worker&&hooks_.worker(hooks_.context))retain();}
  // Owner-only, before activate(), and no live operation. Table is copied and
  // frozen before the scheduler sees it. No unregister/replacement while polled.
  int registerNative(const NativeClient&client,uint32_t*out){
@@ -111,7 +126,7 @@ class NativeSettingsCoordinator final {
  // release, or mutate the namespace gate. A returning callback can perform no
  // further native I/O after publishing its terminal mailbox result.
  bool workerStep(){
-  if(!active_.load(std::memory_order_acquire)||!hooks_.worker||!hooks_.worker(hooks_.context)||retained())return false;
+  if(!internalAtomicsReady()||!active_.load(std::memory_order_acquire)||!hooks_.worker||!hooks_.worker(hooks_.context)||retained())return false;
   const uint32_t holder=holder_.load(std::memory_order_acquire);
   if(holder==Atomic)return atomic_.workerStep();
   if(holder&&holder<=count_)return clients_[holder-1].workerStep(clients_[holder-1].context);

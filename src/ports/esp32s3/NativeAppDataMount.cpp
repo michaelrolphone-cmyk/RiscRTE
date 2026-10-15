@@ -3,12 +3,22 @@
 #include "NativeRadioResources.h"
 #include "../../../experimental/native_replica/pinned_littlefs/littlefs_api.h"
 #include <esp_littlefs.h>
+#if RISC_NATIVE_ESP_IDF
+#include <esp_vfs_ops.h>
+#include "NativeInternalAtomics.h"
+#define RISC_MOUNT_ATOMIC_DRAM RISC_NATIVE_ATOMIC_DRAM
+#else
+#define RISC_MOUNT_ATOMIC_DRAM
+#endif
 #include <freertos/task.h>
 #include <atomic>
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
 
+#if RISC_NATIVE_ESP_IDF && !RISC_LITTLEFS_IDF6_MTIME32
+#error Native SDK6 AppData requires the qualified LittleFS mtime32 component
+#endif
 #if ESP_LITTLEFS_VERSION_MAJOR != 1 || ESP_LITTLEFS_VERSION_MINOR != 14 || ESP_LITTLEFS_VERSION_PATCH != 1
 #error Native AppData mount requires the qualified ESP LittleFS 1.14.1 source pin
 #endif
@@ -18,6 +28,10 @@
 extern "C" {
 esp_err_t __real_esp_vfs_register(const char*,const esp_vfs_t*,void*);
 esp_err_t __real_esp_vfs_unregister(const char*);
+#if RISC_NATIVE_ESP_IDF
+esp_err_t __real_esp_vfs_register_fs(const char*,const esp_vfs_fs_ops_t*,int,void*);
+esp_err_t __real_esp_vfs_unregister_fs(const char*);
+#endif
 esp_err_t __real_esp_partition_read(const esp_partition_t*,size_t,void*,size_t);
 esp_err_t __real_esp_partition_write(const esp_partition_t*,size_t,const void*,size_t);
 esp_err_t __real_esp_partition_erase_range(const esp_partition_t*,size_t,size_t);
@@ -26,8 +40,15 @@ esp_err_t __real_esp_littlefs_format_partition(const esp_partition_t*);
 }
 namespace RiscAppDataMount { namespace {
 constexpr char Mount[]="/appdata", Settings[]="/.native-settings", Scratch[]="/.risc-file-source", Packages[]="/.packages";
-std::atomic<bool> failed{false};
-std::atomic<void*> owner{nullptr};
+RISC_MOUNT_ATOMIC_DRAM std::atomic<bool> failed{false};
+RISC_MOUNT_ATOMIC_DRAM std::atomic<void*> owner{nullptr};
+bool atomicsInternal(){
+#if RISC_NATIVE_ESP_IDF
+ return RiscCpu::NativeInternalAtomics::internal(failed)&&RiscCpu::NativeInternalAtomics::internal(owner);
+#else
+ return true;
+#endif
+}
 const esp_partition_t* partition=nullptr;
 esp_littlefs_t* context=nullptr;
 esp_vfs_t original{}, fenced{};
@@ -178,16 +199,18 @@ bool partitionCall(const esp_partition_t*p){
 }
 esp_err_t observed(esp_err_t result,const esp_partition_t*p){if(partition&&protectedPartition(p)&&result!=ESP_OK)retain();return result;}
 }
-bool retained(){return failed.load(std::memory_order_acquire);}
-void retain(){failed.store(true,std::memory_order_release);}
+bool retained(){return !atomicsInternal()||failed.load(std::memory_order_acquire);}
+void retain(){if(atomicsInternal())failed.store(true,std::memory_order_release);}
 bool ready(){return usable&&!retained();}
-bool held(){return task()&&owner.load(std::memory_order_acquire)==task()&&!retained();}
+bool held(){return atomicsInternal()&&task()&&owner.load(std::memory_order_acquire)==task()&&!retained();}
 bool prepare(const esp_partition_t*p){
+ if(!atomicsInternal())return false;
  if(attempted)return false;attempted=true;
  if(!p||p->encrypted||p->address!=0x270000||p->size!=0x80000||strcmp(p->label,"appdata")||!task())return false;
  initializeDescriptors();partition=p;owner.store(task());++custodyGeneration;mounting=true;return true;
 }
 bool finish(){
+ if(!atomicsInternal())return false;
  if(!mounting||usable||owner.load()!=task())return false;
  mounting=false;
  if(!registered||retained()||!exact()){retain();return false;}
@@ -205,6 +228,7 @@ bool enter(Access value){
  ++custodyGeneration;access=value;return true;
 }
 void leave(){
+ if(!atomicsInternal())return;
  if(owner.load()!=task()){retain();return;}
  if(handles||inCall){retain();return;}
  if(!retained())owner.store(nullptr,std::memory_order_release);
@@ -233,6 +257,19 @@ extern "C" esp_err_t __wrap_esp_vfs_unregister(const char*p){
  if(p&&(!strcmp(p,"/")||!strcmp(p,Mount)||under(p,Mount)||under(Mount,p)))return ESP_ERR_INVALID_STATE;
  return __real_esp_vfs_unregister(p);
 }
+#if RISC_NATIVE_ESP_IDF
+extern "C" esp_err_t __wrap_esp_vfs_register_fs(const char*p,const esp_vfs_fs_ops_t*v,int flags,void*c){
+ // The qualified vendor still uses esp_vfs_register. The newer registration
+ // route must not install an unfenced alias/ancestor/descendant for appdata.
+ if(!p)return ESP_ERR_INVALID_ARG;
+ if(!strcmp(p,"/")||!strcmp(p,Mount)||under(p,Mount)||under(Mount,p))return ESP_ERR_INVALID_STATE;
+ return __real_esp_vfs_register_fs(p,v,flags,c);
+}
+extern "C" esp_err_t __wrap_esp_vfs_unregister_fs(const char*p){
+ if(p&&(!strcmp(p,"/")||!strcmp(p,Mount)||under(p,Mount)||under(Mount,p)))return ESP_ERR_INVALID_STATE;
+ return __real_esp_vfs_unregister_fs(p);
+}
+#endif
 extern "C" esp_err_t __wrap_esp_partition_read(const esp_partition_t*p,size_t o,void*b,size_t n){
  if(!partitionCall(p))return ESP_FAIL;return observed(__real_esp_partition_read(p,o,b,n),p);
 }

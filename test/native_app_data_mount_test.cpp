@@ -17,6 +17,39 @@
 #include <cstdlib>
 #include "runtime/storage/AppDataFiles.h"
 #include "runtime/storage/PackageFiles.h"
+#if RISC_NATIVE_ESP_IDF
+#include <esp_vfs_ops.h>
+extern "C" unsigned native_sdk6_vfs_calls(void);
+static const void* lastDramPointer=nullptr;
+static const void* deniedDramPointer=nullptr;
+extern "C" bool native_mount_dram(const void*p){lastDramPointer=p;return p!=deniedDramPointer;}
+static void sdk6MountPlacement(){
+ using namespace RiscAppDataMount;
+ assert(!retained());
+ // The last predicate call is the last byte of the owner atomic, rather
+ // than its base. Refusing it proves the entire atomic span is checked.
+ deniedDramPointer=lastDramPointer;assert(deniedDramPointer);
+ assert(retained()&&!held()&&!ready());
+ assert(!prepare(static_cast<const esp_partition_t*>(native_lfs_fixture_partition())));
+ assert(!finish()&&!enter(Access::Settings));
+ Identity id{};Custody custodyState{};assert(!identity(id)&&!custody(custodyState));
+ retain();leave();assert(retained());
+ deniedDramPointer=nullptr;
+ assert(!retained()); // Invalid placement did not latch or mutate controls.
+}
+static void sdk6VfsAliases(){
+ esp_vfs_fs_ops_t ops{};const auto before=native_sdk6_vfs_calls();
+ for(const char*p:{"", "/", "/appdata", "/appdata/.native-settings", "/appdata/ordinary"}){
+  assert(esp_vfs_register_fs(p,&ops,ESP_VFS_FLAG_CONTEXT_PTR,nullptr)==ESP_ERR_INVALID_STATE);
+  assert(esp_vfs_unregister_fs(p)==ESP_ERR_INVALID_STATE);
+ }
+ assert(esp_vfs_register_fs(nullptr,&ops,0,nullptr)==ESP_ERR_INVALID_ARG);
+ assert(native_sdk6_vfs_calls()==before);
+ assert(esp_vfs_register_fs("/appdata-other",&ops,0,nullptr)==ESP_OK);
+ assert(esp_vfs_unregister_fs("/appdata-other")==ESP_OK);
+ assert(native_sdk6_vfs_calls()==before+2);
+}
+#endif
 extern "C" void native_lfs_fixture_select_appdata(void);
 extern "C" void* xTaskGetCurrentTaskHandle(){static thread_local int task;return &task;}
 extern "C" int xPortInIsrContext(){return 0;}
@@ -237,7 +270,11 @@ static void packagePowerCuts(){
  printf("Internal package activation: %u real LittleFS program/erase before/after cuts; old or complete new manifest and image, old image preserved PASS\n",boundaries);
  assert(munmap(out,sizeof(Cut))==0);
 }
-int main(int argc,char**argv){assert(argc==2);assert(native_lfs_fixture_reset()==0);
+int main(int argc,char**argv){assert(argc==2);
+#if RISC_NATIVE_ESP_IDF
+ sdk6VfsAliases();sdk6MountPlacement();
+#endif
+assert(native_lfs_fixture_reset()==0);
  if(!strcmp(argv[1],"packages"))packagePowerCuts();else if(!strcmp(argv[1],"healthy"))healthy();else if(!strcmp(argv[1],"recovery"))recovery();else if(!strcmp(argv[1],"close-failure"))closeFailure();else if(!strcmp(argv[1],"lost-custody"))lostCustody();else if(!strcmp(argv[1],"native-backend"))nativeBackend();else fault();
  puts("PASS: native retained mount binding");
  // Process exit models cold power loss; deliberately no runtime teardown.

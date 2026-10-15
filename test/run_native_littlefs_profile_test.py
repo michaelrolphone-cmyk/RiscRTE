@@ -63,6 +63,16 @@ def obtain_inputs(destination: Path, esp_source: str | None, lfs_source: str | N
         output.write_bytes(payload)
         print(f"PIN {relative} {actual}", flush=True)
 
+    # Explicit native-port qualification uses the same immutable implementation
+    # with the checked time-width/ABI patch. Ordinary legacy tests stay unchanged.
+    if os.environ.get("RISC_LITTLEFS_NATIVE_IDF6") == "1":
+        import importlib.util
+        path = Path(__file__).resolve().parents[1] / "experimental/native_replica/pinned_littlefs/prepare_idf6.py"
+        spec = importlib.util.spec_from_file_location("idf6_littlefs", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.prepare(destination)
+
 
 def run(arguments: list[str]) -> None:
     print("+ " + shlex.join(arguments), flush=True)

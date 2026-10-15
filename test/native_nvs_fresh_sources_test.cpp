@@ -12,18 +12,19 @@ static const uint8_t Owner[16]={'R','i','s','c','R','T','E','/','N','a','t','i',
 extern "C" esp_err_t nvs_get_used_entry_count(nvs_handle_t h,size_t*n){
  ++F::nvsTotal;F::safe();if(F::hit("nvs-count"))return ESP_FAIL;assert(F::handles.count(h));*n=F::nvs[F::handles.at(h).name].size();return ESP_OK;
 }
-extern "C" nvs_iterator_t nvs_entry_find(const char*partition,const char*space,nvs_type_t type){
+static nvs_iterator_t fixture_entry_find(const char*partition,const char*space,nvs_type_t type){
  ++F::nvsTotal;F::safe();assert(!strcmp(partition,"nvs")&&type==NVS_TYPE_ANY);
  if(hideFind||F::hit("nvs-find"))return nullptr;
  auto found=F::nvs.find(space);if(found==F::nvs.end()||found->second.empty())return nullptr;
  auto*i=new Iterator;iterators.insert(i);i->space=space;for(auto&e:found->second)i->keys.push_back(e.first);return i;
 }
-extern "C" nvs_iterator_t nvs_entry_next(nvs_iterator_t it){
+static nvs_iterator_t fixture_entry_next(nvs_iterator_t it){
  ++F::nvsTotal;F::safe();auto*i=static_cast<Iterator*>(it);assert(iterators.count(i));if(++i->at<i->keys.size())return i;iterators.erase(i);delete i;return nullptr;
 }
-extern "C" void nvs_entry_info(nvs_iterator_t it,nvs_entry_info_t*out){
+static void fixture_entry_info(nvs_iterator_t it,nvs_entry_info_t*out){
  ++F::nvsTotal;F::safe();auto*i=static_cast<Iterator*>(it);assert(iterators.count(i));*out={};strcpy(out->namespace_name,i->space.c_str());strcpy(out->key,i->keys.at(i->at).c_str());out->type=corruptInfo?NVS_TYPE_U8:NVS_TYPE_BLOB;
 }
+#include "native_nvs_iterator_fixture.inc"
 extern "C" void nvs_release_iterator(nvs_iterator_t it){
  ++F::nvsTotal;F::safe();auto*i=static_cast<Iterator*>(it);if(!i)return;assert(iterators.erase(i));delete i;
 }
@@ -105,4 +106,20 @@ static void custody(){
  F::handles.clear();F::lease=true;retainWhileOpen=retained=false;reset();
  puts("NVS source collector: owner-worker/initialization refusal and late guard Retained precedence with zero NVS I/O PASS");
 }
-int main(int argc,char**argv){assert(argc==2);F::rootPath=argv[1];setbuf(stdout,nullptr);fresh();legacy();resumed();prefixes();faults();custody();reset();printf("Collector host size=%zu; no collector-owned heap allocation, no production selection, ESP artifact inspector remains unsupported\n",sizeof(Sources));}
+#if RISC_NATIVE_ESP_IDF
+static void sdk6IteratorErrors(){
+ for(unsigned fault=1;fault<=7;++fault){
+  receiptOnly();F::Fixture f;Sources s(6,Owner,f.inspector,hooks());auto api=s.sources();A::Witness w;C::FreshInitReceipt receipt;
+  auto backend=f.store.backend();assert(backend.readInitialization(backend.context,&receipt)==C::Ok);
+  const auto before=F::nvs;sdk6IteratorFault=fault;
+  assert(api.resumeFreshInventory(api.context,6,receipt,&w)==C::Io&&!w.namespaceId);
+  sdk6IteratorFault=0;assert(s.exitSafe()&&F::nvs==before&&F::handles.empty()&&iterators.empty());
+ }
+ puts("SDK6 fresh-source find/next/info errors reject evidence and release live iterators without writes PASS");
+}
+#endif
+int main(int argc,char**argv){assert(argc==2);F::rootPath=argv[1];setbuf(stdout,nullptr);
+#if RISC_NATIVE_ESP_IDF
+sdk6IteratorErrors();
+#endif
+fresh();legacy();resumed();prefixes();faults();custody();reset();printf("Collector host size=%zu; no collector-owned heap allocation, no production selection, ESP artifact inspector remains unsupported\n",sizeof(Sources));}

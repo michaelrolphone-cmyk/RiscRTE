@@ -23,13 +23,14 @@ class NativeAtomicKeyValue final {
  };
  NativeAtomicKeyValue(C&core,const Guard&guard):core_(core),guard_(guard),job_(execute,this,core.payloadAllocator()){}
  NativeAtomicKeyValue(const NativeAtomicKeyValue&)=delete;NativeAtomicKeyValue&operator=(const NativeAtomicKeyValue&)=delete;
- risc_key_value_atomic_v1 api(){return {1,sizeof(risc_key_value_atomic_v1),this,
-  [](void*p,risc_key_value_atomic_state_v1*s){return static_cast<NativeAtomicKeyValue*>(p)->state(s);},
-  [](void*p,uint64_t r,const char*k,void*b,uint32_t n,uint32_t*z){return static_cast<NativeAtomicKeyValue*>(p)->get(r,k,b,n,z);},
-  [](void*p,uint64_t r,const risc_key_value_atomic_mutation_v1*m,uint32_t n,const void*i,uint32_t z,uint64_t*t){return static_cast<NativeAtomicKeyValue*>(p)->submit(r,m,n,i,z,t);},
-  [](void*p,uint64_t t,risc_key_value_atomic_receipt_v1*r){return static_cast<NativeAtomicKeyValue*>(p)->collect(t,r);},
-  [](void*p,uint64_t t){return static_cast<NativeAtomicKeyValue*>(p)->cancel(t);}};}
+ risc_key_value_atomic_v1 api(){if(!controlInternal())return {};return {1,sizeof(risc_key_value_atomic_v1),this,
+  [](void*p,risc_key_value_atomic_state_v1*s)->int32_t{return static_cast<NativeAtomicKeyValue*>(p)->state(s);},
+  [](void*p,uint64_t r,const char*k,void*b,uint32_t n,uint32_t*z)->int32_t{return static_cast<NativeAtomicKeyValue*>(p)->get(r,k,b,n,z);},
+  [](void*p,uint64_t r,const risc_key_value_atomic_mutation_v1*m,uint32_t n,const void*i,uint32_t z,uint64_t*t)->int32_t{return static_cast<NativeAtomicKeyValue*>(p)->submit(r,m,n,i,z,t);},
+  [](void*p,uint64_t t,risc_key_value_atomic_receipt_v1*r)->int32_t{return static_cast<NativeAtomicKeyValue*>(p)->collect(t,r);},
+  [](void*p,uint64_t t)->int32_t{return static_cast<NativeAtomicKeyValue*>(p)->cancel(t);}};}
  int state(risc_key_value_atomic_state_v1*out){
+  if(!controlInternal())return RISC_ATOMIC_RETAINED;
   if(!out||out->struct_size<sizeof(*out)||!owner())return RISC_ATOMIC_INVALID;
   int rc=lock();if(rc)return rc;
   if(!core_.ready())rc=RISC_ATOMIC_UNCERTAIN;
@@ -37,6 +38,7 @@ class NativeAtomicKeyValue final {
   return unlock(rc);
  }
  int get(uint64_t revision,const char*key,void*out,uint32_t cap,uint32_t*size){
+  if(!controlInternal())return RISC_ATOMIC_RETAINED;
   if(size)*size=0;
   if(!owner()||!size||!revision||!key||(!out&&cap))return RISC_ATOMIC_INVALID;
   int rc=lock();if(rc)return rc;
@@ -45,6 +47,7 @@ class NativeAtomicKeyValue final {
  }
  int submit(uint64_t revision,const risc_key_value_atomic_mutation_v1*changes,uint32_t count,const void*intent,uint32_t intentSize,uint64_t*token){
   if(token)*token=0;
+  if(!controlInternal())return RISC_ATOMIC_RETAINED;
   if(!owner()||!token||!revision||(count&&!changes)||count>MaxMutations||!intent||!intentSize||intentSize>MaxIntent)return RISC_ATOMIC_INVALID;
   if(nativeRetained()){retained_=true;return RISC_ATOMIC_RETAINED;}
   if(token_||!job_.exitSafe())return RISC_ATOMIC_BUSY;
@@ -69,12 +72,14 @@ class NativeAtomicKeyValue final {
   token_=id;*token=id;return RISC_ATOMIC_OK;
  }
  int cancel(uint64_t token){
+  if(!controlInternal())return RISC_ATOMIC_RETAINED;
   if(!owner()||!token||token!=token_)return RISC_ATOMIC_INVALID;
   if(nativeRetained()){retained_=true;return RISC_ATOMIC_RETAINED;}
   Phase expected=Phase::Queued;phase_.compare_exchange_strong(expected,Phase::Revoked,std::memory_order_acq_rel);
   return RISC_ATOMIC_PENDING;
  }
  int collect(uint64_t token,risc_key_value_atomic_receipt_v1*out){
+  if(!controlInternal())return RISC_ATOMIC_RETAINED;
   if(!owner()||!out||out->struct_size<sizeof(*out)||!token||token!=token_)return RISC_ATOMIC_INVALID;
   if(nativeRetained()){retained_=true;return RISC_ATOMIC_RETAINED;}
   Result result{};int rc=job_.collect(token,&result);
@@ -85,23 +90,30 @@ class NativeAtomicKeyValue final {
   if(!guard_.release(guard_.context)){retained_=true;return RISC_ATOMIC_RETAINED;}
   held_=false;token_=0;phase_.store(Phase::Idle,std::memory_order_release);*out=receipt;return RISC_ATOMIC_OK;
  }
- bool workerStep(){return guard_.worker&&guard_.worker(guard_.context)&&job_.workerStep();}
+ bool workerStep(){return controlInternal()&&guard_.worker&&guard_.worker(guard_.context)&&job_.workerStep();}
  // Native-only immutable admission identity and terminal custody status.
- uint32_t namespaceId()const{return core_.namespaceId();}
+ uint32_t namespaceId()const{return controlInternal()?core_.namespaceId():0;}
  bool retained()const{return nativeRetained();}
- bool exitSafe()const{return !held_&&!token_&&!nativeRetained()&&job_.exitSafe();}
- bool scratchCleared()const{return job_.scratchCleared();}
+ bool exitSafe()const{return controlInternal()&&!held_&&!token_&&!nativeRetained()&&job_.exitSafe();}
+ bool scratchCleared()const{return controlInternal()&&job_.scratchCleared();}
  // Native owner-only release predicate. Held/token intentionally remain live
  // until guard.release returns; mailbox completion has already been collected.
  bool nativeReleaseSafe()const{return !nativeRetained()&&job_.exitSafe();}
- bool nativePending()const{return job_.pending();}
- bool nativeRetained()const{return retained_||(guard_.retained&&guard_.retained(guard_.context));}
+ bool nativePending()const{return !controlInternal()||job_.pending();}
+ bool nativeRetained()const{return !controlInternal()||retained_||(guard_.retained&&guard_.retained(guard_.context));}
  private:
+ bool controlInternal()const{
+#if RISC_NATIVE_ESP_IDF
+  return RiscCpu::NativeInternalAtomics::internal(*this);
+#else
+  return true;
+#endif
+ }
  enum class Phase:uint32_t {Idle,Queued,Revoked,Committing,Complete};
  C&core_;Guard guard_;NativeReplicaJob job_;std::atomic<Phase>phase_{Phase::Idle};
  bool held_=false,retained_=false,wasCancelled_=false;uint64_t token_=0,operation_=0;
  struct Wipe{void*p;size_t n;~Wipe(){C::wipe(p,n);}};
- bool owner()const{return guard_.owner&&guard_.worker&&guard_.acquire&&guard_.release&&guard_.finish&&guard_.owner(guard_.context);}
+ bool owner()const{return controlInternal()&&guard_.owner&&guard_.worker&&guard_.acquire&&guard_.release&&guard_.finish&&guard_.owner(guard_.context);}
  int lock(){if(nativeRetained()){retained_=true;return RISC_ATOMIC_RETAINED;}if(held_||token_||!job_.exitSafe())return RISC_ATOMIC_BUSY;if(!guard_.acquire(guard_.context))return RISC_ATOMIC_BUSY;held_=true;return 0;}
  int unlock(int result){if(!guard_.release(guard_.context)){retained_=true;return RISC_ATOMIC_RETAINED;}held_=false;return result;}
  static void put32(uint8_t*p,uint32_t v){for(unsigned i=0;i<4;++i)p[i]=uint8_t(v>>(8*i));}
@@ -111,7 +123,7 @@ class NativeAtomicKeyValue final {
  static int translate(int r){switch(r){case C::Ok:return RISC_ATOMIC_OK;case C::Missing:return RISC_ATOMIC_NOT_FOUND;case C::Invalid:return RISC_ATOMIC_INVALID;case C::NoMemory:case C::NoSpace:return RISC_ATOMIC_CAPACITY;case C::Io:return RISC_ATOMIC_IO;case C::Uncertain:return RISC_ATOMIC_UNCERTAIN;case C::Conflict:return RISC_ATOMIC_CONFLICT;case C::Stale:return RISC_ATOMIC_STALE;case C::BufferSmall:return RISC_ATOMIC_BUFFER_SMALL;case C::Busy:return RISC_ATOMIC_BUSY;default:return RISC_ATOMIC_RETAINED;}}
  static Result execute(void*p,uint32_t action,const void*input,uint32_t size){
   auto&self=*static_cast<NativeAtomicKeyValue*>(p);
-  if(!self.guard_.worker(self.guard_.context))return {C::Retained,0,0};
+  if(!self.controlInternal()||!self.guard_.worker(self.guard_.context))return {C::Retained,0,0};
   Phase expected=Phase::Queued;
   if(!self.phase_.compare_exchange_strong(expected,Phase::Committing,std::memory_order_acq_rel)){
    if(expected!=Phase::Revoked)return {C::Retained,0,0};

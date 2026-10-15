@@ -2,6 +2,7 @@
 #include "NativeBaselineAdmission.h"
 #include "FreshInitArtifactInspector.h"
 #include <nvs.h>
+#include "NvsIteratorCompat.h"
 #include <cstdio>
 namespace RiscExperimental {
 // Read-only native source inventory for the existing NVS layout. This collector
@@ -102,16 +103,16 @@ class CheckedNvsFreshSources final {
   size_t before=0,after=0;esp_err_t got=nvs_get_used_entry_count(handle_,&before);rc=check();if(rc||got!=ESP_OK)return cleanup(rc?rc:int(C::Io));
   if(!before)return cleanup((receipt||(sd&&sd->receipt))?int(C::Conflict):int(C::Ok));
   if(!allowReceipt)return cleanup(C::Conflict);
-  char name[12]{};std::snprintf(name,sizeof name,"rnr%08x",unsigned(ns_));iterator_=nvs_entry_find("nvs",name,NVS_TYPE_ANY);rc=check();
-  if(rc||!iterator_)return cleanup(rc?rc:int(C::Io));
+  char name[12]{};std::snprintf(name,sizeof name,"rnr%08x",unsigned(ns_));got=NvsIteratorCompat::find("nvs",name,NVS_TYPE_ANY,iterator_);rc=check();
+  if(rc||got!=ESP_OK||!iterator_)return cleanup(rc?rc:int(C::Io));
   unsigned mask=0;
   while(iterator_){
-   nvs_entry_info_t info{};nvs_entry_info(iterator_,&info);rc=check();if(rc)return cleanup(rc);
+   nvs_entry_info_t info{};got=NvsIteratorCompat::info(iterator_,info);rc=check();if(rc||got!=ESP_OK)return cleanup(rc?rc:int(C::Io));
    if(!std::memchr(info.namespace_name,0,sizeof info.namespace_name)||!std::memchr(info.key,0,sizeof info.key)||std::strcmp(info.namespace_name,name)||info.type!=NVS_TYPE_BLOB)return cleanup(C::Conflict);
    const unsigned bit=!std::strcmp(info.key,"root")?1:!std::strcmp(info.key,"next")?2:0;
    if(!bit||(mask&bit))return cleanup(C::Conflict);
    mask|=bit;
-   iterator_=nvs_entry_next(iterator_);rc=check();if(rc)return cleanup(rc);
+   got=NvsIteratorCompat::next(iterator_);rc=check();if(rc||(got!=ESP_OK&&got!=ESP_ERR_NVS_NOT_FOUND))return cleanup(rc?rc:int(C::Io));
   }
   uint8_t root[48]{},next[24]{};Wipe wipeRoot{root,sizeof root},wipeNext{next,sizeof next};bool hasRoot=false,hasNext=false;
   rc=blob("root",root,sizeof root,&hasRoot);if(!rc)rc=blob("next",next,sizeof next,&hasNext);

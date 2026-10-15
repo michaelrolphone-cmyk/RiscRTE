@@ -21,6 +21,10 @@ s=s.replace('static esp_vfs_t registered_vfs;','static const char* mount_path="/
 s=s.replace('subtype != ESP_PARTITION_SUBTYPE_ANY','(subtype != ESP_PARTITION_SUBTYPE_ANY && subtype != 0x41)')
 s=s.replace('strcmp(path, "/native")','strcmp(path, mount_path)').replace('registered_context ? "/native"','registered_context ? mount_path').replace('.base_path = "/native"','.base_path = mount_path')
 s=s.replace('esp_littlefs_format_partition(&flash_partition)','__real_esp_littlefs_format_partition(&flash_partition)')
+if os.environ.get('SDK6_VFS')=='1':
+ (stubs/'esp_memory_utils.h').write_text('#pragma once\nextern "C" bool native_mount_dram(const void*);\nstatic inline bool esp_ptr_in_dram(const void*p){return native_mount_dram(p);}\n')
+ (stubs/'esp_vfs_ops.h').write_text('#pragma once\n#include "esp_vfs.h"\ntypedef struct {int reserved;} esp_vfs_fs_ops_t;\n#ifdef __cplusplus\nextern "C" {\n#endif\nesp_err_t esp_vfs_register_fs(const char*,const esp_vfs_fs_ops_t*,int,void*);\nesp_err_t esp_vfs_unregister_fs(const char*);\n#ifdef __cplusplus\n}\n#endif\n')
+ s+='\n#include "esp_vfs_ops.h"\nstatic unsigned sdk6_vfs_calls;\nunsigned native_sdk6_vfs_calls(void){return sdk6_vfs_calls;}\nesp_err_t esp_vfs_register_fs(const char*p,const esp_vfs_fs_ops_t*v,int f,void*c){(void)p;(void)v;(void)f;(void)c;++sdk6_vfs_calls;return ESP_OK;}\nesp_err_t esp_vfs_unregister_fs(const char*p){(void)p;++sdk6_vfs_calls;return ESP_OK;}\n'
 fixture=build/'fixture.c';fixture.write_text(s)
 sanitize=['-fsanitize=address,undefined','-fno-sanitize-recover=all','-fno-omit-frame-pointer','-g'] if os.environ.get('SANITIZE')=='1' else []
 common=['-D_GNU_SOURCE','-DLFS_NO_DEBUG','-DLFS_NO_WARN','-DLFS_NO_ERROR','-pthread',*sanitize,'-include',str(stubs/'sdkconfig.h')]
@@ -29,12 +33,14 @@ objects=[]
 for source in [vendor/'littlefs/lfs.c',vendor/'littlefs/lfs_util.c',vendor/'littlefs_esp_part.c',vendor/'esp_littlefs.c',fixture]:
  obj=build/(source.name+'.o');profile.run(['cc','-std=c11',*common,*includes,'-c',str(source),'-o',str(obj)]);objects.append(str(obj))
 flags=['-std=c++17',*common,*includes,'-DESP_PLATFORM','-DRISC_PAIRED_APP_DATA','-DRISC_NATIVE_APP_DATA_MOUNT=1','-Wall','-Wextra','-Werror','-Wno-misleading-indentation']
+if os.environ.get('SDK6_VFS')=='1':flags+=['-DRISC_NATIVE_ESP_IDF=1','-DRISC_LITTLEFS_IDF6_MTIME32=1']
 obj=build/'mount.o';profile.run(['c++',*flags,'-c',str(root/'src/ports/esp32s3/NativeAppDataMount.cpp'),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'native-appdata.o';profile.run(['c++',*flags,'-c',str(root/'src/ports/esp32s3/NativeAppData.cpp'),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'appdata.o';profile.run(['c++',*flags,'-c',str(root/'src/runtime/storage/AppDataFiles.cpp'),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'packages.o';profile.run(['c++',*flags,'-c',str(root/'src/runtime/storage/PackageFiles.cpp'),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'posix.o';profile.run(['c++',*flags,'-c',str(root/'test/native_app_data_mount_posix.cpp'),'-o',str(obj)]);objects.append(str(obj))
 wrapped=['stat','fstat','open','read','write','close','fsync','mkdir','unlink','rename','opendir','readdir','closedir','esp_vfs_register','esp_vfs_unregister','esp_partition_read','esp_partition_write','esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
+if os.environ.get('SDK6_VFS')=='1':wrapped+=['esp_vfs_register_fs','esp_vfs_unregister_fs']
 exe=build/'test';profile.run(['c++',*flags,str(root/'test/native_app_data_mount_test.cpp'),*objects,'-Wl,'+','.join('--wrap='+f for f in wrapped),'-o',str(exe)])
 for case in ['healthy','fault','close-failure','lost-custody','native-backend','recovery','packages']:profile.run([str(exe),case])
 print('PASS: native mount binding real pinned VFS; no firmware activation/hardware claim')

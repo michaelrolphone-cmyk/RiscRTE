@@ -2,6 +2,7 @@
 #include "NativeBaselineAdmission.h"
 #include "FreshInitArtifactInspector.h"
 #include <nvs.h>
+#include "NvsIteratorCompat.h"
 #include <cstdio>
 #include <climits>
 namespace RiscExperimental {
@@ -110,11 +111,11 @@ class CheckedNvsLegacySources final {
   int rc=open(name);if(rc==C::Missing)return C::Ok;if(rc)return cleanup(rc);*present|=1u<<source;
   size_t before=0,after=0;esp_err_t got=nvs_get_used_entry_count(handle_,&before);rc=check();if(rc||got!=ESP_OK)return cleanup(rc?rc:int(C::Io));
   if(source==3){return cleanup(before?fail(C::Conflict,Reason::NativeArtifacts):int(C::Ok));}
-  iterator_=nvs_entry_find("nvs",name,NVS_TYPE_ANY);rc=check();if(rc)return cleanup(rc);
-  if(!iterator_&&before)return cleanup(C::Io);
+  got=NvsIteratorCompat::find("nvs",name,NVS_TYPE_ANY,iterator_);rc=check();if(rc)return cleanup(rc);
+  if((got!=ESP_OK&&got!=ESP_ERR_NVS_NOT_FOUND)||(!iterator_&&before))return cleanup(C::Io);
   uint8_t value[C::ValueMax+8]{};Wipe wipe{value,sizeof value};uint32_t rows=0;
   while(iterator_){
-   nvs_entry_info_t info{};nvs_entry_info(iterator_,&info);rc=check();if(rc)return cleanup(rc);
+   nvs_entry_info_t info{};got=NvsIteratorCompat::info(iterator_,info);rc=check();if(rc||got!=ESP_OK)return cleanup(rc?rc:int(C::Io));
    if(!std::memchr(info.namespace_name,0,sizeof info.namespace_name)||!std::memchr(info.key,0,sizeof info.key)||std::strcmp(info.namespace_name,name)||info.type!=NVS_TYPE_BLOB||!key(info.key))return cleanup(fail(C::Io,Reason::InvalidSource));
    if(source==1&&std::strcmp(info.key,"snapshot")&&std::strcmp(info.key,"state2"))return cleanup(fail(C::Conflict,Reason::UnknownSource));
    size_t n=0;got=nvs_get_blob(handle_,info.key,nullptr,&n);rc=check();if(rc)return cleanup(rc);
@@ -123,7 +124,7 @@ class CheckedNvsLegacySources final {
    size_t actual=n;got=nvs_get_blob(handle_,info.key,value,&actual);rc=check();if(rc)return cleanup(rc);
    if(got!=ESP_OK||actual!=n)return cleanup(fail(C::Io,Reason::InvalidSource));
    rc=captureRow(b,source,info.key,value,uint32_t(n));C::wipe(value,sizeof value);if(rc)return cleanup(rc);++rows;
-   iterator_=nvs_entry_next(iterator_);rc=check();if(rc)return cleanup(rc);
+   got=NvsIteratorCompat::next(iterator_);rc=check();if(rc||(got!=ESP_OK&&got!=ESP_ERR_NVS_NOT_FOUND))return cleanup(rc?rc:int(C::Io));
   }
   got=nvs_get_used_entry_count(handle_,&after);rc=check();
   if(rc||got!=ESP_OK)return cleanup(rc?rc:int(C::Io));
@@ -156,15 +157,15 @@ class CheckedNvsLegacySources final {
   size_t before=0,after=0;esp_err_t got=nvs_get_used_entry_count(handle_,&before);rc=check();
   if(rc||got!=ESP_OK)return cleanup(rc?rc:int(C::Io));
   if(!before)return cleanup(fail(C::Conflict,Reason::NativeArtifacts));
-  iterator_=nvs_entry_find("nvs",name,NVS_TYPE_ANY);rc=check();
-  if(rc||!iterator_)return cleanup(rc?rc:fail(C::Io,Reason::NativeArtifacts));
+  got=NvsIteratorCompat::find("nvs",name,NVS_TYPE_ANY,iterator_);rc=check();
+  if(rc||got!=ESP_OK||!iterator_)return cleanup(rc?rc:fail(C::Io,Reason::NativeArtifacts));
   unsigned mask=0;
   while(iterator_){
-   nvs_entry_info_t info{};nvs_entry_info(iterator_,&info);rc=check();if(rc)return cleanup(rc);
+   nvs_entry_info_t info{};got=NvsIteratorCompat::info(iterator_,info);rc=check();if(rc||got!=ESP_OK)return cleanup(rc?rc:int(C::Io));
    if(!std::memchr(info.namespace_name,0,sizeof info.namespace_name)||!std::memchr(info.key,0,sizeof info.key)||std::strcmp(info.namespace_name,name)||info.type!=NVS_TYPE_BLOB)return cleanup(fail(C::Conflict,Reason::NativeArtifacts));
    const unsigned bit=!std::strcmp(info.key,"root")?1:!std::strcmp(info.key,"next")?2:0;
    if(!bit||(mask&bit))return cleanup(fail(C::Conflict,Reason::NativeArtifacts));
-   mask|=bit;iterator_=nvs_entry_next(iterator_);rc=check();if(rc)return cleanup(rc);
+   mask|=bit;got=NvsIteratorCompat::next(iterator_);rc=check();if(rc||(got!=ESP_OK&&got!=ESP_ERR_NVS_NOT_FOUND))return cleanup(rc?rc:int(C::Io));
   }
   uint8_t root[48]{},next[24]{};Wipe wipeRoot{root,sizeof root},wipeNext{next,sizeof next};bool hasRoot=false,hasNext=false;
   rc=importBlob("root",root,sizeof root,&hasRoot);if(!rc)rc=importBlob("next",next,sizeof next,&hasNext);if(rc)return cleanup(rc);
