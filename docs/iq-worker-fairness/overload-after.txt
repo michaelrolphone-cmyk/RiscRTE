@@ -1,0 +1,2 @@
+Native IQ overload: captures=3001 max_continuous_busy_us=2000 scheduler_blocks=3001 coalesced_notifications=3
+Native IQ worker: overload idle fairness, real timestamps, timer pacing, stop/join retention, restart and failure rollback PASS

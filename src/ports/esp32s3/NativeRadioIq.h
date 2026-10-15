@@ -96,7 +96,17 @@ inline void* workerArgument=nullptr;
 inline uint64_t nowUs(){return static_cast<uint64_t>(esp_timer_get_time());}
 inline void workerWake(void*){portENTER_CRITICAL(&workerMux);if(workerTask)xTaskNotifyGive(workerTask);portEXIT_CRITICAL(&workerMux);}
 inline void workerRun(void*){
-  for(;;){ulTaskNotifyTake(pdTRUE,portMAX_DELAY);if(__atomic_load_n(&workerStopping,__ATOMIC_ACQUIRE))break;workerTick(workerArgument,nowUs());}
+  for(;;){
+    ulTaskNotifyTake(pdTRUE,portMAX_DELAY);
+    if(__atomic_load_n(&workerStopping,__ATOMIC_ACQUIRE))break;
+    workerTick(workerArgument,nowUs());
+    // A slow capture can leave a timer notification pending on every loop.
+    // Consuming it does not block, and taskYIELD cannot schedule CPU0's lower
+    // priority idle task. Really block for one tick after every completed
+    // callback; notifications still coalesce and never cancel this delay.
+    // Stop retains callback ownership until the existing join below completes.
+    vTaskDelay(1);
+  }
   xSemaphoreGive(workerDone);for(;;)vTaskSuspend(nullptr);
 }
 inline bool workerStop(){

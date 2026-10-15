@@ -1,0 +1,25 @@
+name: Native IQ worker fairness
+on:
+  push:
+    branches: [fix/sdr-idle-starvation-20261015]
+  pull_request:
+    paths:
+      - 'src/ports/esp32s3/NativeRadioIq.h'
+      - 'test/native_iq_worker_test.cpp'
+      - 'test/native_iq_shim/**'
+      - 'test/radio_iq_port_test.cpp'
+      - 'test/run_native_iq_worker_test.sh'
+      - 'test/run_radio_iq_test.sh'
+      - '.github/workflows/iq-worker-fairness.yml'
+permissions:
+  contents: read
+jobs:
+  iq-lifecycle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: bash test/run_radio_iq_test.sh
+      - run: SANITIZE=1 bash test/run_radio_iq_test.sh

@@ -1,0 +1,2 @@
+Native IQ overload: captures=3001 max_continuous_busy_us=6002000 scheduler_blocks=0 coalesced_notifications=3
+PRE-FIX REPRODUCED: pending timer notifications prevent CPU0 worker from blocking for more than six seconds

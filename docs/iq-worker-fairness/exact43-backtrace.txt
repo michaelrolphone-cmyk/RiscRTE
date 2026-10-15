@@ -1,0 +1,7 @@
+0x4037875a: panic_abort at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/esp_system/panic.c:408
+0x403820d5: esp_system_abort at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/esp_system/esp_system.c:137
+0x40389159: abort at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/newlib/abort.c:46
+0x42085154: task_wdt_isr at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/esp_system/task_wdt.c:176 (discriminator 3)
+0x4037a8a1: _xt_lowint1 at /home/runner/work/esp32-arduino-lib-builder/esp32-arduino-lib-builder/esp-idf/components/freertos/port/xtensa/xtensa_vectors.S:1118
+0x4399ed14: ?? ??:0
+0x42037b71: RiscCpu::NativeRadioIq::workerRun(void*) at ./src/ports/esp32s3/NativeRadioIq.h:99 (discriminator 1)

@@ -1,5 +1,10 @@
 # RiscRTE
 
+Runtime 0.3.5 gives the native IQ worker a real scheduler block after each
+completed capture, preventing accumulated timer notifications from starving
+CPU0 idle under load. Stop/join retention and watchdog policy remain intact.
+See [production-source reproduction and verification](docs/IQ_WORKER_FAIRNESS.md).
+
 Runtime 0.2.28 forward-ports the PSRAM-backed HTTPS allocator and connection-local
 memory failure handling onto the X4 0.2.24 native lineage. Loader checkpoints,
 ABI, USB, sharing, SD and existing app/provider policies remain unchanged.

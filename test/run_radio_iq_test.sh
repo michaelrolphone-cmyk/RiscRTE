@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
+bash "$repo/test/run_native_iq_worker_test.sh"
 build="$(mktemp -d)";trap 'rm -rf "$build"' EXIT
 flags=(-std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers)
 san=()
