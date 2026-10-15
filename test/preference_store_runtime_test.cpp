@@ -12,6 +12,7 @@ static std::string directory,scenario;
 static std::thread::id ownerThread=std::this_thread::get_id();
 static std::map<std::pair<uint32_t,std::string>,std::string> values;
 static R* runtime;
+static bool reentrantArmed=false;
 static unsigned writes=0,failWrite=0;static int failStatus=RISC_KEY_VALUE_IO;
 static char secondInput[]="second";
 static risc_preference_store_v1 saved{};
@@ -28,6 +29,7 @@ static int32_t get(void*,uint32_t ns,const char* key,void* out,uint32_t capacity
 }
 static int32_t put(void*,uint32_t ns,const char* key,const void* data,uint32_t size){
  ++writes;
+ if(scenario=="reentrant" && reentrantArmed && writes==1){risc_preference_store_receipt_v1 receipt{sizeof(receipt)};assert(saved.collect(saved.context,1,&receipt)==RISC_ATOMIC_BUSY);assert(saved.cancel(saved.context,1)==RISC_ATOMIC_BUSY);assert(!runtime->residentResetSafe());}
  if(scenario=="copy" && writes==1)memset(secondInput,'x',sizeof(secondInput)-1);
  if(writes==failWrite)return failStatus;
  values[{ns,key}]=std::string(static_cast<const char*>(data),size);return 0;
@@ -73,6 +75,7 @@ extern "C" void test_atomic_app(unsigned hook,unsigned){
  if(scenario=="partial")failWrite=2;
  if(scenario=="failed-first")failWrite=1;
  if(scenario=="busy-first"){failWrite=1;failStatus=RISC_KEY_VALUE_BUSY;}
+ reentrantArmed=true;
  assert(!a.submit(a.context,s.revision,m,2,"save",4,&token)&&token);
  assert(!runtime->residentResetSafe());
  if(scenario=="uncollected")return;

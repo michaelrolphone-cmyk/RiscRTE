@@ -1,6 +1,6 @@
-#define main atomic_cohort_fixture_main
+#define ATOMIC_COHORT_MAIN atomic_cohort_fixture_main
 #include "atomic_key_value_cohort_test.cpp"
-#undef main
+#undef ATOMIC_COHORT_MAIN
 static void replaceCapability(const std::string& cap,bool availabilityEnabled){
  for(const char* id:names){
   const std::string path=root+"/"+id+".json";JsonDocument doc;std::ifstream in(path);assert(!deserializeJson(doc,in));

@@ -1,7 +1,11 @@
 # Device-independent preferences
 
-Migration scope is all applications and shared storage consumers everywhere in
-RiscRTE. Implementation inventories record coverage; they do not limit that scope.
+This repository note describes the generic preference implementation. Delivery
+is staged: generic interfaces and providers, optional Runtime integration, shared
+default ELFs, then a reliable baseline. Existing storage paths in other
+applications remain supported as accepted technical debt; further consumer
+migrations are deferred until that baseline. Authoritative requirements and
+delivery tracking are maintained in Workboard.
 
 `storage.preferences@1` (`sdk/app/RiscPreferenceStoreV1.h`) exposes one opaque
 namespace snapshot/get/submit/collect/cancel API. The broker is disabled by

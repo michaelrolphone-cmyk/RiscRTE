@@ -99,11 +99,12 @@ int32_t Runtime::preferenceSubmit(void* c,uint64_t revision,const risc_preferenc
     copied[i]={reinterpret_cast<const char*>(payload+at),RISC_ATOMIC_PUT,payload+at+24,m.size};at+=24+m.size;
   }
   memcpy(payload+at,intent,intentSize);
-  n->pending=c;g->preferenceOperation=++r->preferenceOperationGeneration_;
+  n->pending=c;n->executing=true;g->preferenceOperation=++r->preferenceOperationGeneration_;
   int32_t status=RISC_ATOMIC_OK;
   for(uint32_t i=0;i<count;++i){const auto& m=copied[i];
     if(r->namespaceKeyValuePut(n->id,m.key,m.value,m.size,true)!=RISC_KEY_VALUE_OK){status=RISC_ATOMIC_UNCERTAIN;break;}
   }
+  n->executing=false;
   g->preferenceReceipt={sizeof(g->preferenceReceipt),status,n->revision,status==RISC_ATOMIC_OK?g->preferenceOperation:0};
   *token=g->preferenceOperation;return RISC_ATOMIC_OK;
 }
@@ -115,6 +116,7 @@ int32_t Runtime::preferenceCollect(void* c,uint64_t token,risc_preference_store_
   if(!token || token!=g->preferenceOperation || !out || out->struct_size<sizeof(*out))return RISC_ATOMIC_INVALID;
   auto* n=currentRuntime->preferenceNamespace(g->preferenceNamespace);
   if(!n || n->pending!=c)return RISC_ATOMIC_INVALID;
+  if(n->executing)return RISC_ATOMIC_BUSY;
   *out=g->preferenceReceipt;g->preferenceReceipt={};g->preferenceOperation=0;n->pending=nullptr;return RISC_ATOMIC_OK;
 }
 int32_t Runtime::preferenceCancel(void* c,uint64_t token) {
@@ -124,5 +126,7 @@ int32_t Runtime::preferenceCancel(void* c,uint64_t token) {
 #endif
   // Synchronous publication has already finished. Cancellation lost that race;
   // the original terminal receipt remains mandatory and is never rewritten.
+  auto* n=currentRuntime->preferenceNamespace(g->preferenceNamespace);
+  if(n && n->executing)return RISC_ATOMIC_BUSY;
   return token && token==g->preferenceOperation?RISC_ATOMIC_PENDING:RISC_ATOMIC_INVALID;
 }

@@ -10,5 +10,5 @@ cc -std=c11 "${flags[@]}" "${incs[@]}" -fPIC -fvisibility=hidden -shared -DATOMI
 c++ -std=c++17 "${flags[@]}" "${incs[@]}" -DRISC_RUNTIME_PREFERENCE_STORE=1 -rdynamic -no-pie -pthread \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/test/preference_store_runtime_test.cpp" -ldl -o "$build/test"
-for case in admission normal copy partial failed-first busy-first bad-read uncollected;do "$build/test" "$build" "$case";done
+for case in admission normal copy reentrant partial failed-first busy-first bad-read uncollected;do "$build/test" "$build" "$case";done
 PREFERENCE_STORE=1 bash "$repo/test/run_atomic_key_value_runtime_test.sh"

@@ -351,7 +351,7 @@ class Runtime final {
   static int32_t atomicCancel(void*,uint64_t);
 #endif
 #if RISC_RUNTIME_PREFERENCE_STORE
-  struct PreferenceNamespace {uint32_t id=0;uint64_t revision=1;void* pending=nullptr;};
+  struct PreferenceNamespace {uint32_t id=0;uint64_t revision=1;void* pending=nullptr;bool executing=false;};
   PreferenceNamespace preferenceNamespaces_[64]{};
   uint64_t preferenceOperationGeneration_=0;
   static constexpr PolicyIndex PreferenceStoreDriver=-14;
