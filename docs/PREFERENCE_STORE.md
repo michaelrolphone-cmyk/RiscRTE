@@ -1,9 +1,12 @@
 # Device-independent preferences
 
+Migration scope is all applications and shared storage consumers everywhere in
+RiscRTE. Implementation inventories record coverage; they do not limit that scope.
+
 `storage.preferences@1` (`sdk/app/RiscPreferenceStoreV1.h`) exposes one opaque
-namespace snapshot/get/submit/collect/cancel API. The native build enables the
-broker for every profile through `idf/product-profile.cmake`; other builds may
-explicitly select `RISC_RUNTIME_PREFERENCE_STORE=1`. The generic broker contains
+namespace snapshot/get/submit/collect/cancel API. The broker is disabled by
+default. Only storage-using product profiles explicitly select
+`RISC_RUNTIME_PREFERENCE_STORE=1`; generic Runtime adds no storage requirement. The generic broker contains
 no board identities, device names, application keys, or physical storage paths.
 
 Boot policy binds an application to an exact positive namespace. A registered
