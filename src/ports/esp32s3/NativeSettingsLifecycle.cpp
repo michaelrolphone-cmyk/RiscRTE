@@ -2,7 +2,7 @@
 #if defined(ESP_PLATFORM) && RISC_NATIVE_SETTINGS_LIFECYCLE
 #include "NativeSettingsWorker.h"
 #include "CpuPort.h"
-#include <soc/soc_memory_types.h>
+#include "NativeMemory.h"
 #include <atomic>
 #include <cstring>
 namespace RiscCpu { namespace NativeSettingsLifecycle { namespace {

@@ -47,7 +47,9 @@ bash test/run_native_platform_test.sh
 The peripheral suites compile against the actual pinned SDK headers. Existing
 stage-log, USB PHY lifecycle, diagnostic checkpoint and native bank regressions
 also pass. The legacy baseline target built successfully on 2026-10-15 after
-the service-boundary extraction. Native target qualification is in progress;
+the service-boundary extraction. Native app_main startup, PSA SHA256, SDK6 NVS iterators, frozen time32 export,
+USB PHY recovery and panic/sleep object checks now pass their focused tests.
+Native target qualification is in progress;
 this checkpoint is not a firmware release or a hardware pass.
 
 ## Remaining product gates
@@ -69,3 +71,19 @@ this checkpoint is not a firmware release or a hardware pass.
   tests remain a separate gate.
 
 Reference: https://github.com/espressif/esp-idf/releases/tag/v6.1
+
+## Preserved libc time ABI
+
+The existing ELF symbol `clock_gettime` remains an 8-byte time32 output ABI.
+SDK6 native `timespec` is 16 bytes. The new export translates through a native
+stack temporary, refuses signed-seconds overflow and invalid nanoseconds, and
+never writes beyond the original 8 bytes. This preserves retained old ELFs;
+new native firmware itself continues using the SDK's 64-bit time API. Future
+ELF builds that directly import this legacy symbol must select time32
+(`_USE_LONG_TIME_T`) or use an explicitly versioned capability instead.
+The 164 ELFs in the current watch/X4 shipped stores import none of the audited
+libc layout-sensitive symbols, but that fact does not change the loader ABI.
+
+The SDK's PSRAM atomic workaround remains enabled. Native lock-free gates are
+being qualified against the SDK's internal-SRAM hardware helper path; globally
+turning off the workaround is not an acceptable migration shortcut.

@@ -59,6 +59,10 @@ static const char * const s_picolibc_ctype_tbl = _ctype_b + _CTYPE_OFFSET;
 #include "private/esp_dlmod.h"
 #endif
 #include "private/elf_symbol.h"
+#if RISC_NATIVE_ESP_IDF
+#include "private/elf_time32.h"
+_Static_assert(sizeof(time_t)==8 && sizeof(struct timespec)==16,"Audit changed SDK time ABI");
+#endif
 
 extern int __ltdf2(double a, double b);
 extern unsigned int __fixunsdfsi(double a);
@@ -138,7 +142,11 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
 
     /* time.h */
 
+#if RISC_NATIVE_ESP_IDF
+    { "clock_gettime", (const void *)&risc_elf_clock_gettime32 },
+#else
     ESP_ELFSYM_EXPORT(clock_gettime),
+#endif
     ESP_ELFSYM_EXPORT(strftime),
 
     /* pthread.h */

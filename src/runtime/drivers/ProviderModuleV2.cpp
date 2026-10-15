@@ -12,7 +12,6 @@
 extern "C" {
 #include <esp_elf.h>
 #include <esp_heap_caps.h>
-#include <mbedtls/sha256.h>
 #include <private/esp_privileged_elf.h>
 }
 #endif

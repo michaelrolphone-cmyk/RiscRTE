@@ -85,7 +85,7 @@ bool i2cRawTransfer(uint8_t,uint8_t,const uint8_t*,size_t,uint8_t*,size_t,uint32
 bool i2cOpen(uint8_t physical,uint8_t sda,uint8_t scl,uint32_t hz){
   auto& state=i2c[physical];if(state.installed)return false;
   state.sda=sda;state.scl=scl;
-  i2c_config_t config{};config.mode=I2C_MODE_MASTER;config.sda_io_num=sda;config.scl_io_num=scl;
+  i2c_config_t config{};config.mode=I2C_MODE_MASTER;config.sda_io_num=static_cast<gpio_num_t>(sda);config.scl_io_num=static_cast<gpio_num_t>(scl);
   config.sda_pullup_en=GPIO_PULLUP_ENABLE;config.scl_pullup_en=GPIO_PULLUP_ENABLE;config.master.clk_speed=hz;
   if(i2c_param_config(static_cast<i2c_port_t>(physical),&config)!=ESP_OK)return false;
   state.configured=true;

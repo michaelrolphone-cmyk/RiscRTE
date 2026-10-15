@@ -9,4 +9,4 @@ idf_component_register(SRCS
     INCLUDE_DIRS "${root}/include"
     PRIV_REQUIRES spi_flash lwip esp_timer)
 target_compile_definitions(${COMPONENT_LIB} PRIVATE
-    ELF_LOADER_VER_MAJOR=1 ELF_LOADER_VER_MINOR=3 ELF_LOADER_VER_PATCH=3)
+    RISC_NATIVE_ESP_IDF=1 ELF_LOADER_VER_MAJOR=1 ELF_LOADER_VER_MINOR=3 ELF_LOADER_VER_PATCH=3)

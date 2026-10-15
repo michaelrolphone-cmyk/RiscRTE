@@ -15,7 +15,8 @@ SAME(request_launch);SAME(acquire);SAME(release);SAME(confirm_boot);
 SAME(retain_invocation);SAME(trace);SAME(stream_client);SAME(request_default);SAME(resident_shell);
 _Static_assert(sizeof(old_runtime_api)==offsetof(risc_runtime_api_v1,failure_evidence),"exact frozen .92 prefix");
 _Static_assert(sizeof(old_runtime_api)==RISC_RUNTIME_RESIDENT_SHELL_V1_SIZE,"old table size remains resident prefix");
-_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_FAILURE_EVIDENCE_V1_SIZE,"one suffix only");
+_Static_assert(sizeof(risc_runtime_api_v1)>=RISC_RUNTIME_FAILURE_EVIDENCE_V1_SIZE,"failure evidence prefix retained");
+_Static_assert(offsetof(risc_runtime_api_v1,diagnostic_checkpoint_client)==RISC_RUNTIME_FAILURE_EVIDENCE_V1_SIZE,"later suffix is append-only");
 _Static_assert(sizeof(old_runtime_health)==sizeof(risc_runtime_health_v1),"health unchanged");
 _Static_assert(sizeof(old_runtime_capability)==sizeof(risc_runtime_capability_v1),"grant unchanged");
 int main(void){return 0;}

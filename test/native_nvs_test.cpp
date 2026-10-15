@@ -491,14 +491,34 @@ void nvs_close(nvs_handle_t handle) {
   handles.erase(handle);
 }
 esp_err_t nvs_get_used_entry_count(nvs_handle_t h,size_t*n){CHECK(handles.count(h));*n=store[handles.at(h).name].size();return ESP_OK;}
-struct Iterator {std::vector<nvs_entry_info_t> rows;size_t position=0;};
-nvs_iterator_t nvs_entry_find(const char*part,const char*ns,nvs_type_t type){
+static unsigned liveIterators=0;
+struct Iterator {std::vector<nvs_entry_info_t> rows;size_t position=0;Iterator(){++liveIterators;}~Iterator(){--liveIterators;}};
+static nvs_iterator_t iteratorFind(const char*part,const char*ns,nvs_type_t type){
  CHECK(!strcmp(part,"nvs")&&type==NVS_TYPE_ANY);auto found=store.find(ns);if(found==store.end()||found->second.empty())return nullptr;
  auto*i=new Iterator;for(const auto&row:found->second){nvs_entry_info_t info{};strcpy(info.namespace_name,ns);strcpy(info.key,row.first.c_str());info.type=row.second.blob?NVS_TYPE_BLOB:NVS_TYPE_U8;i->rows.push_back(info);}return i;
 }
-nvs_iterator_t nvs_entry_next(nvs_iterator_t p){auto*i=static_cast<Iterator*>(p);if(++i->position==i->rows.size()){delete i;return nullptr;}return i;}
-void nvs_entry_info(nvs_iterator_t p,nvs_entry_info_t*out){auto*i=static_cast<Iterator*>(p);*out=i->rows.at(i->position);}
+static nvs_iterator_t iteratorNext(nvs_iterator_t p){auto*i=static_cast<Iterator*>(p);if(++i->position==i->rows.size()){delete i;return nullptr;}return i;}
+static void iteratorInfo(nvs_iterator_t p,nvs_entry_info_t*out){auto*i=static_cast<Iterator*>(p);*out=i->rows.at(i->position);}
 void nvs_release_iterator(nvs_iterator_t p){delete static_cast<Iterator*>(p);}
+#if RISC_NATIVE_ESP_IDF
+esp_err_t nvs_entry_find(const char*p,const char*n,nvs_type_t t,nvs_iterator_t*out){
+ *out=nullptr;const auto error=faults["iterator-find"].error;if(error!=ESP_OK)return error;
+ *out=iteratorFind(p,n,t);return *out?ESP_OK:ESP_ERR_NVS_NOT_FOUND;
+}
+esp_err_t nvs_entry_next(nvs_iterator_t*p){
+ const auto error=faults["iterator-next"].error;
+ if(error!=ESP_OK){nvs_release_iterator(*p);*p=nullptr;return error;}
+ *p=iteratorNext(*p);return *p?ESP_OK:ESP_ERR_NVS_NOT_FOUND;
+}
+esp_err_t nvs_entry_info(nvs_iterator_t p,nvs_entry_info_t*out){
+ const auto error=faults["iterator-info"].error;if(error!=ESP_OK)return error;
+ iteratorInfo(p,out);return ESP_OK;
+}
+#else
+nvs_iterator_t nvs_entry_find(const char*p,const char*n,nvs_type_t t){return iteratorFind(p,n,t);}
+nvs_iterator_t nvs_entry_next(nvs_iterator_t p){return iteratorNext(p);}
+void nvs_entry_info(nvs_iterator_t p,nvs_entry_info_t*out){iteratorInfo(p,out);}
+#endif
 esp_err_t nvs_erase_key(nvs_handle_t h,const char*k){CHECK(handles.count(h));handles.at(h).pending[k]={};return ESP_OK;}
 } // extern "C"
 
@@ -535,6 +555,15 @@ int main(int argc, char** argv) {
     CHECK(store["rte00000bb8"].size()==saved.size());for(auto&row:saved)CHECK(store["rte00000bb8"][row.first].bytes==row.second.bytes);
     RiscStorage::ScalableSettings::State reboot;CHECK(([&](){int rc;do{rc=RiscStorage::ScalableSettings::restore(reboot,*b,3000,"app",image,imageSize,false);}while(rc==RISC_KEY_VALUE_BUSY);return rc;})()==0&&reboot.count==66);free(image);
     CHECK(eraseAttempts==0);closed();
+#if RISC_NATIVE_ESP_IDF
+    for(const char* stage:{"iterator-find","iterator-info","iterator-next"}){
+      reset(stage);seed();faults[stage].error=ESP_ERR_NO_MEM;
+      char key[16]{};uint8_t bytes[64]{};uint32_t actual=99;
+      CHECK(backend->scalableSettings->next(nullptr,1,false,"",key,bytes,sizeof bytes,&actual)==RISC_KEY_VALUE_IO);
+      CHECK(actual==0 && liveIterators==0);closed();
+    }
+#endif
+    CHECK(liveIterators==0);
     std::puts("Native NVS adapter: namespace isolation, bounds, probes, missing/type/size faults, atomic output, every-stage IO and exact readback PASS");
   }
   closed();

@@ -1,5 +1,5 @@
 #pragma once
-/* Generic IDF4.4.7 adapter, shared with the native SDK-shim regression.
+/* Generic IDF4.4.7 / IDF6.1 adapter, shared with the native SDK-shim regression.
  * There is one CPU sleep-configuration owner in this minimal runtime. Its
  * baseline RTC_PERIPH policy is AUTO; no other wake/configuration owner exists.
  */
@@ -9,7 +9,11 @@
 #include <driver/gpio.h>
 #include <driver/rtc_io.h>
 #include <esp_sleep.h>
+#if RISC_NATIVE_ESP_IDF
+#include <esp_memory_utils.h>
+#else
 #include <soc/soc_memory_types.h>
+#endif
 namespace RiscCpu { namespace NativeSleep {
 inline bool timerArm(uint32_t ms) {
   if(!ms || ms>RISC_TIMED_SLEEP_MAX_MS)return false;
@@ -79,6 +83,8 @@ inline bool arm(uint8_t pin,bool active,bool pullup) {
   if(esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,pullup?ESP_PD_OPTION_ON:ESP_PD_OPTION_AUTO)!=ESP_OK ||
      rtc_gpio_pulldown_dis(gpio)!=ESP_OK ||
      (pullup?rtc_gpio_pullup_en(gpio):rtc_gpio_pullup_dis(gpio))!=ESP_OK)return false;
+  // Keep replacement semantics on both SDKs. IDF6's *_wakeup_io API appends
+  // pins instead, so it is not a drop-in replacement for this exclusive owner.
   return esp_sleep_enable_ext1_wakeup(uint64_t(1)<<pin,
     active?ESP_EXT1_WAKEUP_ANY_HIGH:ESP_EXT1_WAKEUP_ANY_LOW)==ESP_OK;
 }

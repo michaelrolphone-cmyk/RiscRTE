@@ -25,7 +25,12 @@ inline void mark(const char* s){calls.emplace_back(s);}
 using TaskHandle_t=void*;
 inline TaskHandle_t xTaskGetCurrentTaskHandle(){return reinterpret_cast<void*>(1);}
 inline uint32_t millis(){return 0;}
-inline void vTaskDelay(uint32_t){mark("yield");}
+struct OwnerYield{};
+inline void vTaskDelay(uint32_t){mark("yield");
+#ifdef TEST_NATIVE_ENTRY
+throw OwnerYield{};
+#endif
+}
 constexpr uint32_t configTICK_RATE_HZ=1000;
 struct SerialShim{void begin(unsigned){mark("serial");}};inline SerialShim Serial;
 struct EspShim{uint32_t getFreeHeap(){return 0;}};inline EspShim ESP;
@@ -37,6 +42,7 @@ inline int64_t esp_timer_get_time(){return 0;}
 enum {ESP_RST_PANIC=1,ESP_RST_INT_WDT,ESP_RST_TASK_WDT,ESP_RST_WDT,ESP_RST_BROWNOUT};
 inline int esp_reset_reason(){return 0;}
 using esp_err_t=int;constexpr esp_err_t ESP_OK=0;
+inline esp_err_t nvs_flash_init(){mark("nvs-init");return ESP_OK;}
 struct esp_vfs_spiffs_conf_t{const char*base_path;const char*partition_label;size_t max_files;bool format_if_mount_failed;};
 inline esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t*s){
  assert(s && !std::strcmp(s->base_path,"/bootfs") && !std::strcmp(s->partition_label,"bootfs"));
@@ -107,8 +113,15 @@ return nullptr;
 }
 #endif
 extern void setup();extern void loop();
+#if TEST_NATIVE_ENTRY
+extern "C" void app_main();
+#endif
 int main(){
+#if TEST_NATIVE_ENTRY
+ try { app_main();assert(false); } catch(const OwnerYield&) {}
+#else
  setup();
+#endif
  std::vector<std::string> expected={"failure-evidence","retained-wake","realtime","serial","diagnostics","RTE_SOURCE=test",RISC_APP_POLICY_ROWS_MARKER};
 #ifdef STARTUP_HOOK
  expected.push_back("startup-status");
@@ -138,7 +151,14 @@ int main(){
 #endif
  #endif
  #endif
+#if TEST_NATIVE_ENTRY
+#ifndef RISC_EMBEDDED_BOOTSTORE
+ expected.insert(expected.begin(),"nvs-init");
+#endif
+ expected.push_back("yield");assert(calls==expected);
+#else
  assert(calls==expected);loop();assert(calls.back()=="yield");
+#endif
 }
 '''
 
@@ -151,7 +171,7 @@ class NativeStartup(unittest.TestCase):
                    'ports/esp32s3/NativeRuntime.h', 'ports/esp32s3/NativeBootstrap.h',
                    'ports/esp32s3/NativeSntp.h', 'ports/esp32s3/NvsBootstrapInput.h',
                    'ports/esp32s3/OwnerMaintenance.h', 'ports/esp32s3/NativePlatform.h', 'Arduino.h', 'RiscBuildIdentity.h', 'esp_spiffs.h', 'esp_ota_ops.h',
-                   'esp_system.h', 'bootstrap/Runtime.h', 'ports/esp32s3/CpuPort.h',
+                   'esp_system.h', 'esp_mac.h', 'bootstrap/Runtime.h', 'ports/esp32s3/CpuPort.h',
                    'ports/esp32s3/NativeRetainedWake.h', 'ports/esp32s3/NativeRealtime.h',
                    'ports/esp32s3/NativeBoard.h', 'ports/esp32s3/CooperativeDelay.h',
                    'ports/esp32s3/SleepDiagnostics.h', 'esp_timer.h', 'diagnostics/Performance.h')
@@ -180,7 +200,10 @@ class NativeStartup(unittest.TestCase):
                 source = source.replace('__attribute__((weak))', '__attribute__((weak_import))')
             (folder/'main.cpp').write_text(source)
             (folder/'harness.cpp').write_text(HARNESS)
-            for name, flags in (('no-hook', []), ('success', ['-DSTARTUP_HOOK']),
+            for name, flags in (('native-entry', ['-DRISC_NATIVE_ESP_IDF=1','-DTEST_NATIVE_ENTRY=1']),
+                                ('spiffs-native-entry', ['-DRISC_NATIVE_ESP_IDF=1','-DTEST_NATIVE_ENTRY=1']),
+                                ('native-entry-failed-gate', ['-DRISC_NATIVE_ESP_IDF=1','-DTEST_NATIVE_ENTRY=1','-DSTARTUP_HOOK','-DSTARTUP_FAIL']),
+                                ('no-hook', []), ('success', ['-DSTARTUP_HOOK']),
                                 ('https', ['-DRISC_ENABLE_HTTP']),
                                 ('https-fail', ['-DRISC_ENABLE_HTTP', '-DTLS_ALLOCATOR_FAIL']),
                                 ('failure', ['-DSTARTUP_HOOK', '-DSTARTUP_FAIL']),

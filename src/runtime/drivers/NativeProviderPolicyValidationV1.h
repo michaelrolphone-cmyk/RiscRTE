@@ -8,7 +8,7 @@ bool esp_elf_validate_file(const uint8_t*, size_t);
 bool esp_elf_privileged_selected_import_supported_v1(const char*);
 }
 #ifdef ESP_PLATFORM
-#include <mbedtls/sha256.h>
+#include "runtime/crypto/Sha256.h"
 #else
 #include <openssl/evp.h>
 #endif
@@ -17,7 +17,7 @@ bool esp_elf_privileged_selected_import_supported_v1(const char*);
 namespace RuntimeProviders {
 inline bool nativeProviderDigest(const uint8_t* bytes,size_t length,uint8_t digest[32]) {
 #if defined(ESP_PLATFORM)
-  return bytes && digest && mbedtls_sha256_ret(bytes,length,digest,0)==0;
+  return bytes && digest && RiscCrypto::Sha256::digest(bytes,length,digest);
 #elif defined(RISC_NATIVE_PROVIDER_ADMISSION_TEST)
   unsigned int n=0;
   return bytes && digest && EVP_Digest(bytes,length,digest,&n,EVP_sha256(),nullptr)==1 && n==32;

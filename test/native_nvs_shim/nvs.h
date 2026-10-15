@@ -38,9 +38,16 @@ esp_err_t nvs_get_blob(nvs_handle_t, const char*, void*, size_t*);
 esp_err_t nvs_set_blob(nvs_handle_t, const char*, const void*, size_t);
 esp_err_t nvs_commit(nvs_handle_t);
 void nvs_close(nvs_handle_t);
+#if RISC_NATIVE_ESP_IDF
+// SDK6 signatures; target compilation also checks the actual vendor headers.
+esp_err_t nvs_entry_find(const char*,const char*,nvs_type_t,nvs_iterator_t*);
+esp_err_t nvs_entry_next(nvs_iterator_t*);
+esp_err_t nvs_entry_info(nvs_iterator_t,nvs_entry_info_t*);
+#else
 nvs_iterator_t nvs_entry_find(const char*,const char*,nvs_type_t);
 nvs_iterator_t nvs_entry_next(nvs_iterator_t);
 void nvs_entry_info(nvs_iterator_t,nvs_entry_info_t*);
+#endif
 void nvs_release_iterator(nvs_iterator_t);
 esp_err_t nvs_erase_key(nvs_handle_t,const char*);
 esp_err_t nvs_get_used_entry_count(nvs_handle_t,size_t*);

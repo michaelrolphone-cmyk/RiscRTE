@@ -1,7 +1,7 @@
 #include "NativeSettingsPayloadAllocator.h"
 #if defined(ESP_PLATFORM) && RISC_NATIVE_SETTINGS_PSRAM_PAYLOAD
 #include <esp_heap_caps.h>
-#include <soc/soc_memory_types.h>
+#include "NativeMemory.h"
 #include <cstdint>
 #include <new>
 namespace RiscCpu { namespace NativeSettingsPayloadAllocator { namespace {

@@ -3,7 +3,7 @@
 #if !defined(ESP_PLATFORM) && !defined(RISC_NATIVE_SETTINGS_ASSEMBLY_HOST_TEST)
 #error Settings assembly needs the selected ESP INTERNAL and PSRAM port
 #endif
-#include <soc/soc_memory_types.h>
+#include "NativeMemory.h"
 #include <esp_heap_caps.h>
 #include "runtime/packages/PackageIdentity.h"
 #include <cstring>

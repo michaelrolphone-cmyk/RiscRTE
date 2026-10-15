@@ -15,8 +15,8 @@
 #include "../../../experimental/native_replica/NvsReplicaMetadata.h"
 #include <esp_timer.h>
 #include <freertos/task.h>
-#include <mbedtls/sha256.h>
-#include <soc/soc_memory_types.h>
+#include "runtime/crypto/Sha256.h"
+#include "NativeMemory.h"
 #include <cerrno>
 #include <climits>
 #include <cstring>
@@ -51,7 +51,7 @@ struct Backend {
  bool(*owner)();
  M::Identity identity;
  Little::Mount binding;
- mbedtls_sha256_context hash{};
+ RiscCrypto::Sha256 hash;
  bool hashing=false;
 #if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
  uint8_t incarnation[16]{};
@@ -68,7 +68,7 @@ struct Backend {
    sources(space,LogicalOwner,artifacts,{this,held,initialized,observe}),
    legacy(space,LogicalOwner,space==1?"shared-00000001":"shared-00000006",
     F::Store::ImageMax-C::HeaderV3-4,artifacts,legacyDigest(),{this,held,epoch,initialized,observe},NativeSettingsPayloadAllocator::allocator()){
-   mbedtls_sha256_init(&hash);
+   hash.initialize();
   }
  static uint32_t now(void*){return uint32_t(esp_timer_get_time()/1000);}
  static esp_err_t initialized(void*){return RiscNvs::initializationStatus();}
@@ -115,9 +115,9 @@ struct Backend {
   [](void*p,const void*v,void*d){auto*s=io(p,v);return s?s->identity.vfs->closedir_p(const_cast<void*>(v),static_cast<DIR*>(d)):-1;}};}
  static bool digestAllowed(void*p){auto&s=*static_cast<Backend*>(p);return !observe(p)&&!xPortInIsrContext()&&((s.owner&&s.owner())||held(p));}
  RiscExperimental::NativeBaselineAdmission::Digest legacyDigest(){return {this,
-   [](void*p){auto&s=*static_cast<Backend*>(p);if(!digestAllowed(p))return false;s.hashing=mbedtls_sha256_starts_ret(&s.hash,0)==0;return s.hashing;},
-   [](void*p,const void*b,uint32_t n){auto&s=*static_cast<Backend*>(p);if(!s.hashing||!digestAllowed(p)||(!b&&n))return false;return mbedtls_sha256_update_ret(&s.hash,static_cast<const unsigned char*>(b),n)==0;},
-   [](void*p,uint8_t out[32]){auto&s=*static_cast<Backend*>(p);if(!out||!s.hashing||!digestAllowed(p))return false;const int rc=mbedtls_sha256_finish_ret(&s.hash,out);s.hashing=false;return rc==0;}};}
+   [](void*p){auto&s=*static_cast<Backend*>(p);if(!digestAllowed(p))return false;s.hashing=s.hash.begin();return s.hashing;},
+   [](void*p,const void*b,uint32_t n){auto&s=*static_cast<Backend*>(p);if(!s.hashing||!digestAllowed(p)||(!b&&n))return false;return s.hash.add(static_cast<const unsigned char*>(b),n);},
+   [](void*p,uint8_t out[32]){auto&s=*static_cast<Backend*>(p);if(!out||!s.hashing||!digestAllowed(p))return false;const bool ok=s.hash.finish(out);s.hashing=false;return ok;}};}
 #if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
  static bool ownerOrWorker(void*p){auto&s=*static_cast<Backend*>(p);return !xPortInIsrContext()&&!observe(p)&&((s.owner&&s.owner())||held(p));}
  static bool firstEntropy(void*p,uint8_t out[16]){auto&s=*static_cast<Backend*>(p);return NativeSettingsStartupEntropy::take(s.ns,NativeSettingsStartupEntropy::Purpose::FirstCheckpoint,p,held,out);}

@@ -13,9 +13,16 @@
 #endif
 #include "NativePlatform.h"
 #include <esp_sleep.h>
-#if RISC_ENABLE_USB_PHY
+#if RISC_NATIVE_ESP_IDF && RISC_HWCDC_SLEEP_RECOVERY
+#include <esp_idf_version.h>
+#include <driver/usb_serial_jtag.h>
+#endif
+#if RISC_ENABLE_USB_PHY || (RISC_NATIVE_ESP_IDF && RISC_HWCDC_SLEEP_RECOVERY)
 #include <hal/usb_serial_jtag_ll.h>
 #include <soc/rtc_cntl_struct.h>
+#if ESP_IDF_VERSION_MAJOR >= 6
+#include <esp_private/periph_ctrl.h>
+#endif
 #endif
 #include <cstdio>
 #if RISC_STAGE_LOGS
@@ -66,6 +73,31 @@ struct OutputGuard {
   ~OutputGuard(){outputting=false;}
 };
 bool ours(){return owner && owner==xTaskGetCurrentTaskHandle();}
+#if RISC_NATIVE_ESP_IDF && RISC_HWCDC_SLEEP_RECOVERY && ESP_IDF_VERSION_MAJOR >= 6
+bool nativeSerialModuleEnabled(){
+  bool enabled=false;
+  PERIPH_RCC_ATOMIC(){enabled=usb_serial_jtag_ll_module_is_enabled();}
+  return enabled;
+}
+bool nativeSerialDetach(){
+  // Called only after the same-core Console has released its driver. IDF6
+  // uninstall intentionally preserves the pads for stdout, so explicitly
+  // detach here to preserve the existing checked 20 ms recovery boundary.
+  if(usb_serial_jtag_is_driver_installed())return false;
+  PERIPH_RCC_ATOMIC(){
+    usb_serial_jtag_ll_enable_bus_clock(true);
+    usb_serial_jtag_ll_reset_register();
+  }
+  usb_serial_jtag_ll_phy_enable_pad(false);
+  return nativeSerialModuleEnabled() && !usb_serial_jtag_ll_phy_is_pad_enabled();
+}
+bool nativeSerialRouted(){
+  return nativeSerialModuleEnabled() && RTCCNTL.usb_conf.sw_hw_usb_phy_sel &&
+    !RTCCNTL.usb_conf.sw_usb_phy_sel && !USB_SERIAL_JTAG.conf0.phy_sel &&
+    !USB_SERIAL_JTAG.conf0.pad_pull_override && USB_SERIAL_JTAG.conf0.dp_pullup &&
+    usb_serial_jtag_ll_phy_is_pad_enabled();
+}
+#endif
 #if RISC_NATIVE_DIAGNOSTIC_OBSERVER
 bool draining=false;
 char sourceContext;
@@ -126,8 +158,24 @@ struct Transport {
   size_t write(const uint8_t* p,size_t n){return RiscPlatform::console.write(p,n);}
 #if RISC_HWCDC_SLEEP_RECOVERY
   uint32_t nowMs(){return RiscPlatform::millis();}
-  void end(){RiscPlatform::console.end();}
+#if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
+  bool detached=false;
+#endif
+  void end(){
+    RiscPlatform::console.end();
+#if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
+    detached=RiscPlatform::console.available()<0 && RiscPlatform::console.availableForWrite()==0;
+    if(detached)detached=nativeSerialDetach();
+#endif
+  }
   bool begin(){
+#if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
+    if(!detached || RiscPlatform::console.available()>=0 ||
+       RiscPlatform::console.availableForWrite()!=0 || usb_serial_jtag_ll_phy_is_pad_enabled())return false;
+    usb_serial_jtag_ll_phy_enable_external(false);
+    usb_serial_jtag_ll_phy_disable_pull_override();
+    USB_SERIAL_JTAG.conf0.dp_pullup=1;
+#endif
 #if RISC_STAGE_LOGS
     prepareSerial(); // end() freed the previous diagnostic TX allocation.
 #endif
@@ -135,7 +183,18 @@ struct Transport {
     // Pinned begin() returns void. Missing RX queue returns -1; missing TX
     // queue/mutex returns zero. Interrupt allocation failure calls end(). A
     // fresh sole-producer TX ring is empty, irrespective of host connection.
-    return RiscPlatform::console.available()>=0 && RiscPlatform::console.availableForWrite()>0;
+    const bool initialized=RiscPlatform::console.available()>=0 && RiscPlatform::console.availableForWrite()>0;
+#if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
+    // The official driver enables the selected PHY pads on install. Read back
+    // routing as well as allocation readiness before clearing a failure fence.
+    if(!initialized || !nativeSerialRouted()){
+      RiscPlatform::console.end();
+      if(!usb_serial_jtag_is_driver_installed())usb_serial_jtag_ll_phy_enable_pad(false);
+      return false;
+    }
+    detached=false;
+#endif
+    return initialized;
   }
 #endif
 } transport;
@@ -228,7 +287,11 @@ bool suspendUsbPhy(){
   // Fence recovery, live output and native storage drains before HWCDC end.
   // The pinned end disables/clears its IRQ and removes RX/TX resources.
   usbFenced=true;OutputGuard guard;
+#if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
+  transport.end();
+#else
   RiscPlatform::console.end();
+#endif
   unfinishedLine=false;
 #if RISC_SLEEP_DIAGNOSTICS
   replay.disconnect();
@@ -236,7 +299,11 @@ bool suspendUsbPhy(){
 #if RISC_PERFORMANCE_TRACE
   performanceReplay.disconnect();
 #endif
-  return ours() && RiscPlatform::console.available()<0 && RiscPlatform::console.availableForWrite()==0;
+  return ours() && RiscPlatform::console.available()<0 && RiscPlatform::console.availableForWrite()==0
+#if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
+    && transport.detached
+#endif
+    ;
 }
 bool resumeUsbPhy(){
   if(!ours() || outputting || !usbFenced)return false;
@@ -248,6 +315,14 @@ bool resumeUsbPhy(){
   // recreates its queues and interrupt, but does not reset the fixed-function
   // USB device or select its internal PHY in RTC_CNTL. Reclaim both here;
   // allocated queues alone do not establish that serial can reach the pads.
+#if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
+  transport.end();
+  if(!ours() || !transport.detached)return false;
+  RiscPlatform::delay(20);
+  if(!ours())return false;
+  const bool initialized=transport.begin();
+  const bool routed=nativeSerialRouted();
+#else
   RiscPlatform::console.end();
   if(!ours() || RiscPlatform::console.available()>=0 || RiscPlatform::console.availableForWrite()!=0)return false;
   usb_serial_jtag_ll_enable_bus_clock(true);
@@ -270,8 +345,15 @@ bool resumeUsbPhy(){
     RTCCNTL.usb_conf.sw_hw_usb_phy_sel && !RTCCNTL.usb_conf.sw_usb_phy_sel &&
     !USB_SERIAL_JTAG.conf0.phy_sel && !USB_SERIAL_JTAG.conf0.pad_pull_override &&
     USB_SERIAL_JTAG.conf0.dp_pullup && USB_SERIAL_JTAG.conf0.usb_pad_enable;
+#endif
   if(!ours() || !initialized || !routed){
-    RiscPlatform::console.end();usb_serial_jtag_ll_enable_pad(false);return false;
+    RiscPlatform::console.end();
+#if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
+    if(!usb_serial_jtag_is_driver_installed())usb_serial_jtag_ll_phy_enable_pad(false);
+#else
+    usb_serial_jtag_ll_enable_pad(false);
+#endif
+    return false;
   }
 #if RISC_HWCDC_SLEEP_RECOVERY
   recovery.reset();

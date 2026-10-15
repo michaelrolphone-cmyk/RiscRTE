@@ -7,7 +7,8 @@ flags=(-std=c++17 -Wall -Wextra -Werror -pedantic)
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g)
 fi
-"${CXX:-c++}" "${flags[@]}" -DESP_PLATFORM \
+for native in 0 1;do
+"${CXX:-c++}" "${flags[@]}" -DESP_PLATFORM -DRISC_NATIVE_ESP_IDF="$native" \
   -I"$repo/test/native_nvs_shim" -I"$repo/src" \
   -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" \
   -I"$repo/lib/ArduinoJson/src" \
@@ -17,6 +18,7 @@ fi
 # process, including each of Arduino's two destructive recovery conditions.
 for result in ok no-free-pages new-version fail no-mem invalid-state not-initialized; do
   "$build/native_nvs_test" "$result"
+done
 done
 # Embedded boot-store builds must not define another startup wrapper or depend
 # on native NVS headers. Compile without shim/SDK include directories to prove it.

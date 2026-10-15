@@ -40,13 +40,31 @@ inline int32_t next(void*,uint32_t ns,bool delta,const char*after,char key[16],v
  if(rc!=ESP_OK)return RISC_KEY_VALUE_IO;
  char name[12];std::snprintf(name,sizeof name,"%s%08x",prefix,unsigned(ns));
  size_t used=0;if(nvs_get_used_entry_count(h.value,&used)!=ESP_OK)return RISC_KEY_VALUE_IO;
+#if RISC_NATIVE_ESP_IDF
+ nvs_iterator_t it=nullptr;
+ rc=nvs_entry_find("nvs",name,NVS_TYPE_ANY,&it);
+ if(rc!=ESP_OK && rc!=ESP_ERR_NVS_NOT_FOUND)return RISC_KEY_VALUE_IO;
+ if((rc==ESP_OK && !it) || (!it && used))return RISC_KEY_VALUE_IO;
+#else
  auto it=nvs_entry_find("nvs",name,NVS_TYPE_ANY);if(!it&&used)return RISC_KEY_VALUE_IO;
- while(it){nvs_entry_info_t info{};nvs_entry_info(it,&info);
+#endif
+ while(it){nvs_entry_info_t info{};
+#if RISC_NATIVE_ESP_IDF
+  if(nvs_entry_info(it,&info)!=ESP_OK){nvs_release_iterator(it);return RISC_KEY_VALUE_IO;}
+#else
+  nvs_entry_info(it,&info);
+#endif
   if(std::strcmp(info.key,after)>0&&(!key[0]||std::strcmp(info.key,key)<0)){
    if(info.type!=NVS_TYPE_BLOB||!valid(ns,info.key)){nvs_release_iterator(it);return RISC_KEY_VALUE_IO;}
    std::strcpy(key,info.key);
   }
+#if RISC_NATIVE_ESP_IDF
+  rc=nvs_entry_next(&it);
+  if(rc!=ESP_OK && rc!=ESP_ERR_NVS_NOT_FOUND){nvs_release_iterator(it);return RISC_KEY_VALUE_IO;}
+  if(rc==ESP_OK && !it)return RISC_KEY_VALUE_IO;
+#else
   it=nvs_entry_next(it);
+#endif
  }
  if(!key[0])return RISC_KEY_VALUE_NOT_FOUND;
  return readRaw(h.value,key,out,cap,n);

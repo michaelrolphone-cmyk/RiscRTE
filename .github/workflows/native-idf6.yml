@@ -9,7 +9,7 @@ jobs:
   native-idf:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    container: espressif/idf:v6.1
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,23 +17,31 @@ jobs:
       - name: Verify official SDK identity
         shell: bash
         run: |
+          . "$IDF_PATH/export.sh"
           test "$(git -C "$IDF_PATH" rev-parse HEAD)" = fff9895c82d744c7237be8847347bdd1b07c6643
           xtensa-esp-elf-gcc --version
       - name: Native startup and peripheral contracts
         shell: bash
         run: |
+          . "$IDF_PATH/export.sh"
           python test/test_native_startup.py
           bash test/run_native_i2s_idf6_test.sh
           bash test/run_native_platform_test.sh
+          bash test/run_native_sleep_diagnostics_idf6_test.sh
+          bash test/run_native_sha256_test.sh
+          bash test/run_elf_time32_test.sh
+          bash test/native_nvs_shim/run_test.sh
       - name: Build native candidate with one compiler job
         shell: bash
         run: |
+          . "$IDF_PATH/export.sh"
           cd idf
           idf.py reconfigure
           cmake --build build -- -j1
       - name: Reject Arduino runtime linkage
         shell: bash
         run: |
+          . "$IDF_PATH/export.sh"
           ! xtensa-esp-elf-nm -C idf/build/riscrte_native.elf | grep -E 'initArduino|initVariant|loopTask|HardwareSerial|HWCDC::|String::'
           test -s idf/build/riscrte_native.bin
       - uses: actions/upload-artifact@v4

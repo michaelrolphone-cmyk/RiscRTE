@@ -6,23 +6,40 @@
 #include "runtime/diagnostics/FailureBacktrace.h"
 #include <esp_attr.h>
 #include <esp_idf_version.h>
+#if !CONFIG_IDF_TARGET_ESP32S3 || (ESP_IDF_VERSION != ESP_IDF_VERSION_VAL(4,4,7) && ESP_IDF_VERSION != ESP_IDF_VERSION_VAL(6,1,0))
+#error "Native failure capture requires the audited ESP32-S3 IDF 4.4.7 or 6.1.0 ABI"
+#endif
+#if ESP_IDF_VERSION == ESP_IDF_VERSION_VAL(6,1,0)
+#include <esp_app_desc.h>
+#else
 #include <esp_ota_ops.h>
+#endif
 #include <esp_system.h>
 #include <esp_debug_helpers.h>
 #include <esp_private/panic_internal.h>
 #include <esp_private/system_internal.h>
+#if ESP_IDF_VERSION == ESP_IDF_VERSION_VAL(6,1,0)
+#include <xtensa_context.h>
+#include <esp_memory_utils.h>
+#include <esp_cpu_utils.h>
+#else
 #include <xtensa/xtensa_context.h>
 #include <soc/soc_memory_types.h>
 #include <soc/cpu.h>
+#endif
 #include <cstddef>
 extern "C" { __attribute__((used,visibility("default"))) extern const uint32_t risc_native_failure_evidence_abi=1; }
-#if !CONFIG_IDF_TARGET_ESP32S3 || ESP_IDF_VERSION != ESP_IDF_VERSION_VAL(4,4,7)
-#error "Native failure capture requires the audited ESP32-S3 IDF 4.4.7 ABI"
+#if ESP_IDF_VERSION == ESP_IDF_VERSION_VAL(6,1,0) && (!CONFIG_ESP_SYSTEM_IN_IRAM || !CONFIG_ESP_PANIC_HANDLER_IRAM)
+// IDF6 places the SDK unwind helper through ESP_SYSTEM_IRAM_ATTR and the
+// reset-hint reader through esp_system/linker.lf. Both capture edges must stay
+// cache independent; accepting a flash-backed SDK helper would not be safe.
+#error "Native failure capture requires ESP_SYSTEM_IN_IRAM and ESP_PANIC_HANDLER_IRAM"
 #endif
-static_assert(sizeof(panic_info_t)==36 && offsetof(panic_info_t,frame)==28 &&
+static_assert(sizeof(panic_info_t)==36 && offsetof(panic_info_t,core)==0 &&
+  offsetof(panic_info_t,exception)==4 && offsetof(panic_info_t,frame)==28 &&
   offsetof(panic_info_t,pseudo_excause)==32,"pinned panic_info_t changed");
 static_assert(sizeof(XtExcFrame)==112 && offsetof(XtExcFrame,pc)==4 &&
-  offsetof(XtExcFrame,a0)==12 && offsetof(XtExcFrame,a1)==16 &&
+  offsetof(XtExcFrame,ps)==8 && offsetof(XtExcFrame,a0)==12 && offsetof(XtExcFrame,a1)==16 &&
   offsetof(XtExcFrame,exccause)==80 && offsetof(XtExcFrame,excvaddr)==84,"pinned XtExcFrame changed");
 namespace {
 using namespace RiscFailureEvidence;
@@ -63,8 +80,15 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(panic_info_t* info) {
   if(crashState.ready && !panicEntered) {
     panicEntered=1;
     asm volatile("memw" ::: "memory");
-    Registers registers{};
-    registers.core=UINT32_MAX;registers.exception=UINT32_MAX;
+    Registers registers;
+    // GCC15 can lower aggregate initialization to memset even with loop
+    // pattern recognition disabled. Volatile scalar stores make this panic
+    // initialization independent of libc and preserve every zero/sentinel.
+    volatile Registers& initialized=registers;
+    initialized.core=UINT32_MAX;initialized.exception=UINT32_MAX;
+    initialized.pseudo_excause=0;initialized.pc=0;initialized.sp=0;initialized.a0=0;
+    initialized.ps=0;initialized.exccause=0;initialized.excvaddr=0;
+    initialized.flags=0;initialized.reset_hint=0;
     registers.reset_hint=uint32_t(esp_reset_reason_get_hint());
     if(g_panic_abort)registers.flags|=RISC_FAILURE_ABORT;
     const XtExcFrame* frame=nullptr;
@@ -88,7 +112,8 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(panic_info_t* info) {
         count=RiscFailureBacktrace::collect({registers.pc,registers.sp,registers.a0},firstPc,
           SOC_DRAM_LOW,SOC_DRAM_HIGH-CONFIG_ESP32S3_DATA_CACHE_SIZE,frames,stop,
           [](RiscFailureBacktrace::Cursor& cursor) __attribute__((always_inline)) -> bool {
-            esp_backtrace_frame_t sdk{cursor.pc,cursor.sp,cursor.next_pc,nullptr};
+            esp_backtrace_frame_t sdk;
+            sdk.pc=cursor.pc;sdk.sp=cursor.sp;sdk.next_pc=cursor.next_pc;sdk.exc_frame=nullptr;
             const bool result=esp_backtrace_get_next_frame(&sdk);
             cursor.pc=sdk.pc;cursor.sp=sdk.sp;cursor.next_pc=sdk.next_pc;return result;
           },[](uint32_t pc) __attribute__((always_inline)) -> uint32_t {return esp_cpu_process_stack_pc(pc);});
@@ -105,7 +130,11 @@ void start() {
   const auto reset=esp_reset_reason();
   // The descriptor may live in flash: copy during healthy setup only. Store
   // boot() prestages these bytes in internal DRAM before setting State.ready.
+  #if ESP_IDF_VERSION == ESP_IDF_VERSION_VAL(6,1,0)
+  const auto* app=esp_app_get_description();
+  #else
   const auto* app=esp_ota_get_app_description();
+  #endif
   if(!app || app->magic_word!=ESP_APP_DESC_MAGIC_WORD)return;
   uint8_t identityPresent=0;
   for(unsigned i=0;i<sizeof(app->app_elf_sha256);++i)identityPresent|=app->app_elf_sha256[i];

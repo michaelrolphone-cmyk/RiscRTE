@@ -24,7 +24,7 @@
 #include <esp_partition.h>
 #include <esp_spiffs.h>
 #include <esp_image_format.h>
-#include <mbedtls/sha256.h>
+#include "runtime/crypto/Sha256.h"
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -71,7 +71,7 @@ struct Scratch {
   char manifest[RISC_BANK_MANIFEST_MAX]{};
   uint32_t manifestSize=0,appSize=0;
   uint8_t appDigest[32]{};
-  mbedtls_sha256_context hashContext{};
+  RiscCrypto::Sha256 hashContext;
   uint8_t buffer[4096+96]{};
 };
 Scratch* scratch=nullptr;
@@ -125,9 +125,9 @@ bool closeAdmissionRead(RiscBoot::Runtime* candidate,FILE* file,uint8_t* bytes){
   retainedAdmissionRuntime=nullptr;retainedAdmissionFile=nullptr;retainedAdmissionBytes=nullptr;return true;
 }
 uint32_t now(void*){return RiscPlatform::millis();}
-bool hashBegin(void*){return mbedtls_sha256_starts_ret(&scratch->hashContext,0)==0;}
-bool hashAdd(void*,const void* p,uint32_t n){return mbedtls_sha256_update_ret(&scratch->hashContext,static_cast<const uint8_t*>(p),n)==0;}
-bool hashEnd(void*,uint8_t* digest){return mbedtls_sha256_finish_ret(&scratch->hashContext,digest)==0;}
+bool hashBegin(void*){return scratch->hashContext.begin();}
+bool hashAdd(void*,const void* p,uint32_t n){return scratch->hashContext.add(static_cast<const uint8_t*>(p),n);}
+bool hashEnd(void*,uint8_t* digest){return scratch->hashContext.finish(digest);}
 bool range(unsigned bank,unsigned region,uint32_t off,uint32_t n){return bank<2 && region<2 && parts[bank][region] && n && n<=4096 && off<=parts[bank][region]->size && n<=parts[bank][region]->size-off;}
 bool read(void*,unsigned b,unsigned r,uint32_t o,void* p,uint32_t n){return operationSafe() && p && range(b,r,o,n) && esp_partition_read(parts[b][r],o,p,n)==ESP_OK;}
 bool erase(void*,unsigned b,unsigned r,uint32_t o){return operationSafe() && b!=activeBank && !(o%4096) && range(b,r,o,4096) && esp_partition_erase_range(parts[b][r],o,4096)==ESP_OK;}
@@ -147,6 +147,7 @@ bool record(void*,unsigned b,const Record& value){
 }
 bool cleanup(void*){
   if(!owner() || provisionReadRetained || (runtime && runtime->metadataCloseRetained()))return false;
+  if(scratch && !scratch->hashContext.reset())return false;
   if(provisionFiles && !provisionFiles->close())return false;
   if(appFile){FILE* f=appFile;appFile=nullptr;if(fclose(f)!=0)return false;}
   if(mounted){if(esp_vfs_spiffs_unregister(labels[1-activeBank])!=ESP_OK)return false;mounted=false;}
@@ -527,7 +528,7 @@ bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
   memory=heap_caps_malloc(sizeof(Transaction),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory){scratch->~Scratch();free(scratch);scratch=nullptr;return false;}
   transaction=new(memory) Transaction({nullptr,now,read,erase,write,invalidate,record,hashBegin,hashAdd,hashEnd,openApp,writeApp,finishApp,cleanup,validateFirmware,select,validateStore,openWholeStore,finishWholeStore});
-  mbedtls_sha256_init(&scratch->hashContext);
+  scratch->hashContext.initialize();
   for(unsigned b=0;b<2;++b){const char* appLabel=b?"app1":"app0";
     if(!partition(parts[b][0],ESP_PARTITION_TYPE_APP,esp_partition_subtype_t(ESP_PARTITION_SUBTYPE_APP_OTA_0+b),appLabel,FirmwareOffset[b],FirmwareBytes) ||
        !partition(parts[b][1],ESP_PARTITION_TYPE_DATA,ESP_PARTITION_SUBTYPE_DATA_SPIFFS,labels[b],StoreOffset[b],StoreBytes))return false;}

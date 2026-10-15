@@ -5,7 +5,7 @@
 #include "NativeAppDataMount.h"
 #endif
 #include <esp_heap_caps.h>
-#include <soc/soc_memory_types.h>
+#include "NativeMemory.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <new>

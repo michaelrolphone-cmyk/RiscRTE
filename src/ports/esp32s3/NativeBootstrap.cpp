@@ -7,7 +7,7 @@
 #include "runtime/update/PairedBank.h"
 #include "bootstrap/Json.h"
 #include <esp_heap_caps.h>
-#include <mbedtls/sha256.h>
+#include "runtime/crypto/Sha256.h"
 #include <new>
 #include <algorithm>
 #include <cstdio>
@@ -16,10 +16,10 @@ namespace RiscBootstrap {
 namespace {
 using RiscProvision::Step;
 bool sha(const void* bytes,uint32_t size,uint8_t* digest){
- mbedtls_sha256_context context;mbedtls_sha256_init(&context);
- const bool ok=mbedtls_sha256_starts_ret(&context,0)==0 &&
-   mbedtls_sha256_update_ret(&context,static_cast<const uint8_t*>(bytes),size)==0 && mbedtls_sha256_finish_ret(&context,digest)==0;
- mbedtls_sha256_free(&context);return ok;
+ RiscCrypto::Sha256 context;context.initialize();
+ const bool ok=context.begin() &&
+   context.add(static_cast<const uint8_t*>(bytes),size) && context.finish(digest);
+ context.release();return ok;
 }
 struct Session {
  Port port;RiscProvision::Profile profile;

@@ -3,6 +3,9 @@
 #include "RiscRandomV1.h"
 #include <esp_heap_caps.h>
 #include <esp_system.h>
+#if RISC_NATIVE_ESP_IDF
+#include <esp_random.h>
+#endif
 // Runtime validates explicit grants, owner task and invocation before dispatch.
 namespace RiscCpu {
 inline int32_t randomBytes(void* bytes,uint32_t length) {
