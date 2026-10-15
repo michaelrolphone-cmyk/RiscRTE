@@ -1,9 +1,2971 @@
 {
-  "schema": 1,
-  "enabled": false,
-  "repository": "michaelrolphone-cmyk/RiscRTE",
-  "version": "0.4.0",
-  "tag": "firmware-v0.4.0",
+  "artifacts": {
+    "generic": {
+      "bytes": 9751152,
+      "id": 12003935006,
+      "job_id": 116636599918,
+      "job_name": "native-idf (generic)",
+      "members": {
+        "build/.ninja_deps": {
+          "bytes": 746108,
+          "sha256": "552b88733c5ef60b6f4d539682f7f89e6286f3fde42335649ef50486d0c6957d"
+        },
+        "build/.ninja_log": {
+          "bytes": 135115,
+          "sha256": "fb8857216bd3035ab217497ad82e16f042b19e74bcf6eed8259218b03d468d39"
+        },
+        "build/CMakeCache.txt": {
+          "bytes": 28789,
+          "sha256": "8c6e576732a5243bff921cc2c308adbbc6f47bf52df13d6ae5abeb421780e5df"
+        },
+        "build/CMakeFiles/CMakeConfigureLog.yaml": {
+          "bytes": 245343,
+          "sha256": "6863648a1ff81350754b645cc7ec9f04621d7e87ad0cd0cf9ab9ef6be6e3febe"
+        },
+        "build/bootloader/.ninja_deps": {
+          "bytes": 81464,
+          "sha256": "b4b651941dcf2d0a77cacf15869c58b2489a4c642eb7b1dcde99e30ba84dc178"
+        },
+        "build/bootloader/.ninja_log": {
+          "bytes": 18882,
+          "sha256": "6927decf8047b85a5bfce66ae12d4db9f7683620509ab7f6966a834d58948f35"
+        },
+        "build/bootloader/CMakeCache.txt": {
+          "bytes": 18660,
+          "sha256": "5f8d745bfccbfb3462f38de05263dce4adfb83b388ef0ad834a94c08c618e13b"
+        },
+        "build/bootloader/CMakeFiles/CMakeConfigureLog.yaml": {
+          "bytes": 244411,
+          "sha256": "fe15bac9d3527313f49fef6107651e7129e875085d3bf4addacf8fb8b2c5d456"
+        },
+        "build/bootloader/bootloader.bin": {
+          "bytes": 22640,
+          "sha256": "8e1344731b3cd2c72b8e0fd828eb99186939ba30d048a6803e3f588104620636"
+        },
+        "build/bootloader/bootloader.elf": {
+          "bytes": 629724,
+          "sha256": "f4748ab058dc550609a8d44cb7641f82d0640f68bfe58be99e247bc29c9fbfb1"
+        },
+        "build/bootloader/bootloader.map": {
+          "bytes": 608691,
+          "sha256": "c8de4abcbeeed2e00800c7be35a841a778de992085e80887fb11006572075928"
+        },
+        "build/bootloader/build.ninja": {
+          "bytes": 772933,
+          "sha256": "1f86a9d9a63869a897df7ef33b095ebcd4d507abe8cc2b78e3a9f3c3a47edbfb"
+        },
+        "build/bootloader/compile_commands.json": {
+          "bytes": 548306,
+          "sha256": "7c639f986a7e20967e6635f30f1430dbabe19e079d2f8c7ad50a2ba3c8253a1c"
+        },
+        "build/bootloader/config/kconfig_menus.json": {
+          "bytes": 624550,
+          "sha256": "80131e02b4915dc951e3215b3d8dc795c8ec30085dd967b78c8fde2ff6742326"
+        },
+        "build/bootloader/config/sdkconfig.cmake": {
+          "bytes": 65002,
+          "sha256": "f14a6b5e9b44cce84081abb81a90f25b516cfe623de33b2f993f706e0e24c90b"
+        },
+        "build/bootloader/config/sdkconfig.h": {
+          "bytes": 28920,
+          "sha256": "947765e534fb25bcabcc16a98b64b799cf9b3eddff8cea138e309fbc6040d502"
+        },
+        "build/bootloader/config/sdkconfig.json": {
+          "bytes": 29499,
+          "sha256": "ac22916b5fd5df100e49a10565ea4d69bb6425743a84a13865d2b8c7cb68b0a7"
+        },
+        "build/bootloader/project_description.json": {
+          "bytes": 110919,
+          "sha256": "2c10f9a567fbae37361d34cb02e0c317d25d118afd07668b8ed58007fb47006e"
+        },
+        "build/bootloader/project_elf_src_esp32s3.c": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/bootloader/toolchain/asmflags": {
+          "bytes": 71,
+          "sha256": "21b4c8d43b0d85f90f37512b6a9b85a4cc7e93f93133886dba9593e2eee10a70"
+        },
+        "build/bootloader/toolchain/cflags": {
+          "bytes": 71,
+          "sha256": "21b4c8d43b0d85f90f37512b6a9b85a4cc7e93f93133886dba9593e2eee10a70"
+        },
+        "build/bootloader/toolchain/cxxflags": {
+          "bytes": 81,
+          "sha256": "d2cb1b25e1da83fffb033feb70d34f9ac51fbe242fc7b029415987e7e9cff443"
+        },
+        "build/bootloader/toolchain/ldflags": {
+          "bytes": 24,
+          "sha256": "0882bd89337f1e7949a99b6d96b1fff733639561359a71d6f0507168ac7c42dc"
+        },
+        "build/bootloader/toolchain/toolchain-esp32s3.cmake": {
+          "bytes": 101,
+          "sha256": "25323260dee4df19e35d9aed84bacdd71bb46df9165c286d060dceaa6368ac02"
+        },
+        "build/build.ninja": {
+          "bytes": 6907516,
+          "sha256": "6a946e327658b678a376d112de4c8b977ab83f13807e6ac8ef3705a69cbcd259"
+        },
+        "build/compile_commands.json": {
+          "bytes": 5908566,
+          "sha256": "6a14d3268f6952eae62ceda24f32435b1999f352a3616812b8530b1e465ee732"
+        },
+        "build/config/kconfig_menus.json": {
+          "bytes": 2688020,
+          "sha256": "ddb0ff0e76ffc44d748a0f6c26945fc55fe8de7bd8ab4a494ba72857bf4d45fd"
+        },
+        "build/config/sdkconfig.cmake": {
+          "bytes": 139527,
+          "sha256": "73ee7177e5e29edcd4180714e752e57ca2a6f4ea344e70cad299735ea3fe947b"
+        },
+        "build/config/sdkconfig.h": {
+          "bytes": 52358,
+          "sha256": "80445b010870567f3e4c91204d5889d35a823b0c7dea4ec2223734f65e8ff10e"
+        },
+        "build/config/sdkconfig.json": {
+          "bytes": 60066,
+          "sha256": "1faecf30a26cd40bfe80056c1b9e69c97719c906a6b2b70dc98751b268fbd4bc"
+        },
+        "build/esp-idf/mbedtls/x509_crt_bundle": {
+          "bytes": 67817,
+          "sha256": "b3e27ad072b398df1404c73493e6441ef4929e523f944cc37423e0e4b86c6fb0"
+        },
+        "build/esp-idf/runtime/RiscBuildIdentity.h": {
+          "bytes": 190,
+          "sha256": "e5fc5b34431da306ee44b3e436e8ce81500f10ac0a8235379e713d1c2603fd2e"
+        },
+        "build/flash_args": {
+          "bytes": 152,
+          "sha256": "ad1c23a70ea128740b852f1a9c45454fb4b5382016365fb2dcdb7978e408d795"
+        },
+        "build/flasher_args.json": {
+          "bytes": 921,
+          "sha256": "24470a198d2d6f22da4b415d3e79c41b772456ed2c6ffc80441d42a23e7f458f"
+        },
+        "build/log/idf_py_stderr_output_2501": {
+          "bytes": 5816,
+          "sha256": "f5963f680eb78ec0854669e85745b77d4fda05716794563039bb1298cbc5a6e8"
+        },
+        "build/log/idf_py_stdout_output_2501": {
+          "bytes": 8407,
+          "sha256": "c633a8323e75bf4ee0441f4bcf7bf4977d898f6b45d371b03c98898fe834f0b6"
+        },
+        "build/partition_table/partition-table.bin": {
+          "bytes": 3072,
+          "sha256": "80709764d8fc263606d5b9b06cfa4d4254884c3748bd0392bb2600b46d761e43"
+        },
+        "build/project_description.json": {
+          "bytes": 195276,
+          "sha256": "4c2666cae67f2ecddc989e16d73a6fad5dd3034aca25119bae0049f75dd62038"
+        },
+        "build/project_elf_src_esp32s3.c": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/entropy-command.json": {
+          "bytes": 12000,
+          "sha256": "e9382138d9e1656305bfe04cdb2d94c0f8085070e5f186ad01b5a03b51088c9e"
+        },
+        "build/qualification/atomics/entropy.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/entropy.o": {
+          "bytes": 59780,
+          "sha256": "0a7ba5db43f2b427d2687ebc0265acdfa136c1b419ac5dfc64ec5393b28e7633"
+        },
+        "build/qualification/atomics/radio-0-command.json": {
+          "bytes": 11891,
+          "sha256": "4d153dcbb445f3487d36cfad635fbc59ea230a24562b14d7ee19145d65d48080"
+        },
+        "build/qualification/atomics/radio-0.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/radio-0.o": {
+          "bytes": 408756,
+          "sha256": "d57c4aa9dca55b6c432ee8c0dedf2b6c46abaecf437dc715397e0554eb47e0a2"
+        },
+        "build/qualification/atomics/radio-1-command.json": {
+          "bytes": 11891,
+          "sha256": "783788d5f3be2a637ac616721d89210e7cf698206f78a90de4764d8c9a28a0f8"
+        },
+        "build/qualification/atomics/radio-1.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/radio-1.o": {
+          "bytes": 541708,
+          "sha256": "2155ff78c48ec50769ef7e794e1a6aa76827158c65835da91c72a24c26c4c228"
+        },
+        "build/qualification/atomics/radio.cpp": {
+          "bytes": 326,
+          "sha256": "4fdac4e8300835711b608fc0d7fe7e1f289d8e4e1ebcd366fc305f0ace238925"
+        },
+        "build/qualification/atomics/reject-config.h": {
+          "bytes": 124,
+          "sha256": "eb46dacdeb7fec04c0563163d376ce063d82d98ee528fcb603ffa14040afd5c1"
+        },
+        "build/qualification/atomics/reject-version-command.json": {
+          "bytes": 11946,
+          "sha256": "852f519da7d22df4ba9be6cb40011243024fbd3f1828cefe0eed7d614f9ae055"
+        },
+        "build/qualification/atomics/reject-version.h": {
+          "bytes": 103,
+          "sha256": "381fbabd05de6d6a6e1b2bab0fd08d03988e9149c6d24b831a71a0f5318a5c4c"
+        },
+        "build/qualification/atomics/reject-version.log": {
+          "bytes": 830,
+          "sha256": "6c8902c34b944349fe26562eaae8dd718436e6731827d1dea4f0e11f782b92d1"
+        },
+        "build/qualification/atomics/reject-workaround-command.json": {
+          "bytes": 11948,
+          "sha256": "6ebc52f8d89cc1f1bec77e1548b877385328147cd790df50952279c77097c0c2"
+        },
+        "build/qualification/atomics/reject-workaround.log": {
+          "bytes": 830,
+          "sha256": "6c8902c34b944349fe26562eaae8dd718436e6731827d1dea4f0e11f782b92d1"
+        },
+        "build/qualification/atomics/report.json": {
+          "bytes": 4963,
+          "sha256": "cb5506ddeea22336290c4c69536fd1066bc642ecd8dc5a97c6ce68afce9010c4"
+        },
+        "build/qualification/atomics/sdk-dispatch-command.json": {
+          "bytes": 5754,
+          "sha256": "b6ec813482386b66d62bacdb966d8e1a88ec3e01e4de97555f16a9c07ed7509b"
+        },
+        "build/qualification/atomics/sdk-dispatch.dis": {
+          "bytes": 236632,
+          "sha256": "eeec8cf2d1327fd089ccae0905d4a5514f3e53a88945ab0d1cb2006aa0ec4376"
+        },
+        "build/qualification/atomics/sdk-dispatch.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/sdk-dispatch.o": {
+          "bytes": 329952,
+          "sha256": "34bec977f9c3c67527efd2ac79d057005b95986e44a2233edc4a8b39ea451d98"
+        },
+        "build/qualification/atomics/sdk-hardware-command.json": {
+          "bytes": 5808,
+          "sha256": "fa14836ed40d63c620af7c8571be15d63ba0879689b841c16b335ef7fd32212c"
+        },
+        "build/qualification/atomics/sdk-hardware.dis": {
+          "bytes": 52471,
+          "sha256": "3f180ec21beed967c5fdfc47b43c3ab5512c0097e559129ca8461eedd3dbaaa5"
+        },
+        "build/qualification/atomics/sdk-hardware.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/sdk-hardware.o": {
+          "bytes": 59616,
+          "sha256": "f35752c7d39a8513d9fa0c7e7348af9c6b51d408b7a2e3d0bdd371959c821567"
+        },
+        "build/qualification/atomics/stream-registry-command.json": {
+          "bytes": 11871,
+          "sha256": "e8257a0b7e0dfc91d3c7d6657dabae9a8b0faff8a679612bd12229576195342b"
+        },
+        "build/qualification/atomics/stream-registry.log": {
+          "bytes": 660,
+          "sha256": "7a693c0faddc4692003e115afe0c3367b6f3bb35a90b14396bd34714fb6ed129"
+        },
+        "build/qualification/atomics/stream-registry.o": {
+          "bytes": 228320,
+          "sha256": "8560ec07042459756e1cac1d6e05d13e0bdb811753ab840f5ddb39d5dab3ec4b"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM-command.json": {
+          "bytes": 12036,
+          "sha256": "e7a7d22aee3c02c8d79d88fff4b6567a664a85f05fd26f46f5f22c5405a670b6"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM.h": {
+          "bytes": 165,
+          "sha256": "6427a936820b726061ed7f0d447624d17990ca220a9552cdb6fd91739c6b7097"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM.log": {
+          "bytes": 367,
+          "sha256": "a1df9f66904d4bac3d1fb040caed734aa4590dbfcf03c177e918d0ee29334138"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM-command.json": {
+          "bytes": 12028,
+          "sha256": "54cb6d2f335cc54c171a7d98b2d8b730c9d78871680b6ed3a17e194bdd749e46"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM.h": {
+          "bytes": 157,
+          "sha256": "a1d56d371ec497e7eaab6bcb14735cb2f685fc8ebbbc280a51b46303e4185481"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM.log": {
+          "bytes": 367,
+          "sha256": "a1df9f66904d4bac3d1fb040caed734aa4590dbfcf03c177e918d0ee29334138"
+        },
+        "build/qualification/failure/capture-config.h": {
+          "bytes": 169,
+          "sha256": "b9641813b966901778d8d3360a7aa8783d18e444820792891cb3408cd8da116f"
+        },
+        "build/qualification/failure/debug_helpers-command.json": {
+          "bytes": 6791,
+          "sha256": "de651f4f89a3c05a21a339e5f508a5e887bf2e7dfcd4aa5657261fe6c7ec501c"
+        },
+        "build/qualification/failure/debug_helpers.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/debug_helpers.o": {
+          "bytes": 36444,
+          "sha256": "b1c9208837c5ce38e235282fb33c6e12daaa7b0a4f0b895c2178e0285d4bf191"
+        },
+        "build/qualification/failure/esp_memory_utils-command.json": {
+          "bytes": 7233,
+          "sha256": "f2e535d7eac3d2210201cdc4f54123eb31fbfe5916e9f3b53ef2ba4e706d070c"
+        },
+        "build/qualification/failure/esp_memory_utils.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/esp_memory_utils.o": {
+          "bytes": 12180,
+          "sha256": "5c4aa63e0df6661fa425bd857c3143875b99d29c2b782f1be36f6de553aff0e1"
+        },
+        "build/qualification/failure/esp_psram-command.json": {
+          "bytes": 6013,
+          "sha256": "fa3dda119865892ccd726942e00d247cd0ba5569bf23829c51769054f263c36d"
+        },
+        "build/qualification/failure/esp_psram.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/esp_psram.o": {
+          "bytes": 55760,
+          "sha256": "4a90fb857b14dc6fced053287105861b53542087ded56da17fd04ed6ddad2800"
+        },
+        "build/qualification/failure/recorder-command.json": {
+          "bytes": 12019,
+          "sha256": "efe5fe74da323e6871feafdcd37bd7cda2b105945f0f309488f27ed49d5ac2db"
+        },
+        "build/qualification/failure/recorder.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/recorder.o": {
+          "bytes": 319768,
+          "sha256": "0161fefec8b8d263de39b73aa36af830bcaa9a7012d8b3bfdc55a580a170ad07"
+        },
+        "build/qualification/failure/recorder.su": {
+          "bytes": 1159,
+          "sha256": "5e3aa52c2308d20b406f07a359336d283850edfbb04f1b009b7b8f374b724775"
+        },
+        "build/qualification/failure/report.json": {
+          "bytes": 2562,
+          "sha256": "147332d9c5a8af43377dc6474229608cde919f16f4b88696dfeed7bef6c2eb35"
+        },
+        "build/qualification/failure/reset_reason-command.json": {
+          "bytes": 6789,
+          "sha256": "132d392d1282704acf499918bb50a28468acdcb481a0e68bf4748e4b20a2a019"
+        },
+        "build/qualification/failure/reset_reason.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/reset_reason.o": {
+          "bytes": 15108,
+          "sha256": "ccb7922b11e693710200d1b7a58b8a37e74b35c42d4a4cfa7c8fe36ed9db6a2a"
+        },
+        "build/qualification/failure/sleep-command.json": {
+          "bytes": 11841,
+          "sha256": "3eb4b689de7e6f73c7e2b73ab77c78fa326db8f9d68cfd8076200393fac752a2"
+        },
+        "build/qualification/failure/sleep.cpp": {
+          "bytes": 258,
+          "sha256": "71f057bb7cf6c21bd3b194c56145e2af4a775af9f79b267a35cf2ae304ef0d14"
+        },
+        "build/qualification/failure/sleep.log": {
+          "bytes": 1213,
+          "sha256": "427092da65048b01e51830bde66fa5645f48f61c49aa39cf73ffcdeadf612fd4"
+        },
+        "build/qualification/failure/sleep.o": {
+          "bytes": 37464,
+          "sha256": "be9dc3cc631af0f25d6dd96ae188e556ed5d47dfa7e0f92ecae35d6b26601225"
+        },
+        "build/qualification/failure/wrong-version-command.json": {
+          "bytes": 12004,
+          "sha256": "80971f730e5892a45034d00451c7c44c69d61f0f14eab2a926141196a72ab3f0"
+        },
+        "build/qualification/failure/wrong-version.h": {
+          "bytes": 191,
+          "sha256": "da03d56d19e1a33f97e6bcd947ddf6a3efacdec9d66ad00c2523dbf924ba8046"
+        },
+        "build/qualification/failure/wrong-version.log": {
+          "bytes": 1383,
+          "sha256": "f53c8f4c000f89aa23e49ed422735a8d4d933f4c4f212d4de3df10433774f379"
+        },
+        "build/qualification/http/native-http-stages-0-command.json": {
+          "bytes": 12041,
+          "sha256": "fd1fdef733c4d3aaf812d8c936f10a51ad3351aca5efe1de16d04dc5b5fae26b"
+        },
+        "build/qualification/http/native-http-stages-0.log": {
+          "bytes": 1544,
+          "sha256": "b22ffedd36437c024365283806bfb41b62efc6c97c01b0ff81fe2062526bd986"
+        },
+        "build/qualification/http/native-http-stages-0.o": {
+          "bytes": 118404,
+          "sha256": "0c5fc9cc787439877fa52ebfb4a9768a274a0976b07e7a249e129d1b72230e05"
+        },
+        "build/qualification/http/native-http-stages-1-command.json": {
+          "bytes": 12041,
+          "sha256": "917e8f787f43f95382a101be8aa3e6bdb97ac2304a9bfd224bfa620526ebd3e2"
+        },
+        "build/qualification/http/native-http-stages-1.log": {
+          "bytes": 1544,
+          "sha256": "b22ffedd36437c024365283806bfb41b62efc6c97c01b0ff81fe2062526bd986"
+        },
+        "build/qualification/http/native-http-stages-1.o": {
+          "bytes": 122672,
+          "sha256": "378d1be01d94d4b3c8137be78afc199c64a803ceb3dd8f41b21ca38a610f19e8"
+        },
+        "build/qualification/http/native-http.cpp": {
+          "bytes": 451,
+          "sha256": "df0d5ae4b6f4136341c188c66c59b6f69bcc07e0d41c9dc814bc64a1688dae9b"
+        },
+        "build/qualification/iq/native-iq-0-command.json": {
+          "bytes": 11903,
+          "sha256": "77d18b49cee558523bfd3946d5753602f21e811e5cdfd684f92f458886899317"
+        },
+        "build/qualification/iq/native-iq-0.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/iq/native-iq-0.o": {
+          "bytes": 53196,
+          "sha256": "be39f06dca3f49b045d02800d65221e85b088e0450750695200a522547c9f4d3"
+        },
+        "build/qualification/iq/native-iq-1-command.json": {
+          "bytes": 11903,
+          "sha256": "6c0e7b38287871625e07f4ae15879ef78c70c88ed5419f5698743cb42b66c72b"
+        },
+        "build/qualification/iq/native-iq-1.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/iq/native-iq-1.o": {
+          "bytes": 56200,
+          "sha256": "60aeea468ff5d03c932af4c71300049ea956009d55112ccf608d045d5baf3447"
+        },
+        "build/qualification/iq/native-iq.cpp": {
+          "bytes": 815,
+          "sha256": "92d9729198fbf9eed13cbb64f03921a277b09eb7be46b09b706f99e982fc2888"
+        },
+        "build/qualification/iq/report.json": {
+          "bytes": 3302,
+          "sha256": "a7dc2bc2ba852863755bf2b2f59911aa3f186f3e2e69cbfc3bcb70fa2a235790"
+        },
+        "build/qualification/linked-firmware.json": {
+          "bytes": 1062,
+          "sha256": "964aae7dfa61b0c6cfd65a9fe6f132e6eff2b43a345a707c763c9af1fc8c4cb7"
+        },
+        "build/riscrte_native.bin": {
+          "bytes": 1251360,
+          "sha256": "a9daf3ffa6f1c63e3e7a2ff53be01fb452bcbfd265c1754350f9e9a883ae2996"
+        },
+        "build/riscrte_native.elf": {
+          "bytes": 15228952,
+          "sha256": "b490b837e643dd996a8f1fa787fa52a83641a6f275f719e7b254fc2b17a97b4c"
+        },
+        "build/riscrte_native.map": {
+          "bytes": 11872494,
+          "sha256": "019e20f2c5e793b41c13811ed8522acacae084733c3d725839a44bb1dba1f7a8"
+        },
+        "build/sdkconfig": {
+          "bytes": 93468,
+          "sha256": "def15e931d473d07055ea6245ebfb3131a7aabe3cf1aaa44ea63b8423679f202"
+        },
+        "build/toolchain/asmflags": {
+          "bytes": 98,
+          "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+        },
+        "build/toolchain/cflags": {
+          "bytes": 98,
+          "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+        },
+        "build/toolchain/cxxflags": {
+          "bytes": 108,
+          "sha256": "50190b4d3a273c3a2ccc13a3a908cda254f065b34ea9949f9fedc2477ef4f889"
+        },
+        "build/toolchain/ldflags": {
+          "bytes": 24,
+          "sha256": "0882bd89337f1e7949a99b6d96b1fff733639561359a71d6f0507168ac7c42dc"
+        },
+        "build/toolchain/toolchain-esp32s3.cmake": {
+          "bytes": 101,
+          "sha256": "25323260dee4df19e35d9aed84bacdd71bb46df9165c286d060dceaa6368ac02"
+        },
+        "build/x509_crt_bundle.S": {
+          "bytes": 428665,
+          "sha256": "8aabceb8bbb8dd6701ee5cae030337bcf346401d45ed52c32b617a29a2421506"
+        },
+        "logs/arduino-free-qualification.log": {
+          "bytes": 659,
+          "sha256": "be8a519a22b90fb3ca171ffdf82e511fbebd5d57e8752a08b3604aefa6cc46e9"
+        },
+        "logs/native-bank-qualification.log": {
+          "bytes": 15790,
+          "sha256": "b00885f11b2270a6204fcb80b6b0e3d6d3cc671fdee8d864d15a5268f7edd2b7"
+        },
+        "logs/native-build.log": {
+          "bytes": 166358,
+          "sha256": "5fa006ded08a769e9adaa34a15dbeadcd3d492434a73bea0b5f4143a947b846a"
+        },
+        "logs/native-contracts.log": {
+          "bytes": 36583,
+          "sha256": "36bef3e05aec410738fb85a46b35fb4a78c989759da537c84a7c2e5e035595c1"
+        },
+        "logs/source-custody-final.log": {
+          "bytes": 602,
+          "sha256": "b36005f8c94ced7ab800f0c058cb7b81d36fac4dd4ff813c2ec3153ae4a33314"
+        },
+        "logs/source-custody.log": {
+          "bytes": 1037,
+          "sha256": "bfcf6cd8c1fe738637872c150c4b0658d871348611441927bd7d17f795ac2e19"
+        },
+        "logs/source-setup.log": {
+          "bytes": 5983,
+          "sha256": "c82f56d7cba2884b8797c903f5f7535205fafbf28862aa3d3a9a9cb47ffd75ec"
+        },
+        "logs/target-qualification.log": {
+          "bytes": 980,
+          "sha256": "f987b214cfc4c290da4957c5a9e23deb26477bf0ba41dc281d008175d785f91a"
+        },
+        "metadata/ci-run.json": {
+          "bytes": 835,
+          "sha256": "0f1d69bd34558e48d0b27bd2d19532fad709455b5a4724b55ffa00ece5b10854"
+        },
+        "metadata/compiler-SHA256SUMS": {
+          "bytes": 154,
+          "sha256": "9ea83232086e7ed939a9c771f1b4ca50f1c02510e202a67890b8b4962358ca02"
+        },
+        "metadata/compiler-version.txt": {
+          "bytes": 263,
+          "sha256": "ed21da1d0b473173d364e78a27c81f8f4b2537477bf9c54b34b645fe1268b18e"
+        },
+        "metadata/sdk-tools.json": {
+          "bytes": 47183,
+          "sha256": "039337e5ee2511f97d112aedb98125945625a4dd9ffb67e0cbb094edcdd298b2"
+        },
+        "metadata/sources-after.json": {
+          "bytes": 3556,
+          "sha256": "7adaf7bd3eac6faeacef11f19fc91d8ae29fb376a4be931e43632eaeecd101bd"
+        },
+        "metadata/sources-before.json": {
+          "bytes": 3556,
+          "sha256": "7adaf7bd3eac6faeacef11f19fc91d8ae29fb376a4be931e43632eaeecd101bd"
+        },
+        "metadata/workflow.yml": {
+          "bytes": 21876,
+          "sha256": "8bd1593f7d5b9106e587edf8083372f89495b1600e523ac99987bc7dc24d0bbc"
+        }
+      },
+      "name": "native-idf6-generic-659d859acb122640ef4003bb8d7099501d4381be",
+      "sha256": "a2766cd21f1417c17745b01226b2c6274d1cb4dbd36e11b5b9e6d70eac60e5fa",
+      "sources": {
+        "runtime": {
+          "revision": "659d859acb122640ef4003bb8d7099501d4381be",
+          "submodules": [],
+          "tree": "5bde8014c76a52c9a380b1427aafaf9923a37411"
+        },
+        "sdk": {
+          "revision": "fff9895c82d744c7237be8847347bdd1b07c6643",
+          "submodules": [
+            "24c60e243580c7868f4334a1ba3123481fe1aa48 components/bootloader/subproject/components/micro-ecc/micro-ecc (v1.1)",
+            "98c6de2d5411a7297dbba00387dfca2bcc44fd18 components/bt/controller/lib_esp32 (98c6de2)",
+            "6a5c0b8bfca1a2e984e89431b8ebf9b521dad5ea components/bt/controller/lib_esp32c2/esp32c2-bt-lib (heads/main)",
+            "0a08c4b32f3666003080b662a1a61794da24ff0f components/bt/controller/lib_esp32c3_family (heads/master)",
+            "ac7885ea2fc76e56a814d10120812ccacf101f0b components/bt/controller/lib_esp32c5/esp32c5-bt-lib (ac7885e)",
+            "eee922eaa95770d567f0939cc3d56c712a6ecf65 components/bt/controller/lib_esp32c6/esp32c6-bt-lib (eee922e)",
+            "e0bb64a28b90247a349fbfc03a204df9194e40a1 components/bt/controller/lib_esp32h2/esp32h2-bt-lib (e0bb64a)",
+            "f4ce5d581a264fb5bf4c1b6ed473c45ad91f9db7 components/bt/controller/lib_esp32h4/esp32h4-bt-lib (f4ce5d5)",
+            "7f20740dd66ee774ffce5db0b55507892551aa31 components/bt/controller/lib_esp32s31/esp32s31-bt-lib (7f20740)",
+            "8af29109827eb9e3bc636b2a1ae6596fdfacaf4a components/bt/esp_ble_audio/lib/lib (8af2910)",
+            "f6c62bfa32759da7c44459bd6b40079cce93c94b components/bt/esp_ble_mesh/lib/lib (f6c62bf)",
+            "139cada0ae932957fa06ba37d17e3c9c2c95c773 components/bt/host/nimble/nimble (nimble_1_6_0_tag-439-g139cada0a)",
+            "eeecc49ce8af123cf8ad40efdb9673e37b56230f components/cmock/CMock (v2.5.2-2-geeecc49)",
+            "71b47be7c950f1bf5f7e5303779fa99a16224bb6 components/cmock/CMock/vendor/c_exception (v1.3.1-13-g71b47be)",
+            "cf949f45ca6d172a177b00da21310607b97bc7a7 components/cmock/CMock/vendor/unity (v2.5.1)",
+            "ddc56fa524a38df3098d2f36475fbe3eefe9b4f4 components/esp_coex/lib (heads/main)",
+            "5695f4f38108658bc4a33e4712c1ebcb34911434 components/esp_phy/lib (heads/master)",
+            "7cd4d7b2b4acc38aead43b029ac9409c3eba9c54 components/esp_wifi/lib (remotes/origin/feature/ftm_support_stage2-579-g7cd4d7b2)",
+            "2867f6883a12920b1969ff9624c0ab0e4185c2ce components/heap/tlsf (remotes/origin/master-48-g2867f68)",
+            "c6f2f878e7b0f86033214b85547d579be43351e3 components/lwip/lwip (heads/2.2.0-esp)",
+            "a2b32072ea898afc1ed5b6caf6931e36028c91d6 components/mbedtls/mbedtls (mbedtls-4.1.0-22-ga2b32072ea)",
+            "4dd715391cfb2cf4d06825a17294514024e4dc12 components/openthread/lib (4dd7153)",
+            "b678a4f63b6f9397d1a0fa8f31e5b8e0271a4d00 components/openthread/openthread (thread-reference-20250612-1270-gb678a4f63)",
+            "e185d7fd85499c8ce5ca2a54f5cf8fe7dbe3f8df components/openthread/openthread/third_party/mbedtls/repo (v3.6.5)",
+            "457996474728cb8e968ed21953b72f74d2f536b2 components/openthread/openthread/third_party/mbedtls/repo/framework (mbedtls-4.0.0_tf-psa-crypto-1.0.0)",
+            "abc67a11c6db271bedbb9f58be85d6f4e2ea8389 components/protobuf-c/protobuf-c (v1.4.1)",
+            "ad902cadceb39d0825a97e25ecb5867641f606ba components/spiffs/spiffs (0.2-265-gad902ca)",
+            "bf560290f6020737eafaa8b5cbd2177c3956c03f components/unity/unity (v2.6.0_RC1)"
+          ],
+          "tree": "e6a5e4865e2027f1f0cef5da09f254d65c5cec22"
+        }
+      }
+    },
+    "twatch": {
+      "bytes": 20534528,
+      "id": 12002797189,
+      "job_id": 116636599449,
+      "job_name": "native-idf (twatch, RiscRTE-T-Watch-S3, 74f7491dc470b92dfa41fce41bf0c500f3714a94, 1.1.40, esp32s3...",
+      "members": {
+        "build/.ninja_deps": {
+          "bytes": 754264,
+          "sha256": "ca306618252516f5e7a6abf3b45165bd3be7bf1f886185ac9f6a8c486e17a21a"
+        },
+        "build/.ninja_log": {
+          "bytes": 135636,
+          "sha256": "d4e7337b400005058797df8ec5fd662a4f277d823c9a05583142284349a9f762"
+        },
+        "build/CMakeCache.txt": {
+          "bytes": 28936,
+          "sha256": "2fb61b3debb3b8d881458d35bf8d4de482559682b0455e087b2efe1c36992f29"
+        },
+        "build/CMakeFiles/CMakeConfigureLog.yaml": {
+          "bytes": 245249,
+          "sha256": "6cacfc5ead1aba2438cde2e3e690aeab764b2462946194b37a31f5fae8138341"
+        },
+        "build/bootloader/.ninja_deps": {
+          "bytes": 81464,
+          "sha256": "89e606569690f0b0b69e907a63d8cdd024caebc713ca1f8fc9c9e00cd6a07ab0"
+        },
+        "build/bootloader/.ninja_log": {
+          "bytes": 18878,
+          "sha256": "5c5ebd33e79f38d668570718bd2cc975c20e4c30d3825855ab5b63fcd2853406"
+        },
+        "build/bootloader/CMakeCache.txt": {
+          "bytes": 18648,
+          "sha256": "e6bb5707993a2c0dc585bc9ac1b81e43214799e3fbd4179360a8e0e858ccc8ed"
+        },
+        "build/bootloader/CMakeFiles/CMakeConfigureLog.yaml": {
+          "bytes": 244335,
+          "sha256": "aacbf578e4d8a85b2e753de583152b46741dccad33a7b0bd381ef1e2d3d07427"
+        },
+        "build/bootloader/bootloader.bin": {
+          "bytes": 22640,
+          "sha256": "06d22b02b631afd104890e475771f03fb15bec87734f3db2e6fd3cdd49973104"
+        },
+        "build/bootloader/bootloader.elf": {
+          "bytes": 629720,
+          "sha256": "484733fd6b15a35de15581f9e4729fcfca423da571a9da72f7b7aaa02912b75b"
+        },
+        "build/bootloader/bootloader.map": {
+          "bytes": 608691,
+          "sha256": "85cc7cffcbd502debf28af8801c90ff346cc27e7cf88c9fccd45f125eabf2982"
+        },
+        "build/bootloader/build.ninja": {
+          "bytes": 772314,
+          "sha256": "b240ea30c2b0502309d8c85b0f269422b68d283fdd45234eb57cf5d24265c136"
+        },
+        "build/bootloader/compile_commands.json": {
+          "bytes": 547932,
+          "sha256": "4ce2f7381e38cdf97a5b6a27f5fa0ad173c1ca0da8a94c8a7cba556acedb4cc9"
+        },
+        "build/bootloader/config/kconfig_menus.json": {
+          "bytes": 624550,
+          "sha256": "80131e02b4915dc951e3215b3d8dc795c8ec30085dd967b78c8fde2ff6742326"
+        },
+        "build/bootloader/config/sdkconfig.cmake": {
+          "bytes": 65138,
+          "sha256": "06ff75cdfa4a92273b38dd7fe3c6da90ca37a33f929c1be454a880077a6ad1a8"
+        },
+        "build/bootloader/config/sdkconfig.h": {
+          "bytes": 29056,
+          "sha256": "0aa08d97e335481c217f23bb9d89ee4bec3df48a1db844d19c1e035cc8041316"
+        },
+        "build/bootloader/config/sdkconfig.json": {
+          "bytes": 29635,
+          "sha256": "41331c34c4d19db3ed81fc609d91a94677adf724fc705b93ea141fc5a6af18ef"
+        },
+        "build/bootloader/project_description.json": {
+          "bytes": 110882,
+          "sha256": "3d1a4ea1559dedc0b0546050413a777ac20ffb2fe0deebd48006622ca218e20d"
+        },
+        "build/bootloader/project_elf_src_esp32s3.c": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/bootloader/toolchain/asmflags": {
+          "bytes": 71,
+          "sha256": "21b4c8d43b0d85f90f37512b6a9b85a4cc7e93f93133886dba9593e2eee10a70"
+        },
+        "build/bootloader/toolchain/cflags": {
+          "bytes": 71,
+          "sha256": "21b4c8d43b0d85f90f37512b6a9b85a4cc7e93f93133886dba9593e2eee10a70"
+        },
+        "build/bootloader/toolchain/cxxflags": {
+          "bytes": 81,
+          "sha256": "d2cb1b25e1da83fffb033feb70d34f9ac51fbe242fc7b029415987e7e9cff443"
+        },
+        "build/bootloader/toolchain/ldflags": {
+          "bytes": 24,
+          "sha256": "0882bd89337f1e7949a99b6d96b1fff733639561359a71d6f0507168ac7c42dc"
+        },
+        "build/bootloader/toolchain/toolchain-esp32s3.cmake": {
+          "bytes": 101,
+          "sha256": "25323260dee4df19e35d9aed84bacdd71bb46df9165c286d060dceaa6368ac02"
+        },
+        "build/build.ninja": {
+          "bytes": 6937813,
+          "sha256": "4268f88374b6403fb6ca5a8ab8ce067b711d34ac95d1e573d2baa56af3c04bfd"
+        },
+        "build/compile_commands.json": {
+          "bytes": 5931061,
+          "sha256": "e7ce236dd95d204480d37aa5f75ab9b5c631e1dc93754999f36f4a067b4fadd2"
+        },
+        "build/config/kconfig_menus.json": {
+          "bytes": 2688014,
+          "sha256": "4665f14543660f882b4b2a1a39367923dfce58db007f2ef60568dab4ef0018bb"
+        },
+        "build/config/sdkconfig.cmake": {
+          "bytes": 139663,
+          "sha256": "a1cd033a45c02f442d5a4edc923b409fe626df202fd98b31337c65a268c40bd8"
+        },
+        "build/config/sdkconfig.h": {
+          "bytes": 52494,
+          "sha256": "7f128e3fb899e079d145746e486c337a8755d4d4e0bff9090e50ba89966a8a34"
+        },
+        "build/config/sdkconfig.json": {
+          "bytes": 60202,
+          "sha256": "676e2c932581cf7f7bef080eb564b2945ad04542da3350cad65ceca587684a84"
+        },
+        "build/esp-idf/mbedtls/x509_crt_bundle": {
+          "bytes": 67817,
+          "sha256": "b3e27ad072b398df1404c73493e6441ef4929e523f944cc37423e0e4b86c6fb0"
+        },
+        "build/esp-idf/runtime/RiscBuildIdentity.h": {
+          "bytes": 190,
+          "sha256": "e5fc5b34431da306ee44b3e436e8ce81500f10ac0a8235379e713d1c2603fd2e"
+        },
+        "build/flash_args": {
+          "bytes": 182,
+          "sha256": "11945dacb9ad5acba260036837cafd4c3e2a087d38d2049800468bbecc002ae6"
+        },
+        "build/flasher_args.json": {
+          "bytes": 1065,
+          "sha256": "eac8a848f96da3ebaf107684456a2709e475f8c3b72e484e67a1fb3f9ed7e337"
+        },
+        "build/log/idf_py_stderr_output_1607": {
+          "bytes": 5999,
+          "sha256": "dc33a2866af299e1c8ef570a636f102523c832d7d44bfff02b0674afb94185bf"
+        },
+        "build/log/idf_py_stdout_output_1607": {
+          "bytes": 8525,
+          "sha256": "e5e5dcb37d3939a3e02c900ddf8df2827475eff0da5191356ff09f56b4b950a5"
+        },
+        "build/native-build-evidence/app_commands.txt": {
+          "bytes": 6003955,
+          "sha256": "80bf7dced1f67cff6efc3bbb8757c88c0f163f5c79f7ec1357dbfe930be0fe9e"
+        },
+        "build/native-build-evidence/app_deps.txt": {
+          "bytes": 9139037,
+          "sha256": "b2a41cc8f7a56f414cf8b0f55d7f9b761b2e594d3a0d6e626afbc276a418e57e"
+        },
+        "build/native-build-evidence/app_inputs.txt": {
+          "bytes": 146583,
+          "sha256": "f0c856131d2c0646a93a6c0414c5ae715db7d13cb14ddf424abdb83ccc2cd179"
+        },
+        "build/native-build-evidence/app_phony_queries.txt": {
+          "bytes": 147680,
+          "sha256": "ad6dba9391abc557f448d70b0af68dd4c7f7c50f3090974e9a8f0a93a120d9c0"
+        },
+        "build/native-build-evidence/bootloader_commands.txt": {
+          "bytes": 565029,
+          "sha256": "2e9477166438a497aa1f1a849c5f18fd1d649725228f449eeee2ca5ac96ff701"
+        },
+        "build/native-build-evidence/bootloader_deps.txt": {
+          "bytes": 601498,
+          "sha256": "750702a1030f3435f9a9b9edc30d1dcb75f41f9ae105189225ee03449731bf8d"
+        },
+        "build/native-build-evidence/bootloader_inputs.txt": {
+          "bytes": 20561,
+          "sha256": "d88ed3b2a48f8addaf363f76e1fce30d790c2297490de3f00ebf1f12ae071fdd"
+        },
+        "build/native-build-evidence/bootloader_phony_queries.txt": {
+          "bytes": 25725,
+          "sha256": "ac3fd3ffb45fccee4d7c6776ff05e0a7b4ea546970d71d4d2dd6f5554b4d0e53"
+        },
+        "build/native-build-evidence/build-closure.json": {
+          "bytes": 1159635,
+          "sha256": "86f1763e69f0465e52e36e2c1ee06c7bde4fabc970c853b1af13999d7335b8a2"
+        },
+        "build/native-build-evidence/source-lock.json": {
+          "bytes": 9814,
+          "sha256": "1a9b9d1d10845ceb244c4f5b021f0705d3acb00f5558c95a84164dbfd43a1507"
+        },
+        "build/native-iq-rom.json": {
+          "bytes": 808,
+          "sha256": "7edfeee41f8879078a95353409b5df767ff70b6ea52450c9d2ff8fb79d0b7a0a"
+        },
+        "build/native-iq-rom.ld": {
+          "bytes": 203,
+          "sha256": "5cdb4befd9a6e2592a4299f88adf119d6155a425d51e5cb9a2d0679b64602de3"
+        },
+        "build/partition_table/partition-table.bin": {
+          "bytes": 3072,
+          "sha256": "d27edcdba637142baa7d91e29b70df47554c22a4f14de303dc6a0cdcc1e25de8"
+        },
+        "build/product-sdkconfig.defaults": {
+          "bytes": 127,
+          "sha256": "62d0cb2bf3c279f3263dcc09859e3823af2b2de193d2295fa0579944232056b9"
+        },
+        "build/project_description.json": {
+          "bytes": 195153,
+          "sha256": "f818bf308166b60f2e3f7a19bfdcce789d05509c080a6f91fbecfecbb133e4d1"
+        },
+        "build/project_elf_src_esp32s3.c": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/entropy-command.json": {
+          "bytes": 12643,
+          "sha256": "e89a52968415d3bb2ccd09c09e5c7816510b3ad3a658a0f7740203fa8d375a75"
+        },
+        "build/qualification/atomics/entropy.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/entropy.o": {
+          "bytes": 59776,
+          "sha256": "b59f3a45845ac98e63525db89fdc89ca477a7fc5664c9695191f577e7e93d410"
+        },
+        "build/qualification/atomics/radio-0-command.json": {
+          "bytes": 12534,
+          "sha256": "b6ae84e0378328d2d17608db81d36eb29edf29d2adb1a1a545d8eb744bc8d47c"
+        },
+        "build/qualification/atomics/radio-0.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/radio-0.o": {
+          "bytes": 408748,
+          "sha256": "89e83e5dc41409ce35d2e623e9c5fb8371c13e48485705951dc8312ffb5f89a8"
+        },
+        "build/qualification/atomics/radio-1-command.json": {
+          "bytes": 12534,
+          "sha256": "84656b05f2007969d34d797e66b12a2d448ef95108ac0e28c2e5361075619443"
+        },
+        "build/qualification/atomics/radio-1.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/radio-1.o": {
+          "bytes": 541704,
+          "sha256": "97e2709fe2377a8fc6748ad50a02bd6c7fe5e6aab900fe2c076a9ad7bd033a90"
+        },
+        "build/qualification/atomics/radio.cpp": {
+          "bytes": 326,
+          "sha256": "4fdac4e8300835711b608fc0d7fe7e1f289d8e4e1ebcd366fc305f0ace238925"
+        },
+        "build/qualification/atomics/reject-config.h": {
+          "bytes": 124,
+          "sha256": "eb46dacdeb7fec04c0563163d376ce063d82d98ee528fcb603ffa14040afd5c1"
+        },
+        "build/qualification/atomics/reject-version-command.json": {
+          "bytes": 12588,
+          "sha256": "0e291e9e00cfc450cf1f33c41f5e852f5a3fb029865e3a7c16fbe55ff4365b22"
+        },
+        "build/qualification/atomics/reject-version.h": {
+          "bytes": 103,
+          "sha256": "381fbabd05de6d6a6e1b2bab0fd08d03988e9149c6d24b831a71a0f5318a5c4c"
+        },
+        "build/qualification/atomics/reject-version.log": {
+          "bytes": 825,
+          "sha256": "049925d7b9029187facbf2a5db3fb65ab487b6442e17907e336c60f31b47a185"
+        },
+        "build/qualification/atomics/reject-workaround-command.json": {
+          "bytes": 12590,
+          "sha256": "b7b635226f6fe4dd7e9d420892beebbe0586e3f184d5fe5c2832bbeeaa43505f"
+        },
+        "build/qualification/atomics/reject-workaround.log": {
+          "bytes": 825,
+          "sha256": "049925d7b9029187facbf2a5db3fb65ab487b6442e17907e336c60f31b47a185"
+        },
+        "build/qualification/atomics/report.json": {
+          "bytes": 4963,
+          "sha256": "9816b924b449ee971fea08c655e6c94008b8968675c974f43f11a764ed934433"
+        },
+        "build/qualification/atomics/sdk-dispatch-command.json": {
+          "bytes": 5750,
+          "sha256": "62a33b6e77d4a77fbb40ed266db468423893a9637c0fbbd658c0fe096a9767e5"
+        },
+        "build/qualification/atomics/sdk-dispatch.dis": {
+          "bytes": 236631,
+          "sha256": "751ad1c2c25d85d17333696ff13c436f1e9a3492446a11daffdc3a625647eded"
+        },
+        "build/qualification/atomics/sdk-dispatch.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/sdk-dispatch.o": {
+          "bytes": 329952,
+          "sha256": "0d574d67dc28435a07527374c6b425f680b42e56271160b5d19d11015b311a44"
+        },
+        "build/qualification/atomics/sdk-hardware-command.json": {
+          "bytes": 5804,
+          "sha256": "bf3f1fd79323f5fc8026ce0cf42b7101982979304f64fee4ff8d776e06c1f4a2"
+        },
+        "build/qualification/atomics/sdk-hardware.dis": {
+          "bytes": 52470,
+          "sha256": "e999ce9ebfc1d92092bbf0d1ec94d48851c2ca084222d0b835da8c447a5a4956"
+        },
+        "build/qualification/atomics/sdk-hardware.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/sdk-hardware.o": {
+          "bytes": 59616,
+          "sha256": "e6c61cd68d2b602446b6fc8adcf4e7025962f00af3435381686eda9dc5b05a1b"
+        },
+        "build/qualification/atomics/stream-registry-command.json": {
+          "bytes": 12514,
+          "sha256": "3766af3494bd069cae2e86129f85ee133dc9dd300537ffba8a8e10039d7ed104"
+        },
+        "build/qualification/atomics/stream-registry.log": {
+          "bytes": 658,
+          "sha256": "4e9074fe93993f1aa433abf3eb2e6122d6b7c7b27c7b1aa760a76a8c41b84fba"
+        },
+        "build/qualification/atomics/stream-registry.o": {
+          "bytes": 228552,
+          "sha256": "8a196f61f0bde2e17121835abed2e15b3dbc92cb6f8c03b6735d4e844f9f487a"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM-command.json": {
+          "bytes": 12678,
+          "sha256": "bcc6ad4170b21e4f4071af3bf71946c83dc0986b28763347726e6667b5a3e89d"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM.h": {
+          "bytes": 164,
+          "sha256": "7d6a8162acc7c69bfe67ada99affba5b1af626b50b5359b7846f7066f3072a86"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM.log": {
+          "bytes": 366,
+          "sha256": "e9bb379f868e168d09e8a4c7c5513230058d130e817259c93015e41bafb57ea3"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM-command.json": {
+          "bytes": 12670,
+          "sha256": "88c28bcc7aca31244c18d4627f03e402363d65b6334cb1cac68d11e1fbdb5e23"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM.h": {
+          "bytes": 156,
+          "sha256": "bd278e4623ee756255d273e7f85de54dfe254cb1a25fe783e17ad6e7d440d17d"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM.log": {
+          "bytes": 366,
+          "sha256": "e9bb379f868e168d09e8a4c7c5513230058d130e817259c93015e41bafb57ea3"
+        },
+        "build/qualification/failure/capture-config.h": {
+          "bytes": 169,
+          "sha256": "b9641813b966901778d8d3360a7aa8783d18e444820792891cb3408cd8da116f"
+        },
+        "build/qualification/failure/debug_helpers-command.json": {
+          "bytes": 6786,
+          "sha256": "0b7fb6ce47abae6a77732443df2e28712ead4beba34155dcfb332836fa7f9946"
+        },
+        "build/qualification/failure/debug_helpers.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/debug_helpers.o": {
+          "bytes": 36444,
+          "sha256": "f18746d89006f232038345904146c11ec9826e13cecdf0498276a7a1d76cbac7"
+        },
+        "build/qualification/failure/esp_memory_utils-command.json": {
+          "bytes": 7228,
+          "sha256": "0ed75bd032acd45f3832c3177b1b4114ee2efb0c4e3632e76557e6e990dcffb3"
+        },
+        "build/qualification/failure/esp_memory_utils.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/esp_memory_utils.o": {
+          "bytes": 12180,
+          "sha256": "731020ea5b53291488c1ad39249f8b8d23398ad114a8ba940cf51d65652bda20"
+        },
+        "build/qualification/failure/esp_psram-command.json": {
+          "bytes": 6008,
+          "sha256": "4028296cba54a96b06c6a9ae980196e4c1ce131b0cd38d673310723a80f121c1"
+        },
+        "build/qualification/failure/esp_psram.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/esp_psram.o": {
+          "bytes": 55760,
+          "sha256": "2712c658b6e7b71960265cf5f20870417396abd0b3106ac14ef4d178d3ae6454"
+        },
+        "build/qualification/failure/recorder-command.json": {
+          "bytes": 12661,
+          "sha256": "fcadbbd07a9a189e08b94a189e9890e7cb1a10ac7883874e67013b3cf2c6207b"
+        },
+        "build/qualification/failure/recorder.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/recorder.o": {
+          "bytes": 319760,
+          "sha256": "fc2bb5c098f2c97d94831907dab40a9a232fc407c3be9bbdadfcd57d4712ad74"
+        },
+        "build/qualification/failure/recorder.su": {
+          "bytes": 1152,
+          "sha256": "33fde16be3be39f6344a6ada1cf125006da3c155adb4a1140d4f6cca2cdf8fcb"
+        },
+        "build/qualification/failure/report.json": {
+          "bytes": 2560,
+          "sha256": "5682d6a0c2f3eb445b910c395a847d8f12ec9b72c89e1f5bccb3332d9304c999"
+        },
+        "build/qualification/failure/reset_reason-command.json": {
+          "bytes": 6784,
+          "sha256": "02d757ed2ec09ace5c746beca9b35b955e36a22776763eea07f4b784f24a4c35"
+        },
+        "build/qualification/failure/reset_reason.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/reset_reason.o": {
+          "bytes": 15108,
+          "sha256": "6f16b732fd7aa7e49065cb5bc6a0c6038fa5582c69fdb20b59e59dd24a2ad7a6"
+        },
+        "build/qualification/failure/sleep-command.json": {
+          "bytes": 12484,
+          "sha256": "37f7a38ea3d01317169b76d86a3da6f23f74526cc995ce1d960f6e42e143d669"
+        },
+        "build/qualification/failure/sleep.cpp": {
+          "bytes": 258,
+          "sha256": "71f057bb7cf6c21bd3b194c56145e2af4a775af9f79b267a35cf2ae304ef0d14"
+        },
+        "build/qualification/failure/sleep.log": {
+          "bytes": 1209,
+          "sha256": "2ad4f4a68a212872c15491194adde27d6ff92ac4e45cf4d01be9301da088f985"
+        },
+        "build/qualification/failure/sleep.o": {
+          "bytes": 37460,
+          "sha256": "9004df0ec88fcaa47367faa633da0b1e437e55af01e1e6855d84de3fdac38212"
+        },
+        "build/qualification/failure/wrong-version-command.json": {
+          "bytes": 12646,
+          "sha256": "ba01e95fda2f2065171dcbd45140301955f239b64044c66a060e82ef1d66a303"
+        },
+        "build/qualification/failure/wrong-version.h": {
+          "bytes": 190,
+          "sha256": "c12a47d3a2fcb752f480013882707a06c00094bdaae222c543457056c7ee5eb2"
+        },
+        "build/qualification/failure/wrong-version.log": {
+          "bytes": 1380,
+          "sha256": "59059a4334c1aa2d3a77215548133607a16ab7057711af5e6b8504129f25462f"
+        },
+        "build/qualification/http/native-http-stages-0-command.json": {
+          "bytes": 12684,
+          "sha256": "ef5ac0933089b15948de92a529fd05eb35d09375e2649e907cf29d7f5bfd57a1"
+        },
+        "build/qualification/http/native-http-stages-0.log": {
+          "bytes": 1539,
+          "sha256": "06e8edd9c5bc12a39359bbb4d07065aae52b948cc1f46e170acb7ab2000384b1"
+        },
+        "build/qualification/http/native-http-stages-0.o": {
+          "bytes": 118400,
+          "sha256": "48d5b1c9d08368c61355bbdb94105ed6ce17150c88884458a494325e5a66f2a1"
+        },
+        "build/qualification/http/native-http-stages-1-command.json": {
+          "bytes": 12684,
+          "sha256": "d7046c3150b63fb9787b3a154273e589ad90fccf0db98d6737d3df41fb476cc7"
+        },
+        "build/qualification/http/native-http-stages-1.log": {
+          "bytes": 1539,
+          "sha256": "06e8edd9c5bc12a39359bbb4d07065aae52b948cc1f46e170acb7ab2000384b1"
+        },
+        "build/qualification/http/native-http-stages-1.o": {
+          "bytes": 122668,
+          "sha256": "8faec59487014bc87e431acc3405555d687a63ab1f103cad5ec5210046b183ad"
+        },
+        "build/qualification/http/native-http.cpp": {
+          "bytes": 451,
+          "sha256": "df0d5ae4b6f4136341c188c66c59b6f69bcc07e0d41c9dc814bc64a1688dae9b"
+        },
+        "build/qualification/iq-linked.json": {
+          "bytes": 2611,
+          "sha256": "6996c733df9ae2fdc15f6ec692113f220cdb4b50be5fecaca7579e746cbfd988"
+        },
+        "build/qualification/iq/native-iq-0-command.json": {
+          "bytes": 12546,
+          "sha256": "998212cd422441e4936db68c5223004e9d80f03a555d6ee5e9c00ab9d856e82f"
+        },
+        "build/qualification/iq/native-iq-0.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/iq/native-iq-0.o": {
+          "bytes": 53192,
+          "sha256": "a0d166e1d685d8f7c4407363b1443f18af2fb17877979351d444aeefaeea3947"
+        },
+        "build/qualification/iq/native-iq-1-command.json": {
+          "bytes": 12546,
+          "sha256": "e55229081ee122b1ca90e7491e607a91c8e66d0239db35ba70dbdeafba4ece40"
+        },
+        "build/qualification/iq/native-iq-1.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/iq/native-iq-1.o": {
+          "bytes": 56272,
+          "sha256": "4030a08f46c89dd63ef4fcaa6c26b9a1253130925701a3e5c73b18aeb61f55a7"
+        },
+        "build/qualification/iq/native-iq.cpp": {
+          "bytes": 815,
+          "sha256": "92d9729198fbf9eed13cbb64f03921a277b09eb7be46b09b706f99e982fc2888"
+        },
+        "build/qualification/iq/report.json": {
+          "bytes": 3302,
+          "sha256": "a7dc2bc2ba852863755bf2b2f59911aa3f186f3e2e69cbfc3bcb70fa2a235790"
+        },
+        "build/qualification/linked-firmware.json": {
+          "bytes": 1104,
+          "sha256": "7fcd43592e5c5c6c25e64ec139ae815c7298ac5d23b2db68531bf7e73de5f905"
+        },
+        "build/radio-iq-proof.json": {
+          "bytes": 2611,
+          "sha256": "6996c733df9ae2fdc15f6ec692113f220cdb4b50be5fecaca7579e746cbfd988"
+        },
+        "build/riscrte_native.bin": {
+          "bytes": 1546944,
+          "sha256": "6cf85ed9fd36e578e8d297836969b619c7740416d27aa05ded06b331a8d79348"
+        },
+        "build/riscrte_native.elf": {
+          "bytes": 18038704,
+          "sha256": "d03bf077febfcb7fc34654fdab64c5eab1910d8bce8f249806e82a8b004de633"
+        },
+        "build/riscrte_native.map": {
+          "bytes": 12734920,
+          "sha256": "1a2820273e4957c62b3ba574d88ed10a0eb09c9f3f184e0072f5ce55a36e9bb1"
+        },
+        "build/sdkconfig": {
+          "bytes": 93604,
+          "sha256": "ba39e285340145990c6c3b6bf87fe89380ae9a83570fac5ee029ffab82c7ad1c"
+        },
+        "build/toolchain/asmflags": {
+          "bytes": 98,
+          "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+        },
+        "build/toolchain/cflags": {
+          "bytes": 98,
+          "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+        },
+        "build/toolchain/cxxflags": {
+          "bytes": 108,
+          "sha256": "50190b4d3a273c3a2ccc13a3a908cda254f065b34ea9949f9fedc2477ef4f889"
+        },
+        "build/toolchain/ldflags": {
+          "bytes": 24,
+          "sha256": "0882bd89337f1e7949a99b6d96b1fff733639561359a71d6f0507168ac7c42dc"
+        },
+        "build/toolchain/toolchain-esp32s3.cmake": {
+          "bytes": 101,
+          "sha256": "25323260dee4df19e35d9aed84bacdd71bb46df9165c286d060dceaa6368ac02"
+        },
+        "build/x509_crt_bundle.S": {
+          "bytes": 428664,
+          "sha256": "ed35eee869e9e742efbb154f3b8bffbd75be5e235e3bcade81fb59e32453509d"
+        },
+        "candidate/SHA256SUMS": {
+          "bytes": 589,
+          "sha256": "4d329c02acfd0e71dea0b5119bfdcc47ae2a5217ab886b519c6bf33f2045fd3a"
+        },
+        "candidate/bootloader.bin": {
+          "bytes": 22640,
+          "sha256": "06d22b02b631afd104890e475771f03fb15bec87734f3db2e6fd3cdd49973104"
+        },
+        "candidate/factory-candidate-erases-data-0x0.bin": {
+          "bytes": 16777216,
+          "sha256": "0da39cd020256f88c2da9b45c5b68fb5fb4002999a00c4f4250306eec358bc33"
+        },
+        "candidate/firmware.bin": {
+          "bytes": 1546944,
+          "sha256": "6cf85ed9fd36e578e8d297836969b619c7740416d27aa05ded06b331a8d79348"
+        },
+        "candidate/partitions.bin": {
+          "bytes": 3072,
+          "sha256": "d27edcdba637142baa7d91e29b70df47554c22a4f14de303dc6a0cdcc1e25de8"
+        },
+        "candidate/qualification.json": {
+          "bytes": 1380699,
+          "sha256": "6f26e48b094a16d7e0aeb453294e91f89a24f1fb79412c9a90dbd18a6c9fee57"
+        },
+        "candidate/source-lock.json": {
+          "bytes": 9814,
+          "sha256": "1a9b9d1d10845ceb244c4f5b021f0705d3acb00f5558c95a84164dbfd43a1507"
+        },
+        "candidate/store.bin": {
+          "bytes": 5570560,
+          "sha256": "82568c56c85f9d0ed84b7bf78d37d05c94a3473efc3b8ae7d3f1b07ecabbdc15"
+        },
+        "logs/arduino-free-qualification.log": {
+          "bytes": 659,
+          "sha256": "be8a519a22b90fb3ca171ffdf82e511fbebd5d57e8752a08b3604aefa6cc46e9"
+        },
+        "logs/baseline-inputs.log": {
+          "bytes": 667,
+          "sha256": "0a3c52171f38fe3393781fbe75954430bae3828835020909d5a6f8d1125764da"
+        },
+        "logs/controlled-product-build.log": {
+          "bytes": 174021,
+          "sha256": "b746cedd2651cba65862b9d842aded72d72e17fff0dbaf2ce8035bf1f480c0fb"
+        },
+        "logs/linked-iq-qualification.log": {
+          "bytes": 588,
+          "sha256": "e3276495f1748cfbbba3aab7aa2b9a8d664f0f3e836daa5d1fba261645afd575"
+        },
+        "logs/product-contracts.log": {
+          "bytes": 785,
+          "sha256": "9abaf382287255bb53615969c341c592556b03985537322e2dc9360c130f7302"
+        },
+        "logs/source-custody-final.log": {
+          "bytes": 602,
+          "sha256": "b36005f8c94ced7ab800f0c058cb7b81d36fac4dd4ff813c2ec3153ae4a33314"
+        },
+        "logs/source-custody.log": {
+          "bytes": 1037,
+          "sha256": "bfcf6cd8c1fe738637872c150c4b0658d871348611441927bd7d17f795ac2e19"
+        },
+        "logs/source-setup.log": {
+          "bytes": 6401,
+          "sha256": "b7b2865c72b40ec9c1795e066fd97c697a829cca8bd59a337f1c8d987e47d7a3"
+        },
+        "logs/target-qualification.log": {
+          "bytes": 980,
+          "sha256": "f987b214cfc4c290da4957c5a9e23deb26477bf0ba41dc281d008175d785f91a"
+        },
+        "metadata/baseline-inputs.json": {
+          "bytes": 468,
+          "sha256": "818b4620089ae1a8ed04e5cda25998cd7ede19cb110b39b6b1002cfdd76132da"
+        },
+        "metadata/ci-run.json": {
+          "bytes": 874,
+          "sha256": "b4230f33bf9753ed9eaf758c4753f4a8d1bcc4137dd7630a685b81a8e0ea271b"
+        },
+        "metadata/compiler-SHA256SUMS": {
+          "bytes": 154,
+          "sha256": "9ea83232086e7ed939a9c771f1b4ca50f1c02510e202a67890b8b4962358ca02"
+        },
+        "metadata/compiler-version.txt": {
+          "bytes": 263,
+          "sha256": "ed21da1d0b473173d364e78a27c81f8f4b2537477bf9c54b34b645fe1268b18e"
+        },
+        "metadata/released-baseline.json": {
+          "bytes": 34200,
+          "sha256": "13a624532a753bdc0f6ab6dcb51f08bdc2a3aa64ecc71441c868ae553f34b401"
+        },
+        "metadata/sdk-tools.json": {
+          "bytes": 47183,
+          "sha256": "039337e5ee2511f97d112aedb98125945625a4dd9ffb67e0cbb094edcdd298b2"
+        },
+        "metadata/sources-after.json": {
+          "bytes": 4566,
+          "sha256": "2b988ff73a8ac75f0b250c1dc3486008e90b69e704a673fee1b362ec1e89aa13"
+        },
+        "metadata/sources-before.json": {
+          "bytes": 4566,
+          "sha256": "2b988ff73a8ac75f0b250c1dc3486008e90b69e704a673fee1b362ec1e89aa13"
+        },
+        "metadata/workflow.yml": {
+          "bytes": 21876,
+          "sha256": "8bd1593f7d5b9106e587edf8083372f89495b1600e523ac99987bc7dc24d0bbc"
+        }
+      },
+      "name": "native-idf6-twatch-659d859acb122640ef4003bb8d7099501d4381be",
+      "sha256": "dd8ca187c52dc4594781f39480a1e59c433f6d4aa798fcb9b482e8a1be7b9828",
+      "sources": {
+        "drivers": {
+          "revision": "5890721073ebabd781d5d278e447c761947a5c58",
+          "submodules": [],
+          "tree": "884416cb8ec2f95edcfc945a4a996f3dbca317c6"
+        },
+        "image_helper": {
+          "revision": "74f7491dc470b92dfa41fce41bf0c500f3714a94",
+          "submodules": [],
+          "tree": "e1418b6940d8b8df6b6a82057968b5074a96f2c6"
+        },
+        "product": {
+          "revision": "74f7491dc470b92dfa41fce41bf0c500f3714a94",
+          "submodules": [],
+          "tree": "e1418b6940d8b8df6b6a82057968b5074a96f2c6"
+        },
+        "runtime": {
+          "revision": "659d859acb122640ef4003bb8d7099501d4381be",
+          "submodules": [],
+          "tree": "5bde8014c76a52c9a380b1427aafaf9923a37411"
+        },
+        "sdk": {
+          "revision": "fff9895c82d744c7237be8847347bdd1b07c6643",
+          "submodules": [
+            "24c60e243580c7868f4334a1ba3123481fe1aa48 components/bootloader/subproject/components/micro-ecc/micro-ecc (v1.1)",
+            "98c6de2d5411a7297dbba00387dfca2bcc44fd18 components/bt/controller/lib_esp32 (98c6de2)",
+            "6a5c0b8bfca1a2e984e89431b8ebf9b521dad5ea components/bt/controller/lib_esp32c2/esp32c2-bt-lib (heads/main)",
+            "0a08c4b32f3666003080b662a1a61794da24ff0f components/bt/controller/lib_esp32c3_family (heads/master)",
+            "ac7885ea2fc76e56a814d10120812ccacf101f0b components/bt/controller/lib_esp32c5/esp32c5-bt-lib (ac7885e)",
+            "eee922eaa95770d567f0939cc3d56c712a6ecf65 components/bt/controller/lib_esp32c6/esp32c6-bt-lib (eee922e)",
+            "e0bb64a28b90247a349fbfc03a204df9194e40a1 components/bt/controller/lib_esp32h2/esp32h2-bt-lib (e0bb64a)",
+            "f4ce5d581a264fb5bf4c1b6ed473c45ad91f9db7 components/bt/controller/lib_esp32h4/esp32h4-bt-lib (f4ce5d5)",
+            "7f20740dd66ee774ffce5db0b55507892551aa31 components/bt/controller/lib_esp32s31/esp32s31-bt-lib (7f20740)",
+            "8af29109827eb9e3bc636b2a1ae6596fdfacaf4a components/bt/esp_ble_audio/lib/lib (8af2910)",
+            "f6c62bfa32759da7c44459bd6b40079cce93c94b components/bt/esp_ble_mesh/lib/lib (f6c62bf)",
+            "139cada0ae932957fa06ba37d17e3c9c2c95c773 components/bt/host/nimble/nimble (nimble_1_6_0_tag-439-g139cada0a)",
+            "eeecc49ce8af123cf8ad40efdb9673e37b56230f components/cmock/CMock (v2.5.2-2-geeecc49)",
+            "71b47be7c950f1bf5f7e5303779fa99a16224bb6 components/cmock/CMock/vendor/c_exception (v1.3.1-13-g71b47be)",
+            "cf949f45ca6d172a177b00da21310607b97bc7a7 components/cmock/CMock/vendor/unity (v2.5.1)",
+            "ddc56fa524a38df3098d2f36475fbe3eefe9b4f4 components/esp_coex/lib (heads/main)",
+            "5695f4f38108658bc4a33e4712c1ebcb34911434 components/esp_phy/lib (heads/master)",
+            "7cd4d7b2b4acc38aead43b029ac9409c3eba9c54 components/esp_wifi/lib (remotes/origin/feature/ftm_support_stage2-579-g7cd4d7b2)",
+            "2867f6883a12920b1969ff9624c0ab0e4185c2ce components/heap/tlsf (remotes/origin/master-48-g2867f68)",
+            "c6f2f878e7b0f86033214b85547d579be43351e3 components/lwip/lwip (heads/2.2.0-esp)",
+            "a2b32072ea898afc1ed5b6caf6931e36028c91d6 components/mbedtls/mbedtls (mbedtls-4.1.0-22-ga2b32072ea)",
+            "4dd715391cfb2cf4d06825a17294514024e4dc12 components/openthread/lib (4dd7153)",
+            "b678a4f63b6f9397d1a0fa8f31e5b8e0271a4d00 components/openthread/openthread (thread-reference-20250612-1270-gb678a4f63)",
+            "e185d7fd85499c8ce5ca2a54f5cf8fe7dbe3f8df components/openthread/openthread/third_party/mbedtls/repo (v3.6.5)",
+            "457996474728cb8e968ed21953b72f74d2f536b2 components/openthread/openthread/third_party/mbedtls/repo/framework (mbedtls-4.0.0_tf-psa-crypto-1.0.0)",
+            "abc67a11c6db271bedbb9f58be85d6f4e2ea8389 components/protobuf-c/protobuf-c (v1.4.1)",
+            "ad902cadceb39d0825a97e25ecb5867641f606ba components/spiffs/spiffs (0.2-265-gad902ca)",
+            "bf560290f6020737eafaa8b5cbd2177c3956c03f components/unity/unity (v2.6.0_RC1)"
+          ],
+          "tree": "e6a5e4865e2027f1f0cef5da09f254d65c5cec22"
+        },
+        "system": {
+          "revision": "755cc5174a6deaee120d108cbffe67ae809e1e6f",
+          "submodules": [],
+          "tree": "a9ffde3a032b3109621eae95c0935d6f9e7745e5"
+        }
+      }
+    },
+    "waveshare": {
+      "bytes": 23209827,
+      "id": 12003895092,
+      "job_id": 116636599585,
+      "job_name": "native-idf (waveshare, RiscRTE-Wavshare-S3-Touch-AMOLED-2.06, 25c7151a1ac47e1a19a55b93c4cc3eaf2d4...",
+      "members": {
+        "build/.ninja_deps": {
+          "bytes": 774320,
+          "sha256": "1e9d76cb8635d58c67fc7f16229bad1a1c042110ced2226ffa0b00a22e96efed"
+        },
+        "build/.ninja_log": {
+          "bytes": 136064,
+          "sha256": "696c377dabee5f7656d3751588f5c64397a028a873d484d371c96ed831f13715"
+        },
+        "build/CMakeCache.txt": {
+          "bytes": 28984,
+          "sha256": "376b74b8864422246d5e7d7aaf65d337c8d9a862b405063eef30eed1c19e3c06"
+        },
+        "build/CMakeFiles/CMakeConfigureLog.yaml": {
+          "bytes": 245531,
+          "sha256": "3e04ba77cb06fc92d54db5510c04b71ec22c53369d6dbb6f77ecaa9cacc72649"
+        },
+        "build/bootloader/.ninja_deps": {
+          "bytes": 81468,
+          "sha256": "b34b25bf405290a9a99af8e5840259639faed1149187739237c51900fb64b211"
+        },
+        "build/bootloader/.ninja_log": {
+          "bytes": 18899,
+          "sha256": "9945585f5e65fe8ba18cf080c5c8f7df605ccd45e2a043a3119f28cac661c0a7"
+        },
+        "build/bootloader/CMakeCache.txt": {
+          "bytes": 18684,
+          "sha256": "7f7c8a6da04bd42dbb3e5f18f6bd69b8204ec4cc0da71377bc944889ff5e7b88"
+        },
+        "build/bootloader/CMakeFiles/CMakeConfigureLog.yaml": {
+          "bytes": 244563,
+          "sha256": "67a090142f949e32eb1dcafa82f786a6e1414b38820863e34a16dc45d2a6672e"
+        },
+        "build/bootloader/bootloader.bin": {
+          "bytes": 22640,
+          "sha256": "d4f2cec05817a638659e74ea754b5b2f582e0eacdf5547b16844a1e263795389"
+        },
+        "build/bootloader/bootloader.elf": {
+          "bytes": 629724,
+          "sha256": "16ad765d021573b6c9904b57097f81cf1977d03f89cb7174f307463692a19068"
+        },
+        "build/bootloader/bootloader.map": {
+          "bytes": 608691,
+          "sha256": "43622fb0233810975f1f6fbf69a54168ca398f798f0a23d4a657d82ae2e1c44d"
+        },
+        "build/bootloader/build.ninja": {
+          "bytes": 774171,
+          "sha256": "3075608e7f13b2ee3310f6bbfdf6afa665e4ada022e718ca3d578c97862e33ec"
+        },
+        "build/bootloader/compile_commands.json": {
+          "bytes": 549054,
+          "sha256": "b6cb8ba71c9b5594ba1fa61f8f604f586b3a050983303e241eb8118fd145c490"
+        },
+        "build/bootloader/config/kconfig_menus.json": {
+          "bytes": 624550,
+          "sha256": "80131e02b4915dc951e3215b3d8dc795c8ec30085dd967b78c8fde2ff6742326"
+        },
+        "build/bootloader/config/sdkconfig.cmake": {
+          "bytes": 65144,
+          "sha256": "eae85fb5710185f5fe2f30ae73f2a89f7f3286865579ad30c1c45721a4a9e8cb"
+        },
+        "build/bootloader/config/sdkconfig.h": {
+          "bytes": 29062,
+          "sha256": "d396ccc87f9983389ed25ff1137645efa15c5ec8ea7eb7f24ced5045920ceeae"
+        },
+        "build/bootloader/config/sdkconfig.json": {
+          "bytes": 29641,
+          "sha256": "1ef0d3ffd9cf7c247705fe75b7ec002a39ee794eec01a7fade18b21afe16f781"
+        },
+        "build/bootloader/project_description.json": {
+          "bytes": 110993,
+          "sha256": "41b7c3430c9a359a1a2a1b746e3bb75523a4bc7ee75d0efabd9263e3c406a7ee"
+        },
+        "build/bootloader/project_elf_src_esp32s3.c": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/bootloader/toolchain/asmflags": {
+          "bytes": 71,
+          "sha256": "21b4c8d43b0d85f90f37512b6a9b85a4cc7e93f93133886dba9593e2eee10a70"
+        },
+        "build/bootloader/toolchain/cflags": {
+          "bytes": 71,
+          "sha256": "21b4c8d43b0d85f90f37512b6a9b85a4cc7e93f93133886dba9593e2eee10a70"
+        },
+        "build/bootloader/toolchain/cxxflags": {
+          "bytes": 81,
+          "sha256": "d2cb1b25e1da83fffb033feb70d34f9ac51fbe242fc7b029415987e7e9cff443"
+        },
+        "build/bootloader/toolchain/ldflags": {
+          "bytes": 24,
+          "sha256": "0882bd89337f1e7949a99b6d96b1fff733639561359a71d6f0507168ac7c42dc"
+        },
+        "build/bootloader/toolchain/toolchain-esp32s3.cmake": {
+          "bytes": 101,
+          "sha256": "25323260dee4df19e35d9aed84bacdd71bb46df9165c286d060dceaa6368ac02"
+        },
+        "build/build.ninja": {
+          "bytes": 6987045,
+          "sha256": "d6dc862bc133e8e466d413e51091b8d4049710699c1379bb1e958dd4625daaf8"
+        },
+        "build/compile_commands.json": {
+          "bytes": 5977481,
+          "sha256": "ecf3d76bad386e7a4b60e3f47ff33489b7170853a8451437ac2bd8fdcf9d0a8d"
+        },
+        "build/config/kconfig_menus.json": {
+          "bytes": 2688032,
+          "sha256": "f814e979eefbd9ea4d2c90ec8b33e3ba51c8e2c97ec49574e4acaf0160b92ae9"
+        },
+        "build/config/sdkconfig.cmake": {
+          "bytes": 139669,
+          "sha256": "14abf658e48e0ecc5197f3fa121d1c2c4efd506c0e5f20e6a201a0980d22f74f"
+        },
+        "build/config/sdkconfig.h": {
+          "bytes": 52500,
+          "sha256": "d9d105a698f0ef631b3e34b25805ed616201075ee4e174bc247e8c266decfce7"
+        },
+        "build/config/sdkconfig.json": {
+          "bytes": 60208,
+          "sha256": "ff00295c2f3f00f95f7ee9f135962358a3de074b27a78566fd107c2eb956782e"
+        },
+        "build/esp-idf/mbedtls/x509_crt_bundle": {
+          "bytes": 67817,
+          "sha256": "b3e27ad072b398df1404c73493e6441ef4929e523f944cc37423e0e4b86c6fb0"
+        },
+        "build/esp-idf/runtime/RiscBuildIdentity.h": {
+          "bytes": 190,
+          "sha256": "e5fc5b34431da306ee44b3e436e8ce81500f10ac0a8235379e713d1c2603fd2e"
+        },
+        "build/flash_args": {
+          "bytes": 182,
+          "sha256": "11945dacb9ad5acba260036837cafd4c3e2a087d38d2049800468bbecc002ae6"
+        },
+        "build/flasher_args.json": {
+          "bytes": 1065,
+          "sha256": "eac8a848f96da3ebaf107684456a2709e475f8c3b72e484e67a1fb3f9ed7e337"
+        },
+        "build/log/idf_py_stderr_output_1661": {
+          "bytes": 6017,
+          "sha256": "2acb1fa720a7d4e021205df029b707555fed7cf1169f6099575e342bbc37ad27"
+        },
+        "build/log/idf_py_stdout_output_1661": {
+          "bytes": 8555,
+          "sha256": "30f64f098fb592f3620ef7b0c43696ff38b19b1f3005b78cbb79b2b9c307c610"
+        },
+        "build/native-build-evidence/app_commands.txt": {
+          "bytes": 6048032,
+          "sha256": "b7d0f2881e52c00b9072144032a1134bbb854eb65019807f64b8c67df334fbbd"
+        },
+        "build/native-build-evidence/app_deps.txt": {
+          "bytes": 9503340,
+          "sha256": "bb89c2d54dda6d9d0895a88ff0b8e0bc666d43670f717c600f33610606655425"
+        },
+        "build/native-build-evidence/app_inputs.txt": {
+          "bytes": 147162,
+          "sha256": "f67000f0f80d804a3e59d772a092084ddd5b5cca6d804159fc1bdb8272bf302c"
+        },
+        "build/native-build-evidence/app_phony_queries.txt": {
+          "bytes": 148153,
+          "sha256": "e6100ac9213aea21e65a700d690a189c883752059adee89c0efde98feee2c054"
+        },
+        "build/native-build-evidence/bootloader_commands.txt": {
+          "bytes": 565812,
+          "sha256": "d7181aa33831a069346563b6ce745d07d7e842a47ad93f33f622fa8bbe8dc017"
+        },
+        "build/native-build-evidence/bootloader_deps.txt": {
+          "bytes": 601837,
+          "sha256": "525bab5e7443dd9a5bc11b9296b603313c703f26625a5f46db4bab817b0710ac"
+        },
+        "build/native-build-evidence/bootloader_inputs.txt": {
+          "bytes": 20564,
+          "sha256": "6596e3cc623392547b536db61f7aac45c8240d3cf2cf76971fbf17ae38fdc4b5"
+        },
+        "build/native-build-evidence/bootloader_phony_queries.txt": {
+          "bytes": 25779,
+          "sha256": "92708a67b302e00f9dd154e87aae83e7325ff0eefcab2813355cc48930a310bf"
+        },
+        "build/native-build-evidence/build-closure.json": {
+          "bytes": 1176126,
+          "sha256": "c1d571bbdba8b9ac724e975b89ff2f8e2d291406cad57772194b12cbbb845076"
+        },
+        "build/native-build-evidence/source-lock.json": {
+          "bytes": 9814,
+          "sha256": "a85a2dc4755cb1da6b16e9ca8a3a8d1458d935d363da808e88c702cc3321db3f"
+        },
+        "build/native-iq-rom.json": {
+          "bytes": 808,
+          "sha256": "7edfeee41f8879078a95353409b5df767ff70b6ea52450c9d2ff8fb79d0b7a0a"
+        },
+        "build/native-iq-rom.ld": {
+          "bytes": 203,
+          "sha256": "5cdb4befd9a6e2592a4299f88adf119d6155a425d51e5cb9a2d0679b64602de3"
+        },
+        "build/partition_table/partition-table.bin": {
+          "bytes": 3072,
+          "sha256": "d27edcdba637142baa7d91e29b70df47554c22a4f14de303dc6a0cdcc1e25de8"
+        },
+        "build/product-sdkconfig.defaults": {
+          "bytes": 130,
+          "sha256": "3b4fe6d251c55bb19e5ab76a1b43d07fb8e6172067dfa52a31b7e468429a41bd"
+        },
+        "build/project_description.json": {
+          "bytes": 195795,
+          "sha256": "ac0e8bdb5f76ff497befa84329f19b08866555ec94120081d40fb2b8bbdeddd0"
+        },
+        "build/project_elf_src_esp32s3.c": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/entropy-command.json": {
+          "bytes": 13149,
+          "sha256": "a34f3b82ebfdb43af9b995b6781da7d86117fc00f36955df3814ff1df2a522c2"
+        },
+        "build/qualification/atomics/entropy.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/entropy.o": {
+          "bytes": 59788,
+          "sha256": "fafd57314c3c02fcdf093cad687ebd590a6e8681529e4f8f844d233c07c7c2ae"
+        },
+        "build/qualification/atomics/radio-0-command.json": {
+          "bytes": 13040,
+          "sha256": "31a5d852c1414705f9ee852fe3f18b01d0953b2b300ec70139fb2f4d321377f8"
+        },
+        "build/qualification/atomics/radio-0.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/radio-0.o": {
+          "bytes": 408764,
+          "sha256": "ca7d24195d98504750f400289e20df3bc6eb988f60d10177560ac1e16db47176"
+        },
+        "build/qualification/atomics/radio-1-command.json": {
+          "bytes": 13040,
+          "sha256": "7f5760858adc4820e63376a2f080ca94cb5974fa6bafc9e278481eccb84028e2"
+        },
+        "build/qualification/atomics/radio-1.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/radio-1.o": {
+          "bytes": 541720,
+          "sha256": "43931ee60e9bd838b0730f2951fc678e2effba3c03a0090adb83ec0657716be3"
+        },
+        "build/qualification/atomics/radio.cpp": {
+          "bytes": 326,
+          "sha256": "4fdac4e8300835711b608fc0d7fe7e1f289d8e4e1ebcd366fc305f0ace238925"
+        },
+        "build/qualification/atomics/reject-config.h": {
+          "bytes": 124,
+          "sha256": "eb46dacdeb7fec04c0563163d376ce063d82d98ee528fcb603ffa14040afd5c1"
+        },
+        "build/qualification/atomics/reject-version-command.json": {
+          "bytes": 13097,
+          "sha256": "213a7da2111a20c84f2354c35fac6a752cf752efc112c983cde6580791dfaef1"
+        },
+        "build/qualification/atomics/reject-version.h": {
+          "bytes": 103,
+          "sha256": "381fbabd05de6d6a6e1b2bab0fd08d03988e9149c6d24b831a71a0f5318a5c4c"
+        },
+        "build/qualification/atomics/reject-version.log": {
+          "bytes": 840,
+          "sha256": "9c01fd8d51f04d15c8deadd7dc914f2c3b20f7b2014cbfd30897fbe901a2ec72"
+        },
+        "build/qualification/atomics/reject-workaround-command.json": {
+          "bytes": 13099,
+          "sha256": "456eb44b03bcdc2054908ca45a6019b2b845e815939114771ca88b8df47c97fa"
+        },
+        "build/qualification/atomics/reject-workaround.log": {
+          "bytes": 840,
+          "sha256": "9c01fd8d51f04d15c8deadd7dc914f2c3b20f7b2014cbfd30897fbe901a2ec72"
+        },
+        "build/qualification/atomics/report.json": {
+          "bytes": 4963,
+          "sha256": "9816b924b449ee971fea08c655e6c94008b8968675c974f43f11a764ed934433"
+        },
+        "build/qualification/atomics/sdk-dispatch-command.json": {
+          "bytes": 5762,
+          "sha256": "882b0c63a3f34f11f7b69f36428f7bad04cc48852f1f5f95fbbe4f1170476f67"
+        },
+        "build/qualification/atomics/sdk-dispatch.dis": {
+          "bytes": 236634,
+          "sha256": "4ca32fd7733f4b5602245da24e12cb2aa07a0d2aaffd9457fdd55b816f82a366"
+        },
+        "build/qualification/atomics/sdk-dispatch.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/sdk-dispatch.o": {
+          "bytes": 329956,
+          "sha256": "f6cd34dd7c7b5f9362a8ba538e7c828fc20ba39a2efd99cad3c3e84a8e0fe19c"
+        },
+        "build/qualification/atomics/sdk-hardware-command.json": {
+          "bytes": 5816,
+          "sha256": "5e6578ba2319f43e00543619f48623afe1a4edc5f3c02c4e60883a6c34112789"
+        },
+        "build/qualification/atomics/sdk-hardware.dis": {
+          "bytes": 52473,
+          "sha256": "d4798218545d8f1638b4b150d88ac922c6848918d15098fceb3ad51d6e1cc8b3"
+        },
+        "build/qualification/atomics/sdk-hardware.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/sdk-hardware.o": {
+          "bytes": 59616,
+          "sha256": "62e71915e81ab1252867320e2a2f4d837e53a66b71b0016843e5462fced7b0d1"
+        },
+        "build/qualification/atomics/stream-registry-command.json": {
+          "bytes": 13020,
+          "sha256": "bd37189a154552a4d29e92f8ab7a1a9c807974f4d16f3a5fd7682954afd62970"
+        },
+        "build/qualification/atomics/stream-registry.log": {
+          "bytes": 664,
+          "sha256": "8b0b09d8fefcdce17fef449670da574dbc6114af2c6f9a7aebd1be34c2cfd867"
+        },
+        "build/qualification/atomics/stream-registry.o": {
+          "bytes": 228580,
+          "sha256": "e6e1fe0826625518f1b432c476515cab1c2ea34304f81c534ac244bc9f06e69a"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-0-0-64-command.json": {
+          "bytes": 13240,
+          "sha256": "75fd049b7c3539a5497666f9440b46fd41c05f7fc105afae0f8dd5abf0568b64"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-0-0-64.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-0-0-64.o": {
+          "bytes": 179052,
+          "sha256": "de3ea4df007a03e91f64a21d43cdcc809aeeec7094a24e9423b2efa6be4c9e28"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-0-1-64-command.json": {
+          "bytes": 13240,
+          "sha256": "58b37f65f7d0b7dbfd43d2eec77a1da297ccef9d4b43ada38f4ff17f0cdb0214"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-0-1-64.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-0-1-64.o": {
+          "bytes": 201172,
+          "sha256": "ab4bfdbffe91ec0e7f1585402507cb413d0e66ed1de1b765d83e54b1334923fc"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-1-0-64-command.json": {
+          "bytes": 13240,
+          "sha256": "53c1b27848506a14ee921a0ff5476b54bcf9bf00f376dfa669d91074dd64bfcc"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-1-0-64.log": {
+          "bytes": 1292,
+          "sha256": "b957691b2979bd19bdf9f30473ff14443b440404af155519ba94b0aa2d785276"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-1-0-64.o": {
+          "bytes": 242212,
+          "sha256": "fcb64cda1c32de0d8b80456c949515ee025d873af74fb3b56ac46031cd3363be"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-1-1-128-command.json": {
+          "bytes": 13242,
+          "sha256": "d2f087ba9037a5faca036a8ed8cd25480af4a33c8a877161c6de50f47002dae1"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-1-1-128.log": {
+          "bytes": 1292,
+          "sha256": "b957691b2979bd19bdf9f30473ff14443b440404af155519ba94b0aa2d785276"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-1-1-128.o": {
+          "bytes": 274416,
+          "sha256": "7fe7d5988e08cc69c8fb4c30c5a70090ad06d297ac3c3bde3e11a4b065a806cf"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-1-1-64-command.json": {
+          "bytes": 13240,
+          "sha256": "642d2db821ab6ec519de3db5c4d20b5f74e95b55dc5d315bc2f061076c9c8e31"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-1-1-64.log": {
+          "bytes": 1292,
+          "sha256": "b957691b2979bd19bdf9f30473ff14443b440404af155519ba94b0aa2d785276"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace-1-1-64.o": {
+          "bytes": 270320,
+          "sha256": "a7be2086c787614187b8847bc8a4bf453e2dc9d2a2535af69c0f459cc96e445f"
+        },
+        "build/qualification/diagnostics/diagnostic-workspace.cpp": {
+          "bytes": 766,
+          "sha256": "af3826c503edb57745a8e93e6188c5a37ea6d39d97e4e7553025c3a8819e78ba"
+        },
+        "build/qualification/diagnostics/disable-psram-boot.h": {
+          "bytes": 88,
+          "sha256": "8191d21ce34b9fd266e3d0698bc5bd80ed3969e9333a30f9a0c3aa6fa126456c"
+        },
+        "build/qualification/diagnostics/invalid-boot.log": {
+          "bytes": 1987,
+          "sha256": "3a254e023b7fc9a222b6fb1682755706fed2ac07530ddb54d756241caf181306"
+        },
+        "build/qualification/diagnostics/report.json": {
+          "bytes": 5097,
+          "sha256": "5bf4488380b837f9feb37065d03c6fabd0c3b99260fc940c44986692b08888e7"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM-command.json": {
+          "bytes": 13187,
+          "sha256": "233bb8478a30ffe9979f9a1d157da00109e5f8685f78d90c81ef53bb77ed0713"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM.h": {
+          "bytes": 167,
+          "sha256": "0dd439ce7126ab47dbf07957f8f69981e17cb70077d078eed0c940e296b8e938"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM.log": {
+          "bytes": 369,
+          "sha256": "1e8f13472d5c7ce1560e80792af4674d9851dd36b83ab3e7891e374e5e92763d"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM-command.json": {
+          "bytes": 13179,
+          "sha256": "96e15f51e8cce81a079bc25c28e9efadd2f45140252a81b0cc80cd5802840e08"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM.h": {
+          "bytes": 159,
+          "sha256": "2bf0fa151ec4c3ced4b0cd243ea13d9ae9dc100b45e3bc64b722b3e380d877ac"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM.log": {
+          "bytes": 369,
+          "sha256": "1e8f13472d5c7ce1560e80792af4674d9851dd36b83ab3e7891e374e5e92763d"
+        },
+        "build/qualification/failure/capture-config.h": {
+          "bytes": 169,
+          "sha256": "b9641813b966901778d8d3360a7aa8783d18e444820792891cb3408cd8da116f"
+        },
+        "build/qualification/failure/debug_helpers-command.json": {
+          "bytes": 6801,
+          "sha256": "11a3cdca8d5870ab1f982b3999c5cd9471dd40f6fd2292c931154a9015db2407"
+        },
+        "build/qualification/failure/debug_helpers.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/debug_helpers.o": {
+          "bytes": 36444,
+          "sha256": "febc185cf6fd0688ba82cf3a9008c0dd2f603aaa46ca07b369556ff1111a7896"
+        },
+        "build/qualification/failure/esp_memory_utils-command.json": {
+          "bytes": 7243,
+          "sha256": "4da2644042ad2b3a852515cb317da4fdb004241ff5719adbb4346ab421817eca"
+        },
+        "build/qualification/failure/esp_memory_utils.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/esp_memory_utils.o": {
+          "bytes": 12184,
+          "sha256": "8dc9b5ed09099cab720459a61a2704cb09bdce08f510414d328bc560c4f4791e"
+        },
+        "build/qualification/failure/esp_psram-command.json": {
+          "bytes": 6023,
+          "sha256": "2e241ffd6da13278d35165a9a88e7df924ce15d488c0bf5c5e27514573a4a315"
+        },
+        "build/qualification/failure/esp_psram.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/esp_psram.o": {
+          "bytes": 55764,
+          "sha256": "dc71db96048db997a0bedaa3c8eae2d664b84fe4154aa46a2c6a4e0d54b695b5"
+        },
+        "build/qualification/failure/recorder-command.json": {
+          "bytes": 13170,
+          "sha256": "1769a21af6792280e6d6b0ed6f7fb06c707450e8e21faa44fe4d4a1ed23f4c4e"
+        },
+        "build/qualification/failure/recorder.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/recorder.o": {
+          "bytes": 319780,
+          "sha256": "c7bc7d44d33bb9b6b1639f9161da6a4db053411ad84de38bf07e455c397b98ab"
+        },
+        "build/qualification/failure/recorder.su": {
+          "bytes": 1173,
+          "sha256": "1e72b7b908fc39135fa8507bdd947a04dc9dc44221c8602af22b8849be300a27"
+        },
+        "build/qualification/failure/report.json": {
+          "bytes": 2566,
+          "sha256": "36c19b910eefa3020e4e846d1001e3f6be4202b6effff8cd00848e422dee9d8d"
+        },
+        "build/qualification/failure/reset_reason-command.json": {
+          "bytes": 6799,
+          "sha256": "9f853f0bef16b8efe2bc6fd44dedbb37e4151bc649a3ea4f3a5b5d6a10a36a33"
+        },
+        "build/qualification/failure/reset_reason.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/reset_reason.o": {
+          "bytes": 15112,
+          "sha256": "07fd0c4c52d22cd1a99f117bfbcafc2af4577aad937f4943a5fb58b8818b7c08"
+        },
+        "build/qualification/failure/sleep-command.json": {
+          "bytes": 12990,
+          "sha256": "a6f3bc6e9080972714b1cbb123390f2eea9bbc996be20e578e0720cf2e70bb90"
+        },
+        "build/qualification/failure/sleep.cpp": {
+          "bytes": 258,
+          "sha256": "71f057bb7cf6c21bd3b194c56145e2af4a775af9f79b267a35cf2ae304ef0d14"
+        },
+        "build/qualification/failure/sleep.log": {
+          "bytes": 1221,
+          "sha256": "0fac4a36cf14aefd312c5604c4c17bd8c431711c891d4e159939bad4039c5fed"
+        },
+        "build/qualification/failure/sleep.o": {
+          "bytes": 37472,
+          "sha256": "32bcce668dc1bdcb553939f0991528f6da51913f73b843657d76b080a523d849"
+        },
+        "build/qualification/failure/wrong-version-command.json": {
+          "bytes": 13155,
+          "sha256": "912a74cd929922d5043fd76a2cd6162d50050f8811e46085e428bfbef8a680d7"
+        },
+        "build/qualification/failure/wrong-version.h": {
+          "bytes": 193,
+          "sha256": "28c87c641cb75f34ada45fecf15fec3a47fb219830c30e7c172ef41eac514d76"
+        },
+        "build/qualification/failure/wrong-version.log": {
+          "bytes": 1389,
+          "sha256": "19445a47ed2af5de343cad50390d6a52d70c44a7bfccf99b9feb427a0feb7ab8"
+        },
+        "build/qualification/http/native-http-stages-0-command.json": {
+          "bytes": 13190,
+          "sha256": "981268649425e8bc02e33ed713c37d3460efa8b422e4899c6bfac752507727af"
+        },
+        "build/qualification/http/native-http-stages-0.log": {
+          "bytes": 1554,
+          "sha256": "7f98fa92226047ed8c01c57469bf975886e81c7dfe9c30aa40f12491550825f2"
+        },
+        "build/qualification/http/native-http-stages-0.o": {
+          "bytes": 118412,
+          "sha256": "bd07ba5ada352f44ab2acd3f5addd310dab6d84d1a7a5755702112ee264d8ad8"
+        },
+        "build/qualification/http/native-http-stages-1-command.json": {
+          "bytes": 13190,
+          "sha256": "c802146138faee6ea46c35b80b859b02b800202d4298ba8c92b4a30b0f8e7ff5"
+        },
+        "build/qualification/http/native-http-stages-1.log": {
+          "bytes": 1554,
+          "sha256": "7f98fa92226047ed8c01c57469bf975886e81c7dfe9c30aa40f12491550825f2"
+        },
+        "build/qualification/http/native-http-stages-1.o": {
+          "bytes": 122684,
+          "sha256": "a408d2e34a1bff36aabaad69d1ff4ba3f6dccd3e5a43712ee27a534dc0dc70c7"
+        },
+        "build/qualification/http/native-http.cpp": {
+          "bytes": 451,
+          "sha256": "df0d5ae4b6f4136341c188c66c59b6f69bcc07e0d41c9dc814bc64a1688dae9b"
+        },
+        "build/qualification/iq-linked.json": {
+          "bytes": 2609,
+          "sha256": "4218e52bc780226f6f121af5c7282305b99404c4e29ab4f98e892d1333f98031"
+        },
+        "build/qualification/iq/native-iq-0-command.json": {
+          "bytes": 13052,
+          "sha256": "8dc503067989341f7ded896a3139f577f918a77709631e75857e2d67d1f56f36"
+        },
+        "build/qualification/iq/native-iq-0.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/iq/native-iq-0.o": {
+          "bytes": 53204,
+          "sha256": "ee98ff073d2b743e1fccac7a08cbce442ec3ef31d393f0585b53788609c89409"
+        },
+        "build/qualification/iq/native-iq-1-command.json": {
+          "bytes": 13052,
+          "sha256": "8e66e3aa4dc8c892d4d11128e093a887c01bb21846304d0c44a0520594280af5"
+        },
+        "build/qualification/iq/native-iq-1.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/iq/native-iq-1.o": {
+          "bytes": 56292,
+          "sha256": "d0eb0b0a49b762328ac3afc8a23207ee39183f28ffcd88f6c31bcad6c88a44c3"
+        },
+        "build/qualification/iq/native-iq.cpp": {
+          "bytes": 815,
+          "sha256": "92d9729198fbf9eed13cbb64f03921a277b09eb7be46b09b706f99e982fc2888"
+        },
+        "build/qualification/iq/report.json": {
+          "bytes": 3302,
+          "sha256": "a7dc2bc2ba852863755bf2b2f59911aa3f186f3e2e69cbfc3bcb70fa2a235790"
+        },
+        "build/qualification/linked-firmware.json": {
+          "bytes": 1104,
+          "sha256": "5a2458be4a2c70de19bc393bf7b28f28ecaa108b4e47df413fc5d2cfdb157e52"
+        },
+        "build/radio-iq-proof.json": {
+          "bytes": 2609,
+          "sha256": "4218e52bc780226f6f121af5c7282305b99404c4e29ab4f98e892d1333f98031"
+        },
+        "build/riscrte_native.bin": {
+          "bytes": 1731424,
+          "sha256": "d46a97f230834ca7e77eb75ea2bf1df8270e18a42e6fc667e7069e17c2f5f6fa"
+        },
+        "build/riscrte_native.elf": {
+          "bytes": 21895720,
+          "sha256": "32cb5cc5d3d14765ac37fbb624ecb9c3719c853f39dd00d3905e885f66c4fb64"
+        },
+        "build/riscrte_native.map": {
+          "bytes": 14455435,
+          "sha256": "369cae96c435d1989a1c8879aa5551522428172815bfd58cd75da5a0d34cd855"
+        },
+        "build/sdkconfig": {
+          "bytes": 93610,
+          "sha256": "50fe7d17c8aa0fdac05118a0a6486cae3354719077d43c8d8f8027c100dd9639"
+        },
+        "build/toolchain/asmflags": {
+          "bytes": 98,
+          "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+        },
+        "build/toolchain/cflags": {
+          "bytes": 98,
+          "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+        },
+        "build/toolchain/cxxflags": {
+          "bytes": 108,
+          "sha256": "50190b4d3a273c3a2ccc13a3a908cda254f065b34ea9949f9fedc2477ef4f889"
+        },
+        "build/toolchain/ldflags": {
+          "bytes": 24,
+          "sha256": "0882bd89337f1e7949a99b6d96b1fff733639561359a71d6f0507168ac7c42dc"
+        },
+        "build/toolchain/toolchain-esp32s3.cmake": {
+          "bytes": 101,
+          "sha256": "25323260dee4df19e35d9aed84bacdd71bb46df9165c286d060dceaa6368ac02"
+        },
+        "build/x509_crt_bundle.S": {
+          "bytes": 428667,
+          "sha256": "55f6407006f25c5c695d782e38429a00da83c9ccc9f54b5ddd8aab6360b042e1"
+        },
+        "candidate/SHA256SUMS": {
+          "bytes": 589,
+          "sha256": "ecb826092d05b3db2f21407b37c19729a45db2ded21feac751396c6045f538d5"
+        },
+        "candidate/bootloader.bin": {
+          "bytes": 22640,
+          "sha256": "d4f2cec05817a638659e74ea754b5b2f582e0eacdf5547b16844a1e263795389"
+        },
+        "candidate/factory-candidate-erases-data-0x0.bin": {
+          "bytes": 16777216,
+          "sha256": "28216ef77a5a30d528989bf53270f419290d4b5a3a9e05c835253a046a79a9b8"
+        },
+        "candidate/firmware.bin": {
+          "bytes": 1731424,
+          "sha256": "d46a97f230834ca7e77eb75ea2bf1df8270e18a42e6fc667e7069e17c2f5f6fa"
+        },
+        "candidate/partitions.bin": {
+          "bytes": 3072,
+          "sha256": "d27edcdba637142baa7d91e29b70df47554c22a4f14de303dc6a0cdcc1e25de8"
+        },
+        "candidate/qualification.json": {
+          "bytes": 1399748,
+          "sha256": "45397970a66c1d82fe712e5fe9f3fd4f019fc5f549f2fc0dd3d91e83c41c1ef4"
+        },
+        "candidate/source-lock.json": {
+          "bytes": 9814,
+          "sha256": "a85a2dc4755cb1da6b16e9ca8a3a8d1458d935d363da808e88c702cc3321db3f"
+        },
+        "candidate/store.bin": {
+          "bytes": 5570560,
+          "sha256": "0b205838bd4ad9a279c4dc75f700932edb87ef53fc94e5c71e4ed987009b5eae"
+        },
+        "logs/arduino-free-qualification.log": {
+          "bytes": 659,
+          "sha256": "be8a519a22b90fb3ca171ffdf82e511fbebd5d57e8752a08b3604aefa6cc46e9"
+        },
+        "logs/baseline-inputs.log": {
+          "bytes": 670,
+          "sha256": "8e14dfa666804e5d92192fb1ecae8674373442131cb273bf75777a689eaa2422"
+        },
+        "logs/controlled-product-build.log": {
+          "bytes": 194875,
+          "sha256": "419b950a33fa48b3ed3b4006cd9837d7b69714a0ecc119a3c3d0588584a1232d"
+        },
+        "logs/diagnostic-qualification.log": {
+          "bytes": 758,
+          "sha256": "aa03d03411e53e89b5dd65f66ad362a315cf2ae08834cc9d70e6afe3a49521f8"
+        },
+        "logs/linked-iq-qualification.log": {
+          "bytes": 588,
+          "sha256": "e3276495f1748cfbbba3aab7aa2b9a8d664f0f3e836daa5d1fba261645afd575"
+        },
+        "logs/product-contracts.log": {
+          "bytes": 872,
+          "sha256": "63c8a2dd499709715bdd162c4980a9c28873f669b2f067dc420796c4dafed58b"
+        },
+        "logs/source-custody-final.log": {
+          "bytes": 602,
+          "sha256": "b36005f8c94ced7ab800f0c058cb7b81d36fac4dd4ff813c2ec3153ae4a33314"
+        },
+        "logs/source-custody.log": {
+          "bytes": 1037,
+          "sha256": "bfcf6cd8c1fe738637872c150c4b0658d871348611441927bd7d17f795ac2e19"
+        },
+        "logs/source-setup.log": {
+          "bytes": 6560,
+          "sha256": "6e3ce224ca73eb94b72d96f185aacaef69ddfe447986f57ed2e7495d54e2d93f"
+        },
+        "logs/target-qualification.log": {
+          "bytes": 980,
+          "sha256": "f987b214cfc4c290da4957c5a9e23deb26477bf0ba41dc281d008175d785f91a"
+        },
+        "metadata/baseline-inputs.json": {
+          "bytes": 493,
+          "sha256": "ce1de78f1d3b7bf42fc548227a1b877a037ff3e91614594f4098a4afc653ac0b"
+        },
+        "metadata/ci-run.json": {
+          "bytes": 877,
+          "sha256": "01e4850751f4081d3023cce20a41e0fdf7157401338daa6886271d280b249637"
+        },
+        "metadata/compiler-SHA256SUMS": {
+          "bytes": 154,
+          "sha256": "9ea83232086e7ed939a9c771f1b4ca50f1c02510e202a67890b8b4962358ca02"
+        },
+        "metadata/compiler-version.txt": {
+          "bytes": 263,
+          "sha256": "ed21da1d0b473173d364e78a27c81f8f4b2537477bf9c54b34b645fe1268b18e"
+        },
+        "metadata/released-baseline.json": {
+          "bytes": 35976,
+          "sha256": "a25dd296eafd2bdb604c310b58aa14dbf6d021e76c336c087c5e2bcb8735cc58"
+        },
+        "metadata/sdk-tools.json": {
+          "bytes": 47183,
+          "sha256": "039337e5ee2511f97d112aedb98125945625a4dd9ffb67e0cbb094edcdd298b2"
+        },
+        "metadata/sources-after.json": {
+          "bytes": 4586,
+          "sha256": "432da7daa6bc6179182a104bc5bcb4338154ce9d6f0a918435898e04881b6d68"
+        },
+        "metadata/sources-before.json": {
+          "bytes": 4586,
+          "sha256": "432da7daa6bc6179182a104bc5bcb4338154ce9d6f0a918435898e04881b6d68"
+        },
+        "metadata/workflow.yml": {
+          "bytes": 21876,
+          "sha256": "8bd1593f7d5b9106e587edf8083372f89495b1600e523ac99987bc7dc24d0bbc"
+        }
+      },
+      "name": "native-idf6-waveshare-659d859acb122640ef4003bb8d7099501d4381be",
+      "sha256": "1bd762a43ca1c75b86d486a099d8f9cb5c2d84eece767d7c0eb198747b41a672",
+      "sources": {
+        "drivers": {
+          "revision": "5890721073ebabd781d5d278e447c761947a5c58",
+          "submodules": [],
+          "tree": "884416cb8ec2f95edcfc945a4a996f3dbca317c6"
+        },
+        "image_helper": {
+          "revision": "74f7491dc470b92dfa41fce41bf0c500f3714a94",
+          "submodules": [],
+          "tree": "e1418b6940d8b8df6b6a82057968b5074a96f2c6"
+        },
+        "product": {
+          "revision": "25c7151a1ac47e1a19a55b93c4cc3eaf2d4a4298",
+          "submodules": [],
+          "tree": "a892cf169eb16c8fad43726f2c419dca14f7af4f"
+        },
+        "runtime": {
+          "revision": "659d859acb122640ef4003bb8d7099501d4381be",
+          "submodules": [],
+          "tree": "5bde8014c76a52c9a380b1427aafaf9923a37411"
+        },
+        "sdk": {
+          "revision": "fff9895c82d744c7237be8847347bdd1b07c6643",
+          "submodules": [
+            "24c60e243580c7868f4334a1ba3123481fe1aa48 components/bootloader/subproject/components/micro-ecc/micro-ecc (v1.1)",
+            "98c6de2d5411a7297dbba00387dfca2bcc44fd18 components/bt/controller/lib_esp32 (98c6de2)",
+            "6a5c0b8bfca1a2e984e89431b8ebf9b521dad5ea components/bt/controller/lib_esp32c2/esp32c2-bt-lib (heads/main)",
+            "0a08c4b32f3666003080b662a1a61794da24ff0f components/bt/controller/lib_esp32c3_family (heads/master)",
+            "ac7885ea2fc76e56a814d10120812ccacf101f0b components/bt/controller/lib_esp32c5/esp32c5-bt-lib (ac7885e)",
+            "eee922eaa95770d567f0939cc3d56c712a6ecf65 components/bt/controller/lib_esp32c6/esp32c6-bt-lib (eee922e)",
+            "e0bb64a28b90247a349fbfc03a204df9194e40a1 components/bt/controller/lib_esp32h2/esp32h2-bt-lib (e0bb64a)",
+            "f4ce5d581a264fb5bf4c1b6ed473c45ad91f9db7 components/bt/controller/lib_esp32h4/esp32h4-bt-lib (f4ce5d5)",
+            "7f20740dd66ee774ffce5db0b55507892551aa31 components/bt/controller/lib_esp32s31/esp32s31-bt-lib (7f20740)",
+            "8af29109827eb9e3bc636b2a1ae6596fdfacaf4a components/bt/esp_ble_audio/lib/lib (8af2910)",
+            "f6c62bfa32759da7c44459bd6b40079cce93c94b components/bt/esp_ble_mesh/lib/lib (f6c62bf)",
+            "139cada0ae932957fa06ba37d17e3c9c2c95c773 components/bt/host/nimble/nimble (nimble_1_6_0_tag-439-g139cada0a)",
+            "eeecc49ce8af123cf8ad40efdb9673e37b56230f components/cmock/CMock (v2.5.2-2-geeecc49)",
+            "71b47be7c950f1bf5f7e5303779fa99a16224bb6 components/cmock/CMock/vendor/c_exception (v1.3.1-13-g71b47be)",
+            "cf949f45ca6d172a177b00da21310607b97bc7a7 components/cmock/CMock/vendor/unity (v2.5.1)",
+            "ddc56fa524a38df3098d2f36475fbe3eefe9b4f4 components/esp_coex/lib (heads/main)",
+            "5695f4f38108658bc4a33e4712c1ebcb34911434 components/esp_phy/lib (heads/master)",
+            "7cd4d7b2b4acc38aead43b029ac9409c3eba9c54 components/esp_wifi/lib (remotes/origin/feature/ftm_support_stage2-579-g7cd4d7b2)",
+            "2867f6883a12920b1969ff9624c0ab0e4185c2ce components/heap/tlsf (remotes/origin/master-48-g2867f68)",
+            "c6f2f878e7b0f86033214b85547d579be43351e3 components/lwip/lwip (heads/2.2.0-esp)",
+            "a2b32072ea898afc1ed5b6caf6931e36028c91d6 components/mbedtls/mbedtls (mbedtls-4.1.0-22-ga2b32072ea)",
+            "4dd715391cfb2cf4d06825a17294514024e4dc12 components/openthread/lib (4dd7153)",
+            "b678a4f63b6f9397d1a0fa8f31e5b8e0271a4d00 components/openthread/openthread (thread-reference-20250612-1270-gb678a4f63)",
+            "e185d7fd85499c8ce5ca2a54f5cf8fe7dbe3f8df components/openthread/openthread/third_party/mbedtls/repo (v3.6.5)",
+            "457996474728cb8e968ed21953b72f74d2f536b2 components/openthread/openthread/third_party/mbedtls/repo/framework (mbedtls-4.0.0_tf-psa-crypto-1.0.0)",
+            "abc67a11c6db271bedbb9f58be85d6f4e2ea8389 components/protobuf-c/protobuf-c (v1.4.1)",
+            "ad902cadceb39d0825a97e25ecb5867641f606ba components/spiffs/spiffs (0.2-265-gad902ca)",
+            "bf560290f6020737eafaa8b5cbd2177c3956c03f components/unity/unity (v2.6.0_RC1)"
+          ],
+          "tree": "e6a5e4865e2027f1f0cef5da09f254d65c5cec22"
+        },
+        "system": {
+          "revision": "755cc5174a6deaee120d108cbffe67ae809e1e6f",
+          "submodules": [],
+          "tree": "a9ffde3a032b3109621eae95c0935d6f9e7745e5"
+        }
+      }
+    },
+    "x4": {
+      "bytes": 26783139,
+      "id": 12003420515,
+      "job_id": 116636599732,
+      "job_name": "native-idf (x4, RiscRTE-XTEINK-X4-PRO, a9009a5d774ae7060b9f298fdcbc81be6c22cc17, 0.1.122, esp32s3...",
+      "members": {
+        "build/.ninja_deps": {
+          "bytes": 770416,
+          "sha256": "90636e5cd9bf5777b7399b679553461f7c0b4b91f8cf1e72c46e652221502b82"
+        },
+        "build/.ninja_log": {
+          "bytes": 134717,
+          "sha256": "b8cb316595e147f547a24937ba7da87c0b9390afcac9aa720491268c64a93587"
+        },
+        "build/CMakeCache.txt": {
+          "bytes": 28872,
+          "sha256": "c7c3992513eafcb0c97396692d2c5ddd21b984a544130634e377843e716bcd24"
+        },
+        "build/CMakeFiles/CMakeConfigureLog.yaml": {
+          "bytes": 244873,
+          "sha256": "4578c2aedc79b751e7f25ecae8018f3f7e9ec2663cb390a60c1bd1e403902788"
+        },
+        "build/bootloader/.ninja_deps": {
+          "bytes": 81456,
+          "sha256": "a97671cb8a736492bc4648e59a0cad000d3d3579c13d9e0be484d864d78c13a4"
+        },
+        "build/bootloader/.ninja_log": {
+          "bytes": 18843,
+          "sha256": "80c50d763eb3e574fdd5989b2a02afe47adca5edb03cba4855645f21d80eaa2e"
+        },
+        "build/bootloader/CMakeCache.txt": {
+          "bytes": 18600,
+          "sha256": "28c9afbc534e76885fcae53da26eb5845c88098b6a8ffc303186cd1d4ce6f3db"
+        },
+        "build/bootloader/CMakeFiles/CMakeConfigureLog.yaml": {
+          "bytes": 244031,
+          "sha256": "11bfc1c309b4fc14990aada2a1f148fca4ecd25dfd407e56c68034b7a484be97"
+        },
+        "build/bootloader/bootloader.bin": {
+          "bytes": 22640,
+          "sha256": "2b23ebd26fcc4c62a256a6e873bc10adc93cd7ed6c07b6160cd302a534519a5b"
+        },
+        "build/bootloader/bootloader.elf": {
+          "bytes": 629716,
+          "sha256": "1435bd7b09b5a74c0310e3038785fd1e2a5af825c9dba6985620c116294158cc"
+        },
+        "build/bootloader/bootloader.map": {
+          "bytes": 608691,
+          "sha256": "e2ddbd5cfb729e94ffedde813f5aea7b52ce773cbc8ac703a6b3b9e28abba14b"
+        },
+        "build/bootloader/build.ninja": {
+          "bytes": 769838,
+          "sha256": "1d70f00989b491c82f25183cbd6ee190fa87556604f951929631b99950f570de"
+        },
+        "build/bootloader/compile_commands.json": {
+          "bytes": 546436,
+          "sha256": "dcfbf3c8241912b929c2b61b637e1b138089be573d3ba8ffa00dca756e081514"
+        },
+        "build/bootloader/config/kconfig_menus.json": {
+          "bytes": 624550,
+          "sha256": "80131e02b4915dc951e3215b3d8dc795c8ec30085dd967b78c8fde2ff6742326"
+        },
+        "build/bootloader/config/sdkconfig.cmake": {
+          "bytes": 65126,
+          "sha256": "05f13492e3955bcfa24ff8584fafbc8fdec0429c34781f660e4f0c1f7cc741ec"
+        },
+        "build/bootloader/config/sdkconfig.h": {
+          "bytes": 29044,
+          "sha256": "d89c97f919d2147e3bd346e3c03b204737ee210a4cb76a5b9bd2f77fbfdc07c3"
+        },
+        "build/bootloader/config/sdkconfig.json": {
+          "bytes": 29623,
+          "sha256": "8649d1f727768ce4f5ca8b2e167152f889abf81b4561f8d630f810a7420247d9"
+        },
+        "build/bootloader/project_description.json": {
+          "bytes": 110734,
+          "sha256": "8e92cad74b01a189de6c876e0d2d4d1e085319608c62f573049dde811e8cd4b9"
+        },
+        "build/bootloader/project_elf_src_esp32s3.c": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/bootloader/toolchain/asmflags": {
+          "bytes": 71,
+          "sha256": "21b4c8d43b0d85f90f37512b6a9b85a4cc7e93f93133886dba9593e2eee10a70"
+        },
+        "build/bootloader/toolchain/cflags": {
+          "bytes": 71,
+          "sha256": "21b4c8d43b0d85f90f37512b6a9b85a4cc7e93f93133886dba9593e2eee10a70"
+        },
+        "build/bootloader/toolchain/cxxflags": {
+          "bytes": 81,
+          "sha256": "d2cb1b25e1da83fffb033feb70d34f9ac51fbe242fc7b029415987e7e9cff443"
+        },
+        "build/bootloader/toolchain/ldflags": {
+          "bytes": 24,
+          "sha256": "0882bd89337f1e7949a99b6d96b1fff733639561359a71d6f0507168ac7c42dc"
+        },
+        "build/bootloader/toolchain/toolchain-esp32s3.cmake": {
+          "bytes": 101,
+          "sha256": "25323260dee4df19e35d9aed84bacdd71bb46df9165c286d060dceaa6368ac02"
+        },
+        "build/build.ninja": {
+          "bytes": 6957092,
+          "sha256": "08f8ea901ee74562f3273dfb6487f516e7c114cf213583dbb6ad207e844400ac"
+        },
+        "build/compile_commands.json": {
+          "bytes": 5952315,
+          "sha256": "36a05e97cb830909d16ca61209adc72fbc033862b26347329cf9300b38e01920"
+        },
+        "build/config/kconfig_menus.json": {
+          "bytes": 2687990,
+          "sha256": "76c863087b6f657b173968432ea59d376d9d3a7496828e83c1001e5855ea0eca"
+        },
+        "build/config/sdkconfig.cmake": {
+          "bytes": 139651,
+          "sha256": "cfec4aff5719b576a8ed8d04db52c73e233a7534fc7af9f80e6879adb6d7bb31"
+        },
+        "build/config/sdkconfig.h": {
+          "bytes": 52482,
+          "sha256": "c3792af966bbf47793e3ad89efd33ff0471c96602915926ae301df7ddd743a81"
+        },
+        "build/config/sdkconfig.json": {
+          "bytes": 60190,
+          "sha256": "51aac606bd5b8d6ea329fa7cf3a14e6603c11f5b14b0a201ebd03d56dd7e8489"
+        },
+        "build/esp-idf/mbedtls/x509_crt_bundle": {
+          "bytes": 67817,
+          "sha256": "b3e27ad072b398df1404c73493e6441ef4929e523f944cc37423e0e4b86c6fb0"
+        },
+        "build/esp-idf/runtime/RiscBuildIdentity.h": {
+          "bytes": 190,
+          "sha256": "e5fc5b34431da306ee44b3e436e8ce81500f10ac0a8235379e713d1c2603fd2e"
+        },
+        "build/flash_args": {
+          "bytes": 182,
+          "sha256": "11945dacb9ad5acba260036837cafd4c3e2a087d38d2049800468bbecc002ae6"
+        },
+        "build/flasher_args.json": {
+          "bytes": 1065,
+          "sha256": "eac8a848f96da3ebaf107684456a2709e475f8c3b72e484e67a1fb3f9ed7e337"
+        },
+        "build/log/idf_py_stderr_output_1652": {
+          "bytes": 5975,
+          "sha256": "b4a3f48f07870cdc8f178d5a2b2f4ca89e4f7dce7fd407519820db6b5e080516"
+        },
+        "build/log/idf_py_stdout_output_1652": {
+          "bytes": 8485,
+          "sha256": "cfcf120b801ed63fe9a895121b7947d8de21a48284005a15baddf051dcaefbd6"
+        },
+        "build/native-build-evidence/app_commands.txt": {
+          "bytes": 6028998,
+          "sha256": "c654fe2ca2c2453b4eaf690bb59c1cec5cc38876a6efcd442380959669bf6917"
+        },
+        "build/native-build-evidence/app_deps.txt": {
+          "bytes": 9462771,
+          "sha256": "b4d2d28833b4fbcb6381aea544bd6eee314ddc4ba3e22677834cb01901b03dbe"
+        },
+        "build/native-build-evidence/app_inputs.txt": {
+          "bytes": 146271,
+          "sha256": "18fd221249a83a23832a3bff704887eb5e7b44f2aed40deb40b841b0559c330b"
+        },
+        "build/native-build-evidence/app_phony_queries.txt": {
+          "bytes": 147347,
+          "sha256": "ccfad832eb177d55ccaca03a41bc1eac3f1b1b27460791012ab16a255d7e17f2"
+        },
+        "build/native-build-evidence/bootloader_commands.txt": {
+          "bytes": 563985,
+          "sha256": "63f800df997866057a298c8c5417a42d4237c5d181dfeff7b8ed760a9f83f06a"
+        },
+        "build/native-build-evidence/bootloader_deps.txt": {
+          "bytes": 601046,
+          "sha256": "9f8ef8f570857100fd9e5b57713058db912036801c1c790f5c4805dfeac04916"
+        },
+        "build/native-build-evidence/bootloader_inputs.txt": {
+          "bytes": 20557,
+          "sha256": "5a9ab309685f7f8ef98b31a664fa857da6b85cf6f46fc28c95b9ebc82e56f21c"
+        },
+        "build/native-build-evidence/bootloader_phony_queries.txt": {
+          "bytes": 25653,
+          "sha256": "b0f97447f8ef5f47552b9d69842e4b18756ba3b314b128b4dba29f0be621718d"
+        },
+        "build/native-build-evidence/build-closure.json": {
+          "bytes": 1163386,
+          "sha256": "5a452bb20a4ebb16bfc2a628badf65b63b72e56bcef8236eb454e7b3ae42b90b"
+        },
+        "build/native-build-evidence/source-lock.json": {
+          "bytes": 9995,
+          "sha256": "db9259cfc45df176fdc94165db5e21a9f9e41a832872ae9bbb24684cf8f626fa"
+        },
+        "build/native-iq-rom.json": {
+          "bytes": 808,
+          "sha256": "7edfeee41f8879078a95353409b5df767ff70b6ea52450c9d2ff8fb79d0b7a0a"
+        },
+        "build/native-iq-rom.ld": {
+          "bytes": 203,
+          "sha256": "5cdb4befd9a6e2592a4299f88adf119d6155a425d51e5cb9a2d0679b64602de3"
+        },
+        "build/partition_table/partition-table.bin": {
+          "bytes": 3072,
+          "sha256": "475bd8da863027242a38a6401d45ee2251084037e92b19631f6468ad5ae5efc9"
+        },
+        "build/product-sdkconfig.defaults": {
+          "bytes": 121,
+          "sha256": "f36062805ff8f55f9eba0bad400f81ab0321151cd03b15661766c3a1e5cc4806"
+        },
+        "build/project_description.json": {
+          "bytes": 194478,
+          "sha256": "0bdaa036cc50333bf0662c17ea0ab9ad85c5ac041f1ac65a3a72e5c511ddb4cb"
+        },
+        "build/project_elf_src_esp32s3.c": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/entropy-command.json": {
+          "bytes": 13245,
+          "sha256": "8f8ca62facc31bede4150175fffb49982f7a345648e6ef19aedf602fcc6778d5"
+        },
+        "build/qualification/atomics/entropy.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/entropy.o": {
+          "bytes": 59696,
+          "sha256": "d47cadf135583f19fab0157db7f2fcc15b26f64f06765314cf9acef3a7659960"
+        },
+        "build/qualification/atomics/entropy.su": {
+          "bytes": 717,
+          "sha256": "2a2e90f22126cb4c299817a9924ac624698d8efd40042d98353fe18d9a92f262"
+        },
+        "build/qualification/atomics/radio-0-command.json": {
+          "bytes": 13136,
+          "sha256": "7ca2100e7e58a9530890b3b33518c1020f49bc60a54a65f746ffabae3f47a047"
+        },
+        "build/qualification/atomics/radio-0.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/radio-0.o": {
+          "bytes": 408660,
+          "sha256": "920c996dc019bb9a506337969c0685792ef06e2641c404caaaa80513128fbd0c"
+        },
+        "build/qualification/atomics/radio-0.su": {
+          "bytes": 4741,
+          "sha256": "6da9d76bcc88117a0404e11b2962d78d4876ae0c2d5cb2d42d8f7f2649773e76"
+        },
+        "build/qualification/atomics/radio-1-command.json": {
+          "bytes": 13136,
+          "sha256": "cd3d4eb04d6400e37f0802a7bd95d96deaa8cbe1acf678b850d36a83d41fdd97"
+        },
+        "build/qualification/atomics/radio-1.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/radio-1.o": {
+          "bytes": 541572,
+          "sha256": "88de8aa3507bfc2437576f5c1ab61b96b315bcc490d09d9b99c1f5283b6bebd2"
+        },
+        "build/qualification/atomics/radio-1.su": {
+          "bytes": 5321,
+          "sha256": "a52285df087eaae6ac09802c9f0420277840a0d137819c32f14e026d592bca42"
+        },
+        "build/qualification/atomics/radio.cpp": {
+          "bytes": 326,
+          "sha256": "4fdac4e8300835711b608fc0d7fe7e1f289d8e4e1ebcd366fc305f0ace238925"
+        },
+        "build/qualification/atomics/reject-config.h": {
+          "bytes": 124,
+          "sha256": "eb46dacdeb7fec04c0563163d376ce063d82d98ee528fcb603ffa14040afd5c1"
+        },
+        "build/qualification/atomics/reject-version-command.json": {
+          "bytes": 13186,
+          "sha256": "e19d076f5e8896dc2e2a7300112330e37a70b978f1e9053d60d44d0ac9bae650"
+        },
+        "build/qualification/atomics/reject-version.h": {
+          "bytes": 103,
+          "sha256": "381fbabd05de6d6a6e1b2bab0fd08d03988e9149c6d24b831a71a0f5318a5c4c"
+        },
+        "build/qualification/atomics/reject-version.log": {
+          "bytes": 805,
+          "sha256": "c5c833830b3b9885673514333a3bb3fe5bc12e2b376581063f5d5d9fe6775861"
+        },
+        "build/qualification/atomics/reject-version.su": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/reject-workaround-command.json": {
+          "bytes": 13188,
+          "sha256": "5609eaa158511216b3165d04aff7fa6decd4667eb75b1503e25d833b57df50c7"
+        },
+        "build/qualification/atomics/reject-workaround.log": {
+          "bytes": 805,
+          "sha256": "c5c833830b3b9885673514333a3bb3fe5bc12e2b376581063f5d5d9fe6775861"
+        },
+        "build/qualification/atomics/reject-workaround.su": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/report.json": {
+          "bytes": 4963,
+          "sha256": "9816b924b449ee971fea08c655e6c94008b8968675c974f43f11a764ed934433"
+        },
+        "build/qualification/atomics/sdk-dispatch-command.json": {
+          "bytes": 5734,
+          "sha256": "5ed73fc98579b008c33b0eb2e5c08e0362b78dae12bb6d117706beb966a5bd31"
+        },
+        "build/qualification/atomics/sdk-dispatch.dis": {
+          "bytes": 236627,
+          "sha256": "65928e0f95246af6245d62cc266f40f409f0a665e29b07a196ac4a5f922d1da5"
+        },
+        "build/qualification/atomics/sdk-dispatch.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/sdk-dispatch.o": {
+          "bytes": 329948,
+          "sha256": "650230be6a5dc6af6895b6eb6238589ae87538f5756092feb269bdace6b509af"
+        },
+        "build/qualification/atomics/sdk-hardware-command.json": {
+          "bytes": 5788,
+          "sha256": "27e6aae9e110af45f0f0e261affe96e1b23f75e736442bbaffa134127626bb88"
+        },
+        "build/qualification/atomics/sdk-hardware.dis": {
+          "bytes": 52466,
+          "sha256": "5eba32e2526e92519195b4b819108440f14be6876f6521c3bfd3d82ba7f6e445"
+        },
+        "build/qualification/atomics/sdk-hardware.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/atomics/sdk-hardware.o": {
+          "bytes": 59612,
+          "sha256": "8e17ad436293c428f01ad96afaa2cd0c6313d395d1f13305cc17febe39512eba"
+        },
+        "build/qualification/atomics/stream-registry-command.json": {
+          "bytes": 13116,
+          "sha256": "965b812fd249bf6bab46b9d65fabc5fe2ddb70982679c95848168adaac7697e9"
+        },
+        "build/qualification/atomics/stream-registry.log": {
+          "bytes": 650,
+          "sha256": "2e1e7b9dbef7c87eacf657e63830b817c2ebc5486862a483e9bf7eff325d2d14"
+        },
+        "build/qualification/atomics/stream-registry.o": {
+          "bytes": 228304,
+          "sha256": "5f02bcd3230d4157c6dc6de330b77a8d15418af9ab5ef5b214cdc66a695c9607"
+        },
+        "build/qualification/atomics/stream-registry.su": {
+          "bytes": 5933,
+          "sha256": "035a12ee35a6ab50aeb5afca7003d697ad6efda17b7396914543b475fc21f736"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM-command.json": {
+          "bytes": 13276,
+          "sha256": "47ab9f44e9427e38834074073e8392518829adb3a6531ad3e0679a5d7aa4b77b"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM.h": {
+          "bytes": 160,
+          "sha256": "52036173439e6f62241317c79048a4e4817346f574d1d73b6a701534f769e308"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM.log": {
+          "bytes": 362,
+          "sha256": "4c17330b82b9798675c59d5d63799573f6c7b4bbcc9ef2e7e454e7c30edf5d43"
+        },
+        "build/qualification/failure/CONFIG_ESP_PANIC_HANDLER_IRAM.su": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM-command.json": {
+          "bytes": 13268,
+          "sha256": "2484366aeaf930f5de7c9953f28ce8bef37f0b66e48acf6ff8d300e857290521"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM.h": {
+          "bytes": 152,
+          "sha256": "f1897209459c7d5c5fa7cd6c9583b4cbc343ad1caab996d34dc69c448bfa8d39"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM.log": {
+          "bytes": 362,
+          "sha256": "4c17330b82b9798675c59d5d63799573f6c7b4bbcc9ef2e7e454e7c30edf5d43"
+        },
+        "build/qualification/failure/CONFIG_ESP_SYSTEM_IN_IRAM.su": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/capture-config.h": {
+          "bytes": 169,
+          "sha256": "b9641813b966901778d8d3360a7aa8783d18e444820792891cb3408cd8da116f"
+        },
+        "build/qualification/failure/debug_helpers-command.json": {
+          "bytes": 6766,
+          "sha256": "836411ff1974d6e66a97f00b75152dfdde24efc0e86cf307cd014642216844e8"
+        },
+        "build/qualification/failure/debug_helpers.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/debug_helpers.o": {
+          "bytes": 36440,
+          "sha256": "3ff82b7d47b92374101029328f94c0663b8d50e69abd4c920537e555deccc778"
+        },
+        "build/qualification/failure/esp_memory_utils-command.json": {
+          "bytes": 7208,
+          "sha256": "f43b2e305e111d3a7208f9d22623c1437eac0f9da64830fc04d6e9c0179b4712"
+        },
+        "build/qualification/failure/esp_memory_utils.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/esp_memory_utils.o": {
+          "bytes": 12176,
+          "sha256": "29e3412a23127dc75c5771dd08f5c6e07e925e44e76a01589e36256ad4fad0bb"
+        },
+        "build/qualification/failure/esp_psram-command.json": {
+          "bytes": 5988,
+          "sha256": "1cf54bcfbb2384c654ec589fcd59abb2db924457da8ba4864c9f25c0bbabf167"
+        },
+        "build/qualification/failure/esp_psram.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/esp_psram.o": {
+          "bytes": 55756,
+          "sha256": "ea8a2731365f181ff8bf5f975fe1469a4cf7b1bb6f1bba55c4c3f27f17600fee"
+        },
+        "build/qualification/failure/recorder-command.json": {
+          "bytes": 13259,
+          "sha256": "4308c297e40b5a11aa739390128e52e5444e7f2c2b7bdad81f4fe525813ce3f0"
+        },
+        "build/qualification/failure/recorder.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/recorder.o": {
+          "bytes": 319588,
+          "sha256": "daedc25e95c40b12d278957ec8fdd8140b606b75077ecc7f3ce5caae26fa7771"
+        },
+        "build/qualification/failure/recorder.su": {
+          "bytes": 837,
+          "sha256": "0bcdd9e079fdd708eff94133ff4e7836e4ec23335f00f24a767b7647e42dfafe"
+        },
+        "build/qualification/failure/report.json": {
+          "bytes": 2470,
+          "sha256": "09f561591f336f0cb5cbb54b4378876824d8dff974084c616364d84d1ba7fbc7"
+        },
+        "build/qualification/failure/reset_reason-command.json": {
+          "bytes": 6764,
+          "sha256": "6e4a7af7dd2dd0542557aa3cf5ebe28a2711412bacae9e7dd5949d9a0f4ce23d"
+        },
+        "build/qualification/failure/reset_reason.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/failure/reset_reason.o": {
+          "bytes": 15104,
+          "sha256": "2e2f9341bbea72e6e148ee0d663457d3045398c0bc236d7c587faf4af143036d"
+        },
+        "build/qualification/failure/sleep-command.json": {
+          "bytes": 13086,
+          "sha256": "ffda0596b9880adcffcae7b6ce9745d24decc13915132d616acacf6eb567f4cb"
+        },
+        "build/qualification/failure/sleep.cpp": {
+          "bytes": 258,
+          "sha256": "71f057bb7cf6c21bd3b194c56145e2af4a775af9f79b267a35cf2ae304ef0d14"
+        },
+        "build/qualification/failure/sleep.log": {
+          "bytes": 1193,
+          "sha256": "0fd2e63f6f337dce548c1757fa90dac88e13f01a290d4a9c1e64b6b3c0f7d38f"
+        },
+        "build/qualification/failure/sleep.o": {
+          "bytes": 37420,
+          "sha256": "a6c5e59844c809486c306750d069c30d1985f0f67ae2b0d1b6cde8804819c3d9"
+        },
+        "build/qualification/failure/sleep.su": {
+          "bytes": 550,
+          "sha256": "a47fc27da6b5a2d999eb07722d3e332c6c51b435f3c773835e5a8bc6070e66a9"
+        },
+        "build/qualification/failure/wrong-version-command.json": {
+          "bytes": 13244,
+          "sha256": "aff21bea78b50fc5cdfb318c076bd1affb7852379b3ae370e95ceccc03a3ab69"
+        },
+        "build/qualification/failure/wrong-version.h": {
+          "bytes": 186,
+          "sha256": "c8a57ae142745e6f2f3ebd9cd17c70fb35c4a10b616c2973c329d762898fac35"
+        },
+        "build/qualification/failure/wrong-version.log": {
+          "bytes": 1368,
+          "sha256": "0de533557ddeb84f90c9ceaeedbf4ade52d03370359a87a66386701d8993cfae"
+        },
+        "build/qualification/failure/wrong-version.su": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/http/native-http-stages-0-command.json": {
+          "bytes": 13286,
+          "sha256": "1795a1365b12e78625affc231e34eca8395b5cffba88e68ab36647d3fb66bffb"
+        },
+        "build/qualification/http/native-http-stages-0.log": {
+          "bytes": 1519,
+          "sha256": "34944e9702b883ea9fb4738814881a9aefdfe59f97607a824fbcea05487d0126"
+        },
+        "build/qualification/http/native-http-stages-0.o": {
+          "bytes": 118312,
+          "sha256": "a21a188fc34c9ab0faecb6497767b9fe6d034c2d96e33b549a9cc9c5f6c232b7"
+        },
+        "build/qualification/http/native-http-stages-0.su": {
+          "bytes": 2430,
+          "sha256": "81568ebbe74078bdc8e0dff7692d86e6ffca6f7d2d75f3259d3cc8dbe8b44293"
+        },
+        "build/qualification/http/native-http-stages-1-command.json": {
+          "bytes": 13286,
+          "sha256": "3ce748a358478cd684cdfdb23c13dbc70c93e8b4845ff4a94767f8c74121052e"
+        },
+        "build/qualification/http/native-http-stages-1.log": {
+          "bytes": 1519,
+          "sha256": "34944e9702b883ea9fb4738814881a9aefdfe59f97607a824fbcea05487d0126"
+        },
+        "build/qualification/http/native-http-stages-1.o": {
+          "bytes": 122532,
+          "sha256": "bfaf950942af9160be8b18fc5e1b3177c9206f17ca3669cd381ca177fdaf611d"
+        },
+        "build/qualification/http/native-http-stages-1.su": {
+          "bytes": 2530,
+          "sha256": "e33af3ed30d2ed529c8dd987c87d9797ef01e0bab7bd01bf2067567567485fd2"
+        },
+        "build/qualification/http/native-http.cpp": {
+          "bytes": 451,
+          "sha256": "df0d5ae4b6f4136341c188c66c59b6f69bcc07e0d41c9dc814bc64a1688dae9b"
+        },
+        "build/qualification/iq-linked.json": {
+          "bytes": 2602,
+          "sha256": "6a43c5fc5a75edf51651d5c843d59d2762f439a658b51ef5487a6fd06aa7efa7"
+        },
+        "build/qualification/iq/native-iq-0-command.json": {
+          "bytes": 13148,
+          "sha256": "49a4f58f695617fb710dbc5894280965d6568d30431125583e8b38520b45f0b2"
+        },
+        "build/qualification/iq/native-iq-0.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/iq/native-iq-0.o": {
+          "bytes": 53104,
+          "sha256": "fe520d68991e9a99e8535f9dea90878c9a49bd86c9c7601350494ce55e96ed81"
+        },
+        "build/qualification/iq/native-iq-0.su": {
+          "bytes": 1229,
+          "sha256": "e4ff402211e8fc4708d43008242eaf1904ff3f382bb46b2ad6e7b1c8b745890d"
+        },
+        "build/qualification/iq/native-iq-1-command.json": {
+          "bytes": 13148,
+          "sha256": "0efd05c03390ceb46aac8d0c8e2fb6f72fe1f5d234341ccd3bf25f53c5e3d66b"
+        },
+        "build/qualification/iq/native-iq-1.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "build/qualification/iq/native-iq-1.o": {
+          "bytes": 56140,
+          "sha256": "96bebd977ae804bdcd4278b7240f0a05bd23c9a969e2d3f31a9ea66760a854b1"
+        },
+        "build/qualification/iq/native-iq-1.su": {
+          "bytes": 1329,
+          "sha256": "b3cd8c15c90abc70e956cbf29d1339c3aee67eb347265ece27c5e5e348beb76e"
+        },
+        "build/qualification/iq/native-iq.cpp": {
+          "bytes": 815,
+          "sha256": "92d9729198fbf9eed13cbb64f03921a277b09eb7be46b09b706f99e982fc2888"
+        },
+        "build/qualification/iq/report.json": {
+          "bytes": 3302,
+          "sha256": "a7dc2bc2ba852863755bf2b2f59911aa3f186f3e2e69cbfc3bcb70fa2a235790"
+        },
+        "build/qualification/linked-firmware.json": {
+          "bytes": 1104,
+          "sha256": "d6ad6aa6d11acafea1fee6ba82d8c9a5ba1b705e77d2fddf472a9f178c005ab6"
+        },
+        "build/qualification/x4-startup.json": {
+          "bytes": 2685,
+          "sha256": "60f97d9f82b3fc4c0fc63122a580f1fb3f9eb152fce4ac8299f3233043323b83"
+        },
+        "build/radio-iq-proof.json": {
+          "bytes": 2602,
+          "sha256": "6a43c5fc5a75edf51651d5c843d59d2762f439a658b51ef5487a6fd06aa7efa7"
+        },
+        "build/riscrte_native.bin": {
+          "bytes": 1751440,
+          "sha256": "4a9faa252f7b87cdacdc3e350352734d682dae9a4bebe30c3502d1adb9e194dd"
+        },
+        "build/riscrte_native.elf": {
+          "bytes": 22169512,
+          "sha256": "8535d95801c96d6ea16d26236a48db2733f28475e5576ba4e64bda1d98e0c278"
+        },
+        "build/riscrte_native.map": {
+          "bytes": 14450005,
+          "sha256": "0d822490b484d081424c199780b5878143e5cb8a27a7644edf57e81345d05371"
+        },
+        "build/sdkconfig": {
+          "bytes": 93592,
+          "sha256": "8d894f8454d83cd6f454fc0f261552f92bfeeb7d9bb4ded36063e904fee4622b"
+        },
+        "build/toolchain/asmflags": {
+          "bytes": 98,
+          "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+        },
+        "build/toolchain/cflags": {
+          "bytes": 98,
+          "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+        },
+        "build/toolchain/cxxflags": {
+          "bytes": 108,
+          "sha256": "50190b4d3a273c3a2ccc13a3a908cda254f065b34ea9949f9fedc2477ef4f889"
+        },
+        "build/toolchain/ldflags": {
+          "bytes": 24,
+          "sha256": "0882bd89337f1e7949a99b6d96b1fff733639561359a71d6f0507168ac7c42dc"
+        },
+        "build/toolchain/toolchain-esp32s3.cmake": {
+          "bytes": 101,
+          "sha256": "25323260dee4df19e35d9aed84bacdd71bb46df9165c286d060dceaa6368ac02"
+        },
+        "build/x4-native-idf61/X4NativeBuildIdentity.h": {
+          "bytes": 376,
+          "sha256": "cf4dd7b2360f28a19330c3f98c47bb09c169ba4e3e457339c8db679c44d4ea1e"
+        },
+        "build/x4-native-idf61/selection.txt": {
+          "bytes": 2836,
+          "sha256": "7dec53a4c4c8eadcb5464c947a878086ad4067a5b0cfc46cd08831d4b5bc4611"
+        },
+        "build/x509_crt_bundle.S": {
+          "bytes": 428660,
+          "sha256": "d0b6e5a85facfb64250d19d052a34f6836be8d8b0d624416b6f8afd8664cce7a"
+        },
+        "candidate/SHA256SUMS": {
+          "bytes": 696,
+          "sha256": "16bfd400ad58b50ab61ea4141f329556b9ee2290374fcc9c19f433620f704f91"
+        },
+        "candidate/X4-0.1.121-Complete-SD-Keep-Existing.zip": {
+          "bytes": 10844318,
+          "sha256": "2b6dce3efb468f3cd728b50707e0c9552d84e225b65e2b27e683d3d726bc6cef"
+        },
+        "candidate/bootloader.bin": {
+          "bytes": 22640,
+          "sha256": "2b23ebd26fcc4c62a256a6e873bc10adc93cd7ed6c07b6160cd302a534519a5b"
+        },
+        "candidate/factory-candidate-erases-data-0x0.bin": {
+          "bytes": 16777216,
+          "sha256": "bc7e913dff34a4a82b455f3eddac910d45e7201a4ded19d372b2a8fd54a30d10"
+        },
+        "candidate/firmware.bin": {
+          "bytes": 1751440,
+          "sha256": "4a9faa252f7b87cdacdc3e350352734d682dae9a4bebe30c3502d1adb9e194dd"
+        },
+        "candidate/partitions.bin": {
+          "bytes": 3072,
+          "sha256": "475bd8da863027242a38a6401d45ee2251084037e92b19631f6468ad5ae5efc9"
+        },
+        "candidate/qualification.json": {
+          "bytes": 1503227,
+          "sha256": "fb54874040a028eddff10afd30c23a7b6d6b549f151a8098904f24fd181a20bd"
+        },
+        "candidate/source-lock.json": {
+          "bytes": 9995,
+          "sha256": "db9259cfc45df176fdc94165db5e21a9f9e41a832872ae9bbb24684cf8f626fa"
+        },
+        "candidate/store.bin": {
+          "bytes": 5308416,
+          "sha256": "12c405252575b2dd709caffc1295d9c0b1904e90870941c01ab82500c5fb45bd"
+        },
+        "logs/arduino-free-qualification.log": {
+          "bytes": 659,
+          "sha256": "be8a519a22b90fb3ca171ffdf82e511fbebd5d57e8752a08b3604aefa6cc46e9"
+        },
+        "logs/baseline-inputs.log": {
+          "bytes": 726,
+          "sha256": "94b2e9ffb21afb9ba9e4e620b7aa6651d6897b2355c8a94b9469a7ff3b8ce5f2"
+        },
+        "logs/controlled-product-build.log": {
+          "bytes": 194431,
+          "sha256": "3eb6b10ec4540d581ef7a20ec9bca0dc21ae16689c95da0d877ad089fb24057c"
+        },
+        "logs/linked-iq-qualification.log": {
+          "bytes": 588,
+          "sha256": "e3276495f1748cfbbba3aab7aa2b9a8d664f0f3e836daa5d1fba261645afd575"
+        },
+        "logs/product-contracts.log": {
+          "bytes": 799,
+          "sha256": "7ca93295e948a249bd837c69d7885e75e66dd73e0f5ca98b4e234a338a8f7708"
+        },
+        "logs/source-custody-final.log": {
+          "bytes": 602,
+          "sha256": "b36005f8c94ced7ab800f0c058cb7b81d36fac4dd4ff813c2ec3153ae4a33314"
+        },
+        "logs/source-custody.log": {
+          "bytes": 1037,
+          "sha256": "bfcf6cd8c1fe738637872c150c4b0658d871348611441927bd7d17f795ac2e19"
+        },
+        "logs/source-setup.log": {
+          "bytes": 6544,
+          "sha256": "14d8eefb65c574c3ad0884bf453886ad504fec24b93d9930fab83b28a3472f10"
+        },
+        "logs/target-qualification.log": {
+          "bytes": 980,
+          "sha256": "f987b214cfc4c290da4957c5a9e23deb26477bf0ba41dc281d008175d785f91a"
+        },
+        "logs/x4-startup-qualification.log": {
+          "bytes": 648,
+          "sha256": "d77a5244fd41c09a53efd3ac3d99ab8ec5d15c8061f7191b0a5467310a0d2e8d"
+        },
+        "metadata/baseline-inputs.json": {
+          "bytes": 745,
+          "sha256": "a4f02c91aeb438c4120a41829ac45387bbad5d1445fa69b06b9931858b6e75b5"
+        },
+        "metadata/ci-run.json": {
+          "bytes": 870,
+          "sha256": "881f37a1484eaf51dad3d28ef05ae40141f8e7eac7831573b36271faaffd66a8"
+        },
+        "metadata/compiler-SHA256SUMS": {
+          "bytes": 154,
+          "sha256": "9ea83232086e7ed939a9c771f1b4ca50f1c02510e202a67890b8b4962358ca02"
+        },
+        "metadata/compiler-version.txt": {
+          "bytes": 263,
+          "sha256": "ed21da1d0b473173d364e78a27c81f8f4b2537477bf9c54b34b645fe1268b18e"
+        },
+        "metadata/released-baseline.json": {
+          "bytes": 56640,
+          "sha256": "541d89454601832152f4175e044194c74cb4aa9b8a0d71b571ad42db44f9f142"
+        },
+        "metadata/sdk-tools.json": {
+          "bytes": 47183,
+          "sha256": "039337e5ee2511f97d112aedb98125945625a4dd9ffb67e0cbb094edcdd298b2"
+        },
+        "metadata/sources-after.json": {
+          "bytes": 4551,
+          "sha256": "a9a6197c7c10d601a1687d3ebd79ad005c5fe16592fcb72854d058ccf88db5f7"
+        },
+        "metadata/sources-before.json": {
+          "bytes": 4551,
+          "sha256": "a9a6197c7c10d601a1687d3ebd79ad005c5fe16592fcb72854d058ccf88db5f7"
+        },
+        "metadata/workflow.yml": {
+          "bytes": 21876,
+          "sha256": "8bd1593f7d5b9106e587edf8083372f89495b1600e523ac99987bc7dc24d0bbc"
+        }
+      },
+      "name": "native-idf6-x4-659d859acb122640ef4003bb8d7099501d4381be",
+      "sha256": "7d2fc8059ff54fb08a65d66cbcd7ff53e709d8ccea3b34117a5286bb12c71e25",
+      "sources": {
+        "drivers": {
+          "revision": "5890721073ebabd781d5d278e447c761947a5c58",
+          "submodules": [],
+          "tree": "884416cb8ec2f95edcfc945a4a996f3dbca317c6"
+        },
+        "image_helper": {
+          "revision": "74f7491dc470b92dfa41fce41bf0c500f3714a94",
+          "submodules": [],
+          "tree": "e1418b6940d8b8df6b6a82057968b5074a96f2c6"
+        },
+        "product": {
+          "revision": "a9009a5d774ae7060b9f298fdcbc81be6c22cc17",
+          "submodules": [],
+          "tree": "afbde5d8920985b93b92c3cab48978a12d245a16"
+        },
+        "runtime": {
+          "revision": "659d859acb122640ef4003bb8d7099501d4381be",
+          "submodules": [],
+          "tree": "5bde8014c76a52c9a380b1427aafaf9923a37411"
+        },
+        "sdk": {
+          "revision": "fff9895c82d744c7237be8847347bdd1b07c6643",
+          "submodules": [
+            "24c60e243580c7868f4334a1ba3123481fe1aa48 components/bootloader/subproject/components/micro-ecc/micro-ecc (v1.1)",
+            "98c6de2d5411a7297dbba00387dfca2bcc44fd18 components/bt/controller/lib_esp32 (98c6de2)",
+            "6a5c0b8bfca1a2e984e89431b8ebf9b521dad5ea components/bt/controller/lib_esp32c2/esp32c2-bt-lib (heads/main)",
+            "0a08c4b32f3666003080b662a1a61794da24ff0f components/bt/controller/lib_esp32c3_family (heads/master)",
+            "ac7885ea2fc76e56a814d10120812ccacf101f0b components/bt/controller/lib_esp32c5/esp32c5-bt-lib (ac7885e)",
+            "eee922eaa95770d567f0939cc3d56c712a6ecf65 components/bt/controller/lib_esp32c6/esp32c6-bt-lib (eee922e)",
+            "e0bb64a28b90247a349fbfc03a204df9194e40a1 components/bt/controller/lib_esp32h2/esp32h2-bt-lib (e0bb64a)",
+            "f4ce5d581a264fb5bf4c1b6ed473c45ad91f9db7 components/bt/controller/lib_esp32h4/esp32h4-bt-lib (f4ce5d5)",
+            "7f20740dd66ee774ffce5db0b55507892551aa31 components/bt/controller/lib_esp32s31/esp32s31-bt-lib (7f20740)",
+            "8af29109827eb9e3bc636b2a1ae6596fdfacaf4a components/bt/esp_ble_audio/lib/lib (8af2910)",
+            "f6c62bfa32759da7c44459bd6b40079cce93c94b components/bt/esp_ble_mesh/lib/lib (f6c62bf)",
+            "139cada0ae932957fa06ba37d17e3c9c2c95c773 components/bt/host/nimble/nimble (nimble_1_6_0_tag-439-g139cada0a)",
+            "eeecc49ce8af123cf8ad40efdb9673e37b56230f components/cmock/CMock (v2.5.2-2-geeecc49)",
+            "71b47be7c950f1bf5f7e5303779fa99a16224bb6 components/cmock/CMock/vendor/c_exception (v1.3.1-13-g71b47be)",
+            "cf949f45ca6d172a177b00da21310607b97bc7a7 components/cmock/CMock/vendor/unity (v2.5.1)",
+            "ddc56fa524a38df3098d2f36475fbe3eefe9b4f4 components/esp_coex/lib (heads/main)",
+            "5695f4f38108658bc4a33e4712c1ebcb34911434 components/esp_phy/lib (heads/master)",
+            "7cd4d7b2b4acc38aead43b029ac9409c3eba9c54 components/esp_wifi/lib (remotes/origin/feature/ftm_support_stage2-579-g7cd4d7b2)",
+            "2867f6883a12920b1969ff9624c0ab0e4185c2ce components/heap/tlsf (remotes/origin/master-48-g2867f68)",
+            "c6f2f878e7b0f86033214b85547d579be43351e3 components/lwip/lwip (heads/2.2.0-esp)",
+            "a2b32072ea898afc1ed5b6caf6931e36028c91d6 components/mbedtls/mbedtls (mbedtls-4.1.0-22-ga2b32072ea)",
+            "4dd715391cfb2cf4d06825a17294514024e4dc12 components/openthread/lib (4dd7153)",
+            "b678a4f63b6f9397d1a0fa8f31e5b8e0271a4d00 components/openthread/openthread (thread-reference-20250612-1270-gb678a4f63)",
+            "e185d7fd85499c8ce5ca2a54f5cf8fe7dbe3f8df components/openthread/openthread/third_party/mbedtls/repo (v3.6.5)",
+            "457996474728cb8e968ed21953b72f74d2f536b2 components/openthread/openthread/third_party/mbedtls/repo/framework (mbedtls-4.0.0_tf-psa-crypto-1.0.0)",
+            "abc67a11c6db271bedbb9f58be85d6f4e2ea8389 components/protobuf-c/protobuf-c (v1.4.1)",
+            "ad902cadceb39d0825a97e25ecb5867641f606ba components/spiffs/spiffs (0.2-265-gad902ca)",
+            "bf560290f6020737eafaa8b5cbd2177c3956c03f components/unity/unity (v2.6.0_RC1)"
+          ],
+          "tree": "e6a5e4865e2027f1f0cef5da09f254d65c5cec22"
+        },
+        "system": {
+          "revision": "755cc5174a6deaee120d108cbffe67ae809e1e6f",
+          "submodules": [],
+          "tree": "a9ffde3a032b3109621eae95c0935d6f9e7745e5"
+        }
+      }
+    }
+  },
+  "enabled": true,
   "publication_branch": "work/native-idf-6.1",
-  "disabled_reason": "Await exact successful official four-product CI run, immutable source locks, original ZIP IDs/digests, and reviewed complete member inventories."
+  "repository": "michaelrolphone-cmyk/RiscRTE",
+  "run_attempt": 1,
+  "run_id": 38797200408,
+  "schema": 1,
+  "source_sha": "659d859acb122640ef4003bb8d7099501d4381be",
+  "source_workflow_sha256": "8bd1593f7d5b9106e587edf8083372f89495b1600e523ac99987bc7dc24d0bbc",
+  "tag": "firmware-v0.4.0",
+  "version": "0.4.0",
+  "workflow_id": 385684839
 }

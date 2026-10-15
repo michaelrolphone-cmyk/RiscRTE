@@ -1,8 +1,8 @@
 # Runtime0.4.0 exact native CI release transport
 
-This transport is checked in **disabled**. It builds nothing, does not access a
-device, and cannot publish from a local invocation. Only the separately enabled
-GitHub-hosted release job uses its job-scoped `GITHUB_TOKEN`.
+This exact release request is enabled for the verified CI run recorded below.
+It builds nothing, does not access a device, and cannot publish from a local
+invocation. Only the GitHub-hosted release job uses its job-scoped `GITHUB_TOKEN`.
 
 ## Identity and activation
 
@@ -125,3 +125,33 @@ After an enabled exact manifest and local copies of the four original ZIPs are
 available, `verify-archives --archives <directory>` validates `generic.zip`,
 `twatch.zip`, `waveshare.zip`, and `x4.zip` without network or publication.
 `publish` refuses a local context before network access.
+
+
+## Verified Runtime0.4.0 activation
+
+The enabled canonical request binds original Runtime source
+`659d859acb122640ef4003bb8d7099501d4381be` to official run
+[38797200408, attempt 1](https://github.com/michaelrolphone-cmyk/RiscRTE/actions/runs/38797200408/attempts/1).
+The run and all four product jobs completed successfully. The original ZIPs were
+independently downloaded once and validated in place, including complete member
+inventories, source custody, native hash locks, and qualified product payloads.
+
+Original artifact identities:
+
+- Generic: `12003935006`, 9,751,152 bytes, 139 members;
+  SHA256 `a2766cd21f1417c17745b01226b2c6274d1cb4dbd36e11b5b9e6d70eac60e5fa`
+- Watch: `12002797189`, 20,534,528 bytes, 165 members;
+  SHA256 `dd8ca187c52dc4594781f39480a1e59c433f6d4aa798fcb9b482e8a1be7b9828`
+- Wave: `12003895092`, 23,209,827 bytes, 185 members;
+  SHA256 `1bd762a43ca1c75b86d486a099d8f9cb5c2d84eece767d7c0eb198747b41a672`
+- X4: `12003420515`, 26,783,139 bytes, 184 members;
+  SHA256 `7d2fc8059ff54fb08a65d66cbcd7ff53e709d8ccea3b34117a5286bb12c71e25`
+
+Canonical public manifest: 136,870 bytes, SHA256
+`ddf5e3be350658b53bffa023fd3fbc9771c11fce25065f9bf6021ab5ca015d29`.
+This publication-only successor does not change the qualified source identity.
+The release job rechecks live run/workflow/artifact identities and tag absence
+before mutation, then verifies every uploaded asset by redownload. This record
+establishes publication inputs; the completed release job establishes delivery.
+Hardware remains pending, factories erase data, and preserving SDK migration is
+not yet eligible.
