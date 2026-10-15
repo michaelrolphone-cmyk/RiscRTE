@@ -1,0 +1,33 @@
+name: Generic storage contract ABI
+on:
+  push:
+    branches: [work/unified-default-capabilities]
+    paths:
+      - 'sdk/app/RiscPreferenceStoreV1.h'
+      - 'sdk/app/RiscKeyValueAtomicV1.h'
+      - 'sdk/app/RiscStorageFiles*.h'
+      - 'src/bootstrap/PreferenceStoreConfig.h'
+      - 'src/bootstrap/StorageFilesConfig.h'
+      - 'test/storage_contract_abi_test.c'
+      - 'test/run_storage_contract_abi_test.sh'
+      - '.github/workflows/storage-contract.yml'
+  pull_request:
+    paths:
+      - 'sdk/app/RiscPreferenceStoreV1.h'
+      - 'sdk/app/RiscKeyValueAtomicV1.h'
+      - 'sdk/app/RiscStorageFiles*.h'
+      - 'src/bootstrap/PreferenceStoreConfig.h'
+      - 'src/bootstrap/StorageFilesConfig.h'
+      - 'test/storage_contract_abi_test.c'
+      - 'test/run_storage_contract_abi_test.sh'
+      - '.github/workflows/storage-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  abi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_storage_contract_abi_test.sh
