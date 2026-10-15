@@ -11,7 +11,7 @@
 #if RISC_HWCDC_SLEEP_RECOVERY
 #include "diagnostics/UsbSleepRecovery.h"
 #endif
-#include <Arduino.h>
+#include "NativePlatform.h"
 #include <esp_sleep.h>
 #if RISC_ENABLE_USB_PHY
 #include <hal/usb_serial_jtag_ll.h>
@@ -121,21 +121,21 @@ int32_t readAfter(void* context,uint64_t after,char* out,uint32_t capacity,
 // Must remain the sole HWCDC ring producer: no setDebugOutput or concurrent
 // Serial writer. Pinned HWCDC can underflow a zero timeout without capacity.
 struct Transport {
-  bool connected(){return bool(Serial);}
-  size_t writable(){int n=Serial.availableForWrite();return n>0?size_t(n):0;}
-  size_t write(const uint8_t* p,size_t n){return Serial.write(p,n);}
+  bool connected(){return bool(RiscPlatform::console);}
+  size_t writable(){int n=RiscPlatform::console.availableForWrite();return n>0?size_t(n):0;}
+  size_t write(const uint8_t* p,size_t n){return RiscPlatform::console.write(p,n);}
 #if RISC_HWCDC_SLEEP_RECOVERY
-  uint32_t nowMs(){return millis();}
-  void end(){Serial.end();}
+  uint32_t nowMs(){return RiscPlatform::millis();}
+  void end(){RiscPlatform::console.end();}
   bool begin(){
 #if RISC_STAGE_LOGS
     prepareSerial(); // end() freed the previous diagnostic TX allocation.
 #endif
-    Serial.begin(115200);Serial.setTxTimeoutMs(0);
+    RiscPlatform::console.begin(115200);RiscPlatform::console.setTxTimeoutMs(0);
     // Pinned begin() returns void. Missing RX queue returns -1; missing TX
     // queue/mutex returns zero. Interrupt allocation failure calls end(). A
     // fresh sole-producer TX ring is empty, irrespective of host connection.
-    return Serial.available()>=0 && Serial.availableForWrite()>0;
+    return RiscPlatform::console.available()>=0 && RiscPlatform::console.availableForWrite()>0;
   }
 #endif
 } transport;
@@ -184,7 +184,7 @@ const risc_diagnostic_source_api_v1* nativeSource(){
 bool prepareSerial(){
   // Reuse the pinned driver's own bounded ring for startup bursts. Allocation
   // failure preserves begin()'s ordinary 256-byte fallback, never a host wait.
-  return Serial.setTxBufferSize(8192)==8192;
+  return RiscPlatform::console.setTxBufferSize(8192)==8192;
 }
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
@@ -195,11 +195,11 @@ int32_t checkpoint(const char* app,uint64_t invocation,const char* text,uint32_t
 #endif
   // Intentionally permitted while console/PHY is fenced. RAM copy only; no
   // native observer/drain, Serial access, allocation or provider callbacks.
-  return captureCheckpoint(lastCheckpoint,journal.boot,millis(),app,invocation,text,length);
+  return captureCheckpoint(lastCheckpoint,journal.boot,RiscPlatform::millis(),app,invocation,text,length);
 }
 #endif
 void start(){
-  owner=xTaskGetCurrentTaskHandle();Serial.setTxTimeoutMs(0);
+  owner=xTaskGetCurrentTaskHandle();RiscPlatform::console.setTxTimeoutMs(0);
   outputting=unfinishedLine=false;
 #if RISC_STAGE_LOGS
   lostLines=truncatedLines=reportedLost=reportedTruncated=0;
@@ -215,7 +215,7 @@ void start(){
   const auto reset=esp_reset_reason();
   const bool retain=reset==ESP_RST_SW || reset==ESP_RST_DEEPSLEEP || reset==ESP_RST_PANIC ||
     reset==ESP_RST_INT_WDT || reset==ESP_RST_TASK_WDT || reset==ESP_RST_WDT;
-  begin(journal,retain,millis(),int32_t(reset),uint32_t(esp_sleep_get_wakeup_cause()));
+  begin(journal,retain,RiscPlatform::millis(),int32_t(reset),uint32_t(esp_sleep_get_wakeup_cause()));
 #endif
 }
 #if RISC_ENABLE_USB_PHY
@@ -228,7 +228,7 @@ bool suspendUsbPhy(){
   // Fence recovery, live output and native storage drains before HWCDC end.
   // The pinned end disables/clears its IRQ and removes RX/TX resources.
   usbFenced=true;OutputGuard guard;
-  Serial.end();
+  RiscPlatform::console.end();
   unfinishedLine=false;
 #if RISC_SLEEP_DIAGNOSTICS
   replay.disconnect();
@@ -236,7 +236,7 @@ bool suspendUsbPhy(){
 #if RISC_PERFORMANCE_TRACE
   performanceReplay.disconnect();
 #endif
-  return ours() && Serial.available()<0 && Serial.availableForWrite()==0;
+  return ours() && RiscPlatform::console.available()<0 && RiscPlatform::console.availableForWrite()==0;
 }
 bool resumeUsbPhy(){
   if(!ours() || outputting || !usbFenced)return false;
@@ -248,13 +248,13 @@ bool resumeUsbPhy(){
   // recreates its queues and interrupt, but does not reset the fixed-function
   // USB device or select its internal PHY in RTC_CNTL. Reclaim both here;
   // allocated queues alone do not establish that serial can reach the pads.
-  Serial.end();
-  if(!ours() || Serial.available()>=0 || Serial.availableForWrite()!=0)return false;
+  RiscPlatform::console.end();
+  if(!ours() || RiscPlatform::console.available()>=0 || RiscPlatform::console.availableForWrite()!=0)return false;
   usb_serial_jtag_ll_enable_bus_clock(true);
   usb_serial_jtag_ll_reset_register();
   usb_serial_jtag_ll_enable_pad(false);
   if(!usb_serial_jtag_ll_module_is_enabled() || USB_SERIAL_JTAG.conf0.usb_pad_enable)return false;
-  delay(20);
+  RiscPlatform::delay(20);
   if(!ours())return false;
   // Same internal-JTAG selection as IDF 4.4.7 usb_phy_ll_int_jtag_enable.
   // That C-only header also contains volatile USB_WRAP struct copies which
@@ -271,7 +271,7 @@ bool resumeUsbPhy(){
     !USB_SERIAL_JTAG.conf0.phy_sel && !USB_SERIAL_JTAG.conf0.pad_pull_override &&
     USB_SERIAL_JTAG.conf0.dp_pullup && USB_SERIAL_JTAG.conf0.usb_pad_enable;
   if(!ours() || !initialized || !routed){
-    Serial.end();usb_serial_jtag_ll_enable_pad(false);return false;
+    RiscPlatform::console.end();usb_serial_jtag_ll_enable_pad(false);return false;
   }
 #if RISC_HWCDC_SLEEP_RECOVERY
   recovery.reset();
@@ -309,8 +309,8 @@ void poll(){
 #endif
   if(reportLoss())return;
 #if RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE
-  for(unsigned i=0;i<16 && Serial.available()>0;++i){
-    int c=Serial.read();if(c<0)break;
+  for(unsigned i=0;i<16 && RiscPlatform::console.available()>0;++i){
+    int c=RiscPlatform::console.read();if(c<0)break;
 #if RISC_SLEEP_DIAGNOSTICS
 #if RISC_PERFORMANCE_TRACE
     if(!performanceReplay.active())
@@ -359,7 +359,7 @@ void line(const char* text){
   if(risc_native_diagnostic_observer)risc_native_diagnostic_observer(text);
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
-  message(journal,millis(),text);
+  message(journal,RiscPlatform::millis(),text);
   if(replay.active()){noteLost();return;}
 #endif
 #if RISC_PERFORMANCE_TRACE
@@ -426,7 +426,7 @@ void timestamped(const char* format,...){
 #endif
 void lightEnter(){
 #if RISC_SLEEP_DIAGNOSTICS
-  if(ours())event(journal,millis(),LightEnter);
+  if(ours())event(journal,RiscPlatform::millis(),LightEnter);
 #endif
 }
 void lightReturn(int32_t result,uint32_t cause){
@@ -435,7 +435,7 @@ void lightReturn(int32_t result,uint32_t cause){
   (void)result;
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
-  event(journal,millis(),LightReturn,result,cause);
+  event(journal,RiscPlatform::millis(),LightReturn,result,cause);
 #else
   (void)cause;
 #endif
@@ -453,7 +453,7 @@ void lightReturn(int32_t result,uint32_t cause){
 }
 void deepEnter(){
 #if RISC_SLEEP_DIAGNOSTICS
-  if(ours())event(journal,millis(),DeepEnter);
+  if(ours())event(journal,RiscPlatform::millis(),DeepEnter);
 #endif
 }
 }

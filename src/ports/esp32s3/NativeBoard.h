@@ -5,7 +5,7 @@ namespace RiscCpu {
 // native-port reservations, never product pin assignments from a profile.
 inline void reserveNativePins(RiscBoot::Board& board){
  for(int p=22;p<=37;++p)board.reservePin(p);
-#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
+#if (RISC_NATIVE_ESP_IDF && RISC_CONSOLE_USB_SERIAL_JTAG) || (defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT)
  board.reservePin(19);board.reservePin(20);
 #else
  board.reservePin(43);board.reservePin(44);

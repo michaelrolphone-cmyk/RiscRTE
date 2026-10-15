@@ -1,4 +1,11 @@
 #pragma once
+// Keep the qualified legacy adapter isolated from the native channel API.
+#if __has_include(<esp_idf_version.h>)
+#include <esp_idf_version.h>
+#endif
+#if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
+#include "NativeI2sIdf6.h"
+#else
 // Generic standard signed16 stereo TX and mono PDM RX. No board/audio policy.
 // Exclusive runtime owner: no Arduino/other IDF caller may share these units.
 #include "NativeSleep.h"
@@ -148,3 +155,5 @@ inline bool write(uint8_t unit,const int16_t* pcm,size_t frames,size_t* done,uin
 }
 inline bool idle(){for(const auto& s:states)if(s.installed || s.clock>=0)return false;return true;}
 } }
+
+#endif // ESP-IDF 6 native channel backend / legacy baseline

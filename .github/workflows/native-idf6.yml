@@ -1,0 +1,50 @@
+name: Native ESP-IDF 6.1 migration
+on:
+  push:
+    branches: [work/native-idf-6.1]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-idf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container: espressif/idf:v6.1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify official SDK identity
+        shell: bash
+        run: |
+          test "$(git -C "$IDF_PATH" rev-parse HEAD)" = fff9895c82d744c7237be8847347bdd1b07c6643
+          xtensa-esp-elf-gcc --version
+      - name: Native startup and peripheral contracts
+        shell: bash
+        run: |
+          python test/test_native_startup.py
+          bash test/run_native_i2s_idf6_test.sh
+          bash test/run_native_platform_test.sh
+      - name: Build native candidate with one compiler job
+        shell: bash
+        run: |
+          cd idf
+          idf.py reconfigure
+          cmake --build build -- -j1
+      - name: Reject Arduino runtime linkage
+        shell: bash
+        run: |
+          ! xtensa-esp-elf-nm -C idf/build/riscrte_native.elf | grep -E 'initArduino|initVariant|loopTask|HardwareSerial|HWCDC::|String::'
+          test -s idf/build/riscrte_native.bin
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-idf6-candidate-${{ github.sha }}
+          path: |
+            idf/build/riscrte_native.elf
+            idf/build/riscrte_native.bin
+            idf/build/riscrte_native.map
+            idf/build/project_description.json
+            idf/build/config/sdkconfig.json
+            idf/build/log/
+          if-no-files-found: warn

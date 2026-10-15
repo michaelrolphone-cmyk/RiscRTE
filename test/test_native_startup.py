@@ -29,6 +29,7 @@ inline void vTaskDelay(uint32_t){mark("yield");}
 constexpr uint32_t configTICK_RATE_HZ=1000;
 struct SerialShim{void begin(unsigned){mark("serial");}};inline SerialShim Serial;
 struct EspShim{uint32_t getFreeHeap(){return 0;}};inline EspShim ESP;
+namespace RiscPlatform {inline uint32_t millis(){return ::millis();}inline uint32_t freeHeap(){return ESP.getFreeHeap();}inline auto&console=Serial;}
 struct esp_partition_t{uint32_t address=0;};
 inline const esp_partition_t* esp_ota_get_running_partition(){return nullptr;}
 inline void esp_efuse_mac_get_default(uint8_t*){}
@@ -149,7 +150,7 @@ class NativeStartup(unittest.TestCase):
                    'ports/esp32s3/NativeFailureEvidence.h', 'ports/esp32s3/NativeCompute.h',
                    'ports/esp32s3/NativeRuntime.h', 'ports/esp32s3/NativeBootstrap.h',
                    'ports/esp32s3/NativeSntp.h', 'ports/esp32s3/NvsBootstrapInput.h',
-                   'ports/esp32s3/OwnerMaintenance.h', 'Arduino.h', 'RiscBuildIdentity.h', 'esp_spiffs.h', 'esp_ota_ops.h',
+                   'ports/esp32s3/OwnerMaintenance.h', 'ports/esp32s3/NativePlatform.h', 'Arduino.h', 'RiscBuildIdentity.h', 'esp_spiffs.h', 'esp_ota_ops.h',
                    'esp_system.h', 'bootstrap/Runtime.h', 'ports/esp32s3/CpuPort.h',
                    'ports/esp32s3/NativeRetainedWake.h', 'ports/esp32s3/NativeRealtime.h',
                    'ports/esp32s3/NativeBoard.h', 'ports/esp32s3/CooperativeDelay.h',

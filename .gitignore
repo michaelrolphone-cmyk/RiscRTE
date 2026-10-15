@@ -4,3 +4,9 @@ build/
 __pycache__/
 .DS_Store
 dist/
+
+# Isolated native-IDF qualification output
+idf/build/
+idf/sdkconfig
+idf/sdkconfig.old
+idf/managed_components/

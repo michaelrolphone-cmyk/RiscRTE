@@ -3,7 +3,7 @@
 #include "diagnostics/StageLog.h"
 // Recovery follows the selected fixed-function hardware USB transport, even
 // when retained diagnostics are disabled. UART and TinyUSB remain unchanged.
-#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT && defined(ARDUINO_USB_MODE) && ARDUINO_USB_MODE == 1
+#if (RISC_NATIVE_ESP_IDF && RISC_CONSOLE_USB_SERIAL_JTAG) || defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT && defined(ARDUINO_USB_MODE) && ARDUINO_USB_MODE == 1
 #define RISC_HWCDC_SERIAL 1
 #else
 #define RISC_HWCDC_SERIAL 0

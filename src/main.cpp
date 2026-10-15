@@ -1,10 +1,13 @@
 #include "runtime/drivers/SelectedNativeProviderPolicyV1.h"
-#include <Arduino.h>
+#include "ports/esp32s3/NativePlatform.h"
 #include <esp_heap_caps.h>
 #include <RiscBuildIdentity.h>
 #include <esp_spiffs.h>
 #include <esp_ota_ops.h>
 #include <esp_system.h>
+#if RISC_NATIVE_ESP_IDF
+#include <esp_mac.h>
+#endif
 #include "bootstrap/Runtime.h"
 // Retained by the boot diagnostic reference; available to native packaging
 // without exporting any new application or provider ABI.
@@ -96,9 +99,9 @@ namespace {
 TaskHandle_t owner=nullptr;
 bool isOwner() { return xTaskGetCurrentTaskHandle()==owner; }
 
-bool monotonicMillis(uint32_t* out) { *out=millis();return true; }
+bool monotonicMillis(uint32_t* out) { *out=RiscPlatform::millis();return true; }
 bool health(risc_runtime_health_v1* out) {
-  out->uptime_ms=millis(); out->free_heap=ESP.getFreeHeap();
+  out->uptime_ms=RiscPlatform::millis(); out->free_heap=RiscPlatform::freeHeap();
   const auto* app=esp_ota_get_running_partition(); out->app_address=app?app->address:0;
   esp_efuse_mac_get_default(out->mac);
   snprintf(out->target,sizeof(out->target),"%s", RISC_TARGET);
@@ -108,7 +111,7 @@ void diagnosticLine(const char* line) {
 #if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::line(line);
 #else
-  Serial.println(line);
+  RiscPlatform::console.println(line);
 #endif
 }
 void diagnosticFormat(const char* format,...) {
@@ -251,7 +254,7 @@ void setup() {
 #if RISC_STAGE_LOGS && RISC_HWCDC_SERIAL
   const bool diagnosticTxReady=RiscDiagnostics::prepareSerial();
 #endif
-  Serial.begin(115200);
+  RiscPlatform::console.begin(115200);
 #if RISC_DIAGNOSTIC_ADAPTER
   RiscDiagnostics::start();
 #endif
@@ -421,7 +424,7 @@ void setup() {
   // An independent qualified native backend admission is required. This hook
   // performs no mount, format, source import, default initialization or SD I/O.
   const auto* settings=risc_native_settings_admission?risc_native_settings_admission():nullptr;
-  if(!RiscCpu::NativeSettingsLifecycle::prepare(settings,{isOwner,schedulerDelay,[]()->uint32_t{return uint32_t(millis());},RiscCpu::NativeCrownRecovery::exitRequested}) ||
+  if(!RiscCpu::NativeSettingsLifecycle::prepare(settings,{isOwner,schedulerDelay,[]()->uint32_t{return uint32_t(RiscPlatform::millis());},RiscCpu::NativeCrownRecovery::exitRequested}) ||
      !RiscCpu::NativeSettingsLifecycle::bind(runtime)) {
     diagnosticLine("RTE_BOOT error=native-settings-admission");return;
   }
@@ -467,3 +470,15 @@ void setup() {
 #endif
 }
 void loop() { cooperate(50); }
+
+#if RISC_NATIVE_ESP_IDF
+// IDF has initialized the RTOS/PSRAM before this owner task. Product-specific
+// early hardware hooks wrap app_main externally, never enter the generic core.
+extern "C" void app_main(){
+#ifndef RISC_EMBEDDED_BOOTSTORE
+  (void)nvs_flash_init(); // Wrapped, latched once, never erased or formatted.
+#endif
+  setup();
+  for(;;)loop();
+}
+#endif
