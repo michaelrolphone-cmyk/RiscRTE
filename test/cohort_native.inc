@@ -124,7 +124,7 @@ extern "C" void test_cohort_update(){
 static void cohortNative(const char* loader,const char* root){
  using namespace RiscBankStore;namespace fs=std::filesystem;
  fsRoot=root;fs::create_directories(fsRoot+"/bootfs");fs::create_directories(fsRoot+"/updatefs");
- std::ifstream input(loader,std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
+ const auto boot=validatedBootloader(loader);
  memcpy(flash.data(),boot.data(),boot.size());firmware(0,RISC_BUILD_VERSION);firmware(1,RISC_BUILD_VERSION);
  cohortBytes.assign(flash.begin()+0x800000,flash.begin()+0x800000+imageSize);cohortBytes.resize(imageSize+RiscUpdate::StoreBytes,0x79);
  cohortImage={};cohortImage.struct_size=sizeof(cohortImage);cohortImage.store_abi=RiscUpdate::StoreAbi;cohortImage.firmware_size=imageSize;cohortImage.store_size=RiscUpdate::StoreBytes;

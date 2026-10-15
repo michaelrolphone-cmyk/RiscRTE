@@ -5,9 +5,32 @@ build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
 san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
-cc "${san[@]}" -std=c11 -I"$repo/test/native_bank_stubs" -I"$repo/lib/elf_loader/include" -c "$repo/lib/elf_loader/src/esp_elf_validate.c" -o "$build/validate.o"
 extra=(-DARDUINO_USB_CDC_ON_BOOT=1 -DRISC_NATIVE_DIAGNOSTIC_OBSERVER="${NATIVE_DIAGNOSTIC_OBSERVER:-0}");if [[ "${APP_DATA_TEST:-0}" == 1 ]];then extra+=(-DRISC_PAIRED_APP_DATA=1);fi
 if [[ "${NATIVE_PROVIDER_TEST_ABI:-1}" == 2 ]];then extra+=(-DRISC_NATIVE_ESP_IDF=1);fi
+# Validate the complete ESP image before compiling or executing the host model.
+# Copy validated bytes once so every mode consumes the same exact fixture.
+if [[ -n "${BOOTLOADER_FILE:-}" ]];then
+ bootloader_identity="$(python3 - "$repo" "$BOOTLOADER_FILE" "$build/bootloader.bin" <<'PY_BOOTLOADER'
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / 'scripts'))
+from release_assets import esp_image, file_bytes, require, sha
+data = file_bytes(pathlib.Path(sys.argv[2]))
+require(len(data) <= 0x8000, 'bootloader exceeds its flash region')
+esp_image(data)
+pathlib.Path(sys.argv[3]).write_bytes(data)
+print(len(data), sha(data))
+PY_BOOTLOADER
+ )"
+ read -r bootloader_bytes bootloader_sha <<< "$bootloader_identity"
+ [[ "$bootloader_bytes" =~ ^[1-9][0-9]*$ && "$bootloader_sha" =~ ^[0-9a-f]{64}$ ]]
+ extra+=("-DRISC_TEST_BOOTLOADER_BYTES=$bootloader_bytes" "-DRISC_TEST_BOOTLOADER_SHA256=\"$bootloader_sha\"")
+ BOOTLOADER_FILE="$build/bootloader.bin"
+ echo "Validated ESP32-S3 bootloader: bytes=$bootloader_bytes sha256=$bootloader_sha"
+elif [[ "${BOOT_PATH_ONLY:-0}" == 1 || -n "${BOOT_BASELINE_REF:-}${PRODUCT_STORE:-}" ]];then
+ echo 'BOOTLOADER_FILE is required for bootloader-backed tests.' >&2
+ exit 1
+fi
+cc "${san[@]}" -std=c11 -I"$repo/test/native_bank_stubs" -I"$repo/lib/elf_loader/include" -c "$repo/lib/elf_loader/src/esp_elf_validate.c" -o "$build/validate.o"
 native_objects=()
 if [[ -z "${BOOT_BASELINE_REF:-}" ]];then
  extra+=(-DRISC_NATIVE_PROVIDER_ADMISSION_TEST=1 -DRISC_NATIVE_BANK_PROVIDER_TEST=1 -Wl,--wrap=fread,--wrap=fgetc)

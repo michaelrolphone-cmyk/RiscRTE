@@ -22,7 +22,7 @@ static void constantBootCost(){
 }
 static void bootCost(const char* loader,const char* native){
  using namespace RiscUpdate;
- std::ifstream input(loader,std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
+ const auto boot=validatedBootloader(loader);
  memcpy(flash.data(),boot.data(),boot.size());firmware(0,RISC_BUILD_VERSION);
  if(native){
   std::ifstream image(native,std::ios::binary);assert(image);
@@ -34,18 +34,18 @@ static void bootCost(const char* loader,const char* native){
  const auto record=makeRecord(0,imageSize,fw,store);memcpy(flash.data()+JournalOffset,&record,sizeof(record));
  clearBootCounters();assert(RiscBankStore::prepareBoot(own,restartSafe,safe));
 #ifdef RISC_TEST_BOOT_SCANS
- const size_t firmwareChunks=(imageSize+4095)/4096,storeChunks=StoreBytes/4096;
- assert(nativeFlashReads==4 && nativeFlashBytes==15104);
+ const size_t bootloaderChunks=(boot.size()+4095)/4096,firmwareChunks=(imageSize+4095)/4096,storeChunks=StoreBytes/4096;
+ assert(nativeFlashReads==bootloaderChunks && nativeFlashBytes==boot.size());
  assert(nativePartitionReads==1+2*firmwareChunks+storeChunks && nativePartitionBytes==sizeof(record)+2*imageSize+StoreBytes);
- assert(nativeHashStarts==3 && nativeHashFinishes==3 && nativeHashUpdates==4+firmwareChunks+storeChunks);
- assert(nativeHashBytes==15104+imageSize+StoreBytes && delays==4+2*firmwareChunks+storeChunks);
+ assert(nativeHashStarts==3 && nativeHashFinishes==3 && nativeHashUpdates==bootloaderChunks+firmwareChunks+storeChunks);
+ assert(nativeHashBytes==boot.size()+imageSize+StoreBytes && delays==bootloaderChunks+2*firmwareChunks+storeChunks);
  assert(nativeImageVerifications==1 && nativeImageDescriptions==1);
  assert(nativeFirmwareScanReads==firmwareChunks && nativeFirmwareScanBytes==imageSize);
 #else
  constantBootCost();
 #endif
  assert(!writes && !confirms);
- std::cout<<"prepareBoot ABI="<<StoreAbi<<" firmware="<<imageSize<<" store="<<StoreBytes
+ std::cout<<"prepareBoot ABI="<<StoreAbi<<" bootloader="<<boot.size()<<" firmware="<<imageSize<<" store="<<StoreBytes
   <<" explicit_reads="<<nativePartitionReads+nativeFlashReads<<" explicit_read_bytes="<<nativePartitionBytes+nativeFlashBytes
   <<" sha_starts="<<nativeHashStarts<<" sha_updates="<<nativeHashUpdates<<" sha_bytes="<<nativeHashBytes
   <<" firmware_marker_reads="<<nativeFirmwareScanReads<<" firmware_marker_bytes="<<nativeFirmwareScanBytes

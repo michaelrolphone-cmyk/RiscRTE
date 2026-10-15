@@ -27,7 +27,7 @@ static std::string compactHex(const std::vector<uint8_t>& bytes){
 }
 static void compactNative(const std::string& mode,const char* bootloader,const char* directory){
  using namespace RiscBankStore;namespace fs=std::filesystem;
- std::ifstream input(bootloader,std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
+ const auto boot=validatedBootloader(bootloader);
  memcpy(flash.data(),boot.data(),boot.size());otaState=ESP_OTA_IMG_VALID;firmware(0,RISC_BUILD_VERSION);
  std::fill(flash.begin()+0x9000,flash.begin()+0xf000,0x6b);
 #ifdef RISC_PAIRED_APP_DATA

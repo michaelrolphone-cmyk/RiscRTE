@@ -1,14 +1,14 @@
 name: Native ESP-IDF 6.1 migration
 on:
   push:
-    branches: [work/native-idf-6.1]
+    branches: [main, work/native-idf-6.1]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   native-idf:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -18,44 +18,152 @@ jobs:
             source: ''
           - product: twatch
             repository: RiscRTE-T-Watch-S3
-            source: a71f1659b2ae4072b18acc13f15ef11e65181f54
+            source: c11f354ca5278174332e0a91cbc1ad7ef0514d00
+            candidate_version: 1.1.40
+            target: esp32s3-16mb-appdata-expanded-iq
+            factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-launch-brightness-1.1.39/TWatch-1.1.39-Launch-Brightness-factory-erases-data-0x0.bin
+            factory_sha256: 0194fe7095edd50ee4e82b8077a9d154fddf5323143f3219f070bde952424370
           - product: waveshare
             repository: RiscRTE-Wavshare-S3-Touch-AMOLED-2.06
-            source: 3e655f516f98505ec33b6a8a066267210ddac967
+            source: d51a2dac2e0912d91476d0ec997ac24894db0304
+            candidate_version: 0.1.49
+            target: esp32s3-16mb-waveshare-expanded
+            factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-launch-brightness-0.1.48/Waveshare-0.1.48-Launch-Brightness-factory-erases-data-0x0.bin
+            factory_sha256: 868933ecf2cb468b8d487333fbc6150641035015b58b62c884024fc8d8fc06da
           - product: x4
             repository: RiscRTE-XTEINK-X4-PRO
-            source: f09db250b29ec68dfed7530cc8e0ac0b21c66802
+            source: 2747c4d17a02359940122f190983eb0d11d80fdd
+            candidate_version: 0.1.122
+            target: esp32s3-16mb-appdata-iq
+            factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO/releases/download/test-t064-crash-0.1.121/X4-0.1.121-T064-Crash-Reports-factory-erases-data-0x0.bin
+            factory_sha256: 48145adc023a334885207100ce29596edef3f02c07a6d830ca53e3ab1fbf5993
+            sd_url: https://github.com/michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO/releases/download/test-t064-crash-0.1.121/X4-0.1.121-Complete-SD-Keep-Existing.zip
+            sd_sha256: 2b6dce3efb468f3cd728b50707e0c9552d84e225b65e2b27e683d3d726bc6cef
     container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/checkout@v4
-        if: matrix.product != 'generic'
-        with:
-          repository: michaelrolphone-cmyk/${{ matrix.repository }}
-          ref: ${{ matrix.source }}
-          path: product
-          persist-credentials: false
-          sparse-checkout: |
-            profiles
-            native
-            minimal/native
-            minimal/scripts
-            minimal/test
-      - name: Verify official SDK identity
+    env:
+      PRODUCT: ${{ matrix.product }}
+      PRODUCT_REPOSITORY: ${{ matrix.repository }}
+      PRODUCT_SOURCE: ${{ matrix.source }}
+      IMAGE_HELPER_SOURCE: c11f354ca5278174332e0a91cbc1ad7ef0514d00
+      SYSTEM_SOURCE: 755cc5174a6deaee120d108cbffe67ae809e1e6f
+      DRIVERS_SOURCE: 5890721073ebabd781d5d278e447c761947a5c58
+      SDK_SOURCE: fff9895c82d744c7237be8847347bdd1b07c6643
+      SDK_IMAGE: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONNOUSERSITE: '1'
+      CCACHE_DISABLE: '1'
+      IDF_CCACHE_ENABLE: '0'
+      CMAKE_BUILD_PARALLEL_LEVEL: '1'
+    defaults:
+      run:
         shell: bash
+    steps:
+      # Container actions/checkout can leave repos owned by another UID. Clone
+      # public immutable sources as this shell's owner, never relaxing Git trust.
+      # All sources, baseline inputs, build and candidate directories are siblings.
+      - name: Clone clean immutable source roots
         run: |
+          set -euo pipefail
+          export NATIVE_ROOT="$RUNNER_TEMP/native-idf61-$PRODUCT"
+          echo "NATIVE_ROOT=$NATIVE_ROOT" >> "$GITHUB_ENV"
+          test ! -e "$NATIVE_ROOT"
+          mkdir -p "$NATIVE_ROOT"/{sources,inputs,metadata,logs}
+          exec > >(tee "$NATIVE_ROOT/logs/source-setup.log") 2>&1
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git libssl-dev
+          clone_source() {
+            local repository="$1" revision="$2" destination="$3"
+            [[ "$revision" =~ ^[0-9a-f]{40}$ ]]
+            test ! -e "$destination"
+            git init --quiet "$destination"
+            git -C "$destination" remote add origin "https://github.com/$repository.git"
+            git -C "$destination" fetch --no-tags --depth=1 origin "$revision"
+            git -C "$destination" checkout --quiet --detach FETCH_HEAD
+            test "$(git -C "$destination" rev-parse HEAD)" = "$revision"
+            git -C "$destination" submodule update --init --recursive --depth=1
+          }
+          clone_source "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$NATIVE_ROOT/sources/runtime"
+          if [[ "$PRODUCT" != generic ]]; then
+            clone_source "michaelrolphone-cmyk/$PRODUCT_REPOSITORY" "$PRODUCT_SOURCE" "$NATIVE_ROOT/sources/product"
+            clone_source michaelrolphone-cmyk/RiscRTE-System-Apps "$SYSTEM_SOURCE" "$NATIVE_ROOT/sources/system"
+            clone_source michaelrolphone-cmyk/RiscRTE-Drivers "$DRIVERS_SOURCE" "$NATIVE_ROOT/sources/drivers"
+            if [[ "$PRODUCT" == twatch ]]; then
+              test "$PRODUCT_SOURCE" = "$IMAGE_HELPER_SOURCE"
+              echo "IMAGE_HELPER_ROOT=$NATIVE_ROOT/sources/product" >> "$GITHUB_ENV"
+            else
+              clone_source michaelrolphone-cmyk/RiscRTE-T-Watch-S3 "$IMAGE_HELPER_SOURCE" "$NATIVE_ROOT/sources/image-helper"
+              echo "IMAGE_HELPER_ROOT=$NATIVE_ROOT/sources/image-helper" >> "$GITHUB_ENV"
+            fi
+          fi
+      - name: Verify official SDK, compiler and clean source custody
+        run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/source-custody.log") 2>&1
           . "$IDF_PATH/export.sh"
-          test "$(git -C "$IDF_PATH" rev-parse HEAD)" = fff9895c82d744c7237be8847347bdd1b07c6643
-          xtensa-esp-elf-gcc --version
+          test "$(git -C "$IDF_PATH" rev-parse HEAD)" = "$SDK_SOURCE"
+          compiler="$(command -v xtensa-esp-elf-gcc)"
+          "$compiler" --version | tee "$NATIVE_ROOT/metadata/compiler-version.txt"
+          grep -F 'esp-15.2.0_20251204' "$NATIVE_ROOT/metadata/compiler-version.txt"
+          test "$("$compiler" -dumpfullversion)" = 15.2.0
+          sha256sum "$compiler" > "$NATIVE_ROOT/metadata/compiler-SHA256SUMS"
+          python --version
+          cmake --version
+          ninja --version
+          cp "$IDF_PATH/tools/tools.json" "$NATIVE_ROOT/metadata/sdk-tools.json"
+          cp "$NATIVE_ROOT/sources/runtime/.github/workflows/native-idf6.yml" "$NATIVE_ROOT/metadata/workflow.yml"
+          source_args=(--source "runtime=$NATIVE_ROOT/sources/runtime@$GITHUB_SHA" --source "sdk=$IDF_PATH@$SDK_SOURCE")
+          if [[ "$PRODUCT" != generic ]]; then
+            source_args+=(--source "product=$NATIVE_ROOT/sources/product@$PRODUCT_SOURCE"
+              --source "system=$NATIVE_ROOT/sources/system@$SYSTEM_SOURCE"
+              --source "drivers=$NATIVE_ROOT/sources/drivers@$DRIVERS_SOURCE"
+              --source "image_helper=$IMAGE_HELPER_ROOT@$IMAGE_HELPER_SOURCE")
+            cp "$NATIVE_ROOT/sources/product/docs/native-idf61/released-baseline.json" "$NATIVE_ROOT/metadata/released-baseline.json"
+          fi
+          python "$NATIVE_ROOT/sources/runtime/scripts/native_idf61_ci.py" sources "${source_args[@]}" --output "$NATIVE_ROOT/metadata/sources-before.json"
+          python - "$NATIVE_ROOT/metadata/ci-run.json" <<'PY'
+          import json, os, sys
+          keys = ('GITHUB_REPOSITORY', 'GITHUB_SHA', 'GITHUB_REF', 'GITHUB_RUN_ID',
+                  'GITHUB_RUN_ATTEMPT', 'GITHUB_WORKFLOW_REF', 'GITHUB_WORKFLOW_SHA',
+                  'PRODUCT', 'SDK_IMAGE', 'SDK_SOURCE', 'SYSTEM_SOURCE', 'DRIVERS_SOURCE',
+                  'PRODUCT_SOURCE', 'IMAGE_HELPER_SOURCE')
+          with open(sys.argv[1], 'w') as stream:
+              json.dump({key: os.environ.get(key) for key in keys}, stream, sort_keys=True, indent=2)
+              stream.write('\n')
+          PY
+      - name: Download and verify exact released baseline inputs
+        if: matrix.product != 'generic'
+        env:
+          FACTORY_URL: ${{ matrix.factory_url }}
+          FACTORY_SHA256: ${{ matrix.factory_sha256 }}
+          SD_URL: ${{ matrix.sd_url }}
+          SD_SHA256: ${{ matrix.sd_sha256 }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/baseline-inputs.log") 2>&1
+          . "$IDF_PATH/export.sh"
+          download() {
+            local url="$1" digest="$2" destination="$3"
+            curl --fail --show-error --silent --location --retry 3 --proto '=https' --proto-redir '=https' "$url" --output "$destination"
+            printf '%s  %s\n' "$digest" "$destination" | sha256sum --check --strict -
+          }
+          download "$FACTORY_URL" "$FACTORY_SHA256" "$NATIVE_ROOT/inputs/released-factory.bin"
+          args=()
+          if [[ "$PRODUCT" == x4 ]]; then
+            download "$SD_URL" "$SD_SHA256" "$NATIVE_ROOT/inputs/released-complete-sd.zip"
+            args+=(--sd-archive "$NATIVE_ROOT/inputs/released-complete-sd.zip" --sd-url "$SD_URL" --sd-sha256 "$SD_SHA256")
+          fi
+          python "$NATIVE_ROOT/sources/runtime/scripts/native_idf61_ci.py" baselines \
+            --product "$PRODUCT" --contract "$NATIVE_ROOT/metadata/released-baseline.json" \
+            --factory "$NATIVE_ROOT/inputs/released-factory.bin" --factory-url "$FACTORY_URL" --factory-sha256 "$FACTORY_SHA256" \
+            "${args[@]}" --output "$NATIVE_ROOT/metadata/baseline-inputs.json"
       - name: Native startup and peripheral contracts
         if: matrix.product == 'generic'
-        shell: bash
         run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/native-contracts.log") 2>&1
           . "$IDF_PATH/export.sh"
-          apt-get update
-          apt-get install -y --no-install-recommends libssl-dev
+          cd "$NATIVE_ROOT/sources/runtime"
+          python test/test_native_idf61_ci.py
           python test/test_native_startup.py
           python test/test_native_product_profile.py
           bash test/run_native_sdmmc_test.sh
@@ -83,59 +191,153 @@ jobs:
           bash test/run_native_iq_worker_test.sh
           bash test/run_provider_queue_host_test.sh
           bash test/run_provider_queue_retained_fence_test.sh
-      - name: Build native candidate with one compiler job
-        shell: bash
+      - name: Build generic native target with one compiler job
+        if: matrix.product == 'generic'
         run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/native-build.log") 2>&1
           . "$IDF_PATH/export.sh"
-          options=(-D RISC_SOURCE_SHA="$GITHUB_SHA")
-          if [[ '${{ matrix.product }}' != generic ]]; then
-            options+=(-D RISC_PRODUCT_PROFILE="$GITHUB_WORKSPACE/product/profiles/native-idf61.cmake")
+          test ! -e "$NATIVE_ROOT/build"
+          idf.py -C "$NATIVE_ROOT/sources/runtime/idf" -B "$NATIVE_ROOT/build" \
+            -D "RISC_SOURCE_SHA=$GITHUB_SHA" -D "SDKCONFIG=$NATIVE_ROOT/build/sdkconfig" -D CCACHE_ENABLE=0 reconfigure
+          cmake --build "$NATIVE_ROOT/build" -- -j1
+      - name: Qualify fresh bootloader and complete native bank regression
+        if: matrix.product == 'generic'
+        run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/native-bank-qualification.log") 2>&1
+          . "$IDF_PATH/export.sh"
+          cd "$NATIVE_ROOT/sources/runtime"
+          python test/native_bank_bootloader_fixture_test.py "$NATIVE_ROOT/build/bootloader/bootloader.bin"
+          NATIVE_PROVIDER_TEST_ABI=2 APP_DATA_TEST=1 NATIVE_DIAGNOSTIC_OBSERVER=1 \
+            BOOTLOADER_FILE="$NATIVE_ROOT/build/bootloader/bootloader.bin" bash test/run_native_bank_test.sh
+          NATIVE_PROVIDER_TEST_ABI=2 APP_DATA_TEST=1 NATIVE_DIAGNOSTIC_OBSERVER=1 \
+            BOOTLOADER_FILE="$NATIVE_ROOT/build/bootloader/bootloader.bin" \
+            SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_native_bank_test.sh
+      - name: Fresh controlled product build and same-process qualification
+        if: matrix.product != 'generic'
+        env:
+          CANDIDATE_VERSION: ${{ matrix.candidate_version }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/controlled-product-build.log") 2>&1
+          . "$IDF_PATH/export.sh"
+          test ! -e "$NATIVE_ROOT/build"
+          test ! -e "$NATIVE_ROOT/candidate"
+          args=()
+          if [[ "$PRODUCT" == x4 ]]; then
+            args+=(--sd-archive "$NATIVE_ROOT/inputs/released-complete-sd.zip")
           fi
-          if [[ '${{ matrix.product }}' == x4 ]]; then
-            options+=(-D RISC_X4_SOURCE_SHA='${{ matrix.source }}')
-          fi
-          cd idf
-          idf.py "${options[@]}" reconfigure
-          cmake --build build -- -j1
+          python "$NATIVE_ROOT/sources/product/scripts/native_idf61_build.py" \
+            --source "product=$NATIVE_ROOT/sources/product" --source "runtime=$NATIVE_ROOT/sources/runtime" \
+            --source "system=$NATIVE_ROOT/sources/system" --source "drivers=$NATIVE_ROOT/sources/drivers" \
+            --source "sdk=$IDF_PATH" --source "image_helper=$IMAGE_HELPER_ROOT" \
+            --compiler "$(command -v xtensa-esp-elf-gcc)" --baseline "$NATIVE_ROOT/inputs/released-factory.bin" \
+            --candidate-version "$CANDIDATE_VERSION" \
+            --native-build "$NATIVE_ROOT/build" --output "$NATIVE_ROOT/candidate" "${args[@]}"
       - name: Qualify native target custody and placement
-        shell: bash
         run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/target-qualification.log") 2>&1
           . "$IDF_PATH/export.sh"
-          python test/native_internal_atomics_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/atomics
-          python test/native_http_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/http
-          python test/native_failure_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/failure
-          python test/native_iq_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --rom-elf "$ESP_ROM_ELF_DIR/esp32s3_rev0_rom.elf" --output idf/build/qualification/iq
+          cd "$NATIVE_ROOT/sources/runtime"
+          python test/native_internal_atomics_target_test.py --compile-commands "$NATIVE_ROOT/build/compile_commands.json" --idf "$IDF_PATH" --output "$NATIVE_ROOT/build/qualification/atomics"
+          python test/native_http_idf6_target_test.py --compile-commands "$NATIVE_ROOT/build/compile_commands.json" --idf "$IDF_PATH" --output "$NATIVE_ROOT/build/qualification/http"
+          python test/native_failure_idf6_target_test.py --compile-commands "$NATIVE_ROOT/build/compile_commands.json" --idf "$IDF_PATH" --output "$NATIVE_ROOT/build/qualification/failure"
+          python test/native_iq_idf6_target_test.py --compile-commands "$NATIVE_ROOT/build/compile_commands.json" --idf "$IDF_PATH" --rom-elf "$ESP_ROM_ELF_DIR/esp32s3_rev0_rom.elf" --output "$NATIVE_ROOT/build/qualification/iq"
+      - name: Prove final linked product IQ reservation
+        if: matrix.product != 'generic'
+        env:
+          NATIVE_TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/linked-iq-qualification.log") 2>&1
+          . "$IDF_PATH/export.sh"
+          python "$NATIVE_ROOT/sources/runtime/scripts/native_idf_iq_link.py" verify \
+            --elf "$NATIVE_ROOT/build/riscrte_native.elf" --target "$NATIVE_TARGET" \
+            --output "$NATIVE_ROOT/build/qualification/iq-linked.json"
       - name: Qualify diagnostic snapshot placement
         if: matrix.product == 'waveshare'
-        shell: bash
         run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/diagnostic-qualification.log") 2>&1
           . "$IDF_PATH/export.sh"
-          python test/native_diagnostic_workspace_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/diagnostics
+          cd "$NATIVE_ROOT/sources/runtime"
+          python test/native_diagnostic_workspace_target_test.py --compile-commands "$NATIVE_ROOT/build/compile_commands.json" --idf "$IDF_PATH" --output "$NATIVE_ROOT/build/qualification/diagnostics"
       - name: Reject Arduino runtime linkage
-        shell: bash
         run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/arduino-free-qualification.log") 2>&1
           . "$IDF_PATH/export.sh"
-          python test/native_firmware_idf6_test.py --build idf/build
+          python "$NATIVE_ROOT/sources/runtime/test/native_firmware_idf6_test.py" --build "$NATIVE_ROOT/build"
       - name: Qualify X4 linked startup boundary
         if: matrix.product == 'x4'
-        shell: bash
         run: |
+          set -euo pipefail
+          exec > >(tee "$NATIVE_ROOT/logs/x4-startup-qualification.log") 2>&1
           . "$IDF_PATH/export.sh"
-          python product/minimal/test/verify_native_idf61_target.py --elf idf/build/riscrte_native.elf --selection idf/build/x4-native-idf61/selection.txt --output idf/build/qualification/x4-startup.json
+          python "$NATIVE_ROOT/sources/product/minimal/test/verify_native_idf61_target.py" \
+            --elf "$NATIVE_ROOT/build/riscrte_native.elf" --selection "$NATIVE_ROOT/build/x4-native-idf61/selection.txt" \
+            --objdump "$(command -v xtensa-esp-elf-objdump)" --output "$NATIVE_ROOT/build/qualification/x4-startup.json"
+      - name: Verify source custody after build and qualification
+        if: always()
+        run: |
+          set -euo pipefail
+          test -d "$NATIVE_ROOT/logs"
+          exec > >(tee "$NATIVE_ROOT/logs/source-custody-final.log") 2>&1
+          . "$IDF_PATH/export.sh"
+          source_args=(--source "runtime=$NATIVE_ROOT/sources/runtime@$GITHUB_SHA" --source "sdk=$IDF_PATH@$SDK_SOURCE")
+          if [[ "$PRODUCT" != generic ]]; then
+            source_args+=(--source "product=$NATIVE_ROOT/sources/product@$PRODUCT_SOURCE"
+              --source "system=$NATIVE_ROOT/sources/system@$SYSTEM_SOURCE"
+              --source "drivers=$NATIVE_ROOT/sources/drivers@$DRIVERS_SOURCE"
+              --source "image_helper=$IMAGE_HELPER_ROOT@$IMAGE_HELPER_SOURCE")
+          fi
+          python "$NATIVE_ROOT/sources/runtime/scripts/native_idf61_ci.py" sources "${source_args[@]}" --output "$NATIVE_ROOT/metadata/sources-after.json"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: native-idf6-${{ matrix.product }}-${{ github.sha }}
+          # Include response files, exact compile databases and provenance even
+          # on failure, without uploading all compiler intermediate objects.
           path: |
-            idf/build/riscrte_native.elf
-            idf/build/riscrte_native.bin
-            idf/build/riscrte_native.map
-            idf/build/project_description.json
-            idf/build/config/sdkconfig.json
-            idf/build/bootloader/bootloader.bin
-            idf/build/partition_table/partition-table.bin
-            idf/build/radio-iq-proof.json
-            idf/build/x4-native-idf61/selection.txt
-            idf/build/log/
-            idf/build/qualification/
+            ${{ env.NATIVE_ROOT }}/candidate/
+            ${{ env.NATIVE_ROOT }}/metadata/
+            ${{ env.NATIVE_ROOT }}/logs/
+            ${{ env.NATIVE_ROOT }}/build/riscrte_native.elf
+            ${{ env.NATIVE_ROOT }}/build/riscrte_native.bin
+            ${{ env.NATIVE_ROOT }}/build/riscrte_native.map
+            ${{ env.NATIVE_ROOT }}/build/sdkconfig*
+            ${{ env.NATIVE_ROOT }}/build/compile_commands.json
+            ${{ env.NATIVE_ROOT }}/build/project_description.json
+            ${{ env.NATIVE_ROOT }}/build/flasher_args.json
+            ${{ env.NATIVE_ROOT }}/build/flash_args
+            ${{ env.NATIVE_ROOT }}/build/CMakeCache.txt
+            ${{ env.NATIVE_ROOT }}/build/build.ninja
+            ${{ env.NATIVE_ROOT }}/build/.ninja_deps
+            ${{ env.NATIVE_ROOT }}/build/.ninja_log
+            ${{ env.NATIVE_ROOT }}/build/config/
+            ${{ env.NATIVE_ROOT }}/build/toolchain/
+            ${{ env.NATIVE_ROOT }}/build/native-build-evidence/
+            ${{ env.NATIVE_ROOT }}/build/native-iq-rom.*
+            ${{ env.NATIVE_ROOT }}/build/radio-iq-proof.json
+            ${{ env.NATIVE_ROOT }}/build/product-sdkconfig.defaults
+            ${{ env.NATIVE_ROOT }}/build/bootloader/bootloader.*
+            ${{ env.NATIVE_ROOT }}/build/bootloader/compile_commands.json
+            ${{ env.NATIVE_ROOT }}/build/bootloader/project_description.json
+            ${{ env.NATIVE_ROOT }}/build/bootloader/CMakeCache.txt
+            ${{ env.NATIVE_ROOT }}/build/bootloader/build.ninja
+            ${{ env.NATIVE_ROOT }}/build/bootloader/.ninja_deps
+            ${{ env.NATIVE_ROOT }}/build/bootloader/.ninja_log
+            ${{ env.NATIVE_ROOT }}/build/bootloader/config/
+            ${{ env.NATIVE_ROOT }}/build/bootloader/toolchain/
+            ${{ env.NATIVE_ROOT }}/build/partition_table/
+            ${{ env.NATIVE_ROOT }}/build/x4-native-idf61/
+            ${{ env.NATIVE_ROOT }}/build/log/
+            ${{ env.NATIVE_ROOT }}/build/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ env.NATIVE_ROOT }}/build/CMakeFiles/CMakeError.log
+            ${{ env.NATIVE_ROOT }}/build/bootloader/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ env.NATIVE_ROOT }}/build/bootloader/CMakeFiles/CMakeError.log
+            ${{ env.NATIVE_ROOT }}/build/qualification/
+          include-hidden-files: true
           if-no-files-found: warn

@@ -27,6 +27,13 @@ if(RISC_NATIVE_APPDATA)
     endforeach()
 endif()
 target_link_libraries(${COMPONENT_LIB} INTERFACE ${RISC_NATIVE_LINK_OPTIONS})
+# Keep the allocated app-capacity marker in the final ELF, rather than relying
+# on a host admission harness's independently compiled capacity.
+foreach(definition IN LISTS RISC_NATIVE_DEFINITIONS)
+    if(definition MATCHES "^RISC_INSTALLED_APP_CAPACITY=[0-9]+$")
+        target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,-u,risc_installed_app_capacity")
+    endif()
+endforeach()
 # Both the native startup and the legacy qualification route retain one-shot,
 # no-erase NVS initialization. No automatic migration or format is introduced.
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=nvs_flash_init")

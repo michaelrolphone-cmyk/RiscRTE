@@ -257,6 +257,22 @@ static void firmware(unsigned bank,const char* version,const char* abi=nullptr){
  memcpy(data+4087,marker.c_str(),marker.size()+1);
  const char prefix[]="RISC_RUNTIME_VERSION:";memcpy(data+900,prefix,sizeof(prefix));
 }
+#ifndef RISC_TEST_BOOTLOADER_BYTES
+#define RISC_TEST_BOOTLOADER_BYTES 0
+#define RISC_TEST_BOOTLOADER_SHA256 ""
+#endif
+static std::vector<uint8_t> validatedBootloader(const char* path){
+ // The runner checks segment structure, checksum and appended ESP digest.
+ // Bind this process to those exact validated bytes, not just any image size.
+ std::ifstream input(path,std::ios::binary);assert(input);
+ std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});
+ assert(RISC_TEST_BOOTLOADER_BYTES>0 && RISC_TEST_BOOTLOADER_BYTES<=0x8000);
+ assert(boot.size()==RISC_TEST_BOOTLOADER_BYTES);
+ uint8_t digest[32];SHA256(boot.data(),boot.size(),digest);std::string hex;
+ for(uint8_t c:digest){hex+="0123456789abcdef"[c>>4];hex+="0123456789abcdef"[c&15];}
+ assert(hex==RISC_TEST_BOOTLOADER_SHA256);
+ return boot;
+}
 #include "cohort_native.inc"
 #include "boot_path_native.inc"
 #include "compact_image_native.inc"
@@ -320,7 +336,7 @@ int main(int argc,char** argv){
  if(mode=="boot" || mode=="unscanned-store" || mode=="bad-layout" || mode=="restart" || mode=="restart-unknown" || provisioning){
    const bool restarting=mode=="restart" || mode=="restart-unknown";
    if(restarting)otaState=ESP_OTA_IMG_VALID; // normal updates require a confirmed source
-   assert(argc==(mode=="provision-product"?6:(bootstrapping||mode=="provision-seed")?5:provisioning?4:3));if(provisioning)otaState=(mode=="bootstrap-pending-bank"||mode=="bootstrap-receipt-pending")?ESP_OTA_IMG_PENDING_VERIFY:ESP_OTA_IMG_VALID;std::ifstream input(argv[2],std::ios::binary);std::vector<uint8_t> boot((std::istreambuf_iterator<char>(input)),{});assert(boot.size()==15104);
+   assert(argc==(mode=="provision-product"?6:(bootstrapping||mode=="provision-seed")?5:provisioning?4:3));if(provisioning)otaState=(mode=="bootstrap-pending-bank"||mode=="bootstrap-receipt-pending")?ESP_OTA_IMG_PENDING_VERIFY:ESP_OTA_IMG_VALID;const auto boot=validatedBootloader(argv[2]);
    memcpy(flash.data(),boot.data(),boot.size());firmware(0,RISC_BUILD_VERSION);
    if(mode=="provision-product"){
      std::ifstream firmwareInput(argv[5],std::ios::binary);assert(firmwareInput);

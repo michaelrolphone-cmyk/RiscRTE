@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import re
+import shlex
 import subprocess
 from pathlib import Path
 from elftools.elf.elffile import ELFFile
@@ -20,6 +21,13 @@ def main():
     for bad in ('String::concat(char const*)','initArduino()','vtable for HardwareSerial'):
         assert FORBIDDEN.search(bad)
     report={'linked_firmware_verified':True,'hardware_verified':False,'symbols':{}}
+    compilation=json.loads((build/'compile_commands.json').read_text())
+    runtime_rows=[row for row in compilation if Path(row['file']).as_posix().endswith('/src/bootstrap/Runtime.cpp')]
+    assert len(runtime_rows)==1, 'Runtime compilation identity must be unique'
+    arguments=runtime_rows[0].get('arguments') or shlex.split(runtime_rows[0]['command'])
+    capacity_definitions=[value.split('=',1)[1] for value in arguments
+                          if value.startswith('-DRISC_INSTALLED_APP_CAPACITY=')]
+    assert len(capacity_definitions)<=1, 'Ambiguous allocated app-capacity selection'
     with (build/'riscrte_native.elf').open('rb') as stream:
         e=ELFFile(stream)
         assert e.elfclass==32 and e.little_endian and e['e_machine']=='EM_XTENSA'
@@ -46,6 +54,16 @@ def main():
         raw=section.data()[offset:offset+descriptor['st_size']]
         assert raw[48:80].rstrip(b'\0')==b'arduino-lib-builder', 'paired-bank project identity changed'
         report['image_project']='arduino-lib-builder'
+        if capacity_definitions:
+            expected=int(capacity_definitions[0])
+            capacity=[s for s in syms if s.name=='risc_installed_app_capacity']
+            assert len(capacity)==1, 'Allocated app-capacity marker missing from linked firmware'
+            marker=capacity[0];section=e.get_section(marker['st_shndx'])
+            assert marker['st_size']==4 and section['sh_flags'] & 2
+            offset=marker['st_value']-section['sh_addr']
+            value=int.from_bytes(section.data()[offset:offset+4],'little')
+            assert value==expected, 'Linked app capacity differs from compiled Runtime selection'
+            report['allocated_installed_app_capacity']=value
     project=json.loads((build/'project_description.json').read_text())
     assert project['target']=='esp32s3'
     assert not any('arduino' in name.lower() for name in project['build_components'])
