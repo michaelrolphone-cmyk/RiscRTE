@@ -19,6 +19,7 @@ int main(){
  h.radioIqWorkerStart=[](uint32_t,risc_radio_iq_tick_v1,void*){++workerStarts;return workerStartOk;};
  h.radioIqWorkerStop=[](){++workerStops;return workerStopOk;};
  h.radioIqNowUs=[](){return uint64_t(1234567);};
+ h.deepHold=[](uint8_t,bool){return true;};
  Port p(h);auto& c=p.iq_;c.port=&p;auto& r=p.radios_[0];r.port=&p;r.token=10;auto& b=p.hci_;b.port=&p;
  auto refused=[&](){uint64_t t=99;assert(!Port::radioIqClaim(&c,&t) && !t && !c.token);};
  assert(!Port::radioIqClaim(nullptr,nullptr));
@@ -34,7 +35,7 @@ int main(){
  uint64_t duplicate=99;assert(!Port::radioIqClaim(&c,&duplicate) && !duplicate);
  assert(!Port::radioJoin(&r,10,"test","test-pass") && !Port::radioScanStart(&r,10));
  assert(!Port::hciOpen(&b,0,&duplicate) && !duplicate && !starts);
- auto& g=p.gpios_[0];g.port=&p;p.pins_[4]={&g,90,false};risc_light_sleep_result_v1 wake{sizeof(wake),0};
+ auto& g=p.gpios_[0];g.port=&p;p.pins_[4]={&g,90,false};p.pins_[5]={&g,91,true};risc_light_sleep_result_v1 wake{sizeof(wake),0};
  auto sleep=[&](int32_t expected){
   assert(Port::gpioLightSleep(&g,90,false,&wake)==expected);
   assert(Port::gpioDeepSleep(&g,90,false)==expected);
@@ -42,7 +43,12 @@ int main(){
   assert(Port::gpioDeepSleepFor(&g,90,false,10)==expected);
   assert(Port::gpioLightSleepSet(&g,90,false,10,&wake)==expected);
   assert(Port::gpioDeepSleepSet(&g,90,false,10)==expected);
-  assert(Port::gpioDeepSleepHold(&g,90,true)==expected);
+  // A static hold changes only this unrelated output, not whole-device sleep.
+  // The current scoped-pad contract permits it during active IQ, but retains
+  // every operation when IQ cleanup is uncertain. Release it before next claim.
+  const auto holdExpected=expected==RISC_LIGHT_SLEEP_BUSY?0:expected;
+  assert(Port::gpioDeepSleepHold(&g,91,true)==holdExpected);
+  if(holdExpected==0)assert(Port::gpioDeepSleepHold(&g,91,false)==0);
  };
  sleep(RISC_LIGHT_SLEEP_BUSY);
  owner=false;assert(!Port::radioIqRelease(&c,t));owner=true;
