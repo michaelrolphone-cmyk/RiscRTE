@@ -1,0 +1,38 @@
+name: Generic file provider adapters
+on:
+  push:
+    branches: [work/unified-default-capabilities]
+    paths:
+      - 'sdk/app/RiscStorageFilesV1.h'
+      - 'sdk/app/RiscStorageVolumeV1.h'
+      - 'sdk/driver/RiscStorageVolume*V1.h'
+      - 'src/bootstrap/StorageFilesVolumeAdapter.h'
+      - 'test/storage_files_adapter_test.cpp'
+      - 'test/run_storage_files_adapter_test.sh'
+      - '.github/workflows/storage-files-adapter.yml'
+  pull_request:
+    paths:
+      - 'sdk/app/RiscStorageFilesV1.h'
+      - 'sdk/app/RiscStorageVolumeV1.h'
+      - 'sdk/driver/RiscStorageVolume*V1.h'
+      - 'src/bootstrap/StorageFilesVolumeAdapter.h'
+      - 'test/storage_files_adapter_test.cpp'
+      - 'test/run_storage_files_adapter_test.sh'
+      - '.github/workflows/storage-files-adapter.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  adapter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_storage_files_adapter_test.sh

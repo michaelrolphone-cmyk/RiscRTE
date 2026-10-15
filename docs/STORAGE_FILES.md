@@ -1,7 +1,11 @@
 # Optional generic file capabilities
 
-Migration scope is all applications and shared storage consumers everywhere in
-RiscRTE. Implementation inventories record coverage; they do not limit that scope.
+This repository note describes the generic storage implementation. Delivery is
+staged: generic interfaces and providers, optional Runtime integration, shared
+default ELFs, then a reliable baseline. Existing storage paths in other
+applications remain supported as accepted technical debt; further consumer
+migrations are deferred until that baseline. Authoritative requirements and
+delivery tracking are maintained in Workboard.
 
 `storage.files@1` is an optional backend-neutral file service. Its public header
 is `sdk/app/RiscStorageFilesV1.h`; `storage.files.catalog@1` discovers only the
