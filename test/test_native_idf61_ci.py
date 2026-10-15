@@ -139,7 +139,7 @@ class NativeCiWorkflow(unittest.TestCase):
     def test_generated_input_custody_and_release_routing_are_retained(self):
         workflow = self.workflow()
         self.assertIn('          python test/test_release_routing.py\n', workflow)
-        self.assertIn('          python tests/test_native_idf61_candidate.py\n', workflow)
+        self.assertIn('          python tests/test_native_idf61_candidate.py "${args[@]}"\n', workflow)
         self.assertIn('          python tests/test_native_idf61_provenance.py\n', workflow)
         self.assertIn('            python tests/test_native_display_archive.py\n', workflow)
         paths = workflow.split('          path: |\n', 1)[1]
@@ -148,6 +148,14 @@ class NativeCiWorkflow(unittest.TestCase):
                      'esp-idf/runtime/RiscBuildIdentity.h'):
             self.assertIn('            ${{ env.NATIVE_ROOT }}/build/' + name + '\n', paths)
         self.assertIn('            ${{ env.NATIVE_ROOT }}/build/x4-native-idf61/\n', paths)
+
+    def test_product_contract_invocation_supplies_exact_inputs(self):
+        workflow = self.workflow()
+        step = workflow.split('      - name: Controlled product source and provenance contracts\n', 1)[1].split('      - name:', 1)[0]
+        self.assertIn('args=(--runtime "$NATIVE_ROOT/sources/runtime" --image-helper "$IMAGE_HELPER_ROOT"\n', step)
+        self.assertIn('            --sdk "$IDF_PATH" --baseline "$NATIVE_ROOT/inputs/released-factory.bin")\n', step)
+        self.assertIn('          if [[ "$PRODUCT" == x4 ]]; then\n            args+=(--sd-archive "$NATIVE_ROOT/inputs/released-complete-sd.zip")\n          fi\n', step)
+        self.assertIn('          python tests/test_native_idf61_candidate.py "${args[@]}"\n', step)
 
 
 if __name__ == '__main__':

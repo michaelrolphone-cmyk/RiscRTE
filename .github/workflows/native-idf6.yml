@@ -230,7 +230,12 @@ jobs:
           exec > >(tee "$NATIVE_ROOT/logs/product-contracts.log") 2>&1
           . "$IDF_PATH/export.sh"
           cd "$NATIVE_ROOT/sources/product"
-          python tests/test_native_idf61_candidate.py
+          args=(--runtime "$NATIVE_ROOT/sources/runtime" --image-helper "$IMAGE_HELPER_ROOT"
+            --sdk "$IDF_PATH" --baseline "$NATIVE_ROOT/inputs/released-factory.bin")
+          if [[ "$PRODUCT" == x4 ]]; then
+            args+=(--sd-archive "$NATIVE_ROOT/inputs/released-complete-sd.zip")
+          fi
+          python tests/test_native_idf61_candidate.py "${args[@]}"
           python tests/test_native_idf61_provenance.py
           if [[ "$PRODUCT" == waveshare ]]; then
             python tests/test_native_display_archive.py
