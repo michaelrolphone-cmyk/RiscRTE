@@ -1,6 +1,7 @@
 #pragma once
 #include "FreeRTOS.h"
 typedef void* TaskHandle_t;
+TickType_t xTaskGetTickCount();
 void xTaskNotifyGive(TaskHandle_t);
 uint32_t ulTaskNotifyTake(BaseType_t,TickType_t);
 void vTaskDelay(TickType_t);

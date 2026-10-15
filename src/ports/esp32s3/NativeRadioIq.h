@@ -69,8 +69,8 @@ inline bool prepare(){
   if(phyPrepared || !ready())return false;
   tracePrepared=tracePending;tracePending=false;
   trace("RTE_IQ stage=modem-init");
-  // IDF 4.4.7 keeps modem backup memory, domain power and PHY enable as separate
-  // references. BT teardown can leave the domain powered off. Its first power-on
+  // Both pinned SDKs keep modem backup, domain power and PHY ownership separate.
+  // BT teardown can leave the domain powered off. Its first power-on
   // resets the modem, so acquire it BEFORE PHY calibration/wakeup, never after.
   esp_phy_modem_init();
   trace("RTE_IQ stage=power-on");
@@ -78,7 +78,13 @@ inline bool prepare(){
   trace("RTE_IQ stage=phy-enable");
   // SDK calls are synchronous void APIs; stage logs locate a stall but do not
   // add a timeout or claim that calibration completed until this call returns.
+#if RISC_NATIVE_ESP_IDF
+  // IDF6 tracks modem bits, not anonymous enable references. The broker excludes
+  // both native Wi-Fi and HCI for the complete IQ lease; use one matching bit.
+  esp_phy_enable(PHY_MODEM_WIFI);
+#else
   esp_phy_enable();
+#endif
   phyPrepared=true;
   trace("RTE_IQ stage=prepared");
   return true;
@@ -91,6 +97,8 @@ inline portMUX_TYPE workerMux=portMUX_INITIALIZER_UNLOCKED;
 inline SemaphoreHandle_t workerDone=nullptr;
 inline esp_timer_handle_t workerTimer=nullptr;
 inline bool workerStopping=false;
+// Owner-task state survives a failed timer deletion after the join was consumed.
+inline bool workerJoined=false;
 inline risc_radio_iq_tick_v1 workerTick=nullptr;
 inline void* workerArgument=nullptr;
 inline uint64_t nowUs(){return static_cast<uint64_t>(esp_timer_get_time());}
@@ -109,27 +117,55 @@ inline void workerRun(void*){
   }
   xSemaphoreGive(workerDone);for(;;)vTaskSuspend(nullptr);
 }
+inline bool workerOwned(){return workerTask||workerTimer||workerDone||workerTick||workerArgument;}
 inline bool workerStop(){
-  if(!workerTask)return true;
+  if(!workerOwned())return true;
   __atomic_store_n(&workerStopping,true,__ATOMIC_RELEASE);
-  if(workerTimer)esp_timer_stop(workerTimer);
-  workerWake(nullptr);
-  if(xSemaphoreTake(workerDone,pdMS_TO_TICKS(100))!=pdTRUE)return false;
-  portENTER_CRITICAL(&workerMux);TaskHandle_t done=workerTask;workerTask=nullptr;portEXIT_CRITICAL(&workerMux);
-  vTaskDelete(done);
-  if(workerTimer){esp_timer_delete(workerTimer);workerTimer=nullptr;}
-  vSemaphoreDelete(workerDone);workerDone=nullptr;workerTick=nullptr;workerArgument=nullptr;return true;
+  // One 100-ms tick budget covers timer callback drainage AND provider join.
+  const TickType_t started=xTaskGetTickCount(),budget=pdMS_TO_TICKS(100);
+  if(workerTimer){
+#if RISC_NATIVE_ESP_IDF
+    // Unlike stop(), this also drains an already-dispatched wake callback.
+    // ESP_OK includes an inactive timer. Every other result retains custody.
+    if(esp_timer_stop_blocking(workerTimer,budget)!=ESP_OK)return false;
+#else
+    const auto stopped=esp_timer_stop(workerTimer);
+    if(stopped!=ESP_OK && stopped!=ESP_ERR_INVALID_STATE)return false;
+#endif
+  }
+  if(workerTask && !workerJoined){
+    workerWake(nullptr);
+    const TickType_t elapsed=xTaskGetTickCount()-started;
+    const TickType_t remaining=elapsed<budget?budget-elapsed:0;
+    if(xSemaphoreTake(workerDone,remaining)!=pdTRUE)return false;
+    workerJoined=true;
+  }
+  // Retain the task identity, completion latch, callback and argument until
+  // timer deletion succeeds. A retry must never wait on the consumed semaphore.
+  if(workerTimer){
+    if(esp_timer_delete(workerTimer)!=ESP_OK)return false;
+    workerTimer=nullptr;
+  }
+  if(workerTask){
+    portENTER_CRITICAL(&workerMux);TaskHandle_t done=workerTask;workerTask=nullptr;portEXIT_CRITICAL(&workerMux);
+    vTaskDelete(done);
+  }
+  if(workerDone){vSemaphoreDelete(workerDone);workerDone=nullptr;}
+  workerTick=nullptr;workerArgument=nullptr;workerJoined=false;return true;
 }
 inline bool workerStart(uint32_t interval,risc_radio_iq_tick_v1 tick,void*argument){
-  if(!phyPrepared||workerTask||!tick||interval<1000||interval>100000)return false;
+  if(!phyPrepared||workerOwned()||!tick||interval<1000||interval>100000)return false;
   workerDone=xSemaphoreCreateBinary();if(!workerDone)return false;
   esp_timer_create_args_t config{};config.callback=workerWake;config.name="iq-period";
   if(esp_timer_create(&config,&workerTimer)!=ESP_OK){vSemaphoreDelete(workerDone);workerDone=nullptr;return false;}
-  workerTick=tick;workerArgument=argument;__atomic_store_n(&workerStopping,false,__ATOMIC_RELEASE);
-  if(xTaskCreatePinnedToCore(workerRun,"iq-envelope",4096,nullptr,3,&workerTask,0)!=pdPASS){esp_timer_delete(workerTimer);workerTimer=nullptr;vSemaphoreDelete(workerDone);workerDone=nullptr;workerTask=nullptr;return false;}
+  workerTick=tick;workerArgument=argument;workerJoined=false;__atomic_store_n(&workerStopping,false,__ATOMIC_RELEASE);
+  if(xTaskCreatePinnedToCore(workerRun,"iq-envelope",4096,nullptr,3,&workerTask,0)!=pdPASS){
+    // Even a timer without a task can retain cleanup ownership on SDK failure.
+    workerTask=nullptr;return !workerStop();
+  }
   if(esp_timer_start_periodic(workerTimer,interval)!=ESP_OK){
-    // A failed join still owns callback code and its lease. Report ownership so
-    // provider stop/quiesce must retry the join before releasing/unmapping.
+    // A failed stop, join or delete still owns callback code and its lease.
+    // Report custody so provider stop/quiesce must retry before unmapping.
     return !workerStop();
   }
   return true;
@@ -137,10 +173,14 @@ inline bool workerStart(uint32_t interval,risc_radio_iq_tick_v1 tick,void*argume
 inline bool cleanup(){
   // Retain every SDK reference while capture is unparked. The provider restores
   // the calibrated state before release; native cleanup must not reset it early.
-  if(workerTask||!ready())return false;
+  if(workerOwned()||!ready())return false;
   if(!phyPrepared)return true;
   trace("RTE_IQ stage=phy-disable");
+#if RISC_NATIVE_ESP_IDF
+  esp_phy_disable(PHY_MODEM_WIFI);
+#else
   esp_phy_disable();
+#endif
   trace("RTE_IQ stage=power-off");
   esp_wifi_bt_power_domain_off();
   esp_phy_modem_deinit();

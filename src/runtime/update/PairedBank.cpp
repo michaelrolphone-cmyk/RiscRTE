@@ -125,7 +125,7 @@ int32_t Transaction::step(uint64_t token,risc_bank_status_v1* out){
   const bool copying=state_==RISC_BANK_COPY_FIRMWARE || state_==RISC_BANK_COPY_STORE;
   const unsigned region=(state_==RISC_BANK_COPY_STORE || state_==RISC_BANK_VERIFY_STORE || state_==RISC_BANK_VERIFY_CLONE || state_==RISC_BANK_REVERIFY_STORE)?1:0;
   const uint32_t total=region?StoreBytes:targetRecord_.firmwareSize;
-  const uint32_t n=std::min(RISC_BANK_CHUNK_MAX,total-offset_);
+  const uint32_t n=std::min<uint32_t>(RISC_BANK_CHUNK_MAX,total-offset_);
   if(!io_.read(io_.context,copying?active_:target_,region,offset_,buffer_,n))return fail(RISC_BANK_IO);
   if(copying){if(!writeRaw(region,offset_,buffer_,n))return fail(RISC_BANK_IO);}
   else if(!io_.hashAdd(io_.context,buffer_,n))return fail(RISC_BANK_IO);

@@ -11,6 +11,21 @@ class RadioIqTarget(unittest.TestCase):
   self.assertIn('-DRISC_ENABLE_RADIO_IQ=1',c['env:esp32s3-16mb-appdata-iq']['build_flags'])
   self.assertIn('radio_iq_build.py',c['env:esp32s3-16mb-appdata-iq']['extra_scripts'])
   self.assertEqual(c['env:esp32s3-16mb-appdata-iq']['build_flags'].count('RISC_TARGET'),1)
+class RadioIqRomEvidence(unittest.TestCase):
+ def test_unknown_rom_fails_closed(self):
+  for data in (b'',b'ESP32-S3',bytes(64)):
+   with self.assertRaisesRegex(ValueError,'ROM ELF checksum'):proof.prove_rom(data)
+ @unittest.skipUnless(os.environ.get('RADIO_IQ_ROM_ELF'),'requires the official SDK-pinned ROM ELF')
+ def test_exact_official_call_stubs(self):
+  data=pathlib.Path(os.environ['RADIO_IQ_ROM_ELF']).read_bytes()
+  result=proof.prove_rom(data)
+  self.assertEqual(result['required_linker_aliases'],proof.ROM_ENTRIES)
+  self.assertEqual(result['call_stub_symbols']['__call_rom_i2c_readReg'],0x40005d48)
+  self.assertEqual(result['call_stub_symbols']['__call_rom_i2c_writeReg'],0x40005d60)
+  self.assertEqual(result['function_body_addresses']['rom_i2c_readReg'],0x400357f8)
+  self.assertEqual(result['function_body_addresses']['rom_i2c_writeReg'],0x40035880)
+  for changed in (data[:-1],data+b'changed',bytes([data[0]^1])+data[1:]):
+   with self.assertRaisesRegex(ValueError,'ROM ELF checksum'):proof.prove_rom(changed)
 @unittest.skipUnless(os.environ.get('RADIO_IQ_ELF'),'requires the actual linked IQ target ELF')
 class RadioIqElf(unittest.TestCase):
  def setUp(self):

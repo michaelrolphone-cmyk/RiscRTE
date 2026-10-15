@@ -6,6 +6,9 @@
 #include <cstring>
 #include <memory>
 #include <new>
+#if defined(ESP_PLATFORM)
+#include "ports/esp32s3/NativeInternalAtomics.h"
+#endif
 
 // Byte-ring copying and provider rights follow Reader's StreamRuntime and
 // NativeStreamBridge.p4.inc. This bounded host retains no backend/ELF callbacks,
@@ -54,13 +57,23 @@ struct Registry {
   void (*fenceHook)(Testing::FenceCheckpoint, uint64_t, uint32_t) = nullptr;
 #endif
 };
+#if defined(ESP_PLATFORM)
+// IDF6's PSRAM workaround makes global always-lock-free false. Authority
+// storage is explicitly internal; the SDK dispatches these addresses to its
+// hardware atomic helpers. Queue payloads and lazy metadata need no atomics.
+RISC_NATIVE_ATOMIC_DRAM Registry registry;
+bool registryPlaced() { return RiscCpu::NativeInternalAtomics::internal(registry); }
+#else
 Registry registry;
 static_assert(ATOMIC_INT_LOCK_FREE == 2, "Provider authority requires lock-free 32-bit atomics");
+bool registryPlaced() { return true; }
+#endif
 struct Lock {
-  bool held = !registry.mutex.test_and_set(std::memory_order_acquire);
+  bool held = registryPlaced() && !registry.mutex.test_and_set(std::memory_order_acquire);
   ~Lock() { if (held) registry.mutex.clear(std::memory_order_release); }
 };
 Context* contextSlot(uint64_t context) {
+  if (!registryPlaced()) return nullptr;
   const uint32_t slot = static_cast<uint32_t>(context);
   const uint64_t generation = context >> 32;
   if (!slot || slot > registry.contexts.size() || !generation ||
@@ -492,8 +505,8 @@ bool queueSnapshot(uint64_t context, uint32_t endpoint, risc_stream_client_info_
   *closed = q->closed;
   return true;
 }
-bool lockRegistry() { return !registry.mutex.test_and_set(std::memory_order_acquire); }
-void unlockRegistry() { registry.mutex.clear(std::memory_order_release); }
+bool lockRegistry() { return registryPlaced() && !registry.mutex.test_and_set(std::memory_order_acquire); }
+void unlockRegistry() { if (registryPlaced()) registry.mutex.clear(std::memory_order_release); }
 size_t allocatedBytes() { Lock lock; return lock.held ? registry.allocated : SIZE_MAX; }
 bool metadataAllocated() { Lock lock; return lock.held && bool(registry.queues); }
 void failNextAllocation() { Lock lock; if (lock.held) registry.failAllocation = true; }

@@ -15,8 +15,13 @@ extern const uint32_t _rom_chip_id=CHIP_ESP32S3;
 extern const int32_t _rom_eco_version=0;
 void esp_phy_modem_init(void){assert(false);}
 void esp_wifi_bt_power_domain_on(void){assert(false);}
+#if RISC_NATIVE_ESP_IDF
+void esp_phy_enable(esp_phy_modem_t){assert(false);}
+void esp_phy_disable(esp_phy_modem_t){assert(false);}
+#else
 void esp_phy_enable(void){assert(false);}
 void esp_phy_disable(void){assert(false);}
+#endif
 void esp_wifi_bt_power_domain_off(void){assert(false);}
 void esp_phy_modem_deinit(void){assert(false);}
 }
@@ -34,6 +39,9 @@ unsigned captures=0,limit=0,delays=0,taskDeletes=0,timerDeletes=0,semaphoreDelet
 uint64_t captureUs=0;
 bool timerRunning=false,semaphoreGiven=false,inCallback=false,runOnJoin=false,taskFinished=false;
 bool failSemaphore=false,failTimer=false,failTask=false,failStart=false,stopDuringDelay=false;
+int stopResult=ESP_OK,deleteResult=ESP_OK;
+unsigned stopDelayTicks=0,stopCalls=0,deleteAttempts=0,joinCalls=0;
+TickType_t lastStopBudget=0,lastJoinBudget=0;
 std::vector<uint64_t> stamps;
 int argument=42;
 void advance(uint64_t us,bool blocked){
@@ -61,12 +69,14 @@ void capture(void* arg,uint64_t stamp){
 void reset(){
  using namespace RiscCpu::NativeRadioIq;
  assert(!workerTask && !workerTimer && !workerDone);
- phyPrepared=true;workerTick=nullptr;workerArgument=nullptr;
+ phyPrepared=true;workerTick=nullptr;workerArgument=nullptr;assert(!workerJoined);
  taskEntry=nullptr;timerCallback=nullptr;notifications=maxTaken=0;
  time=period=nextTimer=busy=maxBusy=idle=0;
  captures=limit=delays=taskDeletes=timerDeletes=semaphoreDeletes=joinTimeouts=0;
  captureUs=0;timerRunning=semaphoreGiven=inCallback=runOnJoin=taskFinished=false;
  failSemaphore=failTimer=failTask=failStart=stopDuringDelay=false;stamps.clear();
+ stopResult=deleteResult=ESP_OK;stopDelayTicks=stopCalls=deleteAttempts=joinCalls=0;
+ lastStopBudget=lastJoinBudget=0;
 }
 void assertReleased(){
  using namespace RiscCpu::NativeRadioIq;
@@ -87,8 +97,25 @@ int esp_timer_start_periodic(esp_timer_handle_t timer,uint64_t period){
  assert(timer==&Model::timerStorage);if(Model::failStart)return -1;
  Model::period=period;Model::nextTimer=Model::time+period;Model::timerRunning=true;return ESP_OK;
 }
-int esp_timer_stop(esp_timer_handle_t timer){assert(timer==&Model::timerStorage);Model::timerRunning=false;return ESP_OK;}
-int esp_timer_delete(esp_timer_handle_t timer){assert(timer==&Model::timerStorage);++Model::timerDeletes;return ESP_OK;}
+int esp_timer_stop(esp_timer_handle_t timer){
+ using namespace Model;assert(timer==&timerStorage);++stopCalls;
+ if(stopResult!=ESP_OK)return stopResult;
+ const bool wasRunning=timerRunning;timerRunning=false;return wasRunning?ESP_OK:ESP_ERR_INVALID_STATE;
+}
+#if RISC_NATIVE_ESP_IDF
+int esp_timer_stop_blocking(esp_timer_handle_t timer,uint32_t timeout){
+ using namespace Model;assert(timer==&timerStorage);++stopCalls;lastStopBudget=timeout;
+ assert(timeout==pdMS_TO_TICKS(100) && stopDelayTicks<=timeout);
+ if(stopResult!=ESP_ERR_INVALID_ARG && stopResult!=ESP_ERR_INVALID_STATE)timerRunning=false;
+ time+=stopDelayTicks*TickUs;return stopResult;
+}
+#endif
+int esp_timer_delete(esp_timer_handle_t timer){
+ using namespace Model;assert(timer==&timerStorage && !timerRunning);++deleteAttempts;
+ if(deleteResult!=ESP_OK)return deleteResult;
+ ++timerDeletes;return ESP_OK;
+}
+TickType_t xTaskGetTickCount(){return static_cast<TickType_t>(Model::time/Model::TickUs);}
 void xTaskNotifyGive(TaskHandle_t task){assert(task==&Model::taskStorage);++Model::notifications;}
 uint32_t ulTaskNotifyTake(BaseType_t clear,TickType_t ticks){
  using namespace Model;
@@ -113,7 +140,8 @@ BaseType_t xTaskCreatePinnedToCore(void(*entry)(void*),const char* name,uint32_t
 SemaphoreHandle_t xSemaphoreCreateBinary(){return Model::failSemaphore?nullptr:&Model::semaphoreStorage;}
 BaseType_t xSemaphoreGive(SemaphoreHandle_t semaphore){assert(semaphore==&Model::semaphoreStorage && !Model::inCallback);Model::semaphoreGiven=Model::taskFinished=true;return pdTRUE;}
 BaseType_t xSemaphoreTake(SemaphoreHandle_t semaphore,TickType_t timeout){
- assert(semaphore==&Model::semaphoreStorage && timeout==pdMS_TO_TICKS(100));
+ assert(semaphore==&Model::semaphoreStorage && timeout<=pdMS_TO_TICKS(100));
+ ++Model::joinCalls;Model::lastJoinBudget=timeout;
  if(!Model::semaphoreGiven && Model::runOnJoin)Model::run();
  if(Model::semaphoreGiven){Model::semaphoreGiven=false;return pdTRUE;}
  ++Model::joinTimeouts;return 0;
@@ -152,7 +180,50 @@ int main(int argc,char** argv){
  reset();failStart=true;runOnJoin=true;assert(!workerStart(1000,capture,&argument));assertReleased();assert(!captures);
  reset();failStart=true;assert(workerStart(1000,capture,&argument));assert(workerTask && workerTimer && workerDone && workerStopping && !cleanup());
  assert(!workerStart(1000,capture,&argument));runOnJoin=true;assert(workerStop());assertReleased();assert(!captures);
+ // Timer stop errors retain every handle and callback, even when timeout has
+ // already disarmed the timer. Retrying an inactive timer is legal in IDF6.
+ for(int error:{ESP_ERR_TIMEOUT,ESP_ERR_INVALID_ARG,ESP_ERR_NOT_FINISHED}){
+  reset();runOnJoin=true;assert(workerStart(1000,capture,&argument));
+  const auto task=workerTask;const auto timer=workerTimer;const auto done=workerDone;
+  stopResult=error;assert(!workerStop());
+  assert(workerTask==task && workerTimer==timer && workerDone==done && workerTick==capture && workerArgument==&argument);
+  assert(!taskDeletes && !timerDeletes && !semaphoreDeletes && !joinCalls && !cleanup());
+  assert(!workerStart(1000,capture,&argument));stopResult=ESP_OK;
+  assert(workerStop());assertReleased();assert(!captures);
+ }
+ // A consumed join must stay latched across repeated failed timer deletions.
+ reset();runOnJoin=true;assert(workerStart(1000,capture,&argument));
+ deleteResult=ESP_ERR_INVALID_STATE;assert(!workerStop());
+ assert(workerJoined && workerTask && workerTimer && workerDone && workerTick==capture && workerArgument==&argument && !cleanup());
+ assert(joinCalls==1 && !semaphoreGiven && !taskDeletes && !timerDeletes && !semaphoreDeletes);
+ assert(!workerStop() && joinCalls==1 && deleteAttempts==2);
+ deleteResult=ESP_OK;assert(workerStop() && joinCalls==1);assertReleased();
+ // Task-create rollback owns the callback lease until its timer is deleted,
+ // although no task ever existed. Reporting ownership makes broker stop retry.
+ reset();failTask=true;deleteResult=ESP_ERR_INVALID_STATE;
+ assert(workerStart(1000,capture,&argument));
+ assert(!workerTask && workerTimer && workerDone && workerTick==capture && workerArgument==&argument && !cleanup());
+ assert(!workerStop() && !workerStart(1000,capture,&argument));
+ deleteResult=ESP_OK;assert(workerStop());
+ assert(!workerOwned() && !workerJoined && !taskDeletes && timerDeletes==1 && semaphoreDeletes==1 && !joinCalls);
+ assert(workerStop() && timerDeletes==1 && semaphoreDeletes==1);
+#if RISC_NATIVE_ESP_IDF
+ // A timer API failure on rollback must be retained even before task creation.
+ reset();failTask=true;stopResult=ESP_ERR_INVALID_STATE;
+ assert(workerStart(1000,capture,&argument) && workerTimer && workerDone && !workerTask);
+ assert(!workerStop() && !cleanup());stopResult=ESP_OK;assert(workerStop() && !workerOwned());
+ // Timer drainage and task join share one deadline, including tick wraparound.
+ for(unsigned spent:{0u,70u,100u}){
+  reset();time=(uint64_t(UINT32_MAX)-30)*TickUs;runOnJoin=true;stopDelayTicks=spent;
+  assert(workerStart(1000,capture,&argument));assert(workerStop());
+  assert(lastStopBudget==100 && lastJoinBudget==100-spent);assertReleased();
+ }
+ reset();runOnJoin=true;stopDelayTicks=100;stopResult=ESP_ERR_TIMEOUT;
+ assert(workerStart(1000,capture,&argument));const auto started=xTaskGetTickCount();
+ assert(!workerStop() && xTaskGetTickCount()-started==100 && !joinCalls && workerOwned());
+ stopResult=ESP_OK;stopDelayTicks=0;assert(workerStop());assertReleased();
+#endif
  // No late timer notification may target the destroyed task.
  const auto priorNotifications=notifications;workerWake(nullptr);assert(notifications==priorNotifications);
- puts("Native IQ worker: overload idle fairness, real timestamps, timer pacing, stop/join retention, restart and failure rollback PASS");
+ puts("Native IQ worker: overload idle fairness, real timestamps, timer pacing, bounded timer drainage, checked delete/join retention, restart and failure rollback PASS");
 }

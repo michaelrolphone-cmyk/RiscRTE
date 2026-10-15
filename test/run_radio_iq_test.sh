@@ -12,10 +12,11 @@ for name in port binding; do
  "${CXX:-c++}" "${flags[@]}" "${san[@]}" -rdynamic "${includes[@]}" "${sources[@]}" "$repo/test/radio_iq_${name}_test.cpp" -ldl -o "$build/$name"
  "$build/$name" "$build"
 done
-for variant in normal chip eco dram iram; do
+for variant in normal native6 chip eco dram iram; do
  extra=()
  case "$variant" in
   normal) extra=(-DIQ_PORT_LIFECYCLE -DRISC_SLEEP_DIAGNOSTICS=1 "${includes[@]}" "${sources[@]}" -ldl);;
+  native6) extra=(-DRISC_NATIVE_ESP_IDF=1 -DIQ_PORT_LIFECYCLE -DRISC_SLEEP_DIAGNOSTICS=1 "${includes[@]}" "${sources[@]}" -ldl);;
   chip) extra=(-DIQ_ROM_CHIP=5);;
   eco) extra=(-DIQ_ROM_ECO=-1);;
   dram) extra=(-DIQ_BAD_LAYOUT -Wl,--defsym,_heap_start=0x3FCB0004);;

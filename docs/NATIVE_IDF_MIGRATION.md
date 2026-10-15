@@ -87,3 +87,24 @@ libc layout-sensitive symbols, but that fact does not change the loader ABI.
 The SDK's PSRAM atomic workaround remains enabled. Native lock-free gates are
 being qualified against the SDK's internal-SRAM hardware helper path; globally
 turning off the workaround is not an acceptable migration shortcut.
+
+## First linked generic target (2026-10-15)
+
+The native `idf/` target now compiles and links against the exact SDK/GCC pins.
+Its first local generic binary is 1,406,592 bytes in the 3 MiB app slot.
+`test/native_firmware_idf6_test.py` checks the linked stream authority registry
+in internal DRAM, the legacy yield bridge in IRAM, the retained time32 adapter,
+and absence of Arduino runtime symbols/components. Standalone ArduinoJson is
+still a header-only JSON dependency; its `RamString` is not Arduino `String`.
+
+The private v1 yield bridge preserves IDF4's variadic `argc`/`int` behavior
+using IDF6's same ISR trace/switch sequence. Host boundary tests and the actual
+SDK object verify it has only `_frxt_setup_switch` as an undefined dependency.
+This is not a claim that old SDK-private driver layouts are interchangeable.
+
+Generic linking and affected-object tests do not qualify a product release.
+Feature-enabled storage, SDK-cohort provider admission, device profiles,
+rebuilt packages, exact final-image proofs and physical tests remain gates.
+CI supplies the immutable GitHub checkout SHA to CMake because the official
+container's build shell and checkout can have different owners; Git ownership
+protections are not modified. Local builds still obtain identity from Git.

@@ -32,18 +32,23 @@ jobs:
           bash test/run_native_sleep_diagnostics_idf6_test.sh
           bash test/run_native_sha256_test.sh
           bash test/run_elf_time32_test.sh
+          bash test/run_elf_yield_compat_test.sh
           bash test/native_nvs_shim/run_test.sh
           bash test/run_native_internal_atomics_test.sh
           python test/run_native_settings_startup_entropy_test.py
           bash test/run_native_http_idf6_test.sh
           bash test/run_native_tls_memory_idf6_test.sh
           bash test/run_image_pressure_realloc_test.sh
+          bash test/run_provider_queue_native_placement_test.sh
+          bash test/run_native_iq_worker_test.sh
+          bash test/run_provider_queue_host_test.sh
+          bash test/run_provider_queue_retained_fence_test.sh
       - name: Build native candidate with one compiler job
         shell: bash
         run: |
           . "$IDF_PATH/export.sh"
           cd idf
-          idf.py reconfigure
+          idf.py -D RISC_SOURCE_SHA="$GITHUB_SHA" reconfigure
           cmake --build build -- -j1
       - name: Qualify native target custody and placement
         shell: bash
@@ -52,12 +57,12 @@ jobs:
           python test/native_internal_atomics_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/atomics
           python test/native_http_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/http
           python test/native_failure_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/failure
+          python test/native_iq_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --rom-elf "$ESP_ROM_ELF_DIR/esp32s3_rev0_rom.elf" --output idf/build/qualification/iq
       - name: Reject Arduino runtime linkage
         shell: bash
         run: |
           . "$IDF_PATH/export.sh"
-          ! xtensa-esp-elf-nm -C idf/build/riscrte_native.elf | grep -E 'initArduino|initVariant|loopTask|HardwareSerial|HWCDC::|String::'
-          test -s idf/build/riscrte_native.bin
+          python test/native_firmware_idf6_test.py --build idf/build
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -17,8 +17,19 @@ target_compile_definitions(${COMPONENT_LIB} PUBLIC RISC_NATIVE_ESP_IDF=1
 # Both the native startup and the legacy qualification route retain one-shot,
 # no-erase NVS initialization. No automatic migration or format is introduced.
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=nvs_flash_init")
-execute_process(COMMAND git rev-parse HEAD WORKING_DIRECTORY "${root}"
-    OUTPUT_VARIABLE source_sha OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+if(DEFINED RISC_SOURCE_SHA)
+    # GitHub's container checkout can have a different owner from IDF's shell.
+    # Its immutable checkout SHA is supplied by the workflow, without changing
+    # Git's ownership protections or relying on a user-wide safe.directory.
+    set(source_sha "${RISC_SOURCE_SHA}")
+else()
+    execute_process(COMMAND git rev-parse HEAD WORKING_DIRECTORY "${root}"
+        OUTPUT_VARIABLE source_sha OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+endif()
+string(LENGTH "${source_sha}" source_sha_length)
+if(NOT source_sha_length EQUAL 40 OR NOT source_sha MATCHES "^[0-9a-f]+$")
+    message(FATAL_ERROR "Runtime source identity must be an exact Git commit SHA")
+endif()
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/RiscBuildIdentity.h"
     "#define RISC_BUILD_SOURCE_SHA \"${source_sha}\"\n#define RISC_BUILD_IDENTITY \"RTE_SOURCE=${source_sha}\"\n#define RISC_BUILD_VERSION \"0.3.5-idf6-candidate\"\n")
 target_include_directories(${COMPONENT_LIB} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")

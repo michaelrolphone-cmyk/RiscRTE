@@ -62,7 +62,9 @@ def main():
                 if label in expected:
                     section=elf.get_section(s['st_shndx'])
                     assert section.name.startswith('.dram'),(label,section.name)
-                    assert s['st_size'] in (1,4,44),(label,s['st_size'])
+                    if label=='RuntimeStreams::(anonymous namespace)::registry':
+                        assert s['st_size']>=28 and s['st_size']%4==0,(label,s['st_size'])
+                    else:assert s['st_size'] in (1,4,44),(label,s['st_size'])
                     if s['st_size']!=1:assert s['st_value']%4==0
                     found[label]={'section':section.name,'size':s['st_size']}
                 if s['st_shndx']=='SHN_UNDEF' and s.name.startswith(('__atomic','__sync')):
@@ -78,6 +80,8 @@ def main():
         inspect(path,expected)
     entropy=compile_one(entropy_entry,'entropy',['-DRISC_NATIVE_SETTINGS_PORT_SELECTED=1','-DRISC_NATIVE_SETTINGS_BACKEND=1','-DRISC_NATIVE_SETTINGS_STARTUP_ENTROPY=1'])
     inspect(entropy,['RiscCpu::NativeSettingsStartupEntropy::(anonymous namespace)::state'])
+    streams=compile_one(entry('/ProviderQueueHost.cpp'),'stream-registry')
+    inspect(streams,['RuntimeStreams::(anonymous namespace)::registry'])
     sdk=compile_one(entry('/esp_libc/src/stdatomic.c'),'sdk-dispatch')
     hardware=compile_one(entry('/esp_libc/src/port/xtensa/stdatomic_s32c1i.c'),'sdk-hardware')
     dispatch=subprocess.check_output([objdump,'-dr',str(sdk)],text=True)

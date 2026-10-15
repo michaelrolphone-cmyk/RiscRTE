@@ -21,9 +21,10 @@ int test_wifi_status=ESP_ERR_WIFI_NOT_INIT;
 static unsigned phy_enables=0,phy_disables=0,modem_refs=0,power_refs=0,phy_refs=0;
 static unsigned resets=0,calibrations=0,wakeups=0;
 static bool powered=false,calibrated=false,digital_valid=false,backup=false;
+static bool fail_after_power_off=false;
 static uint32_t run=0,banks=0,reads=0;
 static std::vector<std::string> calls,logs;
-// Model IDF 4.4.7's distinct references and persistent calibration flag. This
+// Model the pinned SDKs' distinct ownership and persistent calibration flag. This
 // deliberately does not make esp_phy_enable implicitly power the modem: the old
 // adapter fails here after a normal BT controller disable/deinit lifecycle.
 extern "C" void esp_phy_modem_init(void){calls.push_back("modem-init");++modem_refs;}
@@ -31,13 +32,25 @@ extern "C" void esp_wifi_bt_power_domain_on(void){
  calls.push_back("power-on");assert(modem_refs && !phy_refs);
  if(!power_refs++){powered=true;digital_valid=false;++resets;}
 }
+#if RISC_NATIVE_ESP_IDF
+static esp_phy_modem_t expected_modem=PHY_MODEM_WIFI;
+static unsigned phy_flags=0;
+extern "C" void esp_phy_enable(esp_phy_modem_t modem){
+ assert(modem==expected_modem && !(phy_flags&modem));phy_flags|=modem;
+#else
 extern "C" void esp_phy_enable(void){
+#endif
  calls.push_back("phy-enable");assert(powered && power_refs && modem_refs && !phy_refs);
  ++phy_refs;++phy_enables;
  if(calibrated)++wakeups;else{calibrated=true;++calibrations;}
  digital_valid=true;
 }
+#if RISC_NATIVE_ESP_IDF
+extern "C" void esp_phy_disable(esp_phy_modem_t modem){
+ assert(modem==expected_modem && phy_flags==unsigned(modem));phy_flags&=~modem;
+#else
 extern "C" void esp_phy_disable(void){
+#endif
  calls.push_back("phy-disable");assert(powered && modem_refs && phy_refs==1 && digital_valid);
  assert(!(run&0x80000000u) && !(banks&0xfu));
  --phy_refs;++phy_disables;backup=true;
@@ -45,6 +58,7 @@ extern "C" void esp_phy_disable(void){
 extern "C" void esp_wifi_bt_power_domain_off(void){
  calls.push_back("power-off");assert(power_refs && !phy_refs);
  if(!--power_refs){powered=false;digital_valid=false;}
+ if(fail_after_power_off)test_wifi_status=-1;
 }
 extern "C" void esp_phy_modem_deinit(void){
  calls.push_back("modem-deinit");assert(modem_refs && !phy_refs && !power_refs);
@@ -56,8 +70,14 @@ namespace RiscDiagnostics { void line(const char* line){logs.emplace_back(line);
 uint32_t iq_reg_read(uint32_t address){++reads;if(address==0x60033D5C)return run;assert(address==0x600C101C);return banks;}
 static void released(){assert(!modem_refs && !power_refs && !phy_refs && !powered && !backup);}
 static void bluetooth_cycle(){
- esp_phy_modem_init();esp_wifi_bt_power_domain_on();esp_phy_enable();
- esp_phy_disable();esp_wifi_bt_power_domain_off();esp_phy_modem_deinit();released();
+ esp_phy_modem_init();esp_wifi_bt_power_domain_on();
+#if RISC_NATIVE_ESP_IDF
+ expected_modem=PHY_MODEM_BT;esp_phy_enable(PHY_MODEM_BT);esp_phy_disable(PHY_MODEM_BT);
+ assert(!phy_flags);expected_modem=PHY_MODEM_WIFI;
+#else
+ esp_phy_enable();esp_phy_disable();
+#endif
+ esp_wifi_bt_power_domain_off();esp_phy_modem_deinit();released();
 }
 int main(){
  using namespace RiscCpu::NativeRadioIq;
@@ -71,6 +91,17 @@ int main(){
   calls.clear();assert(prepare() && phyPrepared && digital_valid && !prepare());
   assert((calls==std::vector<std::string>{"modem-init","power-on","phy-enable"}));
   const auto before=calls.size();
+  // Once prepared, any lost admission proof retains the matching PHY bit,
+  // modem backup and powered domain; no void SDK release is invented.
+  for(int error:{0,-1}){
+   test_wifi_status=error;const auto priorReads=reads;
+   assert(!cleanup() && phyPrepared && powered && phy_refs==1 && modem_refs==1 && power_refs==1);
+   assert(calls.size()==before && reads==priorReads);
+  }
+  test_wifi_status=ESP_ERR_WIFI_NOT_INIT;
+  test_chip.model=5;const auto priorReads=reads;
+  assert(!cleanup() && phyPrepared && calls.size()==before && reads==priorReads);
+  test_chip.model=CHIP_ESP32S3;
   run=0x80000000u;assert(!cleanup() && phyPrepared && calls.size()==before);run=0;
   for(unsigned bit=0;bit<4;++bit){banks=1u<<bit;assert(!cleanup() && phyPrepared && calls.size()==before);}
   banks=0;assert(cleanup() && !phyPrepared);released();
@@ -81,6 +112,13 @@ int main(){
 #if RISC_SLEEP_DIAGNOSTICS
  assert((logs==std::vector<std::string>{"RTE_IQ stage=modem-init","RTE_IQ stage=power-on","RTE_IQ stage=phy-enable","RTE_IQ stage=prepared","RTE_IQ stage=phy-disable","RTE_IQ stage=power-off","RTE_IQ stage=released"}));
 #endif
+ // A failed post-release proof retains the broker lease, but the completed
+ // void SDK releases must not be repeated on the next cleanup attempt.
+ assert(prepare());fail_after_power_off=true;
+ assert(!cleanup() && !phyPrepared);released();const auto releasedCalls=calls.size();
+ assert(!cleanup() && calls.size()==releasedCalls);
+ fail_after_power_off=false;test_wifi_status=ESP_ERR_WIFI_NOT_INIT;
+ assert(cleanup() && calls.size()==releasedCalls);
  auto refused=[&](){const auto before=calls.size();assert(!prepare() && !phyPrepared && calls.size()==before);released();};
  test_wifi_status=0;reads=0;assert(!ready() && !reads);refused();test_wifi_status=-1;assert(!ready() && !reads);refused();test_wifi_status=ESP_ERR_WIFI_NOT_INIT;
  run=0x80000000;assert(!ready());refused();run=0;
