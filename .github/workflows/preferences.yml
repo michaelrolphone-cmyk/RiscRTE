@@ -1,0 +1,29 @@
+name: Generic preference provider qualification
+on:
+  push:
+    branches: [work/unified-default-capabilities]
+  pull_request:
+    paths:
+      - 'src/bootstrap/**'
+      - 'sdk/app/RiscPreferenceStoreV1.h'
+      - 'test/*preference*'
+      - '.github/workflows/preferences.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_preference_store_runtime_test.sh
+      - run: bash test/run_preference_store_cohort_test.sh
+      - run: PREFERENCE_STORE=1 NATIVE_SETTINGS_LIFECYCLE=1 bash test/run_atomic_key_value_runtime_test.sh
+      - run: bash test/run_atomic_key_value_cohort_test.sh

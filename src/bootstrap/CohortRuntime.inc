@@ -185,8 +185,15 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
     }
   }
   if(!validateAppDataExportCohort(candidate,delegations,delegationCount,exactExportMigration))return false;
-  auto persistent=[](const AppGrantPolicy& g){return g.keyValue || g.driver==AppDataDriver;};
-  auto same=[](const AppGrantPolicy& a,const AppGrantPolicy& b){return a.api==b.api && a.instance==b.instance && !strcmp(a.capability,b.capability);};
+  auto persistent=[](const AppGrantPolicy& g){return keyValuePolicy(g) || g.driver==AppDataDriver;};
+  auto same=[](const AppGrantPolicy& a,const AppGrantPolicy& b){
+#if RISC_RUNTIME_PREFERENCE_STORE
+    // A facade preserves the existing opaque namespace for the same app ID.
+    // No new owner, key migration, or backend authority is inferred here.
+    if((a.driver==PreferenceStoreDriver || b.driver==PreferenceStoreDriver) && keyValuePolicy(a) && keyValuePolicy(b))return a.instance==b.instance;
+#endif
+    return a.api==b.api && a.instance==b.instance && !strcmp(a.capability,b.capability);
+  };
   // Keep every existing persisted app namespace attached to the same identity.
   // Removing an owner would lose the only durable anti-reassignment record.
   for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(persistent(policies_[p].grants[g])){
@@ -198,7 +205,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
     if(!found)return false;
   }
   auto oldKvUsed=[&](uint32_t ns){
-    for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(policies_[p].grants[g].keyValue && policies_[p].grants[g].instance==ns)return true;
+    for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(keyValuePolicy(policies_[p].grants[g]) && policies_[p].grants[g].instance==ns)return true;
     for(size_t p=0;p<driverCount_;++p)for(size_t g=0;g<providerStorage_[p].count;++g)if(providerStorage_[p].keys[g].nameSpace==ns)return true;
     return false;
   };
@@ -211,13 +218,13 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
   };
   for(size_t p=0;p<candidate.policyCount_;++p)for(size_t g=0;g<candidate.policies_[p].count;++g){
     const auto& grant=candidate.policies_[p].grants[g];if(!persistent(grant))continue;
-    bool used=grant.keyValue?oldKvUsed(uint32_t(grant.instance)):oldFilesUsed(uint32_t(grant.instance)),owned=false;
+    bool used=keyValuePolicy(grant)?oldKvUsed(uint32_t(grant.instance)):oldFilesUsed(uint32_t(grant.instance)),owned=false;
     for(size_t q=0;q<policyCount_;++q)for(size_t h=0;h<policies_[q].count;++h){const auto& previous=policies_[q].grants[h];
-      if(!persistent(previous) || strcmp(previous.capability,grant.capability) || previous.instance!=grant.instance)continue;
+      if(!persistent(previous) || (!(keyValuePolicy(previous) && keyValuePolicy(grant)) && strcmp(previous.capability,grant.capability)) || previous.instance!=grant.instance)continue;
       used=true;if(same(previous,grant) && !strcmp(policies_[q].id,candidate.policies_[p].id))owned=true;
     }
     if(used && !owned){
-      if(exactExportMigration && grant.keyValue) {
+      if(exactExportMigration && keyValuePolicy(grant)) {
         size_t selected=nativeV2->sharedKeyValueCount;
         for(size_t i=0;i<nativeV2->sharedKeyValueCount;++i) {
           const auto& entry=nativeV2->sharedKeyValue[i];
@@ -229,7 +236,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
           for(size_t q=0;q<policyCount_;++q) {
             bool owns=false;
             for(size_t h=0;h<policies_[q].count;++h)
-              owns=owns || (policies_[q].grants[h].keyValue && same(policies_[q].grants[h],grant));
+              owns=owns || (keyValuePolicy(policies_[q].grants[h]) && same(policies_[q].grants[h],grant));
             if(!owns)continue;
             size_t match=entry.previousOwnerCount;
             for(size_t j=0;j<entry.previousOwnerCount;++j) {
@@ -248,13 +255,13 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
         if(selected==nativeV2->sharedKeyValueCount)return false;
         nativeKvConsumed[selected]=true;continue;
       }
-      if(!migrating || !grant.keyValue || policyCount_<2)return false;
+      if(!migrating || !keyValuePolicy(grant) || policyCount_<2)return false;
       const char* id=candidate.policies_[p].id;
       for(size_t q=0;q<policyCount_;++q){
         if(!strcmp(policies_[q].id,id))return false; // Existing-app expansion is never a migration.
         bool universal=false;
         for(size_t h=0;h<policies_[q].count;++h)
-          if(policies_[q].grants[h].keyValue && same(policies_[q].grants[h],grant))universal=true;
+          if(keyValuePolicy(policies_[q].grants[h]) && same(policies_[q].grants[h],grant))universal=true;
         if(!universal)return false;
       }
       size_t entry=0;

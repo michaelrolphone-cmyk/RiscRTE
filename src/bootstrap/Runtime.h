@@ -10,6 +10,10 @@
 #include "InstalledFiles.h"
 #include "AppDataBackend.h"
 #include "AtomicKeyValueConfig.h"
+#include "PreferenceStoreConfig.h"
+#if RISC_RUNTIME_PREFERENCE_STORE
+#include <RiscPreferenceStoreV1.h>
+#endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
 #include <RiscKeyValueAtomicV1.h>
 #include <RiscKeyValueAvailabilityV1.h>
@@ -248,6 +252,9 @@ class Runtime final {
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
     atomicExitSafe(true) &&
 #endif
+#if RISC_RUNTIME_PREFERENCE_STORE
+    preferenceExitSafe(true) &&
+#endif
     fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
@@ -343,6 +350,24 @@ class Runtime final {
   static int32_t atomicCollect(void*,uint64_t,risc_key_value_atomic_receipt_v1*);
   static int32_t atomicCancel(void*,uint64_t);
 #endif
+#if RISC_RUNTIME_PREFERENCE_STORE
+  struct PreferenceNamespace {uint32_t id=0;uint64_t revision=1;void* pending=nullptr;};
+  PreferenceNamespace preferenceNamespaces_[64]{};
+  uint64_t preferenceOperationGeneration_=0;
+  static constexpr PolicyIndex PreferenceStoreDriver=-14;
+  struct AppGrant;
+  PreferenceNamespace* preferenceNamespace(uint32_t,bool create=false);
+  bool preferenceAvailable(const char*,uint32_t);
+  bool preferenceExitSafe(bool) const;
+  static AppGrant* preferenceContext(void*);
+  static int32_t preferenceState(void*,risc_preference_store_state_v1*);
+  static int32_t preferenceGet(void*,uint64_t,const char*,void*,uint32_t,uint32_t*);
+  static int32_t preferenceSubmit(void*,uint64_t,const risc_preference_store_mutation_v1*,uint32_t,const void*,uint32_t,uint64_t*);
+  static int32_t preferenceCollect(void*,uint64_t,risc_preference_store_receipt_v1*);
+  static int32_t preferenceCancel(void*,uint64_t);
+#endif
+  int32_t namespaceKeyValueGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t);
+  int32_t namespaceKeyValuePut(uint32_t,const char*,const void*,uint32_t,bool preference=false,bool provider=false);
   static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
   static int32_t keyValuePut(void*,const char*,const void*,uint32_t);
   struct ProviderKey {
@@ -415,6 +440,16 @@ class Runtime final {
     PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false, fileOpenSource=false;
     char sharedFile[RISC_APP_DATA_NAME_MAX+1]{};
   };
+  static bool keyValuePolicy(const AppGrantPolicy& g) {
+    return g.keyValue
+#if RISC_RUNTIME_PREFERENCE_STORE
+      || g.driver==PreferenceStoreDriver
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+      || g.driver==AtomicKeyValueDriver
+#endif
+#endif
+      ;
+  }
 #if UINTPTR_MAX == UINT32_MAX
   static_assert(sizeof(AppGrantPolicy)==72,"App policy target layout changed");
 #endif
@@ -428,6 +463,9 @@ class Runtime final {
     constexpr PolicyIndex tags[]={AppDataDriver,RetainedWakeDriver,RealtimeDriver,
       RealtimeControlDriver,PromotionDriver,AppDataExportDriver,SharedDataDriver,
       MemoryHeapDriver,RandomDriver,AppCatalogDriver,
+#if RISC_RUNTIME_PREFERENCE_STORE
+      PreferenceStoreDriver,
+#endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
       AtomicKeyValueDriver,KeyValueAvailabilityDriver,
 #endif
@@ -576,6 +614,12 @@ class Runtime final {
     uint32_t generation=0; bool live=false;
     uint32_t keyValueNamespace=0; risc_key_value_v1 keyValue{};
     risc_memory_heap_api_v1 memoryHeap{};risc_random_api_v1 random{};
+#if RISC_RUNTIME_PREFERENCE_STORE
+    risc_preference_store_v1 preferences{};
+    uint32_t preferenceNamespace=0;
+    uint64_t preferenceOperation=0;
+    risc_preference_store_receipt_v1 preferenceReceipt{};
+#endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
     risc_key_value_atomic_v1 atomic{};
     risc_key_value_availability_v1 availability{};

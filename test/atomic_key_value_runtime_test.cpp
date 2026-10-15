@@ -1,6 +1,11 @@
 #define NATIVE_ATOMIC_ENDPOINT_FIXTURE_ONLY
 #include "native_atomic_key_value_test.cpp"
 #include "bootstrap/Runtime.h"
+#ifdef TEST_PREFERENCES
+#include <RiscPreferenceStoreV1.h>
+#undef RISC_KEY_VALUE_ATOMIC_CAPABILITY
+#define RISC_KEY_VALUE_ATOMIC_CAPABILITY RISC_PREFERENCE_STORE_CAPABILITY
+#endif
 #include <fstream>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -38,7 +43,11 @@ static void delay(uint32_t){}
 static risc_runtime_capability_v1 acquire(const risc_runtime_api_v1* rt,unsigned ns){
  risc_runtime_capability_v1 g{};g.struct_size=sizeof(g);assert(rt->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,ns,&g));return g;
 }
-static risc_key_value_atomic_state_v1 state(const risc_key_value_atomic_v1&a){risc_key_value_atomic_state_v1 s{sizeof(s)};assert(!a.state(a.context,&s));return s;}
+static risc_key_value_atomic_state_v1 state(const risc_key_value_atomic_v1&a){risc_key_value_atomic_state_v1 s{sizeof(s)};assert(!a.state(a.context,&s));
+#ifdef TEST_PREFERENCES
+ assert(s.flags==15);
+#endif
+ return s;}
 static void invalid(const risc_key_value_atomic_v1&a){
  risc_key_value_atomic_state_v1 s{sizeof(s)};risc_key_value_atomic_receipt_v1 receipt{sizeof(receipt)};
  char out='x';uint32_t n=42;uint64_t token=42;
@@ -157,8 +166,8 @@ extern "C" void test_atomic_app(unsigned hook,unsigned child){
  saved=renewed;assert(rt->request_launch("child.elf"));
 }
 static void file(const char* name,const std::string& content){std::ofstream(directory+"/"+name)<<content;}
-static std::string manifest(const char* id,const char* elf,unsigned api=1){return std::string("{\"type\":\"application\",\"id\":\"")+id+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\""+elf+"\",\"entry\":\"app_main\",\"requires\":[{\"capability\":\"storage.key-value.atomic\",\"api\":"+std::to_string(api)+"}]}";}
-static std::string grant(unsigned ns,unsigned api=1){return "{\"capability\":\"storage.key-value.atomic\",\"api\":"+std::to_string(api)+",\"instance_id\":"+std::to_string(ns)+"}";}
+static std::string manifest(const char* id,const char* elf,unsigned api=1){return std::string("{\"type\":\"application\",\"id\":\"")+id+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\""+elf+"\",\"entry\":\"app_main\",\"requires\":[{\"capability\":\"" RISC_KEY_VALUE_ATOMIC_CAPABILITY "\",\"api\":"+std::to_string(api)+"}]}";}
+static std::string grant(unsigned ns,unsigned api=1){return "{\"capability\":\"" RISC_KEY_VALUE_ATOMIC_CAPABILITY "\",\"api\":"+std::to_string(api)+",\"instance_id\":"+std::to_string(ns)+"}";}
 static void boot(unsigned ns=6,unsigned api=1,bool multi=true){
  file("app.json",manifest("atomic-main","default.elf",api));file("child.json",manifest("atomic-child","child.elf"));
  file("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":[],\"app_capabilities\":[{\"manifest\":\"app.json\",\"grants\":["+grant(ns,api)+(multi?","+grant(7):"")+ "]},{\"manifest\":\"child.json\",\"grants\":["+grant(7)+"]}]"+(scenario=="resident"?",\"resident_shell\":{\"api\":1,\"host\":\"default.elf\",\"foreground\":[\"child.elf\"]}":"")+"}");

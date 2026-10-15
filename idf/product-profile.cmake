@@ -39,3 +39,7 @@ endif()
 if(NOT DEFINED RISC_NATIVE_TARGET)
     set(RISC_NATIVE_TARGET "esp32s3-native-idf61")
 endif()
+
+# The native Runtime exposes a generic preference facade on every profile.
+# Actual namespace backend selection remains registration/capability driven.
+list(APPEND RISC_NATIVE_DEFINITIONS RISC_RUNTIME_PREFERENCE_STORE=1)
