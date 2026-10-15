@@ -8,12 +8,41 @@ permissions:
 jobs:
   native-idf:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - product: generic
+            repository: ''
+            source: ''
+          - product: twatch
+            repository: RiscRTE-T-Watch-S3
+            source: a71f1659b2ae4072b18acc13f15ef11e65181f54
+          - product: waveshare
+            repository: RiscRTE-Wavshare-S3-Touch-AMOLED-2.06
+            source: 3e655f516f98505ec33b6a8a066267210ddac967
+          - product: x4
+            repository: RiscRTE-XTEINK-X4-PRO
+            source: f09db250b29ec68dfed7530cc8e0ac0b21c66802
     container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: actions/checkout@v4
+        if: matrix.product != 'generic'
+        with:
+          repository: michaelrolphone-cmyk/${{ matrix.repository }}
+          ref: ${{ matrix.source }}
+          path: product
+          persist-credentials: false
+          sparse-checkout: |
+            profiles
+            native
+            minimal/native
+            minimal/scripts
+            minimal/test
       - name: Verify official SDK identity
         shell: bash
         run: |
@@ -21,15 +50,26 @@ jobs:
           test "$(git -C "$IDF_PATH" rev-parse HEAD)" = fff9895c82d744c7237be8847347bdd1b07c6643
           xtensa-esp-elf-gcc --version
       - name: Native startup and peripheral contracts
+        if: matrix.product == 'generic'
         shell: bash
         run: |
           . "$IDF_PATH/export.sh"
           apt-get update
           apt-get install -y --no-install-recommends libssl-dev
           python test/test_native_startup.py
+          python test/test_native_product_profile.py
+          bash test/run_native_sdmmc_test.sh
+          SANITIZE=1 bash test/run_native_sdmmc_test.sh
+          python test/run_native_app_data_mount_test.py
+          python test/run_native_littlefs_profile_test.py
+          python test/run_native_idf6_storage_mtime_test.py
+          bash test/run_native_idf6_storage_atomic_test.sh
+          bash test/run_native_bank_provider_admission_test.sh
           bash test/run_native_i2s_idf6_test.sh
           bash test/run_native_platform_test.sh
           bash test/run_native_sleep_diagnostics_idf6_test.sh
+          bash test/run_native_diagnostic_workspace_test.sh
+          ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash test/run_native_diagnostic_workspace_test.sh
           bash test/run_native_sha256_test.sh
           bash test/run_elf_time32_test.sh
           bash test/run_elf_yield_compat_test.sh
@@ -47,8 +87,15 @@ jobs:
         shell: bash
         run: |
           . "$IDF_PATH/export.sh"
+          options=(-D RISC_SOURCE_SHA="$GITHUB_SHA")
+          if [[ '${{ matrix.product }}' != generic ]]; then
+            options+=(-D RISC_PRODUCT_PROFILE="$GITHUB_WORKSPACE/product/profiles/native-idf61.cmake")
+          fi
+          if [[ '${{ matrix.product }}' == x4 ]]; then
+            options+=(-D RISC_X4_SOURCE_SHA='${{ matrix.source }}')
+          fi
           cd idf
-          idf.py -D RISC_SOURCE_SHA="$GITHUB_SHA" reconfigure
+          idf.py "${options[@]}" reconfigure
           cmake --build build -- -j1
       - name: Qualify native target custody and placement
         shell: bash
@@ -58,21 +105,37 @@ jobs:
           python test/native_http_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/http
           python test/native_failure_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/failure
           python test/native_iq_idf6_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --rom-elf "$ESP_ROM_ELF_DIR/esp32s3_rev0_rom.elf" --output idf/build/qualification/iq
+      - name: Qualify diagnostic snapshot placement
+        if: matrix.product == 'waveshare'
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          python test/native_diagnostic_workspace_target_test.py --compile-commands idf/build/compile_commands.json --idf "$IDF_PATH" --output idf/build/qualification/diagnostics
       - name: Reject Arduino runtime linkage
         shell: bash
         run: |
           . "$IDF_PATH/export.sh"
           python test/native_firmware_idf6_test.py --build idf/build
+      - name: Qualify X4 linked startup boundary
+        if: matrix.product == 'x4'
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          python product/minimal/test/verify_native_idf61_target.py --elf idf/build/riscrte_native.elf --selection idf/build/x4-native-idf61/selection.txt --output idf/build/qualification/x4-startup.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: native-idf6-candidate-${{ github.sha }}
+          name: native-idf6-${{ matrix.product }}-${{ github.sha }}
           path: |
             idf/build/riscrte_native.elf
             idf/build/riscrte_native.bin
             idf/build/riscrte_native.map
             idf/build/project_description.json
             idf/build/config/sdkconfig.json
+            idf/build/bootloader/bootloader.bin
+            idf/build/partition_table/partition-table.bin
+            idf/build/radio-iq-proof.json
+            idf/build/x4-native-idf61/selection.txt
             idf/build/log/
             idf/build/qualification/
           if-no-files-found: warn

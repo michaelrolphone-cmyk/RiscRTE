@@ -30,6 +30,7 @@ def main():
             'RuntimeStreams::(anonymous namespace)::registry':'.dram',
             'vPortEvaluateYieldFromISR':'.iram',
             'risc_elf_clock_gettime32':'.flash.text',
+            'RiscDiagnostics::(anonymous namespace)::replayStorage':'.ext_ram.bss',
         }.items():
             found=[s for name,s in zip(labels,syms) if name==wanted]
             assert len(found)==1,wanted
@@ -39,12 +40,19 @@ def main():
                 assert 0x3fc88000<=s['st_value'] and s['st_value']+s['st_size']<=0x3fd00000
                 assert s['st_value']%4==0
             report['symbols'][wanted]={'address':s['st_value'],'size':s['st_size'],'section':section.name}
+        descriptor=next(s for s in syms if s.name=='esp_app_desc')
+        section=e.get_section(descriptor['st_shndx'])
+        offset=descriptor['st_value']-section['sh_addr']
+        raw=section.data()[offset:offset+descriptor['st_size']]
+        assert raw[48:80].rstrip(b'\0')==b'arduino-lib-builder', 'paired-bank project identity changed'
+        report['image_project']='arduino-lib-builder'
     project=json.loads((build/'project_description.json').read_text())
     assert project['target']=='esp32s3'
     assert not any('arduino' in name.lower() for name in project['build_components'])
     config=json.loads((build/'config/sdkconfig.json').read_text())
     assert config['STDATOMIC_S32C1I_SPIRAM_WORKAROUND']
     assert config['LIBC_NEWLIB'] and config['SPIRAM']
+    assert config['BOOTLOADER_APP_ROLLBACK_ENABLE'], 'paired-bank first-boot rollback must remain enabled'
     report['sdk_commit']=subprocess.check_output(['git','-C',project['idf_path'],'rev-parse','HEAD'],text=True).strip()
     assert report['sdk_commit']=='fff9895c82d744c7237be8847347bdd1b07c6643'
     report['arduino_runtime_symbols']=[]

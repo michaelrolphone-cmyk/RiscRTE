@@ -84,13 +84,16 @@ struct Backend {
  static int observe(void*p){auto&s=*static_cast<Backend*>(p);return M::retained()||s.files.retained()||s.artifacts.retained()?int(C::Retained):int(C::Ok);}
  static bool cooperate(void*p){vTaskDelay(1);return observe(p)==C::Ok&&held(p);}
  static bool space(void*p,uint32_t*total,uint32_t*used){
-  if(total)*total=0;if(used)*used=0;
+  if(total)*total=0;
+  if(used)*used=0;
   if(!total||!used||!held(p))return false;
   size_t t=0,u=0;if(!M::usage(&t,&u)||t!=F::Store::PartitionBytes||u>t||t>UINT32_MAX)return false;
-  if(!held(p)||observe(p))return false;*total=uint32_t(t);*used=uint32_t(u);return true;
+  if(!held(p)||observe(p))return false;
+  *total=uint32_t(t);*used=uint32_t(u);return true;
  }
  static int snapshot(void*p,Little::Mount*out){
-  if(out)*out={};auto&s=*static_cast<Backend*>(p);
+  if(out)*out={};
+  auto&s=*static_cast<Backend*>(p);
   if(observe(p))return C::Retained;
   if(!out||!held(p))return C::Busy;
   W::Custody worker{};M::Custody mount{};
@@ -110,7 +113,8 @@ struct Backend {
   [](void*p,const void*v,const char*n)->void*{auto*s=io(p,v);return s?s->identity.vfs->opendir_p(const_cast<void*>(v),n):nullptr;},
   [](void*p,const void*v,void*d,Little::Entry*out){auto*s=io(p,v);if(!s||!out)return -1;errno=0;
    const auto*e=s->identity.vfs->readdir_p(const_cast<void*>(v),static_cast<DIR*>(d));
-   if(!e)return errno?-1:0;const size_t n=strnlen(e->d_name,sizeof e->d_name);
+   if(!e)return errno?-1:0;
+   const size_t n=strnlen(e->d_name,sizeof e->d_name);
    if(n==sizeof e->d_name||n>=sizeof out->name){errno=EIO;return -1;}std::memcpy(out->name,e->d_name,n+1);return 1;},
   [](void*p,const void*v,void*d){auto*s=io(p,v);return s?s->identity.vfs->closedir_p(const_cast<void*>(v),static_cast<DIR*>(d)):-1;}};}
  static bool digestAllowed(void*p){auto&s=*static_cast<Backend*>(p);return !observe(p)&&!xPortInIsrContext()&&((s.owner&&s.owner())||held(p));}
@@ -145,7 +149,8 @@ template<class T>struct Permanent {alignas(T) unsigned char bytes[sizeof(T)]{};t
 struct State {Permanent<Backend>namespaces[2];const NativeSettingsLifecycle::Admission*selected=nullptr;bool attempted=false;} state;
 } // namespace
 bool prepare(bool(*owner)()){
- if(state.attempted)return false;state.attempted=true;
+ if(state.attempted)return false;
+ state.attempted=true;
  if(!owner||xPortInIsrContext()||!owner()||!internal(&state,sizeof state)||RiscNvs::initializationStatus()!=ESP_OK)return false;
  M::Guard guard(M::Access::Settings);M::Identity id{};
  if(!guard.held||!M::identity(id)||std::strcmp(id.mountPath,"/appdata")||std::strcmp(id.settingsRoot,"/appdata/.native-settings")||

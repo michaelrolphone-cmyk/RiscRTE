@@ -24,6 +24,9 @@
 #include <esp_partition.h>
 #include <esp_spiffs.h>
 #include <esp_image_format.h>
+#if RISC_NATIVE_ESP_IDF
+#include <esp_app_desc.h>
+#endif
 #include "runtime/crypto/Sha256.h"
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
@@ -191,7 +194,7 @@ bool finishWholeStore(void*,unsigned b,uint8_t* digest){
   // Hash the closed, persisted partition after all file writes and filesystem
   // GC. PairedBank independently compares a second raw readback before READY.
   uint32_t started=RiscPlatform::millis();
-  for(uint32_t at=0;at<StoreBytes;){uint32_t n=std::min(4096u,StoreBytes-at);
+  for(uint32_t at=0;at<StoreBytes;){uint32_t n=std::min<uint32_t>(4096u,StoreBytes-at);
     if(!read(nullptr,b,1,at,scratch->buffer,n)||!hashAdd(nullptr,scratch->buffer,n))return false;
     at+=n;vTaskDelay(1);if(!operationSafe()||uint32_t(RiscPlatform::millis()-started)>30000u)return false;}
   return hashEnd(nullptr,digest) && (!provisionProfile->imageMode() || !memcmp(digest,provisionProfile->image.sha256,32));
@@ -233,7 +236,7 @@ bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole r
   if(!bytes)return false;
   if(!operationSafe()){free(bytes);return false;}
   FILE* input=fopen(path,"rb");bool ok=input && (!policy || operationSafe()) && hashBegin(nullptr);uint32_t at=0;
-  while(ok && at<file.bytes){uint32_t n=std::min(4096u,file.bytes-at);
+  while(ok && at<file.bytes){uint32_t n=std::min<uint32_t>(4096u,file.bytes-at);
     ok=operationSafe() && fread(bytes+at,1,n,input)==n && (!policy || operationSafe()) && hashAdd(nullptr,bytes+at,n);at+=n;
     vTaskDelay(1);if(uint32_t(RiscPlatform::millis()-context.started)>=30000u)ok=false;}
   uint8_t digest[32];ok=ok && (!policy || operationSafe()) && fgetc(input)==EOF &&
@@ -303,7 +306,7 @@ bool finishApp(void*,unsigned b){
   auto* data=static_cast<uint8_t*>(heap_caps_malloc(scratch->appSize,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
   if(!data){fclose(f);return false;}
   uint32_t offset=0,started=RiscPlatform::millis();bool ok=hashBegin(nullptr);
-  while(ok && offset<scratch->appSize){uint32_t n=std::min(4096u,scratch->appSize-offset);
+  while(ok && offset<scratch->appSize){uint32_t n=std::min<uint32_t>(4096u,scratch->appSize-offset);
     ok=operationSafe() && fread(data+offset,1,n,f)==n && hashAdd(nullptr,data+offset,n);offset+=n;vTaskDelay(1);
     if(uint32_t(RiscPlatform::millis()-started)>30000u)ok=false;
   }
@@ -318,13 +321,17 @@ bool validateFirmware(void*,unsigned b,uint32_t n){
   esp_image_metadata_t metadata{};esp_partition_pos_t position={parts[b][0]->address,parts[b][0]->size};
   if(esp_image_verify(ESP_IMAGE_VERIFY,&position,&metadata)!=ESP_OK || metadata.image_len!=n)return false;
   esp_app_desc_t description{};if(esp_ota_get_partition_description(parts[b][0],&description)!=ESP_OK)return false;
+#if RISC_NATIVE_ESP_IDF
+  const esp_app_desc_t* current=esp_app_get_description();
+#else
   const esp_app_desc_t* current=esp_ota_get_app_description();
+#endif
   if(!current || memcmp(description.project_name,current->project_name,sizeof(description.project_name)))return false;
   // Verify actual compatible-loader marker rather than trusting a caller flag.
   uint8_t* block=scratch->buffer;size_t carry=0;uint32_t started=RiscPlatform::millis();
   bool abiFound=false,versionFound=false;char version[32]{};
   constexpr char prefix[]="RISC_RUNTIME_VERSION:";
-  for(uint32_t at=0;at<n;){uint32_t count=std::min(4096u,n-at);
+  for(uint32_t at=0;at<n;){uint32_t count=std::min<uint32_t>(4096u,n-at);
     if(!operationSafe() || esp_partition_read(parts[b][0],at,block+carry,count)!=ESP_OK)return false;
     size_t available=carry+count;
     for(size_t p=0;p+sizeof(risc_paired_store_abi)<=available;++p)if(!memcmp(block+p,risc_paired_store_abi,sizeof(risc_paired_store_abi)))abiFound=true;
@@ -395,7 +402,7 @@ bool admitFile(void* context,const char* filename,bool provider){
   if(!bytes){if(policy)closeAdmissionRead(candidate,f,nullptr);else fclose(f);return false;}
   uint32_t offset=0,started=RiscPlatform::millis();
   while(ok && offset<uint32_t(length)){
-    uint32_t n=std::min(4096u,uint32_t(length)-offset);
+    uint32_t n=std::min<uint32_t>(4096u,uint32_t(length)-offset);
     ok=operationSafe() && fread(bytes+offset,1,n,f)==n;offset+=n;vTaskDelay(1);
     if(uint32_t(RiscPlatform::millis()-started)>30000u)ok=false;
   }
@@ -489,7 +496,7 @@ const risc_bank_store_v1 api={1,sizeof(api),nullptr,
     snprintf(out->runtime_version,sizeof(out->runtime_version),"%s",RISC_BUILD_VERSION);
     snprintf(out->layout,sizeof(out->layout),"%s",Layout);return true;
   },beginFirmware,beginApp,
-  [](void*,uint64_t t,risc_bank_status_v1* s){
+  [](void*,uint64_t t,risc_bank_status_v1* s)->int32_t{
     if(!ready())return RISC_BANK_UNAVAILABLE;
     int32_t result=transaction->step(t,s);
     if(s && s->struct_size>=sizeof(*s)){

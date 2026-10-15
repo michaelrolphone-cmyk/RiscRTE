@@ -1,5 +1,11 @@
 # RiscRTE
 
+Runtime 0.4.0 is the native ESP-IDF 6.1 migration candidate. The primary build
+is `idf/`, pinned to the official SDK and GCC15 toolchain, without the Arduino
+runtime. Product-owned profiles preserve the released watch, Waveshare and X4
+feature/storage selections. See [build, compatibility and qualification gates](docs/NATIVE_IDF_MIGRATION.md). The old PlatformIO route remains a regression
+reference; candidate binaries are not hardware-qualified by a successful build.
+
 Runtime 0.3.5 gives the native IQ worker a real scheduler block after each
 completed capture, preventing accumulated timer notifications from starving
 CPU0 idle under load. Stop/join retention and watchdog policy remain intact.

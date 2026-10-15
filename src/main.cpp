@@ -5,6 +5,7 @@
 #include <esp_spiffs.h>
 #include <esp_ota_ops.h>
 #include <esp_system.h>
+#include <esp_sleep.h>
 #if RISC_NATIVE_ESP_IDF
 #include <esp_mac.h>
 #endif
@@ -275,7 +276,7 @@ void setup() {
     if(failure) { diagnosticFormat("RTE_BOOT error=native-startup detail=%s",failure);return; }
   }
 #ifdef RISC_ENABLE_HTTP
-  // Arduino has initialized PSRAM before setup. Install before any bootstrap
+  // The platform has initialized PSRAM before setup. Install before any bootstrap
   // or application can start networking; an unavailable hook disables HTTPS.
   if(!RiscCpu::NativeTlsMemory::initialize())
     diagnosticLine("RTE_HTTP unavailable=tls-psram-allocator");

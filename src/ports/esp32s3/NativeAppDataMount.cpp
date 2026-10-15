@@ -69,7 +69,8 @@ bool cleanPath(const char* p){
  if(!p||p[0]!='/')return false;
  for(const char* at=p+1;*at;){const char* end=strchr(at,'/');size_t n=end?size_t(end-at):strlen(at);
   if(!n || (n==1&&at[0]=='.') || (n==2&&at[0]=='.'&&at[1]=='.') || memchr(at,'\\',n))return false;
-  if(!end)break;at=end+1;if(!*at)return false;
+  if(!end)break;
+  at=end+1;if(!*at)return false;
  }
  return true;
 }
@@ -79,7 +80,8 @@ bool pathAllowed(const char* p,bool rootRead=false){
  if(!cleanPath(p)){errno=EINVAL;return false;}
  if(rootRead&&!strcmp(p,"/"))return true;
  bool allowed=access==Access::Settings?under(p,Settings):access==Access::FileSource?!strcmp(p,Scratch):access==Access::Packages?under(p,Packages):!under(p,Settings)&&!under(p,Scratch)&&!under(p,Packages);
- if(!allowed)errno=EACCES;return allowed;
+ if(!allowed)errno=EACCES;
+ return allowed;
 }
 bool mutablePath(const char*p){if(!pathAllowed(p))return false;if(!strcmp(p,"/")||(usable&&!strcmp(p,Settings))){errno=EACCES;return false;}return true;}
 bool exact(){return context && partition && context->partition==partition && context->cfg.context==context &&
@@ -123,7 +125,8 @@ int stat(void*c,const char*p,struct stat*s){
  int r=original.stat_p(c,p,s);return end(r==0,true)?r:-1;
 }
 int fstat(void*c,int fd,struct stat*s){
- if(!fileKnown(fd)||!start(c))return -1;int r=original.fstat_p(c,fd,s);return end(r==0,true)?r:-1;
+ if(!fileKnown(fd)||!start(c))return -1;
+ int r=original.fstat_p(c,fd,s);return end(r==0,true)?r:-1;
 }
 DIR* opendir(void*c,const char*p){
  if(!pathAllowed(p))return nullptr;
@@ -134,18 +137,21 @@ DIR* opendir(void*c,const char*p){
  DIR*d=original.opendir_p(c,p);if(d){++handles;for(auto&known:directories)if(!known){known=d;break;}}return end(d!=nullptr)?d:nullptr;
 }
 struct dirent* readdir(void*c,DIR*d){
- if(!directoryKnown(d)||!start(c))return nullptr;auto*r=original.readdir_p(c,d);return end(r!=nullptr)?r:nullptr;
+ if(!directoryKnown(d)||!start(c))return nullptr;
+ auto*r=original.readdir_p(c,d);return end(r!=nullptr)?r:nullptr;
 }
 int readdir_r(void*c,DIR*d,struct dirent*e,struct dirent**r){
  if(!directoryKnown(d)||!start(c)){if(r)*r=nullptr;return errno;}
  int result=original.readdir_r_p(c,d,e,r);if(result==EIO)retain();if(!end(result==0)){if(r)*r=nullptr;return EIO;}return result;
 }
 int closedir(void*c,DIR*d){
- if(!directoryKnown(d)||!start(c))return -1;int r=original.closedir_p(c,d);
+ if(!directoryKnown(d)||!start(c))return -1;
+ int r=original.closedir_p(c,d);
  if(r)retain();else{for(auto&known:directories)if(known==d){known=nullptr;--handles;break;}}return end(r==0)?r:-1;
 }
 void seekdir(void*c,DIR*d,long offset){
- if(!directoryKnown(d)||!start(c))return;original.seekdir_p(c,d,offset);(void)end(true);
+ if(!directoryKnown(d)||!start(c))return;
+ original.seekdir_p(c,d,offset);(void)end(true);
 }
 int rename(void*c,const char*a,const char*b){if(!mutablePath(a)||!mutablePath(b))return -1;return invoke<int>(c,original.rename_p,a,b);}
 ssize_t write(void*c,int fd,const void*b,size_t n){if(!fileKnown(fd))return -1;return invoke<ssize_t>(c,original.write_p,fd,b,n);}
@@ -205,7 +211,8 @@ bool ready(){return usable&&!retained();}
 bool held(){return atomicsInternal()&&task()&&owner.load(std::memory_order_acquire)==task()&&!retained();}
 bool prepare(const esp_partition_t*p){
  if(!atomicsInternal())return false;
- if(attempted)return false;attempted=true;
+ if(attempted)return false;
+ attempted=true;
  if(!p||p->encrypted||p->address!=0x270000||p->size!=0x80000||strcmp(p->label,"appdata")||!task())return false;
  initializeDescriptors();partition=p;owner.store(task());++custodyGeneration;mounting=true;return true;
 }
@@ -236,7 +243,9 @@ void leave(){
 bool identity(Identity&out){out={};if(!held()||!exact())return false;out={context,&fenced,partition,Mount,"/appdata/.native-settings",mountGeneration,rootGeneration};return true;}
 bool custody(Custody&out){out={};if(!held()||!ready()||!exact())return false;out={owner.load(),custodyGeneration,access};return true;}
 bool usage(size_t*total,size_t*used){
- if(total)*total=0;if(used)*used=0;if(!total||!used||!start(context))return false;
+ if(total)*total=0;
+ if(used)*used=0;
+ if(!total||!used||!start(context))return false;
  esp_err_t r=esp_littlefs_partition_info(partition,total,used);if(r!=ESP_OK)retain();return end(r==ESP_OK)&&r==ESP_OK;
 }
 } // namespace RiscAppDataMount
@@ -271,20 +280,25 @@ extern "C" esp_err_t __wrap_esp_vfs_unregister_fs(const char*p){
 }
 #endif
 extern "C" esp_err_t __wrap_esp_partition_read(const esp_partition_t*p,size_t o,void*b,size_t n){
- if(!partitionCall(p))return ESP_FAIL;return observed(__real_esp_partition_read(p,o,b,n),p);
+ if(!partitionCall(p))return ESP_FAIL;
+ return observed(__real_esp_partition_read(p,o,b,n),p);
 }
 extern "C" esp_err_t __wrap_esp_partition_write(const esp_partition_t*p,size_t o,const void*b,size_t n){
  if(partition&&protectedPartition(p)&&mounting){retain();return ESP_FAIL;}
- if(!partitionCall(p))return ESP_FAIL;return observed(__real_esp_partition_write(p,o,b,n),p);
+ if(!partitionCall(p))return ESP_FAIL;
+ return observed(__real_esp_partition_write(p,o,b,n),p);
 }
 extern "C" esp_err_t __wrap_esp_partition_erase_range(const esp_partition_t*p,size_t o,size_t n){
  if(partition&&protectedPartition(p)&&mounting){retain();return ESP_FAIL;}
- if(!partitionCall(p))return ESP_FAIL;return observed(__real_esp_partition_erase_range(p,o,n),p);
+ if(!partitionCall(p))return ESP_FAIL;
+ return observed(__real_esp_partition_erase_range(p,o,n),p);
 }
 extern "C" esp_err_t __wrap_esp_littlefs_format(const char*p){
- if(p&&!strcmp(p,"appdata"))return ESP_ERR_INVALID_STATE;return __real_esp_littlefs_format(p);
+ if(p&&!strcmp(p,"appdata"))return ESP_ERR_INVALID_STATE;
+ return __real_esp_littlefs_format(p);
 }
 extern "C" esp_err_t __wrap_esp_littlefs_format_partition(const esp_partition_t*p){
- if(protectedPartition(p))return ESP_ERR_INVALID_STATE;return __real_esp_littlefs_format_partition(p);
+ if(protectedPartition(p))return ESP_ERR_INVALID_STATE;
+ return __real_esp_littlefs_format_partition(p);
 }
 #endif

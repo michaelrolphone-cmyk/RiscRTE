@@ -68,10 +68,10 @@ static bool open(uint8_t clk,uint8_t cmd,uint8_t dat0,uint32_t hz,risc_sdmmc_car
   esp_err_t result=sdmmc_host_init_slot(host.slot,&slot);
   if(result==ESP_OK)result=sdmmc_card_init(&host,&card);
   busy=false;
-  if(result!=ESP_OK || card.csd.sector_size!=RISC_SDMMC_SECTOR_BYTES || !card.csd.capacity ||
+  if(result!=ESP_OK || card.csd.sector_size!=RISC_SDMMC_SECTOR_BYTES || card.csd.capacity<=0 ||
      card.max_freq_khz<=0 || card.max_freq_khz>host.max_freq_khz)return false;
   ready=true;fault=false;
-  *info={sizeof(*info),RISC_SDMMC_SECTOR_BYTES,card.csd.capacity,uint32_t(card.max_freq_khz)*1000u,0};
+  *info={sizeof(*info),RISC_SDMMC_SECTOR_BYTES,uint64_t(card.csd.capacity),uint32_t(card.max_freq_khz)*1000u,0};
   RISC_STAGE_LOG("sd transport=hardware-sdmmc width=1 clock_hz=%u sectors=%llu clk=%u cmd=%u dat0=%u",
     unsigned(info->clock_hz),static_cast<unsigned long long>(info->sector_count),unsigned(clk),unsigned(cmd),unsigned(dat0));
   return true;
@@ -79,7 +79,7 @@ static bool open(uint8_t clk,uint8_t cmd,uint8_t dat0,uint32_t hz,risc_sdmmc_car
 static bool valid(uint64_t lba,uint32_t count,const void* buffer){
   const auto address=reinterpret_cast<uintptr_t>(buffer);
   return owned() && ready && !busy && !fault && buffer && count && count<=RISC_SDMMC_MAX_SECTORS &&
-    lba<SIZE_MAX && lba<card.csd.capacity && count<=uint64_t(card.csd.capacity)-lba &&
+    lba<SIZE_MAX && lba<uint64_t(card.csd.capacity) && count<=uint64_t(card.csd.capacity)-lba &&
     count<=SIZE_MAX-lba && address<=UINTPTR_MAX-size_t(count)*RISC_SDMMC_SECTOR_BYTES;
 }
 static bool read(uint64_t lba,uint32_t count,void* out){

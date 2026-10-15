@@ -16,14 +16,17 @@ with (stubs/'esp_partition.h').open('a') as f:f.write('\ntypedef int esp_partiti
 (stubs/'esp_timer.h').write_text('#pragma once\n#include <stdint.h>\nstatic inline int64_t esp_timer_get_time(){return 1000;}\n')
 # Real payload adapter with tracked host PSRAM boundary and OpenSSL hash shim.
 (stubs/'soc').mkdir(exist_ok=True)
-(stubs/'soc/soc_memory_types.h').write_text('#pragma once\nbool esp_ptr_internal(const void*);\nbool esp_ptr_external_ram(const void*);\n')
+# Model DRAM through the fixture's tracked internal/PSRAM boundary. The actual
+# NativeInternalAtomics guard still checks alignment, overflow and both endpoints.
+(stubs/'soc/soc_memory_types.h').write_text('#pragma once\nbool esp_ptr_internal(const void*);\nbool esp_ptr_external_ram(const void*);\ninline bool esp_ptr_in_dram(const void* p){return esp_ptr_internal(p); }\n')
 (stubs/'esp_heap_caps.h').write_text('#pragma once\n#include <stddef.h>\n#define MALLOC_CAP_SPIRAM 1\n#define MALLOC_CAP_8BIT 2\n#define MALLOC_CAP_INTERNAL 4\nvoid* heap_caps_malloc(size_t,unsigned);\nvoid heap_caps_free(void*);\n')
 (stubs/'mbedtls').mkdir(exist_ok=True)
 (stubs/'mbedtls/sha256.h').write_text('#pragma once\n#include <openssl/sha.h>\n#include <string.h>\ntypedef SHA256_CTX mbedtls_sha256_context;\nstatic inline void mbedtls_sha256_init(mbedtls_sha256_context*p){memset(p,0,sizeof *p);}\nstatic inline int mbedtls_sha256_starts_ret(mbedtls_sha256_context*p,int n){return n?-1:SHA256_Init(p)==1?0:-1;}\nstatic inline int mbedtls_sha256_update_ret(mbedtls_sha256_context*p,const unsigned char*b,size_t n){return SHA256_Update(p,b,n)==1?0:-1;}\nstatic inline int mbedtls_sha256_finish_ret(mbedtls_sha256_context*p,unsigned char*b){return SHA256_Final(b,p)==1?0:-1;}\n')
+# The shared SHA adapter releases its context in both entropy selections.
+with (stubs/'mbedtls/sha256.h').open('a') as f:f.write('\nstatic inline void mbedtls_sha256_free(mbedtls_sha256_context*p){memset(p,0,sizeof *p);}\n')
 if os.environ.get('STARTUP_ENTROPY')=='1':
  (stubs/'bootloader_random.h').write_text('#pragma once\nextern "C" void bootloader_random_enable();\nextern "C" void bootloader_random_disable();\n')
  (stubs/'esp_random.h').write_text('#pragma once\n#include <stddef.h>\nextern "C" void esp_fill_random(void*,size_t);\n')
- with (stubs/'mbedtls/sha256.h').open('a') as f:f.write('\nstatic inline void mbedtls_sha256_free(mbedtls_sha256_context*p){memset(p,0,sizeof *p);}\n')
 # Host esp_vfs.h declares the older ssize_t truncate member; IDF 4.4 uses int.
 
 s= (root/'test/native_littlefs_profile_fixture.c').read_text()

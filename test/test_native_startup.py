@@ -171,7 +171,7 @@ class NativeStartup(unittest.TestCase):
                    'ports/esp32s3/NativeRuntime.h', 'ports/esp32s3/NativeBootstrap.h',
                    'ports/esp32s3/NativeSntp.h', 'ports/esp32s3/NvsBootstrapInput.h',
                    'ports/esp32s3/OwnerMaintenance.h', 'ports/esp32s3/NativePlatform.h', 'Arduino.h', 'RiscBuildIdentity.h', 'esp_spiffs.h', 'esp_ota_ops.h',
-                   'esp_system.h', 'esp_mac.h', 'bootstrap/Runtime.h', 'ports/esp32s3/CpuPort.h',
+                   'esp_system.h', 'esp_mac.h', 'esp_sleep.h', 'bootstrap/Runtime.h', 'ports/esp32s3/CpuPort.h',
                    'ports/esp32s3/NativeRetainedWake.h', 'ports/esp32s3/NativeRealtime.h',
                    'ports/esp32s3/NativeBoard.h', 'ports/esp32s3/CooperativeDelay.h',
                    'ports/esp32s3/SleepDiagnostics.h', 'esp_timer.h', 'diagnostics/Performance.h')
@@ -216,6 +216,7 @@ class NativeStartup(unittest.TestCase):
                     output = folder/name
                     subprocess.run(['c++', '-std=c++17', '-Wall', '-Wextra', '-Werror',
                                     '-Wno-unused-function', *([] if name.startswith('spiffs') else ['-DRISC_EMBEDDED_BOOTSTORE=1']), *flags, '-I'+str(folder),
+                                    '-I'+str(ROOT/'src/runtime/drivers'),
                                     str(folder/'main.cpp'), str(folder/'harness.cpp'),
                                     *(['-Wl,-U,_risc_native_startup_error'] if sys.platform == 'darwin' else []),
                                     '-o', str(output)], check=True)

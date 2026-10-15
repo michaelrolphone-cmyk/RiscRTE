@@ -25,6 +25,11 @@
 #endif
 #endif
 #include <cstdio>
+#if RISC_NATIVE_ESP_IDF && (RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE)
+#include <esp_attr.h>
+#include <new>
+#include <type_traits>
+#endif
 #if RISC_STAGE_LOGS
 #include <esp_timer.h>
 #include <cstdarg>
@@ -46,14 +51,56 @@ namespace {
 // No flash/NVS writes. RTC no-init may survive deep/software/watchdog resets;
 // every boot validates it. Cold/brownout/external/unknown reset discards it.
 RTC_NOINIT_ATTR Journal journal;
+#endif
+#if RISC_NATIVE_ESP_IDF && (RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE)
+// Only copied replay/checkpoint payload lives here. All accesses are ordinary
+// owner-task calls after start(), never ISR/panic/cache-disabled callbacks.
+// The SDK maps, zeros and excludes external BSS from its heap before app_main;
+// with this selection it aborts startup if PSRAM cannot be initialized.
+struct ReplayWorkspace {
+#if RISC_SLEEP_DIAGNOSTICS
+  Replay sleep;
+  Checkpoint checkpoint;
+#endif
+#if RISC_PERFORMANCE_TRACE
+  RiscPerf::Replay performance;
+#endif
+};
+static_assert(std::is_trivially_destructible<ReplayWorkspace>::value,
+              "Restarted diagnostic storage must not own external resources");
+alignas(ReplayWorkspace)
+#if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+#if !CONFIG_SPIRAM_BOOT_INIT
+#error "External diagnostic workspace requires SDK PSRAM boot initialization"
+#endif
+EXT_RAM_BSS_ATTR
+#endif
+unsigned char replayStorage[sizeof(ReplayWorkspace)];
+ReplayWorkspace& replayWorkspace(){
+  return *std::launder(reinterpret_cast<ReplayWorkspace*>(replayStorage));
+}
+#if RISC_SLEEP_DIAGNOSTICS
+Replay& sleepReplay(){return replayWorkspace().sleep;}
+Checkpoint& checkpointState(){return replayWorkspace().checkpoint;}
+#endif
+#if RISC_PERFORMANCE_TRACE
+RiscPerf::Replay& perfReplay(){return replayWorkspace().performance;}
+#endif
+#else
+// Preserve legacy placement and static initialization exactly.
+#if RISC_SLEEP_DIAGNOSTICS
 Replay replay;
 Checkpoint lastCheckpoint;
-#endif
-#if RISC_HWCDC_SLEEP_RECOVERY
-UsbSleepRecovery recovery;
+Replay& sleepReplay(){return replay;}
+Checkpoint& checkpointState(){return lastCheckpoint;}
 #endif
 #if RISC_PERFORMANCE_TRACE
 RiscPerf::Replay performanceReplay;
+RiscPerf::Replay& perfReplay(){return performanceReplay;}
+#endif
+#endif
+#if RISC_HWCDC_SLEEP_RECOVERY
+UsbSleepRecovery recovery;
 #endif
 TaskHandle_t owner=nullptr;
 bool outputting=false,unfinishedLine=false;
@@ -254,23 +301,29 @@ int32_t checkpoint(const char* app,uint64_t invocation,const char* text,uint32_t
 #endif
   // Intentionally permitted while console/PHY is fenced. RAM copy only; no
   // native observer/drain, Serial access, allocation or provider callbacks.
-  return captureCheckpoint(lastCheckpoint,journal.boot,RiscPlatform::millis(),app,invocation,text,length);
+  return captureCheckpoint(checkpointState(),journal.boot,RiscPlatform::millis(),app,invocation,text,length);
 }
 #endif
 void start(){
+#if RISC_NATIVE_ESP_IDF && (RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE)
+  // BSS alone cannot preserve Replay's nonzero snapshot defaults. Construct
+  // in-place before publishing the owner, with no heap allocation or fallback.
+  owner=nullptr;
+  new (replayStorage) ReplayWorkspace;
+#endif
   owner=xTaskGetCurrentTaskHandle();RiscPlatform::console.setTxTimeoutMs(0);
   outputting=unfinishedLine=false;
 #if RISC_STAGE_LOGS
   lostLines=truncatedLines=reportedLost=reportedTruncated=0;
 #endif
 #if RISC_PERFORMANCE_TRACE
-  performanceReplay.disconnect();
+  perfReplay().disconnect();
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
   recovery.reset();
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
-  replay.disconnect();lastCheckpoint={};
+  sleepReplay().disconnect();checkpointState()={};
   const auto reset=esp_reset_reason();
   const bool retain=reset==ESP_RST_SW || reset==ESP_RST_DEEPSLEEP || reset==ESP_RST_PANIC ||
     reset==ESP_RST_INT_WDT || reset==ESP_RST_TASK_WDT || reset==ESP_RST_WDT;
@@ -294,10 +347,10 @@ bool suspendUsbPhy(){
 #endif
   unfinishedLine=false;
 #if RISC_SLEEP_DIAGNOSTICS
-  replay.disconnect();
+  sleepReplay().disconnect();
 #endif
 #if RISC_PERFORMANCE_TRACE
-  performanceReplay.disconnect();
+  perfReplay().disconnect();
 #endif
   return ours() && RiscPlatform::console.available()<0 && RiscPlatform::console.availableForWrite()==0
 #if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
@@ -373,10 +426,10 @@ void poll(){
 #endif
   if(!transport.connected()){
 #if RISC_SLEEP_DIAGNOSTICS
-    replay.disconnect();
+    sleepReplay().disconnect();
 #endif
 #if RISC_PERFORMANCE_TRACE
-    performanceReplay.disconnect();
+    perfReplay().disconnect();
 #endif
     return;
   }
@@ -384,10 +437,10 @@ void poll(){
   // command dump or another line; never retain or retry its abandoned payload.
   if(unfinishedLine){finishLine();return;}
 #if RISC_PERFORMANCE_TRACE
-  if(!performanceReplay.active())
+  if(!perfReplay().active())
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
-  if(!replay.active())
+  if(!sleepReplay().active())
 #endif
   if(reportLoss())return;
 #if RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE
@@ -395,28 +448,28 @@ void poll(){
     int c=RiscPlatform::console.read();if(c<0)break;
 #if RISC_SLEEP_DIAGNOSTICS
 #if RISC_PERFORMANCE_TRACE
-    if(!performanceReplay.active())
+    if(!perfReplay().active())
 #endif
-      replay.input(char(c),journal,&lastCheckpoint);
+      sleepReplay().input(char(c),journal,&checkpointState());
 #endif
 #if RISC_PERFORMANCE_TRACE
 #if RISC_SLEEP_DIAGNOSTICS
-    if(!replay.active())
+    if(!sleepReplay().active())
 #endif
-      performanceReplay.input(char(c));
+      perfReplay().input(char(c));
 #endif
 #if RISC_SLEEP_DIAGNOSTICS && RISC_PERFORMANCE_TRACE
     // The winning command's newline must also discard the other parser's
     // prefix; otherwise the next request would concatenate two commands.
-    if(replay.active())performanceReplay.disconnect();
-    else if(performanceReplay.active())replay.disconnect();
+    if(sleepReplay().active())perfReplay().disconnect();
+    else if(perfReplay().active())sleepReplay().disconnect();
 #endif
   }
 #if RISC_PERFORMANCE_TRACE
-  if(performanceReplay.active()){performanceReplay.poll(transport);return;}
+  if(perfReplay().active()){perfReplay().poll(transport);return;}
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
-  replay.poll(transport);
+  sleepReplay().poll(transport);
 #endif
 #endif
 }
@@ -442,10 +495,10 @@ void line(const char* text){
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
   message(journal,RiscPlatform::millis(),text);
-  if(replay.active()){noteLost();return;}
+  if(sleepReplay().active()){noteLost();return;}
 #endif
 #if RISC_PERFORMANCE_TRACE
-  if(performanceReplay.active()){noteLost();return;}
+  if(perfReplay().active()){noteLost();return;}
 #endif
 #if RISC_ENABLE_USB_PHY
   if(usbFenced){noteLost();return;}
@@ -524,10 +577,10 @@ void lightReturn(int32_t result,uint32_t cause){
 #if RISC_HWCDC_SLEEP_RECOVERY
   if(result==ESP_OK){
 #if RISC_SLEEP_DIAGNOSTICS
-    replay.disconnect();
+    sleepReplay().disconnect();
 #endif
 #if RISC_PERFORMANCE_TRACE
-    performanceReplay.disconnect();
+    perfReplay().disconnect();
 #endif
     recovery.request(); // RAM only; wake-source cleanup runs before any USB I/O.
   }

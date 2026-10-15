@@ -52,23 +52,42 @@ USB PHY recovery and panic/sleep object checks now pass their focused tests.
 Native target qualification is in progress;
 this checkpoint is not a firmware release or a hardware pass.
 
-## Remaining product gates
+## Product qualification status
 
-- Finish SDK6 compile/link qualification, including panic/backtrace retention,
-  USB PHY lease restoration, paired-bank SHA operations, TLS and native radio.
-- Requalify the freestanding ELF relocation/import boundary with GCC15; do not
-  broaden device-driver imports just to make a build pass.
-- Port the shared USB controller producer from its IDF4 private-header boundary.
-- Replace Waveshare's Arduino_GFX display bridge behind the existing native
-  DisplayBackend without changing panel, paired-row, reset or brightness timing.
-- Preserve T-Watch's provider/capability composition and currently delivered apps.
-- Preserve X4 Pro's GPIO1 early rail ordering and replace its old Arduino startup
-  and flash-profile assertions with exact native SDK startup proofs.
-- Audit the current T5 Paper Pro source before porting its board/display bridge;
-  historical sources are not sufficient evidence for a release candidate.
-- Produce immutable product firmware, provider/app, metadata and catalog closure
-  only after those builds and byte-level artifact checks pass. Hardware smoke
-  tests remain a separate gate.
+The native ports now cover panic/sleep retention, USB PHY recovery, SHA/TLS,
+paired AppData, settings, storage custody, native I2S and the CO5300 display.
+The exact released T-Watch, Waveshare and X4 feature selections have explicit
+product-owned CMake profiles. The shared app and ordinary driver builders are
+qualified against GCC15 while retaining the public ELF import ABI. The private
+USB-host provider uses a separately admitted SDK6 cohort; this does not activate
+an unselected controller in any product. The released device-MSC workflows stay
+in the selected product composition.
+
+The T5S3-Reader migration is limited to current shared-source/build dependencies,
+including the selected device-MSC producer. Porting the full legacy standalone
+T5 firmware or changing its Paper Space default is outside this migration.
+
+The first feature-enabled Waveshare link exposed static internal-DRAM overlap
+with the fixed IQ reservation. Final image proofs must pass unchanged after
+safe ordinary-task payload placement. Every product requires an exact-source
+full link, its startup/partition/export proofs, immutable candidate packaging,
+and release/catalog closure. Physical boot, rollback, sleep, display, SD and
+radio behavior remain untested until exercised on the actual device.
+
+## Existing image admission and rollback
+
+Released paired-bank admission compares the app descriptor's project-name
+field. Native SDK6 therefore retains `arduino-lib-builder` only as an image
+identity string, with Runtime's numeric release version in the version field.
+No Arduino component or runtime symbol is linked. The linked-firmware check
+asserts both this descriptor identity and Arduino-free dependencies.
+
+SDK6 factory bootloaders retain rollback support, as the released Arduino2.0.17
+bootloader did. A new factory image and an update preserving the exact old
+bootloader are distinct artifacts. Preserving updates require identical
+partition bytes, image/admission bounds and readback checks; hardware boot,
+confirmation and rollback are separate gates. Metadata compatibility alone
+is not evidence that an old bootloader successfully starts a new application.
 
 Reference: https://github.com/espressif/esp-idf/releases/tag/v6.1
 
@@ -103,8 +122,8 @@ SDK object verify it has only `_frxt_setup_switch` as an undefined dependency.
 This is not a claim that old SDK-private driver layouts are interchangeable.
 
 Generic linking and affected-object tests do not qualify a product release.
-Feature-enabled storage, SDK-cohort provider admission, device profiles,
-rebuilt packages, exact final-image proofs and physical tests remain gates.
+Feature-enabled product links, immutable packages, exact final-image proofs
+and physical tests remain gates.
 CI supplies the immutable GitHub checkout SHA to CMake because the official
 container's build shell and checkout can have different owners; Git ownership
 protections are not modified. Local builds still obtain identity from Git.

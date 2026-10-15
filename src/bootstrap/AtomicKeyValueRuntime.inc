@@ -38,7 +38,7 @@ const Runtime::KeyValueAvailability* Runtime::keyValueAvailability(uint32_t ns) 
 }
 bool Runtime::keyValueAuthoritative(uint32_t ns) const {
   const auto* a=keyValueAvailability(ns);if(!a)return true;
-  risc_key_value_availability_state_v1 value{sizeof(value)};
+  risc_key_value_availability_state_v1 value{};value.struct_size=sizeof(value);
   return a->snapshot(a->context,ns,&value)==RISC_KEY_VALUE_AVAILABILITY_OK &&
     value.namespace_id==ns && value.availability==RISC_KEY_VALUE_AVAILABLE;
 }
@@ -79,7 +79,7 @@ int32_t Runtime::atomicLegacyGet(uint32_t ns,const char* key,void* out,uint32_t 
   if(endpoint->retained()){(void)atomicResult(RISC_ATOMIC_RETAINED);return RISC_KEY_VALUE_IO;}
   if(!keyValueAuthoritative(ns))return RISC_KEY_VALUE_NOT_FOUND;
   uint8_t bytes[RISC_KEY_VALUE_V2_BLOB_MAX];RiscRuntime::ScopedBufferWipe wipe(bytes);uint32_t size=0;
-  risc_key_value_atomic_state_v1 state{sizeof(state)};
+  risc_key_value_atomic_state_v1 state{};state.struct_size=sizeof(state);
   int32_t rc=endpoint->state(&state);
   if(rc==RISC_ATOMIC_OK)rc=endpoint->get(state.revision,key,bytes,limit,&size);
   if(rc==RISC_ATOMIC_RETAINED)(void)atomicResult(rc);

@@ -10,6 +10,7 @@ static bool owned=true,init_bad,slot_bad,card_bad,read_bad,write_bad,sync_bad,cl
 static int reset_bad=-1;
 static unsigned inits,slots,cards,reads,writes,syncs,deinits,resets;
 static uint8_t media[64*512];
+static int reported_capacity=64;
 void* heap_caps_malloc(size_t n,unsigned caps){assert(n==4096 && caps==(MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA|MALLOC_CAP_8BIT));if(allocation_bad)return nullptr;++allocations;return std::malloc(n);}
 void heap_caps_free(void* p){assert(p && p==ns::dma);++frees;std::free(p);}
 static bool check_owner(){return owned;}
@@ -23,7 +24,7 @@ esp_err_t sdmmc_host_init_slot(int slot,const sdmmc_slot_config_t* c){
 }
 esp_err_t sdmmc_card_init(const sdmmc_host_t* h,sdmmc_card_t* c){
  ++cards;assert(h->flags==SDMMC_HOST_FLAG_1BIT && h->max_freq_khz==20000 && h->slot==1 && h->command_timeout_ms==1000);
- c->csd={512,64};c->max_freq_khz=20000;return card_bad?ESP_FAIL:ESP_OK;
+ c->csd={512,test_capacity_t(reported_capacity)};c->max_freq_khz=20000;return card_bad?ESP_FAIL:ESP_OK;
 }
 esp_err_t sdmmc_read_sectors(sdmmc_card_t*,void* out,size_t lba,size_t count){
  ++reads;assert(out==ns::dma && !((uintptr_t)out%4));if(read_bad){memset(out,0xa5,count*512);return ESP_FAIL;}memcpy(out,media+lba*512,count*512);return ESP_OK;
@@ -39,7 +40,12 @@ int main(int argc,char**argv){
  if(!strcmp(mode,"allocation-failure")){allocation_bad=true;assert(!ns::open(41,42,40,20000000,&info) && ns::closed() && !inits && !allocations && !frees);return 0;}
  if(!strcmp(mode,"init-failure")){init_bad=true;assert(!ns::open(41,42,40,20000000,&info));assert(!ns::close() && !ns::closed() && !ns::idle() && !deinits);return 0;}
  slot_bad=!strcmp(mode,"slot-failure");card_bad=!strcmp(mode,"card-failure");
+ if(!strcmp(mode,"zero-capacity"))reported_capacity=0;
+ if(!strcmp(mode,"negative-capacity"))reported_capacity=-1;
+ if(!strcmp(mode,"capacity-limit"))reported_capacity=INT32_MAX;
  const bool opened=ns::open(41,42,40,20000000,&info);
+ if(reported_capacity<=0){assert(!opened && !info.sector_count && ns::close() && ns::closed());return 0;}
+ if(reported_capacity==INT32_MAX){assert(opened && info.sector_count==uint64_t(INT32_MAX));assert(ns::close() && ns::closed());return 0;}
  if(slot_bad || card_bad){assert(!opened && ns::close() && ns::closed() && resets==3);return 0;}
  assert(opened && !ns::closed() && ns::idle() && info.sector_size==512 && info.sector_count==64);
  uint8_t input[4097],output[4097];for(unsigned i=0;i<sizeof(input);++i)input[i]=uint8_t(i*3);
