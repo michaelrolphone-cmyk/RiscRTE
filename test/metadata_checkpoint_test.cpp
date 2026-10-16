@@ -1,6 +1,8 @@
 // Only stdio failures, wall time and scheduler waits are substituted. The real
 // readJson, size/deadline checks, JSON guard and parser execute on every input.
 #include "bootstrap/Json.h"
+#include "bootstrap/RuntimeFiles.h"
+#include "runtime/storage/PosixFiles.h"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -24,7 +26,9 @@ struct Input {
   bool eof=false,error=false,failClose=false,failOpen=false,failAllocation=false;
 } input;
 FILE* fake(){return reinterpret_cast<FILE*>(&input);}
-const char* FakePath="metadata-checkpoint-fixture";
+const char* FakePath="/metadata-checkpoint-fixture";
+bool providerMode=false;
+bool providerRead(const char*,JsonDocument&,bool*);
 void reset(const std::string& bytes) {
   input={};input.bytes=bytes;
   clockNs=readNs=clockCallNs=0;delayNs=Millisecond;
@@ -40,7 +44,7 @@ std::string json(size_t size) {
 }
 bool read(bool* retained=nullptr) {
   JsonDocument doc;
-  const bool ok=RiscBoot::readJson(FakePath,doc,retained);
+  const bool ok=providerMode?providerRead(FakePath,doc,retained):RiscBoot::readJson(FakePath,doc,retained);
   assert(opens==1 && closes==(input.failOpen?0:1));
 #if RISC_PERFORMANCE_TRACE
   assert(RiscPerf::data.counts[33]==delayCalls);
@@ -105,7 +109,7 @@ void storeCounts(const char* root) {
   }
   if(cohort)paths.push_back(base+"cohort.json");
   reset("");
-  for(const auto& path:paths){JsonDocument doc;assert(RiscBoot::readJson(path.c_str(),doc));}
+  for(const auto& path:paths){JsonDocument doc;assert(providerMode?providerRead(path.c_str(),doc,nullptr):RiscBoot::readJson(path.c_str(),doc));}
   assert(opens==paths.size() && closes==opens);
   printf("Exact-store production reader (zero simulated I/O time): files=%llu bytes=%llu reads=%llu delay_calls=%llu requested_ticks=%llu max_bytes_between_yields=%zu\n",
     (unsigned long long)opens,(unsigned long long)readBytes,(unsigned long long)readCalls,
@@ -149,7 +153,31 @@ extern "C" size_t __wrap_fread(void* data,size_t size,size_t count,FILE* stream)
 extern "C" int __wrap_feof(FILE* stream) {return stream==fake()?input.eof:__real_feof(stream);}
 extern "C" int __wrap_ferror(FILE* stream) {return stream==fake()?input.error:__real_ferror(stream);}
 extern "C" void* __wrap_malloc(size_t size) {return size==65537 && input.failAllocation?nullptr:__real_malloc(size);}
+namespace {
+FILE* providerStream=nullptr;
+bool providerRead(const char* path,JsonDocument& doc,bool* retained) {
+  // Unused callbacks are a real complete table; only open/read/close are
+  // replaced, so the production generic broker validates the whole ABI.
+  RiscStorage::PosixFiles backing("/");auto table=*backing.api();
+  table.open=[](void*,const char* path,uint32_t flags,uint32_t* handle)->int32_t{
+    assert(flags==RISC_FILES_READ && !providerStream);providerStream=fopen(path,"rb");
+    if(!providerStream)return RISC_FILES_NOT_FOUND;
+    *handle=1;return RISC_FILES_OK;
+  };
+  table.read=[](void*,uint32_t handle,void* bytes,uint32_t count,uint32_t* actual)->int32_t{
+    assert(handle==1 && providerStream);*actual=fread(bytes,1,count,providerStream);
+    return *actual || (feof(providerStream) && !ferror(providerStream))?RISC_FILES_OK:RISC_FILES_IO;
+  };
+  table.close=[](void*,uint32_t handle)->int32_t{
+    assert(handle==1 && providerStream);const int result=fclose(providerStream);providerStream=nullptr;
+    return result?RISC_FILES_RETAINED:RISC_FILES_OK;
+  };
+  RiscBoot::RuntimeFiles files;assert(files.bind(&table,[](){return true;},[](){return true;}));
+  RiscBoot::RuntimeFileSources::Entry entry{"/",&files};RiscBoot::RuntimeFileSources sources(&entry,1);
+  return RiscBoot::readJson(RiscBoot::RuntimeFileView(&sources,"/"),path,doc,retained);
+}
+}
 int main(int argc,char** argv) {
-  fixedBounds();deadlineAndFailures();
+  for(bool mode:{false,true}){providerMode=mode;fixedBounds();deadlineAndFailures();}
   if(argc==3 && !std::strcmp(argv[1],"--store"))storeCounts(argv[2]);else assert(argc==1);
 }

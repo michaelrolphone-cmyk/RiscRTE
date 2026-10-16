@@ -132,3 +132,14 @@ an active source for a staged one. Consumers must check the whole map's retained
 barrier before every lookup/I/O, retaining all dependent sessions until restart.
 The map, its entries, roots and provider bindings are immutable borrowed platform
 configuration for their complete lifetime.
+
+The internal read-only `RuntimeFileView` selects one exact source root and fences
+all callbacks against retention anywhere in the shared source map. A known file
+or directory token whose close cannot dispatch is retained as well; a metadata
+consumer never forgets that token or rebinds the provider. The view is three
+borrowed pointers (12 bytes on the native 32-bit target), with no image buffer.
+The explicit-provider JSON entry shares the original 65,537-byte allocation,
+512-byte read limit, five-second deadline and 32-KiB/two-millisecond/final-remainder
+yield checkpoints. The path-only JSON entry remains temporarily while Runtime
+consumer call sites are converted; its presence is tracked implementation work,
+not completion of the all-Runtime provider migration.

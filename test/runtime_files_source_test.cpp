@@ -66,6 +66,12 @@ int main(int argc,char**argv){
  RuntimeFileSources::Entry bindings[]={{"/active",&files},{"/staged",&identityFiles}};
  RuntimeFileSources sources(bindings,2);assert(sources.find("/active")==&files&&sources.find("/staged")==&identityFiles);
  assert(!sources.find("/absent")&&!sources.retained());
+ RiscBoot::RuntimeFileView activeView(&sources,"/active"),stagedView(&sources,"/staged"),unboundView(&sources,"/absent");
+ uint32_t viewed=0;assert(unboundView.open("/absent/dir/data",&viewed)==RISC_FILES_UNAVAILABLE&&!viewed);
+ assert(activeView.open("/active-other/dir/data",&viewed)==RISC_FILES_INVALID&&!viewed);
+ assert(activeView.open("/staged/dir/data",&viewed)==RISC_FILES_INVALID&&!viewed);
+ assert(!activeView.open("/active/dir/data",&viewed));assert(!activeView.close(viewed));
+ assert(!stagedView.open("/staged/dir/data",&viewed));assert(!stagedView.close(viewed));
  RuntimeFileSources::Entry duplicate[]={{"/active",&files},{"/active",&identityFiles}};
  RuntimeFileSources ambiguous(duplicate,2);assert(!ambiguous.find("/active"));
  std::thread foreign([&]{uint32_t token=9;assert(files.open("/dir/data",RISC_FILES_READ,&token)==RISC_FILES_CONTEXT&&!token);});foreign.join();
@@ -74,11 +80,26 @@ int main(int argc,char**argv){
  // Two Runtime/candidate callers share this explicit binding and its sticky
  // custody barrier; a failed parse/read cannot hide the provider's retention.
  auto& candidate=files;realClose=table.close;table.close=uncertainClose;assert(!candidate.open("/dir/data",RISC_FILES_READ,&h));assert(candidate.close(h)==RISC_FILES_RETAINED);assert(files.retained()&&!files.exitSafe()&&!candidate.exitSafe()&&sources.retained());
+ assert(activeView.stat("/active/dir/data",&info)==RISC_FILES_RETAINED);
+ assert(stagedView.stat("/staged/dir/data",&info)==RISC_FILES_RETAINED && !identityFiles.retained());
  unsigned prior=calls;assert(files.stat("/dir/data",&info)==RISC_FILES_RETAINED&&calls==prior);assert(!files.bind(provider.api(),owner,available));
  // Separate provider for a separate session, never a rebind of retained state.
  RiscStorage::PosixFiles other(root.c_str());auto otherTable=*other.api();RuntimeFiles second;assert(second.bind(&otherTable,owner,available));realOpen=otherTable.open;otherTable.open=loseCustody;uint32_t lost=0;assert(second.open("/dir/data",RISC_FILES_READ,&lost)==RISC_FILES_RETAINED);safe=true;assert(second.retained()&&!second.exitSafe());assert(second.close(lost)==RISC_FILES_RETAINED);
  // Fixture releases its OS descriptor only after validating no client cleanup.
  // Production provider and dependent resources remain retained until restart.
  assert(!otherTable.close(otherTable.context,lost));
+ // A known descriptor cannot be forgotten when close is rejected before
+ // dispatch. The trusted view latches custody without calling the provider.
+ RiscStorage::PosixFiles guarded(root.c_str());auto guardedTable=*guarded.api();RuntimeFiles guardedFiles;
+ assert(guardedFiles.bind(&guardedTable,owner,available));
+ RuntimeFileSources::Entry guardedEntry{"/guarded",&guardedFiles};RuntimeFileSources guardedSources(&guardedEntry,1);
+ RiscBoot::RuntimeFileView guardedView(&guardedSources,"/guarded");
+ uint32_t guardedHandle=0;assert(!guardedView.open("/guarded/dir/data",&guardedHandle));
+ safe=false;assert(guardedView.close(guardedHandle)==RISC_FILES_RETAINED);safe=true;
+ assert(guardedSources.retained() && !guardedFiles.exitSafe());
+ assert(guardedView.close(guardedHandle)==RISC_FILES_RETAINED);
+ // This fixture's first native token is one; only the backend test harness
+ // releases it after checking that no client retry reaches that backend.
+ assert(!guardedTable.close(guardedTable.context,1));
  puts("Internal generic files: CRUD, explicit binding, owner/reentrancy, shared retention, absent provider PASS");
 }

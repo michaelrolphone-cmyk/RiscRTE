@@ -7,7 +7,7 @@ source="${RUNTIME_SOURCE:-$repo}"
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
 flags=(-std=c++17 -Wall -Wextra -Werror -DESP_PLATFORM=1
-  -I"$source/src" -I"$source/lib/ArduinoJson/src"
+  -I"$source/src" -I"$source/sdk/app" -I"$source/sdk/driver" -I"$source/lib/ArduinoJson/src"
   -I"$repo/test/performance_loader_stubs"
   -Wl,--wrap=fopen,--wrap=fclose,--wrap=fread,--wrap=feof,--wrap=ferror,--wrap=malloc)
 if [[ "${SANITIZE:-0}" == 1 ]]; then

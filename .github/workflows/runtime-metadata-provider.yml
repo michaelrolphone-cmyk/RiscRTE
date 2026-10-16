@@ -1,0 +1,27 @@
+name: Provider-backed Runtime metadata
+on:
+  push:
+    branches: [work/unified-default-capabilities]
+    paths: ['src/bootstrap/Json.*', 'src/bootstrap/RuntimeFiles.h', 'src/bootstrap/StorageFilesVolumeAdapter.h', 'test/*metadata*', 'test/runtime_files_source_test.cpp', '.github/workflows/runtime-metadata-provider.yml']
+  pull_request:
+    paths: ['src/bootstrap/Json.*', 'src/bootstrap/RuntimeFiles.h', 'src/bootstrap/StorageFilesVolumeAdapter.h', 'test/*metadata*', 'test/runtime_files_source_test.cpp', '.github/workflows/runtime-metadata-provider.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_metadata_provider_test.sh
+      - run: bash test/run_metadata_checkpoint_test.sh
+      - run: bash test/run_metadata_read_test.sh
+      - run: bash test/run_runtime_files_source_test.sh
+      - run: bash test/run_board_test.sh
+      - run: bash test/run_i2c_function_test.sh
