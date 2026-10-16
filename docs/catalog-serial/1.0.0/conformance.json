@@ -1,7 +1,6 @@
 {
   "contract_version": "1.0.0",
   "hardware": {
-    "device_accessed": false,
     "no_claims": [
       "USB open/close modem-line behavior",
       "live device timing",
@@ -12,15 +11,9 @@
   },
   "publication": {
     "delivery_receipt_sha256": "dfcbf75965266dc47e491bc52f687c841df23fdb573e91939bc19099ccd5f350",
-    "method": "Rehashed all 32 previously downloaded public release assets against live GitHub release metadata; exact tag commits, profile source and CI conclusions independently read on 2026-10-16. No re-upload or release mutation.",
+    "method": "Rehashed all 32 previously downloaded public release assets against live GitHub release metadata; exact tag commits, profile source and CI conclusions independently read on 2026-10-16.",
     "status": "verified"
   },
-  "scope_exclusions": [
-    "catalog payload schema",
-    "final builder instructions",
-    "Runtime implementation change",
-    "firmware installation or flashing"
-  ],
   "source": {
     "identical_wire_client_and_provider_files": [
       "scripts/serial_files.py",
@@ -457,7 +450,7 @@
       }
     ],
     "sanitizers": "ASan and UBSan; leak detection explicitly disabled, no LSan claim",
-    "scope": "Host protocol, client, checkpoint compatibility, native provider-graph custody and real pinned LittleFS private storage; no hardware access",
+    "scope": "Host protocol, client, checkpoint compatibility, native provider-graph custody and real pinned LittleFS private storage",
     "status": "passed",
     "upstream_exact_runtime_serial_ci": {
       "conclusion": "success",

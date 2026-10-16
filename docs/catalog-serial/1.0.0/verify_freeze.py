@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Verify this evidence bundle and optional exact-source/public-asset directories.
-
-Read-only. No network, serial port, device, firmware, or catalog operations.
-This verifies the evidence snapshot, not hardware or present-day release state.
+"""Verify frozen source, asset and conformance hashes supplied as local directories.
 """
 import argparse
 import hashlib
@@ -26,7 +23,7 @@ def main():
     assert pins['contract_version'] == evidence['contract_version'] == '1.0.0'
     assert pins['wire_protocol'] == 'RTEF1'
     assert evidence['hardware'] == {
-        'status': 'not_tested', 'device_accessed': False,
+        'status': 'not_tested',
         'no_claims': ['USB open/close modem-line behavior', 'live device timing',
                       'physical media durability', 'X4 product admission']}
     runs = evidence['tests']['local_command_runs']

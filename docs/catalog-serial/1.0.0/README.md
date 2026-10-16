@@ -1,12 +1,9 @@
 # Catalog / RTEF1 integration contract 1.0.0
 
 Frozen 2026-10-16. This is a versioned integration baseline for the **published
-Waveshare 0.1.52 and T-Watch 1.1.43** releases. It describes existing behavior;
-it changes no Runtime implementation, product selection, public ABI, or release.
-The associated evidence is [pins.json](pins.json) and
-[conformance.json](conformance.json). Future behavior or newly admitted products
-require a separately reviewed contract revision. An unreleased cumulative Runtime
-or X4 candidate is not qualified by this freeze.
+Waveshare 0.1.52 and T-Watch 1.1.43** releases. The associated evidence is [pins.json](pins.json) and
+[conformance.json](conformance.json). Its source and product-admission pins apply
+to those two releases; X4 admission is outside this baseline.
 
 ## 1. Exact delivered revisions
 
@@ -270,9 +267,7 @@ reset is part of this service or its client recovery.
 [conformance.json](conformance.json) keeps source verification, software tests,
 publication and hardware evidence distinct. Public release assets include
 `TESTING.txt`; both releases remain **hardware untested**. Their factory images
-erase existing device data, and no data-preserving update kit is supplied. These
-are initial-installation artifact facts, not an additional bootstrap acceptance
-criterion. Per-file serial updates preserve unrelated files and directories;
+erase existing device data, and no data-preserving update kit is supplied. Per-file serial updates preserve unrelated files and directories.
 RTEF1 transfer does not flash factory artifacts.
 
 For later authorized device testing: keep Home awake, use one selected owner-trusted
@@ -280,18 +275,16 @@ For later authorized device testing: keep Home awake, use one selected owner-tru
 file, read back/compare, then explicitly replace that same file. Exercise binary,
 empty, partial/interrupted cases and preserve siblings; inspect failures before
 another transfer. Follow the release TESTING.txt and do not infer SD availability
-from map presence. No device was accessed for this freeze.
+from map presence.
 
-The freeze gate is satisfied by exact published pins, source equivalence and
-admission review, normal/ASan+UBSan host conformance, exact-source upstream CI and
-verified publication digests. It does not establish hardware timing, USB behavior,
-media durability, X4 admission, or a final catalog payload schema. This freeze
-adds no installation requirement beyond the explicitly selected operation.
+The evidence records exact published pins, source equivalence, admission review,
+normal/ASan+UBSan host conformance, successful exact-source upstream CI and verified
+publication digests. Hardware timing, USB behavior and physical media durability
+remain untested.
 
 ### Recheck the evidence bundle
 
 Run `python3 verify_freeze.py` from this directory to verify the committed logs
 and internal evidence consistency. To additionally rehash source and published
 assets, supply `--waveshare-runtime`, `--twatch-runtime`, `--waveshare-assets` and
-`--twatch-assets` directories containing the exact frozen files. The verifier is
-read-only and performs no network, serial, reset, flash or catalog operations.
+`--twatch-assets` directories containing the exact frozen files.
