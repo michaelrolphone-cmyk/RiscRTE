@@ -17,6 +17,7 @@ class NativeSpiffsFiles final {
  public:
   explicit NativeSpiffsFiles(const char* root):files_(root,RiscStorage::PosixFiles::OpenBehavior::SerializedFlatVfs,ModifiedTime){}
   const risc_storage_files_v1* api()const{return files_.api();}
+  const risc_storage_files_identity_v1* identityApi()const{return files_.identityApi();}
   bool exitSafe()const{return files_.exitSafe();}
   bool retained()const{return files_.retained();}
  private:

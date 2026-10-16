@@ -1,5 +1,6 @@
 #include <RiscPreferenceStoreV1.h>
 #include <RiscStorageFilesV1.h>
+#include <RiscStorageFilesIdentityV1.h>
 #include <RiscStorageFilesCatalogV1.h>
 #include "bootstrap/PreferenceStoreConfig.h"
 #include "bootstrap/StorageFilesConfig.h"
@@ -14,6 +15,8 @@ STATIC_ASSERT(RISC_PREFERENCE_STORE_COPIED_INPUT==4u, "copied input is independe
 STATIC_ASSERT(RISC_PREFERENCE_STORE_ATOMIC_GROUP==8u, "atomic group is explicit");
 STATIC_ASSERT(offsetof(risc_storage_files_v1,api_version)==0, "file ABI prefix");
 STATIC_ASSERT(offsetof(risc_storage_files_catalog_v1,api_version)==0, "catalog ABI prefix");
+STATIC_ASSERT(sizeof(risc_storage_files_identity_value_v1)==72, "opaque identity value layout");
+STATIC_ASSERT(offsetof(risc_storage_files_identity_v1,api_version)==0, "identity ABI prefix");
 STATIC_ASSERT(sizeof(risc_storage_files_handle_v1)==4, "opaque token width");
 STATIC_ASSERT(sizeof(((risc_storage_files_namespace_v1*)0)->namespace_id)==8, "opaque namespace width");
 STATIC_ASSERT(sizeof(((risc_storage_files_namespace_v1*)0)->label)==RISC_STORAGE_FILES_LABEL_MAX, "catalog label layout");

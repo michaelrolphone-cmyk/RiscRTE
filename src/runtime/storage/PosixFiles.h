@@ -2,6 +2,7 @@
 // Optional provider implementation. POSIX/VFS details terminate here, never in
 // metadata, loader, policy, or configuration consumers. No mount/format occurs.
 #include <RiscStorageFilesV1.h>
+#include <RiscStorageFilesIdentityV1.h>
 #include "FileValidation.h"
 #include <cstdlib>
 #include <cerrno>
@@ -34,6 +35,9 @@ class PosixFiles final {
   // root is immutable, borrowed provider configuration. The caller keeps it
   // and this provider alive through every open handle and retained failure.
   explicit PosixFiles(const char* root,OpenBehavior behavior=OpenBehavior::Posix,bool modifiedTime=true):root_(root),behavior_(behavior),modifiedTime_(modifiedTime){
+    identity_={1,sizeof(identity_),this,
+      [](void*c,const char*p,risc_storage_files_identity_value_v1*v){return self(c).pathIdentity(p,v);},
+      [](void*c,uint32_t h,risc_storage_files_identity_value_v1*v){return self(c).openedIdentity(h,v);}};
     api_={1,sizeof(api_),this,
       [](void*c,const char*p,uint32_t f,uint32_t*h){return self(c).open(p,f,h);},
       [](void*c,uint32_t h){return self(c).close(h);},
@@ -55,11 +59,12 @@ class PosixFiles final {
       [](void*c,uint32_t h,uint64_t o){return self(c).dirSeek(h,o);}};
   }
   const risc_storage_files_v1* api()const{return &api_;}
+  const risc_storage_files_identity_v1* identityApi()const{return &identity_;}
   bool retained()const{return retained_;}
   bool exitSafe()const{if(retained_)return false;for(const auto& h:handles_)if(h.token)return false;return true;}
  private:
   struct Handle{uint32_t token=0,flags=0;int fd=-1;DIR* dir=nullptr;char* path=nullptr;};
-  const char*root_;OpenBehavior behavior_;risc_storage_files_v1 api_{};Handle handles_[Capacity]{};uint32_t next_=0;bool retained_=false,modifiedTime_=true;
+  const char*root_;OpenBehavior behavior_;risc_storage_files_v1 api_{};risc_storage_files_identity_v1 identity_{};Handle handles_[Capacity]{};uint32_t next_=0;bool retained_=false,modifiedTime_=true;
   static PosixFiles& self(void*c){return *static_cast<PosixFiles*>(c);}
   static int32_t error(){return errno==ENOENT?RISC_FILES_NOT_FOUND:errno==EEXIST?RISC_FILES_EXISTS:errno==EACCES||errno==EPERM?RISC_FILES_DENIED:errno==ENOTSUP||errno==ENOSYS?RISC_FILES_UNAVAILABLE:RISC_FILES_IO;}
   int32_t retain(){retained_=true;return RISC_FILES_RETAINED;}
@@ -87,6 +92,29 @@ class PosixFiles final {
   }
   Handle* vacant(){if(retained_||next_==UINT32_MAX)return nullptr;for(auto&h:handles_)if(!h.token)return &h;return nullptr;}
   Handle* find(uint32_t token,bool dir=false){if(retained_||!token)return nullptr;for(auto&h:handles_)if(h.token==token&&bool(h.dir)==dir)return &h;return nullptr;}
+  static int32_t identityValue(const struct ::stat& s,risc_storage_files_identity_value_v1*out){
+    if(!S_ISREG(s.st_mode))return RISC_FILES_DENIED;
+    if(s.st_size<0)return RISC_FILES_IO;
+    *out={};out->struct_size=sizeof(*out);out->size=uint64_t(s.st_size);
+    out->opaque[0]=uint64_t(s.st_dev);out->opaque[1]=uint64_t(s.st_ino);
+    out->opaque[2]=uint64_t(s.st_mtime);out->opaque[3]=uint64_t(s.st_ctime);
+#if defined(__linux__) && !defined(ESP_PLATFORM)
+    out->opaque[4]=uint64_t(s.st_mtim.tv_nsec);out->opaque[5]=uint64_t(s.st_ctim.tv_nsec);
+#endif
+    return RISC_FILES_OK;
+  }
+  int32_t pathIdentity(const char*p,risc_storage_files_identity_value_v1*out){
+    if(retained_)return RISC_FILES_RETAINED;
+    char full[512];if(!out||out->struct_size<sizeof(*out)||!path(p,full))return RISC_FILES_INVALID;
+    if(!strcmp(p,"/"))return RISC_FILES_DENIED;
+    struct ::stat s{};if(!noLinks(full)||::stat(full,&s))return error();
+    return identityValue(s,out);
+  }
+  int32_t openedIdentity(uint32_t token,risc_storage_files_identity_value_v1*out){
+    if(retained_)return RISC_FILES_RETAINED;
+    auto*h=find(token);if(!h||!out||out->struct_size<sizeof(*out))return RISC_FILES_INVALID;
+    struct ::stat s{};if(fstat(h->fd,&s))return error();return identityValue(s,out);
+  }
   int32_t open(const char*p,uint32_t flags,uint32_t*out){
     if(out)*out=0;
     char full[512];if(!out||!path(p,full)||!validFlags(flags))return RISC_FILES_INVALID;

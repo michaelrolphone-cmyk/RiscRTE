@@ -113,3 +113,22 @@ suppressed on unmodified SPIFFS C sources, whose pinned IDF configuration uses
 byte-packed object-index tables. This is native implementation semantics testing
 on a host, together with a separate Xtensa compile probe; it is not hardware
 qualification or a claim that subsequent Runtime consumer integration is done.
+
+### Internal metadata identity and source selection
+
+The optional `storage.files.identity@1` supplement returns canonical opaque
+identity values for paths and open handles in the same file-provider binding.
+The current representation is a 72-byte value; that size is an ABI design choice,
+not a requirement that a backend use any particular native identity mechanism.
+POSIX/native adapters preserve their prior device/inode/size/time comparison
+(including Linux nanoseconds) without exposing those meanings to consumers.
+This is change/replacement evidence, not a content hash, frozen snapshot or new
+durability guarantee. Missing identity support remains explicitly unavailable.
+
+A trusted `RuntimeFileSources` map binds exact logical roots to already-bound
+sessions. Missing or duplicate roots cannot select a source. Active and staged
+roots are resolved separately; copying a Runtime port cannot silently substitute
+an active source for a staged one. Consumers must check the whole map's retained
+barrier before every lookup/I/O, retaining all dependent sessions until restart.
+The map, its entries, roots and provider bindings are immutable borrowed platform
+configuration for their complete lifetime.

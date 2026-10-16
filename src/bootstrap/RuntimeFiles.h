@@ -7,10 +7,15 @@ namespace RiscBoot {
 class RuntimeFiles final {
  public:
   using Check=bool (*)();
-  bool bind(const risc_storage_files_v1* table,Check owner,Check safe) {
+  bool bind(const risc_storage_files_v1* table,Check owner,Check safe,
+            const risc_storage_files_identity_v1* identity=nullptr) {
+    if(identity && (!table || identity->api_version!=1 || identity->struct_size<sizeof(*identity) ||
+       identity->context!=table->context || !identity->path || !identity->opened))return false;
     if(!owner || !safe || !owner() || !safe() || calling_ || !files_.bindFiles(table))return false;
-    owner_=owner;safe_=safe;return true;
+    owner_=owner;safe_=safe;identity_=identity;return true;
   }
+  int32_t identity(const char*p,risc_storage_files_identity_value_v1*v){return call([&]{return files_.identity(identity_,p,0,v);});}
+  int32_t identity(uint32_t h,risc_storage_files_identity_value_v1*v){return call([&]{return files_.identity(identity_,nullptr,h,v);});}
   bool bound()const{return files_.bound();}
   bool retained()const{return retained_ || files_.retained();}
   bool exitSafe()const{return !calling_ && !retained() && files_.exitSafe();}
@@ -45,6 +50,7 @@ class RuntimeFiles final {
     if(rc==RISC_FILES_RETAINED || !owner_() || !safe_()){retained_=true;return RISC_FILES_RETAINED;}
     return rc;
   }
+  const risc_storage_files_identity_v1* identity_=nullptr;
   StorageFilesVolumeAdapter files_;Check owner_=nullptr,safe_=nullptr;
   bool calling_=false,retained_=false;
 };
@@ -52,4 +58,31 @@ class RuntimeFiles final {
 // Runtime candidates use the same authority while comparing active/staged
 // roots. No app can bind, replace, or acquire this privileged client.
 inline RuntimeFiles& runtimeFiles(){static RuntimeFiles files;return files;}
+}
+
+namespace RiscBoot {
+// Trusted immutable source map. Names select generic namespace sessions, not
+// physical backends. Every candidate shares its map's terminal custody barrier.
+class RuntimeFileSources final {
+ public:
+  struct Entry {const char* root;RuntimeFiles* files;};
+  constexpr RuntimeFileSources(const Entry* entries,size_t count):entries_(entries),count_(count){}
+  RuntimeFiles* find(const char* root)const {
+    if(!RiscStorage::validPath(root) || !entries_)return nullptr;
+    RuntimeFiles* result=nullptr;
+    for(size_t i=0;i<count_;++i){
+      const auto&e=entries_[i];if(!RiscStorage::validPath(e.root)||!e.files||!e.files->bound())return nullptr;
+      for(size_t j=0;j<i;++j)if(!strcmp(e.root,entries_[j].root))return nullptr;
+      if(!strcmp(e.root,root))result=e.files;
+    }
+    return result;
+  }
+  bool retained()const {if(entries_)for(size_t i=0;i<count_;++i)if(entries_[i].files&&entries_[i].files->retained())return true;return false;}
+ private:
+  const Entry* entries_;size_t count_;
+};
+inline bool sameFileIdentity(const risc_storage_files_identity_value_v1&a,const risc_storage_files_identity_value_v1&b){
+ return a.struct_size==sizeof(a)&&b.struct_size==sizeof(b)&&!a.reserved&&!b.reserved&&
+   a.size==b.size&&!memcmp(a.opaque,b.opaque,sizeof(a.opaque));
+}
 }

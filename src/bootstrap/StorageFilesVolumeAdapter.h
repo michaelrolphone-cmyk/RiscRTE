@@ -1,4 +1,5 @@
 #pragma once
+#include <RiscStorageFilesIdentityV1.h>
 /* Native adapter only. Backend custody and all legacy volume details stop here;
  * the app table is RiscStorageFilesV1.h. Runtime owns invocation authorization,
  * graph grants and propagation of sticky retention. Never expose this class to
@@ -97,6 +98,22 @@ class StorageFilesVolumeAdapter {
     if(n>size)return retain();
     *count=uint32_t(n);
     return handleStatus(*h);
+  }
+  // Internal optional supplement: map grant-owned tokens before calling the
+  // matching provider. Raw handles never escape through the application ABI.
+  int32_t identity(const risc_storage_files_identity_v1* api,const char* path,
+                   uint32_t token,risc_storage_files_identity_value_v1* out) {
+    if(!out || out->struct_size<sizeof(*out))return RISC_FILES_INVALID;
+    if(!files_ || !api || api->api_version!=1 || api->struct_size<sizeof(*api) ||
+       api->context!=files_->context || !api->path || !api->opened)return RISC_FILES_UNAVAILABLE;
+    if(path && !RiscStorage::validPath(path))return RISC_FILES_INVALID;
+    Handle* h=path?nullptr:find(token,false);if(!path&&!h)return RISC_FILES_INVALID;
+    int32_t rc=before();if(rc!=RISC_FILES_OK)return rc;
+    risc_storage_files_identity_value_v1 value{};value.struct_size=sizeof(value);
+    rc=directResult(path?api->path(api->context,path,&value):api->opened(api->context,h->native,&value));
+    if(rc!=RISC_FILES_OK)return rc;
+    if(value.struct_size!=sizeof(value)||value.reserved)return RISC_FILES_IO;
+    *out=value;return RISC_FILES_OK;
   }
   int32_t seek(risc_storage_files_handle_v1 token,uint64_t offset) {
     Handle* h=find(token,false);if(!h)return RISC_FILES_INVALID;
