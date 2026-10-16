@@ -48,6 +48,6 @@ test_zip_nonregular_compressed_and_duplicates (__main__.ContractTests.test_zip_n
 test_zip_prefix_suffix_and_gap_rejected (__main__.ContractTests.test_zip_prefix_suffix_and_gap_rejected) ... ok
 
 ----------------------------------------------------------------------
-Ran 48 tests in 0.777s
+Ran 48 tests in 0.807s
 
 OK

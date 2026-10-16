@@ -96,7 +96,7 @@ def parent_paths(path):
 
 
 def pack(manifest, contents):
-    """Deterministic fixture/container writer. Does not extract or contact devices."""
+    """Deterministic fixture/container writer."""
     members = dict(contents)
     require('manifest.json' not in members, 'reserved manifest source')
     members['manifest.json'] = canonical(manifest)

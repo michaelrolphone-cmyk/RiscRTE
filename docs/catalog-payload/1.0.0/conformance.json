@@ -143,7 +143,7 @@
     {
       "path": "test-results.txt",
       "bytes": 4347,
-      "sha256": "62b58bb59b4f124f20d6d7d58b468a86b833573ef7478171c53e2b0fa8a61fe4"
+      "sha256": "a3da7203fedff3eff5bbf18e07961b57990488e02a78824439a138878dc10331"
     },
     {
       "path": "test_validate.py",
@@ -152,8 +152,8 @@
     },
     {
       "path": "validate.py",
-      "bytes": 17781,
-      "sha256": "6a80f7d341c8229937a5a09b0f6f2faf2a73b56f5029fc066d06e43c17c2c134"
+      "bytes": 17744,
+      "sha256": "57f5803a8d98287a9a0f5e2aa7fdb92d63d6b0775763f48f08d8a79ca1fbfac4"
     }
   ]
 }
