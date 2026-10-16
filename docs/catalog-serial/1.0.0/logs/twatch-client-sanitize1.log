@@ -1,0 +1,37 @@
+test_cli_download_exclusive_default_and_explicit_replace (__main__.IntegrationTest.test_cli_download_exclusive_default_and_explicit_replace) ... ok
+test_cli_invalid_inputs_never_open_device (__main__.IntegrationTest.test_cli_invalid_inputs_never_open_device) ... ok
+test_cli_upload_download_and_metadata (__main__.IntegrationTest.test_cli_upload_download_and_metadata) ... ok
+test_crc_rejection_on_real_endpoint (__main__.IntegrationTest.test_crc_rejection_on_real_endpoint) ... ok
+test_create_never_replaces_and_replace_is_explicit (__main__.IntegrationTest.test_create_never_replaces_and_replace_is_explicit) ... ok
+test_download_corruption_is_detected_at_crc (__main__.IntegrationTest.test_download_corruption_is_detected_at_crc) ... ok
+test_download_missing_and_unavailable_are_distinct (__main__.IntegrationTest.test_download_missing_and_unavailable_are_distinct) ... ok
+test_exact_duplicate_frame_does_not_repeat_write (__main__.IntegrationTest.test_exact_duplicate_frame_does_not_repeat_write) ... ok
+test_invalid_paths_rejected_before_sending (__main__.IntegrationTest.test_invalid_paths_rejected_before_sending) ... ok
+test_local_fifo_and_symlink_destinations_are_rejected (__main__.IntegrationTest.test_local_fifo_and_symlink_destinations_are_rejected) ... ok
+test_local_sink_zero_progress_aborts (__main__.IntegrationTest.test_local_sink_zero_progress_aborts) ... ok
+test_local_source_failures_abort_but_do_not_restore_destination (__main__.IntegrationTest.test_local_source_failures_abort_but_do_not_restore_destination) ... ok
+test_long_interleaved_diagnostics_do_not_confuse_frames (__main__.IntegrationTest.test_long_interleaved_diagnostics_do_not_confuse_frames) ... ok
+test_lost_commit_acknowledgment_is_unknown_and_not_retried (__main__.IntegrationTest.test_lost_commit_acknowledgment_is_unknown_and_not_retried) ... ok
+test_lost_put_acknowledgment_can_leave_truncated_file (__main__.IntegrationTest.test_lost_put_acknowledgment_can_leave_truncated_file) ... ok
+test_lost_write_acknowledgment_never_retries_chunk (__main__.IntegrationTest.test_lost_write_acknowledgment_never_retries_chunk) ... ok
+test_namespaces_stat_and_mkdir (__main__.IntegrationTest.test_namespaces_stat_and_mkdir) ... ok
+test_path_fragments_preserve_utf8_and_spaces (__main__.IntegrationTest.test_path_fragments_preserve_utf8_and_spaces) ... ok
+test_protocol_oversize_line_is_fatal (__main__.IntegrationTest.test_protocol_oversize_line_is_fatal) ... ok
+test_readonly_and_unavailable_upload_do_not_create (__main__.IntegrationTest.test_readonly_and_unavailable_upload_do_not_create) ... ok
+test_retained_status_poison_session_without_cleanup (__main__.IntegrationTest.test_retained_status_poison_session_without_cleanup) ... ok
+test_roundtrip_binary_empty_and_all_chunk_boundaries (__main__.IntegrationTest.test_roundtrip_binary_empty_and_all_chunk_boundaries) ... ok
+test_streaming_short_provider_and_local_io (__main__.IntegrationTest.test_streaming_short_provider_and_local_io) ... ok
+test_sync_failure_is_not_success (__main__.IntegrationTest.test_sync_failure_is_not_success) ... ok
+test_write_failure_preserves_partial_selected_file (__main__.IntegrationTest.test_write_failure_preserves_partial_selected_file) ... ok
+test_wrong_read_offset_is_rejected (__main__.IntegrationTest.test_wrong_read_offset_is_rejected) ... ok
+test_wrong_session_wrong_sequence_and_malformed_success (__main__.IntegrationTest.test_wrong_session_wrong_sequence_and_malformed_success) ... ok
+test_wrong_write_offset_stops_before_commit (__main__.IntegrationTest.test_wrong_write_offset_stops_before_commit) ... ok
+test_zero_write_fails_without_infinite_loop (__main__.IntegrationTest.test_zero_write_fails_without_infinite_loop) ... ok
+test_oversize_protocol_frame_and_partial_eof (__main__.TransportTest.test_oversize_protocol_frame_and_partial_eof) ... ok
+test_serial_transport_rejects_regular_file (__main__.TransportTest.test_serial_transport_rejects_regular_file) ... ok
+test_unterminated_diagnostic_has_a_deadline (__main__.TransportTest.test_unterminated_diagnostic_has_a_deadline) ... ok
+
+----------------------------------------------------------------------
+Ran 32 tests in 13.687s
+
+OK
