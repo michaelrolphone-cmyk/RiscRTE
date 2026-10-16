@@ -3,6 +3,10 @@
 namespace RiscBoot {
 // Internal, borrowed semantic endpoint. Registration copies this descriptor;
 // the context and operations outlive Runtime and all retained receipts.
+// Trusted providers obey the existing RiscKeyValueAtomicV1 status, size and
+// output contracts. Direct atomic calls retain that contract; Runtime adds
+// post-call owner/custody fencing. Legacy read-through separately stages bytes
+// and validates size before publishing them to the caller.
 struct AtomicSettingsEndpoint {
   struct Operations {
     uint32_t (*namespaceId)(void*);
