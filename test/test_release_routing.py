@@ -15,7 +15,7 @@ import publish_firmware as legacy
 class ReleaseRoutingTests(unittest.TestCase):
     def test_default_branch_workflow_is_read_only_regression(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text()
-        self.assertIn('name: Historical Arduino regression\n', workflow)
+        self.assertIn('name: Shared Runtime regression\n', workflow)
         self.assertIn('    branches: [main, master]\n', workflow)
         self.assertIn('  workflow_dispatch:\n', workflow)
         self.assertIn('  contents: read\n', workflow)
