@@ -8,7 +8,7 @@ on:
       - 'src/runtime/storage/**'
       - 'src/bootstrap/**'
       - 'src/ports/esp32s3/NativeSerialFiles.*'
-      - 'src/ports/esp32s3/NativeSerialStorage.*'
+      - 'src/ports/esp32s3/NativeSerialStorage*.*'
       - 'src/ports/esp32s3/NativeAppDataMount.*'
       - 'src/ports/esp32s3/NativePlatform.*'
       - 'src/ports/esp32s3/SleepDiagnostics.*'
@@ -18,6 +18,7 @@ on:
       - 'scripts/serial_files.py'
       - 'test/*serial_files*'
       - 'test/*serial*storage*'
+      - 'test/native_serial_product_provider.c'
       - 'test/*serial_waveshare*'
       - 'test/*spiffs*'
       - 'test/*littlefs*'
@@ -57,6 +58,8 @@ jobs:
         run: WAVESHARE_SOURCE="$GITHUB_WORKSPACE/.qualification/waveshare" python3 test/run_native_serial_waveshare_sd_test.py
       - name: Optional Runtime checkpoint prefix compatibility
         run: bash test/run_runtime_checkpoint_api_test.sh
+      - name: Explicit X4 and legacy product startup storage binding
+        run: TMPDIR="$RUNNER_TEMP" python3 test/run_native_serial_product_storage_test.py
       - name: Permanent native provider graph custody and wire integration
         run: bash test/run_serial_native_provider_test.sh
       - name: Explicit private storage on actual pinned LittleFS and fenced mount

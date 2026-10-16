@@ -68,6 +68,7 @@ RiscSerial::Namespace namespaces[]={
   {2,"Serial files",&privateClient,true},
 #endif
 #if RISC_NATIVE_SERIAL_SD
+  // Permanent wire namespace, deliberately independent of provider instance.
   {12,"SD card",&sdClient,true},
 #endif
 };

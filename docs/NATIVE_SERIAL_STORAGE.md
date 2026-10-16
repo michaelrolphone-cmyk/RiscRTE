@@ -9,7 +9,7 @@ alternative for other products.
 | Explicit flag | Permanent namespace | Session and authority |
 | --- | --- | --- |
 | `RISC_NATIVE_SERIAL_APPDATA_FILES=1` | 2, `Serial files`, writable | Separate `RuntimeFiles` + `ReopenedFiles`, exclusively `/appdata/.serial-files` |
-| `RISC_NATIVE_SERIAL_SD=1` | 12, `SD card`, writable | Separate Runtime-owned graph grant to exactly `sdmmc-fatfs`, instance 12 |
+| `RISC_NATIVE_SERIAL_SD=1` | 12, `SD card`, writable | Separate Runtime-owned graph grant to the exact product-selected provider and instance; default `sdmmc-fatfs`, instance 12 |
 | `RISC_NATIVE_SERIAL_BOOT_FILES=1` | 1, `Active boot store`, read-only | Separate `NativeSpiffsFiles` + `RuntimeFiles` on the existing `/bootfs` mount; embedded builds use the POSIX counterpart |
 
 All require `RISC_NATIVE_SERIAL_FILES=1`. The private mutable selection also
@@ -78,16 +78,35 @@ RISC_NATIVE_SERIAL_FILES=1
 RISC_NATIVE_SERIAL_APPDATA_FILES=1
 ```
 
-For Waveshare only, also add `RISC_NATIVE_SERIAL_SD=1`. Its existing exact
-`sdmmc-fatfs` instance 12 is separately acquired by Runtime and explicitly
-given an explicit cold-media preparation policy before application entry;
-already-ready media is never remounted, and unavailable media is refreshed once.
-It is not borrowed
-from the Home application. Failed optional activation/card absence stays
-unavailable without a fallback. Missing or ambiguous configured provider identity
-is an admission error. T-Watch does not select SD merely because some other
-product does. Either product may separately opt into the read-only boot export
-with `RISC_NATIVE_SERIAL_BOOT_FILES=1`.
+For Waveshare, also add `RISC_NATIVE_SERIAL_SD=1`. With neither provider
+selector overridden, this preserves its existing exact `sdmmc-fatfs`, instance
+12 binding. For the explicit X4 candidate, select all three destinations and
+supply both provider selectors in its product-owned definitions:
+
+```cmake
+RISC_NATIVE_SERIAL_FILES=1
+RISC_NATIVE_SERIAL_BOOT_FILES=1
+RISC_NATIVE_SERIAL_APPDATA_FILES=1
+RISC_NATIVE_SERIAL_SD=1
+"RISC_NATIVE_SERIAL_SD_PROVIDER=\"x4pro-sd\""
+RISC_NATIVE_SERIAL_SD_INSTANCE=9
+```
+
+Wire namespace 12 remains independent of either native instance: X4 advertises
+12 while binding instance 9. No board, mount, label or app-grant inference is
+used. An incomplete selector pair, invalid provider string or out-of-range /
+noninteger instance fails compilation. A complete override has no legacy
+fallback. The shared actual startup binding requires the exact, uniquely
+admitted `storage.volume@1` provider after complete Runtime graph preparation.
+Missing, wrong or ambiguous configuration is an admission error.
+
+Runtime separately acquires that native session and applies explicit cold-media
+preparation before application entry. Already-ready media is never remounted,
+and unavailable media is refreshed once. No Home application grant is borrowed.
+Clean optional activation/card absence stays unavailable without a fallback;
+uncertain custody remains terminally retained. T-Watch does not select SD merely
+because another product does. Other profiles may separately opt into the
+read-only boot export with `RISC_NATIVE_SERIAL_BOOT_FILES=1`.
 
 The shared ordinary Home loop must call the explicitly admitted settled Runtime
 checkpoint after callbacks return; its previous ordinary yield alone is not a
@@ -112,6 +131,13 @@ the exact whole-flash digest while a separate metadata session is active.
 `WAVESHARE_SOURCE=/path/to/exact/published/checkout python3
 test/run_native_serial_waveshare_sd_test.py` qualifies the pinned async SD
 provider and FatFs against a RAM card through the actual native graph session.
-The target compile probe checks default-off, wire-only, T-Watch and Waveshare
-compositions using the pinned Xtensa/IDF toolchain. These are host/compile gates,
+`python3 test/run_native_serial_product_storage_test.py` exercises the shared
+production startup binding with default `legacyWave12` and explicit `X4SD9`,
+including stable `NS` wire ID 12, exact provider/instance/API selection,
+unadmitted and ambiguous graph rejection, absent media, transfers and terminal
+custody. Its synthetic provider does not qualify the real X4 driver.
+The target compile probe checks default-off, wire-only, T-Watch, Waveshare and
+explicit X4 compositions using the pinned Xtensa/IDF toolchain. It preserves
+external serial workspace placement and empty default-off objects. Full product
+linking and IQ-bank memory-margin proof remain separate. These are host/compile gates,
 not hardware qualification or permission to access a device.

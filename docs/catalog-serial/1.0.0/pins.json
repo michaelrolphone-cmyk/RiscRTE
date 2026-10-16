@@ -1,0 +1,683 @@
+{
+  "common_client": {
+    "git_blob": "5a67334b2052aa8224be7fc76ae6f98500f5194d",
+    "path": "scripts/serial_files.py",
+    "sha256": "7dd82ad4fb9d3abd953519d584b551f5735d7b25f47a000d0ebf766490123f6a"
+  },
+  "contract_version": "1.0.0",
+  "freeze_date": "2026-10-16",
+  "products": [
+    {
+      "admission": {
+        "active_boot_bank_writable": false,
+        "application_grants_reused": false,
+        "boot_export_enabled": false,
+        "dispatch": "settled-owner-checkpoint",
+        "flags": {
+          "RISC_NATIVE_SERIAL_APPDATA_FILES": 1,
+          "RISC_NATIVE_SERIAL_FILES": 1,
+          "RISC_NATIVE_SERIAL_SD": 1
+        },
+        "hardware_tested": false,
+        "namespaces": [
+          {
+            "id": 2,
+            "label": "Serial files",
+            "private_root": "/appdata/.serial-files",
+            "writable": true
+          },
+          {
+            "backend_instance": 12,
+            "backend_provider": "sdmmc-fatfs",
+            "id": 12,
+            "label": "SD card",
+            "writable": true
+          }
+        ]
+      },
+      "assets": [
+        {
+          "bytes": 22640,
+          "github_asset_id": 648403908,
+          "name": "bootloader.bin",
+          "sha256": "71afcbbdce4f3259dea297527c0a02a43db489c18fcd635297da1bac069f650c",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/bootloader.bin"
+        },
+        {
+          "bytes": 6777,
+          "github_asset_id": 648403918,
+          "name": "ci-provenance.zip",
+          "sha256": "c8a7340eeaa3e72d4494521e0a050457c7b9f39d52f61c12b09a1cbc5692eb67",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/ci-provenance.zip"
+        },
+        {
+          "bytes": 617424,
+          "github_asset_id": 648403927,
+          "name": "default.elf",
+          "sha256": "9f10c7150cdc175ff5af0dbc1410e455ead4f18868dd56555e10860781103f2f",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/default.elf"
+        },
+        {
+          "bytes": 1551,
+          "github_asset_id": 648403929,
+          "name": "default.json",
+          "sha256": "0888f82c0f69d48210d94bd9507e359833200d2756a1327323580324f314e3b1",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/default.json"
+        },
+        {
+          "bytes": 1773584,
+          "github_asset_id": 648403942,
+          "name": "firmware.bin",
+          "sha256": "0f6d19bbd1035a7bee47c843a1855806849288b12aa12a55ebb1fe68952fc5d3",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/firmware.bin"
+        },
+        {
+          "bytes": 3072,
+          "github_asset_id": 648403948,
+          "name": "partitions.bin",
+          "sha256": "d27edcdba637142baa7d91e29b70df47554c22a4f14de303dc6a0cdcc1e25de8",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/partitions.bin"
+        },
+        {
+          "bytes": 1399724,
+          "github_asset_id": 648403958,
+          "name": "qualification.json",
+          "sha256": "11df2fa4d6b365c482315a610d283fff20d35e1db6e6d848fd0f25821fc45582",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/qualification.json"
+        },
+        {
+          "bytes": 844,
+          "github_asset_id": 648403892,
+          "name": "RELEASE-NOTES.txt",
+          "sha256": "46a6c8debcb95a267e845b11bc3975e2244efae8bba41826062c8e50fb57a05e",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/RELEASE-NOTES.txt"
+        },
+        {
+          "bytes": 13888,
+          "github_asset_id": 648403968,
+          "name": "release.json",
+          "sha256": "c98902d08e0423807de15ffa1f0cfa5b8190b19490ef1f7c44d4a2e04b6d2a6f",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/release.json"
+        },
+        {
+          "bytes": 1287,
+          "github_asset_id": 648403894,
+          "name": "SHA256SUMS",
+          "sha256": "e01d3a14ead7240803f2c768c12a0ecf50e381303ad8b0a7afb0dc1f9464bd68",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/SHA256SUMS"
+        },
+        {
+          "bytes": 10148,
+          "github_asset_id": 648403967,
+          "name": "source-lock.json",
+          "sha256": "7416e31e0e4650b2b4c40f8d411fefdfe7a9925f521e18d67e8d7f6388588212",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/source-lock.json"
+        },
+        {
+          "bytes": 3492,
+          "github_asset_id": 648403973,
+          "name": "source-pins.json",
+          "sha256": "54a4189ba659f438eb0bb4a87d510e4f69133c1ca373db122e43ef96111f2e33",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/source-pins.json"
+        },
+        {
+          "bytes": 5570560,
+          "github_asset_id": 648403972,
+          "name": "store.bin",
+          "sha256": "e025d90b35626b60f81a4558b5176b0f5ab2c7880ee37074f3c6a687fce4eb37",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/store.bin"
+        },
+        {
+          "bytes": 1879,
+          "github_asset_id": 648403893,
+          "name": "TESTING.txt",
+          "sha256": "179c9cdc939b5dcea846684c78ba0d708712c5967fcc01d75c2a4112204dd72b",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/TESTING.txt"
+        },
+        {
+          "bytes": 13037685,
+          "github_asset_id": 648403889,
+          "name": "Waveshare-0.1.52-Shared-Default-Evidence.zip",
+          "sha256": "f44c8c70057c9b87be9131cd3135e31367bca0d8e0ea8813d8c908c63a353ea5",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/Waveshare-0.1.52-Shared-Default-Evidence.zip"
+        },
+        {
+          "bytes": 16777216,
+          "github_asset_id": 648403896,
+          "name": "Waveshare-0.1.52-Shared-Default-factory-erases-data-0x0.bin",
+          "sha256": "b17b236a9c729da91b8ec709f9b43bbe326296602c34de69f3aa8582741dbd6c",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/download/test-shared-default-0.1.52/Waveshare-0.1.52-Shared-Default-factory-erases-data-0x0.bin"
+        }
+      ],
+      "ci": {
+        "conclusion": "success",
+        "head_sha": "3368c0719597116fcb4b583b4a596f41a79d5263",
+        "id": 38955286642,
+        "run_attempt": 2,
+        "status": "completed",
+        "updated_at": "2026-10-16T19:40:23Z",
+        "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/actions/runs/38955286642",
+        "workflow_id": 386478904
+      },
+      "github_release_id": 415315710,
+      "hardware_tested": false,
+      "prerelease": true,
+      "product": "waveshare",
+      "product_revision": "3368c0719597116fcb4b583b4a596f41a79d5263",
+      "profile": {
+        "path": "profiles/native-idf61.cmake",
+        "sha256": "59a8d368b4b5ec01c68fb690349e0c11620f9b6ee535cd95047b99d218295187",
+        "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/blob/3368c0719597116fcb4b583b4a596f41a79d5263/profiles/native-idf61.cmake"
+      },
+      "release_tag": "test-shared-default-0.1.52",
+      "release_url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06/releases/tag/test-shared-default-0.1.52",
+      "repository": "michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06",
+      "runtime_revision": "9f8d67029181f6cd064e247aa949a295854fc494",
+      "runtime_tree": "d24d855ea565932b6724628e6ffeaa7690814f96",
+      "source_pins": {
+        "brightness_diagnostics_revision": "afe17271c63c7ade67e85662188748a58074d8b8",
+        "drivers_revision": "5890721073ebabd781d5d278e447c761947a5c58",
+        "image_helper_revision": "74f7491dc470b92dfa41fce41bf0c500f3714a94",
+        "runtime_revision": "9f8d67029181f6cd064e247aa949a295854fc494",
+        "sdk_revision": "fff9895c82d744c7237be8847347bdd1b07c6643",
+        "system_revision": "cb483470887b5198e2f3cd2457586ef6622142a9",
+        "utilities_revision": "fc9f93402050f020a3422ee889620b2414c7ad5d",
+        "watch_revision": "8132d73c828c0e4763f6c89a3d6a4a883314056a"
+      },
+      "sources": [
+        {
+          "git_blob": "5a67334b2052aa8224be7fc76ae6f98500f5194d",
+          "identical_across_delivered_revisions": true,
+          "path": "scripts/serial_files.py",
+          "sha256": "7dd82ad4fb9d3abd953519d584b551f5735d7b25f47a000d0ebf766490123f6a",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/scripts/serial_files.py"
+        },
+        {
+          "git_blob": "2c3a28348b79f342f17beca984eaaa326e136eb6",
+          "identical_across_delivered_revisions": true,
+          "path": "src/runtime/serial/Files.cpp",
+          "sha256": "27cb0118c33f4a56302431b3398f016f6b2917098da12ba372ac197751335d6f",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/runtime/serial/Files.cpp"
+        },
+        {
+          "git_blob": "e5f225f8482c9936ef94469dd9c1ac6b31e022d4",
+          "identical_across_delivered_revisions": true,
+          "path": "src/runtime/serial/Files.h",
+          "sha256": "aa03f3c523b3010190ea77f8bbea2471a7d1d079758bc6182d9ce23f915a4535",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/runtime/serial/Files.h"
+        },
+        {
+          "git_blob": "f564e3722a6090904d7613e50d860f0ae4f5163e",
+          "identical_across_delivered_revisions": true,
+          "path": "sdk/app/RiscStorageFilesV1.h",
+          "sha256": "0699725f95e574a22ef7892416e76a33cd0a57d06b96cc42021e10ba0aeb215b",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/sdk/app/RiscStorageFilesV1.h"
+        },
+        {
+          "git_blob": "631a5aa9c6287bb3d5692537a3b7a2cac4397474",
+          "identical_across_delivered_revisions": true,
+          "path": "src/bootstrap/RuntimeFiles.h",
+          "sha256": "9ee0a2cfc0d640be1ca0192d2fade9f87967172d78df2ce44e8bf9607b9b1239",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/bootstrap/RuntimeFiles.h"
+        },
+        {
+          "git_blob": "af1ddfe36bebd32a94336b9b238b8e00e0936641",
+          "identical_across_delivered_revisions": true,
+          "path": "src/runtime/storage/ReopenedFiles.h",
+          "sha256": "a65f804ef97f3219615e1dcd7c661c15541c01ad21a69fe9b8a6d9a289d32780",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/runtime/storage/ReopenedFiles.h"
+        },
+        {
+          "git_blob": "2ce00620c1271621490e052a431a36890d564018",
+          "identical_across_delivered_revisions": true,
+          "path": "src/runtime/storage/ReopenedFiles.cpp",
+          "sha256": "48080cc125434a2d9cce917cc5df5fdbd27687f420bba1730ed73eddb7c7a716",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/runtime/storage/ReopenedFiles.cpp"
+        },
+        {
+          "git_blob": "a23a343a49951816dc7173d7cde872f24234db42",
+          "identical_across_delivered_revisions": true,
+          "path": "src/ports/esp32s3/NativeSerialFiles.h",
+          "sha256": "3dd9999782c3e7bf60da1f3a395d11201654ebf351dd8a65365706d0d9b00a03",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/ports/esp32s3/NativeSerialFiles.h"
+        },
+        {
+          "git_blob": "8d73cf69191aa9588aa60b92a6d9488d6cc3573b",
+          "identical_across_delivered_revisions": true,
+          "path": "docs/NATIVE_SERIAL_STORAGE.md",
+          "sha256": "bb501477273481987a5ef8704eef81105ca7c9964da0467dff63f43a2b616957",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/docs/NATIVE_SERIAL_STORAGE.md"
+        },
+        {
+          "git_blob": "b9f99bb171fcd7faa010dbb0fc34bd1ec6f12a94",
+          "identical_across_delivered_revisions": false,
+          "path": "src/ports/esp32s3/NativeSerialFiles.cpp",
+          "sha256": "aaee66f411a506879499f120df366c292a2cd7e54adcd2c500f3ce85a03bfc8d",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/ports/esp32s3/NativeSerialFiles.cpp"
+        },
+        {
+          "git_blob": "80cefbb035e5e266436eea4fcfaeb8a4574879ac",
+          "identical_across_delivered_revisions": false,
+          "path": "src/ports/esp32s3/NativeSerialStorage.cpp",
+          "sha256": "73dbe646121be8795050d608f78807eeb249a84bf4be2ec513fdeccf6504e566",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/ports/esp32s3/NativeSerialStorage.cpp"
+        },
+        {
+          "git_blob": "0f0178e596fd797c7c588ad257aaf23b9e73f627",
+          "identical_across_delivered_revisions": false,
+          "path": "src/ports/esp32s3/NativeSerialStorage.h",
+          "sha256": "8796c28c66f3fbd21b06090e548d7bbc807ebc6101a3636df869b47293e6b2f1",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/ports/esp32s3/NativeSerialStorage.h"
+        },
+        {
+          "git_blob": "dc178ee9808a4ded93b4809774ccd4ad22294fca",
+          "identical_across_delivered_revisions": false,
+          "path": "src/bootstrap/Runtime.cpp",
+          "sha256": "ef76df16c776ec2763cd697c0b11878a962ee350127db2657c4d652347f3ae55",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/bootstrap/Runtime.cpp"
+        },
+        {
+          "git_blob": "4176f65255b0550c3631acba09e6d18ba2f7a990",
+          "identical_across_delivered_revisions": false,
+          "path": "src/main.cpp",
+          "sha256": "aeb0e256a82c48c5929cf1feb82f3ab2e66239ad97f14cd015c72cf353bb865c",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/src/main.cpp"
+        },
+        {
+          "git_blob": "bb0c77547538b804d64b19fed05c5ba55b71b09e",
+          "identical_across_delivered_revisions": false,
+          "path": "sdk/app/RiscRuntimeCheckpointV1.h",
+          "sha256": "dcc3bb7d76aa2d39f45d6cc648f38b6e4e3708cafcff463d21bee96275fd17f0",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/sdk/app/RiscRuntimeCheckpointV1.h"
+        },
+        {
+          "git_blob": "9fc614e26ac11a28b81ff4af3cce0e50c49b7d93",
+          "identical_across_delivered_revisions": false,
+          "path": "docs/SERIAL_FILES.md",
+          "sha256": "b4bfa8ca41a267715d254ea3be4a755a51845c1049beddda804bfa41f8c6f71d",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/docs/SERIAL_FILES.md"
+        },
+        {
+          "git_blob": "3b7320914ea48dc35e04e375ef704aece4934d4c",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_serial_files_test.sh",
+          "sha256": "19b4a6d8e42333e18020d2851bd158549772da15ead23d9d5df6dbec1cdef35e",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/test/run_serial_files_test.sh"
+        },
+        {
+          "git_blob": "0ad175a500a0d9595a54296f86976c389d4a6c77",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_serial_files_client_test.sh",
+          "sha256": "626c9fcfe46c3362dc3ff78e3f08b6865cf3b68be22180abdf4142f528e4a3fb",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/test/run_serial_files_client_test.sh"
+        },
+        {
+          "git_blob": "90ddda2317a34588a8a13b4eb4f47f93118d833e",
+          "identical_across_delivered_revisions": false,
+          "path": "test/serial_files_client_test.py",
+          "sha256": "912a857a6ae2a79f6ed91fceb587f139d074bacf74659c4a80f697d740cf6448",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/test/serial_files_client_test.py"
+        },
+        {
+          "git_blob": "b95f10a7f30adf959c58ae26de143fed3609ccaa",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_serial_native_provider_test.sh",
+          "sha256": "b28eca06512b06733c7882a962e66d73f5b1dc8767059376418981cc8d1c507b",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/test/run_serial_native_provider_test.sh"
+        },
+        {
+          "git_blob": "2a711b98a3bda19867dccffea29213ce16f6c4df",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_native_serial_storage_test.py",
+          "sha256": "1e81fc8aade839cb9774a1dbf66ae01a0e0a2f2e18842bfb1b8f903e13417738",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/test/run_native_serial_storage_test.py"
+        },
+        {
+          "git_blob": "e6ccc9178ecc7c3c8739dacad9e5749afc77b402",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_runtime_checkpoint_api_test.sh",
+          "sha256": "4f950d23903db323aa4453683220b125da1881477fc92d2c8b2d023d074e0dc8",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/9f8d67029181f6cd064e247aa949a295854fc494/test/run_runtime_checkpoint_api_test.sh"
+        }
+      ],
+      "version": "0.1.52"
+    },
+    {
+      "admission": {
+        "active_boot_bank_writable": false,
+        "application_grants_reused": false,
+        "boot_export_enabled": false,
+        "dispatch": "settled-owner-checkpoint",
+        "flags": {
+          "RISC_NATIVE_SERIAL_APPDATA_FILES": 1,
+          "RISC_NATIVE_SERIAL_FILES": 1
+        },
+        "hardware_tested": false,
+        "namespaces": [
+          {
+            "id": 2,
+            "label": "Serial files",
+            "private_root": "/appdata/.serial-files",
+            "writable": true
+          }
+        ]
+      },
+      "assets": [
+        {
+          "bytes": 22640,
+          "github_asset_id": 648019856,
+          "name": "bootloader.bin",
+          "sha256": "1ce73d93eff82e0117270beb7c8ba5f2dbe47ba25737481f8e025b67b456eb22",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/bootloader.bin"
+        },
+        {
+          "bytes": 6675,
+          "github_asset_id": 648019867,
+          "name": "ci-provenance.zip",
+          "sha256": "85abc184fd3541b4c7e9094ea7f46e23f0431d28fa10edf3d2ba05eb3c8de427",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/ci-provenance.zip"
+        },
+        {
+          "bytes": 617424,
+          "github_asset_id": 648019870,
+          "name": "default.elf",
+          "sha256": "9f10c7150cdc175ff5af0dbc1410e455ead4f18868dd56555e10860781103f2f",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/default.elf"
+        },
+        {
+          "bytes": 1551,
+          "github_asset_id": 648019885,
+          "name": "default.json",
+          "sha256": "0888f82c0f69d48210d94bd9507e359833200d2756a1327323580324f314e3b1",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/default.json"
+        },
+        {
+          "bytes": 1592080,
+          "github_asset_id": 648019892,
+          "name": "firmware.bin",
+          "sha256": "de30dea304e5e201a4fccf494d7aab5a0505865151e4169741e7b8ec40720476",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/firmware.bin"
+        },
+        {
+          "bytes": 3072,
+          "github_asset_id": 648019897,
+          "name": "partitions.bin",
+          "sha256": "d27edcdba637142baa7d91e29b70df47554c22a4f14de303dc6a0cdcc1e25de8",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/partitions.bin"
+        },
+        {
+          "bytes": 1386297,
+          "github_asset_id": 648019896,
+          "name": "qualification.json",
+          "sha256": "dd781ff81977fe2d7e88914620f916c604e473d31ba925d8c463c9931734823d",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/qualification.json"
+        },
+        {
+          "bytes": 819,
+          "github_asset_id": 648019833,
+          "name": "RELEASE-NOTES.txt",
+          "sha256": "549baaf98058a6b7f4b441820b73a044ee59136967d468a2cf675653e02ad36b",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/RELEASE-NOTES.txt"
+        },
+        {
+          "bytes": 13841,
+          "github_asset_id": 648019903,
+          "name": "release.json",
+          "sha256": "4cb1903a1772649db26bade409af98567fe0a90a4a4aec3cc94f1b216b04197b",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/release.json"
+        },
+        {
+          "bytes": 1281,
+          "github_asset_id": 648019829,
+          "name": "SHA256SUMS",
+          "sha256": "e0ec4d608a1489017d6c0dfa6c75f59490363a7ae21483b4e01c7c72619bf34a",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/SHA256SUMS"
+        },
+        {
+          "bytes": 10148,
+          "github_asset_id": 648019943,
+          "name": "source-lock.json",
+          "sha256": "f8e51434c1ed15d65296d5aa8b7a5490ef4f8a4a2d8cf77c368fc679b4683c02",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/source-lock.json"
+        },
+        {
+          "bytes": 3105,
+          "github_asset_id": 648019936,
+          "name": "source-pins.json",
+          "sha256": "d813d8428f6c4ff35d3c9bda5fc95c7e697fe5537d578efad8453bc236c02e38",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/source-pins.json"
+        },
+        {
+          "bytes": 5570560,
+          "github_asset_id": 648019938,
+          "name": "store.bin",
+          "sha256": "760372b13f07d5bcab5cf3cbee13303d864afbd93c816ec91cdba2f145b35cf7",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/store.bin"
+        },
+        {
+          "bytes": 1854,
+          "github_asset_id": 648019827,
+          "name": "TESTING.txt",
+          "sha256": "6b5f7b3aff9d71367ef8309a24aefe7ce3d4c543767838d62ba85578220cdd72",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/TESTING.txt"
+        },
+        {
+          "bytes": 11123665,
+          "github_asset_id": 648019834,
+          "name": "TWatch-1.1.43-Shared-Default-Evidence.zip",
+          "sha256": "78c994c45afb1d58ed2624a4e79ec333a06b52efb0d290b19132d018cd1317db",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/TWatch-1.1.43-Shared-Default-Evidence.zip"
+        },
+        {
+          "bytes": 16777216,
+          "github_asset_id": 648019828,
+          "name": "TWatch-1.1.43-Shared-Default-factory-erases-data-0x0.bin",
+          "sha256": "f6b600197087ae93c93752507b89d6be0c248abb528c010da2d280f7a0166f36",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/download/test-shared-default-1.1.43/TWatch-1.1.43-Shared-Default-factory-erases-data-0x0.bin"
+        }
+      ],
+      "ci": {
+        "conclusion": "success",
+        "head_sha": "aa91c1cd7eb664d9a5bd78df05cab53b2c683f18",
+        "id": 38936771092,
+        "run_attempt": 2,
+        "status": "completed",
+        "updated_at": "2026-10-16T17:12:04Z",
+        "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/actions/runs/38936771092",
+        "workflow_id": 386478670
+      },
+      "github_release_id": 415195233,
+      "hardware_tested": false,
+      "prerelease": true,
+      "product": "twatch",
+      "product_revision": "aa91c1cd7eb664d9a5bd78df05cab53b2c683f18",
+      "profile": {
+        "path": "profiles/native-idf61.cmake",
+        "sha256": "6e87b761aa0d3abdaa4154481c0a2b0c7be7ffdc6b12b548e96dcc325e58fc75",
+        "url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/blob/aa91c1cd7eb664d9a5bd78df05cab53b2c683f18/profiles/native-idf61.cmake"
+      },
+      "release_tag": "test-shared-default-1.1.43",
+      "release_url": "https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/releases/tag/test-shared-default-1.1.43",
+      "repository": "michaelrolphone-cmyk/RiscRTE-T-Watch-S3",
+      "runtime_revision": "21c6d64c51470158e1e8fb26d403b194f27ea38c",
+      "runtime_tree": "5de1130018926a57325dba27ec4338c5ccdc39e1",
+      "source_pins": {
+        "drivers_revision": "5890721073ebabd781d5d278e447c761947a5c58",
+        "image_helper_revision": "74f7491dc470b92dfa41fce41bf0c500f3714a94",
+        "runtime_revision": "21c6d64c51470158e1e8fb26d403b194f27ea38c",
+        "sdk_revision": "fff9895c82d744c7237be8847347bdd1b07c6643",
+        "system_revision": "cb483470887b5198e2f3cd2457586ef6622142a9",
+        "utilities_revision": "fc9f93402050f020a3422ee889620b2414c7ad5d",
+        "watch_revision": "8132d73c828c0e4763f6c89a3d6a4a883314056a"
+      },
+      "sources": [
+        {
+          "git_blob": "5a67334b2052aa8224be7fc76ae6f98500f5194d",
+          "identical_across_delivered_revisions": true,
+          "path": "scripts/serial_files.py",
+          "sha256": "7dd82ad4fb9d3abd953519d584b551f5735d7b25f47a000d0ebf766490123f6a",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/scripts/serial_files.py"
+        },
+        {
+          "git_blob": "2c3a28348b79f342f17beca984eaaa326e136eb6",
+          "identical_across_delivered_revisions": true,
+          "path": "src/runtime/serial/Files.cpp",
+          "sha256": "27cb0118c33f4a56302431b3398f016f6b2917098da12ba372ac197751335d6f",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/runtime/serial/Files.cpp"
+        },
+        {
+          "git_blob": "e5f225f8482c9936ef94469dd9c1ac6b31e022d4",
+          "identical_across_delivered_revisions": true,
+          "path": "src/runtime/serial/Files.h",
+          "sha256": "aa03f3c523b3010190ea77f8bbea2471a7d1d079758bc6182d9ce23f915a4535",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/runtime/serial/Files.h"
+        },
+        {
+          "git_blob": "f564e3722a6090904d7613e50d860f0ae4f5163e",
+          "identical_across_delivered_revisions": true,
+          "path": "sdk/app/RiscStorageFilesV1.h",
+          "sha256": "0699725f95e574a22ef7892416e76a33cd0a57d06b96cc42021e10ba0aeb215b",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/sdk/app/RiscStorageFilesV1.h"
+        },
+        {
+          "git_blob": "631a5aa9c6287bb3d5692537a3b7a2cac4397474",
+          "identical_across_delivered_revisions": true,
+          "path": "src/bootstrap/RuntimeFiles.h",
+          "sha256": "9ee0a2cfc0d640be1ca0192d2fade9f87967172d78df2ce44e8bf9607b9b1239",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/bootstrap/RuntimeFiles.h"
+        },
+        {
+          "git_blob": "af1ddfe36bebd32a94336b9b238b8e00e0936641",
+          "identical_across_delivered_revisions": true,
+          "path": "src/runtime/storage/ReopenedFiles.h",
+          "sha256": "a65f804ef97f3219615e1dcd7c661c15541c01ad21a69fe9b8a6d9a289d32780",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/runtime/storage/ReopenedFiles.h"
+        },
+        {
+          "git_blob": "2ce00620c1271621490e052a431a36890d564018",
+          "identical_across_delivered_revisions": true,
+          "path": "src/runtime/storage/ReopenedFiles.cpp",
+          "sha256": "48080cc125434a2d9cce917cc5df5fdbd27687f420bba1730ed73eddb7c7a716",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/runtime/storage/ReopenedFiles.cpp"
+        },
+        {
+          "git_blob": "a23a343a49951816dc7173d7cde872f24234db42",
+          "identical_across_delivered_revisions": true,
+          "path": "src/ports/esp32s3/NativeSerialFiles.h",
+          "sha256": "3dd9999782c3e7bf60da1f3a395d11201654ebf351dd8a65365706d0d9b00a03",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/ports/esp32s3/NativeSerialFiles.h"
+        },
+        {
+          "git_blob": "8d73cf69191aa9588aa60b92a6d9488d6cc3573b",
+          "identical_across_delivered_revisions": true,
+          "path": "docs/NATIVE_SERIAL_STORAGE.md",
+          "sha256": "bb501477273481987a5ef8704eef81105ca7c9964da0467dff63f43a2b616957",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/docs/NATIVE_SERIAL_STORAGE.md"
+        },
+        {
+          "git_blob": "f72eb297193743687d9c2c0749f7080842af4eb3",
+          "identical_across_delivered_revisions": false,
+          "path": "src/ports/esp32s3/NativeSerialFiles.cpp",
+          "sha256": "ad806997dc86b70224c7cd3e817b446152a1933ae58a91037ae0a3ad8a542628",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/ports/esp32s3/NativeSerialFiles.cpp"
+        },
+        {
+          "git_blob": "f3a44a8301a79448a424d0da7b59ca17b8392261",
+          "identical_across_delivered_revisions": false,
+          "path": "src/ports/esp32s3/NativeSerialStorage.cpp",
+          "sha256": "56ac6b966c1c7923ebb4d246a25ff50ded2b61a428e79f69a958a38cd4b404bc",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/ports/esp32s3/NativeSerialStorage.cpp"
+        },
+        {
+          "git_blob": "0f0178e596fd797c7c588ad257aaf23b9e73f627",
+          "identical_across_delivered_revisions": false,
+          "path": "src/ports/esp32s3/NativeSerialStorage.h",
+          "sha256": "8796c28c66f3fbd21b06090e548d7bbc807ebc6101a3636df869b47293e6b2f1",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/ports/esp32s3/NativeSerialStorage.h"
+        },
+        {
+          "git_blob": "dc178ee9808a4ded93b4809774ccd4ad22294fca",
+          "identical_across_delivered_revisions": false,
+          "path": "src/bootstrap/Runtime.cpp",
+          "sha256": "ef76df16c776ec2763cd697c0b11878a962ee350127db2657c4d652347f3ae55",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/bootstrap/Runtime.cpp"
+        },
+        {
+          "git_blob": "4176f65255b0550c3631acba09e6d18ba2f7a990",
+          "identical_across_delivered_revisions": false,
+          "path": "src/main.cpp",
+          "sha256": "aeb0e256a82c48c5929cf1feb82f3ab2e66239ad97f14cd015c72cf353bb865c",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/src/main.cpp"
+        },
+        {
+          "git_blob": "bb0c77547538b804d64b19fed05c5ba55b71b09e",
+          "identical_across_delivered_revisions": false,
+          "path": "sdk/app/RiscRuntimeCheckpointV1.h",
+          "sha256": "dcc3bb7d76aa2d39f45d6cc648f38b6e4e3708cafcff463d21bee96275fd17f0",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/sdk/app/RiscRuntimeCheckpointV1.h"
+        },
+        {
+          "git_blob": "e7d68b12ff141a1b4237ac713d5c5c49ed5aff04",
+          "identical_across_delivered_revisions": false,
+          "path": "docs/SERIAL_FILES.md",
+          "sha256": "6f81c543376097dbbc0b0b055900f71cc50246c7c0adb7d5cf04897e23ecfc8d",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/docs/SERIAL_FILES.md"
+        },
+        {
+          "git_blob": "3b7320914ea48dc35e04e375ef704aece4934d4c",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_serial_files_test.sh",
+          "sha256": "19b4a6d8e42333e18020d2851bd158549772da15ead23d9d5df6dbec1cdef35e",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/test/run_serial_files_test.sh"
+        },
+        {
+          "git_blob": "0ad175a500a0d9595a54296f86976c389d4a6c77",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_serial_files_client_test.sh",
+          "sha256": "626c9fcfe46c3362dc3ff78e3f08b6865cf3b68be22180abdf4142f528e4a3fb",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/test/run_serial_files_client_test.sh"
+        },
+        {
+          "git_blob": "90ddda2317a34588a8a13b4eb4f47f93118d833e",
+          "identical_across_delivered_revisions": false,
+          "path": "test/serial_files_client_test.py",
+          "sha256": "912a857a6ae2a79f6ed91fceb587f139d074bacf74659c4a80f697d740cf6448",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/test/serial_files_client_test.py"
+        },
+        {
+          "git_blob": "b95f10a7f30adf959c58ae26de143fed3609ccaa",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_serial_native_provider_test.sh",
+          "sha256": "b28eca06512b06733c7882a962e66d73f5b1dc8767059376418981cc8d1c507b",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/test/run_serial_native_provider_test.sh"
+        },
+        {
+          "git_blob": "e3faf72eb879f6140254c8880d5cd6c093f7e9c9",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_native_serial_storage_test.py",
+          "sha256": "d745792046601d0ec04143aef6c334fd03053fd4c537e8cb15a85f4232333815",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/test/run_native_serial_storage_test.py"
+        },
+        {
+          "git_blob": "e6ccc9178ecc7c3c8739dacad9e5749afc77b402",
+          "identical_across_delivered_revisions": false,
+          "path": "test/run_runtime_checkpoint_api_test.sh",
+          "sha256": "4f950d23903db323aa4453683220b125da1881477fc92d2c8b2d023d074e0dc8",
+          "url": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/21c6d64c51470158e1e8fb26d403b194f27ea38c/test/run_runtime_checkpoint_api_test.sh"
+        }
+      ],
+      "version": "1.1.43"
+    }
+  ],
+  "shared_default": {
+    "bytes": 617424,
+    "sha256": "9f10c7150cdc175ff5af0dbc1410e455ead4f18868dd56555e10860781103f2f"
+  },
+  "shared_home": {
+    "checkpoint_test_url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Watch/blob/8132d73c828c0e4763f6c89a3d6a4a883314056a/scripts/test_runtime_service_checkpoint.py",
+    "repository": "michaelrolphone-cmyk/RiscRTE-Watch",
+    "revision": "8132d73c828c0e4763f6c89a3d6a4a883314056a",
+    "source_url": "https://github.com/michaelrolphone-cmyk/RiscRTE-Watch/blob/8132d73c828c0e4763f6c89a3d6a4a883314056a/apps/clock/crown.c"
+  },
+  "wire_protocol": "RTEF1"
+}

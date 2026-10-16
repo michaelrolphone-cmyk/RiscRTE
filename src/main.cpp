@@ -4,7 +4,7 @@
 #include <RiscBuildIdentity.h>
 #include "ports/esp32s3/NativeRuntimeFiles.h"
 #include "ports/esp32s3/NativeSerialFiles.h"
-#include "ports/esp32s3/NativeSerialStorage.h"
+#include "ports/esp32s3/NativeSerialStorageBinding.h"
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include <esp_sleep.h>
@@ -503,7 +503,7 @@ void setup() {
     diagnosticLine("RTE_BOOT error=serial-storage-admission");return;
   }
 #if RISC_NATIVE_SERIAL_SD
-  if(!runtime.bindNativeFiles("sdmmc-fatfs",12,RiscCpu::NativeSerialStorage::sdFiles(),isOwner,providerStorageSafe,true)){
+  if(!RiscCpu::NativeSerialStorage::bindSd(runtime,isOwner,providerStorageSafe)){
     diagnosticLine("RTE_BOOT error=serial-sd-admission");return;
   }
 #endif

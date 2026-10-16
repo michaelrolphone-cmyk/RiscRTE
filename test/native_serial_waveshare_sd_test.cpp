@@ -1,6 +1,6 @@
 #include "bootstrap/Runtime.h"
 #include "ports/esp32s3/NativeSerialFiles.h"
-#include "ports/esp32s3/NativeSerialStorage.h"
+#include "ports/esp32s3/NativeSerialStorageBinding.h"
 #include "RuntimeFileFixture.h"
 #include <algorithm>
 #include <cassert>
@@ -150,7 +150,8 @@ int main(int argc,char**argv){
     if(!prepared)std::fprintf(stderr,"prepare: %s\n",runtime->error());assert(prepared);
     assert(!runtime->bindNativeFiles("sdmmc-fatfs",13,S::sdFiles(),owner,safe));
     assert(!runtime->bindNativeFiles("wrong-provider",12,S::sdFiles(),owner,safe));
-    assert(runtime->bindNativeFiles("sdmmc-fatfs",12,S::sdFiles(),owner,safe,mode!="cold"));
+    if(mode=="cold")assert(runtime->bindNativeFiles("sdmmc-fatfs",12,S::sdFiles(),owner,safe,false));
+    else assert(S::bindSd(*runtime,owner,safe));
     assert(!S::sdFiles().bound()&&counter(3)==0&&counter(0)==0);
     assert(N::prepare(S::admission(),owner,safe));
     const bool retained=mode=="failed-close"||mode=="failed-write"||mode=="failed-release"||mode=="failed-prepare";

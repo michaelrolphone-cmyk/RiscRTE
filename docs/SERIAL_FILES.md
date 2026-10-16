@@ -33,6 +33,48 @@ session's owner, resource arbitration and lifecycle. Provider availability is
 reported through its file status; the readiness callback establishes whether
 it is safe to dispatch at all, without I/O, acquisition or callbacks.
 
+### Explicit built-in product storage composition
+
+The optional built-in composition selects independent sessions with
+`RISC_NATIVE_SERIAL_BOOT_FILES=1` (read-only active boot store, wire ID 1),
+`RISC_NATIVE_SERIAL_APPDATA_FILES=1` (private `/appdata/.serial-files`, wire ID 2),
+and `RISC_NATIVE_SERIAL_SD=1` (wire ID 12). All require
+`RISC_NATIVE_SERIAL_FILES=1`; private files also require the selected fenced
+AppData mount. These wire IDs are logical authority, never provider instance IDs.
+They do not expose app-owned AppData roots or give apps a new capability.
+
+For SD, the product can override **both** compile-time selectors:
+
+```text
+RISC_NATIVE_SERIAL_SD_PROVIDER="x4pro-sd"
+RISC_NATIVE_SERIAL_SD_INSTANCE=9
+```
+
+This is the explicit X4 candidate mapping. Omitting both selectors preserves
+the existing Waveshare `sdmmc-fatfs`, instance 12 composition. Supplying only
+one selector, an empty/embedded-NUL/oversized provider string, or a noninteger
+or out-of-range hardware instance rejects compilation. A complete override
+never falls back to the legacy selection. Board identity, chip compatibility,
+media paths, labels and application grants do not select the provider.
+
+The actual startup calls `NativeSerialStorage::bindSd` only after complete
+Runtime graph preparation and serial storage preparation. It asks the unchanged
+native binding gate for the exact provider and instance with `storage.volume@1`
+and explicit one-time volume preparation. Missing/unadmitted, wrong-API,
+wrong-capability and ambiguous selections fail closed before activation.
+Clean absent media remains catalogued but unavailable; failed preparation,
+close or graph release with uncertain custody retains the existing terminal
+fence. An X4 `NS` reply still advertises ID 12, regardless of instance 9.
+
+`test/run_native_serial_product_storage_test.py` exercises this shared startup
+path, Runtime graph admission, wire enumeration/transfers and terminal custody
+for explicit `X4SD9` and default `legacyWave12`. Its provider and media are
+synthetic; it does not qualify the X4 SD driver or physical device. The separate
+pinned Waveshare RAM-card test also uses the shared startup binding. The native
+compiler test checks the exact X4 selectors with all three storage destinations,
+external workspace placement and empty default-off objects. A complete linked
+product image still needs its own IQ-bank/static-memory proof and device gates.
+
 Console parsing and partial TX run through the existing diagnostic owner and
 never call providers. Requests dispatch at a settled resident foreground
 checkpoint, an explicitly called size-checked `service_checkpoint` Runtime

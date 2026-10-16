@@ -24,7 +24,7 @@ while i < len(command):
     if arg in ("-o", "-MF", "-MT", "-MQ"):
         i += 2
         continue
-    if arg in ("-c", "-MD", "-MMD", "-MP") or arg == entry["file"] or arg.startswith(("-DRISC_NATIVE_SERIAL_FILES=", "-DRISC_NATIVE_SERIAL_BOOT_FILES=", "-DRISC_NATIVE_SERIAL_APPDATA_FILES=", "-DRISC_NATIVE_SERIAL_SD=")):
+    if arg in ("-c", "-MD", "-MMD", "-MP") or arg == entry["file"] or arg.startswith(("-DRISC_NATIVE_SERIAL_FILES=", "-DRISC_NATIVE_SERIAL_BOOT_FILES=", "-DRISC_NATIVE_SERIAL_APPDATA_FILES=", "-DRISC_NATIVE_SERIAL_SD=", "-DRISC_NATIVE_SERIAL_SD_PROVIDER=", "-DRISC_NATIVE_SERIAL_SD_INSTANCE=")):
         i += 1
         continue
     flags.append(arg.replace(original_root, str(root)))
@@ -42,10 +42,12 @@ for enabled in (0, 1):
                "-c", str(source), "-o", str(output)]
         commands.append(cmd)
         subprocess.run(cmd, cwd=entry["directory"], check=True)
-for profile, sd in (("twatch", 0), ("waveshare", 1)):
+for profile, sd in (("twatch", 0), ("waveshare", 1), ("x4", 1)):
     selected = ["-DRISC_NATIVE_SERIAL_FILES=1", "-DRISC_NATIVE_SERIAL_BOOT_FILES=1",
                 "-DRISC_NATIVE_SERIAL_APPDATA_FILES=1", "-DRISC_NATIVE_SERIAL_SD=" + str(sd),
                 "-DRISC_NATIVE_APP_DATA_MOUNT=1", "-DRISC_PAIRED_APP_DATA"]
+    if profile == "x4":
+        selected += ['-DRISC_NATIVE_SERIAL_SD_PROVIDER="x4pro-sd"', "-DRISC_NATIVE_SERIAL_SD_INSTANCE=9"]
     for relative in ("src/main.cpp", "src/ports/esp32s3/NativeSerialStorage.cpp",
                      "src/ports/esp32s3/NativeAppDataMount.cpp", "src/runtime/storage/ReopenedFiles.cpp"):
         source = root / relative
@@ -56,12 +58,12 @@ for profile, sd in (("twatch", 0), ("waveshare", 1)):
 nm = str(pathlib.Path(command[0]).with_name(pathlib.Path(command[0]).name.replace("g++", "nm")))
 for name in ("NativeSerialFiles", "NativeSerialStorage"):
     assert not subprocess.check_output([nm, str(out / (name + "-0.o"))], text=True).strip()
-print("Selected native main/Runtime/CpuPort/Console integration compile, feature on/off, explicit independent T-Watch/Waveshare storage composition, empty default-off adapters PASS")
+print("Selected native main/Runtime/CpuPort/Console integration compile, feature on/off, explicit independent T-Watch/Waveshare/X4 storage composition, empty default-off adapters PASS")
 
 # The SDK profile already selects external BSS and initializes it before app_main.
 # Assert placement in the compiled production objects, not just source attributes.
 from prove_native_serial_workspace import prove
 objdump = str(pathlib.Path(command[0]).with_name(pathlib.Path(command[0]).name.replace("g++", "objdump")))
 prove(out / "NativeSerialFiles-1.o", ["endpoint"], True, objdump)
-for profile in ("twatch", "waveshare"):
+for profile in ("twatch", "waveshare", "x4"):
     prove(out / ("NativeSerialStorage-" + profile + ".o"), ["provider"], True, objdump)
