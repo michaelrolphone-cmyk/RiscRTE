@@ -45,36 +45,29 @@ bool Runtime::configureInstallation(JsonVariantConst value){
   if(serializeJson(allowed,installation_[0].providerGrants,sizeof(installation_[0].providerGrants))>=sizeof(installation_[0].providerGrants)-1)return false;
   installation_[0].providersEnabled=true;
  }
+ bool checkpoints=false;
  if(!value["settings_sd"].isUnbound()){
   if(!value["settings_sd"].is<bool>())return fail("invalid installed settings selection");
-  if(value["settings_sd"].as<bool>()){
-   if(!count||!port_.keyValue||!port_.keyValue->journalRead||!port_.keyValue->journalWrite||!port_.keyValue->legacyNamespace)return fail("installed settings journal unavailable");
+  checkpoints=value["settings_sd"].as<bool>();
+  if(checkpoints){
+   if(!count||!settings_)return fail("installed settings journal unavailable");
    for(JsonObjectConst grant:value["grants"].as<JsonArrayConst>())if(grant["capability"]=="storage.key-value"&&grant["api"]!=1)return fail("SD private settings require KV API 1");
-   if(port_.keyValue->scalableSettings){
-    if(!scalableSettings_.create(size_t(count)))return false;
-   }else{
-   installedSettings_=metadataArray<RiscStorage::SdFirstKeyValue::State>(size_t(count));
-   installedSettingsWorkspace_=metadataArray<RiscStorage::SdFirstKeyValue::Workspace>(1);
-   if(!installedSettings_||!installedSettingsWorkspace_)return false;
-   }
   }
  }
+ uint32_t sharedNamespaces[128]{},sharedCount=0;
  if(!value["shared_settings"].isUnbound()){
   const auto shared=value["shared_settings"];
-  if(!shared.is<JsonArrayConst>()||!shared.size()||shared.size()>128||
-     !value["settings_sd"].is<bool>()||!value["settings_sd"].as<bool>()||
-     !port_.keyValue||!port_.keyValue->scalableSettings)return fail("shared settings require scalable SD selection");
-  sharedSettingsNamespaces_=metadataArray<uint32_t>(shared.size());
-  if(!sharedSettingsNamespaces_||!sharedSettings_.create(shared.size()))return false;
-  size_t i=0;for(JsonVariantConst item:shared.as<JsonArrayConst>()){
+  if(!shared.is<JsonArrayConst>()||!shared.size()||shared.size()>128||!checkpoints||!settings_)return fail("shared settings require scalable SD selection");
+  for(JsonVariantConst item:shared.as<JsonArrayConst>()){
    int64_t ns=0;if(!integer(item,1,INT32_MAX,ns)||(ns>=first&&ns<first+count))return fail("invalid shared settings namespace");
-   for(size_t j=0;j<i;++j)if(sharedSettingsNamespaces_[j]==uint32_t(ns))return fail("duplicate shared settings namespace");
-   sharedSettingsNamespaces_[i++]=uint32_t(ns);
+   for(size_t j=0;j<sharedCount;++j)if(sharedNamespaces[j]==uint32_t(ns))return fail("duplicate shared settings namespace");
+   sharedNamespaces[sharedCount++]=uint32_t(ns);
   }
  }
+ if(settings_&&!settings_->configure(uint32_t(first),uint32_t(count),checkpoints,sharedNamespaces,sharedCount))return fail("settings provider configuration unavailable");
  installation_[0].volume=uint64_t(volume);installation_[0].namespaceFirst=uint32_t(first);installation_[0].namespaceCount=uint32_t(count);
  installation_[0].internalEnabled=internalEnabled;installation_[0].internalVolume=uint64_t(internal);
- installation_[0].api.base={1,sizeof(risc_installation_media_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),uint32_t((installedSettings_||scalableSettings_)?count:0),installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,scalableSettings_?2u:1u,uint32_t(sharedSettings_.count),installationSharedSettingsNamespace};
+ installation_[0].api.base={1,sizeof(risc_installation_media_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),settings_?settings_->checkpointCount():0u,installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,settings_?settings_->format():1u,settings_?settings_->sharedCount():0u,installationSharedSettingsNamespace};
  installation_[0].api.media_tag=RISC_INSTALLATION_MEDIA_TAG;installation_[0].api.media_version=1;installation_[0].api.media_mask=internalEnabled?3u:1u;
  installation_[0].api.namespaced_media=installationNamespacedMedia;installation_[0].api.providers_media=installationProvidersMedia;
  return registerPlatform(RISC_INSTALLATION_CAPABILITY,1,Scope::Global,0,&installation_[0].api);

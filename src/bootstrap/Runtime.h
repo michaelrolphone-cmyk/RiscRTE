@@ -29,8 +29,8 @@ namespace RiscExperimental { class NativeAtomicKeyValue; }
 #include "TcpListenerBackend.h"
 #include "EntropyBackend.h"
 #include "runtime/storage/AppDataExport.h"
-#include "runtime/storage/SdFirstKeyValue.h"
-#include "runtime/storage/ScalableSettings.h"
+#include "KeyValueBackend.h"
+#include "SettingsService.h"
 #include "FileOpenState.h"
 #include "FileSourceBackend.h"
 #include "FailureEvidenceBackend.h"
@@ -56,19 +56,6 @@ namespace RiscUpdate { struct NativeAppDataExportPolicyV1; struct NativeAppDataE
 namespace RiscExperimental { class NativeRuntimeStoragePin; }
 namespace RiscBoot {
 class Runtime;
-// Optional compiled-in backend. Namespace comes only from validated boot policy.
-// Backend must obey the public status/size contract; broker copies reads only
-// after success. No app value encoding or fallback policy belongs here.
-struct KeyValueBackend {
-  void* context;
-  int32_t (*get)(void*,uint32_t,const char*,void*,uint32_t,uint32_t*);
-  int32_t (*put)(void*,uint32_t,const char*,const void*,uint32_t);
-  uint32_t maxBlobSize=RISC_KEY_VALUE_BLOB_MAX;
-  int32_t (*journalRead)(void*,uint32_t,void*,uint32_t,uint32_t*)=nullptr;
-  int32_t (*journalWrite)(void*,uint32_t,const void*,uint32_t)=nullptr;
-  int32_t (*legacyNamespace)(void*,uint32_t,bool*)=nullptr;
-  const RiscStorage::ScalableSettings::Backend* scalableSettings=nullptr;
-};
 struct Port {
   bool (*owner)();
   bool (*health)(risc_runtime_health_v1*);
@@ -130,6 +117,8 @@ struct Port {
   const FileSourceBackend* fileSource=nullptr;
   // Trusted immutable active/staged metadata sources. Absent means unavailable.
   const RuntimeFileSources* files=nullptr;
+  // Optional semantic provider. Each Runtime opens an independent session.
+  const SettingsProvider* settings=nullptr;
 };
 class Runtime final {
  public:
@@ -393,7 +382,7 @@ class Runtime final {
   static int32_t storageFilesSnapshot(void*,risc_storage_files_catalog_snapshot_v1*);
   static int32_t storageFilesGet(void*,uint64_t,uint32_t,risc_storage_files_namespace_v1*);
 #endif
-  int32_t namespaceKeyValueGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t);
+  int32_t namespaceKeyValueGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t,bool provider=false);
   int32_t namespaceKeyValuePut(uint32_t,const char*,const void*,uint32_t,bool preference=false,bool provider=false);
   static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
   static int32_t keyValuePut(void*,const char*,const void*,uint32_t);
@@ -573,14 +562,9 @@ class Runtime final {
     risc_installation_media_v1 api{};uint64_t volume=0,internalVolume=0;bool internalEnabled=false;uint32_t medium=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
   };
   MetadataArray<InstallationState> installation_;
-  MetadataArray<RiscStorage::SdFirstKeyValue::State> installedSettings_;
-  RiscStorage::ScalableSettings::Collection scalableSettings_, sharedSettings_;
-  MetadataArray<uint32_t> sharedSettingsNamespaces_;
-  RiscStorage::ScalableSettings::State* scalableSettingsState(uint32_t)const;
-  uint32_t settingsNamespace(uint32_t slot)const;
+  std::unique_ptr<SettingsSession> settings_;
+  bool openSettings();
   static uint32_t installationSharedSettingsNamespace(void*,uint32_t);
-  MetadataArray<RiscStorage::SdFirstKeyValue::Workspace> installedSettingsWorkspace_;
-  RiscStorage::SdFirstKeyValue::Journal settingsJournal();
   static uint32_t installationSettingsStatus(void*,uint32_t);
   static int32_t installationSettingsRestore(void*,uint32_t,const char*,const void*,uint32_t,bool);
   static int32_t installationSettingsSnapshot(void*,uint32_t,void*,uint32_t,uint32_t*,uint64_t*);

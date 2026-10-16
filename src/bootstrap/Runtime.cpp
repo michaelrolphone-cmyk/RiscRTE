@@ -1,5 +1,6 @@
 #include <RiscInternalPackageVolumeV1.h>
 #include "Runtime.h"
+#include "LegacySettingsProvider.h"
 #include "AppDeclarations.h"
 #include "RemovableAppImage.h"
 #include "runtime/drivers/DeviceProviderExecutorV2.h"
@@ -132,6 +133,7 @@ Runtime::~Runtime() {
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
   if(!atomicExitSafe(true))std::abort();
 #endif
+  if(settings_ && settings_->retained())std::abort();
   // Native owners retain the entire metadata candidate after lost I/O custody.
   // As with GraphV2, destruction is a caller contract violation, never cleanup.
   if(retainedNativeProviderRead_ || retainedNativeProviderBytes_)std::abort();
@@ -257,8 +259,8 @@ bool Runtime::validateGraph() {
       if (!strcmp(req.capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) {
         auto& storage=providerStorage_[i];
         if ((req.api!=RISC_BOUND_KEY_VALUE_API_V1 && req.api!=RISC_BOUND_KEY_VALUE_API_V2) || !storage.count ||
-            !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
-            port_.keyValue->maxBlobSize<(req.api==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX))
+            !settings_ ||
+            settings_->maxBlobSize()<(req.api==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX))
           return fail("provider key-value policy/backend unavailable");
         if (hw) for(size_t b=0;b<hw->bindingCount;++b)
           if (!strcmp(hw->bindings[b].capability,req.capability))
@@ -498,8 +500,8 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         } else
 #endif
         if (keyValue) {
-          if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
-              port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
+          if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !settings_ ||
+              settings_->maxBlobSize()<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
         } else if (!strcmp(capability,RISC_PROVIDER_PROMOTION_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || strcmp(policy.elf,invocation_->current_))return fail("invalid default provider-promotion authority");
@@ -826,7 +828,7 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return RISC_KEY_VALUE_CONTEXT;
 #endif
   Runtime* r=currentRuntime;
-  if (!r || !r->active() || !context || !r->port_.keyValue) return RISC_KEY_VALUE_CONTEXT;
+  if (!r || !r->active() || !context || !r->settings_) return RISC_KEY_VALUE_CONTEXT;
   const AppGrant* matched=nullptr;
   for (const auto& grant:r->invocation_->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
@@ -837,27 +839,15 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
 #endif
   return r->namespaceKeyValueGet(matched->keyValueNamespace,key,buffer,capacity,outSize,limit);
 }
-int32_t Runtime::namespaceKeyValueGet(uint32_t ns,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize,uint32_t limit) {
-  if(installedSettings_&&ns>=installation_[0].namespaceFirst&&ns-installation_[0].namespaceFirst<installation_[0].namespaceCount&&installedSettings_[ns-installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
-    auto journal=settingsJournal();return RiscStorage::SdFirstKeyValue::get(installedSettings_[ns-installation_[0].namespaceFirst],installedSettingsWorkspace_[0],journal,ns,key,buffer,capacity,outSize);
-  }
-  uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
-  const auto& backend=*port_.keyValue;
-  auto*state=scalableSettingsState(ns);
-  const int32_t result=state
-    ?RiscStorage::ScalableSettings::get(*state,key,temp,limit,&size)
-    :backend.get(backend.context,ns,key,temp,limit,&size);
-  if (result==RISC_KEY_VALUE_NOT_FOUND || result==RISC_KEY_VALUE_BUSY) return result;
-  if (result!=RISC_KEY_VALUE_OK || !size || size>limit) return RISC_KEY_VALUE_IO;
-  if (capacity<size) {*outSize=size;return RISC_KEY_VALUE_BUFFER_SMALL;}
-  memcpy(buffer,temp,size);*outSize=size;return RISC_KEY_VALUE_OK;
+int32_t Runtime::namespaceKeyValueGet(uint32_t ns,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize,uint32_t limit,bool provider) {
+  return settings_?settings_->get(ns,key,buffer,capacity,outSize,limit,provider):RISC_KEY_VALUE_CONTEXT;
 }
 int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint32_t size) {
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
   const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return RISC_KEY_VALUE_CONTEXT;
 #endif
   Runtime* r=currentRuntime;
-  if (!r || !r->active() || !context || !r->port_.keyValue) return RISC_KEY_VALUE_CONTEXT;
+  if (!r || !r->active() || !context || !r->settings_) return RISC_KEY_VALUE_CONTEXT;
   const AppGrant* matched=nullptr;
   for (const auto& grant:r->invocation_->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
@@ -875,13 +865,7 @@ int32_t Runtime::namespaceKeyValuePut(uint32_t ns,const char* key,const void* da
 #else
   (void)preference;
 #endif
-  const auto& backend=*port_.keyValue;
-  int32_t result;
-  if(auto* state=scalableSettingsState(ns))
-    result=RiscStorage::ScalableSettings::put(*state,*backend.scalableSettings,ns,key,data,size);
-  else if(!provider && installedSettings_&&ns>=installation_[0].namespaceFirst&&ns-installation_[0].namespaceFirst<installation_[0].namespaceCount&&installedSettings_[ns-installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
-    auto journal=settingsJournal();result=RiscStorage::SdFirstKeyValue::put(installedSettings_[ns-installation_[0].namespaceFirst],installedSettingsWorkspace_[0],journal,ns,key,data,size);
-  } else result=backend.put(backend.context,ns,key,data,size);
+  const int32_t result=settings_?settings_->put(ns,key,data,size,provider):RISC_KEY_VALUE_CONTEXT;
 #if RISC_RUNTIME_PREFERENCE_STORE
   // A failed commit can have changed storage. Only BUSY promises no I/O.
   if(tracked && result!=RISC_KEY_VALUE_BUSY)++tracked->revision;
@@ -910,7 +894,7 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   return true;
 }
 bool Runtime::providerStorageSafe() const {
-  if(entropyRetained_ || tcpRetained_ || metadataCloseRetained() || !appDataExitSafe())return false;
+  if((settings_ && settings_->retained()) || entropyRetained_ || tcpRetained_ || metadataCloseRetained() || !appDataExitSafe())return false;
   if(invocation_->installedFiles_ && invocation_->installedFiles_->retained())return false;
   if(port_.providerStorageSafe)return port_.providerStorageSafe();
   return !port_.appExitSafe || port_.appExitSafe();
@@ -953,7 +937,7 @@ Runtime::ProviderStorage* Runtime::providerContext(void* context) {
   const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return nullptr;
 #endif
   Runtime* r=currentRuntime;
-  if (!r || !context || !r->port_.owner() || !r->port_.keyValue) return nullptr;
+  if (!r || !context || !r->port_.owner() || !r->settings_) return nullptr;
   if (r->retained_ || !r->providerStorageSafe()) {
     // Native retention can become observable inside app_main, before the
     // outer appExitBarrier. Revoke without invoking any physical cleanup.
@@ -976,14 +960,7 @@ int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uin
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
   if(storage->owner->atomicReadThrough(matched->nameSpace))return storage->owner->atomicLegacyGet(matched->nameSpace,key,buffer,capacity,outSize,limit);
 #endif
-  uint8_t temp[RISC_BOUND_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
-  const auto& backend=*storage->owner->port_.keyValue;
-  auto*state=storage->owner->scalableSettingsState(matched->nameSpace);
-  const int32_t result=state?RiscStorage::ScalableSettings::get(*state,key,temp,limit,&size):backend.get(backend.context,matched->nameSpace,key,temp,limit,&size);
-  if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND || result==RISC_BOUND_KEY_VALUE_BUSY) return result;
-  if (result!=RISC_BOUND_KEY_VALUE_OK || !size || size>limit) return RISC_BOUND_KEY_VALUE_IO;
-  if (capacity<size) {*outSize=size;return RISC_BOUND_KEY_VALUE_BUFFER_SMALL;}
-  memcpy(buffer,temp,size);*outSize=size;return RISC_BOUND_KEY_VALUE_OK;
+  return storage->owner->namespaceKeyValueGet(matched->nameSpace,key,buffer,capacity,outSize,limit,true);
 }
 int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data,uint32_t size) {
   const ProviderStorage* storage=providerContext(context);
@@ -1099,6 +1076,10 @@ bool Runtime::revokeApp() {
 #include "EntropyRuntime.inc"
 #include "ProviderPromotionRuntime.inc"
 #include "ResidentShellRuntime.inc"
+bool Runtime::openSettings() {
+  settings_=openSettingsService(port_.settings,port_.keyValue);
+  return (!port_.settings&&!port_.keyValue)||bool(settings_);
+}
 bool Runtime::prepare(const char* root) {
   RiscPerf::Scope trace(10,11);
   if(attempted_ || metadataCloseRetained() || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/' || !metadataSource(root).bound()) return fail("invalid boot invocation");
@@ -1152,7 +1133,7 @@ bool Runtime::prepare(const char* root) {
   }
   bootDriverCount_=driverCount_;
   registrationOpen_=true;
-  const bool bound=(!port_.bindPlatforms || port_.bindPlatforms(*this)) && registerProviderRealtime() && configureInstallation(c["installation"]);
+  const bool bound=(!port_.bindPlatforms || port_.bindPlatforms(*this)) && openSettings() && registerProviderRealtime() && configureInstallation(c["installation"]);
   registrationOpen_=false;
   if (!bound) return fail("trusted platform binding failed");
   if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !configureAppDataExports(c["app_capabilities"]) || !residentPolicy(c["resident_shell"]) || !configureInstalledFiles(c)) return false;
@@ -1283,19 +1264,10 @@ bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity
   if(settingsPending)*settingsPending=false;
   if(!relative||!path(root_,relative,out,capacity))return false;
   auto ready=[&](size_t index){
-    if(!installedSettings_&&!scalableSettings_)return true;
-    const auto&policy=policies_[index];for(size_t g=0;g<policy.count;++g){const auto&grant=policy.grants[g];
-      if(keyValuePolicy(grant)){
-        const auto*state=scalableSettingsState(uint32_t(grant.instance));
-        if(state&&state->status!=RiscStorage::ScalableSettings::Clean&&state->status!=RiscStorage::ScalableSettings::Dirty){
-          if(settingsPending)*settingsPending=state->status==RiscStorage::ScalableSettings::Cold||state->status==RiscStorage::ScalableSettings::Restoring;
-          return false;
-        }
-      }
-      if(keyValuePolicy(grant)&&grant.instance>=installation_[0].namespaceFirst&&grant.instance-installation_[0].namespaceFirst<installation_[0].namespaceCount){
-        const auto status=scalableSettings_?uint32_t(scalableSettings_[grant.instance-installation_[0].namespaceFirst].status):uint32_t(installedSettings_[grant.instance-installation_[0].namespaceFirst].status);
-        if(status==RiscStorage::SdFirstKeyValue::Cold||status==RiscStorage::SdFirstKeyValue::Uncertain||status==RiscStorage::ScalableSettings::Restoring)return false;
-      }
+    if(!settings_)return true;
+    const auto& policy=policies_[index];
+    for(size_t g=0;g<policy.count;++g){const auto& grant=policy.grants[g];
+      if(keyValuePolicy(grant)&&!settings_->launchReady(uint32_t(grant.instance),settingsPending))return false;
     }
     return true;
   };

@@ -108,10 +108,10 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
      !cohortSameJson(currentBoot["installation"]["namespace_range"],newBoot["installation"]["namespace_range"]))return false;
   if(installation_&&installation_[0].providersEnabled&&
      !cohortSameJson(currentBoot["installation"]["provider_grants"],newBoot["installation"]["provider_grants"]))return false;
-  if((installedSettings_||scalableSettings_)&&newBoot["installation"]["settings_sd"]!=true)return false;
+  if((settings_&&settings_->checkpointCount())&&newBoot["installation"]["settings_sd"]!=true)return false;
   // Once shared namespaces are checkpoint-backed, preserving updates may not
   // silently detach them and revive stale native originals.
-  if(sharedSettings_.count&&!cohortSameJson(currentBoot["installation"]["shared_settings"],newBoot["installation"]["shared_settings"]))return false;
+  if((settings_&&settings_->sharedCount())&&!cohortSameJson(currentBoot["installation"]["shared_settings"],newBoot["installation"]["shared_settings"]))return false;
   bool consumed[RiscLimits::Apps]{};
   // Reuse the running graph's already scoped native tables with an identical
   // hardware/port declaration. Never bind the staged board into the CPU owner.
