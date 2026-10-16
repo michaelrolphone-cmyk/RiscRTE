@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         sanitize: [0, 1]
     env:
@@ -29,6 +30,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         storage: [0, 1]
     container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
@@ -49,7 +51,7 @@ jobs:
           if [[ "${{ matrix.storage }}" == 0 ]];then
             python test/compile_runtime_metadata_target.py "$RUNNER_TEMP/settings-native/compile_commands.json" "$RUNNER_TEMP/settings-embedded" --storage 0 --embedded --elf
           else
-            git worktree add --detach "$RUNNER_TEMP/settings-before" 9c08697e68df98117b677c664a0e632361cbc5a5
+            git -c safe.directory="$PWD" worktree add --detach "$RUNNER_TEMP/settings-before" 9c08697e68df98117b677c664a0e632361cbc5a5
             python test/compile_settings_service_layout_target.py "$RUNNER_TEMP/settings-native/compile_commands.json" "$RUNNER_TEMP/settings-before" "$RUNNER_TEMP/settings-layout"
           fi
       - uses: actions/upload-artifact@v4
@@ -61,6 +63,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
         sanitize: [0, 1]
     env:

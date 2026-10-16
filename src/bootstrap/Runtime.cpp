@@ -1104,7 +1104,9 @@ bool Runtime::openSettings() {
   // Explicit selection never downgrades after unavailable or failed open.
   if(port_.settings)settings_=port_.settings->open?port_.settings->open(port_.settings->context):nullptr;
   else if(port_.keyValue&&port_.keyValue->openSettings)settings_=port_.keyValue->openSettings(*port_.keyValue);
-  return (!port_.settings&&!port_.keyValue)||bool(settings_);
+  // Opening is a provider callback too: a returned session may already hold
+  // terminal custody, even when this boot grants no settings capabilities.
+  return (!port_.settings&&!port_.keyValue)||settingsCallSafe();
 }
 bool Runtime::prepare(const char* root) {
   RiscPerf::Scope trace(10,11);

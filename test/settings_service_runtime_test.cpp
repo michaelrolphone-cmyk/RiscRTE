@@ -42,7 +42,7 @@ struct Session final:SettingsSession {
  bool retained()const override{return terminal;}
 };
 static Session* current;
-static SettingsProvider provider{nullptr,[](void*)->std::unique_ptr<SettingsSession>{++opens;auto p=std::make_unique<Session>();current=p.get();return p;}};
+static SettingsProvider provider{nullptr,[](void*)->std::unique_ptr<SettingsSession>{++opens;auto p=std::make_unique<Session>();current=p.get();if(mode=="factory-retained")p->terminal=true;if(mode=="factory-owner")owned=false;return p;}};
 extern "C" void settings_service_test_entry(){
  auto*rt=risc_runtime_get_api(1);assert(rt);if(mode=="no-storage")return;risc_runtime_capability_v1 grant{};grant.struct_size=sizeof grant;
  if(mode.find("preference-")==0){
@@ -100,12 +100,17 @@ int main(int argc,char**argv){
   for(const char* name:{"app.json","boot.json"}){const std::string path=root+"/"+name;std::ifstream in(path);std::string text{std::istreambuf_iterator<char>(in),{}};const auto at=text.find("storage.key-value");assert(at!=std::string::npos);text.replace(at,17,"storage.preferences");std::ofstream(path)<<text;}
  }
  if(mode=="absent"||mode=="no-storage")p.settings=nullptr;
- if(mode=="no-storage"){
+ if(mode=="no-storage"||mode.find("factory-")==0){
   std::ofstream(root+"/boot.json")<<R"({"board":"board.json","default_app":"default.elf","drivers":[]})";
  }
  SettingsProvider unavailable{};if(mode=="unavailable")p.settings=&unavailable;
  {Runtime r(p);runtime=&r;assert(sources.bind(r));
   if(mode=="absent"||mode=="unavailable"){assert(!r.prepare(root.c_str()));assert(!opens);return 0;}
+  if(mode.find("factory-")==0){
+   assert(!r.prepare(root.c_str())&&opens==1&&!getCalls&&!putCalls);
+   if(mode=="factory-retained"){assert(r.retained()&&!destroyed);_exit(0);}
+   owned=true;return 0;
+  }
   assert(r.prepare(root.c_str()));
   auto* active=current;
   if(mode=="normal"){

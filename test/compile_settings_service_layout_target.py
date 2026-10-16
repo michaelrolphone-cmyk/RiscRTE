@@ -41,14 +41,16 @@ for label, source in [('before', a.before.resolve()), ('after', root)]:
         command.append(value)
     command += ['-fno-access-control', '-URISC_RUNTIME_PREFERENCE_STORE', '-URISC_RUNTIME_STORAGE_FILES', '-DRISC_RUNTIME_PREFERENCE_STORE=1', '-DRISC_RUNTIME_STORAGE_FILES=1', '-MMD', '-MF', str(deps), '-o', str(obj)]
     subprocess.run(command, cwd=row['directory'], check=True)
-    nm = subprocess.check_output([command[0].removesuffix('g++') + 'nm', '-S', str(obj)], text=True)
+    compiler = next(value for value in command if pathlib.Path(value).name.endswith('g++'))
+    nm_command = [compiler.removesuffix('g++') + 'nm', '-S', str(obj)]
+    nm = subprocess.check_output(nm_command, text=True)
     sizes = {v.split()[-1]: int(v.split()[1], 16) for v in nm.splitlines() if v.split()[-1].startswith('resource_')}
     inputs = {}
     for name in shlex.split(deps.read_text().replace('\\\n', ' ').split(':', 1)[1]):
         path = pathlib.Path(name).resolve()
         inputs[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
     def git(*args):
-        return subprocess.check_output(['git', '-C', str(source), *args], text=True).strip()
-    report['measurements'][label] = {'source': str(source), 'commit': git('rev-parse', 'HEAD'), 'tree': git('rev-parse', 'HEAD^{tree}'), 'status': git('status', '--porcelain'), 'command': command, 'directory': row['directory'], 'sizes': sizes, 'inputs_sha256': inputs}
+        return subprocess.check_output(['git', '-c', 'safe.directory=' + str(source), '-C', str(source), *args], text=True).strip()
+    report['measurements'][label] = {'source': str(source), 'commit': git('rev-parse', 'HEAD'), 'tree': git('rev-parse', 'HEAD^{tree}'), 'status': git('status', '--porcelain'), 'command': command, 'nm_command': nm_command, 'directory': row['directory'], 'sizes': sizes, 'inputs_sha256': inputs}
     print(label, sizes, flush=True)
 (a.output / 'layout.json').write_text(json.dumps(report, indent=2) + '\n')
