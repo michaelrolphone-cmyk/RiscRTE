@@ -11,26 +11,30 @@ import unittest
 import test_native_startup as baseline
 ROOT = baseline.ROOT
 SHIM = baseline.SHIM.replace('inline uint32_t millis(){return 0;}', 'extern uint32_t clockMs;inline uint32_t millis(){return clockMs;}')
-SHIM = SHIM.replace('inline void vTaskDelay(uint32_t){mark("yield");}', 'void testScheduler(uint32_t);inline void vTaskDelay(uint32_t n){testScheduler(n);}')
-SHIM = SHIM.replace('using esp_err_t=int;constexpr esp_err_t ESP_OK=0;', '#include <nvs.h>')
+start = SHIM.index('inline void vTaskDelay(')
+end = SHIM.index('constexpr uint32_t configTICK_RATE_HZ', start)
+SHIM = SHIM[:start] + 'void testScheduler(uint32_t);inline void vTaskDelay(uint32_t n){testScheduler(n); }\n' + SHIM[end:]
+SHIM = SHIM.replace('using esp_err_t=int;constexpr esp_err_t ESP_OK=0,ESP_ERR_INVALID_ARG=0x102;', '#include <nvs.h>')
 SHIM = SHIM.replace('namespace RiscDiagnostics{', 'extern unsigned diagnosticsPolls;namespace RiscDiagnostics{').replace('inline void poll(){}', 'inline void poll(){++diagnosticsPolls;}')
-SHIM = SHIM.replace('bool(*controlExitRequested)();};', 'bool(*controlExitRequested)();bool(*nativeOwnerCheckpoint)(bool);bool(*nativeDiscoveryCheckpoint)();bool(*nativeSettingsShutdown)();};\nvoid testRuntimeRun(Port&);')
+SHIM = SHIM.replace('const RuntimeFileSources*files=nullptr;};', 'bool(*nativeOwnerCheckpoint)(bool);bool(*nativeDiscoveryCheckpoint)();bool(*nativeSettingsShutdown)();const RuntimeFileSources*files=nullptr;};\nvoid testRuntimeRun(Port&);')
 a = SHIM.index('class Runtime{Board b;')
 b = SHIM.index('\n}\nnamespace RiscCpu', a)
 SHIM = SHIM[:a] + r'''
-extern bool dataGrants,runtimeRetained;class Runtime{Board b;Port p;public:explicit Runtime(Port v):p(v){}Board&board(){return b;}
+extern bool dataGrants,runtimeRetained;class Runtime{Board b;Port port_;bool attempted_=false;public:explicit Runtime(Port v):port_(v){}Board&board(){return b;}
+ @BIND_FILE_SOURCES@
+ bool bindFileSources(const RuntimeFileSources* sources){mark("source-bind");return bindFileSourcesImpl(sources);}
  bool registerAtomicKeyValueReadThrough(uint32_t ns,RiscExperimental::NativeAtomicKeyValue&e){assert(e.namespaceId()==ns);mark(ns==1?"read1":"read6");return true;}
  bool registerAtomicKeyValue(const char*,uint32_t ns,RiscExperimental::NativeAtomicKeyValue&e){assert(e.namespaceId()==ns);mark(ns==1?"write1":"write6");return true;}
  struct KeyValueAvailability {void*context;int32_t(*snapshot)(void*,uint32_t,risc_key_value_availability_state_v1*);};
  bool registerKeyValueAvailability(uint32_t,KeyValueAvailability){return true;}
  bool keyValueReconciliationSafe(uint32_t)const{return !dataGrants;}
  bool keyValueRetentionObserved()const{return runtimeRetained;}
- bool prepare(const char*){mark("prepare");return true;}bool run(){mark("run");testRuntimeRun(p);return true;}const char*error(){return "test";}
+ bool prepare(const char* root){assert(!std::strcmp(root,"/bootfs"));assert(port_.files==RiscCpu::NativeRuntimeFiles::sources());assert(port_.files&&port_.files->find("/bootfs")&&port_.files->find("/updatefs"));attempted_=true;mark("prepare");return true;}bool run(){mark("run");testRuntimeRun(port_);return true;}const char*error(){return "test";}
 };
 ''' + SHIM[b:]
 SHIM = SHIM.replace('namespace RiscBoot{', '#include "experimental/native_replica/NativeSettingsCoordinator.h"\n#include <RiscKeyValueAvailabilityV1.h>\nnamespace RiscBoot{', 1)
 SHIM = SHIM.replace('class Port{public:explicit Port(int){}', 'class Port{public:bool attached=false;explicit Port(int){}bool nativeStorageAttached(){return attached;}')
-SHIM = SHIM.replace('bool providerStorageSafe(){return true;}', 'bool providerStorageSafe(){return !attached;}bool nativeDiscoveryProviderSafe(){return true;}bool nativeDiscoveryAppExitSafe(){return true;}')
+SHIM = SHIM.replace('bool providerStorageSafe(){return cpuStorageSafe;}', 'bool providerStorageSafe(){return cpuStorageSafe&&!attached;}bool nativeDiscoveryProviderSafe(){return true;}bool nativeDiscoveryAppExitSafe(){return true;}')
 WORKER = r'''
 #pragma once
 #include "experimental/native_replica/NativeSettingsCoordinator.h"
@@ -48,6 +52,7 @@ HARNESS = r'''
 #include <memory>
 namespace L=RiscCpu::NativeSettingsLifecycle;namespace W=RiscCpu::NativeSettingsWorker;namespace NF=NativeFixture;
 namespace RiscBoot {bool dataGrants=false,runtimeRetained=false;}
+void afterMount(){const auto* map=RiscCpu::NativeRuntimeFiles::sources();assert(map&&map->find("/bootfs")&&map->find("/updatefs")&&!map->retained());}
 std::vector<std::string>calls;uint32_t clockMs=0;unsigned diagnosticsPolls=0;
 std::string mode;bool selected=false;uint32_t onNamespace=0;unsigned registered=0,delays=0;bool failSecond=false;
 std::unique_ptr<W::Coordinator>services[2];
@@ -179,12 +184,17 @@ class NativeSettingsStartup(unittest.TestCase):
  def test_actual_entrypoint(self):
   with tempfile.TemporaryDirectory() as directory:
    folder=pathlib.Path(directory)
-   (folder/'shim.h').write_text(SHIM)
-   headers=('ports/esp32s3/NativeTlsMemory.h','esp_heap_caps.h','ports/esp32s3/NativeRadioResources.h','ports/esp32s3/NvsKeyValue.h','ports/esp32s3/NativeFailureEvidence.h','ports/esp32s3/NativeCompute.h','Arduino.h','RiscBuildIdentity.h','esp_spiffs.h','esp_ota_ops.h','esp_system.h','bootstrap/Runtime.h','ports/esp32s3/CpuPort.h','ports/esp32s3/NativeRetainedWake.h','ports/esp32s3/NativeRealtime.h','ports/esp32s3/NativeBoard.h','ports/esp32s3/CooperativeDelay.h','ports/esp32s3/SleepDiagnostics.h','esp_timer.h','diagnostics/Performance.h','CpuPort.h')
+   runtime=(ROOT/'src/bootstrap/Runtime.h').read_text()
+   start=runtime.index('  bool bindFileSources(');end=runtime.index('\n  Runtime(const Runtime&)',start)
+   binding=runtime[start:end].replace('bindFileSources(','bindFileSourcesImpl(',1)
+   (folder/'shim.h').write_text(SHIM.replace('@BIND_FILE_SOURCES@',binding))
+   (folder/'sdkconfig.h').write_text('#pragma once\n')
+   headers=('ports/esp32s3/NativePlatform.h','ports/esp32s3/NativeTlsMemory.h','esp_heap_caps.h','ports/esp32s3/NativeRadioResources.h','ports/esp32s3/NvsKeyValue.h','ports/esp32s3/NativeFailureEvidence.h','ports/esp32s3/NativeCompute.h','Arduino.h','RiscBuildIdentity.h','esp_spiffs.h','esp_ota_ops.h','esp_system.h','esp_sleep.h','bootstrap/Runtime.h','ports/esp32s3/CpuPort.h','ports/esp32s3/NativeRetainedWake.h','ports/esp32s3/NativeRealtime.h','ports/esp32s3/NativeBoard.h','ports/esp32s3/CooperativeDelay.h','ports/esp32s3/SleepDiagnostics.h','esp_timer.h','diagnostics/Performance.h','CpuPort.h')
    for name in headers:
     path=folder/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('#include "shim.h"\n')
-   for name in ('bootstrap/AppPolicyLimits.h','diagnostics/StageLog.h','ports/esp32s3/NativeDiagnosticBinding.h','ports/esp32s3/NativeCrownRecovery.h','ports/esp32s3/NativeSettingsLifecycle.h','runtime/drivers/NativeProviderPolicyV1.h','runtime/drivers/SelectedNativeProviderPolicyV1.h','runtime/packages/PackageIdentity.h'):
+   for name in ('bootstrap/AppPolicyLimits.h','diagnostics/StageLog.h','ports/esp32s3/NativeDiagnosticBinding.h','ports/esp32s3/NativeCrownRecovery.h','ports/esp32s3/NativeSettingsLifecycle.h','runtime/packages/PackageIdentity.h'):
     path=folder/name;path.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/'src'/name,path)
+   shutil.copyfile(ROOT/'src/ports/esp32s3/NativeMemory.h',folder/'NativeMemory.h')
    shutil.copyfile(ROOT/'src/ports/esp32s3/NativeSettingsLifecycle.h',folder/'NativeSettingsLifecycle.h')
    shutil.copyfile(ROOT/'src/ports/esp32s3/NativeSettingsLifecycle.cpp',folder/'lifecycle.cpp')
    shutil.copyfile(ROOT/'src/main.cpp',folder/'main.cpp')
@@ -200,6 +210,8 @@ class NativeSettingsStartup(unittest.TestCase):
    # An absent native selector symbol must link and fail closed, not initialize.
    subprocess.run([command[0],'-DNO_ADMISSION',*command[1:]],check=True)
    subprocess.run([str(folder/'test'),'missing-admission',str(folder/'absent-symbol')],check=True)
-   rejected=subprocess.run(['c++','-std=c++17','-DRISC_NATIVE_SETTINGS_LIFECYCLE=1','-DRISC_NATIVE_SETTINGS_WORKER=1','-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1','-DRISC_NATIVE_STORAGE_CUSTODY=1','-I'+str(folder),'-x','c++','-fsyntax-only','-'],input='#include "NativeSettingsLifecycle.h"\n',text=True,capture_output=True)
-   self.assertNotEqual(rejected.returncode,0);self.assertIn('X4-only',rejected.stderr)
+   selection=['c++','-std=c++17','-DRISC_NATIVE_SETTINGS_LIFECYCLE=1','-DRISC_NATIVE_SETTINGS_WORKER=1','-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1','-DRISC_NATIVE_STORAGE_CUSTODY=1',*['-I'+str(p) for p in includes],'-x','c++','-fsyntax-only','-']
+   rejected=subprocess.run(selection,input='#include "NativeSettingsLifecycle.h"\n',text=True,capture_output=True)
+   self.assertNotEqual(rejected.returncode,0);self.assertIn('explicitly selected native storage integration',rejected.stderr)
+   subprocess.run([selection[0],'-DRISC_NATIVE_SETTINGS_PORT_SELECTED=1',*selection[1:]],input='#include "NativeSettingsLifecycle.h"\n',text=True,check=True)
 if __name__=='__main__':unittest.main()

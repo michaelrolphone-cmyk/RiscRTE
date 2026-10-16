@@ -20,7 +20,7 @@ for ident,name in module.DEVICES.items():
  boot['drivers'].append({'manifest':f'{name}/manifest.json','instance_id':ident})
 (out/'boot.json').write_text(json.dumps(boot))
 # Keep the old consumer SDK bytes unchanged and prove the complete ABI prefix.
-# Runtime0.1.11 adds one optional callback; whole-file equality is no longer
-# the correct compatibility test for this frozen old-ABI regression.
+# Optional callbacks append after the frozen capability prefix; whole-file
+# equality is not the compatibility test for this frozen old-ABI regression.
 from verify_legacy_runtime_header import verify
 verify(watch/'sdk/app/RiscRuntimeV1.h')

@@ -32,9 +32,13 @@ class AppPolicyRows(unittest.TestCase):
         config.read(ROOT / 'platformio.ini')
         opted = set()
         expanded = set()
+        universal = set()
         for name in config.sections():
             flags = config[name].get('build_flags', '')
-            if '-DRISC_APP_POLICY_ROWS=24' in flags:
+            if '-DRISC_APP_POLICY_ROWS=32' in flags:
+                self.assertIn('-DRISC_APP_REQUIREMENT_ROWS=32', flags)
+                universal.add(name)
+            elif '-DRISC_APP_POLICY_ROWS=24' in flags:
                 self.assertIn('-DRISC_APP_REQUIREMENT_ROWS=24', flags)
                 expanded.add(name)
             elif '-DRISC_APP_POLICY_ROWS=' in flags:
@@ -43,6 +47,7 @@ class AppPolicyRows(unittest.TestCase):
                 opted.add(name)
         self.assertEqual(expanded, {'env:esp32s3-16mb-appdata-iq-sharing',
                                     'env:esp32s3-16mb-appdata-iq-policy24'})
+        self.assertEqual(universal, {'env:esp32s3-16mb-appdata-universal'})
         self.assertEqual(opted, {'env:esp32s3-16mb-appdata' + suffix + '-policy17'
                                 for suffix in ('', '-iq', '-perf', '-iq-perf')})
 
