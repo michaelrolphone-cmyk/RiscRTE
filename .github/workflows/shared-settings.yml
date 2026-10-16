@@ -5,6 +5,8 @@ on:
       - 'src/**'
       - 'sdk/**'
       - 'test/**'
+      - 'scripts/host_compiler_cache.py'
+      - '.github/actions/host-cache/**'
       - '.github/workflows/shared-settings.yml'
 permissions:
   contents: read
@@ -20,6 +22,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+      - uses: ./.github/actions/host-cache
+        with:
+          shard: shared-settings
       - name: Scalable settings, path aliases, and real Runtime routing
         run: |
           bash test/run_sd_first_key_value_test.sh
@@ -32,5 +37,7 @@ jobs:
         run: |
           bash test/run_sd_first_key_value_test.sh
           bash test/run_removable_runtime_test.sh
-  integration:
-    uses: ./.github/workflows/integration.yml
+      - name: Report compiler cache results
+        if: always()
+        run: ccache --show-stats --verbose
+  # integration.yml owns the complete suite for all pull requests.
