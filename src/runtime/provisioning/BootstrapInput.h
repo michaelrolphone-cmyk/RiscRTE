@@ -1,7 +1,7 @@
 #pragma once
 #include "Profile.h"
 namespace RiscProvision {
-constexpr uint32_t DescriptorBytes=256, ProfileInputBytes=16384;
+constexpr uint32_t DescriptorBytes=256;
 enum class InputStatus {Ready,Missing,Unavailable,Invalid};
 struct Input {
  void* context=nullptr;

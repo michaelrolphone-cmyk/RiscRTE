@@ -66,7 +66,7 @@ c++ -rdynamic -Wl,--wrap=open,--wrap=close,--wrap=fopen,--wrap=fclose,--wrap=ope
  "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
  "$repo/src/runtime/provisioning/BootstrapInput.cpp" "$repo/src/runtime/provisioning/Coordinator.cpp" \
- "$repo/src/runtime/provisioning/StoreFiles.cpp" "$repo/src/runtime/provisioning/Profile.cpp" \
+ "$repo/src/runtime/provisioning/StoreFiles.cpp" "$repo/src/runtime/provisioning/Profile.cpp" "$repo/src/runtime/provisioning/PreservingPolicy.cpp" \
  "$repo/src/runtime/update/PairedBank.cpp" "$repo/src/runtime/update/StoreAudit.cpp" "$repo/test/native_bank_test.cpp" "$build/validate.o" "${native_objects[@]}" -lcrypto -ldl -o "$build/test"
 if [[ "${NATIVE_EXPORT_ADMISSION_ONLY:-0}" == 1 ]];then
  "$build/test" native-export-admission "$build/export-admission"
@@ -105,7 +105,8 @@ fi
 "$build/test" diagnostic-candidate "$build/diagnostic-candidate"
 "$build/test" diagnostic-candidate-absent "$build/diagnostic-candidate-absent"
 if [[ -n "${BOOTLOADER_FILE:-}" ]]; then
- for mode in success odd-chunks interrupt offline-consumed corrupt length download-fail write-fail readback-fail readback-corrupt bad-board bad-elf native-mismatch bad-magic bad-name bad-capacity free-page-programmed extra-file file-mismatch mount-fail unmount-retained admission-close extra-elf-close selection-unknown receipt-fail; do
+ for mode in preserving-native preserving-native-close; do "$build/test" "$mode" "$BOOTLOADER_FILE" "$build/$mode"; done
+ for mode in tuples-success tuples-file-mismatch tuples-extra-file tuples-interrupt tuples-selection-unknown success odd-chunks interrupt offline-consumed corrupt length download-fail write-fail readback-fail readback-corrupt bad-board bad-elf native-mismatch bad-magic bad-name bad-capacity free-page-programmed extra-file file-mismatch mount-fail unmount-retained admission-close extra-elf-close selection-unknown receipt-fail; do
   "$build/test" "image-$mode" "$BOOTLOADER_FILE" "$build/image-$mode"
  done
  "$build/test" boot-cost "$BOOTLOADER_FILE"

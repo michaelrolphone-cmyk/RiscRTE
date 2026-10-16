@@ -135,6 +135,89 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   rejected("invalid app identity/declarations");
   puts("App policy capacity: 9/16/18 and full bound accepted, overflow rejected; last-slot identity/path, exact grants and independent declaration/namespace bounds PASS");
 }
+static void optionalVolumeAuthority(const std::string& root) {
+  auto save=[&](const char* name,const JsonDocument& value){std::string bytes;serializeJson(value,bytes);write(root+"/"+name,bytes);};
+  JsonDocument hw,config,app;
+  assert(parse(board,strlen(board),hw));
+  auto second=hw["devices"].as<JsonArray>().add<JsonObject>();second.set(hw["devices"][0]);
+  second["instance_id"]=8;second["config"]["pins"][0]=6;save("board.json",hw);
+  config["board"]="board.json";config["default_app"]="optional-volume.elf";
+  auto drivers=config["drivers"].to<JsonArray>();
+  for(unsigned instance:{7u,8u}) {
+    JsonDocument provider;assert(parse(manifest,strlen(manifest),provider));
+    const std::string name="volume-"+std::to_string(instance);
+    provider["id"]=name;provider["file_name"]=name+".elf";
+    provider["provides"][0]["capability"]="storage.volume";
+    save((name+".json").c_str(),provider);
+    auto selected=drivers.add<JsonObject>();selected["manifest"]=name+".json";selected["instance_id"]=instance;
+  }
+  app["type"]="application";app["id"]="optional-volume";app["version"]="1.0.0";app["entry"]="app_main";
+  app["architecture"]="xtensa-esp32s3";app["file_name"]="optional-volume.elf";
+  app["requires"].to<JsonArray>();
+  auto optional=app["optional"].to<JsonArray>().add<JsonObject>();optional["capability"]="storage.volume";optional["api"]=1;
+  save("optional-volume.json",app);
+  auto policy=config["app_capabilities"].to<JsonArray>().add<JsonObject>();policy["manifest"]="optional-volume.json";
+  auto grants=policy["grants"].to<JsonArray>();
+  auto check=[&](const char* expected,const char* error=nullptr){
+    save("boot.json",config);lines.clear();RiscTest::FileSources files({root});Runtime runtime({owner,health,delay,logLine});
+    assert(files.bind(runtime));const bool prepared=runtime.prepare(root.c_str());
+    if(error){assert(!prepared);assert(!strcmp(runtime.error(),error));assert(!runtime.run());assert(lines.empty());}
+    else {if(!prepared)fprintf(stderr,"optional volume rejected: %s\n",runtime.error());assert(prepared);assert(runtime.run());assert((lines==std::vector<std::string>{expected}));}
+  };
+  check("VOLUME absent"); // Providers alone never authorize optional acquisition.
+  auto grant=grants.add<JsonObject>();grant["capability"]="storage.volume";grant["api"]=1;
+  for(unsigned instance:{7u,8u}) {grant["instance_id"]=instance;check(instance==7?"VOLUME 7":"VOLUME 8");}
+  grant["instance_id"]=0;check(nullptr,"ambiguous app provider");
+  grant["instance_id"]=7;grants.add(grant);grants[1]["instance_id"]=8;
+  check(nullptr,"app requirement not uniquely authorized");grants.clear();drivers.clear();
+  check("VOLUME absent"); // Internal-only product need not supply an SD provider.
+  write(root+"/board.json",board);
+  puts("Optional storage.volume: absent provider/authority, unique explicit grant among two providers, exact-instance isolation and ambiguous policy rejection PASS");
+}
+static void softwareBindings(const std::string& root) {
+  JsonDocument config,hw,sw,consumer;
+  assert(parse(manifest,strlen(manifest),hw));sw.set(hw);
+  sw["id"]="singleton";sw["requires"].to<JsonArray>();sw.remove("hardware_compatibility");
+  consumer.set(sw);consumer["id"]="consumer";
+  consumer["provides"][0]["capability"]="test.consumer";
+  auto requirement=consumer["requires"].as<JsonArray>().add<JsonObject>();
+  requirement["capability"]="test.probe";requirement["api"]=1;
+  auto save=[&](const char* name,const JsonDocument& doc){std::string bytes;serializeJson(doc,bytes);write(root+"/"+name,bytes);};
+  save("bound-hw.json",hw);save("bound-sw.json",sw);save("consumer.json",consumer);
+  config["board"]="board.json";config["default_app"]="default.elf";
+  auto drivers=config["drivers"].to<JsonArray>();
+  auto h=drivers.add<JsonObject>();h["manifest"]="bound-hw.json";h["instance_id"]=7;
+  drivers.add<JsonObject>()["manifest"]="bound-sw.json";
+  auto c=drivers.add<JsonObject>();c["manifest"]="consumer.json";
+  auto check=[&](const char* error){
+    save("boot.json",config);const size_t before=lines.size();
+    RiscTest::FileSources files({root});Runtime runtime({owner,health,delay,logLine});assert(files.bind(runtime));bool ok=runtime.prepare(root.c_str());
+    if(error){if(ok || strcmp(runtime.error(),error))fprintf(stderr,"binding expected %s got %s\n",error,runtime.error());assert(!ok);assert(!strcmp(runtime.error(),error));}
+    else {if(!ok)fprintf(stderr,"binding rejected %s\n",runtime.error());assert(ok);}
+    assert(lines.size()==before);
+  };
+  check("ambiguous dependency");
+  auto bindings=c["bindings"].to<JsonArray>();auto b=bindings.add<JsonObject>();
+  b["capability"]="test.probe";b["api"]=1;b["instance_id"]=7;check(nullptr);
+  b["instance_id"]=0;check(nullptr); // singleton zero is a selection, not wildcard
+  b["instance_id"]=8;check("missing dependency");
+  b["instance_id"]=-1;check("invalid software dependency binding");
+  b["instance_id"]=7;b["api"]=2;check("undeclared/duplicate software dependency binding");
+  b["api"]=1;b["capability"]="test.unknown";check("undeclared/duplicate software dependency binding");
+  b["capability"]="platform.clock";check("invalid software dependency binding");
+  b["capability"]="storage.app-data.bound";check("invalid software dependency binding");
+  b["capability"]="test.probe";b["extra"]=true;check("invalid software dependency binding");b.remove("extra");
+  // Two requirements allow the duplicate to reach semantic validation.
+  auto second=consumer["requires"].as<JsonArray>().add<JsonObject>();second["capability"]="test.consumer";second["api"]=1;save("consumer.json",consumer);
+  bindings.add(b);check("undeclared/duplicate software dependency binding");bindings.remove(1);
+  b["instance_id"]=7;check("driver dependency cycle");
+  consumer["requires"].as<JsonArray>().remove(1);save("consumer.json",consumer);
+  h["bindings"].to<JsonArray>();check("invalid software dependency bindings");h.remove("bindings");
+  c["bindings"].to<JsonObject>();check("invalid software dependency bindings");
+  c.remove("bindings");drivers.remove(1);check(nullptr); // legacy unique match unchanged
+  puts("Software dependency bindings: dual provider, exact zero/nonzero, absent target, malformed/duplicate/private/hardware and cycle admission PASS");
+}
+
 int main(int argc,char** argv){
   assert(argc==2);std::string root=argv[1];
   write(root+"/board.json",board);write(root+"/probe.json",manifest);
@@ -216,6 +299,8 @@ int main(int argc,char** argv){
   {RiscTest::FileSources runtimeFiles17({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles17.bind(runtime));assert(!runtime.prepare(root.c_str()));}
   puts("App grants: identity/declaration/exact instance, size/version checks, stale handles, child isolation and automatic revocation PASS");
   appPolicyCapacity(root,grantBoot);
+  softwareBindings(root);
+  optionalVolumeAuthority(root);
   driverCapacity(root);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"heartbeat.elf","drivers":[]})");
   heartbeatMode=true;generation=0;lines.clear();

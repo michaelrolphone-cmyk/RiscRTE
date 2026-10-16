@@ -24,6 +24,7 @@ struct Port {
  FreshTime time{};
  const RiscBoot::AppDataBackend* appData=nullptr;
  const RiscBoot::RuntimeFileSources* files=nullptr;
+ bool preserving=false; // native request only; owner profiles retain their existing route
 };
 enum class Outcome {Installed,Stopped};
 enum class Reason {NoProfile,InvalidProfile,InputUnavailable,MemoryUnavailable,PairUnavailable,

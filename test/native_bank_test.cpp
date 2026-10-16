@@ -276,6 +276,7 @@ static std::vector<uint8_t> validatedBootloader(const char* path){
 #include "cohort_native.inc"
 #include "boot_path_native.inc"
 #include "compact_image_native.inc"
+#include "preserving_profile_native.inc"
 #ifdef RISC_NATIVE_BANK_PROVIDER_TEST
 #include "native_bank_provider_admission.inc"
 #include "native_bank_app_data_export_admission.inc"
@@ -283,6 +284,7 @@ static std::vector<uint8_t> validatedBootloader(const char* path){
 int main(int argc,char** argv){
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
+ if(mode=="preserving-native"||mode=="preserving-native-close"){assert(argc==4);preservingNative(argv[2],argv[3],mode=="preserving-native-close");return 0;}
 #ifdef RISC_NATIVE_BANK_PROVIDER_TEST
  if(mode=="native-export-admission" || mode=="native-export-close"){assert(argc==3);nativeAppDataExportAdmission(argv[2],mode=="native-export-close");return 0;}
  if(mode=="native-provider-admission"){assert(argc==3);nativeProviderAdmission(argv[2]);return 0;}

@@ -1,5 +1,3 @@
-#include "RuntimeFileFixture.h"
-#include "FixtureJson.h"
 // The same source supplies a tiny host app so authority/update assertions run
 // at the real app-entry boundary, rather than by fabricating active Runtime state.
 #ifdef OPTIONAL_APP_TEST_MODULE
@@ -19,6 +17,8 @@ extern "C" __attribute__((visibility("default"))) void app_main() { test_optiona
 #define private public
 #include "bootstrap/Runtime.h"
 #undef private
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 #include <RiscPlatformClockV1.h>
 
 using RiscBoot::Runtime;

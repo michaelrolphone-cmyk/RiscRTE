@@ -11,7 +11,8 @@ extern void removable_installation(const void*);
 extern void removable_bound_settings(const void*);
 static bool start(const risc_provider_dependency_v1* d,size_t n) {
 #ifdef INTERNAL_PROVIDER
- (void)d;return n==0;
+ for(size_t i=0;i<n;++i)if(!strcmp(d[i].capability_id,"platform.installation"))removable_installation(d[i].api);
+ return n<=1;
 #endif
   for(size_t i=0;i<n;++i)if(d[i].capability_id[0]=='p')removable_installation(d[i].api);
   for(size_t i=0;i<n;++i)if(!strcmp(d[i].capability_id,"storage.key-value.bound"))removable_bound_settings(d[i].api);
@@ -19,7 +20,7 @@ static bool start(const risc_provider_dependency_v1* d,size_t n) {
 }
 static bool quiesce(void){
 #ifndef INTERNAL_PROVIDER
-removable_event(3,0);
+if(removable_event(3,0))return false;
 #endif
 return true;}
 static void stop(void){}

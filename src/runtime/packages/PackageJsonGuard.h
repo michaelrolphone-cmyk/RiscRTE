@@ -20,7 +20,10 @@ class PackageJsonGuard {
   static constexpr size_t kMaxKeyBytes = 63;
   static constexpr size_t kMaxArrayItems = 128;
 
-  PackageJsonGuard(const char* data, size_t length) : data_(data), length_(length) {}
+  // A caller may explicitly supply its own bounded array policy. Ordinary
+  // package/board metadata keeps the default 128-item limit.
+  PackageJsonGuard(const char* data, size_t length, size_t maxArrayItems = kMaxArrayItems)
+      : data_(data), length_(length), maxArrayItems_(maxArrayItems) {}
 
   bool objectOnly() {
     if (!data_ || !length_ || length_ > kMaxBytes) return false;
@@ -34,6 +37,7 @@ class PackageJsonGuard {
   struct Key { size_t offset; size_t length; };
   const char* data_;
   size_t length_;
+  const size_t maxArrayItems_;
   size_t position_ = 0;
   size_t activeKeys_ = 0;
   size_t depth_ = 0;
@@ -185,7 +189,7 @@ class PackageJsonGuard {
     if (take(']')) { --depth_; return true; }
     size_t count = 0;
     for (;;) {
-      if (++count > kMaxArrayItems || !value()) return false;
+      if (++count > maxArrayItems_ || !value()) return false;
       skipWhitespace();
       if (take(']')) { --depth_; return true; }
       if (!take(',')) return false;

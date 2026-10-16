@@ -2,7 +2,7 @@
 #include <RiscBankStoreV1.h>
 namespace RiscBoot { class Runtime; class RuntimeFileSources; struct KeyValueBackend; struct AppDataBackend; }
 namespace RiscCpu { struct Hardware; }
-namespace RiscProvision { struct Profile; }
+namespace RiscProvision { struct Profile; struct RequestSource; }
 namespace RiscBankStore {
 // Paired target only. Boot resolves the deployed table and selected pair's
 // existing commit record, without rehashing installed images. Install/update
@@ -13,6 +13,7 @@ bool bind(RiscBoot::Runtime&);
 bool confirmBoot();
 void rejectBoot();
 bool exitSafe();
+bool provisionRequestSource(RiscProvision::RequestSource&,risc_bank_status_v1&,bool requireLive);
 bool provisionAvailable(); // verified confirmed pair, owner, before Runtime binding
 // Confirmed active-bank receipt survives later app/firmware/cohort updates.
 // Missing is the only state that permits a legacy store-marker fallback.
@@ -28,7 +29,7 @@ ProvisionHistory provisionHistory(const uint8_t (&digest)[32]);
 // Hardware tables are copied; profile and KV backend remain immutable/alive
 // through abort success or terminal restart. No caller-supplied admission hook.
 int32_t provisionBegin(const RiscProvision::Profile&,const uint8_t (&digest)[32],const RiscCpu::Hardware&,
-                       const RiscBoot::KeyValueBackend*,uint64_t*,const RiscBoot::AppDataBackend* =nullptr);
+                       const RiscBoot::KeyValueBackend*,uint64_t*,const RiscBoot::AppDataBackend* =nullptr,bool preserving=false);
 int32_t provisionStep(uint64_t,risc_bank_status_v1*);
 bool provisionStatus(uint64_t,risc_bank_status_v1*); // read-only, including unsafe/ambiguous terminal state
 int32_t provisionWrite(uint64_t,size_t,const void*,uint32_t);

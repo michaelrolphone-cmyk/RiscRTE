@@ -1,5 +1,6 @@
 #pragma once
 #include "runtime/provisioning/BootstrapInput.h"
+#include "NvsQuarantine.h"
 #include <nvs.h>
 #include <nvs_flash.h>
 namespace RiscNvs {esp_err_t initializationStatus();}

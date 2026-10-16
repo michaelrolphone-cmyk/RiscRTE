@@ -311,6 +311,7 @@ class Runtime final {
     RuntimeProviders::RequirementV2 requirements[RuntimeProviders::GraphV2::kMaxRequirements]{};
     char names[RuntimeProviders::GraphV2::kMaxRequirements][96]{};
     size_t count=0;
+    bool explicitBinding[RuntimeProviders::GraphV2::kMaxRequirements]{};
     bool coldBootStart=false;
     Runtime* sourceOwner=nullptr;uint64_t sourceVolume=0;int sourceDriver=-1;
     char sourcePath[193]{};bool internalFallback=false,sourceFiles=false;
@@ -572,7 +573,7 @@ class Runtime final {
   uint8_t appCatalogState_[MaxAppPolicies]{};
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
-    bool enabled=true, catalogAuthority=false;
+    bool enabled=true, catalogAuthority=false, internalFallback=false;
     AppCatalogMetadata catalog{};
     char sourcePath[193]{}; PolicyIndex sourceDriver=-1;bool sourceFiles=false;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;

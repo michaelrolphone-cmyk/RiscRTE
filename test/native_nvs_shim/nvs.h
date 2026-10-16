@@ -26,7 +26,7 @@ typedef int esp_err_t;
 #define ESP_ERR_NVS_PART_NOT_FOUND (ESP_ERR_NVS_BASE + 0x0f)
 #define ESP_ERR_NVS_NEW_VERSION_FOUND (ESP_ERR_NVS_BASE + 0x10)
 typedef uint32_t nvs_handle_t;
-typedef enum {NVS_TYPE_U8=0x01,NVS_TYPE_BLOB=0x42,NVS_TYPE_ANY=0xff} nvs_type_t;
+typedef enum {NVS_TYPE_U8=0x01,NVS_TYPE_STR=0x21,NVS_TYPE_BLOB=0x42,NVS_TYPE_ANY=0xff} nvs_type_t;
 typedef void* nvs_iterator_t;
 typedef struct {char namespace_name[16];char key[16];nvs_type_t type;} nvs_entry_info_t;
 typedef enum { NVS_READONLY, NVS_READWRITE } nvs_open_mode_t;
@@ -36,6 +36,10 @@ extern "C" {
 esp_err_t nvs_open(const char*, nvs_open_mode_t, nvs_handle_t*);
 esp_err_t nvs_get_blob(nvs_handle_t, const char*, void*, size_t*);
 esp_err_t nvs_set_blob(nvs_handle_t, const char*, const void*, size_t);
+esp_err_t nvs_get_u8(nvs_handle_t, const char*, uint8_t*);
+esp_err_t nvs_set_u8(nvs_handle_t, const char*, uint8_t);
+esp_err_t nvs_get_str(nvs_handle_t, const char*, char*, size_t*);
+esp_err_t nvs_set_str(nvs_handle_t, const char*, const char*);
 esp_err_t nvs_commit(nvs_handle_t);
 void nvs_close(nvs_handle_t);
 #if RISC_NATIVE_ESP_IDF

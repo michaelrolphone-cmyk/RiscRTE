@@ -97,7 +97,7 @@ struct Session {
  Step begin(){
    reason=Reason::StageFailed;
    if(!bankToken){
-     if(RiscBankStore::provisionBegin(profile,digest,port.hardware,port.keyValue,&bankToken,port.appData)!=RISC_BANK_OK){reason=Reason::StageFailed;return Step::Failed;}
+     if(RiscBankStore::provisionBegin(profile,digest,port.hardware,port.keyValue,&bankToken,port.appData,port.preserving)!=RISC_BANK_OK){reason=Reason::StageFailed;return Step::Failed;}
    }
    risc_bank_status_v1 status{};status.struct_size=sizeof(status);
    if(RiscBankStore::provisionStep(bankToken,&status)!=RISC_BANK_OK){reason=Reason::StageFailed;return Step::Failed;}

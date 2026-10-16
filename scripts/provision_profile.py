@@ -21,11 +21,15 @@ import tempfile
 from release_assets import require
 
 LAYOUTS = {'riscrte-paired-16m-v1': 0x4f0000,
-           'riscrte-paired-appdata-v2': 0x510000}
+           'riscrte-paired-appdata-v2': 0x510000,
+           'riscrte-paired-appdata-v3': 0x550000}
 TARGET_LAYOUTS = {'esp32s3-16mb-paired': 'riscrte-paired-16m-v1',
                   'esp32s3-16mb-appdata': 'riscrte-paired-appdata-v2',
-                  'esp32s3-16mb-appdata-iq': 'riscrte-paired-appdata-v2'}
-MAX_FILES = 128
+                  'esp32s3-16mb-appdata-iq': 'riscrte-paired-appdata-v2',
+                  'esp32s3-16mb-appdata-expanded': 'riscrte-paired-appdata-v3',
+                  'esp32s3-16mb-appdata-expanded-iq': 'riscrte-paired-appdata-v3',
+                  'esp32s3-16mb-waveshare-expanded': 'riscrte-paired-appdata-v3'}
+MAX_FILES = 160
 MAX_PROFILE = 16384
 REQUIRED = {'boot.json', 'board.json', 'default.elf'}
 
@@ -318,7 +322,14 @@ def profile_bytes(record, wifi, base_url=None):
         profile['files'] = [{key: entry[key] for key in ('path', 'bytes', 'sha256')}
                             for entry in profile['files']]
     data = encode(profile)
-    require(len(data) <= MAX_PROFILE, 'profile exceeds 16 KiB; use compact schema 2 with one matching base URL')
+    # Preserve existing exact profile bytes when schema 3 still fits. Tuples
+    # remove repeated field names only; every inventory entry remains explicit.
+    if profile['schema_version'] == 3 and len(data) > MAX_PROFILE:
+        profile['schema_version'] = 4
+        profile['files'] = [[entry[key] for key in ('path', 'bytes', 'sha256')]
+                            for entry in profile['files']]
+        data = encode(profile)
+    require(len(data) <= MAX_PROFILE, 'profile exceeds 16 KiB; use a matching shared base URL or compact image inventory')
     return data
 
 
@@ -416,7 +427,7 @@ def main():
     except (Exception, KeyboardInterrupt) as error:
         # Only these fixed validation labels may be reported. JSON, filesystem
         # and subprocess diagnostics can contain owner data and stay private.
-        safe = {'profile exceeds 16 KiB; use compact schema 2 with one matching base URL',
+        safe = {'profile exceeds 16 KiB; use a matching shared base URL or compact image inventory',
                 'native store capacity exceeded', 'base URL differs from pinned inventory sources',
                 'private output must be outside Git working trees and publication directories',
                 'output already exists', 'native SPIFFS relative path bound'}
