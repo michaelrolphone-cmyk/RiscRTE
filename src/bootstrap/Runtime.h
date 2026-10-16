@@ -9,6 +9,8 @@
 #include "AppRequirementLimits.h"
 #include "InstalledFiles.h"
 #include "RuntimeFiles.h"
+#include "RuntimeFileImage.h"
+struct elf_file;
 #include "AppDataBackend.h"
 #include "AtomicKeyValueConfig.h"
 #include "PreferenceStoreConfig.h"
@@ -22,6 +24,7 @@
 #endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
 #include <RiscKeyValueAtomicV1.h>
+#include "AtomicSettingsEndpoint.h"
 #include <RiscKeyValueAvailabilityV1.h>
 namespace RiscExperimental { class NativeAtomicKeyValue; }
 #endif
@@ -29,8 +32,8 @@ namespace RiscExperimental { class NativeAtomicKeyValue; }
 #include "TcpListenerBackend.h"
 #include "EntropyBackend.h"
 #include "runtime/storage/AppDataExport.h"
-#include "runtime/storage/SdFirstKeyValue.h"
-#include "runtime/storage/ScalableSettings.h"
+#include "KeyValueBackend.h"
+#include "SettingsService.h"
 #include "FileOpenState.h"
 #include "FileSourceBackend.h"
 #include "FailureEvidenceBackend.h"
@@ -56,19 +59,6 @@ namespace RiscUpdate { struct NativeAppDataExportPolicyV1; struct NativeAppDataE
 namespace RiscExperimental { class NativeRuntimeStoragePin; }
 namespace RiscBoot {
 class Runtime;
-// Optional compiled-in backend. Namespace comes only from validated boot policy.
-// Backend must obey the public status/size contract; broker copies reads only
-// after success. No app value encoding or fallback policy belongs here.
-struct KeyValueBackend {
-  void* context;
-  int32_t (*get)(void*,uint32_t,const char*,void*,uint32_t,uint32_t*);
-  int32_t (*put)(void*,uint32_t,const char*,const void*,uint32_t);
-  uint32_t maxBlobSize=RISC_KEY_VALUE_BLOB_MAX;
-  int32_t (*journalRead)(void*,uint32_t,void*,uint32_t,uint32_t*)=nullptr;
-  int32_t (*journalWrite)(void*,uint32_t,const void*,uint32_t)=nullptr;
-  int32_t (*legacyNamespace)(void*,uint32_t,bool*)=nullptr;
-  const RiscStorage::ScalableSettings::Backend* scalableSettings=nullptr;
-};
 struct Port {
   bool (*owner)();
   bool (*health)(risc_runtime_health_v1*);
@@ -130,6 +120,8 @@ struct Port {
   const FileSourceBackend* fileSource=nullptr;
   // Trusted immutable active/staged metadata sources. Absent means unavailable.
   const RuntimeFileSources* files=nullptr;
+  // Optional semantic provider. Each Runtime opens an independent session.
+  const SettingsProvider* settings=nullptr;
 };
 class Runtime final {
  public:
@@ -154,9 +146,11 @@ class Runtime final {
   // Trusted firmware only, before prepare or in bindPlatforms. Copies app ID;
   // endpoint/namespace gate must outlive all invocations and successful shutdown.
   bool registerAtomicKeyValue(const char* appId,uint32_t nameSpace,RiscExperimental::NativeAtomicKeyValue&);
+  bool registerAtomicKeyValue(const char* appId,uint32_t nameSpace,AtomicSettingsEndpoint);
   // Optional namespace routing for already-admitted KV1/KV2 readers. All
   // legacy writes into that namespace are denied; no implicit intent/fallback.
   bool registerAtomicKeyValueReadThrough(uint32_t nameSpace,RiscExperimental::NativeAtomicKeyValue&);
+  bool registerAtomicKeyValueReadThrough(uint32_t nameSpace,AtomicSettingsEndpoint);
   struct KeyValueAvailability {
     void* context=nullptr;
     int32_t (*snapshot)(void*,uint32_t,risc_key_value_availability_state_v1*)=nullptr;
@@ -270,14 +264,15 @@ class Runtime final {
 #if RISC_RUNTIME_STORAGE_FILES
     storageFilesExitSafe(true) &&
 #endif
-    fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
+    (!settings_||!settings_->retained()) && fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
   // by their native store owner, which must retain its mount/session.
   bool metadataCloseRetained() const { return metadataCloseRetained_ || (port_.files && port_.files->retained()); }
   // Terminal native read custody. The native caller must keep this Runtime
   // and its store/session alive; destruction or cleanup retry is unsupported.
-  bool nativeProviderReadRetained() const { return retainedNativeProviderRead_!=nullptr; }
+  bool nativeProviderReadRetained() const { return retainedNativeProviderRead_!=0; }
+  RuntimeFileView imageSource() const { return metadataSource(); }
   const char* error() const { return error_; }
   Board& board() { return board_; }
   const Board& board() const { return board_; }
@@ -302,13 +297,16 @@ class Runtime final {
     size_t count=0;
     bool coldBootStart=false;
     Runtime* sourceOwner=nullptr;uint64_t sourceVolume=0;int sourceDriver=-1;
-    char sourcePath[193]{};bool internalFallback=false;
+    char sourcePath[193]{};bool internalFallback=false,sourceFiles=false;
   };
   bool fail(const char* reason) { if (reason != error_) snprintf(error_,sizeof(error_),"%s",reason); return false; }
   bool manifest(JsonObjectConst, Driver&);
   bool registerNativeProvider(const Driver&, RuntimeProviders::SpecV2&, const RuntimeProviders::NativeProviderPolicyV1&);
   bool validateGraph();
   static void* openDriverImage(void*,const char*,const void*);
+  bool readRuntimeImage(const char*,RuntimeFileImage&,size_t expected=0,bool pinned=false);
+  static int readInternalImage(void*,const char*,::elf_file*);
+  void* openInternalImage(const char*,bool cached=false);
   void serviceProviders();
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   void serviceNativeSettings(bool discoveryOnly=false);
@@ -339,7 +337,7 @@ class Runtime final {
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
   struct AtomicBinding {
     char app[96]{};uint32_t nameSpace=0;
-    RiscExperimental::NativeAtomicKeyValue* endpoint=nullptr;
+    AtomicSettingsEndpoint endpoint{};
     KeyValueAvailability availability{};
   };
   #ifndef RISC_RUNTIME_ATOMIC_BINDING_CAPACITY
@@ -353,12 +351,13 @@ class Runtime final {
   bool keyValueAuthoritative(uint32_t) const;
   static int32_t keyValueAvailabilitySnapshot(void*,risc_key_value_availability_state_v1*);
   AtomicBinding* atomicBinding(const char*,uint32_t);
-  RiscExperimental::NativeAtomicKeyValue* atomicReadThrough(uint32_t) const;
+  const AtomicSettingsEndpoint* atomicReadThrough(uint32_t) const;
   int32_t atomicLegacyGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t);
   bool atomicExitSafe(bool exiting) const;
   struct AppGrant;
   static AppGrant* atomicContext(void*);
   int32_t atomicResult(int32_t);
+  int32_t atomicEndpointResult(const AtomicSettingsEndpoint*,int32_t);
   static int32_t atomicState(void*,risc_key_value_atomic_state_v1*);
   static int32_t atomicGet(void*,uint64_t,const char*,void*,uint32_t,uint32_t*);
   static int32_t atomicSubmit(void*,uint64_t,const risc_key_value_atomic_mutation_v1*,uint32_t,const void*,uint32_t,uint64_t*);
@@ -393,7 +392,7 @@ class Runtime final {
   static int32_t storageFilesSnapshot(void*,risc_storage_files_catalog_snapshot_v1*);
   static int32_t storageFilesGet(void*,uint64_t,uint32_t,risc_storage_files_namespace_v1*);
 #endif
-  int32_t namespaceKeyValueGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t);
+  int32_t namespaceKeyValueGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t,bool provider=false);
   int32_t namespaceKeyValuePut(uint32_t,const char*,const void*,uint32_t,bool preference=false,bool provider=false);
   static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
   static int32_t keyValuePut(void*,const char*,const void*,uint32_t);
@@ -559,7 +558,7 @@ class Runtime final {
     char id[96]{}, version[64]{}, elf[256]{};
     bool enabled=true, catalogAuthority=false;
     AppCatalogMetadata catalog{};
-    char sourcePath[193]{}; PolicyIndex sourceDriver=-1;
+    char sourcePath[193]{}; PolicyIndex sourceDriver=-1;bool sourceFiles=false;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
     const RiscStorage::AppDataExport::Entry* exports=nullptr;
     size_t exportCount=0;
@@ -573,14 +572,12 @@ class Runtime final {
     risc_installation_media_v1 api{};uint64_t volume=0,internalVolume=0;bool internalEnabled=false;uint32_t medium=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
   };
   MetadataArray<InstallationState> installation_;
-  MetadataArray<RiscStorage::SdFirstKeyValue::State> installedSettings_;
-  RiscStorage::ScalableSettings::Collection scalableSettings_, sharedSettings_;
-  MetadataArray<uint32_t> sharedSettingsNamespaces_;
-  RiscStorage::ScalableSettings::State* scalableSettingsState(uint32_t)const;
-  uint32_t settingsNamespace(uint32_t slot)const;
+  std::unique_ptr<SettingsSession> settings_;
+  bool openSettings();
+  bool settingsCallSafe();
+  bool settingsReadSafe() const;
+  uint32_t settingsMaxBlobSize();
   static uint32_t installationSharedSettingsNamespace(void*,uint32_t);
-  MetadataArray<RiscStorage::SdFirstKeyValue::Workspace> installedSettingsWorkspace_;
-  RiscStorage::SdFirstKeyValue::Journal settingsJournal();
   static uint32_t installationSettingsStatus(void*,uint32_t);
   static int32_t installationSettingsRestore(void*,uint32_t,const char*,const void*,uint32_t,bool);
   static int32_t installationSettingsSnapshot(void*,uint32_t,void*,uint32_t,uint32_t*,uint64_t*);
@@ -659,7 +656,7 @@ class Runtime final {
     risc_key_value_atomic_v1 atomic{};
     risc_key_value_availability_v1 availability{};
     uint32_t availabilityNamespace=0;
-    RiscExperimental::NativeAtomicKeyValue* atomicEndpoint=nullptr;
+    const AtomicSettingsEndpoint* atomicEndpoint=nullptr;
     uint64_t atomicOperation=0;
 #endif
   };
@@ -675,7 +672,9 @@ class Runtime final {
   bool nativeCheckpointRunning_=false;
 #endif
   RuntimeProviders::NativeProviderPolicySnapshotV1* nativePolicies_=nullptr;
-  FILE* retainedNativeProviderRead_=nullptr; // Deliberately never closed after lost native custody.
+  uint32_t retainedNativeProviderRead_=0; // Provider token retained until restart.
+  uint8_t* retainedRemovableBytes_=nullptr;
+  void* retainedRemovableRead_=nullptr; // Provider session and buffer remain pinned after uncertainty.
   uint8_t* retainedNativeProviderBytes_=nullptr; // May remain borrowed by uncertain native I/O.
   Board board_;
   // Must outlive graph destruction, including retained-module retry/abort.
@@ -762,3 +761,11 @@ class Runtime final {
   bool reclaimingAppImages_=false;
 };
 }
+
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+#include "NativeAtomicSettingsAdapter.h"
+namespace RiscBoot {
+inline bool Runtime::registerAtomicKeyValue(const char* app,uint32_t ns,RiscExperimental::NativeAtomicKeyValue& endpoint){return registerAtomicKeyValue(app,ns,nativeAtomicSettings(endpoint));}
+inline bool Runtime::registerAtomicKeyValueReadThrough(uint32_t ns,RiscExperimental::NativeAtomicKeyValue& endpoint){return registerAtomicKeyValueReadThrough(ns,nativeAtomicSettings(endpoint));}
+}
+#endif

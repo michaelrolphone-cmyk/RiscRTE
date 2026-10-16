@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "esp_elf_image.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -38,6 +40,8 @@ typedef enum {
 void *dlopen(const char *file, int mode);
 /* Trusted loader only: fresh relocation/data/BSS, no basename/path cache alias. */
 void *esp_dlopen_instance(const char *file);
+/* Explicit trusted reader; fresh mutable-source snapshots are never cached. */
+void *esp_dlopen_reader_instance(const char *file, esp_dl_image_reader reader, void *context);
 
 /**
  * @brief Dynamic loader compatibility interface - Look up symbol address.

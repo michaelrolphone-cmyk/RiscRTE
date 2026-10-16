@@ -307,8 +307,8 @@ bool GraphV2::activate(size_t index) {
                                  nodes_[dependency].module.capability()};
   }
   const void* imageSource=nullptr;
-  if(node.spec.openImage) {
-    const int source=findProvider(node.spec.imageProvider,"storage.volume",1,node.spec.imageInstance);
+  if(node.spec.imageProvider) {
+    const int source=findProvider(node.spec.imageProvider,node.spec.imageCapability?node.spec.imageCapability:"storage.volume",1,node.spec.imageInstance);
     if(source<0 || !activate(size_t(source)) || !nodes_[source].module.pinConsumer()) {
       if(source<0)fail("Image source missing",node.spec.id);
       node.visit=Visit::Releasing;(void)deactivateIfUnused(index);return false;

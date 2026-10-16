@@ -25,6 +25,26 @@ int main(int argc, char** argv) {
   assert(grant.slot && graph.interfaceFor(grant));
   assert(graph.release(grant) && graph.shutdown());
 
+  // Internal readers have no source dependency. External readers retain an
+  // owned exact capability/provider selection, including software instance0.
+  auto reader=+[](void*,const char*,const void*)->void*{return nullptr;};
+  SpecV2 internal{"internal",argv[1],"cap.reader",1,nullptr,0};internal.openImage=reader;internal.imageContext=&graph;
+  {OwnedNodeV2 node;assert(node.snapshot(internal));assert(!node.spec.imageProvider);}
+  for(unsigned mode=0;mode<6;++mode){
+    auto bad=internal;
+    if(mode==0)bad.imageContext=nullptr;
+    if(mode==1)bad.imageInstance=1;
+    if(mode==2)bad.imageCapability="storage.files";
+    if(mode==3){bad.openImage=nullptr;bad.imageProvider="source";}
+    if(mode==4){bad.imageProvider="source";bad.imageCapability="cap.unrelated";}
+    if(mode==5)bad.requiredOsCpuAbi=1;
+    OwnedNodeV2 node;assert(!node.snapshot(bad));
+  }
+  char providerName[]="files-source",sourceCapability[]="storage.files";
+  auto external=internal;external.imageProvider=providerName;external.imageCapability=sourceCapability;
+  {OwnedNodeV2 node;assert(node.snapshot(external));providerName[0]='X';sourceCapability[0]='X';
+    assert(!strcmp(node.spec.imageProvider,"files-source") && !strcmp(node.spec.imageCapability,"storage.files") && !node.spec.imageInstance);}
+
   // Privileged metadata and the COMPLETE candidate image are independently
   // owned at registration, before the private loader takes its second copy.
   char privilegedId[96] = "physical-provider";

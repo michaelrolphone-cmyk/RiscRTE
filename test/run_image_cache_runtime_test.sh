@@ -20,4 +20,4 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/test/image_cache_runtime_test.cpp" "$build/target-dlfcn.o" "$build/target-dlmod.o" "$build/host-elf-backend.o" \
   -ldl -o "$build/test"
-for mode in admitted loose missing init-failure retained replacement; do "$build/test" "$build" "$mode"; done
+for mode in admitted loose missing init-failure retained cache-unavailable cache-retained-source replacement; do "$build/test" "$build" "$mode"; done

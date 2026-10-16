@@ -11,9 +11,6 @@
 #include "diagnostics/Performance.h"
 #include "diagnostics/StageLog.h"
 #include "KeyValueGeneration.h"
-#if RISC_RUNTIME_ATOMIC_KEY_VALUE
-#include "../../experimental/native_replica/NativeAtomicKeyValue.h"
-#endif
 #include "runtime/update/Version.h"
 #include "runtime/update/CohortMigration.h"
 #include "runtime/update/NativeAppDataExportPolicyV1.h"
@@ -30,10 +27,11 @@
 #if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST) || defined(RISC_REMOVABLE_APP_TEST)
 #include <private/esp_dlcache.h>
 #endif
-#if defined(ESP_PLATFORM) || defined(RISC_REMOVABLE_APP_TEST)
+#if defined(ESP_PLATFORM) || defined(RISC_REMOVABLE_APP_TEST) || defined(RISC_APP_IMAGE_CACHE_TEST)
 #include <esp_elf.h>
 #include <private/elf_platform.h>
 extern "C" bool esp_elf_validate_file(const uint8_t*,size_t);
+extern "C" bool esp_elf_admit_managed_app(const char*,const uint8_t*,size_t);
 #endif
 #ifdef ESP_PLATFORM
 #include <esp_heap_caps.h>
@@ -132,6 +130,7 @@ Runtime::~Runtime() {
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
   if(!atomicExitSafe(true))std::abort();
 #endif
+  if(settings_ && settings_->retained())std::abort();
   // Native owners retain the entire metadata candidate after lost I/O custody.
   // As with GraphV2, destruction is a caller contract violation, never cleanup.
   if(retainedNativeProviderRead_ || retainedNativeProviderBytes_)std::abort();
@@ -257,8 +256,8 @@ bool Runtime::validateGraph() {
       if (!strcmp(req.capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) {
         auto& storage=providerStorage_[i];
         if ((req.api!=RISC_BOUND_KEY_VALUE_API_V1 && req.api!=RISC_BOUND_KEY_VALUE_API_V2) || !storage.count ||
-            !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
-            port_.keyValue->maxBlobSize<(req.api==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX))
+            !settings_ ||
+            settingsMaxBlobSize()<(req.api==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX))
           return fail("provider key-value policy/backend unavailable");
         if (hw) for(size_t b=0;b<hw->bindingCount;++b)
           if (!strcmp(hw->bindings[b].capability,req.capability))
@@ -334,11 +333,14 @@ bool Runtime::validateGraph() {
   // Source access is a loader dependency, not an extra capability passed to
   // the provider. Keep the entire mount closure internal, even with fallback.
   for(size_t i=0;i<driverCount_;++i)if(drivers_[i].sourcePath[0]) {
-    auto& d=drivers_[i];
+    auto& d=drivers_[i];d.sourceDriver=-1;
     for(size_t j=0;j<driverCount_;++j)
       if(drivers_[j].instance==d.sourceVolume && drivers_[j].api==1 &&
-         !strcmp(drivers_[j].provides,"storage.volume"))d.sourceDriver=int(j);
-    if(d.sourceDriver<0)return fail("driver source volume unavailable");
+         !strcmp(drivers_[j].provides,d.sourceFiles?"storage.files":"storage.volume")) {
+        if(d.sourceDriver>=0)return fail("ambiguous driver image source");
+        d.sourceDriver=int(j);
+      }
+    if(d.sourceDriver<0)return fail("driver image source unavailable");
   }
   // Bounded transitive closure catches every cycle before ANY ELF entry point.
   for(size_t k=0;k<driverCount_;++k) for(size_t i=0;i<driverCount_;++i) for(size_t j=0;j<driverCount_;++j) edges[i][j]=edges[i][j] || (edges[i][k] && edges[k][j]);
@@ -347,7 +349,7 @@ bool Runtime::validateGraph() {
     const size_t source=size_t(drivers_[i].sourceDriver);
     for(size_t j=0;j<driverCount_;++j)
       if((j==source || edges[source][j]) && drivers_[j].sourceDriver>=0)
-        return fail("SD bootstrap dependency must remain internal");
+        return fail("image source bootstrap dependency must remain internal");
   }
   return true;
 }
@@ -397,15 +399,17 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     }
     if(!item["image_source"].isNull()) {
       auto source=item["image_source"].as<JsonObjectConst>();int64_t instance=0;char relativeImage[192];
-      if(!keys(source,{"volume_instance","path"}) || !integer(source["volume_instance"],0,INT32_MAX,instance) ||
+      if(!keys(source,{"volume_instance","path"},{"capability"}) ||
+         (!source["capability"].isUnbound() && !eq(source["capability"],"storage.files") && !eq(source["capability"],"storage.volume")) || !integer(source["volume_instance"],0,INT32_MAX,instance) ||
          !text(source["path"],relativeImage,sizeof(relativeImage)) || !InstalledFiles::valid(relativeImage,false) ||
-         !elfPath(relativeImage) || !strcmp(policy.elf,invocation_->current_))return fail("invalid removable app source");
+         !elfPath(relativeImage) || !strcmp(policy.elf,invocation_->current_))return fail("invalid app image source");
+      policy.sourceFiles=eq(source["capability"],"storage.files");
       for(size_t d=0;d<driverCount_;++d)if(drivers_[d].instance==uint64_t(instance) &&
-          !strcmp(drivers_[d].provides,"storage.volume") && drivers_[d].api==1) {
-        if(policy.sourceDriver>=0)return fail("ambiguous removable app volume");
+          !strcmp(drivers_[d].provides,policy.sourceFiles?"storage.files":"storage.volume") && drivers_[d].api==1) {
+        if(policy.sourceDriver>=0)return fail("ambiguous app image source");
         policy.sourceDriver=static_cast<PolicyIndex>(d);
       }
-      if(policy.sourceDriver<0)return fail("removable app volume unavailable");
+      if(policy.sourceDriver<0)return fail("app image source unavailable");
       snprintf(policy.sourcePath,sizeof(policy.sourcePath),"/%s",relativeImage);
     }
     for (size_t declaration=0;declaration<declarations.size();++declaration) {
@@ -498,8 +502,8 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         } else
 #endif
         if (keyValue) {
-          if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !port_.keyValue || !port_.keyValue->get || !port_.keyValue->put ||
-              port_.keyValue->maxBlobSize<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
+          if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !settings_ ||
+              settingsMaxBlobSize()<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
         } else if (!strcmp(capability,RISC_PROVIDER_PROMOTION_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || strcmp(policy.elf,invocation_->current_))return fail("invalid default provider-promotion authority");
@@ -662,7 +666,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.preferences={1,sizeof(grant.preferences),context,preferenceState,preferenceGet,preferenceSubmit,preferenceCollect,preferenceCancel};
     grant.preferenceNamespace=uint32_t(allowed->instance);grant.api=&grant.preferences;
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
-    if(auto* binding=atomicBinding(invocation_->appPolicy_->id,grant.preferenceNamespace))grant.atomicEndpoint=binding->endpoint;
+    if(auto* binding=atomicBinding(invocation_->appPolicy_->id,grant.preferenceNamespace))grant.atomicEndpoint=&binding->endpoint;
 #endif
   } else
 #endif
@@ -684,7 +688,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     if(!binding || retained_ || !invocation_->entryRunning_ || !providerStorageSafe())return false;
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
     grant.atomic={1,sizeof(grant.atomic),context,atomicState,atomicGet,atomicSubmit,atomicCollect,atomicCancel};
-    grant.atomicEndpoint=binding->endpoint;grant.api=&grant.atomic;
+    grant.atomicEndpoint=&binding->endpoint;grant.api=&grant.atomic;
   } else
 #endif
   if(allowed->driver==AppCatalogDriver){
@@ -826,7 +830,7 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
   const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return RISC_KEY_VALUE_CONTEXT;
 #endif
   Runtime* r=currentRuntime;
-  if (!r || !r->active() || !context || !r->port_.keyValue) return RISC_KEY_VALUE_CONTEXT;
+  if (!r || !r->active() || !context || !r->settings_) return RISC_KEY_VALUE_CONTEXT;
   const AppGrant* matched=nullptr;
   for (const auto& grant:r->invocation_->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
@@ -837,27 +841,35 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
 #endif
   return r->namespaceKeyValueGet(matched->keyValueNamespace,key,buffer,capacity,outSize,limit);
 }
-int32_t Runtime::namespaceKeyValueGet(uint32_t ns,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize,uint32_t limit) {
-  if(installedSettings_&&ns>=installation_[0].namespaceFirst&&ns-installation_[0].namespaceFirst<installation_[0].namespaceCount&&installedSettings_[ns-installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
-    auto journal=settingsJournal();return RiscStorage::SdFirstKeyValue::get(installedSettings_[ns-installation_[0].namespaceFirst],installedSettingsWorkspace_[0],journal,ns,key,buffer,capacity,outSize);
+bool Runtime::settingsReadSafe() const {return settings_&&!retained_&&!settings_->retained()&&port_.owner&&port_.owner();}
+uint32_t Runtime::settingsMaxBlobSize() {
+  if(!settingsCallSafe())return 0;
+  const uint32_t size=settings_->maxBlobSize();return settingsCallSafe()?size:0;
+}
+bool Runtime::settingsCallSafe() {
+  if(settings_&&settings_->retained()){
+    retained_=true;fail("settings provider custody retained; restart required");(void)appExitBarrier(false);
   }
-  uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
-  const auto& backend=*port_.keyValue;
-  auto*state=scalableSettingsState(ns);
-  const int32_t result=state
-    ?RiscStorage::ScalableSettings::get(*state,key,temp,limit,&size)
-    :backend.get(backend.context,ns,key,temp,limit,&size);
-  if (result==RISC_KEY_VALUE_NOT_FOUND || result==RISC_KEY_VALUE_BUSY) return result;
-  if (result!=RISC_KEY_VALUE_OK || !size || size>limit) return RISC_KEY_VALUE_IO;
-  if (capacity<size) {*outSize=size;return RISC_KEY_VALUE_BUFFER_SMALL;}
-  memcpy(buffer,temp,size);*outSize=size;return RISC_KEY_VALUE_OK;
+  return settings_&&!retained_&&port_.owner&&port_.owner();
+}
+int32_t Runtime::namespaceKeyValueGet(uint32_t ns,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize,uint32_t limit,bool provider) {
+  if(outSize)*outSize=0;
+  if(!settingsCallSafe())return RISC_KEY_VALUE_CONTEXT;
+  uint8_t bytes[RISC_KEY_VALUE_V2_BLOB_MAX];RiscRuntime::ScopedBufferWipe wipe(bytes);uint32_t size=0;
+  if(!outSize||(!buffer&&capacity)||limit>sizeof bytes)return RISC_KEY_VALUE_INVALID;
+  const int32_t rc=settings_->get(ns,key,bytes,limit,&size,limit,provider);
+  if(!settingsCallSafe())return RISC_KEY_VALUE_CONTEXT;
+  if(rc==RISC_KEY_VALUE_NOT_FOUND||rc==RISC_KEY_VALUE_BUSY)return rc;
+  if(rc!=RISC_KEY_VALUE_OK||!size||size>limit)return RISC_KEY_VALUE_IO;
+  if(capacity<size){*outSize=size;return RISC_KEY_VALUE_BUFFER_SMALL;}
+  std::memcpy(buffer,bytes,size);*outSize=size;return RISC_KEY_VALUE_OK;
 }
 int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint32_t size) {
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
   const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return RISC_KEY_VALUE_CONTEXT;
 #endif
   Runtime* r=currentRuntime;
-  if (!r || !r->active() || !context || !r->port_.keyValue) return RISC_KEY_VALUE_CONTEXT;
+  if (!r || !r->active() || !context || !r->settings_) return RISC_KEY_VALUE_CONTEXT;
   const AppGrant* matched=nullptr;
   for (const auto& grant:r->invocation_->appGrants_) if (grant.live && grant.keyValueNamespace && grant.keyValue.context==context) matched=&grant;
   if (!matched) return RISC_KEY_VALUE_CONTEXT;
@@ -875,17 +887,13 @@ int32_t Runtime::namespaceKeyValuePut(uint32_t ns,const char* key,const void* da
 #else
   (void)preference;
 #endif
-  const auto& backend=*port_.keyValue;
-  int32_t result;
-  if(auto* state=scalableSettingsState(ns))
-    result=RiscStorage::ScalableSettings::put(*state,*backend.scalableSettings,ns,key,data,size);
-  else if(!provider && installedSettings_&&ns>=installation_[0].namespaceFirst&&ns-installation_[0].namespaceFirst<installation_[0].namespaceCount&&installedSettings_[ns-installation_[0].namespaceFirst].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
-    auto journal=settingsJournal();result=RiscStorage::SdFirstKeyValue::put(installedSettings_[ns-installation_[0].namespaceFirst],installedSettingsWorkspace_[0],journal,ns,key,data,size);
-  } else result=backend.put(backend.context,ns,key,data,size);
+  if(!settingsCallSafe())return RISC_KEY_VALUE_CONTEXT;
+  const int32_t result=settings_->put(ns,key,data,size,provider);
 #if RISC_RUNTIME_PREFERENCE_STORE
   // A failed commit can have changed storage. Only BUSY promises no I/O.
   if(tracked && result!=RISC_KEY_VALUE_BUSY)++tracked->revision;
 #endif
+  if(!settingsCallSafe())return RISC_KEY_VALUE_CONTEXT;
   return result==RISC_KEY_VALUE_OK || result==RISC_KEY_VALUE_BUSY ? result : RISC_KEY_VALUE_IO;
 }
 
@@ -910,7 +918,7 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   return true;
 }
 bool Runtime::providerStorageSafe() const {
-  if(entropyRetained_ || tcpRetained_ || metadataCloseRetained() || !appDataExitSafe())return false;
+  if((settings_ && settings_->retained()) || entropyRetained_ || tcpRetained_ || metadataCloseRetained() || !appDataExitSafe())return false;
   if(invocation_->installedFiles_ && invocation_->installedFiles_->retained())return false;
   if(port_.providerStorageSafe)return port_.providerStorageSafe();
   return !port_.appExitSafe || port_.appExitSafe();
@@ -953,7 +961,7 @@ Runtime::ProviderStorage* Runtime::providerContext(void* context) {
   const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return nullptr;
 #endif
   Runtime* r=currentRuntime;
-  if (!r || !context || !r->port_.owner() || !r->port_.keyValue) return nullptr;
+  if (!r || !context || !r->port_.owner() || !r->settings_) return nullptr;
   if (r->retained_ || !r->providerStorageSafe()) {
     // Native retention can become observable inside app_main, before the
     // outer appExitBarrier. Revoke without invoking any physical cleanup.
@@ -976,14 +984,7 @@ int32_t Runtime::boundKeyValueGet(void* context,const char* key,void* buffer,uin
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
   if(storage->owner->atomicReadThrough(matched->nameSpace))return storage->owner->atomicLegacyGet(matched->nameSpace,key,buffer,capacity,outSize,limit);
 #endif
-  uint8_t temp[RISC_BOUND_KEY_VALUE_V2_BLOB_MAX]; RiscRuntime::ScopedBufferWipe wipe(temp); uint32_t size=0;
-  const auto& backend=*storage->owner->port_.keyValue;
-  auto*state=storage->owner->scalableSettingsState(matched->nameSpace);
-  const int32_t result=state?RiscStorage::ScalableSettings::get(*state,key,temp,limit,&size):backend.get(backend.context,matched->nameSpace,key,temp,limit,&size);
-  if (result==RISC_BOUND_KEY_VALUE_NOT_FOUND || result==RISC_BOUND_KEY_VALUE_BUSY) return result;
-  if (result!=RISC_BOUND_KEY_VALUE_OK || !size || size>limit) return RISC_BOUND_KEY_VALUE_IO;
-  if (capacity<size) {*outSize=size;return RISC_BOUND_KEY_VALUE_BUFFER_SMALL;}
-  memcpy(buffer,temp,size);*outSize=size;return RISC_BOUND_KEY_VALUE_OK;
+  return storage->owner->namespaceKeyValueGet(matched->nameSpace,key,buffer,capacity,outSize,limit,true);
 }
 int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data,uint32_t size) {
   const ProviderStorage* storage=providerContext(context);
@@ -1099,6 +1100,14 @@ bool Runtime::revokeApp() {
 #include "EntropyRuntime.inc"
 #include "ProviderPromotionRuntime.inc"
 #include "ResidentShellRuntime.inc"
+bool Runtime::openSettings() {
+  // Explicit selection never downgrades after unavailable or failed open.
+  if(port_.settings)settings_=port_.settings->open?port_.settings->open(port_.settings->context):nullptr;
+  else if(port_.keyValue&&port_.keyValue->openSettings)settings_=port_.keyValue->openSettings(*port_.keyValue);
+  // Opening is a provider callback too: a returned session may already hold
+  // terminal custody, even when this boot grants no settings capabilities.
+  return (!port_.settings&&!port_.keyValue)||settingsCallSafe();
+}
 bool Runtime::prepare(const char* root) {
   RiscPerf::Scope trace(10,11);
   if(attempted_ || metadataCloseRetained() || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/' || !metadataSource(root).bound()) return fail("invalid boot invocation");
@@ -1137,13 +1146,15 @@ bool Runtime::prepare(const char* root) {
     if(!readJson(metadataSource(),d.elf,manifestDoc,&metadataCloseRetained_) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
     if(!item["image_source"].isUnbound()) {
       const auto source=item["image_source"].as<JsonObjectConst>();int64_t volume=0;char checked[256];
-      if(!keys(source,{"volume_instance","path","internal_fallback"}) ||
-         !integer(source["volume_instance"],1,INT32_MAX,volume) ||
+      if(!keys(source,{"volume_instance","path","internal_fallback"},{"capability"}) ||
+         (!source["capability"].isUnbound() && !eq(source["capability"],"storage.files") && !eq(source["capability"],"storage.volume")) ||
+         !integer(source["volume_instance"],eq(source["capability"],"storage.files")?0:1,INT32_MAX,volume) ||
          !text(source["path"],d.sourcePath,sizeof(d.sourcePath)) ||
          strncmp(d.sourcePath,"Drivers/",8) || !elfPath(d.sourcePath) ||
          !path("",d.sourcePath,checked,sizeof(d.sourcePath)) ||
          !source["internal_fallback"].is<bool>())return fail("invalid driver image source");
       strcpy(d.sourcePath,checked);
+      d.sourceFiles=eq(source["capability"],"storage.files");
       d.sourceVolume=uint64_t(volume);d.internalFallback=source["internal_fallback"].as<bool>();d.sourceOwner=this;
     }
     if(!providerPolicy(item,providerStorage_[driverCount_]) ||
@@ -1152,23 +1163,21 @@ bool Runtime::prepare(const char* root) {
   }
   bootDriverCount_=driverCount_;
   registrationOpen_=true;
-  const bool bound=(!port_.bindPlatforms || port_.bindPlatforms(*this)) && registerProviderRealtime() && configureInstallation(c["installation"]);
+  const bool bound=(!port_.bindPlatforms || port_.bindPlatforms(*this)) && openSettings() && registerProviderRealtime() && configureInstallation(c["installation"]);
   registrationOpen_=false;
   if (!bound) return fail("trusted platform binding failed");
   if(!validateGraph() || !appPolicies(c["app_capabilities"]) || !configureAppDataExports(c["app_capabilities"]) || !residentPolicy(c["resident_shell"]) || !configureInstalledFiles(c)) return false;
   if(!installationNamespaceRangeSafe())return fail("installation namespace range overlaps existing authority");
   bootPolicyCount_=policyCount_;
-  bool hasProviderFiles=false;
-  for(size_t i=0;i<driverCount_;++i)hasProviderFiles=hasProviderFiles || providerStorage_[i].fileCount || drivers_[i].sourceDriver>=0;
   for(size_t i=0;i<driverCount_;++i) {
-    const Driver& d=drivers_[i];
+    Driver& d=drivers_[i];d.sourceOwner=this;
     RuntimeProviders::SpecV2 spec{d.id,d.elf,d.provides,d.api,d.requirements,d.count};
-    if(d.sourceDriver>=0){spec.openImage=openDriverImage;spec.imageContext=&drivers_[i];spec.imageProvider=drivers_[d.sourceDriver].id;spec.imageInstance=d.sourceVolume;}
+    if(d.sourceDriver>=0){spec.openImage=openDriverImage;spec.imageContext=&drivers_[i];spec.imageProvider=drivers_[d.sourceDriver].id;spec.imageInstance=d.sourceVolume;spec.imageCapability=d.sourceFiles?"storage.files":"storage.volume";}
     spec.hardware=d.instance?&board_.device(d.instance)->hardware:nullptr;
-    if (providerStorage_[i].count || providerStorage_[i].needsRealtime || providerStorage_[i].needsTcp || providerStorage_[i].needsEntropy || hasProviderFiles){
-      providerStorage_[i].owner=this;
-      spec.lease={&providerStorage_[i],beginProvider,revokeProvider,(hasProviderFiles || providerStorage_[i].needsTcp || providerStorage_[i].needsEntropy)?providerResourcesSafe:nullptr};
-    }
+    // Every image callback needs the shared custody fence, including failed
+    // reads before a module handle exists and providers without other leases.
+    providerStorage_[i].owner=this;
+    spec.lease={&providerStorage_[i],beginProvider,revokeProvider,providerResourcesSafe};
     const RuntimeProviders::NativeProviderPolicyV1* selected=nullptr;
     for(size_t p=0;p<port_.nativeProviders.count;++p) {
       const auto& policy=port_.nativeProviders.entries[p];
@@ -1185,6 +1194,7 @@ bool Runtime::prepare(const char* root) {
       }
     }
     if(selected && d.sourceDriver>=0)return fail("native provider must remain internal");
+    if(!selected && d.sourceDriver<0){spec.openImage=openDriverImage;spec.imageContext=&d;}
     if(selected ? !registerNativeProvider(d,spec,*selected) : !graph_.addVerified(spec))
       return fail(error_[0]?error_:"driver registration failed");
   }
@@ -1192,56 +1202,102 @@ bool Runtime::prepare(const char* root) {
   if(installation_ && !reserveInstalledApps(MaxAppPolicies))return fail("installed registry reservation failed");
   return true;
 }
+bool Runtime::readRuntimeImage(const char* name,RuntimeFileImage& image,size_t expected,bool pinned) {
+  struct Context {Runtime* runtime;std::chrono::steady_clock::time_point start,lastYield;size_t sinceYield=0;};
+  const auto now=std::chrono::steady_clock::now();Context context{this,now,now,0};
+  RuntimeFileImage::Hooks hooks{
+    [](size_t n)->void* {
+#if defined(ESP_PLATFORM) || defined(RISC_REMOVABLE_APP_TEST) || defined(RISC_APP_IMAGE_CACHE_TEST)
+      return esp_elf_malloc(n,false);
+#else
+      return std::malloc(n);
+#endif
+    },
+    [](void* p){
+#if defined(ESP_PLATFORM) || defined(RISC_REMOVABLE_APP_TEST) || defined(RISC_APP_IMAGE_CACHE_TEST)
+      esp_elf_free(p);
+#else
+      std::free(p);
+#endif
+    },
+    [](void* raw)->bool {auto* r=static_cast<Context*>(raw)->runtime;return r->port_.owner() && r->providerStorageSafe();},
+    [](void* raw,size_t n)->bool {
+      auto& c=*static_cast<Context*>(raw);const auto at=std::chrono::steady_clock::now();
+      if(at-c.start>=std::chrono::seconds(30)){errno=ETIMEDOUT;return false;}
+      c.sinceYield+=n;
+      if(c.sinceYield>=32*1024 || at-c.lastYield>=std::chrono::milliseconds(2)) {
+#ifdef ESP_PLATFORM
+        vTaskDelay(1);
+#else
+        if(c.runtime->port_.delay)c.runtime->port_.delay(1);
+#endif
+        c.sinceYield=0;c.lastYield=std::chrono::steady_clock::now();
+      }
+      return std::chrono::steady_clock::now()-c.start<std::chrono::seconds(30);
+    },&context};
+  if(pinned) {
+    hooks.allocate=[](size_t n)->void* {
+#ifdef ESP_PLATFORM
+      void* p=heap_caps_malloc(n,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+      return p?p:heap_caps_malloc(n,MALLOC_CAP_8BIT);
+#else
+      return std::malloc(n);
+#endif
+    };
+    hooks.free=[](void* p){
+#ifdef ESP_PLATFORM
+      heap_caps_free(p);
+#else
+      std::free(p);
+#endif
+    };
+  }
+  const bool ok=image.read(metadataSource(),name,hooks,expected);
+  if(image.retained){retainedNativeProviderRead_=image.handle?image.handle:UINT32_MAX;retainedNativeProviderBytes_=image.bytes;metadataCloseRetained_=true;}
+  errno=image.error;return ok;
+}
+int Runtime::readInternalImage(void* raw,const char* name,::elf_file* file) {
+  if(!raw || !file){errno=EINVAL;return -1;}
+  auto& runtime=*static_cast<Runtime*>(raw);RuntimeFileImage image;
+  RiscPerf::emit(40);
+  if(!runtime.readRuntimeImage(name,image)){RiscPerf::emit(44,uint32_t(-1));errno=image.error;return -1;}
+  RiscPerf::emit(41,uint32_t(image.size));RiscPerf::emit(45);
+  const bool valid=esp_elf_validate_file(image.bytes,image.size);
+  if(valid)RiscPerf::emit(46);
+  if(!valid ||
+     !esp_elf_admit_managed_app(name,image.bytes,image.size) || !runtime.providerStorageSafe()) {
+#if defined(ESP_PLATFORM) || defined(RISC_REMOVABLE_APP_TEST) || defined(RISC_APP_IMAGE_CACHE_TEST)
+    esp_elf_free(image.bytes);
+#else
+    std::free(image.bytes);
+#endif
+    RiscPerf::emit(44,uint32_t(-1));errno=ENOEXEC;return -1;
+  }
+  file->payload=image.bytes;file->size=image.size;return 0;
+}
+void* Runtime::openInternalImage(const char* name,bool cached) {
+  // Cache lookup may skip media entirely, but never the terminal custody fence.
+  if(!port_.owner() || !providerStorageSafe())return nullptr;
+#if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
+  if(cached)return esp_dlopen_cached_reader_instance(&appImages_,name,readInternalImage,this);
+#else
+  (void)cached;
+#endif
+  return esp_dlopen_reader_instance(name,readInternalImage,this);
+}
 bool Runtime::registerNativeProvider(const Driver& d,RuntimeProviders::SpecV2& spec,
                                      const RuntimeProviders::NativeProviderPolicyV1& policy) {
-  // Read one exact candidate into temporary owned storage. Graph admission
-  // copies and hashes its own snapshot; no filesystem path reaches relocation.
-#ifdef ESP_PLATFORM
-  auto* bytes=static_cast<uint8_t*>(heap_caps_malloc(policy.elfLength,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
-  if(!bytes)bytes=static_cast<uint8_t*>(heap_caps_malloc(policy.elfLength,MALLOC_CAP_8BIT));
-#else
-  auto* bytes=static_cast<uint8_t*>(std::malloc(policy.elfLength));
-#endif
-  if(!bytes)return fail("native provider image allocation failed");
-  FILE* file=port_.owner() && providerStorageSafe()?fopen(d.elf,"rb"):nullptr;
-  bool ok=file!=nullptr;size_t at=0;
-  const auto started=std::chrono::steady_clock::now();
-  while(ok && at<policy.elfLength) {
-    const size_t chunk=std::min(size_t(4096),policy.elfLength-at);
-    ok=port_.owner() && providerStorageSafe() && fread(bytes+at,1,chunk,file)==chunk;
-    at+=chunk;
-#ifdef ESP_PLATFORM
-    vTaskDelay(1);
-#endif
-    if(std::chrono::steady_clock::now()-started>std::chrono::seconds(30))ok=false;
-  }
-  // Losing the owner or native storage custody fences every further stream
-  // operation, including EOF probing and close. The native store owner latches
-  // this retained state before destroying a metadata-only candidate.
-  if(ok) {
-    ok=port_.owner() && providerStorageSafe();
-    if(ok)ok=fgetc(file)==EOF;
-    if(ok)ok=port_.owner() && providerStorageSafe() && !ferror(file);
-  }
-  if(file) {
-    if(!port_.owner() || !providerStorageSafe()) {
-      retainedNativeProviderRead_=file;retainedNativeProviderBytes_=bytes;metadataCloseRetained_=true;ok=false;
-    } else {
-      // Establish custody before close: an error makes the native ownership
-      // uncertain, so never reuse or dereference the FILE afterward.
-      retainedNativeProviderRead_=file;retainedNativeProviderBytes_=bytes;
-      if(fclose(file)==0) {retainedNativeProviderRead_=nullptr;retainedNativeProviderBytes_=nullptr;}
-      else {metadataCloseRetained_=true;ok=false;}
-    }
-  }
-  if(ok)ok=port_.owner() && providerStorageSafe();
+  // Graph admission copies/hashes this one provider-backed input snapshot.
+  RuntimeFileImage image;
+  bool ok=readRuntimeImage(d.elf,image,policy.elfLength,true);
+  auto* bytes=image.bytes;
   if(ok) {
     spec.requiredOsCpuAbi=policy.osCpuAbi;spec.verifiedElfBytes=bytes;
     spec.verifiedElfLength=policy.elfLength;spec.declaredImports=policy.imports;
     spec.declaredImportCount=policy.importCount;memcpy(spec.contentSha256,policy.sha256,32);
     ok=RuntimePackages::DeviceProviderExecutorV2::registerNativePolicy(graph_,spec,policy);
   }
-  if(!retainedNativeProviderBytes_) {
+  if(bytes && !image.retained) {
 #ifdef ESP_PLATFORM
     heap_caps_free(bytes);
 #else
@@ -1283,18 +1339,13 @@ bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity
   if(settingsPending)*settingsPending=false;
   if(!relative||!path(root_,relative,out,capacity))return false;
   auto ready=[&](size_t index){
-    if(!installedSettings_&&!scalableSettings_)return true;
-    const auto&policy=policies_[index];for(size_t g=0;g<policy.count;++g){const auto&grant=policy.grants[g];
+    if(!settings_)return true;
+    const auto& policy=policies_[index];
+    for(size_t g=0;g<policy.count;++g){const auto& grant=policy.grants[g];
       if(keyValuePolicy(grant)){
-        const auto*state=scalableSettingsState(uint32_t(grant.instance));
-        if(state&&state->status!=RiscStorage::ScalableSettings::Clean&&state->status!=RiscStorage::ScalableSettings::Dirty){
-          if(settingsPending)*settingsPending=state->status==RiscStorage::ScalableSettings::Cold||state->status==RiscStorage::ScalableSettings::Restoring;
-          return false;
-        }
-      }
-      if(keyValuePolicy(grant)&&grant.instance>=installation_[0].namespaceFirst&&grant.instance-installation_[0].namespaceFirst<installation_[0].namespaceCount){
-        const auto status=scalableSettings_?uint32_t(scalableSettings_[grant.instance-installation_[0].namespaceFirst].status):uint32_t(installedSettings_[grant.instance-installation_[0].namespaceFirst].status);
-        if(status==RiscStorage::SdFirstKeyValue::Cold||status==RiscStorage::SdFirstKeyValue::Uncertain||status==RiscStorage::ScalableSettings::Restoring)return false;
+        if(!settingsReadSafe())return false;
+        const bool ready=settings_->launchReady(uint32_t(grant.instance),settingsPending);
+        if(!settingsReadSafe()||!ready)return false;
       }
     }
     return true;
@@ -1552,7 +1603,7 @@ bool Runtime::appExitBarrier(bool exiting) {
 #if RISC_RUNTIME_STORAGE_FILES
      storageFilesExitSafe(exiting) &&
 #endif
-     graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained() && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
+     (!settings_||!settings_->retained()) && graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained() && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());
@@ -1624,9 +1675,9 @@ bool Runtime::runOne(const char* name) {
   // Only exact prepared installed-image paths enter this session's cache.
   // Loose child paths retain the ordinary reader and admission behavior.
   void* module=policy && !policy->enabled ? nullptr : policy && policy->sourceDriver>=0 ? loadRemovableApp(*policy) : (policy || !strcmp(name,default_)) ?
-    esp_dlopen_cached_instance(&appImages_,name) : esp_dlopen_instance(name);
+    openInternalImage(name,true) : openInternalImage(name);
 #else
-  void* module=policy && !policy->enabled ? nullptr : policy && policy->sourceDriver>=0 ? loadRemovableApp(*policy) : esp_dlopen_instance(name);
+  void* module=policy && !policy->enabled ? nullptr : policy && policy->sourceDriver>=0 ? loadRemovableApp(*policy) : openInternalImage(name);
 #endif
   RISC_STAGE_LOG("app load end file=%s result=%s elapsed_us=%llu",name,module?"ok":"failed",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
@@ -1635,7 +1686,7 @@ bool Runtime::runOne(const char* name) {
   native_app_memory_relocation(false);
 #endif
   if(!module) {
-    if(retained_){(void)appExitBarrier();return false;}
+    if(retained_ || !providerStorageSafe()){(void)appExitBarrier();return false;}
 #if defined(ESP_PLATFORM) || defined(RISC_NATIVE_APP_MEMORY_TEST)
     if(!native_app_memory_end()){retained_=true;fail("failed app load allocation cleanup retained");(void)appExitBarrier();return false;}
 #endif

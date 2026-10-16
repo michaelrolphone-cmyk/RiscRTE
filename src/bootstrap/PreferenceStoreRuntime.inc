@@ -26,8 +26,8 @@ bool Runtime::preferenceAvailable(const char* app,uint32_t ns) {
 #else
   (void)app;
 #endif
-  return port_.keyValue && port_.keyValue->get && port_.keyValue->put &&
-    port_.keyValue->maxBlobSize>=RISC_KEY_VALUE_BLOB_MAX && preferenceNamespace(ns,true);
+  return settings_ &&
+    settingsMaxBlobSize()>=RISC_KEY_VALUE_BLOB_MAX && preferenceNamespace(ns,true);
 }
 bool Runtime::preferenceExitSafe(bool exiting) const {
   if(!exiting)return true;
@@ -52,7 +52,8 @@ int32_t Runtime::preferenceState(void* c,risc_preference_store_state_v1* out) {
   auto* r=currentRuntime;auto* n=r->preferenceNamespace(g->preferenceNamespace);
   if(!n)return RISC_ATOMIC_INVALID;
   if(n->pending)return RISC_ATOMIC_BUSY;
-  const uint32_t limit=std::min<uint32_t>(r->port_.keyValue->maxBlobSize,RISC_KEY_VALUE_V2_BLOB_MAX);
+  const uint32_t limit=std::min<uint32_t>(r->settingsMaxBlobSize(),RISC_KEY_VALUE_V2_BLOB_MAX);
+  if(!r->settingsCallSafe())return r->retained_?RISC_ATOMIC_RETAINED:RISC_ATOMIC_INVALID;
   *out={sizeof(*out),RISC_PREFERENCE_STORE_COPIED_INPUT,n->id,PreferenceMutations,limit,PreferenceGroup,PreferenceIntent,0,n->revision};
   return RISC_ATOMIC_OK;
 }
@@ -66,7 +67,7 @@ int32_t Runtime::preferenceGet(void* c,uint64_t revision,const char* key,void* o
   if(!n)return RISC_ATOMIC_INVALID;
   if(n->pending)return RISC_ATOMIC_BUSY;
   if(revision!=n->revision)return RISC_ATOMIC_STALE;
-  return preferenceStatus(r->namespaceKeyValueGet(n->id,key,out,capacity,size,std::min<uint32_t>(r->port_.keyValue->maxBlobSize,RISC_KEY_VALUE_V2_BLOB_MAX)));
+  return preferenceStatus(r->namespaceKeyValueGet(n->id,key,out,capacity,size,std::min<uint32_t>(r->settingsMaxBlobSize(),RISC_KEY_VALUE_V2_BLOB_MAX)));
 }
 int32_t Runtime::preferenceSubmit(void* c,uint64_t revision,const risc_preference_store_mutation_v1* changes,uint32_t count,const void* intent,uint32_t intentSize,uint64_t* token) {
   if(token)*token=0;
@@ -80,7 +81,8 @@ int32_t Runtime::preferenceSubmit(void* c,uint64_t revision,const risc_preferenc
   if(n->pending || g->preferenceOperation)return RISC_ATOMIC_BUSY;
   if(revision!=n->revision)return RISC_ATOMIC_STALE;
   if(n->revision>UINT64_MAX-count || r->preferenceOperationGeneration_==UINT64_MAX)return RISC_ATOMIC_CAPACITY;
-  const uint32_t limit=std::min<uint32_t>(r->port_.keyValue->maxBlobSize,RISC_KEY_VALUE_V2_BLOB_MAX);
+  const uint32_t limit=std::min<uint32_t>(r->settingsMaxBlobSize(),RISC_KEY_VALUE_V2_BLOB_MAX);
+  if(!r->settingsCallSafe())return r->retained_?RISC_ATOMIC_RETAINED:RISC_ATOMIC_INVALID;
   uint32_t bytes=intentSize;
   for(uint32_t i=0;i<count;++i){const auto& m=changes[i];
     if(!keyValueKey(m.key) || m.kind!=RISC_ATOMIC_PUT || !m.value || !m.size || m.size>limit)return RISC_ATOMIC_INVALID;

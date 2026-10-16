@@ -100,6 +100,7 @@ class RuntimeFileView final {
     files_(sources?sources->find(root):nullptr){}
   bool retained()const{return sources_ && sources_->retained();}
   bool bound()const{return files_!=nullptr;}
+  void retainCustody(){if(files_)files_->retainCustody();}
   int32_t open(const char*p,uint32_t*h){if(h)*h=0;return call([&]{const char*n=name(p);return n?files_->open(n,RISC_FILES_READ,h):int32_t(RISC_FILES_INVALID);});}
   int32_t close(uint32_t h){
     const int32_t rc=call([&]{return files_->close(h);});

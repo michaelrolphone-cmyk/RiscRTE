@@ -1,6 +1,7 @@
 // One source-bound host path: Runtime -> permanent coordinator polling task ->
 // NativeAtomicKeyValue -> CheckedNativeReplicaStore -> AppDataFiles/NVS metadata.
 #define NATIVE_FIXTURE_THREADED 1
+#define NATIVE_FIXTURE_EXTERNAL_SOURCE 1
 #include "native_replica_checked_fixture.h"
 #include "experimental/native_replica/NativeSettingsCoordinator.h"
 #include "bootstrap/Runtime.h"
@@ -16,6 +17,19 @@ namespace NF=NativeFixture;
 static const auto ownerThread=std::this_thread::get_id();
 static bool owner(){return !NF::onWorker&&std::this_thread::get_id()==ownerThread;}
 static std::string directory,scenario;
+// Runtime metadata/image source is a separate owner-thread provider. The native
+// settings fixture must still reject all unleased reads of its persistence root.
+namespace NativeFixture {
+bool externalSourceDescriptor(int fd){
+ char link[64],path[4096];std::snprintf(link,sizeof(link),"/proc/self/fd/%d",fd);
+ const auto n=readlink(link,path,sizeof(path)-1);if(n<=0)return false;path[n]=0;
+ const std::filesystem::path source(path);
+ if(source.parent_path()!=std::filesystem::path(directory))return false;
+ const auto ext=source.extension();if(ext!=".json"&&ext!=".elf")return false;
+ assert(owner());return true;
+}
+}
+
 static unsigned phase=0,entries=0,finishes=0,providerStops=0;
 static Coordinator*service;
 static R*runtime;

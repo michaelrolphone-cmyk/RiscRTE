@@ -1,25 +1,25 @@
 // Included only by the explicitly selected Runtime.cpp broker.
-bool Runtime::registerAtomicKeyValue(const char* app,uint32_t ns,RiscExperimental::NativeAtomicKeyValue& endpoint) {
+bool Runtime::registerAtomicKeyValue(const char* app,uint32_t ns,AtomicSettingsEndpoint endpoint) {
   if(!port_.owner || !port_.owner() || (attempted_ && !registrationOpen_) || !app ||
      strnlen(app,96)>=96 || !RuntimePackages::safeId(app) || !ns || ns>INT32_MAX ||
-     endpoint.namespaceId()!=ns || !endpoint.exitSafe() || atomicBindingCount_==RISC_RUNTIME_ATOMIC_BINDING_CAPACITY)return false;
+     !endpoint || endpoint.namespaceId()!=ns || !endpoint.exitSafe() || atomicBindingCount_==RISC_RUNTIME_ATOMIC_BINDING_CAPACITY)return false;
   for(size_t i=0;i<atomicBindingCount_;++i) {
     const auto& b=atomicBindings_[i];
-    if((b.nameSpace==ns && (!strcmp(b.app,app) || b.endpoint!=&endpoint)) ||
-       (b.endpoint==&endpoint && b.nameSpace!=ns))return false;
+    if((b.nameSpace==ns && (!strcmp(b.app,app) || !b.endpoint.same(endpoint))) ||
+       (b.endpoint.same(endpoint) && b.nameSpace!=ns))return false;
   }
-  auto& b=atomicBindings_[atomicBindingCount_++];strcpy(b.app,app);b.nameSpace=ns;b.endpoint=&endpoint;
+  auto& b=atomicBindings_[atomicBindingCount_++];strcpy(b.app,app);b.nameSpace=ns;b.endpoint=endpoint;
   return true;
 }
-bool Runtime::registerAtomicKeyValueReadThrough(uint32_t ns,RiscExperimental::NativeAtomicKeyValue& endpoint) {
+bool Runtime::registerAtomicKeyValueReadThrough(uint32_t ns,AtomicSettingsEndpoint endpoint) {
   if(!port_.owner || !port_.owner() || (attempted_ && !registrationOpen_) || !ns || ns>INT32_MAX ||
-     endpoint.namespaceId()!=ns || !endpoint.exitSafe() || atomicBindingCount_==RISC_RUNTIME_ATOMIC_BINDING_CAPACITY)return false;
+     !endpoint || endpoint.namespaceId()!=ns || !endpoint.exitSafe() || atomicBindingCount_==RISC_RUNTIME_ATOMIC_BINDING_CAPACITY)return false;
   for(size_t i=0;i<atomicBindingCount_;++i) {
     const auto& b=atomicBindings_[i];
-    if((b.nameSpace==ns && (!b.app[0] || b.endpoint!=&endpoint)) ||
-       (b.endpoint==&endpoint && b.nameSpace!=ns))return false;
+    if((b.nameSpace==ns && (!b.app[0] || !b.endpoint.same(endpoint))) ||
+       (b.endpoint.same(endpoint) && b.nameSpace!=ns))return false;
   }
-  auto& b=atomicBindings_[atomicBindingCount_++];b.nameSpace=ns;b.endpoint=&endpoint;return true;
+  auto& b=atomicBindings_[atomicBindingCount_++];b.nameSpace=ns;b.endpoint=endpoint;return true;
 }
 bool Runtime::registerKeyValueAvailability(uint32_t ns,KeyValueAvailability status) {
   if(!port_.owner || !port_.owner() || (attempted_ && !registrationOpen_) || !status.snapshot)return false;
@@ -69,9 +69,9 @@ int32_t Runtime::keyValueAvailabilitySnapshot(void* context,risc_key_value_avail
   }
   return RISC_KEY_VALUE_AVAILABILITY_CONTEXT;
 }
-RiscExperimental::NativeAtomicKeyValue* Runtime::atomicReadThrough(uint32_t ns) const {
+const AtomicSettingsEndpoint* Runtime::atomicReadThrough(uint32_t ns) const {
   for(size_t i=0;i<atomicBindingCount_;++i)
-    if(!atomicBindings_[i].app[0] && atomicBindings_[i].nameSpace==ns)return atomicBindings_[i].endpoint;
+    if(!atomicBindings_[i].app[0] && atomicBindings_[i].nameSpace==ns)return &atomicBindings_[i].endpoint;
   return nullptr;
 }
 int32_t Runtime::atomicLegacyGet(uint32_t ns,const char* key,void* out,uint32_t capacity,uint32_t* outSize,uint32_t limit) {
@@ -81,8 +81,9 @@ int32_t Runtime::atomicLegacyGet(uint32_t ns,const char* key,void* out,uint32_t 
   uint8_t bytes[RISC_KEY_VALUE_V2_BLOB_MAX];RiscRuntime::ScopedBufferWipe wipe(bytes);uint32_t size=0;
   risc_key_value_atomic_state_v1 state{};state.struct_size=sizeof(state);
   int32_t rc=endpoint->state(&state);
+  rc=atomicEndpointResult(endpoint,rc);
   if(rc==RISC_ATOMIC_OK)rc=endpoint->get(state.revision,key,bytes,limit,&size);
-  if(rc==RISC_ATOMIC_RETAINED)(void)atomicResult(rc);
+  rc=atomicEndpointResult(endpoint,rc);
   if(rc==RISC_ATOMIC_NOT_FOUND)return RISC_KEY_VALUE_NOT_FOUND;
   if(rc==RISC_ATOMIC_BUSY || rc==RISC_ATOMIC_STALE)return RISC_KEY_VALUE_BUSY;
   // Oversized values are IO under the old per-version contract, not size probes.
@@ -103,7 +104,7 @@ bool Runtime::atomicExitSafe(bool exiting) const {
     return true;
   };
   for(size_t i=0;i<atomicBindingCount_;++i)
-    if(!atomicBindings_[i].app[0] && atomicBindings_[i].endpoint->retained())return false;
+    if(!atomicBindings_[i].app[0] && atomicBindings_[i].endpoint.retained())return false;
   return safe(mainInvocation_) && (!foreground_ || safe(*foreground_));
 }
 Runtime::AppGrant* Runtime::atomicContext(void* context) {
@@ -125,18 +126,22 @@ int32_t Runtime::atomicResult(int32_t result) {
   }
   return result;
 }
+int32_t Runtime::atomicEndpointResult(const AtomicSettingsEndpoint* endpoint,int32_t result) {
+  if(endpoint->retained() || !port_.owner || !port_.owner())return atomicResult(RISC_ATOMIC_RETAINED);
+  return atomicResult(result);
+}
 int32_t Runtime::atomicState(void* c,risc_key_value_atomic_state_v1* out) {
   auto* g=atomicContext(c);if(!g || !out || out->struct_size<sizeof(*out))return RISC_ATOMIC_INVALID;
   if(g->atomicEndpoint->retained())return currentRuntime->atomicResult(RISC_ATOMIC_RETAINED);
   if(!currentRuntime->keyValueAuthoritative(g->atomicEndpoint->namespaceId()))return RISC_ATOMIC_BUSY;
-  return currentRuntime->atomicResult(g->atomicEndpoint->state(out));
+  return currentRuntime->atomicEndpointResult(g->atomicEndpoint,g->atomicEndpoint->state(out));
 }
 int32_t Runtime::atomicGet(void* c,uint64_t revision,const char* key,void* out,uint32_t cap,uint32_t* size) {
   if(size)*size=0;
   auto* g=atomicContext(c);if(!g || !size || !revision || !key || (!out&&cap))return RISC_ATOMIC_INVALID;
   if(g->atomicEndpoint->retained())return currentRuntime->atomicResult(RISC_ATOMIC_RETAINED);
   if(!currentRuntime->keyValueAuthoritative(g->atomicEndpoint->namespaceId())){if(size)*size=0;return RISC_ATOMIC_BUSY;}
-  return currentRuntime->atomicResult(g->atomicEndpoint->get(revision,key,out,cap,size));
+  return currentRuntime->atomicEndpointResult(g->atomicEndpoint,g->atomicEndpoint->get(revision,key,out,cap,size));
 }
 int32_t Runtime::atomicSubmit(void* c,uint64_t revision,const risc_key_value_atomic_mutation_v1* changes,uint32_t count,const void* intent,uint32_t size,uint64_t* token) {
   auto* g=atomicContext(c);if(token)*token=0;if(!g)return RISC_ATOMIC_INVALID;
@@ -144,15 +149,15 @@ int32_t Runtime::atomicSubmit(void* c,uint64_t revision,const risc_key_value_ato
   if(g->atomicOperation || !currentRuntime->keyValueAuthoritative(g->atomicEndpoint->namespaceId()))return RISC_ATOMIC_BUSY;
   const int32_t result=g->atomicEndpoint->submit(revision,changes,count,intent,size,token);
   if(result==RISC_ATOMIC_OK)g->atomicOperation=*token;
-  return currentRuntime->atomicResult(result);
+  return currentRuntime->atomicEndpointResult(g->atomicEndpoint,result);
 }
 int32_t Runtime::atomicCollect(void* c,uint64_t token,risc_key_value_atomic_receipt_v1* out) {
   auto* g=atomicContext(c);if(!g || !token || token!=g->atomicOperation)return RISC_ATOMIC_INVALID;
   const int32_t result=g->atomicEndpoint->collect(token,out);
   if(result==RISC_ATOMIC_OK)g->atomicOperation=0;
-  return currentRuntime->atomicResult(result);
+  return currentRuntime->atomicEndpointResult(g->atomicEndpoint,result);
 }
 int32_t Runtime::atomicCancel(void* c,uint64_t token) {
   auto* g=atomicContext(c);if(!g || !token || token!=g->atomicOperation)return RISC_ATOMIC_INVALID;
-  return currentRuntime->atomicResult(g->atomicEndpoint->cancel(token));
+  return currentRuntime->atomicEndpointResult(g->atomicEndpoint,g->atomicEndpoint->cancel(token));
 }

@@ -44,6 +44,7 @@ static void compactNative(const std::string& mode,const char* bootloader,const c
   {"boot.json",text(R"({"board":"board.json","default_app":"default.elf","drivers":[]})")},
   {"board.json",text(R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})")},
   {"default.elf",elf("memcpy")}};
+ if(mode=="image-extra-elf-close")files["extra.elf"]=elf("memcpy");
  if(mode=="image-bad-board")files["board.json"]=text("{}");
  if(mode=="image-bad-elf")reinterpret_cast<elf32_hdr_t*>(files["default.elf"].data())->machine=3;
  if(mode=="image-native-mismatch"){
@@ -81,6 +82,7 @@ static void compactNative(const std::string& mode,const char* bootloader,const c
  if(mode=="image-mount-fail")mountFailure=true;
  if(mode=="image-unmount-retained")unmountFailure=true;
  if(mode=="image-admission-close")failAdmissionClose=true;
+ if(mode=="image-extra-elf-close")metadataClosePath=modelStageRoot+"/extra.elf";
  if(mode=="image-selection-unknown")selectFailure=true;
  if(mode=="image-receipt-fail")attemptWriteFault=1;
  if(mode=="image-offline-consumed"){
@@ -101,7 +103,7 @@ static void compactNative(const std::string& mode,const char* bootloader,const c
   bootNet.mode="image-success";result=RiscBootstrap::run(port,modelStageRoot.c_str());
  }
  const bool selected=mode=="image-success"||mode=="image-selection-unknown"||mode=="image-odd-chunks"||mode=="image-interrupt";
- const bool retained=mode=="image-unmount-retained"||mode=="image-admission-close";
+ const bool retained=mode=="image-unmount-retained"||mode=="image-admission-close"||mode=="image-extra-elf-close";
  assert((result.outcome==RiscBootstrap::Outcome::Stopped)==(selected||retained));
  assert(!hardwareCalls && bootNet.opens==(mode=="image-interrupt"?2u:1u) && !bootNet.radio && !bootNet.http);
  assert(!fs::exists(fs::path(modelStageRoot)/RiscProvision::StoreFiles::DigestFile));
@@ -120,5 +122,10 @@ static void compactNative(const std::string& mode,const char* bootloader,const c
  }else assert(!selectorCalls&&!restarts);
  if(retained)assert(!RiscBankStore::exitSafe());
  else if(!selected)assert(RiscBankStore::exitSafe()&&!provisionFiles&&!provisionToken);
+ if(mode=="image-admission-close" || mode=="image-extra-elf-close") {
+  assert(candidateCpu && retainedAdmissionRuntime && retainedAdmissionFile && retainedAdmissionBytes);
+  assert(mode=="image-extra-elf-close"?metadataFailedCloses==1:failedAdmissionCloses==1);
+  assert(provisionAbort(provisionToken)==RISC_BANK_RETAINED && !selectorCalls && !restarts);
+ }
  std::cout<<"Compact image native download, readback, admission and selection: "<<mode<<" PASS\n";
 }
