@@ -157,7 +157,7 @@ jobs:
           git -C "$root/build/watch-clock-sdk" init --quiet
           git -C "$root/build/watch-clock-sdk" remote add origin https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3.git
           git -C "$root/build/watch-clock-sdk" fetch --no-tags --depth=1 origin aa7b03c15a59aa99b2d60ae20905edbdf62e35e6
-          git -C "$root/build/watch-clock-sdk" checkout --quiet --detach FETCH_HEAD -- sdk/app
+          git -C "$root/build/watch-clock-sdk" checkout --quiet FETCH_HEAD -- sdk/app
       - name: Qualify real Xtensa ELFs, loader and image cache
         run: |
           set -euo pipefail

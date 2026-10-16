@@ -11,6 +11,12 @@ case "${1:-}" in
   "$CC" --version | head -1 | grep -F '15.2.0'
   CC="$CC" python test/verify_legacy_runtime_header.py build/watch-clock-sdk/sdk/app/RiscRuntimeV1.h
   python scripts/build_apps.py --cc "$CC"
+  python - <<'PY_ENDIAN'
+from pathlib import Path
+for elf in Path('build/elf').glob('*.elf'):
+    if elf.read_bytes()[:7] != b'\x7fELF\x01\x01\x01':
+        raise ValueError(f'{elf}: expected ELF32 little-endian ESP32-S3 fixture')
+PY_ENDIAN
   bash test/run_performance_loader_test.sh
   SANITIZE=1 bash test/run_performance_loader_test.sh
   bash test/run_image_byte_cache_test.sh

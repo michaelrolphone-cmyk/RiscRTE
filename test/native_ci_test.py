@@ -26,6 +26,7 @@ class NativeCITests(unittest.TestCase):
         # Independent fixtures no longer wait for the host shards.
         self.assertNotIn('needs: host', target)
         self.assertNotIn('continue-on-error', target)
+        self.assertNotIn('--detach FETCH_HEAD --', target)
 
     def test_shared_target_cases_are_retained(self):
         script = (ROOT / 'test/run_native_target_fixtures.sh').read_text()
@@ -45,7 +46,7 @@ class NativeCITests(unittest.TestCase):
         self.assertIn('BOOT_PATH_FIRMWARE="$NATIVE_ROOT/build/riscrte_native.bin"', native)
         self.assertIn('--sdkconfig "$NATIVE_ROOT/build/config/sdkconfig.h"', native)
         self.assertIn('SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_native_bank_test.sh', native)
-        self.assertIn("'little endian' in info", (ROOT / 'scripts/build_apps.py').read_text())
+        self.assertIn("expected ELF32 little-endian ESP32-S3 fixture", script)
 
     def fixture(self, root):
         sdk = root / 'sdk'
