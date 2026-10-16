@@ -52,7 +52,7 @@ for flag in command[1:]:
         continue
     flags.append(flag.replace(old, str(root)))
 flags += ['-DRISC_NATIVE_PROVISION_REQUEST=1', '-DRISC_NATIVE_PACKAGE_VOLUME=1',
-          '-DRISC_ENABLE_HTTP=1', '-Werror', '-Wno-error=misleading-indentation', '-fstack-usage']
+          '-DRISC_ENABLE_HTTP=1', '-Werror', '-Werror=misleading-indentation', '-fstack-usage']
 sources = ['src/runtime/provisioning/RequestQueue.cpp', 'src/runtime/provisioning/PreservingPolicy.cpp',
            'src/runtime/provisioning/Installer.cpp', 'src/ports/esp32s3/NvsKeyValue.cpp',
            'src/ports/esp32s3/NativeProvisionRequest.cpp', 'src/ports/esp32s3/NativePackageVolumeAdmission.cpp',

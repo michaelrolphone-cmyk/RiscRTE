@@ -40,12 +40,14 @@ bool terminalReceipt(const RequestView&old,const RequestSource&source,uint8_t(&o
 }
 }
 InputStatus readRequest(Input input,void*bytes,uint32_t cap,uint32_t*size,bool*controlled){
- if(controlled)*controlled=false;if(size)*size=0;
+ if(controlled)*controlled=false;
+ if(size)*size=0;
  if(!input.read||!bytes||!size)return InputStatus::Invalid;
  auto state=input.read(input.context,"receipt",bytes,cap,size);
  if(state==InputStatus::Ready){
   if(*size!=RequestReceiptBytes||get(static_cast<uint8_t*>(bytes)+8)!=2)return InputStatus::Invalid;
-  if(controlled)*controlled=true;return state;
+  if(controlled)*controlled=true;
+  return state;
  }
  if(state!=InputStatus::Missing)return state;
  uint8_t marker=0;const auto markerState=stateValue(input,marker);
