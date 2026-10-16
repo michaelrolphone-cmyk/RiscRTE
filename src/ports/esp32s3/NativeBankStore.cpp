@@ -288,6 +288,9 @@ bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profil
     if(context.seen[i] || n<4 || strcmp(name+n-4,".elf"))continue;
     char path[256];ok=RiscBoot::path(root,name,path,sizeof(path)) && inspectProvisionedImage(context,path,ElfRole::Either);
   }
+  // Extra images use the same provider sessions as graph images. A late
+  // retained read must preserve its candidate just like the earlier pass.
+  if(retainedAdmissionRuntime==candidate)return false;
   ok=ok && operationSafe() && uint32_t(RiscPlatform::millis()-context.started)<30000u;
   // prepare/inspect never map modules, issue grants, invoke providers or touch
   // peripherals, so metadata can be discarded even when admission fails.

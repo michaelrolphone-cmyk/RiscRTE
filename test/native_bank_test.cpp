@@ -643,7 +643,7 @@ int main(int argc,char** argv){
        assert(provisionWrite(token,0,payload[0].data(),1)==RISC_BANK_STATE);assert(bind(blocked));
      }else if(mode=="provision-close-retained"){
        failAdmissionClose=true;assert(provisionFinish(token)==RISC_BANK_INTEGRITY);
-       assert(provisionReadRetained && !candidateCpu && failedAdmissionCloses==1);
+       assert(provisionReadRetained && candidateCpu && retainedAdmissionRuntime && retainedAdmissionFile && retainedAdmissionBytes && failedAdmissionCloses==1);
        assert(provisionAbort(token)==RISC_BANK_RETAINED && failedAdmissionCloses==1);
        assert(!bind(blocked) && !exitSafe());assert(!provisionRestart(token) && restarts==0);
        assert(provisionActivate(token)==RISC_BANK_UNAVAILABLE);
@@ -657,7 +657,7 @@ int main(int argc,char** argv){
          restartEnabled=false;assert(!provisionRestart(token) && restarts==0);restartEnabled=true;
          assert(!provisionRestart(token) && restarts==1);}
      }
-     assert(hardwareCalls==0 && !candidateCpu);
+     assert(hardwareCalls==0 && bool(candidateCpu)==(mode=="provision-close-retained"));
      uint8_t preserved[32];SHA256(flash.data()+RiscUpdate::StoreOffset[0],RiscUpdate::StoreBytes,preserved);assert(!memcmp(preserved,record.storeSha,32));
      SHA256(flash.data()+0x10000,imageSize,preserved);assert(!memcmp(preserved,record.firmwareSha,32));
    }

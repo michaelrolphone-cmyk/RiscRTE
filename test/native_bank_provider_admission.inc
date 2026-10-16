@@ -8,7 +8,11 @@ static bool providerReadStorageSafe=true;
 static uint32_t providerRetainedRead=0;
 static void* providerRetainedReadContext=nullptr;
 static const uint8_t* providerRetainedReadBytes=nullptr;
-static unsigned providerReadCalls=0,providerCloseCalls=0;
+static unsigned providerReadCalls=0,providerCloseCalls=0,providerOpenCalls=0;
+static bool providerBudgetActive=false;
+static uint32_t providerBudgetReadMillis=0;
+static size_t providerBudgetReadBytes=0;
+static std::vector<unsigned> providerBudgetReadDelays,providerBudgetHashDelays;
 // Decorate the actual generic provider table. The backend still owns all file
 // operations; faults and retained identity are observed at its context/token seam.
 class ProviderAdmissionSources final {
@@ -25,14 +29,16 @@ class ProviderAdmissionSources final {
      providers().emplace(table.context,this);
      table.open=[](void* context,const char* path,uint32_t flags,uint32_t* handle)->int32_t {
        auto& s=*providers().at(context);const auto* api=s.provider.api();
-       const int32_t rc=api->open(context,path,flags,handle);
+       ++providerOpenCalls;const int32_t rc=api->open(context,path,flags,handle);
        if(rc==RISC_FILES_OK)s.opened.emplace(*handle,s.logical+path);
        return rc;
      };
      table.read=[](void* context,uint32_t handle,void* bytes,uint32_t count,uint32_t* actual)->int32_t {
        auto& s=*providers().at(context);const auto* api=s.provider.api();++providerReadCalls;
        if(context==providerRetainedReadContext && handle==providerRetainedRead && providerCustodyLoss!=4)++providerCustodyEofProbes;
+       if(providerBudgetActive)providerBudgetReadDelays.push_back(delays);
        const int32_t rc=api->read(context,handle,bytes,count,actual);
+       if(providerBudgetActive && rc==RISC_FILES_OK && *actual){providerBudgetReadBytes+=*actual;ticks+=providerBudgetReadMillis;}
        const auto opened=s.opened.find(handle);
        if(rc==RISC_FILES_OK && *actual && opened!=s.opened.end() && opened->second==providerCustodyReadPath){
          if(providerCustodySkipReads){--providerCustodySkipReads;return rc;}
@@ -68,6 +74,99 @@ class ProviderAdmissionSources final {
      sources()->find(root)==&it->second->files && it->second->opened.count(handle)==1;
  }
 };
+static void nativeAdmissionBudgets(const std::string& root,const ProviderAdmissionSources& sources){
+ using namespace RiscBankStore;
+ const auto save=[&](const char* name,const std::vector<uint8_t>& bytes){
+   std::ofstream out(root+"/"+name,std::ios::binary);out.write(reinterpret_cast<const char*>(bytes.data()),bytes.size());assert(out.good());
+ };
+ std::ofstream(root+"/boot.json")<<R"({"board":"board.json","default_app":"budget-a.elf","drivers":[]})";
+ auto candidate=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,nullptr,nullptr,nullptr});
+ assert(sources.bind(*candidate) && candidate->prepare(root.c_str()));
+ const auto reset=[&](uint32_t readMillis){
+   assert(!nativeHashUpdateHook && !retainedAdmissionRuntime && !retainedAdmissionFile && !retainedAdmissionBytes);
+   ticks=1000;delays=0;delayScale=1;unsafeAfterDelay=0;providerBudgetReadMillis=readMillis;
+   providerBudgetReadBytes=0;providerBudgetReadDelays.clear();providerBudgetHashDelays.clear();providerBudgetActive=true;
+ };
+ const std::string path=root+"/budget-a.elf";
+ unsigned cases=0;
+ // Constant time: only the byte budget can yield, once per complete 32 KiB.
+ {
+   const std::vector<uint8_t> bytes(64*1024,0x5a);save("budget-a.elf",bytes);reset(0);
+   const uint32_t started=ticks;RiscBoot::RuntimeFileImage image;
+   assert(readAdmissionImage(candidate.get(),path.c_str(),image,bytes.size(),&started));
+   assert(image.size==bytes.size() && !image.handle && !image.retained && !memcmp(image.bytes,bytes.data(),bytes.size()));
+   assert(delays==2 && ticks-started==2 && providerBudgetReadBytes==bytes.size() && providerBudgetReadDelays.size()==17);
+   for(size_t i=0;i<providerBudgetReadDelays.size();++i)assert(providerBudgetReadDelays[i]==i/8);
+   free(image.bytes);++cases;
+ }
+ // Only 8 KiB: advancing each provider read by 2 ms must yield twice, before
+ // the next provider call, without waiting for the byte budget.
+ {
+   const std::vector<uint8_t> bytes(8192,0x6b);save("budget-a.elf",bytes);reset(2);
+   const uint32_t started=ticks;RiscBoot::RuntimeFileImage image;
+   assert(readAdmissionImage(candidate.get(),path.c_str(),image,bytes.size(),&started));
+   assert(delays==2 && ticks-started==6 && providerBudgetReadBytes==8192);
+   assert((providerBudgetReadDelays==std::vector<unsigned>{0,1,2}));free(image.bytes);++cases;
+ }
+ // An expired shared admission must reject before opening even a valid file.
+ {
+   reset(0);const uint32_t started=ticks-30000u;const unsigned opens=providerOpenCalls,reads=providerReadCalls;
+   RiscBoot::RuntimeFileImage image;assert(!readAdmissionImage(candidate.get(),path.c_str(),image,8192,&started));
+   assert(image.error==ETIMEDOUT && !image.bytes && !image.handle && !image.retained);
+   assert(providerOpenCalls==opens && providerReadCalls==reads && !delays);++cases;
+ }
+ auto profile=std::make_unique<RiscProvision::Profile>();profile->count=2;
+ const auto images=[&](size_t length){
+   auto bytes=elf("memcpy");bytes.resize(length);assert(admitElf(bytes.data(),bytes.size(),ElfRole::Application));
+   for(unsigned i=0;i<2;++i){auto& file=profile->files[i];strcpy(file.path,i?"budget-b.elf":"budget-a.elf");file.bytes=bytes.size();SHA256(bytes.data(),bytes.size(),file.sha256);save(file.path,bytes);}
+ };
+ ProvisionState state({},admissionHardware(),nullptr,nullptr);provisionState=&state;provisionProfile=profile.get();
+ // Both actual provisioning inspections share one started value. The first
+ // image leaves 2 ms after both reader and ELF-audit yields; the second
+ // consumes them and must not start a new budget.
+ {
+   images(1024);reset(29996);AdmissionImages context{root.c_str(),ticks,candidate.get()};
+   assert(inspectProvisionedImage(context,path.c_str(),ElfRole::Application));
+   assert(context.seen[0] && !context.seen[1] && ticks-context.started==29998 && delays==2);
+   const size_t hashes=nativeHashStarts;providerBudgetReadMillis=2;
+   assert(!inspectProvisionedImage(context,(root+"/budget-b.elf").c_str(),ElfRole::Application));
+   assert(!context.seen[1] && ticks-context.started==30000 && nativeHashStarts==hashes);
+   assert(!provisionReadRetained && !retainedAdmissionFile && !candidate->metadataCloseRetained() && sources.sources()->exitSafe());
+   const unsigned opens=providerOpenCalls,reads=providerReadCalls;
+   assert(!inspectProvisionedImage(context,(root+"/budget-b.elf").c_str(),ElfRole::Application));
+   assert(providerOpenCalls==opens && providerReadCalls==reads);++cases;
+ }
+ // Count read-pass and hash-pass fairness separately. With no elapsed time,
+ // 64 KiB contributes two yields in each pass, plus one ELF-audit yield.
+ {
+   images(64*1024);reset(0);AdmissionImages context{root.c_str(),ticks,candidate.get()};
+   const size_t updates=nativeHashUpdates;assert(inspectProvisionedImage(context,path.c_str(),ElfRole::Application));
+   assert(context.seen[0] && delays==5 && ticks-context.started==5 && nativeHashUpdates-updates==16);
+   assert(providerBudgetReadDelays.back()==2);++cases;
+ }
+ // Inject time only in the SHA fixture boundary. The read pass is below both
+ // budgets; each 4 KiB hash update then crosses the elapsed 2 ms threshold.
+ {
+   images(8192);reset(0);AdmissionImages context{root.c_str(),ticks,candidate.get()};
+   nativeHashUpdateHook=[](size_t n){assert(n==4096);providerBudgetHashDelays.push_back(delays);ticks+=2;};
+   const bool accepted=inspectProvisionedImage(context,path.c_str(),ElfRole::Application);nativeHashUpdateHook=nullptr;
+   assert(accepted && context.seen[0] && delays==3 && ticks-context.started==7);
+   assert((providerBudgetReadDelays==std::vector<unsigned>{0,0,0}));
+   assert((providerBudgetHashDelays==std::vector<unsigned>{0,1}));++cases;
+ }
+ // Hash time also spends the same aggregate deadline, including the yield.
+ {
+   images(8192);reset(0);AdmissionImages context{root.c_str(),ticks-29998u,candidate.get()};
+   const size_t updates=nativeHashUpdates,finishes=nativeHashFinishes;
+   nativeHashUpdateHook=[](size_t n){assert(n==4096);ticks+=2;};
+   const bool accepted=inspectProvisionedImage(context,path.c_str(),ElfRole::Application);nativeHashUpdateHook=nullptr;
+   assert(!accepted && !context.seen[0] && delays==1 && ticks-context.started==30001);
+   assert(nativeHashUpdates-updates==1 && nativeHashFinishes==finishes && sources.sources()->exitSafe());++cases;
+ }
+ providerBudgetActive=false;providerBudgetReadMillis=0;provisionState=nullptr;provisionProfile=nullptr;
+ assert(cases==7 && operationSafe() && !hardwareCalls && !writes && !selectorCalls && !restarts);
+ std::cout<<"Production NativeBank reader/hash budgets: "<<cases<<" aggregate-deadline, zero-I/O expiry and 32KiB/2ms fairness cases PASS\n";
+}
 static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0,bool provisioningCustody=false,bool secondRead=false){
  using namespace RiscBankStore;
  using namespace RuntimeProviders;
@@ -314,6 +413,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
      <<", refuses cleanup, zero unauthorized closes/selection PASS\n";
    return;
  }
+ nativeAdmissionBudgets(provisionRoot,sources);
  fsRoot.clear();delete scratch;scratch=nullptr;
  assert(!hardwareCalls && !writes && !selectorCalls && !restarts);
  std::cout<<"Production native provider bank admission: selected="<<selected

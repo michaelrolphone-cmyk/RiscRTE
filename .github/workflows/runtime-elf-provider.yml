@@ -1,7 +1,5 @@
 name: Provider-backed Runtime ELF
 on:
-  push:
-    branches: [work/provider-backed-elf-loading]
   pull_request:
     paths: ['src/bootstrap/**', 'src/runtime/drivers/**', 'src/runtime/storage/**', 'src/ports/esp32s3/NativeBankStore.cpp', 'lib/elf_loader/**', 'test/**', '.github/workflows/runtime-elf-provider.yml']
   workflow_dispatch:
