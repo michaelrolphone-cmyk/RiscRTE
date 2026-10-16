@@ -1,4 +1,5 @@
 #include "bootstrap/Runtime.h"
+#include "RuntimeFileFixture.h"
 #include <RiscResidentShellV1.h>
 #include <RiscStreamClientV1.h>
 #include <cassert>
@@ -14,7 +15,6 @@
 #include <freertos/task.h>
 #include <esp_heap_caps.h>
 #include <unordered_set>
-#include "RuntimeFileFixture.h"
 bool resident_test_memory_lock=true;
 static std::unordered_set<void*> memoryLive;
 extern "C" void* heap_caps_malloc(size_t n,uint32_t){void* p=std::malloc(n);assert(p);memoryLive.insert(p);return p;}
