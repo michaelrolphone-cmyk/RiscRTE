@@ -60,7 +60,7 @@ still retains. Older clients can conservatively map the new result to IO.
 - Actual Runtime: all 28 admission, caller/receiver, resident/legacy handoff,
   load/init failure, stale token, full-store, Home, cancellation and retained
   cleanup scenarios pass normal and ASan/UBSan.
-- Real pinned LittleFS mount: healthy, open/read/close failure, short-read,
+- Real pinned LittleFS mount: healthy, open/read/write/close failure, short-read,
   changed-size and remove-fault all pass normal and ASan/UBSan. The native guard
   and radio lease stay retained and later provider calls do not occur on faults.
 - Generic adapter and C compatibility: 5,394 checks normal/sanitized, including

@@ -42,6 +42,7 @@ struct Fixture {
 }
 int main(){
  {RiscStorage::FileSourceFiles f({nullptr,[](void*){return true;},[](void*){return true;}});RiscBoot::RuntimeFiles empty;assert(!f.configure(nullptr,"/.risc-file-source")&&!f.configure(&empty,"/.risc-file-source"));assert(f.begin(8)==RISC_FILE_SOURCE_UNAVAILABLE);}
+ {Provider p;RiscBoot::RuntimeFiles session;assert(session.bind(&p.api,own,ready));RiscStorage::FileSourceFiles f({nullptr,[](void*){return owner;},[](void*){return safe;}});assert(!f.configure(&session,"/foreign")&&!f.configure(&session,"/../.risc-file-source")&&!p.calls);}
  {Fixture f;const auto calls=f.provider.calls;assert(!f.source.configure(&f.session,"/other"));assert(calls==f.provider.calls);f.sealed();uint32_t n=0;char b[8]{};assert(f.source.readAt(0,b,8,&n)==0&&n==8&&!memcmp(b,"01234567",8));assert(f.source.discard()==0&&f.source.exitSafe()&&!f.provider.exists);}
  for(int result:{int(RISC_FILES_UNAVAILABLE),int(RISC_FILES_NO_SPACE),123456}){Fixture f;f.provider.openResult=result;assert(f.source.begin(8)==(result==RISC_FILES_UNAVAILABLE?RISC_FILE_SOURCE_UNAVAILABLE:result==RISC_FILES_NO_SPACE?RISC_FILE_SOURCE_NO_SPACE:RISC_FILE_SOURCE_IO));assert(!f.provider.exists&&f.source.exitSafe());}
  {Fixture f;assert(f.source.begin(8)==0);f.provider.writeResult=RISC_FILES_NO_SPACE;uint32_t n=1;assert(f.source.write("01234567",8,&n)==RISC_FILE_SOURCE_NO_SPACE&&!n);assert(f.source.discard()==0);}

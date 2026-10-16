@@ -38,9 +38,18 @@ static void bind(){
 static void verifyOriginal(){RiscAppDataMount::Guard g(RiscAppDataMount::Access::AppData);assert(g.held);int fd=native_lfs_fixture_open("/n00000001/timecard.json",O_RDONLY);assert(fd>=0);char bytes[8];assert(native_lfs_fixture_read(fd,bytes,8)==8&&!memcmp(bytes,"original",8));assert(native_lfs_fixture_close(fd)==0);}
 int main(int argc,char**argv){
  assert(argc==2);bind();const auto* b=RiscFileSource::backend();std::array<unsigned char,4096> bytes{};for(unsigned i=0;i<bytes.size();++i)bytes[i]=i%251;
- const bool fault=!strcmp(argv[1],"open-fault")||!strcmp(argv[1],"close-fault")||!strcmp(argv[1],"read-fault")||!strcmp(argv[1],"short-read")||!strcmp(argv[1],"changed-size")||!strcmp(argv[1],"remove-fault");
+ const bool fault=!strcmp(argv[1],"open-fault")||!strcmp(argv[1],"close-fault")||!strcmp(argv[1],"read-fault")||!strcmp(argv[1],"short-read")||!strcmp(argv[1],"changed-size")||!strcmp(argv[1],"remove-fault")||!strcmp(argv[1],"write-fault");
  if(!strcmp(argv[1],"open-fault")){
   native_lfs_fixture_fault(NATIVE_LFS_FLASH_PROG,2,NATIVE_LFS_FAIL_BEFORE);assert(b->begin(b->context,65536)==RISC_FILE_SOURCE_RETAINED);
+ }else if(!strcmp(argv[1],"write-fault")){
+  assert(b->begin(b->context,65536)==0);
+  native_lfs_fixture_fault(NATIVE_LFS_FLASH_PROG,1,NATIVE_LFS_FAIL_BEFORE);
+  uint32_t actual=0;bool failed=false;
+  for(unsigned at=0;at<65536;at+=actual){
+   const int32_t rc=b->write(b->context,bytes.data(),512,&actual);
+   if(rc){assert(rc==RISC_FILE_SOURCE_RETAINED&&!actual);failed=true;break;}
+  }
+  assert(failed);
  }else {
   assert(b->begin(b->context,12u*1024u*1024u)==RISC_FILE_SOURCE_NO_SPACE);assert(RiscFileSource::resetSafe());
   assert(b->begin(b->context,65536)==0);assert(!RiscFileSource::resetSafe()&&b->exitSafe(b->context));
