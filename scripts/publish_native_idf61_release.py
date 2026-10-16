@@ -359,10 +359,15 @@ class GitHub:
 
     def download(self, path, destination):
         require(not destination.exists(), 'Download must not replace an existing file')
+        # Actions archive endpoints negotiate GitHub JSON before redirecting;
+        # only Release asset endpoints use the octet-stream media type.
+        accept = ('application/vnd.github+json' if '/actions/artifacts/' in path
+                  and path.endswith('/zip') else 'application/octet-stream')
         try:
-            response = self.request('https://api.github.com/' + path, accept='application/octet-stream')
+            response = self.request('https://api.github.com/' + path, accept=accept)
         except urllib.error.HTTPError as error:
-            require(error.code in (301, 302, 303, 307, 308), 'Artifact/release download failed')
+            require(error.code in (301, 302, 303, 307, 308),
+                    f'Artifact/release download failed: HTTP {error.code} at {path}')
             url = error.headers['Location']
             for _ in range(6):
                 parsed = urllib.parse.urlsplit(url)
@@ -375,7 +380,8 @@ class GitHub:
                     response = self.opener.open(urllib.request.Request(url), timeout=120)
                     break
                 except urllib.error.HTTPError as redirect:
-                    require(redirect.code in (301, 302, 303, 307, 308), 'Signed download failed')
+                    require(redirect.code in (301, 302, 303, 307, 308),
+                            f'Signed download failed: HTTP {redirect.code}')
                     url = redirect.headers['Location']
             else:
                 raise ValueError('Too many signed download redirects')

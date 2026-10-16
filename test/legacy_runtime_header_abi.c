@@ -44,6 +44,7 @@ _Static_assert(offsetof(risc_runtime_api_v1,failure_evidence)==RISC_RUNTIME_RESI
 _Static_assert(offsetof(risc_runtime_api_v1,diagnostic_checkpoint_client)==RISC_RUNTIME_FAILURE_EVIDENCE_V1_SIZE,"checkpoint follows evidence");
 _Static_assert(offsetof(risc_runtime_api_v1,monotonic_ms)==RISC_RUNTIME_DIAGNOSTIC_CHECKPOINT_V1_SIZE,"clock follows checkpoint");
 _Static_assert(offsetof(risc_runtime_api_v1,exit_requested)==RISC_RUNTIME_MONOTONIC_V1_SIZE,"host control follows clock");
+/* Later optional callbacks retain the complete host-control prefix. */
 _Static_assert(offsetof(risc_runtime_api_v1,take_launch_failure)==RISC_RUNTIME_EXIT_REQUESTED_V1_SIZE,"launch failure follows host control");
 _Static_assert(offsetof(risc_runtime_api_v1,initial_default)==RISC_RUNTIME_LAUNCH_FAILURE_V1_SIZE,"initial default follows launch failure");
 _Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_INITIAL_DEFAULT_V1_SIZE,"initial default is final suffix");

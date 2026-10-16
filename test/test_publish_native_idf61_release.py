@@ -397,6 +397,25 @@ class ReleaseGuards(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Duplicate JSON'):
             r.load_json(b'{"enabled":false,"enabled":true}')
 
+    def test_artifact_and_release_downloads_use_endpoint_specific_media_types(self):
+        client = r.GitHub('test-token')
+        for path, expected in [('repos/owner/repo/actions/artifacts/1/zip', 'application/vnd.github+json'),
+                               ('repos/owner/repo/releases/assets/1', 'application/octet-stream')]:
+            with self.subTest(path=path), mock.patch.object(client, 'request', return_value=io.BytesIO(b'exact')) as request:
+                destination = self.root / ('artifact.zip' if 'actions/' in path else 'release.zip')
+                client.download(path, destination)
+                self.assertEqual(request.call_args.kwargs['accept'], expected)
+                self.assertEqual(destination.read_bytes(), b'exact')
+
+    def test_non_redirect_download_error_reports_status_without_token(self):
+        client = r.GitHub('never-log-this-token')
+        error = r.urllib.error.HTTPError('https://api.github.com/download', 415, 'unsupported media', {}, None)
+        with mock.patch.object(client, 'request', side_effect=error):
+            with self.assertRaisesRegex(ValueError, 'HTTP 415 at repos/test/actions/artifacts/1/zip') as caught:
+                client.download('repos/test/actions/artifacts/1/zip', self.root / 'missing.zip')
+            self.assertNotIn(client.token, str(caught.exception))
+        self.assertFalse((self.root / 'missing.zip').exists())
+
     def test_no_token_forwarded_to_signed_storage(self):
         client = r.GitHub('secret-not-for-storage')
         first = r.urllib.error.HTTPError('https://api.github.com/download', 302, 'redirect',

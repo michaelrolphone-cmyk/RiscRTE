@@ -25,10 +25,15 @@ def replace_once(source, before, after):
     return source.replace(before, after, 1)
 
 
-def verify(header):
+def frozen_header(header):
     header = Path(header).resolve()
     if hashlib.sha256(header.read_bytes()).hexdigest() != LEGACY_SHA:
-        raise ValueError('unreviewed historical SDK header')
+        raise AssertionError('unreviewed historical SDK header')
+    return header
+
+
+def verify(header):
+    header = frozen_header(header)
     current = ROOT / 'sdk/app/RiscRuntimeV1.h'
     source = current.read_text()
     with tempfile.TemporaryDirectory() as temporary:
@@ -49,7 +54,13 @@ def verify(header):
                              '  void (*unexpected_suffix)(void);\n} risc_runtime_api_v1;')
         signature = replace_once(source, 'bool (*initial_default)(void);',
                                  'uint32_t (*initial_default)(void);')
+        shifted = replace_once(source, '  bool (*health)(risc_runtime_health_v1* out);',
+                               '  uint64_t unexpected_prefix;\n  bool (*health)(risc_runtime_health_v1* out);')
+        grant = replace_once(source, '  uint32_t struct_size, slot, generation;',
+                             '  uint64_t struct_size; uint32_t slot, generation;')
         for name, mutated, diagnostic in (
+            ('prefix-shift', shifted, 'risc_runtime_api_v1.health offset'),
+            ('grant-layout', grant, 'risc_runtime_capability_v1.struct_size size'),
             ('prefix-order', prefix, 'risc_runtime_api_v1.health offset'),
             ('suffix-order', suffix, 'launch failure follows host control'),
             ('unknown-suffix', extra, 'twelve pointer suffixes only'),
@@ -58,12 +69,24 @@ def verify(header):
             candidate = temporary / (name + '.h')
             candidate.write_text(mutated)
             result = compile_probe(header, candidate, temporary / (name + '.o'))
-            if result.returncode == 0 or diagnostic not in result.stderr:
+            if (result.returncode == 0 or diagnostic not in result.stderr
+                    or 'static assertion failed' not in result.stderr):
                 raise AssertionError(name + ' negative control failed:\n' + result.stderr)
+
+        changed = temporary / 'changed-frozen.h'
+        changed.write_bytes(header.read_bytes() + b'\n/* changed frozen header */\n')
+        try:
+            frozen_header(changed)
+        except AssertionError as error:
+            if str(error) != 'unreviewed historical SDK header':
+                raise
+        else:
+            raise AssertionError('Changed frozen consumer header unexpectedly accepted')
+        return 7
 
 
 if __name__ == '__main__':
     import sys
-    verify(sys.argv[1])
+    rejected = verify(sys.argv[1])
     print('Frozen legacy Runtime header and every field/size plus twelve '
-          'append-only callback suffixes verified; four ABI breakage controls rejected')
+          'append-only callback suffixes verified; ' + str(rejected) + ' ABI drift controls rejected')
