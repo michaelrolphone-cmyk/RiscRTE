@@ -1,4 +1,4 @@
-#include "ports/esp32s3/NativeSerialStorage.h"
+#include "ports/esp32s3/NativeSerialStorage.cpp" // Inspect real raw workspace without a firmware test hook.
 #include "ports/esp32s3/NativeAppDataMount.h"
 #include "runtime/storage/AppDataFiles.h"
 #include "runtime/storage/ReopenedFiles.h"
@@ -69,6 +69,15 @@ static void preserved(){
 }
 int main(int argc,char** argv){
   assert(argc==2);std::string scenario=argv[1];
+  std::memset(A::privateProviderStorage,0xa5,sizeof(A::privateProviderStorage));
+  assert(!A::admission());owned=false;assert(!A::prepare(owner,safe));owned=true;
+  for(auto byte:A::privateProviderStorage)assert(byte==0xa5);
+  if(scenario=="unsafe-prepare"){
+    allowed=false;assert(!A::prepare(owner,safe));allowed=true;
+    assert(!A::prepare(owner,safe) && !A::admission());
+    for(auto byte:A::privateProviderStorage)assert(byte==0xa5);
+    puts("Serial provider unsafe admission remains unconstructed and one-shot PASS");return 0;
+  }
   assert(native_lfs_fixture_reset()==0);
   assert(native_lfs_fixture_mkdir("/n00000001")==0);
   assert(native_lfs_fixture_seed("/n00000001/original","app sibling",11)==0);
@@ -82,10 +91,14 @@ int main(int argc,char** argv){
   }
   if(scenario=="corrupt-root"){
     {M::Guard g(M::Access::SerialFiles);assert(g.held);assert(native_lfs_fixture_seed("/.serial-files","occupied",8)==0);}
-    assert(!A::prepare(owner,safe)&&!A::admission());noPhysicalHandles();puts("Corrupt serial root fails closed PASS");return 0;
+    assert(!A::prepare(owner,safe)&&!A::admission());
+    unsigned char failed[sizeof(A::privateProviderStorage)];std::memcpy(failed,A::privateProviderStorage,sizeof(failed));
+    assert(!A::prepare(owner,safe) && !std::memcmp(failed,A::privateProviderStorage,sizeof(failed)));
+    noPhysicalHandles();puts("Corrupt serial root fails closed PASS");return 0;
   }
   if(scenario=="first-busy")radio=true;
   assert(A::prepare(owner,safe));assert(!A::prepare(owner,safe));
+  assert(reinterpret_cast<uintptr_t>(&A::privateProvider())%alignof(RiscStorage::ReopenedFiles)==0);
   if(scenario=="first-busy")radio=false;
   noPhysicalHandles();
   const auto* admission=A::admission();assert(admission&&admission->count==1+RISC_NATIVE_SERIAL_SD);
@@ -151,6 +164,8 @@ int main(int argc,char** argv){
       wire.command("READ 0",RISC_FILES_RETAINED);
     }
     assert(!endpoint.custodySafe()&&M::retained()&&radio);const auto before=counts();
+    unsigned char retained[sizeof(A::privateProviderStorage)];std::memcpy(retained,A::privateProviderStorage,sizeof(retained));
+    assert(!A::prepare(owner,safe) && !std::memcmp(retained,A::privateProviderStorage,sizeof(retained)));
     for(unsigned i=0;i<8;++i){endpoint.checkpoint();assert(!endpoint.shutdown());}
     const auto after=counts();assert(!memcmp(&before,&after,sizeof(before)));
   }

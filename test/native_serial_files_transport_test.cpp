@@ -1,4 +1,4 @@
-#include "ports/esp32s3/NativeSerialFiles.h"
+#include "ports/esp32s3/NativeSerialFiles.cpp" // Inspect real workspace lifetime without a firmware test hook.
 #include "ports/esp32s3/SleepDiagnostics.h"
 #include "ports/esp32s3/NativePlatform.h"
 #include "bootstrap/Runtime.h"
@@ -86,13 +86,33 @@ int usb_serial_jtag_write_bytes(const void* data,size_t length,uint32_t ticks){
 }
 int main(int argc,char**argv){
   assert(argc>=2);const std::string root=argv[1];
+  // Guard every public entry before construction, even over poisoned raw BSS.
+  std::memset(N::workspaceStorage,0xa5,sizeof(N::workspaceStorage));
+  auto inert=[](){
+    N::input('x');N::disconnect();N::consumeOutput(99);
+    assert(N::checkpoint() && N::shutdown() && !N::pending());
+    assert(!N::output() && !N::outputSize() && N::exitSafe() && N::custodySafe());
+  };
+  inert();
+  task=reinterpret_cast<void*>(2);assert(!N::prepare(nullptr,owner,safe));task=reinterpret_cast<void*>(1);
+  inIsr=true;assert(!N::prepare(nullptr,owner,safe));inIsr=false;
+  for(auto byte:N::workspaceStorage)assert(byte==0xa5);
   RiscPlatform::console.begin(115200);RiscDiagnostics::start();host=true;
   if(argc==3){
-    assert(N::prepare(nullptr,owner,safe));
+    const std::string scenario=argv[2];
+    RiscBoot::RuntimeFiles unavailable;
+    RiscSerial::Namespace invalidMap[]={{1,"valid",&unavailable,true},{1,"duplicate",&unavailable,true}};
+    N::Admission invalid{invalidMap,2,[](){return true;}};
+    if(scenario=="malformed")invalid.count=RiscSerial::Files::NamespaceMax+1;
+    if(scenario=="bad-label")invalidMap[0].label="";
+    assert(N::prepare(scenario=="absent"?nullptr:&invalid,owner,safe)==(scenario=="absent"));
+    unsigned char failed[sizeof(N::workspaceStorage)];std::memcpy(failed,N::workspaceStorage,sizeof(failed));
     assert(!N::prepare(nullptr,owner,safe));
     feed("RTEF1 12345678 1 HELLO\n");parse();checkpoint();
     assert(tx.empty() && N::exitSafe() && N::custodySafe());
-    puts("Native serial absent admission remains inert PASS");return 0;
+    inert();assert(!std::memcmp(failed,N::workspaceStorage,sizeof(failed)));
+    if(scenario=="absent" || scenario=="malformed")for(auto byte:N::workspaceStorage)assert(byte==0xa5);
+    puts("Native serial absent/failed admission remains inert, one-shot and unchanged PASS");return 0;
   }
   RiscStorage::PosixFiles provider(root.c_str());real=*provider.api();auto table=real;
   table.open=[](void*c,const char*p,uint32_t f,uint32_t*h){entered();N::checkpoint();return real.open(c,p,f,h);};
@@ -105,6 +125,24 @@ int main(int argc,char**argv){
   N::Admission admission{namespaces,2,[](){return ready;}};
   ready=false; // Metadata-only admission is independent of dispatch readiness.
   assert(N::prepare(&admission,owner,safe));assert(!N::prepare(&admission,owner,safe));
+  assert(reinterpret_cast<uintptr_t>(&N::workspace())%alignof(N::Workspace)==0);
+  assert(!N::workspace().endpoint.pending() && !N::workspace().endpoint.outputSize());
+  for(size_t i=admission.count;i<RiscSerial::Files::NamespaceMax;++i){
+    assert(N::workspace().namespaces[i].id==0 && !N::workspace().namespaces[i].files);
+    for(auto byte:N::workspace().labels[i])assert(byte==0);
+  }
+  // Foreign-task/ISR inspection must reject before reading PSRAM at all. Poison
+  // the live representation while inaccessible, then restore it for owner use.
+  unsigned char live[sizeof(N::workspaceStorage)];std::memcpy(live,N::workspaceStorage,sizeof(live));
+  std::memset(N::workspaceStorage,0xa5,sizeof(N::workspaceStorage));
+  for(unsigned mode=0;mode<2;++mode){
+    task=reinterpret_cast<void*>(mode?1:2);inIsr=bool(mode);
+    assert(!N::checkpoint() && !N::shutdown() && N::pending());
+    assert(!N::exitSafe() && !N::custodySafe() && !N::output() && !N::outputSize());
+    N::input('x');N::disconnect();N::consumeOutput(99);
+    for(auto byte:N::workspaceStorage)assert(byte==0xa5);
+  }
+  task=reinterpret_cast<void*>(1);inIsr=false;std::memcpy(N::workspaceStorage,live,sizeof(live));
   settled=true;assert(N::shutdown());settled=false;
   assert(providerCalls==0 && N::exitSafe());ready=true;
   label[0]='X';namespaces[0].id=99; // Admission owns copied immutable metadata.
@@ -160,6 +198,10 @@ int main(int argc,char**argv){
   settled=true;assert(!N::shutdown());settled=false;
   assert(!N::custodySafe() && !N::exitSafe());sleepGuards(RISC_LIGHT_SLEEP_RETAINED);
   const auto terminalCalls=providerCalls;
+  unsigned char retained[sizeof(N::workspaceStorage)];
+  std::memcpy(retained,N::workspaceStorage,sizeof(retained));
+  assert(!N::prepare(&admission,owner,safe));
+  assert(!std::memcmp(retained,N::workspaceStorage,sizeof(retained)));
   platformSafe=false; // Terminal RAM status replies must not require I/O permission.
   const auto terminal=command("RTEF1 32345678 1 HELLO");
   assert(terminal=="RTEF1 32345678 1 "+std::to_string(RISC_FILES_RETAINED)+"\n");

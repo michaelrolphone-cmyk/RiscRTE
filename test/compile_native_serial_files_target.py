@@ -57,3 +57,11 @@ nm = str(pathlib.Path(command[0]).with_name(pathlib.Path(command[0]).name.replac
 for name in ("NativeSerialFiles", "NativeSerialStorage"):
     assert not subprocess.check_output([nm, str(out / (name + "-0.o"))], text=True).strip()
 print("Selected native main/Runtime/CpuPort/Console integration compile, feature on/off, explicit independent T-Watch/Waveshare storage composition, empty default-off adapters PASS")
+
+# The SDK profile already selects external BSS and initializes it before app_main.
+# Assert placement in the compiled production objects, not just source attributes.
+from prove_native_serial_workspace import prove
+objdump = str(pathlib.Path(command[0]).with_name(pathlib.Path(command[0]).name.replace("g++", "objdump")))
+prove(out / "NativeSerialFiles-1.o", ["endpoint"], True, objdump)
+for profile in ("twatch", "waveshare"):
+    prove(out / ("NativeSerialStorage-" + profile + ".o"), ["provider"], True, objdump)

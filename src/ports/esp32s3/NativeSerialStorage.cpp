@@ -7,6 +7,10 @@
 #include "NativeAppDataMount.h"
 #include "NativeRadioResources.h"
 #include "runtime/storage/ReopenedFiles.h"
+#include <new>
+#if RISC_NATIVE_ESP_IDF
+#include <esp_attr.h>
+#endif
 #endif
 namespace RiscCpu { namespace NativeSerialStorage { namespace {
 NativeSerialFiles::Check ownerCheck=nullptr,safeCheck=nullptr;
@@ -37,9 +41,20 @@ bool leave(void*){
   if(resource){resource=false;nativeBackgroundResourceEnd();}
   return true;
 }
-RiscStorage::ReopenedFiles privateProvider({nullptr,enter,leave,
-  [](void*){return RiscAppDataMount::retained();},[](void*){RiscAppDataMount::retain();},
-  [](void*,uint64_t* total,uint64_t* used){size_t t=0,u=0;const bool ok=RiscAppDataMount::usage(&t,&u);*total=t;*used=u;return ok;}});
+// Reopened path/offset state is owner-task-only, not a DMA or atomic object.
+// Keep mount/resource custody gates internal; preserve this provider through
+// failed preparation or terminal retention, with no destruction or retry.
+alignas(RiscStorage::ReopenedFiles)
+#if RISC_NATIVE_ESP_IDF && CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+#if !CONFIG_SPIRAM_BOOT_INIT
+#error "External serial provider requires SDK PSRAM boot initialization"
+#endif
+EXT_RAM_BSS_ATTR
+#endif
+unsigned char privateProviderStorage[sizeof(RiscStorage::ReopenedFiles)];
+RiscStorage::ReopenedFiles& privateProvider(){
+  return *std::launder(reinterpret_cast<RiscStorage::ReopenedFiles*>(privateProviderStorage));
+}
 RiscBoot::RuntimeFiles privateClient;
 #endif
 #if RISC_NATIVE_SERIAL_SD
@@ -78,10 +93,13 @@ bool prepare(NativeSerialFiles::Check ownerFn,NativeSerialFiles::Check safeFn){
   if(!bootClient.bind(&bootTable,owner,safe,bootProvider.identityApi(),bootProvider.directoryApi()))return false;
 #endif
 #if RISC_NATIVE_SERIAL_APPDATA_FILES
-  if(!privateProvider.configure("/appdata/.serial-files"))return false;
-  const int32_t provisioned=privateProvider.provision();
+  new (privateProviderStorage) RiscStorage::ReopenedFiles({nullptr,enter,leave,
+    [](void*){return RiscAppDataMount::retained();},[](void*){RiscAppDataMount::retain();},
+    [](void*,uint64_t* total,uint64_t* used){size_t t=0,u=0;const bool ok=RiscAppDataMount::usage(&t,&u);*total=t;*used=u;return ok;}});
+  if(!privateProvider().configure("/appdata/.serial-files"))return false;
+  const int32_t provisioned=privateProvider().provision();
   if(provisioned==RISC_FILES_OK){
-    if(!privateClient.bind(privateProvider.api(),owner,safe))return false;
+    if(!privateClient.bind(privateProvider().api(),owner,safe))return false;
   }else if(provisioned!=RISC_FILES_NO_SPACE && provisioned!=RISC_FILES_BUSY && provisioned!=RISC_FILES_UNAVAILABLE){
     return false; // Corruption/uncertain custody is not optional unavailability.
   }
