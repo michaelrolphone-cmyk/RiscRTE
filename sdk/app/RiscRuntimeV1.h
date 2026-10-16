@@ -6,6 +6,8 @@
 extern "C" {
 #endif
 #define RISC_RUNTIME_API_V1 1u
+enum { RISC_RUNTIME_CHECKPOINT_OK=0, RISC_RUNTIME_CHECKPOINT_BUSY=1,
+       RISC_RUNTIME_CHECKPOINT_CONTEXT=-1, RISC_RUNTIME_CHECKPOINT_RETAINED=-2 };
 struct risc_stream_client_v1;
 struct risc_resident_client_v1;
 struct risc_failure_evidence_client_v1;
@@ -114,6 +116,15 @@ typedef struct {
    * this Runtime session. False for child apps, init/fini and later returns.
    * Does not classify hardware wake; clients use retained-wake for that. */
   bool (*initial_default)(void);
+  /* Optional settled native service boundary, app_main owner only. Call only
+   * after presentation/other operations complete and before starting new work.
+   * May perform bounded synchronous storage I/O; NEVER call from a provider,
+   * pending-frame/BUSY wait, ordinary yield helper, init/fini or callback.
+   * Runtime rechecks resource custody and temporarily revokes app entry while
+   * dispatching. BUSY means no work admitted; retry at a later settled boundary.
+   * RETAINED requires prompt return with no further provider calls or cleanup.
+   * This grants no file authority. Older tables omit this optional suffix. */
+  int32_t (*service_checkpoint)(void);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
@@ -128,6 +139,7 @@ typedef struct {
 #define RISC_RUNTIME_EXIT_REQUESTED_V1_SIZE (offsetof(risc_runtime_api_v1, exit_requested) + sizeof(((risc_runtime_api_v1*)0)->exit_requested))
 #define RISC_RUNTIME_LAUNCH_FAILURE_V1_SIZE (offsetof(risc_runtime_api_v1, take_launch_failure) + sizeof(((risc_runtime_api_v1*)0)->take_launch_failure))
 #define RISC_RUNTIME_INITIAL_DEFAULT_V1_SIZE (offsetof(risc_runtime_api_v1, initial_default) + sizeof(((risc_runtime_api_v1*)0)->initial_default))
+#define RISC_RUNTIME_SERVICE_CHECKPOINT_V1_SIZE (offsetof(risc_runtime_api_v1, service_checkpoint) + sizeof(((risc_runtime_api_v1*)0)->service_checkpoint))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }

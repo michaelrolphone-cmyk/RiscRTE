@@ -1,5 +1,6 @@
 #include "bootstrap/Runtime.h"
 #include <RiscResidentShellV1.h>
+#include <RiscRuntimeCheckpointV1.h>
 #include <RiscStreamClientV1.h>
 #include <cassert>
 #include <cstdio>
@@ -81,6 +82,7 @@ unsigned serialChecks=0,serialShutdowns=0;
 bool serialCheckpoint(){
  assert(!runningRuntime->active() && !risc_runtime_get_api(1));
  const unsigned before=delays;api->yield_ms(1);assert(delays==before);
+ assert(api->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_BUSY);
  risc_runtime_capability_v1 grant{sizeof(grant)};assert(!api->acquire("storage.key-value",1,0,&grant));
  ++serialChecks;return mode!="serial-checkpoint-retained";
 }
@@ -212,6 +214,7 @@ extern "C" void test_resident_unmap(unsigned role){if(!finished)++unmaps[role];}
 #endif
 extern "C" int test_resident_init(unsigned role){
  ++starts[role];api=risc_runtime_get_api(1);assert(api && api->struct_size>=RISC_RUNTIME_RESIDENT_SHELL_V1_SIZE);
+ assert(risc_runtime_service_checkpoint_v1(api)==RISC_RUNTIME_CHECKPOINT_CONTEXT);
 #ifdef RISC_NATIVE_APP_MEMORY_TEST
  activeAppRole=role;
  appMemory[role]=static_cast<unsigned char*>(native_app_psram_alloc(37+role));assert(appMemory[role]);appMemory[role][0]=0x71+role;
@@ -221,7 +224,7 @@ extern "C" int test_resident_init(unsigned role){
  return 0;
 }
 extern "C" void test_resident_fini(unsigned role){
- ++finis[role];risc_resident_client_v1 no{};no.struct_size=sizeof(no);assert(!api->resident_shell(&no));
+ ++finis[role];assert(risc_runtime_service_checkpoint_v1(api)==RISC_RUNTIME_CHECKPOINT_CONTEXT);risc_resident_client_v1 no{};no.struct_size=sizeof(no);assert(!api->resident_shell(&no));
  if(role==1 && mode=="fini-retained")exitSafe=false;
 #ifdef RISC_NATIVE_APP_MEMORY_TEST
  if(role==1 && mode=="memory-lock-retained")resident_test_memory_lock=false;
@@ -231,6 +234,17 @@ extern "C" void test_resident_main(unsigned role,unsigned* visits){
  ++entries[role];assert(++*visits==1);
  risc_resident_client_v1 client{};client.struct_size=sizeof(client);assert(api->resident_shell(&client));
  if(!role){
+#if RISC_NATIVE_SERIAL_FILES
+  if(mode=="normal"){
+   const unsigned count=serialChecks;
+   api->yield_ms(1);assert(serialChecks==count);
+   owned=false;assert(api->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_CONTEXT);owned=true;
+   exitSafe=false;assert(api->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_BUSY);exitSafe=true;
+   assert(serialChecks==count);
+   assert(risc_runtime_service_checkpoint_v1(api)==RISC_RUNTIME_CHECKPOINT_OK);
+   assert(serialChecks==count+1 && runningRuntime->active());
+  }
+#endif
   host=client;hostStatic=visits;assert(host.role==RISC_RESIDENT_ROLE_HOST);
   hostGrant=acquire("storage.key-value");hostKv=*static_cast<const risc_key_value_v1*>(hostGrant.api);
   auto files=acquire("storage.installed-files");hostFiles=*static_cast<const risc_storage_volume_api_v1*>(files.api);hostDir=hostFiles.dir_open(hostFiles.context,"/");assert(hostDir);
@@ -387,7 +401,7 @@ int main(int argc,char**argv){
  assert(finis[0]==(terminal()?0u:1u));
  if(mode=="normal")assert(starts[1]==3 && finis[1]==3 && dispatches==12);
 #if RISC_NATIVE_SERIAL_FILES
- if(mode=="normal")assert(serialChecks==dispatches && serialShutdowns==5);
+ if(mode=="normal")assert(serialChecks==dispatches+1 && serialShutdowns==5);
 #endif
  if(mode=="file-open")assert(starts[1]==2 && starts[2]==1 && finis[1]==2 && finis[2]==1);
  if(mode=="child-retained" || mode=="callback-retained" || mode=="native-retained" || mode=="invalid-callback")assert(finis[1]==0);

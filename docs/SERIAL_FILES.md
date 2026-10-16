@@ -34,12 +34,16 @@ reported through its file status; the readiness callback establishes whether
 it is safe to dispatch at all, without I/O, acquisition or callbacks.
 
 Console parsing and partial TX run through the existing diagnostic owner and
-never call providers. Requests dispatch at the settled resident foreground
-checkpoint after the shell callback returns, or in the idle main loop after a
-clean Runtime return. App yield/capability acquisition cannot start transfer I/O.
-A legacy/noncooperative app without these checkpoints cannot service transfers
-while its entry remains on the stack. Product enablement must verify its actual
-application scheduling, not merely compile the feature.
+never call providers. Requests dispatch at a settled resident foreground
+checkpoint, an explicitly called size-checked `service_checkpoint` Runtime
+suffix, or after `Runtime::run` has safely returned. Ordinary yield and
+capability acquisition never dispatch synchronous serial storage. The explicit
+suffix is app-main/owner-only and checks native idleness, graph lifecycle,
+stream and storage custody before temporarily revoking app entry for the call.
+BUSY leaves work queued; RETAINED is terminal. `RiscRuntimeCheckpointV1.h` makes
+a missing older suffix a safe no-op. Shared Home calls it only between completed
+presentations, never from panel BUSY polling. Products must still qualify their
+selected provider and actual scheduling.
 
 A command makes at most two bounded file calls. Healthy transfer custody blocks
 sleep, USB PHY handoff and normal restart temporarily without being treated as

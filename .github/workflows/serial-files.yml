@@ -39,6 +39,10 @@ jobs:
       ASAN_OPTIONS: detect_leaks=0
     steps:
       - uses: actions/checkout@v4
+      - name: Optional Runtime checkpoint prefix compatibility
+        run: bash test/run_runtime_checkpoint_api_test.sh
+      - name: Permanent native provider graph custody and wire integration
+        run: bash test/run_serial_native_provider_test.sh
       - name: Bounded protocol and generic namespace custody
         run: bash test/run_serial_files_test.sh
       - name: Python client through the real C++ protocol endpoint

@@ -249,6 +249,14 @@ class Runtime final {
                             bool (*admit)(void*,const char*,bool),void* context,
                             const RiscUpdate::NativeAppDataExportPolicyV2&) const;
   bool appInventory(size_t index,void*,size_t,uint32_t*) const;
+  int32_t serviceCheckpoint();
+#if RISC_NATIVE_SERIAL_FILES
+  // Explicit trusted native selection after prepare, before run. Independent
+  // of all app grants; Runtime pins the exact provider and dependencies until
+  // checked serial shutdown. Missing optional providers remain unavailable.
+  bool bindNativeFiles(const char* provider,uint64_t instance,RuntimeFiles&,
+                       RuntimeFiles::Check owner,RuntimeFiles::Check safe);
+#endif
   bool active() const { return
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
     !nativeCheckpointRunning_ &&
@@ -686,6 +694,14 @@ class Runtime final {
   // Must outlive graph destruction, including retained-module retry/abort.
   ProviderStorage providerStorage_[MaxDrivers]{};
   RuntimeProviders::GraphV2 graph_{RuntimeStreams::runtimeProviderStreamHost()};
+#if RISC_NATIVE_SERIAL_FILES
+  struct NativeFilesBinding {
+    RuntimeFiles* files=nullptr;RuntimeFiles::Check owner=nullptr,safe=nullptr;
+    RuntimeProviders::GrantV2 grant{};size_t driver=0;
+  } nativeFiles_[16]{};
+  bool activateNativeFiles();
+  bool releaseNativeFiles();
+#endif
   struct AppDataExportDelete {
     void operator()(RiscStorage::AppDataExport* value) const {
       value->~AppDataExport();std::free(value);
