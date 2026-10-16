@@ -30,19 +30,22 @@ class CoverageTests(unittest.TestCase):
     def test_preserves_every_baseline_command_once(self):
         commands = json.loads((ROOT / 'test/host_suite.json').read_text())
         # Exact 184-command source9f8d670 baseline. Intentional suite edits must
-        # update this digest alongside the documented coverage change.
-        self.assertEqual(hashlib.sha256(('\n'.join(commands) + '\n').encode()).hexdigest(),
+        # retain this prefix unchanged when extending the suite.
+        self.assertEqual(hashlib.sha256(('\n'.join(commands[:184]) + '\n').encode()).hexdigest(),
                          'd56d8fcedd4cf37a8cc3bef824af3cb883fe3f4ef1ad0d255c9e58b93edf4a13')
+        # New T023 coverage is explicit; no original command is removed or repeated.
+        self.assertEqual(commands[184:], ['bash test/run_request_queue_test.sh', 'SANITIZE=1 bash test/run_request_queue_test.sh', 'bash test/run_request_queue_compaction_test.sh', 'SANITIZE=1 bash test/run_request_queue_compaction_test.sh', 'bash test/run_native_provision_request_test.sh', 'SANITIZE=1 bash test/run_native_provision_request_test.sh', 'bash test/run_preserving_policy_test.sh', 'SANITIZE=1 bash test/run_preserving_policy_test.sh', 'python3 test/run_native_provision_boot_gate_test.py', 'SANITIZE=1 python3 test/run_native_provision_boot_gate_test.py', 'bash test/run_nvs_quarantine_radio_test.sh', 'SANITIZE=1 bash test/run_nvs_quarantine_radio_test.sh'])
         assigned = list(suite.assignments(commands))
         self.assertEqual([c for _, c in assigned], commands)
-        self.assertEqual(len(assigned), 184)
-        self.assertEqual(sum('SANITIZE=1' in c for c in commands), 82)
+        self.assertEqual(len(assigned), 196)
+        self.assertEqual(len(commands), len(set(commands)))
+        self.assertEqual(sum('SANITIZE=1' in c for c in commands), 88)
         self.assertEqual(sum('TSAN=1' in c for c in commands), 2)
         self.assertEqual(set(s for s, _ in assigned), set(suite.SHARDS))
-        self.assertEqual(sum(s == 'normal' for s, _ in assigned), 90)
-        self.assertEqual(sum(s == 'asan-1' for s, _ in assigned), 41)
-        self.assertEqual(sum(s == 'asan-2' for s, _ in assigned), 41)
-        self.assertEqual(sum(s == 'tools' for s, _ in assigned), 12)
+        self.assertEqual(sum(s == 'normal' for s, _ in assigned), 95)
+        self.assertEqual(sum(s == 'asan-1' for s, _ in assigned), 44)
+        self.assertEqual(sum(s == 'asan-2' for s, _ in assigned), 44)
+        self.assertEqual(sum(s == 'tools' for s, _ in assigned), 13)
 
     def test_failure_remains_visible_and_later_commands_run(self):
         with tempfile.TemporaryDirectory() as directory:
