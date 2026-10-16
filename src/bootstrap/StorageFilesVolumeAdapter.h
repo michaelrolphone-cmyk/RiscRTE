@@ -6,6 +6,7 @@
  * For the legacy bridge only, metadata suffix is mandatory: boolean stat cannot
  * distinguish a missing file from an I/O failure. */
 #include <RiscStorageFilesV1.h>
+#include "runtime/storage/FileValidation.h"
 #include <RiscStorageVolumeFsV1.h>
 #include <cstring>
 #include <climits>
@@ -43,7 +44,7 @@ class StorageFilesVolumeAdapter {
   bool exitSafe() const {if(retained_)return false;for(const auto& h:handles_)if(h.native)return false;return true;}
   int32_t open(const char* path,uint32_t flags,risc_storage_files_handle_v1* out) {
     if(out)*out=0;
-    if(!out || !validPath(path) || !validFlags(flags))return RISC_FILES_INVALID;
+    if(!out || !RiscStorage::validPath(path) || !RiscStorage::validFlags(flags))return RISC_FILES_INVALID;
     int32_t rc=before();if(rc!=RISC_FILES_OK)return rc;
     Handle* h=vacant();if(!h || generation_==UINT32_MAX)return RISC_FILES_BUSY;
     if(files_) {
@@ -125,7 +126,7 @@ class StorageFilesVolumeAdapter {
     return after(fs_->file_truncate(context(),h->native,size),false);
   }
   int32_t stat(const char* path,risc_storage_files_stat_v1* out) {
-    if(!validPath(path) || !out || out->struct_size<sizeof(*out))return RISC_FILES_INVALID;
+    if(!RiscStorage::validPath(path) || !out || out->struct_size<sizeof(*out))return RISC_FILES_INVALID;
     int32_t rc=before();if(rc!=RISC_FILES_OK)return rc;
     if(files_) {
       risc_storage_files_stat_v1 value{};value.struct_size=sizeof(value);
@@ -144,7 +145,7 @@ class StorageFilesVolumeAdapter {
     *out={sizeof(*out),value.flags,value.size,value.modified_seconds};return RISC_FILES_OK;
   }
   int32_t mkdir(const char* path) {
-    if(!validPath(path))return RISC_FILES_INVALID;
+    if(!RiscStorage::validPath(path))return RISC_FILES_INVALID;
     if(files_){int32_t rc=before();return rc==RISC_FILES_OK?directResult(files_->mkdir(files_->context,path)):rc;}
     risc_storage_files_stat_v1 st{};st.struct_size=sizeof(st);int32_t rc=stat(path,&st);
     if(rc==RISC_FILES_OK)return RISC_FILES_EXISTS;
@@ -152,7 +153,7 @@ class StorageFilesVolumeAdapter {
     return after(volume_->mkdir(context(),path),true);
   }
   int32_t rename(const char* source,const char* destination) {
-    if(!validPath(source) || !validPath(destination))return RISC_FILES_INVALID;
+    if(!RiscStorage::validPath(source) || !RiscStorage::validPath(destination))return RISC_FILES_INVALID;
     if(files_){int32_t rc=before();return rc==RISC_FILES_OK?directResult(files_->rename(files_->context,source,destination)):rc;}
     risc_storage_files_stat_v1 st{};st.struct_size=sizeof(st);int32_t rc=stat(destination,&st);
     if(rc==RISC_FILES_OK)return RISC_FILES_EXISTS;
@@ -161,7 +162,7 @@ class StorageFilesVolumeAdapter {
     return after(volume_->rename(context(),source,destination),true);
   }
   int32_t remove(const char* path) {
-    if(!validPath(path) || !std::strcmp(path,"/"))return RISC_FILES_INVALID;
+    if(!RiscStorage::validPath(path) || !std::strcmp(path,"/"))return RISC_FILES_INVALID;
     if(files_){int32_t rc=before();return rc==RISC_FILES_OK?directResult(files_->remove(files_->context,path)):rc;}
     risc_storage_files_stat_v1 st{};st.struct_size=sizeof(st);int32_t rc=stat(path,&st);
     if(rc!=RISC_FILES_OK)return rc;
@@ -169,7 +170,7 @@ class StorageFilesVolumeAdapter {
   }
   int32_t dirOpen(const char* path,risc_storage_files_handle_v1* out) {
     if(out)*out=0;
-    if(!out || !validPath(path))return RISC_FILES_INVALID;
+    if(!out || !RiscStorage::validPath(path))return RISC_FILES_INVALID;
     int32_t rc=before();if(rc!=RISC_FILES_OK)return rc;
     Handle* h=vacant();if(!h || generation_==UINT32_MAX)return RISC_FILES_BUSY;
     if(files_) {
@@ -285,38 +286,6 @@ class StorageFilesVolumeAdapter {
     if(!closed)return retain();
     rc=after(true,false);if(rc!=RISC_FILES_OK)return retain();*h={};return RISC_FILES_OK;
   }
-  static bool validFlags(uint32_t flags) {
-    return !(flags&~63u) && (flags&(RISC_FILES_READ|RISC_FILES_WRITE)) &&
-      (!(flags&(RISC_FILES_CREATE|RISC_FILES_TRUNCATE|RISC_FILES_APPEND)) || (flags&RISC_FILES_WRITE)) &&
-      (!(flags&RISC_FILES_EXCLUSIVE) || (flags&RISC_FILES_CREATE));
-  }
-  static bool validPath(const char* path) {
-    if(!path || path[0]!='/')return false;
-    size_t n=strnlen(path,RISC_STORAGE_FILES_PATH_MAX);if(!n || n>=RISC_STORAGE_FILES_PATH_MAX)return false;
-    if(n==1)return true;
-    // Reject malformed UTF-8, overlong forms, surrogate code points and values
-    // outside Unicode. Names are never normalized or silently reinterpreted.
-    for(size_t i=1;i<n;) {
-      unsigned char lead=static_cast<unsigned char>(path[i++]);
-      if(lead<0x80)continue;
-      unsigned remaining=0;uint32_t code=0,minimum=0;
-      if(lead>=0xc2 && lead<=0xdf){remaining=1;code=lead&31u;minimum=0x80;}
-      else if(lead>=0xe0 && lead<=0xef){remaining=2;code=lead&15u;minimum=0x800;}
-      else if(lead>=0xf0 && lead<=0xf4){remaining=3;code=lead&7u;minimum=0x10000;}
-      else return false;
-      if(n-i<remaining)return false;
-      while(remaining--){unsigned char next=static_cast<unsigned char>(path[i++]);if((next&0xc0)!=0x80)return false;code=(code<<6)|(next&63u);}
-      if(code<minimum || code>0x10ffff || (code>=0xd800 && code<=0xdfff))return false;
-    }
-    size_t start=1;
-    for(size_t i=1;i<=n;++i) {
-      unsigned char c=static_cast<unsigned char>(path[i]);if((c && c<32) || c==127 || c=='\\')return false;
-      if(!c || c=='/') {
-        size_t count=i-start;if(!count || (count==1 && path[start]=='.') || (count==2 && path[start]=='.' && path[start+1]=='.'))return false;
-        start=i+1;
-      }
-    }
-    return true;
-  }
+
 };
 }
