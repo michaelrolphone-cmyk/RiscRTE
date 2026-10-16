@@ -1,0 +1,51 @@
+name: Runtime scratch provider
+on:
+  push:
+    branches: [work/runtime-scratch-provider]
+  pull_request:
+    paths:
+      - 'src/runtime/storage/FileSourceFiles.h'
+      - 'src/ports/esp32s3/Native*Files.h'
+      - 'src/ports/esp32s3/NativeFileSource.cpp'
+      - 'src/bootstrap/RuntimeFiles.h'
+      - 'src/bootstrap/StorageFilesVolumeAdapter.h'
+      - 'sdk/app/RiscStorageFiles*.h'
+      - 'test/*file_source*'
+      - 'test/compile_runtime_scratch_target.py'
+      - '.github/workflows/runtime-scratch-provider.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_file_source_provider_test.sh
+      - run: bash test/run_file_source_storage_test.sh
+      - run: bash test/run_file_source_runtime_test.sh
+      - run: bash test/run_storage_files_adapter_test.sh
+  native-mount:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+      BUILD_DIR: /tmp/scratch-mount
+      MOUNT_BUILD: /tmp/scratch-mount
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 test/run_native_app_data_mount_test.py
+      - run: MOUNT_ROOT="$PWD" python3 test/run_native_file_source_mount_test.py

@@ -14,4 +14,4 @@ for source,obj in [(root/'src/ports/esp32s3/NativeFileSource.cpp',build/'file-so
 objects=[build/n for n in ['lfs.c.o','lfs_util.c.o','littlefs_esp_part.c.o','esp_littlefs.c.o','fixture.c.o','source-mount.o','file-source.o']]
 wrap=['fstat','open','read','write','close','unlink','lseek','esp_vfs_register','esp_vfs_unregister','esp_partition_read','esp_partition_write','esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
 exe=build/'file-source-test';subprocess.run(['c++',*flags,'-no-pie',str(root/'test/native_file_source_mount_test.cpp'),*map(str,objects),'-Wl,'+','.join('--wrap='+n for n in wrap),'-o',str(exe)],check=True)
-for case in ['healthy','open-fault','close-fault','read-fault']:subprocess.run([str(exe),case],check=True)
+for case in ['healthy','open-fault','close-fault','read-fault','short-read','changed-size','remove-fault']:subprocess.run([str(exe),case],check=True)

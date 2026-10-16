@@ -15,9 +15,12 @@ fi
 "${CC:-cc}" -x c -std=c11 -Wall -Wextra -Werror -pedantic -I"$root/sdk/app" \
   -o "$build/storage-files-c-api" - <<'C_SOURCE'
 #include <RiscStorageFilesV1.h>
+#include <RiscStorageFilesDirectoryV1.h>
+_Static_assert(RISC_FILES_DIRECTORY_CAPACITY == -8, "directory supplement result ABI");
 _Static_assert(RISC_STORAGE_FILES_HANDLE_INVALID == 0, "invalid token ABI");
 _Static_assert(RISC_STORAGE_FILES_IO_MAX == 4096, "bounded transfer ABI");
 _Static_assert(sizeof(((risc_storage_files_entry_v1*)0)->name) == 128, "entry name ABI");
+_Static_assert(RISC_FILES_EXISTS == 3 && RISC_FILES_INVALID == -1 && RISC_FILES_IO == -2 && RISC_FILES_UNAVAILABLE == -3 && RISC_FILES_BUSY == -4 && RISC_FILES_DENIED == -5 && RISC_FILES_RETAINED == -6 && RISC_FILES_CONTEXT == -7 && RISC_FILES_NO_SPACE == -9, "additive result ABI");
 _Static_assert(RISC_FILES_OK == 0 && RISC_FILES_NOT_FOUND == 1 && RISC_FILES_END == 2, "status ABI");
 int main(void) {
     risc_storage_files_v1 api = {0};

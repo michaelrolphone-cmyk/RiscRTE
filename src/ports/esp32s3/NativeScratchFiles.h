@@ -22,17 +22,17 @@ public:
    [](void*c,uint32_t h,uint64_t o){return self(c).seek(h,o);},
    [](void*c,uint32_t h,uint64_t*n,uint64_t*o){return self(c).info(h,n,o);},
    [](void*c,uint32_t h){return self(c).sync(h);},
-   [](void*,uint32_t,uint64_t)->int32_t{return RISC_FILES_UNAVAILABLE;},
-   [](void*,const char*,risc_storage_files_stat_v1*)->int32_t{return RISC_FILES_UNAVAILABLE;},
-   [](void*,const char*)->int32_t{return RISC_FILES_UNAVAILABLE;},
-   [](void*,const char*,const char*)->int32_t{return RISC_FILES_UNAVAILABLE;},
+   [](void*c,uint32_t,uint64_t)->int32_t{return self(c).unavailable();},
+   [](void*c,const char*,risc_storage_files_stat_v1*)->int32_t{return self(c).unavailable();},
+   [](void*c,const char*)->int32_t{return self(c).unavailable();},
+   [](void*c,const char*,const char*)->int32_t{return self(c).unavailable();},
    [](void*c,const char*p){return self(c).remove(p);},
-   [](void*,const char*,uint32_t*h)->int32_t{if(h)*h=0;return RISC_FILES_UNAVAILABLE;},
-   [](void*,uint32_t,risc_storage_files_entry_v1*)->int32_t{return RISC_FILES_UNAVAILABLE;},
-   [](void*,uint32_t)->int32_t{return RISC_FILES_UNAVAILABLE;},
-   [](void*,uint32_t)->int32_t{return RISC_FILES_UNAVAILABLE;},
-   [](void*,uint32_t,uint64_t*)->int32_t{return RISC_FILES_UNAVAILABLE;},
-   [](void*,uint32_t,uint64_t)->int32_t{return RISC_FILES_UNAVAILABLE;}};
+   [](void*c,const char*,uint32_t*h)->int32_t{if(h)*h=0;return self(c).unavailable();},
+   [](void*c,uint32_t,risc_storage_files_entry_v1*)->int32_t{return self(c).unavailable();},
+   [](void*c,uint32_t)->int32_t{return self(c).unavailable();},
+   [](void*c,uint32_t)->int32_t{return self(c).unavailable();},
+   [](void*c,uint32_t,uint64_t*)->int32_t{return self(c).unavailable();},
+   [](void*c,uint32_t,uint64_t)->int32_t{return self(c).unavailable();}};
  }
  const risc_storage_files_v1* api()const{return &api_;}
  bool retained()const{return retained_;}
@@ -43,6 +43,7 @@ private:
  static NativeScratchFiles& self(void*c){return *static_cast<NativeScratchFiles*>(c);}
  bool name(const char*p)const{return RiscStorage::validPath(path_)&&p&&!strcmp(p,"/.risc-file-source");}
  bool badSuccess()const{return successErrno_&&errno!=0;}
+ int32_t unavailable()const{return retained_?RISC_FILES_RETAINED:RISC_FILES_UNAVAILABLE;}
  int32_t retain(){retained_=true;return RISC_FILES_RETAINED;}
  int32_t error(){if(errno==ENOSPC||errno==EDQUOT)return RISC_FILES_NO_SPACE;if(errno==ENOENT)return RISC_FILES_NOT_FOUND;if(errno==EEXIST)return RISC_FILES_EXISTS;return terminalIo_?retain():int32_t(RISC_FILES_IO);}
  int32_t gate(uint32_t h)const{return retained_?RISC_FILES_RETAINED:!h||h!=token_?RISC_FILES_INVALID:RISC_FILES_OK;}

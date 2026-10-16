@@ -70,9 +70,11 @@ public:
   if(want>hooks_.ioMax)want=hooks_.ioMax;
   if(!want)return leave(RISC_FILE_SOURCE_OK);
   uint32_t token=0;int32_t rc=open(RISC_FILES_READ,&token);if(rc)return leave(rc);
+  // Short reads or changed lengths contradict this sealed source. Retain the
+  // generic session before close/cleanup, irrespective of backing mechanism.
   unsigned char bytes[RISC_FILE_OPEN_SOURCE_IO_MAX];rc=inspect(token,size_);uint32_t got=0;
   if(!rc)rc=result(files_->seek(token,offset));
-  if(!rc){rc=result(files_->read(token,bytes,want,&got));if(!rc&&!got)rc=RISC_FILE_SOURCE_IO;}
+  if(!rc){rc=result(files_->read(token,bytes,want,&got));if(!rc&&got!=want){retain();rc=RISC_FILE_SOURCE_RETAINED;}}
   if(retained())return leave(RISC_FILE_SOURCE_RETAINED);
   const auto closed=close(token);if(closed)return leave(closed);
   rc=leave(rc);if(!rc){memcpy(out,bytes,got);*actual=got;}return rc;
@@ -98,7 +100,7 @@ private:
  void retain(){retained_=true;if(files_)files_->retainCustody();}
  static int32_t result(int32_t rc){switch(rc){case RISC_FILES_OK:return RISC_FILE_SOURCE_OK;case RISC_FILES_NO_SPACE:return RISC_FILE_SOURCE_NO_SPACE;case RISC_FILES_RETAINED:return RISC_FILE_SOURCE_RETAINED;case RISC_FILES_BUSY:return RISC_FILE_SOURCE_BUSY;case RISC_FILES_UNAVAILABLE:return RISC_FILE_SOURCE_UNAVAILABLE;default:return RISC_FILE_SOURCE_IO;}}
  int32_t enter(){if(retained())return RISC_FILE_SOURCE_RETAINED;if(!configured_)return RISC_FILE_SOURCE_UNAVAILABLE;if(busy_||!safe())return RISC_FILE_SOURCE_BUSY;busy_=true;return RISC_FILE_SOURCE_OK;}
- int32_t leave(int32_t rc){if(!safe()||rc==RISC_FILE_SOURCE_RETAINED)retain();busy_=false;return retained()?RISC_FILE_SOURCE_RETAINED:rc;}
+ int32_t leave(int32_t rc){if(!safe()||rc==RISC_FILE_SOURCE_RETAINED)retain();busy_=false;return retained()?int32_t(RISC_FILE_SOURCE_RETAINED):rc;}
  int32_t space(uint64_t bytes){
   if(!hooks_.freeBytes)return RISC_FILE_SOURCE_OK;
   uint64_t available=0;
@@ -106,7 +108,7 @@ private:
   return available<hooks_.headroom||bytes>available-hooks_.headroom?RISC_FILE_SOURCE_NO_SPACE:RISC_FILE_SOURCE_OK;
  }
  int32_t open(uint32_t flags,uint32_t*token){return result(files_->open(Name,flags,token));}
- int32_t inspect(uint32_t token,uint64_t size){uint64_t actual=0,at=0;const int32_t rc=result(files_->info(token,&actual,&at));return rc?rc:actual!=size?RISC_FILE_SOURCE_IO:RISC_FILE_SOURCE_OK;}
+ int32_t inspect(uint32_t token,uint64_t size){uint64_t actual=0,at=0;const int32_t rc=result(files_->info(token,&actual,&at));if(rc)return rc;if(actual!=size){retain();return RISC_FILE_SOURCE_RETAINED;}return RISC_FILE_SOURCE_OK;}
  int32_t close(uint32_t token){const int32_t rc=files_->close(token);if(rc==RISC_FILES_OK)return RISC_FILE_SOURCE_OK;retain();return RISC_FILE_SOURCE_RETAINED;}
 };
 }

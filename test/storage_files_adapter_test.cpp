@@ -1157,7 +1157,7 @@ void testGenericErrorsAndRetention() {
   const char* operations[] = {"open", "dir_open", "read", "write", "seek", "info", "sync", "truncate", "stat", "mkdir", "rename", "remove",
     "dir_next", "dir_rewind", "dir_tell", "dir_seek"};
   const int32_t errors[] = {RISC_FILES_NOT_FOUND, RISC_FILES_BUSY, RISC_FILES_UNAVAILABLE, RISC_FILES_DENIED,
-    RISC_FILES_IO, RISC_FILES_INVALID, RISC_FILES_CONTEXT, RISC_FILES_RETAINED, 123456};
+    RISC_FILES_IO, RISC_FILES_INVALID, RISC_FILES_CONTEXT, RISC_FILES_NO_SPACE, RISC_FILES_RETAINED, 123456};
   for (const char* operation : operations) {
     for (int32_t result : errors) {
       GenericFixture f; Token file = f.open(), dir = f.directory();
