@@ -1,0 +1,13 @@
+{
+  "container": {
+    "asset_name": "flat-root-container.zip",
+    "bytes": 5648,
+    "sha256": "961d93a90f508a86dcefeb07a812db21a46231a1b3e48eb9f4c996650961d6fa"
+  },
+  "manifest": {
+    "asset_name": "flat-root-manifest.json",
+    "bytes": 4746,
+    "sha256": "38fdf2bb1ddb18d777d65fa00e496918221c7490fa2929310ccf18d99fbd6547"
+  },
+  "schema_version": "1.0.0"
+}

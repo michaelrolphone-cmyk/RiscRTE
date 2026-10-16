@@ -1,0 +1,46 @@
+{
+  "context_version": "1.0.0",
+  "fixture": true,
+  "hardware_profile": "fixture-profile",
+  "hardware_revision": "rev-a",
+  "installed_firmware_id": null,
+  "limits": {
+    "container_bytes": 1048576,
+    "inventory_files": 100
+  },
+  "namespaces": [
+    {
+      "case_semantics": "sensitive",
+      "firmware_id": "fixture-v2",
+      "forbid_trailing_dot_space": false,
+      "forbidden_characters": "",
+      "hierarchical": true,
+      "max_component_bytes": 255,
+      "max_file_bytes": 1048576,
+      "max_path_bytes": 490,
+      "namespace_id": "7",
+      "operations": [
+        "stat",
+        "get",
+        "mkdir",
+        "create",
+        "replace"
+      ],
+      "writable": true,
+      "write_budget_bytes": 1048576
+    }
+  ],
+  "product_id": "fixture-board",
+  "supported_methods": [
+    "fixture-flash-method"
+  ],
+  "trusted_binding_sha256": [
+    "c331272b36ee9d789a97f6b9b3fea417c96f0b13a51834ecac6663816b5a86ae"
+  ],
+  "trusted_consumer_sha256": [
+    "eb73c779c70cba4806da1a8179ad5758b1040ba5bb9ce184b97a84aac5fe7ebd"
+  ],
+  "trusted_container_sha256": "c2f93d6faa77738f605f85fda830f908374da6c6d8c987cdf14751f7a5fb844c",
+  "trusted_install_sha256": "d1d9cd43384c79f1494bf9c64389950a337f59abb9afe769ce2203caa5facbe3",
+  "trusted_manifest_sha256": "d93d615cee8500f3cb9e23f64b1ed512a2734ed9937ee7ea6d590ec2b682d996"
+}
