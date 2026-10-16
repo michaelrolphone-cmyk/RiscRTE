@@ -1,7 +1,7 @@
 name: RiscRTE integration
 on:
   pull_request:
-    branches: [main, master, integrate/diagnostic-usb-yield-0181, fix/watch-native-usb-sleep, perf/committed-pair-boot-0155, fix/provider-invocation-retention, feat/default-cohort-promotion, codex/retained-realtime-snapshot, integrate/x4-pr35-iq-lifecycle-0146, fix/provider-quiescence-diagnostics, fix/bitbang-probe-startup, fix/gpio-output-readback, feat/declared-file-dispatch, feat/typed-gpio-held-retirement, feat/profile-provisioning-core, feat/minimal-runtime, test/watch-app-handoff, codex/typed-retained-wake, feat/owned-deep-sleep-b1, feat/owned-timer-wake, feat/provider-bound-storage, feat/alarm-i2s-output, feat/platform-radio-station, fix/explicit-kv-namespaces, fix/graph-provider-instance-loading, feat/bounded-kv-v2, feat/app-policy-capacity, feat/provider-key-capacity, feat/owned-wake-set, feat/installed-file-volume, feat/scoped-radio-spi, feat/app-data-volume]
+    # This owns integration for every PR base; shared-settings does not call it again.
   workflow_dispatch:
   workflow_call:
 env:
@@ -12,12 +12,15 @@ concurrency:
   group: integration-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  host:
-    name: Host integration and version guards
+  host-tests:
+    name: Host tests (${{ matrix.shard }})
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [normal, asan-1, asan-2, tools]
     runs-on: ubuntu-24.04
-    # Measured runners reached the pressure suite after 31-38 minutes, with
-    # 23 commands (including 10 sanitizer runs) still pending. Keep all gates.
-    timeout-minutes: 75
+    # Every original normal, ASan/UBSan, TSan and variant command is retained.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +32,12 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: python -m pip install esptool==4.11.0 pyelftools==0.32
+      - uses: ./.github/actions/host-cache
+        with:
+          shard: ${{ matrix.shard }}
+      - name: Cache and suite correctness guards
+        if: matrix.shard == 'tools'
+        run: python -m unittest discover -s test -p host_ci_test.py -v
       - name: Source version guards
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -39,6 +48,7 @@ jobs:
             python scripts/check_versions.py
           fi
       - name: Fetch official pinned NVS partition generator (offline tests only)
+        if: matrix.shard == 'tools'
         uses: actions/checkout@v4
         with:
           repository: espressif/esp-idf
@@ -47,6 +57,7 @@ jobs:
           path: build/idf-nvs-source
           persist-credentials: false
       - name: Fetch pinned external clock and drivers (test-only)
+        if: matrix.shard == 'normal'
         uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
@@ -54,6 +65,7 @@ jobs:
           path: build/watch-clock-source
           persist-credentials: false
       - name: Fetch exact LittleFS dependency for offline disk proof
+        if: matrix.shard == 'normal'
         uses: actions/checkout@v4
         with:
           repository: joltwallet/esp_littlefs
@@ -62,6 +74,7 @@ jobs:
           path: build/littlefs-source
           persist-credentials: false
       - name: Fetch exact Bluetooth transport provider for burst regression
+        if: matrix.shard == 'tools' || matrix.shard == 'asan-2'
         uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
@@ -69,6 +82,7 @@ jobs:
           path: build/ble-watch-source
           persist-credentials: false
       - name: Fetch exact Bluetooth scanner provider for burst regression
+        if: matrix.shard == 'tools' || matrix.shard == 'asan-2'
         uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/RiscRTE-Drivers
@@ -76,205 +90,45 @@ jobs:
           path: build/ble-driver-source
           persist-credentials: false
       - name: Build initial disk2.1 image and exercise real LittleFS power cuts
+        if: matrix.shard == 'normal'
         run: |
           python scripts/app_data_image.py --littlefs-source build/littlefs-source/src/littlefs --output build/appdata-initial
           APP_DATA_INITIAL_IMAGE=build/appdata-initial python test/app_data_image_test.py
           bash test/run_app_data_littlefs_test.sh build/littlefs-source build/appdata-initial/appdata.bin
           SANITIZE=1 bash test/run_app_data_littlefs_test.sh build/littlefs-source build/appdata-initial/appdata.bin
       - uses: actions/upload-artifact@v4
+        if: matrix.shard == 'normal'
         with:
           name: riscrte-appdata-initial-image-${{ github.event.pull_request.head.sha || github.sha }}
           path: build/appdata-initial/
           if-no-files-found: error
           retention-days: 14
       - name: Real runtime, external drivers and clock through physical bus model
+        if: matrix.shard == 'normal'
         run: bash test/run_clock_integration.sh build/watch-clock-source
-      - name: Real host modules, board binding and default-child-default lifecycle
-        run: |
-          bash test/run_board_test.sh test/fixtures/garden/relay6.json test/fixtures/garden/crowpanel.json test/fixtures/garden/paper.json
-          bash test/run_metadata_read_test.sh
-          SANITIZE=1 bash test/run_metadata_read_test.sh
-          bash test/run_provider_exit_lifecycle_test.sh
-          SANITIZE=1 bash test/run_provider_exit_lifecycle_test.sh
-          bash test/run_retained_yield_test.sh
-          SANITIZE=1 bash test/run_retained_yield_test.sh
-          bash test/run_demand_activation_test.sh
-          SANITIZE=1 bash test/run_demand_activation_test.sh
-          bash test/run_cold_provider_start_test.sh
-          SANITIZE=1 bash test/run_cold_provider_start_test.sh
-          bash test/run_demand_retention_test.sh
-          SANITIZE=1 bash test/run_demand_retention_test.sh
-          RISC_APP_POLICY_ROWS=17 bash test/run_demand_retention_test.sh
-          RISC_APP_POLICY_ROWS=17 SANITIZE=1 bash test/run_demand_retention_test.sh
-          bash test/run_runtime_test.sh
-          SANITIZE=1 bash test/run_runtime_test.sh
-          bash test/run_performance_recorder_test.sh
-          SANITIZE=1 bash test/run_performance_recorder_test.sh
-          bash test/run_performance_runtime_test.sh
-          SANITIZE=1 bash test/run_performance_runtime_test.sh
-          bash test/run_performance_native_test.sh
-          SANITIZE=1 bash test/run_performance_native_test.sh
-          bash test/run_native_diagnostic_observer_test.sh
-          SANITIZE=1 bash test/run_native_diagnostic_observer_test.sh
-          bash test/run_diagnostic_source_binding_test.sh
-          SANITIZE=1 bash test/run_diagnostic_source_binding_test.sh
-          bash test/run_stage_log_test.sh
-          SANITIZE=1 bash test/run_stage_log_test.sh
-          STAGE_LOGS=1 bash test/run_performance_runtime_test.sh
-          STAGE_LOGS=1 SANITIZE=1 bash test/run_performance_runtime_test.sh
-          bash test/run_app_data_files_test.sh
-          SANITIZE=1 bash test/run_app_data_files_test.sh
-          bash test/run_app_data_runtime_test.sh
-          SANITIZE=1 bash test/run_app_data_runtime_test.sh
-          bash test/run_app_data_layout_test.sh
-          bash test/run_native_app_data_test.sh
-          SANITIZE=1 bash test/run_native_app_data_test.sh
-          bash test/run_installed_files_test.sh
-          SANITIZE=1 bash test/run_installed_files_test.sh
-          bash test/native_tls_async/run_async_fdset.sh
-          bash test/native_tls_cleanup/run_checked_cleanup.sh
-          bash test/run_native_tls_memory_test.sh
-          SANITIZE=1 bash test/run_native_tls_memory_test.sh
-          bash test/run_http_test.sh
-          SANITIZE=1 bash test/run_http_test.sh
-          bash test/run_runtime_limits_test.sh
-          bash test/run_full_product_metadata_capacity_test.sh
-          SANITIZE=1 bash test/run_full_product_metadata_capacity_test.sh
-          bash test/run_paired_runtime_memory_test.sh
-          SANITIZE=1 bash test/run_paired_runtime_memory_test.sh
-          bash test/run_paired_bank_test.sh
-          SANITIZE=1 bash test/run_paired_bank_test.sh
-          APP_DATA_TEST=1 bash test/run_paired_bank_test.sh
-          SANITIZE=1 APP_DATA_TEST=1 bash test/run_paired_bank_test.sh
-          bash test/run_cohort_runtime_test.sh
-          SANITIZE=1 bash test/run_cohort_runtime_test.sh
-          APP_DATA_TEST=1 bash test/run_cohort_runtime_test.sh
-          SANITIZE=1 APP_DATA_TEST=1 bash test/run_cohort_runtime_test.sh
-          bash test/run_store_audit_test.sh
-          SANITIZE=1 bash test/run_store_audit_test.sh
-          bash test/run_provider_diagnostics_test.sh
-          SANITIZE=1 bash test/run_provider_diagnostics_test.sh
-          bash test/run_provider_diagnostics_sink_test.sh
-          SANITIZE=1 bash test/run_provider_diagnostics_sink_test.sh
-          bash test/run_provider_diagnostic_availability_test.sh
-          SANITIZE=1 bash test/run_provider_diagnostic_availability_test.sh
-          bash test/run_provider_diagnostic_composition_test.sh
-          SANITIZE=1 bash test/run_provider_diagnostic_composition_test.sh
-          bash test/run_scoped_provider_low_level_test.sh
-          SANITIZE=1 bash test/run_scoped_provider_low_level_test.sh
-          bash test/run_scoped_provider_graph_module_test.sh
-          SANITIZE=1 bash test/run_scoped_provider_graph_module_test.sh
-          bash test/run_scoped_provider_module_test.sh
-          SANITIZE=1 bash test/run_scoped_provider_module_test.sh
-          bash test/run_native_bank_provider_admission_test.sh
-          SANITIZE=1 bash test/run_native_bank_provider_admission_test.sh
-          bash test/run_native_bank_test.sh
-          NATIVE_DIAGNOSTIC_OBSERVER=1 bash test/run_native_bank_test.sh
-          SANITIZE=1 NATIVE_DIAGNOSTIC_OBSERVER=1 bash test/run_native_bank_test.sh
-          APP_DATA_TEST=1 bash test/run_native_bank_test.sh
-          SANITIZE=1 bash test/run_native_bank_test.sh
-          bash test/run_provisioning_test.sh
-          SANITIZE=1 bash test/run_provisioning_test.sh
-          bash test/run_update_runtime_test.sh
-          SANITIZE=1 bash test/run_update_runtime_test.sh
-          python test/paired_bank_images_test.py -v
-          bash test/run_startup_failure_test.sh
-          SANITIZE=1 bash test/run_startup_failure_test.sh
-          bash test/run_default_request_test.sh
-          SANITIZE=1 bash test/run_default_request_test.sh
-          bash test/run_resident_shell_test.sh
-          RESIDENT_NATIVE_MEMORY=1 SANITIZE=1 bash test/run_resident_shell_test.sh
-          bash test/run_resident_legacy_test.sh
-          RESIDENT_NATIVE_MEMORY=1 SANITIZE=1 bash test/run_resident_legacy_test.sh
-          bash test/run_resident_policy_test.sh
-          SANITIZE=1 bash test/run_resident_policy_test.sh
-          bash test/run_resident_memory_test.sh
-          SANITIZE=1 bash test/run_resident_memory_test.sh
-          bash test/run_resident_native_contexts_test.sh
-          SANITIZE=1 bash test/run_resident_native_contexts_test.sh
-          bash test/run_file_open_test.sh
-          SANITIZE=1 bash test/run_file_open_test.sh
-          bash test/run_held_output_test.sh
-          SANITIZE=1 bash test/run_held_output_test.sh
-          bash test/run_provider_sync_test.sh
-          SANITIZE=1 bash test/run_provider_sync_test.sh
-          python test/provision_seed_test.py -v
-          python test/provision_seed_extension_test.py -v
-          python test/provision_profile_test.py -v
-          python test/provision_image_inventory_test.py -v
-          bash test/run_store_image_capacity_test.sh
-          SANITIZE=1 bash test/run_store_image_capacity_test.sh
-          NVS_GENERATOR=build/idf-nvs-source/components/nvs_flash/nvs_partition_generator/nvs_partition_gen.py python test/provision_device_test.py -v
-          python test/maintenance_plan_test.py -v
-          bash test/run_hci_test.sh
-          SANITIZE=1 bash test/run_hci_test.sh
-          bash test/run_hci_radio_coexistence_test.sh
-          SANITIZE=1 bash test/run_hci_radio_coexistence_test.sh
-          TSAN=1 bash test/run_hci_radio_coexistence_test.sh
-          bash test/run_clock_scheduler_wait_test.sh
-          SANITIZE=1 bash test/run_clock_scheduler_wait_test.sh
-          TSAN=1 bash test/run_clock_scheduler_wait_test.sh
-          python test/run_hci_scanner_burst_test.py --watch build/ble-watch-source --drivers build/ble-driver-source --output build/ble-scanner-normal
-          SANITIZE=1 python test/run_hci_scanner_burst_test.py --watch build/ble-watch-source --drivers build/ble-driver-source --output build/ble-scanner-sanitized
-          bash test/run_radio_iq_test.sh
-          SANITIZE=1 bash test/run_radio_iq_test.sh
-          bash test/run_radio_test.sh
-          SANITIZE=1 bash test/run_radio_test.sh
-          bash test/run_i2s_test.sh
-          SANITIZE=1 bash test/run_i2s_test.sh
-          bash test/run_diagnostic_journal_test.sh
-          SANITIZE=1 bash test/run_diagnostic_journal_test.sh
-          bash test/run_light_sleep_test.sh
-          bash test/run_native_spi_test.sh
-          SANITIZE=1 bash test/run_native_spi_test.sh
-          bash test/run_spi_radio_test.sh
-          SANITIZE=1 bash test/run_spi_radio_test.sh
-          bash test/run_deep_sleep_test.sh
-          SANITIZE=1 bash test/run_deep_sleep_test.sh
-          bash test/run_key_value_v2_test.sh
-          SANITIZE=1 bash test/run_key_value_v2_test.sh
-          bash test/run_key_value_multi_test.sh
-          SANITIZE=1 bash test/run_key_value_multi_test.sh
-          python3 -m unittest discover -s test -p 'test_app_policy_rows.py'
-          bash test/run_key_value_test.sh
-          SANITIZE=1 bash test/run_key_value_test.sh
-          bash test/run_bound_app_data_test.sh
-          SANITIZE=1 bash test/run_bound_app_data_test.sh
-          bash test/run_bound_key_value_test.sh
-          SANITIZE=1 bash test/run_bound_key_value_test.sh
-          bash test/run_native_registry_test.sh
-          SANITIZE=1 bash test/run_native_registry_test.sh
-          bash test/run_reader_image_cache_test.sh
-          SANITIZE=1 bash test/run_reader_image_cache_test.sh
-          bash test/run_runtime_file_image_test.sh
-          SANITIZE=1 bash test/run_runtime_file_image_test.sh
-          bash test/run_runtime_image_custody_test.sh
-          SANITIZE=1 bash test/run_runtime_image_custody_test.sh
-          bash test/run_image_cache_runtime_test.sh
-          SANITIZE=1 bash test/run_image_cache_runtime_test.sh
-          bash test/run_image_cache_pressure_test.sh
-          SANITIZE=1 bash test/run_image_cache_pressure_test.sh
-          RISC_APP_POLICY_ROWS=17 bash test/run_image_cache_pressure_test.sh
-          bash test/run_provider_queue_retained_fence_test.sh
-          SANITIZE=1 bash test/run_provider_queue_retained_fence_test.sh
-          bash test/run_app_stream_sessions_test.sh
-          SANITIZE=1 bash test/run_app_stream_sessions_test.sh
-          RISC_APP_POLICY_ROWS=17 bash test/run_app_stream_sessions_test.sh
-          bash test/run_provider_module_lease_v2_test.sh
-          SANITIZE=1 bash test/run_provider_module_lease_v2_test.sh
-          bash test/run_provider_realtime_test.sh
-          SANITIZE=1 bash test/run_provider_realtime_test.sh
-          bash test/run_realtime_test.sh
-          SANITIZE=1 bash test/run_realtime_test.sh
-          bash test/run_retained_wake_test.sh
-          SANITIZE=1 bash test/run_retained_wake_test.sh
-          RISC_APP_POLICY_ROWS=17 bash test/run_retained_wake_test.sh
-          RISC_APP_POLICY_ROWS=17 SANITIZE=1 bash test/run_retained_wake_test.sh
-          bash test/run_retained_app_test.sh
-          SANITIZE=1 bash test/run_retained_app_test.sh
-          bash test/run_watch_test.sh
-          SANITIZE=1 bash test/run_provider_graph_v2_test.sh
-          python -m unittest discover -s test -p 'test_*.py' -v
+      - name: Run independently timed host regression commands
+        run: python scripts/run_host_suite.py --shard "${{ matrix.shard }}" --output "build/host-timings-${{ matrix.shard }}.json"
+      - name: Report compiler cache results
+        if: always()
+        run: ccache --show-stats --verbose
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: host-timings-${{ matrix.shard }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: build/host-timings-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 14
+  host:
+    # Keep the original required-check name and fail on missing/cancelled shards.
+    name: Host integration and version guards
+    needs: host-tests
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every host shard
+        env:
+          HOST_RESULT: ${{ needs.host-tests.result }}
+        run: test "$HOST_RESULT" = success
   target:
     name: ESP32-S3 firmware, real ELFs and candidate bundle
     needs: host
@@ -291,6 +145,9 @@ jobs:
           python-version: '3.11'
           cache: pip
           cache-dependency-path: requirements-ci.txt
+      - uses: ./.github/actions/host-cache
+        with:
+          shard: target-host-tests
       - uses: actions/cache@v4
         with:
           path: |
@@ -467,3 +324,6 @@ jobs:
           path: dist/esp32s3-16mb-appdata-iq/
           if-no-files-found: error
           retention-days: 14
+      - name: Report target host-test compiler cache results
+        if: always()
+        run: ccache --show-stats --verbose
