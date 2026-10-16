@@ -54,6 +54,51 @@ Partial frames, queued replies and open transfers have a 30-second idle budget;
 RAM-only cancellation works even when a provider is temporarily unavailable.
 Neither scheduling nor these checks establish hardware timing/durability.
 
+## Native workspace placement
+
+Native profiles with `CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY` reserve the
+owner-task protocol workspace and private `ReopenedFiles` provider in external
+BSS. They require the SDK's `CONFIG_SPIRAM_BOOT_INIT` selection, already present
+in the shared native defaults and both selected watch profiles. No new PSRAM
+requirement applies to feature-off or non-external-BSS builds: their storage
+remains internal. There is no heap allocation or internal-heap fallback.
+
+Only raw, aligned bytes are reserved. The settled owner `prepare()` boundary
+explicitly constructs each object after SDK memory initialization, preserving
+nonzero constructor defaults. Admission/owner/dispatch gates, provider clients,
+and mount/resource custody stay internal. No workspace access occurs before
+construction; absent or rejected admission remains inert. Prepared inspection
+and checkpoint calls reject foreign-task/ISR access conservatively before
+reading the workspace. Selection stays
+one-shot on failure and after terminal retention, so live provider state cannot
+be reconstructed, released, or retried. These workspaces are ordinary task data,
+never ISR, DMA, atomic, panic, or cache-disabled callback state.
+
+The serial-enabled Waveshare verification initially placed `.dram0.bss` at
+`0x3fcaa138..0x3fcb0bc0`, overlapping the fixed IQ bank at `0x3fcb0000` by 3008
+bytes. Conditional external placement moves 2792 protocol bytes and 760 provider
+bytes into PSRAM; the verified successor link ends internal BSS at `0x3fcafdf0`
+(528 bytes before the bank). The IQ bank, its alias, application-bank geometry,
+shared ABI, PSRAM SDK policy, and fail-closed overlap proof are unchanged. This
+small static margin must continue to be checked on every exact native link;
+it is not a claim about dynamic free heap or hardware qualification.
+
+Regression commands (also run with `SANITIZE=1 ASAN_OPTIONS=detect_leaks=0`):
+
+```sh
+IDF_PATH=/path/to/pinned/esp-idf bash test/run_native_serial_files_transport_test.sh
+python3 test/run_native_serial_storage_test.py
+python3 test/compile_native_serial_files_target.py build/compile_commands.json build/serial-objects
+python3 test/prove_native_serial_workspace.py build/riscrte_native.elf \
+  --workspace endpoint --workspace provider --external 1
+```
+
+Host tests cover internal/external placement, poisoned pre-construction storage,
+rejected admission, copied metadata, real Console partial TX, private LittleFS
+custody/faults, and retained-state reentry. Native object and final-ELF checks
+verify placement independently of source attributes. The ordinary final native
+IQ proof still rejects any static/load-segment overlap with either bank alias.
+
 ## Owner commands
 
 Use an explicit POSIX serial character-device path. The transport uses 115200

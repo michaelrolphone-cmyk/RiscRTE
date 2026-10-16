@@ -31,7 +31,7 @@ s+='\noff_t __wrap_lseek(int fd,off_t at,int whence){return registered_vfs.lseek
 fixture=build/'fixture.c';fixture.write_text(s)
 sanitize=['-fsanitize=address,undefined','-fno-sanitize-recover=all','-fno-omit-frame-pointer','-fno-pie','-no-pie','-g'] if os.environ.get('SANITIZE')=='1' else []
 common=['-D_GNU_SOURCE','-DLFS_NO_DEBUG','-DLFS_NO_WARN','-DLFS_NO_ERROR','-pthread',*sanitize,'-include',str(stubs/'sdkconfig.h')]
-includes=['-I'+str(p) for p in (stubs,vendor,vendor/'littlefs',root,root/'src',root/'test',root/'sdk/app',root/'sdk/driver',root/'sdk/hardware')]
+includes=['-I'+str(p) for p in (root/'test/native_diagnostic_workspace_shim',stubs,vendor,vendor/'littlefs',root,root/'src',root/'test',root/'sdk/app',root/'sdk/driver',root/'sdk/hardware')]
 objects=[]
 for source in (vendor/'littlefs/lfs.c',vendor/'littlefs/lfs_util.c',vendor/'littlefs_esp_part.c',vendor/'esp_littlefs.c',fixture):
     obj=build/(source.name+'.o');profile.run(['cc','-std=c11',*common,*includes,'-c',str(source),'-o',str(obj)]);objects.append(str(obj))
@@ -44,9 +44,12 @@ for name in ('src/ports/esp32s3/NativeAppDataMount.cpp','src/runtime/storage/Reo
 wrapped=['stat','fstat','open','read','write','close','fsync','mkdir','unlink','rename','opendir','readdir','closedir','lseek','ftruncate',
          'esp_vfs_register','esp_vfs_unregister','esp_vfs_register_fs','esp_vfs_unregister_fs','esp_partition_read','esp_partition_write',
          'esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
-for sd in (0,1):
-    exe=build/('serial-'+str(sd));profile.run(['c++',*flags,'-DRISC_NATIVE_SERIAL_SD='+str(sd),str(root/'src/ports/esp32s3/NativeSerialStorage.cpp'),
+for external in (0,1):
+ for sd in (0,1):
+    exe=build/('serial-'+str(external)+'-'+str(sd));profile.run(['c++',*flags,'-DRISC_NATIVE_SERIAL_SD='+str(sd),
+      '-DCONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY='+str(external),'-DCONFIG_SPIRAM_BOOT_INIT='+str(external),
       str(root/'test/native_serial_storage_test.cpp'),*objects,'-Wl,'+','.join('--wrap='+f for f in wrapped),'-o',str(exe)])
-    for case in ('healthy','busy','capacity','first-full','first-busy','corrupt-root','directory-limit','close','sync','read','changed-size'):
+    profile.run(['python3',str(root/'test/prove_native_serial_workspace.py'),str(exe),'--workspace','provider','--external',str(external)])
+    for case in ('unsafe-prepare','healthy','busy','capacity','first-full','first-busy','corrupt-root','directory-limit','close','sync','read','changed-size'):
         profile.run([str(exe),case])
 print('Native serial private namespace: actual pinned LittleFS, both product selections PASS; hardware unqualified')
