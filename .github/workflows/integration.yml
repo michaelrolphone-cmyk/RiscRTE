@@ -177,7 +177,7 @@ jobs:
         with:
           name: native-target-fixtures-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
-            ${{ runner.temp }}/native-target-fixtures/build/elf/
-            ${{ runner.temp }}/native-target-fixtures/build/native-spiffs-config/
+            ${{ env.FIXTURE_ROOT }}/build/elf/
+            ${{ env.FIXTURE_ROOT }}/build/native-spiffs-config/
           if-no-files-found: error
           retention-days: 14

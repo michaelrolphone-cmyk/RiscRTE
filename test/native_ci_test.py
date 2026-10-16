@@ -27,6 +27,9 @@ class NativeCITests(unittest.TestCase):
         self.assertNotIn('needs: host', target)
         self.assertNotIn('continue-on-error', target)
         self.assertNotIn('--detach FETCH_HEAD --', target)
+        for artifact in ('elf', 'native-spiffs-config'):
+            self.assertIn('${{ env.FIXTURE_ROOT }}/build/' + artifact + '/', target)
+        self.assertNotIn('${{ runner.temp }}/native-target-fixtures/build/', target)
 
     def test_shared_target_cases_are_retained(self):
         script = (ROOT / 'test/run_native_target_fixtures.sh').read_text()
