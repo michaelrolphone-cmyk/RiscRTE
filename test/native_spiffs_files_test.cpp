@@ -5,6 +5,8 @@
 extern "C" {void fixture_mount();void fixture_unmount();extern int fixture_short_write,fixture_fstat_fail,fixture_close_fail,fixture_truncate_fail,fixture_disappear;}
 int main(){
  fixture_mount();RiscCpu::NativeSpiffsFiles provider("/bootfs");const auto&a=*provider.api();uint32_t h=0,n=0;uint64_t size=0,at=0;
+ assert(a.open(a.context,"/",RISC_FILES_WRITE|RISC_FILES_CREATE,&h)==RISC_FILES_DENIED&&!h);
+ assert(a.open(a.context,"/",RISC_FILES_READ,&h)==RISC_FILES_DENIED&&!h);
  assert(a.open(a.context,"/absent",RISC_FILES_WRITE|RISC_FILES_APPEND,&h)==RISC_FILES_NOT_FOUND&&!h);
  assert(a.open(a.context,"/absent",RISC_FILES_WRITE|RISC_FILES_TRUNCATE,&h)==RISC_FILES_NOT_FOUND&&!h);
  assert(!a.open(a.context,"/sample",RISC_FILES_READ|RISC_FILES_WRITE|RISC_FILES_CREATE,&h));
@@ -23,6 +25,11 @@ int main(){
  assert(!a.read(a.context,h,bytes,sizeof(bytes),&n)&&n==4&&!memcmp(bytes,"abcd",4));assert(!a.read(a.context,h,bytes,sizeof(bytes),&n)&&!n);assert(!a.close(a.context,h));
  fixture_truncate_fail=1;assert(a.open(a.context,"/sample",RISC_FILES_WRITE|RISC_FILES_TRUNCATE,&h)==RISC_FILES_IO&&!h);fixture_truncate_fail=0;
  risc_storage_files_stat_v1 st{sizeof(st)};assert(!a.stat(a.context,"/sample",&st)&&st.size==4);
+ #ifdef CONFIG_SPIFFS_USE_MTIME
+ assert((st.flags&RISC_FILES_MODIFIED_VALID)&&st.modified_seconds>0);
+#else
+ assert(!(st.flags&RISC_FILES_MODIFIED_VALID)&&st.modified_seconds==0);
+#endif
  fixture_fstat_fail=1;assert(a.open(a.context,"/sample",RISC_FILES_READ,&h)==RISC_FILES_IO&&!h);fixture_fstat_fail=0;
  assert(!a.open(a.context,"/sub/item",RISC_FILES_WRITE|RISC_FILES_CREATE,&h));assert(!a.close(a.context,h));
  assert(a.mkdir(a.context,"/sub")==RISC_FILES_UNAVAILABLE);assert(a.dir_open(a.context,"/missing",&h)==RISC_FILES_UNAVAILABLE&&!h);

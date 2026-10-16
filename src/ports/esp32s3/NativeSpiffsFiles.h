@@ -1,4 +1,7 @@
 #pragma once
+#ifdef ESP_PLATFORM
+#include <sdkconfig.h>
+#endif
 #include "runtime/storage/PosixFiles.h"
 namespace RiscCpu {
 // Optional adapter for the selected IDF SPIFFS VFS. IDF 6.1 does not preserve
@@ -12,11 +15,16 @@ namespace RiscCpu {
 // The root string and provider live until successful shutdown or real restart.
 class NativeSpiffsFiles final {
  public:
-  explicit NativeSpiffsFiles(const char* root):files_(root,RiscStorage::PosixFiles::OpenBehavior::SerializedFlatVfs){}
+  explicit NativeSpiffsFiles(const char* root):files_(root,RiscStorage::PosixFiles::OpenBehavior::SerializedFlatVfs,ModifiedTime){}
   const risc_storage_files_v1* api()const{return files_.api();}
   bool exitSafe()const{return files_.exitSafe();}
   bool retained()const{return files_.retained();}
  private:
+#ifdef CONFIG_SPIFFS_USE_MTIME
+  static constexpr bool ModifiedTime=true;
+#else
+  static constexpr bool ModifiedTime=false;
+#endif
   RiscStorage::PosixFiles files_;
 };
 }

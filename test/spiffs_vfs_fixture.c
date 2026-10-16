@@ -11,8 +11,12 @@
 #include <strings.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <time.h>
 #include "spiffs.h"
 #define ESP_OK 0
+#ifdef CONFIG_SPIFFS_USE_MTIME
+typedef time_t spiffs_time_t;
+#endif
 // Host DIR is opaque; its unused embedded IDF field is replaced by a byte.
 // Every callback treats the returned pointer solely as this private struct.
 typedef struct { char unused; spiffs_DIR d; struct dirent e; long offset;

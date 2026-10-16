@@ -90,6 +90,9 @@ file without creation only after EEXIST. TRUNCATE uses checked `ftruncate`;
 APPEND seeks to the current end before each serialized write. There is no
 remove/recreate recovery. `info` reports actual native position, including a
 position clamped by native truncate, rather than an assumed cached position.
+Modification time is valid only when the native SDK stores it; disabled timestamp
+support never advertises a synthetic epoch value. The namespace root cannot be
+opened or created as a regular file.
 Root directory enumeration returns flat relative object names, including slash
 characters already present in those names. It does not synthesize a hierarchy:
 non-root directory operations and mkdir are unavailable. No-replace rename is

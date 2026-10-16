@@ -2,9 +2,9 @@ name: Internal runtime storage source
 on:
   push:
     branches: [work/unified-default-capabilities]
-    paths: ['src/bootstrap/RuntimeFiles.h', 'src/bootstrap/StorageFilesVolumeAdapter.h', 'src/runtime/storage/FileValidation.h', 'src/runtime/storage/PosixFiles.h', 'src/ports/esp32s3/NativeSpiffsFiles.h', 'test/*spiffs*', 'test/runtime_files_source_test.cpp', 'test/posix_files_provider_test.cpp', 'test/run_runtime_files_source_test.sh', '.github/workflows/runtime-storage-source.yml']
+    paths: ['src/bootstrap/RuntimeFiles.h', 'src/bootstrap/StorageFilesVolumeAdapter.h', 'src/runtime/storage/FileValidation.h', 'src/runtime/storage/PosixFiles.h', 'src/ports/esp32s3/NativeSpiffsFiles.h', 'test/*spiffs*', 'test/compile_runtime_files_target.sh', 'test/runtime_files_target_probe.cpp', 'test/runtime_files_source_test.cpp', 'test/posix_files_provider_test.cpp', 'test/run_runtime_files_source_test.sh', '.github/workflows/runtime-storage-source.yml']
   pull_request:
-    paths: ['src/bootstrap/RuntimeFiles.h', 'src/bootstrap/StorageFilesVolumeAdapter.h', 'src/runtime/storage/FileValidation.h', 'src/runtime/storage/PosixFiles.h', 'src/ports/esp32s3/NativeSpiffsFiles.h', 'test/*spiffs*', 'test/runtime_files_source_test.cpp', 'test/posix_files_provider_test.cpp', 'test/run_runtime_files_source_test.sh', '.github/workflows/runtime-storage-source.yml']
+    paths: ['src/bootstrap/RuntimeFiles.h', 'src/bootstrap/StorageFilesVolumeAdapter.h', 'src/runtime/storage/FileValidation.h', 'src/runtime/storage/PosixFiles.h', 'src/ports/esp32s3/NativeSpiffsFiles.h', 'test/*spiffs*', 'test/compile_runtime_files_target.sh', 'test/runtime_files_target_probe.cpp', 'test/runtime_files_source_test.cpp', 'test/posix_files_provider_test.cpp', 'test/run_runtime_files_source_test.sh', '.github/workflows/runtime-storage-source.yml']
   workflow_dispatch:
 jobs:
   source:
@@ -37,3 +37,4 @@ jobs:
           sparse-checkout: components/spiffs
       - run: git -C .sdk/idf submodule update --init --depth 1 components/spiffs/spiffs
       - run: bash test/run_native_spiffs_files_test.sh .sdk/idf
+      - run: MTIME=1 bash test/run_native_spiffs_files_test.sh .sdk/idf

@@ -33,7 +33,7 @@ class PosixFiles final {
   enum class OpenBehavior { Posix, SerializedFlatVfs };
   // root is immutable, borrowed provider configuration. The caller keeps it
   // and this provider alive through every open handle and retained failure.
-  explicit PosixFiles(const char* root,OpenBehavior behavior=OpenBehavior::Posix):root_(root),behavior_(behavior){
+  explicit PosixFiles(const char* root,OpenBehavior behavior=OpenBehavior::Posix,bool modifiedTime=true):root_(root),behavior_(behavior),modifiedTime_(modifiedTime){
     api_={1,sizeof(api_),this,
       [](void*c,const char*p,uint32_t f,uint32_t*h){return self(c).open(p,f,h);},
       [](void*c,uint32_t h){return self(c).close(h);},
@@ -59,7 +59,7 @@ class PosixFiles final {
   bool exitSafe()const{if(retained_)return false;for(const auto& h:handles_)if(h.token)return false;return true;}
  private:
   struct Handle{uint32_t token=0,flags=0;int fd=-1;DIR* dir=nullptr;char* path=nullptr;};
-  const char*root_;OpenBehavior behavior_;risc_storage_files_v1 api_{};Handle handles_[Capacity]{};uint32_t next_=0;bool retained_=false;
+  const char*root_;OpenBehavior behavior_;risc_storage_files_v1 api_{};Handle handles_[Capacity]{};uint32_t next_=0;bool retained_=false,modifiedTime_=true;
   static PosixFiles& self(void*c){return *static_cast<PosixFiles*>(c);}
   static int32_t error(){return errno==ENOENT?RISC_FILES_NOT_FOUND:errno==EEXIST?RISC_FILES_EXISTS:errno==EACCES||errno==EPERM?RISC_FILES_DENIED:errno==ENOTSUP||errno==ENOSYS?RISC_FILES_UNAVAILABLE:RISC_FILES_IO;}
   int32_t retain(){retained_=true;return RISC_FILES_RETAINED;}
@@ -90,6 +90,7 @@ class PosixFiles final {
   int32_t open(const char*p,uint32_t flags,uint32_t*out){
     if(out)*out=0;
     char full[512];if(!out||!path(p,full)||!validFlags(flags))return RISC_FILES_INVALID;
+    if(!strcmp(p,"/"))return RISC_FILES_DENIED;
     if(retained_)return RISC_FILES_RETAINED;
     auto*h=vacant();if(!h)return RISC_FILES_BUSY;
     if(!noLinks(full,flags&RISC_FILES_CREATE))return error();
@@ -160,7 +161,7 @@ class PosixFiles final {
       uint32_t token=0;int32_t rc=dirOpen(p,&token);if(rc)return rc;rc=dirClose(token);if(rc)return rc;
       *out={sizeof(*out),RISC_FILES_DIRECTORY,0,0};return RISC_FILES_OK;
     }
-    struct ::stat s{};if(!noLinks(full)||::stat(full,&s))return error();if(!S_ISREG(s.st_mode)&&!S_ISDIR(s.st_mode))return RISC_FILES_DENIED;if(s.st_size<0||s.st_mtime<0)return RISC_FILES_IO;*out={sizeof(*out),uint32_t((S_ISDIR(s.st_mode)?RISC_FILES_DIRECTORY:0)|RISC_FILES_MODIFIED_VALID),uint64_t(s.st_size),uint64_t(s.st_mtime)};return RISC_FILES_OK;}
+    struct ::stat s{};if(!noLinks(full)||::stat(full,&s))return error();if(!S_ISREG(s.st_mode)&&!S_ISDIR(s.st_mode))return RISC_FILES_DENIED;if(s.st_size<0||(modifiedTime_&&s.st_mtime<0))return RISC_FILES_IO;*out={sizeof(*out),uint32_t((S_ISDIR(s.st_mode)?RISC_FILES_DIRECTORY:0)|(modifiedTime_?RISC_FILES_MODIFIED_VALID:0)),uint64_t(s.st_size),modifiedTime_?uint64_t(s.st_mtime):0};return RISC_FILES_OK;}
   int32_t mkdir(const char*p){if(retained_)return RISC_FILES_RETAINED;char full[512];if(!path(p,full))return RISC_FILES_INVALID;if(behavior_==OpenBehavior::SerializedFlatVfs)return RISC_FILES_UNAVAILABLE;if(!noLinks(full,true))return error();return ::mkdir(full,0700)?error():int32_t(RISC_FILES_OK);}
   int32_t rename(const char*a,const char*b){
     if(retained_)return RISC_FILES_RETAINED;

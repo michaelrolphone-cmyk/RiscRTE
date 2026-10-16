@@ -14,7 +14,11 @@ cat > "$build/sdkconfig.h" <<'CONFIG'
 #define CONFIG_SPIFFS_USE_MAGIC 1
 #define CONFIG_SPIFFS_USE_MAGIC_LENGTH 1
 CONFIG
-printf '#pragma once\n' > "$build/esp_log.h"
+if [[ "${MTIME:-0}" == 1 ]];then
+ sed -i 's/CONFIG_SPIFFS_META_LENGTH 0/CONFIG_SPIFFS_META_LENGTH 8/' "$build/sdkconfig.h"
+ printf '#define CONFIG_SPIFFS_USE_MTIME 1\n#define CONFIG_SPIFFS_MTIME_WIDE_64_BITS 1\n' >> "$build/sdkconfig.h"
+fi
+printf '#pragma once\n#define ESP_LOGW(...) ((void)0)\n' > "$build/esp_log.h"
 printf '#pragma once\n#define ESP_STATIC_ASSERT _Static_assert\n' > "$build/esp_assert.h"
 flags=(-g -fno-omit-frame-pointer)
 if [[ "${SANITIZE:-0}" == 1 ]];then flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all);fi
@@ -33,5 +37,5 @@ for source in "$spiffs"/spiffs_{cache,check,gc,hydrogen,nucleus}.c "$repo/test/s
 done
 wraps=()
 for name in open close read write lseek fstat stat fsync ftruncate remove mkdir opendir readdir closedir rewinddir telldir seekdir;do wraps+=(-Wl,--wrap="$name");done
-c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -DESP_PLATFORM -DRISC_POSIX_FILES_NOREPLACE=0 "${flags[@]}" -I"$repo/src" -I"$repo/sdk/app" "$repo/test/native_spiffs_files_test.cpp" "${objects[@]}" "${wraps[@]}" -no-pie -o "$build/test"
+c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -DESP_PLATFORM -DRISC_POSIX_FILES_NOREPLACE=0 "${flags[@]}" -I"$build" -I"$repo/src" -I"$repo/sdk/app" "$repo/test/native_spiffs_files_test.cpp" "${objects[@]}" "${wraps[@]}" -no-pie -o "$build/test"
 "$build/test"
