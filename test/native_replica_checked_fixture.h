@@ -61,11 +61,22 @@ extern "C" void nvs_close(nvs_handle_t h){++nvsTotal;assert(handles.erase(h)==1)
 extern "C" ssize_t __real_write(int,const void*,size_t);
 extern "C" ssize_t __wrap_write(int fd,const void*p,size_t n){++fsTotal;safe();if(ioHit("write")){errno=ENOSPC;return -1;}if(ioHit("partial"))return __real_write(fd,p,n/2);power("write-before");if(powerCheckpoint&&n>1){const ssize_t first=__real_write(fd,p,n/2);if(first!=ssize_t(n/2))return first;power("write-prefix");const ssize_t last=__real_write(fd,static_cast<const uint8_t*>(p)+n/2,n-n/2);if(last<0)return last;power("write-after");return first+last;}const auto rc=__real_write(fd,p,n);power("write-after");return rc;}
 extern "C" ssize_t __real_read(int,void*,size_t);
-extern "C" ssize_t __wrap_read(int fd,void*p,size_t n){++fsTotal;safe();if(ioHit("read")){errno=EIO;return -1;}return __real_read(fd,p,n);}
+#ifdef NATIVE_FIXTURE_EXTERNAL_SOURCE
+bool externalSourceDescriptor(int);
+#endif
+extern "C" ssize_t __wrap_read(int fd,void*p,size_t n){
+#ifdef NATIVE_FIXTURE_EXTERNAL_SOURCE
+ if(externalSourceDescriptor(fd))return __real_read(fd,p,n);
+#endif
+ ++fsTotal;safe();if(ioHit("read")){errno=EIO;return -1;}return __real_read(fd,p,n);}
 extern "C" int __real_fsync(int);
 extern "C" int __wrap_fsync(int fd){++fsTotal;safe();if(ioHit("sync")){errno=EIO;return -1;}power("sync-before");const auto rc=__real_fsync(fd);power("sync-after");return rc;}
 extern "C" int __real_close(int);
-extern "C" int __wrap_close(int fd){++fsTotal;power("close-before");int rc=__real_close(fd);power("close-after");if(ioHit("close")){errno=EIO;return -1;}return rc;}
+extern "C" int __wrap_close(int fd){
+#ifdef NATIVE_FIXTURE_EXTERNAL_SOURCE
+ if(externalSourceDescriptor(fd))return __real_close(fd);
+#endif
+ ++fsTotal;power("close-before");int rc=__real_close(fd);power("close-after");if(ioHit("close")){errno=EIO;return -1;}return rc;}
 extern "C" int __real_rename(const char*,const char*);
 extern "C" int __wrap_rename(const char*a,const char*b){++fsTotal;safe();if(ioHit("rename-before")){errno=EIO;return -1;}power("rename-before");int rc=__real_rename(a,b);power("rename-after");if(ioHit("rename-after")){errno=EIO;return -1;}return rc;}
 

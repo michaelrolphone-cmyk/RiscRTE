@@ -40,7 +40,7 @@ static bool admit(void*,const char*p,bool driver){assert(!driver&&std::filesyste
 static void same(const R&from,const R&to){
  assert(from.atomicBindingCount_==8&&to.atomicBindingCount_==8);
  for(unsigned i=0;i<8;++i){const auto&a=from.atomicBindings_[i];const auto&b=to.atomicBindings_[i];
-  assert(!strcmp(a.app,b.app)&&a.nameSpace==b.nameSpace&&a.endpoint==b.endpoint&&a.availability.context==b.availability.context&&a.availability.snapshot==b.availability.snapshot);
+  assert(!strcmp(a.app,b.app)&&a.nameSpace==b.nameSpace&&a.endpoint.same(b.endpoint)&&a.availability.context==b.availability.context&&a.availability.snapshot==b.availability.snapshot);
  }
  for(const auto&g:to.mainInvocation_.appGrants_)assert(!g.live);
  assert(!to.foreground_&&!to.mainInvocation_.active_);

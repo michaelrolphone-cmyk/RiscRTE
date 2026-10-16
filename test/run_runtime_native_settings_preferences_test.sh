@@ -2,7 +2,12 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 system="$(cd "${SYSTEM_ROOT:?Set SYSTEM_ROOT to the pinned System source checkout}" && pwd)"
-source_commit=5636756db893d682ad42a595625b226f40bbba4d
+# Historical default stays pinned. A new qualification may explicitly select a
+# different full source commit; every compiler-selected dependency is still
+# compared byte-for-byte with that commit below.
+source_commit="${SYSTEM_SOURCE_COMMIT:-5636756db893d682ad42a595625b226f40bbba4d}"
+[[ "$source_commit" =~ ^[0-9a-f]{40}$ ]] || { echo "SYSTEM_SOURCE_COMMIT must be an exact commit" >&2; exit 1; }
+git -C "$system" cat-file -e "$source_commit^{commit}"
 cmp "$root/sdk/app/RiscKeyValueAtomicV1.h" "$system/lib/PortableApps/include/RiscKeyValueAtomicV1.h"
 build="$(mktemp -d)";trap 'rm -rf "$build"' EXIT
 out="${EVIDENCE_DIR:-$build/evidence}";mkdir -p "$out"
