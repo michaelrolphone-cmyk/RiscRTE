@@ -1,0 +1,108 @@
+{
+  "version": "1.0.0",
+  "fixture_only": true,
+  "algorithm": "byte[i] = (i * 73 + seed) modulo 256",
+  "namespace_binding": null,
+  "settings_sentinel": "Select a persistent non-default native setting and observe it through its independent owner. A serial file is not a settings sentinel.",
+  "files": [
+    {
+      "id": "empty",
+      "role": "payload",
+      "source": "empty.bin",
+      "bytes": 0,
+      "seed": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "crc32": "00000000"
+    },
+    {
+      "id": "one",
+      "role": "payload",
+      "source": "one.bin",
+      "bytes": 1,
+      "seed": 0,
+      "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "crc32": "d202ef8d"
+    },
+    {
+      "id": "boundary47",
+      "role": "payload",
+      "source": "boundary47.bin",
+      "bytes": 47,
+      "seed": 0,
+      "sha256": "851780bf8668b60db299df54cbd299f20674343e0c2a141e004dee8c30d9f491",
+      "crc32": "c09efe95"
+    },
+    {
+      "id": "boundary48",
+      "role": "payload",
+      "source": "boundary48.bin",
+      "bytes": 48,
+      "seed": 0,
+      "sha256": "a19d9234c7cfcf8e8c068dd119f7f60163bba9746786bcef07fc687f1723c349",
+      "crc32": "8171e243"
+    },
+    {
+      "id": "boundary49",
+      "role": "payload",
+      "source": "boundary49.bin",
+      "bytes": 49,
+      "seed": 0,
+      "sha256": "e602409858783c4ed97e9372dd8d7d66f3b9cd0cdeae0a8cf12f8c08e0d499f4",
+      "crc32": "f6373dc9"
+    },
+    {
+      "id": "binary257",
+      "role": "payload",
+      "source": "binary257.bin",
+      "bytes": 257,
+      "seed": 0,
+      "sha256": "a59303fa184887167e243282d9f6590d1ca33e40dc1f21451e02b404c5fc43c7",
+      "crc32": "a53e0f49"
+    },
+    {
+      "id": "multichunk4097",
+      "role": "payload",
+      "source": "multichunk4097.bin",
+      "bytes": 4097,
+      "seed": 17,
+      "sha256": "6d6128f838c8624a8b39eb0c524b61a6ee1abe5a7bdd48067aaf0c2c7276099b",
+      "crc32": "04ad6642"
+    },
+    {
+      "id": "sibling",
+      "role": "sentinel",
+      "source": "sibling.bin",
+      "bytes": 113,
+      "seed": 31,
+      "sha256": "0f5836ef51b7a94af1509a61a8f5f8b89e00dd15492b7042024891e4fcb815a5",
+      "crc32": "d88153a4"
+    },
+    {
+      "id": "directory-sibling",
+      "role": "sentinel",
+      "source": "directory-sibling.bin",
+      "bytes": 97,
+      "seed": 63,
+      "sha256": "6c86a8496eab2ad18c51448800ff92afc55cb7979c74d76d6d1d578ec91ac490",
+      "crc32": "15987a9b"
+    },
+    {
+      "id": "user-file",
+      "role": "sentinel",
+      "source": "user-file.bin",
+      "bytes": 193,
+      "seed": 127,
+      "sha256": "f8b0e4b74ac3d60c5170ff96c503b648650c44cdf82a0a9809626c23a37ba763",
+      "crc32": "dc2d2773"
+    },
+    {
+      "id": "other-namespace",
+      "role": "sentinel",
+      "source": "other-namespace.bin",
+      "bytes": 71,
+      "seed": 191,
+      "sha256": "c5195808ec12add2721d3121a4336938df133dfb81e338c42fe191ade94edc1c",
+      "crc32": "89558654"
+    }
+  ]
+}

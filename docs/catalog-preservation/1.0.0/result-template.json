@@ -1,0 +1,1865 @@
+{
+  "run_id": null,
+  "started_at": null,
+  "finished_at": null,
+  "operator": null,
+  "product": null,
+  "hardware_revision": null,
+  "device_identifier": null,
+  "host_os_browser": null,
+  "client_source_commit": null,
+  "firmware_before": null,
+  "firmware_after": null,
+  "release_id": null,
+  "catalog_revision": null,
+  "manifest_sha256": null,
+  "container_sha256": null,
+  "payload_inventory_sha256": null,
+  "flash_method": null,
+  "flash_order": null,
+  "erase_disclosure": null,
+  "version": "1.0.0",
+  "evidence_class": null,
+  "trusted_mapping_evidence": [],
+  "admitted_namespaces_before": [],
+  "admitted_namespaces_after": [],
+  "flash_artifact_hashes": [],
+  "provider_bounds": {},
+  "sentinel_definitions": [],
+  "snapshots": [],
+  "cases": [
+    {
+      "id": "file-empty",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "file-one",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "file-boundary47",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "file-boundary48",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "file-boundary49",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "file-binary257",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "file-multichunk4097",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "path-nested",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "path-flat",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "path-exact",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "utf8-boundary",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "root",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "dot",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "empty-component",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "backslash",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "control",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "trailing-slash",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "over-bound",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "create-existing",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "replace-shorter",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "replace-empty",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "replace-missing",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "read-missing",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "parent-file",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "namespace-readonly",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "installer-preflight",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "service-create",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "service-replace",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "read",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "namespace-unavailable",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "namespace-unknown",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "namespace-ambiguous",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "missing-binding",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "conflicting-binding",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "duplicate-discovery-id",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "misleading-label",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "no-space-open",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "create",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "replace",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "no-space-write",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "io-short-write",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "io-short-read",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "io-zero-progress",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "read",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "write",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "io-invalid-count",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "integrity-crc",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "commit",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "close",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "integrity-sha",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "source-changed",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "early-eof",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "extra-byte",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "mutated-source",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "busy-checkpoint",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "release-before-deadline",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "deadline-expired",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "retained-custody",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "retained-status",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "uncertain-io",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "failed-close",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "safety-loss",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "wire-session",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "wire-sequence",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "wrong-sequence",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "minus10",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "wire-offset",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "wire-malformed",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "malformed-reply",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "unknown-status",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "oversized-diagnostics",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "wire-replay",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "exact-duplicate",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "changed-duplicate",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "timeout",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "path",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "get",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "write",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "read",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "close",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "disconnect",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "read",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "mid-write",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "after-sync-close",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "lost-put-ack",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "lost-commit-ack",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "sync-close-failure",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "sync",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "close",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "abort-no-rollback",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "partial-create",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "partial-replace",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "restart-persistence",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "whole-payload-failure",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "last-file-fails",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "omitted-file",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "duplicate-file",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "tampered-inventory",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "flash-effects",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "default",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    },
+    {
+      "id": "paired-final-usability",
+      "status": "not_run",
+      "environment": null,
+      "evidence": [],
+      "fixture": null,
+      "injection_point": null,
+      "observed_status": null,
+      "last_acknowledged_offset": null,
+      "selected_file_state": "unverified",
+      "custody_state": "unverified",
+      "session_usable": null,
+      "cleanup_sent": null,
+      "automatic_retry": null,
+      "success_displayed": null,
+      "recovery_decision": null,
+      "recovery_run_id": null,
+      "not_applicable_reason": null,
+      "substitute_coverage": null,
+      "serial_snapshots": {
+        "before": null,
+        "after": null
+      },
+      "variants": [
+        {
+          "id": "supported-order",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "invalid-transfer-first",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        },
+        {
+          "id": "readonly-final",
+          "status": "not_run",
+          "environment": null,
+          "evidence": [],
+          "observation": null
+        }
+      ]
+    }
+  ],
+  "flash_effects": {
+    "declared": [],
+    "observed": [],
+    "comparison": "unverified",
+    "evidence": [],
+    "environment": null,
+    "before_snapshot": null,
+    "after_snapshot": null
+  },
+  "file_results": [],
+  "serial_preservation": {
+    "changed_unrelated": null,
+    "status": "unverified",
+    "evidence": []
+  },
+  "restart_persistence": {
+    "status": "unverified",
+    "environment": null,
+    "evidence": [],
+    "before_snapshot": null,
+    "after_snapshot": null
+  },
+  "target_consumer_usability": {
+    "status": "unverified",
+    "environment": null,
+    "evidence": []
+  },
+  "final_payload": {
+    "expected_files": null,
+    "verified_files": 0,
+    "expected_bytes": null,
+    "verified_bytes": 0,
+    "status": "unverified",
+    "environment": null
+  },
+  "source_status": "unverified",
+  "software_tests_status": "not_run",
+  "publication_status": "unverified",
+  "hardware_status": "not_tested",
+  "qualification_status": "unverified",
+  "failures": [],
+  "limitations": []
+}

@@ -1,0 +1,556 @@
+{
+  "version": "1.0.0",
+  "preparation_only": true,
+  "common_requirements": [
+    "Capture independent sentinels around each serial interval, including failures.",
+    "Preserve original failed/unverified attempts; append recovery records.",
+    "Scope hardware and software evidence separately."
+  ],
+  "cases": [
+    {
+      "id": "file-empty",
+      "title": "Create/readback empty",
+      "stimulus": "PUT create at fresh disposable path; WRITE immutable inventory bytes; COMMIT; GET/READ/CLOSE.",
+      "expected": "Exact count/CRC32/SHA-256; empty uses PUT/COMMIT and GET/CLOSE without data commands; no text conversion.",
+      "evidence": "Wire transcript, complete readback, before/after independent sentinels.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "file-one",
+      "title": "Create/readback one",
+      "stimulus": "PUT create at fresh disposable path; WRITE immutable inventory bytes; COMMIT; GET/READ/CLOSE.",
+      "expected": "Exact count/CRC32/SHA-256; empty uses PUT/COMMIT and GET/CLOSE without data commands; no text conversion.",
+      "evidence": "Wire transcript, complete readback, before/after independent sentinels.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "file-boundary47",
+      "title": "Create/readback boundary47",
+      "stimulus": "PUT create at fresh disposable path; WRITE immutable inventory bytes; COMMIT; GET/READ/CLOSE.",
+      "expected": "Exact count/CRC32/SHA-256; empty uses PUT/COMMIT and GET/CLOSE without data commands; no text conversion.",
+      "evidence": "Wire transcript, complete readback, before/after independent sentinels.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "file-boundary48",
+      "title": "Create/readback boundary48",
+      "stimulus": "PUT create at fresh disposable path; WRITE immutable inventory bytes; COMMIT; GET/READ/CLOSE.",
+      "expected": "Exact count/CRC32/SHA-256; empty uses PUT/COMMIT and GET/CLOSE without data commands; no text conversion.",
+      "evidence": "Wire transcript, complete readback, before/after independent sentinels.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "file-boundary49",
+      "title": "Create/readback boundary49",
+      "stimulus": "PUT create at fresh disposable path; WRITE immutable inventory bytes; COMMIT; GET/READ/CLOSE.",
+      "expected": "Exact count/CRC32/SHA-256; empty uses PUT/COMMIT and GET/CLOSE without data commands; no text conversion.",
+      "evidence": "Wire transcript, complete readback, before/after independent sentinels.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "file-binary257",
+      "title": "Create/readback binary257",
+      "stimulus": "PUT create at fresh disposable path; WRITE immutable inventory bytes; COMMIT; GET/READ/CLOSE.",
+      "expected": "Exact count/CRC32/SHA-256; empty uses PUT/COMMIT and GET/CLOSE without data commands; no text conversion.",
+      "evidence": "Wire transcript, complete readback, before/after independent sentinels.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "file-multichunk4097",
+      "title": "Create/readback multichunk4097",
+      "stimulus": "PUT create at fresh disposable path; WRITE immutable inventory bytes; COMMIT; GET/READ/CLOSE.",
+      "expected": "Exact count/CRC32/SHA-256; empty uses PUT/COMMIT and GET/CLOSE without data commands; no text conversion.",
+      "evidence": "Wire transcript, complete readback, before/after independent sentinels.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "path-nested",
+      "title": "Nested parents",
+      "stimulus": "Ensure declared parents ancestor-first then create /qualification/sub/leaf.bin.",
+      "expected": "Only authoritative NOT_FOUND permits MKDIR; existing directories preserved; no recursive replacement.",
+      "evidence": "Capability evidence, parent/leaf trace and neighboring inventory.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "hierarchical provider"
+    },
+    {
+      "id": "path-flat",
+      "title": "Flat provider",
+      "stimulus": "Root-only inventory without parents; separately request unsupported MKDIR.",
+      "expected": "Root files work; unsupported directory operation is not absence.",
+      "evidence": "Profile and exact transcript.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "flat provider"
+    },
+    {
+      "id": "path-exact",
+      "title": "Exact paths/bounds",
+      "stimulus": "Supported space/non-ASCII path with UTF-8 crossing PATH chunk; invalid/over-bound paths.",
+      "expected": "Preserve exact UTF-8; reject invalid or provider-over-bound paths without normalization/fallback.",
+      "evidence": "Path byte hex, provider limits, mutation trace.",
+      "variants": [
+        "utf8-boundary",
+        "root",
+        "dot",
+        "empty-component",
+        "backslash",
+        "control",
+        "trailing-slash",
+        "over-bound"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "create-existing",
+      "title": "Exclusive create conflict",
+      "stimulus": "Preseed known 257-byte target then PUT create.",
+      "expected": "EXISTS/failure; target unchanged; never switch to replace.",
+      "evidence": "Pre/post target and sentinels; exact mode/status.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "replace-shorter",
+      "title": "Shorter replacement",
+      "stimulus": "Preseed 4097-byte target then replace with boundary49.",
+      "expected": "Truncates at PUT; exact 49 bytes after completion, no old suffix; siblings unchanged.",
+      "evidence": "PUT and full readback, snapshots.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "replace-empty",
+      "title": "Empty replacement",
+      "stimulus": "Preseed 4097-byte target then replace with empty.",
+      "expected": "Exact zero-length file after PUT/COMMIT and GET/CLOSE.",
+      "evidence": "Transcript and independent snapshots.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "replace-missing",
+      "title": "Missing replace",
+      "stimulus": "Confirm absent target then PUT replace.",
+      "expected": "NOT_FOUND/failure; no automatic create.",
+      "evidence": "STAT/PUT and final absence.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "read-missing",
+      "title": "Missing read",
+      "stimulus": "GET absent selected path.",
+      "expected": "NOT_FOUND/failure; no verified-success host artifact.",
+      "evidence": "Host destination state and wire status.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "parent-file",
+      "title": "Parent conflict",
+      "stimulus": "Preseed a declared parent as file; preflight payload.",
+      "expected": "Reject before child mutation; preserve parent.",
+      "evidence": "Preflight trace and parent hash.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "namespace-readonly",
+      "title": "Read-only destination",
+      "stimulus": "Exercise installer preflight and direct low-level writes to read-only namespace.",
+      "expected": "Installer rejects before PUT; service rejects writes; supported reads still work.",
+      "evidence": "Admission flags, status and snapshots.",
+      "variants": [
+        "installer-preflight",
+        "service-create",
+        "service-replace",
+        "read"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "namespace-unavailable",
+      "title": "Unavailable admitted provider",
+      "stimulus": "Enumerate admitted namespace while its provider is unavailable.",
+      "expected": "UNAVAILABLE is not NOT_FOUND; no fallback/mkdir/retry mutation.",
+      "evidence": "Map, selected ID, status, snapshots.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "namespace-unknown",
+      "title": "Unknown namespace",
+      "stimulus": "Use unadmitted positive ID in direct harness.",
+      "expected": "NOT_FOUND for unknown ID; installer rejects trusted-profile mismatch before mutation.",
+      "evidence": "Actual map, binding, trace.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "namespace-ambiguous",
+      "title": "Ambiguous mapping",
+      "stimulus": "Conflicting/missing mappings, duplicate discovered IDs and misleading backend labels.",
+      "expected": "Fail before mutation; labels/mount roots/provider instances never route data.",
+      "evidence": "Validation errors and zero-mutation trace.",
+      "variants": [
+        "missing-binding",
+        "conflicting-binding",
+        "duplicate-discovery-id",
+        "misleading-label"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "no-space-open",
+      "title": "Capacity at PUT",
+      "stimulus": "Inject known-custody NO_SPACE at PUT create/replace.",
+      "expected": "Fail and observe actual selected-file state; no format/delete/mode change. Do not presume failed replace preserved old bytes.",
+      "evidence": "Hook, status, target/sentinel snapshots.",
+      "variants": [
+        "create",
+        "replace"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "no-space-write",
+      "title": "Capacity mid-write",
+      "stimulus": "NO_SPACE after acknowledged prefix.",
+      "expected": "Incomplete target retained; best-effort known-handle ABORT only for definite custody; no rollback.",
+      "evidence": "Counts, custody, ABORT outcome, readback when safe.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "io-short-write",
+      "title": "Legal short WRITE",
+      "stimulus": "Accept positive partial counts using 1,17,3,48 schedule.",
+      "expected": "Continue unconsumed suffix at acknowledged offset; exact bytes/CRC/hash.",
+      "evidence": "Requested/actual counts, progress and readback.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "io-short-read",
+      "title": "Legal short READ/local write",
+      "stimulus": "Short positive reads and host-sink writes until GET size consumed.",
+      "expected": "Continue by actual counts; no truncation/duplication/overcount.",
+      "evidence": "Wire and sink counts; full hash.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "io-zero-progress",
+      "title": "Zero progress",
+      "stimulus": "Zero READ before EOF or WRITE before complete.",
+      "expected": "Fail without spinning or success; preserve failed artifact.",
+      "evidence": "Bounded call count, custody, cleanup decision.",
+      "variants": [
+        "read",
+        "write"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "io-invalid-count",
+      "title": "Impossible provider count",
+      "stimulus": "Count beyond request or impossible cursor/size.",
+      "expected": "Fence uncertain custody; no further provider I/O/session reuse/success.",
+      "evidence": "Hook, subsequent call count, retained dependencies.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "integrity-crc",
+      "title": "CRC mismatch",
+      "stimulus": "Wrong COMMIT CRC or corrupted CLOSE CRC.",
+      "expected": "Integrity failure, no verified success or rollback inference.",
+      "evidence": "Expected/observed CRC, receipt, file state.",
+      "variants": [
+        "commit",
+        "close"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "integrity-sha",
+      "title": "SHA mismatch",
+      "stimulus": "Same-length content with valid wire CRC but wrong manifest SHA.",
+      "expected": "Payload fails full readback; CRC alone never qualifies it.",
+      "evidence": "Manifest, complete readback, final receipt/UI.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "source-changed",
+      "title": "Changing source",
+      "stimulus": "Inject early EOF, extra byte or changed content after source validation.",
+      "expected": "Fail, retain known effects, never silently install different payload.",
+      "evidence": "Source identities, detection stage, prefix.",
+      "variants": [
+        "early-eof",
+        "extra-byte",
+        "mutated-source"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "busy-checkpoint",
+      "title": "Busy checkpoint",
+      "stimulus": "Hold owner unsafe before dispatch; release before or after deadline.",
+      "expected": "No I/O while unsafe; safe release can progress; expiry makes client unusable and sends no cleanup/retry.",
+      "evidence": "Checkpoint states, provider calls, monotonic times.",
+      "variants": [
+        "release-before-deadline",
+        "deadline-expired"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "retained-custody",
+      "title": "Retained custody",
+      "stimulus": "Inject -6, uncertain provider I/O, failed close or safety loss during admitted operation.",
+      "expected": "Fence I/O; retain dependencies until real restart. Client unusable on -6; time/host close prove no recovery.",
+      "evidence": "Hook, lifetime evidence, subsequent trace and restart.",
+      "variants": [
+        "retained-status",
+        "uncertain-io",
+        "failed-close",
+        "safety-loss"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "wire-session",
+      "title": "Wrong response session",
+      "stimulus": "Return plausible reply with wrong session.",
+      "expected": "Client unusable; no cleanup/retry/reconnect/reset/success.",
+      "evidence": "Exact reply and all later output.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "wire-sequence",
+      "title": "Wrong sequence/-10",
+      "stimulus": "Wrong reply sequence or -10.",
+      "expected": "Session unusable; no cleanup/retry/reconnect/reset.",
+      "evidence": "Exact reply and output silence.",
+      "variants": [
+        "wrong-sequence",
+        "minus10"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "wire-offset",
+      "title": "Wrong offset",
+      "stimulus": "Backwards/skipped/oversized acknowledged offset.",
+      "expected": "Uncertain result; stop with no cleanup/retry; do not over-credit progress.",
+      "evidence": "Wire and progress events.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "wire-malformed",
+      "title": "Malformed/unknown/diagnostics",
+      "stimulus": "Malformed RTEF1, unknown nonzero status or oversized continuing diagnostics.",
+      "expected": "Malformed response is uncertain; definite nonzero is failure; diagnostics bounded and never extend deadline.",
+      "evidence": "Bytes, deadline/memory measurement, classification.",
+      "variants": [
+        "malformed-reply",
+        "unknown-status",
+        "oversized-diagnostics"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "wire-replay",
+      "title": "Bounded server replay",
+      "stimulus": "Direct harness repeats latest exact request then changes same-sequence content.",
+      "expected": "Exact duplicate replays without repeated I/O; changed content fails; no automatic client-retry authorization implied.",
+      "evidence": "Exact request/response and provider call counters.",
+      "variants": [
+        "exact-duplicate",
+        "changed-duplicate"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "timeout",
+      "title": "Timeout",
+      "stimulus": "Suppress reply at each listed stage with continuing diagnostics.",
+      "expected": "Finite deadline; unusable session; no cleanup/retry/reconnect/reset; retain unverified target.",
+      "evidence": "Timing, wire output and receipt.",
+      "variants": [
+        "path",
+        "get",
+        "write",
+        "read",
+        "close"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "disconnect",
+      "title": "Disconnect",
+      "stimulus": "Drop transport during read, write or after sync/close.",
+      "expected": "Stop; preserve partial/unverified file and prior receipts; disconnect is not rollback/cleanup.",
+      "evidence": "Host/device trace and explicit recovery record.",
+      "variants": [
+        "read",
+        "mid-write",
+        "after-sync-close"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "lost-put-ack",
+      "title": "Lost PUT ACK",
+      "stimulus": "Execute PUT replace on longer target and suppress ACK before WRITE.",
+      "expected": "May already be truncated; no cleanup/retry/reconnect/reset. Inspect custody/target before explicit recovery.",
+      "evidence": "Executed-command hook, dropped ACK, snapshots and decision.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "lost-commit-ack",
+      "title": "Lost COMMIT ACK",
+      "stimulus": "Execute valid COMMIT through sync/close, suppress response.",
+      "expected": "May be complete; initial receipt stays unverified, no blind upload. Separate safe readback may reconcile.",
+      "evidence": "Execution hook, lost response, immutable original and recovery receipt.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "sync-close-failure",
+      "title": "Sync/close failure",
+      "stimulus": "Inject sync then close failure separately.",
+      "expected": "No COMMIT/CLOSE success; distinguish definite failure from terminal/uncertain custody.",
+      "evidence": "Fault/custody/lifetime trace.",
+      "variants": [
+        "sync",
+        "close"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "abort-no-rollback",
+      "title": "ABORT no rollback",
+      "stimulus": "Partially create then partially replace in separate tests; allowed known-handle ABORT.",
+      "expected": "Closes only; partial create remains, old bytes not restored, earlier files remain.",
+      "evidence": "ABORT and before/after target, earlier file, sentinels.",
+      "variants": [
+        "partial-create",
+        "partial-replace"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "restart-persistence",
+      "title": "Restart persistence",
+      "stimulus": "Healthy COMMIT/readback/close, supported restart, fresh session/admission, full reread.",
+      "expected": "Required bytes and consumers persist; unrelated serial-only changes zero; no universal power-loss claim.",
+      "evidence": "Identity, restart kind/timing, complete readbacks and independent native observers.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "whole-payload-failure",
+      "title": "Whole inventory",
+      "stimulus": "Verify early files then fail last required file; separately omit/duplicate/tamper inventory.",
+      "expected": "No overall success; fixed complete denominator, earlier effects retained.",
+      "evidence": "Trusted inventory, receipts, totals/UI.",
+      "variants": [
+        "last-file-fails",
+        "omitted-file",
+        "duplicate-file",
+        "tampered-inventory"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "flash-effects",
+      "title": "Flash effects separate",
+      "stimulus": "F0 before exact method, F1 immediately afterward; compare declared volumes/settings.",
+      "expected": "Measure actual erasure separately; declared-preserved mismatch fails; unknown cannot justify transfer-first.",
+      "evidence": "Artifact identities, method/disclosure, independent snapshots and comparison.",
+      "variants": [
+        "default"
+      ],
+      "applicability": "required"
+    },
+    {
+      "id": "paired-final-usability",
+      "title": "Final paired usability",
+      "stimulus": "Supported order then final restart/readback/consumer exercise; invalid transfer-first and readonly-final fixture variants.",
+      "expected": "All required files exact length/SHA and consumer-usable after last firmware step. Reject unsupported order before mutation; readonly final may suffice.",
+      "evidence": "Complete final inventory, firmware pair, effects and per-file consumer use.",
+      "variants": [
+        "supported-order",
+        "invalid-transfer-first",
+        "readonly-final"
+      ],
+      "applicability": "required"
+    }
+  ]
+}
