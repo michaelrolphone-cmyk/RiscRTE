@@ -1,0 +1,27 @@
+name: Cache compatible host Runtime compilation
+description: Reuse Runtime objects without reusing test results or changing test flags
+inputs:
+  shard:
+    description: Independent cache writer namespace
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install compiler cache
+      shell: bash
+      run: sudo apt-get update -qq && sudo apt-get install -y ccache
+    - uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/riscrte-ccache
+        key: host-cxx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.shard }}-${{ hashFiles('scripts/host_compiler_cache.py', '.github/actions/host-cache/action.yml') }}-${{ github.sha }}
+        restore-keys: |
+          host-cxx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.shard }}-${{ hashFiles('scripts/host_compiler_cache.py', '.github/actions/host-cache/action.yml') }}-
+    - name: Enable conservative host compiler cache
+      shell: bash
+      run: |
+        echo "CCACHE_DIR=$RUNNER_TEMP/riscrte-ccache" >> "$GITHUB_ENV"
+        echo 'CCACHE_COMPILERCHECK=content' >> "$GITHUB_ENV"
+        echo 'CCACHE_NODIRECT=true' >> "$GITHUB_ENV"
+        echo 'CCACHE_SLOPPINESS=' >> "$GITHUB_ENV"
+        echo 'CCACHE_MAXSIZE=1G' >> "$GITHUB_ENV"
+        python scripts/host_compiler_cache.py --install "$RUNNER_TEMP/riscrte-host-cxx"
