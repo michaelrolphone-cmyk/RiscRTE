@@ -4,8 +4,6 @@ on:
     # This owns integration for every PR base; shared-settings does not call it again.
   workflow_dispatch:
   workflow_call:
-env:
-  PLATFORMIO_SETTING_ENABLE_TELEMETRY: "No"
 permissions:
   contents: read
 concurrency:
@@ -37,7 +35,9 @@ jobs:
           shard: ${{ matrix.shard }}
       - name: Cache and suite correctness guards
         if: matrix.shard == 'tools'
-        run: python -m unittest discover -s test -p host_ci_test.py -v
+        run: |
+          python -m unittest discover -s test -p host_ci_test.py -v
+          python -m unittest discover -s test -p native_ci_test.py -v
       - name: Source version guards
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -130,200 +130,54 @@ jobs:
           HOST_RESULT: ${{ needs.host-tests.result }}
         run: test "$HOST_RESULT" = success
   target:
-    name: ESP32-S3 firmware, real ELFs and candidate bundle
-    needs: host
+    name: Native target-format regression
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 20
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SDK_SOURCE: fff9895c82d744c7237be8847347bdd1b07c6643
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: pip
-          cache-dependency-path: requirements-ci.txt
-      - uses: ./.github/actions/host-cache
-        with:
-          shard: target-host-tests
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.platformio/.cache
-            ~/.platformio/packages
-            ~/.platformio/platforms
-          key: ${{ runner.os }}-${{ runner.arch }}-risc-tools-${{ hashFiles('platformio.ini', 'requirements-ci.txt') }}
-      - name: Install pinned tools
-        run: python -m pip install -r requirements-ci.txt
-      - name: Fetch frozen app SDK for Xtensa ABI proof
-        uses: actions/checkout@v4
-        with:
-          repository: michaelrolphone-cmyk/RiscRTE-T-Watch-S3
-          ref: aa7b03c15a59aa99b2d60ae20905edbdf62e35e6
-          path: build/watch-clock-sdk
-          sparse-checkout: sdk/app
-          persist-credentials: false
-      - name: Build firmware and real default/child/provider ELFs
+      - name: Fetch exact source and frozen SDK header
         run: |
-          pio run -e esp32s3 -j 1
-          RADIO_IQ_DISABLED_ELF=.pio/build/esp32s3/firmware.elf python -m unittest discover -s test -p 'test_radio_iq_proof.py' -v
-          CC="$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" python test/verify_legacy_runtime_header.py build/watch-clock-sdk/sdk/app/RiscRuntimeV1.h
-          python scripts/build_apps.py
-          bash test/run_performance_loader_test.sh
-          SANITIZE=1 bash test/run_performance_loader_test.sh
-          bash test/run_image_byte_cache_test.sh
-          SANITIZE=1 bash test/run_image_byte_cache_test.sh
-          bash test/run_elf_test.sh
-          pio run -e esp32s3 -t buildfs -j 1
-      - name: Freeze and verify candidate release assets
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y --no-install-recommends git libssl-dev
+          root="$RUNNER_TEMP/native-target-fixtures"
+          echo "FIXTURE_ROOT=$root" >> "$GITHUB_ENV"
+          git init --quiet "$root"
+          git -C "$root" remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -C "$root" fetch --no-tags --depth=1 origin "$SOURCE_SHA"
+          git -C "$root" checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$root" rev-parse HEAD)" = "$SOURCE_SHA"
+          mkdir -p "$root/build/watch-clock-sdk"
+          git -C "$root/build/watch-clock-sdk" init --quiet
+          git -C "$root/build/watch-clock-sdk" remote add origin https://github.com/michaelrolphone-cmyk/RiscRTE-T-Watch-S3.git
+          git -C "$root/build/watch-clock-sdk" fetch --no-tags --depth=1 origin aa7b03c15a59aa99b2d60ae20905edbdf62e35e6
+          git -C "$root/build/watch-clock-sdk" checkout --quiet --detach FETCH_HEAD -- sdk/app
+      - name: Qualify real Xtensa ELFs, loader and image cache
         run: |
-          python scripts/release_assets.py stage --source-sha "$SOURCE_SHA"
-          python scripts/release_assets.py verify --source-sha "$SOURCE_SHA"
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          test "$(git -C "$IDF_PATH" rev-parse HEAD)" = "$SDK_SOURCE"
+          cd "$FIXTURE_ROOT"
+          python -m pip install pyelftools==0.32
+          bash test/run_native_target_fixtures.sh elf
+      - name: Qualify real native SPIFFS streaming and compact images
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          cd "$FIXTURE_ROOT"
+          bash test/run_native_target_fixtures.sh spiffs
       - uses: actions/upload-artifact@v4
-        with:
-          name: riscrte-firmware-${{ github.event.pull_request.head.sha || github.sha }}
-          path: dist/release/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Build and verify generic 16 MiB native-USB runtime
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          pio run -e esp32s3-16mb-usb -j 1
-          python scripts/usb_candidate.py --source-sha "$SOURCE_SHA"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: riscrte-esp32s3-16mb-usb-${{ github.event.pull_request.head.sha || github.sha }}
-          path: dist/esp32s3-16mb-usb/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Build paired Runtime with real TLS roots and rollback guard
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          pio run -e esp32s3-16mb-paired -j 1
-          BOOT_PATH_ONLY=1 BOOT_PATH_FIRMWARE=.pio/build/esp32s3-16mb-paired/firmware.bin BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
-          BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
-          SANITIZE=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
-          python scripts/paired_candidate.py --source-sha "$SOURCE_SHA"
-          export MKSPIFFS="$HOME/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino"
-          python test/provision_seed_test.py -v
-          pio run -e esp32s3-16mb-paired -t buildfs -j 1
-          python scripts/provision_seed.py --candidate dist/esp32s3-16mb-paired --store .pio/build/esp32s3-16mb-paired/spiffs.bin --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" --mkspiffs "$MKSPIFFS" --output dist/esp32s3-16mb-paired/seed --source-sha "$SOURCE_SHA"
-          python scripts/provision_seed.py --candidate dist/esp32s3-16mb-paired --store .pio/build/esp32s3-16mb-paired/spiffs.bin --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" --mkspiffs "$MKSPIFFS" --output dist/provision-seed-repeat --source-sha "$SOURCE_SHA"
-          diff -r dist/esp32s3-16mb-paired/seed dist/provision-seed-repeat
-          SEED_DIRECTORY=dist/esp32s3-16mb-paired/seed BOOTLOADER_FILE=.pio/build/esp32s3-16mb-paired/bootloader.bin bash test/run_native_bank_test.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: riscrte-esp32s3-16mb-paired-${{ github.event.pull_request.head.sha || github.sha }}
-          path: dist/esp32s3-16mb-paired/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Build explicit owner maintenance image (no device operation)
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          pio run -e esp32s3-16mb-maintenance -j 1
-          python scripts/maintenance_candidate.py --source-sha "$SOURCE_SHA"
-          python test/maintenance_plan_test.py --seed dist/esp32s3-16mb-paired/seed --maintenance dist/owner-maintenance
-      - uses: actions/upload-artifact@v4
-        with:
-          name: riscrte-owner-maintenance-${{ github.event.pull_request.head.sha || github.sha }}
-          path: dist/owner-maintenance/
-          if-no-files-found: error
-          retention-days: 14
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: riscrte-appdata-initial-image-${{ github.event.pull_request.head.sha || github.sha }}
-          path: build/appdata-initial
-      - name: Fetch pinned runtime SPIFFS source for streamed-install proof
-        uses: actions/checkout@v4
-        with:
-          repository: pellepl/spiffs
-          ref: 0dbb3f71c5f6fae3747a9d935372773762baf852
-          path: build/spiffs-source
-          persist-credentials: false
-      - name: Build opt-in app-data Runtime and verify separate layout
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          pio run -e esp32s3-16mb-appdata -j 1
-          pio run -e esp32s3-16mb-appdata-perf -j 1
-          APP_DATA_TEST=1 BOOT_PATH_ONLY=1 BOOT_PATH_FIRMWARE=.pio/build/esp32s3-16mb-appdata/firmware.bin BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
-          APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
-          SANITIZE=1 APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
-          python scripts/paired_candidate.py --app-data --app-data-image build/appdata-initial --source-sha "$SOURCE_SHA"
-          pio run -e esp32s3-16mb-appdata -t buildfs -j 1
-          python scripts/provision_seed.py --candidate dist/esp32s3-16mb-appdata --store .pio/build/esp32s3-16mb-appdata/spiffs.bin --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" --mkspiffs "$HOME/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino" --output dist/esp32s3-16mb-appdata/seed --source-sha "$SOURCE_SHA"
-          SEED_DIRECTORY=dist/esp32s3-16mb-appdata/seed APP_DATA_TEST=1 BOOTLOADER_FILE=.pio/build/esp32s3-16mb-appdata/bootloader.bin bash test/run_native_bank_test.sh
-      - name: Verify ABI2 owner maintenance and restoration (no device operation)
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          pio run -e esp32s3-16mb-appdata-maintenance -j 1
-          python scripts/maintenance_candidate.py --app-data --source-sha "$SOURCE_SHA"
-          python test/maintenance_plan_test.py --seed dist/esp32s3-16mb-appdata/seed --maintenance dist/owner-maintenance-appdata
-      - uses: actions/upload-artifact@v4
-        with:
-          name: riscrte-owner-maintenance-appdata-${{ github.event.pull_request.head.sha || github.sha }}
-          path: dist/owner-maintenance-appdata/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Real SPIFFS high-fill stream, retry, interruption and error proofs
-        run: |
-          python test/provisioning_spiffs_fixture.py build/spiffs-fixtures
-          for shape in high-fill-83 boundary-3 boundary-128; do
-            bash test/run_provisioning_spiffs_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" .pio/build/esp32s3-16mb-appdata/spiffs.bin "build/spiffs-fixtures/$shape" "build/spiffs-result-$shape.bin"
-          done
-          SANITIZE=1 bash test/run_provisioning_spiffs_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" .pio/build/esp32s3-16mb-appdata/spiffs.bin build/spiffs-fixtures/high-fill-83 build/spiffs-result-high-fill-83-sanitized.bin
-      - name: Compact image read-only admission and dense-store proof
-        uses: actions/checkout@v4
-        with:
-          repository: espressif/esp-idf
-          ref: v4.4.7
-          sparse-checkout: components/spiffs
-          path: build/spiffs-image-producer
-          persist-credentials: false
-      - name: Verify compact image read-only admission and dense-store proof
-        run: |
-          bash test/run_provisioning_spiffs_image_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" .pio/build/esp32s3-16mb-appdata/spiffs.bin build/store
-          python test/provisioning_spiffs_image_fixture.py build/compact-image-fixture
-          test "$(sha256sum build/spiffs-image-producer/components/spiffs/spiffsgen.py | cut -d' ' -f1)" = 5779792a4d98a12383233267511735769a201b5c2c79b582186a40c22b7c6466
-          python build/spiffs-image-producer/components/spiffs/spiffsgen.py 0x510000 build/compact-image-fixture build/compact-image.bin --page-size 256 --block-size 4096 --obj-name-len 32 --meta-len 4
-          bash test/run_store_image_capacity_test.sh build/compact-image.bin
-          bash test/run_provisioning_spiffs_image_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" build/compact-image.bin build/compact-image-fixture
-          SANITIZE=1 bash test/run_provisioning_spiffs_image_test.sh build/spiffs-source "$HOME/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32s3" build/compact-image.bin build/compact-image-fixture
-      - uses: actions/upload-artifact@v4
-        with:
-          name: riscrte-esp32s3-16mb-appdata-${{ github.event.pull_request.head.sha || github.sha }}
-          path: dist/esp32s3-16mb-appdata/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Build opt-in IQ Runtime with mandatory bank reservation proof
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          pio run -e esp32s3-16mb-appdata-iq -j 1
-          RADIO_IQ_ELF=.pio/build/esp32s3-16mb-appdata-iq/firmware.elf python -m unittest discover -s test -p 'test_radio_iq_proof.py' -v
-          python scripts/paired_candidate.py --app-data --radio-iq --app-data-image build/appdata-initial --source-sha "$SOURCE_SHA"
-          pio run -e esp32s3-16mb-appdata-iq -t buildfs -j 1
-          python scripts/provision_seed.py --candidate dist/esp32s3-16mb-appdata-iq --store .pio/build/esp32s3-16mb-appdata-iq/spiffs.bin --cc "$HOME/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc" --mkspiffs "$HOME/.platformio/packages/tool-mkspiffs/mkspiffs_espressif32_arduino" --output dist/esp32s3-16mb-appdata-iq/seed --source-sha "$SOURCE_SHA"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: riscrte-esp32s3-16mb-appdata-iq-${{ github.event.pull_request.head.sha || github.sha }}
-          path: dist/esp32s3-16mb-appdata-iq/
-          if-no-files-found: error
-          retention-days: 14
-      - name: Report target host-test compiler cache results
         if: always()
-        run: ccache --show-stats --verbose
+        with:
+          name: native-target-fixtures-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ${{ runner.temp }}/native-target-fixtures/build/elf/
+            ${{ runner.temp }}/native-target-fixtures/build/native-spiffs-config/
+          if-no-files-found: error
+          retention-days: 14
