@@ -1,13 +1,14 @@
 // Only the physical pins/controllers/register transfers are modeled. The actual
 // Runtime, Graph, CpuPort, five external drivers, clock app and renderer execute.
 #include "support/WatchPeripheralModel.h"
+#include "RuntimeFileFixture.h"
 using namespace WatchPeripheralModel;
 int main(int argc,char** argv){
   assert(argc==2);const std::string root=argv[1];
   for(unsigned scenario=0;scenario<5;++scenario){
     reset(scenario!=1,scenario==2,scenario==3);model.installFailure=scenario==4;
     RiscCpu::Port port({owner,now,delay,gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,i2cOpen,i2cTransfer,i2cClose,spiOpen,spiBegin,spiTransfer,spiEnd,spiClose});cpu=&port;
-    RiscBoot::Runtime runtime({owner,health,delay,log,bind});
+    RiscTest::FileSources runtimeFiles0({root.c_str()});RiscBoot::Runtime runtime({owner,health,delay,log,bind});assert(runtimeFiles0.bind(runtime));
     if(!runtime.prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime.error());return 1;}
     assert(port.quiescent() && !model.time && !model.calls && !model.i2c && !model.spi);
     const bool ran=runtime.run();

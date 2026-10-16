@@ -22,7 +22,7 @@ bool Runtime::configureInstalledFiles(JsonObjectConst boot) {
   if(!manifest || !add(manifest) || !add(drivers_[i].elf+prefix))return fail("invalid installed driver inventory");
  }
  invocation_->installedFiles_.reset(new(std::nothrow) InstalledFiles());
- if(!invocation_->installedFiles_ || !invocation_->installedFiles_->configure(root_,names.get(),count))return fail("installed volume unavailable");
+ if(!invocation_->installedFiles_ || !invocation_->installedFiles_->configure(root_,names.get(),count,port_.files))return fail("installed volume unavailable");
  return true;
 }
 Runtime* Runtime::volumeContext(void*context,bool diagnostic) {

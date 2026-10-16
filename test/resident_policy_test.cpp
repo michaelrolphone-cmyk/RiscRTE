@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 
 static_assert(RISC_RESIDENT_POLL_ACTIVITY==1 && RISC_RESIDENT_POLL_INHIBIT_IDLE==2 &&
               RISC_RESIDENT_POLL_INHIBIT_POLICY==4,"Append-only POLL hints");
@@ -319,7 +320,7 @@ extern "C" void test_policy_main(unsigned role,unsigned* visits,const risc_resid
 }
 int main(int argc,char** argv){
   assert(argc==3);root=argv[1];mode=argv[2];setup();RiscCpu::Port cpuPort(hardware());cpu=&cpuPort;
-  runtime=new Runtime({owner,health,delay,log,bind,&keyBackend,safe});
+  static RiscTest::FileSources runtimeFiles0({root.c_str()});runtime=new Runtime({owner,health,delay,log,bind,&keyBackend,safe});assert(runtimeFiles0.bind(*runtime));
   if(!runtime->prepare(root.c_str())){std::fprintf(stderr,"Policy fixture admission failed: %s\n",runtime->error());return 1;}
   assert(!hardwareCalls);
   const bool success=runtime->run();if(success==terminal())std::fprintf(stderr,"Unexpected runtime result %s: %s\n",mode.c_str(),runtime->error());

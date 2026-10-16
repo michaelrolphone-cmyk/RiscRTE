@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <cstring>
+#include "RuntimeFileFixture.h"
 using namespace RiscBoot;
 static bool owned=true,safe=true,backendBusy=false;static unsigned calls=0,writesCount=0,gets=0;
 static risc_bound_key_value_v2 bound{},staleBound{};static risc_key_value_v2 staleApp{};
@@ -86,11 +87,11 @@ int main(int argc,char** argv){
   write("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"provider.json","key_value":[{"key":"value","namespace":4,"access":"read-write"},{"key":"readonly","namespace":4,"access":"read"},{"key":"partial","namespace":4,"access":"read"},{"key":"oversize","namespace":4,"access":"read"}]}],"app_capabilities":[{"manifest":"default.json","grants":[{"capability":"storage.key-value","api":1,"instance_id":1},{"capability":"storage.key-value","api":2,"instance_id":5}]}]})");
  };
  unsigned before=calls;
- for(unsigned limit:{64u,2047u}){backend.maxBlobSize=limit;stage(2,req1+","+req2);Runtime r(port());assert(!r.prepare(root.c_str()));}
- backend.maxBlobSize=2048;stage(3,req1+","+req2);{Runtime r(port());assert(!r.prepare(root.c_str()));}
- stage(2,req1+","+req2+","+req2);{Runtime r(port());assert(!r.prepare(root.c_str()));}
- stage(2,req1);{Runtime r(port());assert(!r.prepare(root.c_str()));}assert(calls==before);
- stage(2,req1+","+req2);{Runtime r(port());if(!r.prepare(root.c_str())){fprintf(stderr,"prepare failed: %s\n",r.error());abort();}assert(r.run());}
+ for(unsigned limit:{64u,2047u}){backend.maxBlobSize=limit;stage(2,req1+","+req2);RiscTest::FileSources rFiles0({root.c_str()});Runtime r(port());assert(rFiles0.bind(r));assert(!r.prepare(root.c_str()));}
+ backend.maxBlobSize=2048;stage(3,req1+","+req2);{RiscTest::FileSources rFiles1({root.c_str()});Runtime r(port());assert(rFiles1.bind(r));assert(!r.prepare(root.c_str()));}
+ stage(2,req1+","+req2+","+req2);{RiscTest::FileSources rFiles2({root.c_str()});Runtime r(port());assert(rFiles2.bind(r));assert(!r.prepare(root.c_str()));}
+ stage(2,req1);{RiscTest::FileSources rFiles3({root.c_str()});Runtime r(port());assert(rFiles3.bind(r));assert(!r.prepare(root.c_str()));}assert(calls==before);
+ stage(2,req1+","+req2);{RiscTest::FileSources rFiles4({root.c_str()});Runtime r(port());assert(rFiles4.bind(r));if(!r.prepare(root.c_str())){fprintf(stderr,"prepare failed: %s\n",r.error());abort();}assert(r.run());}
  denied(staleApp);risc_key_value_v1 provider{staleBound.api_version,staleBound.struct_size,staleBound.context,staleBound.get,staleBound.put};denied(provider);
  puts("Explicit KV v2 admission, mixed versions, 2048-byte bounds, uncertain writes, read isolation and lifecycle PASS");
 }

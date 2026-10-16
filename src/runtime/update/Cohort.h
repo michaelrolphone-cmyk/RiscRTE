@@ -1,5 +1,6 @@
 #pragma once
 #include "bootstrap/Json.h"
+#include "bootstrap/RuntimeFiles.h"
 #include "Version.h"
 #include "PairedBank.h"
 namespace RiscUpdate {
@@ -32,11 +33,10 @@ inline bool validCohortRequest(const risc_bank_cohort_v1& c){
     parseVersion(c.runtime_version,version) && repository(c.source_repo) && hex(c.source_revision,40) &&
     c.store_abi==StoreAbi && c.store_size==StoreBytes && c.firmware_size>=32 && c.firmware_size<=FirmwareBytes;
 }
-inline bool readCohort(const char* root,CohortIdentity& out,bool* closeRetained=nullptr){
+inline bool parseCohort(const JsonDocument& doc,CohortIdentity& out){
   using namespace RiscBoot;
-  char filename[256],digest[65];JsonDocument doc;int64_t number;
+  char digest[65];int64_t number;
   out={};out.product.struct_size=sizeof(out.product);
-  if(!path(root,"cohort.json",filename,sizeof(filename)) || !readJson(filename,doc,closeRetained))return false;
   JsonObjectConst c=doc.as<JsonObjectConst>();
   if(!keys(c,{"schema","schema_version","product","version","runtime_version","source_repo","source_revision",
              "layout","store_abi","firmware_size","firmware_sha256"}) ||
@@ -56,6 +56,12 @@ inline bool readCohort(const char* root,CohortIdentity& out,bool* closeRetained=
   for(unsigned i=0;i<32;++i){auto digit=[](char x){return x<='9'?x-'0':x-'a'+10;};out.firmwareSha[i]=uint8_t(digit(digest[2*i])*16+digit(digest[2*i+1]));}
   return true;
 }
+inline bool readCohort(RiscBoot::RuntimeFileView source,const char* root,CohortIdentity& out,bool* closeRetained=nullptr){
+  char filename[256];JsonDocument doc;out={};out.product.struct_size=sizeof(out.product);
+  return RiscBoot::path(root,"cohort.json",filename,sizeof(filename)) &&
+    RiscBoot::readJson(source,filename,doc,closeRetained) && parseCohort(doc,out) && !source.retained();
+}
+
 inline bool cohortMatches(const CohortIdentity& c,const risc_bank_cohort_v1& request){
   return !strcmp(c.product.product,request.product) && !strcmp(c.product.version,request.version) &&
     !strcmp(c.product.source_repo,request.source_repo) && !strcmp(c.product.source_revision,request.source_revision) &&

@@ -6,6 +6,7 @@
 #include <string>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 static std::string root,tracePath;static bool wake=false,timed=false;static RiscCpu::Port* cpu;
 static bool isOwner=true,safe=true;static int mode=0;static uint32_t cause=0;
 static RiscRetainedWake::Image image{};static RiscRetainedWake::Store* store;
@@ -68,14 +69,14 @@ int main(int argc,char** argv){
    [](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return -1;}};
   p.keyValue=&unusedStorage;
   if(mode==5)p.retainedWake=nullptr;
-  RiscBoot::Runtime runtime(p);
+  RiscTest::FileSources runtimeFiles0({root.c_str()});RiscBoot::Runtime runtime(p);assert(runtimeFiles0.bind(runtime));
   if(mode==5 || mode==6){assert(!runtime.prepare(root.c_str()));return 0;}
   assert(runtime.prepare(root.c_str()));
   // Metadata-only admission sees the same capability without consuming boot RTC.
   {RiscBoot::Port metadata=p;
    // A separate CPU metadata binder is needed for scoped driver dependencies.
    RiscCpu::Port metadataCpu(h);cpu=&metadataCpu;
-   metadata.bindPlatforms=bind;RiscBoot::Runtime admitted(metadata);
+   metadata.bindPlatforms=bind;RiscTest::FileSources admittedFiles1({root.c_str()});RiscBoot::Runtime admitted(metadata);assert(admittedFiles1.bind(admitted));
    assert(admitted.prepare(root.c_str()));cpu=&port;}
   bool result=runtime.run();assert(result==(mode!=4));assert(!image.magic);
   if(mode!=4){store->commit();assert(!image.magic);}

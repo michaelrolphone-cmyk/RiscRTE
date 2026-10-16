@@ -5,10 +5,11 @@ static void stage_quad(const std::string& root,unsigned physical=2) {
   std::ofstream(root+"/display.json")<<R"({"type":"driver","id":"quad-display","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"display.elf","requires":[{"capability":"hardware.device","api":1},{"capability":"platform.gpio","api":1},{"capability":"spi.bus","api":1},{"capability":"platform.clock","api":1}],"provides":[{"capability":"test.display","api":1}],"hardware_compatibility":[{"compatible":"test,quad","revisions":["unspecified"],"config_type":"display.spi","config_version":2}]})";
 }
 struct QuadFixture {
-  Port p;RiscBoot::Runtime r;
-  QuadFixture(const std::string& root,unsigned physical=2,bool supported=true):p(hardware()),r(runtime()){
+  Port p;RiscTest::FileSources metadataFiles;RiscBoot::Runtime r;
+  QuadFixture(const std::string& root,unsigned physical=2,bool supported=true):p(hardware()),metadataFiles({root}),r(runtime()){
     model={};for(auto& state:NativeShim::spi)state={};stage_quad(root,physical);current=&p;
     if(!supported)p.hw_.spiOpenQuad=nullptr;
+    assert(metadataFiles.bind(r));
     if(!r.prepare(root.c_str())){std::fprintf(stderr,"quad prepare: %s\n",r.error());assert(false);}
     assert(!model.calls && p.spiCount_==1);
   }

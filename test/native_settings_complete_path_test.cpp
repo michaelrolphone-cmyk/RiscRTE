@@ -20,6 +20,7 @@
 #include <fstream>
 #include <atomic>
 #include <filesystem>
+#include "RuntimeFileFixture.h"
 namespace M=RiscAppDataMount;
 namespace B=RiscCpu::NativeSettingsBackend;
 namespace F=RiscCpu::NativeSettingsAssembly;
@@ -139,7 +140,7 @@ int main(int argc,char**argv){assert(argc==6);mode=argv[2];output=argv[4];cardPa
  Port cpu(hardware());port=&cpu;RiscBoot::Port boot{owner,[](risc_runtime_health_v1*){return true;},schedule,[](const char*){return true;},bind};
  boot.appExitSafe=[](){return L::continuing()?port->nativeDiscoveryAppExitSafe():port->appExitSafe()&&L::exitSafe();};boot.providerStorageSafe=[](){return !L::retained()&&(L::continuing()?port->nativeDiscoveryProviderSafe():port->providerStorageSafe());};boot.retainedDelay=schedule;boot.nativeOwnerCheckpoint=[](bool admit){return L::checkpoint(admit);};boot.nativeDiscoveryCheckpoint=[](){return L::discoveryCheckpoint();};boot.nativeSettingsShutdown=[](){return L::shutdown();};
  static const RiscBoot::KeyValueBackend legacy{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},[](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},2048};boot.keyValue=&legacy;
- RiscBoot::Runtime runtime(boot);assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());assert(f&&loadMedia&&saveMedia);
+ RiscTest::FileSources runtimeFiles0({argv[1]});RiscBoot::Runtime runtime(boot);assert(runtimeFiles0.bind(runtime));assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());assert(f&&loadMedia&&saveMedia);
  const bool existing=std::filesystem::exists(argv[3]);if(existing)loadMedia(argv[3]);
  if(mode=="absent")f->fault(8);else{P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());if(!existing)file("/ordinary.txt","keep");}
  if(mode=="ambiguous"){auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG")&&e->mkdir(f->volume->context,"/RTECFG/00000001"));file("/RTECFG/00000001/replica.index","invalid-ambiguous");assert(e->mkdir(f->volume->context,"/RTECFG/00000006"));file("/RTECFG/00000006/replica.index","invalid-ambiguous");}

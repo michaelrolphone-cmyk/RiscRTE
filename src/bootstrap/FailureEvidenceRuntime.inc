@@ -9,7 +9,7 @@ bool Runtime::failureEvidenceToken(uint64_t token,bool healthy) const {
     !foregroundRunning_ && !shellDispatching_ && !yielding_ &&
     !graph_.lifecycleBusy() && !invocation_->streams_.busy() &&
     !invocation_->streams_.retained() && graph_.activationSafe() &&
-    !metadataCloseRetained_ && appDataExitSafe() && providerStorageSafe();
+    !metadataCloseRetained() && appDataExitSafe() && providerStorageSafe();
 }
 bool Runtime::failureEvidenceClient(risc_failure_evidence_client_v1* out) {
   if(!out || out->struct_size<sizeof(*out))return false;

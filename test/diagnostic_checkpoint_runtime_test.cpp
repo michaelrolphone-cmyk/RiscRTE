@@ -3,6 +3,7 @@
 #include <cassert>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
 using namespace RiscBoot;
 namespace {
 bool owner=true;std::string mode;unsigned writes=0,stages=0;
@@ -35,7 +36,7 @@ int main(int argc,char** argv){
  std::ofstream(root+"/boot.json")<<R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[]})";
  for(unsigned i=0;i<(mode=="retained"?1u:3u);++i){
   Port port{owns,health,delay,log};if(mode!="off")port.diagnosticCheckpoint=copy;
-  auto* r=new Runtime(port);assert(r->prepare(root.c_str()));const bool result=r->run();
+  static RiscTest::FileSources rFiles0({root.c_str()});auto* r=new Runtime(port);assert(rFiles0.bind(*r));assert(r->prepare(root.c_str()));const bool result=r->run();
   assert(result==(mode!="retained"));denied(client);denied(saved);saved=client;
   if(mode=="retained"){assert(r->retained());held=r;}else delete r;
  }

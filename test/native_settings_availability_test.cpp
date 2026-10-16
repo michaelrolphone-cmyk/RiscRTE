@@ -2,6 +2,7 @@
 #include "native_atomic_key_value_test.cpp"
 #include "bootstrap/Runtime.h"
 #include <fstream>
+#include "RuntimeFileFixture.h"
 using R=RiscBoot::Runtime;
 static R* runtime;static A* endpoint;
 static uint32_t availability=RISC_KEY_VALUE_UNAVAILABLE;static uint64_t generation=1;
@@ -82,7 +83,7 @@ int main(int argc,char**argv){
  RiscBoot::KeyValueBackend legacy{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*){assert(false);return RISC_KEY_VALUE_IO;},[](void*,uint32_t,const char*,const void*,uint32_t){assert(false);return RISC_KEY_VALUE_IO;}};
  RiscBoot::Port p{owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,&legacy};
  p.nativeOwnerCheckpoint=checkpoint;p.nativeDiscoveryCheckpoint=discovery;p.nativeSettingsShutdown=[](){++shutdowns;return true;};
- R r(p);runtime=&r;assert(r.prepare(root.c_str()));assert(!r.registerKeyValueAvailability(6,{nullptr,snapshot}));
+ RiscTest::FileSources rFiles0({root.c_str()});R r(p);assert(rFiles0.bind(r));runtime=&r;assert(r.prepare(root.c_str()));assert(!r.registerKeyValueAvailability(6,{nullptr,snapshot}));
  assert(r.run()&&!r.retained()&&shutdowns==1&&snapshots&&disk.root==before&&!disk.calls);
  assert(r.keyValueReconciliationSafe(6));
  puts("Availability: exact version/namespace grants, RAM defaults, no writes, pending authority, legacy/atomic/provider fences, generation and stale contexts PASS");

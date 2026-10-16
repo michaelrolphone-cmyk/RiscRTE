@@ -38,6 +38,17 @@ int main(){
  assert(!a.dir_open(a.context,"/",&h));uint64_t cursor=0;assert(!a.dir_tell(a.context,h,&cursor)&&cursor==0);
  risc_storage_files_entry_v1 e{sizeof(e)};unsigned seen=0;int rc=0;while((rc=a.dir_next(a.context,h,&e))==RISC_FILES_OK){assert(!e.flags);if(!strcmp(e.name,"sample")){assert(e.size==4);seen|=1;}else if(!strcmp(e.name,"sub/item"))seen|=2;else assert(false);}
  assert(rc==RISC_FILES_END&&seen==3);assert(!a.dir_rewind(a.context,h));assert(!a.dir_tell(a.context,h,&cursor)&&cursor==0);assert(!a.dir_next(a.context,h,&e));assert(!a.dir_tell(a.context,h,&cursor)&&cursor==1);assert(!a.dir_seek(a.context,h,0));assert(!a.dir_tell(a.context,h,&cursor)&&cursor==0);assert(a.dir_seek(a.context,h,999)!=RISC_FILES_OK);assert(!a.dir_close(a.context,h));
+ const auto& variable=*provider.directoryApi();uint32_t required=0;char name[128]{},first[128]{};
+ assert(!a.dir_open(a.context,"/",&h));
+ assert(variable.next(variable.context,h,&st,nullptr,0,&required)==RISC_FILES_DIRECTORY_CAPACITY&&required>1);
+ assert(!a.dir_tell(a.context,h,&cursor)&&cursor==0);
+ memset(name,'!',sizeof(name));assert(variable.next(variable.context,h,&st,name,required-1,&required)==RISC_FILES_DIRECTORY_CAPACITY&&name[0]=='!');
+ assert(!variable.next(variable.context,h,&st,name,sizeof(name),&required)&&required==strlen(name)+1);strcpy(first,name);
+ assert(!a.dir_rewind(a.context,h));assert(variable.next(variable.context,h,&st,nullptr,0,&required)==RISC_FILES_DIRECTORY_CAPACITY);
+ assert(!a.dir_seek(a.context,h,1));assert(!variable.next(variable.context,h,&st,name,sizeof(name),&required)&&strcmp(name,first));
+ assert(!a.dir_rewind(a.context,h));assert(variable.next(variable.context,h,&st,nullptr,0,&required)==RISC_FILES_DIRECTORY_CAPACITY);const uint32_t old=h;assert(!a.dir_close(a.context,h));
+ assert(variable.next(variable.context,old,&st,name,sizeof(name),&required)==RISC_FILES_INVALID&&!required);
+ assert(!a.dir_open(a.context,"/",&h));assert(!variable.next(variable.context,h,&st,name,sizeof(name),&required)&&!strcmp(name,first));assert(!a.dir_close(a.context,h));
  fixture_disappear=1;assert(a.open(a.context,"/sample",RISC_FILES_WRITE|RISC_FILES_CREATE,&h)==RISC_FILES_NOT_FOUND&&!h);assert(a.stat(a.context,"/sample",&st)==RISC_FILES_NOT_FOUND);
  assert(!a.remove(a.context,"/sub/item"));assert(provider.exitSafe());
  assert(!a.open(a.context,"/retained",RISC_FILES_WRITE|RISC_FILES_CREATE,&h));fixture_close_fail=1;assert(a.close(a.context,h)==RISC_FILES_RETAINED);assert(provider.retained()&&!provider.exitSafe());assert(a.stat(a.context,"/retained",&st)==RISC_FILES_RETAINED);

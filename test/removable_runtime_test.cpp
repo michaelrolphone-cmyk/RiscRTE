@@ -16,6 +16,7 @@
 #include <string>
 #include <unistd.h>
 #include <cstdlib>
+#include "RuntimeFileFixture.h"
 static std::string mode,root;
 static bool settingsMode(){return mode=="catalog-settings"||mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable";}
 static std::map<std::string,std::string> legacySettings;
@@ -437,7 +438,7 @@ int main(int argc,char** argv) {
   write("boot.json",boot);
   if(mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable")for(unsigned i=0;i<32;++i)legacySettings["key"+std::to_string(i)]="preserved-"+std::to_string(i);
   if(mode=="shared-settings")for(unsigned i=0;i<40;++i){char key[16];snprintf(key,sizeof key,"legacy%04u",i);sharedOriginal[6][key]="opaque-legacy";}
-  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(mode=="catalog-settings-scalable")privateKv.scalableSettings=&scalableBackend;if(settingsMode())port.keyValue=&privateKv;if(mode=="shared-settings")port.keyValue=&sharedKv;runtime=new RiscBoot::Runtime(port);
+  RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(mode=="catalog-settings-scalable")privateKv.scalableSettings=&scalableBackend;if(settingsMode())port.keyValue=&privateKv;if(mode=="shared-settings")port.keyValue=&sharedKv;static RiscTest::FileSources runtimeFiles0({root.c_str(),root+"/shared-stage"});runtime=new RiscBoot::Runtime(port);assert(runtimeFiles0.bind(*runtime));
   if(mode=="invalid-path" || mode=="default-external" || mode=="provider-bootstrap") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
   if(catalogMode()){
     // Boot cannot reserve any namespace already owned by an app, even before
@@ -447,7 +448,7 @@ int main(int argc,char** argv) {
     auto owner=conflicting["app_capabilities"].add<JsonObject>();owner["manifest"]="namespace-owner.json";
     auto grant=owner["grants"].to<JsonArray>().add<JsonObject>();grant["capability"]="storage.app-data";grant["api"]=1;grant["instance_id"]=1000;
     std::string invalid;serializeJson(conflicting,invalid);write("boot.json",invalid);
-    {RiscBoot::Runtime overlapping(port);assert(!overlapping.prepare(root.c_str()));}
+    {RiscTest::FileSources overlappingFiles1({root.c_str()});RiscBoot::Runtime overlapping(port);assert(overlappingFiles1.bind(overlapping));assert(!overlapping.prepare(root.c_str()));}
     if(mode=="shared-settings"){
       for(unsigned which=0;which<4;++which){
         JsonDocument invalidShared;assert(!deserializeJson(invalidShared,boot));
@@ -457,7 +458,7 @@ int main(int argc,char** argv) {
         if(which==2)list.add(0);
         if(which==3){list.add(1);invalidShared["installation"]["settings_sd"]=false;}
         std::string bad;serializeJson(invalidShared,bad);write("boot.json",bad);
-        RiscBoot::Runtime rejected(port);assert(!rejected.prepare(root.c_str()));
+        RiscTest::FileSources rejectedFiles2({root.c_str()});RiscBoot::Runtime rejected(port);assert(rejectedFiles2.bind(rejected));assert(!rejected.prepare(root.c_str()));
       }
     }
     write("boot.json",boot);
@@ -491,7 +492,7 @@ int main(int argc,char** argv) {
     }
     delete runtime;
     const auto disk=sharedDisk;sharedOriginal.clear();sharedDeltas.clear();sharedAnchors.clear();++sharedPass;sharedHydratedThisRun=false;
-    runtime=new RiscBoot::Runtime(port);assert(runtime->prepare(root.c_str()));
+    static RiscTest::FileSources runtimeFiles4({root.c_str()});runtime=new RiscBoot::Runtime(port);assert(runtimeFiles4.bind(*runtime));assert(runtime->prepare(root.c_str()));
     assert(runtime->run()&&!runtime->retained());assert(sharedDisk==disk);delete runtime;
     puts("Shared settings: actual app/provider namespace 1/6 routing, 1024 opaque keys, native erase/restart, isolation and fail-closed recovery PASS");return 0;
   }

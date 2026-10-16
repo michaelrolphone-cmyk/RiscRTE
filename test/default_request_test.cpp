@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
 using namespace RiscBoot;
 namespace {
 std::string root,mode;
@@ -101,7 +102,7 @@ extern "C" void test_file_main(unsigned role,const risc_runtime_api_v1* api,char
 }
 int main(int argc,char** argv){
  assert(argc==3);root=argv[1];mode=argv[2];setup();
- auto* runtime=new Runtime({owner,health,delay,logLine,nullptr,nullptr,safe});
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new Runtime({owner,health,delay,logLine,nullptr,nullptr,safe});assert(runtimeFiles0.bind(*runtime));
  assert(!runtime->launchDefault());assert(runtime->prepare(root.c_str()));assert(!runtime->launchDefault());
  bool ok=runtime->run();assert(ok==!(retained() || mode=="default-load-failure" || mode=="default-init-failure"));
  assert(runtime->retained()==retained());assert(!risc_runtime_get_api(1));assert(cached && !cached->request_default());

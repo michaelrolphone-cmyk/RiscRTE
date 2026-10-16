@@ -1,5 +1,5 @@
 bool Runtime::promotionSafe() const {
-  return !retained_ && !metadataCloseRetained_ && !invocation_->queued_[0] &&
+  return !retained_ && !metadataCloseRetained() && !invocation_->queued_[0] &&
     appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) &&
     providerStorageSafe() && graph_.activationSafe();
 }

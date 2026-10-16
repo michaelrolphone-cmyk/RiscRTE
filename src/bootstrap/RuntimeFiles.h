@@ -8,17 +8,20 @@ class RuntimeFiles final {
  public:
   using Check=bool (*)();
   bool bind(const risc_storage_files_v1* table,Check owner,Check safe,
-            const risc_storage_files_identity_v1* identity=nullptr) {
+            const risc_storage_files_identity_v1* identity=nullptr,
+            const risc_storage_files_directory_v1* directory=nullptr) {
     if(identity && (!table || identity->api_version!=1 || identity->struct_size<sizeof(*identity) ||
        identity->context!=table->context || !identity->path || !identity->opened))return false;
+    if(directory && (!table || directory->api_version!=1 || directory->struct_size<sizeof(*directory) || directory->context!=table->context || !directory->next))return false;
     if(!owner || !safe || !owner() || !safe() || calling_ || !files_.bindFiles(table))return false;
-    owner_=owner;safe_=safe;identity_=identity;return true;
+    owner_=owner;safe_=safe;identity_=identity;directory_=directory;return true;
   }
   int32_t identity(const char*p,risc_storage_files_identity_value_v1*v){return call([&]{return files_.identity(identity_,p,0,v);});}
   int32_t identity(uint32_t h,risc_storage_files_identity_value_v1*v){return call([&]{return files_.identity(identity_,nullptr,h,v);});}
   // Internal consumers must preserve a known open token if cleanup cannot
   // dispatch (for example owner/safety changed before close).
   void retainCustody(){retained_=true;}
+  int32_t directoryNext(uint32_t h,risc_storage_files_stat_v1*s,char*n,uint32_t cap,uint32_t*required){if(required)*required=0;return call([&]{return files_.directoryNext(directory_,h,s,n,cap,required);});}
   bool bound()const{return files_.bound();}
   bool retained()const{return retained_ || files_.retained();}
   bool exitSafe()const{return !calling_ && !retained() && files_.exitSafe();}
@@ -54,6 +57,7 @@ class RuntimeFiles final {
     return rc;
   }
   const risc_storage_files_identity_v1* identity_=nullptr;
+  const risc_storage_files_directory_v1* directory_=nullptr;
   StorageFilesVolumeAdapter files_;Check owner_=nullptr,safe_=nullptr;
   bool calling_=false,retained_=false;
 };
@@ -81,6 +85,7 @@ class RuntimeFileSources final {
     return result;
   }
   bool retained()const {if(entries_)for(size_t i=0;i<count_;++i)if(entries_[i].files&&entries_[i].files->retained())return true;return false;}
+  bool exitSafe()const {if(entries_)for(size_t i=0;i<count_;++i)if(entries_[i].files&&!entries_[i].files->exitSafe())return false;return true;}
  private:
   const Entry* entries_;size_t count_;
 };
@@ -102,6 +107,19 @@ class RuntimeFileView final {
     return rc;
   }
   int32_t read(uint32_t h,void*b,uint32_t n,uint32_t*a){if(a)*a=0;return call([&]{return files_->read(h,b,n,a);});}
+  // Bounded caller-owned metadata buffer. Legal short reads are continued;
+  // one extra byte proves complete EOF without allocating another buffer.
+  bool readToEnd(uint32_t h,void*data,uint32_t capacity,uint32_t*actual){
+    if(!actual || (!data&&capacity))return false;
+    *actual=0;auto*bytes=static_cast<unsigned char*>(data);
+    while(*actual<capacity){uint32_t got=0,wanted=capacity-*actual;
+      if(wanted>RISC_STORAGE_FILES_IO_MAX)wanted=RISC_STORAGE_FILES_IO_MAX;
+      const int32_t rc=read(h,bytes+*actual,wanted,&got);*actual+=got;
+      if(rc!=RISC_FILES_OK)return false;
+      if(!got)return true;
+    }
+    unsigned char extra=0;uint32_t got=0;return read(h,&extra,1,&got)==RISC_FILES_OK && !got;
+  }
   int32_t seek(uint32_t h,uint64_t o){return call([&]{return files_->seek(h,o);});}
   int32_t info(uint32_t h,uint64_t*n,uint64_t*o){return call([&]{return files_->info(h,n,o);});}
   int32_t identity(const char*p,risc_storage_files_identity_value_v1*v){return call([&]{const char*n=name(p);return n?files_->identity(n,v):int32_t(RISC_FILES_INVALID);});}
@@ -109,6 +127,7 @@ class RuntimeFileView final {
   int32_t stat(const char*p,risc_storage_files_stat_v1*s){return call([&]{const char*n=name(p);return n?files_->stat(n,s):int32_t(RISC_FILES_INVALID);});}
   int32_t dirOpen(const char*p,uint32_t*h){if(h)*h=0;return call([&]{const char*n=name(p);return n?files_->dirOpen(n,h):int32_t(RISC_FILES_INVALID);});}
   int32_t dirNext(uint32_t h,risc_storage_files_entry_v1*e){return call([&]{return files_->dirNext(h,e);});}
+  int32_t directoryNext(uint32_t h,risc_storage_files_stat_v1*s,char*n,uint32_t cap,uint32_t*required){if(required)*required=0;return call([&]{return files_->directoryNext(h,s,n,cap,required);});}
   int32_t dirClose(uint32_t h){
     const int32_t rc=call([&]{return files_->dirClose(h);});
     if(rc!=RISC_FILES_OK && files_){files_->retainCustody();return RISC_FILES_RETAINED;}

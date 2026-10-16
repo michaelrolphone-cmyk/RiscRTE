@@ -3,6 +3,7 @@
 // metadata, loader, policy, or configuration consumers. No mount/format occurs.
 #include <RiscStorageFilesV1.h>
 #include <RiscStorageFilesIdentityV1.h>
+#include <RiscStorageFilesDirectoryV1.h>
 #include "FileValidation.h"
 #include <cstdlib>
 #include <cerrno>
@@ -35,6 +36,7 @@ class PosixFiles final {
   // root is immutable, borrowed provider configuration. The caller keeps it
   // and this provider alive through every open handle and retained failure.
   explicit PosixFiles(const char* root,OpenBehavior behavior=OpenBehavior::Posix,bool modifiedTime=true):root_(root),behavior_(behavior),modifiedTime_(modifiedTime){
+    directory_={1,sizeof(directory_),this,[](void*c,uint32_t h,risc_storage_files_stat_v1*s,char*n,uint32_t cap,uint32_t*required){return self(c).directoryNext(h,s,n,cap,required);}};
     identity_={1,sizeof(identity_),this,
       [](void*c,const char*p,risc_storage_files_identity_value_v1*v){return self(c).pathIdentity(p,v);},
       [](void*c,uint32_t h,risc_storage_files_identity_value_v1*v){return self(c).openedIdentity(h,v);}};
@@ -60,11 +62,12 @@ class PosixFiles final {
   }
   const risc_storage_files_v1* api()const{return &api_;}
   const risc_storage_files_identity_v1* identityApi()const{return &identity_;}
+  const risc_storage_files_directory_v1* directoryApi()const{return &directory_;}
   bool retained()const{return retained_;}
   bool exitSafe()const{if(retained_)return false;for(const auto& h:handles_)if(h.token)return false;return true;}
  private:
   struct Handle{uint32_t token=0,flags=0;int fd=-1;DIR* dir=nullptr;char* path=nullptr;};
-  const char*root_;OpenBehavior behavior_;risc_storage_files_v1 api_{};risc_storage_files_identity_v1 identity_{};Handle handles_[Capacity]{};uint32_t next_=0;bool retained_=false,modifiedTime_=true;
+  const char*root_;OpenBehavior behavior_;risc_storage_files_v1 api_{};risc_storage_files_identity_v1 identity_{};risc_storage_files_directory_v1 directory_{};Handle handles_[Capacity]{};uint32_t next_=0;bool retained_=false,modifiedTime_=true;
   static PosixFiles& self(void*c){return *static_cast<PosixFiles*>(c);}
   static int32_t error(){return errno==ENOENT?RISC_FILES_NOT_FOUND:errno==EEXIST?RISC_FILES_EXISTS:errno==EACCES||errno==EPERM?RISC_FILES_DENIED:errno==ENOTSUP||errno==ENOSYS?RISC_FILES_UNAVAILABLE:RISC_FILES_IO;}
   int32_t retain(){retained_=true;return RISC_FILES_RETAINED;}
@@ -210,6 +213,22 @@ class PosixFiles final {
   int32_t remove(const char*p){if(retained_)return RISC_FILES_RETAINED;char full[512];if(!path(p,full)||!strcmp(p,"/"))return RISC_FILES_INVALID;if(!noLinks(full))return error();return ::remove(full)?error():int32_t(RISC_FILES_OK);}
   int32_t dirOpen(const char*p,uint32_t*out){if(out)*out=0;if(retained_)return RISC_FILES_RETAINED;char full[512];if(!out||!path(p,full))return RISC_FILES_INVALID;if(behavior_==OpenBehavior::SerializedFlatVfs && strcmp(p,"/"))return RISC_FILES_UNAVAILABLE;auto*h=vacant();if(!h)return RISC_FILES_BUSY;if(!noLinks(full))return error();DIR*d=opendir(full);if(!d)return error();h->dir=d;h->token=++next_;h->path=strdup(full);if(!h->path){const int32_t rc=dirClose(h->token);return rc?rc:int32_t(RISC_FILES_IO);}*out=h->token;return RISC_FILES_OK;}
   int32_t dirNext(uint32_t token,risc_storage_files_entry_v1*out){if(retained_)return RISC_FILES_RETAINED;auto*h=find(token,true);if(!h||!out||out->struct_size<sizeof(*out))return RISC_FILES_INVALID;dirent*e;do{errno=0;e=readdir(h->dir);if(!e)return errno?error():int32_t(RISC_FILES_END);}while(!strcmp(e->d_name,".")||!strcmp(e->d_name,".."));if(strlen(e->d_name)>=sizeof(out->name))return RISC_FILES_IO;char full[512];int n=snprintf(full,sizeof(full),"%s%s%s",h->path,h->path[strlen(h->path)-1]=='/'?"":"/",e->d_name);struct ::stat s{};if(n<0||size_t(n)>=sizeof(full)||inspect(full,&s))return RISC_FILES_IO;if(!S_ISREG(s.st_mode)&&!S_ISDIR(s.st_mode))return RISC_FILES_DENIED;if(s.st_size<0)return RISC_FILES_IO;*out={};out->struct_size=sizeof(*out);out->flags=S_ISDIR(s.st_mode)?RISC_FILES_DIRECTORY:0;out->size=uint64_t(s.st_size);strcpy(out->name,e->d_name);return RISC_FILES_OK;}
+  int32_t directoryNext(uint32_t token,risc_storage_files_stat_v1*out,char*name,uint32_t capacity,uint32_t*required){
+    if(required)*required=0;
+    if(retained_)return RISC_FILES_RETAINED;
+    auto*h=find(token,true);if(!h||!out||out->struct_size<sizeof(*out)||!required||(!name&&capacity))return RISC_FILES_INVALID;
+    uint64_t position=0;int32_t rc=dirTell(token,&position);if(rc)return rc;
+    dirent*e;do{errno=0;e=readdir(h->dir);if(!e)return errno?error():int32_t(RISC_FILES_END);}while(!strcmp(e->d_name,".")||!strcmp(e->d_name,".."));
+    const size_t bytes=strlen(e->d_name)+1;
+    if(bytes>RISC_STORAGE_FILES_PATH_MAX)return RISC_FILES_IO;
+    if(bytes>capacity){rc=dirSeek(token,position);if(rc)return rc;*required=uint32_t(bytes);return RISC_FILES_DIRECTORY_CAPACITY;}
+    char full[512];int n=snprintf(full,sizeof(full),"%s%s%s",h->path,h->path[strlen(h->path)-1]=='/'?"":"/",e->d_name);
+    struct ::stat st{};if(n<0||size_t(n)>=sizeof(full)||inspect(full,&st))return RISC_FILES_IO;
+    if(!S_ISREG(st.st_mode)&&!S_ISDIR(st.st_mode))return RISC_FILES_DENIED;
+    if(st.st_size<0)return RISC_FILES_IO;
+    *out={sizeof(*out),S_ISDIR(st.st_mode)?uint32_t(RISC_FILES_DIRECTORY):0u,uint64_t(st.st_size),0};
+    memcpy(name,e->d_name,bytes);*required=uint32_t(bytes);return RISC_FILES_OK;
+  }
   int32_t dirClose(uint32_t token){if(retained_)return RISC_FILES_RETAINED;auto*h=find(token,true);if(!h)return RISC_FILES_INVALID;if(closedir(h->dir))return retain();free(h->path);*h={};return RISC_FILES_OK;}
   int32_t dirRewind(uint32_t token){if(retained_)return RISC_FILES_RETAINED;auto*h=find(token,true);if(!h)return RISC_FILES_INVALID;errno=0;rewinddir(h->dir);if(errno)return error();const long at=telldir(h->dir);return at==0?int32_t(RISC_FILES_OK):(at<0?error():int32_t(RISC_FILES_IO));}
   int32_t dirTell(uint32_t token,uint64_t*out){if(retained_)return RISC_FILES_RETAINED;auto*h=find(token,true);if(!h||!out)return RISC_FILES_INVALID;errno=0;long n=telldir(h->dir);if(n<0)return error();*out=uint64_t(n);return RISC_FILES_OK;}

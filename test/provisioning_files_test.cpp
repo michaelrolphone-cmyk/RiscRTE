@@ -6,6 +6,7 @@
 #include <cassert>
 #include <vector>
 #include <memory>
+#include "RuntimeFileFixture.h"
 using namespace RiscProvision;
 namespace fs=std::filesystem;
 using Bytes=std::vector<uint8_t>;
@@ -17,7 +18,7 @@ struct Context {
  [](void* c,const void* p,uint32_t n){auto& v=static_cast<Context*>(c)->hashing;auto* b=static_cast<const uint8_t*>(p);v.insert(v.end(),b,b+n);return true;},
  [](void* c,uint8_t* d){auto& v=static_cast<Context*>(c)->hashing;SHA256(v.data(),v.size(),d);return true;},
  [](void* c,const char* root,const Profile&){auto& self=*static_cast<Context*>(c);++self.admissions;if(!self.admitted)return false;
-  auto runtime=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{owner,health,delay,log});return runtime->prepare(root);}};}
+  RiscTest::FileSources runtimeFiles0({root});auto runtime=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{owner,health,delay,log});assert(runtimeFiles0.bind(*runtime));return runtime->prepare(root);}};}
 };
 static Bytes read(const fs::path& p){std::ifstream f(p,std::ios::binary);return {std::istreambuf_iterator<char>(f),{}};}
 static void write(const fs::path& p,const Bytes& data){std::ofstream f(p,std::ios::binary);f.write(reinterpret_cast<const char*>(data.data()),data.size());assert(f.good());}

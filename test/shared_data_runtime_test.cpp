@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <sys/stat.h>
+#include "RuntimeFileFixture.h"
 static unsigned steps=0,healthCalls=0,clockCalls=0;static bool owner=true;
 static const risc_runtime_api_v1* savedRuntime;static risc_app_data_v1 saved{};
 extern "C" void shared_test_clock(const risc_runtime_api_v1* rt){
@@ -33,10 +34,10 @@ int main(int argc,char**argv){assert(argc==2);std::string root=argv[1];
  write(root+"/default.json",manifest("default"));write(root+"/child.json",manifest("child"));
  auto policy=[](const char*id,unsigned ns,const std::string&file){return std::string("{\"manifest\":\"")+id+".json\",\"grants\":[{\"capability\":\"storage.shared-data\",\"api\":1,\"instance_id\":3"+file+"},{\"capability\":\"storage.app-data\",\"api\":1,\"instance_id\":"+std::to_string(ns)+"}]}";};
  auto boot=[&](const std::string&file){write(root+"/boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[)")+policy("default",63,file)+","+policy("child",64,file)+"]}");};
- for(const char*bad:{"",",\"file\":\"\"",",\"file\":\"../escape\"",",\"file\":\"a/b\""}){boot(bad);RiscBoot::Runtime r(port);assert(!r.prepare(root.c_str()));}
+ for(const char*bad:{"",",\"file\":\"\"",",\"file\":\"../escape\"",",\"file\":\"a/b\""}){boot(bad);RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r(port);assert(rFiles0.bind(r));assert(!r.prepare(root.c_str()));}
  boot(",\"file\":\"context-fingerprints.cfp\"");
  // The child has its own private namespace, while the exact shared file is common.
- {RiscBoot::Runtime r(port);assert(r.prepare(root.c_str()));assert(r.run());assert(steps==2);}
+ {RiscTest::FileSources rFiles1({root.c_str()});RiscBoot::Runtime r(port);assert(rFiles1.bind(r));assert(r.prepare(root.c_str()));assert(r.run());assert(steps==2);}
  uint32_t now=0;assert(savedRuntime&&!savedRuntime->monotonic_ms(&now));
  uint32_t size=0;uint64_t revision=0;assert(saved.stat(saved.context,"context-fingerprints.cfp",&size,&revision)==RISC_APP_DATA_CONTEXT);
  puts("Shared-data actual ELF: exact file grants, invalid path rejection, namespace isolation, cross-app persistence, stale revisions and revocation; inexpensive owner clock, null/nonowner/inactive rejection PASS");

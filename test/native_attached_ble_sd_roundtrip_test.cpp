@@ -13,6 +13,7 @@
 #include "ports/esp32s3/NativeSettingsWorker.h"
 #include <openssl/evp.h>
 #include <memory>
+#include "RuntimeFileFixture.h"
 namespace F=NativeFixture;namespace L=RiscCpu::NativeSettingsLifecycle;namespace W=RiscCpu::NativeSettingsWorker;
 using B=RiscCpu::NativeSettingsBootstrap;using Sources=B::Sources;using M=RiscCpu::NativeSettingsMaintenance;using Coordinator=RiscExperimental::NativeSettingsCoordinator;
 static std::unique_ptr<Coordinator> services[2];static unsigned onNamespace=0;static M*maintenance;static Pin*anchorPin;static F::Fixture*stores[2];static std::string scenario;static bool cancelLatch=false,cancellationArmed=false;static unsigned checkpoints=0;
@@ -116,7 +117,7 @@ int main(int argc,char**argv){
  boot.appExitSafe=[](){return port->appExitSafe()&&L::exitSafe();};boot.providerStorageSafe=[](){return port->providerStorageSafe()&&!L::retained();};boot.retainedDelay=schedule;
  boot.nativeOwnerCheckpoint=[](bool admitNew){++checkpoints;if(!admitNew)++admissionDeferred;return L::checkpoint(admitNew);};
  static const RiscBoot::KeyValueBackend forbiddenLegacy{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},[](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},2048};boot.keyValue=&forbiddenLegacy;
- RiscBoot::Runtime runtime(boot);assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());
+ RiscTest::FileSources runtimeFiles0({argv[1]});RiscBoot::Runtime runtime(boot);assert(runtimeFiles0.bind(runtime));assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());
  if(restoring){assert(loadMedia);loadMedia(mediaPath);}
  {P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());}
  if(!restoring){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));seedMaintenance(1,one,oneId);seedMaintenance(6,six,sixId);file("/ordinary.txt","keep",4);}

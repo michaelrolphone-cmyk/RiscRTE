@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <cstdio>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static Port* activePort;
 static unsigned io=0;
@@ -50,7 +51,7 @@ int main(int argc,char**argv){
    case 14:d["config_version"]=1;m["hardware_compatibility"][0]["config_version"]=1;break;
   }
   std::string text;serializeJson(b,text);save("board.json",text);text.clear();serializeJson(m,text);save("driver.json",text);
-  io=0;Port p(hardware());activePort=&p;RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
+  io=0;Port p(hardware());activePort=&p;RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(rFiles0.bind(r));
   bool ok=r.prepare(root.c_str());if(ok!=valid)fprintf(stderr,"scenario=%u error=%s\n",scenario,r.error());assert(ok==valid && !io);
   if(!valid)continue;
   const auto& device=*r.board().device(1);assert(r.board().deviceBus(1)==100);

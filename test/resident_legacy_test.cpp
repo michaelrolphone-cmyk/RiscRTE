@@ -14,6 +14,7 @@
 #include <freertos/task.h>
 #include <esp_heap_caps.h>
 #include <unordered_set>
+#include "RuntimeFileFixture.h"
 bool resident_test_memory_lock=true;
 static std::unordered_set<void*> memoryLive;
 extern "C" void* heap_caps_malloc(size_t n,uint32_t){void* p=std::malloc(n);assert(p);memoryLive.insert(p);return p;}
@@ -356,7 +357,7 @@ extern "C" void test_legacy_main(unsigned role,unsigned* visits,const risc_resid
 }
 int main(int argc,char** argv){
   assert(argc==3);root=argv[1];mode=argv[2];setup();
-  auto* runtime=new Runtime({owner,health,delay,log,nullptr,&kv,safe});
+  static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new Runtime({owner,health,delay,log,nullptr,&kv,safe});assert(runtimeFiles0.bind(*runtime));
   const bool malformed=begins("policy-");
   assert(runtime->prepare(root.c_str())!=malformed);
   if(malformed){assert(events.empty());delete runtime;std::printf("Resident legacy: %s PASS\n",mode.c_str());finished=true;return 0;}

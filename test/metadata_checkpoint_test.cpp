@@ -1,4 +1,4 @@
-// Only stdio failures, wall time and scheduler waits are substituted. The real
+// Only provider I/O, wall time and scheduler waits are substituted. The real
 // readJson, size/deadline checks, JSON guard and parser execute on every input.
 #include "bootstrap/Json.h"
 #include "bootstrap/RuntimeFiles.h"
@@ -27,7 +27,6 @@ struct Input {
 } input;
 FILE* fake(){return reinterpret_cast<FILE*>(&input);}
 const char* FakePath="/metadata-checkpoint-fixture";
-bool providerMode=false;
 bool providerRead(const char*,JsonDocument&,bool*);
 void reset(const std::string& bytes) {
   input={};input.bytes=bytes;
@@ -44,7 +43,7 @@ std::string json(size_t size) {
 }
 bool read(bool* retained=nullptr) {
   JsonDocument doc;
-  const bool ok=providerMode?providerRead(FakePath,doc,retained):RiscBoot::readJson(FakePath,doc,retained);
+  const bool ok=providerRead(FakePath,doc,retained);
   assert(opens==1 && closes==(input.failOpen?0:1));
 #if RISC_PERFORMANCE_TRACE
   assert(RiscPerf::data.counts[33]==delayCalls);
@@ -109,7 +108,7 @@ void storeCounts(const char* root) {
   }
   if(cohort)paths.push_back(base+"cohort.json");
   reset("");
-  for(const auto& path:paths){JsonDocument doc;assert(providerMode?providerRead(path.c_str(),doc,nullptr):RiscBoot::readJson(path.c_str(),doc));}
+  for(const auto& path:paths){JsonDocument doc;assert(providerRead(path.c_str(),doc,nullptr));}
   assert(opens==paths.size() && closes==opens);
   printf("Exact-store production reader (zero simulated I/O time): files=%llu bytes=%llu reads=%llu delay_calls=%llu requested_ticks=%llu max_bytes_between_yields=%zu\n",
     (unsigned long long)opens,(unsigned long long)readBytes,(unsigned long long)readCalls,
@@ -178,6 +177,6 @@ bool providerRead(const char* path,JsonDocument& doc,bool* retained) {
 }
 }
 int main(int argc,char** argv) {
-  for(bool mode:{false,true}){providerMode=mode;fixedBounds();deadlineAndFailures();}
+  fixedBounds();deadlineAndFailures();
   if(argc==3 && !std::strcmp(argv[1],"--store"))storeCounts(argv[2]);else assert(argc==1);
 }

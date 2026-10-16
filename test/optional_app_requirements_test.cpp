@@ -1,3 +1,5 @@
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 // The same source supplies a tiny host app so authority/update assertions run
 // at the real app-entry boundary, rather than by fabricating active Runtime state.
 #ifdef OPTIONAL_APP_TEST_MODULE
@@ -72,7 +74,7 @@ void configure(const std::string& app,const std::string& grants="[]",
 }
 void expectPrepare(const char* name,const std::string& app,const std::string& grants,bool expected,
                    const std::string& drivers="[]") {
-  configure(app,grants,drivers);auto runtime=std::make_unique<Runtime>(port());
+  configure(app,grants,drivers);RiscTest::FileSources runtimeFiles0({root.c_str()});auto runtime=std::make_unique<Runtime>(port());assert(runtimeFiles0.bind(*runtime));
   const bool actual=runtime->prepare(root.c_str());
   if(actual!=expected) {
     fprintf(stderr,"%s: prepare expected %d, got %d (%s)\n",name,int(expected),int(actual),runtime->error());abort();
@@ -142,11 +144,11 @@ void schemaAndAuthority() {
   expectPrepare("optional KV namespace zero",manifest("[]",array(key1)),array(grant(RISC_KEY_VALUE_CAPABILITY)),false);
 
   configure(manifest("[]",array(clock+","+key1+","+missing)));
-  {auto runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(root.c_str()));
+  {RiscTest::FileSources runtimeFiles1({root.c_str()});auto runtime=std::make_unique<Runtime>(port());assert(runtimeFiles1.bind(*runtime));assert(runtime->prepare(root.c_str()));
     run(*runtime,[&](){assert(runtime->policies_[0].count==0);acquire(*runtime,"platform.clock",1,0,false);
       acquire(*runtime,RISC_KEY_VALUE_CAPABILITY,1,5,false);acquire(*runtime,"test.absent",1,0,false);});}
   configure(manifest("[]",array(clock+","+key1+","+key2)),array(clockGrant+","+keyGrant1));
-  {auto runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(root.c_str()));
+  {RiscTest::FileSources runtimeFiles2({root.c_str()});auto runtime=std::make_unique<Runtime>(port());assert(runtimeFiles2.bind(*runtime));assert(runtime->prepare(root.c_str()));
     run(*runtime,[&](){assert(runtime->policies_[0].count==2);acquire(*runtime,"platform.clock",1,0,true);
       acquire(*runtime,RISC_KEY_VALUE_CAPABILITY,1,5,true);acquire(*runtime,RISC_KEY_VALUE_CAPABILITY,1,8,false);
       acquire(*runtime,RISC_KEY_VALUE_CAPABILITY,2,5,false);});}
@@ -169,7 +171,7 @@ void ownerGrantBounds() {
   grants.erase(grants.rfind(",{"));grants+=","+grant("platform.clock");
   const auto optional=array(key+","+row("platform.clock"));
   configure(manifest("[]",optional),array(grants));
-  auto runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(root.c_str()));
+  RiscTest::FileSources runtimeFiles3({root.c_str()});auto runtime=std::make_unique<Runtime>(port());assert(runtimeFiles3.bind(*runtime));assert(runtime->prepare(root.c_str()));
   run(*runtime,[&](){
     assert(runtime->policies_[0].count==Runtime::MaxAppPolicyGrants);
     Runtime::UpdateApp out{};
@@ -202,7 +204,7 @@ void updates() {
   for(bool granted:{false,true}) {
     std::string grants=granted?array(grant("platform.clock")+","+grant(RISC_KEY_VALUE_CAPABILITY,1,5)+","+grant(RISC_KEY_VALUE_CAPABILITY,1,8)):"[]";
     configure(manifest("[]",array(clock+","+key1)),grants);
-    auto runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(root.c_str()));
+    RiscTest::FileSources runtimeFiles4({root.c_str()});auto runtime=std::make_unique<Runtime>(port());assert(runtimeFiles4.bind(*runtime));assert(runtime->prepare(root.c_str()));
     run(*runtime,[&](){
       const auto before=runtime->policies_[0];
       auto check=[&](const char* name,const std::string& candidate,bool expected){
@@ -246,7 +248,7 @@ void discovery() {
     const std::string envelope=envelopeGrant?array(grant("storage.volume",1,9)):"[]";
     configure(manifest(),"[]",R"([{"manifest":"sd.json","instance_id":9}])",
       "{\"volume_instance\":9,\"grants\":"+envelope+"}");
-    installer=nullptr;auto runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(root.c_str()));
+    installer=nullptr;RiscTest::FileSources runtimeFiles5({root.c_str()});auto runtime=std::make_unique<Runtime>(port());assert(runtimeFiles5.bind(*runtime));assert(runtime->prepare(root.c_str()));
     run(*runtime,[&](){
       assert(installer);char launch[193]{};
       auto admit=[&](const std::string& app){return installer->admit(installer->context,"Apps/discovered/manifest.json",app.c_str(),launch,sizeof(launch));};
@@ -307,12 +309,12 @@ void reservedDiscovery() {
     auto second=board["devices"].as<JsonArray>().add<JsonObject>();second.set(board["devices"][0]);
     second["instance_id"]=10;second["config"]["pins"][0]=6;
     std::string encoded;serializeJson(board,encoded);write("board.json",encoded);
-    JsonDocument boot,policy;assert(RiscBoot::readJson((root+"/boot.json").c_str(),boot));
+    JsonDocument boot,policy;assert(RiscTest::readFixtureJson((root+"/boot.json").c_str(),boot));
     const std::string reserved="{\"manifest\":\"reserved.json\",\"grants\":"+grants+
       ",\"catalog_authority\":true,\"image_source\":{\"volume_instance\":9,\"path\":\"Apps/reserved/reserved.elf\"}}";
     assert(RiscBoot::parse(reserved.data(),reserved.size(),policy));boot["app_capabilities"].as<JsonArray>().add(policy.as<JsonVariantConst>());
     encoded.clear();serializeJson(boot,encoded);write("boot.json",encoded);
-    auto callbacks=port();callbacks.appData=&data;auto runtime=std::make_unique<Runtime>(callbacks);
+    auto callbacks=port();callbacks.appData=&data;RiscTest::FileSources runtimeFiles6({root.c_str()});auto runtime=std::make_unique<Runtime>(callbacks);assert(runtimeFiles6.bind(*runtime));
     assert(runtime->prepare(root.c_str()));assert(runtime->policies_[1].catalogAuthority&&!runtime->policies_[1].enabled);
     installer=nullptr;run(*runtime,[&](){
       assert(installer);char launch[193]{};const auto before=runtime->policyCount_;

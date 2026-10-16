@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <cstdio>
 #include <cstring>
+#include "RuntimeFileFixture.h"
 static RiscStorage::Worker mailbox;
 static bool worker=false,poison=false,acquired=false;
 static const char* mode(){const char*p=std::getenv("PROBE_MODE");return p?p:"success";}
@@ -32,7 +33,7 @@ int main(int argc,char**argv){assert(argc==2);std::string root=argv[1];
  save("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"platform.clock","api":1,"instance_id":0}]}]})");
  RiscBoot::Port port{[](){return !worker;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},[](RiscBoot::Runtime&r){static const uint32_t table[]={1,8};return r.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,table);}};
  port.appExitSafe=[](){return cpu->appExitSafe();};port.providerStorageSafe=[](){return cpu->providerStorageSafe();};
- auto*r=new RiscBoot::Runtime(port);if(!r->prepare(root.c_str())){puts(r->error());assert(false);}bool result=r->run();
+ static RiscTest::FileSources rFiles0({root.c_str()});auto*r=new RiscBoot::Runtime(port);assert(rFiles0.bind(*r));if(!r->prepare(root.c_str())){puts(r->error());assert(false);}bool result=r->run();
  if(std::getenv("EXPECT_OLD_FAILURE")||strcmp(mode(),"success")){assert(!result&&r->retained());printf("Production retention fence PASS mode=%s original=%s\n",mode(),std::getenv("EXPECT_OLD_FAILURE")?"yes":"no");return 0;}
  assert(result&&!r->retained()&&acquired);assert(cpu->appExitSafe());
  // Real exit and real custody faults remain unsafe; this is not an idle bypass.

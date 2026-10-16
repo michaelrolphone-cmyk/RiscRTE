@@ -1,3 +1,4 @@
+#include "FixtureJson.h"
 #include "bootstrap/Board.h"
 #include <cassert>
 #include <cstdio>
@@ -6,7 +7,7 @@
 using namespace RiscBoot;
 int main(int argc,char** argv) {
   for(int i=1;i<argc;++i) {
-    JsonDocument doc;assert(readJson(argv[i],doc));
+    JsonDocument doc;assert(RiscTest::readFixtureJson(argv[i],doc));
     auto board=std::make_unique<Board>();
     if(!board->load(doc.as<JsonObjectConst>())) { fprintf(stderr,"%s: %s\n",argv[i],board->error());return 1; }
     printf("Shared board manifest materialization PASS: %s\n",board->identity()->board_id);

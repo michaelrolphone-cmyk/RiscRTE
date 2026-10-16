@@ -11,6 +11,7 @@
 #include <vector>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 namespace fs=std::filesystem;
 using RiscBoot::Runtime;
 static std::string root;
@@ -207,7 +208,7 @@ static JsonDocument boot(){return parse(std::string(R"({"board":"board.json","de
 static void install(){file("board.json",std::string(R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})"));file("first.json",driver(0));file("second.json",driver(1));file("app.json",std::string(appManifest));file("boot.json",boot());}
 static void admission(){
  unsigned before=calls,images=loaded;
- auto rejected=[&](){Runtime r(port());assert(!r.prepare(root.c_str()) && calls==before && loaded==images);};
+ auto rejected=[&](){RiscTest::FileSources rFiles0({root.c_str()});Runtime r(port());assert(rFiles0.bind(r));assert(!r.prepare(root.c_str()) && calls==before && loaded==images);};
  for(unsigned bad=0;bad<22;++bad){auto b=boot();auto entry=b["drivers"][0]["app_data"][0];
   switch(bad){
    case 0:b["drivers"][0]["app_data"]=nullptr;break;
@@ -240,11 +241,11 @@ static void admission(){
  d=parse(driver(0));d["provides"][0]["capability"]=RISC_BOUND_APP_DATA_CAPABILITY;file("first.json",d);rejected();
  install();auto a=parse(appManifest);a["requires"][0]["capability"]=RISC_BOUND_APP_DATA_CAPABILITY;file("app.json",a);
  auto b=boot();b["app_capabilities"][0]["grants"][0]["capability"]=RISC_BOUND_APP_DATA_CAPABILITY;file("boot.json",b);rejected();
- install();{auto p=port();p.appData=nullptr;Runtime r(p);assert(!r.prepare(root.c_str()));}
+ install();{auto p=port();p.appData=nullptr;RiscTest::FileSources rFiles1({root.c_str()});Runtime r(p);assert(rFiles1.bind(r));assert(!r.prepare(root.c_str()));}
  auto original=backend;
- for(unsigned i=0;i<4;++i){backend=original;if(i==0)backend.stat=nullptr;if(i==1)backend.read=nullptr;if(i==2)backend.replace=nullptr;if(i==3)backend.exitSafe=nullptr;Runtime r(port());assert(!r.prepare(root.c_str()));}
+ for(unsigned i=0;i<4;++i){backend=original;if(i==0)backend.stat=nullptr;if(i==1)backend.read=nullptr;if(i==2)backend.replace=nullptr;if(i==3)backend.exitSafe=nullptr;RiscTest::FileSources rFiles2({root.c_str()});Runtime r(port());assert(rFiles2.bind(r));assert(!r.prepare(root.c_str()));}
  backend=original;assert(calls==before && loaded==images);
- {Runtime r(port());assert(r.prepare(root.c_str()) && calls==before && loaded==images);}
+ {RiscTest::FileSources rFiles3({root.c_str()});Runtime r(port());assert(rFiles3.bind(r));assert(r.prepare(root.c_str()) && calls==before && loaded==images);}
  puts("Bound app-data exact policy/schema, backend-required, provider-only and metadata zero-I/O PASS");
 }
 int main(int argc,char** argv){
@@ -254,20 +255,20 @@ int main(int argc,char** argv){
  for(unsigned cycle=0;cycle<2;++cycle){
   // Remove the quota-test fourth committed file between ordinary boots.
   fs::remove(root+"/files/n00000005/outside.bin");
-  appEntries=0;Runtime r(port());running=&r;assert(r.prepare(root.c_str()));assert(r.run() && !r.retained());
+  appEntries=0;RiscTest::FileSources rFiles4({root.c_str()});Runtime r(port());assert(rFiles4.bind(r));running=&r;assert(r.prepare(root.c_str()));assert(r.run() && !r.retained());
   assert(appEntries==1 && starts==quiesced && quiesced==stopped && loaded==unloaded);
   for(unsigned i=0;i<2;++i){bound_files_denied(saved[i]);prior[i]=saved[i];saved[i]={};}
  }
  auto eager=boot();eager["provider_activation"]="eager";file("boot.json",eager);
- eagerRun=true;appEntries=0;{Runtime r(port());running=&r;assert(r.prepare(root.c_str()));assert(r.run() && appEntries==1);}eagerRun=false;
- failedStart=true;{Runtime r(port());running=&r;unsigned before=diagnosed;assert(r.prepare(root.c_str()));assert(!r.run() && !r.retained());assert(diagnosed==before+1 && starts==quiesced && stopped==quiesced && loaded==unloaded);}failedStart=false;file("boot.json",boot());
+ eagerRun=true;appEntries=0;{RiscTest::FileSources rFiles5({root.c_str()});Runtime r(port());assert(rFiles5.bind(r));running=&r;assert(r.prepare(root.c_str()));assert(r.run() && appEntries==1);}eagerRun=false;
+ failedStart=true;{RiscTest::FileSources rFiles6({root.c_str()});Runtime r(port());assert(rFiles6.bind(r));running=&r;unsigned before=diagnosed;assert(r.prepare(root.c_str()));assert(!r.run() && !r.retained());assert(diagnosed==before+1 && starts==quiesced && stopped==quiesced && loaded==unloaded);}failedStart=false;file("boot.json",boot());
  puts("Bound app-data real Runtime/ELF and file backend: read/replace/RO/namespaces/quota/revisions/release/restart/failure revocation PASS");
  // Retained invocations are intentionally never destroyed. Each isolated child
  // proves no post-fault provider callback, no fini and no retry after a reset flag.
  for(bool duringStart:{false,true})for(int op=1;op<=4;++op){
   file("boot.json",duringStart?eager:boot());pid_t pid=fork();assert(pid>=0);
   if(!pid){faultOp=op;faultInStart=duringStart;appEntries=0;unsigned finis=appFinis;
-   auto r=std::make_unique<Runtime>(port());running=r.get();assert(r->prepare(root.c_str()));
+   RiscTest::FileSources rFiles7({root.c_str()});auto r=std::make_unique<Runtime>(port());assert(rFiles7.bind(*r));running=r.get();assert(r->prepare(root.c_str()));
    assert(!r->run() && r->retained() && retainedTriggered && appFinis==finis);
    if(duringStart)assert(!appEntries);
    unsigned before=calls;for(const auto& api:saved)bound_files_denied(api);assert(calls==before);
@@ -279,7 +280,7 @@ int main(int argc,char** argv){
  puts("Bound app-data stat/read/replace/unsafe reset retention during eager start and app: sticky no-I/O/no-diagnostic/no-teardown PASS");
  for(unsigned mode=1;mode<=2;++mode){pid_t pid=fork();assert(pid>=0);
   if(!pid){faultOp=3;cooperativeMode=mode;appEntries=0;unsigned finis=appFinis;
-   auto r=std::make_unique<Runtime>(port());running=r.get();assert(r->prepare(root.c_str()));
+   RiscTest::FileSources rFiles8({root.c_str()});auto r=std::make_unique<Runtime>(port());assert(rFiles8.bind(*r));running=r.get();assert(r->prepare(root.c_str()));
    assert(!r->run() && r->retained() && retainedTriggered && appFinis==finis);
    (void)r.release();_exit(0);
   }
@@ -296,7 +297,7 @@ int main(int argc,char** argv){
   if(stage==1 && startResult)continue; // Diagnostics only run after a rejected start.
   pid_t pid=fork();assert(pid>=0);
   if(!pid){faultOp=3;indirectFault=true;relayResult=startResult;relayStage=stage;appEntries=0;unsigned finis=appFinis;
-   auto r=std::make_unique<Runtime>(port());running=r.get();assert(r->prepare(root.c_str()));
+   RiscTest::FileSources rFiles9({root.c_str()});auto r=std::make_unique<Runtime>(port());assert(rFiles9.bind(*r));running=r.get();assert(r->prepare(root.c_str()));
    assert(!r->run() && r->retained() && retainedTriggered && appFinis==finis);
    (void)r.release();_exit(0);
   }

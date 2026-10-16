@@ -8,6 +8,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 
 static unsigned generation=0;
 static bool ownerOk=true;
@@ -55,8 +56,8 @@ static std::vector<RiscPerf::Record> records(){
 static void run(const std::string& root,bool enabled){
   generation=initialized=finalized=0;begins.clear();childIds.clear();lines.clear();waits.clear();ticks=0;
   RiscPerf::configure(clockUs,owner,enabled);
-  RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},
-    [](uint32_t ms){waits.push_back(ms);if(RiscPerf::enabled)ticks+=uint64_t(ms)*1000;},[](const char* s){lines.emplace_back(s);return true;}});
+  RiscTest::FileSources runtimeFiles0({root.c_str()});RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},
+    [](uint32_t ms){waits.push_back(ms);if(RiscPerf::enabled)ticks+=uint64_t(ms)*1000;},[](const char* s){lines.emplace_back(s);return true;}});assert(runtimeFiles0.bind(runtime));
   assert(runtime.prepare(root.c_str()));assert(runtime.run());assert(!runtime.retained());
   assert(generation==3 && initialized==4 && finalized==4);
   assert((waits==std::vector<uint32_t>{3,1,1,3,1,1,3}));
@@ -139,7 +140,7 @@ int main(int argc,char** argv){
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"driver.json"}]})");
   RiscPerf::configure(clockUs,owner,true);generation=2;
   {
-    RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});
+    RiscTest::FileSources runtimeFiles1({root.c_str()});RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});assert(runtimeFiles1.bind(runtime));
     assert(runtime.prepare(root.c_str()) && runtime.run());
   }
   for(uint32_t phase:{RiscPerf::ProviderAcquireBegin,RiscPerf::ProviderAcquireEnd,RiscPerf::ProviderStartBegin,RiscPerf::ProviderStartEnd})
@@ -155,7 +156,7 @@ int main(int argc,char** argv){
   // Failed startup is named and does not acquire a false successful endpoint.
   lines.clear();startupAdmit=false;
   {
-    RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* s){lines.emplace_back(s);return true;}});
+    RiscTest::FileSources runtimeFiles2({root.c_str()});RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* s){lines.emplace_back(s);return true;}});assert(runtimeFiles2.bind(runtime));
     assert(runtime.prepare(root.c_str()) && !runtime.run());
   }
   findLine("provider start end id=startup-failure result=failed elapsed_us=");
@@ -169,7 +170,7 @@ int main(int argc,char** argv){
     startupDetail=detail;
     lines.clear();
     {
-      RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* s){lines.emplace_back(s);return true;}});
+      RiscTest::FileSources runtimeFiles3({root.c_str()});RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* s){lines.emplace_back(s);return true;}});assert(runtimeFiles3.bind(runtime));
       assert(runtime.prepare(root.c_str()) && !runtime.run());
     }
     std::string reported;unsigned part=0;
@@ -187,7 +188,7 @@ int main(int argc,char** argv){
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"driver.json"}]})");
   generation=2;
   {
-    RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* s){lines.emplace_back(s);return true;}});
+    RiscTest::FileSources runtimeFiles4({root.c_str()});RiscBoot::Runtime runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* s){lines.emplace_back(s);return true;}});assert(runtimeFiles4.bind(runtime));
     assert(runtime.prepare(root.c_str()) && runtime.run());
   }
   findLine("providers activation mode=demand selected=1");

@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <cstdio>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static Port* activePort;
 static unsigned io=0;
@@ -27,7 +28,7 @@ int main(int argc,char**argv){
  auto boot=[&](bool selected){save("boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[)")+(selected?R"({"manifest":"tx.json","instance_id":12})":"")+"]}");};
  save("tx.json",R"({"type":"driver","id":"generic-tx","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"driver.elf","requires":[{"capability":"hardware.device","api":1},{"capability":"platform.i2s.controller","api":1}],"provides":[{"capability":"test.output","api":1}],"hardware_compatibility":[{"compatible":"test,tx","revisions":["unspecified"],"config_type":"audio.i2s","config_version":1}]})");
  auto prepared=[&](Hardware h,bool expected,size_t tables,bool rx=false){
-  Port p(h);activePort=&p;RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
+  Port p(h);activePort=&p;RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(rFiles0.bind(r));
   assert(r.prepare(root.c_str())==expected);assert(p.i2sCount_==tables && !io);
   if(tables){assert(p.i2ss_[0].config.controller==(rx?0:1) && p.i2ss_[0].config.pdm_rx==rx && p.i2ss_[0].config.bclk==7 && p.i2ss_[0].config.ws==(rx?-1:8) && p.i2ss_[0].config.data==9);assert(p.i2ss_[0].api.read && p.quiescent());}
  };

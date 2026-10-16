@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <cstdio>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static Port* activePort;
 static unsigned io=0;
@@ -40,7 +41,7 @@ int main(int argc,char**argv){
   bytes.clear();serializeJson(m,bytes);save("peer.json",bytes);
   save("boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"driver.json","instance_id":1})")+(peer?R"(,{"manifest":"peer.json","instance_id":2})":"")+"]}");
   io=0;Port p(hardware());activePort=&p;
-  RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
+  RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(rFiles0.bind(r));
   const bool valid=r.prepare(root.c_str());if(valid!=(ordinary || !peer))fprintf(stderr,"ordinary=%d peer=%d error=%s\n",ordinary,peer,r.error());assert(valid==(ordinary || !peer));assert(!io);
   if(!ordinary && peer)continue;
   auto& a=p.gpios_[0].api.base;const auto bit=[](unsigned n){return uint64_t(1)<<n;};

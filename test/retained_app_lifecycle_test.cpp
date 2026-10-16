@@ -7,6 +7,7 @@
 #include <string>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 
 // Real Runtime/Graph/CPU + dlopen app/provider images. Only the lowest hardware
 // and key-value backend are modeled. This does not simulate Xtensa allocation.
@@ -148,7 +149,7 @@ static void child() {
   hardware.wakeValid=deepValid;hardware.wakeArm=lightArm;hardware.wakeClear=lightClear;hardware.lightSleep=lightSleep;
   hardware.timerArm=timerArm;hardware.timerClear=timerClear;
   cpu = new RiscCpu::Port(hardware);
-  auto* runtime = new RiscBoot::Runtime({owner, health, delay, logLine, bind, &keyValue, appExitSafe});
+  static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime = new RiscBoot::Runtime({owner, health, delay, logLine, bind, &keyValue, appExitSafe});assert(runtimeFiles0.bind(*runtime));
   assert(runtime->prepare(root.c_str()));
   const bool ordinary = mode == "ordinary-refusal" || mode == "timed-light-normal" || mode == "timed-light-short" || mode == "timed-deep-refusal";
   assert(runtime->run() == ordinary);

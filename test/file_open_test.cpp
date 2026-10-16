@@ -7,6 +7,8 @@
 #include <vector>
 #include <sys/mman.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 using namespace RiscBoot;
 namespace {
 Runtime* live=nullptr;
@@ -252,7 +254,7 @@ int main(int argc,char** argv) {
   std::filesystem::copy_file(root+"/role-0.elf",root+"/browser-backup.elf");
   for(const char* scenario:{"success","load-failure","invalid-elf","missing-entry","init-failure","init-failure-grant","repeat","long-path","discard-result","default-caller","default-receiver","caller-load-failure","queued-launch"}) {
     mode=scenario;provision();memset(visits,0,sizeof(visits));memset(initCalls,0,sizeof(initCalls));memset(finiCalls,0,sizeof(finiCalls));
-    Runtime runtime({owner,health,delay,logLine,nullptr,nullptr,safe});live=&runtime;
+    RiscTest::FileSources runtimeFiles0({root.c_str()});Runtime runtime({owner,health,delay,logLine,nullptr,nullptr,safe});assert(runtimeFiles0.bind(runtime));live=&runtime;
     assert(runtime.prepare(root.c_str()));
     std::vector<std::string> churn(128,std::string(4096,'Z'));
     assert(runtime.run());
@@ -270,27 +272,27 @@ int main(int argc,char** argv) {
   puts("File-open: declared immutable handlers, strict SD paths, explicit grants, copied handoff, fresh child-caller-default, repeated success/failure and automatic grant cleanup PASS");
   // Malformed association metadata always rejects before any ELF executes.
   for(const char* bad:{"null","{}","[1]","[\"txt\"]","[\".TXT\"]","[\".\"]","[\".a-b\"]","[\".txt\",\".txt\"]","[\".abcdefghijklmno\"]"}) {
-    provision();JsonDocument viewer;assert(readJson((root+"/viewer.json").c_str(),viewer));
+    provision();JsonDocument viewer;assert(RiscTest::readFixtureJson((root+"/viewer.json").c_str(),viewer));
     JsonDocument invalid;assert(!deserializeJson(invalid,bad));viewer["supported_file_types"].set(invalid.as<JsonVariantConst>());save("viewer.json",viewer);
-    Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"invalid app file associations"));
+    RiscTest::FileSources runtimeFiles1({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles1.bind(runtime));assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"invalid app file associations"));
   }
   for(const char* field:{"id","display_name","icon","supported_file_types"}) {
-    provision();JsonDocument viewer;assert(readJson((root+"/viewer.json").c_str(),viewer));
+    provision();JsonDocument viewer;assert(RiscTest::readFixtureJson((root+"/viewer.json").c_str(),viewer));
     if(!strcmp(field,"supported_file_types")){auto types=viewer[field].to<JsonArray>();for(unsigned n=0;n<13;++n)types.add(".t"+std::to_string(n));}
     else viewer[field]=std::string(!strcmp(field,"id")?64:!strcmp(field,"icon")?24:96,'a');
-    save("viewer.json",viewer);Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));
+    save("viewer.json",viewer);RiscTest::FileSources runtimeFiles2({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles2.bind(runtime));assert(!runtime.prepare(root.c_str()));
   }
   for(const char* field:{"api","instance_id"}) {
-    provision();JsonDocument boot;assert(readJson((root+"/boot.json").c_str(),boot));
+    provision();JsonDocument boot;assert(RiscTest::readFixtureJson((root+"/boot.json").c_str(),boot));
     boot["app_capabilities"][0]["grants"][0][field]=!strcmp(field,"api")?2:1;save("boot.json",boot);
-    if(!strcmp(field,"api")){JsonDocument browser;assert(readJson((root+"/browser.json").c_str(),browser));browser["requires"][0]["api"]=2;save("browser.json",browser);}
-    Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"invalid file-open authority"));
+    if(!strcmp(field,"api")){JsonDocument browser;assert(RiscTest::readFixtureJson((root+"/browser.json").c_str(),browser));browser["requires"][0]["api"]=2;save("browser.json",browser);}
+    RiscTest::FileSources runtimeFiles3({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles3.bind(runtime));assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"invalid file-open authority"));
   }
   puts("File-open: malformed/oversized/duplicate metadata and wrong global version/instance fail closed PASS");
   // Retention intentionally keeps the pinned test module until process exit.
   for(const char* scenario:{"retained-caller","retained-receiver"}) {
     mode=scenario;provision();memset(visits,0,sizeof(visits));memset(initCalls,0,sizeof(initCalls));memset(finiCalls,0,sizeof(finiCalls));exitSafe=true;
-    Runtime runtime({owner,health,delay,logLine,nullptr,nullptr,safe});live=&runtime;
+    RiscTest::FileSources runtimeFiles4({root.c_str()});Runtime runtime({owner,health,delay,logLine,nullptr,nullptr,safe});assert(runtimeFiles4.bind(runtime));live=&runtime;
     assert(runtime.prepare(root.c_str()));assert(!runtime.run() && runtime.retained());
     assert(visits[0]==1 && visits[2]==1 && visits[1]==unsigned(mode=="retained-receiver"));
     assert(finiCalls[0]==unsigned(mode=="retained-receiver") && finiCalls[1]==0);

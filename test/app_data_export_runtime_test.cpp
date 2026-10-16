@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 using namespace RiscBoot;
 namespace fs=std::filesystem;
 static bool owned=true,backendSafe=true,allocationFail=false;
@@ -45,7 +47,7 @@ extern "C" void export_test_probe(int role,int live){
 }
 extern "C" void export_test_finished(int role){assert(mode!=1 && mode!=3 && mode!=4);++finished[role];}
 static void save(const fs::path& path,const JsonDocument& doc){std::ofstream file(path);serializeJson(doc,file);assert(file.good());}
-static JsonDocument read(const fs::path& path){JsonDocument doc;assert(readJson(path.c_str(),doc));return doc;}
+static JsonDocument read(const fs::path& path){JsonDocument doc;assert(RiscTest::readFixtureJson(path.c_str(),doc));return doc;}
 static void textFile(const fs::path& path,const char* text){std::ofstream(path)<<text;}
 static JsonDocument manifest(const char* id,const char* elf,bool exports,bool owner){
  JsonDocument doc;doc["type"]="application";doc["id"]=id;doc["version"]="1.0.0";doc["architecture"]="xtensa-esp32s3";doc["file_name"]=elf;doc["entry"]="app_main";
@@ -103,13 +105,13 @@ static void policies(const Port& port){
   if(bad==17){for(unsigned i=2;i<17;++i)item["app_data_export"]["files"].as<JsonArray>().add(e);}
   if(bad==18)item["grants"][0]["instance_id"]=41;
   if(bad==19)item["grants"][0]["api"]=2;
-  save(source/"boot.json",boot);Runtime runtime(port);if(runtime.prepare(source.c_str())){std::cerr<<"accepted bad policy "<<bad<<"\n";assert(false);}
+  save(source/"boot.json",boot);RiscTest::FileSources runtimeFiles0({source.c_str()});Runtime runtime(port);assert(runtimeFiles0.bind(runtime));if(runtime.prepare(source.c_str())){std::cerr<<"accepted bad policy "<<bad<<"\n";assert(false);}
  }
- save(source/"boot.json",original);{Runtime runtime(port);assert(runtime.prepare(source.c_str()));}
+ save(source/"boot.json",original);{RiscTest::FileSources runtimeFiles1({source.c_str()});Runtime runtime(port);assert(runtimeFiles1.bind(runtime));assert(runtime.prepare(source.c_str()));}
  // Unused map and missing native backend reject before any backend operation.
  store(source,false);auto boot=read(source/"boot.json");map(boot["app_capabilities"][0].as<JsonObject>());save(source/"boot.json",boot);
- {Runtime runtime(port);assert(!runtime.prepare(source.c_str()));}
- store(source);{auto missing=port;missing.appData=nullptr;Runtime runtime(missing);assert(!runtime.prepare(source.c_str()));}
+ {RiscTest::FileSources runtimeFiles2({source.c_str()});Runtime runtime(port);assert(runtimeFiles2.bind(runtime));assert(!runtime.prepare(source.c_str()));}
+ store(source);{auto missing=port;missing.appData=nullptr;RiscTest::FileSources runtimeFiles3({source.c_str()});Runtime runtime(missing);assert(runtimeFiles3.bind(runtime));assert(!runtime.prepare(source.c_str()));}
  assert(!calls);puts("App-data export strict maps, exact owner, no aliases and no implicit namespace authority PASS");
 }
 static void watchPolicy(const Port& port,const fs::path& fixtures){
@@ -129,17 +131,17 @@ static void watchPolicy(const Port& port,const fs::path& fixtures){
   }
  }
  assert(owners==4);save(source/"boot.json",boot);
- {Runtime runtime(port);assert(runtime.prepare(source.c_str()));}
+ {RiscTest::FileSources runtimeFiles4({source.c_str()});Runtime runtime(port);assert(runtimeFiles4.bind(runtime));assert(runtime.prepare(source.c_str()));}
  for(size_t i=0;i<exports["files"].size();++i) {
   auto bad=boot;auto file=bad["app_capabilities"][0]["app_data_export"]["files"][i];file["namespace"]=file["namespace"].as<unsigned>()+100;
-  save(source/"boot.json",bad);Runtime runtime(port);assert(!runtime.prepare(source.c_str()));
+  save(source/"boot.json",bad);RiscTest::FileSources runtimeFiles5({source.c_str()});Runtime runtime(port);assert(runtimeFiles5.bind(runtime));assert(!runtime.prepare(source.c_str()));
  }
  save(source/"boot.json",boot);assert(!calls);
  puts("App-data export pinned Watch25 owner IDs/namespaces and exact persisted-file projection admission PASS");
 }
 static void cohort(const Port& port){
  const auto old=source/"old",next=source/"next";store(old,false);store(next,true);
- Runtime previous(port);assert(previous.prepare(old.c_str()));
+ RiscTest::FileSources previousFiles6({old.c_str(),next.c_str()});Runtime previous(port);assert(previousFiles6.bind(previous));assert(previous.prepare(old.c_str()));
  unsigned admitted=0;auto inspect=[](void* c,const char*,bool){++*static_cast<unsigned*>(c);return true;};
  auto check=[&](const Runtime& current,bool expected,const Runtime::AppDataExportDelegation* d=nullptr,size_t count=0){
   Runtime candidate(Port{});const bool actual=current.validateCohort(candidate,next.c_str(),inspect,&admitted,d,count);
@@ -154,7 +156,7 @@ static void cohort(const Port& port){
  Runtime::AppDataExportDelegation duplicate[]={exact,exact};check(previous,false,duplicate,2);check(previous,false,nullptr,1);check(previous,false,&exact,Runtime::MaxAppPolicies+1);
  std::swap(entries[0],entries[1]);check(previous,true,&exact,1);std::swap(entries[0],entries[1]);
  auto changed=entries[0];entries[0].writable=false;check(previous,false,&exact,1);entries[0]=changed;
- store(old,true);Runtime existing(port);assert(existing.prepare(old.c_str()));check(existing,true);check(existing,false,&exact,1);
+ store(old,true);RiscTest::FileSources existingFiles8({old.c_str(),next.c_str()});Runtime existing(port);assert(existingFiles8.bind(existing));assert(existing.prepare(old.c_str()));check(existing,true);check(existing,false,&exact,1);
  const auto original=read(next/"boot.json");
  auto reordered=original;reordered["app_capabilities"][0]["app_data_export"]["files"][0].set(original["app_capabilities"][0]["app_data_export"]["files"][1]);reordered["app_capabilities"][0]["app_data_export"]["files"][1].set(original["app_capabilities"][0]["app_data_export"]["files"][0]);save(next/"boot.json",reordered);check(existing,true);save(next/"boot.json",original);
  for(unsigned bad=0;bad<8;++bad){auto boot=original;auto m=boot["app_capabilities"][0]["app_data_export"];auto e=m["files"][0];
@@ -174,9 +176,9 @@ static void cohort(const Port& port){
   auto app=read(root/"default.json");auto req=app["requires"].as<JsonArray>().add<JsonObject>();req["capability"]="storage.installed-files";req["api"]=1;save(root/"default.json",app);
   auto boot=read(root/"boot.json");auto g=boot["app_capabilities"][0]["grants"].as<JsonArray>().add<JsonObject>();g["capability"]="storage.installed-files";g["api"]=1;g["instance_id"]=0;save(root/"boot.json",boot);
  };
- store(old,false);installedGrant(old);Runtime previousGrants(port);assert(previousGrants.prepare(old.c_str()));
+ store(old,false);installedGrant(old);RiscTest::FileSources previousGrantsFiles9({old.c_str(),next.c_str()});Runtime previousGrants(port);assert(previousGrantsFiles9.bind(previousGrants));assert(previousGrants.prepare(old.c_str()));
  store(next,true);check(previousGrants,false,&exact,1);installedGrant(next);check(previousGrants,true,&exact,1);
- store(old,true);installedGrant(old);Runtime existingGrants(port);assert(existingGrants.prepare(old.c_str()));
+ store(old,true);installedGrant(old);RiscTest::FileSources existingGrantsFiles10({old.c_str(),next.c_str()});Runtime existingGrants(port);assert(existingGrantsFiles10.bind(existingGrants));assert(existingGrants.prepare(old.c_str()));
  check(existingGrants,true);store(next,true);check(existingGrants,false);
  assert(!calls);puts("App-data export cohort preserves owner/grants/maps and consumes exact native-only initial delegation PASS");
 }
@@ -192,7 +194,7 @@ int main(int argc,char** argv){
  Port port{[](){return owned;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&backend;
  if(scenario=="policy"){policies(port);return 0;}if(scenario=="watch-policy"){watchPolicy(port,argv[3]);return 0;}if(scenario=="cohort"){cohort(port);return 0;}
  assert(files.replace(41,"state.bin",0,"init",4)==RISC_APP_DATA_OK);assert(files.replace(41,"readonly.bin",0,"read",4)==RISC_APP_DATA_OK);
- store(source,true,mode==2 || mode==3);auto runtime=std::make_unique<Runtime>(port);running=runtime.get();assert(runtime->prepare(source.c_str()));
+ store(source,true,mode==2 || mode==3);static RiscTest::FileSources runtimeFiles11({source.c_str()});auto runtime=std::make_unique<Runtime>(port);assert(runtimeFiles11.bind(*runtime));running=runtime.get();assert(runtime->prepare(source.c_str()));
  const bool clean=runtime->run();assert(clean==(mode!=1 && mode!=3 && mode!=4));assert(runtime->retained()==!clean);
  if(mode!=4)export_test_probe(0,0);
  if(mode==2 || mode==3)export_test_probe(1,0);

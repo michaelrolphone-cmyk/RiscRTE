@@ -25,6 +25,7 @@
 #include <openssl/evp.h>
 #include <dlfcn.h>
 #include <set>
+#include "RuntimeFileFixture.h"
 using Sync=RiscExperimental::NativeSdSynchronization;
 using Restore=RiscExperimental::CheckedSdNativeRestore;
 using Reader=RiscExperimental::CheckedSdReplicaReader;
@@ -128,7 +129,7 @@ static void seedNative(){
  puts("PRECONDITION: explicitly synthetic matching native/SD baseline (optional encoded preset seed), generation 19; no first-boot/product policy claim");
 }
 static void app(){
- R current({owner,health,delay,logLine,bind,&forbiddenLegacy});runtime=&current;
+ RiscTest::FileSources currentFiles0({directory.c_str()});R current({owner,health,delay,logLine,bind,&forbiddenLegacy});assert(currentFiles0.bind(current));runtime=&current;
  if(!current.prepare(directory.c_str())){fprintf(stderr,"controller prepare: %s\n",current.error());assert(false);}
  assert(current.run()&&!current.retained()&&current.residentResetSafe());invalid(savedApi);
 }
@@ -188,7 +189,7 @@ int main(int argc,char**argv){
  if(!restoring)seedNative();
  Port cpu(hardware());port=&cpu;RiscBoot::Port boot{sdPortOwner,health,[](uint32_t ms){nowMs+=ms;},logLine,sdPortBind};
  boot.appExitSafe=[](){return port->appExitSafe();};boot.providerStorageSafe=[](){return port->providerStorageSafe();};
- R sdRuntime(boot);if(!sdRuntime.prepare(sdDir.c_str())){fprintf(stderr,"SD prepare: %s\n",sdRuntime.error());assert(false);}
+ RiscTest::FileSources sdRuntimeFiles1({sdDir.c_str()});R sdRuntime(boot);assert(sdRuntimeFiles1.bind(sdRuntime));if(!sdRuntime.prepare(sdDir.c_str())){fprintf(stderr,"SD prepare: %s\n",sdRuntime.error());assert(false);}
  Pin anchor(sdRuntime,cpu,55);assert(!anchor.acquire());if(std::filesystem::exists(card))media(sdDir,"native_settings_sd_load",card);
  {P ready(sdRuntime,cpu,ns,55);bootstrap(ready);assert(!ready.release());}
  if(!restoring)seedSd(initialIdentity());independentFileAndUsb();

@@ -1,5 +1,6 @@
 // Execute the real runtime, seven external drivers, and three shared apps.
 #include "support/WatchPeripheralModel.h"
+#include "RuntimeFileFixture.h"
 using namespace WatchPeripheralModel;
 namespace {
 bool touchBus=false; unsigned touchReads=0,batteryReads=0,clockReady=0,phase=0,step=0;
@@ -45,7 +46,7 @@ bool displayTransfer(uint8_t p,const uint8_t* tx,uint8_t* rx,size_t n,uint32_t m
 int main(int argc,char**argv){
  assert(argc==2);reset(true);model.registers[0][0x34]=0x0f;model.registers[0][0x35]=0xa0;
  RiscCpu::Port port({owner,now,delay,gpioOpen,gpioWrite,gpioRead,gpioPwm,gpioClose,busOpen,transfer,busClose,spiOpen,spiBegin,displayTransfer,spiEnd,spiClose});cpu=&port;
- RiscBoot::Runtime runtime({owner,live,delay,diagnostic,bind});
+ RiscTest::FileSources runtimeFiles0({argv[1]});RiscBoot::Runtime runtime({owner,live,delay,diagnostic,bind});assert(runtimeFiles0.bind(runtime));
  if(!runtime.prepare(argv[1]) || !runtime.run()){fprintf(stderr,"runtime: %s\n",runtime.error());return 1;}
  fprintf(stderr,"ready=%u frames=%zu battery=%u touch=%u steps=%u\n",clockReady,frames.size(),batteryReads,touchReads,step);
 #ifdef EXPECT_BATTERY_UI

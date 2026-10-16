@@ -13,7 +13,7 @@ static void display_backend_tests(const std::string& root){
   std::ifstream in(root+"/display.json");std::string manifest((std::istreambuf_iterator<char>(in)),{});
   const auto at=manifest.find("spi.bus");manifest.replace(at,7,"platform.display.backend");
   std::ofstream(root+"/display.json")<<manifest;
-  RiscBoot::Runtime r(runtime());assert(r.prepare(root.c_str()));assert(!displayCalls && !model.calls && !p.spiCount_);
+  RiscTest::FileSources metadataFiles({root});RiscBoot::Runtime r(runtime());assert(metadataFiles.bind(r));assert(r.prepare(root.c_str()));assert(!displayCalls && !model.calls && !p.spiCount_);
   auto& a=p.display_.api;uint64_t token=0;uint16_t row[410]{};
   model.owner=false;assert(!a.open(a.context,&token) && !token && !displayCalls);model.owner=true;
   assert(p.reserve(6,&r));assert(!a.open(a.context,&token) && !displayCalls);p.unreserve(6,&r);

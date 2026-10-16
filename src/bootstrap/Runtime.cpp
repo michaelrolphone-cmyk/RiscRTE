@@ -365,7 +365,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
     const size_t slot=replacing?replacement:policyCount_;
     auto& policy=policies_[slot]; char relative[193]; JsonDocument doc;
     if (!keys(item,{"manifest","grants"},{"app_data_export","image_source","catalog_authority"}) || !text(item["manifest"],relative,sizeof(relative)) ||
-        !path(root_,relative,policy.elf,sizeof(policy.elf)) || (suppliedManifest.isNull() && !readJson(policy.elf,doc,&metadataCloseRetained_))) return fail("invalid app policy manifest path");
+        !path(root_,relative,policy.elf,sizeof(policy.elf)) || (suppliedManifest.isNull() && !readJson(metadataSource(),policy.elf,doc,&metadataCloseRetained_))) return fail("invalid app policy manifest path");
     JsonObjectConst manifest=suppliedManifest.isNull()?doc.as<JsonObjectConst>():suppliedManifest.as<JsonObjectConst>(); char filename[128];
     if (!keys(manifest,{"type","id","version","architecture","file_name","entry","requires"},{"description","display_name","icon","supported_file_types","runtime_lifecycle","launcher_visible","min_firmware_version","optional"}) ||
         !eq(manifest["type"],"application") || !eq(manifest["architecture"],"xtensa-esp32s3") || !eq(manifest["entry"],"app_main") ||
@@ -513,7 +513,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
           if(grant.api!=1 || grant.instance || !port_.retainedWake)return fail("retained-wake backend/authority unavailable");
           if(!retainedCohort_[0]){
             RiscUpdate::CohortIdentity identity{};
-            if(!RiscUpdate::readCohort(root_,identity,&metadataCloseRetained_))return fail("retained-wake cohort unavailable");
+            if(!RiscUpdate::readCohort(metadataSource(),root_,identity,&metadataCloseRetained_))return fail("retained-wake cohort unavailable");
             char digest[65]{};for(unsigned b=0;b<32;++b)snprintf(digest+2*b,3,"%02x",identity.firmwareSha[b]);
             const int n=snprintf(retainedCohort_,sizeof(retainedCohort_),"%s|%s|%s|%s|%s|%s|%u|%u|%s",
               identity.product.product,identity.product.version,identity.product.source_repo,identity.product.source_revision,
@@ -910,7 +910,7 @@ bool Runtime::providerPolicy(JsonObjectConst selection,ProviderStorage& storage)
   return true;
 }
 bool Runtime::providerStorageSafe() const {
-  if(entropyRetained_ || tcpRetained_ || metadataCloseRetained_ || !appDataExitSafe())return false;
+  if(entropyRetained_ || tcpRetained_ || metadataCloseRetained() || !appDataExitSafe())return false;
   if(invocation_->installedFiles_ && invocation_->installedFiles_->retained())return false;
   if(port_.providerStorageSafe)return port_.providerStorageSafe();
   return !port_.appExitSafe || port_.appExitSafe();
@@ -1101,7 +1101,7 @@ bool Runtime::revokeApp() {
 #include "ResidentShellRuntime.inc"
 bool Runtime::prepare(const char* root) {
   RiscPerf::Scope trace(10,11);
-  if(attempted_ || metadataCloseRetained_ || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/') return fail("invalid boot invocation");
+  if(attempted_ || metadataCloseRetained() || !port_.owner() || !root || strlen(root)>=sizeof(root_) || root[0]!='/' || !metadataSource(root).bound()) return fail("invalid boot invocation");
   attempted_=true; strcpy(root_,root);
   if (!RuntimeProviders::nativeProviderPolicySetValid(port_.nativeProviders)) return fail("invalid native provider selection");
   if(port_.nativeProviders.count) {
@@ -1110,12 +1110,12 @@ bool Runtime::prepare(const char* root) {
     port_.nativeProviders=nativePolicies_->view();
   }
   char filename[256], relative[193]; JsonDocument config, boardDoc;
-  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,config,&metadataCloseRetained_)) return fail("boot.json unreadable/invalid");
+  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(metadataSource(),filename,config,&metadataCloseRetained_)) return fail("boot.json unreadable/invalid");
   JsonObjectConst c=config.as<JsonObjectConst>();
   if (!c["port"].isNull() && !board_.port(c["port"])) return fail(board_.error());
   if(!RiscUpdate::validCohortMigration(c["cohort_migration"]))return fail("invalid cohort migration policy");
   if(!keys(c,{"board","default_app","drivers"},{"port","app_capabilities","cohort_migration","provider_activation","resident_shell","installation"}) || !text(c["board"],relative,sizeof(relative)) ||
-      !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,boardDoc,&metadataCloseRetained_) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
+      !path(root_,relative,filename,sizeof(filename)) || !readJson(metadataSource(),filename,boardDoc,&metadataCloseRetained_) || !board_.load(boardDoc.as<JsonObjectConst>())) return fail(board_.error()[0]?board_.error():"board manifest unreadable/invalid");
   // Activation policy never filters admission, registration or image inspection.
   const auto activation=c["provider_activation"];
   if(!activation.isUnbound() && !eq(activation,"eager") && !eq(activation,"demand") && !eq(activation,"demand-retained"))
@@ -1134,7 +1134,7 @@ bool Runtime::prepare(const char* root) {
       d.coldBootStart=true;
     }
     d.instance=instance; JsonDocument manifestDoc;
-    if(!readJson(d.elf,manifestDoc,&metadataCloseRetained_) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
+    if(!readJson(metadataSource(),d.elf,manifestDoc,&metadataCloseRetained_) || !manifest(manifestDoc.as<JsonObjectConst>(),d)) return fail(error_[0]?error_:"driver manifest unreadable/invalid");
     if(!item["image_source"].isUnbound()) {
       const auto source=item["image_source"].as<JsonObjectConst>();int64_t volume=0;char checked[256];
       if(!keys(source,{"volume_instance","path","internal_fallback"}) ||
@@ -1251,7 +1251,7 @@ bool Runtime::registerNativeProvider(const Driver& d,RuntimeProviders::SpecV2& s
   return ok || fail("native provider image admission failed");
 }
 const RuntimeProviders::NativeProviderPolicyV1* Runtime::nativeProviderPolicyForImage(const char* image) const {
-  if(!prepared_ || metadataCloseRetained_ || !image || !port_.owner())return nullptr;
+  if(!prepared_ || metadataCloseRetained() || !image || !port_.owner())return nullptr;
   const RuntimeProviders::NativeProviderPolicyV1* selected=nullptr;
   for(size_t i=0;i<driverCount_;++i) {
     const auto& d=drivers_[i];
@@ -1266,7 +1266,7 @@ const RuntimeProviders::NativeProviderPolicyV1* Runtime::nativeProviderPolicyFor
   return selected;
 }
 bool Runtime::inspectImages(bool (*inspect)(void*,const char*,bool),void* context) const {
-  if(!prepared_ || invocation_->active_ || retained_ || metadataCloseRetained_ || !port_.owner() || !inspect)return false;
+  if(!prepared_ || invocation_->active_ || retained_ || metadataCloseRetained() || !port_.owner() || !inspect)return false;
   if(!inspect(context,default_,false))return false;
   for(size_t i=0;i<policyCount_;++i){
     if(policies_[i].sourceDriver>=0 || !strcmp(policies_[i].elf,default_))continue;
@@ -1323,7 +1323,7 @@ bool Runtime::launch(const char* relative) {
        (!residentAllowed(selected) && !residentLegacyAllowed(selected) && !(legacy && !strcmp(selected,default_))))return false;
   }
   if(invocation_->fileOpen_.phase==FileOpenState::Phase::Requested || invocation_->fileOpen_.phase==FileOpenState::Phase::Receiving)return false;
-  if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained_ || !appDataExitSafe() || (invocation_->installedFiles_ && invocation_->installedFiles_->retained()) || invocation_->queued_[0] || appDataBusy() || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
+  if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained() || !appDataExitSafe() || (invocation_->installedFiles_ && invocation_->installedFiles_->retained()) || invocation_->queued_[0] || appDataBusy() || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   char selected[sizeof(invocation_->queued_)]{};
   const bool ok=installedLaunchPath(relative,selected,sizeof(selected));
   if(ok)std::strcpy(invocation_->queued_,selected);
@@ -1410,11 +1410,11 @@ bool Runtime::appUpdate(const char* id,const void* bytes,size_t size,UpdateApp& 
   return appManifestPath(size_t(policy-policies_.get()),out.manifest,sizeof(out.manifest));
 }
 bool Runtime::appManifestPath(size_t index,char* out,size_t capacity) const {
-  if(metadataCloseRetained_ || index>=policyCount_ || !out)return false;
+  if(metadataCloseRetained() || index>=policyCount_ || !out)return false;
   // Keep per-app path storage out of scarce static internal DRAM. The immutable
   // selected boot policy supplies this path; no caller filename is accepted.
   char filename[256];JsonDocument boot;
-  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,boot,&metadataCloseRetained_))return false;
+  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(metadataSource(),filename,boot,&metadataCloseRetained_))return false;
   return text(boot["app_capabilities"][index]["manifest"],out,capacity);
 }
 size_t Runtime::appInventoryCount() const {
@@ -1440,12 +1440,12 @@ bool Runtime::appInventory(size_t index,void* output,size_t capacity,uint32_t* a
   }
   char relative[193],name[256];
   if(!appManifestPath(index,relative,sizeof(relative)) || !path(root_,relative,name,sizeof(name)))return false;
-  FILE* f=fopen(name,"rb");if(!f)return false;
-  size_t n=fread(output,1,capacity,f);
-  bool ok=n && fgetc(f)==EOF && !ferror(f);
-  if(fclose(f)!=0){metadataCloseRetained_=true;ok=false;}
-  if(!ok){memset(output,0,n);return false;}
-  *actual=uint32_t(n);return true;
+  auto source=metadataSource();uint32_t handle=0;
+  if(source.open(name,&handle)!=RISC_FILES_OK)return false;
+  uint32_t n=0;bool ok=source.readToEnd(handle,output,uint32_t(capacity),&n) && n;
+  if(source.close(handle)!=RISC_FILES_OK)ok=false;
+  if(!ok || source.retained()){memset(output,0,n);return false;}
+  *actual=n;return true;
 }
 Runtime::GrantUsage Runtime::grantUsage() const {
   GrantUsage out{};
@@ -1552,7 +1552,7 @@ bool Runtime::appExitBarrier(bool exiting) {
 #if RISC_RUNTIME_STORAGE_FILES
      storageFilesExitSafe(exiting) &&
 #endif
-     graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
+     graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained() && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());
@@ -1779,7 +1779,7 @@ bool Runtime::takeLaunchFailure(risc_runtime_launch_failure_v1* out) {
   *out=launchFailure_;launchFailure_={};return true;
 }
 bool Runtime::run() {
-  if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained_) return fail("runtime not launchable");
+  if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained()) return fail("runtime not launchable");
   prepared_=false; currentRuntime=this;
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
   atomicKeyValueOwner.store(port_.owner,std::memory_order_release);
@@ -1947,7 +1947,7 @@ bool RiscBoot::Runtime::admitInstalledApp(const char* policyJson,const char* man
  return admitInstalledAppAt(policyJson,manifestJson,policyCount_);
 }
 bool RiscBoot::Runtime::admitInstalledAppAt(const char* policyJson,const char* manifestJson,size_t slot) {
-  if(!installedMetadata_ || !port_.owner() || retained_ || metadataCloseRetained_ ||
+  if(!installedMetadata_ || !port_.owner() || retained_ || metadataCloseRetained() ||
      !providerStorageSafe() || !graph_.activationSafe() || promotionRunning_ ||
      graph_.lifecycleBusy() || slot>=policyCapacity_ || slot>policyCount_ || !policyJson || !manifestJson ||
      strnlen(policyJson,4097)>4096 || strnlen(manifestJson,4097)>4096)return false;

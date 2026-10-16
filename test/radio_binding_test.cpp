@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <cstdio>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static Port* activePort;
 static unsigned io=0,prepareCalls=0,asyncBegins=0;static bool prepareOk=true;static size_t expectedAsync=0;
@@ -28,7 +29,7 @@ int main(int argc,char**argv){
  auto boot=[&](bool selected){save("boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[)")+(selected?R"({"manifest":"tx.json","instance_id":12})":"")+"]}");};
  save("tx.json",R"({"type":"driver","id":"generic-tx","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"driver.elf","requires":[{"capability":"hardware.device","api":1},{"capability":"platform.radio","api":1}],"provides":[{"capability":"test.output","api":1}],"hardware_compatibility":[{"compatible":"espressif,esp32s3-wifi","revisions":["unspecified"],"config_type":"radio.integrated","config_version":1}]})");
  auto prepared=[&](Hardware h,bool expected,size_t tables){
-  Port p(h);activePort=&p;RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
+  Port p(h);activePort=&p;RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(rFiles0.bind(r));
   assert(r.prepare(root.c_str())==expected);assert(p.radioCount_==tables && !io);
   if(tables && expectedAsync){
    auto& radio=p.radios_[0];assert(radio.asyncUnavailable==!prepareOk);radio.token=71;

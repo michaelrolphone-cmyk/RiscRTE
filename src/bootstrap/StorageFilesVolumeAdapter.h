@@ -1,5 +1,6 @@
 #pragma once
 #include <RiscStorageFilesIdentityV1.h>
+#include <RiscStorageFilesDirectoryV1.h>
 /* Native adapter only. Backend custody and all legacy volume details stop here;
  * the app table is RiscStorageFilesV1.h. Runtime owns invocation authorization,
  * graph grants and propagation of sticky retention. Never expose this class to
@@ -114,6 +115,28 @@ class StorageFilesVolumeAdapter {
     if(rc!=RISC_FILES_OK)return rc;
     if(value.struct_size!=sizeof(value)||value.reserved)return RISC_FILES_IO;
     *out=value;return RISC_FILES_OK;
+  }
+  int32_t directoryNext(const risc_storage_files_directory_v1* api,uint32_t token,
+                        risc_storage_files_stat_v1*out,char*name,uint32_t capacity,uint32_t*required){
+    if(required)*required=0;
+    if(!out||out->struct_size<sizeof(*out)||!required||(!name&&capacity))return RISC_FILES_INVALID;
+    Handle*h=find(token,true);if(!h)return RISC_FILES_INVALID;
+    int32_t rc=before();if(rc)return rc;
+    if(!api){
+      if(capacity<RISC_STORAGE_FILES_NAME_MAX)return RISC_FILES_UNAVAILABLE;
+      risc_storage_files_entry_v1 entry{};entry.struct_size=sizeof(entry);rc=dirNext(token,&entry);if(rc)return rc;
+      const size_t bytes=strlen(entry.name)+1;memcpy(name,entry.name,bytes);*required=uint32_t(bytes);
+      *out={sizeof(*out),entry.flags,entry.size,0};return RISC_FILES_OK;
+    }
+    if(!files_||api->api_version!=1||api->struct_size<sizeof(*api)||api->context!=files_->context||!api->next)return RISC_FILES_UNAVAILABLE;
+    risc_storage_files_stat_v1 value{};value.struct_size=sizeof(value);uint32_t needed=0;
+    rc=api->next(api->context,h->native,&value,name,capacity,&needed);
+    if(rc==RISC_FILES_DIRECTORY_CAPACITY){if(needed<=capacity||needed>RISC_STORAGE_FILES_PATH_MAX)return RISC_FILES_IO;*required=needed;return rc;}
+    rc=directResult(rc);if(rc)return rc;
+    if(value.struct_size!=sizeof(value)||value.flags&~uint32_t(RISC_FILES_DIRECTORY)||value.modified_seconds||!needed||needed>capacity||needed>RISC_STORAGE_FILES_PATH_MAX||strnlen(name,capacity)!=needed-1)return RISC_FILES_IO;
+    char checked[RISC_STORAGE_FILES_PATH_MAX+1];checked[0]='/';memcpy(checked+1,name,needed);
+    if(!RiscStorage::validPath(checked))return RISC_FILES_IO;
+    *out=value;*required=needed;return RISC_FILES_OK;
   }
   int32_t seek(risc_storage_files_handle_v1 token,uint64_t offset) {
     Handle* h=find(token,false);if(!h)return RISC_FILES_INVALID;

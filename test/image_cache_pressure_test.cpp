@@ -20,6 +20,7 @@
 #include <limits>
 #include <string>
 #include <thread>
+#include "RuntimeFileFixture.h"
 extern "C" bool risc_runtime_reclaim_app_images();
 extern "C" void native_app_memory_relocation(bool);
 static thread_local bool isOwner=true;
@@ -215,7 +216,7 @@ int main(int argc,char**argv){
   write(root+"/app.json",R"({"type":"application","id":"pressure-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.pressure","api":1},{"capability":"runtime.provider-promotion","api":1}]})");
   write(root+"/provider.json",R"({"type":"driver","id":"pressure","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"provider.elf","requires":[],"provides":[{"capability":"test.pressure","api":1}]})");
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand-retained","drivers":[{"manifest":"provider.json"}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.pressure","api":1,"instance_id":0},{"capability":"runtime.provider-promotion","api":1,"instance_id":0}]}]})");
-  runtime=new RiscBoot::Runtime({[](){return isOwner;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});
+  static RiscTest::FileSources runtimeFiles0({root.c_str()});runtime=new RiscBoot::Runtime({[](){return isOwner;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});assert(runtimeFiles0.bind(*runtime));
   assert(runtime->prepare(root.c_str()));
   const bool retained=mode=="app-retained" || mode=="provider-retained";
   assert(runtime->run()!=retained && runtime->retained()==retained);

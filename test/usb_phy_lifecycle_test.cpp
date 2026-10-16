@@ -7,6 +7,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include "RuntimeFileFixture.h"
 static std::string root,mode,trace;
 static RiscCpu::Port* cpu;
 static bool active=false;
@@ -40,7 +41,7 @@ static void child(){
  h.usbPhySuspend=[](){if(active)return false;const bool ok=test_native_usb_suspend();return ok && mode!="partial";};
  h.usbPhyResume=[](){return test_native_usb_resume(active);};
  cpu=new RiscCpu::Port(h);
- auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,nullptr,appExitSafe,providerStorageSafe});
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,nullptr,appExitSafe,providerStorageSafe});assert(runtimeFiles0.bind(*runtime));
  assert(runtime->prepare(root.c_str()));
  const bool retained=mode=="retained" || mode=="unreleased" || mode=="partial";
  // Child return reloads a fresh default, whose host-owned run counter ends the test.

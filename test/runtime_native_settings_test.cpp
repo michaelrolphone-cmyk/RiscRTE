@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include "RuntimeFileFixture.h"
 using Coordinator=RiscExperimental::NativeSettingsCoordinator;
 using R=RiscBoot::Runtime;
 namespace NF=NativeFixture;
@@ -245,7 +246,7 @@ static void runBoot(){
  assert(!coordinator.registerNative(reload.client(),&reload.slot)&&!coordinator.activate());
  Poller worker(coordinator);poller=&worker;loadNative(reload);
  if(phase)verifyIntents(fixture.core);
- R current({owner,health,delay,logLine,bind,&forbiddenLegacy});runtime=&current;const bool prepared=current.prepare(directory.c_str());if(!prepared)fprintf(stderr,"Runtime prepare: %s\n",current.error());assert(prepared);
+ RiscTest::FileSources currentFiles0({directory.c_str()});R current({owner,health,delay,logLine,bind,&forbiddenLegacy});assert(currentFiles0.bind(current));runtime=&current;const bool prepared=current.prepare(directory.c_str());if(!prepared)fprintf(stderr,"Runtime prepare: %s\n",current.error());assert(prepared);
  const bool ok=current.run();
  if(scenario!="roundtrip"){
   assert(!ok&&current.retained()&&!current.residentResetSafe()&&!coordinator.exitSafe());

@@ -13,6 +13,7 @@
 #include "ports/esp32s3/NativeSettingsWorker.h"
 #include <openssl/evp.h>
 #include <memory>
+#include "RuntimeFileFixture.h"
 namespace F=NativeFixture;namespace L=RiscCpu::NativeSettingsLifecycle;namespace W=RiscCpu::NativeSettingsWorker;
 using B=RiscCpu::NativeSettingsBootstrap;using Sources=B::Sources;using LegacySources=B::Legacy;using M=RiscCpu::NativeSettingsMaintenance;using Coordinator=RiscExperimental::NativeSettingsCoordinator;
 static std::unique_ptr<Coordinator> services[2];static thread_local unsigned onNamespace=0;static bool concurrentNative=false;static M*maintenance;static Pin*anchorPin;static bool releaseAnchorAtFinal=false;static C*cores[2];static std::string scenario;static bool cancelLatch=false,cancellationArmed=false;static unsigned checkpoints=0;
@@ -366,7 +367,7 @@ int main(int argc,char**argv){assert(argc==4);scenario=argv[2];F::rootPath=argv[
  boot.nativeDiscoveryCheckpoint=[](){return L::discoveryCheckpoint();};
  boot.nativeSettingsShutdown=[](){const bool ok=L::shutdown();if(ok&&(asyncCase()||releaseAnchorAtFinal)){assert(!anchorPin->release()&&!f);releaseAnchorAtFinal=false;}return ok;};boot.retainedDelay=schedule;boot.nativeOwnerCheckpoint=[](bool admitNew){++checkpoints;const bool safe=L::checkpoint(admitNew);if(safe&&L::exitSafe()&&releaseAnchorAtFinal){assert(admitNew&&!anchorPin->release()&&!f);releaseAnchorAtFinal=false;}return safe;};
  static const RiscBoot::KeyValueBackend forbiddenLegacy{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},[](void*,uint32_t,const char*,const void*,uint32_t)->int32_t{assert(false);return RISC_KEY_VALUE_IO;},2048};boot.keyValue=&forbiddenLegacy;
- RiscBoot::Runtime runtime(boot);assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());if(!noCard()){P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());}
+ RiscTest::FileSources runtimeFiles0({argv[1]});RiscBoot::Runtime runtime(boot);assert(runtimeFiles0.bind(runtime));assert(L::bind(runtime));if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());if(!noCard()){P fresh(runtime,cpu,1,9);bootstrap(fresh);assert(!fresh.release());}
  if(!noCard()){const auto*e=risc_storage_volume_extension(f->volume);assert(e->mkdir(f->volume->context,"/RTECFG"));auto remote=oneId;if(scenario=="foreign")remote.lineage[0]^=42;if(scenario!="restore-no-checkpoint"&&(!startupCase()||scenario=="bootstrap-legacy-conflict"||scenario=="bootstrap-fresh-restore"||scenario=="bootstrap-fresh-busy-return-conflict")){if(scenario.rfind("first",0)!=0||scenario=="first-conflict")seedMaintenance(1,one,remote);if(scenario.rfind("first",0)!=0)seedMaintenance(6,six,sixId);}file("/ordinary.txt","keep",4);}else f->fault(8);
  if(scenario=="restore-conflict"||scenario=="unavailable-conflict")F::nvs["rte00000001"]["valuable"]={1,2,3};
  if(scenario=="restore-resume"||(startupCase()&&scenario.find("resume")!=std::string::npos)){

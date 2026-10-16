@@ -7,6 +7,7 @@
 #include <string>
 #include <thread>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 using R=RiscBoot::Runtime;
 static std::string directory,scenario;
 static std::thread::id ownerThread=std::this_thread::get_id();
@@ -108,12 +109,12 @@ static void boot(unsigned api=1,unsigned ns=6){
 int main(int argc,char** argv){
  assert(argc==3);directory=argv[1];scenario=argv[2];boot();
  if(scenario=="admission"){
-  {R r({owner,health,delay,logLine});assert(!r.prepare(directory.c_str()));}
-  boot(2);{R r({owner,health,delay,logLine,nullptr,&backend});assert(!r.prepare(directory.c_str()));}
-  boot(1,0);{R r({owner,health,delay,logLine,nullptr,&backend});assert(!r.prepare(directory.c_str()));}
+  {RiscTest::FileSources rFiles0({directory.c_str()});R r({owner,health,delay,logLine});assert(rFiles0.bind(r));assert(!r.prepare(directory.c_str()));}
+  boot(2);{RiscTest::FileSources rFiles1({directory.c_str()});R r({owner,health,delay,logLine,nullptr,&backend});assert(rFiles1.bind(r));assert(!r.prepare(directory.c_str()));}
+  boot(1,0);{RiscTest::FileSources rFiles2({directory.c_str()});R r({owner,health,delay,logLine,nullptr,&backend});assert(rFiles2.bind(r));assert(!r.prepare(directory.c_str()));}
   puts("Preference exact API/namespace/backend admission PASS");return 0;
  }
- R r({owner,health,delay,logLine,nullptr,&backend});runtime=&r;assert(r.prepare(directory.c_str()));
+ RiscTest::FileSources rFiles3({directory.c_str()});R r({owner,health,delay,logLine,nullptr,&backend});assert(rFiles3.bind(r));runtime=&r;assert(r.prepare(directory.c_str()));
  if(scenario=="uncollected"){assert(!r.run()&&r.retained()&&!r.residentResetSafe());invalid(saved);puts("Preference receipt custody blocks release/exit PASS");fflush(stdout);_exit(0);}
  assert(r.run()&&!r.retained());invalid(saved);puts("Preference sync namespace revisions/copies/failures/lifecycle PASS");
 }

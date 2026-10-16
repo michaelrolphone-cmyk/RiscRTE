@@ -14,6 +14,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
+#include "RuntimeFileFixture.h"
 
 using Pin = RiscExperimental::NativeRuntimeStoragePin;
 static std::string mode;
@@ -170,7 +171,7 @@ int main(int argc, char **argv) {
     assert(argc == 3);
     const std::string root = argv[1]; mode = argv[2]; metadata(root);
     cpu = new RiscCpu::Port(hardware());
-    runtime = new RiscBoot::Runtime(bootPort());
+    static RiscTest::FileSources runtimeFiles0({root.c_str()});runtime = new RiscBoot::Runtime(bootPort());assert(runtimeFiles0.bind(*runtime));
     if (mode == "unprepared") {
         Pin pin(*runtime, *cpu, 55);
         assert(pin.acquire() != RISC_STORAGE_ASYNC_OK && pin.exitSafe() && events.empty());

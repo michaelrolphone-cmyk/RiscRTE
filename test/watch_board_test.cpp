@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 using namespace RiscBoot;
 static bool owner(){return true;}
 static bool health(risc_runtime_health_v1*){return false;}
@@ -12,7 +14,7 @@ static void save(const std::string& path,const JsonDocument& d){std::ofstream f(
 int main(int argc,char** argv) {
   assert(argc==3); std::string fixtures=argv[1],temp=argv[2]; unsigned profiles=0;
   for(const auto& file:std::filesystem::directory_iterator(fixtures+"/hardware")) {
-    JsonDocument board;assert(readJson(file.path().c_str(),board));
+    JsonDocument board;assert(RiscTest::readFixtureJson(file.path().c_str(),board));
     Board materialized;assert(materialized.load(board.as<JsonObjectConst>()));
     assert(materialized.bus(103)->controller==0 && materialized.physicalController(103)==2);
     assert(materialized.bus(104)->controller==1 && materialized.physicalController(104)==3);
@@ -21,13 +23,13 @@ int main(int argc,char** argv) {
     assert(materialized.device(15) && materialized.device(16)); // WiFi/BLE are separate family resources.
     JsonDocument boot;boot["board"]="board.json";boot["default_app"]="default.elf";
     auto selected=boot["drivers"].to<JsonArray>();
-    Runtime runtime({owner,health,delay,diagnostic});
+    RiscTest::FileSources runtimeFiles0({temp.c_str()});Runtime runtime({owner,health,delay,diagnostic});assert(runtimeFiles0.bind(runtime));
     static const uint32_t rawHeader[]={1,8}; // Admission only; never activated here.
     assert(runtime.registerPlatform("platform.clock",1,Runtime::Scope::Global,0,rawHeader));
     for(JsonObjectConst device:board["devices"].as<JsonArrayConst>()) {
       bool matched=false;
       for(const auto& directory:std::filesystem::directory_iterator(fixtures+"/drivers")) {
-        JsonDocument manifest;assert(readJson((directory.path()/"manifest.json").c_str(),manifest));
+        JsonDocument manifest;assert(RiscTest::readFixtureJson((directory.path()/"manifest.json").c_str(),manifest));
         bool compatible=false;
         for(JsonObjectConst entry:manifest["hardware_compatibility"].as<JsonArrayConst>())
           if(eq(entry["compatible"],device["compatible"].as<const char*>()) && eq(entry["config_type"],device["config_type"].as<const char*>())) compatible=true;
@@ -46,7 +48,7 @@ int main(int argc,char** argv) {
     }
     save(temp+"/board.json",board);save(temp+"/boot.json",boot);
     if(!runtime.prepare(temp.c_str())) {fprintf(stderr,"%s: %s\n",file.path().c_str(),runtime.error());return 1;}
-    {Runtime absent({owner,health,delay,diagnostic});assert(!absent.prepare(temp.c_str()));}
+    {RiscTest::FileSources absentFiles1({temp.c_str()});Runtime absent({owner,health,delay,diagnostic});assert(absentFiles1.bind(absent));assert(!absent.prepare(temp.c_str()));}
     // Missing metadata is not inferred from a board name/controller value.
     JsonDocument changed=board;changed["buses"][2].remove("controller_namespace");changed["buses"][2].remove("physical_controller");
     {Board b;assert(!b.load(changed.as<JsonObjectConst>()));}

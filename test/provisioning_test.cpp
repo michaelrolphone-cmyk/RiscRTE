@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 using namespace RiscProvision;
 namespace fs=std::filesystem;
 using Bytes=std::vector<uint8_t>;
@@ -45,7 +46,7 @@ struct Host {
   // Real Runtime preparation validates full board/manifest/dependency policy
   // without loading any module. Host dlopen ELF fixture is executed only after
   // simulated reset, never during candidate validation.
-  auto rt=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{owner,health,delay,diagnostic});return rt->prepare((h.root/"stage").c_str())?Step::Done:Step::Failed;},
+  RiscTest::FileSources rtFiles0({(h.root/"stage").c_str()});auto rt=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{owner,health,delay,diagnostic});assert(rtFiles0.bind(*rt));return rt->prepare((h.root/"stage").c_str())?Step::Done:Step::Failed;},
  [](void* c){return static_cast<Host*>(c)->op("close");},
  [](void* c,const uint8_t* d){auto& h=*static_cast<Host*>(c);++h.activations;if(h.failure=="activate")return Selection::Unchanged;
   // Model selector commit; old store is retained for a later health decision.
@@ -53,7 +54,7 @@ struct Host {
   fs::rename(h.root/"stage",h.root/"installed");h.staged=false;h.active=true;memcpy(h.committed,d,32);if(h.afterSelectUnsafe)h.safe=false;return h.ambiguous?Selection::Unknown:Selection::Selected;},
  [](void* c){auto& h=*static_cast<Host*>(c);++h.aborts;auto s=h.op("abort");if(s==Step::Done){fs::remove_all(h.root/"stage");h.staged=false;h.offset=0;}return s;}
  };}
- void boot(){assert(active);auto rt=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{owner,health,delay,diagnostic});assert(rt->prepare((root/"installed").c_str()));assert(rt->run());}
+ void boot(){assert(active);RiscTest::FileSources rtFiles1({(root/"installed").c_str()});auto rt=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{owner,health,delay,diagnostic});assert(rtFiles1.bind(*rt));assert(rt->prepare((root/"installed").c_str()));assert(rt->run());}
 };
 static std::string profile(Host& h){
  std::string s=R"({"schema":"riscrte.provisioning","schema_version":1,"wifi":{"ssid":"test-network","password":"test-only-password"},"files":[)";bool first=true;

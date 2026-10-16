@@ -1,6 +1,7 @@
 // Reuse the real X4/FatFs/Runtime/native-store fixture without its case main.
 // The runner copies only that fixture prefix; its source bytes are recorded.
 #include NATIVE_BOOTSTRAP_SWEEP_FIXTURE
+#include "RuntimeFileFixture.h"
 int main(int argc,char**argv){
  assert(argc==4);scenario=argv[2];F::rootPath=argv[3];F::empty();
  const bool firstSucceeds=scenario=="both-ready"||scenario=="conflict-second";
@@ -29,7 +30,7 @@ int main(int argc,char**argv){
  for(auto&s:services)assert(!s->activate());
  Port cpu(hardware());port=&cpu;RiscBoot::Port boot{owner,[](risc_runtime_health_v1*){return true;},schedule,[](const char*){return true;},bind};
  static const RiscBoot::KeyValueBackend unusedLegacy{nullptr,[](void*,uint32_t,const char*,void*,uint32_t,uint32_t*){return RISC_KEY_VALUE_IO;},[](void*,uint32_t,const char*,const void*,uint32_t){return RISC_KEY_VALUE_IO;},2048};boot.keyValue=&unusedLegacy;
- RiscBoot::Runtime runtime(boot);
+ RiscTest::FileSources runtimeFiles0({argv[1]});RiscBoot::Runtime runtime(boot);assert(runtimeFiles0.bind(runtime));
  for(unsigned i=0;i<2;++i){assert(runtime.registerAtomicKeyValueReadThrough(i?6:1,services[i]->endpoint()));assert(runtime.registerAtomicKeyValue("maintenance-test",i?6:1,services[i]->endpoint()));}
  if(!runtime.prepare(argv[1])){fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}Pin anchor(runtime,cpu,9);anchorPin=&anchor;assert(!anchor.acquire());
  if(scenario=="defer-first")f->fault(8);

@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 static std::string mode;
 static unsigned phase=0;
 static std::vector<std::string> events;
@@ -23,7 +24,7 @@ int main(int argc,char** argv){
  write(root,"app.json",R"({"type":"application","id":"portable-serial-witness","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"serial.port","api":1}]})");
  write(root,"boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","provider_activation":")")+activation+R"(","drivers":[{"manifest":"serial.json"}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"serial.port","api":1,"instance_id":0}]}]})");
  static uint32_t now=0;
- auto* runtime=new RiscBoot::Runtime({[](){return true;},[](risc_runtime_health_v1* h){h->uptime_ms=++now;return true;},[](uint32_t){},[](const char*){return true;}});
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new RiscBoot::Runtime({[](){return true;},[](risc_runtime_health_v1* h){h->uptime_ms=++now;return true;},[](uint32_t){},[](const char*){return true;}});assert(runtimeFiles0.bind(*runtime));
  assert(runtime->prepare(root.c_str()));
  const bool retained=mode=="close-retained" || mode=="configure-rollback-retained";
  assert(runtime->run()==!retained && runtime->retained()==retained);

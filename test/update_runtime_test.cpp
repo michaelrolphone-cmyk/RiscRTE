@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
 using namespace RiscBoot;
 static Runtime* rt=nullptr;static std::string mode,app;static unsigned healthCalls=0,phase=0;
 static bool namespaceMode=false,storageSafe=true;static unsigned finalGrant=0;
@@ -82,7 +83,7 @@ int main(int argc,char** argv){assert(argc==2);std::string root=argv[1];
    boot+="]}]}";std::ofstream(root+"/boot.json")<<boot;
    for(const char* test:{"exit","healthy","refuse","queued","retained"}){
      mode=test;healthCalls=phase=0;storageSafe=true;
-     Runtime runtime({owner,health,delay,log,bindClock,&backend,safe,safe,confirm});rt=&runtime;
+     RiscTest::FileSources runtimeFiles0({root.c_str()});Runtime runtime({owner,health,delay,log,bindClock,&backend,safe,safe,confirm});assert(runtimeFiles0.bind(runtime));rt=&runtime;
      unsigned inspected=0;
      auto inspect=[](void* context,const char* path,bool driver){assert(!driver && strstr(path,"/default.elf"));++*static_cast<unsigned*>(context);return true;};
      assert(!runtime.inspectImages(inspect,&inspected) && inspected==0);

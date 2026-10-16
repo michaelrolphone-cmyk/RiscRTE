@@ -60,6 +60,7 @@ const esp_partition_t* parts[2][2]{};
 const esp_partition_t* journal=nullptr;
 const char* labels[2]={"bootfs0","bootfs1"};
 RiscBoot::Runtime* runtime=nullptr;
+const RiscBoot::RuntimeFileSources* fileSources=nullptr;
 bool (*isOwner)()=nullptr;bool (*restartIsSafe)()=nullptr;
 bool (*operationIsSafe)()=nullptr;
 bool prepared=false,mounted=false,pending=false,confirmed=false;
@@ -114,7 +115,7 @@ static_assert(CONFIG_SPIFFS_PAGE_SIZE==RiscProvision::SpiffsCapacity::PageBytes 
 #endif
 bool owner(){return isOwner && isOwner();}
 bool operationSafe(){return owner() && !retainedAdmissionRuntime && !retainedAdmissionFile && !retainedAdmissionBytes &&
-  !provisionReadRetained && (!runtime || !runtime->metadataCloseRetained()) && operationIsSafe && operationIsSafe();}
+  !provisionReadRetained && (!fileSources || !fileSources->retained()) && (!runtime || !runtime->metadataCloseRetained()) && operationIsSafe && operationIsSafe();}
 bool retainAdmissionRead(RiscBoot::Runtime* candidate,FILE* file,uint8_t* bytes){
   retainedAdmissionRuntime=candidate;retainedAdmissionFile=file;retainedAdmissionBytes=bytes;
   provisionReadRetained=true;return false;
@@ -149,7 +150,7 @@ bool record(void*,unsigned b,const Record& value){
   return receipt!=ReceiptState::Ready || persistReceipt(b,value,inherited);
 }
 bool cleanup(void*){
-  if(!owner() || provisionReadRetained || (runtime && runtime->metadataCloseRetained()))return false;
+  if(!owner() || provisionReadRetained || (fileSources && !fileSources->exitSafe()) || (runtime && runtime->metadataCloseRetained()))return false;
   if(scratch && !scratch->hashContext.reset())return false;
   if(provisionFiles && !provisionFiles->close())return false;
   if(appFile){FILE* f=appFile;appFile=nullptr;if(fclose(f)!=0)return false;}
@@ -254,7 +255,7 @@ bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profil
   // a different release whose update identity would become misleading.
   for(size_t i=0;i<profile.count;++i)if(!strcmp(profile.files[i].path,"cohort.json")){
     CohortIdentity cohort{};
-    if(!readCohort(root,cohort,&provisionReadRetained) || strcmp(cohort.runtimeVersion,RISC_BUILD_VERSION) ||
+    if(!readCohort(RiscBoot::RuntimeFileView(fileSources,root),root,cohort,&provisionReadRetained) || strcmp(cohort.runtimeVersion,RISC_BUILD_VERSION) ||
        cohort.firmwareSize!=scratch->verifiedActiveRecord.firmwareSize ||
        memcmp(cohort.firmwareSha,scratch->verifiedActiveRecord.firmwareSha,32))return false;
   }
@@ -264,6 +265,7 @@ bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profil
   if(!runtimeMemory){free(cpuMemory);return false;}
   candidateCpu=new(cpuMemory) RiscCpu::Port(provisionState->hardware);
   RiscBoot::Port port{isOwner,nullptr,nullptr,nullptr,bindProvisioningCandidate,provisionState->keyValue,nullptr,nullptr,nullptr,provisionState->appData,RiscCpu::NativeRetainedWake::backend()};
+  port.files=fileSources;
   port.nativeProviders=RuntimeProviders::selectedNativeProviderPoliciesV1();
   port.memoryHeap=RiscCpu::memoryHeap;port.randomBytes=RiscCpu::randomBytes;
   auto* candidate=new(runtimeMemory) RiscBoot::Runtime(port);
@@ -367,11 +369,12 @@ ReceiptState activeReceipt(uint8_t (&digest)[32]){
 }
 ReceiptState sourceReceipt(uint8_t (&digest)[32]){
   const auto receipt=activeReceipt(digest);if(receipt!=ReceiptState::Missing)return receipt;
-  errno=0;FILE* file=fopen("/bootfs/.provision-sha256","rb");
-  if(!file)return errno==ENOENT?ReceiptState::Missing:ReceiptState::Unavailable;
-  uint8_t bytes[33];const size_t size=fread(bytes,1,sizeof(bytes),file);bool okay=size==32 && !ferror(file);
-  if(fclose(file)!=0){provisionReadRetained=true;okay=false;}
-  if(!okay)return ReceiptState::Unavailable;
+  RiscBoot::RuntimeFileView source(fileSources,"/bootfs");uint32_t file=0;
+  const int32_t opened=source.open("/bootfs/.provision-sha256",&file);
+  if(opened!=RISC_FILES_OK)return opened==RISC_FILES_NOT_FOUND?ReceiptState::Missing:ReceiptState::Unavailable;
+  uint8_t bytes[33];uint32_t size=0;bool okay=source.readToEnd(file,bytes,sizeof(bytes),&size) && size==32;
+  if(source.close(file)!=RISC_FILES_OK){provisionReadRetained=true;okay=false;}
+  if(!okay || source.retained())return ReceiptState::Unavailable;
   memcpy(digest,bytes,32);return ReceiptState::Ready;
 }
 bool persistReceipt(unsigned b,const Record& pair,const uint8_t (&digest)[32]){
@@ -432,7 +435,7 @@ bool validateStore(void*,unsigned b){
   if(esp_vfs_spiffs_register(&config)!=ESP_OK)return false;
   mounted=true;
   CohortIdentity candidate{};
-  if(!readCohort("/updatefs",candidate,&provisionReadRetained) || !cohortMatches(candidate,scratch->cohort))return false;
+  if(!readCohort(RiscBoot::RuntimeFileView(fileSources,"/updatefs"),"/updatefs",candidate,&provisionReadRetained) || !cohortMatches(candidate,scratch->cohort))return false;
   void* memory=heap_caps_malloc(sizeof(RiscBoot::Runtime),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory)return false;
   auto* staged=new(memory) RiscBoot::Runtime({});
@@ -471,7 +474,7 @@ int32_t beginApp(void*,const char* id,const void* bytes,uint32_t n,const risc_ba
 }
 int32_t cohortStatus(void*,risc_bank_cohort_status_v1* out){
   if(!ready() || !out || out->struct_size<sizeof(*out))return RISC_BANK_UNAVAILABLE;
-  CohortIdentity current{};if(!readCohort("/bootfs",current,&provisionReadRetained))return RISC_BANK_NOT_FOUND;
+  CohortIdentity current{};if(!readCohort(RiscBoot::RuntimeFileView(fileSources,"/bootfs"),"/bootfs",current,&provisionReadRetained))return RISC_BANK_NOT_FOUND;
   *out=current.product;return RISC_BANK_OK;
 }
 int32_t beginCohort(void*,const risc_bank_cohort_v1* image,uint64_t* token){
@@ -481,7 +484,7 @@ int32_t beginCohort(void*,const risc_bank_cohort_v1* image,uint64_t* token){
   if(!transaction->status(&status) || status.state!=RISC_BANK_IDLE)return RISC_BANK_STATE;
   if(!validCohortRequest(*image))return RISC_BANK_INVALID;
   CohortIdentity current{};uint32_t oldVersion[3],newVersion[3];
-  if(!readCohort("/bootfs",current,&provisionReadRetained) || strcmp(current.product.product,image->product) ||
+  if(!readCohort(RiscBoot::RuntimeFileView(fileSources,"/bootfs"),"/bootfs",current,&provisionReadRetained) || strcmp(current.product.product,image->product) ||
      strcmp(current.product.source_repo,image->source_repo) ||
      !parseVersion(current.product.version,oldVersion) || !parseVersion(image->version,newVersion) ||
      compareVersion(newVersion,oldVersion)<=0 || !parseVersion(RISC_BUILD_VERSION,oldVersion) ||
@@ -525,9 +528,9 @@ bool partition(const esp_partition_t*& out,esp_partition_type_t type,esp_partiti
   out=esp_partition_find_first(type,subtype,label);return out && !out->encrypted && out->address==offset && out->size==size;
 }
 }
-bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)()){
+bool prepareBoot(bool (*own)(),bool (*safe)(),bool (*operation)(),const RiscBoot::RuntimeFileSources* files){
   if(prepared)return false;
-  isOwner=own;restartIsSafe=safe;operationIsSafe=operation;if(!operationSafe() || RiscPlatform::flashBytes()<0x1000000)return false;
+  fileSources=files;isOwner=own;restartIsSafe=safe;operationIsSafe=operation;if(!operationSafe() || RiscPlatform::flashBytes()<0x1000000)return false;
   if(scratch || transaction)return false;
   void* memory=heap_caps_malloc(sizeof(Scratch),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory)return false;
@@ -673,6 +676,6 @@ int32_t provisionAbort(uint64_t t){
   memset(provisionDigest,0,sizeof(provisionDigest));provisionToken=0;return RISC_BANK_OK;
 }
 bool provisionRestart(uint64_t t){return provisionReady(t) && api.restart(nullptr,t);}
-bool exitSafe(){return !provisionReadRetained && (!runtime || !runtime->metadataCloseRetained()) && (!prepared || (transaction->exitSafe() && !appFile && !mounted));}
+bool exitSafe(){return !provisionReadRetained && (!fileSources || !fileSources->retained()) && (!runtime || !runtime->metadataCloseRetained()) && (!prepared || (transaction->exitSafe() && !appFile && !mounted));}
 }
 #endif

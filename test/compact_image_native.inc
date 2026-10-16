@@ -38,6 +38,7 @@ static void compactNative(const std::string& mode,const char* bootloader,const c
  auto record=RiscUpdate::makeRecord(0,imageSize,firmwareHash,storeHash);
  memcpy(flash.data()+RiscUpdate::JournalOffset,&record,sizeof(record));assert(prepareBoot(own,restartSafe,safe));
  const auto preserved=flash;modelStageRoot=directory;fs::create_directories(modelStageRoot);stagingRoot=modelStageRoot.c_str();modelProvisionFiles=false;
+ static RiscTest::FileSources sources({modelStageRoot},own,safe);fileSources=sources.sources();
  auto text=[](const char* s){return std::vector<uint8_t>(s,s+strlen(s));};
  std::map<std::string,std::vector<uint8_t>> files{
   {"boot.json",text(R"({"board":"board.json","default_app":"default.elf","drivers":[]})")},
@@ -76,6 +77,7 @@ static void compactNative(const std::string& mode,const char* bootloader,const c
  hardware.radioLeave=[](){++bootNet.leaves;bootNet.radio=false;return true;};hardware.radioIdle=[](){return !bootNet.radio;};
  hardware.httpClient=&bootstrapHttp;hardware.httpIdle=[](){return !bootNet.http;};hardware.httpSafe=[](){return !bootNet.broken;};
  RiscBootstrap::Port port{hardware,nullptr,safe,{nullptr,bootstrapInput},{nullptr,bootstrapTime,[](void*){++bootNet.timeStops;return true;}}};
+ port.files=sources.sources();
  if(mode=="image-mount-fail")mountFailure=true;
  if(mode=="image-unmount-retained")unmountFailure=true;
  if(mode=="image-admission-close")failAdmissionClose=true;

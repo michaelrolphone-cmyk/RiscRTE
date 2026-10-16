@@ -1,3 +1,4 @@
+#include "RuntimeFileFixture.h"
 /* Included by the native pressure harness: no alternate lifecycle or broker.
  * All calls enter production Runtime, Graph, AppStreamSessions and queue code. */
 static risc_stream_client_v1 savedClient{};
@@ -181,7 +182,7 @@ static int runCustody(const std::string& root){
   write(root+"/stream.json",R"({"type":"driver","id":"pressure-stream","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"stream.elf","requires":[{"capability":"test.root","api":1}],"provides":[{"capability":"test.pressure.stream","api":1}]})");
   write(root+"/custody.json",R"({"type":"application","id":"custody","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"custody.elf","entry":"app_main","requires":[{"capability":"test.pressure.stream","api":1},{"capability":"runtime.provider-promotion","api":1}]})");
   write(root+"/boot.json",R"({"board":"board.json","default_app":"custody.elf","provider_activation":"demand-retained","drivers":[{"manifest":"stream.json"},{"manifest":"root.json"}],"app_capabilities":[{"manifest":"custody.json","grants":[{"capability":"test.pressure.stream","api":1,"instance_id":0},{"capability":"runtime.provider-promotion","api":1,"instance_id":0}]}]})");
-  runtime=new RiscBoot::Runtime({[](){return isOwner;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* line){if(!std::strcmp(line,"RTE_APP child=failed action=reload-default"))++childFailures;return true;}});
+  static RiscTest::FileSources runtimeFiles0({root.c_str()});runtime=new RiscBoot::Runtime({[](){return isOwner;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char* line){if(!std::strcmp(line,"RTE_APP child=failed action=reload-default"))++childFailures;return true;}});assert(runtimeFiles0.bind(*runtime));
   assert(runtime->prepare(root.c_str()));
   assert(runtime->run()!=custodyRetained() && runtime->retained()==custodyRetained());
   assert(!risc_runtime_reclaim_app_images() && !risc_test_native_image_count());

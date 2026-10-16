@@ -8,6 +8,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 using RiscBoot::Runtime;
 static std::string mode;
 static std::vector<std::string> events,lines;
@@ -234,18 +235,18 @@ int main(int argc,char** argv){
   port.keyValue=&unusedStorage;
   if(mode=="limits") {
     selected.add(selected[0]);save(root,"boot.json",boot);
-    Runtime denied(port);assert(!denied.prepare(root.c_str()));assert(!loads);selected.remove(selected.size()-1);
+    RiscTest::FileSources deniedFiles0({root.c_str()});Runtime denied(port);assert(deniedFiles0.bind(denied));assert(!denied.prepare(root.c_str()));assert(!loads);selected.remove(selected.size()-1);
   }
   for(const char* invalid:{"null","true","1","{}","[]","\"Demand-retained\""}) {
     JsonDocument bad;bad.set(boot);JsonDocument value;assert(!deserializeJson(value,invalid));bad["provider_activation"].set(value);
-    save(root,"boot.json",bad);Runtime denied(port);assert(!denied.prepare(root.c_str()));assert(!loads);
+    save(root,"boot.json",bad);RiscTest::FileSources deniedFiles1({root.c_str()});Runtime denied(port);assert(deniedFiles1.bind(denied));assert(!denied.prepare(root.c_str()));assert(!loads);
   }
   save(root,"boot.json",boot);
   const std::string unused=mode=="limits"?ids.back()+".json":"unused.json";
   std::ifstream in(root+"/"+unused);const std::string original((std::istreambuf_iterator<char>(in)),{});in.close();
-  write(root,unused,"{}");{Runtime denied(port);assert(!denied.prepare(root.c_str()));assert(!loads);}
+  write(root,unused,"{}");{RiscTest::FileSources deniedFiles2({root.c_str()});Runtime denied(port);assert(deniedFiles2.bind(denied));assert(!denied.prepare(root.c_str()));assert(!loads);}
   write(root,unused,original);
-  Runtime runtime(port);assert(runtime.prepare(root.c_str()));assert(!loads);
+  RiscTest::FileSources runtimeFiles3({root.c_str()});Runtime runtime(port);assert(runtimeFiles3.bind(runtime));assert(runtime.prepare(root.c_str()));assert(!loads);
   unsigned inspected=0;assert(runtime.inspectImages([](void* c,const char*,bool){++*static_cast<unsigned*>(c);return true;},&inspected));
   assert(inspected==ids.size()+2);
   assert(!runtime.inspectImages([](void*,const char* path,bool){return !strstr(path,"unused.elf") && !strstr(path,"p16.elf");},nullptr));

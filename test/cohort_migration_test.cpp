@@ -1,4 +1,6 @@
+#include "FixtureJson.h"
 #include "bootstrap/Runtime.h"
+#include "RuntimeFileFixture.h"
 #include "runtime/update/Cohort.h"
 #include <cassert>
 #include <filesystem>
@@ -25,7 +27,7 @@ static AppDataBackend data{nullptr,
 static Port port(){Port p{owner,health,delay,log,bind,&kv};p.appData=&data;return p;}
 static void save(const fs::path& path,const std::string& value){fs::create_directories(path.parent_path());std::ofstream file(path);file<<value;assert(file.good());}
 static void save(const fs::path& path,const JsonDocument& doc){std::string s;serializeJson(doc,s);save(path,s);}
-static JsonDocument read(const fs::path& path){JsonDocument result;assert(readJson(path.c_str(),result));return result;}
+static JsonDocument read(const fs::path& path){JsonDocument result;assert(RiscTest::readFixtureJson(path.c_str(),result));return result;}
 static void store(const fs::path& path,unsigned appCount,unsigned driverCount){
  fs::remove_all(path);fs::create_directories(path);
  save(path/"board.json",std::string(R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"watch","revision":"rev1","buses":[],"devices":[]})"));
@@ -84,12 +86,12 @@ static std::string snapshot(const fs::path& root){
 }
 int main(int argc,char** argv){
  assert(argc==2);fs::path root=argv[1],old=root/"migration-old",next=root/"migration-next";
- std::unique_ptr<Runtime> runtime;
+ RiscTest::FileSources sources({old.string(),next.string()});std::unique_ptr<Runtime> runtime;
  auto reset=[&](unsigned oldCount=2,unsigned newCount=3){
   store(old,oldCount,1);store(next,newCount,1);universal(old,oldCount);universal(next,newCount);
   save(old/"cohort.json",identity("1.0.2",'a'));save(next/"cohort.json",identity("1.0.3",'b'));
   auto boot=read(next/"boot.json");migration(boot,oldCount==1?"app1":"app2");save(next/"boot.json",boot);
-  bindings=0;runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(old.c_str()) && bindings==1);
+  bindings=0;runtime=std::make_unique<Runtime>(port());assert(sources.bind(*runtime));assert(runtime->prepare(old.c_str()) && bindings==1);
  };
  auto check=[&](bool expected){
   apps=drivers=0;const auto before=snapshot(old)+snapshot(next);auto candidate=std::make_unique<Runtime>(Port{});
@@ -137,7 +139,7 @@ int main(int argc,char** argv){
  extra["application_id"]="app3";extra["api"]=1;extra["namespace"]=50;save(next/"boot.json",b);check(true);
  reset();b=read(old/"boot.json");b["app_capabilities"][1]["grants"].as<JsonArray>().remove(3);save(old/"boot.json",b);
  b=read(next/"boot.json");b["app_capabilities"][1]["grants"].as<JsonArray>().remove(3);save(next/"boot.json",b);
- bindings=0;runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(old.c_str()));check(false); // Non-universal.
+ bindings=0;runtime=std::make_unique<Runtime>(port());assert(sources.bind(*runtime));assert(runtime->prepare(old.c_str()));check(false); // Non-universal.
  reset();b=read(next/"boot.json");b["app_capabilities"][2]["grants"][3]["instance_id"]=1;migration(b,"app2",1,1);save(next/"boot.json",b);check(false); // Private owner.
  reset();b=read(next/"boot.json");b["app_capabilities"][2]["grants"][3]["api"]=2;migration(b,"app2",2,50);save(next/"boot.json",b);
  auto manifest=read(next/"app2.json");auto req=manifest["requires"].as<JsonArray>().add<JsonObject>();req["capability"]="storage.key-value";req["api"]=2;save(next/"app2.json",manifest);check(false);
@@ -152,7 +154,7 @@ int main(int argc,char** argv){
  b=read(next/"boot.json");b["cohort_migration"]["from"]["product"]="other-product";save(next/"boot.json",b);check(false); // Explicit cross-product migration also denied.
  reset();b=read(next/"cohort.json");b["source_repo"]="other/watch";save(next/"cohort.json",b);check(false);
  // Stale record may validate its identical installed target, never regrant.
- reset();fs::remove_all(old);fs::copy(next,old,fs::copy_options::recursive);bindings=0;runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(old.c_str()));check(true);
+ reset();fs::remove_all(old);fs::copy(next,old,fs::copy_options::recursive);bindings=0;runtime=std::make_unique<Runtime>(port());assert(sources.bind(*runtime));assert(runtime->prepare(old.c_str()));check(true);
  b=read(next/"cohort.json");b["firmware_sha256"]=std::string(64,'e');save(next/"cohort.json",b);check(false);
  save(next/"cohort.json",read(old/"cohort.json"));store(next,4,1);universal(next,4);save(next/"cohort.json",read(old/"cohort.json"));b=read(next/"boot.json");migration(b,"app3");save(next/"boot.json",b);check(false);
  std::cout<<"Explicit cohort shared-KV migration: exact origin/target/API/new identity, universal >=2 owners, consumed entries, no private/appdata/provider expansion, identical-board and self-validation, no writes/binds/ELF execution PASS\n";

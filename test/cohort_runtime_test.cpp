@@ -1,4 +1,6 @@
+#include "FixtureJson.h"
 #include "bootstrap/Runtime.h"
+#include "RuntimeFileFixture.h"
 #include "runtime/update/Cohort.h"
 #include <cassert>
 #include <filesystem>
@@ -26,7 +28,7 @@ static AppDataBackend data{nullptr,
 static Port port(){Port p{owner,health,delay,log,bind,&kv};p.appData=&data;p.coldBoot=[](){assert(false);return false;};return p;}
 static void save(const fs::path& path,const std::string& value){fs::create_directories(path.parent_path());std::ofstream file(path);file<<value;assert(file.good());}
 static void save(const fs::path& path,const JsonDocument& doc){std::string s;serializeJson(doc,s);save(path,s);}
-static JsonDocument read(const fs::path& path){JsonDocument result;assert(readJson(path.c_str(),result));return result;}
+static JsonDocument read(const fs::path& path){JsonDocument result;assert(RiscTest::readFixtureJson(path.c_str(),result));return result;}
 static void store(const fs::path& path,unsigned appCount,unsigned driverCount){
  fs::remove_all(path);fs::create_directories(path);
  save(path/"board.json",std::string(R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"watch","revision":"rev1","buses":[],"devices":[]})"));
@@ -65,12 +67,17 @@ static bool admit(void*,const char* path,bool provider){
 }
 int main(int argc,char** argv){
  assert(argc==2);fs::path root=argv[1],old=root/"old",next=root/"next";store(old,19,17);store(next,20,18);
- auto runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(old.c_str()) && bindings==1);
+ RiscTest::FileSources sources({old.string(),next.string()});
+ auto runtime=std::make_unique<Runtime>(port());assert(sources.bind(*runtime));assert(runtime->prepare(old.c_str()) && bindings==1);
  auto check=[&](bool expected){apps=drivers=0;auto candidate=std::make_unique<Runtime>(Port{});
   const bool accepted=runtime->validateCohort(*candidate,next.c_str(),admit,nullptr);
   if(accepted!=expected)std::cerr<<"candidate error: "<<candidate->error()<<"\n";
   assert(accepted==expected && bindings==1);
  };
+ // A prebound candidate cannot silently replace its immutable source authority.
+ {RiscTest::FileSources otherSources({next.string()});auto candidate=std::make_unique<Runtime>(port());assert(otherSources.bind(*candidate));
+  assert(!runtime->validateCohort(*candidate,next.c_str(),admit,nullptr));
+  assert(candidate->prepare(next.c_str())&&bindings==2);--bindings;}
  check(true);assert(apps==20 && drivers==18);
  // A staged cold-start selection is admitted and fully inspected without
  // sampling the running boot class, consuming RTC state or activating code.
@@ -118,10 +125,10 @@ int main(int argc,char** argv){
  JsonDocument identity;identity["schema"]="riscrte.cohort";identity["schema_version"]=1;identity["product"]="twatch-s3";identity["version"]="1.0.2";
  identity["runtime_version"]="0.1.33";identity["source_repo"]="owner/repository";identity["source_revision"]=std::string(40,'a');identity["layout"]=RiscUpdate::Layout;
  identity["store_abi"]=RiscUpdate::StoreAbi;identity["firmware_size"]=123456;identity["firmware_sha256"]=std::string(64,'b');
- save(next/"cohort.json",identity);RiscUpdate::CohortIdentity parsed{};assert(RiscUpdate::readCohort(next.c_str(),parsed));
- for(const char* key:{"source_revision","firmware_sha256","runtime_version","layout","source_repo"}){auto bad=identity;bad[key]="invalid";save(next/"cohort.json",bad);assert(!RiscUpdate::readCohort(next.c_str(),parsed));}
- auto bad=identity;bad["extra"]=1;save(next/"cohort.json",bad);assert(!RiscUpdate::readCohort(next.c_str(),parsed));
- save(next/"cohort.json",std::string("{\"schema\":\"riscrte.cohort\",\"schema\":\"riscrte.cohort\"}"));assert(!RiscUpdate::readCohort(next.c_str(),parsed));
+ save(next/"cohort.json",identity);RiscUpdate::CohortIdentity parsed{};assert(RiscUpdate::readCohort(RuntimeFileView(sources.sources(),next.c_str()),next.c_str(),parsed));
+ for(const char* key:{"source_revision","firmware_sha256","runtime_version","layout","source_repo"}){auto bad=identity;bad[key]="invalid";save(next/"cohort.json",bad);assert(!RiscUpdate::readCohort(RuntimeFileView(sources.sources(),next.c_str()),next.c_str(),parsed));}
+ auto bad=identity;bad["extra"]=1;save(next/"cohort.json",bad);assert(!RiscUpdate::readCohort(RuntimeFileView(sources.sources(),next.c_str()),next.c_str(),parsed));
+ save(next/"cohort.json",std::string("{\"schema\":\"riscrte.cohort\",\"schema\":\"riscrte.cohort\"}"));assert(!RiscUpdate::readCohort(RuntimeFileView(sources.sources(),next.c_str()),next.c_str(),parsed));
  std::cout<<"Cohort 20/18 and "<<appLimit<<"/"<<driverLimit<<" complete graph, namespace ownership, hardware, metadata, exact inventory and no native bind/provider execution PASS\n";
  return 0;
 }

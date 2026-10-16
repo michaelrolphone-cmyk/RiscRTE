@@ -7,6 +7,8 @@
 #include <vector>
 #include <algorithm>
 #include <new>
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 using namespace RiscBoot;
 static unsigned generation=0, beats=0;
 static bool heartbeatMode=false;
@@ -46,17 +48,17 @@ static void driverCapacity(const std::string& root) {
     auto name="selected-"+std::to_string(i)+".json";save(name,provider);drivers.add<JsonObject>()["manifest"]=name;
   }
   save("boot.json",config);
-  {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));}
+  {RiscTest::FileSources runtimeFiles0({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles0.bind(runtime));assert(runtime.prepare(root.c_str()));}
   drivers.add<JsonObject>()["manifest"]="selected-0.json";save("boot.json",config);
-  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"invalid driver list"));}
+  {RiscTest::FileSources runtimeFiles1({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles1.bind(runtime));assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"invalid driver list"));}
   drivers.remove(RuntimeProviders::GraphV2::kMaxModules);drivers[RuntimeProviders::GraphV2::kMaxModules-1]["manifest"]="selected-0.json";save("boot.json",config);
-  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"duplicate package singleton/hardware owner"));}
+  {RiscTest::FileSources runtimeFiles2({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles2.bind(runtime));assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),"duplicate package singleton/hardware owner"));}
   puts("Runtime providers: full selected capacity accepted, overflow and duplicate final slot rejected before activation PASS");
 }
 static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   JsonDocument original, app;
   assert(parse(grantBoot,strlen(grantBoot),original));
-  assert(readJson((root+"/app.json").c_str(),app));
+  assert(RiscTest::readFixtureJson((root+"/app.json").c_str(),app));
   auto save=[&](const char* name,const JsonDocument& doc) {
     std::string encoded;serializeJson(doc,encoded);write(root+"/"+name,encoded);
   };
@@ -79,13 +81,13 @@ static void appPolicyCapacity(const std::string& root,const char* grantBoot) {
   };
   auto rejected=[&](const char* reason) {
     save("boot.json",config);const size_t before=lines.size();
-    Runtime runtime({owner,health,delay,logLine});
+    RiscTest::FileSources runtimeFiles3({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles3.bind(runtime));
     assert(!runtime.prepare(root.c_str()));assert(!strcmp(runtime.error(),reason));
     assert(!runtime.run());assert(lines.size()==before);
   };
   for(unsigned count:{9u,16u,18u,unsigned(Runtime::MaxAppPolicies)}) {
     policies(count);generation=0;lines.clear();
-    Runtime runtime({owner,health,delay,logLine});
+    RiscTest::FileSources runtimeFiles4({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles4.bind(runtime));
     assert(runtime.prepare(root.c_str()));
     // Parser-owned JSON and source text are gone before app grant lookup.
     // Churn equivalent allocations, then prove the authoritative names survive
@@ -138,7 +140,7 @@ int main(int argc,char** argv){
   write(root+"/board.json",board);write(root+"/probe.json",manifest);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7}]})");
   {
-    Runtime runtime({owner,health,delay,logLine});
+    RiscTest::FileSources runtimeFiles5({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles5.bind(runtime));
     assert(!risc_runtime_get_api(1));
     assert(runtime.prepare(root.c_str()));
     assert(runtime.run());assert(!risc_runtime_get_api(1));
@@ -154,7 +156,7 @@ int main(int argc,char** argv){
   write(root+"/drivers/probe.json",namedJson);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"drivers/probe.json","instance_id":7}]})");
   lines.clear();generation=0;
-  {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}
+  {RiscTest::FileSources runtimeFiles6({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles6.bind(runtime));assert(runtime.prepare(root.c_str()));assert(runtime.run());}
   assert(generation==3 && lines.size()==5);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7}]})");
   // One package artifact serves independent physical instances. Preserve both
@@ -166,34 +168,34 @@ int main(int argc,char** argv){
     std::string encoded;serializeJson(dual,encoded);write(root+"/board.json",encoded);
     const char* two=R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7},{"manifest":"probe.json","instance_id":8}]})";
     write(root+"/boot.json",two);
-    {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));}
+    {RiscTest::FileSources runtimeFiles7({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles7.bind(runtime));assert(runtime.prepare(root.c_str()));}
     JsonDocument config;assert(parse(two,strlen(two),config));
     config["drivers"][1]["instance_id"]=7;encoded.clear();serializeJson(config,encoded);write(root+"/boot.json",encoded);
-    {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+    {RiscTest::FileSources runtimeFiles8({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles8.bind(runtime));assert(!runtime.prepare(root.c_str()));}
     config["drivers"][1]["instance_id"]=8;config["drivers"][1]["manifest"]="probe-other.json";
     encoded.clear();serializeJson(config,encoded);write(root+"/boot.json",encoded);
     JsonDocument other;assert(parse(manifest,strlen(manifest),other));other["version"]="2.0.0";
     encoded.clear();serializeJson(other,encoded);write(root+"/probe-other.json",encoded);
-    {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+    {RiscTest::FileSources runtimeFiles9({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles9.bind(runtime));assert(!runtime.prepare(root.c_str()));}
     other["version"]="1.0.0";other["file_name"]="different.elf";
     encoded.clear();serializeJson(other,encoded);write(root+"/probe-other.json",encoded);
-    {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+    {RiscTest::FileSources runtimeFiles10({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles10.bind(runtime));assert(!runtime.prepare(root.c_str()));}
     write(root+"/board.json",board);
     write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"probe.json","instance_id":7}]})");
   }
   // Invalid board always rejects before any driver entry/load or default app.
   JsonDocument doc;assert(parse(board,strlen(board),doc));
   doc["devices"][0]["config"]["pins"][0]=49;std::string bad;serializeJson(doc,bad);write(root+"/board.json",bad);
-  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!runtime.run());}
+  {RiscTest::FileSources runtimeFiles11({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles11.bind(runtime));assert(!runtime.prepare(root.c_str()));assert(!runtime.run());}
   write(root+"/board.json",board);
   assert(parse(manifest,strlen(manifest),doc));doc["hardware_compatibility"][0]["compatible"]="wrong,chip";bad.clear();serializeJson(doc,bad);write(root+"/probe.json",bad);
-  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+  {RiscTest::FileSources runtimeFiles12({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles12.bind(runtime));assert(!runtime.prepare(root.c_str()));}
   write(root+"/probe.json",manifest);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"../default.elf","drivers":[]})");
-  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+  {RiscTest::FileSources runtimeFiles13({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles13.bind(runtime));assert(!runtime.prepare(root.c_str()));}
   // Missing default fails once; never searches/reboots/retries recursively.
   write(root+"/boot.json",R"({"board":"board.json","default_app":"absent.elf","drivers":[]})");
-  {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(!runtime.run());}
+  {RiscTest::FileSources runtimeFiles14({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles14.bind(runtime));assert(runtime.prepare(root.c_str()));assert(!runtime.run());}
   assert(!parse("{\"id\":1,\"id\":2}",15,doc));
   assert(parse(board,strlen(board),doc));
   doc["devices"].as<JsonArray>().add(doc["devices"][0]);
@@ -204,20 +206,20 @@ int main(int argc,char** argv){
   write(root+"/app.json",R"({"type":"application","id":"cap-test","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"cap-app.elf","entry":"app_main","requires":[{"capability":"test.probe","api":1}]})");
   const char* grantBoot=R"({"board":"board.json","default_app":"cap-app.elf","drivers":[{"manifest":"probe.json","instance_id":7}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.probe","api":1,"instance_id":7}]}]})";
   write(root+"/boot.json",grantBoot);generation=0;lines.clear();
-  {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}
+  {RiscTest::FileSources runtimeFiles15({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles15.bind(runtime));assert(runtime.prepare(root.c_str()));assert(runtime.run());}
   assert((lines==std::vector<std::string>{"CAP granted","CAP child denied","CAP granted"}));
   assert(parse(grantBoot,strlen(grantBoot),doc));doc["app_capabilities"][0]["grants"][0]["api"]=2;
   bad.clear();serializeJson(doc,bad);write(root+"/boot.json",bad);
-  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+  {RiscTest::FileSources runtimeFiles16({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles16.bind(runtime));assert(!runtime.prepare(root.c_str()));}
   assert(parse(grantBoot,strlen(grantBoot),doc));doc["app_capabilities"][0]["grants"][0]["instance_id"]=8;
   bad.clear();serializeJson(doc,bad);write(root+"/boot.json",bad);
-  {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));}
+  {RiscTest::FileSources runtimeFiles17({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles17.bind(runtime));assert(!runtime.prepare(root.c_str()));}
   puts("App grants: identity/declaration/exact instance, size/version checks, stale handles, child isolation and automatic revocation PASS");
   appPolicyCapacity(root,grantBoot);
   driverCapacity(root);
   write(root+"/boot.json",R"({"board":"board.json","default_app":"heartbeat.elf","drivers":[]})");
   heartbeatMode=true;generation=0;lines.clear();
-  {Runtime runtime({owner,health,delay,logLine});assert(runtime.prepare(root.c_str()));assert(runtime.run());}
+  {RiscTest::FileSources runtimeFiles18({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles18.bind(runtime));assert(runtime.prepare(root.c_str()));assert(runtime.run());}
   assert(beats==3 && lines.size()==3);
   for(size_t i=0;i<3;++i) {
     unsigned seq=0,uptime=0,heap=0,app=0;
@@ -236,7 +238,7 @@ int main(int argc,char** argv){
       R"({"board":"board.json","default_app":"yield.elf","drivers":[{"manifest":"yield-probe.json","instance_id":7}]})":
       R"({"board":"board.json","default_app":"yield.elf","drivers":[]})");
     waits.clear();polls=0;
-    Runtime runtime({owner,health,delay,logLine});runtime.yield(20);assert(waits.empty());
+    RiscTest::FileSources runtimeFiles19({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles19.bind(runtime));runtime.yield(20);assert(waits.empty());
     assert(runtime.prepare(root.c_str()));assert(runtime.run());
     assert((waits==(pollable?std::vector<uint32_t>{1,1,1,20,50}:std::vector<uint32_t>{1,1,20,50})));
     assert(polls==(pollable?4u:0u));
@@ -247,7 +249,7 @@ int main(int argc,char** argv){
   write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[]})");
   generation=0;lines.clear();controlBegins.clear();controlEnds=0;
   Port cp{owner,health,delay,logLine};cp.controlBegin=controlBegin;cp.controlEnd=controlEnd;cp.controlExitRequested=controlRequest;cp.appExitSafe=controlSafe;
-  {Runtime r(cp);assert(r.prepare(root.c_str()));assert(r.run());}
+  {RiscTest::FileSources rFiles20({root.c_str()});Runtime r(cp);assert(rFiles20.bind(r));assert(r.prepare(root.c_str()));assert(r.run());}
   assert((controlBegins==std::vector<bool>{false,true,false,true,false}));
   assert(controlEnds==5&&!controlPending);
   assert(std::find(lines.begin(),lines.end(),"TEST native-exit-read")!=lines.end());
@@ -257,7 +259,7 @@ int main(int argc,char** argv){
   // A retained image remains owned until native reset. Give the fixture itself
   // process-lifetime storage; destructing it would violate the custody contract.
   alignas(Runtime) static unsigned char retainedStorage[sizeof(Runtime)];
-  auto *retainedRuntime=new (retainedStorage) Runtime(cp);assert(retainedRuntime->prepare(root.c_str()));
+  static RiscTest::FileSources retainedRuntimeFiles21({root.c_str()});auto *retainedRuntime=new (retainedStorage) Runtime(cp);assert(retainedRuntimeFiles21.bind(*retainedRuntime));assert(retainedRuntime->prepare(root.c_str()));
   assert(!retainedRuntime->run()&&retainedRuntime->retained());
   assert(controlPending&&controlEnds==1&&controlBegins.size()==2);
   puts("Native host control: persistent child request, competing launch overridden after cleanup, failed custody keeps recovery armed PASS");

@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include "RuntimeFileFixture.h"
 using RiscBoot::Runtime;
 static std::string root,mode,longRoute;
 static bool owned=true,safe=true,reading=false,journalFault=false;
@@ -173,13 +174,13 @@ int main(int argc,char** argv){
   // default entry; they never create a fabricated successful empty catalog.
   if(mode=="normal") {
     for(const std::string& extra:{std::string(",\"launcher_visible\":0"),std::string(",\"display_name\":\"")+std::string(96,'x')+"\"",std::string(",\"min_firmware_version\":\"")+std::string(32,'x')+"\"",std::string(",\"display_name\":\"line\\nfeed\"")}) {
-      auto optional=manifest("default","default.elf",extra,true);optional.replace(optional.find("\"requires\":[")+12,0,"{\"capability\":\"storage.key-value\",\"api\":1},");write("host.json",optional);Runtime accepted(port);assert(accepted.prepare(root.c_str()));assert(!entries);
+      auto optional=manifest("default","default.elf",extra,true);optional.replace(optional.find("\"requires\":[")+12,0,"{\"capability\":\"storage.key-value\",\"api\":1},");write("host.json",optional);RiscTest::FileSources acceptedFiles0({root.c_str()});Runtime accepted(port);assert(acceptedFiles0.bind(accepted));assert(accepted.prepare(root.c_str()));assert(!entries);
     }
-    assert(!unlink((root+"/host.json").c_str()));{Runtime rejected(port);assert(!rejected.prepare(root.c_str()));}
+    assert(!unlink((root+"/host.json").c_str()));{RiscTest::FileSources rejectedFiles1({root.c_str()});Runtime rejected(port);assert(rejectedFiles1.bind(rejected));assert(!rejected.prepare(root.c_str()));}
     write("host.json",host);
-    auto wrong=boot;const auto at=wrong.find("\"instance_id\":0",wrong.find("\"app.catalog\""));wrong.replace(at,15,"\"instance_id\":9");write("boot.json",wrong);{Runtime rejected(port);assert(!rejected.prepare(root.c_str()));}write("boot.json",boot);
+    auto wrong=boot;const auto at=wrong.find("\"instance_id\":0",wrong.find("\"app.catalog\""));wrong.replace(at,15,"\"instance_id\":9");write("boot.json",wrong);{RiscTest::FileSources rejectedFiles2({root.c_str()});Runtime rejected(port);assert(rejectedFiles2.bind(rejected));assert(!rejected.prepare(root.c_str()));}write("boot.json",boot);
   }
-  runtime=new Runtime(port);if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
+  static RiscTest::FileSources runtimeFiles3({root.c_str()});runtime=new Runtime(port);assert(runtimeFiles3.bind(*runtime));if(!runtime->prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",runtime->error());abort();}
   const bool expectRetained=mode=="retained"||mode=="acquire_retained"||mode=="acquire_lost_owner";
   const bool ok=runtime->run();assert(ok==!expectRetained);assert(runtime->retained()==expectRetained);
   if(mode=="normal"||mode=="long_path")assert(entries==3);else assert(entries==1);

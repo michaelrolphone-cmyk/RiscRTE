@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <cstdio>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static Port* activePort;
 static unsigned io=0;
@@ -30,7 +31,7 @@ int main(int argc,char**argv){
  auto prepare=[&](const std::string&drivers,size_t expected,bool valid=true){
   save("boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[)")+drivers+"]}");
   Port p(hardware());activePort=&p;
-  RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
+  RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(rFiles0.bind(r));
   assert(r.prepare(root.c_str())==valid);assert(p.syncCount_==expected && !io);
   if(expected){
    auto& first=p.syncs_[0].api;
@@ -52,7 +53,7 @@ int main(int argc,char**argv){
  save("app.json",R"({"type":"application","id":"raw-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"platform.sync","api":1}]})");
  save("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"driver.json","instance_id":1}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"platform.sync","api":1,"instance_id":1}]}]})");
  Port forbidden(hardware());activePort=&forbidden;
- RiscBoot::Runtime appRuntime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
+ RiscTest::FileSources appRuntimeFiles1({root.c_str()});RiscBoot::Runtime appRuntime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(appRuntimeFiles1.bind(appRuntime));
  assert(!appRuntime.prepare(root.c_str()) && !io);
  assert(std::string(appRuntime.error())=="raw platform capability denied to app");
  puts("Provider sync: exact selected instance binding, distinct contexts, unavailable API and zero hardware I/O PASS");

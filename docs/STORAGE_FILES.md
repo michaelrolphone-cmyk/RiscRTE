@@ -72,9 +72,8 @@ Host verification (not hardware qualification):
 
 `RuntimeFiles` is an explicitly bound internal client of the same file ABI.
 The binding, provider and namespace root remain alive through open handles and
-retained failures. Unbound use is unavailable. This boundary is independently
-qualified; metadata, loader, configuration and scratch consumer wiring follows
-in separate increments.
+retained failures. Unbound use is unavailable. Metadata consumers use this boundary. Loader, configuration and scratch
+consumer wiring remain separate increments.
 
 `PosixFiles` encapsulates ordinary POSIX operations. Linux no-replace rename uses
 `renameat2(RENAME_NOREPLACE)`; platforms without that primitive report unavailable.
@@ -140,6 +139,52 @@ consumer never forgets that token or rebinds the provider. The view is three
 borrowed pointers (12 bytes on the native 32-bit target), with no image buffer.
 The explicit-provider JSON entry shares the original 65,537-byte allocation,
 512-byte read limit, five-second deadline and 32-KiB/two-millisecond/final-remainder
-yield checkpoints. The path-only JSON entry remains temporarily while Runtime
-consumer call sites are converted; its presence is tracked implementation work,
-not completion of the all-Runtime provider migration.
+yield checkpoints. The path-only JSON/cohort entries are removed. Runtime boot/board/driver/app
+metadata, inventory and cohort comparisons now require this explicit view.
+Missing source binding fails admission before I/O.
+
+### Variable-capacity directory enumeration
+
+The additive `storage.files.directory@1` supplement uses the same provider context
+and opaque directory token. `next` accepts a caller-owned name buffer and reports
+required bytes including NUL. `RISC_FILES_DIRECTORY_CAPACITY` leaves the entry
+unconsumed, including a null/zero-capacity size probe; seek, rewind and close
+invalidate that position normally. The fixed `storage.files@1` entry remains
+unchanged. A legacy provider without the supplement can enumerate fixed names
+when the caller supplies at least the existing fixed capacity; a present failing
+supplement never falls back. Provider physical path/name limits still apply.
+
+Cohort inventory preserves its existing 256-object and depth-ten bounds with one
+open cursor at a time. Its additional queue is 256 six-byte metadata records
+(1,536 bytes), allocated using the existing metadata allocation policy. It accepts
+both real hierarchies and flat slash-containing names; it does not fabricate
+hierarchies for a flat backend. The existing 193-byte admitted manifest path
+buffer is preserved, including names longer than the fixed file-entry field.
+
+### Metadata consumers and native assembly
+
+Installed-artifact reads retain admitted-path filtering and compare opaque path,
+opened-file and post-read identity. Legal short reads fill the existing bounded
+512-byte local buffer. Bytes are returned only after complete read, identity
+verification and successful close. There is no extra executable-image buffer.
+Every Runtime/candidate sharing the source map observes any retained source;
+failed cleanup cannot reset or rebind that map.
+
+Native assembly selects immutable active/staged roots before metadata reads. Its
+state is 960 bytes in the pinned Xtensa compilation, prefers PSRAM and has no
+internal-memory fallback when metadata PSRAM or
+paired-bank policy requires it. The state remains allocated through restart; it
+never owns a full image copy. The immutable embedded VFS now implements pathname
+stat as well as descriptor stat, and advertises no modification timestamps.
+Bootstrap digests and bank receipt/cohort metadata use the injected source map.
+Provider-owned partition/provisioning operations remain in their backend.
+
+Qualification distinguishes host behavioral tests, actual pinned SDK translation
+unit compilation, firmware linking and hardware execution. The metadata target
+runner compiles Json.cpp, Runtime.cpp, NativeBootstrap.cpp, NativeBankStore.cpp and
+main.cpp against configured SDK headers; this alone is not a firmware build.
+
+The identity and variable-capacity directory supplements are currently wired only
+through trusted internal provider bindings. The application broker does not yet
+materialize or grant these supplement capabilities. Their reusable ABI headers
+do not imply application acquisition support.

@@ -1,4 +1,5 @@
 #include "runtime/storage/PosixFiles.h"
+#include "bootstrap/RuntimeFiles.h"
 #include <cassert>
 #include <cstdarg>
 #include <cstdio>
@@ -36,5 +37,27 @@ int main(int argc,char**argv){
  badFstat=true;assert(a.open(a.context,"/source",RISC_FILES_READ,&h)==RISC_FILES_IO&&!h);badFstat=false;
  const std::string fifo=root+"/fifo";assert(!mkfifo(fifo.c_str(),0600));
  assert(a.open(a.context,"/fifo",RISC_FILES_READ,&h)==RISC_FILES_DENIED&&!h);
+ // The additive enumerator preserves names admitted by Runtime's 193-byte
+ // manifest path schema without changing the fixed files@1 entry layout.
+ assert(!a.mkdir(a.context,"/long-directory"));
+ const std::string longName=std::string(123,'b')+".json",longPath="/long-directory/"+longName;
+ assert(!a.open(a.context,longPath.c_str(),RISC_FILES_WRITE|RISC_FILES_CREATE|RISC_FILES_EXCLUSIVE,&h));assert(!a.close(a.context,h));
+ RiscBoot::RuntimeFiles client;assert(client.bind(provider.api(),[] {return true;},[] {return true;},provider.identityApi(),provider.directoryApi()));
+ uint32_t dir=0,required=999;uint64_t start=0,after=0;
+ assert(!client.dirOpen("/long-directory",&dir));assert(!client.dirTell(dir,&start));
+ char name[193];memset(name,'!',sizeof(name));st={sizeof(st)};
+ assert(client.directoryNext(dir,&st,nullptr,0,&required)==RISC_FILES_DIRECTORY_CAPACITY&&required==129);
+ assert(!client.dirTell(dir,&after)&&after==start);
+ assert(client.directoryNext(dir,&st,name,128,&required)==RISC_FILES_DIRECTORY_CAPACITY&&required==129&&name[0]=='!');
+ assert(!client.dirTell(dir,&after)&&after==start);
+ assert(!client.directoryNext(dir,&st,name,sizeof(name),&required)&&required==129&&!strcmp(name,longName.c_str()));
+ assert(client.directoryNext(dir,&st,name,sizeof(name),&required)==RISC_FILES_END&&required==0);
+ assert(!client.dirRewind(dir));assert(client.directoryNext(dir,&st,nullptr,0,&required)==RISC_FILES_DIRECTORY_CAPACITY);
+ assert(!client.dirSeek(dir,start));assert(!client.directoryNext(dir,&st,name,sizeof(name),&required)&&!strcmp(name,longName.c_str()));
+ assert(!client.dirRewind(dir));assert(client.directoryNext(dir,&st,nullptr,0,&required)==RISC_FILES_DIRECTORY_CAPACITY);
+ const uint32_t closed=dir;assert(!client.dirClose(dir));
+ assert(client.directoryNext(closed,&st,name,sizeof(name),&required)==RISC_FILES_INVALID&&required==0);
+ assert(!client.dirOpen("/long-directory",&dir));assert(!client.directoryNext(dir,&st,name,sizeof(name),&required)&&!strcmp(name,longName.c_str()));assert(!client.dirClose(dir));
+ assert(client.exitSafe());
  assert(provider.exitSafe());puts(RISC_POSIX_FILES_NOREPLACE?"POSIX generic provider: atomic no-replace race, malformed metadata, directory errors, alias rejection PASS":"POSIX generic provider: missing no-replace primitive reports unavailable without mutation PASS");
 }

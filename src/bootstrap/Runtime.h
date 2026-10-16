@@ -8,6 +8,7 @@
 #include "AppPolicyLimits.h"
 #include "AppRequirementLimits.h"
 #include "InstalledFiles.h"
+#include "RuntimeFiles.h"
 #include "AppDataBackend.h"
 #include "AtomicKeyValueConfig.h"
 #include "PreferenceStoreConfig.h"
@@ -127,6 +128,8 @@ struct Port {
 #endif
   // Optional native-owned private scratch, never an app-selected path.
   const FileSourceBackend* fileSource=nullptr;
+  // Trusted immutable active/staged metadata sources. Absent means unavailable.
+  const RuntimeFileSources* files=nullptr;
 };
 class Runtime final {
  public:
@@ -135,6 +138,10 @@ class Runtime final {
   static constexpr size_t MaxAppRequirements=RISC_APP_REQUIREMENT_ROWS;
   explicit Runtime(Port p) : port_(p), mainInvocation_(graph_,{this,streamBindingValid,streamRetain,streamYield}) {}
   ~Runtime();
+  bool bindFileSources(const RuntimeFileSources* sources){
+    if(attempted_ || port_.files || !sources || sources->retained() || !port_.owner || !port_.owner())return false;
+    port_.files=sources;return true;
+  }
   Runtime(const Runtime&)=delete;
   Runtime& operator=(const Runtime&)=delete;
   Runtime(Runtime&&)=delete;
@@ -267,7 +274,7 @@ class Runtime final {
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
   // by their native store owner, which must retain its mount/session.
-  bool metadataCloseRetained() const { return metadataCloseRetained_; }
+  bool metadataCloseRetained() const { return metadataCloseRetained_ || (port_.files && port_.files->retained()); }
   // Terminal native read custody. The native caller must keep this Runtime
   // and its store/session alive; destruction or cleanup retry is unsupported.
   bool nativeProviderReadRetained() const { return retainedNativeProviderRead_!=nullptr; }
@@ -750,6 +757,7 @@ class Runtime final {
   bool prepared_=false, attempted_=false, retained_=false;
   bool yielding_=false;
   mutable bool metadataCloseRetained_=false;
+  RuntimeFileView metadataSource(const char* root=nullptr)const{return RuntimeFileView(port_.files,root?root:root_);}
   esp_dl_image_cache* appImages_=nullptr;
   bool reclaimingAppImages_=false;
 };

@@ -1,6 +1,7 @@
 #include <RiscPreferenceStoreV1.h>
 #include <RiscStorageFilesV1.h>
 #include <RiscStorageFilesIdentityV1.h>
+#include <RiscStorageFilesDirectoryV1.h>
 #include <RiscStorageFilesCatalogV1.h>
 #include "bootstrap/PreferenceStoreConfig.h"
 #include "bootstrap/StorageFilesConfig.h"
@@ -17,6 +18,8 @@ STATIC_ASSERT(offsetof(risc_storage_files_v1,api_version)==0, "file ABI prefix")
 STATIC_ASSERT(offsetof(risc_storage_files_catalog_v1,api_version)==0, "catalog ABI prefix");
 STATIC_ASSERT(sizeof(risc_storage_files_identity_value_v1)==72, "opaque identity value layout");
 STATIC_ASSERT(offsetof(risc_storage_files_identity_v1,api_version)==0, "identity ABI prefix");
+STATIC_ASSERT(offsetof(risc_storage_files_directory_v1,api_version)==0, "directory supplement ABI prefix");
+STATIC_ASSERT(sizeof(((risc_storage_files_entry_v1*)0)->name)==128, "published fixed entry ABI unchanged");
 STATIC_ASSERT(sizeof(risc_storage_files_handle_v1)==4, "opaque token width");
 STATIC_ASSERT(sizeof(((risc_storage_files_namespace_v1*)0)->namespace_id)==8, "opaque namespace width");
 STATIC_ASSERT(sizeof(((risc_storage_files_namespace_v1*)0)->label)==RISC_STORAGE_FILES_LABEL_MAX, "catalog label layout");

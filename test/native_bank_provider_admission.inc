@@ -108,6 +108,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
  const bool selected=selectedNativeProviderPoliciesV1().count==1;
  assert(selectedNativeProviderPoliciesV1().count==(selected?1u:0u));
  const std::string provisionRoot=std::string(directory)+"/provision";
+ static RiscTest::FileSources sources({RiscTest::FileSources::Mapping{provisionRoot,provisionRoot},{"/bootfs",std::string(directory)+"/bootfs"},{"/updatefs",std::string(directory)+"/updatefs"}},own,safe);fileSources=sources.sources();
  for(unsigned scenario=0;scenario<13;++scenario){
    auto files=base;
    if(scenario==1)files["default.elf"]=appElf;
@@ -148,7 +149,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
    if(mismatch==1)strcpy(requirementName,"platform.bank-store");
    if(mismatch==2)requirement.api=2;
    RiscBoot::Port ownedPort{own,nullptr,nullptr,nullptr};ownedPort.nativeProviders={&mutablePolicy,1};
-   auto candidate=std::make_unique<RiscBoot::Runtime>(ownedPort);static const uint32_t clockTable[]={1,8};
+   auto candidate=std::make_unique<RiscBoot::Runtime>(ownedPort);assert(sources.bind(*candidate));static const uint32_t clockTable[]={1,8};
    assert(candidate->registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,clockTable));
    assert(candidate->prepare(provisionRoot.c_str())==(mismatch==0));
    if(mismatch)continue;
@@ -171,7 +172,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
    const char* diagnosticImport="puts";auto mutablePolicy=policy;mutablePolicy.imports=&diagnosticImport;mutablePolicy.diagnosticAbi=1;
    SHA256(files["driver.elf"].data(),files["driver.elf"].size(),mutablePolicy.sha256);
    RiscBoot::Port ownedPort{own,nullptr,nullptr,nullptr};ownedPort.nativeProviders={&mutablePolicy,1};
-   auto candidate=std::make_unique<RiscBoot::Runtime>(ownedPort);assert(candidate->prepare(provisionRoot.c_str()));
+   auto candidate=std::make_unique<RiscBoot::Runtime>(ownedPort);assert(sources.bind(*candidate));assert(candidate->prepare(provisionRoot.c_str()));
    const std::string image=provisionRoot+"/driver.elf";
    const auto* admitted=candidate->nativeProviderPolicyForImage(image.c_str());assert(admitted && admitted->diagnosticAbi==1);
    mutablePolicy.diagnosticAbi=0;diagnosticImport="xTaskGetTickCount";
@@ -188,7 +189,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
  identityNative("/bootfs","1.0.1",RISC_BUILD_VERSION,std::string(40,'a').c_str());
  identityNative("/updatefs","1.0.2",RISC_BUILD_VERSION,cohortImage.source_revision);
  RiscBoot::Port port{own,nullptr,[](uint32_t){},nullptr};port.nativeProviders=selectedNativeProviderPoliciesV1();
- auto source=std::make_unique<RiscBoot::Runtime>(port);assert(source->prepare("/bootfs"));runtime=source.get();
+ auto source=std::make_unique<RiscBoot::Runtime>(port);assert(sources.bind(*source));assert(source->prepare("/bootfs"));runtime=source.get();
  assert((source->nativeProviderPolicyForImage("/bootfs/driver.elf")!=nullptr)==selected);
  assert(!source->nativeProviderPolicyForImage("/updatefs/driver.elf"));
  assert(!source->nativeProviderPolicyForImage("/bootfs/default.elf"));
@@ -213,7 +214,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
    const char* imports[]={import};auto mutablePolicy=policy;
    mutablePolicy.driverId=id;mutablePolicy.version=version;mutablePolicy.capability=capability;mutablePolicy.imports=imports;
    RiscBoot::Port mutablePort{own,nullptr,[](uint32_t){},nullptr};mutablePort.nativeProviders={&mutablePolicy,1};
-   source=std::make_unique<RiscBoot::Runtime>(mutablePort);assert(source->prepare("/bootfs"));runtime=source.get();
+   source=std::make_unique<RiscBoot::Runtime>(mutablePort);assert(sources.bind(*source));assert(source->prepare("/bootfs"));runtime=source.get();
    assert(bool(source->nativeProviderPolicyForImage("/bootfs/driver.elf"))==selectedInSource);
    auto changedFiles=base;changedFiles["driver.elf"]=elf("vTaskDelay","t5_driver_get");
    strcpy(id,"replaced-provider");strcpy(version,"2.0.0");strcpy(capability,"test.replaced");strcpy(import,"vTaskDelay");
@@ -238,7 +239,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
      identityNative("/updatefs","1.0.2",RISC_BUILD_VERSION,cohortImage.source_revision);
      RiscBoot::Port custodyPort{own,nullptr,[](uint32_t){},nullptr};custodyPort.nativeProviders={&policy,1};
      custodyPort.providerStorageSafe=[](){return providerReadStorageSafe;};
-     source=std::make_unique<RiscBoot::Runtime>(custodyPort);assert(source->prepare("/bootfs"));runtime=source.get();
+     source=std::make_unique<RiscBoot::Runtime>(custodyPort);assert(sources.bind(*source));assert(source->prepare("/bootfs"));runtime=source.get();
    }else{
      assert(selected && (custodyLoss==1 || secondRead));auto profile=std::make_unique<RiscProvision::Profile>();
      for(const auto& item:base){auto& f=profile->files[profile->count++];strcpy(f.path,item.first.c_str());f.bytes=item.second.size();SHA256(item.second.data(),item.second.size(),f.sha256);}

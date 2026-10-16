@@ -1,4 +1,6 @@
 #include "bootstrap/Runtime.h"
+#include "RuntimeFileFixture.h"
+#include <cstdarg>
 #include "runtime/update/Cohort.h"
 #include <cassert>
 #include <cerrno>
@@ -14,7 +16,7 @@ using namespace RiscBoot;
 namespace {
 struct Fault {
   std::string path;
-  FILE* stream=nullptr;
+  int stream=-1;
   unsigned occurrence=1,matches=0,opens=0,closes=0,reads=0,allocations=0;
   bool close=false,read=false,allocation=false;
 } fault;
@@ -23,10 +25,10 @@ Runtime* liveRuntime=nullptr;
 bool liveClose=false;
 unsigned liveCalls=0;
 void arm(const fs::path& path,bool close=false,bool read=false,bool allocation=false,unsigned occurrence=1){
-  assert(!fault.stream);fault={};fault.path=path.string();fault.close=close;
+  assert(fault.stream<0);fault={};fault.path=path.string();fault.close=close;
   fault.read=read;fault.allocation=allocation;fault.occurrence=occurrence;
 }
-void consumed(){assert(!fault.stream && fault.opens==1 && fault.closes==1);}
+void consumed(){assert(fault.stream<0 && fault.opens==1 && fault.closes==1);}
 void save(const fs::path& path,const std::string& bytes){std::ofstream file(path,std::ios::binary);file<<bytes;assert(file.good());}
 void save(const fs::path& path,const JsonDocument& doc){std::string bytes;serializeJson(doc,bytes);save(path,bytes);}
 bool owner(){return true;}
@@ -50,42 +52,42 @@ struct NoJsonMemory final : ArduinoJson::Allocator {
   void* reallocate(void*,size_t) override{return nullptr;}
 };
 }
-extern "C" FILE* __real_fopen(const char*,const char*);
-extern "C" int __real_fclose(FILE*);
-extern "C" size_t __real_fread(void*,size_t,size_t,FILE*);
-extern "C" int __real_feof(FILE*);
-extern "C" int __real_ferror(FILE*);
+extern "C" int __real_open(const char*,int,...);
+extern "C" int __real_close(int);
+extern "C" ssize_t __real_read(int,void*,size_t);
 extern "C" void* __real_malloc(size_t);
 extern "C" int __real_dlclose(void*);
 extern "C" int __wrap_dlclose(void* module){++unloads;return __real_dlclose(module);}
-extern "C" FILE* __wrap_fopen(const char* path,const char* mode){
-  FILE* stream=__real_fopen(path,mode);if(stream)++allOpens;
-  if(stream && fault.path==path && ++fault.matches==fault.occurrence){
-    assert(!fault.stream);fault.stream=stream;++fault.opens;
+extern "C" int __wrap_open(const char* path,int flags,...){
+  mode_t mode=0;if(flags&O_CREAT){va_list args;va_start(args,flags);mode=va_arg(args,int);va_end(args);}
+  const int stream=__real_open(path,flags,mode);if(stream>=0)++allOpens;
+  if(stream>=0 && fault.path==path && ++fault.matches==fault.occurrence){
+    assert(fault.stream<0);fault.stream=stream;++fault.opens;
   }
   return stream;
 }
-extern "C" int __wrap_fclose(FILE* stream){
+extern "C" int __wrap_close(int stream){
   const bool selected=stream==fault.stream;
-  if(selected){++fault.closes;fault.stream=nullptr;}
-  const int result=__real_fclose(stream);
-  // Real host resources are released once; the injected error models native
-  // uncertainty without intentionally leaking descriptors into the host test.
-  if(selected && fault.close){errno=EIO;return EOF;}
+  if(selected){++fault.closes;fault.stream=-1;}
+  const int result=__real_close(stream);
+  // Host resources are released once; the error models uncertain target custody.
+  if(selected && fault.close){errno=EIO;return -1;}
   return result;
 }
-extern "C" size_t __wrap_fread(void* data,size_t size,size_t count,FILE* stream){
-  if(stream==fault.stream){++fault.reads;if(fault.read){errno=EIO;return 0;}}
-  return __real_fread(data,size,count,stream);
+extern "C" ssize_t __wrap_read(int stream,void* data,size_t count){
+  if(stream==fault.stream){++fault.reads;if(fault.read){errno=EIO;return -1;}}
+  return __real_read(stream,data,count);
 }
-extern "C" int __wrap_feof(FILE* stream){
-  return stream==fault.stream && fault.read?1:__real_feof(stream);
+static bool testReadJson(const char* path,JsonDocument& doc,bool* retained=nullptr){
+  const std::string root=fs::path(path).parent_path().string();RiscTest::FileSources files({root});
+  return readJson(RuntimeFileView(files.sources(),root.c_str()),path,doc,retained);
 }
-extern "C" int __wrap_ferror(FILE* stream){
-  return stream==fault.stream && fault.read?1:__real_ferror(stream);
+static bool testReadCohort(const char* root,RiscUpdate::CohortIdentity& identity,bool* retained){
+  RiscTest::FileSources files({std::string(root)});
+  return RiscUpdate::readCohort(RuntimeFileView(files.sources(),root),root,identity,retained);
 }
 extern "C" void* __wrap_malloc(size_t bytes){
-  if(fault.stream && bytes==65537){++fault.allocations;if(fault.allocation)return nullptr;}
+  if(fault.stream>=0 && bytes==65537){++fault.allocations;if(fault.allocation)return nullptr;}
   return __real_malloc(bytes);
 }
 extern "C" void test_cohort_update(){
@@ -105,33 +107,34 @@ static void jsonReads(const fs::path& root){
   const fs::path input=root/"read.json";save(input,"{\"valid\":true}");
   for(bool close:{false,true})for(bool read:{false,true})for(bool allocation:{false,true}){
     arm(input,close,read,allocation);bool retained=false;JsonDocument doc;
-    assert(readJson(input.c_str(),doc,&retained)==(!close && !read && !allocation));
+    assert(testReadJson(input.c_str(),doc,&retained)==(!close && !read && !allocation));
     consumed();assert(retained==close && fault.allocations==1);
     assert(allocation?fault.reads==0:fault.reads>0);
   }
-  arm(input,true);JsonDocument defaultApi;assert(!readJson(input.c_str(),defaultApi));consumed();
-  bool retained=true;arm(input);JsonDocument good;assert(readJson(input.c_str(),good,&retained));
+  arm(input,true);JsonDocument defaultApi;assert(!testReadJson(input.c_str(),defaultApi));consumed();
+  bool retained=true;arm(input);JsonDocument good;assert(testReadJson(input.c_str(),good,&retained));
   consumed();assert(retained && good["valid"].as<bool>());
-  arm(root/"absent.json");assert(!readJson(fault.path.c_str(),good,&retained));
+  arm(root/"absent.json");assert(!testReadJson(fault.path.c_str(),good,&retained));
   assert(retained && !fault.opens && !fault.closes);
-  retained=false;assert(!readJson(fault.path.c_str(),good,&retained));assert(!retained);
+  retained=false;assert(!testReadJson(fault.path.c_str(),good,&retained));assert(!retained);
   for(const std::string& invalid:{std::string("{"),std::string(65537,' ')})for(bool close:{false,true}){
     save(input,invalid);arm(input,close);retained=false;JsonDocument doc;
-    assert(!readJson(input.c_str(),doc,&retained));consumed();assert(retained==close);
+    assert(!testReadJson(input.c_str(),doc,&retained));consumed();assert(retained==close);
   }
   save(input,"{\"valid\":true}");NoJsonMemory allocator;
   for(bool close:{false,true}){
     arm(input,close);retained=false;JsonDocument doc(&allocator);
-    assert(!readJson(input.c_str(),doc,&retained));consumed();assert(retained==close);
+    assert(!testReadJson(input.c_str(),doc,&retained));consumed();assert(retained==close);
   }
   puts("JSON metadata: normal/default API, open/read/parse/size errors, buffer/parser OOM, sticky close retention and single-close cleanup PASS");
 }
 static void preparation(const fs::path& root){
   store(root);
+  {Runtime unbound(port());const unsigned opened=allOpens;assert(!unbound.prepare(root.c_str()));assert(allOpens==opened&&!unbound.metadataCloseRetained());}
   for(const char* name:{"boot.json","board.json","probe.json","app.json"}){
     for(bool close:{false,true})for(unsigned failure=0;failure<3;++failure){
       arm(root/name,close,failure==1,failure==2);
-      auto runtime=std::make_unique<Runtime>(port());inspections=0;
+      RiscTest::FileSources files({root.string()});auto runtime=std::make_unique<Runtime>(port());assert(files.bind(*runtime));inspections=0;
       const bool accepted=runtime->prepare(root.c_str());
       assert(accepted==(!close && failure==0));consumed();
       assert(runtime->metadataCloseRetained()==close && !runtime->retained() && !runtime->active());
@@ -146,33 +149,34 @@ static void preparation(const fs::path& root){
       runtime.reset();assert(allOpens==opened && fault.closes==1);
     }
   }
-  arm(root/"unused");auto fresh=std::make_unique<Runtime>(port());
+  arm(root/"unused");RiscTest::FileSources freshFiles({root.string()});auto fresh=std::make_unique<Runtime>(port());assert(freshFiles.bind(*fresh));
   assert(fresh->prepare(root.c_str()) && !fresh->metadataCloseRetained());
   puts("Runtime preparation: boot/board/driver/app normal, read/OOM and retained-close matrix; no retry, inspection, launch or cross-instance state PASS");
 }
 static void cohortReads(const fs::path& old,const fs::path& next){
-  store(old);store(next);arm(old/"unused");auto current=std::make_unique<Runtime>(port());
-  assert(current->prepare(old.c_str()));
+  store(old);store(next);
   // Both the initial comparison reads and prepare's second candidate reads
   // belong to the same admission attempt, including source metadata failures.
   for(const fs::path& path:{old/"boot.json",old/"board.json",next/"boot.json",next/"board.json",next/"probe.json",next/"app.json"}){
     const unsigned count=(path==next/"boot.json" || path==next/"board.json")?2:1;
     for(unsigned occurrence=1;occurrence<=count;++occurrence){
+      RiscTest::FileSources files({old.string(),next.string()});arm(old/"unused");auto current=std::make_unique<Runtime>(port());assert(files.bind(*current));assert(current->prepare(old.c_str()));
       arm(path,true,false,false,occurrence);auto candidate=std::make_unique<Runtime>(Port{});inspections=0;
       assert(!current->validateCohort(*candidate,next.c_str(),inspect,nullptr));consumed();
-      assert(candidate->metadataCloseRetained() && !current->metadataCloseRetained() && !inspections);
+      assert(candidate->metadataCloseRetained() && current->metadataCloseRetained() && !inspections);
       const unsigned opened=allOpens;
       assert(!current->validateCohort(*candidate,next.c_str(),inspect,nullptr));
       assert(!candidate->prepare(next.c_str()) && !candidate->run());
       assert(allOpens==opened && fault.closes==1);
     }
   }
+  RiscTest::FileSources files({old.string(),next.string()});arm(old/"unused");auto current=std::make_unique<Runtime>(port());assert(files.bind(*current));assert(current->prepare(old.c_str()));
   arm(next/"unused");auto candidate=std::make_unique<Runtime>(Port{});inspections=0;
   assert(current->validateCohort(*candidate,next.c_str(),inspect,nullptr));
   assert(!candidate->metadataCloseRetained() && inspections==2);
   for(bool close:{false,true}){
     arm(next/"cohort.json",close);bool retained=false;RiscUpdate::CohortIdentity identity;
-    assert(!RiscUpdate::readCohort(next.c_str(),identity,&retained));consumed();assert(retained==close);
+    assert(!testReadCohort(next.c_str(),identity,&retained));consumed();assert(retained==close);
   }
   JsonDocument identity;identity["schema"]="riscrte.cohort";identity["schema_version"]=1;
   identity["product"]="test-product";identity["version"]="1.0.0";identity["runtime_version"]="1.0.0";
@@ -182,7 +186,7 @@ static void cohortReads(const fs::path& old,const fs::path& next){
   save(old/"cohort.json",identity);identity["version"]="2.0.0";save(next/"cohort.json",identity);
   for(bool close:{false,true}){
     arm(next/"cohort.json",close);bool retained=false;RiscUpdate::CohortIdentity parsed;
-    assert(RiscUpdate::readCohort(next.c_str(),parsed,&retained)==!close);consumed();assert(retained==close);
+    assert(testReadCohort(next.c_str(),parsed,&retained)==!close);consumed();assert(retained==close);
   }
   JsonDocument migrationBoot;assert(parse(boot,strlen(boot),migrationBoot));
   auto migration=migrationBoot["cohort_migration"].to<JsonObject>();migration["schema"]=1;
@@ -192,9 +196,10 @@ static void cohortReads(const fs::path& old,const fs::path& next){
   auto shared=migration["shared_key_value"].to<JsonArray>().add<JsonObject>();
   shared["application_id"]="new-app";shared["api"]=1;shared["namespace"]=1;save(next/"boot.json",migrationBoot);
   for(const fs::path& path:{old/"cohort.json",next/"cohort.json"}){
-    arm(path,true);candidate=std::make_unique<Runtime>(Port{});inspections=0;
+    RiscTest::FileSources migrationFiles({old.string(),next.string()});arm(old/"unused");auto current=std::make_unique<Runtime>(port());assert(migrationFiles.bind(*current));assert(current->prepare(old.c_str()));
+    arm(path,true);auto candidate=std::make_unique<Runtime>(Port{});inspections=0;
     assert(!current->validateCohort(*candidate,next.c_str(),inspect,nullptr));consumed();
-    assert(candidate->metadataCloseRetained() && !current->metadataCloseRetained() && !inspections);
+    assert(candidate->metadataCloseRetained() && current->metadataCloseRetained() && !inspections);
   }
   puts("Cohort metadata: source/candidate comparison, repeated preparation reads and identity helper retain on candidate before native cleanup PASS");
 }
@@ -203,7 +208,7 @@ static void liveReads(const fs::path& root,const fs::path& fixture){
   config["drivers"].to<JsonArray>();save(root/"boot.json",config);
   fs::copy_file(fixture,root/"app.elf",fs::copy_options::overwrite_existing);
   for(const char* name:{"boot.json","app.json"})for(bool close:{false,true}){
-    arm(root/"unused");auto runtime=std::make_unique<Runtime>(port());assert(runtime->prepare(root.c_str()));
+    arm(root/"unused");RiscTest::FileSources files({root.string()});auto runtime=std::make_unique<Runtime>(port());assert(files.bind(*runtime));assert(runtime->prepare(root.c_str()));
     arm(root/name,close);liveRuntime=runtime.get();liveClose=close;liveCalls=0;
     const unsigned previousUnloads=unloads;
     assert(runtime->run()==!close && liveCalls==1);

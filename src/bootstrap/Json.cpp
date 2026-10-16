@@ -45,13 +45,6 @@ bool readDocument(JsonDocument& doc,Read read,Close close) {
   free(data); return good;
 }
 }
-bool readJson(const char* filename,JsonDocument& doc,bool* closeRetained) {
-  RiscPerf::Scope trace(28,29,RiscPerf::identity(filename));
-  FILE* f=fopen(filename,"rb");if(!f)return false;
-  return readDocument(doc,[&](void* bytes,size_t count,size_t& got){
-    got=fread(bytes,1,count,f);return got || (feof(f) && !ferror(f));
-  },[&]{if(!fclose(f))return true;if(closeRetained)*closeRetained=true;return false;});
-}
 bool readJson(RuntimeFileView source,const char* filename,JsonDocument& doc,bool* closeRetained) {
   RiscPerf::Scope trace(28,29,RiscPerf::identity(filename));
   const auto retained=[&]{if(closeRetained && source.retained())*closeRetained=true;};

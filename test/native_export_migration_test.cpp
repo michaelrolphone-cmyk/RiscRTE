@@ -39,7 +39,7 @@ int main(int argc,char** argv) {
    {"fixture","1.0.1","fixture/product","aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","0.2.13"},
    {"fixture","1.0.2","fixture/product","bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","0.2.13"},
    before.c_str(),after.c_str(),&kvTransition,1};
-  auto current=std::make_unique<Runtime>(port());assert(current->prepare(old.c_str()));
+  RiscTest::FileSources sources({old.string(),next.string()});auto current=std::make_unique<Runtime>(port());assert(sources.bind(*current));assert(current->prepare(old.c_str()));
   auto check=[&](bool expected,const RiscUpdate::NativeAppDataExportPolicyV2& selected) {
    auto candidate=std::make_unique<Runtime>(Port{});apps=drivers=0;
    bool result=current->validateNativeCohort(*candidate,next.c_str(),admit,nullptr,selected);
@@ -66,10 +66,10 @@ int main(int argc,char** argv) {
   save(next/"boot.json",tampered);check(false,policy);save(next/"boot.json",nextBoot);
   // Confirmed target can validate itself and later ordinary updates; the
   // installed native migration record grants no second expansion.
-  current=std::make_unique<Runtime>(port());assert(current->prepare(next.c_str()));
+  current=std::make_unique<Runtime>(port());assert(sources.bind(*current));assert(current->prepare(next.c_str()));
   check(true,policy);auto future=read(next/"cohort.json");future["version"]="1.0.3";save(next/"cohort.json",future);check(true,policy);
   // Rollback uses the old bank intact, without applying a reverse map rewrite.
-  auto rolledBack=std::make_unique<Runtime>(port());assert(rolledBack->prepare(old.c_str()));
+  auto rolledBack=std::make_unique<Runtime>(port());assert(sources.bind(*rolledBack));assert(rolledBack->prepare(old.c_str()));
   assert(read(old/"boot.json")==oldBoot);
  }
  std::cout<<"Native export V2 first/expanded map, explicit KV ownership, exact binding, retry, unchanged and old-bank rollback PASS\n";

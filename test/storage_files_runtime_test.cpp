@@ -10,6 +10,7 @@
 #include <cassert>
 #include <unistd.h>
 #include <filesystem>
+#include "RuntimeFileFixture.h"
 using R=RiscBoot::Runtime;
 static std::thread::id ownerThread=std::this_thread::get_id();
 static Backend volumes[2];
@@ -96,7 +97,7 @@ static void edit(const char* name,const std::string& from,const std::string& to)
 static void policyTests(std::string base){
  directory=base+"/old";std::filesystem::create_directories(directory);boot();file("cohort.json","{}");
  for(const char* name:{"default.elf","provider0.elf","provider1.elf"})std::filesystem::copy_file(base+"/"+name,directory+"/"+name,std::filesystem::copy_options::overwrite_existing);
- const auto old=directory;R source({owner,health,delay,logLine});assert(source.prepare(old.c_str()));
+ const auto old=directory;RiscTest::FileSources sourceFiles0({old.c_str(),base+"/new"});R source({owner,health,delay,logLine});assert(sourceFiles0.bind(source));assert(source.prepare(old.c_str()));
  directory=base+"/new";std::filesystem::copy(old,directory,std::filesystem::copy_options::recursive|std::filesystem::copy_options::overwrite_existing);
  auto admitted=[](void*,const char* path,bool){return std::filesystem::is_regular_file(path);};
  {R candidate({});assert(source.validateCohort(candidate,directory.c_str(),admitted,nullptr));}
@@ -111,7 +112,7 @@ static void policyTests(std::string base){
   if(bad==3)edit("boot.json","\"instance_id\":101","\"instance_id\":0");
   if(bad==4)edit("boot.json","Documents",std::string(49,'x'));
   if(bad==5)edit("boot.json",direct?"\"backend_capability\":\"storage.files\"":"\"backend_capability\":\"storage.volume\"","\"backend_capability\":\"unknown\"");
-  R candidate({owner,health,delay,logLine});assert(!candidate.prepare(directory.c_str()));
+  RiscTest::FileSources candidateFiles5({directory.c_str()});R candidate({owner,health,delay,logLine});assert(candidateFiles5.bind(candidate));assert(!candidate.prepare(directory.c_str()));
  }
  // Omission means unique provider selection. An explicitly supplied ID must
  // be a nonempty string, including when there is only one possible provider.
@@ -124,12 +125,12 @@ static void policyTests(std::string base){
   if(form==5)grant["backend_provider"]=true;
   if(form==6)grant["backend_provider"].to<JsonObject>();
   {std::ofstream output(directory+"/boot.json");serializeJson(doc,output);}
-  R candidate({owner,health,delay,logLine});assert(candidate.prepare(directory.c_str())==(form<2));
+  RiscTest::FileSources candidateFiles6({directory.c_str()});R candidate({owner,health,delay,logLine});assert(candidateFiles6.bind(candidate));assert(candidate.prepare(directory.c_str())==(form<2));
  }
  assert(volumes[0].totalCalls()==0&&volumes[1].totalCalls()==0&&generic[0].totalCalls()==0&&generic[1].totalCalls()==0);
  puts("Generic files policy: exact mapping/admission, preserving cohort, no provider I/O PASS");
 }
-int main(int argc,char** argv){assert(argc==3);directory=argv[1];scenario=argv[2];direct=scenario=="direct"||scenario=="reentrant"||scenario=="malformed-direct"||scenario=="unavailable"||scenario=="direct-policies";if(scenario=="policies"||scenario=="direct-policies"){policyTests(directory);return 0;}if(scenario=="malformed-direct")generic[0].api.close=nullptr;boot();R r({owner,health,delay,logLine});runtime=&r;if(!r.prepare(directory.c_str())){fprintf(stderr,"prepare: %s\n",r.error());assert(false);}
+int main(int argc,char** argv){assert(argc==3);directory=argv[1];scenario=argv[2];direct=scenario=="direct"||scenario=="reentrant"||scenario=="malformed-direct"||scenario=="unavailable"||scenario=="direct-policies";if(scenario=="policies"||scenario=="direct-policies"){policyTests(directory);return 0;}if(scenario=="malformed-direct")generic[0].api.close=nullptr;boot();RiscTest::FileSources rFiles7({directory.c_str()});R r({owner,health,delay,logLine});assert(rFiles7.bind(r));runtime=&r;if(!r.prepare(directory.c_str())){fprintf(stderr,"prepare: %s\n",r.error());assert(false);}
  if(scenario=="open-exit"||scenario=="failed-close"){assert(!r.run()&&r.retained()&&!r.residentResetSafe());invalid(saved);puts("Generic files retained custody and exit barrier PASS");fflush(stdout);_exit(0);}
  assert(r.run()&&!r.retained());if(saved.context)invalid(saved);puts("Generic files real Runtime: catalog, namespace mapping, owner/handle isolation, CRUD, lifecycle PASS");
 }

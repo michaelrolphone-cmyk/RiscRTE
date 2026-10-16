@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cstring>
+#include "RuntimeFileFixture.h"
 using namespace RiscBoot;
 static bool owned=true,safe=true,retaining=false;static unsigned phase=0,reads=0,writes=0;
 static unsigned capacity=0,indexMode=0;
@@ -65,7 +66,7 @@ int main(int argc,char** argv){
   write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":[],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]},{\"manifest\":\"child.json\",\"grants\":["+grant(1)+"]}]}");
  };
  unsigned cases=0;
- auto check=[&](const std::string& grants,const std::string& req,bool expected){stage(grants,req);Runtime r(port());bool actual=r.prepare(root.c_str());if(actual!=expected)fprintf(stderr,"unexpected admission %s\n",r.error());assert(actual==expected);if(!expected){assert(!r.run());stage(grant(1),requirement());assert(!r.prepare(root.c_str()));assert(!r.run());}++cases;};
+ auto check=[&](const std::string& grants,const std::string& req,bool expected){stage(grants,req);RiscTest::FileSources rFiles0({root.c_str()});Runtime r(port());assert(rFiles0.bind(r));bool actual=r.prepare(root.c_str());if(actual!=expected)fprintf(stderr,"unexpected admission %s\n",r.error());assert(actual==expected);if(!expected){assert(!r.run());stage(grant(1),requirement());assert(!r.prepare(root.c_str()));assert(!r.run());}++cases;};
  check(grant(1)+","+grant(5),requirement(),true);
  check(grant(5)+","+grant(1),requirement(),true);
  check(grant(1)+","+grant(1),requirement(),false);
@@ -101,15 +102,15 @@ int main(int argc,char** argv){
  check(prefix+","+grant(12,RISC_KEY_VALUE_CAPABILITY,2),requirement(),false);
  assert(!allocationCount);
  stage(many,requirement());allocationFailure=true;
- {Runtime r(port());assert(!r.prepare(root.c_str()));assert(!strcmp(r.error(),"app policy allocation failed"));assert(!r.run());}
+ {RiscTest::FileSources rFiles1({root.c_str()});Runtime r(port());assert(rFiles1.bind(r));assert(!r.prepare(root.c_str()));assert(!strcmp(r.error(),"app policy allocation failed"));assert(!r.run());}
  allocationFailure=false;assert(!allocationCount);
- {Runtime r(port());assert(r.prepare(root.c_str()));assert(allocationCount==1);
+ {RiscTest::FileSources rFiles2({root.c_str()});Runtime r(port());assert(rFiles2.bind(r));assert(r.prepare(root.c_str()));assert(allocationCount==1);
   printf("Policy rows=%zu Runtime bytes=%zu metadata per app=%zu\n",Runtime::MaxAppPolicyGrants,sizeof(Runtime),allocationBytes/2);}
  assert(!allocationCount);++cases;
  for(unsigned run=0;run<3;++run){
   stage(run&1?grant(5)+","+grant(1):grant(1)+","+grant(5),requirement());
   owned=safe=true;retaining=run==2;phase=0;values.clear();reads=writes=0;
-  Runtime r(port());assert(r.prepare(root.c_str()));assert(r.run()!=retaining);
+  RiscTest::FileSources rFiles3({root.c_str()});Runtime r(port());assert(rFiles3.bind(r));assert(r.prepare(root.c_str()));assert(r.run()!=retaining);
   assert(values[1]["same"]==std::vector<unsigned char>({'o','n','e'}));assert(values[5]["same"]==std::vector<unsigned char>({'f','i','v','e'}));
   assert(writes==2&&reads>=2);uint32_t size=999;char bytes[8];
   assert(saved.get(saved.context,"same",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_CONTEXT&&!size);
@@ -119,7 +120,7 @@ int main(int argc,char** argv){
   if(limit>Runtime::MaxAppPolicyGrants)continue;
   capacity=limit;owned=safe=true;retaining=false;values.clear();reads=writes=0;
   std::string declared;for(unsigned i=1;i<=limit;++i){if(i>1)declared+=",";declared+=grant(i);}
-  stage(declared,requirement());Runtime r(port());assert(r.prepare(root.c_str()));
+  stage(declared,requirement());RiscTest::FileSources rFiles4({root.c_str()});Runtime r(port());assert(rFiles4.bind(r));assert(r.prepare(root.c_str()));
   std::vector<std::string> parsedStorageChurn(256,std::string(4096,'X'));
   assert(!r.prepare(root.c_str()));assert(r.run());
   assert(reads==limit&&writes==limit);
@@ -142,7 +143,7 @@ int main(int argc,char** argv){
   }
   write("default.json",manifest("default","default.elf",requirements));
   write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+drivers+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]}]}");
-  Runtime r(port());const bool accepted=r.prepare(root.c_str());if(accepted!=(count<=Runtime::MaxAppRequirements))fprintf(stderr,"requirement capacity: %s\n",r.error());assert(accepted==(count<=Runtime::MaxAppRequirements));if(count>Runtime::MaxAppRequirements)assert(!strcmp(r.error(),"invalid app identity/declarations"));++cases;
+  RiscTest::FileSources rFiles5({root.c_str()});Runtime r(port());assert(rFiles5.bind(r));const bool accepted=r.prepare(root.c_str());if(accepted!=(count<=Runtime::MaxAppRequirements))fprintf(stderr,"requirement capacity: %s\n",r.error());assert(accepted==(count<=Runtime::MaxAppRequirements));if(count>Runtime::MaxAppRequirements)assert(!strcmp(r.error(),"invalid app identity/declarations"));++cases;
  }
  // Sixteen unique requirements need seventeen rows when one requirement has
  // two distinct namespaces. Default rejects; opt-in admits the exact boundary.
@@ -155,12 +156,12 @@ int main(int argc,char** argv){
   }
   write("default.json",manifest("default","default.elf",requirements));
   write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+drivers+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grants+"]}]}");
-  {Runtime r(port());assert(r.prepare(root.c_str())==(Runtime::MaxAppPolicyGrants==17));}
+  {RiscTest::FileSources rFiles6({root.c_str()});Runtime r(port());assert(rFiles6.bind(r));assert(r.prepare(root.c_str())==(Runtime::MaxAppPolicyGrants==17));}
   ++cases;
  }
  capacity=0;indexMode=1;owned=safe=true;
  stage(grant(0,"platform.clock"),requirement("platform.clock"));
- {Runtime r(port());assert(r.prepare(root.c_str()) && r.run());++cases;}
+ {RiscTest::FileSources rFiles7({root.c_str()});Runtime r(port());assert(rFiles7.bind(r));assert(r.prepare(root.c_str()) && r.run());++cases;}
  indexMode=2;std::string driverList;
  for(unsigned i=0;i<16;i++){
   const std::string name="slot"+std::to_string(i),cap="test."+name;
@@ -170,7 +171,7 @@ int main(int argc,char** argv){
  }
  write("default.json",manifest("default","default.elf",requirement("test.slot15")));
  write("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":["+driverList+"],\"app_capabilities\":[{\"manifest\":\"default.json\",\"grants\":["+grant(0,"test.slot15")+"]}]}");
- {Runtime r(port());assert(r.prepare(root.c_str()) && r.run());++cases;}
+ {RiscTest::FileSources rFiles8({root.c_str()});Runtime r(port());assert(rFiles8.bind(r));assert(r.prepare(root.c_str()) && r.run());++cases;}
  indexMode=0;
  capacity=0;
  assert(!allocationCount);

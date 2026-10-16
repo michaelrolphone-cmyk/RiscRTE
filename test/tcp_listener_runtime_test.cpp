@@ -10,6 +10,7 @@
 #include <string>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static std::string root;
 static Port* cpu;
@@ -91,10 +92,10 @@ int main(int argc,char** argv){
  for(int index=0;index<2;++index){const std::string name=index?"second":"first";file((name+".json").c_str(),std::string(R"({"type":"driver","id":"tcp-)")+name+R"(","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":")"+name+R"(.elf","requires":[{"capability":"platform.tcp-listener","api":1}],"provides":[{"capability":"test.tcp.)"+name+R"(","api":1}]})");}
  file("app.json",R"({"type":"application","id":"tcp-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.tcp.first","api":1},{"capability":"test.tcp.second","api":1}]})");
  file("boot.json",R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"first.json"},{"manifest":"second.json"}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.tcp.first","api":1,"instance_id":0},{"capability":"test.tcp.second","api":1,"instance_id":0}]}]})");
- {auto h=hardware();h.tcpListener=nullptr;Port p(h);cpu=&p;RiscBoot::Runtime r(runtimePort());assert(!r.prepare(root.c_str())&&calls==0);}
- {auto bad=backend;bad.close=nullptr;auto h=hardware();h.tcpListener=&bad;Port p(h);cpu=&p;RiscBoot::Runtime r(runtimePort());assert(!r.prepare(root.c_str())&&calls==0);}
+ {auto h=hardware();h.tcpListener=nullptr;Port p(h);cpu=&p;RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r(runtimePort());assert(rFiles0.bind(r));assert(!r.prepare(root.c_str())&&calls==0);}
+ {auto bad=backend;bad.close=nullptr;auto h=hardware();h.tcpListener=&bad;Port p(h);cpu=&p;RiscTest::FileSources rFiles1({root.c_str()});RiscBoot::Runtime r(runtimePort());assert(rFiles1.bind(r));assert(!r.prepare(root.c_str())&&calls==0);}
  file("cohort.json","{}");
- {Port p(hardware());cpu=&p;RiscBoot::Runtime current(runtimePort()),candidate({});
+ {Port p(hardware());cpu=&p;RiscTest::FileSources currentFiles2({root.c_str()});RiscBoot::Runtime current(runtimePort()),candidate({});assert(currentFiles2.bind(current));
   assert(current.prepare(root.c_str())&&calls==0);
   const bool admitted=current.validateCohort(candidate,root.c_str(),[](void*,const char*,bool){return true;},nullptr);
   if(!admitted)fprintf(stderr,"candidate: %s\n",candidate.error());
@@ -107,7 +108,7 @@ int main(int argc,char** argv){
  for(const char* path:{"board.json","cohort.json","default.elf"})std::filesystem::copy_file(root+"/"+path,oldRoot+"/"+path);
  std::ofstream(oldRoot+"/app.json")<<R"({"type":"application","id":"tcp-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[]})";
  std::ofstream(oldRoot+"/boot.json")<<R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[]}]})";
- for(bool enabled:{false,true}){auto h=hardware();if(!enabled)h.tcpListener=nullptr;Port p(h);cpu=&p;RiscBoot::Runtime current(runtimePort()),candidate({});
+ for(bool enabled:{false,true}){auto h=hardware();if(!enabled)h.tcpListener=nullptr;Port p(h);cpu=&p;RiscTest::FileSources currentFiles3({oldRoot.c_str(),root.c_str()});RiscBoot::Runtime current(runtimePort()),candidate({});assert(currentFiles3.bind(current));
   assert(current.prepare(oldRoot.c_str()));
   assert(current.validateCohort(candidate,root.c_str(),[](void*,const char*,bool){return true;},nullptr)==enabled&&calls==0);
  }
@@ -115,12 +116,12 @@ int main(int argc,char** argv){
  const std::string normalApp=R"({"type":"application","id":"tcp-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.tcp.first","api":1},{"capability":"test.tcp.second","api":1}]})";
  file("app.json",R"({"type":"application","id":"tcp-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"platform.tcp-listener","api":1}]})");
  file("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"platform.tcp-listener","api":1,"instance_id":0}]}]})");
- {Port p(hardware());cpu=&p;RiscBoot::Runtime r(runtimePort());assert(!r.prepare(root.c_str())&&calls==0);}
+ {Port p(hardware());cpu=&p;RiscTest::FileSources rFiles4({root.c_str()});RiscBoot::Runtime r(runtimePort());assert(rFiles4.bind(r));assert(!r.prepare(root.c_str())&&calls==0);}
  file("app.json",normalApp);file("boot.json",normalBoot);
  for(int extension=0;extension<2;++extension)for(mode=0;mode<5;++mode){
   outbound=extension;backend.connect=outbound?listen:nullptr;backend.connected=outbound?connected:nullptr;
   const auto child=fork();assert(child>=0);
-  if(!child){Port p(hardware());cpu=&p;RiscBoot::Runtime r(runtimePort());assert(r.prepare(root.c_str())&&calls==0);assert(r.run()==(mode==0));denied(tables[0]);assert(mode==0?stops==3:stops==0);_exit(0);}
+  if(!child){Port p(hardware());cpu=&p;RiscTest::FileSources rFiles5({root.c_str()});RiscBoot::Runtime r(runtimePort());assert(rFiles5.bind(r));assert(r.prepare(root.c_str())&&calls==0);assert(r.run()==(mode==0));denied(tables[0]);assert(mode==0?stops==3:stops==0);_exit(0);}
   int status;assert(waitpid(child,&status,0)==child);assert(WIFEXITED(status)&&WEXITSTATUS(status)==0);
  }
  puts("Runtime TCP: opt-in/admission, provider generation ownership, raw app denial and retention fences PASS");
