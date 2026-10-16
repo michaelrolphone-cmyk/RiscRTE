@@ -1,0 +1,79 @@
+name: Provider-backed Runtime ELF
+on:
+  push:
+    branches: [work/provider-backed-elf-loading]
+  pull_request:
+    paths: ['src/bootstrap/**', 'src/runtime/drivers/**', 'src/runtime/storage/**', 'src/ports/esp32s3/NativeBankStore.cpp', 'lib/elf_loader/**', 'test/**', '.github/workflows/runtime-elf-provider.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  provider-images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_reader_image_cache_test.sh
+      - run: bash test/run_runtime_file_image_test.sh
+      - run: bash test/run_runtime_image_custody_test.sh
+      - run: bash test/run_removable_app_image_test.sh
+      - run: bash test/run_removable_runtime_test.sh
+      - run: bash test/run_native_registry_test.sh
+      - run: bash test/run_image_cache_runtime_test.sh
+      - run: bash test/run_image_cache_pressure_test.sh
+      - run: bash test/run_runtime_test.sh
+      - run: bash test/run_performance_runtime_test.sh
+      - run: bash test/run_provider_graph_v2_test.sh
+
+  native-consumers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        storage: [0, 1]
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Configure pinned native SDK and compile actual consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          options=()
+          if [[ "${{ matrix.storage }}" == 1 ]];then options=(-D "RISC_PRODUCT_PROFILE=$PWD/test/fixtures/native_metadata_profile.cmake");fi
+          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/elf-native" -D "RISC_SOURCE_SHA=$GITHUB_SHA" "${options[@]}" reconfigure
+          python test/compile_runtime_metadata_target.py "$RUNNER_TEMP/elf-native/compile_commands.json" "$RUNNER_TEMP/elf-objects" --storage "${{ matrix.storage }}" --elf
+          if [[ "${{ matrix.storage }}" == 0 ]];then
+            python test/compile_runtime_metadata_target.py "$RUNNER_TEMP/elf-native/compile_commands.json" "$RUNNER_TEMP/elf-embedded" --storage 0 --embedded --elf
+          else
+            cmake --build "$RUNNER_TEMP/elf-native" --target bootloader -- -j1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: matrix.storage == 1
+        with:
+          name: elf-native-bootloader
+          path: ${{ runner.temp }}/elf-native/bootloader/bootloader.bin
+  native-bank-elf:
+    needs: native-consumers
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      NATIVE_PROVIDER_TEST_ABI: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: elf-native-bootloader
+          path: .native-bootloader
+      - run: python -m pip install "esptool==5.1.0"
+      - run: BOOTLOADER_FILE="$PWD/.native-bootloader/bootloader.bin" bash test/run_native_bank_test.sh

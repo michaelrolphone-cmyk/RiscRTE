@@ -37,7 +37,7 @@ fi
 cc "${san[@]}" -std=c11 -I"$repo/test/native_bank_stubs" -I"$repo/lib/elf_loader/include" -c "$repo/lib/elf_loader/src/esp_elf_validate.c" -o "$build/validate.o"
 native_objects=()
 if [[ -z "${BOOT_BASELINE_REF:-}" ]];then
- extra+=(-DRISC_NATIVE_PROVIDER_ADMISSION_TEST=1 -DRISC_NATIVE_BANK_PROVIDER_TEST=1 -Wl,--wrap=fread,--wrap=fgetc)
+ extra+=(-DRISC_NATIVE_PROVIDER_ADMISSION_TEST=1 -DRISC_NATIVE_BANK_PROVIDER_TEST=1)
  for source in esp_privileged_imports esp_privileged_manifest_imports;do
   cc "${san[@]}" -std=gnu11 -Wall -Wextra -Werror -I"$repo/test/native_bank_stubs" -I"$repo/lib/elf_loader/include" -c "$repo/lib/elf_loader/src/$source.c" -o "$build/$source.o"
   native_objects+=("$build/$source.o")

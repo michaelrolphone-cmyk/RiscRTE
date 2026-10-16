@@ -5,27 +5,69 @@ static std::string providerCustodyReadPath;
 static unsigned providerCustodyLoss=0;
 static unsigned providerCustodySkipReads=0,providerCustodyEofProbes=0;
 static bool providerReadStorageSafe=true;
-static FILE* providerRetainedRead=nullptr;
+static uint32_t providerRetainedRead=0;
+static void* providerRetainedReadContext=nullptr;
 static const uint8_t* providerRetainedReadBytes=nullptr;
-extern "C" size_t __real_fread(void*,size_t,size_t,FILE*);
-extern "C" size_t __wrap_fread(void* bytes,size_t size,size_t count,FILE* file){
- const size_t result=__real_fread(bytes,size,count,file);
- const auto opened=metadataStreams.find(file);
- if(result && opened!=metadataStreams.end() && opened->second.first==providerCustodyReadPath){
-   if(providerCustodySkipReads){--providerCustodySkipReads;return result;}
-   providerCustodyReadPath.clear();providerRetainedRead=file;providerRetainedReadBytes=static_cast<const uint8_t*>(bytes);
-   if(providerCustodyLoss==1)ownerEnabled=false;
-   if(providerCustodyLoss==2)providerReadStorageSafe=false;
-   if(providerCustodyLoss==3)operationEnabled=false;
-   if(providerCustodyLoss==4)failNextNativeClose=true;
+static unsigned providerReadCalls=0,providerCloseCalls=0;
+// Decorate the actual generic provider table. The backend still owns all file
+// operations; faults and retained identity are observed at its context/token seam.
+class ProviderAdmissionSources final {
+ struct Source;
+ static std::map<void*,Source*>& providers(){static std::map<void*,Source*> value;return value;}
+ struct Source {
+   const std::string logical,backend;
+   RiscStorage::PosixFiles provider;
+   risc_storage_files_v1 table;
+   RiscBoot::RuntimeFiles files;
+   std::map<uint32_t,std::string> opened;
+   Source(const RiscTest::FileSources::Mapping& mapping):logical(mapping.logical),backend(mapping.backend),
+       provider(backend.c_str()),table(*provider.api()) {
+     providers().emplace(table.context,this);
+     table.open=[](void* context,const char* path,uint32_t flags,uint32_t* handle)->int32_t {
+       auto& s=*providers().at(context);const auto* api=s.provider.api();
+       const int32_t rc=api->open(context,path,flags,handle);
+       if(rc==RISC_FILES_OK)s.opened.emplace(*handle,s.logical+path);
+       return rc;
+     };
+     table.read=[](void* context,uint32_t handle,void* bytes,uint32_t count,uint32_t* actual)->int32_t {
+       auto& s=*providers().at(context);const auto* api=s.provider.api();++providerReadCalls;
+       if(context==providerRetainedReadContext && handle==providerRetainedRead && providerCustodyLoss!=4)++providerCustodyEofProbes;
+       const int32_t rc=api->read(context,handle,bytes,count,actual);
+       const auto opened=s.opened.find(handle);
+       if(rc==RISC_FILES_OK && *actual && opened!=s.opened.end() && opened->second==providerCustodyReadPath){
+         if(providerCustodySkipReads){--providerCustodySkipReads;return rc;}
+         providerCustodyReadPath.clear();providerRetainedRead=handle;providerRetainedReadContext=context;
+         providerRetainedReadBytes=static_cast<const uint8_t*>(bytes);
+         if(providerCustodyLoss==1)ownerEnabled=false;
+         if(providerCustodyLoss==2)providerReadStorageSafe=false;
+         if(providerCustodyLoss==3)operationEnabled=false;
+         if(providerCustodyLoss==4)failNextNativeClose=true;
+       }
+       return rc;
+     };
+     table.close=[](void* context,uint32_t handle)->int32_t {
+       auto& s=*providers().at(context);const auto* api=s.provider.api();
+       if(context==providerRetainedReadContext && handle==providerRetainedRead)++providerCloseCalls;
+       const int32_t rc=api->close(context,handle);if(rc==RISC_FILES_OK)s.opened.erase(handle);return rc;
+     };
+     assert(files.bind(&table,own,safe,provider.identityApi(),provider.directoryApi()));
+   }
+ };
+ std::vector<std::unique_ptr<Source>> owned_;
+ std::vector<RiscBoot::RuntimeFileSources::Entry> entries_;
+ std::unique_ptr<const RiscBoot::RuntimeFileSources> sources_;
+ public:
+ explicit ProviderAdmissionSources(std::initializer_list<RiscTest::FileSources::Mapping> mappings){
+   for(const auto& mapping:mappings){owned_.emplace_back(new Source(mapping));auto& source=*owned_.back();entries_.push_back({source.logical.c_str(),&source.files});}
+   sources_.reset(new RiscBoot::RuntimeFileSources(entries_.data(),entries_.size()));
  }
- return result;
-}
-extern "C" int __real_fgetc(FILE*);
-extern "C" int __wrap_fgetc(FILE* file){
- if(file==providerRetainedRead && providerCustodyLoss && providerCustodyLoss!=4)++providerCustodyEofProbes;
- return __real_fgetc(file);
-}
+ const RiscBoot::RuntimeFileSources* sources()const{return sources_.get();}
+ bool bind(RiscBoot::Runtime& runtime)const{return runtime.bindFileSources(sources());}
+ bool owns(const char* root,void* context,uint32_t handle)const {
+   const auto it=providers().find(context);return it!=providers().end() &&
+     sources()->find(root)==&it->second->files && it->second->opened.count(handle)==1;
+ }
+};
 static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0,bool provisioningCustody=false,bool secondRead=false){
  using namespace RiscBankStore;
  using namespace RuntimeProviders;
@@ -108,7 +150,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
  const bool selected=selectedNativeProviderPoliciesV1().count==1;
  assert(selectedNativeProviderPoliciesV1().count==(selected?1u:0u));
  const std::string provisionRoot=std::string(directory)+"/provision";
- static RiscTest::FileSources sources({RiscTest::FileSources::Mapping{provisionRoot,provisionRoot},{"/bootfs",std::string(directory)+"/bootfs"},{"/updatefs",std::string(directory)+"/updatefs"}},own,safe);fileSources=sources.sources();
+ static ProviderAdmissionSources sources({{provisionRoot,provisionRoot},{"/bootfs",std::string(directory)+"/bootfs"},{"/updatefs",std::string(directory)+"/updatefs"}});fileSources=sources.sources();
  for(unsigned scenario=0;scenario<13;++scenario){
    auto files=base;
    if(scenario==1)files["default.elf"]=appElf;
@@ -231,7 +273,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
    runtime=nullptr;source.reset();
  }
  // Terminal custody cases each run in a separate process. Preserve the exact
- // candidate, read buffer, FILE and CPU instead of simulating native recovery.
+ // candidate, read buffer, provider context/token and CPU without simulating recovery.
  if(custodyLoss){
    save(fsRoot+"/bootfs",base);save(fsRoot+"/updatefs",base);
    if(!provisioningCustody){
@@ -246,13 +288,21 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
      provisionProfile=profile.release();provisionState=new ProvisionState({},admissionHardware(),nullptr,nullptr);mounted=true;
    }
    providerCustodyLoss=custodyLoss;providerCustodySkipReads=secondRead?1:0;
-   providerCustodyReadPath=fsRoot+"/updatefs/driver.elf";providerRetainedRead=nullptr;
+   providerCustodyReadPath="/updatefs/driver.elf";providerRetainedRead=0;providerRetainedReadContext=nullptr;
    assert(!(provisioningCustody?admitProvisionedStore("/updatefs",*provisionProfile):validateStore(nullptr,1)));
-   assert(providerRetainedRead && providerCustodyReadPath.empty());
+   assert(providerRetainedRead && providerRetainedReadContext && providerCustodyReadPath.empty());
+   assert(sources.owns("/updatefs",providerRetainedReadContext,providerRetainedRead));
    assert(retainedAdmissionRuntime && retainedAdmissionRuntime->nativeProviderReadRetained()==!secondRead);
    if(secondRead)assert(retainedAdmissionFile==providerRetainedRead && retainedAdmissionBytes==providerRetainedReadBytes);
    assert(provisionReadRetained && mounted && !cleanup(nullptr) && !exitSafe());
-   assert(metadataStreams.count(providerRetainedRead)==(custodyLoss==4?0u:1u) && !providerCustodyEofProbes);
+   unsigned openDescriptors=0;for(const auto& descriptor:metadataDescriptors)if(descriptor.second==fsRoot+"/updatefs/driver.elf")++openDescriptors;
+   assert(openDescriptors==(custodyLoss==4?0u:1u) && !providerCustodyEofProbes);
+   assert(providerCloseCalls==(custodyLoss==4?1u:0u));
+   const unsigned reads=providerReadCalls,closes=providerCloseCalls;uint8_t extra=0;uint32_t actual=99;
+   auto retainedSource=retainedAdmissionRuntime->imageSource();
+   assert(retainedSource.read(providerRetainedRead,&extra,1,&actual)==RISC_FILES_RETAINED && !actual);
+   assert(retainedSource.close(providerRetainedRead)==RISC_FILES_RETAINED);
+   assert(providerReadCalls==reads && providerCloseCalls==closes);
    assert(failedAdmissionCloses==(custodyLoss==4?1u:0u));
    assert(bool(candidateCpu)==provisioningCustody);
    assert(providerRetainedReadBytes && !memcmp(providerRetainedReadBytes,nativeElf.data(),nativeElf.size()));
@@ -260,7 +310,7 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
    source.release(); // The terminal native session stays alive to process exit.
    std::cout<<"Production native provider custody: "<<(provisioningCustody?"provisioning":"staged")
      <<" read="<<(secondRead?"second":"prepare")<<" loss="<<custodyLoss
-     <<" retains candidate/FILE/buffer"<<(provisioningCustody?"/CPU":"")
+     <<" retains candidate/provider-token/buffer"<<(provisioningCustody?"/CPU":"")
      <<", refuses cleanup, zero unauthorized closes/selection PASS\n";
    return;
  }

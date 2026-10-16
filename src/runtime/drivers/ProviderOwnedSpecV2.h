@@ -32,6 +32,7 @@ struct OwnedNodeV2 final {
   char path[512]{};
   char provides[96]{};
   char imageProvider[96]{};
+  char imageCapability[32]{};
   RequirementV2 requirements[GraphV2::kMaxRequirements]{};
   char requirementNames[GraphV2::kMaxRequirements][96]{};
   char requirementProviders[GraphV2::kMaxRequirements][96]{};
@@ -107,9 +108,14 @@ struct OwnedNodeV2 final {
          !copyString(path, sizeof(path), from.verifiedElfPath)) ||
         from.requirementCount > GraphV2::kMaxRequirements ||
         (from.requirementCount && !from.requirements)) return false;
-    if(bool(from.openImage)!=bool(from.imageProvider) || (from.openImage && (from.requiredOsCpuAbi || !from.imageContext || !copyString(imageProvider,sizeof(imageProvider),from.imageProvider))))return false;
+    if((!from.openImage && (from.imageProvider || from.imageContext || from.imageInstance || from.imageCapability)) ||
+       (from.openImage && (from.requiredOsCpuAbi || !from.imageContext)) ||
+       (!from.imageProvider && (from.imageInstance || from.imageCapability)) ||
+       (from.imageCapability && strcmp(from.imageCapability,"storage.files") && strcmp(from.imageCapability,"storage.volume")) ||
+       (from.imageProvider && !copyString(imageProvider,sizeof(imageProvider),from.imageProvider)))return false;
     spec = from;
     spec.imageProvider=from.imageProvider?imageProvider:nullptr;
+    if(from.imageCapability){if(!copyString(imageCapability,sizeof(imageCapability),from.imageCapability))return false;spec.imageCapability=imageCapability;}
     spec.id = id;
     spec.provides = provides;
     spec.verifiedElfPath = from.verifiedElfPath ? path : nullptr;
