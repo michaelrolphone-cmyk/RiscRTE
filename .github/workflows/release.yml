@@ -1,4 +1,4 @@
-name: Historical Arduino regression
+name: Shared Runtime regression
 on:
   push:
     branches: [main, master]
@@ -6,11 +6,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: riscrte-legacy-regression
+  group: riscrte-shared-regression
   cancel-in-progress: false
 jobs:
   integration:
-    # Keep historical integration available without any release authority.
+    # Run shared regression coverage for the default branch.
     # Native versions are published only by native-idf61-release.yml.
     if: github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch
     uses: ./.github/workflows/integration.yml
