@@ -24,5 +24,19 @@
     "X4 paired firmware/payload update",
     "Waveshare",
     "T-Watch"
-  ]
+  ],
+  "independent_recheck": {
+    "observed_at": "2026-10-16T21:12:57Z",
+    "fixture_metadata": "passed",
+    "report_checker_tests": 34,
+    "result": "passed",
+    "component_sha256": {
+      "fixtures.py": "e8d705e155d5a4607bfa1a04499ea332cf2a7a56f82477711402b75e950fd447",
+      "matrix.json": "1d0d6a7e8188525fe9f9bf8c2a7da89c1390044aa34852b23305b5b009719262",
+      "inventory.json": "56632bff140bbe934c9fd51d3f98f0143bc44195a3e51fa63e4adb572f08a815",
+      "result-template.json": "3737aebcb5783cc9ee81f24ed99c85deef8d1df48fc04a65335535f7f1b605fa",
+      "review_result.py": "a5c928858e408625c87a7c620de1d6eb71c767413eb0abbfcd94393c6f63f6cb",
+      "test_qualification.py": "e777f60525f5d5fed6170b52286f88de730716f9bc38443c0d7eeafe292208b7"
+    }
+  }
 }
