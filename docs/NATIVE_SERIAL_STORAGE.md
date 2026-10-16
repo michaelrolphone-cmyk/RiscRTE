@@ -141,3 +141,45 @@ explicit X4 compositions using the pinned Xtensa/IDF toolchain. It preserves
 external serial workspace placement and empty default-off objects. Full product
 linking and IQ-bank memory-margin proof remain separate. These are host/compile gates,
 not hardware qualification or permission to access a device.
+
+### X4 evidence boundaries
+
+`TMPDIR=/tmp python3 test/run_native_serial_x4_sd_test.py --x4 /path/to/x4
+--storage /path/to/drivers --receipt /tmp/x4-source-receipt.json` is a bounded,
+optional real-source behavior fixture. It verifies the `RiscRTE-XTEINK-X4-PRO` inputs against
+`a9009a5d774ae7060b9f298fdcbc81be6c22cc17` and `RiscRTE-Drivers/lib/StorageFatFs` against
+`c66da311c1348b81666d9abeb28e6b151267d4ce`; the latter is an independently
+available source reference, not the .123 Drivers input revision. Every external
+source is verified against its Git object before use and rechecked afterward.
+The receipt records sources, staged manifests/board, compiler commands and cases.
+`SANITIZE=1 ASAN_OPTIONS=detect_leaks=0` adds ASan/UBSan; intentional terminal
+retention cases exit with the graph still pinned.
+
+The fixture compiles the actual X4 async driver and shared FatFs. Its full
+storage and diagnostic/service descriptor suffixes are preserved; only lifecycle
+counters and typed platform dependencies are supplied by the harness. Exact
+native SD9 and the power dependency come from the pinned X4 board. Modeled RAM
+media exercises stable wire namespace 12, no application storage grants,
+create/replace/empty/readback and sibling preservation, duplicate replies,
+owner-only checkpoint dispatch, disconnect, absent media, a cold negative
+control and failed close/write/release/preparation custody. The native GPIO
+transport and asynchronous worker submission callbacks abort if called: this
+qualifies the synchronous native file path at owner checkpoints, not worker-task
+execution or physical SD.
+
+Keep the evidence levels separate:
+
+- The synthetic product test qualifies startup selection and rejection rules.
+- The .123 product admission fixture uses the exact retained `sd/driver.elf`
+  and manifest with `Runtime::prepare`, cohort validation and the selected native
+  graph binding. Metadata-only binding leaves `sdFiles().bound()` false until
+  activation; it does not execute retained Xtensa instructions.
+- The real-source fixture qualifies the behavior described above. Its async
+  source manifest is 0.2.24, following the pinned source build script. There is
+  no historical build receipt proving that this composition reproduces the
+  preserved released `x4pro-sd` 0.2.23 ELF (SHA-256
+  `10880847a604dc7d6b1ea5555fe7e60a47b6859d26d6ed9299c78b293e9bfd46`).
+  This provenance gap is recorded without replacing the released bytes or
+  introducing an additional historical-reproducibility acceptance requirement.
+- Exact product firmware linking/memory margin and subsequent hardware behavior
+  require their own receipts. Host source behavior is not physical qualification.

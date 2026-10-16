@@ -1,0 +1,13 @@
+{
+  "container": {
+    "asset_name": "bootstrap-container.zip",
+    "bytes": 5790,
+    "sha256": "c2f93d6faa77738f605f85fda830f908374da6c6d8c987cdf14751f7a5fb844c"
+  },
+  "manifest": {
+    "asset_name": "bootstrap-manifest.json",
+    "bytes": 4888,
+    "sha256": "d93d615cee8500f3cb9e23f64b1ed512a2734ed9937ee7ea6d590ec2b682d996"
+  },
+  "schema_version": "1.0.0"
+}

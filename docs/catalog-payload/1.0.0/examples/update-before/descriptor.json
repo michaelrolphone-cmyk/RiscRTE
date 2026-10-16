@@ -1,0 +1,13 @@
+{
+  "container": {
+    "asset_name": "update-before-container.zip",
+    "bytes": 6157,
+    "sha256": "d9f017e9244b97fa6f53f3e92d73b78f0e1f292ef17743edaa3d131d0f564186"
+  },
+  "manifest": {
+    "asset_name": "update-before-manifest.json",
+    "bytes": 5255,
+    "sha256": "a31e9b905db533cb16bfea7c6e0ca0b26056fc23e3478514e10f0c8b5af23f8b"
+  },
+  "schema_version": "1.0.0"
+}

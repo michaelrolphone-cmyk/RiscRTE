@@ -20,6 +20,7 @@ on:
       - 'test/*serial*storage*'
       - 'test/native_serial_product_provider.c'
       - 'test/*serial_waveshare*'
+      - 'test/*serial_x4*'
       - 'test/*spiffs*'
       - 'test/*littlefs*'
       - 'test/native_littlefs_profile_stubs/**'
@@ -56,6 +57,32 @@ jobs:
           path: .qualification/waveshare
       - name: Exact async SD provider through independent native graph admission
         run: WAVESHARE_SOURCE="$GITHUB_WORKSPACE/.qualification/waveshare" python3 test/run_native_serial_waveshare_sd_test.py
+      - name: Exact X4 source reference for bounded RAM-media qualification
+        uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO
+          ref: a9009a5d774ae7060b9f298fdcbc81be6c22cc17
+          path: .qualification/x4
+      - name: Exact shared FatFs source reference
+        uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-Drivers
+          ref: c66da311c1348b81666d9abeb28e6b151267d4ce
+          path: .qualification/storage
+      - name: Actual X4 source through explicit SD9 binding and owner checkpoints
+        run: |
+          mkdir -p .qualification/receipts
+          TMPDIR="$RUNNER_TEMP" python3 test/run_native_serial_x4_sd_test.py \
+            --x4 "$GITHUB_WORKSPACE/.qualification/x4" --storage "$GITHUB_WORKSPACE/.qualification/storage" \
+            --receipt "$GITHUB_WORKSPACE/.qualification/receipts/x4-source-${{ matrix.sanitize }}.json"
+      - name: Preserve bounded X4 source qualification receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: x4-source-serial-${{ matrix.sanitize }}-${{ github.sha }}
+          path: .qualification/receipts/x4-source-${{ matrix.sanitize }}.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Optional Runtime checkpoint prefix compatibility
         run: bash test/run_runtime_checkpoint_api_test.sh
       - name: Explicit X4 and legacy product startup storage binding

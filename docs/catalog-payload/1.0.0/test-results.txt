@@ -1,0 +1,53 @@
+test_all_five_positive_containers (__main__.ContractTests.test_all_five_positive_containers) ... ok
+test_backend_label_is_not_route (__main__.ContractTests.test_backend_label_is_not_route) ... ok
+test_capacity_and_provider_bounds (__main__.ContractTests.test_capacity_and_provider_bounds) ... ok
+test_case_alias (__main__.ContractTests.test_case_alias) ... ok
+test_consumer_firmware_mismatch (__main__.ContractTests.test_consumer_firmware_mismatch) ... ok
+test_create_cannot_replace (__main__.ContractTests.test_create_cannot_replace) ... ok
+test_deterministic_examples (__main__.ContractTests.test_deterministic_examples) ... ok
+test_duplicate_destinations (__main__.ContractTests.test_duplicate_destinations) ... ok
+test_duplicate_json_member_and_nonfinite (__main__.ContractTests.test_duplicate_json_member_and_nonfinite) ... ok
+test_duplicate_mapping (__main__.ContractTests.test_duplicate_mapping) ... ok
+test_duplicate_sources (__main__.ContractTests.test_duplicate_sources) ... ok
+test_exact_unicode_and_wire_allowed_destinations (__main__.ContractTests.test_exact_unicode_and_wire_allowed_destinations) ... ok
+test_extra_file (__main__.ContractTests.test_extra_file) ... ok
+test_extra_parent (__main__.ContractTests.test_extra_parent) ... ok
+test_factory_uses_evidence_not_label (__main__.ContractTests.test_factory_uses_evidence_not_label) ... ok
+test_file_directory_collision (__main__.ContractTests.test_file_directory_collision) ... ok
+test_firmware_hash_mismatch (__main__.ContractTests.test_firmware_hash_mismatch) ... ok
+test_fixture_denied_by_default (__main__.ContractTests.test_fixture_denied_by_default) ... ok
+test_foreign_owner (__main__.ContractTests.test_foreign_owner) ... ok
+test_hash_mismatch (__main__.ContractTests.test_hash_mismatch) ... ok
+test_identifier_newline_rejected (__main__.ContractTests.test_identifier_newline_rejected) ... ok
+test_installed_firmware_mismatch (__main__.ContractTests.test_installed_firmware_mismatch) ... ok
+test_inventory_hash_mismatch (__main__.ContractTests.test_inventory_hash_mismatch) ... ok
+test_length_mismatch (__main__.ContractTests.test_length_mismatch) ... ok
+test_missing_file (__main__.ContractTests.test_missing_file) ... ok
+test_missing_flash_artifact (__main__.ContractTests.test_missing_flash_artifact) ... ok
+test_missing_mapping (__main__.ContractTests.test_missing_mapping) ... ok
+test_missing_parent (__main__.ContractTests.test_missing_parent) ... ok
+test_namespace_count_is_per_firmware (__main__.ContractTests.test_namespace_count_is_per_firmware) ... ok
+test_namespace_numeric_limits (__main__.ContractTests.test_namespace_numeric_limits) ... ok
+test_parent_order (__main__.ContractTests.test_parent_order) ... ok
+test_preflash_survival (__main__.ContractTests.test_preflash_survival) ... ok
+test_product_profile_hardware_mismatch (__main__.ContractTests.test_product_profile_hardware_mismatch) ... ok
+test_provider_specific_naming_constraints (__main__.ContractTests.test_provider_specific_naming_constraints) ... ok
+test_readonly_flat_and_missing_operation (__main__.ContractTests.test_readonly_flat_and_missing_operation) ... ok
+test_replace_guards_are_optional (__main__.ContractTests.test_replace_guards_are_optional) ... ok
+test_schema_meta_validation (__main__.ContractTests.test_schema_meta_validation) ... ok
+test_totals_mismatch (__main__.ContractTests.test_totals_mismatch) ... ok
+test_unknown_namespace (__main__.ContractTests.test_unknown_namespace) ... ok
+test_unknown_property (__main__.ContractTests.test_unknown_property) ... ok
+test_unknown_schema (__main__.ContractTests.test_unknown_schema) ... ok
+test_unsafe_destination_paths (__main__.ContractTests.test_unsafe_destination_paths) ... ok
+test_unsafe_source_paths (__main__.ContractTests.test_unsafe_source_paths) ... ok
+test_unsupported_flash (__main__.ContractTests.test_unsupported_flash) ... ok
+test_unsupported_operation (__main__.ContractTests.test_unsupported_operation) ... ok
+test_untrusted_pins (__main__.ContractTests.test_untrusted_pins) ... ok
+test_zip_nonregular_compressed_and_duplicates (__main__.ContractTests.test_zip_nonregular_compressed_and_duplicates) ... ok
+test_zip_prefix_suffix_and_gap_rejected (__main__.ContractTests.test_zip_prefix_suffix_and_gap_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 48 tests in 0.807s
+
+OK

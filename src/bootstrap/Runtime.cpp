@@ -1,6 +1,7 @@
 #include <RiscProvisionRequestV1.h>
 #include <RiscInternalPackageVolumeV1.h>
 #include "Runtime.h"
+extern "C" const char risc_platform_capacity[]=RISC_PLATFORM_CAPACITY_MARKER;
 #include "AppDeclarations.h"
 #include "RemovableAppImage.h"
 #include "CoreAppImageDigest.h"
