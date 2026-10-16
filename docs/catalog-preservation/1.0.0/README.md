@@ -129,8 +129,7 @@ A snapshot has `id`, `stage`, `timestamp`, `firmware_id`, `observer`, `environme
 `{"exists":true,"type":"file","bytes":49,"sha256":"..."}`; absent state uses
 `{"exists":false}`. Settings state is `{"persistent":true,"value":...}`. Include
 all declared sentinels in each snapshot. Retain the full source snapshots and diff;
-a claimed zero count alone is not proof. `flash_scope` is the manifest logical
-volume or `settings`, not a backend routing label. Record additional independently
+a claimed zero count alone is not proof. `flash_scope` is `volume:<manifest logical volume>` or `settings`, not a backend routing label. Record additional independently
 observed scopes explicitly rather than pretending they are admitted volumes.
 
 ## 3. Run boundary, binary and path cases
@@ -257,8 +256,9 @@ retry or deletion of the original failure. Record actual counts/hashes on failur
 
 `flash_artifact_hashes` contains the exact manifest firmware artifact records,
 including ID/source/bytes/SHA-256. Flash `declared`/`observed` are lists of
-`{"scope":"logical-volume-or-settings","effect":"preserved|erased|unknown"}`;
-observed may additionally be `changed`. Declared effects must match the manifest.
+`{"scope":"volume:logical-volume-or-settings","effect":"preserved|erased|unknown"}`;
+Use `settings` alone for the settings scope; the `volume:` prefix prevents
+collisions with a logical volume named settings. Observed may additionally be `changed`. Declared effects must match the manifest.
 Unknown declarations stay explicit; an observed unknown cannot verify a declared
 preserved/erased effect. Include evidence and distinct before/after flash snapshots.
 Final totals derive only from verified final records. Every case's `serial_snapshots`

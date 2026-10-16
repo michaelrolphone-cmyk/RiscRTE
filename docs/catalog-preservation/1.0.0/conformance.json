@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "purpose": "Qualification procedure and deterministic evidence tooling",
+  "source_status": "prepared",
+  "software_tests": {
+    "status": "passed",
+    "suite": "test_qualification.py",
+    "tests": 34,
+    "observed_at": "2026-10-16T21:11:13Z",
+    "log": "preparation-tests.txt",
+    "scope": "Fixture generation and report checker only; synthetic records are fabricated test inputs."
+  },
+  "matrix_execution": "not_run",
+  "browser_installer_execution": "not_run",
+  "hardware_status": "not_tested",
+  "product_qualification": "unverified",
+  "baselines": "baselines.json",
+  "procedure": "README.md",
+  "matrix": "matrix.json",
+  "inventory": "inventory.json",
+  "result_template": "result-template.json",
+  "rollout": [
+    "X4 initial bootstrap/install",
+    "X4 paired firmware/payload update",
+    "Waveshare",
+    "T-Watch"
+  ]
+}

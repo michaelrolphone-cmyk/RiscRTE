@@ -32,8 +32,8 @@ def inventory():
 def template():
     matrix = json.loads((ROOT/'matrix.json').read_text())
     r = {k:None for k in ['run_id','started_at','finished_at','operator','product',
-        'hardware_revision','device_identifier','host_os_browser','client_source_commit',
-        'firmware_before','firmware_after','release_id','catalog_revision',
+        'hardware_revision','hardware_profile','device_identifier','host_os_browser','client_source_commit',
+        'firmware_before','firmware_after','firmware_source_after','release_id','catalog_revision',
         'manifest_sha256','container_sha256','payload_inventory_sha256','flash_method',
         'flash_order','erase_disclosure']}
     r.update(version='1.0.0', evidence_class=None, trusted_mapping_evidence=[],
