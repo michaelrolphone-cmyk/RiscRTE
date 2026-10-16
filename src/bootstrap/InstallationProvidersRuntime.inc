@@ -105,7 +105,7 @@ int32_t Runtime::installationProviderTransaction(void*context,const risc_install
   auto& spec=specs[i];spec={d.id,d.elf,d.provides,d.api,d.requirements,d.count};
   spec.hardware=d.instance?&r->board_.device(d.instance)->hardware:nullptr;
   spec.openImage=openDriverImage;spec.imageContext=&r->drivers_[slots[i]];
-  spec.imageProvider=r->drivers_[d.sourceDriver].id;spec.imageInstance=d.sourceVolume;
+  spec.imageProvider=r->drivers_[d.sourceDriver].id;spec.imageInstance=d.sourceVolume;spec.imageCapability="storage.volume";
   auto&owned=r->providerStorage_[slots[i]];owned.owner=r;
   spec.lease={&owned,beginProvider,revokeProvider,providerResourcesSafe};
  }

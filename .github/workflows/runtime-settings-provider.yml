@@ -1,0 +1,59 @@
+name: Provider-backed Runtime settings
+on:
+  pull_request:
+    paths: ['src/bootstrap/**', 'src/runtime/storage/**', 'src/runtime/update/Cohort.h', 'test/**', '.github/workflows/runtime-settings-provider.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  semantic-settings:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_settings_service_test.sh
+      - run: bash test/run_settings_service_runtime_test.sh
+      - run: bash test/run_sd_first_key_value_test.sh
+      - run: bash test/run_key_value_test.sh
+      - run: bash test/run_removable_runtime_test.sh
+      - run: bash test/run_preference_store_runtime_test.sh
+      - run: bash test/run_preference_store_cohort_test.sh
+      - run: PREFERENCE_STORE=1 NATIVE_SETTINGS_LIFECYCLE=1 bash test/run_atomic_key_value_runtime_test.sh
+  native-consumers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        storage: [0, 1]
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Compile actual native consumers with settings on and off
+        shell: bash
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          options=()
+          if [[ "${{ matrix.storage }}" == 1 ]];then options=(-D "RISC_PRODUCT_PROFILE=$PWD/test/fixtures/native_metadata_profile.cmake");fi
+          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/settings-native" -D "RISC_SOURCE_SHA=$GITHUB_SHA" "${options[@]}" reconfigure
+          python test/compile_runtime_metadata_target.py "$RUNNER_TEMP/settings-native/compile_commands.json" "$RUNNER_TEMP/settings-objects" --storage "${{ matrix.storage }}" --elf
+          if [[ "${{ matrix.storage }}" == 0 ]];then
+            python test/compile_runtime_metadata_target.py "$RUNNER_TEMP/settings-native/compile_commands.json" "$RUNNER_TEMP/settings-embedded" --storage 0 --embedded --elf
+          else
+            git worktree add --detach "$RUNNER_TEMP/settings-before" 9c08697e68df98117b677c664a0e632361cbc5a5
+            python test/compile_settings_service_layout_target.py "$RUNNER_TEMP/settings-native/compile_commands.json" "$RUNNER_TEMP/settings-before" "$RUNNER_TEMP/settings-layout"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: matrix.storage == 1
+        with:
+          name: settings-target-layout
+          path: ${{ runner.temp }}/settings-layout

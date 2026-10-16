@@ -18,6 +18,8 @@
 #include <cstdlib>
 #include "RuntimeFileFixture.h"
 static std::string mode,root;
+static bool genericFileSource=false;
+extern "C" bool removable_file_source_mode(){return genericFileSource;}
 static bool settingsMode(){return mode=="catalog-settings"||mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable";}
 static std::map<std::string,std::string> legacySettings;
 static std::vector<uint8_t> payload;
@@ -354,8 +356,33 @@ extern "C" const risc_storage_volume_api_v1* removable_volume() {
   }
   return &v;
 }
+// Genuine generic source: no storage.volume table or lifecycle callbacks.
+extern "C" const risc_storage_files_v1* removable_files() {
+  static RiscStorage::PosixFiles forbidden{"/no-posix-image-source"};
+  static risc_storage_files_v1 table=*forbidden.api();
+  table.open=[](void*,const char*p,uint32_t flags,uint32_t*out)->int32_t {
+    *out=0;assert(flags==RISC_FILES_READ);
+    assert(!strcmp(p,"/Apps/child/child.elf") || (providerMode() && !strcmp(p,"/Drivers/plugin/plugin.elf")));
+    if(!present)return RISC_FILES_UNAVAILABLE;
+    if(mode=="missing")return RISC_FILES_NOT_FOUND;
+    if(mode=="busy")return RISC_FILES_BUSY;
+    ++opens;live=1;offset=0;*out=1;return RISC_FILES_OK;
+  };
+  table.info=[](void*,uint32_t h,uint64_t*n,uint64_t*o)->int32_t{assert(h==1 && live);*n=payload.size();*o=offset;return RISC_FILES_OK;};
+  table.read=[](void*,uint32_t h,void*p,uint32_t n,uint32_t*a)->int32_t {
+    assert(h==1 && live && n<=4096);*a=0;
+    if(mode=="removed" && offset>1000)return RISC_FILES_IO;
+    n=std::min(size_t(n),std::min(size_t(333),payload.size()-offset));
+    memcpy(p,payload.data()+offset,n);offset+=n;*a=n;return RISC_FILES_OK;
+  };
+  table.close=[](void*,uint32_t h)->int32_t{assert(h==1 && live);++closes;
+    if(mode=="close-retained" || mode=="provider-retained")return RISC_FILES_RETAINED;
+    live=0;return RISC_FILES_OK;};
+  return &table;
+}
 extern "C" void* esp_elf_malloc(uint32_t n,bool){return malloc(n);}
 extern "C" void esp_elf_free(void* p){free(p);}
+extern "C" bool esp_elf_admit_managed_app(const char*,const uint8_t*,size_t){return true;}
 extern "C" bool esp_elf_validate_file(const uint8_t* p,size_t n){
 #if defined(__APPLE__)
   return n>52 && p[0]==0xcf && p[1]==0xfa && p[2]==0xed && p[3]==0xfe;
@@ -364,14 +391,16 @@ extern "C" bool esp_elf_validate_file(const uint8_t* p,size_t n){
 #endif
 }
 extern "C" void* esp_dlopen_reader_instance(const char* name,esp_dl_image_reader reader,void* context){
-  assert(!live);elf_file_t file{};assert(reader(context,name,&file)==0);
+  elf_file_t file{};if(reader(context,name,&file)!=0)return nullptr;
   char temporary[]="/tmp/riscrte-sd-test-XXXXXX";int fd=mkstemp(temporary);assert(fd>=0);
   FILE* out=fdopen(fd,"wb");assert(out);assert(fwrite(file.payload,1,file.size,out)==file.size);assert(!fclose(out));
   esp_elf_free(file.payload);void* module=dlopen(temporary,RTLD_NOW|RTLD_LOCAL);unlink(temporary);assert(module);return module;
 }
 extern "C" const risc_storage_volume_api_v1* removable_internal_volume(){static risc_storage_volume_api_v1 table;table=*removable_volume();table.context=reinterpret_cast<void*>(1);table.struct_size=sizeof(table);return &table;}
 int main(int argc,char** argv) {
-  assert(argc==3);root=argv[1];mode=argv[2];selectImage("revision1.elf");
+  assert(argc==3);root=argv[1];mode=argv[2];
+  genericFileSource=mode.rfind("files-",0)==0;if(genericFileSource)mode.erase(0,6);
+  selectImage("revision1.elf");
   if(providerMode())selectImage("plugin.elf");
   if(mode=="provider-fallback" || mode=="provider-required")present=false;
   if(mode=="malformed")payload[0]=0;
@@ -435,10 +464,29 @@ int main(int argc,char** argv) {
     if(mode=="provider-bootstrap")doc["drivers"][0]["image_source"].set(source);
     boot.clear();serializeJson(doc,boot);
   }
+  if(genericFileSource){
+    JsonDocument doc,source;assert(!deserializeJson(doc,boot));
+    std::ifstream input(root+"/sd.json");std::string text((std::istreambuf_iterator<char>(input)),{});
+    assert(!deserializeJson(source,text));source["provides"][0]["capability"]="storage.files";
+    source["requires"].to<JsonArray>();source.remove("hardware_compatibility");doc["drivers"][0].remove("instance_id");
+    text.clear();serializeJson(source,text);write("sd.json",text);
+    for(JsonObject item:doc["drivers"].as<JsonArray>())if(!item["image_source"].isNull()){item["image_source"]["capability"]="storage.files";item["image_source"]["volume_instance"]=0;}
+    for(JsonObject item:doc["app_capabilities"].as<JsonArray>())if(!item["image_source"].isNull()){item["image_source"]["capability"]="storage.files";item["image_source"]["volume_instance"]=0;}
+    if(mode=="ambiguous-app" || mode=="provider-ambiguous") {
+      source["id"]="second-files";text.clear();serializeJson(source,text);write("second-files.json",text);
+      doc["drivers"].add<JsonObject>()["manifest"]="second-files.json";
+    }
+    boot.clear();serializeJson(doc,boot);
+  }
   write("boot.json",boot);
   if(mode=="catalog-settings-legacy"||mode=="catalog-settings-scalable")for(unsigned i=0;i<32;++i)legacySettings["key"+std::to_string(i)]="preserved-"+std::to_string(i);
   if(mode=="shared-settings")for(unsigned i=0;i<40;++i){char key[16];snprintf(key,sizeof key,"legacy%04u",i);sharedOriginal[6][key]="opaque-legacy";}
   RiscBoot::Port port{[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};port.appData=&privateData;if(mode=="catalog-settings-scalable")privateKv.scalableSettings=&scalableBackend;if(settingsMode())port.keyValue=&privateKv;if(mode=="shared-settings")port.keyValue=&sharedKv;static RiscTest::FileSources runtimeFiles0({root.c_str(),root+"/shared-stage"});runtime=new RiscBoot::Runtime(port);assert(runtimeFiles0.bind(*runtime));
+  if(mode=="ambiguous-app" || mode=="provider-ambiguous") {
+    assert(!runtime->prepare(root.c_str()));assert(!starts && !opens);
+    assert(!strcmp(runtime->error(),mode=="ambiguous-app"?"ambiguous app image source":"ambiguous driver image source"));
+    delete runtime;puts("Software-only generic source: duplicate instance0 rejected before activation PASS");return 0;
+  }
   if(mode=="invalid-path" || mode=="default-external" || mode=="provider-bootstrap") {assert(!runtime->prepare(root.c_str()));assert(!starts);delete runtime;return 0;}
   if(catalogMode()){
     // Boot cannot reserve any namespace already owned by an app, even before
@@ -472,7 +520,7 @@ int main(int argc,char** argv) {
     if(retained){assert(live && !defaults && !stops);}
     else {assert(!live && starts==stops);assert(defaults==(required?0u:1u));delete runtime;}
     assert(opens==((mode=="provider-source"||retained)?1u:0u));
-    printf("SD driver source %s: actual module load, fallback/custody PASS\n",mode.c_str());return 0;
+    printf("Driver image source %s: actual module load, fallback/custody PASS\n",mode.c_str());return 0;
   }
   if(mode=="shared-settings"){
     assert(runtime->run()&&!runtime->retained());
@@ -504,5 +552,5 @@ int main(int argc,char** argv) {
   else {assert(defaults==3 && !live && starts==stops);assert(children==((mode=="normal" || mode=="replacement" || (mode=="discovery"||catalogMode()))?2u:0u));delete runtime;}
   if(catalogMode())assert(privateWrites==2);
   if(mode=="catalog-media"){assert(internalOpens>=4);puts("Internal medium: actual app/driver module loads, explicit software volume zero, replay/update, live replacement refusal and unselected-media denial PASS");}
-  printf("SD Runtime mode=%s defaults=%u children=%u opens=%u closes=%u provider_starts=%u stops=%u PASS\n",mode.c_str(),defaults,children,opens,closes,starts,stops);
+  printf("Image-source Runtime mode=%s defaults=%u children=%u opens=%u closes=%u provider_starts=%u stops=%u PASS\n",mode.c_str(),defaults,children,opens,closes,starts,stops);
 }

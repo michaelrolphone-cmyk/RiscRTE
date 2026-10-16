@@ -244,6 +244,12 @@ jobs:
           SANITIZE=1 bash test/run_bound_key_value_test.sh
           bash test/run_native_registry_test.sh
           SANITIZE=1 bash test/run_native_registry_test.sh
+          bash test/run_reader_image_cache_test.sh
+          SANITIZE=1 bash test/run_reader_image_cache_test.sh
+          bash test/run_runtime_file_image_test.sh
+          SANITIZE=1 bash test/run_runtime_file_image_test.sh
+          bash test/run_runtime_image_custody_test.sh
+          SANITIZE=1 bash test/run_runtime_image_custody_test.sh
           bash test/run_image_cache_runtime_test.sh
           SANITIZE=1 bash test/run_image_cache_runtime_test.sh
           bash test/run_image_cache_pressure_test.sh

@@ -301,6 +301,16 @@ void dlmod_listsymbol(void)
  *
  * @return Pointer to the relocated ELF structure (esp_elf_t), NULL on relocation failure.
  */
+static int read_image(const char *path, esp_dl_image_reader reader, void *context,
+                       elf_file_t *file)
+{
+    /* The reader owns failed-call cleanup, so discard its output before retry.
+     * Clear stale errno before either source to avoid spurious reclamation. */
+    memset(file, 0, sizeof(*file));
+    errno = 0;
+    return reader ? reader(context, path, file) : esp_elf_open(file, path);
+}
+
 static esp_elf_t *relocate_image(const char *path, esp_dl_image_cache **cache, esp_dl_image_reader reader, void *context)
 {
     if (!path || path[0] == '\0') {
@@ -309,10 +319,10 @@ static esp_elf_t *relocate_image(const char *path, esp_dl_image_cache **cache, e
 
     int ret;
     elf_file_t file = {0};
-    if (reader) ret = reader(context,path,&file);
-    else if (cache_find(cache ? *cache : NULL, path, &file)) ret = 0;
-    else { errno = 0; ret = esp_elf_open(&file, path); }
-    if (!reader && ret < 0 && errno == ENOMEM && esp_dl_image_cache_reclaim(cache)) ret = esp_elf_open(&file, path);
+    if (cache_find(cache ? *cache : NULL, path, &file)) ret = 0;
+    else ret = read_image(path, reader, context, &file);
+    if (ret < 0 && errno == ENOMEM && esp_dl_image_cache_reclaim(cache))
+        ret = read_image(path, reader, context, &file);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to open file %s", path);
         return NULL;
@@ -452,6 +462,11 @@ struct dlmod_slist_t *dlmod_insert_instance(const char *path, const char *name) 
 struct dlmod_slist_t *dlmod_insert_cached_instance(const char *path, const char *name,
                                                   esp_dl_image_cache **cache) {
     return insert_module(path,name,true,cache,NULL,NULL);
+}
+struct dlmod_slist_t *dlmod_insert_cached_reader_instance(const char *path, const char *name,
+                                                         esp_dl_image_cache **cache,
+                                                         esp_dl_image_reader reader, void *context) {
+    return reader ? insert_module(path,name,true,cache,reader,context) : NULL;
 }
 
 /**

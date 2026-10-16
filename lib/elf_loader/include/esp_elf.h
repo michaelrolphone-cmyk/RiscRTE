@@ -9,17 +9,13 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "esp_elf_image.h"
 #include "private/elf_types.h"
 #include "private/elf_symbol.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct elf_file {
-    uint8_t *payload;
-    size_t size;
-} elf_file_t;
 
 /**
  * @brief Symbol table type

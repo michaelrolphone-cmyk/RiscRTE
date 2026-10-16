@@ -43,6 +43,7 @@ extern "C" void* pressure_malloc(size_t n){
 }
 extern "C" void pressure_free(void*p){
   if(!p)return;
+  risc_test_native_forget_image(p);
   if(custodyPressure)checkCustodyPressure();
   const size_t i=indexOf(p);
   if(i<allocCount){
@@ -88,9 +89,7 @@ extern "C" void vTaskDelay(TickType_t){}
 extern "C" void spi_flash_disable_interrupts_caches_and_other_cpu(){}
 extern "C" void spi_flash_enable_interrupts_caches_and_other_cpu(){}
 extern "C" void esp_spiram_writeback_cache(){}
-// This fixture never admits removable images. ESP_PLATFORM still links those
-// Runtime paths; fail loudly if this host-mapping fixture enters one of them.
-extern "C" bool esp_elf_validate_file(const uint8_t*,size_t){std::abort();}
+// Native registry backend validates host fixtures for explicit provider reads.
 extern "C" bool esp_elf_privileged_diagnostic_abi_supported_v1(uint32_t abi){return abi==0;}
 extern "C" bool esp_elf_privileged_os_cpu_scope_owned_v1(){return false;}
 extern "C" bool esp_elf_privileged_os_cpu_import_allowed_v1(const char*){return false;}
@@ -209,10 +208,14 @@ static void write(const std::string&path,const char*data){std::ofstream(path)<<d
 #include "image_cache_custody.inc"
 int main(int argc,char**argv){
   assert(argc==3);const std::string root=argv[1];mode=argv[2];
-  if(mode=="ledger-final" || mode.rfind("custody-",0)==0)return runCustody(root);
+  if(mode=="ledger-final" || mode.rfind("custody-",0)==0){
+    const int result=runCustody(root);assert(!risc_test_native_legacy_open_count());return result;
+  }
   assert(!risc_runtime_reclaim_app_images());
   assert(!elf_find_sym_default("risc_runtime_reclaim_app_images"));
   assert(!elf_find_sym_default("esp_dlopen_cached_instance"));
+  assert(!elf_find_sym_default("esp_dlopen_cached_reader_instance"));
+  assert(!elf_find_sym_default("esp_dlopen_reader_instance"));
   write(root+"/board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})");
   write(root+"/app.json",R"({"type":"application","id":"pressure-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"test.pressure","api":1},{"capability":"runtime.provider-promotion","api":1}]})");
   write(root+"/provider.json",R"({"type":"driver","id":"pressure","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"provider.elf","requires":[],"provides":[{"capability":"test.pressure","api":1}]})");
@@ -221,6 +224,7 @@ int main(int argc,char**argv){
   assert(runtime->prepare(root.c_str()));
   const bool retained=mode=="app-retained" || mode=="provider-retained";
   assert(runtime->run()!=retained && runtime->retained()==retained);
+  assert(!risc_test_native_legacy_open_count());
   assert(!risc_runtime_reclaim_app_images() && !risc_test_native_image_count());
   if(mode.compare(0,8,"provider")==0)assert(providerOutlivedApp==1);
   if(!retained){delete runtime;runtime=nullptr;assert(!risc_test_native_mapping_count());if(allocCount){std::fprintf(stderr,"remaining blocks=%zu bytes=%zu\n",allocCount,live);for(size_t i=0;i<allocCount;++i)std::fprintf(stderr," %zu",allocations[i].n);}assert(!allocCount && !live);}
