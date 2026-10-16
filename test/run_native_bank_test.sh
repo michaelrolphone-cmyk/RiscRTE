@@ -7,6 +7,10 @@ san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
 extra=(-DARDUINO_USB_CDC_ON_BOOT=1 -DRISC_NATIVE_DIAGNOSTIC_OBSERVER="${NATIVE_DIAGNOSTIC_OBSERVER:-0}");if [[ "${APP_DATA_TEST:-0}" == 1 ]];then extra+=(-DRISC_PAIRED_APP_DATA=1);fi
 if [[ "${NATIVE_PROVIDER_TEST_ABI:-1}" == 2 ]];then extra+=(-DRISC_NATIVE_ESP_IDF=1);fi
+crypto_native=0;if [[ "${NATIVE_PROVIDER_TEST_ABI:-1}" == 2 ]];then crypto_native=1;fi
+c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -DRISC_NATIVE_ESP_IDF="$crypto_native" \
+ -I"$repo/test/native_bank_stubs" -I"$repo/src" "$repo/test/native_bank_crypto_stub_test.cpp" -lcrypto -o "$build/crypto-stub"
+"$build/crypto-stub"
 # Validate the complete ESP image before compiling or executing the host model.
 # Copy validated bytes once so every mode consumes the same exact fixture.
 if [[ -n "${BOOTLOADER_FILE:-}" ]];then
