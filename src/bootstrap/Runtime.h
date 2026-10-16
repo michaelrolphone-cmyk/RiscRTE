@@ -122,6 +122,12 @@ struct Port {
   const RuntimeFileSources* files=nullptr;
   // Optional semantic provider. Each Runtime opens an independent session.
   const SettingsProvider* settings=nullptr;
+#if RISC_NATIVE_SERIAL_FILES
+  // Optional trusted service: dispatch only at settled app boundaries. Never
+  // provider acquisition, app yield, ISR, or inside a provider callback.
+  bool (*serialFilesCheckpoint)()=nullptr;
+  bool (*serialFilesShutdown)()=nullptr;
+#endif
 };
 class Runtime final {
  public:
@@ -243,8 +249,18 @@ class Runtime final {
                             bool (*admit)(void*,const char*,bool),void* context,
                             const RiscUpdate::NativeAppDataExportPolicyV2&) const;
   bool appInventory(size_t index,void*,size_t,uint32_t*) const;
+  int32_t serviceCheckpoint();
+#if RISC_NATIVE_SERIAL_FILES
+  // Explicit trusted native selection after prepare, before run. Independent
+  // of all app grants; Runtime pins the exact provider and dependencies until
+  // checked serial shutdown. Failed optional activation remains unavailable.
+  // prepareVolume explicitly requests one legacy provider refresh at activation;
+  // generic file providers own their own readiness. No app/wire refresh exists.
+  bool bindNativeFiles(const char* provider,uint64_t instance,RuntimeFiles&,
+                       RuntimeFiles::Check owner,RuntimeFiles::Check safe,bool prepareVolume=false);
+#endif
   bool active() const { return
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
     !nativeCheckpointRunning_ &&
 #endif
     invocation_->active_ && !invocation_->streams_.busy() && port_.owner(); }
@@ -252,7 +268,7 @@ class Runtime final {
   // Compiled-in reset/deep-sleep admission. A suspended native stack has no
   // durable checkpoint; the foreground must finish before RAM can be lost.
   bool residentResetSafe() const {return
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
     !nativeCheckpointRunning_ &&
 #endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
@@ -668,7 +684,7 @@ class Runtime final {
   } platforms_[MaxPlatforms]{};
   size_t platformCount_=0;
   Port port_;
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   bool nativeCheckpointRunning_=false;
 #endif
   RuntimeProviders::NativeProviderPolicySnapshotV1* nativePolicies_=nullptr;
@@ -680,6 +696,14 @@ class Runtime final {
   // Must outlive graph destruction, including retained-module retry/abort.
   ProviderStorage providerStorage_[MaxDrivers]{};
   RuntimeProviders::GraphV2 graph_{RuntimeStreams::runtimeProviderStreamHost()};
+#if RISC_NATIVE_SERIAL_FILES
+  struct NativeFilesBinding {
+    RuntimeFiles* files=nullptr;RuntimeFiles::Check owner=nullptr,safe=nullptr;
+    RuntimeProviders::GrantV2 grant{};size_t driver=0;bool prepareVolume=false;
+  } nativeFiles_[16]{};
+  bool activateNativeFiles();
+  bool releaseNativeFiles();
+#endif
   struct AppDataExportDelete {
     void operator()(RiscStorage::AppDataExport* value) const {
       value->~AppDataExport();std::free(value);

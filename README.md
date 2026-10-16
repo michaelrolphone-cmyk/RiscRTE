@@ -1,5 +1,10 @@
 # RiscRTE
 
+An explicitly selected [individual-file serial endpoint](docs/SERIAL_FILES.md)
+provides bounded transfer through product-admitted generic file namespaces.
+It is default-off; create and explicit in-place replacement preserve sibling
+content and never synchronize or replace a whole folder.
+
 Runtime 0.4.0 is the native ESP-IDF 6.1 migration candidate. The primary build
 is `idf/`, pinned to the official SDK and GCC15 toolchain, without the Arduino
 runtime. Product-owned profiles preserve the released watch, Waveshare and X4

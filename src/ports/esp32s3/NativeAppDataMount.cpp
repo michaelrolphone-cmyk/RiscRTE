@@ -40,6 +40,9 @@ esp_err_t __real_esp_littlefs_format_partition(const esp_partition_t*);
 }
 namespace RiscAppDataMount { namespace {
 constexpr char Mount[]="/appdata", Settings[]="/.native-settings", Scratch[]="/.risc-file-source", Packages[]="/.packages";
+#if RISC_NATIVE_SERIAL_APPDATA_FILES
+constexpr char SerialFiles[]="/.serial-files";
+#endif
 RISC_MOUNT_ATOMIC_DRAM std::atomic<bool> failed{false};
 RISC_MOUNT_ATOMIC_DRAM std::atomic<void*> owner{nullptr};
 bool atomicsInternal(){
@@ -79,7 +82,11 @@ bool pathAllowed(const char* p,bool rootRead=false){
  if(!held()){errno=EBUSY;return false;}
  if(!cleanPath(p)){errno=EINVAL;return false;}
  if(rootRead&&!strcmp(p,"/"))return true;
- bool allowed=access==Access::Settings?under(p,Settings):access==Access::FileSource?!strcmp(p,Scratch):access==Access::Packages?under(p,Packages):!under(p,Settings)&&!under(p,Scratch)&&!under(p,Packages);
+ bool allowed=access==Access::Settings?under(p,Settings):access==Access::FileSource?!strcmp(p,Scratch):access==Access::Packages?under(p,Packages):
+#if RISC_NATIVE_SERIAL_APPDATA_FILES
+   access==Access::SerialFiles?under(p,SerialFiles):!under(p,SerialFiles)&&
+#endif
+   !under(p,Settings)&&!under(p,Scratch)&&!under(p,Packages);
  if(!allowed)errno=EACCES;
  return allowed;
 }
@@ -228,7 +235,11 @@ bool finish(){
  ++rootGeneration;usable=true;leave();return ready();
 }
 bool enter(Access value){
- if(!ready()||!task()||(value!=Access::AppData&&value!=Access::Settings&&value!=Access::FileSource&&value!=Access::Packages))return false;
+ if(!ready()||!task()||(value!=Access::AppData&&value!=Access::Settings&&value!=Access::FileSource&&value!=Access::Packages
+#if RISC_NATIVE_SERIAL_APPDATA_FILES
+   &&value!=Access::SerialFiles
+#endif
+   ))return false;
  void* expected=nullptr;
  if(!owner.compare_exchange_strong(expected,task(),std::memory_order_acq_rel))return false;
  if(custodyGeneration==UINT64_MAX){retain();return false;}

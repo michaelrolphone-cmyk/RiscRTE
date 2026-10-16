@@ -93,7 +93,8 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);},
     [](){return currentRuntime && currentRuntime->exitRequested();},
     [](risc_runtime_launch_failure_v1* out){return currentRuntime && currentRuntime->takeLaunchFailure(out);},
-    [](){return currentRuntime && currentRuntime->initialDefault();}};
+    [](){return currentRuntime && currentRuntime->initialDefault();},
+    []()->int32_t{return currentRuntime?currentRuntime->serviceCheckpoint():RISC_RUNTIME_CHECKPOINT_CONTEXT;}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -121,6 +122,9 @@ namespace RiscBoot {
 #include "StorageFilesRuntime.inc"
 #endif
 Runtime::~Runtime() {
+#if RISC_NATIVE_SERIAL_FILES
+  if(!releaseNativeFiles())std::abort();
+#endif
 #if RISC_RUNTIME_STORAGE_FILES
   if(!storageFilesExitSafe(true))std::abort();
 #endif
@@ -611,7 +615,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     original->active_ && original->entryRunning_ && !retained_ && port_.owner();};
   auto catalogRetain=[&](){retained_=true;fail("app catalog admission retained");(void)appExitBarrier(false);return false;};
   out->slot=out->generation=0;out->api=nullptr;
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   if(nativeCheckpointRunning_)return false;
 #endif
   if(!appDataExitSafe()){(void)appExitBarrier(false);return false;}
@@ -1533,8 +1537,10 @@ void Runtime::serviceNativeSettings(bool discoveryOnly) {
 }
 #endif
 void Runtime::serviceProviders() {
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   if(nativeCheckpointRunning_)return;
+#endif
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
   serviceNativeSettings();
 #endif
   if(port_.providerServicesReady && !port_.providerServicesReady())return;
@@ -1545,8 +1551,120 @@ void Runtime::serviceProviders() {
   struct ServiceLease {void (*end)();~ServiceLease(){if(end)end();}} lease{port_.providerServiceBegin?port_.providerServiceEnd:nullptr};
   graph_.service(RISC_DRIVER_SERVICE_MAX_MS);
 }
+#if RISC_NATIVE_SERIAL_FILES
+bool Runtime::bindNativeFiles(const char* provider,uint64_t instance,RuntimeFiles& files,
+                              RuntimeFiles::Check owner,RuntimeFiles::Check safe,bool prepareVolume) {
+  if(!prepared_ || currentRuntime || retained_ || !port_.owner() || !provider ||
+     !*provider || !owner || !safe || !owner() || !safe() || files.bound() || files.retained())return false;
+  size_t selected=driverCount_;
+  for(size_t i=0;i<driverCount_;++i)if(!strcmp(drivers_[i].id,provider) && drivers_[i].instance==instance &&
+      drivers_[i].api==1 && (!strcmp(drivers_[i].provides,RISC_STORAGE_FILES_CAPABILITY) ||
+                           !strcmp(drivers_[i].provides,"storage.volume"))) {
+    if(selected!=driverCount_)return false;
+    selected=i;
+  }
+  if(selected==driverCount_ || (prepareVolume && strcmp(drivers_[selected].provides,"storage.volume")))return false;
+  NativeFilesBinding* slot=nullptr;
+  for(auto& binding:nativeFiles_){if(binding.files==&files)return false;if(!binding.files && !slot)slot=&binding;}
+  if(!slot)return false;
+  *slot={&files,owner,safe,{},selected,prepareVolume};return true;
+}
+bool Runtime::activateNativeFiles() {
+  bool selected=false;for(const auto& binding:nativeFiles_)if(binding.files)selected=true;
+  if(!selected)return true;
+  if(currentRuntime!=this || !port_.owner() || retained_ || !providerStorageSafe())return false;
+  nativeCheckpointRunning_=true;
+  struct Guard{bool& flag;~Guard(){flag=false;}} guard{nativeCheckpointRunning_};
+  for(auto& binding:nativeFiles_)if(binding.files) {
+    const auto& d=drivers_[binding.driver];
+    binding.grant=graph_.acquireFrom(d.id,d.provides,d.api,d.instance);
+    if(!graph_.activationSafe() || !port_.owner() || !providerStorageSafe()) {
+      binding.files->retainCustody();retained_=true;return fail("native file provider activation retained");
+    }
+    // An absent optional provider stays explicitly unavailable, without a
+    // fallback or app grant. Failed activation with uncertain custody above
+    // remains terminal and must not be released speculatively.
+    if(!binding.grant.slot)continue;
+    const void* api=graph_.interfaceFor(binding.grant);
+    const bool bound=!strcmp(d.provides,RISC_STORAGE_FILES_CAPABILITY)
+      ?binding.files->bind(static_cast<const risc_storage_files_v1*>(api),binding.owner,binding.safe)
+      :binding.files->bindVolume(static_cast<const risc_storage_volume_api_v1*>(api),binding.owner,binding.safe);
+    if(bound && binding.prepareVolume) {
+      // Explicit native policy before the first app/cache invocation. Observe
+      // custody before and after the one cold refresh. An already-ready volume
+      // is never remounted; clean absence/refusal stays unavailable, while an
+      // uncertain state pins the grant even if refresh claimed success.
+      const auto* volume=static_cast<const risc_storage_volume_api_v1*>(api);
+      const auto* state=risc_storage_volume_state(volume); // bindVolume checked it
+      bool safe=binding.owner() && binding.safe();
+      int32_t observed=safe?state->observe(volume->context):RISC_STORAGE_STATE_RETAINED;
+      if(observed==RISC_STORAGE_STATE_UNAVAILABLE && safe && volume->refresh) {
+        (void)volume->refresh(volume->context);
+        safe=binding.owner() && binding.safe();
+        observed=safe?state->observe(volume->context):RISC_STORAGE_STATE_RETAINED;
+      }
+      if(!safe || (observed!=RISC_STORAGE_STATE_READY && observed!=RISC_STORAGE_STATE_UNAVAILABLE) ||
+         !graph_.activationSafe() || !providerStorageSafe()) {
+        binding.files->retainCustody();retained_=true;
+        return fail("native volume preparation retained");
+      }
+    }
+    if(!bound) {
+      if(!graph_.release(binding.grant)){binding.files->retainCustody();retained_=true;return fail("native file admission cleanup retained");}
+      binding.grant={};
+    }
+  }
+  return true;
+}
+bool Runtime::releaseNativeFiles() {
+  for(auto& binding:nativeFiles_)if(binding.grant.slot) {
+    if(retained_ || !binding.files->exitSafe() || !port_.owner() || !providerStorageSafe()) {
+      binding.files->retainCustody();retained_=true;return false;
+    }
+    if(!graph_.release(binding.grant)){binding.files->retainCustody();retained_=true;return false;}
+    binding.grant={};
+    if(!binding.files->retire()){binding.files->retainCustody();retained_=true;return false;}
+  }
+  return true;
+}
+#endif
+int32_t Runtime::serviceCheckpoint() {
+  if(currentRuntime!=this || !port_.owner() || !invocation_->entryRunning_)
+    return RISC_RUNTIME_CHECKPOINT_CONTEXT;
+  if(retained_)return RISC_RUNTIME_CHECKPOINT_RETAINED;
+#if RISC_NATIVE_SERIAL_FILES
+  if(nativeCheckpointRunning_ || yielding_ || promotionRunning_ || !invocation_->active_ ||
+     invocation_->queued_[0] || graph_.lifecycleBusy() || invocation_->streams_.busy() ||
+     mainInvocation_.streams_.busy() || (foreground_ && foreground_->streams_.busy()))
+    return RISC_RUNTIME_CHECKPOINT_BUSY;
+  // This explicit app-declared boundary differs from ordinary yield. Check
+  // actual native idleness as well as the caller's declaration; refusal does
+  // not turn a healthy in-flight operation into terminal retention.
+  if(!graph_.activationSafe() || metadataCloseRetained() || !appDataExitSafe() ||
+     appDataBusy() || !fileSourceExitSafe() || !appDataExportExitSafe() ||
+     !providerStorageSafe() || (port_.appExitSafe && !port_.appExitSafe()))
+    return RISC_RUNTIME_CHECKPOINT_BUSY;
+#if RISC_RUNTIME_STORAGE_FILES
+  if(!storageFilesExitSafe(true))return RISC_RUNTIME_CHECKPOINT_BUSY;
+#endif
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+  if(!atomicExitSafe(true))return RISC_RUNTIME_CHECKPOINT_BUSY;
+#endif
+#if RISC_RUNTIME_PREFERENCE_STORE
+  if(!preferenceExitSafe(true))return RISC_RUNTIME_CHECKPOINT_BUSY;
+#endif
+  if(port_.serialFilesCheckpoint) {
+    nativeCheckpointRunning_=true;
+    const bool safe=port_.serialFilesCheckpoint();
+    nativeCheckpointRunning_=false;
+    if(!safe){retained_=true;fail("serial file custody retained; restart required");
+      (void)appExitBarrier(false);return RISC_RUNTIME_CHECKPOINT_RETAINED;}
+  }
+#endif
+  return RISC_RUNTIME_CHECKPOINT_OK;
+}
 void Runtime::yield(uint32_t ms) {
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   // No app/provider polling while a native checkpoint owns its resources.
   if(nativeCheckpointRunning_){if(port_.owner()&&port_.retainedDelay)port_.retainedDelay(ms<1?1:ms>50?50:ms);return;}
 #endif
@@ -1753,6 +1871,17 @@ bool Runtime::runOne(const char* name) {
     initialDefaultInvocation_=invocation_==&mainInvocation_ && invocation_->defaultRunning_ && !firstDefaultStarted_;
     if(initialDefaultInvocation_)firstDefaultStarted_=true;
     entry();
+#if RISC_NATIVE_SERIAL_FILES
+    // End the native serial session before any application or provider image
+    // can be revoked. Failed close pins all custody through real restart.
+    if(!retained_ && port_.serialFilesShutdown) {
+      nativeCheckpointRunning_=true;const bool serialSafe=port_.serialFilesShutdown();nativeCheckpointRunning_=false;
+      if(!serialSafe) {
+        retained_=true;fail("serial file shutdown retained; restart required");
+        (void)appExitBarrier(false);return false;
+      }
+    }
+#endif
     if(port_.failureEvidence && !appExitBarrier())return false;
     RISC_STAGE_LOG("app entry returned file=%s",name);
     RiscPerf::emit(17);
@@ -1888,6 +2017,9 @@ bool Runtime::run() {
   }
   // The active store is immutable until restart. Paired updates stage another
   // bank; a new Runtime session owns a new cache even at the same mount path.
+#if RISC_NATIVE_SERIAL_FILES
+  if(ok && !activateNativeFiles())ok=false;
+#endif
 #if RISC_APP_IMAGE_CACHE && (defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST))
   if(ok){
     appImages_=esp_dl_image_cache_create();
@@ -1956,7 +2088,16 @@ bool Runtime::run() {
     if(!safe){retained_=true;ok=fail("native settings shutdown retained; restart required");}
   }
 #endif
+#if RISC_NATIVE_SERIAL_FILES
+  if(!retained_ && port_.serialFilesShutdown) {
+    nativeCheckpointRunning_=true;const bool serialSafe=port_.serialFilesShutdown();nativeCheckpointRunning_=false;
+    if(!serialSafe){retained_=true;ok=fail("serial file shutdown retained; restart required");}
+  }
+#endif
   if(!retained_ && !fileSourceCleanup())ok=false;
+#if RISC_NATIVE_SERIAL_FILES
+  if(!retained_ && !releaseNativeFiles())ok=fail("native file provider shutdown retained; restart required");
+#endif
   if(!retained_) {
     for(size_t i=driverCount_;i--;) if(grants_[i].slot && !graph_.release(grants_[i])) {
       retained_=true;

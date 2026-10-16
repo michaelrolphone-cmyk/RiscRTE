@@ -18,6 +18,7 @@ done
 cp "$build/stream_session_provider.elf" "$build/stream.elf"
 cp "$build/stream_session_root.elf" "$build/root.elf"
 native=()
+if [[ "${SERIAL_FILES:-0}" == 1 ]];then native+=(-DRISC_NATIVE_SERIAL_FILES=1);fi
 extra=()
 if [[ "${RESIDENT_NATIVE_MEMORY:-0}" == 1 ]];then
  native=(-DRISC_NATIVE_APP_MEMORY_TEST -I"$repo/test/resident_memory_stubs" -I"$repo/test/image_pressure_stubs")
@@ -36,6 +37,7 @@ modes="${RESIDENT_SCENARIOS:-normal wake-host streams stream-retained busy exit 
 if [[ "${RESIDENT_NATIVE_MEMORY:-0}" == 1 && -z "${RESIDENT_SCENARIOS:-}" ]];then
  modes+=" memory-lock-retained switch-lock-retained memory-oom"
 fi
+if [[ "${SERIAL_FILES:-0}" == 1 && -z "${RESIDENT_SCENARIOS:-}" ]];then modes+=" serial-checkpoint-retained serial-shutdown-retained";fi
 for mode in $modes;do
   cp "$build/role-0.elf" "$build/host.elf"
   cp "$build/role-1.elf" "$build/child.elf"

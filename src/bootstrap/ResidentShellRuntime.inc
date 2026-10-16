@@ -121,7 +121,7 @@ bool Runtime::residentFailure(uint64_t token,risc_resident_failure_v1* out) {
   *out=lastFailure_;out->struct_size=sizeof(*out);return out->kind!=RISC_RESIDENT_FAILURE_NONE;
 }
 int32_t Runtime::runForeground(uint64_t token,const char* relative,risc_resident_result_v1* out) {
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   if(nativeCheckpointRunning_)return RISC_RESIDENT_BUSY;
 #endif
   if(!out || out->struct_size<sizeof(*out))return RISC_RESIDENT_INVALID;
@@ -233,7 +233,7 @@ int32_t Runtime::residentExit(uint64_t token) {
   foregroundExit_=true;return RISC_RESIDENT_OK;
 }
 int32_t Runtime::residentCheckpoint(uint64_t token,const risc_resident_request_v1* request,risc_resident_reply_v1* reply) {
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   if(nativeCheckpointRunning_)return RISC_RESIDENT_BUSY;
 #endif
   if(!residentToken(token,RISC_RESIDENT_ROLE_FOREGROUND) || !foregroundRunning_ || !shellToken_)return RISC_RESIDENT_DENIED;
@@ -264,6 +264,18 @@ int32_t Runtime::residentCheckpoint(uint64_t token,const risc_resident_request_v
     recordResidentFailure(RISC_RESIDENT_FAILURE_RETAINED,RISC_RESIDENT_RETAINED,child->current_,token);
     invocation_=child;return RISC_RESIDENT_RETAINED;
   }
+#if RISC_NATIVE_SERIAL_FILES
+  // The shell callback has returned, its grants and resources are settled, and
+  // no provider lease is held. A bounded file operation can run here; ordinary
+  // yield and capability acquisition never enter this service.
+  if(port_.serialFilesCheckpoint) {
+    nativeCheckpointRunning_=true;const bool serialSafe=port_.serialFilesCheckpoint();nativeCheckpointRunning_=false;
+    if(!serialSafe) {
+      retained_=true;fail("serial file custody retained; restart required");
+      (void)appExitBarrier(false);invocation_=child;return RISC_RESIDENT_RETAINED;
+    }
+  }
+#endif
   if(!selectInvocation(*child)) {invocation_=child;return RISC_RESIDENT_RETAINED;}
   if(foregroundExit_ || status==RISC_RESIDENT_EXIT)child->residentPolicyPending_=false;
   else if(status==RISC_RESIDENT_OK) {

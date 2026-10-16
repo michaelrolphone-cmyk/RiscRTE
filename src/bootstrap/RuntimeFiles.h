@@ -13,16 +13,25 @@ class RuntimeFiles final {
     if(identity && (!table || identity->api_version!=1 || identity->struct_size<sizeof(*identity) ||
        identity->context!=table->context || !identity->path || !identity->opened))return false;
     if(directory && (!table || directory->api_version!=1 || directory->struct_size<sizeof(*directory) || directory->context!=table->context || !directory->next))return false;
-    if(!owner || !safe || !owner() || !safe() || calling_ || !files_.bindFiles(table))return false;
+    if(retired_ || !owner || !safe || !owner() || !safe() || calling_ || !files_.bindFiles(table))return false;
     owner_=owner;safe_=safe;identity_=identity;directory_=directory;return true;
   }
+  // Native assembly bridge only. Its graph grant outlives this client, and no
+  // invocation-bound table or backend selection leaks into generic callers.
+  bool bindVolume(const risc_storage_volume_api_v1* table,Check owner,Check safe) {
+    if(retired_ || !owner || !safe || !owner() || !safe() || calling_ || !files_.bind(table))return false;
+    owner_=owner;safe_=safe;return true;
+  }
+  // Successful permanent-provider shutdown invalidates the borrowed table.
+  // Retirement is one-way; this object can never be rebound to another store.
+  bool retire(){if(!exitSafe() || !owner_ || !owner_())return false;retired_=true;return true;}
   int32_t identity(const char*p,risc_storage_files_identity_value_v1*v){return call([&]{return files_.identity(identity_,p,0,v);});}
   int32_t identity(uint32_t h,risc_storage_files_identity_value_v1*v){return call([&]{return files_.identity(identity_,nullptr,h,v);});}
   // Internal consumers must preserve a known open token if cleanup cannot
   // dispatch (for example owner/safety changed before close).
   void retainCustody(){retained_=true;}
   int32_t directoryNext(uint32_t h,risc_storage_files_stat_v1*s,char*n,uint32_t cap,uint32_t*required){if(required)*required=0;return call([&]{return files_.directoryNext(directory_,h,s,n,cap,required);});}
-  bool bound()const{return files_.bound();}
+  bool bound()const{return !retired_ && files_.bound();}
   bool retained()const{return retained_ || files_.retained();}
   bool exitSafe()const{return !calling_ && !retained() && files_.exitSafe();}
   int32_t open(const char*p,uint32_t f,uint32_t*h){if(h)*h=0;return call([&]{return files_.open(p,f,h);});}
@@ -59,7 +68,7 @@ class RuntimeFiles final {
   const risc_storage_files_identity_v1* identity_=nullptr;
   const risc_storage_files_directory_v1* directory_=nullptr;
   StorageFilesVolumeAdapter files_;Check owner_=nullptr,safe_=nullptr;
-  bool calling_=false,retained_=false;
+  bool calling_=false,retained_=false,retired_=false;
 };
 // One explicitly selected platform-owned internal store service. Multiple
 // Runtime candidates use the same authority while comparing active/staged

@@ -1,4 +1,5 @@
 #include "CpuPort.h"
+#include "NativeSerialFiles.h"
 #include "HciBounds.h"
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
 #include "NativeSettingsLifecycle.h"
@@ -120,6 +121,9 @@ bool Port::nativeDiscoveryAppExitSafe() const {
 }
 #endif
 bool Port::restartResourcesSafe() const {
+#if RISC_NATIVE_SERIAL_FILES
+  if(!NativeSerialFiles::exitSafe())return false;
+#endif
   if(display_.token)return false;
   if(runtime_ && !runtime_->residentResetSafe())return false;
   if(storageWork_.gpio || storageWorkBusy() || sdmmc_.token || sdmmc_.closing)return false;
@@ -834,6 +838,9 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_LIGHT_SLEEP_RETAINED;
+#if RISC_NATIVE_SERIAL_FILES
+  if(!NativeSerialFiles::custodySafe())return RISC_LIGHT_SLEEP_RETAINED;
+#endif
   if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_LIGHT_SLEEP_RETAINED;
   if(!p.tcpIdle() || !p.entropyIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
@@ -847,6 +854,9 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   for(const auto& c:p.radios_){if(c.closing)return RISC_LIGHT_SLEEP_RETAINED;if(c.active || c.serviceLease)return RISC_LIGHT_SLEEP_BUSY;}
   if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_LIGHT_SLEEP_RETAINED;
   if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_LIGHT_SLEEP_BUSY;
+#if RISC_NATIVE_SERIAL_FILES
+  if(!NativeSerialFiles::exitSafe())return RISC_LIGHT_SLEEP_BUSY;
+#endif
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
   if(pin<0)return RISC_LIGHT_SLEEP_INVALID;
@@ -888,6 +898,9 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_DEEP_SLEEP_CONTEXT;
   if(p.poisoned_)return RISC_DEEP_SLEEP_RETAINED;
+#if RISC_NATIVE_SERIAL_FILES
+  if(!NativeSerialFiles::custodySafe())return RISC_DEEP_SLEEP_RETAINED;
+#endif
   if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_DEEP_SLEEP_RETAINED;
   if(!p.tcpIdle() || !p.entropyIdle())return RISC_DEEP_SLEEP_BUSY;
   if(p.runtime_ && !p.runtime_->residentResetSafe())return RISC_DEEP_SLEEP_BUSY;
@@ -903,6 +916,9 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_DEEP_SLEEP_RETAINED;
   if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_DEEP_SLEEP_BUSY;
   for(const auto& pin:p.pins_)if(pin.pwm)return RISC_DEEP_SLEEP_BUSY;
+#if RISC_NATIVE_SERIAL_FILES
+  if(!NativeSerialFiles::exitSafe())return RISC_DEEP_SLEEP_BUSY;
+#endif
   int pin=-1;
   for(unsigned i=0;i<49;++i)if(token && p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)pin=i;
   if(pin<0)return RISC_DEEP_SLEEP_INVALID;
@@ -981,6 +997,9 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   auto& c=*static_cast<Gpio*>(context);auto& p=*c.port;
   if(!p.hw_.owner || !p.hw_.owner())return RISC_LIGHT_SLEEP_CONTEXT;
   if(p.poisoned_ || p.sleepRetained_)return RISC_LIGHT_SLEEP_RETAINED;
+#if RISC_NATIVE_SERIAL_FILES
+  if(!NativeSerialFiles::custodySafe())return RISC_LIGHT_SLEEP_RETAINED;
+#endif
   if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_LIGHT_SLEEP_RETAINED;
   if(!p.tcpIdle() || !p.entropyIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(deep && p.runtime_ && !p.runtime_->residentResetSafe())return RISC_LIGHT_SLEEP_BUSY;
@@ -995,6 +1014,9 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   if(p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_LIGHT_SLEEP_RETAINED;
   if(p.hci_.token || (p.hw_.hciIdle && !p.hw_.hciIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(deep)for(const auto& pin:p.pins_)if(pin.pwm)return RISC_LIGHT_SLEEP_BUSY;
+#if RISC_NATIVE_SERIAL_FILES
+  if(!NativeSerialFiles::exitSafe())return RISC_LIGHT_SLEEP_BUSY;
+#endif
   int anchor=-1;for(unsigned i=0;i<49;++i)if(p.pins_[i].owner==&c && p.pins_[i].token==token && !p.pins_[i].output)anchor=i;
   if(anchor<0)return RISC_LIGHT_SLEEP_INVALID;
   uint64_t mask=0,high=0,pulls=0;unsigned count=0;

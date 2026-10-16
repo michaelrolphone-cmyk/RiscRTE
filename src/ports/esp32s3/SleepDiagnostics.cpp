@@ -12,6 +12,9 @@
 #include "diagnostics/UsbSleepRecovery.h"
 #endif
 #include "NativePlatform.h"
+#if RISC_NATIVE_SERIAL_FILES
+#include "NativeSerialFiles.h"
+#endif
 #include <esp_sleep.h>
 #if RISC_NATIVE_ESP_IDF && RISC_HWCDC_SLEEP_RECOVERY
 #include <esp_idf_version.h>
@@ -104,6 +107,9 @@ UsbSleepRecovery recovery;
 #endif
 TaskHandle_t owner=nullptr;
 bool outputting=false,unfinishedLine=false;
+#if RISC_NATIVE_SERIAL_FILES
+bool serialConnected=false;
+#endif
 #if RISC_ENABLE_USB_PHY
 bool usbFenced=false;
 #endif
@@ -313,6 +319,9 @@ void start(){
 #endif
   owner=xTaskGetCurrentTaskHandle();RiscPlatform::console.setTxTimeoutMs(0);
   outputting=unfinishedLine=false;
+#if RISC_NATIVE_SERIAL_FILES
+  serialConnected=false;
+#endif
 #if RISC_STAGE_LOGS
   lostLines=truncatedLines=reportedLost=reportedTruncated=0;
 #endif
@@ -334,12 +343,20 @@ void start(){
 bool usbPhyIdle(){return ours() && !usbFenced;}
 bool suspendUsbPhy(){
   if(!ours() || outputting || usbFenced)return false;
+#if RISC_NATIVE_SERIAL_FILES
+  // A PHY claimant cannot strand an accepted request or file handle. Refusal
+  // is temporary; only a settled Runtime checkpoint may cancel/close it.
+  if(!RiscCpu::NativeSerialFiles::exitSafe())return false;
+#endif
 #if RISC_NATIVE_DIAGNOSTIC_OBSERVER
   if(draining)return false;
 #endif
   // Fence recovery, live output and native storage drains before HWCDC end.
   // The pinned end disables/clears its IRQ and removes RX/TX resources.
   usbFenced=true;OutputGuard guard;
+#if RISC_NATIVE_SERIAL_FILES
+  RiscCpu::NativeSerialFiles::disconnect();serialConnected=false;
+#endif
 #if RISC_NATIVE_ESP_IDF && ESP_IDF_VERSION_MAJOR >= 6
   transport.end();
 #else
@@ -425,6 +442,10 @@ void poll(){
   if(!recovery.poll(transport))return;
 #endif
   if(!transport.connected()){
+#if RISC_NATIVE_SERIAL_FILES
+    if(serialConnected)RiscCpu::NativeSerialFiles::disconnect();
+    serialConnected=false;
+#endif
 #if RISC_SLEEP_DIAGNOSTICS
     sleepReplay().disconnect();
 #endif
@@ -433,6 +454,9 @@ void poll(){
 #endif
     return;
   }
+#if RISC_NATIVE_SERIAL_FILES
+  serialConnected=true;
+#endif
   // A zero write may truncate a best-effort live line. Terminate it before a
   // command dump or another line; never retain or retry its abandoned payload.
   if(unfinishedLine){finishLine();return;}
@@ -442,10 +466,29 @@ void poll(){
 #if RISC_SLEEP_DIAGNOSTICS
   if(!sleepReplay().active())
 #endif
+#if RISC_NATIVE_SERIAL_FILES
+  if(!RiscCpu::NativeSerialFiles::pending())
+#endif
   if(reportLoss())return;
-#if RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE
-  for(unsigned i=0;i<16 && RiscPlatform::console.available()>0;++i){
+#if RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE || RISC_NATIVE_SERIAL_FILES
+  for(unsigned i=0;i<(RISC_NATIVE_SERIAL_FILES?64u:16u) && RiscPlatform::console.available()>0;++i){
     int c=RiscPlatform::console.read();if(c<0)break;
+#if RISC_NATIVE_SERIAL_FILES
+    RiscCpu::NativeSerialFiles::input(uint8_t(c));
+    if(RiscCpu::NativeSerialFiles::pending()){
+      // A file frame wins only after its complete protocol prefix. Terminate
+      // any partly emitted diagnostic replay before the first response byte.
+#if RISC_SLEEP_DIAGNOSTICS
+      if(sleepReplay().active())unfinishedLine=true;
+      sleepReplay().disconnect();
+#endif
+#if RISC_PERFORMANCE_TRACE
+      if(perfReplay().active())unfinishedLine=true;
+      perfReplay().disconnect();
+#endif
+      continue;
+    }
+#endif
 #if RISC_SLEEP_DIAGNOSTICS
 #if RISC_PERFORMANCE_TRACE
     if(!perfReplay().active())
@@ -465,6 +508,20 @@ void poll(){
     else if(perfReplay().active())sleepReplay().disconnect();
 #endif
   }
+#if RISC_NATIVE_SERIAL_FILES
+  if(RiscCpu::NativeSerialFiles::pending()){
+    if(unfinishedLine){finishLine();return;}
+    size_t count=RiscCpu::NativeSerialFiles::outputSize();
+    if(count>64)count=64;
+    const auto available=transport.writable();if(count>available)count=available;
+    if(count){
+      size_t written=transport.write(reinterpret_cast<const uint8_t*>(RiscCpu::NativeSerialFiles::output()),count);
+      if(written>count)written=count;
+      RiscCpu::NativeSerialFiles::consumeOutput(written);
+    }
+    return;
+  }
+#endif
 #if RISC_PERFORMANCE_TRACE
   if(perfReplay().active()){perfReplay().poll(transport);return;}
 #endif
@@ -505,6 +562,9 @@ void line(const char* text){
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
   if(!recovery.ready()){noteLost();return;}
+#endif
+#if RISC_NATIVE_SERIAL_FILES
+  if(RiscCpu::NativeSerialFiles::pending()){noteLost();return;}
 #endif
   // Live output is best effort, at most 256 bytes. No wait for a missing host
   // or unavailable capacity. Each owner write is at most 64 bytes.
@@ -576,6 +636,9 @@ void lightReturn(int32_t result,uint32_t cause){
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
   if(result==ESP_OK){
+#if RISC_NATIVE_SERIAL_FILES
+    RiscCpu::NativeSerialFiles::disconnect();serialConnected=false;
+#endif
 #if RISC_SLEEP_DIAGNOSTICS
     sleepReplay().disconnect();
 #endif

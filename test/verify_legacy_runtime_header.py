@@ -54,6 +54,11 @@ def verify(header):
                              '  void (*unexpected_suffix)(void);\n} risc_runtime_api_v1;')
         signature = replace_once(source, 'bool (*initial_default)(void);',
                                  'uint32_t (*initial_default)(void);')
+        checkpoint_signature = replace_once(source, 'int32_t (*service_checkpoint)(void);',
+                                            'bool (*service_checkpoint)(void);')
+        checkpoint_order = replace_once(source, '(*initial_default)', '(*swapped_default)')
+        checkpoint_order = replace_once(checkpoint_order, '(*service_checkpoint)', '(*initial_default)')
+        checkpoint_order = replace_once(checkpoint_order, '(*swapped_default)', '(*service_checkpoint)')
         shifted = replace_once(source, '  bool (*health)(risc_runtime_health_v1* out);',
                                '  uint64_t unexpected_prefix;\n  bool (*health)(risc_runtime_health_v1* out);')
         grant = replace_once(source, '  uint32_t struct_size, slot, generation;',
@@ -63,8 +68,10 @@ def verify(header):
             ('grant-layout', grant, 'risc_runtime_capability_v1.struct_size size'),
             ('prefix-order', prefix, 'risc_runtime_api_v1.health offset'),
             ('suffix-order', suffix, 'launch failure follows host control'),
-            ('unknown-suffix', extra, 'twelve pointer suffixes only'),
+            ('unknown-suffix', extra, 'thirteen pointer suffixes only'),
             ('suffix-signature', signature, 'initial default signature'),
+            ('checkpoint-signature', checkpoint_signature, 'service checkpoint signature'),
+            ('checkpoint-order', checkpoint_order, 'initial default follows launch failure'),
         ):
             candidate = temporary / (name + '.h')
             candidate.write_text(mutated)
@@ -82,11 +89,11 @@ def verify(header):
                 raise
         else:
             raise AssertionError('Changed frozen consumer header unexpectedly accepted')
-        return 7
+        return 9
 
 
 if __name__ == '__main__':
     import sys
     rejected = verify(sys.argv[1])
-    print('Frozen legacy Runtime header and every field/size plus twelve '
+    print('Frozen legacy Runtime header and every field/size plus thirteen '
           'append-only callback suffixes verified; ' + str(rejected) + ' ABI drift controls rejected')

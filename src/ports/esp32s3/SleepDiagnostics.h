@@ -1,6 +1,9 @@
 #pragma once
 #include <cstdint>
 #include "diagnostics/StageLog.h"
+#ifndef RISC_NATIVE_SERIAL_FILES
+#define RISC_NATIVE_SERIAL_FILES 0
+#endif
 // Recovery follows the selected fixed-function hardware USB transport, even
 // when retained diagnostics are disabled. UART and TinyUSB remain unchanged.
 #if (RISC_NATIVE_ESP_IDF && RISC_CONSOLE_USB_SERIAL_JTAG) || defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT && defined(ARDUINO_USB_MODE) && ARDUINO_USB_MODE == 1
@@ -38,7 +41,7 @@
 #define RISC_PERFORMANCE_TRACE 0
 #endif
 // The adapter also supplies bounded live output when the recorder is opted out.
-#define RISC_DIAGNOSTIC_ADAPTER (RISC_SLEEP_DIAGNOSTICS || RISC_HWCDC_SLEEP_RECOVERY || RISC_PERFORMANCE_TRACE || RISC_STAGE_LOGS || RISC_NATIVE_DIAGNOSTIC_OBSERVER || RISC_ENABLE_USB_PHY)
+#define RISC_DIAGNOSTIC_ADAPTER (RISC_SLEEP_DIAGNOSTICS || RISC_HWCDC_SLEEP_RECOVERY || RISC_PERFORMANCE_TRACE || RISC_STAGE_LOGS || RISC_NATIVE_DIAGNOSTIC_OBSERVER || RISC_ENABLE_USB_PHY || RISC_NATIVE_SERIAL_FILES)
 namespace RiscDiagnostics {
 #if RISC_SLEEP_DIAGNOSTICS
 int32_t checkpoint(const char* application,uint64_t invocation,const char* text,uint32_t length);

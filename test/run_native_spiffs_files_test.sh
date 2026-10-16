@@ -37,5 +37,11 @@ for source in "$spiffs"/spiffs_{cache,check,gc,hydrogen,nucleus}.c "$repo/test/s
 done
 wraps=()
 for name in open close read write lseek fstat stat fsync ftruncate remove mkdir opendir readdir closedir rewinddir telldir seekdir;do wraps+=(-Wl,--wrap="$name");done
-c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -DESP_PLATFORM -DRISC_POSIX_FILES_NOREPLACE=0 "${flags[@]}" -I"$build" -I"$repo/src" -I"$repo/sdk/app" "$repo/test/native_spiffs_files_test.cpp" "${objects[@]}" "${wraps[@]}" -no-pie -o "$build/test"
+sources=("$repo/test/native_spiffs_files_test.cpp")
+selection=()
+if [[ "${SERIAL_STORAGE:-0}" == 1 ]];then
+ sources=("$repo/test/native_serial_boot_storage_test.cpp" "$repo/src/ports/esp32s3/NativeSerialStorage.cpp" "$repo/src/runtime/serial/Files.cpp")
+ selection=(-DRISC_NATIVE_SERIAL_FILES=1 -DRISC_NATIVE_SERIAL_BOOT_FILES=1 -I"$repo/sdk/driver")
+fi
+c++ -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -DESP_PLATFORM -DRISC_POSIX_FILES_NOREPLACE=0 "${flags[@]}" -I"$build" -I"$repo/src" -I"$repo/sdk/app" "${sources[@]}" "${selection[@]}" "${objects[@]}" "${wraps[@]}" -no-pie -o "$build/test"
 "$build/test"
