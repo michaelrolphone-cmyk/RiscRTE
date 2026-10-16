@@ -35,7 +35,10 @@ enum {
  RISC_FILES_OK=0, RISC_FILES_NOT_FOUND=1, RISC_FILES_END=2, RISC_FILES_EXISTS=3,
  RISC_FILES_INVALID=-1, RISC_FILES_IO=-2, RISC_FILES_UNAVAILABLE=-3,
  RISC_FILES_BUSY=-4, RISC_FILES_DENIED=-5, RISC_FILES_RETAINED=-6,
- RISC_FILES_CONTEXT=-7
+ RISC_FILES_CONTEXT=-7,
+ // Additive result: capacity/quota exhaustion with known custody. Older
+ // clients may conservatively report IO; every earlier value/layout is stable.
+ RISC_FILES_NO_SPACE=-9
 };
 enum {
  RISC_FILES_READ=1u, RISC_FILES_WRITE=2u, RISC_FILES_CREATE=4u,

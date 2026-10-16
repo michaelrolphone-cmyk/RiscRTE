@@ -1,0 +1,71 @@
+name: Runtime scratch provider
+on:
+  push:
+    branches: [work/runtime-scratch-provider]
+  pull_request:
+    paths:
+      - 'src/runtime/storage/FileSourceFiles.h'
+      - 'src/ports/esp32s3/Native*Files.h'
+      - 'src/ports/esp32s3/NativeFileSource.cpp'
+      - 'src/bootstrap/RuntimeFiles.h'
+      - 'src/bootstrap/StorageFilesVolumeAdapter.h'
+      - 'sdk/app/RiscStorageFiles*.h'
+      - 'test/*file_source*'
+      - 'test/compile_runtime_scratch_target.py'
+      - 'test/fixtures/native_scratch_profile.cmake'
+      - '.github/workflows/runtime-scratch-provider.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_file_source_provider_test.sh
+      - run: bash test/run_file_source_storage_test.sh
+      - run: bash test/run_file_source_runtime_test.sh
+      - run: bash test/run_storage_files_adapter_test.sh
+  native-mount:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+      BUILD_DIR: /tmp/scratch-mount
+      MOUNT_BUILD: /tmp/scratch-mount
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 test/run_native_app_data_mount_test.py
+      - run: MOUNT_ROOT="$PWD" python3 test/run_native_file_source_mount_test.py
+  native-compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Compile scratch with the actual pinned native warning policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/scratch-native" -D "RISC_SOURCE_SHA=$GITHUB_SHA" -D "RISC_PRODUCT_PROFILE=$PWD/test/fixtures/native_scratch_profile.cmake" reconfigure
+          python test/compile_runtime_scratch_target.py "$RUNNER_TEMP/scratch-native/compile_commands.json" "$RUNNER_TEMP/scratch-objects"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scratch-native-compile
+          path: ${{ runner.temp }}/scratch-objects

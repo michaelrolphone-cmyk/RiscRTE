@@ -3,6 +3,7 @@
 #include "NativeAppData.h"
 #include "NativeAppDataMount.h"
 #include "NativeRadioResources.h"
+#include "NativeScratchFiles.h"
 #include "runtime/storage/FileSourceFiles.h"
 extern "C" const uint32_t risc_file_source_abi __attribute__((used))=1;
 namespace RiscFileSource { namespace {
@@ -11,12 +12,15 @@ bool(*operationSafe)()=nullptr;
 bool attempted=false,configured=false,nativeRetained=false;
 bool owner(){return ownerTask&&ownerTask();}
 bool operation(){return owner()&&operationSafe&&operationSafe()&&RiscAppData::exitSafe();}
+RiscCpu::NativeScratchFiles provider("/appdata/.risc-file-source");
+RiscBoot::RuntimeFiles session;
+bool providerSafe(){return owner()&&RiscAppDataMount::held()&&!RiscAppDataMount::retained()&&RiscCpu::nativeRadioResourceHeldReady();}
 RiscStorage::FileSourceFiles files({nullptr,[](void*){return owner();},
  [](void*){return owner()&&RiscAppDataMount::held()&&!RiscAppDataMount::retained()&&RiscCpu::nativeRadioResourceHeldReady();},
  [](void*,uint64_t* out){size_t total=0,used=0;if(!out||!RiscAppDataMount::usage(&total,&used)||used>total)return false;*out=uint64_t(total-used);return true;},
  // A bounded reserve for ordinary app-data metadata/updates, not a guarantee
  // that another writer or every settings transaction will have enough space.
- UINT64_C(64)*1024,512,true,true});
+ UINT64_C(64)*1024,512,RiscCpu::NativeScratchFiles::maximumSize()});
 // Native radio custody encloses the global real-mount guard. Neither lease is
 // released after terminal storage custody. No failed close or unlink is retried.
 template<class F> int32_t execute(F action) {
@@ -47,7 +51,7 @@ bool prepare(bool(*task)(),bool(*safe)()) {
  if(!operation()||!RiscAppDataMount::ready()||!RiscCpu::nativeRadioResourceTry())return false;
  {
   RiscAppDataMount::Guard mount(RiscAppDataMount::Access::FileSource);
-  if(mount.held)configured=files.configure("/appdata/.risc-file-source");
+  if(mount.held)configured=session.bind(provider.api(),owner,providerSafe)&&files.configure(&session,"/.risc-file-source");
   if(!files.exitSafe())RiscAppDataMount::retain();
  }
  if(RiscAppDataMount::retained()||!files.exitSafe()){nativeRetained=true;return false;}
