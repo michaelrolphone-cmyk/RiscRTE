@@ -2,7 +2,7 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 build="${OUTPUT_DIR:-$(mktemp -d)}";mkdir -p "$build"
-flags=(-std=c++17 -Wall -Wextra -Werror -Wno-misleading-indentation -g -O1)
+flags=(-std=c++17 -Wall -Wextra -Werror -g -O1)
 if [[ ${SANITIZE:-0} == 1 ]];then flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -no-pie);fi
 c++ "${flags[@]}" -I"$root/src" -I"$root/sdk/app" -I"$root/sdk/driver" "$root/test/file_source_provider_test.cpp" -o "$build/test"
 "$build/test"

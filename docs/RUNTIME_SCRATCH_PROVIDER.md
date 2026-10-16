@@ -81,3 +81,11 @@ exact commands, source hashes and object hashes. The workflow runs host and real
 mount qualification independently. These are source/software checks, not a full
 firmware link or hardware qualification. Integration and product publication
 remain separate steps.
+
+The target replay treats misleading indentation as an error and adds no warning
+suppression. A full TWatch product build exposed an ambiguous adjacent-if line
+in the concrete provider that the initial focused replay had suppressed; the
+line was separated without changing semantics. The corrected replay passed
+against both complete TWatch and Waveshare native build command databases. The
+scratch workflow now configures the pinned native SDK and runs this strict
+on/off/layout compilation, including commands with compiler launchers.

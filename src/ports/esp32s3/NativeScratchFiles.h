@@ -48,7 +48,8 @@ private:
  int32_t error(){if(errno==ENOSPC||errno==EDQUOT)return RISC_FILES_NO_SPACE;if(errno==ENOENT)return RISC_FILES_NOT_FOUND;if(errno==EEXIST)return RISC_FILES_EXISTS;return terminalIo_?retain():int32_t(RISC_FILES_IO);}
  int32_t gate(uint32_t h)const{return retained_?RISC_FILES_RETAINED:!h||h!=token_?RISC_FILES_INVALID:RISC_FILES_OK;}
  int32_t open(const char*p,uint32_t flags,uint32_t*out){
-  if(out)*out=0;if(retained_)return RISC_FILES_RETAINED;
+  if(out)*out=0;
+  if(retained_)return RISC_FILES_RETAINED;
   if(!out||!name(p)||!RiscStorage::validFlags(flags))return RISC_FILES_INVALID;
   if(flags&~uint32_t(RISC_FILES_READ|RISC_FILES_WRITE|RISC_FILES_CREATE|RISC_FILES_EXCLUSIVE))return RISC_FILES_UNAVAILABLE;
   if((flags&RISC_FILES_CREATE)&&!(flags&RISC_FILES_EXCLUSIVE))return RISC_FILES_UNAVAILABLE;
