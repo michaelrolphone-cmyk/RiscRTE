@@ -46,7 +46,7 @@ extern "C" void native_app_memory_relocation(bool);
 #endif
 namespace {
 RiscBoot::Runtime* currentRuntime=nullptr;
-#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
 // Reject foreign workers before reading mutable Runtime/invocation state.
 std::atomic<bool(*)()> atomicKeyValueOwner{nullptr};
 #endif
@@ -119,7 +119,13 @@ namespace RiscBoot {
 #if RISC_RUNTIME_PREFERENCE_STORE
 #include "PreferenceStoreRuntime.inc"
 #endif
+#if RISC_RUNTIME_STORAGE_FILES
+#include "StorageFilesRuntime.inc"
+#endif
 Runtime::~Runtime() {
+#if RISC_RUNTIME_STORAGE_FILES
+  if(!storageFilesExitSafe(true))std::abort();
+#endif
 #if RISC_RUNTIME_PREFERENCE_STORE
   if(!preferenceExitSafe(true))std::abort();
 #endif
@@ -412,6 +418,11 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
       // authorize more than one positive KV namespace, still within MaxAppPolicyGrants
       // total grants; no other capability's uniqueness rule is broadened.
       const bool keyValue=!strcmp(requested,RISC_KEY_VALUE_CAPABILITY);
+#if RISC_RUNTIME_STORAGE_FILES
+      const bool files=!strcmp(requested,RISC_STORAGE_FILES_CAPABILITY);
+#else
+      const bool files=false;
+#endif
 #if RISC_RUNTIME_PREFERENCE_STORE
       const bool preferenceStore=!strcmp(requested,RISC_PREFERENCE_STORE_CAPABILITY);
 #else
@@ -430,12 +441,16 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
       for (JsonObjectConst allowed:item["grants"].as<JsonArrayConst>()) {
         int64_t allowedApi=0,instance=0;char capability[96];
         if (!text(allowed["capability"],capability,sizeof(capability)) ||
-            !(strcmp(capability,RISC_SHARED_DATA_CAPABILITY)?keys(allowed,{"capability","api","instance_id"}):keys(allowed,{"capability","api","instance_id","file"})) ||
+            !(
+#if RISC_RUNTIME_STORAGE_FILES
+              !strcmp(capability,RISC_STORAGE_FILES_CAPABILITY)?keys(allowed,{"capability","api","instance_id","backend_capability","backend_instance","label"},{"backend_provider"}):
+#endif
+              strcmp(capability,RISC_SHARED_DATA_CAPABILITY)?keys(allowed,{"capability","api","instance_id"}):keys(allowed,{"capability","api","instance_id","file"})) ||
             !integer(allowed["api"],1,UINT32_MAX,allowedApi) || !integer(allowed["instance_id"],0,INT32_MAX,instance)) return fail("invalid app grant");
         if (!strcmp(capability,RISC_BOUND_KEY_VALUE_CAPABILITY)) return fail("provider key-value denied to app");
         if (!strcmp(capability,RISC_BOUND_APP_DATA_CAPABILITY)) return fail("provider app-data denied to app");
         if (strcmp(capability,requested) || allowedApi!=api) continue;
-        if (++matches>1 && !keyValue && !atomicKeyValue && !availability && !preferenceStore && !sharedData) return fail("app requirement not uniquely authorized");
+        if (++matches>1 && !keyValue && !atomicKeyValue && !availability && !preferenceStore && !sharedData && !files) return fail("app requirement not uniquely authorized");
         if (policy.count==MaxAppPolicyGrants) return fail("too many app grants");
         for (size_t i=0;i<policy.count;++i) {
           const auto& earlier=policy.grants[i];
@@ -444,6 +459,26 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
         }
         auto& grant=policy.grants[policy.count];
         grant.api=api;grant.instance=instance;
+#if RISC_RUNTIME_STORAGE_FILES
+        if(files) {
+          int64_t backend=0;char backendCapability[96],backendProvider[96]{};
+          if(grant.api!=1 || !grant.instance || !integer(allowed["backend_instance"],0,INT32_MAX,backend) ||
+             !text(allowed["label"],grant.sharedFile,sizeof(grant.sharedFile)) ||
+             !text(allowed["backend_capability"],backendCapability,sizeof(backendCapability)) ||
+             (strcmp(backendCapability,"storage.volume") && strcmp(backendCapability,RISC_STORAGE_FILES_CAPABILITY)) ||
+             (!allowed["backend_provider"].isUnbound() && !text(allowed["backend_provider"],backendProvider,sizeof(backendProvider))))return fail("invalid file namespace mapping");
+          for(size_t d=0;d<driverCount_;++d)if(!strcmp(drivers_[d].provides,backendCapability) &&
+              drivers_[d].api==1 && drivers_[d].instance==uint64_t(backend) && (!backendProvider[0] || !strcmp(backendProvider,drivers_[d].id))) {
+            if(grant.platform>=0)return fail("ambiguous file namespace backend");
+            grant.platform=static_cast<PolicyIndex>(d);
+          }
+          if(grant.platform<0)return fail("file namespace backend unavailable");
+          grant.driver=StorageFilesDriver;grant.capability=RISC_STORAGE_FILES_CAPABILITY;
+        } else if(!strcmp(capability,RISC_STORAGE_FILES_CATALOG_CAPABILITY)) {
+          if(grant.api!=1 || grant.instance)return fail("invalid files catalog authority");
+          grant.driver=StorageFilesCatalogDriver;grant.capability=RISC_STORAGE_FILES_CATALOG_CAPABILITY;
+        } else
+#endif
 #if RISC_RUNTIME_PREFERENCE_STORE
         if(preferenceStore) {
           if(grant.api!=1 || !grant.instance || !preferenceAvailable(policy.id,uint32_t(grant.instance)))
@@ -532,6 +567,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
           if (grant.platform<0) return fail("app platform clock unavailable");
           grant.capability=platforms_[grant.platform].capability;
         } else {
+          if (!strcmp(capability,"storage.files") || !strcmp(capability,"storage.files.catalog"))return fail("generic files broker unavailable");
           if (!strcmp(capability,"storage.preferences"))return fail("preference store broker unavailable");
           if (!strcmp(capability,"storage.key-value.atomic"))return fail("atomic key-value broker unavailable");
           if (!strncmp(capability,"platform.",9) || !strcmp(capability,"spi.bus") || !strcmp(capability,"hardware.device")) return fail("raw platform capability denied to app");
@@ -553,6 +589,9 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
   return true;
 }
 bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc_runtime_capability_v1* out) {
+#if RISC_RUNTIME_STORAGE_FILES
+  if(storageFilesCalling_)return false;
+#endif
   if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !invocation_->appPolicy_ || !out || out->struct_size<sizeof(*out) || !capability || !api || grantGeneration_==UINT32_MAX) return false;
   const bool catalog=!strcmp(capability,RISC_APP_CATALOG_CAPABILITY);
   Invocation* const original=invocation_;
@@ -588,6 +627,30 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
   size_t slot=0;while(slot<16 && invocation_->appGrants_[slot].live)++slot;
   if (slot==16) return false;
   auto& grant=invocation_->appGrants_[slot];
+#if RISC_RUNTIME_STORAGE_FILES
+  if(allowed->driver==StorageFilesCatalogDriver){
+    if(!invocation_->entryRunning_ || retained_)return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    grant.storageFilesCatalog={1,sizeof(grant.storageFilesCatalog),context,storageFilesSnapshot,storageFilesGet};grant.api=&grant.storageFilesCatalog;
+  } else if(allowed->driver==StorageFilesDriver){
+    if(!invocation_->entryRunning_ || retained_ || !providerStorageSafe())return false;
+    void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
+    grant.storageFilesAdapter.reset(new(std::nothrow) StorageFilesVolumeAdapter);
+    if(!grant.storageFilesAdapter)return false;
+    if(!acquireProviderDriver(allowed->platform,drivers_[allowed->platform].provides,1,grant)) {
+      if(!retained_)grant={};
+      return false;
+    }
+    const bool backendBound=!strcmp(drivers_[allowed->platform].provides,RISC_STORAGE_FILES_CAPABILITY)
+      ?grant.storageFilesAdapter->bindFiles(static_cast<const risc_storage_files_v1*>(grant.api))
+      :grant.storageFilesAdapter->bind(static_cast<const risc_storage_volume_api_v1*>(grant.api));
+    if(!backendBound) {
+      if(!graph_.release(grant.provider)){retained_=true;fail("file backend admission retained");(void)appExitBarrier(false);return false;}
+      grant={};return false;
+    }
+    grant.storageFiles=storageFilesTable(context);grant.api=&grant.storageFiles;
+  } else
+#endif
 #if RISC_RUNTIME_PREFERENCE_STORE
   if(allowed->driver==PreferenceStoreDriver){
 #if RISC_NATIVE_SETTINGS_LIFECYCLE && RISC_RUNTIME_ATOMIC_KEY_VALUE
@@ -693,15 +756,34 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     if(!invocation_->installedFiles_->end())return false;
     invocation_->installedVolumeContext_=context;invocation_->installedVolume_=volumeTable(context);grant.api=&invocation_->installedVolume_;
   } else if (allowed->driver>=0) {
+    if(!acquireProviderDriver(allowed->driver,capability,api,grant))return false;
+  } else grant.api=platforms_[allowed->platform].table;
+  const auto* header=static_cast<const uint32_t*>(grant.api);
+  if (!header || header[0]!=api || header[1]<8) {
+    if (grant.provider.slot && !graph_.release(grant.provider)) {
+      retained_=true;fail("invalid app interface retained");if(residentEnabled_)(void)appExitBarrier(false);return false;
+    }
+    grant={}; return false;
+  }
+  grant.live=true;grant.generation=++grantGeneration_;grant.invocation=invocation_->streams_.context();
+#if RISC_RUNTIME_STORAGE_FILES
+  if(allowed->driver!=StorageFilesCatalogDriver)
+#endif
+  serviceProviders();
+  if(!appExitBarrier(false))return false;
+  if(catalog && !catalogCustody())return catalogRetain();
+  out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
+}
+bool Runtime::acquireProviderDriver(PolicyIndex index,const char* capability,uint32_t api,AppGrant& grant) {
     serviceProviders();
     if(!appExitBarrier(false))return false;
-    const auto& driver=drivers_[allowed->driver];
-    if(demandRetention_ && !demandActivation_ && !grants_[allowed->driver].slot) {
+    const auto& driver=drivers_[index];
+    if(demandRetention_ && !demandActivation_ && !grants_[index].slot) {
       // Only the first real acquisition after promotion creates session custody.
       // Keep the normal loader/dependency ordering and serialize start callbacks.
       if(!promotionSafe())return false;
       promotionRunning_=true;
-      auto& pin=grants_[allowed->driver];
+      auto& pin=grants_[index];
       pin=graph_.acquireFrom(driver.id,capability,api,driver.instance);
       const bool safe=promotionSafe();
       promotionRunning_=false;
@@ -715,19 +797,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.provider=graph_.acquireFrom(driver.id,capability,api,driver.instance);
     if (!grant.provider.slot) {serviceProviders();(void)appExitBarrier(false);return false;}
     grant.api=graph_.interfaceFor(grant.provider);
-  } else grant.api=platforms_[allowed->platform].table;
-  const auto* header=static_cast<const uint32_t*>(grant.api);
-  if (!header || header[0]!=api || header[1]<8) {
-    if (grant.provider.slot && !graph_.release(grant.provider)) {
-      retained_=true;fail("invalid app interface retained");if(residentEnabled_)(void)appExitBarrier(false);return false;
-    }
-    grant={}; return false;
-  }
-  grant.live=true;grant.generation=++grantGeneration_;grant.invocation=invocation_->streams_.context();
-  serviceProviders();
-  if(!appExitBarrier(false))return false;
-  if(catalog && !catalogCustody())return catalogRetain();
-  out->slot=slot+1;out->generation=grant.generation;out->api=grant.api;return true;
+    return true;
 }
 int32_t Runtime::randomFill(void* context,void* bytes,uint32_t length){
  Runtime* r=currentRuntime;if(!r||!r->active()||r->retained_||!context||!r->port_.randomBytes)return RISC_RANDOM_CONTEXT;
@@ -752,7 +822,7 @@ int32_t Runtime::memoryHeapSnapshot(void* context,risc_memory_heap_snapshot_v1* 
 }
 int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize) {
   if (outSize) *outSize=0;
-#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
   const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return RISC_KEY_VALUE_CONTEXT;
 #endif
   Runtime* r=currentRuntime;
@@ -783,7 +853,7 @@ int32_t Runtime::namespaceKeyValueGet(uint32_t ns,const char* key,void* buffer,u
   memcpy(buffer,temp,size);*outSize=size;return RISC_KEY_VALUE_OK;
 }
 int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint32_t size) {
-#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
   const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return RISC_KEY_VALUE_CONTEXT;
 #endif
   Runtime* r=currentRuntime;
@@ -879,7 +949,7 @@ void Runtime::revokeProviders() {
   for (auto& storage:providerStorage_) revokeProvider(&storage);
 }
 Runtime::ProviderStorage* Runtime::providerContext(void* context) {
-#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
   const auto owner=atomicKeyValueOwner.load(std::memory_order_acquire);if(!owner || !owner())return nullptr;
 #endif
   Runtime* r=currentRuntime;
@@ -930,6 +1000,9 @@ int32_t Runtime::boundKeyValuePut(void* context,const char* key,const void* data
 }
 
 bool Runtime::release(risc_runtime_capability_v1* out) {
+#if RISC_RUNTIME_STORAGE_FILES
+  if(storageFilesCalling_)return false;
+#endif
   if (promotionRunning_ || graph_.lifecycleBusy() || !active() || !out || out->struct_size<sizeof(*out) || !out->slot || out->slot>16) return false;
   if(!appDataExitSafe()){(void)appExitBarrier();return false;}
   auto& grant=invocation_->appGrants_[out->slot-1];
@@ -942,6 +1015,12 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
 #endif
 #if RISC_RUNTIME_PREFERENCE_STORE
   if(grant.preferenceOperation)return false;
+#endif
+#if RISC_RUNTIME_STORAGE_FILES
+  if(grant.storageFilesAdapter && !grant.storageFilesAdapter->exitSafe()) {
+    if(grant.storageFilesAdapter->retained())(void)storageFilesResult(RISC_FILES_RETAINED);
+    return false;
+  }
 #endif
   RuntimeStreams::AppStreamBinding binding{grant.invocation,out->slot,grant.generation,grant.api,grant.provider};
   uint64_t providerContext=0;
@@ -974,6 +1053,9 @@ bool Runtime::release(risc_runtime_capability_v1* out) {
   return true;
 }
 bool Runtime::revokeApp() {
+#if RISC_RUNTIME_STORAGE_FILES
+  if(!storageFilesExitSafe(true)){(void)appExitBarrier();return false;}
+#endif
 #if RISC_RUNTIME_PREFERENCE_STORE
   if(!preferenceExitSafe(true)){(void)appExitBarrier();return false;}
 #endif
@@ -1467,6 +1549,9 @@ bool Runtime::appExitBarrier(bool exiting) {
 #if RISC_RUNTIME_PREFERENCE_STORE
      preferenceExitSafe(exiting) &&
 #endif
+#if RISC_RUNTIME_STORAGE_FILES
+     storageFilesExitSafe(exiting) &&
+#endif
      graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained_ && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
@@ -1696,7 +1781,7 @@ bool Runtime::takeLaunchFailure(risc_runtime_launch_failure_v1* out) {
 bool Runtime::run() {
   if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained_) return fail("runtime not launchable");
   prepared_=false; currentRuntime=this;
-#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
   atomicKeyValueOwner.store(port_.owner,std::memory_order_release);
   struct AtomicOwnerLifetime {
     ~AtomicOwnerLifetime(){atomicKeyValueOwner.store(nullptr,std::memory_order_release);}

@@ -1,0 +1,38 @@
+name: Optional generic file Runtime integration
+on:
+  push:
+    branches: [work/unified-default-capabilities]
+    paths:
+      - 'src/bootstrap/**'
+      - 'sdk/app/RiscStorageFiles*.h'
+      - 'test/*storage_files*'
+      - 'test/*optional_storage*'
+      - 'test/fixtures/storage_files_runtime_provider.c'
+      - '.github/workflows/storage-files-runtime.yml'
+  pull_request:
+    paths:
+      - 'src/bootstrap/**'
+      - 'sdk/app/RiscStorageFiles*.h'
+      - 'test/*storage_files*'
+      - 'test/*optional_storage*'
+      - 'test/fixtures/storage_files_runtime_provider.c'
+      - '.github/workflows/storage-files-runtime.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  broker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_storage_files_runtime_test.sh
+      - run: PREFERENCE_STORE=1 ATOMIC_KEY_VALUE=1 bash test/run_storage_files_runtime_test.sh
+      - run: bash test/run_optional_storage_disabled_test.sh

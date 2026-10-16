@@ -185,6 +185,22 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
     }
   }
   if(!validateAppDataExportCohort(candidate,delegations,delegationCount,exactExportMigration))return false;
+#if RISC_RUNTIME_STORAGE_FILES
+  // A preserving update cannot silently retarget an already-authorized logical
+  // file namespace. Presentation labels may change; its provider identity may not.
+  for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g){
+    const auto& before=policies_[p].grants[g];if(before.driver!=StorageFilesDriver)continue;
+    bool found=false;
+    for(size_t q=0;q<candidate.policyCount_;++q)if(!strcmp(policies_[p].id,candidate.policies_[q].id))
+      for(size_t h=0;h<candidate.policies_[q].count;++h){const auto& after=candidate.policies_[q].grants[h];
+        if(after.driver!=StorageFilesDriver || before.instance!=after.instance || before.api!=after.api)continue;
+        const auto& a=drivers_[before.platform];const auto& b=candidate.drivers_[after.platform];
+        if(a.instance!=b.instance || a.api!=b.api || strcmp(a.id,b.id) || strcmp(a.provides,b.provides))return false;
+        found=true;
+      }
+    if(!found)return false;
+  }
+#endif
   auto persistent=[](const AppGrantPolicy& g){return keyValuePolicy(g) || g.driver==AppDataDriver;};
   auto same=[](const AppGrantPolicy& a,const AppGrantPolicy& b){
 #if RISC_RUNTIME_PREFERENCE_STORE
