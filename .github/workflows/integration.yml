@@ -15,8 +15,9 @@ jobs:
   host:
     name: Host integration and version guards
     runs-on: ubuntu-24.04
-    # The integrated source/ASan/UBSan suites exceed the old fifteen-minute cap.
-    timeout-minutes: 45
+    # Measured runners reached the pressure suite after 31-38 minutes, with
+    # 23 commands (including 10 sanitizer runs) still pending. Keep all gates.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
         with:

@@ -94,7 +94,8 @@ extern "C" bool esp_elf_validate_file(const uint8_t*,size_t){std::abort();}
 extern "C" bool esp_elf_privileged_diagnostic_abi_supported_v1(uint32_t abi){return abi==0;}
 extern "C" bool esp_elf_privileged_os_cpu_scope_owned_v1(){return false;}
 extern "C" bool esp_elf_privileged_os_cpu_import_allowed_v1(const char*){return false;}
-extern "C" uintptr_t esp_elf_privileged_os_cpu_lookup_v1(const char*){return 0;}
+// No privileged relocation scope exists in this host-mapping fixture.
+extern "C" uintptr_t esp_elf_privileged_os_cpu_lookup_current(const char*){std::abort();}
 extern "C" uintptr_t esp_elf_find_symbol(const char*){return 0;}
 extern "C" int esp_elf_register_symbol(esp_elf_symbol_table_t*){return 0;}
 extern "C" int* __errno(){return &errno;}
