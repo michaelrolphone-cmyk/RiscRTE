@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "repository": "michaelrolphone-cmyk/RiscRTE",
+  "verified_main": "788c8640906a3baf90a68be33f2253bd05a0bc8c",
+  "files": [
+    {
+      "path": "docs/catalog-payload/1.0.0/BUILDER.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff0676d7044b243bb9afa5c451b42c26ef86a39b",
+      "size": 13908,
+      "url": "https://api.github.com/repos/michaelrolphone-cmyk/RiscRTE/git/blobs/ff0676d7044b243bb9afa5c451b42c26ef86a39b",
+      "sha256": "330161d4e939074ea8e9964ced03423063dd9ae430821a80cdc5e31734205fb3"
+    },
+    {
+      "path": "docs/catalog-payload/1.0.0/README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5531de8e335433cc82ec4c0a21484963684d6477",
+      "size": 16848,
+      "url": "https://api.github.com/repos/michaelrolphone-cmyk/RiscRTE/git/blobs/5531de8e335433cc82ec4c0a21484963684d6477",
+      "sha256": "1d08cd77957987f3d1d588c0530e9ec35acc37ed7d9abb57428e475a2ddea2a0"
+    },
+    {
+      "path": "docs/catalog-payload/1.0.0/validate.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "07e1f983dfe13a900fbd2a08d34324067b4958e0",
+      "size": 17744,
+      "url": "https://api.github.com/repos/michaelrolphone-cmyk/RiscRTE/git/blobs/07e1f983dfe13a900fbd2a08d34324067b4958e0",
+      "sha256": "57f5803a8d98287a9a0f5e2aa7fdb92d63d6b0775763f48f08d8a79ca1fbfac4"
+    },
+    {
+      "path": "docs/catalog-serial/1.0.0/README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fa4b296e4236745b25ed5091d09916ded5119753",
+      "size": 19864,
+      "url": "https://api.github.com/repos/michaelrolphone-cmyk/RiscRTE/git/blobs/fa4b296e4236745b25ed5091d09916ded5119753",
+      "sha256": "d1cf607d5b731228b72adcd955f757c082a1fc4de427ccb7dbd13f98909519f0"
+    }
+  ]
+}
