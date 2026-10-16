@@ -13,6 +13,10 @@
 #include "runtime/crypto/Sha256.h"
 #include <cstring>
 #include <new>
+#include <type_traits>
+#if RISC_NATIVE_ESP_IDF && CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+#include <esp_attr.h>
+#endif
 namespace RiscProvisionRequest {namespace {
 using namespace RiscProvision;
 bool(*ownerTask)()=nullptr;
@@ -77,7 +81,21 @@ const risc_provision_request_api_v1 api{1,sizeof(api),nullptr,status,queue};
 const risc_provision_request_api_v1 admissionApi{1,sizeof(admissionApi),nullptr,
  [](void*,risc_provision_request_status_v1*)->int32_t{return RISC_PROVISION_REQUEST_UNAVAILABLE;},
  [](void*,const risc_provision_request_v1*,uint8_t*)->int32_t{return RISC_PROVISION_REQUEST_UNAVAILABLE;}};
-Buffer*bootBuffer=nullptr;RequestView bootView;
+Buffer*bootBuffer=nullptr;
+static_assert(std::is_trivially_destructible<RequestView>::value,
+ "Reused provision boot metadata must not require destruction");
+// Boot-owner-only parsed metadata. The SDK initializes PSRAM before app_main;
+// construct after acquiring bootBuffer and never access after its release.
+// NVS custody/owner gates stay internal, including the quarantine fence.
+alignas(RequestView)
+#if RISC_NATIVE_ESP_IDF && CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+#if !CONFIG_SPIRAM_BOOT_INIT
+#error "External provision boot metadata requires SDK PSRAM boot initialization"
+#endif
+EXT_RAM_BSS_ATTR
+#endif
+unsigned char bootViewStorage[sizeof(RequestView)];
+RequestView& bootView(){return *std::launder(reinterpret_cast<RequestView*>(bootViewStorage));}
 Input unavailable(){return {nullptr,[](void*,const char*,void*,uint32_t,uint32_t*n){if(n)*n=0;return InputStatus::Unavailable;}};}
 }
 bool bind(RiscBoot::Runtime&r,bool(*own)()){ownerTask=own;return owner()&&r.registerPlatform(RISC_PROVISION_REQUEST_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&api);}
@@ -85,14 +103,15 @@ bool bindAdmission(RiscBoot::Runtime&r){return r.registerPlatform(RISC_PROVISION
 Input bootInput(Input original,bool&preserving){
  preserving=true;if(requestUnknown||bootBuffer)return unavailable();
  bootBuffer=new(std::nothrow) Buffer;if(!bootBuffer)return unavailable();
+ new (bootViewStorage) RequestView;
  uint32_t n=0;auto result=load(*bootBuffer,n);
  if(result==InputStatus::Missing){releaseBootInput();preserving=false;return original;}
  RequestSource source;risc_bank_status_v1 bank{};
- if(result!=InputStatus::Ready||!parseRequest(bootBuffer->bytes,n,bootView,hash)||
+ if(result!=InputStatus::Ready||!parseRequest(bootBuffer->bytes,n,bootView(),hash)||
     !RiscBankStore::provisionRequestSource(source,bank,false)||
-    (!requestConsumed(bootView,source)&&!requestSourceMatches(bootView,source)))return unavailable();
- return requestInput(bootView);
+    (!requestConsumed(bootView(),source)&&!requestSourceMatches(bootView(),source)))return unavailable();
+ return requestInput(bootView());
 }
-void releaseBootInput(){delete bootBuffer;bootBuffer=nullptr;bootView={};}
+void releaseBootInput(){if(bootBuffer)bootView()={};delete bootBuffer;bootBuffer=nullptr;}
 }
 #endif

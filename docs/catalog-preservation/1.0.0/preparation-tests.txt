@@ -1,0 +1,39 @@
+test_boundaries (__main__.FixturesTest.test_boundaries) ... ok
+test_metadata (__main__.FixturesTest.test_metadata) ... ok
+test_no_overwrite (__main__.FixturesTest.test_no_overwrite) ... ok
+test_oracles (__main__.FixturesTest.test_oracles) ... ok
+test_template (__main__.FixturesTest.test_template) ... ok
+test_ack_recovery_preserves_original (__main__.ReportTest.test_ack_recovery_preserves_original) ... ok
+test_all_identity_bindings (__main__.ReportTest.test_all_identity_bindings) ... ok
+test_artifact_identity (__main__.ReportTest.test_artifact_identity) ... ok
+test_changed_restart_setting (__main__.ReportTest.test_changed_restart_setting) ... ok
+test_changed_serial_sentinel (__main__.ReportTest.test_changed_serial_sentinel) ... ok
+test_complete_hardware (__main__.ReportTest.test_complete_hardware) ... ok
+test_complete_mixed (__main__.ReportTest.test_complete_mixed) ... ok
+test_complete_software (__main__.ReportTest.test_complete_software) ... ok
+test_conditional_exclusion (__main__.ReportTest.test_conditional_exclusion) ... ok
+test_failed_unverified_notrun_cases_and_variants (__main__.ReportTest.test_failed_unverified_notrun_cases_and_variants) ... ok
+test_file_oracles_and_status (__main__.ReportTest.test_file_oracles_and_status) ... ok
+test_final_case_cannot_be_substitute (__main__.ReportTest.test_final_case_cannot_be_substitute) ... ok
+test_final_checks_required (__main__.ReportTest.test_final_checks_required) ... ok
+test_flash_effect_shapes_and_mismatch (__main__.ReportTest.test_flash_effect_shapes_and_mismatch) ... ok
+test_flash_preserved_change (__main__.ReportTest.test_flash_preserved_change) ... ok
+test_json_parser (__main__.ReportTest.test_json_parser) ... ok
+test_missing_duplicate_cases (__main__.ReportTest.test_missing_duplicate_cases) ... ok
+test_missing_evidence (__main__.ReportTest.test_missing_evidence) ... ok
+test_missing_extra_duplicate_files (__main__.ReportTest.test_missing_extra_duplicate_files) ... ok
+test_missing_independent_settings (__main__.ReportTest.test_missing_independent_settings) ... ok
+test_missing_snapshot_or_independent_observer (__main__.ReportTest.test_missing_snapshot_or_independent_observer) ... ok
+test_missing_variant (__main__.ReportTest.test_missing_variant) ... ok
+test_nonfinite_anywhere (__main__.ReportTest.test_nonfinite_anywhere) ... ok
+test_required_exclusion_needs_harness (__main__.ReportTest.test_required_exclusion_needs_harness) ... ok
+test_required_substitute (__main__.ReportTest.test_required_substitute) ... ok
+test_software_promotion_rejected (__main__.ReportTest.test_software_promotion_rejected) ... ok
+test_template_rejected (__main__.ReportTest.test_template_rejected) ... ok
+test_totals (__main__.ReportTest.test_totals) ... ok
+test_unrelated_hardware_not_final_evidence (__main__.ReportTest.test_unrelated_hardware_not_final_evidence) ... ok
+
+----------------------------------------------------------------------
+Ran 34 tests in 0.314s
+
+OK

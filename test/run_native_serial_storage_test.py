@@ -49,7 +49,7 @@ for external in (0,1):
     exe=build/('serial-'+str(external)+'-'+str(sd));profile.run(['c++',*flags,'-DRISC_NATIVE_SERIAL_SD='+str(sd),
       '-DCONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY='+str(external),'-DCONFIG_SPIRAM_BOOT_INIT='+str(external),
       str(root/'test/native_serial_storage_test.cpp'),*objects,'-Wl,'+','.join('--wrap='+f for f in wrapped),'-o',str(exe)])
-    profile.run(['python3',str(root/'test/prove_native_serial_workspace.py'),str(exe),'--workspace','provider','--external',str(external)])
+    profile.run(['python3',str(root/'test/prove_native_serial_workspace.py'),str(exe),'--workspace','provider','--workspace','sessions','--external',str(external)])
     for case in ('unsafe-prepare','healthy','busy','capacity','first-full','first-busy','corrupt-root','directory-limit','close','sync','read','changed-size'):
         profile.run([str(exe),case])
 print('Native serial private namespace: actual pinned LittleFS, both product selections PASS; hardware unqualified')

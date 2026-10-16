@@ -142,6 +142,25 @@ external serial workspace placement and empty default-off objects. Full product
 linking and IQ-bank memory-margin proof remain separate. These are host/compile gates,
 not hardware qualification or permission to access a device.
 
+The external workspace also contains each selected serial client's ordinary
+session state, the read-only boot provider/table, and copied namespace/admission
+records. `prepare` constructs these objects once, only after its owner/safety
+checks and SDK PSRAM boot initialization. Failed preparation does not reconstruct
+or destroy them. `admission()` remains null until preparation succeeds;
+`bindSd` checks that admission before obtaining the SD client. Owner, preparation,
+and mount/resource gates remain internal. Session-local custody flags move with
+their task-owned clients/providers. These are task-owned objects,
+never ISR, DMA, atomic, or cache-disabled data. Non-native/no-external-BSS profiles
+retain ordinary BSS with the same construction and custody lifecycle.
+
+The provisioning boot view uses the same external-BSS policy, constructed after
+its boot-buffer object is acquired and reset before release. Its NVS quarantine
+and owner gates remain internal. Allocation failures preserve the unavailable
+input result, and repeated input/release calls never replace a live view.
+`prove_native_serial_workspace.py` selections `endpoint`, `provider`, `sessions`
+and `provision` check the actual production objects/final ELF, including internal
+control placement. External placement requires `CONFIG_SPIRAM_BOOT_INIT`.
+
 ### X4 evidence boundaries
 
 `TMPDIR=/tmp python3 test/run_native_serial_x4_sd_test.py --x4 /path/to/x4

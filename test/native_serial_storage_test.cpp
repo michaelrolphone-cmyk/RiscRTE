@@ -70,12 +70,15 @@ static void preserved(){
 int main(int argc,char** argv){
   assert(argc==2);std::string scenario=argv[1];
   std::memset(A::privateProviderStorage,0xa5,sizeof(A::privateProviderStorage));
+  std::memset(A::sessionStorage,0xa5,sizeof(A::sessionStorage));
   assert(!A::admission());owned=false;assert(!A::prepare(owner,safe));owned=true;
   for(auto byte:A::privateProviderStorage)assert(byte==0xa5);
+  for(auto byte:A::sessionStorage)assert(byte==0xa5);
   if(scenario=="unsafe-prepare"){
     allowed=false;assert(!A::prepare(owner,safe));allowed=true;
     assert(!A::prepare(owner,safe) && !A::admission());
     for(auto byte:A::privateProviderStorage)assert(byte==0xa5);
+  for(auto byte:A::sessionStorage)assert(byte==0xa5);
     puts("Serial provider unsafe admission remains unconstructed and one-shot PASS");return 0;
   }
   assert(native_lfs_fixture_reset()==0);

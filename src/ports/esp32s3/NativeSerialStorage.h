@@ -51,6 +51,7 @@ namespace RiscCpu { namespace NativeSerialStorage {
 bool prepare(NativeSerialFiles::Check owner,NativeSerialFiles::Check safe);
 const NativeSerialFiles::Admission* admission();
 #if RISC_NATIVE_SERIAL_SD
+// Requires successful prepare/admission; the owner constructs this session once.
 RiscBoot::RuntimeFiles& sdFiles();
 #endif
 } }

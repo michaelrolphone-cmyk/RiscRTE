@@ -66,4 +66,27 @@ from prove_native_serial_workspace import prove
 objdump = str(pathlib.Path(command[0]).with_name(pathlib.Path(command[0]).name.replace("g++", "objdump")))
 prove(out / "NativeSerialFiles-1.o", ["endpoint"], True, objdump)
 for profile in ("twatch", "waveshare", "x4"):
-    prove(out / ("NativeSerialStorage-" + profile + ".o"), ["provider"], True, objdump)
+    prove(out / ("NativeSerialStorage-" + profile + ".o"), ["provider", "sessions"], True, objdump)
+
+# The provision boot view shares the owner-only external-workspace contract.
+source = root / "src/ports/esp32s3/NativeProvisionRequest.cpp"
+cmd = [command[0], *flags, "-DRISC_NATIVE_PROVISION_REQUEST=1", "-DRISC_PAIRED_BANKS=1",
+       "-c", str(source), "-o", str(out / "NativeProvisionRequest.o")]
+commands.append(cmd)
+subprocess.run(cmd, cwd=entry["directory"], check=True)
+prove(out / "NativeProvisionRequest.o", ["provision"], True, objdump)
+(out / "commands.json").write_text(json.dumps(commands, indent=2) + "\n")
+
+# Missing PSRAM initialization must not silently select external live objects.
+invalid = out / "no-psram-init.h"
+invalid.write_text("#include <sdkconfig.h>\n#undef CONFIG_SPIRAM_BOOT_INIT\n#define CONFIG_SPIRAM_BOOT_INIT 0\n")
+for relative in ("src/ports/esp32s3/NativeSerialStorage.cpp", "src/ports/esp32s3/NativeProvisionRequest.cpp"):
+    source = root / relative
+    cmd = [command[0], *flags, *selected, "-DRISC_NATIVE_PROVISION_REQUEST=1", "-DRISC_PAIRED_BANKS=1",
+           "-include", str(invalid), "-c", str(source), "-o", str(out / (source.stem + "-invalid.o"))]
+    result = subprocess.run(cmd, cwd=entry["directory"], text=True, capture_output=True)
+    (out / (source.stem + "-invalid.log")).write_text(result.stdout + result.stderr)
+    assert result.returncode != 0 and "SDK PSRAM boot initialization" in result.stderr, result.stderr
+    commands.append(cmd)
+(out / "commands.json").write_text(json.dumps(commands, indent=2) + "\n")
+print("Owner-only session/provision workspace placement and missing PSRAM-init rejection PASS")

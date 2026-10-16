@@ -1,3 +1,10 @@
+#include <new>
+static bool failObjectAllocation=false;
+void* operator new(std::size_t n,const std::nothrow_t&)noexcept{
+ if(failObjectAllocation)return nullptr;
+ try{return ::operator new(n);}catch(...){return nullptr;}
+}
+void operator delete(void*p,const std::nothrow_t&)noexcept{::operator delete(p);}
 #include "ports/esp32s3/NativeProvisionRequest.cpp"
 #include <cassert>
 #include <map>
@@ -43,8 +50,26 @@ extern "C" void nvs_close(nvs_handle_t h){assert(h==1);++closes;}
 extern "C" esp_err_t nvs_flash_init(){assert(false);return ESP_FAIL;}
 extern "C" esp_err_t nvs_flash_erase(){assert(false);return ESP_FAIL;}
 int main(){
+ std::memset(RiscProvisionRequest::bootViewStorage,0xa5,sizeof(RiscProvisionRequest::bootViewStorage));
+ RiscProvisionRequest::releaseBootInput(); // An unopened workspace is never accessed.
+ for(auto byte:RiscProvisionRequest::bootViewStorage)assert(byte==0xa5);
  RiscProvisionRequest::ownerTask=[](){return owned;};source.storeAbi=2;source.firmwareSize=4096;source.storeSha[0]=1;source.firmwareSha[0]=2;
- Input original{reinterpret_cast<void*>(1),nullptr};bool preserving=true;auto input=RiscProvisionRequest::bootInput(original,preserving);assert(!preserving&&input.context==original.context);RiscProvisionRequest::releaseBootInput();
+ Input original{reinterpret_cast<void*>(1),nullptr};bool preserving=true;
+ const auto unopened=opens;Descriptor allocationDescriptor;
+ failObjectAllocation=true;auto input=RiscProvisionRequest::bootInput(original,preserving);
+ assert(preserving&&!RiscProvisionRequest::bootBuffer&&loadDescriptor(input,allocationDescriptor)==InputStatus::Unavailable&&opens==unopened);
+ RiscProvisionRequest::releaseBootInput();
+ for(auto byte:RiscProvisionRequest::bootViewStorage)assert(byte==0xa5);
+ failObjectAllocation=false;risc_test_psram_fail_after=0;
+ input=RiscProvisionRequest::bootInput(original,preserving);
+ assert(preserving&&RiscProvisionRequest::bootBuffer&&loadDescriptor(input,allocationDescriptor)==InputStatus::Unavailable&&opens==unopened);
+ auto*retainedBuffer=RiscProvisionRequest::bootBuffer;
+ input=RiscProvisionRequest::bootInput(original,preserving);
+ assert(preserving&&RiscProvisionRequest::bootBuffer==retainedBuffer&&loadDescriptor(input,allocationDescriptor)==InputStatus::Unavailable&&opens==unopened);
+ RiscProvisionRequest::releaseBootInput();RiscProvisionRequest::releaseBootInput();
+ assert(!RiscProvisionRequest::bootBuffer&&!RiscProvisionRequest::bootView().profile&&!RiscProvisionRequest::bootView().time);
+ risc_test_psram_fail_after=-1;
+ input=RiscProvisionRequest::bootInput(original,preserving);assert(!preserving&&input.context==original.context);RiscProvisionRequest::releaseBootInput();
  std::string p=R"({"schema":"riscrte.provisioning","schema_version":2,"wifi":{"ssid":"test","password":"test-only"},"base_url":"https://example.test/","files":[)";for(const char*k:{"boot.json","board.json","default.elf"}){if(p.back()!='[')p+=',';p+="{\"path\":\""+std::string(k)+"\",\"bytes\":1,\"sha256\":\""+std::string(64,'0')+"\"}";}p+="]}";
  std::string t=R"({"schema":"riscrte.sntp","schema_version":1,"servers":["time.example.test"]})";
  risc_provision_request_v1 request{sizeof(request),p.data(),uint32_t(p.size()),t.data(),uint32_t(t.size()),{}};memcpy(request.expected_active_store_sha256,source.storeSha,32);uint8_t digest[32];
