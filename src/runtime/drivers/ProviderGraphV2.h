@@ -43,6 +43,7 @@ struct SpecV2 {
   void* (*openImage)(void*,const char*,const void*) = nullptr;
   void* imageContext = nullptr;
   const char* imageProvider=nullptr;uint64_t imageInstance=0;
+  const char* imageCapability=nullptr; // null preserves legacy storage.volume selection
 };
 struct GrantV2 {
   uint32_t slot = 0;

@@ -19,9 +19,12 @@ struct Mapping {
     char* path;
     struct Mapping* next;
 };
-struct Image { size_t size; char path[256]; uint8_t bytes[]; };
+/* Image custody is raw bytes, matching the production reader ABI. Side
+ * metadata records host-only paths/sizes without a wrapper or payload copy. */
+struct Image { size_t size; char path[256]; const uint8_t* bytes; };
+static struct Image images[256];
 static struct Mapping* mappings;
-static size_t mapping_count, relocation_count, image_count, read_count, read_bytes;
+static size_t mapping_count, relocation_count, image_count, read_count, read_bytes, legacy_open_count;
 static unsigned fail_relocations;
 static const char* const* extra_symbols;
 static size_t extra_count;
@@ -36,6 +39,7 @@ size_t risc_test_native_relocation_count(void) { return relocation_count; }
 size_t risc_test_native_image_count(void) { return image_count; }
 size_t risc_test_native_read_count(void) { return read_count; }
 size_t risc_test_native_read_bytes(void) { return read_bytes; }
+size_t risc_test_native_legacy_open_count(void) { return legacy_open_count; }
 void risc_test_native_fail_relocations(unsigned count) { fail_relocations = count; }
 void risc_test_native_extra_symbols(const char* const* names, size_t count) {
     assert(!mapping_count && count <= 128 && (!count || names));
@@ -43,25 +47,53 @@ void risc_test_native_extra_symbols(const char* const* names, size_t count) {
     extra_count = count;
 }
 void* esp_elf_malloc(uint32_t size, bool executable) { (void)executable; return calloc(1, size); }
-void esp_elf_free(void* memory) { free(memory); }
+void risc_test_native_forget_image(const void* bytes) {
+    for (size_t i = 0; i < image_count; ++i) {
+        if (images[i].bytes != bytes) continue;
+        images[i] = images[--image_count];
+        memset(&images[image_count], 0, sizeof(images[image_count]));
+        return;
+    }
+}
+void esp_elf_free(void* memory) { risc_test_native_forget_image(memory); free(memory); }
+/* Host fixture admission only. Actual machine validation remains the host
+ * loader's job; production Xtensa structural validation is tested separately. */
+bool esp_elf_validate_file(const uint8_t* bytes, size_t size) {
+    if (!bytes || size < 52 || size > 8 * 1024 * 1024) return false;
+    return !memcmp(bytes, "\177ELF", 4) || !memcmp(bytes, "\317\372\355\376", 4);
+}
+static bool remember_image(const char* path, const uint8_t* bytes, size_t size) {
+    if (!path || !bytes || !size || strlen(path) >= sizeof(images[0].path)) return false;
+    assert(image_count < sizeof(images) / sizeof(images[0]));
+    for (size_t i = 0; i < image_count; ++i) assert(images[i].bytes != bytes);
+    struct Image* image = &images[image_count++];
+    image->size = size; image->bytes = bytes; strcpy(image->path, path);
+    ++read_count; read_bytes += size;
+    return true;
+}
+bool esp_elf_admit_managed_app(const char* path, const uint8_t* bytes, size_t size) {
+    return esp_elf_validate_file(bytes, size) && remember_image(path, bytes, size);
+}
 int esp_elf_open(elf_file_t* file, const char* path) {
+    ++legacy_open_count;
     if (!file || !path || strlen(path)>=sizeof(((struct Image*)0)->path)) return -1;
     FILE* input=fopen(path,"rb");if(!input)return -1;
     long size=-1;
     if(!fseek(input,0,SEEK_END))size=ftell(input);
     if(size<=0 || size>8*1024*1024 || fseek(input,0,SEEK_SET)){fclose(input);return -1;}
-    struct Image* image=malloc(sizeof(*image)+(size_t)size);
-    if(!image){fclose(input);errno=ENOMEM;return -1;}
-    const size_t n=fread(image->bytes,1,(size_t)size,input);++read_count;read_bytes+=n;
+    uint8_t* bytes=esp_elf_malloc((uint32_t)size,false);
+    if(!bytes){fclose(input);errno=ENOMEM;return -1;}
+    const size_t n=fread(bytes,1,(size_t)size,input);
     const bool good=n==(size_t)size && !ferror(input);
     const int closed=fclose(input);
-    if(!good || closed){free(image);return -1;}
-    image->size=(size_t)size;strcpy(image->path,path);
-    file->payload=(uint8_t*)image;file->size=size;++image_count;return 0;
+    if(!good || closed || !remember_image(path,bytes,(size_t)size)){
+        esp_elf_free(bytes);return -1;
+    }
+    file->payload=bytes;file->size=size;return 0;
 }
 void esp_elf_close(elf_file_t* file) {
-    if(file->payload){assert(image_count);--image_count;}
-    free(file->payload); file->payload = NULL; file->size = 0;
+    if (!file) return;
+    esp_elf_free(file->payload); file->payload = NULL; file->size = 0;
 }
 int esp_elf_init(esp_elf_t* elf) { memset(elf, 0, sizeof(*elf)); return 0; }
 
@@ -85,10 +117,15 @@ static void* fresh_host_mapping(const struct Image* image) {
 int esp_elf_relocate(esp_elf_t* elf, const uint8_t* bytes) {
     ++relocation_count;
     if (fail_relocations) { --fail_relocations; return -EIO; }
-    const struct Image* image=(const struct Image*)bytes;
-    const char* path = image->path;
+    size_t image_index = 0;
+    while (image_index < image_count && images[image_index].bytes != bytes) ++image_index;
+    assert(image_index < image_count); /* Original admitted buffer, never a copy. */
+    /* Cache reclamation can compact the metadata array during allocations.
+     * Keep only this small descriptor stable; raw bytes remain independently owned. */
+    const struct Image image = images[image_index];
+    const char* path = image.path;
     risc_test_native_loading(path);
-    void* host = fresh_host_mapping(image);
+    void* host = fresh_host_mapping(&image);
     if (!host) return -ENOEXEC;
     struct Mapping* mapping = calloc(1, sizeof(*mapping));
     const size_t capacity = sizeof(base_symbols)/sizeof(*base_symbols) + extra_count;

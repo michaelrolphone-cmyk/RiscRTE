@@ -9,6 +9,8 @@
 #include "AppRequirementLimits.h"
 #include "InstalledFiles.h"
 #include "RuntimeFiles.h"
+#include "RuntimeFileImage.h"
+struct elf_file;
 #include "AppDataBackend.h"
 #include "AtomicKeyValueConfig.h"
 #include "PreferenceStoreConfig.h"
@@ -277,7 +279,8 @@ class Runtime final {
   bool metadataCloseRetained() const { return metadataCloseRetained_ || (port_.files && port_.files->retained()); }
   // Terminal native read custody. The native caller must keep this Runtime
   // and its store/session alive; destruction or cleanup retry is unsupported.
-  bool nativeProviderReadRetained() const { return retainedNativeProviderRead_!=nullptr; }
+  bool nativeProviderReadRetained() const { return retainedNativeProviderRead_!=0; }
+  RuntimeFileView imageSource() const { return metadataSource(); }
   const char* error() const { return error_; }
   Board& board() { return board_; }
   const Board& board() const { return board_; }
@@ -302,13 +305,16 @@ class Runtime final {
     size_t count=0;
     bool coldBootStart=false;
     Runtime* sourceOwner=nullptr;uint64_t sourceVolume=0;int sourceDriver=-1;
-    char sourcePath[193]{};bool internalFallback=false;
+    char sourcePath[193]{};bool internalFallback=false,sourceFiles=false;
   };
   bool fail(const char* reason) { if (reason != error_) snprintf(error_,sizeof(error_),"%s",reason); return false; }
   bool manifest(JsonObjectConst, Driver&);
   bool registerNativeProvider(const Driver&, RuntimeProviders::SpecV2&, const RuntimeProviders::NativeProviderPolicyV1&);
   bool validateGraph();
   static void* openDriverImage(void*,const char*,const void*);
+  bool readRuntimeImage(const char*,RuntimeFileImage&,size_t expected=0,bool pinned=false);
+  static int readInternalImage(void*,const char*,::elf_file*);
+  void* openInternalImage(const char*,bool cached=false);
   void serviceProviders();
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   void serviceNativeSettings(bool discoveryOnly=false);
@@ -559,7 +565,7 @@ class Runtime final {
     char id[96]{}, version[64]{}, elf[256]{};
     bool enabled=true, catalogAuthority=false;
     AppCatalogMetadata catalog{};
-    char sourcePath[193]{}; PolicyIndex sourceDriver=-1;
+    char sourcePath[193]{}; PolicyIndex sourceDriver=-1;bool sourceFiles=false;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;
     const RiscStorage::AppDataExport::Entry* exports=nullptr;
     size_t exportCount=0;
@@ -675,7 +681,9 @@ class Runtime final {
   bool nativeCheckpointRunning_=false;
 #endif
   RuntimeProviders::NativeProviderPolicySnapshotV1* nativePolicies_=nullptr;
-  FILE* retainedNativeProviderRead_=nullptr; // Deliberately never closed after lost native custody.
+  uint32_t retainedNativeProviderRead_=0; // Provider token retained until restart.
+  uint8_t* retainedRemovableBytes_=nullptr;
+  void* retainedRemovableRead_=nullptr; // Provider session and buffer remain pinned after uncertainty.
   uint8_t* retainedNativeProviderBytes_=nullptr; // May remain borrowed by uncertain native I/O.
   Board board_;
   // Must outlive graph destruction, including retained-module retry/abort.

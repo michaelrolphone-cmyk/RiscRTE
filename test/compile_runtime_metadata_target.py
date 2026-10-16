@@ -9,12 +9,14 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('commands',type=pathlib.Path);p.add_argument('output',type=pathlib.Path)
 p.add_argument('--storage',choices=['0','1'],default='1')
 p.add_argument('--embedded',action='store_true')
+p.add_argument('--elf',action='store_true',help='also compile the provider graph and actual loader')
 a=p.parse_args();root=pathlib.Path(__file__).resolve().parents[1];a.output.mkdir(parents=True,exist_ok=True)
 open_db=gzip.open if a.commands.suffix=='.gz' else open
 with open_db(a.commands,'rt') as f:rows=json.load(f)
 if a.embedded:(a.output/'RiscEmbeddedStore.h').write_text((root/'test/embedded_store_stubs/RiscEmbeddedStore.h').read_text())
 units=['src/bootstrap/Json.cpp','src/bootstrap/Runtime.cpp','src/ports/esp32s3/NativeBootstrap.cpp','src/ports/esp32s3/NativeBankStore.cpp','src/main.cpp']
 if a.embedded:units+=['src/bootstrap/EmbeddedStore.cpp']
+if a.elf:units+=['src/runtime/drivers/ProviderGraphV2.cpp','src/runtime/drivers/ProviderModuleV2.cpp','lib/elf_loader/src/esp_elf.c','lib/elf_loader/src/dlso/dlfcn.c','lib/elf_loader/src/dlso/dlmod.c']
 for relative in units:
  row=next(r for r in rows if r['file'].endswith('/'+relative));original=row['file'][:-len(relative)-1]
  args=shlex.split(row['command']);command=[];skip=False

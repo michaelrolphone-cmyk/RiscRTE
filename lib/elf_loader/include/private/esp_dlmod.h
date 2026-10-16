@@ -73,6 +73,9 @@ esp_elf_t *dlmod_relocate(const char *path);
 struct dlmod_slist_t *dlmod_insert_instance(const char *path, const char *name);
 struct dlmod_slist_t *dlmod_insert_cached_instance(const char *path, const char *name,
                                                   esp_dl_image_cache **cache);
+struct dlmod_slist_t *dlmod_insert_cached_reader_instance(const char *path, const char *name,
+                                                         esp_dl_image_cache **cache,
+                                                         esp_dl_image_reader reader, void *context);
 struct dlmod_slist_t *dlmod_insert(const char *path, const char *name);
 
 /**

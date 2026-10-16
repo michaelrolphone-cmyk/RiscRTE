@@ -31,8 +31,8 @@ extern "C" int __wrap_fclose(FILE* file){
  if(fail){metadataClosePath.clear();++metadataFailedCloses;return EOF;}
  return result;
 }
-// Metadata now calls the generic provider's descriptor operations. Keep ELF
-// stdio faults independent until the loader migration increment.
+// Metadata and ELF readers use the generic provider descriptor operations.
+// Backend-owned update writes still retain their independent stdio fault seam.
 static std::map<int,std::string> metadataDescriptors;
 extern "C" int __real_open(const char*,int,...);
 extern "C" int __real_close(int);
@@ -45,9 +45,12 @@ extern "C" int __wrap_open(const char* path,int flags,...){
 extern "C" int __wrap_close(int fd){
  const auto entry=metadataDescriptors.find(fd);const bool selected=entry!=metadataDescriptors.end();
  const bool fail=selected && entry->second==metadataClosePath && (!metadataRequireCandidate || RiscBankStore::candidateCpu);
+ const bool image=selected && entry->second.size()>=4 && entry->second.compare(entry->second.size()-4,4,".elf")==0;
+ const bool admissionFail=image && failAdmissionClose && RiscBankStore::candidateCpu;
  if(selected)metadataDescriptors.erase(entry);
  const int result=__real_close(fd);
  if(fail){metadataClosePath.clear();++metadataFailedCloses;errno=EIO;return -1;}
+ if(admissionFail){failAdmissionClose=false;++failedAdmissionCloses;errno=EIO;return -1;}
  if(selected && failNextNativeClose){failNextNativeClose=false;++failedAdmissionCloses;errno=EIO;return -1;}
  return result;
 }

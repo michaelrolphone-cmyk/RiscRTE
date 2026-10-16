@@ -37,7 +37,7 @@ fi
 cc "${san[@]}" -std=c11 -I"$repo/test/native_bank_stubs" -I"$repo/lib/elf_loader/include" -c "$repo/lib/elf_loader/src/esp_elf_validate.c" -o "$build/validate.o"
 native_objects=()
 if [[ -z "${BOOT_BASELINE_REF:-}" ]];then
- extra+=(-DRISC_NATIVE_PROVIDER_ADMISSION_TEST=1 -DRISC_NATIVE_BANK_PROVIDER_TEST=1 -Wl,--wrap=fread,--wrap=fgetc)
+ extra+=(-DRISC_NATIVE_PROVIDER_ADMISSION_TEST=1 -DRISC_NATIVE_BANK_PROVIDER_TEST=1)
  for source in esp_privileged_imports esp_privileged_manifest_imports;do
   cc "${san[@]}" -std=gnu11 -Wall -Wextra -Werror -I"$repo/test/native_bank_stubs" -I"$repo/lib/elf_loader/include" -c "$repo/lib/elf_loader/src/$source.c" -o "$build/$source.o"
   native_objects+=("$build/$source.o")
@@ -105,7 +105,7 @@ fi
 "$build/test" diagnostic-candidate "$build/diagnostic-candidate"
 "$build/test" diagnostic-candidate-absent "$build/diagnostic-candidate-absent"
 if [[ -n "${BOOTLOADER_FILE:-}" ]]; then
- for mode in success odd-chunks interrupt offline-consumed corrupt length download-fail write-fail readback-fail readback-corrupt bad-board bad-elf native-mismatch bad-magic bad-name bad-capacity free-page-programmed extra-file file-mismatch mount-fail unmount-retained admission-close selection-unknown receipt-fail; do
+ for mode in success odd-chunks interrupt offline-consumed corrupt length download-fail write-fail readback-fail readback-corrupt bad-board bad-elf native-mismatch bad-magic bad-name bad-capacity free-page-programmed extra-file file-mismatch mount-fail unmount-retained admission-close extra-elf-close selection-unknown receipt-fail; do
   "$build/test" "image-$mode" "$BOOTLOADER_FILE" "$build/image-$mode"
  done
  "$build/test" boot-cost "$BOOTLOADER_FILE"

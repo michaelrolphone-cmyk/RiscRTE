@@ -166,6 +166,17 @@ void *esp_dlopen_reader_instance(const char *file,esp_dl_image_reader reader,voi
     dlerror_set(handle ? NULL : "Snapshot relocation failed");return handle;
 }
 
+void *esp_dlopen_cached_reader_instance(esp_dl_image_cache **cache, const char *file,
+                                        esp_dl_image_reader reader, void *context) {
+    char name[FILE_NAME_MAX]={0};
+    if (!reader || !file || !dlmod_getname(file,name,sizeof(name))) {
+        dlerror_set("Invalid cached reader instance"); return NULL;
+    }
+    void *handle=dlmod_insert_cached_reader_instance(file,name,cache,reader,context);
+    dlerror_set(handle ? NULL : "Cached reader relocation failed");
+    return handle;
+}
+
 void *esp_dlopen_cached_instance(esp_dl_image_cache **cache, const char *file) {
     char name[FILE_NAME_MAX]={0};
     if (!file || !dlmod_getname(file,name,sizeof(name))) {
