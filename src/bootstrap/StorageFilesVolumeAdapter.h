@@ -272,7 +272,7 @@ class StorageFilesVolumeAdapter {
   }
   int32_t handleStatus(const Handle& h) {
     uint32_t error=volume_->handle_error(context(),h.native,h.directory);
-    int32_t rc=after(true,false);return rc==RISC_FILES_OK?(error?RISC_FILES_IO:RISC_FILES_OK):rc;
+    int32_t rc=after(true,false);return rc==RISC_FILES_OK?int32_t(error?RISC_FILES_IO:RISC_FILES_OK):rc;
   }
   int32_t closeHandle(uint32_t token,bool directory) {
     Handle* h=find(token,directory);if(!h)return retained_?RISC_FILES_RETAINED:RISC_FILES_INVALID;
