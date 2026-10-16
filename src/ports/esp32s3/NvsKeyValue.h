@@ -1,6 +1,7 @@
 #pragma once
 #include "bootstrap/Runtime.h"
 #include "NativeRadioResources.h"
+#include "NvsQuarantine.h"
 #include "runtime/resources/ScopedBufferWipe.h"
 #include <nvs.h>
 #include <nvs_flash.h>
@@ -10,6 +11,7 @@ namespace RiscNvs {
 // Initialized once by Arduino's wrapped startup. Failure is latched without
 // erasing/retrying/formatting the existing NVS partition.
 esp_err_t initializationStatus();
+
 inline bool valid(uint32_t id,const char* key) {
   if (!id || id>INT32_MAX || !key || !*key) return false;
   for (unsigned i=0;i<=RISC_KEY_VALUE_KEY_MAX;++i) {

@@ -7,6 +7,7 @@
 #include "HttpResponse.h"
 #include "NativeTlsMemory.h"
 #include "diagnostics/StageLog.h"
+#include "HttpTimeSample.h"
 #include <esp_tls.h>
 #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
 // Pinned SDK layout is required for checked socket detachment: the public
@@ -36,14 +37,15 @@
 namespace RiscCpu { namespace NativeHttp {
 inline uint64_t now(){return static_cast<uint64_t>(esp_timer_get_time()/1000);}
 using Verify=int(*)(void*,mbedtls_x509_crt*,int,uint32_t*);
-enum class Phase { Connect,Send,Receive };
+enum class Phase { SampleTime,Connect,Send,Receive };
 struct Session {
-  uint64_t token,started,utc;HttpBounds::Budget budget;HttpResponse::Decoder decoder;
+  uint64_t token,started,utc,utcAt;HttpBounds::Budget budget;HttpResponse::Decoder decoder;
+  HttpTimeSample::Sample time;
   esp_tls_t* tls=nullptr;esp_tls_cfg_t config{};Verify verify=nullptr;void* verifyContext=nullptr;
   Phase phase=Phase::Connect;int32_t error=0;bool retained=false;unsigned redirects=0;
   char url[RISC_HTTP_URL_MAX+1]{},host[254]{},request[RISC_HTTP_URL_MAX+384]{};
   uint32_t requestBytes=0,sent=0,wire=0;
-  Session(uint64_t id,const risc_http_request_v1& r):token(id),started(now()),utc(r.utc_seconds),
+  Session(uint64_t id,const risc_http_request_v1& r):token(id),started(now()),utc(r.utc_seconds),utcAt(started),
     budget(started,r.timeout_ms,r.max_bytes),decoder(r.max_bytes){std::strcpy(url,r.url);}
 };
 static Session* session=nullptr;
@@ -73,7 +75,7 @@ inline int verifyCertificate(void* context,mbedtls_x509_crt* crt,int depth,uint3
   const int result=s->verify(s->verifyContext,crt,depth,flags);
   // The pinned SDK omits HAVE_TIME_DATE. Validate every presented certificate
   // explicitly; do not alter global system time or disable chain/hostname checks.
-  const uint64_t seconds=s->utc+(now()-s->started)/1000u;
+  const uint64_t seconds=s->utc+(now()-s->utcAt)/1000u;
   HttpBounds::Calendar utc{};
   if(!HttpBounds::calendar(seconds,utc))return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
   if(compare(crt->valid_from,utc)>0)*flags|=MBEDTLS_X509_BADCERT_FUTURE;
@@ -121,6 +123,7 @@ inline bool prepare(Session& s){
   s.tls=esp_tls_init();return s.tls!=nullptr;
 }
 inline bool destroy(Session& s){
+  if(!s.time.close())s.retained=true;
   if(!s.tls)return !s.retained;
   auto* tls=s.tls;
   const int fd=tls->sockfd,wrapped=tls->server_fd.fd;
@@ -142,9 +145,13 @@ inline int32_t close(void*,uint64_t token){
   if(!destroy(*session))return RISC_HTTP_RETAINED;
   lastClosed=token;session->~Session();heap_caps_free(session);session=nullptr;return RISC_HTTP_OK;
 }
-inline int32_t open(void*,const risc_http_request_v1* r,uint64_t* out){
+inline int32_t openImpl(const risc_http_request_v1* r,const char* server,uint64_t* out){
   if(out)*out=0;
-  if(!out || !owner || !owner() || !HttpBounds::request(r))return RISC_HTTP_INVALID;
+  if(!out || !owner || !owner() || !r || r->struct_size<sizeof(*r))return RISC_HTTP_INVALID;
+  risc_http_request_v1 checked=*r;
+  const bool sample=server!=nullptr;
+  if(sample){if(r->utc_seconds || !HttpTimeSample::hostname(server))return RISC_HTTP_INVALID;checked.utc_seconds=HttpBounds::FirstUtc;}
+  if(!HttpBounds::request(&checked))return RISC_HTTP_INVALID;
   if(session)return RISC_HTTP_BUSY;
   if(!networkReady || !networkReady())return RISC_HTTP_NETWORK;
   if(generation==UINT64_MAX)return RISC_HTTP_CLOSED;
@@ -156,8 +163,14 @@ inline int32_t open(void*,const risc_http_request_v1* r,uint64_t* out){
   void* memory=heap_caps_malloc(sizeof(Session),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
   if(!memory){memoryStage("session-allocation-failed");return RISC_HTTP_MEMORY;}
   session=new(memory)Session(++generation,*r);*out=session->token;
+  if(sample){session->time.begin(server,session->started);session->phase=Phase::SampleTime;return RISC_HTTP_OK;}
   if(!prepare(*session)){memoryStage("prepare-allocation-failed");const int32_t c=close(nullptr,*out);if(c==RISC_HTTP_OK)*out=0;return c==RISC_HTTP_OK?RISC_HTTP_MEMORY:c;}
   return RISC_HTTP_OK;
+}
+inline int32_t open(void*,const risc_http_request_v1* r,uint64_t* out){return openImpl(r,nullptr,out);}
+inline int32_t openWithTime(void*,const risc_http_request_v1* r,const char* server,uint64_t* out){
+  if(!server){if(out)*out=0;return RISC_HTTP_INVALID;}
+  return openImpl(r,server,out);
 }
 inline int32_t info(void*,uint64_t token,risc_http_response_v1* out){
   if(!out || out->struct_size<sizeof(*out) || !owner || !owner())return RISC_HTTP_INVALID;
@@ -200,6 +213,15 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
   if(s->error)return s->error;
   if(!s->budget.alive(now()))return s->error=RISC_HTTP_TIMEOUT;
   if(!networkReady || !networkReady())return s->error=RISC_HTTP_NETWORK;
+  if(s->phase==Phase::SampleTime){
+    const int32_t result=s->time.step(s->budget,s->utc);
+    if(result==RISC_HTTP_RETAINED){s->retained=true;return result;}
+    if(result<0)return s->error=result;
+    if(result==RISC_HTTP_AGAIN)return result;
+    s->utcAt=now();
+    if(!prepare(*s))return s->error=RISC_HTTP_MEMORY;
+    return RISC_HTTP_AGAIN;
+  }
   if(s->phase==Phase::Connect){
     // Both pinned IDF4.4 and IDF6.1 reuse select()'s output fd_sets across asynchronous calls.
     // A timeout clears them. Re-arm the SDK-owned connecting socket before
@@ -230,7 +252,7 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
   if(!s->budget.alive(now()))return s->error=RISC_HTTP_TIMEOUT;
   if(again(n))return RISC_HTTP_AGAIN;
   if(n<0)return s->error=transportError(*s,int(n));
-  if(n>capacity)return s->error=RISC_HTTP_TRANSPORT;
+  if(static_cast<uint32_t>(n)>capacity)return s->error=RISC_HTTP_TRANSPORT;
   if(s->wire>s->decoder.maximum+65536u || static_cast<uint32_t>(n)>s->decoder.maximum+65536u-s->wire)return s->error=RISC_HTTP_SIZE;
   s->wire+=n;
   if(!s->decoder.feed(bytes,n,out,capacity))return s->error=s->decoder.error;
@@ -249,5 +271,8 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
   if(n==0)return s->error=RISC_HTTP_TRANSPORT;
   return RISC_HTTP_AGAIN;
 }
-inline const risc_http_client_v1* api(){static const risc_http_client_v1 value={1,sizeof(value),nullptr,open,read,info,close};return &value;}
+inline const risc_http_client_v1* api(){
+  static const risc_http_client_time_v1 value={{1,sizeof(value),nullptr,open,read,info,close},
+    RISC_HTTP_TIME_TAG_V1,RISC_HTTP_TIME_VERSION_V1,openWithTime};return &value.base;
+}
 } }

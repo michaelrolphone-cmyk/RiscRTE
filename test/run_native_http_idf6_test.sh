@@ -16,5 +16,5 @@ include=(-I"$repo/test/native_http_idf6_shim" -I"$idf/components/esp_common/incl
  -I"$idf/components/http_parser" -I"$repo/src" -I"$repo/sdk/driver" -I"$repo/test/native_http_shim")
 "${CC:-cc}" -std=c11 "${flags[@]}" "${san[@]}" "${include[@]}" -DCONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=1 -c "$mbed/port/esp_mem.c" -o "$build/esp_mem.o"
 "${CC:-cc}" -std=c11 "${san[@]}" "${include[@]}" -c "$idf/components/http_parser/http_parser.c" -o "$build/parser.o"
-"${CXX:-c++}" -std=c++17 "${flags[@]}" "${san[@]}" "${include[@]}" -DCONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=1 "$repo/test/native_http_test.cpp" "$build/parser.o" "$build/esp_mem.o" -Wl,--wrap=close -o "$build/native"
+"${CXX:-c++}" -std=c++17 "${flags[@]}" "${san[@]}" "${include[@]}" -DCONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=1 "$repo/test/native_http_test.cpp" "$build/parser.o" "$build/esp_mem.o" -Wl,--wrap=close,--wrap=getaddrinfo,--wrap=freeaddrinfo,--wrap=socket,--wrap=fcntl,--wrap=sendto,--wrap=recvfrom -o "$build/native"
 "$build/native"

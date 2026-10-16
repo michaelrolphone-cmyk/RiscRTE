@@ -1,6 +1,7 @@
 // Exercises the production adapter and startup wrapper with IDF-shaped faults.
 // This is host contract evidence; it does not qualify flash or real hardware.
 #include "ports/esp32s3/NvsKeyValue.h"
+#include "ports/esp32s3/NvsBootstrapInput.h"
 #include <esp_partition.h>
 #include <algorithm>
 #include <array>
@@ -531,7 +532,7 @@ int main(int argc, char** argv) {
   RiscCpu::resourceAvailable=true;
   CHECK(argc == 2);
   const auto result = selectedResult(argv[1]);
-  testInitialization(result);
+  testInitialization(result);CHECK(!RiscNvs::quarantined());
   if (result == ESP_OK) {
     testValidation(); testNamespaceAndBounds(); testReads(); testReadFaults(); testWriteFaults();
     reset("private settings journal namespace");
@@ -564,6 +565,27 @@ int main(int argc, char** argv) {
     }
 #endif
     CHECK(liveIterators==0);
+    reset("global quarantine rejects all clients until ordinary boot");seed();
+    const auto values=store;RiscNvs::quarantine();
+    CHECK(RiscNvs::initializationStatus()==ESP_FAIL);
+    for(unsigned turn=0;turn<3;++turn){
+      CHECK(__wrap_nvs_flash_init()==ESP_FAIL&&initAttempts==1);
+      getResult(RISC_KEY_VALUE_IO);probe(RISC_KEY_VALUE_IO);putResult(RISC_KEY_VALUE_IO);
+      uint8_t bytes[64]{};uint32_t n=0;bool exists=false;char key[16]{};
+      CHECK(backend->journalRead(nullptr,1,bytes,sizeof bytes,&n)==RISC_KEY_VALUE_IO);
+      CHECK(backend->journalWrite(nullptr,1,bytes,sizeof bytes)==RISC_KEY_VALUE_IO);
+      CHECK(backend->legacyNamespace(nullptr,1,&exists)==RISC_KEY_VALUE_IO);
+      CHECK(b->anchorRead(nullptr,1,bytes,sizeof bytes,&n)==RISC_KEY_VALUE_IO);
+      CHECK(b->anchorWrite(nullptr,1,bytes,sizeof bytes)==RISC_KEY_VALUE_IO);
+      CHECK(b->next(nullptr,1,false,"",key,bytes,sizeof bytes,&n)==RISC_KEY_VALUE_IO);
+      CHECK(b->deltaWrite(nullptr,1,"delta",bytes,sizeof bytes)==RISC_KEY_VALUE_IO);
+      CHECK(b->deltaErase(nullptr,1,"delta")==RISC_KEY_VALUE_IO);
+      CHECK(b->legacySnapshot(nullptr,1,bytes,sizeof bytes,&n)==RISC_KEY_VALUE_IO);
+      auto input=RiscBootstrap::nvsInput();
+      CHECK(input.read(input.context,"profile",bytes,sizeof bytes,&n)==RiscProvision::InputStatus::Unavailable);
+      operations({});CHECK(store.size()==values.size());CHECK(store.at("rte00000001").at("clock").bytes==oldValue);
+    }
+    std::puts("Native NVS global quarantine: getters, probes, writes, journal, settings and bootstrap make zero NVS calls; repeated startup cannot reset or erase PASS");
     std::puts("Native NVS adapter: namespace isolation, bounds, probes, missing/type/size faults, atomic output, every-stage IO and exact readback PASS");
   }
   closed();

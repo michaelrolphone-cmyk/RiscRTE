@@ -4,7 +4,7 @@
 #include <RiscBuildIdentity.h>
 #include "ports/esp32s3/NativeRuntimeFiles.h"
 #include "ports/esp32s3/NativeSerialFiles.h"
-#include "ports/esp32s3/NativeSerialStorage.h"
+#include "ports/esp32s3/NativeSerialStorageBinding.h"
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include <esp_sleep.h>
@@ -78,6 +78,7 @@ extern "C" void risc_perf_loader_event(uint32_t phase,uint32_t value) {
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 #include "ports/esp32s3/NativeRuntime.h"
 #include "ports/esp32s3/NativeBootstrap.h"
+#include "ports/esp32s3/NativeProvisionRequest.h"
 #include "ports/esp32s3/NativeSntp.h"
 #include "ports/esp32s3/NvsBootstrapInput.h"
 #include "ports/esp32s3/OwnerMaintenance.h"
@@ -158,6 +159,9 @@ bool bindPlatforms(RiscBoot::Runtime& runtime){
   ))return false;
 #if RISC_NATIVE_PACKAGE_VOLUME
   if(!RiscPackageVolume::bind(runtime,isOwner))return false;
+#endif
+#if RISC_NATIVE_PROVISION_REQUEST
+  if(!RiscProvisionRequest::bind(runtime,isOwner))return false;
 #endif
   return RiscDiagnostics::bindNativeSource(runtime);
 }
@@ -379,6 +383,11 @@ void setup() {
     diagnosticLine("RTE_BOOT error=native-settings-backend");return;
   }
 #endif
+  // Queued handoffs wait for an ordinary boot. A deep-sleep resume must
+  // preserve retained RTC time and leave every pending request untouched.
+#if RISC_NATIVE_PROVISION_REQUEST
+  if(RiscCpu::NativeRetainedWake::coldBoot()) {
+#endif
   // Read-only owner input, before any app/driver binding. No configured fresh
   // time source means offline installed boot, never a stale timestamp bypass.
   RiscPerf::emit(57);
@@ -387,14 +396,25 @@ void setup() {
   stageUs=RiscDiagnostics::monotonicUs();
 #endif
   RISC_STAGE_LOG("boot provisioning begin");
+  bool preservingRequest=false;
+  auto provisionInput=RiscBootstrap::nvsInput();
+#if RISC_NATIVE_PROVISION_REQUEST
+  provisionInput=RiscProvisionRequest::bootInput(provisionInput,preservingRequest);
+#endif
   RiscBootstrap::Port provisionPort{cpu.bootstrapHardware(),RiscNvs::backend(),providerStorageSafe,
-    RiscBootstrap::nvsInput(),RiscBootstrap::configuredFreshTime(RiscBootstrap::nvsInput(),cpu.bootstrapHardware().now)
+    provisionInput,RiscBootstrap::configuredFreshTime(provisionInput,cpu.bootstrapHardware().now)
 #ifdef RISC_PAIRED_APP_DATA
     ,RiscAppData::backend()
+#else
+    ,nullptr
 #endif
   };
   provisionPort.files=RiscCpu::NativeRuntimeFiles::sources();
+  provisionPort.preserving=preservingRequest;
   const auto provision=RiscBootstrap::run(provisionPort,"/bootfs");
+#if RISC_NATIVE_PROVISION_REQUEST
+  RiscProvisionRequest::releaseBootInput();
+#endif
   RiscPerf::finish(57,58,provisionStart,uint32_t(provision.outcome));
   RISC_STAGE_LOG("boot provisioning end action=%s reason=%s elapsed_us=%llu",
                  provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",
@@ -402,6 +422,9 @@ void setup() {
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
   diagnosticFormat("RTE_PROVISION action=%s reason=%s",provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",RiscBootstrap::reasonName(provision.reason));
   if(provision.outcome==RiscBootstrap::Outcome::Stopped)return;
+#if RISC_NATIVE_PROVISION_REQUEST
+  }
+#endif
 #endif
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
   if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime(nativePort({isOwner,health,cooperate,diagnostic,bindPlatforms,
@@ -480,7 +503,7 @@ void setup() {
     diagnosticLine("RTE_BOOT error=serial-storage-admission");return;
   }
 #if RISC_NATIVE_SERIAL_SD
-  if(!runtime.bindNativeFiles("sdmmc-fatfs",12,RiscCpu::NativeSerialStorage::sdFiles(),isOwner,providerStorageSafe,true)){
+  if(!RiscCpu::NativeSerialStorage::bindSd(runtime,isOwner,providerStorageSafe)){
     diagnosticLine("RTE_BOOT error=serial-sd-admission");return;
   }
 #endif

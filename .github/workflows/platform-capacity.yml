@@ -1,0 +1,29 @@
+name: Explicit native platform capacity
+on:
+  pull_request:
+    paths:
+      - 'src/bootstrap/PlatformCapacity.h'
+      - 'src/bootstrap/Runtime.h'
+      - 'src/bootstrap/Runtime.cpp'
+      - 'test/*runtime_platform_capacity*'
+      - '.github/workflows/platform-capacity.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capacity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - run: RECEIPT="$RUNNER_TEMP/platform-normal.json" python3 test/run_runtime_platform_capacity_test.py
+      - run: RECEIPT="$RUNNER_TEMP/platform-sanitized.json" SANITIZE=1 ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 UBSAN_OPTIONS=halt_on_error=1 python3 test/run_runtime_platform_capacity_test.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: platform-capacity-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/platform-*.json
+          if-no-files-found: error

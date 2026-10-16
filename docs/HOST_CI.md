@@ -84,6 +84,10 @@ paired same-machine comparison. Compare uncached, cold and warm runs separately;
 do not present a warm-cache measurement as a cold first-run guarantee. CI job
 summaries and timing artifacts make subsequent comparisons observable.
 
+## Cumulative provisioning extension
+
+The original 184-command prefix and its regression digest remain unchanged. T023 adds six new normal/ASan-UBSan pairs: request queue, compaction, native request bridge (both SDK signatures), preserving policy, ordinary-boot gate and NVS radio quarantine. The 196-command suite runs each command once across the existing four shards; no extra duplicate workflow is added. Runtime/HTTP/removable/provisioning tests already in the baseline exercise their expanded cases in place.
+
 ## Measured first CI result
 
 On the unchanged Runtime source tree, the old 184-command step in run

@@ -1,5 +1,10 @@
 # RiscRTE
 
+An explicit, default-off [preserving provisioning source integration](docs/PROVISIONING_CURRENT_MAIN.md)
+adds bounded next-boot requests and session-private first-fetch time to the
+current native SDK6 Runtime while retaining serial and generic-file storage.
+This checkpoint is not a product release or hardware qualification.
+
 An explicitly selected [individual-file serial endpoint](docs/SERIAL_FILES.md)
 provides bounded transfer through product-admitted generic file namespaces.
 It is default-off; create and explicit in-place replacement preserve sibling

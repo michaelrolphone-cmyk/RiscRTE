@@ -7,6 +7,7 @@
 #include "Board.h"
 #include "AppPolicyLimits.h"
 #include "AppRequirementLimits.h"
+#include "PlatformCapacity.h"
 #include "InstalledFiles.h"
 #include "RuntimeFiles.h"
 #include "RuntimeFileImage.h"
@@ -298,7 +299,7 @@ class Runtime final {
   bool failureEvidenceToken(uint64_t,bool healthy) const;
   void failureBreadcrumb(uint32_t phase,const char* application=nullptr);
   struct Invocation;
-  static constexpr size_t MaxDrivers=RuntimeProviders::GraphV2::kMaxModules, MaxPlatforms=32;
+  static constexpr size_t MaxDrivers=RuntimeProviders::GraphV2::kMaxModules, MaxPlatforms=RISC_PLATFORM_CAPACITY;
   using PolicyIndex=int8_t;
   static_assert(PolicyIndex(-1)<0 && MaxDrivers-1<=INT8_MAX && MaxPlatforms-1<=INT8_MAX,
                 "Policy index must retain -1 and every driver/platform index");
@@ -311,6 +312,7 @@ class Runtime final {
     RuntimeProviders::RequirementV2 requirements[RuntimeProviders::GraphV2::kMaxRequirements]{};
     char names[RuntimeProviders::GraphV2::kMaxRequirements][96]{};
     size_t count=0;
+    bool explicitBinding[RuntimeProviders::GraphV2::kMaxRequirements]{};
     bool coldBootStart=false;
     Runtime* sourceOwner=nullptr;uint64_t sourceVolume=0;int sourceDriver=-1;
     char sourcePath[193]{};bool internalFallback=false,sourceFiles=false;
@@ -572,7 +574,7 @@ class Runtime final {
   uint8_t appCatalogState_[MaxAppPolicies]{};
   struct AppPolicy {
     char id[96]{}, version[64]{}, elf[256]{};
-    bool enabled=true, catalogAuthority=false;
+    bool enabled=true, catalogAuthority=false, internalFallback=false;
     AppCatalogMetadata catalog{};
     char sourcePath[193]{}; PolicyIndex sourceDriver=-1;bool sourceFiles=false;
     AppGrantPolicy grants[MaxAppPolicyGrants]{}; size_t count=0;

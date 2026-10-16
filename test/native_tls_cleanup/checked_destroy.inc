@@ -1,4 +1,5 @@
 inline bool checkedDestroy(Session& s){
+  if(!s.time.close())s.retained=true;
   if(!s.tls)return !s.retained;
   auto* tls=s.tls;
   const int fd=tls->sockfd,wrapped=tls->server_fd.fd;

@@ -11,18 +11,19 @@ namespace {
 // shrink/free as well as the explicit output, without ever logging credentials.
 class ClearingAllocator final:public ArduinoJson::Allocator {
  struct alignas(std::max_align_t) Header {size_t size;};
+ size_t used_=0;
  public:
  void* allocate(size_t size) override {
-   if(size>SIZE_MAX-sizeof(Header))return nullptr;
+   if(size>ProfileJsonBytes-sizeof(Header) || size+sizeof(Header)>ProfileJsonBytes-used_)return nullptr;
    auto* h=static_cast<Header*>(malloc(sizeof(Header)+size));if(!h)return nullptr;
-   h->size=size;return h+1;
+   h->size=size;used_+=sizeof(Header)+size;return h+1;
  }
  void deallocate(void* p) override {
    if(!p)return;
    auto* h=static_cast<Header*>(p)-1;
    volatile unsigned char* bytes=static_cast<volatile unsigned char*>(p);
    for(size_t i=0;i<h->size;++i)bytes[i]=0;
-   free(h);
+   used_-=sizeof(Header)+h->size;free(h);
  }
  void* reallocate(void* p,size_t size) override {
    if(!p)return allocate(size);
@@ -43,11 +44,11 @@ bool source(const char* s){
 }
 bool decode(const char* bytes,size_t size,Profile& out){
   ClearingAllocator allocator;JsonDocument doc(&allocator);
-  if(!RiscBoot::parse(bytes,size,doc))return false;
+  if(!bytes || !size || size>ProfileInputBytes || !RiscBoot::parse(bytes,size,doc,MaxFiles))return false;
   auto root=doc.as<JsonObjectConst>();int64_t n=0;
   if(!RiscBoot::eq(root["schema"],"riscrte.provisioning") ||
-     !RiscBoot::integer(root["schema_version"],1,3,n))return false;
-  const bool compact=n==2,image=n==3;char base[385]{};
+     !RiscBoot::integer(root["schema_version"],1,4,n))return false;
+  const bool compact=n==2,image=n>=3,tuples=n==4;char base[385]{};
   if(image){
     if(!RiscBoot::keys(root,{"schema","schema_version","wifi","image","files"}))return false;
     auto object=root["image"].as<JsonObjectConst>();char digest[65];
@@ -79,11 +80,13 @@ bool decode(const char* bytes,size_t size,Profile& out){
   if(files.isNull() || files.size()<3 || files.size()>MaxFiles)return false;
   uint32_t total=0;bool boot=false,board=false,app=false;
   for(auto value:files){
-    auto object=value.as<JsonObjectConst>();auto& file=out.files[out.count];char joined[200],digest[65];
-    if(!((compact||image)?RiscBoot::keys(object,{"path","bytes","sha256"}):RiscBoot::keys(object,{"path","url","bytes","sha256"})) ||
-       !RiscBoot::text(object["path"],file.path,sizeof(file.path)) || !RiscBoot::path("",file.path,joined,sizeof(joined)) ||
-       !RiscBoot::integer(object["bytes"],1,MaxFileBytes,n) ||
-       !RiscBoot::text(object["sha256"],digest,sizeof(digest)) || strlen(digest)!=64)return false;
+    auto object=value.as<JsonObjectConst>();auto tuple=value.as<JsonArrayConst>();
+    auto& file=out.files[out.count];char joined[200],digest[65];
+    if(tuples ? (tuple.isNull() || tuple.size()!=3) :
+       !((compact||image)?RiscBoot::keys(object,{"path","bytes","sha256"}):RiscBoot::keys(object,{"path","url","bytes","sha256"})))return false;
+    if(!RiscBoot::text(tuples?tuple[0]:object["path"],file.path,sizeof(file.path)) || !RiscBoot::path("",file.path,joined,sizeof(joined)) ||
+       !RiscBoot::integer(tuples?tuple[1]:object["bytes"],1,MaxFileBytes,n) ||
+       !RiscBoot::text(tuples?tuple[2]:object["sha256"],digest,sizeof(digest)) || strlen(digest)!=64)return false;
     if(compact){
       const size_t baseLength=strlen(base),pathLength=strlen(file.path);
       if(baseLength+pathLength>=sizeof(file.url))return false;

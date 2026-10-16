@@ -25,8 +25,10 @@ static std::string compactHex(const std::vector<uint8_t>& bytes){
  uint8_t digest[32];SHA256(bytes.data(),bytes.size(),digest);std::string result;
  for(uint8_t c:digest){result+="0123456789abcdef"[c>>4];result+="0123456789abcdef"[c&15];}return result;
 }
-static void compactNative(const std::string& mode,const char* bootloader,const char* directory){
+static void compactNative(const std::string& requested,const char* bootloader,const char* directory){
  using namespace RiscBankStore;namespace fs=std::filesystem;
+ const bool tuples=requested.find("image-tuples-")==0;
+ const std::string mode=tuples?"image-"+requested.substr(13):requested;
  const auto boot=validatedBootloader(bootloader);
  memcpy(flash.data(),boot.data(),boot.size());otaState=ESP_OTA_IMG_VALID;firmware(0,RISC_BUILD_VERSION);
  std::fill(flash.begin()+0x9000,flash.begin()+0xf000,0x6b);
@@ -45,6 +47,7 @@ static void compactNative(const std::string& mode,const char* bootloader,const c
   {"board.json",text(R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})")},
   {"default.elf",elf("memcpy")}};
  if(mode=="image-extra-elf-close")files["extra.elf"]=elf("memcpy");
+ if(tuples)for(size_t i=3;i<RiscProvision::MaxFiles;++i)files["fixture"+std::to_string(i)+".json"]=text("{}");
  if(mode=="image-bad-board")files["board.json"]=text("{}");
  if(mode=="image-bad-elf")reinterpret_cast<elf32_hdr_t*>(files["default.elf"].data())->machine=3;
  if(mode=="image-native-mismatch"){
@@ -62,14 +65,17 @@ static void compactNative(const std::string& mode,const char* bootloader,const c
  if(mode=="image-free-page-programmed")image[image.size()-1]=0;
  for(auto& item:files){std::ofstream out(fs::path(modelStageRoot)/item.first,std::ios::binary);out.write(reinterpret_cast<const char*>(item.second.data()),item.second.size());}
  if(mode=="image-extra-file"){std::ofstream out(fs::path(modelStageRoot)/"unexpected.json");out<<"{}";}
- if(mode=="image-file-mismatch"){std::ofstream out(fs::path(modelStageRoot)/"default.elf");out<<"corrupt";}
+ if(mode=="image-file-mismatch"){std::ofstream out(fs::path(modelStageRoot)/(tuples?files.rbegin()->first:"default.elf"));out<<"corrupt";}
  bootNet.mode=mode=="image-corrupt"?"bootstrap-corrupt":mode=="image-length"?"bootstrap-length-mismatch":mode=="image-download-fail"?"bootstrap-download-fail":mode;
  bootNet.files["image.bin"]=image;
  bootNet.profile=R"({"schema":"riscrte.provisioning","schema_version":3,"wifi":{"ssid":"test-network","password":"test-only-password"},"image":{"url":"https://example.test/image.bin","bytes":)"+
   std::to_string(image.size())+",\"sha256\":\""+compactHex(image)+"\"},\"files\":[";
  bool first=true;for(auto& item:files){if(!first)bootNet.profile+=',';first=false;
-  bootNet.profile+="{\"path\":\""+item.first+"\",\"bytes\":"+std::to_string(item.second.size())+",\"sha256\":\""+compactHex(item.second)+"\"}";
+  if(tuples)bootNet.profile+="[\""+item.first+"\","+std::to_string(item.second.size())+",\""+compactHex(item.second)+"\"]";
+  else bootNet.profile+="{\"path\":\""+item.first+"\",\"bytes\":"+std::to_string(item.second.size())+",\"sha256\":\""+compactHex(item.second)+"\"}";
  }bootNet.profile+="]}";
+ if(tuples)bootNet.profile.replace(bootNet.profile.find("\"schema_version\":3"),18,"\"schema_version\":4");
+ assert(bootNet.profile.size()<=RiscProvision::ProfileInputBytes);
  bootNet.descriptor=R"({"schema":"riscrte.bootstrap","schema_version":1,"profile_key":"profile"})";
  auto hardware=admissionHardware();hardware.sleep=[](uint32_t n){vTaskDelay(n);};
  hardware.radioJoin=[](const char* ssid,const char* password){assert(!strcmp(ssid,"test-network")&&!strcmp(password,"test-only-password"));++bootNet.joins;bootNet.radio=true;return true;};
@@ -127,5 +133,5 @@ static void compactNative(const std::string& mode,const char* bootloader,const c
   assert(mode=="image-extra-elf-close"?metadataFailedCloses==1:failedAdmissionCloses==1);
   assert(provisionAbort(provisionToken)==RISC_BANK_RETAINED && !selectorCalls && !restarts);
  }
- std::cout<<"Compact image native download, readback, admission and selection: "<<mode<<" PASS\n";
+ std::cout<<"Compact image native download, readback, admission and selection: "<<requested<<" PASS\n";
 }

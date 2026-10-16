@@ -182,5 +182,17 @@
   "SANITIZE=1 bash test/run_retained_app_test.sh",
   "bash test/run_watch_test.sh",
   "SANITIZE=1 bash test/run_provider_graph_v2_test.sh",
-  "python -m unittest discover -s test -p 'test_*.py' -v"
+  "python -m unittest discover -s test -p 'test_*.py' -v",
+  "bash test/run_request_queue_test.sh",
+  "SANITIZE=1 bash test/run_request_queue_test.sh",
+  "bash test/run_request_queue_compaction_test.sh",
+  "SANITIZE=1 bash test/run_request_queue_compaction_test.sh",
+  "bash test/run_native_provision_request_test.sh",
+  "SANITIZE=1 bash test/run_native_provision_request_test.sh",
+  "bash test/run_preserving_policy_test.sh",
+  "SANITIZE=1 bash test/run_preserving_policy_test.sh",
+  "python3 test/run_native_provision_boot_gate_test.py",
+  "SANITIZE=1 python3 test/run_native_provision_boot_gate_test.py",
+  "bash test/run_nvs_quarantine_radio_test.sh",
+  "SANITIZE=1 bash test/run_nvs_quarantine_radio_test.sh"
 ]

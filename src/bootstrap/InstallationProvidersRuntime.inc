@@ -47,7 +47,8 @@ int32_t Runtime::installationProviderTransaction(void*context,const risc_install
  r->installation_[0].call=true;
  JsonDocument permissions;if(deserializeJson(permissions,r->installation_[0].providerGrants))return RISC_INSTALL_INVALID;
  for(uint32_t n=0;n<count;++n){
-  if(media&&(media[n]>1||(media[n]==1&&!r->installation_[0].internalEnabled)))return RISC_INSTALL_DENIED;
+  const uint32_t selected=media?media[n]:0;
+  if(selected>1||!(r->installation_[0].api.media_mask&(1u<<selected)))return RISC_INSTALL_DENIED;
   const auto&record=input[n];
   if(!record.manifest_json||strnlen(record.manifest_json,4097)>4096||!record.image_path||
      strnlen(record.image_path,193)>192||record.instance>INT32_MAX)return RISC_INSTALL_INVALID;

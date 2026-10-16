@@ -86,13 +86,14 @@ int main(int argc,char** argv){assert(argc==2);fs::path base=argv[1];Host h(base
   const auto compact=[&](){std::string result;serializeJson(doc,result);return result;};
   auto text=compact();assert(parseProfile(text.data(),text.size(),*p));
   assert(!strcmp(p->files[0].url,"https://example.test/board.json"));
-  for(size_t i=3;i<MaxFiles;++i){auto item=doc["files"].as<JsonArray>().add<JsonObject>();
+  constexpr size_t legacyCount=128;
+  for(size_t i=3;i<legacyCount;++i){auto item=doc["files"].as<JsonArray>().add<JsonObject>();
    item["path"]="app"+std::to_string(i)+".json";item["bytes"]=1;item["sha256"]=std::string(64,'0');
    if(i==58){text=compact();assert(text.size()<16384 && parseProfile(text.data(),text.size(),*p) && p->count==59);}}
-  text=compact();assert(parseProfile(text.data(),text.size(),*p) && p->count==MaxFiles);
+  text=compact();assert(parseProfile(text.data(),text.size(),*p) && p->count==legacyCount);
   auto extra=doc["files"].as<JsonArray>().add<JsonObject>();extra["path"]="excess.json";extra["bytes"]=1;extra["sha256"]=std::string(64,'0');
-  text=compact();assert(!parseProfile(text.data(),text.size(),*p));
-  doc["files"].as<JsonArray>().remove(MaxFiles);
+  text=compact();assert(parseProfile(text.data(),text.size(),*p) && p->count==legacyCount+1);
+  doc["files"].as<JsonArray>().remove(legacyCount);
   for(const char* bad:{"https://example.test", "https://example.test/a/../", "http://example.test/", "https://user@example.test/", "https://example.test/?token=x/", "https://example.test/%2e/"}){
    doc["base_url"]=bad;text=compact();assert(!parseProfile(text.data(),text.size(),*p));assert(!p->count&&!p->password[0]);}
   doc["base_url"]="https://example.test/";doc["files"][0]["url"]="https://other.test/board.json";text=compact();assert(!parseProfile(text.data(),text.size(),*p));

@@ -28,7 +28,8 @@ static void mbedtls_net_free(mbedtls_net_context *ctx){
 }
 #define _esp_tls_conn_delete esp_mbedtls_conn_delete
 #include "sdk_cleanup.inc"
-struct Session{esp_tls_t*tls;bool retained=false;};
+struct PrivateTime { bool live=false,fail=false;unsigned closes=0;bool close(){if(!live)return !fail;live=false;++closes;return !fail;} };
+struct Session{esp_tls_t*tls;bool retained=false;PrivateTime time;};
 #include "checked_destroy.inc"
 #undef close
 #undef shutdown
@@ -36,7 +37,7 @@ struct Session{esp_tls_t*tls;bool retained=false;};
 static Session fixture(int fd,int wrapped,bool tls=true){
  failClose=false;closeCalls=shutdownCalls=frees=cleanups=0;lastFd=-1;
  auto*p=static_cast<esp_tls_t*>(std::malloc(sizeof(esp_tls_t)));assert(p);
- *p={fd,{wrapped},tls,0};return {p,false};
+ *p={fd,{wrapped},tls,0};return {p,false,{}};
 }
 int main(){
  unsigned cases=0;
@@ -54,6 +55,13 @@ int main(){
  }
  for(auto pair:{std::pair<int,int>{7,8},{-1,7},{-2,-1},{7,-2}}){
   auto s=fixture(pair.first,pair.second);assert(!checkedDestroy(s)&&s.retained&&closeCalls==0&&frees==1&&shutdownCalls==0);++cases;
+ }
+ for(bool hasTls:{false,true})for(bool failure:{false,true}){
+  auto s=fixture(7,7);if(!hasTls){std::free(s.tls);s.tls=nullptr;}
+  s.time.live=true;s.time.fail=failure;
+  assert(checkedDestroy(s)==!failure&&s.time.closes==1&&s.retained==failure);
+  assert(checkedDestroy(s)==!failure&&s.time.closes==1);
+  assert(closeCalls==(hasTls?1:0));++cases;
  }
  printf("%u checked-close SDK ownership, failure, no-retry, and no-double-close cases passed.\n",cases);
 }

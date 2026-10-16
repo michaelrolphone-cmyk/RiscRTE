@@ -6,6 +6,8 @@ import subprocess
 WORKSPACES = {
     'endpoint': ('NativeSerialFiles', 'workspaceStorageE'),
     'provider': ('NativeSerialStorage', 'privateProviderStorageE'),
+    'sessions': ('NativeSerialStorage', 'sessionStorageE'),
+    'provision': ('RiscProvisionRequest', 'bootViewStorageE'),
 }
 
 
@@ -20,16 +22,17 @@ def prove(elf, selected, external, objdump='objdump'):
         matches = [s for s in symbols if namespace in s[0] and s[0].endswith(suffix)]
         assert len(matches) == 1, (selection, matches)
         name, section, address, size = matches[0]
-        assert size >= (2500 if selection == 'endpoint' else 700), (name, size)
-        assert address % 8 == 0, (name, address)
+        assert size >= {'endpoint': 2500, 'provider': 700, 'sessions': 180, 'provision': 288}[selection], (name, size)
+        assert address % (4 if selection == 'provision' else 8) == 0, (name, address)
         assert section.startswith('.ext_ram.bss') == external, (name, section, external)
         if not external:
             assert section.startswith('.bss'), (name, section)
-        controls = [s for s in symbols if namespace in s[0] and s[0] != name]
+        controls = [s for s in symbols if namespace in s[0] and not any(
+            ns in s[0] and s[0].endswith(suffix) for ns, suffix in WORKSPACES.values())]
         assert controls, selection
         for control in controls:
             assert not control[1].startswith('.ext_ram'), control
-        print(f'Serial {selection}: {size} raw bytes in {section}; control objects remain internal PASS')
+        print(f'Serial {selection}: {size} raw bytes at {address:#x} in {section}; control objects remain internal PASS')
 
 
 if __name__ == '__main__':

@@ -42,7 +42,7 @@ for cache in 0 1;do
       -include "$stubs/alloc_redirect.h" -c "$repo/src/$src.cpp" -o "$out/$(basename "$src").o"
   done
   c++ -std=c++17 "${common[@]}" -rdynamic -include "$repo/test/support/native_registry/redirect.h" \
-    "$repo/test/image_cache_pressure_test.cpp" "$out"/*.o -ldl -o "$out/test"
+    "$repo/test/image_cache_pressure_test.cpp" "$out"/*.o -ldl -lcrypto -o "$out/test"
   for mode in ${PRESSURE_SCENARIOS:-provider-mapping provider-start provider-retained malloc calloc realloc caps failed-retry foreign app-retained cache-hit ledger-init ledger-final custody-app custody-provider custody-app-retained custody-provider-retained};do
     "$out/test" "$build" "$mode"
   done

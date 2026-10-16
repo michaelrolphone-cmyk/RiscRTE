@@ -9,7 +9,7 @@ alternative for other products.
 | Explicit flag | Permanent namespace | Session and authority |
 | --- | --- | --- |
 | `RISC_NATIVE_SERIAL_APPDATA_FILES=1` | 2, `Serial files`, writable | Separate `RuntimeFiles` + `ReopenedFiles`, exclusively `/appdata/.serial-files` |
-| `RISC_NATIVE_SERIAL_SD=1` | 12, `SD card`, writable | Separate Runtime-owned graph grant to exactly `sdmmc-fatfs`, instance 12 |
+| `RISC_NATIVE_SERIAL_SD=1` | 12, `SD card`, writable | Separate Runtime-owned graph grant to the exact product-selected provider and instance; default `sdmmc-fatfs`, instance 12 |
 | `RISC_NATIVE_SERIAL_BOOT_FILES=1` | 1, `Active boot store`, read-only | Separate `NativeSpiffsFiles` + `RuntimeFiles` on the existing `/bootfs` mount; embedded builds use the POSIX counterpart |
 
 All require `RISC_NATIVE_SERIAL_FILES=1`. The private mutable selection also
@@ -78,16 +78,35 @@ RISC_NATIVE_SERIAL_FILES=1
 RISC_NATIVE_SERIAL_APPDATA_FILES=1
 ```
 
-For Waveshare only, also add `RISC_NATIVE_SERIAL_SD=1`. Its existing exact
-`sdmmc-fatfs` instance 12 is separately acquired by Runtime and explicitly
-given an explicit cold-media preparation policy before application entry;
-already-ready media is never remounted, and unavailable media is refreshed once.
-It is not borrowed
-from the Home application. Failed optional activation/card absence stays
-unavailable without a fallback. Missing or ambiguous configured provider identity
-is an admission error. T-Watch does not select SD merely because some other
-product does. Either product may separately opt into the read-only boot export
-with `RISC_NATIVE_SERIAL_BOOT_FILES=1`.
+For Waveshare, also add `RISC_NATIVE_SERIAL_SD=1`. With neither provider
+selector overridden, this preserves its existing exact `sdmmc-fatfs`, instance
+12 binding. For the explicit X4 candidate, select all three destinations and
+supply both provider selectors in its product-owned definitions:
+
+```cmake
+RISC_NATIVE_SERIAL_FILES=1
+RISC_NATIVE_SERIAL_BOOT_FILES=1
+RISC_NATIVE_SERIAL_APPDATA_FILES=1
+RISC_NATIVE_SERIAL_SD=1
+"RISC_NATIVE_SERIAL_SD_PROVIDER=\"x4pro-sd\""
+RISC_NATIVE_SERIAL_SD_INSTANCE=9
+```
+
+Wire namespace 12 remains independent of either native instance: X4 advertises
+12 while binding instance 9. No board, mount, label or app-grant inference is
+used. An incomplete selector pair, invalid provider string or out-of-range /
+noninteger instance fails compilation. A complete override has no legacy
+fallback. The shared actual startup binding requires the exact, uniquely
+admitted `storage.volume@1` provider after complete Runtime graph preparation.
+Missing, wrong or ambiguous configuration is an admission error.
+
+Runtime separately acquires that native session and applies explicit cold-media
+preparation before application entry. Already-ready media is never remounted,
+and unavailable media is refreshed once. No Home application grant is borrowed.
+Clean optional activation/card absence stays unavailable without a fallback;
+uncertain custody remains terminally retained. T-Watch does not select SD merely
+because another product does. Other profiles may separately opt into the
+read-only boot export with `RISC_NATIVE_SERIAL_BOOT_FILES=1`.
 
 The shared ordinary Home loop must call the explicitly admitted settled Runtime
 checkpoint after callbacks return; its previous ordinary yield alone is not a
@@ -112,6 +131,74 @@ the exact whole-flash digest while a separate metadata session is active.
 `WAVESHARE_SOURCE=/path/to/exact/published/checkout python3
 test/run_native_serial_waveshare_sd_test.py` qualifies the pinned async SD
 provider and FatFs against a RAM card through the actual native graph session.
-The target compile probe checks default-off, wire-only, T-Watch and Waveshare
-compositions using the pinned Xtensa/IDF toolchain. These are host/compile gates,
+`python3 test/run_native_serial_product_storage_test.py` exercises the shared
+production startup binding with default `legacyWave12` and explicit `X4SD9`,
+including stable `NS` wire ID 12, exact provider/instance/API selection,
+unadmitted and ambiguous graph rejection, absent media, transfers and terminal
+custody. Its synthetic provider does not qualify the real X4 driver.
+The target compile probe checks default-off, wire-only, T-Watch, Waveshare and
+explicit X4 compositions using the pinned Xtensa/IDF toolchain. It preserves
+external serial workspace placement and empty default-off objects. Full product
+linking and IQ-bank memory-margin proof remain separate. These are host/compile gates,
 not hardware qualification or permission to access a device.
+
+The external workspace also contains each selected serial client's ordinary
+session state, the read-only boot provider/table, and copied namespace/admission
+records. `prepare` constructs these objects once, only after its owner/safety
+checks and SDK PSRAM boot initialization. Failed preparation does not reconstruct
+or destroy them. `admission()` remains null until preparation succeeds;
+`bindSd` checks that admission before obtaining the SD client. Owner, preparation,
+and mount/resource gates remain internal. Session-local custody flags move with
+their task-owned clients/providers. These are task-owned objects,
+never ISR, DMA, atomic, or cache-disabled data. Non-native/no-external-BSS profiles
+retain ordinary BSS with the same construction and custody lifecycle.
+
+The provisioning boot view uses the same external-BSS policy, constructed after
+its boot-buffer object is acquired and reset before release. Its NVS quarantine
+and owner gates remain internal. Allocation failures preserve the unavailable
+input result, and repeated input/release calls never replace a live view.
+`prove_native_serial_workspace.py` selections `endpoint`, `provider`, `sessions`
+and `provision` check the actual production objects/final ELF, including internal
+control placement. External placement requires `CONFIG_SPIRAM_BOOT_INIT`.
+
+### X4 evidence boundaries
+
+`TMPDIR=/tmp python3 test/run_native_serial_x4_sd_test.py --x4 /path/to/x4
+--storage /path/to/drivers --receipt /tmp/x4-source-receipt.json` is a bounded,
+optional real-source behavior fixture. It verifies the `RiscRTE-XTEINK-X4-PRO` inputs against
+`a9009a5d774ae7060b9f298fdcbc81be6c22cc17` and `RiscRTE-Drivers/lib/StorageFatFs` against
+`c66da311c1348b81666d9abeb28e6b151267d4ce`; the latter is an independently
+available source reference, not the .123 Drivers input revision. Every external
+source is verified against its Git object before use and rechecked afterward.
+The receipt records sources, staged manifests/board, compiler commands and cases.
+`SANITIZE=1 ASAN_OPTIONS=detect_leaks=0` adds ASan/UBSan; intentional terminal
+retention cases exit with the graph still pinned.
+
+The fixture compiles the actual X4 async driver and shared FatFs. Its full
+storage and diagnostic/service descriptor suffixes are preserved; only lifecycle
+counters and typed platform dependencies are supplied by the harness. Exact
+native SD9 and the power dependency come from the pinned X4 board. Modeled RAM
+media exercises stable wire namespace 12, no application storage grants,
+create/replace/empty/readback and sibling preservation, duplicate replies,
+owner-only checkpoint dispatch, disconnect, absent media, a cold negative
+control and failed close/write/release/preparation custody. The native GPIO
+transport and asynchronous worker submission callbacks abort if called: this
+qualifies the synchronous native file path at owner checkpoints, not worker-task
+execution or physical SD.
+
+Keep the evidence levels separate:
+
+- The synthetic product test qualifies startup selection and rejection rules.
+- The .123 product admission fixture uses the exact retained `sd/driver.elf`
+  and manifest with `Runtime::prepare`, cohort validation and the selected native
+  graph binding. Metadata-only binding leaves `sdFiles().bound()` false until
+  activation; it does not execute retained Xtensa instructions.
+- The real-source fixture qualifies the behavior described above. Its async
+  source manifest is 0.2.24, following the pinned source build script. There is
+  no historical build receipt proving that this composition reproduces the
+  preserved released `x4pro-sd` 0.2.23 ELF (SHA-256
+  `10880847a604dc7d6b1ea5555fe7e60a47b6859d26d6ed9299c78b293e9bfd46`).
+  This provenance gap is recorded without replacing the released bytes or
+  introducing an additional historical-reproducibility acceptance requirement.
+- Exact product firmware linking/memory margin and subsequent hardware behavior
+  require their own receipts. Host source behavior is not physical qualification.
