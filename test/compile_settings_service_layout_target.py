@@ -9,10 +9,11 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('commands', type=pathlib.Path)
 p.add_argument('before', type=pathlib.Path)
 p.add_argument('output', type=pathlib.Path)
+p.add_argument('--after', type=pathlib.Path, help='exact alternative settings source tree')
 a = p.parse_args()
 a.output = a.output.resolve()
 a.output.mkdir(parents=True, exist_ok=True)
-root = pathlib.Path(__file__).resolve().parents[1]
+root = a.after.resolve() if a.after else pathlib.Path(__file__).resolve().parents[1]
 with (gzip.open if a.commands.suffix == '.gz' else open)(a.commands, 'rt') as f:
     rows = json.load(f)
 row = next(r for r in rows if r['file'].endswith('/src/bootstrap/Runtime.cpp'))

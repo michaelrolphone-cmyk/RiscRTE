@@ -57,3 +57,27 @@ jobs:
         with:
           name: settings-target-layout
           path: ${{ runner.temp }}/settings-layout
+  released-settings-controller:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+      SYSTEM_SOURCE_COMMIT: 755cc5174a6deaee120d108cbffe67ae809e1e6f
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-System-Apps
+          ref: 755cc5174a6deaee120d108cbffe67ae809e1e6f
+          path: .system-source
+      - name: Actual seven-preference save, fresh recovery and retention
+        run: SYSTEM_ROOT="$PWD/.system-source" EVIDENCE_DIR="$RUNNER_TEMP/settings-controller" bash test/run_runtime_native_settings_preferences_test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: settings-controller-${{ matrix.sanitize }}
+          path: ${{ runner.temp }}/settings-controller
