@@ -1,0 +1,93 @@
+name: Optional native serial files
+on:
+  push:
+    branches: [work/serial-file-transfer]
+  pull_request:
+    paths:
+      - 'src/runtime/serial/**'
+      - 'src/runtime/storage/**'
+      - 'src/bootstrap/**'
+      - 'src/ports/esp32s3/NativeSerialFiles.*'
+      - 'src/ports/esp32s3/NativePlatform.*'
+      - 'src/ports/esp32s3/SleepDiagnostics.*'
+      - 'src/ports/esp32s3/CpuPort.*'
+      - 'src/main.cpp'
+      - 'sdk/app/RiscStorageFiles*.h'
+      - 'scripts/serial_files.py'
+      - 'test/*serial_files*'
+      - 'test/*resident_shell*'
+      - 'test/fixtures/resident_app.c'
+      - 'test/native_platform_shim/**'
+      - 'test/native_sleep_diagnostics_idf6*'
+      - 'test/run_native_sleep_diagnostics_idf6_test.sh'
+      - 'test/native_sleep_diagnostics_idf6_shim/**'
+      - 'idf/**'
+      - '.github/workflows/serial-files.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protocol-and-lifecycle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bounded protocol and generic namespace custody
+        run: bash test/run_serial_files_test.sh
+      - name: Python client through the real C++ protocol endpoint
+        run: bash test/run_serial_files_client_test.sh
+      - name: Settled resident callbacks, teardown and retained custody
+        run: SERIAL_FILES=1 bash test/run_resident_shell_test.sh
+  native-transport:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the exact SDK source
+        shell: bash
+        run: test "$(git -C "$IDF_PATH" rev-parse HEAD)" = fff9895c82d744c7237be8847347bdd1b07c6643
+      - name: Actual Console, diagnostics, native admission and CPU barriers
+        shell: bash
+        run: bash test/run_native_serial_files_transport_test.sh
+      - name: Feature-off actual IDF6 diagnostic and USB recovery regression
+        shell: bash
+        run: bash test/run_native_sleep_diagnostics_idf6_test.sh
+  native-compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Configure only the generic native Runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/serial-native" -D "RISC_SOURCE_SHA=$GITHUB_SHA" reconfigure
+      - name: Compile exact feature-on and feature-off sources serially
+        shell: bash
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          python test/compile_native_serial_files_target.py "$RUNNER_TEMP/serial-native/compile_commands.json" "$RUNNER_TEMP/serial-native-objects"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: serial-files-native-compile
+          path: ${{ runner.temp }}/serial-native-objects

@@ -20,7 +20,7 @@ void hex(const uint8_t*in,size_t n,char*out){static const char digits[]="0123456
 uint32_t crc32(uint32_t crc,const uint8_t*p,size_t n){while(n--){crc^=*p++;for(unsigned i=0;i<8;++i)crc=(crc>>1)^((crc&1)?0xedb88320u:0);}return crc;}
 }
 bool Files::bind(const Namespace*map,size_t count,Hooks hooks){
- if(bound_ || !hooks.owner || !hooks.safe || !hooks.millis || !hooks.owner() || !hooks.safe() || count>NamespaceMax || (count&&!map))return false;
+ if(bound_ || !hooks.owner || !hooks.safe || !hooks.millis || !hooks.owner() || count>NamespaceMax || (count&&!map))return false;
  for(size_t i=0;i<count;++i){const auto&n=map[i];if(!n.id||!n.files||!n.label||!*n.label||strnlen(n.label,64)>=64)return false;
   for(size_t j=0;j<i;++j)if(map[j].id==n.id)return false;
  }
@@ -39,9 +39,10 @@ void Files::input(uint8_t value){
  }
  if(discard_)return;
  if(value<32 || value>126 || requestLength_+1>=Line){discard_=true;requestLength_=0;return;}
- request_[requestLength_++]=char(value);request_[requestLength_]=0;touched_=hooks_.millis();
+ request_[requestLength_++]=char(value);request_[requestLength_]=0;
+ if(!handle_ || (requestLength_>=6 && !strncmp(request_,"RTEF1 ",6)))touched_=hooks_.millis();
 }
-void Files::consumeOutput(size_t n){if(n>outputSize())n=outputSize();sent_+=n;}
+void Files::consumeOutput(size_t n){if(n>outputSize())n=outputSize();sent_+=n;if(n)touched_=hooks_.millis();}
 void Files::disconnect(){cancel_=true;requestReady_=false;requestLength_=0;discard_=false;responseLength_=sent_=0;}
 void Files::clearTransfer(){selected_=nullptr;handle_=0;size_=offset_=0;crc_=0xffffffffu;writing_=failed_=false;}
 void Files::resetSession(){session_=sequence_=0;pathLength_=0;path_[0]=0;previous_[0]=cached_[0]=0;}
@@ -53,7 +54,7 @@ int32_t Files::close(){
  clearTransfer();return 0;
 }
 void Files::reply(int32_t rc,const char*format,...){
- int n=snprintf(response_,Line,"RTEF1 %08x %u %d",replySession_,replySequence_,int(rc));
+ int n=snprintf(response_,Line,"RTEF1 %08x %u %d",unsigned(replySession_),unsigned(replySequence_),int(rc));
  if(n<0||size_t(n)>=Line-2){retained_=true;return;}
  size_t used=size_t(n);
  if(format){response_[used++]=' ';va_list args;va_start(args,format);n=vsnprintf(response_+used,Line-used,format,args);va_end(args);
@@ -63,9 +64,12 @@ void Files::reply(int32_t rc,const char*format,...){
 void Files::checkpoint(){
  if(!bound_ || calling_ || !hooks_.owner())return;
  checkRetention();
- if(!hooks_.safe())return;
+ const bool cancelling=cancel_ || (pending() && uint32_t(hooks_.millis()-touched_)>=TimeoutMs);
+ // Discarding protocol RAM needs no provider readiness. A live token still
+ // requires its exact safety gate before cleanup; terminal custody never calls.
+ if(!retained_ && !(cancelling && !handle_) && !hooks_.safe())return;
  calling_=true;
- if(cancel_ || ((handle_ || requestLength_) && uint32_t(hooks_.millis()-touched_)>=TimeoutMs)){
+ if(cancelling){
   (void)close();resetSession();cancel_=false;requestReady_=false;requestLength_=0;responseLength_=sent_=0;
  }else if(requestReady_ && !outputSize()){
   command();requestReady_=false;requestLength_=0;
@@ -112,7 +116,7 @@ void Files::command(){
   }else if(!strcmp(cmd,"COMMIT") && count==5 && writing_ && !failed_ && offset_==size_ && strlen(words[4])==8 && number(words[4],a,16)){
    if(uint32_t(a)!=(crc_^0xffffffffu)){failed_=true;reply(-11,"CRC");}
    else{int32_t rc=selected_->files->sync(handle_);checkRetention();if(!rc)rc=close();else failed_=true;reply(retained_?RISC_FILES_RETAINED:rc,"COMMIT");}
-  }else if(!strcmp(cmd,"CLOSE") && count==4 && !writing_ && !failed_ && offset_==size_){uint32_t crc=crc_^0xffffffffu;int32_t rc=close();reply(rc,"CLOSE %08x",crc);}
+  }else if(!strcmp(cmd,"CLOSE") && count==4 && !writing_ && !failed_ && offset_==size_){uint32_t crc=crc_^0xffffffffu;int32_t rc=close();reply(rc,"CLOSE %08x",unsigned(crc));}
   else reply(RISC_FILES_INVALID);
  }else if(!strcmp(cmd,"PATH") && count==6 && number(words[4],a) && unhex(words[5],bytes,n) && !memchr(bytes,0,n) && (a==0||a==pathLength_) && a+n<sizeof(path_)){
   memcpy(path_+a,bytes,n);pathLength_=size_t(a)+n;path_[pathLength_]=0;reply(0,"PATH %u",unsigned(pathLength_));
@@ -120,7 +124,7 @@ void Files::command(){
   const auto*ns=find(a);if(!ns)reply(RISC_FILES_NOT_FOUND);
   else if(!strcmp(cmd,"GET") && count==5){
    selected_=ns;int32_t rc=ns->files->open(path_,RISC_FILES_READ,&handle_);checkRetention();
-   if(!rc){rc=ns->files->info(handle_,&size_,&offset_);checkRetention();if(rc){failed_=true;}else writing_=false;}
+   if(!rc){rc=ns->files->info(handle_,&size_,&offset_);checkRetention();if(!rc && offset_)rc=RISC_FILES_IO;if(rc){failed_=true;}else writing_=false;}
    if(!handle_)clearTransfer();
    reply(retained_?RISC_FILES_RETAINED:rc,"GET %llu",(unsigned long long)size_);
   }else if(!strcmp(cmd,"PUT") && count==7 && (!strcmp(words[5],"create") || !strcmp(words[5],"replace")) && number(words[6],b)){

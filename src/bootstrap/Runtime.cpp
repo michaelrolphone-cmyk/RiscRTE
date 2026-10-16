@@ -611,7 +611,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     original->active_ && original->entryRunning_ && !retained_ && port_.owner();};
   auto catalogRetain=[&](){retained_=true;fail("app catalog admission retained");(void)appExitBarrier(false);return false;};
   out->slot=out->generation=0;out->api=nullptr;
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   if(nativeCheckpointRunning_)return false;
 #endif
   if(!appDataExitSafe()){(void)appExitBarrier(false);return false;}
@@ -1533,8 +1533,10 @@ void Runtime::serviceNativeSettings(bool discoveryOnly) {
 }
 #endif
 void Runtime::serviceProviders() {
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   if(nativeCheckpointRunning_)return;
+#endif
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
   serviceNativeSettings();
 #endif
   if(port_.providerServicesReady && !port_.providerServicesReady())return;
@@ -1546,7 +1548,7 @@ void Runtime::serviceProviders() {
   graph_.service(RISC_DRIVER_SERVICE_MAX_MS);
 }
 void Runtime::yield(uint32_t ms) {
-#if RISC_NATIVE_SETTINGS_LIFECYCLE
+#if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   // No app/provider polling while a native checkpoint owns its resources.
   if(nativeCheckpointRunning_){if(port_.owner()&&port_.retainedDelay)port_.retainedDelay(ms<1?1:ms>50?50:ms);return;}
 #endif
@@ -1753,6 +1755,17 @@ bool Runtime::runOne(const char* name) {
     initialDefaultInvocation_=invocation_==&mainInvocation_ && invocation_->defaultRunning_ && !firstDefaultStarted_;
     if(initialDefaultInvocation_)firstDefaultStarted_=true;
     entry();
+#if RISC_NATIVE_SERIAL_FILES
+    // End the native serial session before any application or provider image
+    // can be revoked. Failed close pins all custody through real restart.
+    if(!retained_ && port_.serialFilesShutdown) {
+      nativeCheckpointRunning_=true;const bool serialSafe=port_.serialFilesShutdown();nativeCheckpointRunning_=false;
+      if(!serialSafe) {
+        retained_=true;fail("serial file shutdown retained; restart required");
+        (void)appExitBarrier(false);return false;
+      }
+    }
+#endif
     if(port_.failureEvidence && !appExitBarrier())return false;
     RISC_STAGE_LOG("app entry returned file=%s",name);
     RiscPerf::emit(17);
@@ -1954,6 +1967,12 @@ bool Runtime::run() {
   if(!retained_ && port_.nativeSettingsShutdown){
     nativeCheckpointRunning_=true;const bool safe=port_.nativeSettingsShutdown();nativeCheckpointRunning_=false;
     if(!safe){retained_=true;ok=fail("native settings shutdown retained; restart required");}
+  }
+#endif
+#if RISC_NATIVE_SERIAL_FILES
+  if(!retained_ && port_.serialFilesShutdown) {
+    nativeCheckpointRunning_=true;const bool serialSafe=port_.serialFilesShutdown();nativeCheckpointRunning_=false;
+    if(!serialSafe){retained_=true;ok=fail("serial file shutdown retained; restart required");}
   }
 #endif
   if(!retained_ && !fileSourceCleanup())ok=false;

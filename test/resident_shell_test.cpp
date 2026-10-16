@@ -72,14 +72,26 @@ std::string loadingPath;
 #endif
 bool owner(){return owned;}
 bool health(risc_runtime_health_v1*){return true;}
-void delay(uint32_t){}
+static unsigned delays=0;
+void delay(uint32_t){++delays;}
 bool log(const char*){return true;}
 bool safe(){return exitSafe;}
+#if RISC_NATIVE_SERIAL_FILES
+unsigned serialChecks=0,serialShutdowns=0;
+bool serialCheckpoint(){
+ assert(!runningRuntime->active() && !risc_runtime_get_api(1));
+ const unsigned before=delays;api->yield_ms(1);assert(delays==before);
+ risc_runtime_capability_v1 grant{sizeof(grant)};assert(!api->acquire("storage.key-value",1,0,&grant));
+ ++serialChecks;return mode!="serial-checkpoint-retained";
+}
+bool serialShutdown(){assert(!runningRuntime->active());++serialShutdowns;return mode!="serial-shutdown-retained";}
+#endif
+
 int32_t get(void*,uint32_t ns,const char*,void* out,uint32_t cap,uint32_t* size){assert(cap>=4);memcpy(out,&ns,4);*size=4;return RISC_KEY_VALUE_OK;}
 int32_t put(void*,uint32_t,const char*,const void*,uint32_t){return RISC_KEY_VALUE_OK;}
 KeyValueBackend kv{nullptr,get,put};
 bool prior(risc_resident_failure_v1* out){out->kind=RISC_RESIDENT_FAILURE_PRIOR_RESET;out->native_reason=77;return true;}
-bool terminal(){return mode=="child-retained" || mode=="callback-retained" || mode=="fini-retained" || mode=="native-retained" || mode=="invalid-callback" || mode=="provider-retained" || mode=="stream-retained" || mode=="memory-lock-retained" || mode=="switch-lock-retained" || mode=="failure-callback-retained" || mode=="prelaunch-retained" || mode=="register-retained" || mode=="release-retained" || mode=="loading-retained" || mode=="loading-invalid" || mode=="loading-native-retained" || mode=="loading-provider-retained";}
+bool terminal(){return mode=="serial-checkpoint-retained" || mode=="serial-shutdown-retained" || mode=="child-retained" || mode=="callback-retained" || mode=="fini-retained" || mode=="native-retained" || mode=="invalid-callback" || mode=="provider-retained" || mode=="stream-retained" || mode=="memory-lock-retained" || mode=="switch-lock-retained" || mode=="failure-callback-retained" || mode=="prelaunch-retained" || mode=="register-retained" || mode=="release-retained" || mode=="loading-retained" || mode=="loading-invalid" || mode=="loading-native-retained" || mode=="loading-provider-retained";}
 void save(const char* path,JsonDocument& doc){std::string bytes;serializeJson(doc,bytes);std::ofstream(root+"/"+path)<<bytes;}
 void setup(){
  std::ofstream(root+"/board.json")<<R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})";
@@ -331,7 +343,7 @@ extern "C" void test_resident_main(unsigned role,unsigned* visits){
    risc_resident_request_v1 request{sizeof(request),RISC_RESIDENT_CHECKPOINT_CONTROLS,0,0};risc_resident_reply_v1 reply{sizeof(reply),0};
    owned=false;assert(client.checkpoint(client.invocation,&request,&reply)==RISC_RESIDENT_DENIED);owned=true;
    const int32_t rc=client.checkpoint(client.invocation,&request,&reply);
-   if(terminal() && mode!="fini-retained" && mode!="provider-retained" && mode!="stream-retained" && mode!="memory-lock-retained" && mode!="release-retained"){assert(rc==RISC_RESIDENT_RETAINED);return;}
+   if(terminal() && mode!="fini-retained" && mode!="provider-retained" && mode!="stream-retained" && mode!="memory-lock-retained" && mode!="release-retained" && mode!="serial-shutdown-retained"){assert(rc==RISC_RESIDENT_RETAINED);return;}
    assert(rc==(mode=="busy"?RISC_RESIDENT_BUSY:mode=="exit"?RISC_RESIDENT_EXIT:RISC_RESIDENT_OK));
    assert(model==73 && *visits==1 && read(childKv)==11+role);denied(hostKv);
 #ifdef RISC_NATIVE_APP_MEMORY_TEST
@@ -363,13 +375,20 @@ extern "C" void test_resident_main(unsigned role,unsigned* visits){
 int main(int argc,char**argv){
  assert(argc==3);root=argv[1];mode=argv[2];setup();
  wakeStore.boot(RISC_BOOT_POWER_ON);
- static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new Runtime({owner,health,delay,log,nullptr,&kv,safe,nullptr,nullptr,nullptr,&wakeStore,nullptr,nullptr,prior});assert(runtimeFiles0.bind(*runtime));runningRuntime=runtime;
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});Port runtimePort{owner,health,delay,log,nullptr,&kv,safe,nullptr,nullptr,nullptr,&wakeStore,nullptr,nullptr,prior};
+#if RISC_NATIVE_SERIAL_FILES
+ runtimePort.serialFilesCheckpoint=serialCheckpoint;runtimePort.serialFilesShutdown=serialShutdown;
+#endif
+ auto* runtime=new Runtime(runtimePort);assert(runtimeFiles0.bind(*runtime));runningRuntime=runtime;
  const bool malformed=mode.rfind("policy-",0)==0;
  assert(runtime->prepare(root.c_str())!=malformed);if(malformed){delete runtime;puts("Resident policy refusal PASS");return 0;}
  if(mode=="load-failure" || mode=="failure-callback-retained")std::remove((root+"/child.elf").c_str());
  assert(runtime->run()!=terminal());assert(runtime->retained()==terminal());assert(starts[0]==1 && entries[0]==1);
  assert(finis[0]==(terminal()?0u:1u));
  if(mode=="normal")assert(starts[1]==3 && finis[1]==3 && dispatches==12);
+#if RISC_NATIVE_SERIAL_FILES
+ if(mode=="normal")assert(serialChecks==dispatches && serialShutdowns==5);
+#endif
  if(mode=="file-open")assert(starts[1]==2 && starts[2]==1 && finis[1]==2 && finis[2]==1);
  if(mode=="child-retained" || mode=="callback-retained" || mode=="native-retained" || mode=="invalid-callback")assert(finis[1]==0);
  if(mode=="provider-retained" || mode=="release-retained" || mode=="loading-provider-retained")assert(quiesces==1);

@@ -3,6 +3,7 @@
 #include <esp_heap_caps.h>
 #include <RiscBuildIdentity.h>
 #include "ports/esp32s3/NativeRuntimeFiles.h"
+#include "ports/esp32s3/NativeSerialFiles.h"
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include <esp_sleep.h>
@@ -99,6 +100,16 @@ extern "C" const char* risc_native_startup_error(void) __attribute__((weak));
 namespace {
 TaskHandle_t owner=nullptr;
 bool isOwner() { return xTaskGetCurrentTaskHandle()==owner; }
+#if RISC_NATIVE_SERIAL_FILES
+bool serialRuntimeSafe=false;
+#endif
+RiscBoot::Port nativePort(RiscBoot::Port port){
+#if RISC_NATIVE_SERIAL_FILES
+  port.serialFilesCheckpoint=RiscCpu::NativeSerialFiles::checkpoint;
+  port.serialFilesShutdown=RiscCpu::NativeSerialFiles::shutdown;
+#endif
+  return port;
+}
 
 bool monotonicMillis(uint32_t* out) { *out=RiscPlatform::millis();return true; }
 bool health(risc_runtime_health_v1* out) {
@@ -149,7 +160,7 @@ bool bindPlatforms(RiscBoot::Runtime& runtime){
 #endif
   return RiscDiagnostics::bindNativeSource(runtime);
 }
-bool appExitSafe(){return RiscCpu::NativeRuntimeFiles::exitSafe() &&
+bool appExitSafe(){return RiscCpu::NativeSerialFiles::custodySafe() && RiscCpu::NativeRuntimeFiles::exitSafe() &&
 #if RISC_NATIVE_PACKAGE_VOLUME
  RiscPackageVolume::exitSafe() &&
 #endif
@@ -166,7 +177,7 @@ bool appExitSafe(){return RiscCpu::NativeRuntimeFiles::exitSafe() &&
   && RiscBankStore::exitSafe()
 #endif
   ;}
-bool providerStorageSafe(){return RiscCpu::NativeRuntimeFiles::custodySafe() &&
+bool providerStorageSafe(){return RiscCpu::NativeSerialFiles::custodySafe() && RiscCpu::NativeRuntimeFiles::custodySafe() &&
 #if RISC_NATIVE_PACKAGE_VOLUME
  RiscPackageVolume::exitSafe() &&
 #endif
@@ -183,7 +194,7 @@ bool providerStorageSafe(){return RiscCpu::NativeRuntimeFiles::custodySafe() &&
  && RiscAppData::custodySafe()
 #endif
  ;}
-bool restartSafe(){return RiscCpu::NativeRuntimeFiles::exitSafe() && cpu.restartResourcesSafe()
+bool restartSafe(){return RiscCpu::NativeSerialFiles::exitSafe() && RiscCpu::NativeRuntimeFiles::exitSafe() && cpu.restartResourcesSafe()
 #if RISC_NATIVE_FILE_SOURCE
  && RiscFileSource::resetSafe()
 #endif
@@ -220,23 +231,23 @@ bool priorFailure(risc_resident_failure_v1* out){
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
 RiscBoot::Runtime* retainedRuntime=nullptr;
 #elif defined(RISC_EMBEDDED_BOOTSTORE)
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
+RiscBoot::Runtime runtime(nativePort({isOwner,health,cooperate,diagnostic,bindPlatforms,nullptr,appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
 ,nativeOwnerCheckpoint,nativeDiscoveryCheckpoint,nativeSettingsShutdown
 #endif
 #if RISC_NATIVE_FILE_SOURCE
 ,RiscFileSource::backend()
 #endif
-});
+}));
 #else
-RiscBoot::Runtime runtime({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
+RiscBoot::Runtime runtime(nativePort({isOwner,health,cooperate,diagnostic,bindPlatforms,RiscNvs::backend(),appExitSafe,providerStorageSafe,confirmBoot,nullptr,RiscCpu::NativeRetainedWake::backend(),schedulerDelay,RiscCpu::NativeRetainedWake::coldBoot,priorFailure,RuntimeProviders::selectedNativeProviderPoliciesV1(),RiscCpu::NativeFailureEvidence::backend(),RISC_DIAGNOSTIC_CHECKPOINT_BACKEND,RiscCpu::nativeRadioResourceReady,RiscCpu::nativeRadioResourceTry,RiscCpu::nativeRadioResourceEnd,monotonicMillis,RiscCpu::memoryHeap,RiscCpu::randomBytes,RiscCpu::NativeCrownRecovery::beginInvocation,RiscCpu::NativeCrownRecovery::endInvocation,RiscCpu::NativeCrownRecovery::exitRequested
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
 ,nativeOwnerCheckpoint,nativeDiscoveryCheckpoint,nativeSettingsShutdown
 #endif
 #if RISC_NATIVE_FILE_SOURCE
 ,RiscFileSource::backend()
 #endif
-});
+}));
 #endif
 }
 void setup() {
@@ -392,7 +403,7 @@ void setup() {
   if(provision.outcome==RiscBootstrap::Outcome::Stopped)return;
 #endif
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
-  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,
+  if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime(nativePort({isOwner,health,cooperate,diagnostic,bindPlatforms,
 #ifdef RISC_EMBEDDED_BOOTSTORE
     nullptr
 #else
@@ -411,7 +422,7 @@ void setup() {
 #if RISC_NATIVE_FILE_SOURCE
     ,RiscFileSource::backend()
 #endif
-  });
+  }));
   if(!retainedRuntime){
     RISC_STAGE_LOG("boot failed reason=runtime-metadata-psram");
 #ifdef RISC_PAIRED_BANKS
@@ -458,6 +469,14 @@ void setup() {
     diagnosticLine("RTE_BOOT error=native-settings-hydration");return;
   }
 #endif
+#if RISC_NATIVE_SERIAL_FILES
+  // Selection names exact permanent namespace sessions. It never infers a
+  // mount, opens a provider, or grants application access to the endpoint.
+  const auto* serial=risc_native_serial_files_admission?risc_native_serial_files_admission():nullptr;
+  if(!RiscCpu::NativeSerialFiles::prepare(serial,isOwner,providerStorageSafe)){
+    diagnosticLine("RTE_BOOT error=serial-file-admission");return;
+  }
+#endif
   RiscPerf::emit(59);
   RISC_STAGE_LOG("boot metadata-ready elapsed_us=%llu",(unsigned long long)(RiscDiagnostics::monotonicUs()-bootUs));
   diagnosticLine("RTE_BOOT board=validated drivers=admitted");
@@ -466,6 +485,11 @@ void setup() {
   // disconnects across reset, so the first RTE_SOURCE is often lost.
   diagnosticLine(RISC_BUILD_IDENTITY);
   const bool ran=runtime.run();
+#if RISC_NATIVE_SERIAL_FILES
+  // A retained Runtime keeps all native dispatch fenced even if individual
+  // hardware readiness predicates still report idle.
+  serialRuntimeSafe=!runtime.retained() && !runtime.metadataCloseRetained();
+#endif
   RISC_STAGE_LOG("boot app-session returned result=%s reason=%s",ran?"ok":"failed",ran?"app-returned":runtime.error());
   if(!ran) diagnosticFormat("RTE_BOOT error=runtime detail=%s",runtime.error());
   else diagnosticLine("RTE_BOOT state=idle reason=app-returned");
@@ -475,7 +499,13 @@ void setup() {
   if(!runtime.retained() && !runtime.metadataCloseRetained() && appExitSafe())RiscBankStore::rejectBoot();
 #endif
 }
-void loop() { cooperate(50); }
+void loop() {
+#if RISC_NATIVE_SERIAL_FILES
+  // setup/run has returned: no application or provider callback is on-stack.
+  if(serialRuntimeSafe)RiscCpu::NativeSerialFiles::checkpoint();
+#endif
+  cooperate(50);
+}
 
 #if RISC_NATIVE_ESP_IDF
 // IDF has initialized the RTOS/PSRAM before this owner task. Product-specific
