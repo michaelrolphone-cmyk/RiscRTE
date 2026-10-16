@@ -1,0 +1,98 @@
+#include "NativeSerialStorage.h"
+#if RISC_NATIVE_SERIAL_STORAGE_SELECTED
+#if RISC_NATIVE_SERIAL_BOOT_FILES
+#include "NativeSpiffsFiles.h"
+#endif
+#if RISC_NATIVE_SERIAL_APPDATA_FILES
+#include "NativeAppDataMount.h"
+#include "NativeRadioResources.h"
+#include "runtime/storage/ReopenedFiles.h"
+#endif
+namespace RiscCpu { namespace NativeSerialStorage { namespace {
+NativeSerialFiles::Check ownerCheck=nullptr,safeCheck=nullptr;
+bool selected=false,prepared=false;
+bool owner(){return ownerCheck&&ownerCheck();}
+bool safe(){return owner()&&safeCheck&&safeCheck();}
+#if RISC_NATIVE_SERIAL_BOOT_FILES
+#ifdef RISC_EMBEDDED_BOOTSTORE
+RiscStorage::PosixFiles bootProvider{"/bootfs",RiscStorage::PosixFiles::OpenBehavior::Posix,false};
+#else
+NativeSpiffsFiles bootProvider{"/bootfs"};
+#endif
+RiscBoot::RuntimeFiles bootClient;
+risc_storage_files_v1 bootTable{};
+#endif
+#if RISC_NATIVE_SERIAL_APPDATA_FILES
+bool resource=false;
+bool enter(void*){
+  if(!safe()||resource||!nativeBackgroundResourceTry())return false;
+  resource=true;
+  if(RiscAppDataMount::enter(RiscAppDataMount::Access::SerialFiles))return true;
+  if(!RiscAppDataMount::retained()){resource=false;nativeBackgroundResourceEnd();}
+  return false;
+}
+bool leave(void*){
+  RiscAppDataMount::leave();
+  if(RiscAppDataMount::retained())return false;
+  if(resource){resource=false;nativeBackgroundResourceEnd();}
+  return true;
+}
+RiscStorage::ReopenedFiles privateProvider({nullptr,enter,leave,
+  [](void*){return RiscAppDataMount::retained();},[](void*){RiscAppDataMount::retain();},
+  [](void*,uint64_t* total,uint64_t* used){size_t t=0,u=0;const bool ok=RiscAppDataMount::usage(&t,&u);*total=t;*used=u;return ok;}});
+RiscBoot::RuntimeFiles privateClient;
+#endif
+#if RISC_NATIVE_SERIAL_SD
+RiscBoot::RuntimeFiles sdClient;
+#endif
+RiscSerial::Namespace namespaces[]={
+#if RISC_NATIVE_SERIAL_BOOT_FILES
+  {1,"Active boot store",&bootClient,false},
+#endif
+#if RISC_NATIVE_SERIAL_APPDATA_FILES
+  {2,"Serial files",&privateClient,true},
+#endif
+#if RISC_NATIVE_SERIAL_SD
+  {12,"SD card",&sdClient,true},
+#endif
+};
+bool ready(){return prepared;}
+const NativeSerialFiles::Admission selectedAdmission{namespaces,sizeof(namespaces)/sizeof(namespaces[0]),ready};
+} // namespace
+bool prepare(NativeSerialFiles::Check ownerFn,NativeSerialFiles::Check safeFn){
+  if(selected||!ownerFn||!safeFn||!ownerFn())return false;
+  selected=true;ownerCheck=ownerFn;safeCheck=safeFn;
+  if(!safe())return false;
+#if RISC_NATIVE_SERIAL_BOOT_FILES
+  bootTable=*bootProvider.api();
+  bootTable.open=[](void*c,const char*p,uint32_t flags,uint32_t*out)->int32_t{
+    if(out)*out=0;
+    if(flags!=RISC_FILES_READ)return RISC_FILES_DENIED;
+    return bootProvider.api()->open(c,p,flags,out);
+  };
+  bootTable.write=[](void*,uint32_t,const void*,uint32_t,uint32_t*out)->int32_t{if(out)*out=0;return RISC_FILES_DENIED;};
+  bootTable.truncate=[](void*,uint32_t,uint64_t)->int32_t{return RISC_FILES_DENIED;};
+  bootTable.mkdir=[](void*,const char*)->int32_t{return RISC_FILES_DENIED;};
+  bootTable.rename=[](void*,const char*,const char*)->int32_t{return RISC_FILES_DENIED;};
+  bootTable.remove=[](void*,const char*)->int32_t{return RISC_FILES_DENIED;};
+  if(!bootClient.bind(&bootTable,owner,safe,bootProvider.identityApi(),bootProvider.directoryApi()))return false;
+#endif
+#if RISC_NATIVE_SERIAL_APPDATA_FILES
+  if(!privateProvider.configure("/appdata/.serial-files"))return false;
+  const int32_t provisioned=privateProvider.provision();
+  if(provisioned==RISC_FILES_OK){
+    if(!privateClient.bind(privateProvider.api(),owner,safe))return false;
+  }else if(provisioned!=RISC_FILES_NO_SPACE && provisioned!=RISC_FILES_BUSY && provisioned!=RISC_FILES_UNAVAILABLE){
+    return false; // Corruption/uncertain custody is not optional unavailability.
+  }
+  // Clean first-enable capacity/contention leaves this optional namespace
+  // catalogued but unavailable. Do not block ordinary boot or retry mutation.
+#endif
+  prepared=true;return true;
+}
+const NativeSerialFiles::Admission* admission(){return prepared?&selectedAdmission:nullptr;}
+#if RISC_NATIVE_SERIAL_SD
+RiscBoot::RuntimeFiles& sdFiles(){return sdClient;}
+#endif
+} }
+#endif

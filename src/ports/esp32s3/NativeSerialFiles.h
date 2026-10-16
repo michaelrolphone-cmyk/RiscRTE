@@ -30,7 +30,8 @@ using Check=bool (*)();
 // endpoint unavailable and does not change the ordinary boot sequence.
 bool prepare(const Admission*,Check owner,Check platformSafe);
 // These two calls alone can dispatch file I/O. The caller must establish a
-// settled Runtime owner boundary, outside all app/provider callbacks and yield.
+// settled Runtime owner boundary, outside provider/capability callbacks and
+// ordinary cooperative yield (including the explicit app service checkpoint).
 bool checkpoint();
 bool shutdown();
 // Transport methods only copy/parser/TX state. They never call file providers.

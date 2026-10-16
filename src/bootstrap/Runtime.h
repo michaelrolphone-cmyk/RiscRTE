@@ -253,9 +253,11 @@ class Runtime final {
 #if RISC_NATIVE_SERIAL_FILES
   // Explicit trusted native selection after prepare, before run. Independent
   // of all app grants; Runtime pins the exact provider and dependencies until
-  // checked serial shutdown. Missing optional providers remain unavailable.
+  // checked serial shutdown. Failed optional activation remains unavailable.
+  // prepareVolume explicitly requests one legacy provider refresh at activation;
+  // generic file providers own their own readiness. No app/wire refresh exists.
   bool bindNativeFiles(const char* provider,uint64_t instance,RuntimeFiles&,
-                       RuntimeFiles::Check owner,RuntimeFiles::Check safe);
+                       RuntimeFiles::Check owner,RuntimeFiles::Check safe,bool prepareVolume=false);
 #endif
   bool active() const { return
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
@@ -697,7 +699,7 @@ class Runtime final {
 #if RISC_NATIVE_SERIAL_FILES
   struct NativeFilesBinding {
     RuntimeFiles* files=nullptr;RuntimeFiles::Check owner=nullptr,safe=nullptr;
-    RuntimeProviders::GrantV2 grant{};size_t driver=0;
+    RuntimeProviders::GrantV2 grant{};size_t driver=0;bool prepareVolume=false;
   } nativeFiles_[16]{};
   bool activateNativeFiles();
   bool releaseNativeFiles();

@@ -40,7 +40,7 @@ def main():
         if os.environ.get('SANITIZE')=='1':
             san=['-fsanitize=address,undefined','-fno-sanitize-recover=all','-fno-omit-frame-pointer','-no-pie','-g']
         run([os.environ.get('CC','cc'),'-std=c11','-g',*san,*['-I'+str(p) for p in (watch/'sdk/driver',watch/'include',out,watch)],'-DTEST_KIND=5',f'-DDRIVER_SOURCE="{watch}/drivers/twatch_panel/driver.c"','-c',out/'watch.c','-o',out/'watch.o'])
-        run([sys.executable,x4/'minimal/scripts/prepare_sdk.py','--runtime',runtime,'--reader',reader,'--output',out/'sdk'])
+        run([sys.executable,ROOT/'test/display_startup_sdk.py','--runtime',runtime,'--reader',reader,'--x4',x4,'--output',out/'sdk'])
         names=['src/bootstrap/Json.cpp','src/bootstrap/Board.cpp','src/bootstrap/Runtime.cpp','src/runtime/streams/AppStreamSessions.cpp','src/runtime/streams/ProviderQueueHost.cpp','src/runtime/drivers/ProviderGraphV2.cpp','src/runtime/drivers/ProviderModuleV2.cpp','src/ports/esp32s3/CpuPort.cpp']
         includes=[out/'sdk',runtime/'src',runtime/'sdk/app',runtime/'lib/ArduinoJson/src',runtime/'test/drivers/stubs']
         run([os.environ.get('CXX','c++'),'-std=c++17','-Wall','-Wextra','-Werror','-Wno-missing-field-initializers','-rdynamic',*san,*['-I'+str(p) for p in includes],*[runtime/p for p in names],ROOT/'test/display_startup_watch_bridge.cpp',out/'watch.o','-ldl','-o',out/'test'])

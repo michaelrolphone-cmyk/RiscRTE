@@ -8,6 +8,8 @@ on:
       - 'src/runtime/storage/**'
       - 'src/bootstrap/**'
       - 'src/ports/esp32s3/NativeSerialFiles.*'
+      - 'src/ports/esp32s3/NativeSerialStorage.*'
+      - 'src/ports/esp32s3/NativeAppDataMount.*'
       - 'src/ports/esp32s3/NativePlatform.*'
       - 'src/ports/esp32s3/SleepDiagnostics.*'
       - 'src/ports/esp32s3/CpuPort.*'
@@ -15,6 +17,12 @@ on:
       - 'sdk/app/RiscStorageFiles*.h'
       - 'scripts/serial_files.py'
       - 'test/*serial_files*'
+      - 'test/*serial*storage*'
+      - 'test/*serial_waveshare*'
+      - 'test/*spiffs*'
+      - 'test/*littlefs*'
+      - 'test/native_littlefs_profile_stubs/**'
+      - 'experimental/native_replica/pinned_littlefs/**'
       - 'test/*resident_shell*'
       - 'test/fixtures/resident_app.c'
       - 'test/native_platform_shim/**'
@@ -39,10 +47,20 @@ jobs:
       ASAN_OPTIONS: detect_leaks=0
     steps:
       - uses: actions/checkout@v4
+      - name: Exact published Waveshare provider source for RAM-card qualification
+        uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06
+          ref: 51242f0bb9e20b5298b3a213a977fc3a18384f4a
+          path: .qualification/waveshare
+      - name: Exact async SD provider through independent native graph admission
+        run: WAVESHARE_SOURCE="$GITHUB_WORKSPACE/.qualification/waveshare" python3 test/run_native_serial_waveshare_sd_test.py
       - name: Optional Runtime checkpoint prefix compatibility
         run: bash test/run_runtime_checkpoint_api_test.sh
       - name: Permanent native provider graph custody and wire integration
         run: bash test/run_serial_native_provider_test.sh
+      - name: Explicit private storage on actual pinned LittleFS and fenced mount
+        run: python3 test/run_native_serial_storage_test.py
       - name: Bounded protocol and generic namespace custody
         run: bash test/run_serial_files_test.sh
       - name: Python client through the real C++ protocol endpoint
@@ -68,6 +86,9 @@ jobs:
       - name: Actual Console, diagnostics, native admission and CPU barriers
         shell: bash
         run: bash test/run_native_serial_files_transport_test.sh
+      - name: Read-only active store admission preserves exact raw bank identity
+        shell: bash
+        run: SERIAL_STORAGE=1 MTIME=1 bash test/run_native_spiffs_files_test.sh "$IDF_PATH"
       - name: Feature-off actual IDF6 diagnostic and USB recovery regression
         shell: bash
         run: bash test/run_native_sleep_diagnostics_idf6_test.sh

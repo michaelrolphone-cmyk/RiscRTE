@@ -60,3 +60,5 @@ int __wrap_closedir(DIR*d){return vfs_spiffs_closedir(&ctx,d);}
 void __wrap_rewinddir(DIR*d){vfs_spiffs_seekdir(&ctx,d,0);}
 long __wrap_telldir(DIR*d){return vfs_spiffs_telldir(&ctx,d);}
 void __wrap_seekdir(DIR*d,long n){vfs_spiffs_seekdir(&ctx,d,n);}
+
+uint32_t fixture_flash_digest(void){uint32_t crc=~0u;for(size_t i=0;i<sizeof(flash);++i){crc^=flash[i];for(unsigned j=0;j<8;++j)crc=(crc>>1)^((crc&1)?0xedb88320u:0);}return ~crc;}

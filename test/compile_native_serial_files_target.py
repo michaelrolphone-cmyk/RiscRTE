@@ -24,7 +24,7 @@ while i < len(command):
     if arg in ("-o", "-MF", "-MT", "-MQ"):
         i += 2
         continue
-    if arg in ("-c", "-MD", "-MMD", "-MP") or arg == entry["file"] or arg.startswith("-DRISC_NATIVE_SERIAL_FILES="):
+    if arg in ("-c", "-MD", "-MMD", "-MP") or arg == entry["file"] or arg.startswith(("-DRISC_NATIVE_SERIAL_FILES=", "-DRISC_NATIVE_SERIAL_BOOT_FILES=", "-DRISC_NATIVE_SERIAL_APPDATA_FILES=", "-DRISC_NATIVE_SERIAL_SD=")):
         i += 1
         continue
     flags.append(arg.replace(original_root, str(root)))
@@ -34,7 +34,7 @@ if "-DRISC_NATIVE_ESP_IDF=1" not in flags:
 commands = []
 for enabled in (0, 1):
     for relative in ("src/main.cpp", "src/bootstrap/Runtime.cpp", "src/ports/esp32s3/CpuPort.cpp",
-                     "src/ports/esp32s3/NativeSerialFiles.cpp", "src/ports/esp32s3/SleepDiagnostics.cpp",
+                     "src/ports/esp32s3/NativeSerialFiles.cpp", "src/ports/esp32s3/NativeSerialStorage.cpp", "src/ports/esp32s3/SleepDiagnostics.cpp",
                      "src/runtime/serial/Files.cpp"):
         source = root / relative
         output = out / (source.stem + "-" + str(enabled) + ".o")
@@ -42,7 +42,18 @@ for enabled in (0, 1):
                "-c", str(source), "-o", str(output)]
         commands.append(cmd)
         subprocess.run(cmd, cwd=entry["directory"], check=True)
+for profile, sd in (("twatch", 0), ("waveshare", 1)):
+    selected = ["-DRISC_NATIVE_SERIAL_FILES=1", "-DRISC_NATIVE_SERIAL_BOOT_FILES=1",
+                "-DRISC_NATIVE_SERIAL_APPDATA_FILES=1", "-DRISC_NATIVE_SERIAL_SD=" + str(sd),
+                "-DRISC_NATIVE_APP_DATA_MOUNT=1", "-DRISC_PAIRED_APP_DATA"]
+    for relative in ("src/main.cpp", "src/ports/esp32s3/NativeSerialStorage.cpp",
+                     "src/ports/esp32s3/NativeAppDataMount.cpp", "src/runtime/storage/ReopenedFiles.cpp"):
+        source = root / relative
+        cmd = [command[0], *flags, *selected, "-c", str(source), "-o", str(out / (source.stem + "-" + profile + ".o"))]
+        commands.append(cmd)
+        subprocess.run(cmd, cwd=entry["directory"], check=True)
 (out / "commands.json").write_text(json.dumps(commands, indent=2) + "\n")
 nm = str(pathlib.Path(command[0]).with_name(pathlib.Path(command[0]).name.replace("g++", "nm")))
-assert not subprocess.check_output([nm, str(out / "NativeSerialFiles-0.o")], text=True).strip()
-print("Selected native main/Runtime/CpuPort/Console integration compile, feature on/off, empty default-off adapter PASS")
+for name in ("NativeSerialFiles", "NativeSerialStorage"):
+    assert not subprocess.check_output([nm, str(out / (name + "-0.o"))], text=True).strip()
+print("Selected native main/Runtime/CpuPort/Console integration compile, feature on/off, explicit independent T-Watch/Waveshare storage composition, empty default-off adapters PASS")

@@ -4,6 +4,7 @@
 #include <RiscBuildIdentity.h>
 #include "ports/esp32s3/NativeRuntimeFiles.h"
 #include "ports/esp32s3/NativeSerialFiles.h"
+#include "ports/esp32s3/NativeSerialStorage.h"
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include <esp_sleep.h>
@@ -470,9 +471,23 @@ void setup() {
   }
 #endif
 #if RISC_NATIVE_SERIAL_FILES
-  // Selection names exact permanent namespace sessions. It never infers a
-  // mount, opens a provider, or grants application access to the endpoint.
+  // Selection names exact permanent namespace sessions. No implicit storage
+  // fallback or application grant authorizes access to the endpoint.
+#if RISC_NATIVE_SERIAL_STORAGE_SELECTED
+  // This explicitly selected product composition alone provisions its private
+  // mutable root and separate permanent clients. The active bank is read-only.
+  if(!RiscCpu::NativeSerialStorage::prepare(isOwner,providerStorageSafe)){
+    diagnosticLine("RTE_BOOT error=serial-storage-admission");return;
+  }
+#if RISC_NATIVE_SERIAL_SD
+  if(!runtime.bindNativeFiles("sdmmc-fatfs",12,RiscCpu::NativeSerialStorage::sdFiles(),isOwner,providerStorageSafe,true)){
+    diagnosticLine("RTE_BOOT error=serial-sd-admission");return;
+  }
+#endif
+  const auto* serial=RiscCpu::NativeSerialStorage::admission();
+#else
   const auto* serial=risc_native_serial_files_admission?risc_native_serial_files_admission():nullptr;
+#endif
   if(!RiscCpu::NativeSerialFiles::prepare(serial,isOwner,providerStorageSafe)){
     diagnosticLine("RTE_BOOT error=serial-file-admission");return;
   }

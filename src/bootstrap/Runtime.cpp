@@ -1553,7 +1553,7 @@ void Runtime::serviceProviders() {
 }
 #if RISC_NATIVE_SERIAL_FILES
 bool Runtime::bindNativeFiles(const char* provider,uint64_t instance,RuntimeFiles& files,
-                              RuntimeFiles::Check owner,RuntimeFiles::Check safe) {
+                              RuntimeFiles::Check owner,RuntimeFiles::Check safe,bool prepareVolume) {
   if(!prepared_ || currentRuntime || retained_ || !port_.owner() || !provider ||
      !*provider || !owner || !safe || !owner() || !safe() || files.bound() || files.retained())return false;
   size_t selected=driverCount_;
@@ -1563,11 +1563,11 @@ bool Runtime::bindNativeFiles(const char* provider,uint64_t instance,RuntimeFile
     if(selected!=driverCount_)return false;
     selected=i;
   }
-  if(selected==driverCount_)return false;
+  if(selected==driverCount_ || (prepareVolume && strcmp(drivers_[selected].provides,"storage.volume")))return false;
   NativeFilesBinding* slot=nullptr;
   for(auto& binding:nativeFiles_){if(binding.files==&files)return false;if(!binding.files && !slot)slot=&binding;}
   if(!slot)return false;
-  *slot={&files,owner,safe,{},selected};return true;
+  *slot={&files,owner,safe,{},selected,prepareVolume};return true;
 }
 bool Runtime::activateNativeFiles() {
   bool selected=false;for(const auto& binding:nativeFiles_)if(binding.files)selected=true;
@@ -1589,6 +1589,26 @@ bool Runtime::activateNativeFiles() {
     const bool bound=!strcmp(d.provides,RISC_STORAGE_FILES_CAPABILITY)
       ?binding.files->bind(static_cast<const risc_storage_files_v1*>(api),binding.owner,binding.safe)
       :binding.files->bindVolume(static_cast<const risc_storage_volume_api_v1*>(api),binding.owner,binding.safe);
+    if(bound && binding.prepareVolume) {
+      // Explicit native policy before the first app/cache invocation. Observe
+      // custody before and after the one cold refresh. An already-ready volume
+      // is never remounted; clean absence/refusal stays unavailable, while an
+      // uncertain state pins the grant even if refresh claimed success.
+      const auto* volume=static_cast<const risc_storage_volume_api_v1*>(api);
+      const auto* state=risc_storage_volume_state(volume); // bindVolume checked it
+      bool safe=binding.owner() && binding.safe();
+      int32_t observed=safe?state->observe(volume->context):RISC_STORAGE_STATE_RETAINED;
+      if(observed==RISC_STORAGE_STATE_UNAVAILABLE && safe && volume->refresh) {
+        (void)volume->refresh(volume->context);
+        safe=binding.owner() && binding.safe();
+        observed=safe?state->observe(volume->context):RISC_STORAGE_STATE_RETAINED;
+      }
+      if(!safe || (observed!=RISC_STORAGE_STATE_READY && observed!=RISC_STORAGE_STATE_UNAVAILABLE) ||
+         !graph_.activationSafe() || !providerStorageSafe()) {
+        binding.files->retainCustody();retained_=true;
+        return fail("native volume preparation retained");
+      }
+    }
     if(!bound) {
       if(!graph_.release(binding.grant)){binding.files->retainCustody();retained_=true;return fail("native file admission cleanup retained");}
       binding.grant={};
