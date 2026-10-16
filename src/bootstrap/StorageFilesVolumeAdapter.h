@@ -286,7 +286,7 @@ class StorageFilesVolumeAdapter {
     switch(rc) {
       case RISC_FILES_OK:case RISC_FILES_NOT_FOUND:case RISC_FILES_END:case RISC_FILES_EXISTS:
       case RISC_FILES_INVALID:case RISC_FILES_IO:case RISC_FILES_UNAVAILABLE:case RISC_FILES_BUSY:
-      case RISC_FILES_DENIED:case RISC_FILES_CONTEXT:return rc;
+      case RISC_FILES_DENIED:case RISC_FILES_CONTEXT:case RISC_FILES_NO_SPACE:return rc;
       default:return RISC_FILES_IO;
     }
   }

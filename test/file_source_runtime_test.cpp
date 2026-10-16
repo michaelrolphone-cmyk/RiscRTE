@@ -1,5 +1,6 @@
 #include "bootstrap/Runtime.h"
 #include "runtime/storage/FileSourceFiles.h"
+#include "ports/esp32s3/NativeScratchFiles.h"
 #include <RiscStorageVolumeV1.h>
 #include <array>
 #include <cassert>
@@ -162,7 +163,7 @@ extern "C" void source_test_main(unsigned role,char* name){
 }
 int main(int argc,char** argv){
  assert(argc==3);root=argv[1];mode=argv[2];scratch=root+"/.risc-file-source";provision();
- auto* files=new RiscStorage::FileSourceFiles({nullptr,[](void*){return ownerOk;},[](void*){return true;}});assert(files->configure(scratch.c_str()));auto* backend=new FileSourceBackend(files->backend());
+ auto* files=new RiscStorage::FileSourceFiles({nullptr,[](void*){return ownerOk;},[](void*){return true;}});static RiscCpu::NativeScratchFiles provider(scratch.c_str(),false,false);static RuntimeFiles session;assert(session.bind(provider.api(),owner,exitSafe));assert(files->configure(&session,"/.risc-file-source"));auto* backend=new FileSourceBackend(files->backend());
  Port p{owner,health,delay,log,nullptr,nullptr,exitSafe};p.fileSource=backend;p.controlEnd=controlEnd;
  if(is("no-backend"))p.fileSource=nullptr;
  static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new Runtime(p);assert(runtimeFiles0.bind(*runtime));
