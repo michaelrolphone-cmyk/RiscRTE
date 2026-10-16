@@ -6,6 +6,7 @@
 #include <string>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 static std::string root,tracePath;static bool wake=false,timed=false;static RiscCpu::Port* cpu;
 extern "C" bool test_deep_timed(){return timed;}
 extern "C" void test_deep_trace(const char* text){std::ofstream(tracePath,std::ios::app)<<text<<'\n';}
@@ -47,7 +48,7 @@ int main(int argc,char** argv){
   timed=std::string(argv[2]).find("timed-")==0;wake=std::string(argv[2]).find("wake")!=std::string::npos;
   RiscCpu::Hardware h{owner,now,waitMs,open,write,read,pwm,close,iOpen,iTransfer,close,sOpen,sBegin,sTransfer,sEnd,close};
   h.deepWakeValid=valid;h.deepReady=ready;h.deepWakeArm=arm;h.deepWakeClear=clear;h.deepSleep=enter;h.deepHold=hold;h.timerArm=timerArm;h.timerClear=timerClear;
-  RiscCpu::Port port(h);cpu=&port;RiscBoot::Runtime runtime({owner,health,waitMs,log,bind,nullptr,appExitSafe});
+  RiscCpu::Port port(h);cpu=&port;RiscTest::FileSources runtimeFiles0({root.c_str()});RiscBoot::Runtime runtime({owner,health,waitMs,log,bind,nullptr,appExitSafe});assert(runtimeFiles0.bind(runtime));
   assert(runtime.prepare(root.c_str()));
   if(!runtime.run()){fprintf(stderr,"Runtime failure: %s\n",runtime.error());return 98;}
   assert(wake && port.quiescent());return 0;

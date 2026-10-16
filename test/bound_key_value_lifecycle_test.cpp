@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
+#include "RuntimeFileFixture.h"
 
 // Real Runtime, Graph, Module and dynamic app/provider images. Only the final
 // backend and owner/native-retention state are modeled. No hardware claim.
@@ -192,7 +193,7 @@ static void fixtures() {
 static bool bindAdmission(RiscBoot::Runtime&) { ++platformBindings; return true; }
 static void expectAdmission(bool accepted, const RiscBoot::KeyValueBackend* source = &backend, bool beforeBinding = false) {
   const size_t beforeEvents = events.size(); const unsigned before = calls(), previousBindings = platformBindings;
-  RiscBoot::Runtime runtime({owner, health, delay, logLine, bindAdmission, source, safe});
+  RiscTest::FileSources runtimeFiles0({root.c_str()});RiscBoot::Runtime runtime({owner, health, delay, logLine, bindAdmission, source, safe});assert(runtimeFiles0.bind(runtime));
   const bool result = runtime.prepare(root.c_str());
   if (result != accepted) fprintf(stderr, "Unexpected prepare=%d, expected=%d, error=%s\n", result, accepted, runtime.error());
   assert(result == accepted);
@@ -274,7 +275,7 @@ static void resetRun() {
 }
 static void normal() {
   for (unsigned iteration = 0; iteration < 2; ++iteration) {
-    resetRun(); RiscBoot::Runtime runtime({owner, health, delay, logLine, nullptr, &backend, safe}); running = &runtime;
+    resetRun(); RiscTest::FileSources runtimeFiles1({root.c_str()});RiscBoot::Runtime runtime({owner, health, delay, logLine, nullptr, &backend, safe});assert(runtimeFiles1.bind(runtime)); running = &runtime;
     assert(runtime.prepare(root.c_str()) && calls() == 0 && events.empty());
     assert(runtime.run()); assert(appRuns == 4 && starts[0] == 1 && starts[1] == 1 && unloads[0] == 1 && unloads[1] == 1);
     assert(values.at({3, "alarm_occ"}) == "forged" && values.at({4, "alarm_occ"}) == "owned-0" && values.at({5, "alarm_occ"}) == "owned-1");
@@ -285,7 +286,7 @@ static void normal() {
 }
 static void failedStart() {
   resetRun(); failStart = true;
-  RiscBoot::Runtime runtime({owner, health, delay, logLine, nullptr, &backend, safe}); running = &runtime;
+  RiscTest::FileSources runtimeFiles2({root.c_str()});RiscBoot::Runtime runtime({owner, health, delay, logLine, nullptr, &backend, safe});assert(runtimeFiles2.bind(runtime)); running = &runtime;
   assert(runtime.prepare(root.c_str()) && !runtime.run());
   assert(appRuns == 0 && starts[0] == 1 && starts[1] == 0);
   assert(strstr(runtime.error(), "bound fixture rejected after storage"));
@@ -295,7 +296,7 @@ static void failedStart() {
 }
 static void retained(bool explicitSignal) {
   resetRun(); retaining = true; signaling = explicitSignal;
-  auto* runtime = new RiscBoot::Runtime({owner, health, delay, logLine, nullptr, &backend, safe}); running = runtime;
+  static RiscTest::FileSources runtimeFiles3({root.c_str()});auto* runtime = new RiscBoot::Runtime({owner, health, delay, logLine, nullptr, &backend, safe});assert(runtimeFiles3.bind(*runtime)); running = runtime;
   assert(runtime->prepare(root.c_str()) && !runtime->run());
   assert(strstr(runtime->error(), signaling ? "app invocation retained" : "native retention barrier") && appRuns == 1);
   assert(unloads[0] == 0 && unloads[1] == 0);

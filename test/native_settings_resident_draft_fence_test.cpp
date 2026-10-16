@@ -7,6 +7,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 
 using Runtime = RiscBoot::Runtime;
 using Core = RiscExperimental::NativeReplicaCore;
@@ -257,7 +258,7 @@ int main(int argc, char** argv) {
   port.providerServicesReady = [] { assert(!inNative && !serviceLease); return true; };
   port.providerServiceBegin = [] { assert(!inNative && !serviceLease); serviceLease = true; ++serviceBegins; return true; };
   port.providerServiceEnd = [] { assert(!inNative && serviceLease); serviceLease = false; ++serviceEnds; };
-  Runtime actual(port); runtime = &actual;
+  RiscTest::FileSources actualFiles0({root.c_str()});Runtime actual(port);assert(actualFiles0.bind(actual)); runtime = &actual;
   if (!actual.prepare(root.c_str())) { std::fprintf(stderr, "prepare: %s\n", actual.error()); return 2; }
   assert(actual.run() && !actual.retained() && !liveDrafts && !held);
   assert(starts == 1 && stops == 1 && serviceCalls && serviceBegins == serviceEnds);

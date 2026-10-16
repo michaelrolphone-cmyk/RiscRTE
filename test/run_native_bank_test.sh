@@ -7,6 +7,10 @@ san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
 extra=(-DARDUINO_USB_CDC_ON_BOOT=1 -DRISC_NATIVE_DIAGNOSTIC_OBSERVER="${NATIVE_DIAGNOSTIC_OBSERVER:-0}");if [[ "${APP_DATA_TEST:-0}" == 1 ]];then extra+=(-DRISC_PAIRED_APP_DATA=1);fi
 if [[ "${NATIVE_PROVIDER_TEST_ABI:-1}" == 2 ]];then extra+=(-DRISC_NATIVE_ESP_IDF=1);fi
+crypto_native=0;if [[ "${NATIVE_PROVIDER_TEST_ABI:-1}" == 2 ]];then crypto_native=1;fi
+c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -DRISC_NATIVE_ESP_IDF="$crypto_native" \
+ -I"$repo/test/native_bank_stubs" -I"$repo/src" "$repo/test/native_bank_crypto_stub_test.cpp" -lcrypto -o "$build/crypto-stub"
+"$build/crypto-stub"
 # Validate the complete ESP image before compiling or executing the host model.
 # Copy validated bytes once so every mode consumes the same exact fixture.
 if [[ -n "${BOOTLOADER_FILE:-}" ]];then
@@ -56,7 +60,7 @@ elif [[ -n "${PRODUCT_STORE:-}${BOOT_PATH_FIRMWARE:-}" ]];then
  extra+=("-DRISC_BUILD_VERSION=\"$version\"")
 fi
 cc "${san[@]}" -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared "$repo/test/fixtures/cohort_native_app.c" -o "$build/cohort-native.elf"
-c++ -rdynamic -Wl,--wrap=fopen,--wrap=fclose,--wrap=opendir,--wrap=stat,--wrap=lstat "${san[@]}" "${extra[@]}" -DRISC_PAIRED_BANKS=1 -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers \
+c++ -rdynamic -Wl,--wrap=open,--wrap=close,--wrap=fopen,--wrap=fclose,--wrap=opendir,--wrap=stat,--wrap=lstat "${san[@]}" "${extra[@]}" -DRISC_PAIRED_BANKS=1 -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers \
  -I"$repo/test" -I"$repo/test/native_bank_stubs" -I"$repo/test/drivers/stubs" -I"$repo/lib/elf_loader/include" \
  -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" \
  "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \

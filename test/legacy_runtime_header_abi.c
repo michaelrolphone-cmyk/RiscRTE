@@ -11,7 +11,10 @@ enum { legacy_capability_end=RISC_RUNTIME_CAPABILITIES_V1_SIZE,legacy_api_versio
 #undef risc_runtime_get_api
 #undef RISC_RUNTIME_CAPABILITIES_V1_SIZE
 #undef RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE
-#include "RiscRuntimeV1.h"
+#ifndef CURRENT_RUNTIME_HEADER
+#define CURRENT_RUNTIME_HEADER "RiscRuntimeV1.h"
+#endif
+#include CURRENT_RUNTIME_HEADER
 #define MEMBER(type,member) \
  _Static_assert(offsetof(legacy_##type,member)==offsetof(type,member),#type "." #member " offset"); \
  _Static_assert(sizeof(((legacy_##type*)0)->member)==sizeof(((type*)0)->member),#type "." #member " size")
@@ -43,5 +46,9 @@ _Static_assert(offsetof(risc_runtime_api_v1,monotonic_ms)==RISC_RUNTIME_DIAGNOST
 _Static_assert(offsetof(risc_runtime_api_v1,exit_requested)==RISC_RUNTIME_MONOTONIC_V1_SIZE,"host control follows clock");
 /* Later optional callbacks retain the complete host-control prefix. */
 _Static_assert(offsetof(risc_runtime_api_v1,take_launch_failure)==RISC_RUNTIME_EXIT_REQUESTED_V1_SIZE,"launch failure follows host control");
-_Static_assert(offsetof(risc_runtime_api_v1,initial_default)==RISC_RUNTIME_LAUNCH_FAILURE_V1_SIZE,"initial-default follows launch failure");
-_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_INITIAL_DEFAULT_V1_SIZE,"initial-default is final suffix");
+_Static_assert(offsetof(risc_runtime_api_v1,initial_default)==RISC_RUNTIME_LAUNCH_FAILURE_V1_SIZE,"initial default follows launch failure");
+_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_INITIAL_DEFAULT_V1_SIZE,"initial default is final suffix");
+_Static_assert(_Generic(((risc_runtime_api_v1*)0)->take_launch_failure,
+ bool(*)(risc_runtime_launch_failure_v1*):1,default:0),"launch failure signature");
+_Static_assert(_Generic(((risc_runtime_api_v1*)0)->initial_default,
+ bool(*)(void):1,default:0),"initial default signature");

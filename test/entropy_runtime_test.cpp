@@ -13,6 +13,7 @@
 #include <string>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static std::string root;
 static Port* cpu;
@@ -107,16 +108,16 @@ int main(int argc,char** argv){
  boot.insert(boot.rfind("]}]}"),",{\"capability\":\"crypto.entropy\",\"api\":1,\"instance_id\":0}");
 #endif
  file("app.json",app);file("boot.json",boot);file("cohort.json","{}");
- {auto h=hardware();h.entropy=nullptr;Port p(h);cpu=&p;RiscBoot::Runtime r(runtimePort());assert(!r.prepare(root.c_str())&&calls==0);}
- {auto bad=backend;bad.safe=nullptr;auto h=hardware();h.entropy=&bad;Port p(h);cpu=&p;RiscBoot::Runtime r(runtimePort());assert(!r.prepare(root.c_str())&&calls==0);}
- {Port p(hardware());cpu=&p;RiscBoot::Runtime r(runtimePort()),candidate({});assert(r.prepare(root.c_str())&&calls==0);const bool admitted=r.validateCohort(candidate,root.c_str(),[](void*,const char*,bool){return true;},nullptr);if(!admitted)fprintf(stderr,"candidate: %s\n",candidate.error());assert(admitted&&calls==0);}
+ {auto h=hardware();h.entropy=nullptr;Port p(h);cpu=&p;RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r(runtimePort());assert(rFiles0.bind(r));assert(!r.prepare(root.c_str())&&calls==0);}
+ {auto bad=backend;bad.safe=nullptr;auto h=hardware();h.entropy=&bad;Port p(h);cpu=&p;RiscTest::FileSources rFiles1({root.c_str()});RiscBoot::Runtime r(runtimePort());assert(rFiles1.bind(r));assert(!r.prepare(root.c_str())&&calls==0);}
+ {Port p(hardware());cpu=&p;RiscTest::FileSources rFiles2({root.c_str()});RiscBoot::Runtime r(runtimePort()),candidate({});assert(rFiles2.bind(r));assert(r.prepare(root.c_str())&&calls==0);const bool admitted=r.validateCohort(candidate,root.c_str(),[](void*,const char*,bool){return true;},nullptr);if(!admitted)fprintf(stderr,"candidate: %s\n",candidate.error());assert(admitted&&calls==0);}
  file("app.json",R"({"type":"application","id":"entropy-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"platform.entropy","api":1}]})");
  file("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"platform.entropy","api":1,"instance_id":0}]}]})");
- {Port p(hardware());cpu=&p;RiscBoot::Runtime r(runtimePort());assert(!r.prepare(root.c_str())&&calls==0);}
+ {Port p(hardware());cpu=&p;RiscTest::FileSources rFiles3({root.c_str()});RiscBoot::Runtime r(runtimePort());assert(rFiles3.bind(r));assert(!r.prepare(root.c_str())&&calls==0);}
  file("app.json",app);file("boot.json",boot);
  for(mode=0;mode<5;++mode){
   const auto child=fork();assert(child>=0);
-  if(!child){Port p(hardware());cpu=&p;RiscBoot::Runtime r(runtimePort());assert(r.prepare(root.c_str())&&calls==0);assert(r.run()==(mode==0 || mode==4));denied(tables[0]);assert(mode==0?stops==3:mode==4?stops==1:stops==0);_exit(0);}
+  if(!child){Port p(hardware());cpu=&p;RiscTest::FileSources rFiles4({root.c_str()});RiscBoot::Runtime r(runtimePort());assert(rFiles4.bind(r));assert(r.prepare(root.c_str())&&calls==0);assert(r.run()==(mode==0 || mode==4));denied(tables[0]);assert(mode==0?stops==3:mode==4?stops==1:stops==0);_exit(0);}
   int status;assert(waitpid(child,&status,0)==child);if(!(WIFEXITED(status)&&WEXITSTATUS(status)==0))fprintf(stderr,"mode %d status %d\n",mode,status);assert(WIFEXITED(status)&&WEXITSTATUS(status)==0);
  }
  puts("Runtime entropy: opt-in, zero-I/O admission, provider generations, bounded copies, BUSY, owner loss and retained cleanup PASS");

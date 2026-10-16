@@ -6,6 +6,7 @@
 #include <cstring>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
 static unsigned failNothrow=0;
 static bool failMetadata=false;
 void* operator new(size_t n,const std::nothrow_t&) noexcept {
@@ -362,7 +363,7 @@ extern "C" void test_resident_main(unsigned role,unsigned* visits){
 int main(int argc,char**argv){
  assert(argc==3);root=argv[1];mode=argv[2];setup();
  wakeStore.boot(RISC_BOOT_POWER_ON);
- auto* runtime=new Runtime({owner,health,delay,log,nullptr,&kv,safe,nullptr,nullptr,nullptr,&wakeStore,nullptr,nullptr,prior});runningRuntime=runtime;
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new Runtime({owner,health,delay,log,nullptr,&kv,safe,nullptr,nullptr,nullptr,&wakeStore,nullptr,nullptr,prior});assert(runtimeFiles0.bind(*runtime));runningRuntime=runtime;
  const bool malformed=mode.rfind("policy-",0)==0;
  assert(runtime->prepare(root.c_str())!=malformed);if(malformed){delete runtime;puts("Resident policy refusal PASS");return 0;}
  if(mode=="load-failure" || mode=="failure-callback-retained")std::remove((root+"/child.elf").c_str());

@@ -10,6 +10,7 @@
 #include <string>
 #include <fstream>
 #include <iterator>
+#include "RuntimeFileFixture.h"
 static RiscBoot::Runtime *running;
 static std::string mode,client;
 static bool allPins;
@@ -44,7 +45,7 @@ int main(int argc,char**argv){
  RiscRetainedWake::Image image{};RiscRetainedWake::Store wake(image);wake.boot(RISC_BOOT_POWER_ON);
  RiscBoot::Port port{[](){return true;},capacity_health,capacity_delay,capacity_log};port.keyValue=&kv;port.appData=&data;port.retainedWake=&wake;port.retainedDelay=[](uint32_t){};
  port.bindPlatforms=[](RiscBoot::Runtime&r){return r.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&capacity_clock)&&r.registerRealtime(&capacity_realtime);};
- auto runtime=new RiscBoot::Runtime(port);running=runtime;
+ static RiscTest::FileSources runtimeFiles0({argv[1]});auto runtime=new RiscBoot::Runtime(port);assert(runtimeFiles0.bind(*runtime));running=runtime;
  if(!runtime->prepare(argv[1])){fprintf(stderr,"PREPARE: %s\n",runtime->error());return 2;}
  bool ran=runtime->run();if(ran==retained){fprintf(stderr,"RUN: ran=%u retained=%u expected=%u error=%s\n",ran,runtime->retained(),retained,runtime->error());return 3;}
  assert(runtime->retained()==retained);if(mode=="handoff")assert(launcherEntries==1);capacity_phase("runtime-stopped");auto u=runtime->grantUsage();

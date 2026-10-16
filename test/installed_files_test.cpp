@@ -1,4 +1,5 @@
 #include "bootstrap/InstalledFiles.h"
+#include "RuntimeFileFixture.h"
 #include <cassert>
 #include <fstream>
 #include <string>
@@ -6,10 +7,10 @@
 #include <sys/stat.h>
 using RiscBoot::InstalledFiles;
 static void put(const std::string&p,const std::string&s){std::ofstream f(p,std::ios::binary);f<<s;assert(f.good());}
-int main(int argc,char**argv){assert(argc==2);std::string root=argv[1];assert(!mkdir((root+"/apps").c_str(),0700));
+int main(int argc,char**argv){assert(argc==2);std::string root=argv[1];RiscTest::FileSources sources({root});assert(!mkdir((root+"/apps").c_str(),0700));
  put(root+"/apps/readme.json",std::string(1025,'A'));put(root+"/boot.json","private boot input");put(root+"/profile.json","secret must not appear");put(root+"/apps/readme.elf","ELF bytes");
  InstalledFiles::Name names[2]{};strcpy(names[0].value,"apps/readme.json");strcpy(names[1].value,"apps/readme.elf");InstalledFiles files;
- assert(files.configure(root.c_str(),names,2));assert(!files.configure(root.c_str(),names,2));
+ assert(files.configure(root.c_str(),names,2,sources.sources()));assert(!files.configure(root.c_str(),names,2,sources.sources()));
  uint64_t size=123;bool dir=false;for(const char*p:{"", "relative", "//apps", "/apps/", "/apps/../profile.json", "/apps/./readme.json", "/apps\\readme.json", "/profile.json", "/boot.json", "/apps/missing.json"})assert(!files.stat(p,&size,&dir));
  assert(files.stat("/apps",&size,&dir)&&dir);assert(files.stat("/apps/readme.json",&size,&dir)&&!dir&&size==1025);
  auto d=files.dirOpen("/");assert(d && !files.dirOpen("/"));risc_storage_dirent_v1 e{};assert(files.dirNext(d,&e) && !strcmp(e.name,"apps") && e.is_directory);assert(!files.dirNext(d,&e));char error[96];assert(files.error(error,sizeof(error))&&!error[0]);files.dirClose(d);assert(!files.dirNext(d,&e));
@@ -19,5 +20,5 @@ int main(int argc,char**argv){assert(argc==2);std::string root=argv[1];assert(!m
  f=files.fileOpen("/apps/readme.json",&size);assert(f);put(root+"/apps/readme.json","short");assert(!files.fileRead(f,bytes,10));assert(files.fileClose(f));
  assert(!unlink((root+"/apps/readme.json").c_str()));assert(!symlink((root+"/profile.json").c_str(),(root+"/apps/readme.json").c_str()));assert(!files.fileOpen("/apps/readme.json",&size));assert(!files.stat("/apps/readme.json",&size,&dir));
  assert(!unlink((root+"/apps/readme.json").c_str()));put(root+"/apps/readme.json","restored");f=files.fileOpen("/apps/readme.json",&size);assert(f);files.end();assert(!files.fileRead(f,bytes,1));
- InstalledFiles invalid;InstalledFiles::Name bad[2]{};strcpy(bad[0].value,"apps/../private");assert(!invalid.configure(root.c_str(),bad,1));bad[0]=names[0];bad[1]=names[0];assert(!invalid.configure(root.c_str(),bad,2));
+ InstalledFiles invalid;InstalledFiles::Name bad[2]{};strcpy(bad[0].value,"apps/../private");assert(!invalid.configure(root.c_str(),bad,1,sources.sources()));bad[0]=names[0];bad[1]=names[0];assert(!invalid.configure(root.c_str(),bad,2,sources.sources()));
  puts("Installed files: exact inventory, traversal/alias/symlink refusal, virtual folders, bounded reads, replacement/in-place stale detection, EOF and handle retirement PASS");}

@@ -6,6 +6,7 @@
 #include <string>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 static std::string root;static RiscCpu::Port* cpu;
 static bool isOwner=true,safe=true;static int mode=0,backendFailure=0;
 static risc_realtime_api_v1 savedRead{};static risc_realtime_control_api_v1 savedControl{};
@@ -78,7 +79,7 @@ static int run(){
  h.realtimeRead=timeRead;h.realtimeSeed=timeSeed;
  if(mode==4){h.realtimeRead=nullptr;h.realtimeSeed=nullptr;};
  RiscCpu::Port port(h);cpu=&port;
- RiscBoot::Runtime rt({owner,health,waitMs,log,bind,nullptr,appExitSafe,storageSafe});
+ RiscTest::FileSources rtFiles0({root.c_str()});RiscBoot::Runtime rt({owner,health,waitMs,log,bind,nullptr,appExitSafe,storageSafe});assert(rtFiles0.bind(rt));
  if(mode>=4 && mode<=6){assert(!rt.prepare(root.c_str()));return 0;}
  assert(rt.prepare(root.c_str()));
  assert(rt.run()==(mode!=3));test_time_old();

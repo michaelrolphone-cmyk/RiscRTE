@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static Port *activePort;
 static bool ownerOK=true,openOK=true,closeOK=true,ioOK=true;
@@ -33,14 +34,14 @@ int main(int argc,char** argv){
  };
  auto boot=[&](bool selected){save("boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[)")+(selected?R"({"manifest":"codec.json","instance_id":12})":"")+"]}");};
  save("codec.json",R"({"type":"driver","id":"codec-test","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"driver.elf","requires":[{"capability":"hardware.device","api":1},{"capability":"platform.i2s.standard","api":1},{"capability":"platform.gpio","api":1}],"provides":[{"capability":"audio.pcm","api":1}],"hardware_compatibility":[{"compatible":"test,codec","revisions":["unspecified"],"config_type":"audio.i2s-standard","config_version":1}]})");
- auto prepare=[&](Hardware h,bool ok,size_t count){Port p(h);activePort=&p;calls=0;RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});bool result=r.prepare(root.c_str());if(result!=ok)fprintf(stderr,"prepare error: %s\n",r.error());assert(result==ok&&p.i2sCount_==count&&!calls);};
+ auto prepare=[&](Hardware h,bool ok,size_t count){Port p(h);activePort=&p;calls=0;RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(rFiles0.bind(r));bool result=r.prepare(root.c_str());if(result!=ok)fprintf(stderr,"prepare error: %s\n",r.error());assert(result==ok&&p.i2sCount_==count&&!calls);};
  board(config);boot(true);prepare(hardware(),true,1);
  boot(false);prepare(hardware(),true,0);boot(true);
  auto h=hardware();h.i2sStandardOpen=nullptr;prepare(h,false,0);
  auto bad=config;bad.replace(bad.find("\"mclk\":16"),9,"\"mclk\":15");board(bad);prepare(hardware(),false,0);
  const std::string legacy=R"(,{"instance_id":13,"chip":{"vendor":"test","model":"legacy","revision":"unspecified"},"compatible":"test,legacy","config_type":"audio.i2s","config_version":1,"config":{"controller":0,"pdm_rx":true,"bclk":10,"ws":-1,"data":9}})";
  board(config,legacy);prepare(hardware(),false,0);
- board(config);Port p(hardware());activePort=&p;RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(r.prepare(root.c_str()));
+ board(config);Port p(hardware());activePort=&p;RiscTest::FileSources rFiles1({root.c_str()});RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(rFiles1.bind(r));assert(r.prepare(root.c_str()));
  auto& state=p.i2ss_[0];auto& api=state.standardApi;uint64_t token=55;
  assert(api.api_version==1&&api.struct_size==sizeof(api));
  assert(!api.open(api.context,4,16000,&token)&&!token);assert(!api.open(api.context,3,12345,&token));

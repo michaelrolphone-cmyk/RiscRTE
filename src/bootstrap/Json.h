@@ -64,8 +64,8 @@ inline bool parse(const char* bytes, size_t size, JsonDocument& doc) {
   return RuntimePackages::PackageJsonGuard(bytes,size).objectOnly() &&
          !deserializeJson(doc,bytes,size,DeserializationOption::NestingLimit(10));
 }
-// A failed close leaves native descriptor ownership uncertain. The optional
-// output is sticky: successful reads never clear an earlier retained close.
-// Callers must not retry fclose on the stream after this function returns.
-bool readJson(const char* filename, JsonDocument& doc, bool* closeRetained=nullptr);
+class RuntimeFileView;
+// Explicit source view; absent binding and any retained source fail closed.
+// closeRetained is sticky and also reports retention in a sibling source.
+bool readJson(RuntimeFileView source,const char* filename,JsonDocument& doc,bool* closeRetained=nullptr);
 }

@@ -83,7 +83,7 @@ bool Runtime::installationNamespaceRangeSafe()const{
  if(!installation_||!installation_[0].namespaceCount)return true;
  const auto&s=installation_[0];auto overlaps=[&](uint64_t n){return n>=s.namespaceFirst&&n<uint64_t(s.namespaceFirst)+s.namespaceCount;};
  for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g){const auto&grant=policies_[p].grants[g];
-  if((grant.keyValue||grant.driver==AppDataDriver||grant.driver==SharedDataDriver)&&overlaps(grant.instance))return false;
+  if((keyValuePolicy(grant)||grant.driver==AppDataDriver||grant.driver==SharedDataDriver)&&overlaps(grant.instance))return false;
  }
  for(const auto&provider:providerStorage_){
   for(size_t i=0;i<provider.count;++i)if(overlaps(provider.keys[i].nameSpace))return false;

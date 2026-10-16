@@ -9,4 +9,5 @@ inline int mbedtls_sha256_starts_ret(mbedtls_sha256_context* c,int){++nativeHash
 inline int mbedtls_sha256_update_ret(mbedtls_sha256_context* c,const unsigned char* p,size_t n){++nativeHashUpdates;nativeHashBytes+=n;c->bytes.insert(c->bytes.end(),p,p+n);return 0;}
 inline int mbedtls_sha256_finish_ret(mbedtls_sha256_context* c,unsigned char* out){++nativeHashFinishes;SHA256(c->bytes.data(),c->bytes.size(),out);return 0;}
 
-inline void mbedtls_sha256_free(mbedtls_sha256_context* c){c->bytes.clear();}
+// Model free, not reset: abort must release storage before native zeroization.
+inline void mbedtls_sha256_free(mbedtls_sha256_context* c){std::vector<unsigned char>().swap(c->bytes);}

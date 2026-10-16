@@ -61,7 +61,7 @@ static void frame_tests(const std::string& root) {
   }
   {
     Port p(hardware());p.hw_.spiTransferFrame=nullptr;model={};for(auto& s:NativeShim::spi)s={};
-    stage_quad(root);current=&p;RiscBoot::Runtime r(runtime());assert(r.prepare(root.c_str()));
+    stage_quad(root);current=&p;RiscTest::FileSources metadataFiles({root});RiscBoot::Runtime r(runtime());assert(metadataFiles.bind(r));assert(r.prepare(root.c_str()));
     assert(p.spis_[0].api.base.struct_size==RISC_SPI_QUAD_RAW_V1_SIZE && !p.spis_[0].api.exchange_frame);
   }
   std::puts("Native framed SPI: real header/data descriptors, continuation CS, host2/3, extents, deadlines and retained polling DMA PASS");

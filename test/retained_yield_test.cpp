@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 static std::string mode;
 static bool owned=true,nativeBusy=false,inDelay=false;
 static unsigned nativeChecks=0,blockedReentries=0;
@@ -102,7 +103,9 @@ int main(int argc,char** argv){
   port.keyValue=&keyValue;
   port.appExitSafe=[](){++nativeChecks;return !nativeBusy;};
   if(mode!="no-raw-hook")port.retainedDelay=[](uint32_t ms){delay(ms,true);};
-  runtime=new RiscBoot::Runtime(port);other=new RiscBoot::Runtime(port);
+  static RiscTest::FileSources metadataFiles({root.c_str()});
+  runtime=new RiscBoot::Runtime(port);assert(metadataFiles.bind(*runtime));
+  other=new RiscBoot::Runtime(port);assert(metadataFiles.bind(*other));
   runtime->yield(50);assert(ordinaryWaits.empty() && retainedWaits.empty());
   assert(runtime->prepare(root.c_str()) && other->prepare(root.c_str()));
   runtime->yield(50);assert(ordinaryWaits.empty() && retainedWaits.empty());

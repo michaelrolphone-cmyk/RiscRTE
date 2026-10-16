@@ -7,6 +7,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include "RuntimeFileFixture.h"
 static std::string root,mode,trace;
 static RiscCpu::Port* cpu;
 static bool active[2]{},cleanup=true;
@@ -49,7 +50,7 @@ static void child(){
  h.i2sRead=[](uint8_t unit,int16_t*,size_t frames,size_t* done,uint32_t ms){assert(unit==0);return transfer(unit,frames,done,ms);};
  h.i2sClose=[](uint8_t unit){if(!cleanup)return false;active[unit]=false;return true;};
  cleanup=!has("close-") && !has("open-retained");cpu=new RiscCpu::Port(h);
- auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,&keyValue,appExitSafe,providerStorageSafe});
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,&keyValue,appExitSafe,providerStorageSafe});assert(runtimeFiles0.bind(*runtime));
  assert(runtime->prepare(root.c_str()));const bool retained=has("retained");
  assert(runtime->run()!=retained);
  if(!has("open-"))assert(transferCalls==((mode.find("rx-")==0&&(has("partial")||has("empty")))?100u:1u));else assert(!transferCalls);

@@ -1,4 +1,5 @@
 #include "bootstrap/Runtime.h"
+#include "RuntimeFileFixture.h"
 #include <RiscResidentShellV1.h>
 #include <RiscStreamClientV1.h>
 #include <cassert>
@@ -356,7 +357,7 @@ extern "C" void test_legacy_main(unsigned role,unsigned* visits,const risc_resid
 }
 int main(int argc,char** argv){
   assert(argc==3);root=argv[1];mode=argv[2];setup();
-  auto* runtime=new Runtime({owner,health,delay,log,nullptr,&kv,safe});
+  static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new Runtime({owner,health,delay,log,nullptr,&kv,safe});assert(runtimeFiles0.bind(*runtime));
   const bool malformed=begins("policy-");
   assert(runtime->prepare(root.c_str())!=malformed);
   if(malformed){assert(events.empty());delete runtime;std::printf("Resident legacy: %s PASS\n",mode.c_str());finished=true;return 0;}

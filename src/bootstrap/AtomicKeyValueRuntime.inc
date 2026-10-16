@@ -112,8 +112,11 @@ Runtime::AppGrant* Runtime::atomicContext(void* context) {
   auto* r=currentRuntime;
   if(!r || !context || !r->active() || r->retained_ || r->promotionRunning_ || r->graph_.lifecycleBusy() || !r->invocation_->entryRunning_)return nullptr;
   for(auto& g:r->invocation_->appGrants_)
-    if(g.live && g.invocation==r->invocation_->streams_.context() && g.api==&g.atomic &&
-       g.atomic.context==context && g.atomicEndpoint)return &g;
+    if(g.live && g.invocation==r->invocation_->streams_.context() && g.atomicEndpoint && ((g.api==&g.atomic && g.atomic.context==context)
+#if RISC_RUNTIME_PREFERENCE_STORE
+       || (g.api==&g.preferences && g.preferences.context==context)
+#endif
+       ))return &g;
   return nullptr;
 }
 int32_t Runtime::atomicResult(int32_t result) {

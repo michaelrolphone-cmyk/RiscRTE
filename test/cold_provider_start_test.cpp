@@ -7,6 +7,8 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 using RiscBoot::Runtime;
 static std::string mode,root;
 static std::vector<std::string> events,lines;
@@ -84,7 +86,7 @@ extern "C" void demand_app(){
 }
 static void file(const char* path,const std::string& value){std::ofstream(root+"/"+path)<<value;}
 static void save(const char* path,const JsonDocument& doc){std::string text;serializeJson(doc,text);file(path,text);}
-static JsonDocument read(const char* path){JsonDocument doc;assert(RiscBoot::readJson((root+"/"+path).c_str(),doc));return doc;}
+static JsonDocument read(const char* path){JsonDocument doc;assert(RiscTest::readFixtureJson((root+"/"+path).c_str(),doc));return doc;}
 static void stage(){
  file("board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})");
  JsonDocument boot;boot["board"]="board.json";boot["default_app"]="default.elf";
@@ -115,18 +117,18 @@ static void admission(RiscBoot::Port port){
  const auto original=read("boot.json");
  for(const char* invalid:{"null","true","false","1","{}","[]","\"Cold\"","\"\"","\"eager\""}){
   auto boot=original;JsonDocument value;assert(!deserializeJson(value,invalid));boot["drivers"][0]["boot_start"].set(value);save("boot.json",boot);
-  Runtime r(port);assert(!r.prepare(root.c_str()) && !r.run());
+  RiscTest::FileSources rFiles0({root.c_str()});Runtime r(port);assert(rFiles0.bind(r));assert(!r.prepare(root.c_str()) && !r.run());
  }
  for(const char* activation:{"eager","omitted"}){
   auto boot=original;boot["drivers"][0]["boot_start"]="cold";
   if(!strcmp(activation,"omitted"))boot.remove("provider_activation");else boot["provider_activation"]=activation;
-  save("boot.json",boot);Runtime r(port);assert(!r.prepare(root.c_str()));
+  save("boot.json",boot);RiscTest::FileSources rFiles1({root.c_str()});Runtime r(port);assert(rFiles1.bind(r));assert(!r.prepare(root.c_str()));
  }
  save("boot.json",original);
  auto unused=read("unused.json"),bad=unused;
  auto dep=bad["requires"].as<JsonArray>().add<JsonObject>();dep["capability"]="test.absent";dep["api"]=1;
- save("unused.json",bad);{Runtime r(port);assert(!r.prepare(root.c_str()));}save("unused.json",unused);
- auto board=read("board.json");file("board.json","{}");{Runtime r(port);assert(!r.prepare(root.c_str()));}save("board.json",board);
+ save("unused.json",bad);{RiscTest::FileSources rFiles2({root.c_str()});Runtime r(port);assert(rFiles2.bind(r));assert(!r.prepare(root.c_str()));}save("unused.json",unused);
+ auto board=read("board.json");file("board.json","{}");{RiscTest::FileSources rFiles3({root.c_str()});Runtime r(port);assert(rFiles3.bind(r));assert(!r.prepare(root.c_str()));}save("board.json",board);
  assert(events.empty() && !classified);
 }
 int main(int argc,char** argv){
@@ -140,7 +142,7 @@ int main(int argc,char** argv){
  }
  if(mode=="missing-classifier")port.coldBoot=nullptr;
  stage();admission(port);
- Runtime runtime(port);assert(runtime.prepare(root.c_str()));
+ RiscTest::FileSources runtimeFiles4({root.c_str()});Runtime runtime(port);assert(runtimeFiles4.bind(runtime));assert(runtime.prepare(root.c_str()));
  std::vector<std::string> images;
  assert(runtime.inspectImages([](void* context,const char* path,bool){static_cast<std::vector<std::string>*>(context)->emplace_back(path);return true;},&images));
  assert(images.size()==4 && images[2]==root+"/unused.elf");

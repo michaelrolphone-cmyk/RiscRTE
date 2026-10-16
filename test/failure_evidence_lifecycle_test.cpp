@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 using namespace RiscBoot;
 namespace {
 bool owner=true,safe=true,held=false;
@@ -92,7 +93,7 @@ extern "C" void failure_test_main(unsigned role){
 int main(int argc,char** argv){
  assert(argc==3);root=argv[1];mode=argv[2];setup();
  Port port{owned,healthy,delay,log};port.appExitSafe=custody;if(mode!="off")port.failureEvidence=&backend;
- auto* runtime=new Runtime(port);assert(runtime->prepare(root.c_str()));const bool terminal=mode=="retained";
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new Runtime(port);assert(runtimeFiles0.bind(*runtime));assert(runtime->prepare(root.c_str()));const bool terminal=mode=="retained";
  assert(runtime->run()!=terminal);assert(runtime->retained()==terminal);denied(client);denied(saved);
  if(terminal){assert(retentions==1 && logs==lastLogs);retainedRuntime=runtime;}
  else {delete runtime;if(mode=="normal")assert(visits==3 && acks==2 && reads==6);}

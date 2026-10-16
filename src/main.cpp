@@ -2,7 +2,7 @@
 #include "ports/esp32s3/NativePlatform.h"
 #include <esp_heap_caps.h>
 #include <RiscBuildIdentity.h>
-#include <esp_spiffs.h>
+#include "ports/esp32s3/NativeRuntimeFiles.h"
 #include <esp_ota_ops.h>
 #include <esp_system.h>
 #include <esp_sleep.h>
@@ -149,7 +149,7 @@ bool bindPlatforms(RiscBoot::Runtime& runtime){
 #endif
   return RiscDiagnostics::bindNativeSource(runtime);
 }
-bool appExitSafe(){return
+bool appExitSafe(){return RiscCpu::NativeRuntimeFiles::exitSafe() &&
 #if RISC_NATIVE_PACKAGE_VOLUME
  RiscPackageVolume::exitSafe() &&
 #endif
@@ -166,7 +166,7 @@ bool appExitSafe(){return
   && RiscBankStore::exitSafe()
 #endif
   ;}
-bool providerStorageSafe(){return
+bool providerStorageSafe(){return RiscCpu::NativeRuntimeFiles::custodySafe() &&
 #if RISC_NATIVE_PACKAGE_VOLUME
  RiscPackageVolume::exitSafe() &&
 #endif
@@ -183,7 +183,7 @@ bool providerStorageSafe(){return
  && RiscAppData::custodySafe()
 #endif
  ;}
-bool restartSafe(){return cpu.restartResourcesSafe()
+bool restartSafe(){return RiscCpu::NativeRuntimeFiles::exitSafe() && cpu.restartResourcesSafe()
 #if RISC_NATIVE_FILE_SOURCE
  && RiscFileSource::resetSafe()
 #endif
@@ -292,6 +292,9 @@ void setup() {
 #ifdef RISC_BOARD_MARKER
   diagnosticLine(RISC_BOARD_MARKER);
 #endif
+  if(!RiscCpu::NativeRuntimeFiles::prepare(isOwner,providerStorageSafe)){
+    diagnosticLine("RTE_BOOT error=metadata-source-binding");return;
+  }
 #ifdef RISC_PAIRED_BANKS
   bool bankReady;
 #if RISC_STAGE_LOGS
@@ -304,6 +307,7 @@ void setup() {
 #else
     providerStorageSafe
 #endif
+    ,RiscCpu::NativeRuntimeFiles::sources()
   );}
   RISC_STAGE_LOG("boot bank-selection end result=%s elapsed_us=%llu",bankReady?"ok":"failed",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
@@ -321,17 +325,13 @@ void setup() {
 #endif
   RISC_STAGE_LOG("boot filesystem-mount begin");
   {RiscPerf::Scope phase(53,54);
-#ifdef RISC_EMBEDDED_BOOTSTORE
-  mounted=riscrte_mount_embedded_store();
-#else
-  esp_vfs_spiffs_conf_t storage{};
-  storage.base_path="/bootfs"; storage.partition_label="bootfs";
+  mounted=RiscCpu::NativeRuntimeFiles::mountBoot(
 #ifdef RISC_PAIRED_BANKS
-  storage.partition_label=RiscBankStore::bootLabel();
+    RiscBankStore::bootLabel()
+#else
+    "bootfs"
 #endif
-  storage.max_files=4; storage.format_if_mount_failed=false;
-  mounted=esp_vfs_spiffs_register(&storage);
-#endif
+  );
   }
   RISC_STAGE_LOG("boot filesystem-mount end result=%d elapsed_us=%llu",int(mounted),
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
@@ -375,12 +375,14 @@ void setup() {
   stageUs=RiscDiagnostics::monotonicUs();
 #endif
   RISC_STAGE_LOG("boot provisioning begin");
-  const auto provision=RiscBootstrap::run({cpu.bootstrapHardware(),RiscNvs::backend(),providerStorageSafe,
+  RiscBootstrap::Port provisionPort{cpu.bootstrapHardware(),RiscNvs::backend(),providerStorageSafe,
     RiscBootstrap::nvsInput(),RiscBootstrap::configuredFreshTime(RiscBootstrap::nvsInput(),cpu.bootstrapHardware().now)
 #ifdef RISC_PAIRED_APP_DATA
     ,RiscAppData::backend()
 #endif
-  },"/bootfs");
+  };
+  provisionPort.files=RiscCpu::NativeRuntimeFiles::sources();
+  const auto provision=RiscBootstrap::run(provisionPort,"/bootfs");
   RiscPerf::finish(57,58,provisionStart,uint32_t(provision.outcome));
   RISC_STAGE_LOG("boot provisioning end action=%s reason=%s elapsed_us=%llu",
                  provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",
@@ -430,6 +432,9 @@ void setup() {
     diagnosticLine("RTE_BOOT error=native-settings-admission");return;
   }
 #endif
+  if(!runtime.bindFileSources(RiscCpu::NativeRuntimeFiles::sources())){
+    diagnosticLine("RTE_BOOT error=metadata-source-authority");return;
+  }
   RiscCpu::reserveNativePins(runtime.board());
 #if RISC_STAGE_LOGS
   stageUs=RiscDiagnostics::monotonicUs();

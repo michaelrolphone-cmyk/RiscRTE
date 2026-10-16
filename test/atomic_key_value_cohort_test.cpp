@@ -7,6 +7,7 @@
 #undef private
 #include <fstream>
 #include <filesystem>
+#include "RuntimeFileFixture.h"
 using R=RiscBoot::Runtime;
 static A*one;static A*six;static bool retainedOne=false,retainedSix=false;
 static unsigned bindings=0,availabilityCalls=0,admissions=0;
@@ -44,11 +45,14 @@ static void same(const R&from,const R&to){
  for(const auto&g:to.mainInvocation_.appGrants_)assert(!g.live);
  assert(!to.foreground_&&!to.mainInvocation_.active_);
 }
-int main(int argc,char**argv){
+#ifndef ATOMIC_COHORT_MAIN
+#define ATOMIC_COHORT_MAIN main
+#endif
+int ATOMIC_COHORT_MAIN(int argc,char**argv){
  assert(argc==2);root=argv[1];std::filesystem::create_directories(root);store();
  Disk d1,d6;Alloc allocation;C c1(1,d1.backend(),limits(),allocation.api()),c6(6,d6.backend(),limits(),allocation.api());assert(!c1.initialize(nullptr,0,{})&&!c6.initialize(nullptr,0,{}));
  Gate g1,g6;auto guard1=g1.api(),guard6=g6.api();guard1.retained=[](void*){return retainedOne;};guard6.retained=[](void*){return retainedSix;};A a1(c1,guard1),a6(c6,guard6);one=&a1;six=&a6;
- R source({owner,health,delay,logLine,bind});assert(source.prepare(root.c_str()));assert(bindings==1&&!availabilityCalls);d1.calls=d6.calls=0;
+ RiscTest::FileSources sourceFiles0({root.c_str()});R source({owner,health,delay,logLine,bind});assert(sourceFiles0.bind(source));assert(source.prepare(root.c_str()));assert(bindings==1&&!availabilityCalls);d1.calls=d6.calls=0;
  {R candidate({});assert(source.validateCohort(candidate,root.c_str(),admit,nullptr));same(source,candidate);assert(admissions==6&&bindings==1&&!availabilityCalls&&!d1.calls&&!d6.calls);}
  // A poisoned/preseeded candidate cannot supplement the trusted source rows.
  {R candidate({owner,health,delay,logLine});assert(candidate.registerAtomicKeyValue("intruder",1,a1));assert(!source.validateCohort(candidate,root.c_str(),admit,nullptr));assert(candidate.atomicBindingCount_==1&&!candidate.attempted_);}
@@ -68,4 +72,5 @@ int main(int argc,char**argv){
  // platform rebind, worker or native disk mutation occurs during admission.
  assert(bindings==1&&!availabilityCalls&&!d1.calls&&!d6.calls&&admissions==12);
  puts("Atomic staged cohort: eight exact bindings, both namespace callbacks, six existing IDs; no active contexts/rebind/I/O; preseed, pending and retained refusal; clean retry PASS");
+ return 0;
 }

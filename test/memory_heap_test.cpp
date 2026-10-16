@@ -2,6 +2,7 @@
 #include <cassert>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
 static risc_random_api_v1 oldRandom;static unsigned randomReads;
 extern "C" void random_test_keep(const risc_random_api_v1* a){oldRandom=*a;}
 static int32_t randomFill(void* p,uint32_t n){++randomReads;for(uint32_t i=0;i<n;++i)static_cast<unsigned char*>(p)[i]=i^0xA5;return 0;}
@@ -17,11 +18,11 @@ int main(int argc,char** argv){assert(argc==2);std::string root=argv[1];
  file("app.json",R"({"type":"application","id":"memory-test","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"memory.heap","api":1},{"capability":"random.bytes","api":1}]})");
  file("boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"memory.heap","api":1,"instance_id":0},{"capability":"random.bytes","api":1,"instance_id":0}]}]})");
  RiscBoot::Port port{owner,health,delay,log};
- {RiscBoot::Runtime unavailable(port);assert(!unavailable.prepare(root.c_str()));assert(!reads);}
+ {RiscTest::FileSources unavailableFiles0({root.c_str()});RiscBoot::Runtime unavailable(port);assert(unavailableFiles0.bind(unavailable));assert(!unavailable.prepare(root.c_str()));assert(!reads);}
  port.memoryHeap=snapshot;
- {RiscBoot::Runtime unavailable(port);assert(!unavailable.prepare(root.c_str()));assert(!randomReads);}
+ {RiscTest::FileSources unavailableFiles1({root.c_str()});RiscBoot::Runtime unavailable(port);assert(unavailableFiles1.bind(unavailable));assert(!unavailable.prepare(root.c_str()));assert(!randomReads);}
  port.randomBytes=randomFill;
- {RiscBoot::Runtime r(port);assert(r.prepare(root.c_str()));assert(r.run());}
+ {RiscTest::FileSources rFiles2({root.c_str()});RiscBoot::Runtime r(port);assert(rFiles2.bind(r));assert(r.prepare(root.c_str()));assert(r.run());}
  risc_memory_heap_snapshot_v1 s{sizeof(s)};assert(old.snapshot(old.context,&s)==RISC_MEMORY_CONTEXT);assert(reads==2);
  unsigned char b=0;assert(oldRandom.fill(oldRandom.context,&b,1)==RISC_RANDOM_CONTEXT);assert(randomReads==1);
  puts("Shared random.bytes and memory.heap admission, snapshots, unsupported classes, ownership and grant revocation PASS");

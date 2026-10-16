@@ -21,6 +21,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 #include <csignal>
+#include "RuntimeFileFixture.h"
 using A=RiscExperimental::NativeSdAttempt;
 using P=RiscExperimental::NativeSdPortAttempt;
 using Pin=RiscExperimental::NativeRuntimeStoragePin;
@@ -133,7 +134,7 @@ int main(int argc,char**argv){
  assert(argc==3);const char*mode=argv[2];Port cpu(hardware());port=&cpu;
  RiscBoot::Port boot{NATIVE_SD_PORT_OWNER,[](risc_runtime_health_v1*){return true;},[](uint32_t ms){nowMs+=ms;},[](const char*){return true;},NATIVE_SD_PORT_BIND};
  boot.appExitSafe=[](){return port->appExitSafe();};boot.providerStorageSafe=[](){return port->providerStorageSafe();};
- RiscBoot::Runtime runtime(boot);if(!runtime.prepare(argv[1])){std::fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}
+ RiscTest::FileSources runtimeFiles0({argv[1]});RiscBoot::Runtime runtime(boot);assert(runtimeFiles0.bind(runtime));if(!runtime.prepare(argv[1])){std::fprintf(stderr,"prepare: %s\n",runtime.error());assert(false);}
  assert(!loads&&!hardwareCalls);Pin anchor(runtime,cpu,55);const int admitted=anchor.acquire();if(admitted){std::fprintf(stderr,"anchor admission: %d, %s\n",admitted,runtime.error());assert(false);}
  assert(f&&loads==1&&!unloads&&f->counter(5)==0&&!f->session());const auto baseline=runtime.grantUsage().graphLive;
  if(!std::strcmp(mode,"wrapper-lifetime")){

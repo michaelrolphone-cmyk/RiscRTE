@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <cstdio>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static Port* activePort;
 static unsigned io=0;
@@ -43,7 +44,7 @@ int main(int argc,char**argv){
   selectedMode=mode;save("sync-trace.txt","");const pid_t child=fork();assert(child>=0);
   if(!child){
    auto* port=new Port(hardware());activePort=port;
-   auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,nullptr,appSafe,storageSafe});
+   static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,nullptr,appSafe,storageSafe});assert(runtimeFiles0.bind(*runtime));
    if(!runtime->prepare(root.c_str())){std::fprintf(stderr,"prepare: %s\n",runtime->error());assert(false);}const bool retained=selectedMode=="retained";
    assert(runtime->run()!=retained);
    if(retained){

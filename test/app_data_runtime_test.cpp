@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <sys/stat.h>
+#include "RuntimeFileFixture.h"
 static bool owned=true,retained=false,fault_mode=false;static int phase=0;static risc_app_data_v1 saved{};
 extern "C" void app_data_test_owner(int n){owned=n;}
 extern "C" int app_data_test_phase(){return phase;}
@@ -28,13 +29,13 @@ int main(int argc,char**argv){assert(argc==2);std::string root=argv[1];
  const std::string manifest=R"({"type":"application","id":"files","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"default.elf","entry":"app_main","requires":[{"capability":"storage.app-data","api":1},{"capability":"platform.clock","api":1}]})";
  write(root+"/app.json",manifest);
  auto boot=[&](unsigned api,unsigned id){write(root+"/boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"storage.app-data","api":)")+std::to_string(api)+",\"instance_id\":"+std::to_string(id)+"},{\"capability\":\"platform.clock\",\"api\":1,\"instance_id\":0}]}]}");};
- boot(1,0);{RiscBoot::Runtime r(port);assert(!r.prepare(root.c_str()));}
- boot(2,1);{RiscBoot::Runtime r(port);assert(!r.prepare(root.c_str()));}
- boot(1,1);{RiscBoot::Runtime r({owner,health,delay,log});assert(!r.prepare(root.c_str()));}
- for(unsigned repeat=0;repeat<2;repeat++){phase=0;RiscBoot::Runtime r(port);assert(r.prepare(root.c_str()));assert(r.run());assert(phase==2);app_data_test_revoked();}
+ boot(1,0);{RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r(port);assert(rFiles0.bind(r));assert(!r.prepare(root.c_str()));}
+ boot(2,1);{RiscTest::FileSources rFiles1({root.c_str()});RiscBoot::Runtime r(port);assert(rFiles1.bind(r));assert(!r.prepare(root.c_str()));}
+ boot(1,1);{RiscTest::FileSources rFiles2({root.c_str()});RiscBoot::Runtime r({owner,health,delay,log});assert(rFiles2.bind(r));assert(!r.prepare(root.c_str()));}
+ for(unsigned repeat=0;repeat<2;repeat++){phase=0;RiscTest::FileSources rFiles3({root.c_str()});RiscBoot::Runtime r(port);assert(rFiles3.bind(r));assert(r.prepare(root.c_str()));assert(r.run());assert(phase==2);app_data_test_revoked();}
  std::string child=manifest;child.replace(child.find("\"files\""),7,"\"child\"");child.replace(child.find("default.elf"),11,"child.elf");write(root+"/child.json",child);
  write(root+"/boot.json",R"({"board":"board.json","default_app":"default.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"storage.app-data","api":1,"instance_id":1},{"capability":"platform.clock","api":1,"instance_id":0}]},{"manifest":"child.json","grants":[{"capability":"storage.app-data","api":1,"instance_id":1}]}]})");
- {RiscBoot::Runtime r(port);assert(!r.prepare(root.c_str()) && strstr(r.error(),"already owned"));}
- boot(1,1);fault_mode=true;{RiscBoot::Runtime r(port);assert(r.prepare(root.c_str()));assert(!r.run() && r.retained());assert(strstr(r.error(),"retention barrier"));app_data_test_revoked();}
+ {RiscTest::FileSources rFiles4({root.c_str()});RiscBoot::Runtime r(port);assert(rFiles4.bind(r));assert(!r.prepare(root.c_str()) && strstr(r.error(),"already owned"));}
+ boot(1,1);fault_mode=true;{RiscTest::FileSources rFiles5({root.c_str()});RiscBoot::Runtime r(port);assert(rFiles5.bind(r));assert(r.prepare(root.c_str()));assert(!r.run() && r.retained());assert(strstr(r.error(),"retention barrier"));app_data_test_revoked();}
  puts("App-data Runtime/actual ELF authority, owner, namespace uniqueness, lifetime/reacquire, handoff and pre-fini retention PASS");
 }

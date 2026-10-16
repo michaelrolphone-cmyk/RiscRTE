@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 using RiscBoot::Runtime;
 static std::vector<std::string> events;
 static std::string mode;
@@ -153,11 +154,11 @@ int main(int argc,char** argv){
   // Malformed policy and unused selected metadata still fail before execution.
   for(const char* invalid:{"null","true","1","\"Demand\"","{}","[]"}){
     JsonDocument bad;bad.set(boot);JsonDocument value;assert(!deserializeJson(value,invalid));bad["provider_activation"].set(value);save(root,"boot.json",bad);
-    Runtime r(port);assert(!r.prepare(root.c_str()));assert(!r.run());assert(events.empty());
+    RiscTest::FileSources rFiles0({root.c_str()});Runtime r(port);assert(rFiles0.bind(r));assert(!r.prepare(root.c_str()));assert(!r.run());assert(events.empty());
   }
   if(promotionMode) {
     JsonDocument bad;bad.set(boot);bad["default_app"]="child.elf";save(root,"boot.json",bad);
-    Runtime r(port);assert(!r.prepare(root.c_str()));assert(events.empty());
+    RiscTest::FileSources rFiles1({root.c_str()});Runtime r(port);assert(rFiles1.bind(r));assert(!r.prepare(root.c_str()));assert(events.empty());
     for(unsigned invalid=0;invalid<4;++invalid) {
       JsonDocument badGrant;badGrant.set(boot);
       auto grants=badGrant["app_capabilities"][0]["grants"].as<JsonArray>();
@@ -165,20 +166,20 @@ int main(int argc,char** argv){
       if(invalid==1)grants[1]["instance_id"]=1;
       if(invalid==2)grants.add(grants[1]);
       if(invalid==3)grants[1]["capability"]="runtime.undeclared";
-      save(root,"boot.json",badGrant);Runtime denied(port);assert(!denied.prepare(root.c_str()));assert(events.empty());
+      save(root,"boot.json",badGrant);RiscTest::FileSources deniedFiles2({root.c_str()});Runtime denied(port);assert(deniedFiles2.bind(denied));assert(!denied.prepare(root.c_str()));assert(events.empty());
     }
   }
   save(root,"boot.json",boot);
-  write(root,"unused.json","{}");{Runtime r(port);assert(!r.prepare(root.c_str()));assert(events.empty());}
+  write(root,"unused.json","{}");{RiscTest::FileSources rFiles3({root.c_str()});Runtime r(port);assert(rFiles3.bind(r));assert(!r.prepare(root.c_str()));assert(events.empty());}
   // Restore unused declaration, then reject a missing dependency in it.
   const char* unused=R"({"type":"driver","id":"unused","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"unused.elf","requires":[],"provides":[{"capability":"test.unused","api":1}]})";
   JsonDocument bad;assert(RiscBoot::parse(unused,strlen(unused),bad));
   auto missing=bad["requires"].as<JsonArray>().add<JsonObject>();missing["capability"]="test.missing";missing["api"]=1;save(root,"unused.json",bad);
-  {Runtime r(port);assert(!r.prepare(root.c_str()));assert(events.empty());}
+  {RiscTest::FileSources rFiles4({root.c_str()});Runtime r(port);assert(rFiles4.bind(r));assert(!r.prepare(root.c_str()));assert(events.empty());}
   write(root,"unused.json",unused);write(root,"board.json","{}");
-  {Runtime r(port);assert(!r.prepare(root.c_str()));assert(events.empty());}
+  {RiscTest::FileSources rFiles5({root.c_str()});Runtime r(port);assert(rFiles5.bind(r));assert(!r.prepare(root.c_str()));assert(events.empty());}
   write(root,"board.json",board);
-  Runtime runtime(port);assert(runtime.prepare(root.c_str()));
+  RiscTest::FileSources runtimeFiles6({root.c_str()});Runtime runtime(port);assert(runtimeFiles6.bind(runtime));assert(runtime.prepare(root.c_str()));
   assert(!runtime.registerPlatform("test.extra",1,Runtime::Scope::Global,0,&runtime));
   std::vector<std::string> images;
   assert(runtime.inspectImages([](void* c,const char* path,bool){static_cast<std::vector<std::string>*>(c)->emplace_back(path);return true;},&images));

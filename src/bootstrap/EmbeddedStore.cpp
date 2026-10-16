@@ -52,6 +52,15 @@ int closeFile(int fd) {
   if(!valid(fd)){errno=EBADF;return -1;}
   slots[fd]={};return 0;
 }
+int statPath(const char* path,struct stat* out) {
+  Lock lock;if(!lock.held){errno=ETIMEDOUT;return -1;}
+  if(!path || !out){errno=EINVAL;return -1;}
+  if(!strcmp(path,"/")){*out={};out->st_mode=S_IFDIR|S_IRUSR;return 0;}
+  for(const auto& file:embeddedFiles)if(!strcmp(file.name,path)){
+    *out={};out->st_mode=S_IFREG|S_IRUSR;out->st_size=file.size;return 0;
+  }
+  errno=ENOENT;return -1;
+}
 int statFile(int fd,struct stat* out) {
   Lock lock;if(!lock.held){errno=ETIMEDOUT;return -1;}
   if(!valid(fd)){errno=EBADF;return -1;}
@@ -62,7 +71,7 @@ esp_err_t riscrte_mount_embedded_store() {
   if(mutex)return ESP_ERR_INVALID_STATE;
   mutex=xSemaphoreCreateMutexStatic(&mutexStorage);if(!mutex)return ESP_ERR_NO_MEM;
   esp_vfs_t vfs{};vfs.flags=ESP_VFS_FLAG_DEFAULT;
-  vfs.open=openFile;vfs.read=readFile;vfs.lseek=seekFile;vfs.close=closeFile;vfs.fstat=statFile;
+  vfs.open=openFile;vfs.read=readFile;vfs.lseek=seekFile;vfs.close=closeFile;vfs.fstat=statFile;vfs.stat=statPath;
   return esp_vfs_register("/bootfs",&vfs,nullptr);
 }
 // Arduino's generic boot must not initialize/change the lab's existing NVS.

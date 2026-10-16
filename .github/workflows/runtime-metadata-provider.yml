@@ -1,0 +1,82 @@
+name: Provider-backed Runtime metadata
+on:
+  push:
+    branches: [work/unified-default-capabilities]
+    paths: ['src/bootstrap/**', 'src/runtime/storage/**', 'src/runtime/update/Cohort.h', 'src/ports/esp32s3/Native*', 'src/main.cpp', 'sdk/app/RiscStorageFiles*', 'test/**', '.github/workflows/runtime-metadata-provider.yml']
+  pull_request:
+    paths: ['src/bootstrap/**', 'src/runtime/storage/**', 'src/runtime/update/Cohort.h', 'src/ports/esp32s3/Native*', 'src/main.cpp', 'sdk/app/RiscStorageFiles*', 'test/**', '.github/workflows/runtime-metadata-provider.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_metadata_provider_test.sh
+      - run: bash test/run_metadata_checkpoint_test.sh
+      - run: bash test/run_metadata_read_test.sh
+      - run: bash test/run_runtime_files_source_test.sh
+      - run: bash test/run_storage_contract_abi_test.sh
+      - run: python3 test/test_native_startup.py
+      - run: bash test/run_embedded_store_provider_test.sh
+      - run: bash test/run_installed_files_test.sh
+      - run: bash test/run_cohort_runtime_test.sh
+      - run: bash test/run_native_bank_test.sh
+      - run: bash test/run_board_test.sh
+      - run: bash test/run_i2c_function_test.sh
+
+  native-consumers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        storage: [0, 1]
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Configure pinned native SDK and compile actual consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          options=()
+          if [[ "${{ matrix.storage }}" == 1 ]];then options=(-D "RISC_PRODUCT_PROFILE=$PWD/test/fixtures/native_metadata_profile.cmake");fi
+          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/metadata-native" -D "RISC_SOURCE_SHA=$GITHUB_SHA" "${options[@]}" reconfigure
+          python test/compile_runtime_metadata_target.py "$RUNNER_TEMP/metadata-native/compile_commands.json" "$RUNNER_TEMP/metadata-objects" --storage "${{ matrix.storage }}"
+          if [[ "${{ matrix.storage }}" == 0 ]];then
+            python test/compile_runtime_metadata_target.py "$RUNNER_TEMP/metadata-native/compile_commands.json" "$RUNNER_TEMP/metadata-embedded" --storage 0 --embedded
+          else
+            cmake --build "$RUNNER_TEMP/metadata-native" --target bootloader -- -j1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: matrix.storage == 1
+        with:
+          name: metadata-native-bootloader
+          path: ${{ runner.temp }}/metadata-native/bootloader/bootloader.bin
+  native-bank-metadata:
+    needs: native-consumers
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+      NATIVE_PROVIDER_TEST_ABI: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: metadata-native-bootloader
+          path: .native-bootloader
+      - run: python -m pip install "esptool==5.1.0"
+      - run: BOOTLOADER_FILE="$PWD/.native-bootloader/bootloader.bin" bash test/run_native_bank_test.sh

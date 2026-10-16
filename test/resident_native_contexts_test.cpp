@@ -5,6 +5,7 @@
 #include <RiscHardwareConfigV1.h>
 #include <cassert>
 #include <cstring>
+#include "RuntimeFileFixture.h"
 
 struct NativeProbe {
   uint32_t version, size;
@@ -525,7 +526,7 @@ int main(int argc, char** argv) {
   cpu = &cpuPort;
   RiscBoot::Port port{owner, health, delay, log, bind, &keyBackend, appExitSafe, storageSafe};
   port.appData = &dataBackend;
-  Runtime running(port);
+  RiscTest::FileSources runningFiles0({argv[1]});Runtime running(port);assert(runningFiles0.bind(running));
   runtime = &running;
   assert(running.prepare(argv[1]));
   assert(!hardwareCalls); // Policy/board admission must perform no hardware I/O.

@@ -3,6 +3,7 @@
 #include <cstring>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
 using R=RiscBoot::Runtime;
 static const risc_runtime_api_v1*savedApi=nullptr;
 static R*runtime;static bool held=false,terminal=false,inCheckpoint=false;static unsigned checkpoints=0,entries=0,delays=0,rawDelays=0;
@@ -41,7 +42,7 @@ int main(int argc,char**argv){assert(argc==3);const std::string root=argv[1];mod
  port.keyValue=&kv;port.appExitSafe=storageSafe;port.providerStorageSafe=storageSafe;port.retainedDelay=rawDelay;port.nativeOwnerCheckpoint=checkpoint;
  // Readiness is false during owned work; the checkpoint must be outside it.
  port.providerServicesReady=storageSafe;port.providerServiceBegin=[](){assert(!held&&!inCheckpoint);return true;};port.providerServiceEnd=[](){assert(!held&&!inCheckpoint);};
- auto*r=new R(port);runtime=r;if(!r->prepare(root.c_str())){std::fprintf(stderr,"prepare: %s\n",r->error());return 2;}const bool ran=r->run();
+ static RiscTest::FileSources rFiles0({root.c_str()});auto*r=new R(port);assert(rFiles0.bind(*r));runtime=r;if(!r->prepare(root.c_str())){std::fprintf(stderr,"prepare: %s\n",r->error());return 2;}const bool ran=r->run();
  if(mode=="retained"){assert(!ran&&r->retained()&&!entries&&held);std::fflush(stdout);std::_Exit(0);}
  assert(ran&&!r->retained()&&entries==1&&checkpoints>=2&&rawDelays==checkpoints);delete r;
  puts("actual Runtime checkpoint: scheduler-only drain, reentry refusal, no yield admission and resumed app acquisition PASS");

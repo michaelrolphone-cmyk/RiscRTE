@@ -5,6 +5,7 @@
 #include "native_spi_shim/Sdk.h"
 #include <cstdio>
 #include <fstream>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 using NativeShim::model;
 using NativeShim::Fault;
@@ -27,10 +28,11 @@ static void stage(const std::string& root,int miso=-1,unsigned physical=2){
   save("display.json",R"({"type":"driver","id":"generic-display","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"display.elf","requires":[{"capability":"hardware.device","api":1},{"capability":"platform.gpio","api":1},{"capability":"spi.bus","api":1},{"capability":"platform.clock","api":1}],"provides":[{"capability":"test.display","api":1}],"hardware_compatibility":[{"compatible":"test,display","revisions":["unspecified"],"config_type":"display.spi","config_version":1}]})");
 }
 struct Fixture {
-  Port p;RiscBoot::Runtime r;
-  Fixture(const std::string& root,int miso=-1,bool supported=true,unsigned physical=2):p(hardware()),r(runtime()){
+  Port p;RiscTest::FileSources metadataFiles;RiscBoot::Runtime r;
+  Fixture(const std::string& root,int miso=-1,bool supported=true,unsigned physical=2):p(hardware()),metadataFiles({root}),r(runtime()){
     model={};for(auto& state:NativeShim::spi)state={};stage(root,miso,physical);current=&p;
     if(!supported)p.hw_.spiBeginThreeWire=nullptr;
+    assert(metadataFiles.bind(r));
     assert(r.prepare(root.c_str()) && !model.calls && p.spiCount_==2 && p.gpioCount_==2);
   }
   ~Fixture(){assert(p.quiescent() && !model.initialized && !model.device.live && !model.pending);}

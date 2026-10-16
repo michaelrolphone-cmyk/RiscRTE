@@ -1,0 +1,40 @@
+name: Internal runtime storage source
+on:
+  push:
+    branches: [work/unified-default-capabilities]
+    paths: ['sdk/app/RiscStorageFilesIdentityV1.h', 'src/bootstrap/RuntimeFiles.h', 'src/bootstrap/StorageFilesVolumeAdapter.h', 'src/runtime/storage/FileValidation.h', 'src/runtime/storage/PosixFiles.h', 'src/ports/esp32s3/NativeSpiffsFiles.h', 'test/*spiffs*', 'test/compile_runtime_files_target.sh', 'test/runtime_files_target_probe.cpp', 'test/runtime_files_source_test.cpp', 'test/posix_files_provider_test.cpp', 'test/run_runtime_files_source_test.sh', '.github/workflows/runtime-storage-source.yml']
+  pull_request:
+    paths: ['sdk/app/RiscStorageFilesIdentityV1.h', 'src/bootstrap/RuntimeFiles.h', 'src/bootstrap/StorageFilesVolumeAdapter.h', 'src/runtime/storage/FileValidation.h', 'src/runtime/storage/PosixFiles.h', 'src/ports/esp32s3/NativeSpiffsFiles.h', 'test/*spiffs*', 'test/compile_runtime_files_target.sh', 'test/runtime_files_target_probe.cpp', 'test/runtime_files_source_test.cpp', 'test/posix_files_provider_test.cpp', 'test/run_runtime_files_source_test.sh', '.github/workflows/runtime-storage-source.yml']
+  workflow_dispatch:
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash test/run_runtime_files_source_test.sh
+      - run: bash test/run_storage_files_adapter_test.sh
+  native-spiffs:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sanitize: [0, 1]
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: espressif/esp-idf
+          ref: fff9895c82d744c7237be8847347bdd1b07c6643
+          path: .sdk/idf
+          sparse-checkout: components/spiffs
+      - run: git -C .sdk/idf submodule update --init --depth 1 components/spiffs/spiffs
+      - run: bash test/run_native_spiffs_files_test.sh .sdk/idf
+      - run: MTIME=1 bash test/run_native_spiffs_files_test.sh .sdk/idf

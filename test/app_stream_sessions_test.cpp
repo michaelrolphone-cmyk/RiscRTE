@@ -10,6 +10,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "RuntimeFileFixture.h"
 static std::string mode;
 static std::vector<std::string> events;
 static bool owner=true,locked=false;
@@ -75,7 +76,7 @@ int main(int argc,char** argv){
  write(root,"boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","provider_activation":")")+activation+R"(","drivers":[{"manifest":"stream.json"},{"manifest":"root.json"}],"app_capabilities":[{"manifest":"default.json","grants":[{"capability":"test.stream","api":1,"instance_id":0})"+promoteGrant+R"(]},{"manifest":"child.json","grants":[{"capability":"test.stream","api":1,"instance_id":0}]}]})");
  uint32_t clock=0;
  static uint32_t* ticks=&clock;
- auto* runtime=new RiscBoot::Runtime({[](){return owner;},[](risc_runtime_health_v1* h){h->uptime_ms=++*ticks;return true;},[](uint32_t){},[](const char*){return true;}});
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new RiscBoot::Runtime({[](){return owner;},[](risc_runtime_health_v1* h){h->uptime_ms=++*ticks;return true;},[](uint32_t){},[](const char*){return true;}});assert(runtimeFiles0.bind(*runtime));
  assert(runtime->prepare(root.c_str()));
  const bool result=runtime->run();
  if(locked){RuntimeStreams::Testing::unlockRegistry();locked=false;}

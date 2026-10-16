@@ -310,7 +310,7 @@ int main(int argc,char** argv){
    auto* wake=RiscCpu::NativeRetainedWake::backend();assert(!wake->ready());
    RiscBoot::Port port{own,nullptr,nullptr,nullptr,bindProvisioningCandidate};
    port.retainedWake=wake;port.coldBoot=[](){assert(false);return false;};
-   RiscBoot::Runtime candidate(port);
+   RiscTest::FileSources sources({root},own,safe);RiscBoot::Runtime candidate(port);assert(sources.bind(candidate));
    const bool expected=RISC_NATIVE_DIAGNOSTIC_OBSERVER && diagnosticSourceAvailable;
    assert(candidate.prepare(root.c_str())==expected);
    if(expected){
@@ -348,13 +348,15 @@ int main(int argc,char** argv){
    auto record=RiscUpdate::makeRecord(0,imageSize,fw,store);memcpy(flash.data()+RiscUpdate::JournalOffset,&record,sizeof(record));
    if(mode=="unscanned-store")flash[RiscUpdate::StoreOffset[0]+16]^=1;
    if(mode=="bad-layout")table[2].size=RiscUpdate::StoreAbi==2?0x300000:0x280000;
-   assert(RiscBankStore::prepareBoot(own,restartSafe,safe)==(mode!="bad-layout"));
+   RiscTest::FileSources initialSources({RiscTest::FileSources::Mapping{"/bootfs",std::filesystem::path(argv[2]).parent_path().string()}},own,safe);
+   assert(RiscBankStore::prepareBoot(own,restartSafe,safe,initialSources.sources())==(mode!="bad-layout"));
    if(mode!="bad-layout")constantBootCost();
    assert(writes==0 && confirms==0);
    if(mode=="boot"){assert(!strcmp(RiscBankStore::bootLabel(),"bootfs0"));assert(!RiscBankStore::confirmBoot());assert(RiscBankStore::exitSafe());}
    if(provisioning){
      using namespace RiscBankStore;namespace fs=std::filesystem;
      modelStageRoot=argv[3];fs::create_directories(modelStageRoot);stagingRoot=modelStageRoot.c_str();modelProvisionFiles=true;
+     static RiscTest::FileSources sources({modelStageRoot,modelStageRoot+"-installed"},own,safe);fileSources=sources.sources();
      if(bootstrapping){
        using namespace RiscBootstrap;bootNet.mode=mode;
        auto text=[](const char* s){return std::vector<uint8_t>(s,s+strlen(s));};
@@ -433,6 +435,7 @@ int main(int argc,char** argv){
        hardware.radioIdle=[](){return !bootNet.radio;};hardware.httpClient=&bootstrapHttp;
        hardware.httpIdle=[](){return !bootNet.http;};hardware.httpSafe=[](){return !bootNet.broken;};
        RiscBootstrap::Port port{hardware,nullptr,safe,{nullptr,bootstrapInput},{nullptr,bootstrapTime,[](void*){++bootNet.timeStops;return bootNet.mode!="bootstrap-time-retained";}}};
+       port.files=sources.sources();
        if(mode=="bootstrap-no-time"||mode=="bootstrap-unchanged")port.time={};
        if(mode=="bootstrap-metadata-close-retained")metadataClosePath=modelStageRoot+"/boot.json";
        if(mode=="bootstrap-oom")risc_test_psram_fail_after=0;
@@ -481,7 +484,7 @@ int main(int argc,char** argv){
          }};
          if(pendingBank){fallbackPort.bindPlatforms=[](RiscBoot::Runtime& rt){return RiscBankStore::bind(rt);};fallbackPort.confirmBoot=RiscBankStore::confirmBoot;}
          RiscBoot::Runtime fallback(fallbackPort);
-         assert(fallback.prepare(installed.c_str())&&fallback.run());
+         assert(sources.bind(fallback));assert(fallback.prepare(installed.c_str())&&fallback.run());
          if(pendingBank)assert(confirms==1&&otaState==ESP_OTA_IMG_VALID&&!provisionAvailable()); // normal health; next boot can provision
 
        }

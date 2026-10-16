@@ -1,13 +1,13 @@
 #pragma once
 #include <RiscBankStoreV1.h>
-namespace RiscBoot { class Runtime; struct KeyValueBackend; struct AppDataBackend; }
+namespace RiscBoot { class Runtime; class RuntimeFileSources; struct KeyValueBackend; struct AppDataBackend; }
 namespace RiscCpu { struct Hardware; }
 namespace RiscProvision { struct Profile; }
 namespace RiscBankStore {
 // Paired target only. Boot resolves the deployed table and selected pair's
 // existing commit record, without rehashing installed images. Install/update
 // owns image validation. False never formats storage; pending failures rollback.
-bool prepareBoot(bool (*owner)(),bool (*restartSafe)(),bool (*operationSafe)());
+bool prepareBoot(bool (*owner)(),bool (*restartSafe)(),bool (*operationSafe)(),const RiscBoot::RuntimeFileSources* files=nullptr);
 const char* bootLabel();
 bool bind(RiscBoot::Runtime&);
 bool confirmBoot();

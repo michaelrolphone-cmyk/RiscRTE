@@ -1,3 +1,4 @@
+#include "FixtureJson.h"
 // Run the actual NativeBankStore::validateStore, with only its flash/VFS and
 // backend I/O replaced by the existing native harness. No ELF is executed.
 #include "native_bank_app_data_export_selection.h"
@@ -75,15 +76,16 @@ static void nativeAppDataExportAdmission(const char* directory,bool closeFailure
     save(std::string(root)+"/boot.json",boot);identity(root,coordinate);
   };
   fsRoot=directory;fs::create_directories(fsRoot);
+  RiscTest::FileSources sources({RiscTest::FileSources::Mapping{"/bootfs",fsRoot+"/bootfs"},{"/updatefs",fsRoot+"/updatefs"}},own,safe);fileSources=sources.sources();
   isOwner=own;operationIsSafe=safe;prepared=confirmed=true;activeBank=0;scratch=new Scratch;
   for(unsigned b=0;b<2;++b)for(unsigned r=0;r<2;++r)parts[b][r]=&table[b*2+r];
   auto source=[&](bool exportMap,const RiscUpdate::NativeAppDataExportCohortV1& coordinate) {
     runtime=nullptr;makeStore("/bootfs",exportMap,coordinate);
-    auto instance=std::make_unique<RiscBoot::Runtime>(port);
+    auto instance=std::make_unique<RiscBoot::Runtime>(port);assert(sources.bind(*instance));
     assert(instance->prepare("/bootfs"));runtime=instance.get();return instance;
   };
   auto check=[&](bool accepted) {
-    RiscUpdate::CohortIdentity candidate;assert(RiscUpdate::readCohort("/updatefs",candidate));
+    RiscUpdate::CohortIdentity candidate;assert(RiscUpdate::readCohort(RiscBoot::RuntimeFileView(sources.sources(),"/updatefs"),"/updatefs",candidate));
     cohortImage={};cohortImage.struct_size=sizeof(cohortImage);cohortImage.store_abi=RiscUpdate::StoreAbi;cohortImage.store_size=RiscUpdate::StoreBytes;
     strcpy(cohortImage.product,candidate.product.product);strcpy(cohortImage.version,candidate.product.version);
     strcpy(cohortImage.source_repo,candidate.product.source_repo);strcpy(cohortImage.source_revision,candidate.product.source_revision);
@@ -164,7 +166,7 @@ static void nativeAppDataExportAdmission(const char* directory,bool closeFailure
   makeStore("/updatefs",false,unrelated);check(false);
   if(closeFailure && enabled) {
     current=source(false,expected.from);makeStore("/updatefs",true,expected.to);
-    RiscUpdate::CohortIdentity target;assert(RiscUpdate::readCohort("/updatefs",target));
+    RiscUpdate::CohortIdentity target;assert(RiscUpdate::readCohort(RiscBoot::RuntimeFileView(sources.sources(),"/updatefs"),"/updatefs",target));
     strcpy(scratch->cohort.version,target.product.version);strcpy(scratch->cohort.source_revision,target.product.source_revision);
     metadataClosePath=fsRoot+"/bootfs/cohort.json";metadataRequireCandidate=false;
     assert(!validateStore(nullptr,1) && metadataFailedCloses==1 && provisionReadRetained && mounted);

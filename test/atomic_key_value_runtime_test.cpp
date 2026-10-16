@@ -1,9 +1,15 @@
 #define NATIVE_ATOMIC_ENDPOINT_FIXTURE_ONLY
 #include "native_atomic_key_value_test.cpp"
 #include "bootstrap/Runtime.h"
+#ifdef TEST_PREFERENCES
+#include <RiscPreferenceStoreV1.h>
+#undef RISC_KEY_VALUE_ATOMIC_CAPABILITY
+#define RISC_KEY_VALUE_ATOMIC_CAPABILITY RISC_PREFERENCE_STORE_CAPABILITY
+#endif
 #include <fstream>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 using R=RiscBoot::Runtime;
 static std::string directory,scenario;
 static std::atomic<bool> sharedRetained{false};
@@ -38,7 +44,11 @@ static void delay(uint32_t){}
 static risc_runtime_capability_v1 acquire(const risc_runtime_api_v1* rt,unsigned ns){
  risc_runtime_capability_v1 g{};g.struct_size=sizeof(g);assert(rt->acquire(RISC_KEY_VALUE_ATOMIC_CAPABILITY,1,ns,&g));return g;
 }
-static risc_key_value_atomic_state_v1 state(const risc_key_value_atomic_v1&a){risc_key_value_atomic_state_v1 s{sizeof(s)};assert(!a.state(a.context,&s));return s;}
+static risc_key_value_atomic_state_v1 state(const risc_key_value_atomic_v1&a){risc_key_value_atomic_state_v1 s{sizeof(s)};assert(!a.state(a.context,&s));
+#ifdef TEST_PREFERENCES
+ assert(s.flags==15);
+#endif
+ return s;}
 static void invalid(const risc_key_value_atomic_v1&a){
  risc_key_value_atomic_state_v1 s{sizeof(s)};risc_key_value_atomic_receipt_v1 receipt{sizeof(receipt)};
  char out='x';uint32_t n=42;uint64_t token=42;
@@ -157,8 +167,8 @@ extern "C" void test_atomic_app(unsigned hook,unsigned child){
  saved=renewed;assert(rt->request_launch("child.elf"));
 }
 static void file(const char* name,const std::string& content){std::ofstream(directory+"/"+name)<<content;}
-static std::string manifest(const char* id,const char* elf,unsigned api=1){return std::string("{\"type\":\"application\",\"id\":\"")+id+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\""+elf+"\",\"entry\":\"app_main\",\"requires\":[{\"capability\":\"storage.key-value.atomic\",\"api\":"+std::to_string(api)+"}]}";}
-static std::string grant(unsigned ns,unsigned api=1){return "{\"capability\":\"storage.key-value.atomic\",\"api\":"+std::to_string(api)+",\"instance_id\":"+std::to_string(ns)+"}";}
+static std::string manifest(const char* id,const char* elf,unsigned api=1){return std::string("{\"type\":\"application\",\"id\":\"")+id+"\",\"version\":\"1.0.0\",\"architecture\":\"xtensa-esp32s3\",\"file_name\":\""+elf+"\",\"entry\":\"app_main\",\"requires\":[{\"capability\":\"" RISC_KEY_VALUE_ATOMIC_CAPABILITY "\",\"api\":"+std::to_string(api)+"}]}";}
+static std::string grant(unsigned ns,unsigned api=1){return "{\"capability\":\"" RISC_KEY_VALUE_ATOMIC_CAPABILITY "\",\"api\":"+std::to_string(api)+",\"instance_id\":"+std::to_string(ns)+"}";}
 static void boot(unsigned ns=6,unsigned api=1,bool multi=true){
  file("app.json",manifest("atomic-main","default.elf",api));file("child.json",manifest("atomic-child","child.elf"));
  file("boot.json","{\"board\":\"board.json\",\"default_app\":\"default.elf\",\"drivers\":[],\"app_capabilities\":[{\"manifest\":\"app.json\",\"grants\":["+grant(ns,api)+(multi?","+grant(7):"")+ "]},{\"manifest\":\"child.json\",\"grants\":["+grant(7)+"]}]"+(scenario=="resident"?",\"resident_shell\":{\"api\":1,\"host\":\"default.elf\",\"foreground\":[\"child.elf\"]}":"")+"}");
@@ -183,11 +193,11 @@ int main(int argc,char** argv){
  A a(c,guard),otherA(other,otherG.api());endpoint=&a;otherEndpoint=&otherA;endpointGate=&gate;otherGate=&otherG;core=&c;otherCore=&other;
  boot();
  if(scenario=="admission"){
-  {R r({owner,health,delay,logLine});assert(!r.prepare(directory.c_str()));}
-  for(unsigned ns:{0u,8u}){boot(ns);R r({owner,health,delay,logLine,bind});assert(!r.prepare(directory.c_str()));}
-  boot(6,2);{R r({owner,health,delay,logLine,bind});assert(!r.prepare(directory.c_str()));}
-  boot();file("app.json",manifest("unregistered","default.elf"));{R r({owner,health,delay,logLine,bind});assert(!r.prepare(directory.c_str()));}
-  boot();{R r({owner,health,delay,logLine,bind});assert(r.prepare(directory.c_str()));assert(!r.registerAtomicKeyValue("late",6,a));}
+  {RiscTest::FileSources rFiles0({directory.c_str()});R r({owner,health,delay,logLine});assert(rFiles0.bind(r));assert(!r.prepare(directory.c_str()));}
+  for(unsigned ns:{0u,8u}){boot(ns);RiscTest::FileSources rFiles1({directory.c_str()});R r({owner,health,delay,logLine,bind});assert(rFiles1.bind(r));assert(!r.prepare(directory.c_str()));}
+  boot(6,2);{RiscTest::FileSources rFiles2({directory.c_str()});R r({owner,health,delay,logLine,bind});assert(rFiles2.bind(r));assert(!r.prepare(directory.c_str()));}
+  boot();file("app.json",manifest("unregistered","default.elf"));{RiscTest::FileSources rFiles3({directory.c_str()});R r({owner,health,delay,logLine,bind});assert(rFiles3.bind(r));assert(!r.prepare(directory.c_str()));}
+  boot();{RiscTest::FileSources rFiles4({directory.c_str()});R r({owner,health,delay,logLine,bind});assert(rFiles4.bind(r));assert(r.prepare(directory.c_str()));assert(!r.registerAtomicKeyValue("late",6,a));}
   puts("Runtime atomic exact app/namespace/API admission and trusted registration PASS");return 0;
  }
  if(scenario=="readthrough"){
@@ -203,7 +213,7 @@ int main(int argc,char** argv){
   }
   std::string json;serializeJson(doc,json);file("boot.json",json);json.clear();serializeJson(manifestDoc,json);file("app.json",json);
  }
- R r({owner,health,delay,logLine,bind,scenario=="readthrough"?&legacy:nullptr});runtime=&r;assert(r.prepare(directory.c_str()));
+ RiscTest::FileSources rFiles5({directory.c_str()});R r({owner,health,delay,logLine,bind,scenario=="readthrough"?&legacy:nullptr});assert(rFiles5.bind(r));runtime=&r;assert(r.prepare(directory.c_str()));
  if(scenario=="pending"||scenario=="retained"||scenario=="state-retained"||scenario.rfind("guard-",0)==0){
   assert(!r.run()&&r.retained()&&finishes==0&&!r.residentResetSafe());invalid(saved);
   // No destructor or cleanup retries are permitted for retained custody.
@@ -215,7 +225,7 @@ int main(int argc,char** argv){
  if(scenario=="resident")assert(entries==2&&finishes==2);
  if(scenario=="controller"){
   C reboot(6,d.backend(),limits(),allocation.api());assert(!reboot.load());Gate restoredGate;A restored(reboot,restoredGate.api());endpoint=&restored;endpointGate=&restoredGate;core=&reboot;phase=1;
-  R next({owner,health,delay,logLine,bind});runtime=&next;assert(next.prepare(directory.c_str())&&next.run()&&!next.retained());
+  RiscTest::FileSources nextFiles6({directory.c_str()});R next({owner,health,delay,logLine,bind});assert(nextFiles6.bind(next));runtime=&next;assert(next.prepare(directory.c_str())&&next.run()&&!next.retained());
  }
  puts("Real Runtime atomic grants: owner/worker, copied inputs, exact receipt, cancel races, stale tables, handoff and fresh invocation PASS");
 }

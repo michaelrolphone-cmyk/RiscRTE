@@ -6,6 +6,7 @@
 #include <string>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
 static std::string root;static bool owned=true;static int phase=0;static risc_key_value_v1 saved{};
 extern "C" void test_kv_owner(int v){owned=v;}
 extern "C" int test_kv_phase(){return phase;}
@@ -42,19 +43,19 @@ int main(int argc,char** argv){
  gen=UINTPTR_MAX-1;assert(RiscBoot::nextKeyValueContext(gen) && gen==UINTPTR_MAX);assert(!RiscBoot::nextKeyValueContext(gen) && gen==UINTPTR_MAX);
  assert(argc==2 || argc==3);root=argv[1];
  if(argc==3){phase=std::string(argv[2])=="wake"?2:0;
-  for(unsigned repeat=0;repeat<2;++repeat){RiscBoot::Runtime runtime({owner,health,delay,log,nullptr,&backend});assert(runtime.prepare(root.c_str()));assert(runtime.run());assert(phase==2);test_kv_revoked();}
+  for(unsigned repeat=0;repeat<2;++repeat){RiscTest::FileSources runtimeFiles0({root.c_str()});RiscBoot::Runtime runtime({owner,health,delay,log,nullptr,&backend});assert(runtimeFiles0.bind(runtime));assert(runtime.prepare(root.c_str()));assert(runtime.run());assert(phase==2);test_kv_revoked();}
   puts("Real runtime + dynamic app key-value grants/handoff/fresh boot PASS");return 0;}
  file("board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})");
  const char* req=R"([{"capability":"storage.key-value","api":1}])";
  file("app.json",manifest("kv-default","default.elf",req));file("child.json",manifest("kv-child","child.elf",req));file("isolated.json",manifest("kv-isolated","isolated.elf",req));
- boot(policy("app.json",0));{RiscBoot::Runtime r({owner,health,delay,log,nullptr,&backend});assert(!r.prepare(root.c_str()));}
- boot(policy("app.json",1));{RiscBoot::Runtime r({owner,health,delay,log});assert(!r.prepare(root.c_str()));}
- file("app.json",manifest("kv-default","default.elf","[]"));{RiscBoot::Runtime r({owner,health,delay,log,nullptr,&backend});assert(!r.prepare(root.c_str()));}
- file("app.json",manifest("kv-default","default.elf",R"([{"capability":"storage.key-value","api":2}])"));{RiscBoot::Runtime r({owner,health,delay,log,nullptr,&backend});assert(!r.prepare(root.c_str()));}
+ boot(policy("app.json",0));{RiscTest::FileSources rFiles1({root.c_str()});RiscBoot::Runtime r({owner,health,delay,log,nullptr,&backend});assert(rFiles1.bind(r));assert(!r.prepare(root.c_str()));}
+ boot(policy("app.json",1));{RiscTest::FileSources rFiles2({root.c_str()});RiscBoot::Runtime r({owner,health,delay,log});assert(rFiles2.bind(r));assert(!r.prepare(root.c_str()));}
+ file("app.json",manifest("kv-default","default.elf","[]"));{RiscTest::FileSources rFiles3({root.c_str()});RiscBoot::Runtime r({owner,health,delay,log,nullptr,&backend});assert(rFiles3.bind(r));assert(!r.prepare(root.c_str()));}
+ file("app.json",manifest("kv-default","default.elf",R"([{"capability":"storage.key-value","api":2}])"));{RiscTest::FileSources rFiles4({root.c_str()});RiscBoot::Runtime r({owner,health,delay,log,nullptr,&backend});assert(rFiles4.bind(r));assert(!r.prepare(root.c_str()));}
  file("app.json",manifest("kv-default","default.elf",req));
  boot(policy("app.json",1)+","+policy("child.json",1)+","+policy("isolated.json",2));
  child(argv[0],"cold");child(argv[0],"wake");
  file("boot.json",R"({"board":"board.json","default_app":"nopolicy.elf","drivers":[]})");
- {RiscBoot::Runtime r({owner,health,delay,log,nullptr,&backend});assert(r.prepare(root.c_str()));assert(r.run());}
+ {RiscTest::FileSources rFiles5({root.c_str()});RiscBoot::Runtime r({owner,health,delay,log,nullptr,&backend});assert(rFiles5.bind(r));assert(r.prepare(root.c_str()));assert(r.run());}
  puts("Capability policy denial, owner/live-generation enforcement, namespace isolation, bounds/faults and persistent fresh-process boot PASS");
 }

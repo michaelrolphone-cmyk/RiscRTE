@@ -7,6 +7,7 @@
 #include <string>
 #include <cstdio>
 #include <filesystem>
+#include "RuntimeFileFixture.h"
 using namespace RiscCpu;
 static Port* activePort;
 static unsigned io=0;
@@ -30,7 +31,7 @@ int main(int argc,char**argv){
  auto boot=[&](bool selected){save("boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[)")+(selected?R"({"manifest":"tx.json"})":"")+"]}");};
  save("tx.json",R"({"type":"driver","id":"generic-iq","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"driver.elf","requires":[{"capability":"platform.radio.iq.resource","api":1}],"provides":[{"capability":"test.output","api":1}]})");
  auto prepared=[&](Hardware h,bool expected,size_t tables){
-  Port p(h);activePort=&p;RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
+  Port p(h);activePort=&p;RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(rFiles0.bind(r));
   assert(r.prepare(root.c_str())==expected);assert(p.iqCount_==tables && !io);
   if(tables){assert(p.iq_.api.base.claim && p.iq_.api.base.release && p.iq_.api.base.bank_base==0x3FCB0000u && p.iq_.api.base.bank_bytes==65536u && p.quiescent());}
  };
@@ -67,7 +68,7 @@ int main(int argc,char**argv){
  std::ofstream(next/"tx.json")<<R"({"type":"driver","id":"generic-iq","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"driver.elf","requires":[{"capability":"platform.radio.iq.resource","api":1}],"provides":[{"capability":"test.output","api":1}]})";
  std::ofstream(next/"driver.elf")<<"not executed";
  Port p(hardware());activePort=&p;
- RiscBoot::Runtime current({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});
+ RiscTest::FileSources currentFiles1({old.c_str(),next.c_str()});RiscBoot::Runtime current({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind});assert(currentFiles1.bind(current));
  RiscBoot::Runtime candidate({});assert(current.prepare(old.c_str()));
  assert(current.validateCohort(candidate,next.c_str(),[](void*,const char*,bool){return true;},nullptr) && !io);
  puts("IQ global CPU resource: opt-in registration, no selected hardware or bind-time I/O, native-first graph continuity and unavailable backend refusal PASS");

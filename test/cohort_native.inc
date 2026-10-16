@@ -3,6 +3,8 @@
 // code; SPIFFS's own on-media parser is covered by target/store image tests.
 #include <filesystem>
 #include <dirent.h>
+#include <cstdarg>
+#include "RuntimeFileFixture.h"
 static std::string fsRoot;
 static unsigned receiptMode=0;
 static bool cohortLiveClose=false;
@@ -27,6 +29,26 @@ extern "C" int __wrap_fclose(FILE* file){
  if(entry!=metadataStreams.end())metadataStreams.erase(entry);
  const int result=__real_fclose(file);
  if(fail){metadataClosePath.clear();++metadataFailedCloses;return EOF;}
+ return result;
+}
+// Metadata now calls the generic provider's descriptor operations. Keep ELF
+// stdio faults independent until the loader migration increment.
+static std::map<int,std::string> metadataDescriptors;
+extern "C" int __real_open(const char*,int,...);
+extern "C" int __real_close(int);
+extern "C" int __wrap_open(const char* path,int flags,...){
+ mode_t mode=0;if(flags&O_CREAT){va_list args;va_start(args,flags);mode=va_arg(args,int);va_end(args);}
+ auto mapped=redirected(path);int fd=__real_open(mapped.c_str(),flags,mode);
+ if(fd>=0 && (flags&O_ACCMODE)==O_RDONLY)metadataDescriptors[fd]=mapped;
+ return fd;
+}
+extern "C" int __wrap_close(int fd){
+ const auto entry=metadataDescriptors.find(fd);const bool selected=entry!=metadataDescriptors.end();
+ const bool fail=selected && entry->second==metadataClosePath && (!metadataRequireCandidate || RiscBankStore::candidateCpu);
+ if(selected)metadataDescriptors.erase(entry);
+ const int result=__real_close(fd);
+ if(fail){metadataClosePath.clear();++metadataFailedCloses;errno=EIO;return -1;}
+ if(selected && failNextNativeClose){failNextNativeClose=false;++failedAdmissionCloses;errno=EIO;return -1;}
  return result;
 }
 extern "C" DIR* __wrap_opendir(const char* path){auto mapped=redirected(path);return __real_opendir(mapped.c_str());}
@@ -124,6 +146,7 @@ extern "C" void test_cohort_update(){
 static void cohortNative(const char* loader,const char* root){
  using namespace RiscBankStore;namespace fs=std::filesystem;
  fsRoot=root;fs::create_directories(fsRoot+"/bootfs");fs::create_directories(fsRoot+"/updatefs");
+ static RiscTest::FileSources sources({RiscTest::FileSources::Mapping{"/bootfs",fsRoot+"/bootfs"},{"/updatefs",fsRoot+"/updatefs"}},own,safe);
  const auto boot=validatedBootloader(loader);
  memcpy(flash.data(),boot.data(),boot.size());firmware(0,RISC_BUILD_VERSION);firmware(1,RISC_BUILD_VERSION);
  cohortBytes.assign(flash.begin()+0x800000,flash.begin()+0x800000+imageSize);cohortBytes.resize(imageSize+RiscUpdate::StoreBytes,0x79);
@@ -158,9 +181,9 @@ static void cohortNative(const char* loader,const char* root){
    memcpy(flash.data()+RiscUpdate::JournalOffset+RiscUpdate::AttemptOffset,&receipt,sizeof(receipt));
   }else saveNative("/bootfs/.provision-sha256",std::string(reinterpret_cast<const char*>(consumedProfile),32));
  }
- assert(prepareBoot(own,restartSafe,safe));
+ assert(prepareBoot(own,restartSafe,safe,sources.sources()));
  auto instance=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,nullptr,exitSafe,safe,confirmBoot});
- assert(instance->prepare("/bootfs"));
+ assert(sources.bind(*instance));assert(instance->prepare("/bootfs"));
  assert(instance->run()!=cohortLiveClose);
  if(cohortLiveClose){assert(instance->retained() && instance->metadataCloseRetained());instance.release();
   std::cout<<"Post-activation live metadata close: invocation retained, cleanup/restart refused, zero resets PASS\n";}
@@ -178,14 +201,14 @@ static void cohortNative(const char* loader,const char* root){
    scratch->~Scratch();free(scratch);scratch=nullptr;
    prepared=pending=confirmed=rollbackTrusted=false;replacingFirmware=replacingCohort=false;
    active=bank;otaState=state;writes=selectorCalls=restarts=0;
-   assert(prepareBoot(own,restartSafe,safe));
+   assert(prepareBoot(own,restartSafe,safe,sources.sources()));
   };
   auto hardware=admissionHardware();hardware.sleep=[](uint32_t n){vTaskDelay(n);};
   hardware.radioJoin=[](const char*,const char*){++bootNet.joins;return false;};
   hardware.radioState=[](uint8_t*,int8_t*){return false;};hardware.radioAddresses=[](uint8_t*,uint8_t*){return false;};
   hardware.radioLeave=[](){return true;};hardware.radioIdle=[](){return true;};
   hardware.httpClient=&bootstrapHttp;hardware.httpIdle=hardware.httpSafe=[](){return true;};
-  RiscBootstrap::Port port{hardware,nullptr,safe,{nullptr,bootstrapInput},{}};
+  RiscBootstrap::Port port{hardware,nullptr,safe,{nullptr,bootstrapInput},{}};port.files=sources.sources();
   reboot(1,ESP_OTA_IMG_PENDING_VERIFY);
   auto result=RiscBootstrap::run(port,"/bootfs");
   assert(result.outcome==RiscBootstrap::Outcome::Installed && result.reason==RiscBootstrap::Reason::PairUnavailable && !bootNet.inputReads);

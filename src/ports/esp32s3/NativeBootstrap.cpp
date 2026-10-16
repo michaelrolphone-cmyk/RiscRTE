@@ -30,7 +30,10 @@ struct Session {
  Reason reason=Reason::Unchanged;
  explicit Session(const Port& p):port(p){}
  ~Session(){volatile uint8_t* p=input;for(size_t i=0;i<sizeof(input);++i)p[i]=0;}
- bool safe(){return !retained && port.hardware.owner && port.hardware.owner() && port.operationSafe && port.operationSafe();}
+ bool safe(){
+   if(port.files && port.files->retained()){retained=true;reason=Reason::CleanupRetained;}
+   return !retained && port.hardware.owner && port.hardware.owner() && port.operationSafe && port.operationSafe();
+ }
  bool clock(uint64_t& utc,bool& pending){
    pending=false;TimeSample sample{};
    if(!port.time.poll){reason=Reason::ClockUnavailable;return false;}
@@ -69,9 +72,11 @@ struct Session {
    if(receipt==RiscBankStore::ProvisionIdentity::Different)return false;
    if(receipt==RiscBankStore::ProvisionIdentity::Unavailable){identityUnavailable=true;reason=Reason::HistoryUnavailable;return false;}
    char path[256];if(!RiscBoot::path(root,RiscProvision::StoreFiles::DigestFile,path,sizeof(path)))return false;
-   FILE* file=fopen(path,"rb");if(!file)return false;
-   uint8_t actual[33];const size_t size=fread(actual,1,sizeof(actual),file);bool ok=size==32&&!ferror(file)&&!memcmp(actual,expected,32);
-   if(fclose(file)!=0){retained=true;reason=Reason::CleanupRetained;ok=false;}return ok;
+   RiscBoot::RuntimeFileView source(port.files,root);uint32_t file=0;
+   const int32_t opened=source.open(path,&file);
+   if(opened!=RISC_FILES_OK){if(opened!=RISC_FILES_NOT_FOUND){identityUnavailable=true;reason=Reason::HistoryUnavailable;}if(source.retained()){retained=true;reason=Reason::CleanupRetained;}return false;}
+   uint8_t actual[33];uint32_t size=0;bool ok=source.readToEnd(file,actual,sizeof(actual),&size) && size==32 && !memcmp(actual,expected,32);
+   if(source.close(file)!=RISC_FILES_OK || source.retained()){retained=true;reason=Reason::CleanupRetained;ok=false;}return ok;
  }
  Step connect(){
    if(identityUnavailable){reason=Reason::HistoryUnavailable;return Step::Failed;}
@@ -166,6 +171,7 @@ bool supported(const Port& p){const auto& h=p.hardware;const auto* http=h.httpCl
 }
 Result run(const Port& port,const char* root){
  if(retainedSession)return {Outcome::Stopped,retainedSession->reason};
+ if(port.files && port.files->retained())return {Outcome::Stopped,Reason::CleanupRetained};
  if(!port.hardware.owner||!port.hardware.owner()||!port.operationSafe||!port.operationSafe())return {Outcome::Stopped,Reason::NativeUnsafe};
  if(!root||root[0]!='/'||strlen(root)>=256||!supported(port))return {Outcome::Installed,Reason::InputUnavailable};
  if(!RiscBankStore::provisionAvailable())return {RiscBankStore::exitSafe()?Outcome::Installed:Outcome::Stopped,Reason::PairUnavailable};

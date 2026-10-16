@@ -9,6 +9,7 @@
 #include "native_replica_checked_fixture.h"
 #include "experimental/native_replica/NativeSdSynchronization.h"
 #include <openssl/evp.h>
+#include "RuntimeFileFixture.h"
 namespace F=NativeFixture;
 using Sync=RiscExperimental::NativeSdSynchronization;
 using Coordinator=RiscExperimental::NativeSettingsCoordinator;
@@ -99,7 +100,7 @@ int main(int argc,char**argv){
  assert(argc==4);const char*mode=argv[2];Port cpu(hardware());port=&cpu;
  RiscBoot::Port boot{owner,[](risc_runtime_health_v1*){return true;},[](uint32_t ms){nowMs+=ms;},[](const char*){return true;},bind};
  boot.appExitSafe=[](){return port->appExitSafe();};boot.providerStorageSafe=[](){return port->providerStorageSafe();};
- RiscBoot::Runtime runtime(boot);assert(runtime.prepare(argv[1]));Pin anchor(runtime,cpu,55);assert(!anchor.acquire());
+ RiscTest::FileSources runtimeFiles0({argv[1]});RiscBoot::Runtime runtime(boot);assert(runtimeFiles0.bind(runtime));assert(runtime.prepare(argv[1]));Pin anchor(runtime,cpu,55);assert(!anchor.acquire());
  if(strcmp(mode,"unavailable")){P fresh(runtime,cpu,3,55);bootstrap(fresh);assert(!fresh.release());}
  const auto original=baseMap();const auto id=baseIdentity(original);auto remote=original;auto remoteId=id;
  if(!strcmp(mode,"foreign"))remoteId.lineage[0]=43;

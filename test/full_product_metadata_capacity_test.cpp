@@ -13,6 +13,7 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include "RuntimeFileFixture.h"
 
 namespace {
 unsigned hardwareCalls = 0, storageCalls = 0;
@@ -158,7 +159,7 @@ int main(int argc,char** argv){
   static_assert(RiscBoot::Runtime::MaxAppPolicyGrants==17,
                 "Preserve .50 Home's existing 17-row installed app policy");
   Context installedContext;cpu=&installedContext.port;
-  auto installed=std::make_unique<RiscBoot::Runtime>(installedContext.callbacks());
+  RiscTest::FileSources installedFiles0({argv[1],argv[2]});auto installed=std::make_unique<RiscBoot::Runtime>(installedContext.callbacks());assert(installedFiles0.bind(*installed));
   if(!installed->prepare(argv[1])){
     std::fprintf(stderr,"Baseline metadata rejected: %s\n",installed->error());return 2;
   }
@@ -166,7 +167,7 @@ int main(int argc,char** argv){
   Inventory baseline;assert(installed->inspectImages(inventory,&baseline));
   assert(baseline.apps==21 && baseline.providers==23);
   Context directContext;cpu=&directContext.port;
-  auto direct=std::make_unique<RiscBoot::Runtime>(directContext.callbacks());
+  RiscTest::FileSources directFiles1({argv[2]});auto direct=std::make_unique<RiscBoot::Runtime>(directContext.callbacks());assert(directFiles1.bind(*direct));
   const bool prepared=direct->prepare(argv[2]);
   Inventory inspected;
   if(prepared)assert(direct->inspectImages(inventory,&inspected));

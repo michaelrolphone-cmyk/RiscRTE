@@ -6,6 +6,8 @@
 #include <cstring>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 using RiscBoot::Runtime;
 static bool owned=true;
 static unsigned starts,apps,reads;
@@ -50,8 +52,8 @@ int main(int argc,char** argv){
   file("boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","drivers":[{"manifest":"provider.json"}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":")")+capability+R"(","api":1,"instance_id":0}]}]})");
  };
  registration();RiscDiagnostics::start();stage();
- {Runtime runtime({owner,health,delay,logLine});assert(!runtime.prepare(root.c_str()));assert(!std::strcmp(runtime.error(),"missing scoped trusted platform provider"));}
- {Runtime runtime({owner,health,delay,logLine,bind});
+ {RiscTest::FileSources runtimeFiles1({root.c_str()});Runtime runtime({owner,health,delay,logLine});assert(runtimeFiles1.bind(runtime));assert(!runtime.prepare(root.c_str()));assert(!std::strcmp(runtime.error(),"missing scoped trusted platform provider"));}
+ {RiscTest::FileSources runtimeFiles2({root.c_str()});Runtime runtime({owner,health,delay,logLine,bind});assert(runtimeFiles2.bind(runtime));
 #if RISC_NATIVE_DIAGNOSTIC_OBSERVER && !defined(TEST_ABSENT_READ)
   assert(runtime.prepare(root.c_str()) && !reads && !starts && !apps);
   assert(runtime.run() && reads==1 && starts==1 && apps==1);
@@ -62,8 +64,8 @@ int main(int argc,char** argv){
  }
  // An explicit app declaration and grant still cannot expose a raw source.
  stage(RISC_DIAGNOSTIC_SOURCE_CAPABILITY);
- JsonDocument config;assert(RiscBoot::readJson((root+"/boot.json").c_str(),config));config["drivers"].to<JsonArray>();
+ JsonDocument config;assert(RiscTest::readFixtureJson((root+"/boot.json").c_str(),config));config["drivers"].to<JsonArray>();
  std::string text;serializeJson(config,text);file("boot.json",text);
- {Runtime runtime({owner,health,delay,logLine,bind});assert(!runtime.prepare(root.c_str()));assert(!std::strcmp(runtime.error(),"raw platform capability denied to app"));}
+ {RiscTest::FileSources runtimeFiles3({root.c_str()});Runtime runtime({owner,health,delay,logLine,bind});assert(runtimeFiles3.bind(runtime));assert(!runtime.prepare(root.c_str()));assert(!std::strcmp(runtime.error(),"raw platform capability denied to app"));}
  puts("Diagnostic source binding: exact global v1, real provider dependency, absent/off rejection, explicit and live app denial PASS");
 }

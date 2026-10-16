@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <cstdio>
+#include "RuntimeFileFixture.h"
 static unsigned defaults,children,inits,finis,loads,unloads;
 static unsigned childRevision=1;
 static std::string mode;
@@ -30,7 +31,7 @@ int main(int argc,char**argv){
   for(unsigned session=0;session<(retained?1u:2u);++session){
     defaults=children=inits=finis=loads=unloads=0;
     const size_t reads=risc_test_native_read_count(),relocations=risc_test_native_relocation_count();
-    RiscBoot::Runtime runtime({[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});
+    RiscTest::FileSources runtimeFiles0({root.c_str()});RiscBoot::Runtime runtime({[](){return true;},[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}});assert(runtimeFiles0.bind(runtime));
     assert(runtime.prepare(root.c_str()));assert(runtime.run()!=retained);assert(runtime.retained()==retained);
     assert(risc_test_native_image_count()==0); // Including retained-failure exit.
     const size_t readDelta=risc_test_native_read_count()-reads;

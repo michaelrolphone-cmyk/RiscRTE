@@ -5,38 +5,44 @@ bool cohortSameJson(JsonVariantConst a,JsonVariantConst b){
   return a==b;
 }
 struct CohortName {char value[193]{};bool seen=false;};
-bool cohortInventory(const char* root,const char* relative,CohortName* names,size_t count,
-                     size_t& objects,unsigned depth,bool (*checkpoint)(void*),void* context){
-  if(depth>10 || !checkpoint(context))return false;
-  char directory[256];
-  if(!*relative){if(strlen(root)>=sizeof(directory))return false;strcpy(directory,root);}
-  else if(!path(root,relative,directory,sizeof(directory)))return false;
-  DIR* dir=opendir(directory);if(!dir)return false;
-  bool good=true;
-  for(;;){
-    errno=0;dirent* item=readdir(dir);if(!item){if(errno)good=false;break;}
-    if(!strcmp(item->d_name,".") || !strcmp(item->d_name,".."))continue;
-    if(++objects>256 || !checkpoint(context)){good=false;break;}
-    char name[193],filename[256];int n=snprintf(name,sizeof(name),"%s%s%s",relative,*relative?"/":"",item->d_name);
-    if(n<=0 || size_t(n)>=sizeof(name) || !path(root,name,filename,sizeof(filename))){good=false;break;}
-    struct stat info{};
-#ifdef ESP_PLATFORM
-    const int error=stat(filename,&info); // SPIFFS has no links or special files.
-#else
-    const int error=lstat(filename,&info);
-#endif
-    if(error){good=false;break;}
-    if(S_ISDIR(info.st_mode)){
-      bool prefix=false;for(size_t i=0;i<count;++i)if(!strncmp(names[i].value,name,size_t(n)) && names[i].value[n]=='/')prefix=true;
-      if(!prefix || !cohortInventory(root,name,names,count,objects,depth+1,checkpoint,context)){good=false;break;}
-    }else if(S_ISREG(info.st_mode)){
-      size_t i=0;for(;i<count;++i)if(!strcmp(names[i].value,name))break;
-      if(i==count || names[i].seen || info.st_size<=0){good=false;break;}
-      names[i].seen=true;
-    }else{good=false;break;}
+bool cohortInventory(RuntimeFileView source,const char* root,CohortName* names,size_t count,
+                     bool (*checkpoint)(void*),void* context){
+  // Keep one provider cursor at a time. The existing depth-ten admission must
+  // not consume eleven native handles (providers may have fewer available).
+  struct Pending {uint16_t name,prefix;uint8_t depth;};
+  auto pending=metadataArray<Pending>(256);if(!pending)return false;
+  size_t head=0,tail=1,objects=0;pending[0]={0,0,0};
+  while(head<tail){
+    const auto current=pending[head++];if(current.depth>10 || !checkpoint(context))return false;
+    char relative[193]{},directory[256];
+    if(current.prefix){memcpy(relative,names[current.name].value,current.prefix);relative[current.prefix]=0;}
+    if(!*relative){if(strlen(root)>=sizeof(directory))return false;strcpy(directory,root);}
+    else if(!path(root,relative,directory,sizeof(directory)))return false;
+    uint32_t dir=0;if(source.dirOpen(directory,&dir)!=RISC_FILES_OK)return false;
+    bool good=true;
+    for(;;){
+      risc_storage_files_stat_v1 item{};item.struct_size=sizeof(item);char entryName[193]{};uint32_t required=0;
+      const int32_t rc=source.directoryNext(dir,&item,entryName,sizeof(entryName),&required);
+      if(rc==RISC_FILES_END)break;
+      if(rc!=RISC_FILES_OK){good=false;break;}
+      if(!strcmp(entryName,".") || !strcmp(entryName,".."))continue;
+      if(++objects>256 || !checkpoint(context)){good=false;break;}
+      char name[193],filename[256];int n=snprintf(name,sizeof(name),"%s%s%s",relative,*relative?"/":"",entryName);
+      if(n<=0 || size_t(n)>=sizeof(name) || !path(root,name,filename,sizeof(filename))){good=false;break;}
+      if(item.flags&RISC_FILES_DIRECTORY){
+        size_t i=0;for(;i<count;++i)if(!strncmp(names[i].value,name,size_t(n)) && names[i].value[n]=='/')break;
+        if(i==count || tail>=256 || current.depth>=10){good=false;break;}
+        pending[tail++]={uint16_t(i),uint16_t(n),uint8_t(current.depth+1)};
+      }else{
+        size_t i=0;for(;i<count;++i)if(!strcmp(names[i].value,name))break;
+        if(i==count || names[i].seen || !item.size){good=false;break;}
+        names[i].seen=true;
+      }
+    }
+    if(source.dirClose(dir)!=RISC_FILES_OK)good=false;
+    if(!good || source.retained())return false;
   }
-  if(closedir(dir))good=false;
-  return good;
+  return true;
 }
 }
 bool Runtime::validateCohort(Runtime& candidate,const char* root,
@@ -59,22 +65,25 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
                                 const AppDataExportDelegation* delegations,size_t delegationCount,
                                 const RiscUpdate::NativeAppDataExportPolicyV1* nativePolicy,
                                 const RiscUpdate::NativeAppDataExportPolicyV2* nativeV2) const {
-  if(&candidate==this || !attempted_ || !port_.owner() || !providerStorageSafe() || !root || !admit || candidate.attempted_ || candidate.metadataCloseRetained_)return false;
+  if(&candidate==this || !attempted_ || !port_.owner() || !providerStorageSafe() || !root || !admit || candidate.attempted_ || candidate.metadataCloseRetained())return false;
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
   // Staged authority comes only from this trusted source Runtime. A preseeded
   // candidate must not mix its own endpoints or writer identities with ours.
   if(candidate.atomicBindingCount_)return false;
 #endif
+  if(candidate.port_.files && candidate.port_.files!=port_.files)return false;
+  candidate.port_.files=port_.files;
+  if(!metadataSource(root).bound())return false;
   // All metadata opened for this admission, including source comparisons,
   // belongs to the candidate's native session. Keep its close failure visible
   // even when validation stops before candidate.prepare() is reached.
   JsonDocument currentBoot,newBoot,currentBoard,newBoard;
   char filename[256],relative[193];
-  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(filename,currentBoot,&candidate.metadataCloseRetained_) ||
-     !path(root,"boot.json",filename,sizeof(filename)) || !readJson(filename,newBoot,&candidate.metadataCloseRetained_) ||
+  if(!path(root_,"boot.json",filename,sizeof(filename)) || !readJson(metadataSource(root_),filename,currentBoot,&candidate.metadataCloseRetained_) ||
+     !path(root,"boot.json",filename,sizeof(filename)) || !readJson(metadataSource(root),filename,newBoot,&candidate.metadataCloseRetained_) ||
      !cohortSameJson(currentBoot["port"],newBoot["port"]))return false;
-  if(!text(currentBoot["board"],relative,sizeof(relative)) || !path(root_,relative,filename,sizeof(filename)) || !readJson(filename,currentBoard,&candidate.metadataCloseRetained_) ||
-     !text(newBoot["board"],relative,sizeof(relative)) || !path(root,relative,filename,sizeof(filename)) || !readJson(filename,newBoard,&candidate.metadataCloseRetained_) ||
+  if(!text(currentBoot["board"],relative,sizeof(relative)) || !path(root_,relative,filename,sizeof(filename)) || !readJson(metadataSource(root_),filename,currentBoard,&candidate.metadataCloseRetained_) ||
+     !text(newBoot["board"],relative,sizeof(relative)) || !path(root,relative,filename,sizeof(filename)) || !readJson(metadataSource(root),filename,newBoard,&candidate.metadataCloseRetained_) ||
      !cohortSameJson(currentBoard.as<JsonVariantConst>(),newBoard.as<JsonVariantConst>()))return false;
   JsonVariantConst migration=newBoot["cohort_migration"];
   if(!RiscUpdate::validCohortMigration(migration))return false;
@@ -82,7 +91,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
   JsonArrayConst shared=migration["shared_key_value"];
   if(!migration.isUnbound()){
     RiscUpdate::CohortIdentity currentIdentity{},nextIdentity{};
-    if(!RiscUpdate::readCohort(root_,currentIdentity,&candidate.metadataCloseRetained_) || !RiscUpdate::readCohort(root,nextIdentity,&candidate.metadataCloseRetained_) ||
+    if(!RiscUpdate::readCohort(metadataSource(),root_,currentIdentity,&candidate.metadataCloseRetained_) || !RiscUpdate::readCohort(metadataSource(root),root,nextIdentity,&candidate.metadataCloseRetained_) ||
        strcmp(currentIdentity.product.source_repo,nextIdentity.product.source_repo) ||
        !RiscUpdate::migrationTarget(migration["to"],nextIdentity))return false;
     migrating=RiscUpdate::migrationTarget(migration["from"],currentIdentity) &&
@@ -146,8 +155,8 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
         exact(selected.runtimeVersion,actual.runtimeVersion,sizeof(actual.runtimeVersion));
     };
     RiscUpdate::CohortIdentity currentIdentity{},nextIdentity{};
-    if(!RiscUpdate::readCohort(root_,currentIdentity,&candidate.metadataCloseRetained_) ||
-       !RiscUpdate::readCohort(root,nextIdentity,&candidate.metadataCloseRetained_) ||
+    if(!RiscUpdate::readCohort(metadataSource(),root_,currentIdentity,&candidate.metadataCloseRetained_) ||
+       !RiscUpdate::readCohort(metadataSource(root),root,nextIdentity,&candidate.metadataCloseRetained_) ||
        !matches(nativePolicy->from,currentIdentity) || !matches(nativePolicy->to,nextIdentity))return false;
     delegations=nativePolicy->delegations;delegationCount=nativePolicy->count;
   }
@@ -171,8 +180,8 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
         exact(selected.runtimeVersion,actual.runtimeVersion,sizeof(actual.runtimeVersion));
     };
     RiscUpdate::CohortIdentity sourceIdentity{},targetIdentity{};
-    if(!RiscUpdate::readCohort(root_,sourceIdentity,&candidate.metadataCloseRetained_) ||
-       !RiscUpdate::readCohort(root,targetIdentity,&candidate.metadataCloseRetained_))return false;
+    if(!RiscUpdate::readCohort(metadataSource(),root_,sourceIdentity,&candidate.metadataCloseRetained_) ||
+       !RiscUpdate::readCohort(metadataSource(root),root,targetIdentity,&candidate.metadataCloseRetained_))return false;
     if(matches(nativeV2->from,sourceIdentity) && matches(nativeV2->to,targetIdentity)) {
     JsonDocument before,after;
     if(strnlen(nativeV2->before,65536)>=65536 || strnlen(nativeV2->after,65536)>=65536 ||
@@ -185,8 +194,31 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
     }
   }
   if(!validateAppDataExportCohort(candidate,delegations,delegationCount,exactExportMigration))return false;
-  auto persistent=[](const AppGrantPolicy& g){return g.keyValue || g.driver==AppDataDriver;};
-  auto same=[](const AppGrantPolicy& a,const AppGrantPolicy& b){return a.api==b.api && a.instance==b.instance && !strcmp(a.capability,b.capability);};
+#if RISC_RUNTIME_STORAGE_FILES
+  // A preserving update cannot silently retarget an already-authorized logical
+  // file namespace. Presentation labels may change; its provider identity may not.
+  for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g){
+    const auto& before=policies_[p].grants[g];if(before.driver!=StorageFilesDriver)continue;
+    bool found=false;
+    for(size_t q=0;q<candidate.policyCount_;++q)if(!strcmp(policies_[p].id,candidate.policies_[q].id))
+      for(size_t h=0;h<candidate.policies_[q].count;++h){const auto& after=candidate.policies_[q].grants[h];
+        if(after.driver!=StorageFilesDriver || before.instance!=after.instance || before.api!=after.api)continue;
+        const auto& a=drivers_[before.platform];const auto& b=candidate.drivers_[after.platform];
+        if(a.instance!=b.instance || a.api!=b.api || strcmp(a.id,b.id) || strcmp(a.provides,b.provides))return false;
+        found=true;
+      }
+    if(!found)return false;
+  }
+#endif
+  auto persistent=[](const AppGrantPolicy& g){return keyValuePolicy(g) || g.driver==AppDataDriver;};
+  auto same=[](const AppGrantPolicy& a,const AppGrantPolicy& b){
+#if RISC_RUNTIME_PREFERENCE_STORE
+    // A facade preserves the existing opaque namespace for the same app ID.
+    // No new owner, key migration, or backend authority is inferred here.
+    if((a.driver==PreferenceStoreDriver || b.driver==PreferenceStoreDriver) && keyValuePolicy(a) && keyValuePolicy(b))return a.instance==b.instance;
+#endif
+    return a.api==b.api && a.instance==b.instance && !strcmp(a.capability,b.capability);
+  };
   // Keep every existing persisted app namespace attached to the same identity.
   // Removing an owner would lose the only durable anti-reassignment record.
   for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(persistent(policies_[p].grants[g])){
@@ -198,7 +230,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
     if(!found)return false;
   }
   auto oldKvUsed=[&](uint32_t ns){
-    for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(policies_[p].grants[g].keyValue && policies_[p].grants[g].instance==ns)return true;
+    for(size_t p=0;p<policyCount_;++p)for(size_t g=0;g<policies_[p].count;++g)if(keyValuePolicy(policies_[p].grants[g]) && policies_[p].grants[g].instance==ns)return true;
     for(size_t p=0;p<driverCount_;++p)for(size_t g=0;g<providerStorage_[p].count;++g)if(providerStorage_[p].keys[g].nameSpace==ns)return true;
     return false;
   };
@@ -211,13 +243,13 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
   };
   for(size_t p=0;p<candidate.policyCount_;++p)for(size_t g=0;g<candidate.policies_[p].count;++g){
     const auto& grant=candidate.policies_[p].grants[g];if(!persistent(grant))continue;
-    bool used=grant.keyValue?oldKvUsed(uint32_t(grant.instance)):oldFilesUsed(uint32_t(grant.instance)),owned=false;
+    bool used=keyValuePolicy(grant)?oldKvUsed(uint32_t(grant.instance)):oldFilesUsed(uint32_t(grant.instance)),owned=false;
     for(size_t q=0;q<policyCount_;++q)for(size_t h=0;h<policies_[q].count;++h){const auto& previous=policies_[q].grants[h];
-      if(!persistent(previous) || strcmp(previous.capability,grant.capability) || previous.instance!=grant.instance)continue;
+      if(!persistent(previous) || (!(keyValuePolicy(previous) && keyValuePolicy(grant)) && strcmp(previous.capability,grant.capability)) || previous.instance!=grant.instance)continue;
       used=true;if(same(previous,grant) && !strcmp(policies_[q].id,candidate.policies_[p].id))owned=true;
     }
     if(used && !owned){
-      if(exactExportMigration && grant.keyValue) {
+      if(exactExportMigration && keyValuePolicy(grant)) {
         size_t selected=nativeV2->sharedKeyValueCount;
         for(size_t i=0;i<nativeV2->sharedKeyValueCount;++i) {
           const auto& entry=nativeV2->sharedKeyValue[i];
@@ -229,7 +261,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
           for(size_t q=0;q<policyCount_;++q) {
             bool owns=false;
             for(size_t h=0;h<policies_[q].count;++h)
-              owns=owns || (policies_[q].grants[h].keyValue && same(policies_[q].grants[h],grant));
+              owns=owns || (keyValuePolicy(policies_[q].grants[h]) && same(policies_[q].grants[h],grant));
             if(!owns)continue;
             size_t match=entry.previousOwnerCount;
             for(size_t j=0;j<entry.previousOwnerCount;++j) {
@@ -248,13 +280,13 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
         if(selected==nativeV2->sharedKeyValueCount)return false;
         nativeKvConsumed[selected]=true;continue;
       }
-      if(!migrating || !grant.keyValue || policyCount_<2)return false;
+      if(!migrating || !keyValuePolicy(grant) || policyCount_<2)return false;
       const char* id=candidate.policies_[p].id;
       for(size_t q=0;q<policyCount_;++q){
         if(!strcmp(policies_[q].id,id))return false; // Existing-app expansion is never a migration.
         bool universal=false;
         for(size_t h=0;h<policies_[q].count;++h)
-          if(policies_[q].grants[h].keyValue && same(policies_[q].grants[h],grant))universal=true;
+          if(keyValuePolicy(policies_[q].grants[h]) && same(policies_[q].grants[h],grant))universal=true;
         if(!universal)return false;
       }
       size_t entry=0;
@@ -325,8 +357,7 @@ bool Runtime::validateCohortImpl(Runtime& candidate,const char* root,
     if(!text(newBoot["drivers"][d]["manifest"],relative,sizeof(relative)) || !add(relative) ||
        !add(candidate.drivers_[d].elf+prefix) || !admit(context,candidate.drivers_[d].elf,true))return false;
   }
-  size_t objects=0;
-  if(!cohortInventory(root,"",names.get(),count,objects,0,[](void* p){auto*r=static_cast<const Runtime*>(p);r->port_.delay(1);return r->port_.owner() && r->providerStorageSafe();},const_cast<Runtime*>(this)))return false;
+  if(!cohortInventory(metadataSource(root),root,names.get(),count,[](void* p){auto*r=static_cast<const Runtime*>(p);r->port_.delay(1);return r->port_.owner() && r->providerStorageSafe();},const_cast<Runtime*>(this)))return false;
   for(size_t i=0;i<count;++i)if(!names[i].seen)return false;
   return true;
 }

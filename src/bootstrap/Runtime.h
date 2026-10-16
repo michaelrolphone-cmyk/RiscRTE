@@ -8,8 +8,18 @@
 #include "AppPolicyLimits.h"
 #include "AppRequirementLimits.h"
 #include "InstalledFiles.h"
+#include "RuntimeFiles.h"
 #include "AppDataBackend.h"
 #include "AtomicKeyValueConfig.h"
+#include "PreferenceStoreConfig.h"
+#include "StorageFilesConfig.h"
+#if RISC_RUNTIME_STORAGE_FILES
+#include <RiscStorageFilesCatalogV1.h>
+#include "StorageFilesVolumeAdapter.h"
+#endif
+#if RISC_RUNTIME_PREFERENCE_STORE
+#include <RiscPreferenceStoreV1.h>
+#endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
 #include <RiscKeyValueAtomicV1.h>
 #include <RiscKeyValueAvailabilityV1.h>
@@ -118,6 +128,8 @@ struct Port {
 #endif
   // Optional native-owned private scratch, never an app-selected path.
   const FileSourceBackend* fileSource=nullptr;
+  // Trusted immutable active/staged metadata sources. Absent means unavailable.
+  const RuntimeFileSources* files=nullptr;
 };
 class Runtime final {
  public:
@@ -126,6 +138,10 @@ class Runtime final {
   static constexpr size_t MaxAppRequirements=RISC_APP_REQUIREMENT_ROWS;
   explicit Runtime(Port p) : port_(p), mainInvocation_(graph_,{this,streamBindingValid,streamRetain,streamYield}) {}
   ~Runtime();
+  bool bindFileSources(const RuntimeFileSources* sources){
+    if(attempted_ || port_.files || !sources || sources->retained() || !port_.owner || !port_.owner())return false;
+    port_.files=sources;return true;
+  }
   Runtime(const Runtime&)=delete;
   Runtime& operator=(const Runtime&)=delete;
   Runtime(Runtime&&)=delete;
@@ -248,11 +264,17 @@ class Runtime final {
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
     atomicExitSafe(true) &&
 #endif
+#if RISC_RUNTIME_PREFERENCE_STORE
+    preferenceExitSafe(true) &&
+#endif
+#if RISC_RUNTIME_STORAGE_FILES
+    storageFilesExitSafe(true) &&
+#endif
     fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
   // by their native store owner, which must retain its mount/session.
-  bool metadataCloseRetained() const { return metadataCloseRetained_; }
+  bool metadataCloseRetained() const { return metadataCloseRetained_ || (port_.files && port_.files->retained()); }
   // Terminal native read custody. The native caller must keep this Runtime
   // and its store/session alive; destruction or cleanup retry is unsupported.
   bool nativeProviderReadRetained() const { return retainedNativeProviderRead_!=nullptr; }
@@ -343,6 +365,36 @@ class Runtime final {
   static int32_t atomicCollect(void*,uint64_t,risc_key_value_atomic_receipt_v1*);
   static int32_t atomicCancel(void*,uint64_t);
 #endif
+#if RISC_RUNTIME_PREFERENCE_STORE
+  struct PreferenceNamespace {uint32_t id=0;uint64_t revision=1;void* pending=nullptr;bool executing=false;};
+  PreferenceNamespace preferenceNamespaces_[64]{};
+  uint64_t preferenceOperationGeneration_=0;
+  static constexpr PolicyIndex PreferenceStoreDriver=-14;
+  struct AppGrant;
+  PreferenceNamespace* preferenceNamespace(uint32_t,bool create=false);
+  bool preferenceAvailable(const char*,uint32_t);
+  bool preferenceExitSafe(bool) const;
+  static AppGrant* preferenceContext(void*);
+  static int32_t preferenceState(void*,risc_preference_store_state_v1*);
+  static int32_t preferenceGet(void*,uint64_t,const char*,void*,uint32_t,uint32_t*);
+  static int32_t preferenceSubmit(void*,uint64_t,const risc_preference_store_mutation_v1*,uint32_t,const void*,uint32_t,uint64_t*);
+  static int32_t preferenceCollect(void*,uint64_t,risc_preference_store_receipt_v1*);
+  static int32_t preferenceCancel(void*,uint64_t);
+#endif
+  struct AppGrant;
+  bool acquireProviderDriver(PolicyIndex,const char*,uint32_t,AppGrant&);
+#if RISC_RUNTIME_STORAGE_FILES
+  static constexpr PolicyIndex StorageFilesDriver=-15,StorageFilesCatalogDriver=-16;
+  bool storageFilesCalling_=false;
+  bool storageFilesExitSafe(bool) const;
+  static AppGrant* storageFilesContext(void*,bool catalog=false);
+  int32_t storageFilesResult(int32_t);
+  risc_storage_files_v1 storageFilesTable(void*);
+  static int32_t storageFilesSnapshot(void*,risc_storage_files_catalog_snapshot_v1*);
+  static int32_t storageFilesGet(void*,uint64_t,uint32_t,risc_storage_files_namespace_v1*);
+#endif
+  int32_t namespaceKeyValueGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t);
+  int32_t namespaceKeyValuePut(uint32_t,const char*,const void*,uint32_t,bool preference=false,bool provider=false);
   static int32_t keyValueGet(void*,const char*,void*,uint32_t,uint32_t*);
   static int32_t keyValuePut(void*,const char*,const void*,uint32_t);
   struct ProviderKey {
@@ -415,6 +467,16 @@ class Runtime final {
     PolicyIndex driver=-1, platform=-1; bool keyValue=false, installedFiles=false, fileOpen=false, fileOpenSource=false;
     char sharedFile[RISC_APP_DATA_NAME_MAX+1]{};
   };
+  static bool keyValuePolicy(const AppGrantPolicy& g) {
+    return g.keyValue
+#if RISC_RUNTIME_PREFERENCE_STORE
+      || g.driver==PreferenceStoreDriver
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+      || g.driver==AtomicKeyValueDriver
+#endif
+#endif
+      ;
+  }
 #if UINTPTR_MAX == UINT32_MAX
   static_assert(sizeof(AppGrantPolicy)==72,"App policy target layout changed");
 #endif
@@ -428,6 +490,12 @@ class Runtime final {
     constexpr PolicyIndex tags[]={AppDataDriver,RetainedWakeDriver,RealtimeDriver,
       RealtimeControlDriver,PromotionDriver,AppDataExportDriver,SharedDataDriver,
       MemoryHeapDriver,RandomDriver,AppCatalogDriver,
+#if RISC_RUNTIME_STORAGE_FILES
+      StorageFilesDriver,StorageFilesCatalogDriver,
+#endif
+#if RISC_RUNTIME_PREFERENCE_STORE
+      PreferenceStoreDriver,
+#endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
       AtomicKeyValueDriver,KeyValueAvailabilityDriver,
 #endif
@@ -576,6 +644,17 @@ class Runtime final {
     uint32_t generation=0; bool live=false;
     uint32_t keyValueNamespace=0; risc_key_value_v1 keyValue{};
     risc_memory_heap_api_v1 memoryHeap{};risc_random_api_v1 random{};
+#if RISC_RUNTIME_STORAGE_FILES
+    risc_storage_files_v1 storageFiles{};
+    risc_storage_files_catalog_v1 storageFilesCatalog{};
+    std::unique_ptr<StorageFilesVolumeAdapter> storageFilesAdapter;
+#endif
+#if RISC_RUNTIME_PREFERENCE_STORE
+    risc_preference_store_v1 preferences{};
+    uint32_t preferenceNamespace=0;
+    uint64_t preferenceOperation=0;
+    risc_preference_store_receipt_v1 preferenceReceipt{};
+#endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
     risc_key_value_atomic_v1 atomic{};
     risc_key_value_availability_v1 availability{};
@@ -678,6 +757,7 @@ class Runtime final {
   bool prepared_=false, attempted_=false, retained_=false;
   bool yielding_=false;
   mutable bool metadataCloseRetained_=false;
+  RuntimeFileView metadataSource(const char* root=nullptr)const{return RuntimeFileView(port_.files,root?root:root_);}
   esp_dl_image_cache* appImages_=nullptr;
   bool reclaimingAppImages_=false;
 };

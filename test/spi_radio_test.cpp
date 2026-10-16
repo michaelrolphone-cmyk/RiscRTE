@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <fstream>
 #include <string>
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 using namespace RiscCpu;
 static Port* current;
 static bool owned=true,openOk=true,beginOk=true,transferOk=true,endOk=true,closeOk=true,gpioCloseOk=true;
@@ -42,7 +44,7 @@ int main(int argc,char**argv){
  };
  auto runtime=[&](){return RiscBoot::Port{owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind};};
  for(const char* model:{"sx1262","sx1280"})for(unsigned physical:{2u,3u}){
-  stage(model,physical);reset();Port p(hardware());current=&p;RiscBoot::Runtime r(runtime());
+  stage(model,physical);reset();Port p(hardware());current=&p;RiscTest::FileSources rFiles0({root.c_str()});RiscBoot::Runtime r(runtime());assert(rFiles0.bind(r));
   if(!r.prepare(root.c_str())){fprintf(stderr,"prepare: %s\n",r.error());return 1;}
   assert(!calls && p.spiCount_==3 && p.gpioCount_==3 && p.quiescent());
   auto& a=p.spis_[0];auto& b=p.spis_[1];auto& display=p.spis_[2];auto& g=p.gpios_[0];auto& other=p.gpios_[1];
@@ -81,12 +83,12 @@ int main(int argc,char**argv){
  static_assert(offsetof(tw_hw_lora_v2,allowed_profiles)==sizeof(tw_hw_lora_v1),"selector suffix moved");
  for(int mask=0;mask<=16;++mask){
   stage("sx1262");JsonDocument board,manifest;
-  assert(RiscBoot::readJson((root+"/board.json").c_str(),board));
+  assert(RiscTest::readFixtureJson((root+"/board.json").c_str(),board));
   for(unsigned i=0;i<2;++i){board["devices"][i]["config_version"]=2;board["devices"][i]["config"]["allowed_profiles"]=mask;}
   std::string bytes;serializeJson(board,bytes);save("board.json",bytes);
-  assert(RiscBoot::readJson((root+"/radio.json").c_str(),manifest));manifest["hardware_compatibility"][0]["config_version"]=2;
+  assert(RiscTest::readFixtureJson((root+"/radio.json").c_str(),manifest));manifest["hardware_compatibility"][0]["config_version"]=2;
   bytes.clear();serializeJson(manifest,bytes);save("radio.json",bytes);
-  reset();Port p(hardware());current=&p;RiscBoot::Runtime r(runtime());
+  reset();Port p(hardware());current=&p;RiscTest::FileSources rFiles1({root.c_str()});RiscBoot::Runtime r(runtime());assert(rFiles1.bind(r));
   assert(r.prepare(root.c_str())==(mask>=1 && mask<=15));assert(!calls);
   if(mask>=1 && mask<=15){
    const auto*d=r.board().device(7);assert(d && d->hardware.config_version==2 && d->hardware.config_size==sizeof(tw_hw_lora_v2));
@@ -97,16 +99,16 @@ int main(int argc,char**argv){
  // A v1-only provider cannot accept the v2 envelope, and other config types
  // must not inherit the radio's additive version allowance.
  for(bool wrongDriver:{false,true}){
-  stage("sx1262");JsonDocument board;assert(RiscBoot::readJson((root+"/board.json").c_str(),board));
+  stage("sx1262");JsonDocument board;assert(RiscTest::readFixtureJson((root+"/board.json").c_str(),board));
   if(wrongDriver){board["devices"][0]["config_version"]=2;board["devices"][0]["config"]["allowed_profiles"]=15;}
   else board["devices"][2]["config_version"]=2;
-  std::string bytes;serializeJson(board,bytes);save("board.json",bytes);reset();Port p(hardware());current=&p;RiscBoot::Runtime r(runtime());
+  std::string bytes;serializeJson(board,bytes);save("board.json",bytes);reset();Port p(hardware());current=&p;RiscTest::FileSources rFiles2({root.c_str()});RiscBoot::Runtime r(runtime());assert(rFiles2.bind(r));
   assert(!r.prepare(root.c_str()) && !calls);
  }
- stage("sx1262",2,false);reset();{Port p(hardware());current=&p;RiscBoot::Runtime r(runtime());assert(r.prepare(root.c_str()) && !calls && !p.spiCount_ && !p.gpioCount_);}
- stage("sx1262",2,true,true);reset();{Port p(hardware());current=&p;RiscBoot::Runtime r(runtime());assert(!r.prepare(root.c_str()) && !calls);}
+ stage("sx1262",2,false);reset();{Port p(hardware());current=&p;RiscTest::FileSources rFiles3({root.c_str()});RiscBoot::Runtime r(runtime());assert(rFiles3.bind(r));assert(r.prepare(root.c_str()) && !calls && !p.spiCount_ && !p.gpioCount_);}
+ stage("sx1262",2,true,true);reset();{Port p(hardware());current=&p;RiscTest::FileSources rFiles4({root.c_str()});RiscBoot::Runtime r(runtime());assert(rFiles4.bind(r));assert(!r.prepare(root.c_str()) && !calls);}
  for(bool cleanup:{true,false}){
-  stage("sx1262");reset();Port p(hardware());current=&p;RiscBoot::Runtime r(runtime());assert(r.prepare(root.c_str()));auto& a=p.spis_[0];uint64_t token=99;
+  stage("sx1262");reset();Port p(hardware());current=&p;RiscTest::FileSources rFiles5({root.c_str()});RiscBoot::Runtime r(runtime());assert(rFiles5.bind(r));assert(r.prepare(root.c_str()));auto& a=p.spis_[0];uint64_t token=99;
   openOk=false;closeOk=cleanup;assert(!a.api.base.claim(a.api.base.context,4,5,6,7,&token) && !token);assert(p.quiescent()==cleanup);
   if(cleanup){openOk=true;assert(a.api.base.claim(a.api.base.context,4,5,6,7,&token));assert(a.api.base.release(a.api.base.context,token) && p.quiescent());}
   else {openOk=closeOk=true;assert(!a.api.base.claim(a.api.base.context,4,5,6,7,&token) && p.poisoned_ && !p.quiescent());}

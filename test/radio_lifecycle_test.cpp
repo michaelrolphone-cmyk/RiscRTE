@@ -7,6 +7,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include "RuntimeFileFixture.h"
 static std::string root,mode,trace;
 static RiscCpu::Port* cpu;
 static bool active=false,cleanup=true;
@@ -43,7 +44,7 @@ static void child(){
  h.radioScanStart=[](){active=true;return mode!="scan-failed";};h.radioScanPoll=[](garden_radio_scan_result_v1*){return mode!="poll-failed";};h.radioScanCancel=h.radioLeave;
  cleanup=mode!="cleanup-retained" && mode!="cleanup-retry";
  cpu=new RiscCpu::Port(h);
- auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,&keyValue,appExitSafe,providerStorageSafe});
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new RiscBoot::Runtime({owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;},bind,&keyValue,appExitSafe,providerStorageSafe});assert(runtimeFiles0.bind(*runtime));
  assert(runtime->prepare(root.c_str()));
  const bool retained=mode=="join-retained" || mode=="scan-retained" || mode=="cleanup-retained" || mode=="state-failed" || mode=="addresses-failed" || mode=="poll-failed";
  // Child return reloads a fresh default, whose host-owned run counter ends the test.

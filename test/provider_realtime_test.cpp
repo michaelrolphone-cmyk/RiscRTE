@@ -8,6 +8,8 @@
 #include <string>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 using RiscBoot::Runtime;
 static std::string root;
 static bool owned=true,safe=true;
@@ -105,7 +107,7 @@ static void stage(const char* appCap=RISC_REALTIME_CONTROL_CAPABILITY){
  file("boot.json",std::string(R"({"board":"board.json","default_app":"default.elf","provider_activation":")")+(scenario==0 || scenario==6?"eager":"demand")+R"(","drivers":[{"manifest":"first.json"},{"manifest":"second.json"}],"app_capabilities":[{"manifest":"app.json","grants":[{"capability":"test.time.first","api":1,"instance_id":0},{"capability":"test.time.second","api":1,"instance_id":0},{"capability":")"+appCap+R"(","api":1,"instance_id":0}]}]})");
 }
 static void boundKeys(unsigned count){
- JsonDocument boot,manifest;assert(RiscBoot::readJson((root+"/boot.json").c_str(),boot));assert(RiscBoot::readJson((root+"/first.json").c_str(),manifest));
+ JsonDocument boot,manifest;assert(RiscTest::readFixtureJson((root+"/boot.json").c_str(),boot));assert(RiscTest::readFixtureJson((root+"/first.json").c_str(),manifest));
  auto req=manifest["requires"].as<JsonArray>().add<JsonObject>();req["capability"]=RISC_BOUND_KEY_VALUE_CAPABILITY;req["api"]=1;
  auto map=boot["drivers"][0]["key_value"].to<JsonArray>();
  for(unsigned i=0;i<count;++i){auto key=map.add<JsonObject>();key["key"]="k"+std::to_string(i);key["namespace"]=1;key["access"]="read";}
@@ -114,11 +116,11 @@ static void boundKeys(unsigned count){
 static RiscBoot::Port port(){return {owner,health,delay,logLine,bind,&kv,safety,safety};}
 static void admission(){
  stage();const auto before=reads+seeds;
- {Runtime r({owner,health,delay,logLine});assert(!r.prepare(root.c_str()));}
- for(unsigned version:{0u,2u}){stage();file("first.json",driver(0,RISC_PLATFORM_REALTIME_CAPABILITY,version));Runtime r(port());assert(!r.prepare(root.c_str()));}
- for(const char* cap:{RISC_REALTIME_CAPABILITY,RISC_REALTIME_CONTROL_CAPABILITY}){stage();file("first.json",driver(0,cap));Runtime r(port());assert(!r.prepare(root.c_str()));}
- stage(RISC_PLATFORM_REALTIME_CAPABILITY);{Runtime r(port());assert(!r.prepare(root.c_str()));}
- stage();boundKeys(11);{Runtime r(port());assert(!r.prepare(root.c_str()));}
+ {RiscTest::FileSources rFiles0({root.c_str()});Runtime r({owner,health,delay,logLine});assert(rFiles0.bind(r));assert(!r.prepare(root.c_str()));}
+ for(unsigned version:{0u,2u}){stage();file("first.json",driver(0,RISC_PLATFORM_REALTIME_CAPABILITY,version));RiscTest::FileSources rFiles1({root.c_str()});Runtime r(port());assert(rFiles1.bind(r));assert(!r.prepare(root.c_str()));}
+ for(const char* cap:{RISC_REALTIME_CAPABILITY,RISC_REALTIME_CONTROL_CAPABILITY}){stage();file("first.json",driver(0,cap));RiscTest::FileSources rFiles2({root.c_str()});Runtime r(port());assert(rFiles2.bind(r));assert(!r.prepare(root.c_str()));}
+ stage(RISC_PLATFORM_REALTIME_CAPABILITY);{RiscTest::FileSources rFiles3({root.c_str()});Runtime r(port());assert(rFiles3.bind(r));assert(!r.prepare(root.c_str()));}
+ stage();boundKeys(11);{RiscTest::FileSources rFiles4({root.c_str()});Runtime r(port());assert(rFiles4.bind(r));assert(!r.prepare(root.c_str()));}
  stage();{Runtime r(port());assert(r.registerRealtime(&backend));assert(!r.registerRealtime(&backend));assert(!r.registerPlatform(RISC_PLATFORM_REALTIME_CAPABILITY,1,Runtime::Scope::Global,0,&backend));}
  uintptr_t end=UINTPTR_MAX;assert(!RiscBoot::nextKeyValueContext(end) && end==UINTPTR_MAX);
  assert(reads+seeds==before);stage();
@@ -132,7 +134,7 @@ int main(int argc,char** argv){
  scenario=atoi(argv[2]);
  alignas(Runtime) unsigned char storage[sizeof(Runtime)];
  for(unsigned iteration=0;iteration<(scenario<=1?2u:1u);++iteration){
-  const auto before=reads+seeds;auto* r=new(storage) Runtime(port());assert(r->prepare(root.c_str()) && reads+seeds==before);deny(previous);
+  const auto before=reads+seeds;RiscTest::FileSources rFiles6({root.c_str()});auto* r=new(storage) Runtime(port());assert(rFiles6.bind(*r));assert(r->prepare(root.c_str()) && reads+seeds==before);deny(previous);
   const bool ok=r->run();assert(ok==(scenario<=1 || scenario==7));deny(saved[0]);deny(saved[1]);
   if(scenario>=2 && scenario<=6){assert(r->retained());assert(scenario==6?lifecycle==2:lifecycle==1);_exit(0);}
   assert(lifecycle==(iteration+1)*2);previous=saved[0];saved[0]={};saved[1]={};r->~Runtime();value={sizeof(value),RISC_REALTIME_UNSET,0,0,0,100,102};

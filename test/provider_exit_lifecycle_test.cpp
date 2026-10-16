@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include "RuntimeFileFixture.h"
 
 // Production Runtime/Graph/CpuPort and actual mapped applications/providers.
 // The prior characterization commit proves the 0.1.50 failures separately.
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
     std::ofstream destination(root+"/default.elf",std::ios::binary);
     destination << source.rdbuf();
   }
-  auto* runtime = new RiscBoot::Runtime(port);
+  static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime = new RiscBoot::Runtime(port);assert(runtimeFiles0.bind(*runtime));
   assert(!runtime->retainInvocation());
   assert(runtime->prepare(root.c_str()));
   assert(!runtime->retainInvocation());

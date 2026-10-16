@@ -11,6 +11,8 @@
 #include <string>
 #include <sys/mman.h>
 #include <unistd.h>
+#include "RuntimeFileFixture.h"
+#include "FixtureJson.h"
 using namespace RiscBoot;
 namespace {
 std::string root,mode,scratch;
@@ -51,7 +53,7 @@ void provision(){
   fg.add("unsupported.elf");
  }
  if(is("bad-instance"))boot["app_capabilities"][1]["grants"][1]["instance_id"]=1;
- if(is("bad-version")){boot["app_capabilities"][1]["grants"][1]["api"]=2;JsonDocument d;assert(readJson((root+"/caller.json").c_str(),d));d["requires"][1]["api"]=2;save("caller.json",d);}
+ if(is("bad-version")){boot["app_capabilities"][1]["grants"][1]["api"]=2;JsonDocument d;assert(RiscTest::readFixtureJson((root+"/caller.json").c_str(),d));d["requires"][1]["api"]=2;save("caller.json",d);}
  save("boot.json",boot);
  if(has("load-failure"))std::filesystem::remove(root+"/viewer.elf");
 }
@@ -163,7 +165,7 @@ int main(int argc,char** argv){
  auto* files=new RiscStorage::FileSourceFiles({nullptr,[](void*){return ownerOk;},[](void*){return true;}});assert(files->configure(scratch.c_str()));auto* backend=new FileSourceBackend(files->backend());
  Port p{owner,health,delay,log,nullptr,nullptr,exitSafe};p.fileSource=backend;p.controlEnd=controlEnd;
  if(is("no-backend"))p.fileSource=nullptr;
- auto* runtime=new Runtime(p);
+ static RiscTest::FileSources runtimeFiles0({root.c_str()});auto* runtime=new Runtime(p);assert(runtimeFiles0.bind(*runtime));
  if(is("no-backend")||is("bad-version")||is("bad-instance")){assert(!runtime->prepare(root.c_str()));assert(!strcmp(runtime->error(),"file-source backend/authority unavailable"));delete runtime;delete backend;delete files;printf("file.open.source admission: %s PASS\n",mode.c_str());return 0;}
  assert(runtime->prepare(root.c_str()));const bool result=runtime->run();
  if(has("retained")){assert(!result&&runtime->retained()&&std::filesystem::exists(scratch));assert(failedCalls==closes+unlinks);retainedRuntime=runtime;retainedFiles=files;}
