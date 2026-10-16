@@ -67,3 +67,46 @@ Host verification (not hardware qualification):
   directories/cursors, precise error distinctions and retention faults.
 - `test/run_optional_storage_disabled_test.sh`: storage-free Runtime admission
   succeeds; all new unselected brokers reject, and broker symbols are absent.
+
+## Optional internal source implementations
+
+`RuntimeFiles` is an explicitly bound internal client of the same file ABI.
+The binding, provider and namespace root remain alive through open handles and
+retained failures. Unbound use is unavailable. This boundary is independently
+qualified; metadata, loader, configuration and scratch consumer wiring follows
+in separate increments.
+
+`PosixFiles` encapsulates ordinary POSIX operations. Linux no-replace rename uses
+`renameat2(RENAME_NOREPLACE)`; platforms without that primitive report unavailable.
+A prechecked destination followed by overwriting rename is never used. Namespace
+assembly must own its root and serialization. The root string is borrowed and
+immutable for the provider lifetime. Special files and observed symlink aliases
+are rejected; this provider is not an OS sandbox against hostile concurrent
+ancestor-directory replacement.
+
+`NativeSpiffsFiles` explicitly selects the pinned IDF flat VFS behavior inside the
+provider implementation. CREATE uses exclusive creation, reopening an existing
+file without creation only after EEXIST. TRUNCATE uses checked `ftruncate`;
+APPEND seeks to the current end before each serialized write. There is no
+remove/recreate recovery. `info` reports actual native position, including a
+position clamped by native truncate, rather than an assumed cached position.
+Root directory enumeration returns flat relative object names, including slash
+characters already present in those names. It does not synthesize a hierarchy:
+non-root directory operations and mkdir are unavailable. No-replace rename is
+also unavailable on this backend. Configuration replacement must use a separate
+provider operation preserving its existing backend guarantee.
+
+No full-image allocation or copy is introduced. Removing cached file positions
+reduces per-handle state; querying position adds a native seek-current operation
+to `info`, with no added operation per ordinary read. Native directory position
+changes are checked against the reported cursor, rather than assumed successful.
+
+`test/run_native_spiffs_files_test.sh PATH_TO_PINNED_IDF` runs production provider
+code over actual SPIFFS RAM flash and unchanged extracted IDF VFS callbacks.
+It pins IDF `fff9895c82d744c7237be8847347bdd1b07c6643` and SPIFFS
+`ad902cadceb39d0825a97e25ecb5867641f606ba`. Formatting is confined to fixture RAM.
+Full ASan/UBSan covers the provider and bridge. Only alignment checking is
+suppressed on unmodified SPIFFS C sources, whose pinned IDF configuration uses
+byte-packed object-index tables. This is native implementation semantics testing
+on a host, together with a separate Xtensa compile probe; it is not hardware
+qualification or a claim that subsequent Runtime consumer integration is done.

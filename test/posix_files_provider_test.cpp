@@ -3,9 +3,11 @@
 #include <cstdarg>
 #include <cstdio>
 #include <string>
-static bool negativeSize=false,negativeTime=false,badRewind=false,race=false;
+static bool negativeSize=false,negativeTime=false,badRewind=false,race=false,badFstat=false;
 extern "C" int __real_stat(const char*,struct stat*);
 extern "C" int __wrap_stat(const char*p,struct stat*s){int rc=__real_stat(p,s);if(!rc){if(negativeSize)s->st_size=-1;if(negativeTime)s->st_mtime=-1;}return rc;}
+extern "C" int __real_fstat(int,struct stat*);
+extern "C" int __wrap_fstat(int fd,struct stat*s){if(badFstat){errno=EIO;return -1;}return __real_fstat(fd,s);}
 extern "C" void __real_rewinddir(DIR*);
 extern "C" void __wrap_rewinddir(DIR*d){__real_rewinddir(d);if(badRewind)errno=EIO;}
 #if RISC_POSIX_FILES_NOREPLACE
@@ -31,5 +33,8 @@ int main(int argc,char**argv){
  risc_storage_files_stat_v1 st{sizeof(st)};negativeSize=true;assert(a.stat(a.context,"/source",&st)==RISC_FILES_IO);negativeSize=false;negativeTime=true;assert(a.stat(a.context,"/source",&st)==RISC_FILES_IO);negativeTime=false;
  assert(!a.dir_open(a.context,"/",&h));badRewind=true;assert(a.dir_rewind(a.context,h)==RISC_FILES_IO);badRewind=false;assert(!a.dir_close(a.context,h));
  std::string link=root+"/link";assert(!symlink("source",link.c_str()));assert(a.open(a.context,"/link",RISC_FILES_READ,&h)==RISC_FILES_DENIED);
+ badFstat=true;assert(a.open(a.context,"/source",RISC_FILES_READ,&h)==RISC_FILES_IO&&!h);badFstat=false;
+ const std::string fifo=root+"/fifo";assert(!mkfifo(fifo.c_str(),0600));
+ assert(a.open(a.context,"/fifo",RISC_FILES_READ,&h)==RISC_FILES_DENIED&&!h);
  assert(provider.exitSafe());puts(RISC_POSIX_FILES_NOREPLACE?"POSIX generic provider: atomic no-replace race, malformed metadata, directory errors, alias rejection PASS":"POSIX generic provider: missing no-replace primitive reports unavailable without mutation PASS");
 }
