@@ -12,6 +12,7 @@ on:
       - 'sdk/app/RiscStorageFiles*.h'
       - 'test/*file_source*'
       - 'test/compile_runtime_scratch_target.py'
+      - 'test/fixtures/native_scratch_profile.cmake'
       - '.github/workflows/runtime-scratch-provider.yml'
   workflow_dispatch:
 permissions:
@@ -62,7 +63,7 @@ jobs:
         run: |
           set -euo pipefail
           . "$IDF_PATH/export.sh"
-          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/scratch-native" -D "RISC_SOURCE_SHA=$GITHUB_SHA" -D "RISC_PRODUCT_PROFILE=$PWD/test/fixtures/native_metadata_profile.cmake" reconfigure
+          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/scratch-native" -D "RISC_SOURCE_SHA=$GITHUB_SHA" -D "RISC_PRODUCT_PROFILE=$PWD/test/fixtures/native_scratch_profile.cmake" reconfigure
           python test/compile_runtime_scratch_target.py "$RUNNER_TEMP/scratch-native/compile_commands.json" "$RUNNER_TEMP/scratch-objects"
       - uses: actions/upload-artifact@v4
         with:
