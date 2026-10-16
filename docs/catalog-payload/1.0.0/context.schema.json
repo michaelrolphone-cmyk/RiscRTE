@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Catalog trusted validation context 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "context_version",
+    "fixture",
+    "product_id",
+    "hardware_profile",
+    "hardware_revision",
+    "installed_firmware_id",
+    "trusted_manifest_sha256",
+    "trusted_binding_sha256",
+    "trusted_install_sha256",
+    "trusted_consumer_sha256",
+    "supported_methods",
+    "namespaces",
+    "limits",
+    "trusted_container_sha256"
+  ],
+  "properties": {
+    "context_version": {
+      "const": "1.0.0"
+    },
+    "fixture": {
+      "type": "boolean"
+    },
+    "product_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+    },
+    "hardware_profile": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+    },
+    "hardware_revision": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+    },
+    "installed_firmware_id": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+        }
+      ]
+    },
+    "trusted_manifest_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+    },
+    "trusted_binding_sha256": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+      },
+      "uniqueItems": true
+    },
+    "trusted_install_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+    },
+    "trusted_consumer_sha256": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+      },
+      "uniqueItems": true
+    },
+    "supported_methods": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+      },
+      "uniqueItems": true
+    },
+    "namespaces": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firmware_id",
+          "namespace_id",
+          "writable",
+          "hierarchical",
+          "case_semantics",
+          "operations",
+          "max_path_bytes",
+          "max_component_bytes",
+          "max_file_bytes",
+          "write_budget_bytes",
+          "forbidden_characters",
+          "forbid_trailing_dot_space"
+        ],
+        "properties": {
+          "firmware_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+          },
+          "namespace_id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,19}(?![\\s\\S])"
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "hierarchical": {
+            "type": "boolean"
+          },
+          "case_semantics": {
+            "enum": [
+              "sensitive",
+              "ascii-insensitive"
+            ]
+          },
+          "operations": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4096,
+            "items": {
+              "enum": [
+                "stat",
+                "mkdir",
+                "get",
+                "create",
+                "replace"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "max_path_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 511
+          },
+          "max_component_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 511
+          },
+          "max_file_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "write_budget_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "forbidden_characters": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "forbid_trailing_dot_space": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "container_bytes",
+        "inventory_files"
+      ],
+      "properties": {
+        "container_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "inventory_files": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "trusted_container_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+    }
+  }
+}

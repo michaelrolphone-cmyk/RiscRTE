@@ -1,0 +1,676 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/michaelrolphone-cmyk/RiscRTE/blob/main/docs/catalog-payload/1.0.0/manifest.schema.json",
+  "title": "RiscRTE generic catalog payload manifest 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "container_format",
+    "fixture",
+    "description",
+    "catalog_release",
+    "product",
+    "firmware",
+    "payload",
+    "plan"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "container_format": {
+      "const": "risc-catalog-payload-zip-store-v1"
+    },
+    "fixture": {
+      "type": "boolean"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "catalog_release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision",
+        "repository",
+        "release_id",
+        "tag",
+        "source_commit"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?![\\s\\S])"
+        },
+        "release_id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*(?![\\s\\S])"
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "source_commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}(?![\\s\\S])"
+        }
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "hardware_profiles",
+        "hardware_revisions",
+        "storage_abi",
+        "wire_protocol",
+        "serial_contract_version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+        },
+        "hardware_profiles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+          },
+          "uniqueItems": true
+        },
+        "hardware_revisions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+          },
+          "uniqueItems": true
+        },
+        "storage_abi": {
+          "const": "RiscStorageFilesV1"
+        },
+        "wire_protocol": {
+          "const": "RTEF1"
+        },
+        "serial_contract_version": {
+          "const": "1.0.0"
+        }
+      }
+    },
+    "firmware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "source_commit",
+        "artifacts",
+        "install"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "source_commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}(?![\\s\\S])"
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "source",
+              "bytes",
+              "sha256"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 511
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+              }
+            }
+          }
+        },
+        "install": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "method_id",
+            "kind",
+            "artifact_ids",
+            "volume_effects",
+            "settings_effect",
+            "erase_disclosure",
+            "evidence"
+          ],
+          "properties": {
+            "method_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+            },
+            "kind": {
+              "enum": [
+                "factory",
+                "update"
+              ]
+            },
+            "artifact_ids": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4096,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+              },
+              "uniqueItems": true
+            },
+            "volume_effects": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4096,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "volume",
+                  "effect",
+                  "evidence"
+                ],
+                "properties": {
+                  "volume": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+                  },
+                  "effect": {
+                    "enum": [
+                      "preserved",
+                      "erased",
+                      "unknown"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "url",
+                      "sha256"
+                    ],
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https://[^\\s]+(?![\\s\\S])"
+                      },
+                      "sha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "settings_effect": {
+              "enum": [
+                "preserved",
+                "erased",
+                "unknown"
+              ]
+            },
+            "erase_disclosure": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "evidence": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "url",
+                "sha256"
+              ],
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "pattern": "^https://[^\\s]+(?![\\s\\S])"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "owner",
+        "inventory_sha256",
+        "volumes",
+        "bindings",
+        "directories",
+        "files",
+        "totals"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+        },
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+        },
+        "inventory_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+        },
+        "volumes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "requirements",
+              "consumer"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+              },
+              "requirements": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "operations",
+                  "hierarchical",
+                  "path_encoding",
+                  "case_semantics"
+                ],
+                "properties": {
+                  "operations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 4096,
+                    "items": {
+                      "enum": [
+                        "stat",
+                        "mkdir",
+                        "get",
+                        "create",
+                        "replace"
+                      ]
+                    },
+                    "uniqueItems": true
+                  },
+                  "hierarchical": {
+                    "type": "boolean"
+                  },
+                  "path_encoding": {
+                    "const": "utf-8-exact"
+                  },
+                  "case_semantics": {
+                    "enum": [
+                      "sensitive",
+                      "ascii-insensitive"
+                    ]
+                  }
+                }
+              },
+              "consumer": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "firmware_id",
+                  "evidence"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+                  },
+                  "firmware_id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+                  },
+                  "evidence": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "url",
+                      "sha256"
+                    ],
+                    "properties": {
+                      "url": {
+                        "type": "string",
+                        "pattern": "^https://[^\\s]+(?![\\s\\S])"
+                      },
+                      "sha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "volume",
+              "firmware_id",
+              "namespace_id",
+              "evidence"
+            ],
+            "properties": {
+              "volume": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+              },
+              "firmware_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+              },
+              "namespace_id": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,19}(?![\\s\\S])"
+              },
+              "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "url",
+                  "sha256"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "pattern": "^https://[^\\s]+(?![\\s\\S])"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "directories": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "volume",
+              "path",
+              "operation"
+            ],
+            "properties": {
+              "volume": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 511
+              },
+              "operation": {
+                "const": "ensure-directory"
+              }
+            }
+          }
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "bytes",
+              "sha256",
+              "volume",
+              "destination",
+              "operation",
+              "owner"
+            ],
+            "properties": {
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 511
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+              },
+              "volume": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+              },
+              "destination": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 511
+              },
+              "operation": {
+                "enum": [
+                  "create",
+                  "replace"
+                ]
+              },
+              "owner": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+              },
+              "previous": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [],
+                    "properties": {
+                      "owner": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+                      },
+                      "bytes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "sha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+                      }
+                    },
+                    "minProperties": 1
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "totals": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file_count",
+            "bytes"
+          ],
+          "properties": {
+            "file_count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "purpose",
+        "order",
+        "pre_firmware_id",
+        "policy"
+      ],
+      "properties": {
+        "purpose": {
+          "enum": [
+            "bootstrap",
+            "combined-update"
+          ]
+        },
+        "order": {
+          "oneOf": [
+            {
+              "const": [
+                "firmware",
+                "payload",
+                "verify"
+              ]
+            },
+            {
+              "const": [
+                "payload",
+                "firmware",
+                "verify"
+              ]
+            }
+          ]
+        },
+        "pre_firmware_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}(?![\\s\\S])"
+            }
+          ]
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "verification",
+            "completion",
+            "on_uncertain_result",
+            "on_partial_file",
+            "unrelated_files",
+            "replacement",
+            "rollback"
+          ],
+          "properties": {
+            "verification": {
+              "const": "commit-crc32-then-full-sha256-readback"
+            },
+            "completion": {
+              "const": "all-required-files-readable-by-target-consumer"
+            },
+            "on_uncertain_result": {
+              "const": "stop-inspect-no-automatic-retry"
+            },
+            "on_partial_file": {
+              "const": "retain-and-reconcile-selected-file"
+            },
+            "unrelated_files": {
+              "const": "preserve"
+            },
+            "replacement": {
+              "const": "explicit-selected-file-in-place-nonatomic"
+            },
+            "rollback": {
+              "const": "none"
+            }
+          }
+        }
+      }
+    }
+  }
+}

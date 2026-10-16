@@ -1,0 +1,156 @@
+{
+  "catalog_release": {
+    "id": "fixture:release-2",
+    "release_id": "2",
+    "repository": "fixture/RiscRTE-Example",
+    "revision": 1,
+    "source_commit": "2222222222222222222222222222222222222222",
+    "tag": "fixture-v2"
+  },
+  "container_format": "risc-catalog-payload-zip-store-v1",
+  "description": "SYNTHETIC SCHEMA FIXTURE ONLY. Namespace 7 is invented for this test, not a product mapping.",
+  "firmware": {
+    "artifacts": [
+      {
+        "bytes": 53,
+        "id": "fixture-image",
+        "sha256": "441e0a1d45a368dc7a672460cdc682377d07bdaa089d3d4a6020583ff7c81316",
+        "source": "firmware/fixture.bin"
+      }
+    ],
+    "id": "fixture-v2",
+    "install": {
+      "artifact_ids": [
+        "fixture-image"
+      ],
+      "erase_disclosure": "Synthetic update example preserves the content volume; settings survival is unknown.",
+      "evidence": {
+        "sha256": "a26d0ddfc14a4dbdc4a8a70244e086b7e18664d37c39288bb8862a7a51985027",
+        "url": "https://example.invalid/fixture/evidence/1111111111111111111111111111111111111111"
+      },
+      "kind": "update",
+      "method_id": "fixture-flash-method",
+      "settings_effect": "unknown",
+      "volume_effects": [
+        {
+          "effect": "preserved",
+          "evidence": {
+            "sha256": "a26d0ddfc14a4dbdc4a8a70244e086b7e18664d37c39288bb8862a7a51985027",
+            "url": "https://example.invalid/fixture/evidence/1111111111111111111111111111111111111111"
+          },
+          "volume": "content"
+        }
+      ]
+    },
+    "source_commit": "2222222222222222222222222222222222222222",
+    "version": "2.0.0-fixture"
+  },
+  "fixture": true,
+  "payload": {
+    "bindings": [
+      {
+        "evidence": {
+          "sha256": "a26d0ddfc14a4dbdc4a8a70244e086b7e18664d37c39288bb8862a7a51985027",
+          "url": "https://example.invalid/fixture/evidence/1111111111111111111111111111111111111111"
+        },
+        "firmware_id": "fixture-v2",
+        "namespace_id": "7",
+        "volume": "content"
+      }
+    ],
+    "directories": [],
+    "files": [
+      {
+        "bytes": 256,
+        "destination": "/data.bin",
+        "operation": "create",
+        "owner": "fixture-app",
+        "previous": null,
+        "sha256": "40aff2e9d2d8922e47afd4648e6967497158785fbd1da870e7110266bf944880",
+        "source": "payload/data.bin",
+        "volume": "content"
+      },
+      {
+        "bytes": 0,
+        "destination": "/empty.txt",
+        "operation": "create",
+        "owner": "fixture-app",
+        "previous": null,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source": "payload/empty.txt",
+        "volume": "content"
+      },
+      {
+        "bytes": 17,
+        "destination": "/settings.json",
+        "operation": "create",
+        "owner": "fixture-app",
+        "previous": null,
+        "sha256": "4fb375ad6c9ada99ac30380310450ba3790143dfc0fab0139c908672161c8361",
+        "source": "payload/settings.json",
+        "volume": "content"
+      }
+    ],
+    "id": "fixture-content-v2",
+    "inventory_sha256": "588c33e9409d8aee03698d1c16a9de5388f797a80c1c486705a1dd60e819666b",
+    "owner": "fixture-app",
+    "totals": {
+      "bytes": 273,
+      "file_count": 3
+    },
+    "volumes": [
+      {
+        "consumer": {
+          "evidence": {
+            "sha256": "a26d0ddfc14a4dbdc4a8a70244e086b7e18664d37c39288bb8862a7a51985027",
+            "url": "https://example.invalid/fixture/evidence/1111111111111111111111111111111111111111"
+          },
+          "firmware_id": "fixture-v2",
+          "id": "fixture-consumer"
+        },
+        "id": "content",
+        "requirements": {
+          "case_semantics": "sensitive",
+          "hierarchical": false,
+          "operations": [
+            "stat",
+            "get",
+            "create"
+          ],
+          "path_encoding": "utf-8-exact"
+        }
+      }
+    ]
+  },
+  "plan": {
+    "order": [
+      "firmware",
+      "payload",
+      "verify"
+    ],
+    "policy": {
+      "completion": "all-required-files-readable-by-target-consumer",
+      "on_partial_file": "retain-and-reconcile-selected-file",
+      "on_uncertain_result": "stop-inspect-no-automatic-retry",
+      "replacement": "explicit-selected-file-in-place-nonatomic",
+      "rollback": "none",
+      "unrelated_files": "preserve",
+      "verification": "commit-crc32-then-full-sha256-readback"
+    },
+    "pre_firmware_id": null,
+    "purpose": "bootstrap"
+  },
+  "product": {
+    "hardware_profiles": [
+      "fixture-profile"
+    ],
+    "hardware_revisions": [
+      "rev-a"
+    ],
+    "id": "fixture-board",
+    "serial_contract_version": "1.0.0",
+    "storage_abi": "RiscStorageFilesV1",
+    "wire_protocol": "RTEF1"
+  },
+  "schema_version": "1.0.0"
+}
