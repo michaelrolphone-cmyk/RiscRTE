@@ -16,10 +16,9 @@ struct Disk {
   [](void*c,uint32_t ns,bool*exists)->int32_t{*exists=!static_cast<Disk*>(c)->values[ns].empty();return 0;}};}
 };
 int main(){
- assert(!openSettingsService(nullptr,nullptr));
- Disk d;auto b=d.backend();SettingsProvider absent{};
- assert(!openSettingsService(&absent,&b)); // selected unavailable provider never falls back
- auto active=openSettingsService(nullptr,&b);auto candidate=openSettingsService(nullptr,&b);
+
+ Disk d;auto b=d.backend();
+ auto active=b.openSettings(b);auto candidate=b.openSettings(b);
  assert(active&&candidate&&active.get()!=candidate.get());
  assert(active->configure(10,2,true,nullptr,0));assert(candidate->configure(10,2,true,nullptr,0));
  assert(active->status(1)==0&&candidate->status(1)==0&&active->status(3)==UINT32_MAX);
@@ -33,7 +32,7 @@ int main(){
  uint64_t generation=0;assert(active->snapshot(1,out,0,&n,&generation)==RISC_KEY_VALUE_BUFFER_SMALL);
  std::vector<uint8_t> snapshot(n);assert(active->snapshot(1,snapshot.data(),n,&n,&generation)==0);
  assert(active->acknowledge(1,generation)==0);active.reset();
- auto restart=openSettingsService(nullptr,&b);assert(restart->configure(10,2,true,nullptr,0));
+ auto restart=b.openSettings(b);assert(restart->configure(10,2,true,nullptr,0));
  assert(restart->restore(1,"settings-test",snapshot.data(),snapshot.size(),false)==0);
  assert(restart->get(10,"mode",out,sizeof out,&n,64,false)==0&&std::string(out,n)=="saved");
  // Existing native writer namespace remains independent; no key/encoding migration.
@@ -42,7 +41,7 @@ int main(){
  d.fail=true;assert(restart->put(10,"mode","uncertain",9,false)==RISC_KEY_VALUE_IO);
  assert(restart->status(1)==3);assert(restart->get(10,"mode",out,sizeof out,&n,64,false)==RISC_KEY_VALUE_BUSY);
  assert(d.values[10].empty()); // uncertain checkpoint never downgrades to native
- auto disabled=openSettingsService(nullptr,&b);assert(disabled->configure(0,0,false,nullptr,0));
+ auto disabled=b.openSettings(b);assert(disabled->configure(0,0,false,nullptr,0));
  assert(disabled->checkpointCount()==0&&disabled->sharedCount()==0&&disabled->status(1)==UINT32_MAX);
  puts("Settings service: optional selection, independent sessions, legacy writes, checkpoint snapshot/ack/restart, cold and uncertain no-fallback PASS");
 }

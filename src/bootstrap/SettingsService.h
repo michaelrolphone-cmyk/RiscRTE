@@ -9,6 +9,8 @@ class SettingsSession {
  public:
   virtual ~SettingsSession()=default;
   virtual uint32_t maxBlobSize() const=0;
+  // Reads receive private Runtime scratch. Runtime validates status/size and
+  // custody before exposing bytes. Failure must never imply fallback.
   virtual int32_t get(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t,bool provider)=0;
   virtual int32_t put(uint32_t,const char*,const void*,uint32_t,bool provider)=0;
   virtual bool configure(uint32_t first,uint32_t count,bool checkpoints,const uint32_t* shared,uint32_t sharedCount)=0;

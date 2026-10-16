@@ -22,6 +22,7 @@
 #endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
 #include <RiscKeyValueAtomicV1.h>
+#include "AtomicSettingsEndpoint.h"
 #include <RiscKeyValueAvailabilityV1.h>
 namespace RiscExperimental { class NativeAtomicKeyValue; }
 #endif
@@ -143,9 +144,11 @@ class Runtime final {
   // Trusted firmware only, before prepare or in bindPlatforms. Copies app ID;
   // endpoint/namespace gate must outlive all invocations and successful shutdown.
   bool registerAtomicKeyValue(const char* appId,uint32_t nameSpace,RiscExperimental::NativeAtomicKeyValue&);
+  bool registerAtomicKeyValue(const char* appId,uint32_t nameSpace,AtomicSettingsEndpoint);
   // Optional namespace routing for already-admitted KV1/KV2 readers. All
   // legacy writes into that namespace are denied; no implicit intent/fallback.
   bool registerAtomicKeyValueReadThrough(uint32_t nameSpace,RiscExperimental::NativeAtomicKeyValue&);
+  bool registerAtomicKeyValueReadThrough(uint32_t nameSpace,AtomicSettingsEndpoint);
   struct KeyValueAvailability {
     void* context=nullptr;
     int32_t (*snapshot)(void*,uint32_t,risc_key_value_availability_state_v1*)=nullptr;
@@ -259,7 +262,7 @@ class Runtime final {
 #if RISC_RUNTIME_STORAGE_FILES
     storageFilesExitSafe(true) &&
 #endif
-    fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
+    (!settings_||!settings_->retained()) && fileSourceExitSafe() && !fileSource_.token && appDataExportExitSafe() && (!residentEnabled_ || (!foregroundRunning_ && !shellLoading_ && !retained_));}
   // Native metadata stream ownership is separate from mapped provider/app
   // retention. Metadata-only candidates may be destroyed after this is latched
   // by their native store owner, which must retain its mount/session.
@@ -328,7 +331,7 @@ class Runtime final {
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
   struct AtomicBinding {
     char app[96]{};uint32_t nameSpace=0;
-    RiscExperimental::NativeAtomicKeyValue* endpoint=nullptr;
+    AtomicSettingsEndpoint endpoint{};
     KeyValueAvailability availability{};
   };
   #ifndef RISC_RUNTIME_ATOMIC_BINDING_CAPACITY
@@ -342,12 +345,13 @@ class Runtime final {
   bool keyValueAuthoritative(uint32_t) const;
   static int32_t keyValueAvailabilitySnapshot(void*,risc_key_value_availability_state_v1*);
   AtomicBinding* atomicBinding(const char*,uint32_t);
-  RiscExperimental::NativeAtomicKeyValue* atomicReadThrough(uint32_t) const;
+  const AtomicSettingsEndpoint* atomicReadThrough(uint32_t) const;
   int32_t atomicLegacyGet(uint32_t,const char*,void*,uint32_t,uint32_t*,uint32_t);
   bool atomicExitSafe(bool exiting) const;
   struct AppGrant;
   static AppGrant* atomicContext(void*);
   int32_t atomicResult(int32_t);
+  int32_t atomicEndpointResult(const AtomicSettingsEndpoint*,int32_t);
   static int32_t atomicState(void*,risc_key_value_atomic_state_v1*);
   static int32_t atomicGet(void*,uint64_t,const char*,void*,uint32_t,uint32_t*);
   static int32_t atomicSubmit(void*,uint64_t,const risc_key_value_atomic_mutation_v1*,uint32_t,const void*,uint32_t,uint64_t*);
@@ -564,6 +568,9 @@ class Runtime final {
   MetadataArray<InstallationState> installation_;
   std::unique_ptr<SettingsSession> settings_;
   bool openSettings();
+  bool settingsCallSafe();
+  bool settingsReadSafe() const;
+  uint32_t settingsMaxBlobSize();
   static uint32_t installationSharedSettingsNamespace(void*,uint32_t);
   static uint32_t installationSettingsStatus(void*,uint32_t);
   static int32_t installationSettingsRestore(void*,uint32_t,const char*,const void*,uint32_t,bool);
@@ -643,7 +650,7 @@ class Runtime final {
     risc_key_value_atomic_v1 atomic{};
     risc_key_value_availability_v1 availability{};
     uint32_t availabilityNamespace=0;
-    RiscExperimental::NativeAtomicKeyValue* atomicEndpoint=nullptr;
+    const AtomicSettingsEndpoint* atomicEndpoint=nullptr;
     uint64_t atomicOperation=0;
 #endif
   };
@@ -746,3 +753,11 @@ class Runtime final {
   bool reclaimingAppImages_=false;
 };
 }
+
+#if RISC_RUNTIME_ATOMIC_KEY_VALUE
+#include "NativeAtomicSettingsAdapter.h"
+namespace RiscBoot {
+inline bool Runtime::registerAtomicKeyValue(const char* app,uint32_t ns,RiscExperimental::NativeAtomicKeyValue& endpoint){return registerAtomicKeyValue(app,ns,nativeAtomicSettings(endpoint));}
+inline bool Runtime::registerAtomicKeyValueReadThrough(uint32_t ns,RiscExperimental::NativeAtomicKeyValue& endpoint){return registerAtomicKeyValueReadThrough(ns,nativeAtomicSettings(endpoint));}
+}
+#endif

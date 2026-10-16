@@ -1,7 +1,10 @@
 #pragma once
 #include <RiscKeyValueV1.h>
+#include "SettingsService.h"
 #include "runtime/storage/ScalableSettings.h"
 namespace RiscBoot {
+struct KeyValueBackend;
+std::unique_ptr<SettingsSession> openLegacySettings(const KeyValueBackend&);
 // Optional compiled-in backend. Namespace comes only from validated boot policy.
 // Backend must obey the public status/size contract; broker copies reads only
 // after success. No app value encoding or fallback policy belongs here.
@@ -14,5 +17,10 @@ struct KeyValueBackend {
   int32_t (*journalWrite)(void*,uint32_t,const void*,uint32_t)=nullptr;
   int32_t (*legacyNamespace)(void*,uint32_t,bool*)=nullptr;
   const RiscStorage::ScalableSettings::Backend* scalableSettings=nullptr;
+  // Compatibility registration supplies the implementation; Runtime only calls
+  // this semantic factory. Existing aggregate initializers retain their fields.
+  std::unique_ptr<SettingsSession> (*openSettings)(const KeyValueBackend&)=openLegacySettings;
 };
 }
+
+#include "LegacySettingsProvider.h"

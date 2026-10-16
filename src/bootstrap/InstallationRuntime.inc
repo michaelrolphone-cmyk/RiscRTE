@@ -57,17 +57,27 @@ bool Runtime::configureInstallation(JsonVariantConst value){
  uint32_t sharedNamespaces[128]{},sharedCount=0;
  if(!value["shared_settings"].isUnbound()){
   const auto shared=value["shared_settings"];
-  if(!shared.is<JsonArrayConst>()||!shared.size()||shared.size()>128||!checkpoints||!settings_)return fail("shared settings require scalable SD selection");
+  if(!shared.is<JsonArrayConst>()||!shared.size()||shared.size()>128||!checkpoints||!settings_)return fail("shared settings require checkpoint provider selection");
   for(JsonVariantConst item:shared.as<JsonArrayConst>()){
    int64_t ns=0;if(!integer(item,1,INT32_MAX,ns)||(ns>=first&&ns<first+count))return fail("invalid shared settings namespace");
    for(size_t j=0;j<sharedCount;++j)if(sharedNamespaces[j]==uint32_t(ns))return fail("duplicate shared settings namespace");
    sharedNamespaces[sharedCount++]=uint32_t(ns);
   }
  }
- if(settings_&&!settings_->configure(uint32_t(first),uint32_t(count),checkpoints,sharedNamespaces,sharedCount))return fail("settings provider configuration unavailable");
+ if(settings_){
+  if(!settingsCallSafe())return false;
+  const bool configured=settings_->configure(uint32_t(first),uint32_t(count),checkpoints,sharedNamespaces,sharedCount);
+  if(!settingsCallSafe()||!configured)return fail("settings provider configuration unavailable");
+ }
+ uint32_t checkpointCount=0,checkpointFormat=1,checkpointShared=0;
+ if(settings_){
+  checkpointCount=settings_->checkpointCount();if(!settingsCallSafe())return false;
+  checkpointFormat=settings_->format();if(!settingsCallSafe())return false;
+  checkpointShared=settings_->sharedCount();if(!settingsCallSafe())return false;
+ }
  installation_[0].volume=uint64_t(volume);installation_[0].namespaceFirst=uint32_t(first);installation_[0].namespaceCount=uint32_t(count);
  installation_[0].internalEnabled=internalEnabled;installation_[0].internalVolume=uint64_t(internal);
- installation_[0].api.base={1,sizeof(risc_installation_media_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),settings_?settings_->checkpointCount():0u,installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,settings_?settings_->format():1u,settings_?settings_->sharedCount():0u,installationSharedSettingsNamespace};
+ installation_[0].api.base={1,sizeof(risc_installation_media_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),checkpointCount,installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,checkpointFormat,checkpointShared,installationSharedSettingsNamespace};
  installation_[0].api.media_tag=RISC_INSTALLATION_MEDIA_TAG;installation_[0].api.media_version=1;installation_[0].api.media_mask=internalEnabled?3u:1u;
  installation_[0].api.namespaced_media=installationNamespacedMedia;installation_[0].api.providers_media=installationProvidersMedia;
  return registerPlatform(RISC_INSTALLATION_CAPABILITY,1,Scope::Global,0,&installation_[0].api);

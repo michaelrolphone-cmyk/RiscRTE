@@ -1,6 +1,5 @@
 #include <RiscInternalPackageVolumeV1.h>
 #include "Runtime.h"
-#include "LegacySettingsProvider.h"
 #include "AppDeclarations.h"
 #include "RemovableAppImage.h"
 #include "runtime/drivers/DeviceProviderExecutorV2.h"
@@ -12,9 +11,6 @@
 #include "diagnostics/Performance.h"
 #include "diagnostics/StageLog.h"
 #include "KeyValueGeneration.h"
-#if RISC_RUNTIME_ATOMIC_KEY_VALUE
-#include "../../experimental/native_replica/NativeAtomicKeyValue.h"
-#endif
 #include "runtime/update/Version.h"
 #include "runtime/update/CohortMigration.h"
 #include "runtime/update/NativeAppDataExportPolicyV1.h"
@@ -260,7 +256,7 @@ bool Runtime::validateGraph() {
         auto& storage=providerStorage_[i];
         if ((req.api!=RISC_BOUND_KEY_VALUE_API_V1 && req.api!=RISC_BOUND_KEY_VALUE_API_V2) || !storage.count ||
             !settings_ ||
-            settings_->maxBlobSize()<(req.api==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX))
+            settingsMaxBlobSize()<(req.api==RISC_BOUND_KEY_VALUE_API_V2?RISC_BOUND_KEY_VALUE_V2_BLOB_MAX:RISC_BOUND_KEY_VALUE_BLOB_MAX))
           return fail("provider key-value policy/backend unavailable");
         if (hw) for(size_t b=0;b<hw->bindingCount;++b)
           if (!strcmp(hw->bindings[b].capability,req.capability))
@@ -501,7 +497,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
 #endif
         if (keyValue) {
           if ((grant.api!=RISC_KEY_VALUE_API_V1 && grant.api!=RISC_KEY_VALUE_API_V2) || !grant.instance || !settings_ ||
-              settings_->maxBlobSize()<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
+              settingsMaxBlobSize()<(grant.api==RISC_KEY_VALUE_API_V2?RISC_KEY_VALUE_V2_BLOB_MAX:RISC_KEY_VALUE_BLOB_MAX)) return fail("app key-value backend/namespace unavailable");
           grant.keyValue=true;grant.capability=RISC_KEY_VALUE_CAPABILITY;
         } else if (!strcmp(capability,RISC_PROVIDER_PROMOTION_CAPABILITY)) {
           if(grant.api!=1 || grant.instance || strcmp(policy.elf,invocation_->current_))return fail("invalid default provider-promotion authority");
@@ -664,7 +660,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     grant.preferences={1,sizeof(grant.preferences),context,preferenceState,preferenceGet,preferenceSubmit,preferenceCollect,preferenceCancel};
     grant.preferenceNamespace=uint32_t(allowed->instance);grant.api=&grant.preferences;
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
-    if(auto* binding=atomicBinding(invocation_->appPolicy_->id,grant.preferenceNamespace))grant.atomicEndpoint=binding->endpoint;
+    if(auto* binding=atomicBinding(invocation_->appPolicy_->id,grant.preferenceNamespace))grant.atomicEndpoint=&binding->endpoint;
 #endif
   } else
 #endif
@@ -686,7 +682,7 @@ bool Runtime::acquire(const char* capability,uint32_t api,uint64_t instance,risc
     if(!binding || retained_ || !invocation_->entryRunning_ || !providerStorageSafe())return false;
     void* context=nextKeyValueContext(keyValueGeneration);if(!context)return false;
     grant.atomic={1,sizeof(grant.atomic),context,atomicState,atomicGet,atomicSubmit,atomicCollect,atomicCancel};
-    grant.atomicEndpoint=binding->endpoint;grant.api=&grant.atomic;
+    grant.atomicEndpoint=&binding->endpoint;grant.api=&grant.atomic;
   } else
 #endif
   if(allowed->driver==AppCatalogDriver){
@@ -839,8 +835,28 @@ int32_t Runtime::keyValueGet(void* context,const char* key,void* buffer,uint32_t
 #endif
   return r->namespaceKeyValueGet(matched->keyValueNamespace,key,buffer,capacity,outSize,limit);
 }
+bool Runtime::settingsReadSafe() const {return settings_&&!retained_&&!settings_->retained()&&port_.owner&&port_.owner();}
+uint32_t Runtime::settingsMaxBlobSize() {
+  if(!settingsCallSafe())return 0;
+  const uint32_t size=settings_->maxBlobSize();return settingsCallSafe()?size:0;
+}
+bool Runtime::settingsCallSafe() {
+  if(settings_&&settings_->retained()){
+    retained_=true;fail("settings provider custody retained; restart required");(void)appExitBarrier(false);
+  }
+  return settings_&&!retained_&&port_.owner&&port_.owner();
+}
 int32_t Runtime::namespaceKeyValueGet(uint32_t ns,const char* key,void* buffer,uint32_t capacity,uint32_t* outSize,uint32_t limit,bool provider) {
-  return settings_?settings_->get(ns,key,buffer,capacity,outSize,limit,provider):RISC_KEY_VALUE_CONTEXT;
+  if(outSize)*outSize=0;
+  if(!settingsCallSafe())return RISC_KEY_VALUE_CONTEXT;
+  uint8_t bytes[RISC_KEY_VALUE_V2_BLOB_MAX];RiscRuntime::ScopedBufferWipe wipe(bytes);uint32_t size=0;
+  if(!outSize||(!buffer&&capacity)||limit>sizeof bytes)return RISC_KEY_VALUE_INVALID;
+  const int32_t rc=settings_->get(ns,key,bytes,limit,&size,limit,provider);
+  if(!settingsCallSafe())return RISC_KEY_VALUE_CONTEXT;
+  if(rc==RISC_KEY_VALUE_NOT_FOUND||rc==RISC_KEY_VALUE_BUSY)return rc;
+  if(rc!=RISC_KEY_VALUE_OK||!size||size>limit)return RISC_KEY_VALUE_IO;
+  if(capacity<size){*outSize=size;return RISC_KEY_VALUE_BUFFER_SMALL;}
+  std::memcpy(buffer,bytes,size);*outSize=size;return RISC_KEY_VALUE_OK;
 }
 int32_t Runtime::keyValuePut(void* context,const char* key,const void* data,uint32_t size) {
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
@@ -865,11 +881,13 @@ int32_t Runtime::namespaceKeyValuePut(uint32_t ns,const char* key,const void* da
 #else
   (void)preference;
 #endif
-  const int32_t result=settings_?settings_->put(ns,key,data,size,provider):RISC_KEY_VALUE_CONTEXT;
+  if(!settingsCallSafe())return RISC_KEY_VALUE_CONTEXT;
+  const int32_t result=settings_->put(ns,key,data,size,provider);
 #if RISC_RUNTIME_PREFERENCE_STORE
   // A failed commit can have changed storage. Only BUSY promises no I/O.
   if(tracked && result!=RISC_KEY_VALUE_BUSY)++tracked->revision;
 #endif
+  if(!settingsCallSafe())return RISC_KEY_VALUE_CONTEXT;
   return result==RISC_KEY_VALUE_OK || result==RISC_KEY_VALUE_BUSY ? result : RISC_KEY_VALUE_IO;
 }
 
@@ -1077,7 +1095,9 @@ bool Runtime::revokeApp() {
 #include "ProviderPromotionRuntime.inc"
 #include "ResidentShellRuntime.inc"
 bool Runtime::openSettings() {
-  settings_=openSettingsService(port_.settings,port_.keyValue);
+  // Explicit selection never downgrades after unavailable or failed open.
+  if(port_.settings)settings_=port_.settings->open?port_.settings->open(port_.settings->context):nullptr;
+  else if(port_.keyValue&&port_.keyValue->openSettings)settings_=port_.keyValue->openSettings(*port_.keyValue);
   return (!port_.settings&&!port_.keyValue)||bool(settings_);
 }
 bool Runtime::prepare(const char* root) {
@@ -1267,7 +1287,11 @@ bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity
     if(!settings_)return true;
     const auto& policy=policies_[index];
     for(size_t g=0;g<policy.count;++g){const auto& grant=policy.grants[g];
-      if(keyValuePolicy(grant)&&!settings_->launchReady(uint32_t(grant.instance),settingsPending))return false;
+      if(keyValuePolicy(grant)){
+        if(!settingsReadSafe())return false;
+        const bool ready=settings_->launchReady(uint32_t(grant.instance),settingsPending);
+        if(!settingsReadSafe()||!ready)return false;
+      }
     }
     return true;
   };
@@ -1524,7 +1548,7 @@ bool Runtime::appExitBarrier(bool exiting) {
 #if RISC_RUNTIME_STORAGE_FILES
      storageFilesExitSafe(exiting) &&
 #endif
-     graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained() && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
+     (!settings_||!settings_->retained()) && graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained() && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());

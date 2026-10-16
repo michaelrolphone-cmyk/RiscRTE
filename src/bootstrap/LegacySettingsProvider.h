@@ -2,7 +2,6 @@
 #include "SettingsService.h"
 #include "KeyValueBackend.h"
 #include "MetadataArray.h"
-#include "runtime/resources/ScopedBufferWipe.h"
 #include <cstdio>
 namespace RiscBoot {
 // Compatibility composition for existing native writers. Concrete checkpoint
@@ -39,15 +38,11 @@ class LegacySettingsSession final : public SettingsSession {
     if(!provider&&installed(ns)&&installed_[ns-first_].status!=RiscStorage::SdFirstKeyValue::LegacyNative){
       auto j=journal();return RiscStorage::SdFirstKeyValue::get(installed_[ns-first_],workspace_[0],j,ns,key,out,cap,size);
     }
-    uint8_t temp[RISC_KEY_VALUE_V2_BLOB_MAX];RiscRuntime::ScopedBufferWipe wipe(temp);uint32_t n=0;
-    if(!size||limit>sizeof temp||(!out&&cap))return RISC_KEY_VALUE_INVALID;
-    *size=0;auto* s=scalable(ns);
-    const int32_t rc=s?RiscStorage::ScalableSettings::get(*s,key,temp,limit,&n):backend_.get(backend_.context,ns,key,temp,limit,&n);
-    if(rc==RISC_KEY_VALUE_NOT_FOUND||rc==RISC_KEY_VALUE_BUSY)return rc;
-    if(rc!=RISC_KEY_VALUE_OK||!n||n>limit)return RISC_KEY_VALUE_IO;
-    if(cap<n){*size=n;return RISC_KEY_VALUE_BUFFER_SMALL;}
-    std::memcpy(out,temp,n);*size=n;return RISC_KEY_VALUE_OK;
+    auto* state=scalable(ns);
+    const uint32_t capacity=cap<limit?cap:limit;
+    return state?RiscStorage::ScalableSettings::get(*state,key,out,capacity,size):backend_.get(backend_.context,ns,key,out,capacity,size);
   }
+
   int32_t put(uint32_t ns,const char* key,const void* data,uint32_t size,bool provider) override {
     int32_t rc;
     if(auto* s=scalable(ns))rc=RiscStorage::ScalableSettings::put(*s,*backend_.scalableSettings,ns,key,data,size);
@@ -106,9 +101,7 @@ class LegacySettingsSession final : public SettingsSession {
   }
   RiscStorage::SdFirstKeyValue::Journal journal() const {return {backend_.context,backend_.journalRead,backend_.journalWrite,backend_.get,backend_.legacyNamespace};}
 };
-inline std::unique_ptr<SettingsSession> openSettingsService(const SettingsProvider* provider,const KeyValueBackend* legacy){
-  // Explicit provider failures never downgrade into the compatibility backend.
-  if(provider)return provider->open?provider->open(provider->context):nullptr;
-  return legacy?std::unique_ptr<SettingsSession>(new(std::nothrow) LegacySettingsSession(*legacy)):nullptr;
+inline std::unique_ptr<SettingsSession> openLegacySettings(const KeyValueBackend& backend){
+  return std::unique_ptr<SettingsSession>(new(std::nothrow) LegacySettingsSession(backend));
 }
 }
