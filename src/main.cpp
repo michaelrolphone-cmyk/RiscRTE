@@ -367,6 +367,11 @@ void setup() {
     diagnosticLine("RTE_BOOT error=native-settings-backend");return;
   }
 #endif
+  // Queued handoffs wait for an ordinary boot. A deep-sleep resume must
+  // preserve retained RTC time and leave every pending request untouched.
+#if RISC_NATIVE_PROVISION_REQUEST
+  if(RiscCpu::NativeRetainedWake::coldBoot()) {
+#endif
   // Read-only owner input, before any app/driver binding. No configured fresh
   // time source means offline installed boot, never a stale timestamp bypass.
   RiscPerf::emit(57);
@@ -399,6 +404,9 @@ void setup() {
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-stageUs));
   diagnosticFormat("RTE_PROVISION action=%s reason=%s",provision.outcome==RiscBootstrap::Outcome::Stopped?"stop":"continue-installed",RiscBootstrap::reasonName(provision.reason));
   if(provision.outcome==RiscBootstrap::Outcome::Stopped)return;
+#if RISC_NATIVE_PROVISION_REQUEST
+  }
+#endif
 #endif
 #if defined(RISC_PAIRED_BANKS) || defined(RISC_RUNTIME_METADATA_PSRAM)
   if(!retainedRuntime)retainedRuntime=RiscCpu::createRetainedRuntime({isOwner,health,cooperate,diagnostic,bindPlatforms,

@@ -36,3 +36,8 @@ The implementation never retries that freed pointer. It retains a poisoned
 session marker, blocks radio teardown/sleep/app unload and requires a restart.
 Healthy sessions preserve bound alarm-service storage; normal close frees all
 native resources. SDK hidden failures and actual heap headroom remain unqualified.
+
+The optional HTTP-time suffix is covered by the same production-header suite.
+Its socket, DNS, random, send, receive and close boundaries are modeled without
+host network traffic. See `docs/HTTP_TIME_BOOTSTRAP.md` for the bounded SNTP
+contract, unauthenticated-time limitation and real ESP32-S3 compile command.
