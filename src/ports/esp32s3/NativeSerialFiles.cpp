@@ -28,6 +28,7 @@ Workspace& workspace(){return *std::launder(reinterpret_cast<Workspace*>(workspa
 // is one-shot even on failed admission; a retained endpoint is never replaced.
 struct State {
   Check owner=nullptr,platformSafe=nullptr,ready=nullptr;
+  ControlObserver observer=nullptr;
   bool selected=false,prepared=false,dispatching=false;
 } state;
 bool owner(){return !xPortInIsrContext() && state.owner && state.owner();}
@@ -40,9 +41,9 @@ struct Dispatch {
   ~Dispatch(){state.dispatching=false;}
 };
 } // namespace
-bool prepare(const Admission* admission,Check ownerCheck,Check platformSafe){
+bool prepare(const Admission* admission,Check ownerCheck,Check platformSafe,ControlObserver observer){
   if(state.selected || !ownerCheck || !platformSafe || xPortInIsrContext() || !ownerCheck())return false;
-  state.selected=true;state.owner=ownerCheck;state.platformSafe=platformSafe;
+  state.selected=true;state.owner=ownerCheck;state.platformSafe=platformSafe;state.observer=observer;
   if(!admission)return true;
   if(!admission->ready || admission->count>RiscSerial::Files::NamespaceMax ||
      (admission->count && !admission->namespaces))return false;
@@ -60,7 +61,8 @@ bool prepare(const Admission* admission,Check ownerCheck,Check platformSafe){
   // require a presently available provider or manufacture a storage session.
   Dispatch dispatch;
   state.prepared=workspace().endpoint.bind(workspace().namespaces,admission->count,
-    {owner,safe,[]()->uint32_t{return RiscPlatform::millis();}});
+    {owner,safe,[]()->uint32_t{return RiscPlatform::millis();},
+     [](uint32_t sid,uint32_t seq,const char*op,uint32_t wait,bool deadline){if(state.observer)state.observer(sid,seq,op,wait,deadline);}});
   return state.prepared;
 }
 bool checkpoint(){
@@ -68,6 +70,12 @@ bool checkpoint(){
   if(!owner())return false;
   if(state.dispatching)return workspace().endpoint.custodySafe();
   Dispatch dispatch;workspace().endpoint.checkpoint();return workspace().endpoint.custodySafe();
+}
+bool controlCheckpoint(){
+  if(!state.prepared)return true;
+  if(!owner())return false;
+  if(state.dispatching)return workspace().endpoint.custodySafe();
+  Dispatch dispatch;workspace().endpoint.controlCheckpoint();return workspace().endpoint.custodySafe();
 }
 bool shutdown(){
   if(!state.prepared)return true;

@@ -7,7 +7,8 @@
 #include <cstdio>
 static bool owned=true,safe=true,disconnectDuringOpen=false;
 static uint32_t now=100;
-static unsigned opens=0,writes=0,reads=0,closes=0,syncs=0;
+static unsigned opens=0,writes=0,reads=0,closes=0,syncs=0,observations=0,deadlines=0;
+static void observed(uint32_t sid,uint32_t seq,const char*op,uint32_t wait,bool deadline){assert(owned&&sid&&seq&&op&&*op);++observations;if(deadline){++deadlines;assert(wait>=RiscSerial::Files::AdmissionWaitMs);}};
 static int fault=0;
 static const risc_storage_files_v1* native=nullptr;
 static RiscSerial::Files* callbackEndpoint=nullptr;
@@ -51,7 +52,7 @@ int main(int argc,char**argv){
  api.sync=[](void*c,uint32_t h){++syncs;return fault==8?int32_t(RISC_FILES_IO):native->sync(c,h);};
  RiscBoot::RuntimeFiles files,missing;assert(files.bind(&api,owner,ready));
  RiscSerial::Namespace map[]={{7,"Selected files",&files,true},{8,"Read only",&files,false},{9,"Absent",&missing,true}};
- RiscSerial::Files endpoint;callbackEndpoint=&endpoint;safe=false;assert(endpoint.bind(map,3,{owner,ready,millis}));safe=true;assert(!endpoint.bind(map,3,{owner,ready,millis}));
+ RiscSerial::Files endpoint;callbackEndpoint=&endpoint;safe=false;assert(endpoint.bind(map,3,{owner,ready,millis,observed}));safe=true;assert(!endpoint.bind(map,3,{owner,ready,millis,observed}));
  // Empty and cancelled protocol sessions have no native cleanup to defer.
  // RAM cancellation remains available while provider readiness is false.
  safe=false;endpoint.disconnect();endpoint.disconnect();assert(endpoint.exitSafe());
@@ -60,6 +61,37 @@ int main(int argc,char**argv){
  for(unsigned char c:std::string("RTEF1 12345678 1 HELLO\n"))endpoint.input(c);
  assert(endpoint.pending());endpoint.disconnect();endpoint.checkpoint();assert(endpoint.exitSafe());
  assert(!opens&&!writes&&!reads&&!closes&&!syncs);safe=true;
+ if(scenario=="control"){
+  Wire w{endpoint};safe=false;
+  auto control=[&](const std::string&cmd,int expected=0){
+   const auto before=opens+writes+reads+closes+syncs;
+   w.feed("RTEF1 12345678 "+std::to_string(++w.seq)+" "+cmd+"\n");endpoint.controlCheckpoint();
+   auto out=w.drain();assert(out.find(" "+std::to_string(expected)+" ")!=std::string::npos);
+   assert(before==opens+writes+reads+closes+syncs);return out;
+  };
+  assert(control("HELLO").find("HELLO 48 511 3")!=std::string::npos);
+  assert(control("NS 0").find("NS 7 1")!=std::string::npos);
+  control("PATH 0 2f73656c6563746564");
+  w.feed("RTEF1 12345678 "+std::to_string(++w.seq)+" GET 7\n");
+  endpoint.controlCheckpoint();assert(!endpoint.outputSize()&&endpoint.pending());
+  now+=RiscSerial::Files::AdmissionWaitMs-1;endpoint.controlCheckpoint();assert(!endpoint.outputSize());
+  ++now;endpoint.controlCheckpoint();assert(w.drain().find(" "+std::to_string(RISC_FILES_BUSY)+"\n")!=std::string::npos);
+  assert(!opens&&!writes&&!reads&&!closes&&!syncs&&!files.retained());assert(observations==2&&deadlines==1);
+  // A live file token may be observed through NS, never closed by control.
+  std::ofstream(root+"/selected")<<"keep";safe=true;w.command("GET 7");const auto closeBefore=closes;
+  safe=false;control("NS 0");w.feed("RTEF1 12345678 "+std::to_string(++w.seq)+" ABORT\n");
+  now+=RiscSerial::Files::AdmissionWaitMs;endpoint.controlCheckpoint();assert(w.drain().find(" "+std::to_string(RISC_FILES_BUSY)+"\n")!=std::string::npos&&closes==closeBefore);
+  endpoint.disconnect();endpoint.controlCheckpoint();assert(!endpoint.exitSafe()&&closes==closeBefore);
+  safe=true;endpoint.checkpoint();assert(endpoint.exitSafe()&&closes==closeBefore+1);
+  // Non-owner metadata and fake command suffixes cannot escape admission.
+  safe=false;owned=false;w.feed("RTEF1 87654321 1 HELLO\n");endpoint.controlCheckpoint();assert(!endpoint.outputSize());owned=true;
+  endpoint.controlCheckpoint();assert(w.drain().find(" 0 HELLO ")!=std::string::npos);
+  const auto before=opens+writes+reads+closes+syncs;
+  w.feed("RTEF1 87654321 2 NSX 0\n");endpoint.controlCheckpoint();assert(!endpoint.outputSize());
+  now+=RiscSerial::Files::AdmissionWaitMs;endpoint.controlCheckpoint();assert(w.drain().find(" "+std::to_string(RISC_FILES_BUSY)+"\n")!=std::string::npos);
+  assert(before==opens+writes+reads+closes+syncs&&!files.retained());endpoint.disconnect();assert(endpoint.exitSafe());
+  puts("serial control metadata, bounded Busy, owner/cancel/live-handle safety PASS");return 0;
+ }
  Wire wire{endpoint};assert(wire.command("HELLO").find("HELLO 48 511 3")!=std::string::npos);
  // Unsent response and completed session replay state are RAM-only too.
  wire.feed("RTEF1 12345678 2 NS 0\n");endpoint.checkpoint();assert(endpoint.outputSize());

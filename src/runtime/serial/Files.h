@@ -6,11 +6,18 @@ namespace RiscSerial {
 // Trusted firmware admission, never inferred from a physical backend or path.
 // The immutable map, labels and provider sessions live until real restart.
 struct Namespace {uint64_t id;const char* label;RiscBoot::RuntimeFiles* files;bool writable;};
-struct Hooks {bool (*owner)();bool (*safe)();uint32_t (*millis)();};
+struct Hooks {
+ bool (*owner)();bool (*safe)();uint32_t (*millis)();
+ // Bounded owner-only observation. Must not call providers, allocate or wait.
+ void (*controlObserved)(uint32_t,uint32_t,const char*,uint32_t,bool)=nullptr;
+};
 class Files final {
  public:
   static constexpr size_t Chunk=48,Line=192,NamespaceMax=16;
   static constexpr uint32_t TimeoutMs=30000;
+  // A healthy but unavailable storage boundary must answer before the public
+  // client request deadline (5 s), without dispatching or claiming an outcome.
+  static constexpr uint32_t AdmissionWaitMs=4000;
   Files()=default;
   Files(const Files&)=delete;Files& operator=(const Files&)=delete;
   bool bind(const Namespace*,size_t,Hooks);
@@ -23,12 +30,15 @@ class Files final {
   // Only the settled owner boundary may dispatch provider calls. Each request
   // issues at most two bounded ABI operations, never an unbounded transfer loop.
   void checkpoint();
+  // Owner-only RAM path: metadata replies and bounded admission refusal.
+  // Never calls file providers, including close/cancel of a live handle.
+  void controlCheckpoint();
   bool shutdown();
   bool exitSafe()const;
   bool custodySafe()const;
   bool pending()const{return (requestLength_>=6 && !strncmp(request_,"RTEF1 ",6)) || requestReady_ || outputSize() || handle_ || cancel_;}
  private:
-  void command();
+  void command(bool storageReady=true);
   void reply(int32_t,const char* format=nullptr,...);
   int32_t close();
   void clearTransfer();
@@ -43,6 +53,6 @@ class Files final {
   char request_[Line]{},previous_[Line]{},response_[Line]{},cached_[Line]{};
   size_t requestLength_=0,responseLength_=0,sent_=0;
   uint32_t session_=0,sequence_=0,replySession_=0,replySequence_=0;
-  bool discard_=false,requestReady_=false;
+  bool discard_=false,requestReady_=false,observedControl_=false,observedDeadline_=false;
 };
 }

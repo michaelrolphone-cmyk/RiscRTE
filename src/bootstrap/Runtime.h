@@ -133,6 +133,9 @@ struct Port {
   // Temporary native custody may permit UI continuation without permitting
   // another storage operation. False defers dispatch without revoking authority.
   bool (*serialFilesReady)()=nullptr;
+  // RAM-only protocol metadata and bounded Busy refusal, independent of SD
+  // readiness. No provider calls, cancellation cleanup, allocation or wait.
+  bool (*serialFilesControlCheckpoint)()=nullptr;
 #endif
 };
 class Runtime final {

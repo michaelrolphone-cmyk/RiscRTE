@@ -300,6 +300,15 @@ bool prepareSerial(){
 }
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
+void serialControl(uint32_t session,uint32_t sequence,const char*operation,uint32_t waited,bool deadline,uint32_t state){
+  if(!ours() || xPortInIsrContext() || outputting || !operation)return;
+  const char*names[]={"HELLO","NS","PATH","STAT","GET","PUT","READ","WRITE","COMMIT","CLOSE","ABORT","MKDIR"};
+  uint32_t op=0;for(unsigned i=0;i<sizeof(names)/sizeof(names[0]);++i)if(!std::strcmp(operation,names[i])){op=i+1;break;}
+  const auto ms=RiscPlatform::millis();
+  event(journal,ms,deadline?SerialDeadlineIdentity:SerialFirstIdentity,int32_t(session),sequence);
+  event(journal,ms,deadline?SerialDeadlineState:SerialFirstState,int32_t(op),state);
+  event(journal,ms,deadline?SerialDeadlineWait:SerialFirstWait,int32_t(waited),0);
+}
 int32_t checkpoint(const char* app,uint64_t invocation,const char* text,uint32_t length){
   if(!ours() || xPortInIsrContext() || outputting)return -1;
 #if RISC_NATIVE_DIAGNOSTIC_OBSERVER
