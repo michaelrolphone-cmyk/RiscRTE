@@ -33,6 +33,8 @@ bool prepare(const Admission*,Check owner,Check platformSafe);
 // settled Runtime owner boundary, outside provider/capability callbacks and
 // ordinary cooperative yield (including the explicit app service checkpoint).
 bool checkpoint();
+// Owner-only metadata/control replies; never calls a provider or waits.
+bool controlCheckpoint();
 bool shutdown();
 // Transport methods only copy/parser/TX state. They never call file providers.
 void input(uint8_t);
@@ -48,6 +50,7 @@ extern "C" const RiscCpu::NativeSerialFiles::Admission* risc_native_serial_files
 #else
 namespace RiscCpu { namespace NativeSerialFiles {
 inline bool checkpoint(){return true;}
+inline bool controlCheckpoint(){return true;}
 inline bool shutdown(){return true;}
 inline bool pending(){return false;}
 inline bool exitSafe(){return true;}

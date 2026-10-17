@@ -69,6 +69,12 @@ bool checkpoint(){
   if(state.dispatching)return workspace().endpoint.custodySafe();
   Dispatch dispatch;workspace().endpoint.checkpoint();return workspace().endpoint.custodySafe();
 }
+bool controlCheckpoint(){
+  if(!state.prepared)return true;
+  if(!owner())return false;
+  if(state.dispatching)return workspace().endpoint.custodySafe();
+  Dispatch dispatch;workspace().endpoint.controlCheckpoint();return workspace().endpoint.custodySafe();
+}
 bool shutdown(){
   if(!state.prepared)return true;
   if(!owner() || state.dispatching)return false;

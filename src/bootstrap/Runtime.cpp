@@ -1682,22 +1682,32 @@ int32_t Runtime::serviceCheckpoint() {
      invocation_->queued_[0] || graph_.lifecycleBusy() || invocation_->streams_.busy() ||
      mainInvocation_.streams_.busy() || (foreground_ && foreground_->streams_.busy()))
     return RISC_RUNTIME_CHECKPOINT_BUSY;
-  if(port_.serialFilesReady && !port_.serialFilesReady())return RISC_RUNTIME_CHECKPOINT_BUSY;
+  const auto deferSerial=[this]()->int32_t {
+    if(port_.serialFilesControlCheckpoint) {
+      nativeCheckpointRunning_=true;
+      const bool safe=port_.serialFilesControlCheckpoint();
+      nativeCheckpointRunning_=false;
+      if(!safe){retained_=true;fail("serial file custody retained; restart required");
+        (void)appExitBarrier(false);return RISC_RUNTIME_CHECKPOINT_RETAINED;}
+    }
+    return RISC_RUNTIME_CHECKPOINT_BUSY;
+  };
+  if(port_.serialFilesReady && !port_.serialFilesReady())return deferSerial();
   // This explicit app-declared boundary differs from ordinary yield. Check
   // actual native idleness as well as the caller's declaration; refusal does
   // not turn a healthy in-flight operation into terminal retention.
   if(!graph_.activationSafe() || metadataCloseRetained() || !appDataExitSafe() ||
      appDataBusy() || !fileSourceExitSafe() || !appDataExportExitSafe() ||
      !providerStorageSafe() || (port_.appExitSafe && !port_.appExitSafe()))
-    return RISC_RUNTIME_CHECKPOINT_BUSY;
+    return deferSerial();
 #if RISC_RUNTIME_STORAGE_FILES
-  if(!storageFilesExitSafe(true))return RISC_RUNTIME_CHECKPOINT_BUSY;
+  if(!storageFilesExitSafe(true))return deferSerial();
 #endif
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
-  if(!atomicExitSafe(true))return RISC_RUNTIME_CHECKPOINT_BUSY;
+  if(!atomicExitSafe(true))return deferSerial();
 #endif
 #if RISC_RUNTIME_PREFERENCE_STORE
-  if(!preferenceExitSafe(true))return RISC_RUNTIME_CHECKPOINT_BUSY;
+  if(!preferenceExitSafe(true))return deferSerial();
 #endif
   if(port_.serialFilesCheckpoint) {
     nativeCheckpointRunning_=true;

@@ -108,6 +108,7 @@ bool serialRuntimeSafe=false;
 RiscBoot::Port nativePort(RiscBoot::Port port){
 #if RISC_NATIVE_SERIAL_FILES
   port.serialFilesCheckpoint=RiscCpu::NativeSerialFiles::checkpoint;
+  port.serialFilesControlCheckpoint=RiscCpu::NativeSerialFiles::controlCheckpoint;
   port.serialFilesShutdown=RiscCpu::NativeSerialFiles::shutdown;
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   port.serialFilesReady=RiscCpu::NativeSettingsLifecycle::exitSafe;

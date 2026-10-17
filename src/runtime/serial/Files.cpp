@@ -86,7 +86,26 @@ void Files::checkpoint(){
  calling_=false;
 }
 bool Files::shutdown(){disconnect();checkpoint();return exitSafe();}
-void Files::command(){
+void Files::controlCheckpoint(){
+ if(!bound_ || calling_ || !hooks_.owner())return;
+ checkRetention();
+ const bool cancelling=cancel_ || (pending() && uint32_t(hooks_.millis()-touched_)>=TimeoutMs);
+ if(cancelling){
+  if(handle_)return; // Exact provider custody remains with the settled path.
+  resetSession();cancel_=false;requestReady_=false;requestLength_=0;responseLength_=sent_=0;
+  return;
+ }
+ if(!requestReady_ || outputSize())return;
+ // The real parser still validates the complete frame and sequence. Inspect
+ // only the operation token to select commands with no provider callbacks.
+ const char* op=request_;
+ for(unsigned i=0;i<3;++i){op=strchr(op,' ');if(!op)return;++op;}
+ const bool metadata=!strcmp(op,"HELLO") || !strncmp(op,"NS ",3) ||
+   (!handle_ && !strncmp(op,"PATH ",5));
+ if(!metadata && uint32_t(hooks_.millis()-touched_)<AdmissionWaitMs)return;
+ calling_=true;command(false);requestReady_=false;requestLength_=0;calling_=false;
+}
+void Files::command(bool storageReady){
  // Parse a private copy so an exact duplicate can replay its cached response
  // without repeating any open/truncate/write/read/sync/close operation.
  char parsed[Line];memcpy(parsed,request_,requestLength_+1);char*words[8]{};unsigned count=0;
@@ -109,6 +128,8 @@ void Files::command(){
  auto finish=[&](){strcpy(cached_,response_);};
  if(retained_){reply(RISC_FILES_RETAINED);finish();return;}
  uint64_t a=0,b=0;uint8_t bytes[Chunk];size_t n=0;
+ if(!storageReady && strcmp(cmd,"HELLO") && strcmp(cmd,"NS") &&
+    (handle_ || strcmp(cmd,"PATH"))){reply(RISC_FILES_BUSY);finish();return;}
  if(!strcmp(cmd,"HELLO") && count==4){reply(0,"HELLO %u %u %u",unsigned(Chunk),unsigned(RISC_STORAGE_FILES_PATH_MAX-1),unsigned(count_));}
  else if(!strcmp(cmd,"NS") && count==5 && number(words[4],a)){
   if(a>=count_)reply(RISC_FILES_NOT_FOUND);else {const auto&ns=namespaces_[a];char label[128];hex(reinterpret_cast<const uint8_t*>(ns.label),strlen(ns.label),label);reply(0,"NS %llu %u %s",(unsigned long long)ns.id,unsigned(ns.writable),label);}

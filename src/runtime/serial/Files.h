@@ -11,6 +11,9 @@ class Files final {
  public:
   static constexpr size_t Chunk=48,Line=192,NamespaceMax=16;
   static constexpr uint32_t TimeoutMs=30000;
+  // A healthy but unavailable storage boundary must answer before the public
+  // client request deadline (5 s), without dispatching or claiming an outcome.
+  static constexpr uint32_t AdmissionWaitMs=4000;
   Files()=default;
   Files(const Files&)=delete;Files& operator=(const Files&)=delete;
   bool bind(const Namespace*,size_t,Hooks);
@@ -23,12 +26,15 @@ class Files final {
   // Only the settled owner boundary may dispatch provider calls. Each request
   // issues at most two bounded ABI operations, never an unbounded transfer loop.
   void checkpoint();
+  // Owner-only RAM path: metadata replies and bounded admission refusal.
+  // Never calls file providers, including close/cancel of a live handle.
+  void controlCheckpoint();
   bool shutdown();
   bool exitSafe()const;
   bool custodySafe()const;
   bool pending()const{return (requestLength_>=6 && !strncmp(request_,"RTEF1 ",6)) || requestReady_ || outputSize() || handle_ || cancel_;}
  private:
-  void command();
+  void command(bool storageReady=true);
   void reply(int32_t,const char* format=nullptr,...);
   int32_t close();
   void clearTransfer();
