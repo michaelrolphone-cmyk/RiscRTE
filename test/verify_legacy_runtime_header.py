@@ -59,6 +59,13 @@ def verify(header):
         checkpoint_order = replace_once(source, '(*initial_default)', '(*swapped_default)')
         checkpoint_order = replace_once(checkpoint_order, '(*service_checkpoint)', '(*initial_default)')
         checkpoint_order = replace_once(checkpoint_order, '(*swapped_default)', '(*service_checkpoint)')
+        sleep_prepare_signature = replace_once(source, 'int32_t (*sleep_prepare)(uint64_t *token);',
+                                               'bool (*sleep_prepare)(uint64_t *token);')
+        sleep_resume_signature = replace_once(source, 'int32_t (*sleep_resume)(uint64_t token);',
+                                              'int32_t (*sleep_resume)(uint32_t token);')
+        sleep_order = replace_once(source, '(*sleep_prepare)', '(*swapped_sleep)')
+        sleep_order = replace_once(sleep_order, '(*sleep_resume)', '(*sleep_prepare)')
+        sleep_order = replace_once(sleep_order, '(*swapped_sleep)', '(*sleep_resume)')
         shifted = replace_once(source, '  bool (*health)(risc_runtime_health_v1* out);',
                                '  uint64_t unexpected_prefix;\n  bool (*health)(risc_runtime_health_v1* out);')
         grant = replace_once(source, '  uint32_t struct_size, slot, generation;',
@@ -68,10 +75,13 @@ def verify(header):
             ('grant-layout', grant, 'risc_runtime_capability_v1.struct_size size'),
             ('prefix-order', prefix, 'risc_runtime_api_v1.health offset'),
             ('suffix-order', suffix, 'launch failure follows host control'),
-            ('unknown-suffix', extra, 'thirteen pointer suffixes only'),
+            ('unknown-suffix', extra, 'fifteen pointer suffixes only'),
             ('suffix-signature', signature, 'initial default signature'),
             ('checkpoint-signature', checkpoint_signature, 'service checkpoint signature'),
             ('checkpoint-order', checkpoint_order, 'initial default follows launch failure'),
+            ('sleep-prepare-signature', sleep_prepare_signature, 'sleep prepare signature'),
+            ('sleep-resume-signature', sleep_resume_signature, 'sleep resume signature'),
+            ('sleep-order', sleep_order, 'sleep prepare follows complete service checkpoint prefix'),
         ):
             candidate = temporary / (name + '.h')
             candidate.write_text(mutated)
@@ -89,11 +99,11 @@ def verify(header):
                 raise
         else:
             raise AssertionError('Changed frozen consumer header unexpectedly accepted')
-        return 9
+        return 12
 
 
 if __name__ == '__main__':
     import sys
     rejected = verify(sys.argv[1])
-    print('Frozen legacy Runtime header and every field/size plus thirteen '
+    print('Frozen legacy Runtime header and every field/size plus fifteen '
           'append-only callback suffixes verified; ' + str(rejected) + ' ABI drift controls rejected')
