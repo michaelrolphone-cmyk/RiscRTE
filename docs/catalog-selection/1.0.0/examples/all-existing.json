@@ -1,0 +1,168 @@
+{
+  "base_fixture": "bootstrap",
+  "description": "Synthetic source-authored input; not a device or installable release.",
+  "expected": {
+    "counts": {
+      "create": 0,
+      "replace-observed": 3,
+      "skip": 0,
+      "verify-equal": 0
+    },
+    "inventory_files": 3,
+    "mutation_performed": false,
+    "rows": [
+      {
+        "action": "replace-observed",
+        "destination": "/example/data.bin",
+        "legacy_guard_comparison": "not-declared",
+        "legacy_operation": "create",
+        "legacy_previous": null,
+        "volume": "content"
+      },
+      {
+        "action": "replace-observed",
+        "destination": "/example/empty.txt",
+        "legacy_guard_comparison": "not-declared",
+        "legacy_operation": "create",
+        "legacy_previous": null,
+        "volume": "content"
+      },
+      {
+        "action": "replace-observed",
+        "destination": "/example/settings.json",
+        "legacy_guard_comparison": "not-declared",
+        "legacy_operation": "create",
+        "legacy_previous": null,
+        "volume": "content"
+      }
+    ],
+    "selected_files": 3,
+    "status": "selection-validated-not-executed"
+  },
+  "fixture": true,
+  "observation": {
+    "binding": {
+      "container_sha256": "c2f93d6faa77738f605f85fda830f908374da6c6d8c987cdf14751f7a5fb844c",
+      "context_sha256": "2cb3f4fe0b07c15315fd64eb73084cfc3c897729fee1996a646e3b22616f27aa",
+      "firmware_id": "fixture-v2",
+      "inventory_sha256": "e702850e7384810a789cdcdf5a729d2f495bfd2714a426833da33ba8b08eaa65",
+      "manifest_sha256": "d93d615cee8500f3cb9e23f64b1ed512a2734ed9937ee7ea6d590ec2b682d996",
+      "session": 305419896
+    },
+    "files": [
+      {
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/data.bin",
+        "namespace_id": "7",
+        "volume": "content"
+      },
+      {
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/empty.txt",
+        "namespace_id": "7",
+        "volume": "content"
+      },
+      {
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/settings.json",
+        "namespace_id": "7",
+        "volume": "content"
+      }
+    ],
+    "namespaces": [
+      {
+        "namespace_id": "7",
+        "writable": true
+      }
+    ],
+    "observation_version": "1.0.0",
+    "parents": [
+      {
+        "current": {
+          "flags": 1,
+          "kind": "directory",
+          "status": 0
+        },
+        "destination": "/example",
+        "namespace_id": "7",
+        "volume": "content"
+      }
+    ],
+    "session_usable": true
+  },
+  "selection": {
+    "binding": {
+      "container_sha256": "c2f93d6faa77738f605f85fda830f908374da6c6d8c987cdf14751f7a5fb844c",
+      "context_sha256": "2cb3f4fe0b07c15315fd64eb73084cfc3c897729fee1996a646e3b22616f27aa",
+      "firmware_id": "fixture-v2",
+      "inventory_sha256": "e702850e7384810a789cdcdf5a729d2f495bfd2714a426833da33ba8b08eaa65",
+      "manifest_sha256": "d93d615cee8500f3cb9e23f64b1ed512a2734ed9937ee7ea6d590ec2b682d996",
+      "session": 305419896
+    },
+    "files": [
+      {
+        "action": "replace-observed",
+        "consent": true,
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/data.bin",
+        "namespace_id": "7",
+        "volume": "content"
+      },
+      {
+        "action": "replace-observed",
+        "consent": true,
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/empty.txt",
+        "namespace_id": "7",
+        "volume": "content"
+      },
+      {
+        "action": "replace-observed",
+        "consent": true,
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/settings.json",
+        "namespace_id": "7",
+        "volume": "content"
+      }
+    ],
+    "mode": "explicit-current-file-selection",
+    "observation_sha256": "eef65e0ea41bc1f5cd9874c95afc103e4824017d7975ecdb3bdee3c9812e18e5",
+    "selection_version": "1.0.0"
+  }
+}
