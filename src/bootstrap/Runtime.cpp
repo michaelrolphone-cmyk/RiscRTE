@@ -1682,6 +1682,7 @@ int32_t Runtime::serviceCheckpoint() {
      invocation_->queued_[0] || graph_.lifecycleBusy() || invocation_->streams_.busy() ||
      mainInvocation_.streams_.busy() || (foreground_ && foreground_->streams_.busy()))
     return RISC_RUNTIME_CHECKPOINT_BUSY;
+  if(port_.serialFilesReady && !port_.serialFilesReady())return RISC_RUNTIME_CHECKPOINT_BUSY;
   // This explicit app-declared boundary differs from ordinary yield. Check
   // actual native idleness as well as the caller's declaration; refusal does
   // not turn a healthy in-flight operation into terminal retention.
@@ -1756,26 +1757,38 @@ bool Runtime::appExitBarrier(bool exiting) {
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if((!exiting || !sleepToken_) &&
+  const char* failed=nullptr;
+  const auto remember=[&](bool ok,const char* label){if(!ok&&!failed)failed=label;return ok;};
+  if(remember(!exiting || !sleepToken_,"sleep-token") &&
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
-     atomicExitSafe(exiting) &&
+     remember(atomicExitSafe(exiting),"atomic") &&
 #endif
 #if RISC_RUNTIME_PREFERENCE_STORE
-     preferenceExitSafe(exiting) &&
+     remember(preferenceExitSafe(exiting),"preference") &&
 #endif
 #if RISC_RUNTIME_STORAGE_FILES
-     storageFilesExitSafe(exiting) &&
+     remember(storageFilesExitSafe(exiting),"storage-files") &&
 #endif
-     (!settings_||!settings_->retained()) && graphSafe && otherSafe && hostSafe && fileSourceExitSafe() && appDataExportExitSafe() && (!exiting || !appDataBusy()) && !retained_ && !invocation_->streams_.retained() && !metadataCloseRetained() && appDataExitSafe() && (!invocation_->installedFiles_ || !invocation_->installedFiles_->retained()) && (exiting ? (!port_.appExitSafe || port_.appExitSafe()) : providerStorageSafe()))return true;
+     remember(!settings_||!settings_->retained(),"settings") &&
+     remember(graphSafe,"provider-graph") && remember(otherSafe,"foreground-custody") &&
+     remember(hostSafe,"main-custody") && remember(fileSourceExitSafe(),"file-source") &&
+     remember(appDataExportExitSafe(),"app-data-export") && remember(!exiting||!appDataBusy(),"app-data-busy") &&
+     remember(!retained_,"runtime-retained") && remember(!invocation_->streams_.retained(),"invocation-streams") &&
+     remember(!metadataCloseRetained(),"metadata-close") && remember(appDataExitSafe(),"app-data-exit") &&
+     remember(!invocation_->installedFiles_||!invocation_->installedFiles_->retained(),"installed-files") &&
+     remember(exiting?(!port_.appExitSafe||port_.appExitSafe()):providerStorageSafe(),
+              exiting?"native-port-exit":"native-provider-safe"))return true;
   char providerReason[192]{};
   if(!graphSafe)std::snprintf(providerReason,sizeof(providerReason),
     "provider retention barrier; %.160s",graph_.lastError());
+  else std::snprintf(providerReason,sizeof(providerReason),
+    "native retention barrier; predicate=%s; app and providers retained; restart required",failed?failed:"unknown");
   // Idempotent signaling must not replace the first retained diagnostic (for
   // example promotion's failure) with a generic later app-stop message.
   const char* reason=retained_ && error_[0] ? error_ :
     retained_ ? "app invocation retained; restart required" :
     !graphSafe ? providerReason :
-    "native retention barrier; app and providers retained; restart required";
+    providerReason;
   // Failed starts can retain a grantless graph; failed releases can retain a
   // pending grant. Neither may reach fini or an implicit cleanup retry here.
   // Revoke app authority without calling provider release/quiesce: the boot

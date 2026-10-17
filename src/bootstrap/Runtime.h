@@ -130,6 +130,9 @@ struct Port {
   bool (*serialFilesShutdown)()=nullptr;
   // Read-only native-service admission, no dispatch or hardware changes.
   bool (*sleepServicesReady)()=nullptr;
+  // Temporary native custody may permit UI continuation without permitting
+  // another storage operation. False defers dispatch without revoking authority.
+  bool (*serialFilesReady)()=nullptr;
 #endif
 };
 class Runtime final {
