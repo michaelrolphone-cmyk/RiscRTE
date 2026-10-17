@@ -128,6 +128,8 @@ struct Port {
   // provider acquisition, app yield, ISR, or inside a provider callback.
   bool (*serialFilesCheckpoint)()=nullptr;
   bool (*serialFilesShutdown)()=nullptr;
+  // Read-only native-service admission, no dispatch or hardware changes.
+  bool (*sleepServicesReady)()=nullptr;
 #endif
 };
 class Runtime final {
@@ -251,6 +253,8 @@ class Runtime final {
                             const RiscUpdate::NativeAppDataExportPolicyV2&) const;
   bool appInventory(size_t index,void*,size_t,uint32_t*) const;
   int32_t serviceCheckpoint();
+  int32_t sleepPrepare(uint64_t*);
+  int32_t sleepResume(uint64_t);
 #if RISC_NATIVE_SERIAL_FILES
   // Explicit trusted native selection after prepare, before run. Independent
   // of all app grants; Runtime pins the exact provider and dependencies until
@@ -260,7 +264,7 @@ class Runtime final {
   bool bindNativeFiles(const char* provider,uint64_t instance,RuntimeFiles&,
                        RuntimeFiles::Check owner,RuntimeFiles::Check safe,bool prepareVolume=false);
 #endif
-  bool active() const { return
+  bool active() const { return !sleepCalling_ &&
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
     !nativeCheckpointRunning_ &&
 #endif
@@ -268,7 +272,7 @@ class Runtime final {
   bool retained() const { return retained_; }
   // Compiled-in reset/deep-sleep admission. A suspended native stack has no
   // durable checkpoint; the foreground must finish before RAM can be lost.
-  bool residentResetSafe() const {return
+  bool residentResetSafe() const {return !sleepCalling_ &&
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
     !nativeCheckpointRunning_ &&
 #endif
@@ -694,6 +698,9 @@ class Runtime final {
   uint8_t* retainedRemovableBytes_=nullptr;
   void* retainedRemovableRead_=nullptr; // Provider session and buffer remain pinned after uncertainty.
   uint8_t* retainedNativeProviderBytes_=nullptr; // May remain borrowed by uncertain native I/O.
+  bool sleepBoundarySafe() const;
+  uint64_t sleepSerial_=0,sleepToken_=0,sleepOwner_=0;
+  bool sleepCalling_=false;
   Board board_;
   // Must outlive graph destruction, including retained-module retry/abort.
   ProviderStorage providerStorage_[MaxDrivers]{};
@@ -702,8 +709,11 @@ class Runtime final {
   struct NativeFilesBinding {
     RuntimeFiles* files=nullptr;RuntimeFiles::Check owner=nullptr,safe=nullptr;
     RuntimeProviders::GrantV2 grant{};size_t driver=0;bool prepareVolume=false;
+    const risc_storage_volume_api_v1_sleep* sleep=nullptr;
+    bool sleepFrozen=false,sleepAttempted=false,sleepPrepared=false;
   } nativeFiles_[16]{};
   bool activateNativeFiles();
+  int32_t resumeNativeSleep();
   bool releaseNativeFiles();
 #endif
   struct AppDataExportDelete {

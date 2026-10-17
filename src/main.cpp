@@ -109,6 +109,11 @@ RiscBoot::Port nativePort(RiscBoot::Port port){
 #if RISC_NATIVE_SERIAL_FILES
   port.serialFilesCheckpoint=RiscCpu::NativeSerialFiles::checkpoint;
   port.serialFilesShutdown=RiscCpu::NativeSerialFiles::shutdown;
+  port.sleepServicesReady=[](){return RiscCpu::NativeSerialFiles::exitSafe()
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+    && RiscCpu::NativeSettingsLifecycle::exitSafe()
+#endif
+    ;};
 #endif
   return port;
 }

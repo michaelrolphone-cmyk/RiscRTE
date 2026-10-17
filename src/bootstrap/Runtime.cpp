@@ -97,7 +97,9 @@ extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
     [](){return currentRuntime && currentRuntime->exitRequested();},
     [](risc_runtime_launch_failure_v1* out){return currentRuntime && currentRuntime->takeLaunchFailure(out);},
     [](){return currentRuntime && currentRuntime->initialDefault();},
-    []()->int32_t{return currentRuntime?currentRuntime->serviceCheckpoint():RISC_RUNTIME_CHECKPOINT_CONTEXT;}};
+    []()->int32_t{return currentRuntime?currentRuntime->serviceCheckpoint():RISC_RUNTIME_CHECKPOINT_CONTEXT;},
+    [](uint64_t* token)->int32_t{if(token)*token=0;return currentRuntime?currentRuntime->sleepPrepare(token):RISC_RUNTIME_SLEEP_CONTEXT;},
+    [](uint64_t token)->int32_t{return currentRuntime?currentRuntime->sleepResume(token):RISC_RUNTIME_SLEEP_CONTEXT;}};
   return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
@@ -1560,7 +1562,7 @@ Runtime::GrantUsage Runtime::grantUsage() const {
 }
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
 void Runtime::serviceNativeSettings(bool discoveryOnly) {
-  if(nativeCheckpointRunning_ || (discoveryOnly && !invocation_->entryRunning_))return;
+  if(sleepToken_ || sleepCalling_ || nativeCheckpointRunning_ || (discoveryOnly && !invocation_->entryRunning_))return;
   if((discoveryOnly?bool(port_.nativeDiscoveryCheckpoint):bool(port_.nativeOwnerCheckpoint)) && currentRuntime==this && port_.owner() &&
      !retained_ && !promotionRunning_ && !invocation_->streams_.busy() &&
      !graph_.lifecycleBusy() && appDataExitSafe()) {
@@ -1577,6 +1579,7 @@ void Runtime::serviceNativeSettings(bool discoveryOnly) {
 }
 #endif
 void Runtime::serviceProviders() {
+  if(sleepToken_ || sleepCalling_)return;
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   if(nativeCheckpointRunning_)return;
 #endif
@@ -1668,7 +1671,9 @@ bool Runtime::releaseNativeFiles() {
   return true;
 }
 #endif
+#include "RuntimeSleep.inc"
 int32_t Runtime::serviceCheckpoint() {
+  if(sleepToken_ || sleepCalling_)return RISC_RUNTIME_CHECKPOINT_BUSY;
   if(currentRuntime!=this || !port_.owner() || !invocation_->entryRunning_)
     return RISC_RUNTIME_CHECKPOINT_CONTEXT;
   if(retained_)return RISC_RUNTIME_CHECKPOINT_RETAINED;
@@ -1712,7 +1717,7 @@ void Runtime::yield(uint32_t ms) {
      invocation_->streams_.busy() || graph_.lifecycleBusy() || (!invocation_->active_ && !retained_))return;
   yielding_=true;
   struct Guard { bool& flag; ~Guard(){flag=false;} } guard{yielding_};
-  if(!retained_) {
+  if(!retained_ && !sleepToken_) {
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
     serviceNativeSettings(true); // accepted work/discovery only; never starts maintenance
     if(retained_){if(port_.retainedDelay)port_.retainedDelay(ms<1?1:ms>50?50:ms);return;}
@@ -1751,7 +1756,7 @@ bool Runtime::appExitBarrier(bool exiting) {
   const bool graphSafe=graph_.activationSafe();
   const bool otherSafe=!foreground_ || (!foreground_->streams_.retained() && (!foreground_->installedFiles_ || !foreground_->installedFiles_->retained()));
   const bool hostSafe=!mainInvocation_.streams_.retained() && (!mainInvocation_.installedFiles_ || !mainInvocation_.installedFiles_->retained());
-  if(
+  if((!exiting || !sleepToken_) &&
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
      atomicExitSafe(exiting) &&
 #endif
@@ -1911,6 +1916,10 @@ bool Runtime::runOne(const char* name) {
     initialDefaultInvocation_=invocation_==&mainInvocation_ && invocation_->defaultRunning_ && !firstDefaultStarted_;
     if(initialDefaultInvocation_)firstDefaultStarted_=true;
     entry();
+    if(sleepToken_) {
+      retained_=true;fail("native sleep transaction abandoned; restart required");
+      (void)appExitBarrier(false);return false;
+    }
 #if RISC_NATIVE_SERIAL_FILES
     // End the native serial session before any application or provider image
     // can be revoked. Failed close pins all custody through real restart.
