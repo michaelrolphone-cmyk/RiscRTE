@@ -28,7 +28,10 @@ bool Files::bind(const Namespace*map,size_t count,Hooks hooks){
 }
 const Namespace* Files::find(uint64_t id)const{for(size_t i=0;i<count_;++i)if(namespaces_[i].id==id)return &namespaces_[i];return nullptr;}
 bool Files::custodySafe()const{if(retained_)return false;for(size_t i=0;i<count_;++i)if(namespaces_[i].files->retained())return false;return true;}
-bool Files::exitSafe()const{return !calling_&&!pending()&&custodySafe();}
+// A drained reply is only a gap inside the admitted host session. Preserve
+// its bounded RAM custody through PATH/STAT and CLOSE/COMMIT transitions, so
+// sleep, USB handoff or restart cannot strand the host's next request.
+bool Files::exitSafe()const{return !calling_&&!session_&&!pending()&&custodySafe();}
 void Files::checkRetention(){if(!custodySafe())retained_=true;}
 void Files::input(uint8_t value){
  if(!bound_ || requestReady_)return;
@@ -74,7 +77,7 @@ void Files::reply(int32_t rc,const char*format,...){
 void Files::checkpoint(){
  if(!bound_ || calling_ || !hooks_.owner())return;
  checkRetention();
- const bool cancelling=cancel_ || (pending() && uint32_t(hooks_.millis()-touched_)>=TimeoutMs);
+ const bool cancelling=cancel_ || ((session_ || pending()) && uint32_t(hooks_.millis()-touched_)>=TimeoutMs);
  // Discarding protocol RAM needs no provider readiness. A live token still
  // requires its exact safety gate before cleanup; terminal custody never calls.
  if(!retained_ && !(cancelling && !handle_) && !hooks_.safe())return;
@@ -90,7 +93,7 @@ bool Files::shutdown(){disconnect();checkpoint();return exitSafe();}
 void Files::controlCheckpoint(){
  if(!bound_ || calling_ || !hooks_.owner())return;
  checkRetention();
- const bool cancelling=cancel_ || (pending() && uint32_t(hooks_.millis()-touched_)>=TimeoutMs);
+ const bool cancelling=cancel_ || ((session_ || pending()) && uint32_t(hooks_.millis()-touched_)>=TimeoutMs);
  if(cancelling){
   if(handle_)return; // Exact provider custody remains with the settled path.
   resetSession();cancel_=false;requestReady_=false;requestLength_=0;responseLength_=sent_=0;

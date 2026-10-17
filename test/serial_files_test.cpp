@@ -61,6 +61,29 @@ int main(int argc,char**argv){
  for(unsigned char c:std::string("RTEF1 12345678 1 HELLO\n"))endpoint.input(c);
  assert(endpoint.pending());endpoint.disconnect();endpoint.checkpoint();assert(endpoint.exitSafe());
  assert(!opens&&!writes&&!reads&&!closes&&!syncs);safe=true;
+ if(scenario=="session"){
+  Wire w{endpoint};
+  w.command("HELLO");w.command("NS 0");w.command("NS 1");
+  assert(!endpoint.pending()&&!endpoint.exitSafe()&&endpoint.custodySafe());
+  const auto calls=opens+writes+reads+closes+syncs;
+  safe=false;now+=RiscSerial::Files::TimeoutMs-1;endpoint.controlCheckpoint();
+  assert(!endpoint.exitSafe()&&calls==opens+writes+reads+closes+syncs);
+  ++now;endpoint.controlCheckpoint();assert(endpoint.exitSafe()&&calls==opens+writes+reads+closes+syncs);
+  // Exact expiry drops the old sequence; it does not dispatch or resurrect it.
+  w.feed("RTEF1 12345678 4 PATH 0 2f73656c6563746564\n");endpoint.controlCheckpoint();assert(w.drain().find(" -10\n")!=std::string::npos);
+  endpoint.disconnect();safe=true;w.seq=0;w.command("HELLO");
+  w.put("/session-file","abc");assert(!endpoint.pending()&&!endpoint.exitSafe());
+  w.path("/session-file");w.command("GET 7");w.command("READ 0");w.command("CLOSE");
+  assert(!endpoint.pending()&&!endpoint.exitSafe());
+  w.command("ABORT");assert(!endpoint.pending()&&!endpoint.exitSafe());
+  endpoint.disconnect();assert(endpoint.exitSafe());
+  // A dormant cable has no lease; wrap-safe activity expiry is bounded too.
+  now=UINT32_MAX-10;w.seq=0;w.command("HELLO");
+  now+=RiscSerial::Files::TimeoutMs-1;endpoint.checkpoint();assert(!endpoint.exitSafe());
+  ++now;endpoint.checkpoint();assert(endpoint.exitSafe());
+  w.seq=0;w.command("HELLO");assert(endpoint.shutdown()&&endpoint.exitSafe());
+  puts("Serial session custody: NS/PATH/CLOSE/COMMIT gaps, expiry, wrap, disconnect/shutdown PASS");return 0;
+ }
  if(scenario=="control"){
   Wire w{endpoint};safe=false;
   auto control=[&](const std::string&cmd,int expected=0){
@@ -131,7 +154,7 @@ int main(int argc,char**argv){
   wire.seq=0;wire.command("HELLO");wire.feed("RTEF1 ");assert(endpoint.pending());now+=RiscSerial::Files::TimeoutMs;endpoint.checkpoint();assert(endpoint.exitSafe());wire.seq=0;wire.command("HELLO");wire.path("/selected");wire.command("PUT 7 replace 8");wire.command("WRITE 0 6162");count=closes;now+=RiscSerial::Files::TimeoutMs;endpoint.checkpoint();assert(closes==count+1&&endpoint.exitSafe());assert(readFile(root+"/selected")=="ab");safe=false;assert(endpoint.shutdown());safe=true;
  }else{
   wire.path("/selected");wire.command("PUT 7 create 4");
-  if(scenario=="zero"){fault=2;wire.command("WRITE 0 61626364",RISC_FILES_IO);fault=0;wire.command("ABORT");assert(endpoint.exitSafe());}
+  if(scenario=="zero"){fault=2;wire.command("WRITE 0 61626364",RISC_FILES_IO);fault=0;wire.command("ABORT");assert(!endpoint.exitSafe());endpoint.disconnect();assert(endpoint.exitSafe());}
   else if(scenario=="full"){fault=3;assert(wire.command("WRITE 0 61626364",RISC_FILES_NO_SPACE).find("WRITE 2")!=std::string::npos);fault=0;wire.command("ABORT");assert(readFile(root+"/selected")=="ab");}
   else if(scenario=="sync"){wire.command("WRITE 0 61626364");fault=8;wire.command("COMMIT ed82cd11",RISC_FILES_IO);assert(syncs==1&&closes==0);fault=0;wire.command("ABORT");}
   else {fault=scenario=="retained"?4:scenario=="invalid-count"?5:scenario=="lost-owner"?6:7;

@@ -6,7 +6,7 @@ flags=(-Wall -Wextra -Werror -Wno-missing-field-initializers -g -no-pie)
 if [[ "${SANITIZE:-0}" == 1 ]];then flags+=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer);fi
 c++ -std=c++17 "${flags[@]}" -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" \
  "$repo/src/runtime/serial/Files.cpp" "$repo/test/serial_files_test.cpp" -o "$build/test"
-for scenario in control normal zero full sync retained invalid-count lost-owner failed-close;do
+for scenario in session control normal zero full sync retained invalid-count lost-owner failed-close;do
  mkdir "$build/$scenario"
  "$build/test" "$build/$scenario" "$scenario"
 done

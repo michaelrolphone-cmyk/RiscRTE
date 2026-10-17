@@ -124,7 +124,9 @@ typedef struct {
    * May perform bounded synchronous storage I/O; NEVER call from a provider,
    * pending-frame/BUSY wait, ordinary yield helper, init/fini or callback.
    * Runtime rechecks resource custody and temporarily revokes app entry while
-   * dispatching. BUSY means no work admitted; retry at a later settled boundary.
+   * dispatching. BUSY means native service work is deferred or remains active;
+   * continue foreground work, defer automatic idle and retry at a later settled
+   * boundary. A command may have completed even when the result is BUSY.
    * RETAINED requires prompt return with no further provider calls or cleanup.
    * This grants no file authority. Older tables omit this optional suffix. */
   int32_t (*service_checkpoint)(void);

@@ -174,12 +174,55 @@ int main(int argc,char**argv){
   // The modeled terminal exits leave USB recovery requested; finish that
   // independent RAM/transport state before the wire-protocol cases below.
   RiscDiagnostics::poll();now+=20000;RiscDiagnostics::poll();
+  // A live admitted session is bounded RAM custody even after all response
+  // bytes have been handed to USB. Cable presence alone above remains idle.
+  auto sessionHeld=[&](){
+    assert(!N::pending()&&!N::exitSafe()&&N::custodySafe());
+    sleepGuards(RISC_LIGHT_SLEEP_BUSY);
+#if RISC_ENABLE_USB_PHY
+    const auto released=uninstalls;assert(!RiscDiagnostics::suspendUsbPhy());
+    assert(uninstalls==released);
+#endif
+  };
+  expect("RTEF1 42345678 1 HELLO","RTEF1 42345678 1 0 HELLO 48 511 2\n");sessionHeld();
+  expect("RTEF1 42345678 2 NS 0","RTEF1 42345678 2 0 NS 42 1 65786163742d66696c6573\n");sessionHeld();
+  expect("RTEF1 42345678 3 NS 1","RTEF1 42345678 3 0 NS 77 0 756e617661696c61626c65\n");sessionHeld();
+  expect("RTEF1 42345678 4 PATH 0 2f676170","RTEF1 42345678 4 0 PATH 4\n");sessionHeld();
+  expect("RTEF1 42345678 5 PUT 42 create 0","RTEF1 42345678 5 0 PUT\n");
+  expect("RTEF1 42345678 6 COMMIT 00000000","RTEF1 42345678 6 0 COMMIT\n");sessionHeld();
+  expect("RTEF1 42345678 7 GET 42","RTEF1 42345678 7 0 GET 0\n");
+  expect("RTEF1 42345678 8 CLOSE","RTEF1 42345678 8 0 CLOSE 00000000\n");sessionHeld();
+  expect("RTEF1 42345678 9 ABORT","RTEF1 42345678 9 0 ABORT\n");sessionHeld();
+  const auto expiryCalls=providerCalls;ready=false;
+  now+=int64_t(RiscSerial::Files::TimeoutMs-1)*1000;N::controlCheckpoint();sessionHeld();
+  now+=1000;N::controlCheckpoint();assert(N::exitSafe()&&providerCalls==expiryCalls);ready=true;
+  expect("RTEF1 52345678 1 HELLO","RTEF1 52345678 1 0 HELLO 48 511 2\n");sessionHeld();
+  N::disconnect();assert(N::exitSafe());
+  // The production64-byte RX budget may split a valid121-byte PATH. No
+  // readiness/provider callback is needed even at a one-byte transport cadence.
+  for(unsigned chunk : {1u,5u,63u,64u,65u,128u}) {
+    ready=false;unsigned seq=0;
+    for(const std::string &op : {std::string("HELLO"),std::string("NS 0"),std::string("NS 1"),std::string("PATH 0 ")+std::string(96,'6')}) {
+      const std::string frame="RTEF1 62345678 "+std::to_string(++seq)+" "+op+"\n";
+      const auto at=tx.size();const auto before=providerCalls;
+      for(size_t k=0;k<frame.size();k+=chunk) {
+        feed(frame.substr(k,chunk));
+        while(!rx.empty()){RiscDiagnostics::poll();N::controlCheckpoint();now+=16000;}
+      }
+      N::controlCheckpoint();drain();assert(providerCalls==before);
+      assert(tx.substr(at).rfind("RTEF1 62345678 "+std::to_string(seq)+" 0 ",0)==0);sessionHeld();
+    }
+    N::disconnect();assert(N::exitSafe());
+  }
+  ready=true;
+  puts("Native serial session sleep/USB/restart custody, bounded expiry and split PATH PASS");
+  const auto previousProviderCalls=providerCalls;
   label[0]='X';namespaces[0].id=99; // Admission owns copied immutable metadata.
   expect("RTEF1 11345678 1 HELLO","RTEF1 11345678 1 0 HELLO 48 511 2\n");
   expect("RTEF1 11345678 2 NS 1","RTEF1 11345678 2 0 NS 77 0 756e617661696c61626c65\n");
   expect("RTEF1 11345678 3 PATH 0 2f66696c65","RTEF1 11345678 3 0 PATH 5\n");
   expect("RTEF1 11345678 4 STAT 77","RTEF1 11345678 4 "+std::to_string(RISC_FILES_UNAVAILABLE)+" STAT 0 0\n");
-  assert(providerCalls==0); // An unavailable session never falls back to another namespace.
+  assert(providerCalls==previousProviderCalls); // An unavailable session never falls back to another namespace.
   expect("RTEF1 12345678 1 HELLO","RTEF1 12345678 1 0 HELLO 48 511 2\n");
   expect("RTEF1 12345678 2 NS 0","RTEF1 12345678 2 0 NS 42 1 65786163742d66696c6573\n");
   expect("RTEF1 12345678 3 PATH 0 2f66696c65","RTEF1 12345678 3 0 PATH 5\n");

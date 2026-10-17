@@ -1,0 +1,75 @@
+{
+  "hardware_tested": false,
+  "receipts": [
+    {
+      "source": "/tmp/wave-path-060/transport-session-sleep.log",
+      "file": "evidence/transport-session-sleep.log.gz",
+      "sha256": "38130d5a97d9470c0f28734a7f436e07a02272548a21a61614c866a4aefa61c9"
+    },
+    {
+      "source": "/tmp/wave-path-060/transport-fixed.log",
+      "file": "evidence/transport-fixed.log.gz",
+      "sha256": "f35158618f47f5cc9e10d25408b2026faf1b3cfe3b087b4e81145fa9a1f91f2f"
+    },
+    {
+      "source": "/tmp/wave-path-060/serial-session-fixed2.log",
+      "file": "evidence/serial-session-fixed2.log.gz",
+      "sha256": "388832123e50a74eb80f69061755b34d58c5da9aa73670279f8821e7b1606d42"
+    },
+    {
+      "source": "/tmp/wave-path-060/serial-session-san.log",
+      "file": "evidence/serial-session-san.log.gz",
+      "sha256": "388832123e50a74eb80f69061755b34d58c5da9aa73670279f8821e7b1606d42"
+    },
+    {
+      "source": "/tmp/wave-path-060/long-preflight-run.log",
+      "file": "evidence/long-preflight-run.log.gz",
+      "sha256": "2188a01e41eeeb43c2a1332972374bf8de53508e05b35f0b660a3bac1a4efa02"
+    },
+    {
+      "source": "/tmp/wave-path-060/long-preflight-run2.log",
+      "file": "evidence/long-preflight-run2.log.gz",
+      "sha256": "96023b568530019f569157601d69dd3e80588e15bb2e53fc0e8418af57e12394"
+    },
+    {
+      "source": "/tmp/wave-path-060/long-preflight-run3.log",
+      "file": "evidence/long-preflight-run3.log.gz",
+      "sha256": "9db50b0d7d4007c3cc4123554c08333f2776a7d39ff8ec615605deea7e319f69"
+    },
+    {
+      "source": "/tmp/wave-path-060/long-preflight-run4.log",
+      "file": "evidence/long-preflight-run4.log.gz",
+      "sha256": "6f430d32f8eb1ec2ee7d906a0d4a46e1fbfd8d20a18b53689c809246ddb2f625"
+    },
+    {
+      "source": "/tmp/wave-path-060/scheduler/qualification4/qualification.json",
+      "file": "evidence/scheduler-qualification.json.gz",
+      "sha256": "ec555355e2a2c74bf74dbacf2d9c900caddc7da4e7225be63ede1b893519c7b6"
+    },
+    {
+      "source": "/tmp/wave-path-060/scheduler/full_transfer_fixture.txt",
+      "file": "evidence/full_transfer_fixture.txt.gz",
+      "sha256": "1460dde193d5d13bd6b14ff4d804d0873c3f89a424554db79b88bec736b21bb6"
+    },
+    {
+      "source": "/tmp/wave-path-060/scheduler/scripts/test_native_serial_scheduler.py",
+      "file": "evidence/test_native_serial_scheduler.py.gz",
+      "sha256": "77f08fe5ec0e5854c1bdfb8dd976a2d281dfd5d41352677702c808c20962d01b"
+    },
+    {
+      "source": "/tmp/wave-path-060/scheduler/tests/serial_native_scheduler/prepare.py",
+      "file": "evidence/prepare.py.gz",
+      "sha256": "36bd781ab6476e52cee2f2fea1f9689953b7eb4e5bf8bf7572b811859203963d"
+    },
+    {
+      "source": "/tmp/wave-path-060/scheduler/tests/serial_native_scheduler/sd_fixture.c",
+      "file": "evidence/sd_fixture.c.gz",
+      "sha256": "73d07d77305fc85fe840bdd2f42a4ec128bf797fab5e7d0317232e426dc33006"
+    },
+    {
+      "source": "/tmp/wave-path-060/runtime-provider-fixed.log",
+      "file": "evidence/runtime-provider-fixed.log.gz",
+      "sha256": "adfe73a13a00db07bae4d207d4ef75ac0e6d77ee983b7e200781157caa289ef4"
+    }
+  ]
+}

@@ -31,7 +31,8 @@ static void (*fault)(unsigned);
 static const void* (*platform)(unsigned);
 static bool owner(){return owned;}
 static bool safe(){return platformSafe;}
-extern "C" int64_t esp_timer_get_time(){return 0;}
+static uint32_t protocolMs;
+extern "C" int64_t esp_timer_get_time(){return int64_t(protocolMs)*1000;}
 extern "C" bool xPortInIsrContext(){return false;}
 static bool checkpoint(){
     assert(!runtime->active()&&!risc_runtime_get_api(1));++checkpoints;
@@ -71,7 +72,7 @@ static void upload(const std::string& name,const std::string& bytes,const char* 
     assert(!S::sdFiles().exitSafe()&&metadata->exitSafe());
     for(size_t i=0;i<bytes.size();i+=RiscSerial::Files::Chunk)
         command("WRITE "+std::to_string(i)+" "+hex(bytes.substr(i,RiscSerial::Files::Chunk)),0,true);
-    command("COMMIT "+crc(bytes),0,true);assert(S::sdFiles().exitSafe()&&N::exitSafe());
+    command("COMMIT "+crc(bytes),0,true);assert(S::sdFiles().exitSafe()&&!N::exitSafe()&&N::custodySafe());
 }
 static void readback(const std::string& name,const std::string& bytes){
     path(name);assert(command("GET 12").find(" GET "+std::to_string(bytes.size())+"\n")!=std::string::npos);
@@ -123,6 +124,14 @@ extern "C" void test_atomic_app(unsigned hook,unsigned){
         path("/Books/selected.bin");command("GET 12");N::disconnect();
         const auto before=counter(0);assert(!N::exitSafe());app->yield_ms(1);assert(counter(0)==before);
         assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&N::exitSafe()&&S::sdFiles().exitSafe());
+    }
+    if(mode=="healthy"){
+        const auto before=counter(0);assert(!N::exitSafe()&&N::custodySafe());
+        protocolMs=RiscSerial::Files::TimeoutMs-1;
+        assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&!N::exitSafe());
+        ++protocolMs;
+        assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&N::exitSafe()&&N::custodySafe());
+        assert(counter(0)==before); // idle-session expiry performs no provider I/O
     }
     if(mode=="failed-release")fault(2);
 }
