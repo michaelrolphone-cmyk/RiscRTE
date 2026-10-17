@@ -10,4 +10,4 @@ cc -std=c11 "${flags[@]}" "${incs[@]}" -fPIC -fvisibility=hidden -shared "$repo/
 c++ -std=c++17 "${flags[@]}" "${incs[@]}" -DRISC_NATIVE_SERIAL_FILES=1 -rdynamic -no-pie -pthread \
  "$repo/src/bootstrap/Json.cpp" "$repo/src/bootstrap/Board.cpp" "$repo/src/bootstrap/Runtime.cpp" "$repo/src/runtime/streams/AppStreamSessions.cpp" "$repo/src/runtime/streams/ProviderQueueHost.cpp" \
  "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" "$repo/src/runtime/serial/Files.cpp" "$repo/test/serial_native_provider_test.cpp" -ldl -o "$build/test"
-for mode in direct volume disconnect failed-close failed-release absent wrong-instance refresh-ready refresh-absent refresh-fail refresh-poison refresh-refused refresh-already-ready;do "$build/test" "$build" "$mode";done
+for mode in native-readiness barrier-port direct volume disconnect failed-close failed-release absent wrong-instance refresh-ready refresh-absent refresh-fail refresh-poison refresh-refused refresh-already-ready;do "$build/test" "$build" "$mode";done

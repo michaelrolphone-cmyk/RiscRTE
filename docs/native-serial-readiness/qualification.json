@@ -1,0 +1,55 @@
+{
+  "schema": "riscrte.native-serial-readiness.host-qualification.v1",
+  "baseline_runtime": "070d5c7e347f74357f2e8843312409315aca5762",
+  "baseline_product": "aa0664c2905abb264a6b07f35d027b4879562c68",
+  "watch": "b00d4e7d36fc69c8defd250a82f6af077c732137",
+  "hardware": "not tested; observed generic barrier remains partly unexplained",
+  "files": {
+    "src/bootstrap/Runtime.cpp": "ab8bf177623dc61e0bdcfe7b1b79f11aa073f25ce77654a2f79ab95999869f09",
+    "src/bootstrap/Runtime.h": "44251394f68d82e51e0ab4e3ff16d9f3343214526cc966fbb81915418bc46b44",
+    "src/main.cpp": "9d108faba4998b644a8b470f242b085abee6f6ecf360555c1eeba1d698092f35",
+    "test/serial_native_provider_test.cpp": "e340356c3a65ec4b3a96457b6647dea699704182fddc999d2cff20dc15f8ec26",
+    "test/run_serial_native_provider_test.sh": "3f67f925493489bc56457445acb6d3a56d9fd7e6e4191688b288efcae1a90a15"
+  },
+  "logs": {
+    "baseline7.log": {
+      "sha256": "1f4e9f56dc000055edc0f594af1b26e5975a8c35f3871319127603b76f5d00d1",
+      "bytes": 2148
+    },
+    "return-baseline.log": {
+      "sha256": "29bd2451c47ea69525d40ae43182febcb9ae373955480c07ecbe00f9e005347a",
+      "bytes": 1042
+    },
+    "fixed1.log": {
+      "sha256": "57c38b4b8a0b8cf5a28b809c34689905311d5ceb55aa53f2bd0ae61384fbec08",
+      "bytes": 2027
+    },
+    "fixed-sanitized.log": {
+      "sha256": "41984193ba4cae89f1e87ae1a210541f979f99b5bcea7a45dfa726b6e05cae7a",
+      "bytes": 2027
+    },
+    "runtime-unit-fixed.log": {
+      "sha256": "305afd663e5ffa08f0535e577cac2fcdeed066193d0cfd7533f5761bd021c44f",
+      "bytes": 900
+    },
+    "runtime-unit-sanitized2.log": {
+      "sha256": "305afd663e5ffa08f0535e577cac2fcdeed066193d0cfd7533f5761bd021c44f",
+      "bytes": 900
+    },
+    "runtime-unit-cancel.log": {
+      "sha256": "305afd663e5ffa08f0535e577cac2fcdeed066193d0cfd7533f5761bd021c44f",
+      "bytes": 900
+    },
+    "runtime-unit-cancel-sanitized.log": {
+      "sha256": "305afd663e5ffa08f0535e577cac2fcdeed066193d0cfd7533f5761bd021c44f",
+      "bytes": 900
+    }
+  },
+  "results": {
+    "runtime_normal": 15,
+    "runtime_asan_ubsan": 15,
+    "scheduler_normal": 2,
+    "scheduler_asan_ubsan": 2,
+    "leak_check": false
+  }
+}

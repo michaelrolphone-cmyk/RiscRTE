@@ -11,7 +11,7 @@
 #include <unistd.h>
 static Backend volume;
 static GenericProvider generic;
-static bool direct,owned=true,platformSafe=true,failRelease=false;
+static bool direct,owned=true,platformSafe=true,failRelease=false,nativeReady=true;
 static std::string root,mode;
 static RiscBoot::Runtime* runtime;
 static RiscBoot::RuntimeFiles client;
@@ -53,6 +53,21 @@ extern "C" void test_atomic_app(unsigned hook,unsigned){
  command("COMMIT 8fe62899");command("PATH 0 2f66696c65");
  command("GET 12");assert(command("READ 0").find("7879")!=std::string::npos);command("CLOSE");
  assert((direct?generic.files["/file"].bytes:volume.nodes["/file"].data)=="xy");
+ if(mode=="native-readiness"){
+  nativeReady=false;const auto before=serialDispatches;
+  const std::string request="RTEF1 12345678 "+std::to_string(++sequence)+" STAT 12\n";
+  for(unsigned char b:request)endpoint.input(b);
+  for(unsigned i=0;i<3;++i){assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_BUSY);assert(serialDispatches==before&&!endpoint.outputSize()&&!client.retained()&&runtime->active()&&risc_runtime_get_api(1)==app);}
+  nativeReady=true;assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&serialDispatches==before+1);
+  const std::string reply(endpoint.output(),endpoint.outputSize());assert(reply.find(" 0 STAT ")!=std::string::npos);endpoint.consumeOutput(endpoint.outputSize());
+  assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&!endpoint.outputSize());
+  nativeReady=false;const std::string cancelled="RTEF1 12345678 "+std::to_string(++sequence)+" STAT 12\n";
+  for(unsigned char b:cancelled)endpoint.input(b);
+  assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_BUSY&&endpoint.pending());
+  endpoint.disconnect();assert(!endpoint.pending()&&endpoint.exitSafe()&&!client.retained());
+  nativeReady=true;assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&!endpoint.outputSize());
+ }
+ if(mode=="barrier-port")platformSafe=false;
  if(mode=="failed-release")failRelease=true;
 }
 static void file(const char* path,const std::string& value){std::ofstream(root+"/"+path)<<value;}
@@ -66,7 +81,7 @@ int main(int argc,char**argv){
  file("boot.json",R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"provider.json"}],"app_capabilities":[{"manifest":"app.json","grants":[]}]})");
  if(prepare && mode!="refresh-already-ready"){volume.ready=false;volume.state=RISC_STORAGE_STATE_UNAVAILABLE;}
  RiscBoot::Port port{owner,health,delay,logLine};port.appExitSafe=safe;port.providerStorageSafe=safe;
- port.serialFilesCheckpoint=checkpoint;port.serialFilesShutdown=[](){return endpoint.shutdown();};
+ port.serialFilesReady=[](){return nativeReady;};port.serialFilesCheckpoint=checkpoint;port.serialFilesShutdown=[](){return endpoint.shutdown();};
  RiscTest::FileSources sources({root.c_str()});runtime=new RiscBoot::Runtime(port);assert(sources.bind(*runtime));
  assert(!runtime->bindNativeFiles("runtime-files-first",0,client,owner,safe));assert(runtime->prepare(root.c_str()));
  const char* id=mode=="absent"?"missing":"runtime-files-first";const uint64_t instance=mode=="wrong-instance"?44:0;
@@ -74,9 +89,9 @@ int main(int argc,char**argv){
  assert(runtime->bindNativeFiles(id,instance,client,owner,safe,prepare)==(mode!="absent"&&mode!="wrong-instance"));
  assert(!client.bound());
  RiscSerial::Namespace map[]={{12,"Native files",&client,true}};assert(endpoint.bind(map,1,{owner,safe,[]()->uint32_t{return 0;}}));
- const bool retained=mode=="failed-close"||mode=="failed-release"||mode=="refresh-fail"||mode=="refresh-poison";
+ const bool retained=mode=="barrier-port"||mode=="failed-close"||mode=="failed-release"||mode=="refresh-fail"||mode=="refresh-poison";
  assert(runtime->run()!=retained);assert(runtime->retained()==retained);assert(refreshes==((prepare&&mode!="refresh-already-ready")?1u:0u));
- if(retained){assert(client.retained());puts("Native graph serial retained custody PASS");fflush(stdout);_exit(0);}
+ if(retained){if(mode=="barrier-port"){assert(!client.retained());assert(std::strstr(runtime->error(),"predicate=native-port-exit"));}else assert(client.retained());puts("Native graph serial retained custody PASS");fflush(stdout);_exit(0);}
  assert(!client.bound());uint32_t h=0;assert(client.open("/file",RISC_FILES_READ,&h)==RISC_FILES_UNAVAILABLE);
  assert((mode=="absent"||mode=="wrong-instance")?quiesces==0:quiesces==1);
  delete runtime;puts("Native graph serial explicit provider admission/wire/retirement PASS");
