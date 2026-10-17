@@ -1,0 +1,33 @@
+name: Catalog existing-card selection
+on:
+  pull_request:
+    paths:
+      - 'docs/catalog-selection/**'
+      - 'docs/catalog-payload/1.0.0/**'
+      - 'scripts/serial_files.py'
+      - 'test/run_catalog_selection_test.sh'
+      - '.github/workflows/catalog-selection.yml'
+  push:
+    branches: [main, work/catalog-existing-card-selection]
+    paths:
+      - 'docs/catalog-selection/**'
+      - 'docs/catalog-payload/1.0.0/**'
+      - 'scripts/serial_files.py'
+      - 'test/run_catalog_selection_test.sh'
+      - '.github/workflows/catalog-selection.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contract-and-client-conformance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install existing payload validator dependency
+        run: python -m pip install -r docs/catalog-payload/1.0.0/requirements.txt
+      - name: Validate selected-file decisions, immutable pins, failure controls and client transcripts
+        run: bash test/run_catalog_selection_test.sh

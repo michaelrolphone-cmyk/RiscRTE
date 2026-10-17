@@ -1,0 +1,192 @@
+{
+  "base_fixture": "update-after",
+  "description": "Synthetic source-authored input; not a device or installable release.",
+  "expected": {
+    "counts": {
+      "create": 0,
+      "replace-observed": 3,
+      "skip": 0,
+      "verify-equal": 0
+    },
+    "inventory_files": 3,
+    "mutation_performed": false,
+    "rows": [
+      {
+        "action": "replace-observed",
+        "destination": "/example/data.bin",
+        "legacy_guard_comparison": {
+          "bytes": "different",
+          "owner": "not-established-by-RTEF1",
+          "sha256": "different"
+        },
+        "legacy_operation": "replace",
+        "legacy_previous": {
+          "bytes": 3,
+          "owner": "fixture-app",
+          "sha256": "cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4"
+        },
+        "volume": "content"
+      },
+      {
+        "action": "replace-observed",
+        "destination": "/example/empty.txt",
+        "legacy_guard_comparison": {
+          "bytes": "different",
+          "owner": "not-established-by-RTEF1",
+          "sha256": "different"
+        },
+        "legacy_operation": "replace",
+        "legacy_previous": {
+          "bytes": 3,
+          "owner": "fixture-app",
+          "sha256": "cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4"
+        },
+        "volume": "content"
+      },
+      {
+        "action": "replace-observed",
+        "destination": "/example/settings.json",
+        "legacy_guard_comparison": {
+          "bytes": "different",
+          "owner": "not-established-by-RTEF1",
+          "sha256": "different"
+        },
+        "legacy_operation": "replace",
+        "legacy_previous": {
+          "bytes": 3,
+          "owner": "fixture-app",
+          "sha256": "cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4"
+        },
+        "volume": "content"
+      }
+    ],
+    "selected_files": 3,
+    "status": "selection-validated-not-executed"
+  },
+  "fixture": true,
+  "observation": {
+    "binding": {
+      "container_sha256": "b059b18aac3ef6706ad2156190374028573b6e0bd1caca163f0f1240ec2d918a",
+      "context_sha256": "28c0e7ed566e3d07f20f32ea6eaaaa6ec3c09b1c826eec3435b856d9723483d5",
+      "firmware_id": "fixture-v2",
+      "inventory_sha256": "982f87744a7204cd1e10861bcce48b88c39e3045f4ef2b925989ef0888b5d94e",
+      "manifest_sha256": "fadbba634f8feb2b4dabb8c3a9b8a779484cd0772449309d69c57cd441d6c4c9",
+      "session": 305419896
+    },
+    "files": [
+      {
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/data.bin",
+        "namespace_id": "7",
+        "volume": "content"
+      },
+      {
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/empty.txt",
+        "namespace_id": "7",
+        "volume": "content"
+      },
+      {
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/settings.json",
+        "namespace_id": "7",
+        "volume": "content"
+      }
+    ],
+    "namespaces": [
+      {
+        "namespace_id": "7",
+        "writable": true
+      }
+    ],
+    "observation_version": "1.0.0",
+    "parents": [
+      {
+        "current": {
+          "flags": 1,
+          "kind": "directory",
+          "status": 0
+        },
+        "destination": "/example",
+        "namespace_id": "7",
+        "volume": "content"
+      }
+    ],
+    "session_usable": true
+  },
+  "selection": {
+    "binding": {
+      "container_sha256": "b059b18aac3ef6706ad2156190374028573b6e0bd1caca163f0f1240ec2d918a",
+      "context_sha256": "28c0e7ed566e3d07f20f32ea6eaaaa6ec3c09b1c826eec3435b856d9723483d5",
+      "firmware_id": "fixture-v2",
+      "inventory_sha256": "982f87744a7204cd1e10861bcce48b88c39e3045f4ef2b925989ef0888b5d94e",
+      "manifest_sha256": "fadbba634f8feb2b4dabb8c3a9b8a779484cd0772449309d69c57cd441d6c4c9",
+      "session": 305419896
+    },
+    "files": [
+      {
+        "action": "replace-observed",
+        "consent": true,
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/data.bin",
+        "namespace_id": "7",
+        "volume": "content"
+      },
+      {
+        "action": "replace-observed",
+        "consent": true,
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/empty.txt",
+        "namespace_id": "7",
+        "volume": "content"
+      },
+      {
+        "action": "replace-observed",
+        "consent": true,
+        "current": {
+          "bytes": 20,
+          "flags": 0,
+          "kind": "file",
+          "sha256": "266e941e0957d6eab60e78a551903c9c1ae6619e56d67472f27e731de15a9481",
+          "status": 0
+        },
+        "destination": "/example/settings.json",
+        "namespace_id": "7",
+        "volume": "content"
+      }
+    ],
+    "mode": "explicit-current-file-selection",
+    "observation_sha256": "070ce122ccb75fda6784508d23a29075e732bd1330bf624ec9a53ec6f2c23999",
+    "selection_version": "1.0.0"
+  }
+}
