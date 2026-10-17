@@ -40,7 +40,7 @@ jobs:
             factory_sha256: 868933ecf2cb468b8d487333fbc6150641035015b58b62c884024fc8d8fc06da
           - product: x4
             repository: RiscRTE-XTEINK-X4-PRO
-            source: 41b8efb25a4cb4d3ab9cfac50ac625c11fab43a1
+            source: fdef773ea7649744e53af66c5c1381c82de84a58
             candidate_version: 0.1.122
             target: esp32s3-16mb-appdata-iq
             factory_url: https://github.com/michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO/releases/download/test-t064-crash-0.1.121/X4-0.1.121-T064-Crash-Reports-factory-erases-data-0x0.bin

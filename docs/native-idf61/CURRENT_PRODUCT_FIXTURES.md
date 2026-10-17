@@ -10,12 +10,12 @@ retained unchanged.
 | --- | --- | --- |
 | T-Watch | 74f7491dc470b92dfa41fce41bf0c500f3714a94 | 364bdd9ba58edd3f6fe1dc16d361db53d6de81af |
 | Waveshare | 25c7151a1ac47e1a19a55b93c4cc3eaf2d4a4298 | 86876d56d5b60cce494c922916e8f22fbc553f2a |
-| X4 | a9009a5d774ae7060b9f298fdcbc81be6c22cc17 | 41b8efb25a4cb4d3ab9cfac50ac625c11fab43a1 |
+| X4 | a9009a5d774ae7060b9f298fdcbc81be6c22cc17 | fdef773ea7649744e53af66c5c1381c82de84a58 |
 
 The host fixture binds both metadata roots explicitly and reads each cohort ELF
 through the candidate Runtime image source. Production admission, role/import
 checks and zero hardware/product-storage callbacks remain mandatory. X4 requires
-a unique Runtime version in ELF and BIN matching the locked Runtime source,
+one Runtime identity value (allowing identical duplicate markers) in ELF and BIN matching the locked Runtime source,
 rather than an obsolete literal 0.4.0. Its product version and startup proof stay
 strict. Normal and sanitized cohort/SD admission, fresh same-process build
 custody, final linked IQ placement and immutable baseline payloads remain gates.

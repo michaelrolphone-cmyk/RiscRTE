@@ -153,7 +153,7 @@ class NativeCiWorkflow(unittest.TestCase):
         workflow = self.workflow()
         for revision in ('364bdd9ba58edd3f6fe1dc16d361db53d6de81af',
                          '86876d56d5b60cce494c922916e8f22fbc553f2a',
-                         '41b8efb25a4cb4d3ab9cfac50ac625c11fab43a1'):
+                         'fdef773ea7649744e53af66c5c1381c82de84a58'):
             self.assertIn('source: ' + revision, workflow)
         self.assertIn('IMAGE_HELPER_SOURCE: 364bdd9ba58edd3f6fe1dc16d361db53d6de81af', workflow)
         self.assertIn('python tests/test_current_native_fixture.py', workflow)
