@@ -14,7 +14,11 @@
       {
         "action": "replace-observed",
         "destination": "/example/data.bin",
-        "legacy_guard_comparison": "owner-not-established-by-RTEF1",
+        "legacy_guard_comparison": {
+          "bytes": "different",
+          "owner": "not-established-by-RTEF1",
+          "sha256": "different"
+        },
         "legacy_operation": "replace",
         "legacy_previous": {
           "bytes": 3,
@@ -26,7 +30,11 @@
       {
         "action": "replace-observed",
         "destination": "/example/empty.txt",
-        "legacy_guard_comparison": "owner-not-established-by-RTEF1",
+        "legacy_guard_comparison": {
+          "bytes": "different",
+          "owner": "not-established-by-RTEF1",
+          "sha256": "different"
+        },
         "legacy_operation": "replace",
         "legacy_previous": {
           "bytes": 3,
@@ -38,7 +46,11 @@
       {
         "action": "replace-observed",
         "destination": "/example/settings.json",
-        "legacy_guard_comparison": "owner-not-established-by-RTEF1",
+        "legacy_guard_comparison": {
+          "bytes": "different",
+          "owner": "not-established-by-RTEF1",
+          "sha256": "different"
+        },
         "legacy_operation": "replace",
         "legacy_previous": {
           "bytes": 3,

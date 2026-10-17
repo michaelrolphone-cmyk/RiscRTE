@@ -66,7 +66,7 @@ class SelectionTests(unittest.TestCase):
         obs = observation(p, contents, 'all-existing')
         selected = make_selection(p, obs, choices_for(p, obs))
         result = validate_selection(p, obs, selected)
-        self.assertTrue(all(r['legacy_guard_comparison'] == 'owner-not-established-by-RTEF1' for r in result['rows']))
+        self.assertTrue(all(r['legacy_guard_comparison'] == {'owner': 'not-established-by-RTEF1', 'bytes': 'different', 'sha256': 'different'} for r in result['rows']))
         self.assertEqual(before, canonical(p.manifest))
         self.assertEqual(p.files[0]['previous']['sha256'], base.sha256(b'old'))
 
@@ -74,7 +74,7 @@ class SelectionTests(unittest.TestCase):
         p, contents = payload_at(self.temp.name, count=45)
         obs = observation(p, contents, 'all-existing')
         result = validate_selection(p, obs, make_selection(p, obs, choices_for(p, obs)))
-        self.assertEqual(result['rows'][0]['legacy_guard_comparison'], 'different')
+        self.assertEqual(result['rows'][0]['legacy_guard_comparison'], {'bytes': 'different', 'sha256': 'different'})
 
     def test_consent_cannot_be_omitted_or_applied_to_other_action(self):
         for value in (False, None, 'yes', 1):
@@ -344,6 +344,41 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(row['outcome'], 'uncertain')
         self.assertIsNone(row['readback'])
 
+    def test_missing_parent_must_be_ensured_before_file_claim(self):
+        obs = observation(self.payload, self.contents, 'clean')
+        obs['parents'][0]['current'] = {'kind': 'absent', 'status': 1}
+        run = self.run_for(obs)
+        with self.assertRaisesRegex(Invalid, 'ensure required parent'):
+            run.recheck(0, obs, self.owner)
+        run = self.run_for(obs)
+        fresh = copy.deepcopy(obs); fresh['parents'][0]['current'] = {'kind': 'directory', 'status': 0, 'flags': 1}
+        self.assertEqual(run.recheck(0, fresh, self.owner)['operation'], 'create')
+
+    def test_selected_final_mismatch_revokes_selected_success(self):
+        equal = observation(self.payload, self.contents, 'all-equal')
+        run = self.run_for(equal)
+        for i in range(3):
+            run.recheck(i, equal, self.owner)
+        self.assertTrue(run.verify_final_inventory(equal))
+        changed = copy.deepcopy(equal); changed['files'][0]['current'] = file_state(b'changed later')
+        self.assertFalse(run.verify_final_inventory(changed))
+        self.assertFalse(run.receipt()['selected_files_verified'])
+        self.assertEqual(run.states[0], 'final-verification-failed')
+
+    def test_oversized_and_unreadable_skipped_rows_do_not_block_valid_selection(self):
+        m, c, contents = source(); c['namespaces'][0]['max_file_bytes'] = 17
+        path = Path(self.temp.name) / 'small-limit.zip'; path.write_bytes(base.pack(m, contents))
+        p = Payload(path, c, True)
+        for current in [file_state(b'x' * 18), {'kind': 'unread', 'reason': 'file-size-bound', 'flags': 0, 'bytes': 18},
+                        {'kind': 'error', 'status': -5}]:
+            obs = observation(p, contents, 'all-equal'); obs['files'][0]['current'] = current
+            choices = choices_for(p, obs, skipped=(0, 2))
+            with self.subTest(current=current):
+                self.assertEqual(validate_selection(p, obs, make_selection(p, obs, choices))['selected_files'], 1)
+                choices[0] = {'action': 'replace-observed', 'consent': True}
+                with self.assertRaises(Invalid):
+                    make_selection(p, obs, choices)
+
     def test_fixture_not_installable_without_opt_in(self):
         with self.assertRaisesRegex(Invalid, 'fixture is not installable'):
             Payload(Path(self.temp.name) / 'container.zip', self.payload.context)
@@ -408,6 +443,24 @@ class ProtocolAdapterTests(unittest.TestCase):
             observe_current(client, '7', '/x', 100)
         self.assertFalse(client.usable)
         self.assertNotIn('ABORT', transport.commands)
+
+    def test_actual_client_oversized_or_unreadable_unselected_file_keeps_session_usable(self):
+        with tempfile.TemporaryDirectory() as temp:
+            m, c, contents = source(); c['namespaces'][0]['max_file_bytes'] = 17
+            path = Path(temp) / 'container.zip'; path.write_bytes(base.pack(m, contents)); p = Payload(path, c, True)
+            for first in ['0 STAT 0 18', '-5']:
+                rows = [('NS 0', '0 NS 7 1 7364'), path_row('/example'), ('STAT 7', '0 STAT 1 0'),
+                        path_row(p.files[0]['destination']), ('STAT 7', first)]
+                for f in p.files[1:]:
+                    rows.extend([path_row(f['destination']), ('STAT 7', '1')])
+                client, transport = self.client(rows)
+                obs = observe(p, client, p.transfer_firmware)
+                self.assertTrue(obs['session_usable'])
+                self.assertEqual(obs['files'][0]['current']['kind'], 'unread' if first.startswith('0') else 'error')
+                selected = make_selection(p, obs, choices_for(p, obs, skipped=(0,)))
+                self.assertEqual(validate_selection(p, obs, selected)['selected_files'], 2)
+                self.assertFalse(transport.rows)
+                self.assertFalse(any(c.startswith('GET') for c in transport.commands))
 
     def test_namespace_absence_cannot_be_confused_with_missing_path(self):
         with tempfile.TemporaryDirectory() as temp:

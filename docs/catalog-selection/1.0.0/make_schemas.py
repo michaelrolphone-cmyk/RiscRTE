@@ -11,16 +11,19 @@ def obj(properties, required=None):
 def schemas():
     digest = {'type': 'string', 'pattern': '^[a-f0-9]{64}$(?![\\s\\S])'}
     number = {'type': 'integer', 'minimum': 0, 'maximum': 9007199254740991}
+    flags = {'type': 'integer', 'minimum': 0, 'maximum': 4294967295}
     ident = {'type': 'string', 'minLength': 1, 'maxLength': 511}
     nsid = {'type': 'string', 'pattern': '^[1-9][0-9]{0,19}$(?![\\s\\S])'}
     binding = obj({'manifest_sha256': digest, 'container_sha256': digest,
                    'inventory_sha256': digest, 'context_sha256': digest,
                    'firmware_id': ident, 'session': {'type': 'integer', 'minimum': 1, 'maximum': 4294967295}})
     current = {'oneOf': [obj({'kind': {'const': 'absent'}, 'status': {'const': 1}}),
-                        obj({'kind': {'const': 'directory'}, 'status': {'const': 0}, 'flags': number}),
-                        obj({'kind': {'const': 'file'}, 'status': {'const': 0}, 'flags': number,
+                        obj({'kind': {'const': 'directory'}, 'status': {'const': 0}, 'flags': flags}),
+                        obj({'kind': {'const': 'file'}, 'status': {'const': 0}, 'flags': flags,
                              'bytes': number, 'sha256': digest}),
                         obj({'kind': {'const': 'error'}, 'status': {'type': 'integer', 'not': {'enum': [0, 1]}}}),
+                        obj({'kind': {'const': 'unread'}, 'reason': {'const': 'file-size-bound'},
+                             'flags': flags, 'bytes': number}),
                         obj({'kind': {'const': 'uncertain'}})]}
     key = {'volume': ident, 'destination': ident, 'namespace_id': nsid}
     observed = obj(dict(key, current=current))

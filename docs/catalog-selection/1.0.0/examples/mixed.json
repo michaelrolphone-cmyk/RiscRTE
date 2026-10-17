@@ -14,7 +14,7 @@
       {
         "action": "replace-observed",
         "destination": "/example/data.bin",
-        "legacy_guard_comparison": "not-declared",
+        "legacy_guard_comparison": {},
         "legacy_operation": "create",
         "legacy_previous": null,
         "volume": "content"
@@ -22,7 +22,7 @@
       {
         "action": "verify-equal",
         "destination": "/example/empty.txt",
-        "legacy_guard_comparison": "not-declared",
+        "legacy_guard_comparison": {},
         "legacy_operation": "create",
         "legacy_previous": null,
         "volume": "content"
@@ -30,7 +30,7 @@
       {
         "action": "create",
         "destination": "/example/settings.json",
-        "legacy_guard_comparison": "not-declared",
+        "legacy_guard_comparison": {},
         "legacy_operation": "create",
         "legacy_previous": null,
         "volume": "content"

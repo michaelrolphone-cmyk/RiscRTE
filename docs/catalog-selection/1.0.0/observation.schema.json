@@ -142,7 +142,7 @@
                   "flags": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 9007199254740991
+                    "maximum": 4294967295
                   }
                 }
               },
@@ -166,7 +166,7 @@
                   "flags": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 9007199254740991
+                    "maximum": 4294967295
                   },
                   "bytes": {
                     "type": "integer",
@@ -198,6 +198,34 @@
                         1
                       ]
                     }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "reason",
+                  "flags",
+                  "bytes"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "unread"
+                  },
+                  "reason": {
+                    "const": "file-size-bound"
+                  },
+                  "flags": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   }
                 }
               },
@@ -281,7 +309,7 @@
                   "flags": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 9007199254740991
+                    "maximum": 4294967295
                   }
                 }
               },
@@ -305,7 +333,7 @@
                   "flags": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 9007199254740991
+                    "maximum": 4294967295
                   },
                   "bytes": {
                     "type": "integer",
@@ -337,6 +365,34 @@
                         1
                       ]
                     }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind",
+                  "reason",
+                  "flags",
+                  "bytes"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "unread"
+                  },
+                  "reason": {
+                    "const": "file-size-bound"
+                  },
+                  "flags": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
                   }
                 }
               },

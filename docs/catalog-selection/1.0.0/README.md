@@ -65,6 +65,11 @@ of every app when the user selected a subset.
 Only STAT status 1 for a previously admitted namespace becomes `absent`.
 UNAVAILABLE (-3), BUSY (-4), IO (-2), RETAINED (-6), sequence disagreement (-10),
 unknown statuses and uncertain outcomes remain distinguishable failures.
+A known host read bound produces `unread`, retaining the observed size but no
+claimed hash. A skipped oversized or definitively unreadable row does not block
+another valid selection while transport custody is known. It cannot authorize
+create, replacement or equal-file verification. Protocol uncertainty still
+invalidates the session.
 Namespace enumeration alone does not prove provider availability. A namespace
 label, backend name or physical mount path never routes a file.
 
@@ -73,6 +78,11 @@ and host SHA-256, plus size/type recheck. Empty files also require GET/CLOSE.
 The read adapter uses the existing `scripts/serial_files.py` client and accepts an
 already-owned live client. Firmware identity comes from the catalog's product flow;
 RTEF1 has no firmware-identity or card-UUID command.
+
+Reference metadata is bounded to 4 MiB and 4,096 file/parent rows. These are
+reference-validator limits, not universal storage limits. Namespace observations
+are capped at 16 entries to match the frozen RTEF1 map bound. The selected provider
+may impose tighter file, path, component and write-budget limits.
 
 The same live owner object and RTEF1 session scope each execution. Serialized
 observations/selections are review and audit data, not resumable write authority.

@@ -112,9 +112,6 @@ def validate_observation(payload, observation):
             if current['kind'] in ('file', 'directory'):
                 require(current['flags'] <= 0xffffffff, 'invalid STAT flags')
                 require(bool(current['flags'] & 1) == (current['kind'] == 'directory'), 'STAT type disagrees')
-                if current['kind'] == 'file':
-                    require(current['bytes'] <= payload.profile(firmware, row['volume'])['max_file_bytes'],
-                            'current file exceeds admitted bound')
     return observation
 
 
@@ -135,6 +132,12 @@ def make_selection(payload, observation, choices):
 def current_valid(current):
     definition = json.loads((ROOT / 'observation.schema.json').read_text())['properties']['files']['items']['properties']['current']
     return Draft202012Validator(definition).is_valid(current) and current.get('status') == 0 and not current.get('flags', 1) & 1
+
+
+class ObservationBlocked(Invalid):
+    def __init__(self, info):
+        self.current = {'kind': 'unread', 'reason': 'file-size-bound', 'flags': info.flags, 'bytes': info.size}
+        super().__init__('current file exceeds admitted read bound')
 
 
 class HashSink:
@@ -162,7 +165,8 @@ def observe_current(client, namespace, path, max_file_bytes):
         raise
     if info.directory:
         return {'kind': 'directory', 'status': 0, 'flags': info.flags}
-    require(info.size <= max_file_bytes, 'current file exceeds admitted bound')
+    if info.size > max_file_bytes:
+        raise ObservationBlocked(info)
     sink = HashSink(max_file_bytes)
     size = client.get_stream(int(namespace), path, sink)
     after = client.stat(int(namespace), path)
@@ -198,6 +202,8 @@ def observe(payload, client, firmware):
                 try:
                     current = observe_current(client, row['namespace_id'], row['destination'],
                                               payload.profile(firmware, row['volume'])['max_file_bytes'])
+                except ObservationBlocked as error:
+                    current = error.current
                 except serial_files.RemoteError as error:
                     # Only the STAT helper above may interpret status 1 as absence.
                     if error.code in (0, 1):
@@ -220,11 +226,9 @@ def matching_bytes(current, entry):
 def legacy_guards(entry, current):
     """Informational only in explicit-current mode; never claim old guards passed."""
     guards = entry.get('previous') or {}
-    if not guards:
-        return 'not-declared'
-    if 'owner' in guards:
-        return 'owner-not-established-by-RTEF1'
-    return 'match' if all(current.get(k) == v for k, v in guards.items()) else 'different'
+    return {name: ('not-established-by-RTEF1' if name == 'owner'
+                   else 'match' if current.get(name) == value else 'different')
+            for name, value in guards.items()}
 
 
 def validate_selection(payload, observation, selection):
@@ -253,6 +257,8 @@ def validate_selection(payload, observation, selection):
         ns = actual.get(row['namespace_id'])
         require(ns is not None, 'selected namespace not actually admitted')
         profile = payload.profile(firmware, entry['volume'])
+        if current['kind'] == 'file':
+            require(current['bytes'] <= profile['max_file_bytes'], 'selected current file exceeds admitted read bound')
         need = {'stat', 'get'}
         selected_paths = [entry['destination']] + base.parent_paths(entry['destination'])
         require(profile['hierarchical'] or len(selected_paths) == 1, 'selected provider is not hierarchical')
@@ -339,6 +345,7 @@ class SelectionRun:
         hashes are necessary. This is not atomic compare-and-swap or a media UUID.
         """
         self._live(owner)
+        self.final_inventory_verified = False
         require(type(index) is int and 0 <= index < len(self.states), 'invalid file index')
         require(self.active is None and self.states[index] == 'pending', 'file already claimed or not pending')
         validate_observation(self.payload, fresh)
@@ -354,8 +361,13 @@ class SelectionRun:
                 row.update(action='skip', consent=False, current=copy.deepcopy(fresh['files'][i]['current']))
         validate_selection(self.payload, fresh, adjusted)
         row = self.selection['files'][index]
+        fresh_parents = {key(p): p['current'] for p in fresh['parents']}
+        for path in base.parent_paths(row['destination']):
+            require(fresh_parents[(row['volume'], path)]['kind'] == 'directory',
+                    'ensure required parent before claiming file mutation')
         if row['action'] == 'verify-equal':
             self.states[index] = 'verified'
+            self.readbacks[index] = copy.deepcopy(fresh['files'][index]['current'])
             return None
         self.final_inventory_verified = False
         self.states[index], self.active = 'claimed', index
@@ -401,7 +413,12 @@ class SelectionRun:
         require(final_observation['binding']['firmware_id'] == self.payload.target_firmware,
                 'final inventory requires target firmware')
         actual = {n['namespace_id'] for n in final_observation['namespaces']}
-        self.final_inventory_verified = all(r['namespace_id'] in actual and matching_bytes(r['current'], f)
+        final_rows = final_observation['files']
+        for i, (row, entry) in enumerate(zip(final_rows, self.payload.files)):
+            if self.states[i] != 'skipped' and (row['namespace_id'] not in actual or not matching_bytes(row['current'], entry)):
+                self.states[i] = 'final-verification-failed'
+                self.stop_reason = 'selected file failed final verification'
+        self.final_inventory_verified = self.stop_reason is None and all(r['namespace_id'] in actual and matching_bytes(r['current'], f)
                                             for r, f in zip(final_observation['files'], self.payload.files))
         return self.final_inventory_verified
 
