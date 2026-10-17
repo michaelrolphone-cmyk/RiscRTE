@@ -1,0 +1,35 @@
+name: Native service sleep transaction
+on:
+  push:
+    branches: [fix/mounted-sd-sleep-20261017, main]
+    paths: ['src/bootstrap/**', 'src/ports/esp32s3/**', 'src/runtime/serial/**', 'sdk/**', 'test/native_sleep_transaction.py', '.github/workflows/native-service-sleep.yml']
+  pull_request:
+    paths: ['src/bootstrap/**', 'src/ports/esp32s3/**', 'src/runtime/serial/**', 'sdk/**', 'test/native_sleep_transaction.py', '.github/workflows/native-service-sleep.yml']
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06
+          ref: 26ebe127fc2f6ea1a3e852ca4571fa70469bdfb1
+          path: .product
+          persist-credentials: false
+      - run: |
+          python3 test/native_sleep_transaction.py --product .product --output dist/native-sleep
+          python3 test/native_sleep_transaction.py --product .product --output dist/native-sleep-sanitized --sanitize
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-service-sleep-receipts
+          path: |
+            dist/native-sleep/receipt.json
+            dist/native-sleep/commands.json
+            dist/native-sleep-sanitized/receipt.json
+            dist/native-sleep-sanitized/commands.json

@@ -11,6 +11,9 @@ enum { RISC_RUNTIME_CHECKPOINT_OK=0, RISC_RUNTIME_CHECKPOINT_BUSY=1,
 struct risc_stream_client_v1;
 struct risc_resident_client_v1;
 struct risc_failure_evidence_client_v1;
+enum { RISC_RUNTIME_SLEEP_OK=0, RISC_RUNTIME_SLEEP_BUSY=1,
+       RISC_RUNTIME_SLEEP_MEDIA_UNAVAILABLE=2, RISC_RUNTIME_SLEEP_CONTEXT=-1,
+       RISC_RUNTIME_SLEEP_RETAINED=-2, RISC_RUNTIME_SLEEP_UNSUPPORTED=-3 };
 struct risc_diagnostic_checkpoint_client_v1;
 /* Minimal headless runtime service. Append-only. Available only on the active
  * app owner task, from module init through fini. Native apps are trusted code.
@@ -125,6 +128,15 @@ typedef struct {
    * RETAINED requires prompt return with no further provider calls or cleanup.
    * This grants no file authority. Older tables omit this optional suffix. */
   int32_t (*service_checkpoint)(void);
+  /* Optional invocation-owned native-file sleep transaction. Call prepare only
+   * at a settled app_main boundary, before wake/pad holds; all native file
+   * handles/transfers must be idle. Runtime keeps providers mapped and freezes
+   * native-file dispatch. A successful token must be resumed by this invocation
+   * after ordinary sleep refusal/Light wake and AFTER restoring wake/pad holds.
+   * Successful Deep entry is terminal. RETAINED forbids all further I/O/cleanup.
+   * This grants no file authority and never relaxes CPU readiness checks. */
+  int32_t (*sleep_prepare)(uint64_t *token);
+  int32_t (*sleep_resume)(uint64_t token);
 } risc_runtime_api_v1;
 #define RISC_RUNTIME_CAPABILITIES_V1_SIZE (offsetof(risc_runtime_api_v1, release) + sizeof(((risc_runtime_api_v1*)0)->release))
 #define RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE (offsetof(risc_runtime_api_v1, confirm_boot) + sizeof(((risc_runtime_api_v1*)0)->confirm_boot))
@@ -140,6 +152,7 @@ typedef struct {
 #define RISC_RUNTIME_LAUNCH_FAILURE_V1_SIZE (offsetof(risc_runtime_api_v1, take_launch_failure) + sizeof(((risc_runtime_api_v1*)0)->take_launch_failure))
 #define RISC_RUNTIME_INITIAL_DEFAULT_V1_SIZE (offsetof(risc_runtime_api_v1, initial_default) + sizeof(((risc_runtime_api_v1*)0)->initial_default))
 #define RISC_RUNTIME_SERVICE_CHECKPOINT_V1_SIZE (offsetof(risc_runtime_api_v1, service_checkpoint) + sizeof(((risc_runtime_api_v1*)0)->service_checkpoint))
+#define RISC_RUNTIME_SLEEP_V1_SIZE (offsetof(risc_runtime_api_v1, sleep_resume) + sizeof(((risc_runtime_api_v1*)0)->sleep_resume))
 const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version);
 #ifdef __cplusplus
 }

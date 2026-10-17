@@ -24,7 +24,10 @@ class RuntimeFiles final {
   }
   // Successful permanent-provider shutdown invalidates the borrowed table.
   // Retirement is one-way; this object can never be rebound to another store.
-  bool retire(){if(!exitSafe() || !owner_ || !owner_())return false;retired_=true;return true;}
+  bool retire(){if(sleeping_ || !exitSafe() || !owner_ || !owner_())return false;retired_=true;return true;}
+  // Internal transaction fence. No provider or handle ownership is released.
+  bool suspendSleep(){if(sleeping_ || !exitSafe() || !owner_ || !owner_() || !safe_())return false;sleeping_=true;return true;}
+  bool resumeSleep(){if(!sleeping_ || !exitSafe() || !owner_ || !owner_() || !safe_())return false;sleeping_=false;return true;}
   int32_t identity(const char*p,risc_storage_files_identity_value_v1*v){return call([&]{return files_.identity(identity_,p,0,v);});}
   int32_t identity(uint32_t h,risc_storage_files_identity_value_v1*v){return call([&]{return files_.identity(identity_,nullptr,h,v);});}
   // Internal consumers must preserve a known open token if cleanup cannot
@@ -56,7 +59,7 @@ class RuntimeFiles final {
   template<class F>int32_t call(F f){
     if(retained())return RISC_FILES_RETAINED;
     if(!bound())return RISC_FILES_UNAVAILABLE;
-    if(calling_)return RISC_FILES_BUSY;
+    if(calling_ || sleeping_)return RISC_FILES_BUSY;
     if(!owner_())return RISC_FILES_CONTEXT;
     if(!safe_())return RISC_FILES_BUSY;
     calling_=true;const int32_t rc=f();calling_=false;
@@ -68,7 +71,7 @@ class RuntimeFiles final {
   const risc_storage_files_identity_v1* identity_=nullptr;
   const risc_storage_files_directory_v1* directory_=nullptr;
   StorageFilesVolumeAdapter files_;Check owner_=nullptr,safe_=nullptr;
-  bool calling_=false,retained_=false,retired_=false;
+  bool calling_=false,retained_=false,retired_=false,sleeping_=false;
 };
 // One explicitly selected platform-owned internal store service. Multiple
 // Runtime candidates use the same authority while comparing active/staged

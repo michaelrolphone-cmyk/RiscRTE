@@ -34,7 +34,7 @@ _Static_assert(legacy_capability_end==RISC_RUNTIME_CAPABILITIES_V1_SIZE,"prefix 
 _Static_assert(sizeof(legacy_risc_runtime_api_v1)==legacy_capability_end,"frozen legacy ends at release");
 _Static_assert(offsetof(risc_runtime_api_v1,confirm_boot)==legacy_capability_end,"new callback appends only");
 _Static_assert(offsetof(risc_runtime_api_v1,retain_invocation)==RISC_RUNTIME_BOOT_CONFIRM_V1_SIZE,"retention appends after complete confirm prefix");
-_Static_assert(sizeof(risc_runtime_api_v1)==legacy_capability_end+13*sizeof(void(*)(void)),"thirteen pointer suffixes only");
+_Static_assert(sizeof(risc_runtime_api_v1)==legacy_capability_end+15*sizeof(void(*)(void)),"fifteen pointer suffixes only");
 _Static_assert(offsetof(risc_runtime_api_v1,trace)==RISC_RUNTIME_RETAIN_INVOCATION_V1_SIZE,"trace follows complete retention prefix");
 
 _Static_assert(offsetof(risc_runtime_api_v1,stream_client)==RISC_RUNTIME_TRACE_V1_SIZE,"stream client follows complete trace prefix");
@@ -48,7 +48,13 @@ _Static_assert(offsetof(risc_runtime_api_v1,exit_requested)==RISC_RUNTIME_MONOTO
 _Static_assert(offsetof(risc_runtime_api_v1,take_launch_failure)==RISC_RUNTIME_EXIT_REQUESTED_V1_SIZE,"launch failure follows host control");
 _Static_assert(offsetof(risc_runtime_api_v1,initial_default)==RISC_RUNTIME_LAUNCH_FAILURE_V1_SIZE,"initial default follows launch failure");
 _Static_assert(offsetof(risc_runtime_api_v1,service_checkpoint)==RISC_RUNTIME_INITIAL_DEFAULT_V1_SIZE,"service checkpoint preserves complete initial default prefix");
-_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_SERVICE_CHECKPOINT_V1_SIZE,"service checkpoint is final suffix");
+_Static_assert(offsetof(risc_runtime_api_v1,sleep_prepare)==RISC_RUNTIME_SERVICE_CHECKPOINT_V1_SIZE,"sleep prepare follows complete service checkpoint prefix");
+_Static_assert(offsetof(risc_runtime_api_v1,sleep_resume)==offsetof(risc_runtime_api_v1,sleep_prepare)+sizeof(((risc_runtime_api_v1*)0)->sleep_prepare),"sleep resume follows sleep prepare");
+_Static_assert(sizeof(risc_runtime_api_v1)==RISC_RUNTIME_SLEEP_V1_SIZE,"sleep resume is final suffix");
+_Static_assert(_Generic(((risc_runtime_api_v1*)0)->sleep_prepare,
+ int32_t(*)(uint64_t*):1,default:0),"sleep prepare signature");
+_Static_assert(_Generic(((risc_runtime_api_v1*)0)->sleep_resume,
+ int32_t(*)(uint64_t):1,default:0),"sleep resume signature");
 _Static_assert(_Generic(((risc_runtime_api_v1*)0)->service_checkpoint,
  int32_t(*)(void):1,default:0),"service checkpoint signature");
 _Static_assert(_Generic(((risc_runtime_api_v1*)0)->take_launch_failure,
