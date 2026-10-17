@@ -82,15 +82,20 @@ suffix, or after `Runtime::run` has safely returned. Ordinary yield and
 capability acquisition never dispatch synchronous serial storage. The explicit
 suffix is app-main/owner-only and checks native idleness, graph lifecycle,
 stream and storage custody before temporarily revoking app entry for the call.
-BUSY leaves work queued; RETAINED is terminal. `RiscRuntimeCheckpointV1.h` makes
-a missing older suffix a safe no-op. Shared Home calls it only between completed
+BUSY means work is deferred or an admitted native session remains active; a
+command may already have completed. Callers continue foreground work and defer
+automatic idle until a later settled checkpoint reports OK. RETAINED is terminal.
+`RiscRuntimeCheckpointV1.h` makes a missing older suffix a safe no-op. Shared Home calls it only between completed
 presentations, never from panel BUSY polling. Products must still qualify their
 selected provider and actual scheduling.
 
-A command makes at most two bounded file calls. Healthy transfer custody blocks
-sleep, USB PHY handoff and normal restart temporarily without being treated as
-terminal retention. App/graph teardown closes known handles before releasing
-anything. Failed close, invalid provider transfer count, lost owner/safety or
+A command makes at most two bounded file calls. An admitted RTEF1 session
+holds bounded RAM custody across request/response gaps, including after NS,
+PATH, CLOSE and COMMIT. It blocks sleep, USB PHY handoff and normal restart
+until explicit disconnect/shutdown or 30 seconds of inactivity are handled at
+an owner checkpoint. A connected cable alone holds no session or sleep lease.
+This healthy session custody is never terminal retention. App/graph teardown
+closes known handles before releasing anything. Failed close, invalid provider transfer count, lost owner/safety or
 `RETAINED` fence future I/O and pin dependent custody through a real restart.
 Partial frames, queued replies and open transfers have a 30-second idle budget;
 RAM-only cancellation works even when a provider is temporarily unavailable.
@@ -225,9 +230,12 @@ are encoded losslessly. Filesystem/provider limits may be stricter.
   busy providers, no space, integrity failure and retained custody are distinct
   statuses. Retained custody is terminal until a real restart and is never
   converted into an ordinary missing-file or retryable result.
-- Firmware closes an inactive open transfer after 30 seconds at a safe owner
-  checkpoint. Disconnect/timeout cleanup can itself fail or be delayed until
-  that checkpoint. Neither host serial-port close nor time passing proves
+- Firmware expires an inactive session after 30 seconds at an owner checkpoint.
+  The client must establish a fresh HELLO session after expiry; stale session/
+  sequence requests receive protocol error -10. ABORT cancels the current
+  transfer, but does not end the session. An open transfer is closed only at its
+  safe owner checkpoint. Disconnect/timeout cleanup can itself fail or be delayed
+  until that checkpoint. Neither host serial-port close nor time passing proves
   cleanup, rollback, or completion.
 
 The default deadline is five seconds per request, including interleaved runtime

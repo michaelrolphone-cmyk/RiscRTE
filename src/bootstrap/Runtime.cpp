@@ -1716,6 +1716,10 @@ int32_t Runtime::serviceCheckpoint() {
     if(!safe){retained_=true;fail("serial file custody retained; restart required");
       (void)appExitBarrier(false);return RISC_RUNTIME_CHECKPOINT_RETAINED;}
   }
+  // Successful dispatch can leave a healthy serial session active between
+  // host requests. Report that bounded activity so callers defer automatic
+  // idle before blanking the display or attempting the sleep transaction.
+  if(port_.sleepServicesReady && !port_.sleepServicesReady())return RISC_RUNTIME_CHECKPOINT_BUSY;
 #endif
   return RISC_RUNTIME_CHECKPOINT_OK;
 }

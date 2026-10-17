@@ -17,6 +17,7 @@ static RiscBoot::Runtime* runtime;
 static RiscBoot::RuntimeFiles client;
 static RiscSerial::Files endpoint;
 static const risc_runtime_api_v1* app;
+static uint32_t protocolNow=0;
 static unsigned sequence=0,serialDispatches=0,quiesces=0,refreshes=0;
 static bool owner(){return owned;}
 static bool safe(){return platformSafe;}
@@ -31,7 +32,7 @@ static std::string command(const char* text,int expected=0){
  const std::string line="RTEF1 12345678 "+std::to_string(++sequence)+" "+text+"\n";
  for(unsigned char b:line)endpoint.input(b);
  const unsigned n=serialDispatches;app->yield_ms(1);assert(serialDispatches==n);
- const auto rc=app->service_checkpoint();assert(rc==(expected==RISC_FILES_RETAINED?RISC_RUNTIME_CHECKPOINT_RETAINED:RISC_RUNTIME_CHECKPOINT_OK));
+ const auto rc=app->service_checkpoint();assert(rc==(expected==RISC_FILES_RETAINED?RISC_RUNTIME_CHECKPOINT_RETAINED:mode=="session-liveness"?RISC_RUNTIME_CHECKPOINT_BUSY:RISC_RUNTIME_CHECKPOINT_OK));
  std::string out;while(endpoint.outputSize()){out.append(endpoint.output(),endpoint.outputSize());endpoint.consumeOutput(endpoint.outputSize());}
  const std::string prefix="RTEF1 12345678 "+std::to_string(sequence)+" "+std::to_string(expected);
  if(out.rfind(prefix,0)!=0)fprintf(stderr,"command %s -> %s expected %s\n",text,out.c_str(),prefix.c_str());
@@ -42,6 +43,7 @@ extern "C" void test_atomic_app(unsigned hook,unsigned){
  if(hook!=1){assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_CONTEXT);return;}
  assert(!runtime->bindNativeFiles("runtime-files-first",0,client,owner,safe));
  risc_runtime_capability_v1 denied{sizeof(denied)};assert(!app->acquire("storage.files",1,12,&denied));
+ if(mode=="session-liveness")assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&endpoint.exitSafe());
  command("HELLO");command("PATH 0 2f66696c65");
  if(mode=="absent"||mode=="wrong-instance"||mode=="refresh-absent"||mode=="refresh-refused"){command("GET 12",RISC_FILES_UNAVAILABLE);return;}
  command("PUT 12 replace 2");command("WRITE 0 7879");
@@ -53,6 +55,22 @@ extern "C" void test_atomic_app(unsigned hook,unsigned){
  command("COMMIT 8fe62899");command("PATH 0 2f66696c65");
  command("GET 12");assert(command("READ 0").find("7879")!=std::string::npos);command("CLOSE");
  assert((direct?generic.files["/file"].bytes:volume.nodes["/file"].data)=="xy");
+ if(mode=="session-liveness"){
+  assert(!endpoint.pending()&&!endpoint.exitSafe()&&client.exitSafe());
+  assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_BUSY&&runtime->active());
+  protocolNow=RiscSerial::Files::TimeoutMs-1;
+  assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_BUSY&&!endpoint.exitSafe());
+  ++protocolNow;
+  assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&endpoint.exitSafe());
+  const std::string stale="RTEF1 12345678 "+std::to_string(++sequence)+" PATH 0 2f66696c65\n";
+  for(unsigned char b:stale)endpoint.input(b);
+  assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_BUSY); // queued error reply still has custody
+  assert(std::string(endpoint.output(),endpoint.outputSize()).find(" -10\n")!=std::string::npos);
+  endpoint.consumeOutput(endpoint.outputSize());assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK);
+  sequence=0;command("HELLO");assert(!endpoint.exitSafe());
+  endpoint.disconnect();assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&endpoint.exitSafe());
+  puts("Runtime session activity BUSY, completed-command reply, bounded expiry, stale rejection and fresh HELLO PASS");
+ }
  if(mode=="native-readiness"){
   nativeReady=false;const auto before=serialDispatches;
   const std::string request="RTEF1 12345678 "+std::to_string(++sequence)+" STAT 12\n";
@@ -81,6 +99,7 @@ int main(int argc,char**argv){
  file("boot.json",R"({"board":"board.json","default_app":"default.elf","provider_activation":"demand","drivers":[{"manifest":"provider.json"}],"app_capabilities":[{"manifest":"app.json","grants":[]}]})");
  if(prepare && mode!="refresh-already-ready"){volume.ready=false;volume.state=RISC_STORAGE_STATE_UNAVAILABLE;}
  RiscBoot::Port port{owner,health,delay,logLine};port.appExitSafe=safe;port.providerStorageSafe=safe;
+ if(mode=="session-liveness")port.sleepServicesReady=[](){return endpoint.exitSafe();};
  port.serialFilesReady=[](){return nativeReady;};port.serialFilesCheckpoint=checkpoint;port.serialFilesShutdown=[](){return endpoint.shutdown();};
  RiscTest::FileSources sources({root.c_str()});runtime=new RiscBoot::Runtime(port);assert(sources.bind(*runtime));
  assert(!runtime->bindNativeFiles("runtime-files-first",0,client,owner,safe));assert(runtime->prepare(root.c_str()));
@@ -88,7 +107,7 @@ int main(int argc,char**argv){
  owned=false;assert(!runtime->bindNativeFiles(id,instance,client,owner,safe));owned=true;
  assert(runtime->bindNativeFiles(id,instance,client,owner,safe,prepare)==(mode!="absent"&&mode!="wrong-instance"));
  assert(!client.bound());
- RiscSerial::Namespace map[]={{12,"Native files",&client,true}};assert(endpoint.bind(map,1,{owner,safe,[]()->uint32_t{return 0;}}));
+ RiscSerial::Namespace map[]={{12,"Native files",&client,true}};assert(endpoint.bind(map,1,{owner,safe,[]()->uint32_t{return protocolNow;}}));
  const bool retained=mode=="barrier-port"||mode=="failed-close"||mode=="failed-release"||mode=="refresh-fail"||mode=="refresh-poison";
  assert(runtime->run()!=retained);assert(runtime->retained()==retained);assert(refreshes==((prepare&&mode!="refresh-already-ready")?1u:0u));
  if(retained){if(mode=="barrier-port"){assert(!client.retained());assert(std::strstr(runtime->error(),"predicate=native-port-exit"));}else assert(client.retained());puts("Native graph serial retained custody PASS");fflush(stdout);_exit(0);}
