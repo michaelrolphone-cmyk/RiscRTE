@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - 'src/runtime/serial/**'
+      - 'src/diagnostics/Journal.h'
+      - 'test/*diagnostic_checkpoint*'
       - 'src/runtime/storage/**'
       - 'src/bootstrap/**'
       - 'src/ports/esp32s3/NativeSerialFiles.*'
@@ -91,6 +93,8 @@ jobs:
         run: bash test/run_serial_native_provider_test.sh
       - name: Explicit private storage on actual pinned LittleFS and fenced mount
         run: python3 test/run_native_serial_storage_test.py
+      - name: Retained diagnostic checkpoint and serial first/deadline capture
+        run: bash test/run_diagnostic_checkpoint_test.sh
       - name: Bounded protocol and generic namespace custody
         run: bash test/run_serial_files_test.sh
       - name: Python client through the real C++ protocol endpoint

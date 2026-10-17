@@ -11,7 +11,7 @@
 namespace RiscDiagnostics {
 constexpr uint32_t Magic=0x52444a31u;
 constexpr unsigned EventCapacity=16, MessageCapacity=8, TextSize=96;
-enum Kind : uint32_t { BootFresh=1, BootRetained, LightEnter, LightReturn, DeepEnter };
+enum Kind : uint32_t { BootFresh=1, BootRetained, LightEnter, LightReturn, DeepEnter, SerialFirstIdentity, SerialFirstState, SerialFirstWait, SerialDeadlineIdentity, SerialDeadlineState, SerialDeadlineWait };
 struct Event {uint32_t sequence,boot,ms,kind; int32_t detail; uint32_t cause;};
 struct Message {uint32_t sequence,boot,ms; char text[TextSize];};
 struct Journal {
@@ -63,7 +63,9 @@ inline void message(Journal& j,uint32_t ms,const char* text){
 }
 inline const char* kindName(uint32_t kind){
   switch(kind){case BootFresh:return "boot-fresh";case BootRetained:return "boot-retained";
-    case LightEnter:return "light-enter";case LightReturn:return "light-return";case DeepEnter:return "deep-enter";}
+    case LightEnter:return "light-enter";case LightReturn:return "light-return";case DeepEnter:return "deep-enter";
+    case SerialFirstIdentity:return "serial-first-identity";case SerialFirstState:return "serial-first-state";case SerialFirstWait:return "serial-first-wait";
+    case SerialDeadlineIdentity:return "serial-deadline-identity";case SerialDeadlineState:return "serial-deadline-state";case SerialDeadlineWait:return "serial-deadline-wait";}
   return "unknown";
 }
 // A read-only, exact-line command. No reset, erase, wake, configuration, arbitrary

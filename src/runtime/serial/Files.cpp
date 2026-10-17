@@ -44,6 +44,7 @@ void Files::input(uint8_t value){
 }
 void Files::consumeOutput(size_t n){if(n>outputSize())n=outputSize();sent_+=n;if(n)touched_=hooks_.millis();}
 void Files::disconnect(){
+ observedControl_=observedDeadline_=false;
  // An idle transport has only protocol RAM to discard. Do not manufacture a
  // pending cleanup barrier after Light wake: Hybrid may enter Deep before the
  // next application checkpoint, even when no host ever connected.
@@ -96,6 +97,19 @@ void Files::controlCheckpoint(){
   return;
  }
  if(!requestReady_ || outputSize())return;
+ const auto waited=uint32_t(hooks_.millis()-touched_);
+ const bool deadline=waited>=AdmissionWaitMs;
+ if(hooks_.controlObserved && (!observedControl_ || (deadline&&!observedDeadline_))){
+  char frame[Line];memcpy(frame,request_,requestLength_+1);
+  char* words[4]={frame};bool valid=true;
+  for(unsigned i=1;i<4;++i){char*space=strchr(words[i-1],' ');if(!space){valid=false;break;}*space=0;words[i]=space+1;}
+  if(valid){char*space=strchr(words[3],' ');if(space)*space=0;uint64_t sid=0,seq=0;
+   if(!strcmp(words[0],"RTEF1")&&strlen(words[1])==8&&number(words[1],sid,16)&&sid&&number(words[2],seq)&&seq&&seq<=UINT32_MAX){
+    hooks_.controlObserved(uint32_t(sid),uint32_t(seq),words[3],waited,deadline);
+    observedControl_=true;if(deadline)observedDeadline_=true;
+   }
+  }
+ }
  // The real parser still validates the complete frame and sequence. Inspect
  // only the operation token to select commands with no provider callbacks.
  const char* op=request_;

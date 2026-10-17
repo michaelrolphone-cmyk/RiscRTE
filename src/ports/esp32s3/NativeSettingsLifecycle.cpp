@@ -256,6 +256,7 @@ int32_t availability(uint32_t ns,risc_key_value_availability_state_v1*out){
  const unsigned i=ns==6?1:0;*out={sizeof(*out),ns,state.availability[i],0,state.generation[i]};return RISC_KEY_VALUE_AVAILABILITY_OK;
 }
 bool retained(){return owner()&&selectedRetained();}
+uint32_t diagnosticState(){return (state.active?1u:0u)|(state.entered?2u:0u)|(state.discovery?4u:0u)|(state.hydrated?8u:0u)|(state.attached?16u:0u)|(selectedRetained()?32u:0u);}
 bool exitSafe(){return (!state.selected||owner())&&!state.entered&&!state.active&&!selectedRetained()&&W::exitSafe()&&(!state.prepared||clientsSafe());}
 bool ready(){return owner()&&state.hydrated&&!selectedRetained();}
 Timing timing(){return owner()?state.time:Timing{};}

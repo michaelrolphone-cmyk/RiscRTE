@@ -28,7 +28,8 @@ struct Admission {
 using Check=bool (*)();
 // One firmware-lifetime selection. Absent admission leaves this optional
 // endpoint unavailable and does not change the ordinary boot sequence.
-bool prepare(const Admission*,Check owner,Check platformSafe);
+using ControlObserver=void (*)(uint32_t,uint32_t,const char*,uint32_t,bool);
+bool prepare(const Admission*,Check owner,Check platformSafe,ControlObserver observer=nullptr);
 // These two calls alone can dispatch file I/O. The caller must establish a
 // settled Runtime owner boundary, outside provider/capability callbacks and
 // ordinary cooperative yield (including the explicit app service checkpoint).

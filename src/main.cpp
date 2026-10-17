@@ -520,7 +520,22 @@ void setup() {
 #else
   const auto* serial=risc_native_serial_files_admission?risc_native_serial_files_admission():nullptr;
 #endif
-  if(!RiscCpu::NativeSerialFiles::prepare(serial,isOwner,providerStorageSafe)){
+  if(!RiscCpu::NativeSerialFiles::prepare(serial,isOwner,providerStorageSafe,
+    [](uint32_t sid,uint32_t seq,const char*op,uint32_t wait,bool deadline){
+#if RISC_SLEEP_DIAGNOSTICS
+      uint32_t flags=0;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+      flags=RiscCpu::NativeSettingsLifecycle::diagnosticState();
+      if(RiscCpu::NativeSettingsLifecycle::exitSafe())flags|=128u;
+#endif
+#if RISC_NATIVE_STORAGE_CUSTODY
+      if(cpu.nativeStorageAttached())flags|=64u;
+#endif
+      RiscDiagnostics::serialControl(sid,seq,op,wait,deadline,flags);
+#else
+      (void)sid;(void)seq;(void)op;(void)wait;(void)deadline;
+#endif
+    })){
     diagnosticLine("RTE_BOOT error=serial-file-admission");return;
   }
 #endif

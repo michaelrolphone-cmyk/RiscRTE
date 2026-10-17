@@ -84,6 +84,9 @@ bool discovering(); // exact healthy discovery custody, not general Busy
 bool shutdown(); // cancel and collect native-owned work before graph teardown
 int32_t availability(uint32_t,risc_key_value_availability_state_v1*);
 void cooperate(); // one accepted step; never starts work
+// Owner-task RAM snapshot: active, entered, discovery, hydrated, attached,
+// retained in bits0..5. No provider callbacks or hardware reads.
+uint32_t diagnosticState();
 bool exitSafe();  // all namespaces, including complete-but-uncollected custody
 bool retained();
 bool ready(); // boot/UI usable; consult availability for durable namespace authority

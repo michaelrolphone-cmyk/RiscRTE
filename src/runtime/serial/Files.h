@@ -6,7 +6,11 @@ namespace RiscSerial {
 // Trusted firmware admission, never inferred from a physical backend or path.
 // The immutable map, labels and provider sessions live until real restart.
 struct Namespace {uint64_t id;const char* label;RiscBoot::RuntimeFiles* files;bool writable;};
-struct Hooks {bool (*owner)();bool (*safe)();uint32_t (*millis)();};
+struct Hooks {
+ bool (*owner)();bool (*safe)();uint32_t (*millis)();
+ // Bounded owner-only observation. Must not call providers, allocate or wait.
+ void (*controlObserved)(uint32_t,uint32_t,const char*,uint32_t,bool)=nullptr;
+};
 class Files final {
  public:
   static constexpr size_t Chunk=48,Line=192,NamespaceMax=16;
@@ -49,6 +53,6 @@ class Files final {
   char request_[Line]{},previous_[Line]{},response_[Line]{},cached_[Line]{};
   size_t requestLength_=0,responseLength_=0,sent_=0;
   uint32_t session_=0,sequence_=0,replySession_=0,replySequence_=0;
-  bool discard_=false,requestReady_=false;
+  bool discard_=false,requestReady_=false,observedControl_=false,observedDeadline_=false;
 };
 }
