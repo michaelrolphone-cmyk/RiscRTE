@@ -41,6 +41,30 @@ std::string command(const std::string& text){
   const auto at=tx.size();feed(text+"\n");parse();checkpoint();drain();return tx.substr(at);
 }
 void expect(const std::string& text,const std::string& response){assert(command(text)==response);}
+struct DeepEntered {};
+static void idleLightDeep(unsigned kind) {
+  RiscCpu::Hardware h{};h.owner=owner;h.now=[]()->uint64_t{return 0;};
+  h.gpioOpen=[](uint8_t,bool,bool,bool){return true;};
+  h.gpioRead=[](uint8_t,bool*level){*level=true;return true;};
+  h.deepWakeValid=[](uint8_t){return true;};h.deepReady=[](){return true;};
+  h.deepWakeArm=[](uint8_t,bool,bool){return true;};h.deepWakeClear=[](uint8_t,bool){return true;};
+  h.deepWakeSetValid=[](uint64_t,uint64_t){return true;};
+  h.deepWakeSetArm=[](uint64_t,uint64_t,uint64_t){return true;};
+  h.deepWakeSetClear=[](uint64_t,uint64_t,uint64_t){return true;};
+  h.timerArm=[](uint32_t){return true;};h.timerClear=[](){return true;};
+  h.deepSleep=[](){throw DeepEntered{};};
+  RiscCpu::Port p(h);auto& g=p.gpios_[0];g.port=&p;g.input=uint64_t(1)<<7;
+  uint64_t token=0;assert(RiscCpu::Port::gpioClaim(&g,7,false,false,false,&token));
+  const auto before=providerCalls;RiscDiagnostics::lightReturn(ESP_OK,4);
+  assert(providerCalls==before);int32_t rc=0;bool entered=false;
+  try {
+    rc=kind==0?RiscCpu::Port::gpioDeepSleep(&g,token,false):kind==1?
+      RiscCpu::Port::gpioDeepSleepFor(&g,token,false,1000):RiscCpu::Port::gpioDeepSleepSet(&g,token,false,0);
+  }catch(const DeepEntered&){entered=true;}
+  std::printf("idle Light -> Deep kind=%u host=%d pending=%d exit_safe=%d result=%d terminal=%d provider_calls=%u\n",
+    kind,host,N::pending(),N::exitSafe(),rc,entered,providerCalls-before);std::fflush(stdout);
+  assert(entered && N::exitSafe() && providerCalls==before);
+}
 void sleepGuards(int32_t expected){
   RiscCpu::Hardware hardware{};hardware.owner=owner;hardware.now=[]()->uint64_t{return 0;};
   RiscCpu::Port port(hardware);auto& gpio=port.gpios_[0];gpio.port=&port;
@@ -145,6 +169,11 @@ int main(int argc,char**argv){
   task=reinterpret_cast<void*>(1);inIsr=false;std::memcpy(N::workspaceStorage,live,sizeof(live));
   settled=true;assert(N::shutdown());settled=false;
   assert(providerCalls==0 && N::exitSafe());ready=true;
+  host=false;for(unsigned kind=0;kind<3;++kind)idleLightDeep(kind);
+  host=true;for(unsigned kind=0;kind<3;++kind)idleLightDeep(kind);
+  // The modeled terminal exits leave USB recovery requested; finish that
+  // independent RAM/transport state before the wire-protocol cases below.
+  RiscDiagnostics::poll();now+=20000;RiscDiagnostics::poll();
   label[0]='X';namespaces[0].id=99; // Admission owns copied immutable metadata.
   expect("RTEF1 11345678 1 HELLO","RTEF1 11345678 1 0 HELLO 48 511 2\n");
   expect("RTEF1 11345678 2 NS 1","RTEF1 11345678 2 0 NS 77 0 756e617661696c61626c65\n");

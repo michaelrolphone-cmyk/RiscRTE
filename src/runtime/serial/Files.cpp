@@ -43,7 +43,16 @@ void Files::input(uint8_t value){
  if(!handle_ || (requestLength_>=6 && !strncmp(request_,"RTEF1 ",6)))touched_=hooks_.millis();
 }
 void Files::consumeOutput(size_t n){if(n>outputSize())n=outputSize();sent_+=n;if(n)touched_=hooks_.millis();}
-void Files::disconnect(){cancel_=true;requestReady_=false;requestLength_=0;discard_=false;responseLength_=sent_=0;}
+void Files::disconnect(){
+ // An idle transport has only protocol RAM to discard. Do not manufacture a
+ // pending cleanup barrier after Light wake: Hybrid may enter Deep before the
+ // next application checkpoint, even when no host ever connected.
+ // A live handle or reentrant dispatch still needs the settled owner boundary.
+ // In particular, an in-flight open may not have installed its handle yet.
+ cancel_=handle_ || calling_;
+ if(!cancel_)resetSession();
+ requestReady_=false;requestLength_=0;discard_=false;responseLength_=sent_=0;
+}
 void Files::clearTransfer(){selected_=nullptr;handle_=0;size_=offset_=0;crc_=0xffffffffu;writing_=failed_=false;}
 void Files::resetSession(){session_=sequence_=0;pathLength_=0;path_[0]=0;previous_[0]=cached_[0]=0;}
 int32_t Files::close(){

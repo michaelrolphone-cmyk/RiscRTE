@@ -5,7 +5,7 @@
 #include <string>
 #include <algorithm>
 #include <cstdio>
-static bool owned=true,safe=true;
+static bool owned=true,safe=true,disconnectDuringOpen=false;
 static uint32_t now=100;
 static unsigned opens=0,writes=0,reads=0,closes=0,syncs=0;
 static int fault=0;
@@ -32,7 +32,11 @@ struct Wire {
 int main(int argc,char**argv){
  assert(argc==3);std::string root=argv[1],scenario=argv[2];
  RiscStorage::PosixFiles provider(root.c_str());native=provider.api();auto api=*native;
- api.open=[](void*c,const char*p,uint32_t f,uint32_t*h){++opens;return native->open(c,p,f,h);};
+ api.open=[](void*c,const char*p,uint32_t f,uint32_t*h){++opens;
+  if(disconnectDuringOpen){callbackEndpoint->disconnect();assert(!callbackEndpoint->exitSafe());}
+  if(fault==9)return int32_t(RISC_FILES_NOT_FOUND);
+  return native->open(c,p,f,h);
+ };
  api.write=[](void*c,uint32_t h,const void*b,uint32_t n,uint32_t*a){++writes;
   if(callbackEndpoint){const unsigned before=writes;callbackEndpoint->checkpoint();assert(writes==before);}
   if(fault==1)return native->write(c,h,b,std::min(n,3u),a);
@@ -48,7 +52,19 @@ int main(int argc,char**argv){
  RiscBoot::RuntimeFiles files,missing;assert(files.bind(&api,owner,ready));
  RiscSerial::Namespace map[]={{7,"Selected files",&files,true},{8,"Read only",&files,false},{9,"Absent",&missing,true}};
  RiscSerial::Files endpoint;callbackEndpoint=&endpoint;safe=false;assert(endpoint.bind(map,3,{owner,ready,millis}));safe=true;assert(!endpoint.bind(map,3,{owner,ready,millis}));
+ // Empty and cancelled protocol sessions have no native cleanup to defer.
+ // RAM cancellation remains available while provider readiness is false.
+ safe=false;endpoint.disconnect();endpoint.disconnect();assert(endpoint.exitSafe());
+ for(unsigned char c:std::string("RTEF1 "))endpoint.input(c);
+ assert(endpoint.pending());endpoint.disconnect();assert(endpoint.exitSafe());
+ for(unsigned char c:std::string("RTEF1 12345678 1 HELLO\n"))endpoint.input(c);
+ assert(endpoint.pending());endpoint.disconnect();endpoint.checkpoint();assert(endpoint.exitSafe());
+ assert(!opens&&!writes&&!reads&&!closes&&!syncs);safe=true;
  Wire wire{endpoint};assert(wire.command("HELLO").find("HELLO 48 511 3")!=std::string::npos);
+ // Unsent response and completed session replay state are RAM-only too.
+ wire.feed("RTEF1 12345678 2 NS 0\n");endpoint.checkpoint();assert(endpoint.outputSize());
+ safe=false;endpoint.disconnect();assert(endpoint.exitSafe()&&!endpoint.outputSize());safe=true;
+ wire.seq=0;assert(wire.command("HELLO").find("HELLO 48 511 3")!=std::string::npos);
  wire.command("NS 0");wire.command("NS 3",RISC_FILES_NOT_FOUND);
  std::ofstream(root+"/sibling")<<"untouched";assert(!mkdir((root+"/other-app").c_str(),0700));std::ofstream(root+"/other-app/elf")<<"application";
  wire.path("/selected");wire.command("PUT 9 create 3",RISC_FILES_UNAVAILABLE);wire.command("PUT 99 create 3",RISC_FILES_NOT_FOUND);wire.command("PUT 8 create 3",RISC_FILES_DENIED);
@@ -66,8 +82,20 @@ int main(int argc,char**argv){
   count=opens;wire.feed("RTEF1 "+std::string(230,'x')+"\n");endpoint.checkpoint();assert(wire.drain().empty());wire.command("PATH 0 ff");wire.command("GET 7",RISC_FILES_INVALID);wire.command("PATH 0 00",RISC_FILES_INVALID);assert(opens==count);
   // Receive and non-owner checkpoints cannot dispatch. Safe owner may later.
   wire.path("/selected");wire.last="RTEF1 12345678 "+std::to_string(++wire.seq)+" GET 7\n";count=opens;wire.feed(wire.last);assert(opens==count);owned=false;endpoint.checkpoint();assert(opens==count);owned=true;safe=false;endpoint.checkpoint();assert(opens==count);safe=true;endpoint.checkpoint();assert(opens==count+1);wire.drain();
-  // Disconnect only latches cancellation; close occurs at the owner checkpoint.
+  // A live handle still latches cancellation; close occurs at the owner checkpoint.
   count=closes;endpoint.disconnect();assert(closes==count&&!endpoint.exitSafe());endpoint.checkpoint();assert(closes==count+1&&endpoint.exitSafe());
+  // Reentrant cancellation may finish without obtaining a token. A second
+  // disconnect must retire that now-empty cancellation using RAM alone.
+  wire.seq=0;wire.command("HELLO");wire.path("/selected");
+  disconnectDuringOpen=true;fault=9;count=closes;wire.command("GET 7",RISC_FILES_NOT_FOUND);
+  disconnectDuringOpen=false;fault=0;assert(!endpoint.exitSafe()&&closes==count);
+  safe=false;endpoint.disconnect();assert(endpoint.exitSafe()&&closes==count);safe=true;
+  // A disconnect nested inside open cannot clear cancellation before the
+  // returned token is installed. It remains blocked until checked close.
+  wire.seq=0;wire.command("HELLO");wire.path("/selected");
+  disconnectDuringOpen=true;count=closes;wire.command("GET 7");disconnectDuringOpen=false;
+  assert(!endpoint.exitSafe()&&closes==count);endpoint.checkpoint();
+  assert(endpoint.exitSafe()&&closes==count+1);endpoint.disconnect();assert(endpoint.exitSafe());
   wire.seq=0;wire.command("HELLO");wire.feed("RTEF1 ");assert(endpoint.pending());now+=RiscSerial::Files::TimeoutMs;endpoint.checkpoint();assert(endpoint.exitSafe());wire.seq=0;wire.command("HELLO");wire.path("/selected");wire.command("PUT 7 replace 8");wire.command("WRITE 0 6162");count=closes;now+=RiscSerial::Files::TimeoutMs;endpoint.checkpoint();assert(closes==count+1&&endpoint.exitSafe());assert(readFile(root+"/selected")=="ab");safe=false;assert(endpoint.shutdown());safe=true;
  }else{
   wire.path("/selected");wire.command("PUT 7 create 4");
