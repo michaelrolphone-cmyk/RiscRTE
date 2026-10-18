@@ -25,6 +25,8 @@ on:
       - 'test/*serial_waveshare*'
       - 'test/*serial_x4*'
       - 'test/*serial_lifetime*'
+      - 'test/*serial_launch*'
+      - 'test/*settings_launch*'
       - 'test/native_serial_post_return_client_test.py'
       - 'test/drivers/provider_keep_set*'
       - 'test/run_provider_keep_set_test.sh'
@@ -114,6 +116,22 @@ jobs:
         run: bash test/run_runtime_checkpoint_api_test.sh
       - name: Explicit X4 and legacy product startup storage binding
         run: TMPDIR="$RUNNER_TEMP" python3 test/run_native_serial_product_storage_test.py
+      - name: Native launch admission preserves admitted serial sessions
+        run: python3 test/run_native_serial_launch_test.py --output "$RUNNER_TEMP/serial-launch"
+      - name: Actual native Settings activity also refuses launch without a serial session
+        run: python3 test/run_native_settings_launch_test.py --output "$RUNNER_TEMP/settings-launch"
+      - name: Preserve launch admission qualification receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: serial-launch-${{ matrix.sanitize }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/serial-launch/*.json
+            ${{ runner.temp }}/serial-launch/*.log
+            ${{ runner.temp }}/settings-launch/*.json
+            ${{ runner.temp }}/settings-launch/*.log
+          if-no-files-found: warn
+          retention-days: 30
       - name: Permanent native provider graph custody and wire integration
         run: bash test/run_serial_native_provider_test.sh
       - name: Explicit private storage on actual pinned LittleFS and fenced mount

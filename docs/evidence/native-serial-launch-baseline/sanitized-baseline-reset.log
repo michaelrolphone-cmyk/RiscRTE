@@ -1,0 +1,3 @@
+BASELINE drained PATH session active; request_launch accepted; queued checkpoint cannot dispatch
+BASELINE accepted launch ran child; shutdown=1; previous SID/PATH lost; next STAT=RTEF1 12345678 4 -10
+Native Runtime launch boundary baseline-reset PASS
