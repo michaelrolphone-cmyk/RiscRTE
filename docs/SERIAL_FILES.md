@@ -150,6 +150,66 @@ Partial frames, queued replies and open transfers have a 30-second idle budget;
 RAM-only cancellation works even when a provider is temporarily unavailable.
 Neither scheduling nor these checks establish hardware timing/durability.
 
+## Native launch admission
+
+When the compiled-in native port supplies `sleepServicesReady`, an ordinary
+`request_launch` now checks that live RAM-only predicate immediately before
+committing its queued path. The production predicate includes
+`NativeSerialFiles::exitSafe()` and, when selected,
+`NativeSettingsLifecycle::exitSafe()`. An admitted session, partial/queued frame,
+undrained response or live transfer therefore refuses the launch with `false`.
+No deferred launch is queued, and the application can keep servicing the same
+session at its settled checkpoints. A fresh request can succeed after checked
+disconnect/expiry. Native Settings activity can also temporarily refuse a
+launch even when no serial session exists; this is an intentional compatibility
+effect of reusing the existing native-service readiness barrier.
+
+The final check is required even when the caller's earlier checkpoint reported
+OK: new input can arrive before launch commitment. Checking after `queued_` is
+written is too late, because that state makes `service_checkpoint` defer before
+serial dispatch. Healthy activity is not terminal retention.
+
+This change does not remove `runOne`'s serial shutdown. Natural app return still
+resets the session and closes known handles before teardown; a failed close
+still retains the app and provider custody. Feature-off builds and ports with
+no readiness hook retain the prior launch behavior. HELLO/NS control admission
+and unavailable namespaces are unchanged. This gate covers `request_launch`,
+not every lifecycle transition: a first HELLO arriving after a launch has already
+committed can still be discarded by shutdown. It does not establish uninterrupted
+serial service across arbitrary app transitions or qualify physical USB timing.
+
+The [baseline receipts](evidence/native-serial-launch-baseline/receipt.json)
+pin released Runtime `7bcac96868bf37c33022e0d1f00997e91f187b02` plus the
+regression-first test commit `522c1ce`. Normal and ASan/UBSan runs observed a
+successful drained PATH session, accepted launch, a blocked queued checkpoint,
+and child entry after serial reset; the next same-SID STAT returned protocol
+error -10. The refusal assertion then failed on that baseline.
+
+```sh
+python3 test/run_native_serial_launch_test.py --output /tmp/serial-launch-normal
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 test/run_native_serial_launch_test.py \
+  --output /tmp/serial-launch-sanitized
+python3 test/run_native_settings_launch_test.py --output /tmp/settings-launch-normal
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 python3 test/run_native_settings_launch_test.py \
+  --output /tmp/settings-launch-sanitized
+```
+
+The host suite runs production Runtime, NativeSerialFiles and Files with a
+synthetic generic-file backend. It checks PATH/reply gaps, partial requests and
+replies, late input, repeated refusals without queueing, complete read/write
+continuation, absent SD with independent namespaces, clean disconnect/expiry,
+null-hook and no-session controls, and natural-return failed-close retention.
+The Settings-busy case in this suite models the native readiness callback.
+The companion `native_settings_launch` test executes the actual Lifecycle,
+Runtime last-atomic-release checkpoint, coordinators, checked stores and CpuPort,
+with a bounded modeled maintenance client and scheduler/NVS boundaries. With no
+serial frames, real continuing Settings activity refuses launch without starving
+checkpoint dispatch; completion permits a child and fresh default. A guard-removed
+control reproduces the previous acceptance. This is not concrete SD maintenance
+or target-worker/hardware qualification. Receipts record all input hashes,
+commands, case results and sanitizer settings. Leak detection is excluded when
+`detect_leaks=0` is selected.
+
 ## Native workspace placement
 
 Native profiles with `CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY` reserve the

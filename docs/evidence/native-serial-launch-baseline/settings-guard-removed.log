@@ -1,0 +1,2 @@
+GUARD actual_settings_continuing=1 serial_exit_safe=1 attempt=0 accepted=1
+test: /workspace/shared/x4-runtime-launch-guard/runtime/test/native_settings_launch_test.cpp:94: void test_atomic_app(unsigned int, unsigned int): Assertion `!accepted&&runtime->active()&&!runtime->retained()&&readyChecks==checks+1' failed.

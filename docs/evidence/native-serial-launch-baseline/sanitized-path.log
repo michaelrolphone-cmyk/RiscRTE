@@ -1,0 +1,2 @@
+GUARD mode=path attempt=0 accepted=1 session_exit_safe=0
+test: /workspace/shared/x4-runtime-launch-guard/runtime/test/native_serial_launch_test.cpp:46: void refused(): Assertion `!accepted' failed.

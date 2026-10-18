@@ -1423,6 +1423,12 @@ bool Runtime::launch(const char* relative) {
   if(promotionRunning_ || graph_.lifecycleBusy() || !active() || metadataCloseRetained() || !appDataExitSafe() || (invocation_->installedFiles_ && invocation_->installedFiles_->retained()) || invocation_->queued_[0] || appDataBusy() || !relative || !elfPath(relative) || (port_.appExitSafe && !port_.appExitSafe())) return false;
   char selected[sizeof(invocation_->queued_)]{};
   const bool ok=installedLaunchPath(relative,selected,sizeof(selected));
+#if RISC_NATIVE_SERIAL_FILES
+  // Check fresh native session/Settings custody before committing the handoff.
+  // Once queued_, serviceCheckpoint defers without dispatch; runOne must still
+  // reset serial custody before teardown. Busy therefore refuses, never queues.
+  if(ok && port_.sleepServicesReady && !port_.sleepServicesReady())return false;
+#endif
   if(ok)std::strcpy(invocation_->queued_,selected);
   RISC_STAGE_LOG("app launch-request file=%s result=%s",relative,ok?"accepted":"invalid-path");
   if(ok)RiscPerf::emit(20);

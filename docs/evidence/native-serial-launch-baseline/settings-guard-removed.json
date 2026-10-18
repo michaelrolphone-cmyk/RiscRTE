@@ -1,0 +1,16 @@
+{
+  "revision": "522c1ce9b2e03673e730941c0af06deda2d67a3f",
+  "baseline": true,
+  "sanitized": false,
+  "returncode": -6,
+  "passed": true,
+  "immutable_inputs_verified": true,
+  "limits": "Host production Runtime, NativeSettingsLifecycle, NativeSerialFiles, CpuPort, Settings coordinators and checked AppData/NVS stores. Scheduler/NVS/internal-memory placement are modeled. The admitted maintenance client is deterministic Pending/Idle, not the concrete SD maintenance backend. Native serial is prepared but has no session or input frames. No target instructions, physical timing, USB, SD, or device qualification. Permanent native clients exit without artificial unregister; leak detection settings are recorded.",
+  "control_kind": "Output-local Runtime.cpp copy, removing only the new launch-readiness predicate; source checkout unchanged",
+  "source_hashes": {
+    "src/bootstrap/Runtime.cpp": "dfe11833a792e2132749c67147a0837348c7eb5ca1dd198cdc9f46b9f5de126c",
+    "src/ports/esp32s3/NativeSettingsLifecycle.cpp": "f653c340d00b274f49fdca0254b217517ef120228c7d81aa1c9eb8356dd12732",
+    "test/native_settings_launch_test.cpp": "4d418707155b18bc30360e6117d59361935f51493ed007e5e0de0bc8b4fdda33",
+    "test/run_native_settings_launch_test.py": "a320ac7713c4cbe48b6c36c14bdb994fb3bd7afea713611c3d0ce618d026a9af"
+  }
+}

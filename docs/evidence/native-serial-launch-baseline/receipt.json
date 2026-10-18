@@ -1,0 +1,72 @@
+[
+  {
+    "revision": "7bcac96868bf37c33022e0d1f00997e91f187b02",
+    "baseline": true,
+    "sanitized": false,
+    "sanitizer_environment": {
+      "ASAN_OPTIONS": null,
+      "UBSAN_OPTIONS": null,
+      "LSAN_OPTIONS": null
+    },
+    "results": [
+      {
+        "case": "baseline-reset",
+        "returncode": 0,
+        "expected_regression_failure": false,
+        "passed": true
+      },
+      {
+        "case": "path",
+        "returncode": -6,
+        "expected_regression_failure": true,
+        "passed": true
+      }
+    ],
+    "immutable_inputs_verified": true,
+    "limits": "Host production Runtime/runOne and NativeSerialFiles/Files with synthetic generic storage. Settings-busy models the documented native readiness hook. No target instruction, physical timing, USB or SD qualification; leak detection may be disabled as recorded.",
+    "test_first_commit": "522c1ce",
+    "source_hashes": {
+      "src/bootstrap/Runtime.cpp": "f154439976527da7c5c86655685a6fd0ad629fa56796b85fe27b2e7f8af3a9d3",
+      "src/bootstrap/Runtime.h": "cd836be9656d350095440b3ec813d47e90ba9f08c2d374dd19d13e0e26a545fe",
+      "src/runtime/serial/Files.cpp": "58710f76e46b15867a4b6fe62854f39fe8a86389794d4a90614add969af2ff2a",
+      "src/ports/esp32s3/NativeSerialFiles.cpp": "d8f676d94c2c566872073abf7fcdc051deac310cc9cb03bc35ad79dad1ef5d52",
+      "test/native_serial_launch_test.cpp": "49ca8915114f7e3bd7e674f910d64fd89bd648f86aebaad7e30259338cd65c0d",
+      "test/run_native_serial_launch_test.py": "f0934ed7f94679e67f6d9d46db8231135c422260720a6f2c194b963c22c1c065"
+    }
+  },
+  {
+    "revision": "7bcac96868bf37c33022e0d1f00997e91f187b02",
+    "baseline": true,
+    "sanitized": true,
+    "sanitizer_environment": {
+      "ASAN_OPTIONS": "detect_leaks=0",
+      "UBSAN_OPTIONS": null,
+      "LSAN_OPTIONS": null
+    },
+    "results": [
+      {
+        "case": "baseline-reset",
+        "returncode": 0,
+        "expected_regression_failure": false,
+        "passed": true
+      },
+      {
+        "case": "path",
+        "returncode": -6,
+        "expected_regression_failure": true,
+        "passed": true
+      }
+    ],
+    "immutable_inputs_verified": true,
+    "limits": "Host production Runtime/runOne and NativeSerialFiles/Files with synthetic generic storage. Settings-busy models the documented native readiness hook. No target instruction, physical timing, USB or SD qualification; leak detection may be disabled as recorded.",
+    "test_first_commit": "522c1ce",
+    "source_hashes": {
+      "src/bootstrap/Runtime.cpp": "f154439976527da7c5c86655685a6fd0ad629fa56796b85fe27b2e7f8af3a9d3",
+      "src/bootstrap/Runtime.h": "cd836be9656d350095440b3ec813d47e90ba9f08c2d374dd19d13e0e26a545fe",
+      "src/runtime/serial/Files.cpp": "58710f76e46b15867a4b6fe62854f39fe8a86389794d4a90614add969af2ff2a",
+      "src/ports/esp32s3/NativeSerialFiles.cpp": "d8f676d94c2c566872073abf7fcdc051deac310cc9cb03bc35ad79dad1ef5d52",
+      "test/native_serial_launch_test.cpp": "49ca8915114f7e3bd7e674f910d64fd89bd648f86aebaad7e30259338cd65c0d",
+      "test/run_native_serial_launch_test.py": "f0934ed7f94679e67f6d9d46db8231135c422260720a6f2c194b963c22c1c065"
+    }
+  }
+]

@@ -128,7 +128,8 @@ struct Port {
   // provider acquisition, app yield, ISR, or inside a provider callback.
   bool (*serialFilesCheckpoint)()=nullptr;
   bool (*serialFilesShutdown)()=nullptr;
-  // Read-only native-service admission, no dispatch or hardware changes.
+  // Read-only native-service admission for sleep and launch commitment.
+  // No dispatch or hardware changes; false is temporary Busy, not retention.
   bool (*sleepServicesReady)()=nullptr;
   // Temporary native custody may permit UI continuation without permitting
   // another storage operation. False defers dispatch without revoking authority.
