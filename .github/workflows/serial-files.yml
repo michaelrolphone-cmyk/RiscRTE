@@ -7,6 +7,8 @@ on:
       - 'src/runtime/serial/**'
       - 'src/runtime/drivers/ProviderGraphV2.*'
       - 'src/diagnostics/Journal.h'
+      - 'src/diagnostics/LiveLogQueue.h'
+      - 'test/*native_log_retention*'
       - 'test/*diagnostic_checkpoint*'
       - 'src/runtime/storage/**'
       - 'src/bootstrap/**'
@@ -160,6 +162,11 @@ jobs:
       - name: Verify the exact SDK source
         shell: bash
         run: test "$(git -C "$IDF_PATH" rev-parse HEAD)" = fff9895c82d744c7237be8847347bdd1b07c6643
+      - name: Bounded native log retention and RX priority under TX pressure
+        shell: bash
+        run: |
+          EXTERNAL=0 bash test/run_native_log_retention_test.sh
+          EXTERNAL=1 bash test/run_native_log_retention_test.sh
       - name: Actual Console, diagnostics, native admission and CPU barriers
         shell: bash
         run: bash test/run_native_serial_files_transport_test.sh

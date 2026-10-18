@@ -110,12 +110,17 @@ extern const uint32_t diagnostic_workspace_sizes[] = {
             if diagnostics:
                 journal = named('journal')
                 assert journal['st_size'] == 1288 and elf.get_section(journal['st_shndx']).name.startswith('.rtc_noinit.')
+            live_logs = [s for s in objects if s.name.endswith('14liveLogStorageE')]
+            if live_logs:
+                assert len(live_logs) == 1 and live_logs[0]['st_size'] == 32784
+                assert elf.get_section(live_logs[0]['st_shndx']).name.startswith('.ext_ram.bss.')
             imports = {s.name for s in symbols if s['st_shndx'] == 'SHN_UNDEF'}
             assert not any('heap_caps_' in name or name in ('malloc', 'calloc', 'realloc', 'free', '_Znwj', '_Znaj') for name in imports)
             assert not any(section.name.startswith('.init_array') and section['sh_size'] for section in elf.iter_sections())
             report['objects'][obj.name] = {'workspace_bytes': sizes[0], 'alignment': sizes[1],
                 'sleep_replay_bytes': sizes[2], 'checkpoint_bytes': sizes[3], 'performance_replay_bytes': sizes[4],
-                'internal_controls': controls, 'allocator_imports': False, 'global_constructor': False}
+                'internal_controls': controls, 'allocator_imports': False, 'global_constructor': False,
+                'live_log_queue_bytes': live_logs[0]['st_size'] if live_logs else 0}
     disabled_boot = out / 'disable-psram-boot.h'
     disabled_boot.write_text('#include <sdkconfig.h>\n#undef CONFIG_SPIRAM_BOOT_INIT\n#define CONFIG_SPIRAM_BOOT_INIT 0\n')
     invalid = list(command) + ['-URISC_SLEEP_DIAGNOSTICS', '-DRISC_SLEEP_DIAGNOSTICS=1',

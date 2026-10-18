@@ -1,0 +1,11 @@
+long-line expected=513 actual=513
+PASS long-line wire=513 polls=1000 writes=9 zero=0
+full-tx ingress remaining=0 hello_commits=1
+PASS full-tx-ingress wire=8248 polls=1001 writes=67 zero=1
+PASS partial-priority wire=246 polls=1002 writes=15 zero=0
+PASS disconnected-burst wire=19690 polls=2010 writes=450 zero=0
+PASS reconnect-partial wire=261 polls=1013 writes=18 zero=0
+PASS queue-wrap wire=98890 polls=5000 writes=2003 zero=0
+PASS foreign-owner wire=0 polls=10 writes=0 zero=0
+PASS recovery-retention wire=32 polls=1000 writes=2 zero=0
+PASS overflow wire=32831 polls=2001 writes=514 zero=0

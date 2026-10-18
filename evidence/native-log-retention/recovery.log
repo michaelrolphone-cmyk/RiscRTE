@@ -1,0 +1,6 @@
+Native IDF6 USB diagnostics: actual Console/driver declarations, atomic RCC, physical 20ms detach, same-core/foreign-owner safety, retained faults and lease fences PASS
+Native IDF6 USB diagnostics: actual Console/driver declarations, atomic RCC, physical 20ms detach, same-core/foreign-owner safety, retained faults and lease fences PASS
+/workspace/shared/native-log-retention-20261018/src/ports/esp32s3/SleepDiagnostics.cpp:280:6: error: ‘bool RiscDiagnostics::{anonymous}::finishLine()’ defined but not used [-Werror=unused-function]
+  280 | bool finishLine(){
+      |      ^~~~~~~~~~
+cc1plus: all warnings being treated as errors
