@@ -95,7 +95,8 @@ jobs:
         run: |
           set -euo pipefail
           . "$IDF_PATH/export.sh"
-          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/stat-native" -D "RISC_SOURCE_SHA=$SOURCE_SHA" -j 1 build
+          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/stat-native" -D "RISC_SOURCE_SHA=$SOURCE_SHA" reconfigure
+          cmake --build "$RUNNER_TEMP/stat-native" -- -j1
       - name: Compile exact feature-on/off native and product selections
         shell: bash
         run: |
