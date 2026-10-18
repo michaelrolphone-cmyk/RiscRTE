@@ -1,0 +1,123 @@
+name: Accepted STAT observation qualification
+on:
+  pull_request:
+    paths:
+      - 'src/bootstrap/**'
+      - 'src/diagnostics/**'
+      - 'src/runtime/serial/**'
+      - 'src/ports/esp32s3/NativeSerialFiles.*'
+      - 'src/ports/esp32s3/SleepDiagnostics.*'
+      - 'src/main.cpp'
+      - 'test/*stat_observation*'
+      - '.github/workflows/stat-observation.yml'
+      - 'docs/stat-observation-evidence/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host-stat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0:detect_stack_use_after_return=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE
+          ref: 584067ddeb6e3170be25261a99c2c1e7912090ee
+          path: .qualification/baseline
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06
+          ref: e1b2fc8b801b33e3bd6ea30626a8dda9bf2237a6
+          path: .qualification/provider
+          persist-credentials: false
+      - name: Verify SDK and ten real-provider baseline/off/on cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C "$IDF_PATH" rev-parse HEAD)" = fff9895c82d744c7237be8847347bdd1b07c6643
+          mkdir -p .qualification/receipts
+          args=()
+          if [[ "$SANITIZE" == 1 ]]; then args+=(--sanitize); fi
+          python3 test/run_stat_observation_provider_test.py \
+            --provider .qualification/provider --baseline .qualification/baseline \
+            --output .qualification/receipts/provider "${args[@]}" 2>&1 | tee .qualification/receipts/provider.log
+      - name: Qualify owned capture, diagnostic snapshot and native transport
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in run_stat_observation_unit_test.sh run_stat_observation_native_test.sh \
+            run_serial_files_test.sh run_storage_files_adapter_test.sh \
+            run_diagnostic_checkpoint_test.sh run_diagnostic_journal_test.sh \
+            run_native_diagnostic_workspace_test.sh run_native_serial_files_transport_test.sh; do
+            bash "test/$test" 2>&1 | tee ".qualification/receipts/$test.log"
+          done
+      - name: Preserve exact-source host qualification receipts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stat-host-${{ matrix.sanitize }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: .qualification/receipts
+          if-no-files-found: error
+  native-target:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE
+          ref: 584067ddeb6e3170be25261a99c2c1e7912090ee
+          path: .qualification/baseline
+          persist-credentials: false
+      - name: Build exact generic native Runtime serially
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          idf.py -C "$PWD/idf" -B "$RUNNER_TEMP/stat-native" -D "RISC_SOURCE_SHA=$SOURCE_SHA" -j 1 build
+      - name: Compile exact feature-on/off native and product selections
+        shell: bash
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          mkdir -p .qualification/target
+          for label in baseline candidate; do
+            root="$PWD"
+            if [[ "$label" == baseline ]]; then root="$PWD/.qualification/baseline"; fi
+            python3 "$root/test/compile_native_serial_files_target.py" \
+              "$RUNNER_TEMP/stat-native/compile_commands.json" ".qualification/target/$label" \
+              2>&1 | tee ".qualification/target/$label.log"
+            xtensa-esp32s3-elf-size -A .qualification/target/"$label"/*.o > ".qualification/target/$label-sections.txt"
+            xtensa-esp32s3-elf-nm -S -C --size-sort .qualification/target/"$label"/*.o > ".qualification/target/$label-symbols.txt"
+          done
+          cp "$RUNNER_TEMP/stat-native/riscrte_native.map" .qualification/target/
+          cp "$RUNNER_TEMP/stat-native/riscrte_native.elf" .qualification/target/
+          cp "$RUNNER_TEMP/stat-native/project_description.json" .qualification/target/
+      - name: Preserve target objects, commands, generic linked map and ELF
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stat-native-${{ github.event.pull_request.head.sha || github.sha }}
+          path: .qualification/target
+          if-no-files-found: warn
