@@ -1,0 +1,15 @@
+POST_RETURN HELLO => RTEF1 87654321 1 0 HELLO 48 511 1
+POST_RETURN NS 0 => RTEF1 87654321 2 0 NS 12 1 53442063617264
+POST_RETURN NS 1 => RTEF1 87654321 3 1
+POST_RETURN PATH 0 2f756e72656c617465642e747874 => RTEF1 87654321 4 0 PATH 14
+POST_RETURN STAT 12 => RTEF1 87654321 5 -3 STAT 0 0
+POST_RETURN readiness=1 bound=0 starts=1 stops=1
+test: /workspace/shared/serial-lifetime-evidence/baseline-source/test/native_serial_waveshare_sd_test.cpp:193: int main(int, char**): Assertion `stat.find(" 0 STAT ")!=std::string::npos' failed.
+Traceback (most recent call last):
+  File "/workspace/shared/serial-lifetime-evidence/baseline-source/test/run_native_serial_waveshare_sd_test.py", line 111, in <module>
+    run([build/'test', build, case])
+  File "/workspace/shared/serial-lifetime-evidence/baseline-source/test/run_native_serial_waveshare_sd_test.py", line 83, in run
+    subprocess.run(cmd, check=True, timeout=180)
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/workspace/shared/serial-lifetime-evidence/baseline-final/test', '/workspace/shared/serial-lifetime-evidence/baseline-final', 'post-return']' died with <Signals.SIGABRT: 6>.

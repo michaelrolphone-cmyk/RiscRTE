@@ -97,6 +97,7 @@ extern "C" void test_atomic_app(unsigned hook,unsigned){
     assert(!runtime->bindNativeFiles("sdmmc-fatfs",12,S::sdFiles(),owner,safe));
     command("HELLO");assert(command("NS 0").find(" NS 12 1 53442063617264\n")!=std::string::npos);
     path("/Books/selected.bin");
+    if(mode=="post-return")return;
     if(mode=="cold"){
         command("GET 12",RISC_FILES_UNAVAILABLE);assert(counter(0)==0&&!counter(6));return;
     }
@@ -172,6 +173,24 @@ int main(int argc,char**argv){
         assert(S::sdFiles().retained()&&counter(3)==1&&counter(5)==0&&counter(8)&&counter(9));
         const auto before=counter(0);uint32_t h=99;assert(S::sdFiles().open("/unrelated.txt",RISC_FILES_READ,&h)==RISC_FILES_RETAINED&&!h);
         assert(counter(0)==before);std::printf("Waveshare async SD serial %s: terminal custody pinned PASS\n",mode.c_str());std::fflush(stdout);_exit(0);
+    }
+    if(mode=="post-return"){
+        // Exact original main.cpp post-return predicate and loop dispatch.
+        const bool serialRuntimeSafe=!runtime->retained()&&!runtime->metadataCloseRetained();
+        assert(serialRuntimeSafe);
+        auto after=[&](const std::string& body){
+            const std::string line="RTEF1 87654321 "+std::to_string(++sequence)+" "+body+"\n";
+            for(unsigned char b:line)N::input(b);
+            if(serialRuntimeSafe)N::checkpoint();
+            auto out=drain();std::printf("POST_RETURN %s => %s",body.c_str(),out.c_str());std::fflush(stdout);return out;
+        };
+        sequence=0;assert(after("HELLO").find(" 0 HELLO ")!=std::string::npos);
+        assert(after("NS 0").find(" 0 NS 12 ")!=std::string::npos);
+        assert(after("NS 1").find(" 1\n")!=std::string::npos);
+        assert(after("PATH 0 "+hex("/unrelated.txt")).find(" 0 PATH ")!=std::string::npos);
+        const auto stat=after("STAT 12");
+        std::printf("POST_RETURN readiness=%d bound=%d starts=%u stops=%u\n",serialRuntimeSafe,S::sdFiles().bound(),counter(3),counter(5));std::fflush(stdout);
+        assert(stat.find(" 0 STAT ")!=std::string::npos);
     }
     assert(!S::sdFiles().bound()&&S::sdFiles().exitSafe()&&counter(3)==1&&counter(4)==1&&counter(5)==1);
     for(unsigned i=6;i<=11;++i)assert(!counter(i));

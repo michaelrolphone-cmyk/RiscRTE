@@ -14,10 +14,11 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-PIN = '51242f0bb9e20b5298b3a213a977fc3a18384f4a'
+PIN = 'e1b2fc8b801b33e3bd6ea30626a8dda9bf2237a6'
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--waveshare', type=Path, default=os.environ.get('WAVESHARE_SOURCE'))
 p.add_argument('--output', type=Path)
+p.add_argument('--case', action='append', help='Run only these named cases')
 p.add_argument('--sanitize', choices=('none', 'undefined', 'address,undefined'),
                default='address,undefined' if os.environ.get('SANITIZE') == '1' else 'none')
 a = p.parse_args()
@@ -55,7 +56,7 @@ for base in (ROOT/'test/fixtures/watch/sdk/driver', a.waveshare/'include', ROOT/
         (sdk/source.name).write_bytes(raw)
         headers[source.name] = dict(source=str(source), sha256=hashlib.sha256(raw).hexdigest())
 manifest = json.loads((a.waveshare/'drivers/storage_sdmmc/manifest-async.json').read_text())
-assert manifest['id'] == 'sdmmc-fatfs' and manifest['version'] == '0.2.1'
+assert manifest['id'] == 'sdmmc-fatfs' and manifest['version'] == '0.2.2'
 assert any(x['capability'] == 'platform.storage-worker' for x in manifest['requires'])
 shutil.copyfile(a.waveshare/'drivers/storage_sdmmc/manifest-async.json', build/'sd.json')
 board = json.loads((a.waveshare/'hardware/board.json').read_text())
@@ -104,6 +105,8 @@ run([cxx, '-std=c++17', *flags, *includes, '-DRISC_NATIVE_SERIAL_FILES=1', '-DRI
      '-DRISC_NATIVE_ESP_IDF=1', '-rdynamic', '-no-pie', '-pthread',
      *[ROOT/x for x in local_names], '-ldl', '-o', build/'test'])
 cases = ('cold', 'absent-card', 'healthy', 'disconnect', 'failed-close', 'failed-write', 'failed-release', 'failed-prepare')
+cases = tuple(a.case or cases)
+(build/'baseline-inputs.json').write_text(json.dumps(dict(product_revision=PIN, external_sources=external, runtime_sources=local_records, commands=commands, sanitizers=a.sanitize),indent=2)+'\n')
 for case in cases:
     run([build/'test', build, case])
 for item in external:
@@ -111,7 +114,7 @@ for item in external:
 for name, expected in local_records.items():
     if hashlib.sha256((ROOT/name).read_bytes()).hexdigest() != expected:
         raise SystemExit('Runtime input changed during build; rerun in a fresh directory: '+name)
-limits = ('Host source qualification only. Exact asynchronous sdmmc-fatfs 0.2.1, actual Runtime graph/native admission and serial protocol; '
+limits = ('Host source qualification only. Exact asynchronous sdmmc-fatfs 0.2.2, actual Runtime graph/native admission and serial protocol; '
           'RAM card, GPIO/sync/storage-worker mocks and host ELF loading. Cold async activation stays UNAVAILABLE without explicit preparation; '
           'selected transfers use actual Runtime prepareVolume=true before app activation. '
           'No real CpuPort, native worker task, physical SD, USB serial or device qualification.')
