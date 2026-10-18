@@ -121,8 +121,14 @@ orig=orig[:start]+custom+orig[end:]
 orig=orig.replace('const bool result=runtime->run();',r'''const bool result=runtime->run();
     if(mode=="abandoned"){
         assert(!result&&runtime->retained()&&runtime->sleepToken_&&NS::closed());
-        assert(counter(3)==1&&counter(5)==0);uint32_t file=99;
-        assert(S::sdFiles().open("/unrelated.txt",RISC_FILES_READ,&file)==RISC_FILES_BUSY&&!file);
+        assert(counter(3)==1&&counter(5)==0&&S::sdFiles().bound()&&S::sdFiles().retained());
+        assert(runtime->nativeFiles_[0].grant.slot&&runtime->nativeFiles_[0].sleepFrozen);
+        const unsigned operations=counter(0);uint32_t file=99;
+        // Returning with an abandoned transaction is terminal custody, not a
+        // reversible in-app sleep fence. The still-frozen grant stays pinned.
+        assert(S::sdFiles().open("/unrelated.txt",RISC_FILES_READ,&file)==RISC_FILES_RETAINED&&!file);
+        assert(!runtime->nativeFilesCheckpoint()&&!runtime->stopNativeFiles());
+        assert(counter(0)==operations&&counter(3)==1&&!counter(4)&&!counter(5));
         puts("Abandoned transaction retains invocation, graph and frozen native dispatch PASS");fflush(stdout);_exit(0);
     }''')
 (O/'serial_sd_deep_repro.cpp').write_text(orig)
@@ -149,8 +155,12 @@ def run(args):
  args=list(map(str,args));cmds.append(args);subprocess.run(args,check=True,env={**os.environ,'ASAN_OPTIONS':'detect_leaks=0','UBSAN_OPTIONS':'halt_on_error=1'})
 run(['cc','-std=c11',*flags,*incs,'-shared','-fPIC','-fvisibility=hidden',R/'test/fixtures/atomic_key_value_app.c','-o',O/'default.elf'])
 run(['cc','-std=c11',*flags,*incs,'-shared','-fPIC','-fvisibility=hidden','-DWAVE_SERIAL_TEST_SOURCE="'+str(P/'tests/test_storage_async.c')+'"',O/'serial_sd_deep_fixture.c',P/'lib/storage_fatfs/fatfs/ff.c',P/'lib/storage_fatfs/fatfs/ffunicode.c','-o',O/'driver.elf'])
-sources=['src/bootstrap/Json.cpp','src/bootstrap/Board.cpp','src/bootstrap/Runtime.cpp','src/runtime/streams/AppStreamSessions.cpp','src/runtime/streams/ProviderQueueHost.cpp','src/runtime/drivers/ProviderGraphV2.cpp','src/runtime/drivers/ProviderModuleV2.cpp','src/runtime/serial/Files.cpp','src/ports/esp32s3/NativeSerialFiles.cpp','src/ports/esp32s3/NativeSerialStorage.cpp','src/ports/esp32s3/CpuPort.cpp']
-run(['c++','-std=c++17',*flags,*incs,'-DRISC_NATIVE_SERIAL_FILES=1','-DRISC_NATIVE_SERIAL_SD=1','-DRISC_NATIVE_ESP_IDF=1','-DRISC_ENABLE_SDMMC=1','-DRISC_NATIVE_STORAGE_CUSTODY=1','-rdynamic','-no-pie','-pthread',*[R/x for x in sources],O/'serial_sd_deep_repro.cpp','-ldl','-o',O/'test'])
+sources=['src/bootstrap/Json.cpp','src/bootstrap/Board.cpp','src/bootstrap/Runtime.cpp','src/runtime/streams/AppStreamSessions.cpp','src/runtime/streams/ProviderQueueHost.cpp','src/runtime/drivers/ProviderGraphV2.cpp','src/runtime/drivers/ProviderModuleV2.cpp','src/runtime/serial/Files.cpp','src/ports/esp32s3/NativeSerialFiles.cpp','src/ports/esp32s3/CpuPort.cpp']
+# The shared serial fixture owns real independent private namespace 2. Reuse
+# its pinned LittleFS composition instead of supplying no-op lifecycle symbols.
+import compile_native_serial_littlefs
+lfs_objects,lfs_selection,lfs_link=compile_native_serial_littlefs.build(R,O/'littlefs-composition',run,'address,undefined' if options.sanitize else 'none')
+run(['c++','-std=c++17',*flags,*incs,*lfs_selection,'-DRISC_NATIVE_SERIAL_FILES=1','-DRISC_NATIVE_SERIAL_SD=1','-DRISC_NATIVE_ESP_IDF=1','-DRISC_ENABLE_SDMMC=1','-DRISC_NATIVE_STORAGE_CUSTODY=1','-rdynamic','-no-pie','-pthread',*[R/x for x in sources],O/'serial_sd_deep_repro.cpp',*lfs_objects,*lfs_link,'-ldl','-o',O/'test'])
 (O/'commands.json').write_text(json.dumps(cmds,indent=2))
 for mode in ('cold','absent-card','healthy','abandoned'):run([O/'test',O,mode])
-(O/'receipt.json').write_text(json.dumps({'hardware_tested':False,'sanitized':options.sanitize,'leak_detection':False,'modes':['cold','absent-card','healthy','abandoned'],'commands':cmds,'source_sha256':{str(f.relative_to(R)):hashlib.sha256(f.read_bytes()).hexdigest() for f in [*[R/x for x in sources],R/'src/bootstrap/RuntimeSleep.inc',Path(__file__)]}},indent=2)+'\n')
+(O/'receipt.json').write_text(json.dumps({'hardware_tested':False,'sanitized':options.sanitize,'leak_detection':False,'modes':['cold','absent-card','healthy','abandoned'],'commands':cmds,'generated_source_sha256':{str(f.relative_to(O)):hashlib.sha256(f.read_bytes()).hexdigest() for f in O.rglob('*') if f.is_file() and f.suffix in ('.c','.cpp','.h','.inc')},'source_sha256':{str(f.relative_to(R)):hashlib.sha256(f.read_bytes()).hexdigest() for f in [*[R/x for x in sources],R/'src/bootstrap/RuntimeSleep.inc',R/'test/native_serial_waveshare_sd_test.cpp',R/'test/compile_native_serial_littlefs.py',R/'test/native_serial_littlefs_composition.cpp',R/'src/ports/esp32s3/NativeSerialStorage.cpp',R/'src/ports/esp32s3/NativeAppDataMount.cpp',R/'src/runtime/storage/ReopenedFiles.cpp',Path(__file__)]}},indent=2)+'\n')

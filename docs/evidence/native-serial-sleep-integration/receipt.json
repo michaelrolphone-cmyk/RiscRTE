@@ -1,0 +1,23 @@
+{
+  "utc": "2026-10-18T06:10:14.310145+00:00",
+  "parent": "10cc80bc1ac65d0d2c25e5d182da9e2737721cb1",
+  "runner_sha256": "515cd1071dfd2f9c5a244fea4d57815e3b62e86b7ad373b241efa04d3b3349b0",
+  "normal_exit": 0,
+  "asan_ubsan_exit": 0,
+  "production_source_changed": false,
+  "files": {
+    "asan-ubsan-commands.json": "4c6a1875e360f8ef5d9399eea050c3246f0fa54f9135371eb9dd91f95fd61767",
+    "provider-inputs.json": "5ec017d08b84ba0a4cfd24059baa8851716efc2c20e9e9c328a89639fd5ed1a5",
+    "linked-stale-busy-failure.log": "b011b5074da5f3742143bc9221cd625ca2dd33a2d1cc5508375e76f1cf54a487",
+    "linked-stale-busy-runner.py.txt": "51007cfb8d0c2ca78d27723121972581865c0c9f5e18c5c06ae5e48f916b276f",
+    "README.md": "78a3fac9b523d012db471483009c0e5c58f9ee92458e9e18bf67ba4f40d30dfa",
+    "asan-ubsan.log": "cfcc89a18b82ac97fb936b133c49e571e25c1e1eaaea44c69f24b98211c361bf",
+    "baseline-link-failure.log": "570065744fd2d12b69a14eef118b5a11e0d0ef750313ba14564ff7a9e3400b81",
+    "baseline-runner.py.txt": "ff6acc5c19d480aff44d5f1f5c795a848224f81b304e7afa7e604d54cac06bcd",
+    "normal.log": "cfcc89a18b82ac97fb936b133c49e571e25c1e1eaaea44c69f24b98211c361bf",
+    "version-guard.log": "46b755ed2fc7c9799b7d4020b83885759ad0a9517fcb0c168279c28eca7e5c1e",
+    "asan-ubsan-receipt.json": "048ef21395ffb7e3b416a746842a5f387638c9239929a869d5ef41603a96053e",
+    "normal-commands.json": "4873a54c4a9f03e9713bdefd931052667c0f17cb9b4184d07f5aa81645302efb",
+    "normal-receipt.json": "12e788dda26bc50c0e90fcae2d31663ef3f24f37a90d53a8041040f127b6ed84"
+  }
+}

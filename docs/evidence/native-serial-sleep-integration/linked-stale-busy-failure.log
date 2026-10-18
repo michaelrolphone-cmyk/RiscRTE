@@ -1,0 +1,32 @@
+PIN esp_littlefs.c f26aa8bdc70c44e9676069a8d91e11921c770dceac989bbf63d9af73c95dcaeb
+PIN esp_littlefs.h f321f41845da8cc68f6c15a860311afe37a52ad57abb95949b820a92e9e8d9ad
+PIN littlefs_api.h cc806a02463db1516ed1a144189bc9267168b6cd79b543e95fb12099eeed18c2
+PIN littlefs_esp_part.c fe89617c72ab3d36ea833a58a8cb8e4208509dd32b4663f91d72ba02ea13e0ea
+PIN littlefs/lfs.c 0b9845f350c33aa448a916847d2246b76c8e296eed8e7e296ae0430242cfda6c
+PIN littlefs/lfs.h a8c8d70f0863fbbc46ce17c5dc7673b40f1b3c9e7e10f3bf33fd28f03dc67703
+PIN littlefs/lfs_util.c f2fbde533670560434bd9f5a547174cc7c5a4670a02c47b4bd85180dced8b2ec
+PIN littlefs/lfs_util.h 03e912a6e9894c9d10c61f5da22b89ebe0bb778af67972d7b67a5f160731bf72
+prepare mode=cold cycle=0 rc=0 token=2
+prepare mode=cold cycle=1 rc=0 token=3
+REPRO mode=cold provider_open=0 serial_exit_safe=1 native_idle=1 native_closed=1 native_custody_pin=0 deepReady=1 result=0 terminal=1
+Owner-safe mounted SD prepare/resume and terminal Deep PASS
+prepare mode=absent-card cycle=0 rc=0 token=2
+prepare mode=absent-card cycle=1 rc=0 token=3
+REPRO mode=absent-card provider_open=0 serial_exit_safe=1 native_idle=1 native_closed=1 native_custody_pin=0 deepReady=1 result=0 terminal=1
+Owner-safe mounted SD prepare/resume and terminal Deep PASS
+prepare mode=healthy cycle=0 rc=0 token=2
+prepare mode=healthy cycle=1 rc=0 token=3
+REPRO mode=healthy provider_open=0 serial_exit_safe=1 native_idle=1 native_closed=1 native_custody_pin=0 deepReady=1 result=0 terminal=1
+Owner-safe mounted SD prepare/resume and terminal Deep PASS
+test: /workspace/shared/serial-lifetime-evidence/sleep-ci/normal/serial_sd_deep_repro.cpp:245: int main(int, char**): Assertion `S::sdFiles().open("/unrelated.txt",RISC_FILES_READ,&file)==RISC_FILES_BUSY&&!file' failed.
+Verified ESP LittleFS 1.14.1 / LittleFS 2.9 pins; staged native ABI and mtime32 port
+Traceback (most recent call last):
+  File "/workspace/shared/serial-lifetime-20261018/test/native_sleep_transaction.py", line 159, in <module>
+    for mode in ('cold','absent-card','healthy','abandoned'):run([O/'test',O,mode])
+                                                             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/shared/serial-lifetime-20261018/test/native_sleep_transaction.py", line 149, in run
+    args=list(map(str,args));cmds.append(args);subprocess.run(args,check=True,env={**os.environ,'ASAN_OPTIONS':'detect_leaks=0','UBSAN_OPTIONS':'halt_on_error=1'})
+                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/workspace/shared/serial-lifetime-evidence/sleep-ci/normal/test', '/workspace/shared/serial-lifetime-evidence/sleep-ci/normal', 'abandoned']' died with <Signals.SIGABRT: 6>.
