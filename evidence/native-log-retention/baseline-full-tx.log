@@ -1,0 +1,2 @@
+full-tx ingress remaining=23 hello_commits=0
+test: /workspace/shared/native-log-retention-20261018/test/native_log_retention_test.cpp:92: int main(int, char**): Assertion `rx.empty() && controlObservations==1' failed.

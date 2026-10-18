@@ -1,0 +1,17 @@
+{
+  "runtime": "ab41321d47de991c832c2cb8aeea99e095686a3c",
+  "sdk": "fff9895c82d744c7237be8847347bdd1b07c6643",
+  "hardware": false,
+  "sdkIRQExecuted": false,
+  "result": "Both expected regression assertions fail with exit 134 before production edits. Long-line output 155/513 bytes. Full TX keeps 23 HELLO bytes unread and no session commitment.",
+  "inputs": {
+    "src/ports/esp32s3/NativePlatform.cpp": "c39688bbf0638ed857d274585099f71448312edd741502cb7e050e1ac853c540",
+    "src/ports/esp32s3/SleepDiagnostics.cpp": "6ae6160ac83ff5388431bf31265a3b66721c56bcd42c5c15861ddc51955a3ea2",
+    "src/ports/esp32s3/NativeSerialFiles.cpp": "d8f676d94c2c566872073abf7fcdc051deac310cc9cb03bc35ad79dad1ef5d52",
+    "src/runtime/serial/Files.cpp": "58710f76e46b15867a4b6fe62854f39fe8a86389794d4a90614add969af2ff2a",
+    "test/native_log_retention_test.cpp": "d9a49f0e76125bba754acd5f1b78834b13c34bf8ed8b45299de564346bb89097",
+    "test/run_native_log_retention_test.sh": "bd753539a0f3c5fed591a8c27c4f56063dc50cbfd8002b5ce8e9442cba67b5f3",
+    "evidence/native-log-retention/baseline-long-line.log": "ceeb8a78bbbb523badb39674073c2143b68a8b60e5f9545be888f205168a8336",
+    "evidence/native-log-retention/baseline-full-tx.log": "87ee2904137f40bf606183a8c2abb128de6ab312498800db3daad30f76f13393"
+  }
+}
