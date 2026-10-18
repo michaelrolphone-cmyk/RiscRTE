@@ -12,7 +12,8 @@
 namespace RiscCpu { namespace NativeSerialFiles {
 // Compiled-in admission, never an application capability or a discovered path.
 // Each selected RuntimeFiles session, provider table and dependency stays alive
-// until restart, including terminal RETAINED. Admission copies IDs, labels and
+// until explicit checked final stop or restart, including terminal RETAINED.
+// Session shutdown alone does not end this lifetime. Admission copies IDs, labels and
 // access flags; labels must never be interpreted as mount paths. These sessions
 // must be independent of invocation/metadata clients whose exit barriers demand
 // no open handles. No provider graph grant or backend is acquired here.
@@ -37,7 +38,10 @@ bool prepare(const Admission*,Check owner,Check platformSafe,ControlObserver obs
 bool checkpoint();
 // Owner-only metadata/control replies; never calls a provider or waits.
 bool controlCheckpoint();
+// Close handles and reset SID/PATH/replies. Prepared service stays admitted.
 bool shutdown();
+// Final endpoint teardown after a successful reset; no re-prepare/re-admission.
+bool stop();
 // Transport methods only copy/parser/TX state. They never call file providers.
 void input(uint8_t);
 void disconnect();
@@ -54,6 +58,7 @@ namespace RiscCpu { namespace NativeSerialFiles {
 inline bool checkpoint(){return true;}
 inline bool controlCheckpoint(){return true;}
 inline bool shutdown(){return true;}
+inline bool stop(){return true;}
 inline bool pending(){return false;}
 inline bool exitSafe(){return true;}
 inline bool custodySafe(){return true;}

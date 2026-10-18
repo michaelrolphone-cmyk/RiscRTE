@@ -1,0 +1,1017 @@
+baseline-types-expanded-0 0 
+baseline-types-expanded-0-nm 0 00000000 00000008 B measure_Grant
+00000000 00000028 B measure_Providers
+00000000 00000038 B measure_Grants
+00000000 00000084 B measure_Port
+00000000 0000c1c0 B measure_Graph
+00000000 00050f60 B measure_Runtime
+
+baseline-types-cohort-0 0 
+baseline-types-cohort-0-nm 0 00000000 00000008 B measure_Grant
+00000000 0000001c B measure_Providers
+00000000 0000002c B measure_Grants
+00000000 00000084 B measure_Port
+00000000 00008800 B measure_Graph
+00000000 00043cc0 B measure_Runtime
+
+baseline-types-installed-0 0 
+baseline-types-installed-0-nm 0 00000000 00000008 B measure_Grant
+00000000 0000001d B measure_Providers
+00000000 0000002d B measure_Grants
+00000000 00000084 B measure_Port
+00000000 00008cd0 B measure_Graph
+00000000 00044f38 B measure_Runtime
+
+baseline-types-legacy-0 0 
+baseline-types-legacy-0-nm 0 00000000 00000008 B measure_Grant
+00000000 00000011 B measure_Providers
+00000000 00000020 B measure_Grants
+00000000 00000084 B measure_Port
+00000000 00005308 B measure_Graph
+00000000 00037c58 B measure_Runtime
+
+baseline-types-expanded-1 0 
+baseline-types-expanded-1-nm 0 00000000 00000008 B measure_Grant
+00000000 00000019 B measure_BindingPrepareVolumeOffsetPlus1
+00000000 0000001d B measure_BindingSleepOffsetPlus1
+00000000 00000024 B measure_NativeFilesBinding
+00000000 00000028 B measure_Providers
+00000000 00000038 B measure_Grants
+00000000 00000098 B measure_Port
+00000000 00000240 B measure_NativeFilesBindings
+00000000 0000c1c0 B measure_Graph
+00000000 000511b8 B measure_Runtime
+
+baseline-types-cohort-1 0 
+baseline-types-cohort-1-nm 0 00000000 00000008 B measure_Grant
+00000000 00000019 B measure_BindingPrepareVolumeOffsetPlus1
+00000000 0000001c B measure_Providers
+00000000 0000001d B measure_BindingSleepOffsetPlus1
+00000000 00000024 B measure_NativeFilesBinding
+00000000 0000002c B measure_Grants
+00000000 00000098 B measure_Port
+00000000 00000240 B measure_NativeFilesBindings
+00000000 00008800 B measure_Graph
+00000000 00043f18 B measure_Runtime
+
+baseline-types-installed-1 0 
+baseline-types-installed-1-nm 0 00000000 00000008 B measure_Grant
+00000000 00000019 B measure_BindingPrepareVolumeOffsetPlus1
+00000000 0000001d B measure_BindingSleepOffsetPlus1
+00000000 0000001d B measure_Providers
+00000000 00000024 B measure_NativeFilesBinding
+00000000 0000002d B measure_Grants
+00000000 00000098 B measure_Port
+00000000 00000240 B measure_NativeFilesBindings
+00000000 00008cd0 B measure_Graph
+00000000 00045190 B measure_Runtime
+
+baseline-types-legacy-1 0 
+baseline-types-legacy-1-nm 0 00000000 00000008 B measure_Grant
+00000000 00000011 B measure_Providers
+00000000 00000019 B measure_BindingPrepareVolumeOffsetPlus1
+00000000 0000001d B measure_BindingSleepOffsetPlus1
+00000000 00000020 B measure_Grants
+00000000 00000024 B measure_NativeFilesBinding
+00000000 00000098 B measure_Port
+00000000 00000240 B measure_NativeFilesBindings
+00000000 00005308 B measure_Graph
+00000000 00037eb0 B measure_Runtime
+
+candidate-types-expanded-0 0 
+candidate-types-expanded-0-nm 0 00000000 00000008 B measure_Grant
+00000000 00000028 B measure_Providers
+00000000 00000038 B measure_Grants
+00000000 00000084 B measure_Port
+00000000 0000c1c0 B measure_Graph
+00000000 00050f60 B measure_Runtime
+
+candidate-types-cohort-0 0 
+candidate-types-cohort-0-nm 0 00000000 00000008 B measure_Grant
+00000000 0000001c B measure_Providers
+00000000 0000002c B measure_Grants
+00000000 00000084 B measure_Port
+00000000 00008800 B measure_Graph
+00000000 00043cc0 B measure_Runtime
+
+candidate-types-installed-0 0 
+candidate-types-installed-0-nm 0 00000000 00000008 B measure_Grant
+00000000 0000001d B measure_Providers
+00000000 0000002d B measure_Grants
+00000000 00000084 B measure_Port
+00000000 00008cd0 B measure_Graph
+00000000 00044f38 B measure_Runtime
+
+candidate-types-legacy-0 0 
+candidate-types-legacy-0-nm 0 00000000 00000008 B measure_Grant
+00000000 00000011 B measure_Providers
+00000000 00000020 B measure_Grants
+00000000 00000084 B measure_Port
+00000000 00005308 B measure_Graph
+00000000 00037c58 B measure_Runtime
+
+candidate-types-expanded-1 0 
+candidate-types-expanded-1-nm 0 measure_Grant
+00000000 00000019 B measure_BindingPrepareVolumeOffsetPlus1
+00000000 0000001a B measure_BindingLifetimeOffsetPlus1
+00000000 0000001d B measure_BindingSleepOffsetPlus1
+00000000 00000024 B measure_NativeFilesBinding
+00000000 00000028 B measure_Providers
+00000000 00000038 B measure_Grants
+00000000 00000099 B measure_PortStopOffsetPlus1
+00000000 0000009c B measure_Port
+00000000 00000240 B measure_NativeFilesBindings
+00000000 0000c1c0 B measure_Graph
+00000000 000511b8 B measure_Runtime
+
+candidate-types-cohort-1 0 
+candidate-types-cohort-1-nm 0 measure_Grant
+00000000 00000019 B measure_BindingPrepareVolumeOffsetPlus1
+00000000 0000001a B measure_BindingLifetimeOffsetPlus1
+00000000 0000001c B measure_Providers
+00000000 0000001d B measure_BindingSleepOffsetPlus1
+00000000 00000024 B measure_NativeFilesBinding
+00000000 0000002c B measure_Grants
+00000000 00000099 B measure_PortStopOffsetPlus1
+00000000 0000009c B measure_Port
+00000000 00000240 B measure_NativeFilesBindings
+00000000 00008800 B measure_Graph
+00000000 00043f18 B measure_Runtime
+
+candidate-types-installed-1 0 
+candidate-types-installed-1-nm 0 measure_Grant
+00000000 00000019 B measure_BindingPrepareVolumeOffsetPlus1
+00000000 0000001a B measure_BindingLifetimeOffsetPlus1
+00000000 0000001d B measure_BindingSleepOffsetPlus1
+00000000 0000001d B measure_Providers
+00000000 00000024 B measure_NativeFilesBinding
+00000000 0000002d B measure_Grants
+00000000 00000099 B measure_PortStopOffsetPlus1
+00000000 0000009c B measure_Port
+00000000 00000240 B measure_NativeFilesBindings
+00000000 00008cd0 B measure_Graph
+00000000 00045190 B measure_Runtime
+
+candidate-types-legacy-1 0 
+candidate-types-legacy-1-nm 0 measure_Grant
+00000000 00000011 B measure_Providers
+00000000 00000019 B measure_BindingPrepareVolumeOffsetPlus1
+00000000 0000001a B measure_BindingLifetimeOffsetPlus1
+00000000 0000001d B measure_BindingSleepOffsetPlus1
+00000000 00000020 B measure_Grants
+00000000 00000024 B measure_NativeFilesBinding
+00000000 00000099 B measure_PortStopOffsetPlus1
+00000000 0000009c B measure_Port
+00000000 00000240 B measure_NativeFilesBindings
+00000000 00005308 B measure_Graph
+00000000 00037eb0 B measure_Runtime
+
+baseline-native-types 0 
+baseline-native-types-nm 0 L__N_1L14sessionStorageE
+00000000 00000190 B measure_NativeSerialSessionWorkspace
+00000000 000001ea T _ZN7RiscCpu17NativeSerialFiles7prepareEPKNS0_9AdmissionEPFbvES5_PFvmmPKcmbEPFvmmylRKN8RiscBoot15StatObservationEE
+00000190 000002f8 d _ZN7RiscCpu19NativeSerialStorage12_GLOBAL__N_1L22privateProviderStorageE
+00000000 000002f8 B measure_NativeSerialPrivateProvider
+00000488 00000af0 d _ZN7RiscCpu17NativeSerialFiles12_GLOBAL__N_1L16workspaceStorageE
+00000000 00000af0 B measure_NativeSerialWorkspace
+
+candidate-native-types 0 
+candidate-native-types-nm 0 L__N_1L14sessionStorageE
+00000000 00000190 B measure_NativeSerialSessionWorkspace
+00000000 000001ea T _ZN7RiscCpu17NativeSerialFiles7prepareEPKNS0_9AdmissionEPFbvES5_PFvmmPKcmbEPFvmmylRKN8RiscBoot15StatObservationEE
+00000190 000002f8 d _ZN7RiscCpu19NativeSerialStorage12_GLOBAL__N_1L22privateProviderStorageE
+00000000 000002f8 B measure_NativeSerialPrivateProvider
+00000488 00000af0 d _ZN7RiscCpu17NativeSerialFiles12_GLOBAL__N_1L16workspaceStorageE
+00000000 00000af0 B measure_NativeSerialWorkspace
+
+candidate-graph-cohort 0 
+candidate-graph-cohort-disassembly 0 SA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0x9
+  6c:	88ba      	add.n	a8, a8, a11
+  6e:	1198c0        	slli	a9, a8, 4
+  71:	889a      	add.n	a8, a8, a9
+  73:	b02820        	addx8	a2, a8, a2
+  76:	bb2222        	l32i	a2, a2, 0x2ec
+  79:	ffe386        	j	b <RuntimeProviders::GraphV2::streamSessionsFor(RuntimeProviders::GrantV2, unsigned long long*) const+0xb>
+			79: R_XTENSA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0xb
+
+candidate-graph-installed 0 
+candidate-graph-installed-disassembly 0 SA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0x9
+  69:	88ba      	add.n	a8, a8, a11
+  6b:	1198c0        	slli	a9, a8, 4
+  6e:	889a      	add.n	a8, a8, a9
+  70:	b02820        	addx8	a2, a8, a2
+  73:	bb2222        	l32i	a2, a2, 0x2ec
+  76:	ffe446        	j	b <RuntimeProviders::GraphV2::streamSessionsFor(RuntimeProviders::GrantV2, unsigned long long*) const+0xb>
+			76: R_XTENSA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0xb
+
+candidate-graph-legacy 0 
+candidate-graph-legacy-disassembly 0 SA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0x9
+  6c:	88ba      	add.n	a8, a8, a11
+  6e:	1198c0        	slli	a9, a8, 4
+  71:	889a      	add.n	a8, a8, a9
+  73:	b02820        	addx8	a2, a8, a2
+  76:	bb2222        	l32i	a2, a2, 0x2ec
+  79:	ffe386        	j	b <RuntimeProviders::GraphV2::streamSessionsFor(RuntimeProviders::GrantV2, unsigned long long*) const+0xb>
+			79: R_XTENSA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0xb
+
+sdk-only-Runtime-0 1 d from /workspace/shared/serial-lifetime-20261018/src/bootstrap/InstalledFiles.h:3,
+                 from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.h:11,
+                 from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:3:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/MetadataArray.h:7:10: fatal error: esp_heap_caps.h: No such file or directory
+    7 | #include <esp_heap_caps.h>
+      |          ^~~~~~~~~~~~~~~~~
+compilation terminated.
+
+sdk-only-main-0 1 In file included from /workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativePlatform.h:6,
+                 from /workspace/shared/serial-lifetime-20261018/src/main.cpp:2:
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeTime.h:4:10: fatal error: esp_timer.h: No such file or directory
+    4 | #include <esp_timer.h>
+      |          ^~~~~~~~~~~~~
+compilation terminated.
+
+sdk-only-NativeSerialFiles-0 0 
+sdk-only-NativeSerialFiles-0-nm 0 
+sdk-only-NativeSerialFiles-0-objdump 0 	00000000 NativeSerialFiles.cpp
+00000000 l    d  .text	00000000 .text
+00000000 l    d  .data	00000000 .data
+00000000 l    d  .bss	00000000 .bss
+00000000 l    d  .debug_info	00000000 .debug_info
+00000000 l    d  .debug_abbrev	00000000 .debug_abbrev
+00000000 l    d  .debug_aranges	00000000 .debug_aranges
+00000000 l    d  .debug_line	00000000 .debug_line
+00000000 l    d  .debug_str	00000000 .debug_str
+00000000 l    d  .comment	00000000 .comment
+00000000 l    d  .xtensa.info	00000000 .xtensa.info
+
+
+
+sdk-only-NativeSerialFiles-0-disassembly 0 
+/workspace/shared/serial-lifetime-evidence/target/final/sdk-only-NativeSerialFiles-0.o:     file format elf32-xtensa-le
+
+
+sdk-only-NativeSerialStorage-0 0 
+sdk-only-NativeSerialStorage-0-nm 0 
+sdk-only-NativeSerialStorage-0-objdump 0 0000000 NativeSerialStorage.cpp
+00000000 l    d  .text	00000000 .text
+00000000 l    d  .data	00000000 .data
+00000000 l    d  .bss	00000000 .bss
+00000000 l    d  .debug_info	00000000 .debug_info
+00000000 l    d  .debug_abbrev	00000000 .debug_abbrev
+00000000 l    d  .debug_aranges	00000000 .debug_aranges
+00000000 l    d  .debug_line	00000000 .debug_line
+00000000 l    d  .debug_str	00000000 .debug_str
+00000000 l    d  .comment	00000000 .comment
+00000000 l    d  .xtensa.info	00000000 .xtensa.info
+
+
+
+sdk-only-NativeSerialStorage-0-disassembly 0 
+/workspace/shared/serial-lifetime-evidence/target/final/sdk-only-NativeSerialStorage-0.o:     file format elf32-xtensa-le
+
+
+sdk-only-ProviderGraphV2-0 1 1018/src/runtime/drivers/NativeProviderPolicyValidationV1.h:11,
+                 from /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderOwnedSpecV2.h:4,
+                 from /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:5:
+/workspace/shared/serial-lifetime-20261018/src/runtime/crypto/Sha256.h:5:10: fatal error: psa/crypto.h: No such file or directory
+    5 | #include <psa/crypto.h>
+      |          ^~~~~~~~~~~~~~
+compilation terminated.
+
+sdk-only-Runtime-1 1 d from /workspace/shared/serial-lifetime-20261018/src/bootstrap/InstalledFiles.h:3,
+                 from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.h:11,
+                 from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:3:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/MetadataArray.h:7:10: fatal error: esp_heap_caps.h: No such file or directory
+    7 | #include <esp_heap_caps.h>
+      |          ^~~~~~~~~~~~~~~~~
+compilation terminated.
+
+sdk-only-main-1 1 In file included from /workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativePlatform.h:6,
+                 from /workspace/shared/serial-lifetime-20261018/src/main.cpp:2:
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeTime.h:4:10: fatal error: esp_timer.h: No such file or directory
+    4 | #include <esp_timer.h>
+      |          ^~~~~~~~~~~~~
+compilation terminated.
+
+sdk-only-NativeSerialFiles-1 1 In file included from /workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativePlatform.h:6,
+                 from /workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:3:
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeTime.h:4:10: fatal error: esp_timer.h: No such file or directory
+    4 | #include <esp_timer.h>
+      |          ^~~~~~~~~~~~~
+compilation terminated.
+
+sdk-only-NativeSerialStorage-1 1 In file included from /workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialStorage.cpp:7:
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeAppDataMount.h:11:10: fatal error: esp_partition.h: No such file or directory
+   11 | #include <esp_partition.h>
+      |          ^~~~~~~~~~~~~~~~~
+compilation terminated.
+
+sdk-only-ProviderGraphV2-1 1 1018/src/runtime/drivers/NativeProviderPolicyValidationV1.h:11,
+                 from /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderOwnedSpecV2.h:4,
+                 from /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:5:
+/workspace/shared/serial-lifetime-20261018/src/runtime/crypto/Sha256.h:5:10: fatal error: psa/crypto.h: No such file or directory
+    5 | #include <psa/crypto.h>
+      |          ^~~~~~~~~~~~~~
+compilation terminated.
+
+shim-Runtime-0 0 e.inc: In member function 'int32_t RiscBoot::Runtime::residentCheckpoint(uint64_t, const risc_resident_request_v1*, risc_resident_reply_v1*)':
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc:287:56: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+  287 |   return foregroundExit_ || status==RISC_RESIDENT_EXIT ? RISC_RESIDENT_EXIT : status;
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+shim-Runtime-0-nm 0 ry_relocation
+         U native_app_memory_retain_all
+         U native_app_memory_select
+         U realloc
+00000000 00000004 R risc_installed_app_capacity
+00000000 0000001a R risc_platform_capacity
+00000000 00000020 T risc_runtime_get_api
+00000000 00000007 T risc_runtime_reclaim_app_images
+         U snprintf
+         U strcat
+         U strchr
+         U strcmp
+         U strcpy
+         U strlen
+         U strncmp
+         U strnlen
+         U strrchr
+         U strstr
+         U vTaskDelay
+
+shim-Runtime-0-objdump 0 
+00000000         *UND*	00000000 _ZNK16RuntimeProviders7GraphV215metadataMutableEj
+00000000         *UND*	00000000 _ZN16RuntimeProviders7GraphV220publishOrdinaryBatchEPKNS_6SpecV2EPKjjb
+00000000  w    O .rodata._ZTVN11ArduinoJson8V742HB226detail16DefaultAllocatorE	00000014 _ZTVN11ArduinoJson8V742HB226detail16DefaultAllocatorE
+00000000 g     O .rodata.risc_installed_app_capacity	00000004 risc_installed_app_capacity
+00000000 g     O .rodata.risc_platform_capacity	0000001a risc_platform_capacity
+
+
+
+shim-Runtime-0-disassembly 0 t::Runtime::installationProvidersMedia(void*, risc_install_provider_v1 const*, unsigned long const*, unsigned long, bool)+0xfffc0014>
+			14: R_XTENSA_SLOT0_OP	.literal._ZN8RiscBoot7Runtime26installationProvidersMediaEPvPK24risc_install_provider_v1PKmmb
+			14: R_XTENSA_ASM_EXPAND	RiscBoot::Runtime::installationProviderTransaction(void*, risc_install_provider_v1 const*, unsigned long const*, unsigned long, bool)
+  17:	0008e0        	callx8	a8
+  1a:	0a2d      	mov.n	a2, a10
+  1c:	f01d      	retw.n
+
+shim-main-0 0 
+shim-main-0-nm 0 0 00000018 R risc_app_policy_rows
+00000000 0000001d R risc_app_requirement_rows
+         w risc_native_settings_admission
+         w risc_native_startup_error
+00000000 00000115 T risc_perf_loader_event
+         U seekdir
+         U snprintf
+         U stat
+         U strchr
+         U strcmp
+         U strcpy
+         U strdup
+         U strlen
+         U strnlen
+         U strstr
+         U telldir
+         U vTaskDelay
+         U vsnprintf
+         U write
+         U xTaskGetCurrentTaskHandle
+
+shim-main-0-objdump 0 PinEi
+00000000         *UND*	00000000 _ZN8RiscBoot7Runtime7prepareEPKc
+00000000         *UND*	00000000 _ZN7RiscCpu23NativeSettingsLifecycle7hydrateERN8RiscBoot7RuntimeERNS_4PortE
+00000000         *UND*	00000000 _ZN7RiscCpu23NativeSettingsLifecycle11attachOwnerERN8RiscBoot7RuntimeERNS_4PortE
+00000000         *UND*	00000000 _ZN8RiscBoot7Runtime3runEv
+00000000 g     F .text._Z4loopv	0000000d _Z4loopv
+00000000 g     F .text.app_main	00000018 app_main
+00000000         *UND*	00000000 nvs_flash_init
+
+
+
+shim-main-0-disassembly 0 XTENSA_SLOT0_OP	.text.app_main+0xf
+
+Disassembly of section .text.startup._GLOBAL__sub_I_risc_app_policy_rows:
+
+00000000 <_GLOBAL__sub_I_risc_app_policy_rows>:
+   0:	004136        	entry	a1, 32
+   3:	000081        	l32r	a8, fffc0004 <_GLOBAL__sub_I_risc_app_policy_rows+0xfffc0004>
+			3: R_XTENSA_SLOT0_OP	.literal.startup._GLOBAL__sub_I_risc_app_policy_rows
+			3: R_XTENSA_ASM_EXPAND	.text.startup._Z41__static_initialization_and_destruction_0v
+   6:	0008e0        	callx8	a8
+   9:	f01d      	retw.n
+
+shim-NativeSerialFiles-0 0 
+shim-NativeSerialFiles-0-nm 0 
+shim-NativeSerialFiles-0-objdump 0 	00000000 NativeSerialFiles.cpp
+00000000 l    d  .text	00000000 .text
+00000000 l    d  .data	00000000 .data
+00000000 l    d  .bss	00000000 .bss
+00000000 l    d  .debug_info	00000000 .debug_info
+00000000 l    d  .debug_abbrev	00000000 .debug_abbrev
+00000000 l    d  .debug_aranges	00000000 .debug_aranges
+00000000 l    d  .debug_line	00000000 .debug_line
+00000000 l    d  .debug_str	00000000 .debug_str
+00000000 l    d  .comment	00000000 .comment
+00000000 l    d  .xtensa.info	00000000 .xtensa.info
+
+
+
+shim-NativeSerialFiles-0-disassembly 0 
+/workspace/shared/serial-lifetime-evidence/target/final/shim-NativeSerialFiles-0.o:     file format elf32-xtensa-le
+
+
+shim-NativeSerialStorage-0 0 
+shim-NativeSerialStorage-0-nm 0 
+shim-NativeSerialStorage-0-objdump 0 0000000 NativeSerialStorage.cpp
+00000000 l    d  .text	00000000 .text
+00000000 l    d  .data	00000000 .data
+00000000 l    d  .bss	00000000 .bss
+00000000 l    d  .debug_info	00000000 .debug_info
+00000000 l    d  .debug_abbrev	00000000 .debug_abbrev
+00000000 l    d  .debug_aranges	00000000 .debug_aranges
+00000000 l    d  .debug_line	00000000 .debug_line
+00000000 l    d  .debug_str	00000000 .debug_str
+00000000 l    d  .comment	00000000 .comment
+00000000 l    d  .xtensa.info	00000000 .xtensa.info
+
+
+
+shim-NativeSerialStorage-0-disassembly 0 
+/workspace/shared/serial-lifetime-evidence/target/final/shim-NativeSerialStorage-0.o:     file format elf32-xtensa-le
+
+
+shim-ProviderGraphV2-0 0 
+shim-ProviderGraphV2-0-nm 0 _match_v2
+         U esp_elf_privileged_selected_import_supported_with_diagnostics_v2
+         U esp_elf_validate_file
+         U heap_caps_free
+         U heap_caps_malloc
+         U mbedtls_sha256_finish_ret
+         U mbedtls_sha256_free
+         U mbedtls_sha256_starts_ret
+         U mbedtls_sha256_update_ret
+         U memcmp
+         U memcpy
+         U memmove
+         U memset
+00000000 00000004 V nativePsaHashLive
+         U snprintf
+         U strchr
+         U strcmp
+         U strcpy
+
+shim-ProviderGraphV2-0-objdump 0 ers7GraphV214activationSafeEv
+00000000 g     F .text._ZNK16RuntimeProviders7GraphV215metadataMutableEj	000000b2 _ZNK16RuntimeProviders7GraphV215metadataMutableEj
+00000000 g     F .text._ZN16RuntimeProviders7GraphV220publishOrdinaryBatchEPKNS_6SpecV2EPKjjb	000002b0 _ZN16RuntimeProviders7GraphV220publishOrdinaryBatchEPKNS_6SpecV2EPKjjb
+00000000 g     F .text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy	00000079 _ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy
+
+
+
+shim-ProviderGraphV2-0-disassembly 0 SA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0x9
+  69:	88ba      	add.n	a8, a8, a11
+  6b:	1198c0        	slli	a9, a8, 4
+  6e:	889a      	add.n	a8, a8, a9
+  70:	b02820        	addx8	a2, a8, a2
+  73:	bb2222        	l32i	a2, a2, 0x2ec
+  76:	ffe446        	j	b <RuntimeProviders::GraphV2::streamSessionsFor(RuntimeProviders::GrantV2, unsigned long long*) const+0xb>
+			76: R_XTENSA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0xb
+
+shim-Runtime-1 0 afe?state->observe(volume->context):RISC_STORAGE_STATE_RETAINED;
+      |                        ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:1650:22: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+ 1650 |         observed=safe?state->observe(volume->context):RISC_STORAGE_STATE_RETAINED;
+      |                  ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+shim-Runtime-1-nm 0 ain_all
+         U native_app_memory_select
+         U realloc
+00000000 00000004 R risc_installed_app_capacity
+00000000 0000001a R risc_platform_capacity
+00000000 00000020 T risc_runtime_get_api
+00000000 00000007 T risc_runtime_reclaim_app_images
+00000000 00000030 t risc_storage_volume_state
+         U snprintf
+         U strcat
+         U strchr
+         U strcmp
+         U strcpy
+         U strlen
+         U strncmp
+         U strnlen
+         U strrchr
+         U strstr
+         U vTaskDelay
+
+shim-Runtime-1-objdump 0 
+00000000         *UND*	00000000 _ZNK16RuntimeProviders7GraphV215metadataMutableEj
+00000000         *UND*	00000000 _ZN16RuntimeProviders7GraphV220publishOrdinaryBatchEPKNS_6SpecV2EPKjjb
+00000000  w    O .rodata._ZTVN11ArduinoJson8V742HB226detail16DefaultAllocatorE	00000014 _ZTVN11ArduinoJson8V742HB226detail16DefaultAllocatorE
+00000000 g     O .rodata.risc_installed_app_capacity	00000004 risc_installed_app_capacity
+00000000 g     O .rodata.risc_platform_capacity	0000001a risc_platform_capacity
+
+
+
+shim-Runtime-1-disassembly 0 t::Runtime::installationProvidersMedia(void*, risc_install_provider_v1 const*, unsigned long const*, unsigned long, bool)+0xfffc0014>
+			14: R_XTENSA_SLOT0_OP	.literal._ZN8RiscBoot7Runtime26installationProvidersMediaEPvPK24risc_install_provider_v1PKmmb
+			14: R_XTENSA_ASM_EXPAND	RiscBoot::Runtime::installationProviderTransaction(void*, risc_install_provider_v1 const*, unsigned long const*, unsigned long, bool)
+  17:	0008e0        	callx8	a8
+  1a:	0a2d      	mov.n	a2, a10
+  1c:	f01d      	retw.n
+
+shim-main-1 0 
+shim-main-1-nm 0 0 00000018 R risc_app_policy_rows
+00000000 0000001d R risc_app_requirement_rows
+         w risc_native_settings_admission
+         w risc_native_startup_error
+00000000 00000115 T risc_perf_loader_event
+         U seekdir
+         U snprintf
+         U stat
+         U strchr
+         U strcmp
+         U strcpy
+         U strdup
+         U strlen
+         U strnlen
+         U strstr
+         U telldir
+         U vTaskDelay
+         U vsnprintf
+         U write
+         U xTaskGetCurrentTaskHandle
+
+shim-main-1-objdump 0 eFilesEPKcyRNS_12RuntimeFilesEPFbvES6_bNS0_21NativeBindingLifetimeE
+00000000         *UND*	00000000 _ZN7RiscCpu17NativeSerialFiles7prepareEPKNS0_9AdmissionEPFbvES5_PFvmmPKcmbEPFvmmylRKN8RiscBoot15StatObservationEE
+00000000         *UND*	00000000 _ZN8RiscBoot7Runtime3runEv
+00000000 g     F .text._Z4loopv	0000001a _Z4loopv
+00000000         *UND*	00000000 _ZN8RiscBoot7Runtime21nativeFilesCheckpointEv
+00000000 g     F .text.app_main	00000018 app_main
+00000000         *UND*	00000000 nvs_flash_init
+
+
+
+shim-main-1-disassembly 0 XTENSA_SLOT0_OP	.text.app_main+0xf
+
+Disassembly of section .text.startup._GLOBAL__sub_I_risc_app_policy_rows:
+
+00000000 <_GLOBAL__sub_I_risc_app_policy_rows>:
+   0:	004136        	entry	a1, 32
+   3:	000081        	l32r	a8, fffc0004 <_GLOBAL__sub_I_risc_app_policy_rows+0xfffc0004>
+			3: R_XTENSA_SLOT0_OP	.literal.startup._GLOBAL__sub_I_risc_app_policy_rows
+			3: R_XTENSA_ASM_EXPAND	.text.startup._Z41__static_initialization_and_destruction_0v
+   6:	0008e0        	callx8	a8
+   9:	f01d      	retw.n
+
+shim-NativeSerialFiles-1 0 
+shim-NativeSerialFiles-1-nm 0 nst&)
+00000000 00000018 t RiscCpu::NativeSerialFiles::prepare(RiscCpu::NativeSerialFiles::Admission const*, bool (*)(), bool (*)(), void (*)(unsigned long, unsigned long, char const*, unsigned long, bool), void (*)(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&))::{lambda()#1}::_FUN()
+         U __udivdi3
+         U esp_timer_get_time
+         U memcpy
+         U memset
+         U strcpy
+         U strncmp
+         U strnlen
+         U xPortInIsrContext
+
+shim-NativeSerialFiles-1-objdump 0 ZN10RiscSerial5Files13consumeOutputEj
+00000000 g     F .text._ZN7RiscCpu17NativeSerialFiles7pendingEv	00000054 _ZN7RiscCpu17NativeSerialFiles7pendingEv
+00000000         *UND*	00000000 strncmp
+00000000 g     F .text._ZN7RiscCpu17NativeSerialFiles8exitSafeEv	0000002e _ZN7RiscCpu17NativeSerialFiles8exitSafeEv
+00000000         *UND*	00000000 _ZNK10RiscSerial5Files8exitSafeEv
+00000000 g     F .text._ZN7RiscCpu17NativeSerialFiles11custodySafeEv	00000024 _ZN7RiscCpu17NativeSerialFiles11custodySafeEv
+
+
+
+shim-NativeSerialFiles-1-disassembly 0 0a1        	l32r	a10, fffc0018 <RiscCpu::NativeSerialFiles::custodySafe()+0xfffc0018>
+			17: R_XTENSA_SLOT0_OP	.literal._ZN7RiscCpu17NativeSerialFiles11custodySafeEv+0x4
+  1a:	000081        	l32r	a8, fffc001c <RiscCpu::NativeSerialFiles::custodySafe()+0xfffc001c>
+			1a: R_XTENSA_SLOT0_OP	.literal._ZN7RiscCpu17NativeSerialFiles11custodySafeEv+0xc
+			1a: R_XTENSA_ASM_EXPAND	RiscSerial::Files::custodySafe() const
+  1d:	0008e0        	callx8	a8
+  20:	0a2d      	mov.n	a2, a10
+  22:	f01d      	retw.n
+
+shim-NativeSerialStorage-1 0 
+shim-NativeSerialStorage-1-nm 0 ndFiles(risc_storage_files_v1 const*)
+00000000 0000000b t RiscCpu::NativeSerialStorage::prepare(bool (*)(), bool (*)())::{lambda(void*)#2}::_FUN(void*)
+00000000 0000000d t RiscCpu::NativeSerialStorage::prepare(bool (*)(), bool (*)())::{lambda(void*)#1}::_FUN(void*)
+00000000 00000025 t RiscCpu::NativeSerialStorage::prepare(bool (*)(), bool (*)())::{lambda(void*, unsigned long long*, unsigned long long*)#1}::_FUN(void*, unsigned long long*, unsigned long long*)
+         U memcpy
+         U memset
+
+shim-NativeSerialStorage-1-objdump 0     *UND*	00000000 memcpy
+00000000         *UND*	00000000 _ZN11RiscStorage13ReopenedFilesC1ENS0_5HooksE
+00000000         *UND*	00000000 _ZN11RiscStorage13ReopenedFiles9configureEPKc
+00000000         *UND*	00000000 _ZN11RiscStorage13ReopenedFiles9provisionEv
+00000000 g     F .text._ZN7RiscCpu19NativeSerialStorage9admissionEv	00000012 _ZN7RiscCpu19NativeSerialStorage9admissionEv
+00000000 g     F .text._ZN7RiscCpu19NativeSerialStorage7sdFilesEv	00000008 _ZN7RiscCpu19NativeSerialStorage7sdFilesEv
+
+
+
+shim-NativeSerialStorage-1-disassembly 0 ffbfe80>
+			d: R_XTENSA_SLOT0_OP	.literal._ZN7RiscCpu19NativeSerialStorage9admissionEv
+  10:	f01d      	retw.n
+
+Disassembly of section .text._ZN7RiscCpu19NativeSerialStorage7sdFilesEv:
+
+00000000 <RiscCpu::NativeSerialStorage::sdFiles()>:
+   0:	004136        	entry	a1, 32
+   3:	000021        	l32r	a2, fffc0004 <RiscCpu::NativeSerialStorage::(anonymous namespace)::privateProviderStorage+0xfffbfe74>
+			3: R_XTENSA_SLOT0_OP	.literal._ZN7RiscCpu19NativeSerialStorage7sdFilesEv
+   6:	f01d      	retw.n
+
+shim-ProviderGraphV2-1 0 
+shim-ProviderGraphV2-1-nm 0 _match_v2
+         U esp_elf_privileged_selected_import_supported_with_diagnostics_v2
+         U esp_elf_validate_file
+         U heap_caps_free
+         U heap_caps_malloc
+         U mbedtls_sha256_finish_ret
+         U mbedtls_sha256_free
+         U mbedtls_sha256_starts_ret
+         U mbedtls_sha256_update_ret
+         U memcmp
+         U memcpy
+         U memmove
+         U memset
+00000000 00000004 V nativePsaHashLive
+         U snprintf
+         U strchr
+         U strcmp
+         U strcpy
+
+shim-ProviderGraphV2-1-objdump 0 ers7GraphV214activationSafeEv
+00000000 g     F .text._ZNK16RuntimeProviders7GraphV215metadataMutableEj	000000b2 _ZNK16RuntimeProviders7GraphV215metadataMutableEj
+00000000 g     F .text._ZN16RuntimeProviders7GraphV220publishOrdinaryBatchEPKNS_6SpecV2EPKjjb	000002b0 _ZN16RuntimeProviders7GraphV220publishOrdinaryBatchEPKNS_6SpecV2EPKjjb
+00000000 g     F .text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy	00000079 _ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy
+
+
+
+shim-ProviderGraphV2-1-disassembly 0 SA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0x9
+  69:	88ba      	add.n	a8, a8, a11
+  6b:	1198c0        	slli	a9, a8, 4
+  6e:	889a      	add.n	a8, a8, a9
+  70:	b02820        	addx8	a2, a8, a2
+  73:	bb2222        	l32i	a2, a2, 0x2ec
+  76:	ffe446        	j	b <RuntimeProviders::GraphV2::streamSessionsFor(RuntimeProviders::GrantV2, unsigned long long*) const+0xb>
+			76: R_XTENSA_SLOT0_OP	.text._ZNK16RuntimeProviders7GraphV217streamSessionsForENS_7GrantV2EPy+0xb
+
+DONE {
+  "stable": true,
+  "types": {
+    "baseline-types-expanded-0": {
+      "measure_Grant": 8,
+      "measure_Providers": 40,
+      "measure_Grants": 56,
+      "measure_Port": 132,
+      "measure_Graph": 49600,
+      "measure_Runtime": 331616
+    },
+    "baseline-types-cohort-0": {
+      "measure_Grant": 8,
+      "measure_Providers": 28,
+      "measure_Grants": 44,
+      "measure_Port": 132,
+      "measure_Graph": 34816,
+      "measure_Runtime": 277696
+    },
+    "baseline-types-installed-0": {
+      "measure_Grant": 8,
+      "measure_Providers": 29,
+      "measure_Grants": 45,
+      "measure_Port": 132,
+      "measure_Graph": 36048,
+      "measure_Runtime": 282424
+    },
+    "baseline-types-legacy-0": {
+      "measure_Grant": 8,
+      "measure_Providers": 17,
+      "measure_Grants": 32,
+      "measure_Port": 132,
+      "measure_Graph": 21256,
+      "measure_Runtime": 228440
+    },
+    "baseline-types-expanded-1": {
+      "measure_Grant": 8,
+      "measure_BindingPrepareVolumeOffsetPlus1": 25,
+      "measure_BindingSleepOffsetPlus1": 29,
+      "measure_NativeFilesBinding": 36,
+      "measure_Providers": 40,
+      "measure_Grants": 56,
+      "measure_Port": 152,
+      "measure_NativeFilesBindings": 576,
+      "measure_Graph": 49600,
+      "measure_Runtime": 332216
+    },
+    "baseline-types-cohort-1": {
+      "measure_Grant": 8,
+      "measure_BindingPrepareVolumeOffsetPlus1": 25,
+      "measure_Providers": 28,
+      "measure_BindingSleepOffsetPlus1": 29,
+      "measure_NativeFilesBinding": 36,
+      "measure_Grants": 44,
+      "measure_Port": 152,
+      "measure_NativeFilesBindings": 576,
+      "measure_Graph": 34816,
+      "measure_Runtime": 278296
+    },
+    "baseline-types-installed-1": {
+      "measure_Grant": 8,
+      "measure_BindingPrepareVolumeOffsetPlus1": 25,
+      "measure_BindingSleepOffsetPlus1": 29,
+      "measure_Providers": 29,
+      "measure_NativeFilesBinding": 36,
+      "measure_Grants": 45,
+      "measure_Port": 152,
+      "measure_NativeFilesBindings": 576,
+      "measure_Graph": 36048,
+      "measure_Runtime": 283024
+    },
+    "baseline-types-legacy-1": {
+      "measure_Grant": 8,
+      "measure_Providers": 17,
+      "measure_BindingPrepareVolumeOffsetPlus1": 25,
+      "measure_BindingSleepOffsetPlus1": 29,
+      "measure_Grants": 32,
+      "measure_NativeFilesBinding": 36,
+      "measure_Port": 152,
+      "measure_NativeFilesBindings": 576,
+      "measure_Graph": 21256,
+      "measure_Runtime": 229040
+    },
+    "candidate-types-expanded-0": {
+      "measure_Grant": 8,
+      "measure_Providers": 40,
+      "measure_Grants": 56,
+      "measure_Port": 132,
+      "measure_Graph": 49600,
+      "measure_Runtime": 331616
+    },
+    "candidate-types-cohort-0": {
+      "measure_Grant": 8,
+      "measure_Providers": 28,
+      "measure_Grants": 44,
+      "measure_Port": 132,
+      "measure_Graph": 34816,
+      "measure_Runtime": 277696
+    },
+    "candidate-types-installed-0": {
+      "measure_Grant": 8,
+      "measure_Providers": 29,
+      "measure_Grants": 45,
+      "measure_Port": 132,
+      "measure_Graph": 36048,
+      "measure_Runtime": 282424
+    },
+    "candidate-types-legacy-0": {
+      "measure_Grant": 8,
+      "measure_Providers": 17,
+      "measure_Grants": 32,
+      "measure_Port": 132,
+      "measure_Graph": 21256,
+      "measure_Runtime": 228440
+    },
+    "candidate-types-expanded-1": {
+      "measure_BindingLifetime": 1,
+      "measure_NativeState": 1,
+      "measure_Grant": 8,
+      "measure_BindingPrepareVolumeOffsetPlus1": 25,
+      "measure_BindingLifetimeOffsetPlus1": 26,
+      "measure_BindingSleepOffsetPlus1": 29,
+      "measure_NativeFilesBinding": 36,
+      "measure_Providers": 40,
+      "measure_Grants": 56,
+      "measure_PortStopOffsetPlus1": 153,
+      "measure_Port": 156,
+      "measure_NativeFilesBindings": 576,
+      "measure_Graph": 49600,
+      "measure_Runtime": 332216
+    },
+    "candidate-types-cohort-1": {
+      "measure_BindingLifetime": 1,
+      "measure_NativeState": 1,
+      "measure_Grant": 8,
+      "measure_BindingPrepareVolumeOffsetPlus1": 25,
+      "measure_BindingLifetimeOffsetPlus1": 26,
+      "measure_Providers": 28,
+      "measure_BindingSleepOffsetPlus1": 29,
+      "measure_NativeFilesBinding": 36,
+      "measure_Grants": 44,
+      "measure_PortStopOffsetPlus1": 153,
+      "measure_Port": 156,
+      "measure_NativeFilesBindings": 576,
+      "measure_Graph": 34816,
+      "measure_Runtime": 278296
+    },
+    "candidate-types-installed-1": {
+      "measure_BindingLifetime": 1,
+      "measure_NativeState": 1,
+      "measure_Grant": 8,
+      "measure_BindingPrepareVolumeOffsetPlus1": 25,
+      "measure_BindingLifetimeOffsetPlus1": 26,
+      "measure_BindingSleepOffsetPlus1": 29,
+      "measure_Providers": 29,
+      "measure_NativeFilesBinding": 36,
+      "measure_Grants": 45,
+      "measure_PortStopOffsetPlus1": 153,
+      "measure_Port": 156,
+      "measure_NativeFilesBindings": 576,
+      "measure_Graph": 36048,
+      "measure_Runtime": 283024
+    },
+    "candidate-types-legacy-1": {
+      "measure_BindingLifetime": 1,
+      "measure_NativeState": 1,
+      "measure_Grant": 8,
+      "measure_Providers": 17,
+      "measure_BindingPrepareVolumeOffsetPlus1": 25,
+      "measure_BindingLifetimeOffsetPlus1": 26,
+      "measure_BindingSleepOffsetPlus1": 29,
+      "measure_Grants": 32,
+      "measure_NativeFilesBinding": 36,
+      "measure_PortStopOffsetPlus1": 153,
+      "measure_Port": 156,
+      "measure_NativeFilesBindings": 576,
+      "measure_Graph": 21256,
+      "measure_Runtime": 229040
+    },
+    "baseline-native-types": {
+      "measure_NativeSerialState": 24,
+      "measure_NativeSerialSessionWorkspace": 400,
+      "measure_NativeSerialPrivateProvider": 760,
+      "measure_NativeSerialWorkspace": 2800
+    },
+    "candidate-native-types": {
+      "measure_NativeSerialState": 24,
+      "measure_NativeSerialSessionWorkspace": 400,
+      "measure_NativeSerialPrivateProvider": 760,
+      "measure_NativeSerialWorkspace": 2800
+    }
+  },
+  "compiles": [
+    {
+      "name": "sdk-only-Runtime-0",
+      "source": "src/bootstrap/Runtime.cpp",
+      "serial_enabled": false,
+      "boundary_shims": false,
+      "returncode": 1
+    },
+    {
+      "name": "sdk-only-main-0",
+      "source": "src/main.cpp",
+      "serial_enabled": false,
+      "boundary_shims": false,
+      "returncode": 1
+    },
+    {
+      "name": "sdk-only-NativeSerialFiles-0",
+      "source": "src/ports/esp32s3/NativeSerialFiles.cpp",
+      "serial_enabled": false,
+      "boundary_shims": false,
+      "returncode": 0,
+      "object_sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382",
+      "object_bytes": 5524
+    },
+    {
+      "name": "sdk-only-NativeSerialStorage-0",
+      "source": "src/ports/esp32s3/NativeSerialStorage.cpp",
+      "serial_enabled": false,
+      "boundary_shims": false,
+      "returncode": 0,
+      "object_sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8",
+      "object_bytes": 5532
+    },
+    {
+      "name": "sdk-only-ProviderGraphV2-0",
+      "source": "src/runtime/drivers/ProviderGraphV2.cpp",
+      "serial_enabled": false,
+      "boundary_shims": false,
+      "returncode": 1
+    },
+    {
+      "name": "sdk-only-Runtime-1",
+      "source": "src/bootstrap/Runtime.cpp",
+      "serial_enabled": true,
+      "boundary_shims": false,
+      "returncode": 1
+    },
+    {
+      "name": "sdk-only-main-1",
+      "source": "src/main.cpp",
+      "serial_enabled": true,
+      "boundary_shims": false,
+      "returncode": 1
+    },
+    {
+      "name": "sdk-only-NativeSerialFiles-1",
+      "source": "src/ports/esp32s3/NativeSerialFiles.cpp",
+      "serial_enabled": true,
+      "boundary_shims": false,
+      "returncode": 1
+    },
+    {
+      "name": "sdk-only-NativeSerialStorage-1",
+      "source": "src/ports/esp32s3/NativeSerialStorage.cpp",
+      "serial_enabled": true,
+      "boundary_shims": false,
+      "returncode": 1
+    },
+    {
+      "name": "sdk-only-ProviderGraphV2-1",
+      "source": "src/runtime/drivers/ProviderGraphV2.cpp",
+      "serial_enabled": true,
+      "boundary_shims": false,
+      "returncode": 1
+    },
+    {
+      "name": "shim-Runtime-0",
+      "source": "src/bootstrap/Runtime.cpp",
+      "serial_enabled": false,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "f9b3638a798311a20cf9f568427896a3c96d299161f0bfe6592e64d3a4950e8f",
+      "object_bytes": 5206796
+    },
+    {
+      "name": "shim-main-0",
+      "source": "src/main.cpp",
+      "serial_enabled": false,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "2f251da2faa53850081ff12be504c0936a551bf1187a11cbcc48951f01bd87fe",
+      "object_bytes": 1218220
+    },
+    {
+      "name": "shim-NativeSerialFiles-0",
+      "source": "src/ports/esp32s3/NativeSerialFiles.cpp",
+      "serial_enabled": false,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "f3b2f7fcb4a70527f1b633f5f6c78ff2828b3968db54bd385451e92cfee2aa77",
+      "object_bytes": 8512
+    },
+    {
+      "name": "shim-NativeSerialStorage-0",
+      "source": "src/ports/esp32s3/NativeSerialStorage.cpp",
+      "serial_enabled": false,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "67af521686b255d74496b14c6e3cd440ea836da91ca1bd9a354f15739f5082d3",
+      "object_bytes": 8520
+    },
+    {
+      "name": "shim-ProviderGraphV2-0",
+      "source": "src/runtime/drivers/ProviderGraphV2.cpp",
+      "serial_enabled": false,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "fc4befa2aa1666a12cf583ab1c32a4a82988239abccba926d90bcf004bd820c6",
+      "object_bytes": 298340
+    },
+    {
+      "name": "shim-Runtime-1",
+      "source": "src/bootstrap/Runtime.cpp",
+      "serial_enabled": true,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "eebd983f661c741ad3db23df8b2e8128163b019b29ef8d1075c9d42e68e569c9",
+      "object_bytes": 5296456
+    },
+    {
+      "name": "shim-main-1",
+      "source": "src/main.cpp",
+      "serial_enabled": true,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "78503ab1fb0ba854912205ab9354ae7732f7990e46496905cba85e2f13a320e6",
+      "object_bytes": 1234240
+    },
+    {
+      "name": "shim-NativeSerialFiles-1",
+      "source": "src/ports/esp32s3/NativeSerialFiles.cpp",
+      "serial_enabled": true,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "d66f5e24a693032714db24f0d56e8f1194218c0abb80a01f9c79b7dd3c516653",
+      "object_bytes": 75144
+    },
+    {
+      "name": "shim-NativeSerialStorage-1",
+      "source": "src/ports/esp32s3/NativeSerialStorage.cpp",
+      "serial_enabled": true,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "4e490f38a82cdac4bc65ecf2c9f4f23028368e71c8f9d3c48eaae19cdcf58012",
+      "object_bytes": 64396
+    },
+    {
+      "name": "shim-ProviderGraphV2-1",
+      "source": "src/runtime/drivers/ProviderGraphV2.cpp",
+      "serial_enabled": true,
+      "boundary_shims": true,
+      "returncode": 0,
+      "object_sha256": "fc4befa2aa1666a12cf583ab1c32a4a82988239abccba926d90bcf004bd820c6",
+      "object_bytes": 298340
+    }
+  ]
+}

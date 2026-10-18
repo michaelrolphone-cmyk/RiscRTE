@@ -1,0 +1,5 @@
+In file included from /workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialStorage.cpp:7:
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeAppDataMount.h:11:10: fatal error: esp_partition.h: No such file or directory
+   11 | #include <esp_partition.h>
+      |          ^~~~~~~~~~~~~~~~~
+compilation terminated.

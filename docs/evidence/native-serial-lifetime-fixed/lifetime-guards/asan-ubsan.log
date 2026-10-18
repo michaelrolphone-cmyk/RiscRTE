@@ -1,0 +1,66 @@
+
+=== native serial lifetime guards: admission (SANITIZE=1) ===
+admission prepared resolved ordinary dependency chain firmware=accepted default-Run=accepted PASS
+admission unrelated Runtime-bound provider excluded  firmware=accepted default-Run=accepted PASS
+admission transitive image-source provider included  firmware=rejected default-Run=accepted PASS
+admission safe ordinary and image-source closure     firmware=accepted default-Run=accepted PASS
+admission root: count                                firmware=rejected default-Run=accepted PASS
+admission root: fileCount                            firmware=rejected default-Run=accepted PASS
+admission root: needsEntropy                         firmware=rejected default-Run=accepted PASS
+admission root: needsTcp                             firmware=rejected default-Run=accepted PASS
+admission root: needsRealtime                        firmware=rejected default-Run=accepted PASS
+admission root: platform.installation                firmware=rejected default-Run=accepted PASS
+admission root: platform.bank-store                  firmware=rejected default-Run=accepted PASS
+admission root: platform.provision-request           firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: count                 firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: fileCount             firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: needsEntropy          firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: needsTcp              firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: needsRealtime         firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: platform.installation firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: platform.bank-store   firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: platform.provision-request firmware=rejected default-Run=accepted PASS
+admission transitive dependency: count               firmware=rejected default-Run=accepted PASS
+admission transitive dependency: fileCount           firmware=rejected default-Run=accepted PASS
+admission transitive dependency: needsEntropy        firmware=rejected default-Run=accepted PASS
+admission transitive dependency: needsTcp            firmware=rejected default-Run=accepted PASS
+admission transitive dependency: needsRealtime       firmware=rejected default-Run=accepted PASS
+admission transitive dependency: platform.installation firmware=rejected default-Run=accepted PASS
+admission transitive dependency: platform.bank-store firmware=rejected default-Run=accepted PASS
+admission transitive dependency: platform.provision-request firmware=rejected default-Run=accepted PASS
+admission image source: count                        firmware=rejected default-Run=accepted PASS
+admission image source: fileCount                    firmware=rejected default-Run=accepted PASS
+admission image source: needsEntropy                 firmware=rejected default-Run=accepted PASS
+admission image source: needsTcp                     firmware=rejected default-Run=accepted PASS
+admission image source: needsRealtime                firmware=rejected default-Run=accepted PASS
+admission image source: platform.installation        firmware=rejected default-Run=accepted PASS
+admission image source: platform.bank-store          firmware=rejected default-Run=accepted PASS
+admission image source: platform.provision-request   firmware=rejected default-Run=accepted PASS
+admission unresolved dependency                      firmware=rejected PASS
+admission missing resolved dependency                firmware=rejected PASS
+admission dependency instance mismatch               firmware=rejected PASS
+admission dependency API mismatch                    firmware=rejected PASS
+admission ambiguous resolved dependency              firmware=rejected PASS
+admission missing image-source provider              firmware=rejected PASS
+admission missing serialFilesShutdown: Firmware rejected / default Run accepted PASS
+admission missing serialFilesStop: Firmware rejected / default Run accepted PASS
+admission restored closure and mandatory callbacks   firmware=accepted default-Run=accepted PASS
+Runtime firmware admission guards: prepared metadata, private-access fault injections PASS
+
+=== native serial lifetime guards: default-run (SANITIZE=1) ===
+Default Run lifetime retires provider at clean Runtime return PASS
+
+=== native serial lifetime guards: readiness (SANITIZE=1) ===
+Parked readiness false dispatches control only; true resumes healthy open handle without retention PASS
+
+=== native serial lifetime guards: leaked-grant (SANITIZE=1) ===
+Parked leaked-grant latches retention: graph bytes, loaded modules, handles and all cleanup callbacks unchanged PASS
+Intentional retained-custody process exit: no Runtime/provider destruction or cleanup attempted
+
+=== native serial lifetime guards: leaked-consumer (SANITIZE=1) ===
+Parked leaked-consumer latches retention: graph bytes, loaded modules, handles and all cleanup callbacks unchanged PASS
+Intentional retained-custody process exit: no Runtime/provider destruction or cleanup attempted
+
+=== native serial lifetime guards: undrained-old-session (SANITIZE=1) ===
+Undrained old-session handle rejects parking and retains native graph without cleanup PASS
+Intentional retained-custody process exit: native provider and open handle remain pinned

@@ -1,0 +1,48 @@
+
+=== native serial lifetime guards: admission (SANITIZE=1) ===
+admission prepared resolved ordinary dependency chain firmware=accepted default-Run=accepted PASS
+admission unrelated Runtime-bound provider excluded  firmware=accepted default-Run=accepted PASS
+admission transitive image-source provider included  firmware=rejected default-Run=accepted PASS
+admission safe ordinary and image-source closure     firmware=accepted default-Run=accepted PASS
+admission root: count                                firmware=rejected default-Run=accepted PASS
+admission root: fileCount                            firmware=rejected default-Run=accepted PASS
+admission root: needsEntropy                         firmware=rejected default-Run=accepted PASS
+admission root: needsTcp                             firmware=rejected default-Run=accepted PASS
+admission root: needsRealtime                        firmware=rejected default-Run=accepted PASS
+admission root: platform.installation                firmware=rejected default-Run=accepted PASS
+admission root: platform.bank-store                  firmware=rejected default-Run=accepted PASS
+admission root: platform.provision-request           firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: count                 firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: fileCount             firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: needsEntropy          firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: needsTcp              firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: needsRealtime         firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: platform.installation firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: platform.bank-store   firmware=rejected default-Run=accepted PASS
+admission ordinary dependency: platform.provision-request firmware=rejected default-Run=accepted PASS
+admission transitive dependency: count               firmware=rejected default-Run=accepted PASS
+admission transitive dependency: fileCount           firmware=rejected default-Run=accepted PASS
+admission transitive dependency: needsEntropy        firmware=rejected default-Run=accepted PASS
+admission transitive dependency: needsTcp            firmware=rejected default-Run=accepted PASS
+admission transitive dependency: needsRealtime       firmware=rejected default-Run=accepted PASS
+admission transitive dependency: platform.installation firmware=rejected default-Run=accepted PASS
+admission transitive dependency: platform.bank-store firmware=rejected default-Run=accepted PASS
+admission transitive dependency: platform.provision-request firmware=rejected default-Run=accepted PASS
+admission image source: count                        firmware=rejected default-Run=accepted PASS
+admission image source: fileCount                    firmware=rejected default-Run=accepted PASS
+admission image source: needsEntropy                 firmware=rejected default-Run=accepted PASS
+admission image source: needsTcp                     firmware=rejected default-Run=accepted PASS
+admission image source: needsRealtime                firmware=rejected default-Run=accepted PASS
+admission image source: platform.installation        firmware=rejected default-Run=accepted PASS
+admission image source: platform.bank-store          firmware=rejected default-Run=accepted PASS
+admission image source: platform.provision-request   firmware=rejected default-Run=accepted PASS
+admission unresolved dependency                      firmware=rejected PASS
+admission missing resolved dependency                firmware=rejected PASS
+admission dependency instance mismatch               firmware=rejected PASS
+admission dependency API mismatch                    firmware=rejected PASS
+admission ambiguous resolved dependency              firmware=rejected PASS
+admission missing image-source provider              firmware=rejected PASS
+admission missing serialFilesShutdown: Firmware rejected / default Run accepted PASS
+admission missing serialFilesStop: Firmware reje==44==LeakSanitizer has encountered a fatal error.
+==44==HINT: For debugging, try setting environment variable LSAN_OPTIONS=verbosity=1:log_threads=1
+==44==HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)

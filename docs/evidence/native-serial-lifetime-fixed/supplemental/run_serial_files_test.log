@@ -1,0 +1,10 @@
+Serial session custody: NS/PATH/CLOSE/COMMIT gaps, expiry, wrap, disconnect/shutdown PASS
+serial control metadata, bounded Busy, owner/cancel/live-handle safety PASS
+Serial files normal PASS (endpoint bytes=1440)
+Serial files zero PASS (endpoint bytes=1440)
+Serial files full PASS (endpoint bytes=1440)
+Serial files sync PASS (endpoint bytes=1440)
+Serial files retained PASS (endpoint bytes=1440)
+Serial files invalid-count PASS (endpoint bytes=1440)
+Serial files lost-owner PASS (endpoint bytes=1440)
+Serial files failed-close PASS (endpoint bytes=1440)

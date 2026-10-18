@@ -1,0 +1,36 @@
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp: In lambda function:
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:19:4: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   19 |    if(f.next++>=(f.mode=="abandoned"?2u:1u))return false;strcpy(e->name,"new-app");e->is_directory=1;return true;};
+      |    ^~
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:19:58: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   19 |    if(f.next++>=(f.mode=="abandoned"?2u:1u))return false;strcpy(e->name,"new-app");e->is_directory=1;return true;};
+      |                                                          ^~~~~~
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp: In lambda function:
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:21:4: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   21 |    if(f.mode=="missing"||f.mode=="missing-io"||(f.mode=="abandoned"&&f.next==1))return 0;*n=f.mode=="oversized"?4097:f.mode=="empty"?0:f.json.size();f.file=true;return 1;};
+      |    ^~
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:21:90: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   21 |    if(f.mode=="missing"||f.mode=="missing-io"||(f.mode=="abandoned"&&f.next==1))return 0;*n=f.mode=="oversized"?4097:f.mode=="empty"?0:f.json.size();f.file=true;return 1;};
+      |                                                                                          ^
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp: In lambda function:
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:23:4: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   23 |    if(f.mode=="truncated")return 0;n=n>97?97:n;memcpy(p,f.json.data()+f.read,n);f.read+=n;return n;};
+      |    ^~
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:23:36: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   23 |    if(f.mode=="truncated")return 0;n=n>97?97:n;memcpy(p,f.json.data()+f.read,n);f.read+=n;return n;};
+      |                                    ^
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp: In lambda function:
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:25:4: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   25 |    if(f.mode=="close-retained")return false;f.file=false;return true;};
+      |    ^~
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:25:45: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   25 |    if(f.mode=="close-retained")return false;f.file=false;return true;};
+      |                                             ^
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp: In lambda function:
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:27:4: error: this ‘if’ clause does not guard... [-Werror=misleading-indentation]
+   27 |    if(f.mode=="directory-retained")return false;f.dir=false;return true;};
+      |    ^~
+/workspace/shared/serial-lifetime-20261018/test/installed_app_discovery_test.cpp:27:49: note: ...this statement, but the latter is misleadingly indented as if it were guarded by the ‘if’
+   27 |    if(f.mode=="directory-retained")return false;f.dir=false;return true;};
+      |                                                 ^
+cc1plus: all warnings being treated as errors

@@ -1,0 +1,37 @@
+         U RiscSerial::Files::checkpoint()
+         U RiscSerial::Files::disconnect()
+         U RiscSerial::Files::consumeOutput(unsigned int)
+         U RiscSerial::Files::controlCheckpoint()
+         U RiscSerial::Files::bind(RiscSerial::Namespace const*, unsigned int, RiscSerial::Hooks)
+         U RiscSerial::Files::input(unsigned char)
+         U RiscSerial::Files::shutdown()
+00000000 00000041 T RiscCpu::NativeSerialFiles::checkpoint()
+00000000 0000001e T RiscCpu::NativeSerialFiles::disconnect()
+00000000 00000027 T RiscCpu::NativeSerialFiles::outputSize()
+00000000 00000024 T RiscCpu::NativeSerialFiles::custodySafe()
+00000000 00000af0 d RiscCpu::NativeSerialFiles::(anonymous namespace)::workspaceStorage
+00000000 00000030 t RiscCpu::NativeSerialFiles::(anonymous namespace)::safe()
+00000000 00000020 t RiscCpu::NativeSerialFiles::(anonymous namespace)::owner()
+00000000 00000018 b RiscCpu::NativeSerialFiles::(anonymous namespace)::state
+00000000 00000020 T RiscCpu::NativeSerialFiles::consumeOutput(unsigned int)
+00000000 00000041 T RiscCpu::NativeSerialFiles::controlCheckpoint()
+00000000 00000017 T RiscCpu::NativeSerialFiles::stop()
+00000000 0000002b T RiscCpu::NativeSerialFiles::input(unsigned char)
+00000000 00000026 T RiscCpu::NativeSerialFiles::output()
+00000000 00000054 T RiscCpu::NativeSerialFiles::pending()
+00000000 000001ea T RiscCpu::NativeSerialFiles::prepare(RiscCpu::NativeSerialFiles::Admission const*, bool (*)(), bool (*)(), void (*)(unsigned long, unsigned long, char const*, unsigned long, bool), void (*)(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&))
+00000000 0000002e T RiscCpu::NativeSerialFiles::exitSafe()
+00000000 00000033 T RiscCpu::NativeSerialFiles::shutdown()
+         U RiscSerial::Files::custodySafe() const
+         U RiscSerial::Files::exitSafe() const
+00000000 0000001a t RiscCpu::NativeSerialFiles::prepare(RiscCpu::NativeSerialFiles::Admission const*, bool (*)(), bool (*)(), void (*)(unsigned long, unsigned long, char const*, unsigned long, bool), void (*)(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&))::{lambda(unsigned long, unsigned long, char const*, unsigned long, bool)#1}::_FUN(unsigned long, unsigned long, char const*, unsigned long, bool)
+00000000 00000019 t RiscCpu::NativeSerialFiles::prepare(RiscCpu::NativeSerialFiles::Admission const*, bool (*)(), bool (*)(), void (*)(unsigned long, unsigned long, char const*, unsigned long, bool), void (*)(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&))::{lambda(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&)#1}::_FUN(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&)
+00000000 00000018 t RiscCpu::NativeSerialFiles::prepare(RiscCpu::NativeSerialFiles::Admission const*, bool (*)(), bool (*)(), void (*)(unsigned long, unsigned long, char const*, unsigned long, bool), void (*)(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&))::{lambda()#1}::_FUN()
+         U __udivdi3
+         U esp_timer_get_time
+         U memcpy
+         U memset
+         U strcpy
+         U strncmp
+         U strnlen
+         U xPortInIsrContext

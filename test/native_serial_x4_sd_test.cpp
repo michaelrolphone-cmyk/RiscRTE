@@ -135,7 +135,7 @@ extern "C" void test_atomic_app(unsigned hook,unsigned){
         assert(app->service_checkpoint()==RISC_RUNTIME_CHECKPOINT_OK&&N::exitSafe()&&N::custodySafe());
         assert(counter(0)==before); // idle-session expiry performs no provider I/O
     }
-    if(mode=="failed-release")fault(2);
+
 }
 int main(int argc,char**argv){
     assert(argc==3);const std::string root=argv[1];mode=argv[2];
@@ -149,7 +149,7 @@ int main(int argc,char**argv){
     if(mode=="absent-card"||mode=="failed-prepare")fault(0);
     if(mode=="failed-prepare")fault(1);
     RiscBoot::Port port{owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};
-    port.appExitSafe=safe;port.providerStorageSafe=safe;port.serialFilesCheckpoint=checkpoint;port.serialFilesShutdown=N::shutdown;
+    port.appExitSafe=safe;port.providerStorageSafe=safe;port.serialFilesCheckpoint=checkpoint;port.serialFilesShutdown=N::shutdown;port.serialFilesStop=N::stop;
     RiscTest::FileSources sources({root.c_str()});metadata=sources.sources();
     runtime=new RiscBoot::Runtime(port);assert(sources.bind(*runtime));
     for(unsigned i=0;i<5;++i){static const char*names[]={"platform.gpio","platform.clock","platform.sync","platform.storage-worker","platform.diagnostic-source"};
@@ -165,7 +165,7 @@ int main(int argc,char**argv){
     else assert(S::bindSd(*runtime,owner,safe));
     assert(!S::sdFiles().bound()&&counter(3)==0&&counter(0)==0);
     assert(N::prepare(S::admission(),owner,safe));
-    const bool retained=mode=="failed-close"||mode=="failed-write"||mode=="failed-release"||mode=="failed-prepare";
+    const bool retained=mode=="failed-close"||mode=="failed-write"||mode=="failed-prepare";
     const bool result=runtime->run();
     if(result==retained)std::fprintf(stderr,"run=%d retained=%d error=%s\n",result,retained,runtime->error());
     assert(result!=retained&&runtime->retained()==retained);
@@ -175,6 +175,16 @@ int main(int argc,char**argv){
         const auto before=counter(0);uint32_t h=99;assert(S::sdFiles().open("/unrelated.txt",RISC_FILES_READ,&h)==RISC_FILES_RETAINED&&!h);
         assert(counter(0)==before);std::printf("X4 source async SD serial %s: terminal custody pinned PASS\n",mode.c_str());std::fflush(stdout);_exit(0);
     }
+    assert(runtime->nativeFilesServiceSafe());
+    assert(S::sdFiles().bound()==(mode!="cold"));
+    for(unsigned i=0;i<8;++i)assert(!runtime->run()&&runtime->nativeFilesServiceSafe());
+    if(mode=="failed-release"){
+        fault(2);assert(!runtime->stopNativeFiles()&&runtime->retained()&&S::sdFiles().retained()&&!counter(5));
+        const auto calls=counter(0);for(unsigned i=0;i<8;++i)assert(!runtime->stopNativeFiles()&&!runtime->nativeFilesCheckpoint());
+        assert(counter(0)==calls);puts("X4 source final-stop release failure retains custody PASS");fflush(stdout);_exit(0);
+    }
+    assert(runtime->stopNativeFiles()&&!runtime->nativeFilesServiceSafe());
+    for(unsigned i=0;i<8;++i)assert(runtime->stopNativeFiles()&&!runtime->run());
     assert(!S::sdFiles().bound()&&S::sdFiles().exitSafe()&&counter(3)==1&&counter(4)==1&&counter(5)==1);
     for(unsigned i=6;i<=11;++i)assert(!counter(i));
     uint32_t h=99;assert(S::sdFiles().open("/unrelated.txt",RISC_FILES_READ,&h)==RISC_FILES_UNAVAILABLE&&!h);

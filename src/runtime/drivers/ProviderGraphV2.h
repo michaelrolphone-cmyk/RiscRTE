@@ -90,6 +90,10 @@ class GraphV2 final {
   size_t moduleCount() const { return count_; }
   size_t liveGrants() const;
   bool holdsGrant(GrantV2 grant) const;
+  // Native-only, read-only proof of an exact retained graph. Every occupied
+  // grant must appear once, and all consumers must belong to those roots or
+  // their acquired dependency edges. Never performs cleanup or grants access.
+  bool validateKeepSet(const GrantV2* keep, size_t count) const;
   // Native-only occupancy evidence, including revoked slots awaiting checked
   // cleanup. High water is lifetime-monotonic and never changes grant custody.
   size_t peakLiveGrants() const { return peakLiveGrants_; }

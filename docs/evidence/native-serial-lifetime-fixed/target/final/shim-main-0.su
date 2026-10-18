@@ -1,0 +1,158 @@
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/SettingsService.h:27:16:virtual bool RiscBoot::SettingsSession::retained() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:12:12:virtual uint32_t RiscBoot::LegacySettingsSession::maxBlobSize() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:28:12:virtual uint32_t RiscBoot::LegacySettingsSession::checkpointCount() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:29:12:virtual uint32_t RiscBoot::LegacySettingsSession::format() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:30:12:virtual uint32_t RiscBoot::LegacySettingsSession::sharedCount() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:31:12:virtual uint32_t RiscBoot::LegacySettingsSession::sharedNamespace(uint32_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:104:6:bool {anonymous}::isOwner()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:278:23:static constexpr uint64_t setup()::<lambda()>::_FUN()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:475:82:static constexpr uint32_t setup()::<lambda()>::_FUN()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:227:6:bool {anonymous}::nativeSettingsShutdown()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:226:6:bool {anonymous}::nativeDiscoveryCheckpoint()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:225:6:bool {anonymous}::nativeOwnerCheckpoint(bool)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeCompute.h:11:16:int32_t RiscCpu::randomBytes(void*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeCompute.h:15:16:int32_t RiscCpu::memoryHeap(risc_memory_heap_snapshot_v1*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:236:6:bool {anonymous}::priorFailure(risc_resident_failure_v1*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:145:6:void {anonymous}::schedulerDelay(uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:229:6:bool {anonymous}::confirmBoot()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:164:6:bool {anonymous}::bindPlatforms(RiscBoot::Runtime&)	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:104:41:std::unique_ptr<RiscBoot::SettingsSession> RiscBoot::openLegacySettings(const KeyValueBackend&)	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:160:6:bool {anonymous}::diagnostic(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:141:6:)	336	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/SdFirstKeyValue.h:23:15:static bool RiscStorage::SdFirstKeyValue::_ZN11RiscStorage15SdFirstKeyValue8keyValidEPKc$part$0(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:148:6:void {anonymous}::cooperate(uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:378:45:static constexpr bool setup()::<lambda()>::_FUN()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsBootstrapInput.h:11:2:static constexpr RiscProvision::InputStatus RiscBootstrap::nvsInput()::<lambda(void*, const char*, void*, uint32_t, uint32_t*)>::_FUN(void*, const char*, void*, uint32_t, uint32_t*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:384:53:static constexpr bool setup()::<lambda()>::_FUN()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:127:6:bool {anonymous}::health(risc_runtime_health_v1*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:126:6:bool {anonymous}::monotonicMillis(uint32_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/FileValidation.h:10:13:bool RiscStorage::validPath(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:74:8:bool RiscStorage::PosixFiles::path(const char*, char (&)[512]) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:197:11:int32_t RiscStorage::PosixFiles::_ZN11RiscStorage10PosixFiles6renameEPKcS2_$part$0(const char*, const char*)	1056	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:54:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, const char*, const char*)>::_FUN(void*, const char*, const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:67:8:bool RiscStorage::PosixFiles::exitSafe() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:72:18:static int32_t RiscStorage::PosixFiles::error()	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:96:11:RiscStorage::PosixFiles::Handle* RiscStorage::PosixFiles::vacant()	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:97:11:RiscStorage::PosixFiles::Handle* RiscStorage::PosixFiles::find(uint32_t, bool)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:42:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, risc_storage_files_identity_value_v1*)>::_FUN(void*, uint32_t, risc_storage_files_identity_value_v1*)	128	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:46:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, void*, uint32_t, uint32_t*)>::_FUN(void*, uint32_t, void*, uint32_t, uint32_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:47:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, const void*, uint32_t, uint32_t*)>::_FUN(void*, uint32_t, const void*, uint32_t, uint32_t*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:50:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t)>::_FUN(void*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:59:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t)>::_FUN(void*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:109:11:int32_t RiscStorage::PosixFiles::pathIdentity(const char*, risc_storage_files_identity_value_v1*)	640	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:41:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, const char*, risc_storage_files_identity_value_v1*)>::_FUN(void*, const char*, risc_storage_files_identity_value_v1*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:170:11:int32_t RiscStorage::PosixFiles::close(uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:45:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t)>::_FUN(void*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:121:11:int32_t RiscStorage::PosixFiles::open(const char*, uint32_t, uint32_t*)	656	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:44:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, const char*, uint32_t, uint32_t*)>::_FUN(void*, const char*, uint32_t, uint32_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:186:11:int32_t RiscStorage::PosixFiles::info(uint32_t, uint64_t*, uint64_t*)	128	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:49:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, uint64_t*, uint64_t*)>::_FUN(void*, uint32_t, uint64_t*, uint64_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:48:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, uint64_t)>::_FUN(void*, uint32_t, uint64_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:51:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, uint64_t)>::_FUN(void*, uint32_t, uint64_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:196:11:int32_t RiscStorage::PosixFiles::mkdir(const char*)	544	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:53:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, const char*)>::_FUN(void*, const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:213:11:int32_t RiscStorage::PosixFiles::remove(const char*)	544	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:55:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, const char*)>::_FUN(void*, const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:215:11:int32_t RiscStorage::PosixFiles::dirNext(uint32_t, risc_storage_files_entry_v1*)	640	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:57:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, risc_storage_files_entry_v1*)>::_FUN(void*, uint32_t, risc_storage_files_entry_v1*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:232:11:int32_t RiscStorage::PosixFiles::dirClose(uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:58:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t)>::_FUN(void*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:214:11:int32_t RiscStorage::PosixFiles::dirOpen(const char*, uint32_t*)	544	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:56:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, const char*, uint32_t*)>::_FUN(void*, const char*, uint32_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:190:11:int32_t RiscStorage::PosixFiles::stat(const char*, risc_storage_files_stat_v1*)	640	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:52:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, const char*, risc_storage_files_stat_v1*)>::_FUN(void*, const char*, risc_storage_files_stat_v1*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:234:11:int32_t RiscStorage::PosixFiles::dirTell(uint32_t, uint64_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:60:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, uint64_t*)>::_FUN(void*, uint32_t, uint64_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:235:11:int32_t RiscStorage::PosixFiles::dirSeek(uint32_t, uint64_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:61:7:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, uint64_t)>::_FUN(void*, uint32_t, uint64_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:216:11:int32_t RiscStorage::PosixFiles::directoryNext(uint32_t, risc_storage_files_stat_v1*, char*, uint32_t, uint32_t*)	656	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/PosixFiles.h:39:43:static constexpr long int RiscStorage::PosixFiles::PosixFiles(const char*, OpenBehavior, bool)::<lambda(void*, uint32_t, risc_storage_files_stat_v1*, char*, uint32_t, uint32_t*)>::_FUN(void*, uint32_t, risc_storage_files_stat_v1*, char*, uint32_t, uint32_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSpiffsFiles.h:18:12:RiscCpu::NativeSpiffsFiles::NativeSpiffsFiles(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/StorageFilesVolumeAdapter.h:47:8:bool RiscBoot::StorageFilesVolumeAdapter::exitSafe() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/StorageFilesVolumeAdapter.h:37:8:bool RiscBoot::StorageFilesVolumeAdapter::bindFiles(const risc_storage_files_v1*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/RuntimeFiles.h:10:8:bool RiscBoot::RuntimeFiles::bind(const risc_storage_files_v1*, Check, Check, const risc_storage_files_identity_v1*, const risc_storage_files_directory_v1*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/RuntimeFiles.h:37:8:bool RiscBoot::RuntimeFiles::bound() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/RuntimeFiles.h:39:8:bool RiscBoot::RuntimeFiles::exitSafe() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/RuntimeFiles.h:7:7:constexpr RiscBoot::RuntimeFiles::RuntimeFiles()	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/RuntimeFiles.h:101:8:bool RiscBoot::RuntimeFileSources::retained() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeRuntimeFiles.h:28:13:bool RiscCpu::NativeRuntimeFiles::custodySafe()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:195:6:bool {anonymous}::providerStorageSafe()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:224:6:bool {anonymous}::updateStorageSafe()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeRuntimeFiles.h:29:13:bool RiscCpu::NativeRuntimeFiles::exitSafe()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:212:6:bool {anonymous}::restartSafe()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:178:6:bool {anonymous}::appExitSafe()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeRuntimeFiles.h:30:13:bool RiscCpu::NativeRuntimeFiles::prepare(bool (*)(), bool (*)())	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:63:13:void RiscPerf::saturate(uint32_t&)	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:67:13:bool RiscPerf::allowed()	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:68:13:void RiscPerf::record(uint32_t, uint32_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:83:17:uint64_t RiscPerf::now()	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:97:13:void RiscPerf::emit(uint32_t, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:130:3:RiscPerf::Scope::Scope(uint32_t, uint32_t, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:134:3:RiscPerf::Scope::~Scope()	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/SdFirstKeyValue.h:23:15:static bool RiscStorage::SdFirstKeyValue::keyValid(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/SdFirstKeyValue.h:33:19:static uint32_t RiscStorage::SdFirstKeyValue::crc(const uint8_t*, unsigned int)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/SdFirstKeyValue.h:34:15:static void RiscStorage::SdFirstKeyValue::word(uint8_t*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/SdFirstKeyValue.h:35:19:static uint32_t RiscStorage::SdFirstKeyValue::word(const uint8_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/SdFirstKeyValue.h:36:19:static unsigned int RiscStorage::SdFirstKeyValue::encode(const State&, uint32_t, bool, uint8_t*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/SdFirstKeyValue.h:43:15:static bool RiscStorage::SdFirstKeyValue::decode(State&, uint32_t, const char*, const void*, unsigned int, bool&)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/SdFirstKeyValue.h:82:18:static int32_t RiscStorage::SdFirstKeyValue::put(State&, Workspace&, const Journal&, uint32_t, const char*, const void*, unsigned int)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:34:8:void RiscStorage::ScalableSettings::State::clear()	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:46:8:void RiscStorage::ScalableSettings::Collection::clear()	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:9:7:RiscBoot::LegacySettingsSession::~LegacySettingsSession()	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:9:7:virtual RiscBoot::LegacySettingsSession::~LegacySettingsSession()	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:47:8:bool RiscStorage::ScalableSettings::Collection::create(size_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:13:8:virtual bool RiscBoot::LegacySettingsSession::configure(uint32_t, uint32_t, bool, const uint32_t*, uint32_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:51:14:static bool RiscStorage::ScalableSettings::key(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:53:18:static uint32_t RiscStorage::ScalableSettings::word(const uint8_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:54:14:static void RiscStorage::ScalableSettings::word(uint8_t*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:55:18:static uint64_t RiscStorage::ScalableSettings::wide(const uint8_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:56:14:static void RiscStorage::ScalableSettings::wide(uint8_t*, uint64_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:57:18:static uint32_t RiscStorage::ScalableSettings::crc(const void*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:58:16:static RiscStorage::ScalableSettings::Entry** RiscStorage::ScalableSettings::find(State&, const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:59:17:static int32_t RiscStorage::ScalableSettings::assign(State&, const char*, const void*, uint32_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:72:17:static int32_t RiscStorage::ScalableSettings::put(State&, const Backend&, uint32_t, const char*, const void*, uint32_t)	2112	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:85:14:static void RiscStorage::ScalableSettings::header(uint8_t*, uint32_t, const State&, uint32_t, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:88:14:static bool RiscStorage::ScalableSettings::validHeader(const uint8_t*, uint32_t, const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:101:17:static int32_t RiscStorage::ScalableSettings::advanceRestore(State&, const Backend&, uint32_t)	2144	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:118:17:static int32_t RiscStorage::ScalableSettings::restore(State&, const Backend&, uint32_t, const char*, const void*, uint32_t, bool)	4592	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/storage/ScalableSettings.h:164:17:static int32_t RiscStorage::ScalableSettings::acknowledge(State&, const Backend&, uint32_t, uint64_t)	2432	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:95:8:bool RiscBoot::LegacySettingsSession::installed(uint32_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:96:12:uint32_t RiscBoot::LegacySettingsSession::nameSpace(uint32_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:97:41:RiscStorage::ScalableSettings::State* RiscBoot::LegacySettingsSession::scalable(uint32_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:79:8:virtual bool RiscBoot::LegacySettingsSession::launchReady(uint32_t, bool*) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:46:11:virtual int32_t RiscBoot::LegacySettingsSession::put(uint32_t, const char*, const void*, uint32_t, bool)	80	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:37:11:virtual int32_t RiscBoot::LegacySettingsSession::get(uint32_t, const char*, void*, uint32_t, uint32_t*, uint32_t, bool)	176	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:74:11:virtual int32_t RiscBoot::LegacySettingsSession::acknowledge(uint32_t, uint64_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:63:11:virtual int32_t RiscBoot::LegacySettingsSession::snapshot(uint32_t, void*, uint32_t, uint32_t*, uint64_t*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:53:11:virtual int32_t RiscBoot::LegacySettingsSession::restore(uint32_t, const char*, const void*, uint32_t, bool)	144	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/LegacySettingsProvider.h:32:12:virtual uint32_t RiscBoot::LegacySettingsSession::status(uint32_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Board.h:48:3:constexpr RiscBoot::Board::Board()	32	static
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.h:149:12:RiscBoot::Runtime::Runtime(RiscBoot::Port)	48	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/CpuPort.h:149:12:RiscCpu::Port::Port(RiscCpu::Hardware)	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:588:1:void __static_initialization_and_destruction_0()	704	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeRadioResources.h:16:3:RiscCpu::NativeRadioResourceGuard::~NativeRadioResourceGuard()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:49:17:void risc_perf_loader_event(uint32_t, uint32_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/resources/ScopedBufferWipe.h:12:3:RiscRuntime::ScopedBufferWipe::~ScopedBufferWipe()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:15:13:bool RiscNvs::valid(uint32_t, const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:25:3:RiscNvs::Handle::~Handle()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:26:13:esp_err_t RiscNvs::Handle::open(uint32_t, nvs_open_mode_t, bool)	48	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:71:5:static constexpr int32_t RiscNvs::backend()::<lambda(void*, uint32_t, bool*)>::_FUN(void*, uint32_t, bool*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:31:16:int32_t RiscNvs::getUnlocked(void*, uint32_t, const char*, void*, uint32_t, uint32_t*)	2128	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:49:16:int32_t RiscNvs::get(void*, uint32_t, const char*, void*, uint32_t, uint32_t*)	64	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsScalableSettings.h:85:3:static constexpr long int RiscNvs::Settings::backend()::<lambda(void*, uint32_t, void*, uint32_t, uint32_t*)>::_FUN(void*, uint32_t, void*, uint32_t, uint32_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:69:5:static constexpr long int RiscNvs::backend()::<lambda(void*, uint32_t, void*, uint32_t, uint32_t*)>::_FUN(void*, uint32_t, void*, uint32_t, uint32_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:54:16:int32_t RiscNvs::put(void*, uint32_t, const char*, const void*, uint32_t)	2128	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:70:5:static constexpr long int RiscNvs::backend()::<lambda(void*, uint32_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const void*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsScalableSettings.h:5:18:esp_err_t RiscNvs::Settings::open(RiscNvs::Handle&, uint32_t, const char*, nvs_open_mode_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsScalableSettings.h:72:16:int32_t RiscNvs::Settings::erase(void*, uint32_t, const char*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsScalableSettings.h:8:16:int32_t RiscNvs::Settings::readRaw(nvs_handle_t, const char*, void*, uint32_t, uint32_t*)	2128	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsScalableSettings.h:33:16:int32_t RiscNvs::Settings::next(void*, uint32_t, bool, const char*, char*, void*, uint32_t, uint32_t*)	128	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsScalableSettings.h:16:16:int32_t RiscNvs::Settings::read(void*, uint32_t, void*, uint32_t, uint32_t*)	48	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsScalableSettings.h:22:16:int32_t RiscNvs::Settings::write(uint32_t, const char*, const char*, const void*, uint32_t)	2144	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsScalableSettings.h:84:3:static constexpr long int RiscNvs::Settings::backend()::<lambda(void*, uint32_t, const char*, const void*, uint32_t)>::_FUN(void*, uint32_t, const char*, const void*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsScalableSettings.h:83:3:static constexpr long int RiscNvs::Settings::backend()::<lambda(void*, uint32_t, const void*, uint32_t)>::_FUN(void*, uint32_t, const void*, uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NvsKeyValue.h:67:41:const RiscBoot::KeyValueBackend* RiscNvs::backend()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:268:6:void setup()	3744	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:571:6:void loop()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:582:17:void app_main()	32	static
+/workspace/shared/serial-lifetime-20261018/src/main.cpp:588:1:cpp)	32	static

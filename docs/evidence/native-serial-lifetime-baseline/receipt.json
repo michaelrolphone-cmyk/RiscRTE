@@ -1,0 +1,10 @@
+{
+  "runtime_revision": "615bfaeeb9f8876255380994a95bebfafaa32779",
+  "provider_revision": "e1b2fc8b801b33e3bd6ea30626a8dda9bf2237a6",
+  "provider_version": "0.2.2",
+  "result": "EXPECTED FAILURE: fresh HELLO/NS/PATH succeed, STAT12 returns UNAVAILABLE after clean run retirement",
+  "namespace_count": 1,
+  "baseline_command": "python3 test/run_native_serial_waveshare_sd_test.py --waveshare /workspace/shared/stat-observation-recovery/provider --output <empty-directory> --case post-return",
+  "raw_sha256": "d5465f1a858a08bd0900674ddf7c74d997aef6ab8f2060e9ae918aaf505f4993",
+  "limits": "Host RAM-card reproduction only; no device access or physical-cause attribution."
+}

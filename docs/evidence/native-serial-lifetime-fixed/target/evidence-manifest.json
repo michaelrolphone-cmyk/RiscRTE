@@ -1,0 +1,2922 @@
+{
+  "types.cpp": {
+    "bytes": 1168,
+    "sha256": "6f01cbcebf8c07c0424be39d2116fa2f02baf77a52f851a4e946c6ccd2ff5d00"
+  },
+  "types-initial-shim.o": {
+    "bytes": 28216,
+    "sha256": "5a77e4c45274eb5c46d52e3729692a294151ac532f15c959e78ffd01376fd611"
+  },
+  "receipt.json": {
+    "bytes": 6878,
+    "sha256": "8df3c2f86e8d7d872c88fc378c91dc80d49b22a8ec201f02ca1749869619139e"
+  },
+  "types-initial-command.json": {
+    "bytes": 3578,
+    "sha256": "59e53463986cc558b55921c19b13decfbd728bac8a8bf95f48c7b6132ec9699d"
+  },
+  "types-initial-shim.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "types-initial-shim-command.json": {
+    "bytes": 3995,
+    "sha256": "c78855b6d6ac5a944340c4f4beedbf2e7deb989ac0db3e80703436706fb934a0"
+  },
+  "README.md": {
+    "bytes": 3725,
+    "sha256": "44396518ee1300c6173a950c8bfe21490a3a226b86f654e40b0f2d3df5ff7ae7"
+  },
+  "pass-1-console.log": {
+    "bytes": 22389,
+    "sha256": "7981027b288c32d257b3a364c090059f8559be7fe3ead5446385e2d1f2ad351a"
+  },
+  "final-console.log": {
+    "bytes": 41082,
+    "sha256": "4605ae8c0f626fc7aec7278212a2a55da36e4a590ed1344db5e08e414dd28b80"
+  },
+  "run_qualification.py": {
+    "bytes": 5298,
+    "sha256": "3747dec3bec2ceaf7ffea4e11256b6845267c93d292adaebb6c2032e3d674441"
+  },
+  "types-initial.log": {
+    "bytes": 506,
+    "sha256": "699f6ce22d5f534fea1e0b979dbb2b874429f4a9ad1a8b8bcca36e72243e4c25"
+  },
+  "pass-2-console.log": {
+    "bytes": 23545,
+    "sha256": "f137b3324c8d48c1cb1442cd6ea25fd2d6ed2f2c05856b43c33000018714a4e8"
+  },
+  "inputs.json": {
+    "bytes": 31899,
+    "sha256": "1773f6d5b10d312440809f92145c6cdd0f14805d262e74d69947e501c8b33c03"
+  },
+  "base-command.json": {
+    "bytes": 3401,
+    "sha256": "308657f7b5f4dcd9607a255e9a8333e337ba812554cfff51e34ad0d2a6179ee5"
+  },
+  "pass-4-console.log": {
+    "bytes": 27625,
+    "sha256": "0740e7099e5f748eac30b11ccbd14ecac4506d78ac6559cb67ecee1507dc4a10"
+  },
+  "summarize.py": {
+    "bytes": 8404,
+    "sha256": "aa3880da42b9ed38d676ee0b68d0af806d6a00751c909881ddd7226d3d1e723d"
+  },
+  "probe_inputs.py": {
+    "bytes": 2931,
+    "sha256": "6ecf8100ddeb6d38c571a08b4bd0d0fed8229e63761f1b3579c1b35980cc75ad"
+  },
+  "native-types.cpp": {
+    "bytes": 604,
+    "sha256": "1b551a8fae6538416decaada1272a3cee3aaf09abe0e2bc76e00498e3296f7b7"
+  },
+  "prior-selected-compile-commands.json": {
+    "bytes": 49835,
+    "sha256": "32b1ec38d6dd90f71c452f7945c1fbea467b84c3dffa98ae18b936a5da9fd8fe"
+  },
+  "pass-3-console.log": {
+    "bytes": 23657,
+    "sha256": "6f1be5192a52cdb1a4ae336f934276618155aa530beb7fbf1c364dbd30670b42"
+  },
+  "final/shim-Runtime-1.su": {
+    "bytes": 179278,
+    "sha256": "181832dda5672456fc101fc30349d8530996b39e887581d87d6500477fde616c"
+  },
+  "final/sdk-only-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-types-expanded-0.d": {
+    "bytes": 11847,
+    "sha256": "65d9e9edb683fb1c055f8e1f8a1b12a9c013f70d4daaf113122b82d471b83449"
+  },
+  "final/candidate-types-installed-0.d": {
+    "bytes": 10025,
+    "sha256": "8df028cd6580afbff5ae7cbeac0bb26c53453cd01d53e8377649caa87f69fee1"
+  },
+  "final/shim-main-0-disassembly.log": {
+    "bytes": 898258,
+    "sha256": "f509d3a2868a8f634232192e65d9775c3c5a77d33ae7595aa7170ad009784144"
+  },
+  "final/shim-Runtime-1.log": {
+    "bytes": 10773,
+    "sha256": "ed05cbf4e1ef53e94cf866677137e526bb2479721c73fe6a85da62e7cf270d16"
+  },
+  "final/candidate-graph-cohort-disassembly.log": {
+    "bytes": 404747,
+    "sha256": "ab79016ddd918ed9b8339bdd16447188e12640e9e5ef8ed523dfe36d9e7466ce"
+  },
+  "final/shim-ProviderGraphV2-0-nm.log": {
+    "bytes": 7363,
+    "sha256": "49aeea4030c8db6a3ab0831870fd9f9e532b595f691d3fb38888a65d88f20b08"
+  },
+  "final/shim-ProviderGraphV2-1.o": {
+    "bytes": 298340,
+    "sha256": "fc4befa2aa1666a12cf583ab1c32a4a82988239abccba926d90bcf004bd820c6"
+  },
+  "final/candidate-types-installed-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-graph-cohort.su": {
+    "bytes": 10079,
+    "sha256": "139d698ad62d2e6bb6d6a1def4074ae2790c84b9582473a1f47aacb51c91608a"
+  },
+  "final/shim-NativeSerialFiles-0.d": {
+    "bytes": 623,
+    "sha256": "a650198b2a630612056853fb6237c695aed43f6b673d3b12a9f4ec1ee9a06c7b"
+  },
+  "final/shim-NativeSerialStorage-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-types-installed-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-main-0-nm.log": {
+    "bytes": 29473,
+    "sha256": "01532f04af01ec727083ac16bc70ef704b97e50fe7ef6b892b09b64ba41aca97"
+  },
+  "final/sdk-only-NativeSerialFiles-0.d": {
+    "bytes": 424,
+    "sha256": "22046e6dd98b67d12b907e5a90cb91d6cd459ab107af521968e6d279cc8ffa0b"
+  },
+  "final/candidate-types-installed-0-nm.log": {
+    "bytes": 210,
+    "sha256": "c5b113555bc8e714f70db40eae5a93551af36bae166c2d265b126a97cea78262"
+  },
+  "final/sdk-only-ProviderGraphV2-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-cohort-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-graph-installed-disassembly.log": {
+    "bytes": 408985,
+    "sha256": "8c0b78f031f87d149149a52bb6e620698881c597a7ca7ce4dbc6dc469c78e9f9"
+  },
+  "final/shim-main-0.o": {
+    "bytes": 1218220,
+    "sha256": "2f251da2faa53850081ff12be504c0936a551bf1187a11cbcc48951f01bd87fe"
+  },
+  "final/shim-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-ProviderGraphV2-0-objdump.log": {
+    "bytes": 71083,
+    "sha256": "cdca7271318d0b11018c9d65c3f7f4b2837ff7c9a2ec819688ea377ad96030a6"
+  },
+  "final/sdk-only-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-types-legacy-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-expanded-1.d": {
+    "bytes": 10024,
+    "sha256": "559876b628f7bf62549613b552464a4b9e761f6137d1d1fc6221f6db32557bc8"
+  },
+  "final/sdk-only-main-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-native-types.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-legacy-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-main-1.d": {
+    "bytes": 16223,
+    "sha256": "3872142591724c87c6e96266d15bd9684fd106cd8eb5f2b0d7c7b760ed4082f3"
+  },
+  "final/baseline-native-types-nm.log": {
+    "bytes": 3347,
+    "sha256": "56877efcf11de877091e5979634e4e9408808f7e05d40c13990198fcdc1744ba"
+  },
+  "final/sdk-only-ProviderGraphV2-1.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "final/baseline-types-cohort-1.d": {
+    "bytes": 11845,
+    "sha256": "c737342ce1f445cc734091def33a6bef934f7ef457fd18d8689cd591d6533d68"
+  },
+  "final/candidate-types-legacy-1.d": {
+    "bytes": 9938,
+    "sha256": "49c7cfae628cd3a35c172c35039e9400ac1d716e353f9e480930103a26513a75"
+  },
+  "final/shim-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-ProviderGraphV2-1.d": {
+    "bytes": 2994,
+    "sha256": "7eda0d5aaa1e11d19ffd8d0b9a4f5b0efcdffcf09e884e8e961b1a9d956bef45"
+  },
+  "final/baseline-types-legacy-1.o": {
+    "bytes": 424136,
+    "sha256": "dc5744f235069d575dd7ad7fc9e213869d136f7725272aef9aaf3ca7e47e0c26"
+  },
+  "final/baseline-types-installed-0.o": {
+    "bytes": 28204,
+    "sha256": "752c7b4fa4272df296ca79b592c8cf3b821f43f52b7471bf0b3db9f6341e5eae"
+  },
+  "final/shim-main-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-types-legacy-0.o": {
+    "bytes": 28160,
+    "sha256": "8864e5075df8834809fd42defc0114c85cd541d76cf0b3f0c22fc382e012fc61"
+  },
+  "final/shim-NativeSerialFiles-0.o": {
+    "bytes": 8512,
+    "sha256": "f3b2f7fcb4a70527f1b633f5f6c78ff2828b3968db54bd385451e92cfee2aa77"
+  },
+  "final/shim-NativeSerialStorage-1-disassembly.log": {
+    "bytes": 37319,
+    "sha256": "04f36f47b4713867552de24d279631f43408876ede22278f28ad5056eb1eb9af"
+  },
+  "final/shim-main-1-disassembly.log": {
+    "bytes": 913439,
+    "sha256": "085d09c513a32200c78381b2d630fbec2787f0c21cd278f0fc0eb608699969b8"
+  },
+  "final/sdk-only-NativeSerialStorage-1.log": {
+    "bytes": 349,
+    "sha256": "622c72b2140e188ad55e7887b7372a1be4b5e26973f8bf0637dfb7354042005c"
+  },
+  "final/baseline-types-installed-0.d": {
+    "bytes": 11848,
+    "sha256": "62dff7e7830babcdfa409d953c1f35403dfcce491a15e5ece5d80286c58d0ae9"
+  },
+  "final/shim-ProviderGraphV2-0-disassembly.log": {
+    "bytes": 408307,
+    "sha256": "db29a15596a5976385c4f3be289831f193aed1aa9139945dac0ee27ddf7e498e"
+  },
+  "final/candidate-types-legacy-1-nm.log": {
+    "bytes": 604,
+    "sha256": "cd577df84360a6bbb1fbee1512065b8390613743551c7c2923eb9acb34a18bef"
+  },
+  "final/shim-NativeSerialStorage-0.o": {
+    "bytes": 8520,
+    "sha256": "67af521686b255d74496b14c6e3cd440ea836da91ca1bd9a354f15739f5082d3"
+  },
+  "final/sdk-only-NativeSerialStorage-0.d": {
+    "bytes": 514,
+    "sha256": "6d8781e6f21e6ff16ce29ef081a62085b09ff939442df58e617383120349832a"
+  },
+  "final/shim-ProviderGraphV2-1.su": {
+    "bytes": 10079,
+    "sha256": "3ee227379359120fffb5ccf39aa2328f451913f0b2de7fe3f58b2454bb70a350"
+  },
+  "final/sdk-only-Runtime-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-Runtime-1-nm.log": {
+    "bytes": 122381,
+    "sha256": "37b7dc6d91a4740c6dd2d5f3b6473009a4db8974e377175f90a6a98678b9cf9d"
+  },
+  "final/baseline-types-installed-1-nm.log": {
+    "bytes": 417,
+    "sha256": "e874b59733de83eeb82232d019676225395be96c57f6f31360bc0ac2670d8669"
+  },
+  "final/shim-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-installed-1-nm.log": {
+    "bytes": 604,
+    "sha256": "d2c59451ecacf99b69549f9c4d3ea47de0e895f1baf5f69427b118fd9911c971"
+  },
+  "final/sdk-only-Runtime-1.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "final/sdk-only-NativeSerialFiles-0-disassembly.log": {
+    "bytes": 122,
+    "sha256": "9a903da620db590db0db02425cec26c9b8e2ec9656deab039887843726bd7ac7"
+  },
+  "final/baseline-types-cohort-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-cohort-1.d": {
+    "bytes": 10022,
+    "sha256": "94c33da531de030294a52264b4a818368fd6606e9673315f2566ef677c5e8f71"
+  },
+  "final/shim-Runtime-0.d": {
+    "bytes": 15175,
+    "sha256": "ae8f12a158af8fc13d7cb55eb7df99405ddadd89d1be659cc44f1e42d92cbf66"
+  },
+  "final/sdk-only-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1860,
+    "sha256": "84bda0cab552d40650b61f01ef6dbf70322a12b5043eddc813825d451a666aec"
+  },
+  "final/shim-NativeSerialFiles-1-objdump.log": {
+    "bytes": 20250,
+    "sha256": "693f4b595d94b985954498700ee5c67f226405833f51b7ff1e5018c37647965b"
+  },
+  "final/baseline-types-cohort-1-nm.log": {
+    "bytes": 417,
+    "sha256": "c4b11a3ecadca9c26fa8c7b3ec52046c75f3b3773d1d0c7855d35c21684f8c42"
+  },
+  "final/shim-NativeSerialStorage-0.d": {
+    "bytes": 713,
+    "sha256": "4019c8c8fd93c1fe9eb7c90f17319ed9d9bbcd1e682948b2cafa727223151976"
+  },
+  "final/candidate-native-types-nm.log": {
+    "bytes": 3405,
+    "sha256": "94818818d64ff53400e53a85cc351bdf07a980c10f7205aa186068d7c21ad2a4"
+  },
+  "final/commands.json": {
+    "bytes": 219184,
+    "sha256": "5b3b819c240d701f3b6f54dd72fcd8cd93ae7cce45236c053bced35eeeb3f90e"
+  },
+  "final/candidate-types-cohort-0.d": {
+    "bytes": 10022,
+    "sha256": "7df3962e3578f70d27992e724b0fea43d57dc06027f4f1a17da6bf09fc6fb9b5"
+  },
+  "final/candidate-graph-legacy.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-types-cohort-0-nm.log": {
+    "bytes": 210,
+    "sha256": "d2bd12f573394112170960514b224b8e08f74a76987ec2d07c819412aa244eb2"
+  },
+  "final/baseline-types-legacy-1.d": {
+    "bytes": 11761,
+    "sha256": "c83ca4e0d825e34ab5084fe3acfaedee5bbdf455e5eee50f4895d0df21129b86"
+  },
+  "final/candidate-types-expanded-0.d": {
+    "bytes": 10024,
+    "sha256": "fbcfde53e023a94bb7af4e8e2a910528330b6cd273665c9c7fc5269c9037a16a"
+  },
+  "final/candidate-types-installed-0.o": {
+    "bytes": 27964,
+    "sha256": "2bbe02f41e3496ea310a38230c5fbe10ced124551b8853ad3ab28dac008c7b17"
+  },
+  "final/candidate-types-cohort-1-nm.log": {
+    "bytes": 604,
+    "sha256": "fbf551f55a41f7160462bdca0686a1b00c437a220aa36d62a0d8b7d0faf24685"
+  },
+  "final/sdk-only-main-0.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "final/candidate-types-installed-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-NativeSerialStorage-1-objdump.log": {
+    "bytes": 16644,
+    "sha256": "d1434d6e7936fd1bbae7f2d93a8131d896d49dce5f425d62717718efa24d2824"
+  },
+  "final/sdk-only-NativeSerialFiles-0.o": {
+    "bytes": 5524,
+    "sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382"
+  },
+  "final/baseline-types-installed-0-nm.log": {
+    "bytes": 210,
+    "sha256": "c5b113555bc8e714f70db40eae5a93551af36bae166c2d265b126a97cea78262"
+  },
+  "final/shim-main-1.su": {
+    "bytes": 28259,
+    "sha256": "fec14064da1659ca6180384754361c3cc8e4fec787d56a53f0d5b406c28b24ae"
+  },
+  "final/shim-Runtime-0.o": {
+    "bytes": 5206796,
+    "sha256": "f9b3638a798311a20cf9f568427896a3c96d299161f0bfe6592e64d3a4950e8f"
+  },
+  "final/sdk-only-NativeSerialFiles-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-NativeSerialStorage-1-nm.log": {
+    "bytes": 2316,
+    "sha256": "27d77a1382f70213c2719eedde9419a5bee9b6bde4df8e55546d4eafab80ca65"
+  },
+  "final/shim-ProviderGraphV2-1-objdump.log": {
+    "bytes": 71083,
+    "sha256": "1d2258f07880bd1ac12a6d6bd056645eeaad0fbbc2e95557b8eab067f0c81812"
+  },
+  "final/shim-NativeSerialStorage-0-disassembly.log": {
+    "bytes": 120,
+    "sha256": "db9a560ccdc5a80a787d6dc0dcc9f183e3d87d1e2fb4941826703d532d85341c"
+  },
+  "final/baseline-types-installed-1.o": {
+    "bytes": 424184,
+    "sha256": "f8d0333ef2f46396faac2b870f55c2d02c0aa9fcee27974e1f75eeb183f4ddf3"
+  },
+  "final/sdk-only-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/sdk-only-NativeSerialStorage-0-disassembly.log": {
+    "bytes": 124,
+    "sha256": "2f3701179763bfae9e232ed64cfcc0387591a2ac65431d263954473a4df2d029"
+  },
+  "final/shim-Runtime-0-disassembly.log": {
+    "bytes": 7141158,
+    "sha256": "b7024671bf71b496ecfd622e6215cffd11defb8dea63b22986877576d75924ac"
+  },
+  "final/candidate-types-legacy-0.o": {
+    "bytes": 27920,
+    "sha256": "9513e6977caf7e91d0209bbf14e7f037e0a19fd88873d3059beaff6755af5762"
+  },
+  "final/candidate-graph-legacy.su": {
+    "bytes": 10079,
+    "sha256": "d42d88fbdb69bf58ac46ccd34606254174d5dbe94ed87ce33c0f278989a1ba3d"
+  },
+  "final/candidate-graph-cohort.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-NativeSerialFiles-1.d": {
+    "bytes": 2196,
+    "sha256": "e32c10e32d3bd9f89216255fb3e2be3ab4e053d36f17c728ebffa997480c0d9c"
+  },
+  "final/sdk-only-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-installed-1.o": {
+    "bytes": 426008,
+    "sha256": "14c7777070ae61395b3bcb8a43e6b941fc4c26a9f7b60f202cfca1a98beed0cb"
+  },
+  "final/shim-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-graph-legacy.o": {
+    "bytes": 294568,
+    "sha256": "b830bd7f45e90a4d2107c69ea2f59791f4fb48ab8f1ee3227b5da3d318617056"
+  },
+  "final/candidate-types-legacy-1.o": {
+    "bytes": 425960,
+    "sha256": "26ef2332ac8e408c360ca5137459c2efd6ebbdf488047aab1362c4e1592456bf"
+  },
+  "final/shim-NativeSerialStorage-1.d": {
+    "bytes": 2167,
+    "sha256": "ae257f3a843ca9fd6bdb9d543221a0cd37af5e08369fdfa30fddd9af759e8e98"
+  },
+  "final/shim-NativeSerialFiles-1-disassembly.log": {
+    "bytes": 65305,
+    "sha256": "f035c72a43c3a0cc8a00a07fda81a63d1de96d8adfdac74b901e3d782902d45a"
+  },
+  "final/shim-NativeSerialFiles-1.su": {
+    "bytes": 3205,
+    "sha256": "1711887490abd5c9780eaab8a9c709c96bc1321eb198ce4cbb35fb5f69e5b593"
+  },
+  "final/candidate-types-expanded-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-Runtime-0-objdump.log": {
+    "bytes": 1090993,
+    "sha256": "b108e83c3350e26e91b8a2da166d1c2932ed1cd657393080bc0792cd32e701b8"
+  },
+  "final/shim-ProviderGraphV2-0.d": {
+    "bytes": 2994,
+    "sha256": "f2e783e83944f50de824b57c881ab53d491294e72020be58dd14d2ef62fad239"
+  },
+  "final/shim-ProviderGraphV2-0.o": {
+    "bytes": 298340,
+    "sha256": "fc4befa2aa1666a12cf583ab1c32a4a82988239abccba926d90bcf004bd820c6"
+  },
+  "final/sdk-only-NativeSerialFiles-1.log": {
+    "bytes": 429,
+    "sha256": "2d38aa6bb76a7ea3b565735385f518742462e7683a22bb3a735431c312027fbd"
+  },
+  "final/baseline-types-expanded-1.o": {
+    "bytes": 424200,
+    "sha256": "ea5e41987f1e3e02ecac33a86aa353e356966b710708fe18323d1e341d034098"
+  },
+  "final/candidate-graph-installed.su": {
+    "bytes": 10079,
+    "sha256": "139d698ad62d2e6bb6d6a1def4074ae2790c84b9582473a1f47aacb51c91608a"
+  },
+  "final/candidate-graph-legacy-disassembly.log": {
+    "bytes": 382722,
+    "sha256": "fe0479b1b202080d8d1fe42ecce55fa5f8d3b62fda251b4aa6bf60874549bbcf"
+  },
+  "final/shim-ProviderGraphV2-0.su": {
+    "bytes": 10079,
+    "sha256": "3ee227379359120fffb5ccf39aa2328f451913f0b2de7fe3f58b2454bb70a350"
+  },
+  "final/sdk-only-main-1.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "final/candidate-graph-installed.o": {
+    "bytes": 298708,
+    "sha256": "5839e5c6d4b9b69257ea75f0cffd6ffc19006d393f9c3f217c273a55ec733467"
+  },
+  "final/shim-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-NativeSerialFiles-1-nm.log": {
+    "bytes": 3287,
+    "sha256": "9f877c548aae2ff088bfd5a4cceb55a7e774e92b2b58d31f01bae7d4cb614ee1"
+  },
+  "final/baseline-types-installed-1.d": {
+    "bytes": 11848,
+    "sha256": "8c0ed365e248a45620582e9ed18023722332e3a7d96d7b8456b330036cab7515"
+  },
+  "final/shim-main-0.su": {
+    "bytes": 27624,
+    "sha256": "790e61befd088dc1a11fa3769e27f98c94c2394f3c21a7e27857c873b2cbfcae"
+  },
+  "final/candidate-types-legacy-0.d": {
+    "bytes": 9938,
+    "sha256": "cff60a738f1f2e0efa0934e0653e74f34338a9a78d264801cbc2f6486b4cc3f2"
+  },
+  "final/baseline-types-legacy-1-nm.log": {
+    "bytes": 417,
+    "sha256": "5e71e8c337fef41ff4e5cd22a93e65b46362006bcaccb401aa4af672451b1970"
+  },
+  "final/shim-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1856,
+    "sha256": "23424278f49dc05b9e5c846648caed7e9a3fbc896841a011fcf7550d6fe0f5a9"
+  },
+  "final/sdk-only-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-Runtime-0.su": {
+    "bytes": 177283,
+    "sha256": "1adc030c879b1dda7381e9353c0cf11f5684613f6a0465f8005b638b8728dd5a"
+  },
+  "final/baseline-types-legacy-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-main-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-expanded-0-nm.log": {
+    "bytes": 210,
+    "sha256": "cd4c141662746cf8c825e6acd2bde31d9a85238788a52d6dda8a692920aca3d5"
+  },
+  "final/candidate-types-expanded-0.o": {
+    "bytes": 27964,
+    "sha256": "e04a8480941de7f8c9f80d5c34365996683a3f80cf26f14c838005b53aef8bd5"
+  },
+  "final/sdk-only-NativeSerialStorage-0.o": {
+    "bytes": 5532,
+    "sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8"
+  },
+  "final/shim-main-1.o": {
+    "bytes": 1234240,
+    "sha256": "78503ab1fb0ba854912205ab9354ae7732f7990e46496905cba85e2f13a320e6"
+  },
+  "final/candidate-types-expanded-1-nm.log": {
+    "bytes": 604,
+    "sha256": "a6d361cd3a2edd49220e764d4104688930aa5ad6bd5faa8d9c3d7e549258737d"
+  },
+  "final/candidate-types-expanded-1.o": {
+    "bytes": 426024,
+    "sha256": "f84a7c7e2ffde9bd6826d8a3094717d36fb79698ade460ea04a2d50ee3ad56cb"
+  },
+  "final/shim-NativeSerialStorage-1.o": {
+    "bytes": 64396,
+    "sha256": "4e490f38a82cdac4bc65ecf2c9f4f23028368e71c8f9d3c48eaae19cdcf58012"
+  },
+  "final/candidate-native-types.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-types-expanded-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-main-1-objdump.log": {
+    "bytes": 247480,
+    "sha256": "435e001aafb89f9c43ef6f14a7bdb7e3a48ef63dc08bca0acb57b5d4f6baf58b"
+  },
+  "final/candidate-types-expanded-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-cohort-0-nm.log": {
+    "bytes": 210,
+    "sha256": "d2bd12f573394112170960514b224b8e08f74a76987ec2d07c819412aa244eb2"
+  },
+  "final/candidate-native-types.o": {
+    "bytes": 111956,
+    "sha256": "171881370e9fe4bfd0f21af16017772c678f71d1ab5635b98b14521557c7ba70"
+  },
+  "final/sdk-only-Runtime-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-types-cohort-0.d": {
+    "bytes": 11845,
+    "sha256": "08b902b12dfb478133cf3f01af062ea47ca13881423deebfd7cf7e3caee4c9df"
+  },
+  "final/baseline-types-expanded-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-ProviderGraphV2-1-nm.log": {
+    "bytes": 7363,
+    "sha256": "49aeea4030c8db6a3ab0831870fd9f9e532b595f691d3fb38888a65d88f20b08"
+  },
+  "final/shim-NativeSerialStorage-1.su": {
+    "bytes": 2367,
+    "sha256": "07cd84980c9147b4edda4fca0ed5abcc9ebc02f80b109e66761107d3b2a79b92"
+  },
+  "final/result.json": {
+    "bytes": 289324,
+    "sha256": "f646fbc277cb10ff441f1e2679633874753705f27ade5312a8aca7c1aa2ca59f"
+  },
+  "final/candidate-types-cohort-1.o": {
+    "bytes": 426024,
+    "sha256": "a5ebac9dac2f58dbf1f27f4849dfb2c0e14387c3413d2601be7a1f230cef407e"
+  },
+  "final/baseline-native-types.o": {
+    "bytes": 110872,
+    "sha256": "e3bbaa8448226320779bb03d9a1234c5b6fb4d7c2fd4a700984f692ae498e15d"
+  },
+  "final/sdk-only-NativeSerialStorage-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-installed-1.d": {
+    "bytes": 10025,
+    "sha256": "6c4c9a323542c1fd81ba66eb29c86235a4e399656ac6ac82f30f266a2f076e79"
+  },
+  "final/baseline-types-legacy-0-nm.log": {
+    "bytes": 210,
+    "sha256": "3d60cb834c80a191dd1a208cd6e3ef25533bd58cb38b2d13ca0bd3e6008a71d8"
+  },
+  "final/sdk-only-Runtime-0.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "final/shim-Runtime-1-disassembly.log": {
+    "bytes": 7300605,
+    "sha256": "d22727665ea6a1ac12f9eb2cc98fa08ca44e78000b35df11b71e841845dc4f74"
+  },
+  "final/baseline-types-expanded-1.d": {
+    "bytes": 11847,
+    "sha256": "37f46e032522d10e9daa8fabbf61fb9378b11215f8052bc14120cf8d6174b0b6"
+  },
+  "final/shim-Runtime-0.log": {
+    "bytes": 9945,
+    "sha256": "3e7901d995ef5a3ab0a972518c158115d25c4d8452076dd2259fbc6c8b86a1f7"
+  },
+  "final/shim-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/sdk-only-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1856,
+    "sha256": "d88c230f03e23122336ed56d84c3d9f80568083442c3497dbe87443abd04a381"
+  },
+  "final/candidate-graph-cohort.o": {
+    "bytes": 298172,
+    "sha256": "dece0e86544e23be908353364eefb6b6e1bc003a165cf1847b18252e45d678a9"
+  },
+  "final/shim-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1852,
+    "sha256": "f5b7cb67ae56146b96ee8ddc77bc2c4d45ae28ebd59730c124ae735622d32f02"
+  },
+  "final/baseline-types-cohort-0.o": {
+    "bytes": 28204,
+    "sha256": "22dd983acf03bab27a9855900047599a5089e1cd2a7851cd936fc6733b85b95e"
+  },
+  "final/sdk-only-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-main-1-nm.log": {
+    "bytes": 31468,
+    "sha256": "be15c3e9c07b9e511e5fce30362e1a15406866d8e5fbdce99dce9be72eb649f3"
+  },
+  "final/shim-Runtime-0-nm.log": {
+    "bytes": 121269,
+    "sha256": "f41991125c8f21f06f73dd366a0f63e0a26a063cfcbd2cd79fd96f2ddef41e3a"
+  },
+  "final/shim-main-0-objdump.log": {
+    "bytes": 242944,
+    "sha256": "960046f2cc582072b5e13b66f250eb44a32bd47a98b5d53727bfc1628e7ffc27"
+  },
+  "final/shim-Runtime-1-objdump.log": {
+    "bytes": 1103101,
+    "sha256": "e7819fbfe8a99b864cd11e8c3918dd42cf93a795931c0cc153f31ea19fadb802"
+  },
+  "final/candidate-types-legacy-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-types-legacy-0.d": {
+    "bytes": 11761,
+    "sha256": "3ffb82058c8172fa60aabe99ce3366bb211c34843b57fe28e4a1394069f9b6ca"
+  },
+  "final/baseline-types-cohort-1.o": {
+    "bytes": 424200,
+    "sha256": "e175d3fddd74ca060662c3daf89b333d0056a0faf5dd3b18a368c0ac526a1b05"
+  },
+  "final/baseline-types-cohort-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/candidate-types-cohort-0.o": {
+    "bytes": 27964,
+    "sha256": "283c1e4ae4a2f53fbf3bd0c96b90ffd43ac9bbe30d763d75933a2efac80df36f"
+  },
+  "final/shim-ProviderGraphV2-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-main-0.d": {
+    "bytes": 16150,
+    "sha256": "dc935709489b4650b488e3aaa76a992f212f90b31a7ecc76c68a96768fd4be0e"
+  },
+  "final/baseline-types-expanded-1-nm.log": {
+    "bytes": 417,
+    "sha256": "770089875f0f6111b936dc7fea890cc052914918de98950cc44dec079acdb6f0"
+  },
+  "final/sdk-only-ProviderGraphV2-0.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "final/sdk-only-ProviderGraphV2-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/sdk-only-main-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-NativeSerialFiles-0-disassembly.log": {
+    "bytes": 118,
+    "sha256": "390c86ae2aa8b351f7bd8cb0449aacbf9ca009ac503392cceae095fc142589bc"
+  },
+  "final/candidate-types-legacy-0-nm.log": {
+    "bytes": 210,
+    "sha256": "3d60cb834c80a191dd1a208cd6e3ef25533bd58cb38b2d13ca0bd3e6008a71d8"
+  },
+  "final/baseline-types-expanded-0-nm.log": {
+    "bytes": 210,
+    "sha256": "cd4c141662746cf8c825e6acd2bde31d9a85238788a52d6dda8a692920aca3d5"
+  },
+  "final/shim-NativeSerialFiles-1.o": {
+    "bytes": 75144,
+    "sha256": "d66f5e24a693032714db24f0d56e8f1194218c0abb80a01f9c79b7dd3c516653"
+  },
+  "final/baseline-types-expanded-0.o": {
+    "bytes": 28204,
+    "sha256": "3cebc6a3808b0fd1122ea4190e7b7ba6c6697a6a2b560900e44283f929d74d71"
+  },
+  "final/shim-ProviderGraphV2-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-Runtime-1.o": {
+    "bytes": 5296456,
+    "sha256": "eebd983f661c741ad3db23df8b2e8128163b019b29ef8d1075c9d42e68e569c9"
+  },
+  "final/candidate-graph-installed.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-NativeSerialFiles-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/baseline-types-installed-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final/shim-Runtime-1.d": {
+    "bytes": 15175,
+    "sha256": "467cff4b68aecf01023dd28de2a87ac0d3fa89a99e471d298d246af034740e0b"
+  },
+  "final/shim-ProviderGraphV2-1-disassembly.log": {
+    "bytes": 408307,
+    "sha256": "d1f1162cd6ba33a8b85853eb8bd90f73b1bcb54ac22388923ae8c81ea4a6764d"
+  },
+  "final/candidate-types-cohort-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/shim-Runtime-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/sdk-only-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/baseline-types-expanded-0.d": {
+    "bytes": 11687,
+    "sha256": "0ac042e7931fc95f77a634b4ea451ec7229738724e73d6dbef4bee9ca33181f9"
+  },
+  "pass-1/candidate-types-installed-0.d": {
+    "bytes": 9833,
+    "sha256": "0d00ed60ce6863c62e73c0f5c6b04b85512ef21e33d991c966c632e847b324d6"
+  },
+  "pass-1/shim-Runtime-1.log": {
+    "bytes": 415,
+    "sha256": "fbc12da5cd5b24d38027a517d627cc6832b9e2ee5e2ed9b1584f4be944a4a669"
+  },
+  "pass-1/candidate-types-installed-1.log": {
+    "bytes": 1208,
+    "sha256": "363cf01e5d21b12e291d214d28880131812659c88e507b21b73c1389c31a3f7f"
+  },
+  "pass-1/shim-NativeSerialFiles-0.d": {
+    "bytes": 421,
+    "sha256": "44e1caa582cb6be39adeea14461272faf5946deee3fb0eef01a6664f6a6e7471"
+  },
+  "pass-1/shim-NativeSerialStorage-1.log": {
+    "bytes": 1489,
+    "sha256": "956e91e946eb7c0b24552810a1960419d21a4a8de36cf3689338dcb1d306f31f"
+  },
+  "pass-1/baseline-types-installed-1.log": {
+    "bytes": 1272,
+    "sha256": "997f11514ed925ff3772278995056766f77fbb413f5ded4dc40c4aeef7557953"
+  },
+  "pass-1/sdk-only-NativeSerialFiles-0.d": {
+    "bytes": 425,
+    "sha256": "5efb74d082021b107cb9351b3708adb769337d4a25dc8882cbd02bfb6caf09d0"
+  },
+  "pass-1/sdk-only-ProviderGraphV2-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/candidate-types-cohort-1.log": {
+    "bytes": 1208,
+    "sha256": "363cf01e5d21b12e291d214d28880131812659c88e507b21b73c1389c31a3f7f"
+  },
+  "pass-1/shim-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/sdk-only-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/baseline-types-legacy-1.log": {
+    "bytes": 1272,
+    "sha256": "997f11514ed925ff3772278995056766f77fbb413f5ded4dc40c4aeef7557953"
+  },
+  "pass-1/candidate-types-expanded-1.d": {
+    "bytes": 9832,
+    "sha256": "466afc7aa713e2723ed3e65649eab48e7da9ad6725a0425934f0c4aab567cc3d"
+  },
+  "pass-1/sdk-only-main-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/candidate-types-legacy-1.log": {
+    "bytes": 1208,
+    "sha256": "363cf01e5d21b12e291d214d28880131812659c88e507b21b73c1389c31a3f7f"
+  },
+  "pass-1/sdk-only-ProviderGraphV2-1.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-1/baseline-types-cohort-1.d": {
+    "bytes": 11685,
+    "sha256": "5cab4ec29beca4dbb6245c8c0bcbbdbf454e1f700dcdb124909c51161afc6cab"
+  },
+  "pass-1/candidate-types-legacy-1.d": {
+    "bytes": 9734,
+    "sha256": "cc14dbe411055814a82c79922d8b01f908d90a8fc12e8c4098f221b3504b6454"
+  },
+  "pass-1/shim-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/shim-main-0.log": {
+    "bytes": 224,
+    "sha256": "67ea0f3ae642f6b258f317b63345a5b3f2666eccdb61fe79023385b6416d4dc5"
+  },
+  "pass-1/shim-NativeSerialFiles-0.o": {
+    "bytes": 5524,
+    "sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382"
+  },
+  "pass-1/sdk-only-NativeSerialStorage-1.log": {
+    "bytes": 349,
+    "sha256": "622c72b2140e188ad55e7887b7372a1be4b5e26973f8bf0637dfb7354042005c"
+  },
+  "pass-1/baseline-types-installed-0.d": {
+    "bytes": 11688,
+    "sha256": "fba578693adef88d84d7a9731fcdea4d0c4a21ac8c7b699c8955485f918e92ba"
+  },
+  "pass-1/shim-NativeSerialStorage-0.o": {
+    "bytes": 5532,
+    "sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8"
+  },
+  "pass-1/sdk-only-NativeSerialStorage-0.d": {
+    "bytes": 515,
+    "sha256": "efdea422951f64257d040ecd115ec81d43136ab61e62d2bc731879bcd0f608b5"
+  },
+  "pass-1/shim-ProviderGraphV2-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/sdk-only-Runtime-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/shim-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/sdk-only-Runtime-1.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "pass-1/baseline-types-cohort-1.log": {
+    "bytes": 1272,
+    "sha256": "997f11514ed925ff3772278995056766f77fbb413f5ded4dc40c4aeef7557953"
+  },
+  "pass-1/candidate-types-cohort-1.d": {
+    "bytes": 9830,
+    "sha256": "e7af3feee4ebc92d762dd3ce3dae432195c381658d862e9addf4a0cfa77be450"
+  },
+  "pass-1/sdk-only-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1861,
+    "sha256": "9e0060ff2d3d11c5302d4603ce1dad942a46507437e7b840e038302215f0e72d"
+  },
+  "pass-1/shim-NativeSerialStorage-0.d": {
+    "bytes": 511,
+    "sha256": "2467732d9a05c85b6cfa5b1c55a580b66f69140acedc6d75b4ad95f3a9cbadcf"
+  },
+  "pass-1/commands.json": {
+    "bytes": 176893,
+    "sha256": "a7b257df2ce33500cc65a976659a0e9b9be4de171528e9d7edc8ff8a44856230"
+  },
+  "pass-1/candidate-types-cohort-0.d": {
+    "bytes": 9830,
+    "sha256": "9abd47af62c25b8ff3ecc8b47a649275131afdf879c1d585a9300e2290166997"
+  },
+  "pass-1/baseline-types-legacy-1.d": {
+    "bytes": 11573,
+    "sha256": "4b261c27babda8150b8164faa22bc8033eb896961d8cfa6c19ce0d375ebcb05b"
+  },
+  "pass-1/candidate-types-expanded-0.d": {
+    "bytes": 9832,
+    "sha256": "1642b28c77e85e803c348f6779b63ac7bed1e551e92f809bfdd4323621020003"
+  },
+  "pass-1/sdk-only-main-0.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "pass-1/candidate-types-installed-0.log": {
+    "bytes": 1208,
+    "sha256": "363cf01e5d21b12e291d214d28880131812659c88e507b21b73c1389c31a3f7f"
+  },
+  "pass-1/sdk-only-NativeSerialFiles-0.o": {
+    "bytes": 5524,
+    "sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382"
+  },
+  "pass-1/shim-main-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/sdk-only-NativeSerialFiles-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/sdk-only-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/shim-NativeSerialFiles-1.d": {
+    "bytes": 1994,
+    "sha256": "49aaa736bdfa8689edad14fe2c4def3243f049265a1299e5a283f0fd13db31da"
+  },
+  "pass-1/sdk-only-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/shim-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/shim-NativeSerialStorage-1.d": {
+    "bytes": 2176,
+    "sha256": "5b716b59ea5f0e1cc0a230414ac6479d12f97402114d8c4c7df01e58630cb2f0"
+  },
+  "pass-1/shim-NativeSerialFiles-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/candidate-types-expanded-1.log": {
+    "bytes": 1208,
+    "sha256": "363cf01e5d21b12e291d214d28880131812659c88e507b21b73c1389c31a3f7f"
+  },
+  "pass-1/sdk-only-NativeSerialFiles-1.log": {
+    "bytes": 429,
+    "sha256": "2d38aa6bb76a7ea3b565735385f518742462e7683a22bb3a735431c312027fbd"
+  },
+  "pass-1/shim-ProviderGraphV2-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/sdk-only-main-1.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "pass-1/shim-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/baseline-types-installed-1.d": {
+    "bytes": 11688,
+    "sha256": "8a11c6648cc5d97352112aa6368db1d93c1f7c3fafc035de38741ec5b1a6bdbb"
+  },
+  "pass-1/shim-main-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/candidate-types-legacy-0.d": {
+    "bytes": 9734,
+    "sha256": "bf68e574ee9c19d580ae4d5757cbeb33df2eafe238d37f0e1b21f837db714cbc"
+  },
+  "pass-1/shim-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1857,
+    "sha256": "82a7d486460cb8627775987bc446e0af7405918e9e8c806d74b29502596a4dad"
+  },
+  "pass-1/sdk-only-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/shim-Runtime-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/baseline-types-legacy-0.log": {
+    "bytes": 1272,
+    "sha256": "997f11514ed925ff3772278995056766f77fbb413f5ded4dc40c4aeef7557953"
+  },
+  "pass-1/shim-main-1.log": {
+    "bytes": 224,
+    "sha256": "67ea0f3ae642f6b258f317b63345a5b3f2666eccdb61fe79023385b6416d4dc5"
+  },
+  "pass-1/sdk-only-NativeSerialStorage-0.o": {
+    "bytes": 5532,
+    "sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8"
+  },
+  "pass-1/baseline-types-expanded-1.log": {
+    "bytes": 1272,
+    "sha256": "997f11514ed925ff3772278995056766f77fbb413f5ded4dc40c4aeef7557953"
+  },
+  "pass-1/candidate-types-expanded-0.log": {
+    "bytes": 1208,
+    "sha256": "363cf01e5d21b12e291d214d28880131812659c88e507b21b73c1389c31a3f7f"
+  },
+  "pass-1/sdk-only-Runtime-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/baseline-types-cohort-0.d": {
+    "bytes": 11685,
+    "sha256": "d5bf8f3a6020c4cb2cecf65c9c00f6ca0ffea6bb47a36d20d1edcc5bb04cbc77"
+  },
+  "pass-1/baseline-types-expanded-0.log": {
+    "bytes": 1272,
+    "sha256": "997f11514ed925ff3772278995056766f77fbb413f5ded4dc40c4aeef7557953"
+  },
+  "pass-1/shim-NativeSerialStorage-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/result.json": {
+    "bytes": 282383,
+    "sha256": "1309c99e40a4038de2ef62bb8db2b602786a072570e8905bbb12c038803c97a7"
+  },
+  "pass-1/sdk-only-NativeSerialStorage-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/candidate-types-installed-1.d": {
+    "bytes": 9833,
+    "sha256": "3bef217efe9faed66ae73c6952fbe6b1c21065b1b566b87ce74ad9563f33d563"
+  },
+  "pass-1/sdk-only-Runtime-0.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "pass-1/baseline-types-expanded-1.d": {
+    "bytes": 11687,
+    "sha256": "d95a9c52cddb6ab3e90d5ac421e4ab92e23fe11574387fc3fd4514ba7ef5e8de"
+  },
+  "pass-1/shim-Runtime-0.log": {
+    "bytes": 415,
+    "sha256": "fbc12da5cd5b24d38027a517d627cc6832b9e2ee5e2ed9b1584f4be944a4a669"
+  },
+  "pass-1/shim-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/sdk-only-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1857,
+    "sha256": "481a34d4738ca8238acdfaf21b8c1c22dcdd5466c192961fadf6cf27af0cea71"
+  },
+  "pass-1/shim-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1853,
+    "sha256": "69a3c1fb9fae6f6c1e55d8fbfd50a8da45d11b5b2f76d3d02d497ab4df6fb74e"
+  },
+  "pass-1/sdk-only-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/candidate-types-legacy-0.log": {
+    "bytes": 1208,
+    "sha256": "363cf01e5d21b12e291d214d28880131812659c88e507b21b73c1389c31a3f7f"
+  },
+  "pass-1/baseline-types-legacy-0.d": {
+    "bytes": 11573,
+    "sha256": "9784e6d0411323aa1d08d22de845deabdf0dbe172782e89509b2a0a350a048e3"
+  },
+  "pass-1/baseline-types-cohort-0.log": {
+    "bytes": 1272,
+    "sha256": "997f11514ed925ff3772278995056766f77fbb413f5ded4dc40c4aeef7557953"
+  },
+  "pass-1/shim-ProviderGraphV2-0.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-1/sdk-only-ProviderGraphV2-0.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-1/sdk-only-ProviderGraphV2-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/sdk-only-main-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-1/shim-ProviderGraphV2-1.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-1/shim-NativeSerialFiles-1.log": {
+    "bytes": 1379,
+    "sha256": "edce8e1ed581d159d097243cc57d7a437e8603fcae3d9e4fd8ddfb73c2f20f83"
+  },
+  "pass-1/baseline-types-installed-0.log": {
+    "bytes": 1272,
+    "sha256": "997f11514ed925ff3772278995056766f77fbb413f5ded4dc40c4aeef7557953"
+  },
+  "pass-1/candidate-types-cohort-0.log": {
+    "bytes": 1208,
+    "sha256": "363cf01e5d21b12e291d214d28880131812659c88e507b21b73c1389c31a3f7f"
+  },
+  "main-probe/shim-main-1.d": {
+    "bytes": 16228,
+    "sha256": "510a13bb084f964ce3c718273f3795b8e90d9ecc35e0388e4ad5e0dd7d2855a3"
+  },
+  "main-probe/result.log": {
+    "bytes": 289,
+    "sha256": "f24335e914589a7a9710e1ff2b09ab77d250592b662421f8bf13f53222efbd05"
+  },
+  "main-probe/result3.log": {
+    "bytes": 307,
+    "sha256": "f3d67cf6dc9820720542ce5d37645cd5a15a69cd2f1a5c0550a2321d1bfeb090"
+  },
+  "main-probe/shim-main-1.su": {
+    "bytes": 28259,
+    "sha256": "fec14064da1659ca6180384754361c3cc8e4fec787d56a53f0d5b406c28b24ae"
+  },
+  "main-probe/result2.log": {
+    "bytes": 2086,
+    "sha256": "8cda3929ee99df68ec0c942586575780c0308c31a3da2b71b538123d4dea597f"
+  },
+  "main-probe/result4.log": {
+    "bytes": 1092,
+    "sha256": "391ad29dbdf956af97d390f4be8de52af45472ef34d1908d7b69fdebc85cecd4"
+  },
+  "main-probe/command.json": {
+    "bytes": 4574,
+    "sha256": "4d92910c346c0c30c64fa0d05e777378f0328e8624fa5411bc094a44d40a4434"
+  },
+  "main-probe/shim-main-1.o": {
+    "bytes": 1234240,
+    "sha256": "78503ab1fb0ba854912205ab9354ae7732f7990e46496905cba85e2f13a320e6"
+  },
+  "main-probe/result5.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "boundary-shims/nvs.h": {
+    "bytes": 2726,
+    "sha256": "8ba12b5d4433f819e6050893c68a518aa5a09e82e206a386e6b93fc0ab90934e"
+  },
+  "boundary-shims/nvs_flash.h": {
+    "bytes": 329,
+    "sha256": "f954c75d3b87bd9e559e40eeff9ca6d6b5f42d860cdfb1fb3576df9a597fdf68"
+  },
+  "boundary-shims/esp_attr.h": {
+    "bytes": 336,
+    "sha256": "891f90fb2b5767a2031fc2a5cb883d923fa45a0475b71efca709cc1ef1270c04"
+  },
+  "boundary-shims/esp_heap_caps.h": {
+    "bytes": 593,
+    "sha256": "2419f8a6747f999d82293035bc0b0c1c04ed237e641ac516771e608cdabb69b5"
+  },
+  "boundary-shims/esp_idf_version.h": {
+    "bytes": 286,
+    "sha256": "eeed620efc44342f1837f4ccafcab25696e897d73860793ce10e6451d9209ab5"
+  },
+  "boundary-shims/esp_mac.h": {
+    "bytes": 156,
+    "sha256": "45a94d6ef3a5ff24e13f7795ac096bf939e546b4e761d8c382fa81ae58ce00a5"
+  },
+  "boundary-shims/RiscBuildIdentity.h": {
+    "bytes": 164,
+    "sha256": "e2b6751f9c5ab53de936e64b53bbbce6bdfb59966f4d98ef1ceda79ec947cf26"
+  },
+  "boundary-shims/esp_partition.h": {
+    "bytes": 698,
+    "sha256": "239eb531812dc33ff8e9ce4340fdb52738405c485aeda1396929753b2c3d0075"
+  },
+  "boundary-shims/esp_vfs.h": {
+    "bytes": 1789,
+    "sha256": "fcd83737262638e183d388bbb42be01c7754b5d8e5d3fd38383c19c647714e17"
+  },
+  "pass-4/shim-Runtime-1.su": {
+    "bytes": 179278,
+    "sha256": "140364417759fd797f9c463f63d30ffeae9cce1fa39170904e6724a41c1fee77"
+  },
+  "pass-4/sdk-only-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/baseline-types-expanded-0.d": {
+    "bytes": 11687,
+    "sha256": "8fc8679ed3da8f9ff2b5b17c011a28abb1296c30e3a1704cb674940d06153a47"
+  },
+  "pass-4/candidate-types-installed-0.d": {
+    "bytes": 9833,
+    "sha256": "b3f5a5732e5e61e9b7ff0e13f93c6c37fc19c7689e43065d44f20dfd18da9be2"
+  },
+  "pass-4/shim-Runtime-1.log": {
+    "bytes": 10773,
+    "sha256": "ed05cbf4e1ef53e94cf866677137e526bb2479721c73fe6a85da62e7cf270d16"
+  },
+  "pass-4/shim-ProviderGraphV2-0-nm.log": {
+    "bytes": 7399,
+    "sha256": "f7bd94a7fd8968725772b488a75986c24f0a0dfdfeafb45f240311811bbe8831"
+  },
+  "pass-4/shim-ProviderGraphV2-1.o": {
+    "bytes": 297764,
+    "sha256": "9aa12fc94d798e1c812e97b27654645dbdd6995d8e076f03c0bd6f3862eba5e3"
+  },
+  "pass-4/candidate-types-installed-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-NativeSerialFiles-0.d": {
+    "bytes": 421,
+    "sha256": "f1d061e87eb2abb561602bea157917a9e379aad9d3927c67a50763e814d5b68f"
+  },
+  "pass-4/shim-NativeSerialStorage-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/baseline-types-installed-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/sdk-only-NativeSerialFiles-0.d": {
+    "bytes": 425,
+    "sha256": "ad1d1f2978ec4360d595e2357db47363b5e1da7507ceddcf3dced20084f5b2d6"
+  },
+  "pass-4/candidate-types-installed-0-nm.log": {
+    "bytes": 177,
+    "sha256": "60f4a5d77c619b791cfb908b1c73c1549f89b99a5112e527a92ca370182f345f"
+  },
+  "pass-4/sdk-only-ProviderGraphV2-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-cohort-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-ProviderGraphV2-0-objdump.log": {
+    "bytes": 71096,
+    "sha256": "d2e1df92954def840d0118e457eb865ddb173abb9217193b99e18289da0b055d"
+  },
+  "pass-4/sdk-only-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/baseline-types-legacy-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-expanded-1.d": {
+    "bytes": 9832,
+    "sha256": "5c0c2a7cd925259c00a6bccc18fd4dd5e65b151df63aebc6ca6330be9ea81781"
+  },
+  "pass-4/sdk-only-main-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-legacy-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/sdk-only-ProviderGraphV2-1.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-4/baseline-types-cohort-1.d": {
+    "bytes": 11685,
+    "sha256": "63e039b1f8ff60e6892db472a2ca3fadb2b589f24cfe527c3550e4e03663c7d2"
+  },
+  "pass-4/candidate-types-legacy-1.d": {
+    "bytes": 9734,
+    "sha256": "730542629fdf170d1902eda21351e4aab391cefbb88ad6578f6e4734976b1451"
+  },
+  "pass-4/shim-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-ProviderGraphV2-1.d": {
+    "bytes": 2804,
+    "sha256": "467dabd476bf1a412fd8100aaae89b6ec7083d3cb477230fc1f701ad9be9e3a2"
+  },
+  "pass-4/baseline-types-legacy-1.o": {
+    "bytes": 28420,
+    "sha256": "65887697206f52e5dd4ac8e15ee85114a454bf301364c00e418749cfb3c6b92b"
+  },
+  "pass-4/baseline-types-installed-0.o": {
+    "bytes": 28032,
+    "sha256": "9dfd6c62b93638c5af3febba0979fc78b171b68de34cd351437fabcd6507064b"
+  },
+  "pass-4/shim-main-0.log": {
+    "bytes": 326,
+    "sha256": "7e441f8ba1b74c17a7c64c1a7d809d234ff7a5a10499b349451bd6fec36dcb38"
+  },
+  "pass-4/baseline-types-legacy-0.o": {
+    "bytes": 27984,
+    "sha256": "f56c6f362de934d3d61c810aa600140092ba74ad588c8b32775ddaa1c45c81dd"
+  },
+  "pass-4/shim-NativeSerialFiles-0.o": {
+    "bytes": 5524,
+    "sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382"
+  },
+  "pass-4/sdk-only-NativeSerialStorage-1.log": {
+    "bytes": 349,
+    "sha256": "622c72b2140e188ad55e7887b7372a1be4b5e26973f8bf0637dfb7354042005c"
+  },
+  "pass-4/baseline-types-installed-0.d": {
+    "bytes": 11688,
+    "sha256": "cabce130b5f2efd5e97f47f74393d8527e043f8b02baade0c83b5ea851096d3c"
+  },
+  "pass-4/candidate-types-legacy-1-nm.log": {
+    "bytes": 272,
+    "sha256": "a08d93ee8ea70c0e5a0a49e1cd511003aca726c97863ad802551e95ea1476d64"
+  },
+  "pass-4/shim-NativeSerialStorage-0.o": {
+    "bytes": 5532,
+    "sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8"
+  },
+  "pass-4/sdk-only-NativeSerialStorage-0.d": {
+    "bytes": 515,
+    "sha256": "9d7b71119084eff6a4a42be700932eb470a74a992a076f7e36f9b40448b7f50b"
+  },
+  "pass-4/shim-ProviderGraphV2-1.su": {
+    "bytes": 10079,
+    "sha256": "3ee227379359120fffb5ccf39aa2328f451913f0b2de7fe3f58b2454bb70a350"
+  },
+  "pass-4/sdk-only-Runtime-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-Runtime-1-nm.log": {
+    "bytes": 122417,
+    "sha256": "a8ee6e8a72b6ae5dfd2b65c9b275f7ebfd53f716c3e5fc3fd38eee101cae80be"
+  },
+  "pass-4/baseline-types-installed-1-nm.log": {
+    "bytes": 272,
+    "sha256": "bbe844857c6206f501a63937814b1e638eb5a9b99d819b2e6393a48cfbbb94c6"
+  },
+  "pass-4/shim-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-installed-1-nm.log": {
+    "bytes": 272,
+    "sha256": "bbe844857c6206f501a63937814b1e638eb5a9b99d819b2e6393a48cfbbb94c6"
+  },
+  "pass-4/sdk-only-Runtime-1.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "pass-4/baseline-types-cohort-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-cohort-1.d": {
+    "bytes": 9830,
+    "sha256": "42d6c64ccf32bd114ebf7458a1dbdaa56eaad0d70400627a44c67dace452dd67"
+  },
+  "pass-4/shim-Runtime-0.d": {
+    "bytes": 14983,
+    "sha256": "a186cf0381549ad534d9de59db483d93bbd0a73ccdd7898f890f8bcb98c066a0"
+  },
+  "pass-4/sdk-only-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1861,
+    "sha256": "6c4067adcf5cd8472c762ba5ff7d95f547d096b621b70ba7c64402bcf8f270d6"
+  },
+  "pass-4/shim-NativeSerialFiles-1-objdump.log": {
+    "bytes": 20251,
+    "sha256": "0c66f31d64edc4f397a9a3c36bdfb36bbc805967570d861968bcb4e8ce108aa7"
+  },
+  "pass-4/baseline-types-cohort-1-nm.log": {
+    "bytes": 272,
+    "sha256": "63c95f322f826f4f88a537bfd7d662b664ab35bc1379ad30973365f4a19660f8"
+  },
+  "pass-4/shim-NativeSerialStorage-0.d": {
+    "bytes": 511,
+    "sha256": "0773ffb73ceeac38132d48d1caa0dd5d90434abe46e8761f5273114924c0658e"
+  },
+  "pass-4/commands.json": {
+    "bytes": 184729,
+    "sha256": "8b6c873fcb80d55852e2b0fb5262a98828afe609b642b0a983dd278c32218098"
+  },
+  "pass-4/candidate-types-cohort-0.d": {
+    "bytes": 9830,
+    "sha256": "bbd0fa666049d9d08bd483b1b99e86d7b14f8d1e81d72e0ae77aa056b2192ab5"
+  },
+  "pass-4/baseline-types-cohort-0-nm.log": {
+    "bytes": 177,
+    "sha256": "fafaebf8c51b438821deb24f348689d90929b7c8156dd6c4fcdd1935ba80324b"
+  },
+  "pass-4/baseline-types-legacy-1.d": {
+    "bytes": 11573,
+    "sha256": "429a4c48dd1690961322b353b302e2f37bdd96d82e4073b9ecd5abfbe03ebcb2"
+  },
+  "pass-4/candidate-types-expanded-0.d": {
+    "bytes": 9832,
+    "sha256": "4a4a8c91686d500e7da8cdf44cc39805d77f45a60e9f111b012efb7830454f67"
+  },
+  "pass-4/candidate-types-installed-0.o": {
+    "bytes": 27792,
+    "sha256": "8d8d02daaec042f9be916ec86c68ee7567b1a6d7f6a316f56d20dd967e7858d5"
+  },
+  "pass-4/candidate-types-cohort-1-nm.log": {
+    "bytes": 272,
+    "sha256": "63c95f322f826f4f88a537bfd7d662b664ab35bc1379ad30973365f4a19660f8"
+  },
+  "pass-4/sdk-only-main-0.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "pass-4/candidate-types-installed-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-NativeSerialStorage-1-objdump.log": {
+    "bytes": 16645,
+    "sha256": "422076bc99360f0e6346297f930b8223b15f4f3d62ef779edaf4c8143c858999"
+  },
+  "pass-4/sdk-only-NativeSerialFiles-0.o": {
+    "bytes": 5524,
+    "sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382"
+  },
+  "pass-4/baseline-types-installed-0-nm.log": {
+    "bytes": 177,
+    "sha256": "60f4a5d77c619b791cfb908b1c73c1549f89b99a5112e527a92ca370182f345f"
+  },
+  "pass-4/shim-main-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-Runtime-0.o": {
+    "bytes": 5206896,
+    "sha256": "daf41e7c10ff58a3a3e06080f94b4c0bf92dd02c7f4282687af759068aedf2dd"
+  },
+  "pass-4/sdk-only-NativeSerialFiles-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-NativeSerialStorage-1-nm.log": {
+    "bytes": 2316,
+    "sha256": "27d77a1382f70213c2719eedde9419a5bee9b6bde4df8e55546d4eafab80ca65"
+  },
+  "pass-4/shim-ProviderGraphV2-1-objdump.log": {
+    "bytes": 71096,
+    "sha256": "063b2f35b77da21b7bd9a0abd36b84112e2508c4e1915ac6b17873eb370888b8"
+  },
+  "pass-4/baseline-types-installed-1.o": {
+    "bytes": 28468,
+    "sha256": "af307c833b974c0e6f37cefff328006a12751bd8ffce004cf70c60e3b8ddc396"
+  },
+  "pass-4/sdk-only-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-legacy-0.o": {
+    "bytes": 27744,
+    "sha256": "74450f0fb6c0f4479785de09163be42b8eecda818160189dbf8ef510d8aba165"
+  },
+  "pass-4/shim-NativeSerialFiles-1.d": {
+    "bytes": 1994,
+    "sha256": "6e40fd8982cf611222f38511b5b1e1c981803a6a094c9b2c2e161e49d1ffdd05"
+  },
+  "pass-4/sdk-only-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-installed-1.o": {
+    "bytes": 28228,
+    "sha256": "240679064f58e99c52b2fd24a42f24b38116a11080218311ee4d4ee586ca72bf"
+  },
+  "pass-4/shim-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-legacy-1.o": {
+    "bytes": 28180,
+    "sha256": "05145a01e4f5b9334f24f075064a176b9342470cb2b8a5999aa57feecdd31ceb"
+  },
+  "pass-4/shim-NativeSerialStorage-1.d": {
+    "bytes": 2168,
+    "sha256": "b784b45e5cb8ee480bff4965101d4db5f681ce03baa1bccb8c3376040ad3643f"
+  },
+  "pass-4/shim-NativeSerialFiles-1.su": {
+    "bytes": 3205,
+    "sha256": "1711887490abd5c9780eaab8a9c709c96bc1321eb198ce4cbb35fb5f69e5b593"
+  },
+  "pass-4/candidate-types-expanded-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-Runtime-0-objdump.log": {
+    "bytes": 1091006,
+    "sha256": "b43d748dc0187e7ba5be95c83e68b6076eed20990a2d63ef01536336a37df214"
+  },
+  "pass-4/shim-ProviderGraphV2-0.d": {
+    "bytes": 2804,
+    "sha256": "dd81748c7835977e586e051c442a7c48d3a8e6a3e85e8c96e73c3b6ccfc7a1b6"
+  },
+  "pass-4/shim-ProviderGraphV2-0.o": {
+    "bytes": 297764,
+    "sha256": "9aa12fc94d798e1c812e97b27654645dbdd6995d8e076f03c0bd6f3862eba5e3"
+  },
+  "pass-4/sdk-only-NativeSerialFiles-1.log": {
+    "bytes": 429,
+    "sha256": "2d38aa6bb76a7ea3b565735385f518742462e7683a22bb3a735431c312027fbd"
+  },
+  "pass-4/baseline-types-expanded-1.o": {
+    "bytes": 28468,
+    "sha256": "8b206d240aa2b061014b22dd1629b53c585461c0aa17f36fb53a1452dc2b0da0"
+  },
+  "pass-4/shim-ProviderGraphV2-0.su": {
+    "bytes": 10079,
+    "sha256": "3ee227379359120fffb5ccf39aa2328f451913f0b2de7fe3f58b2454bb70a350"
+  },
+  "pass-4/sdk-only-main-1.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "pass-4/shim-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-NativeSerialFiles-1-nm.log": {
+    "bytes": 3287,
+    "sha256": "9f877c548aae2ff088bfd5a4cceb55a7e774e92b2b58d31f01bae7d4cb614ee1"
+  },
+  "pass-4/baseline-types-installed-1.d": {
+    "bytes": 11688,
+    "sha256": "4bf74ccabcbbb61472d63df701e0047892e957e7b5cef4c5f7009d88bf15bbbb"
+  },
+  "pass-4/shim-main-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-legacy-0.d": {
+    "bytes": 9734,
+    "sha256": "4797a9e3ba79ea4cbcc90559ecc58fc16c85fa734a94ac18d986de43bc51093f"
+  },
+  "pass-4/baseline-types-legacy-1-nm.log": {
+    "bytes": 272,
+    "sha256": "a08d93ee8ea70c0e5a0a49e1cd511003aca726c97863ad802551e95ea1476d64"
+  },
+  "pass-4/shim-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1857,
+    "sha256": "04c14e422bddd3289db14d82c93d7b32880899c7c14ab91d8ec824e3bab6472a"
+  },
+  "pass-4/sdk-only-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-Runtime-0.su": {
+    "bytes": 177283,
+    "sha256": "1ce29344f43e5b9b932fe73ab6afb311e16260bbc5149197b42060869c1b72cb"
+  },
+  "pass-4/baseline-types-legacy-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-main-1.log": {
+    "bytes": 326,
+    "sha256": "7e441f8ba1b74c17a7c64c1a7d809d234ff7a5a10499b349451bd6fec36dcb38"
+  },
+  "pass-4/candidate-types-expanded-0-nm.log": {
+    "bytes": 177,
+    "sha256": "f5d4b24695637c02ae423658f22a3dcba25aeccc467afbd0e80fe425833048d7"
+  },
+  "pass-4/candidate-types-expanded-0.o": {
+    "bytes": 27792,
+    "sha256": "3ba69bbb5acde97643da33d460fd4a59285b4ada8d927ed35d247a005214b499"
+  },
+  "pass-4/sdk-only-NativeSerialStorage-0.o": {
+    "bytes": 5532,
+    "sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8"
+  },
+  "pass-4/candidate-types-expanded-1-nm.log": {
+    "bytes": 272,
+    "sha256": "dea2773cbb75113a8d05ae1ed5c10a40991edae775680a6958de2c6171bb7b7f"
+  },
+  "pass-4/candidate-types-expanded-1.o": {
+    "bytes": 28228,
+    "sha256": "67cf3cc00b606b6d51c2fa3553df86c9741012e246f432c5a22fb9941d6fa2a7"
+  },
+  "pass-4/shim-NativeSerialStorage-1.o": {
+    "bytes": 64392,
+    "sha256": "03eb4deb4721846f5e7899f6059b7c82efbeb2027713785e592d8151c3b50401"
+  },
+  "pass-4/baseline-types-expanded-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-expanded-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-cohort-0-nm.log": {
+    "bytes": 177,
+    "sha256": "fafaebf8c51b438821deb24f348689d90929b7c8156dd6c4fcdd1935ba80324b"
+  },
+  "pass-4/sdk-only-Runtime-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/baseline-types-cohort-0.d": {
+    "bytes": 11685,
+    "sha256": "ad993065089797dab2bc9c4187e507b20e6a82171b2f1889b3312500e68a3cdf"
+  },
+  "pass-4/baseline-types-expanded-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-ProviderGraphV2-1-nm.log": {
+    "bytes": 7399,
+    "sha256": "f7bd94a7fd8968725772b488a75986c24f0a0dfdfeafb45f240311811bbe8831"
+  },
+  "pass-4/shim-NativeSerialStorage-1.su": {
+    "bytes": 2367,
+    "sha256": "07cd84980c9147b4edda4fca0ed5abcc9ebc02f80b109e66761107d3b2a79b92"
+  },
+  "pass-4/result.json": {
+    "bytes": 286787,
+    "sha256": "c1a101c71c4b64c005c41db4a1190a18122455a245e5b0e38bbdc60facbde1b3"
+  },
+  "pass-4/candidate-types-cohort-1.o": {
+    "bytes": 28228,
+    "sha256": "22f3e28a090b099b2ebd6feaa0ae0ed1524175db7ebc1f1351380e72aaa4b35a"
+  },
+  "pass-4/sdk-only-NativeSerialStorage-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-installed-1.d": {
+    "bytes": 9833,
+    "sha256": "29da69d95ee607256686f054a391faa598284a07177c2aee9e0d3896d37c2f6b"
+  },
+  "pass-4/baseline-types-legacy-0-nm.log": {
+    "bytes": 177,
+    "sha256": "90ce9cc08c03b7f21f964b471d5005c38f47f1f092e7f2c1977d3ffd9eabec66"
+  },
+  "pass-4/sdk-only-Runtime-0.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "pass-4/baseline-types-expanded-1.d": {
+    "bytes": 11687,
+    "sha256": "a6f9d48f4437b61d0587cb4d2efc7181db4e53676d7291bdfcc483fb65259787"
+  },
+  "pass-4/shim-Runtime-0.log": {
+    "bytes": 9945,
+    "sha256": "3e7901d995ef5a3ab0a972518c158115d25c4d8452076dd2259fbc6c8b86a1f7"
+  },
+  "pass-4/shim-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/sdk-only-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1857,
+    "sha256": "c59256a54edde2dfe6eac00e1127613f8d256a3f048b0999ce20ec3ca7f199cd"
+  },
+  "pass-4/shim-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1853,
+    "sha256": "736f6a7ccfe43e5d2d88d4f64fb58a24a80fb1861e38ae7ed6e1a5fad7e3422c"
+  },
+  "pass-4/baseline-types-cohort-0.o": {
+    "bytes": 28032,
+    "sha256": "18231f0683561142bdee658467d16fc5eab8ed526d579e0afe592e1f148fce29"
+  },
+  "pass-4/sdk-only-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-Runtime-0-nm.log": {
+    "bytes": 121305,
+    "sha256": "9c3b94d853491a6c733fcf3098b87882c0831ef2ed44753f1440ad5f16384c5d"
+  },
+  "pass-4/shim-Runtime-1-objdump.log": {
+    "bytes": 1103114,
+    "sha256": "ec396ebb2f6aae54768f9ac29554cd974027d7d06120e1b13d896b7493ed0e0d"
+  },
+  "pass-4/candidate-types-legacy-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/baseline-types-legacy-0.d": {
+    "bytes": 11573,
+    "sha256": "cfea01bb808cda265870fc6d1817889e58412d981ed8153eb3032072d549c9dc"
+  },
+  "pass-4/baseline-types-cohort-1.o": {
+    "bytes": 28468,
+    "sha256": "407c8ca2d2658e8bcbd480ac231638d18da938051de93b178fd93587bf26aa05"
+  },
+  "pass-4/baseline-types-cohort-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-cohort-0.o": {
+    "bytes": 27792,
+    "sha256": "059d36f57b57e6481680feb237116dde9ccdcd503643341d74816181da2bd1e7"
+  },
+  "pass-4/shim-ProviderGraphV2-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/baseline-types-expanded-1-nm.log": {
+    "bytes": 272,
+    "sha256": "dea2773cbb75113a8d05ae1ed5c10a40991edae775680a6958de2c6171bb7b7f"
+  },
+  "pass-4/sdk-only-ProviderGraphV2-0.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-4/sdk-only-ProviderGraphV2-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/sdk-only-main-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/candidate-types-legacy-0-nm.log": {
+    "bytes": 177,
+    "sha256": "90ce9cc08c03b7f21f964b471d5005c38f47f1f092e7f2c1977d3ffd9eabec66"
+  },
+  "pass-4/baseline-types-expanded-0-nm.log": {
+    "bytes": 177,
+    "sha256": "f5d4b24695637c02ae423658f22a3dcba25aeccc467afbd0e80fe425833048d7"
+  },
+  "pass-4/shim-NativeSerialFiles-1.o": {
+    "bytes": 72352,
+    "sha256": "0a680b3998a0226a056b9219edc8bcdf9011c811066d1d5144b99751284815f9"
+  },
+  "pass-4/baseline-types-expanded-0.o": {
+    "bytes": 28032,
+    "sha256": "7920b38bc3c222d59fded7b3e06568901cf6ea38d2d820ea8bf8c9e7cfb82469"
+  },
+  "pass-4/shim-ProviderGraphV2-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-Runtime-1.o": {
+    "bytes": 5296624,
+    "sha256": "c3f22d73a8410b1b9012a42472b062115c40bc64562700a5667e09da9204c6aa"
+  },
+  "pass-4/shim-NativeSerialFiles-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/baseline-types-installed-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-4/shim-Runtime-1.d": {
+    "bytes": 14983,
+    "sha256": "4fdca2162b0ea9ce91b3e5672ff3c97ab081eb715b744cdb4f6e26314d12ff0b"
+  },
+  "pass-4/candidate-types-cohort-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "prior-evidence/compile_commands.json": {
+    "bytes": 6114750,
+    "sha256": "96bf7bcf7930ebbad5b921fb990f74865c066df3edb3d187ea437b146fb2c392"
+  },
+  "pass-2/shim-Runtime-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/baseline-types-expanded-0.d": {
+    "bytes": 11687,
+    "sha256": "3e11e200bdfe6a267e938441663621b2654853b8406f6d92d9c98bc5bc9b6d71"
+  },
+  "pass-2/candidate-types-installed-0.d": {
+    "bytes": 9833,
+    "sha256": "ce191eea88d2aa26a5f277529e951297a36466f097367af95e06b984ac4bc3de"
+  },
+  "pass-2/shim-Runtime-1.log": {
+    "bytes": 415,
+    "sha256": "fbc12da5cd5b24d38027a517d627cc6832b9e2ee5e2ed9b1584f4be944a4a669"
+  },
+  "pass-2/candidate-types-installed-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/shim-NativeSerialFiles-0.d": {
+    "bytes": 421,
+    "sha256": "b499b658bafe49710ddc794ea3e61fc6ed30b7b4df64d3cbe2a1b461baa984e6"
+  },
+  "pass-2/shim-NativeSerialStorage-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/baseline-types-installed-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-NativeSerialFiles-0.d": {
+    "bytes": 425,
+    "sha256": "f4fd3e48258307d397cf8e6663c4195ca8a555f98c375f4f7c697969d22a7304"
+  },
+  "pass-2/candidate-types-installed-0-nm.log": {
+    "bytes": 177,
+    "sha256": "60f4a5d77c619b791cfb908b1c73c1549f89b99a5112e527a92ca370182f345f"
+  },
+  "pass-2/sdk-only-ProviderGraphV2-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-cohort-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/shim-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/baseline-types-legacy-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-expanded-1.d": {
+    "bytes": 9832,
+    "sha256": "c5a6d51bc55539657173477d1d1c54bbf6e9a7a44f44039eb5a7b13be4ff4fb2"
+  },
+  "pass-2/sdk-only-main-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-legacy-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-ProviderGraphV2-1.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-2/baseline-types-cohort-1.d": {
+    "bytes": 11685,
+    "sha256": "5e640abf0bb481e09d7c1477dc58319e0a080da3541cdfa093c18b06d8d21c88"
+  },
+  "pass-2/candidate-types-legacy-1.d": {
+    "bytes": 9734,
+    "sha256": "47232e1452815ff81b071575adef0f491c66c0b61bf34bc0c248ac53936d5961"
+  },
+  "pass-2/shim-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/baseline-types-legacy-1.o": {
+    "bytes": 28420,
+    "sha256": "65887697206f52e5dd4ac8e15ee85114a454bf301364c00e418749cfb3c6b92b"
+  },
+  "pass-2/baseline-types-installed-0.o": {
+    "bytes": 28032,
+    "sha256": "9dfd6c62b93638c5af3febba0979fc78b171b68de34cd351437fabcd6507064b"
+  },
+  "pass-2/shim-main-0.log": {
+    "bytes": 224,
+    "sha256": "67ea0f3ae642f6b258f317b63345a5b3f2666eccdb61fe79023385b6416d4dc5"
+  },
+  "pass-2/baseline-types-legacy-0.o": {
+    "bytes": 27984,
+    "sha256": "f56c6f362de934d3d61c810aa600140092ba74ad588c8b32775ddaa1c45c81dd"
+  },
+  "pass-2/shim-NativeSerialFiles-0.o": {
+    "bytes": 5524,
+    "sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382"
+  },
+  "pass-2/sdk-only-NativeSerialStorage-1.log": {
+    "bytes": 349,
+    "sha256": "622c72b2140e188ad55e7887b7372a1be4b5e26973f8bf0637dfb7354042005c"
+  },
+  "pass-2/baseline-types-installed-0.d": {
+    "bytes": 11688,
+    "sha256": "d1c804605125dc19adebf2389dbf0155785af91e4345f2198fd974c938f49026"
+  },
+  "pass-2/candidate-types-legacy-1-nm.log": {
+    "bytes": 272,
+    "sha256": "a08d93ee8ea70c0e5a0a49e1cd511003aca726c97863ad802551e95ea1476d64"
+  },
+  "pass-2/shim-NativeSerialStorage-0.o": {
+    "bytes": 5532,
+    "sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8"
+  },
+  "pass-2/sdk-only-NativeSerialStorage-0.d": {
+    "bytes": 515,
+    "sha256": "944ddb6dc093d867a7706aebea333084574ce083595e72f91f8b2a51808abcbe"
+  },
+  "pass-2/shim-ProviderGraphV2-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-Runtime-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/baseline-types-installed-1-nm.log": {
+    "bytes": 272,
+    "sha256": "bbe844857c6206f501a63937814b1e638eb5a9b99d819b2e6393a48cfbbb94c6"
+  },
+  "pass-2/shim-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-installed-1-nm.log": {
+    "bytes": 272,
+    "sha256": "bbe844857c6206f501a63937814b1e638eb5a9b99d819b2e6393a48cfbbb94c6"
+  },
+  "pass-2/sdk-only-Runtime-1.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "pass-2/baseline-types-cohort-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-cohort-1.d": {
+    "bytes": 9830,
+    "sha256": "41784fb090b6529f58fcb9c663c749e905d330f53f74a2d7c093c43865cc832a"
+  },
+  "pass-2/sdk-only-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1861,
+    "sha256": "148ee8a556a26af3fdc4cdf1fc28840dfdfcda69a93b47618d9536f7311c594d"
+  },
+  "pass-2/shim-NativeSerialFiles-1-objdump.log": {
+    "bytes": 20251,
+    "sha256": "8b35faee72d8629db992b7197886d561bd03f6a02c75d9a035894e510ca71c63"
+  },
+  "pass-2/baseline-types-cohort-1-nm.log": {
+    "bytes": 272,
+    "sha256": "63c95f322f826f4f88a537bfd7d662b664ab35bc1379ad30973365f4a19660f8"
+  },
+  "pass-2/shim-NativeSerialStorage-0.d": {
+    "bytes": 511,
+    "sha256": "fd291f76c4b6ea939e73d55e508f8a9eed2010d4f7bb8a498330b1ac81b945f2"
+  },
+  "pass-2/commands.json": {
+    "bytes": 180367,
+    "sha256": "f7d400a5171d9f261e12aa152777134d21934dc6bd939e9fbc24ae54ec1f5160"
+  },
+  "pass-2/candidate-types-cohort-0.d": {
+    "bytes": 9830,
+    "sha256": "db207410ce5ee8cc2545d670ee48d5a4f6d8223e3b3a9784e878ee1e4bb1b39d"
+  },
+  "pass-2/baseline-types-cohort-0-nm.log": {
+    "bytes": 177,
+    "sha256": "fafaebf8c51b438821deb24f348689d90929b7c8156dd6c4fcdd1935ba80324b"
+  },
+  "pass-2/baseline-types-legacy-1.d": {
+    "bytes": 11573,
+    "sha256": "71208aebcdc24fd3775d007261c1999edf9d08ae84e29f6c007da5cd06906bb1"
+  },
+  "pass-2/candidate-types-expanded-0.d": {
+    "bytes": 9832,
+    "sha256": "54913a5968c86b5b03685ad388f25c489f3867d3d4ecf831d3a789469311f670"
+  },
+  "pass-2/candidate-types-installed-0.o": {
+    "bytes": 27792,
+    "sha256": "8d8d02daaec042f9be916ec86c68ee7567b1a6d7f6a316f56d20dd967e7858d5"
+  },
+  "pass-2/candidate-types-cohort-1-nm.log": {
+    "bytes": 272,
+    "sha256": "63c95f322f826f4f88a537bfd7d662b664ab35bc1379ad30973365f4a19660f8"
+  },
+  "pass-2/sdk-only-main-0.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "pass-2/candidate-types-installed-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/shim-NativeSerialStorage-1-objdump.log": {
+    "bytes": 16645,
+    "sha256": "ce202560faa8c14d00f595a33f5ee82400d9e0547a981b4ab660c83ff7362ffd"
+  },
+  "pass-2/sdk-only-NativeSerialFiles-0.o": {
+    "bytes": 5524,
+    "sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382"
+  },
+  "pass-2/baseline-types-installed-0-nm.log": {
+    "bytes": 177,
+    "sha256": "60f4a5d77c619b791cfb908b1c73c1549f89b99a5112e527a92ca370182f345f"
+  },
+  "pass-2/shim-main-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-NativeSerialFiles-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/shim-NativeSerialStorage-1-nm.log": {
+    "bytes": 2316,
+    "sha256": "27d77a1382f70213c2719eedde9419a5bee9b6bde4df8e55546d4eafab80ca65"
+  },
+  "pass-2/baseline-types-installed-1.o": {
+    "bytes": 28468,
+    "sha256": "af307c833b974c0e6f37cefff328006a12751bd8ffce004cf70c60e3b8ddc396"
+  },
+  "pass-2/sdk-only-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-legacy-0.o": {
+    "bytes": 27744,
+    "sha256": "74450f0fb6c0f4479785de09163be42b8eecda818160189dbf8ef510d8aba165"
+  },
+  "pass-2/shim-NativeSerialFiles-1.d": {
+    "bytes": 1994,
+    "sha256": "dcbadbc9e0e460db3976d11a5d0cea7fd765083b04b829d833067ee4e93c8947"
+  },
+  "pass-2/sdk-only-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-installed-1.o": {
+    "bytes": 28228,
+    "sha256": "240679064f58e99c52b2fd24a42f24b38116a11080218311ee4d4ee586ca72bf"
+  },
+  "pass-2/shim-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-legacy-1.o": {
+    "bytes": 28180,
+    "sha256": "05145a01e4f5b9334f24f075064a176b9342470cb2b8a5999aa57feecdd31ceb"
+  },
+  "pass-2/shim-NativeSerialStorage-1.d": {
+    "bytes": 2168,
+    "sha256": "daa7c504382c022458b3d1d6df1afe3c37ff6a4c18aa40f0dccb85f1372c0060"
+  },
+  "pass-2/shim-NativeSerialFiles-1.su": {
+    "bytes": 3205,
+    "sha256": "1711887490abd5c9780eaab8a9c709c96bc1321eb198ce4cbb35fb5f69e5b593"
+  },
+  "pass-2/candidate-types-expanded-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-NativeSerialFiles-1.log": {
+    "bytes": 429,
+    "sha256": "2d38aa6bb76a7ea3b565735385f518742462e7683a22bb3a735431c312027fbd"
+  },
+  "pass-2/baseline-types-expanded-1.o": {
+    "bytes": 28468,
+    "sha256": "8b206d240aa2b061014b22dd1629b53c585461c0aa17f36fb53a1452dc2b0da0"
+  },
+  "pass-2/shim-ProviderGraphV2-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-main-1.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "pass-2/shim-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/shim-NativeSerialFiles-1-nm.log": {
+    "bytes": 3287,
+    "sha256": "9f877c548aae2ff088bfd5a4cceb55a7e774e92b2b58d31f01bae7d4cb614ee1"
+  },
+  "pass-2/baseline-types-installed-1.d": {
+    "bytes": 11688,
+    "sha256": "2f5878d586ccfcc2c9b22d1e1e5ec2e973664edd7a37f7704a75ec4117280d2c"
+  },
+  "pass-2/shim-main-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-legacy-0.d": {
+    "bytes": 9734,
+    "sha256": "a626c146c8acafe04da135f9edf89540b0592de4be0aaef0db384b54172136dc"
+  },
+  "pass-2/baseline-types-legacy-1-nm.log": {
+    "bytes": 272,
+    "sha256": "a08d93ee8ea70c0e5a0a49e1cd511003aca726c97863ad802551e95ea1476d64"
+  },
+  "pass-2/shim-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1857,
+    "sha256": "9b6b559ec4458979b36ab20b1e0da2575e57fbf9cc2e7432865e03a9c4e2c27b"
+  },
+  "pass-2/sdk-only-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/shim-Runtime-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/baseline-types-legacy-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/shim-main-1.log": {
+    "bytes": 224,
+    "sha256": "67ea0f3ae642f6b258f317b63345a5b3f2666eccdb61fe79023385b6416d4dc5"
+  },
+  "pass-2/candidate-types-expanded-0-nm.log": {
+    "bytes": 177,
+    "sha256": "f5d4b24695637c02ae423658f22a3dcba25aeccc467afbd0e80fe425833048d7"
+  },
+  "pass-2/candidate-types-expanded-0.o": {
+    "bytes": 27792,
+    "sha256": "3ba69bbb5acde97643da33d460fd4a59285b4ada8d927ed35d247a005214b499"
+  },
+  "pass-2/sdk-only-NativeSerialStorage-0.o": {
+    "bytes": 5532,
+    "sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8"
+  },
+  "pass-2/candidate-types-expanded-1-nm.log": {
+    "bytes": 272,
+    "sha256": "dea2773cbb75113a8d05ae1ed5c10a40991edae775680a6958de2c6171bb7b7f"
+  },
+  "pass-2/candidate-types-expanded-1.o": {
+    "bytes": 28228,
+    "sha256": "67cf3cc00b606b6d51c2fa3553df86c9741012e246f432c5a22fb9941d6fa2a7"
+  },
+  "pass-2/shim-NativeSerialStorage-1.o": {
+    "bytes": 64392,
+    "sha256": "03eb4deb4721846f5e7899f6059b7c82efbeb2027713785e592d8151c3b50401"
+  },
+  "pass-2/baseline-types-expanded-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-expanded-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-cohort-0-nm.log": {
+    "bytes": 177,
+    "sha256": "fafaebf8c51b438821deb24f348689d90929b7c8156dd6c4fcdd1935ba80324b"
+  },
+  "pass-2/sdk-only-Runtime-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/baseline-types-cohort-0.d": {
+    "bytes": 11685,
+    "sha256": "827947a3b556ece3b0ac10392ecdde32a4a7ab8a7a0e5510e8948a15a663d9a7"
+  },
+  "pass-2/baseline-types-expanded-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/shim-NativeSerialStorage-1.su": {
+    "bytes": 2367,
+    "sha256": "07cd84980c9147b4edda4fca0ed5abcc9ebc02f80b109e66761107d3b2a79b92"
+  },
+  "pass-2/result.json": {
+    "bytes": 286301,
+    "sha256": "6caece4a81c3b001bce6d4dd028be3e50abcef1411730a56b68121d33b75ba5d"
+  },
+  "pass-2/candidate-types-cohort-1.o": {
+    "bytes": 28228,
+    "sha256": "22f3e28a090b099b2ebd6feaa0ae0ed1524175db7ebc1f1351380e72aaa4b35a"
+  },
+  "pass-2/sdk-only-NativeSerialStorage-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-installed-1.d": {
+    "bytes": 9833,
+    "sha256": "a09a8b2255950c8b72ae1e85857de76debec38d818e8aa402ac19091b326f590"
+  },
+  "pass-2/baseline-types-legacy-0-nm.log": {
+    "bytes": 177,
+    "sha256": "90ce9cc08c03b7f21f964b471d5005c38f47f1f092e7f2c1977d3ffd9eabec66"
+  },
+  "pass-2/sdk-only-Runtime-0.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "pass-2/baseline-types-expanded-1.d": {
+    "bytes": 11687,
+    "sha256": "260972ecbad21664c268af82373c463ddee5d63b953752a60dfe7b66f57de053"
+  },
+  "pass-2/shim-Runtime-0.log": {
+    "bytes": 415,
+    "sha256": "fbc12da5cd5b24d38027a517d627cc6832b9e2ee5e2ed9b1584f4be944a4a669"
+  },
+  "pass-2/shim-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1857,
+    "sha256": "d52f5a035f540093a000bfcfee9c25a82171bb37e8327bde8cb30d0c6def0a29"
+  },
+  "pass-2/shim-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1853,
+    "sha256": "58f14fdd8f66dffacd8751fd1d24acddc8c04bd72832411035a7a6b0dcda1359"
+  },
+  "pass-2/baseline-types-cohort-0.o": {
+    "bytes": 28032,
+    "sha256": "18231f0683561142bdee658467d16fc5eab8ed526d579e0afe592e1f148fce29"
+  },
+  "pass-2/sdk-only-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-legacy-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/baseline-types-legacy-0.d": {
+    "bytes": 11573,
+    "sha256": "69a469f0a12878748cdf12e449f297e761a0dd6c55dcc76f42474dd60bd8a4d7"
+  },
+  "pass-2/baseline-types-cohort-1.o": {
+    "bytes": 28468,
+    "sha256": "407c8ca2d2658e8bcbd480ac231638d18da938051de93b178fd93587bf26aa05"
+  },
+  "pass-2/baseline-types-cohort-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-cohort-0.o": {
+    "bytes": 27792,
+    "sha256": "059d36f57b57e6481680feb237116dde9ccdcd503643341d74816181da2bd1e7"
+  },
+  "pass-2/shim-ProviderGraphV2-0.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-2/baseline-types-expanded-1-nm.log": {
+    "bytes": 272,
+    "sha256": "dea2773cbb75113a8d05ae1ed5c10a40991edae775680a6958de2c6171bb7b7f"
+  },
+  "pass-2/sdk-only-ProviderGraphV2-0.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-2/sdk-only-ProviderGraphV2-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/sdk-only-main-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-legacy-0-nm.log": {
+    "bytes": 177,
+    "sha256": "90ce9cc08c03b7f21f964b471d5005c38f47f1f092e7f2c1977d3ffd9eabec66"
+  },
+  "pass-2/baseline-types-expanded-0-nm.log": {
+    "bytes": 177,
+    "sha256": "f5d4b24695637c02ae423658f22a3dcba25aeccc467afbd0e80fe425833048d7"
+  },
+  "pass-2/shim-NativeSerialFiles-1.o": {
+    "bytes": 72352,
+    "sha256": "0a680b3998a0226a056b9219edc8bcdf9011c811066d1d5144b99751284815f9"
+  },
+  "pass-2/baseline-types-expanded-0.o": {
+    "bytes": 28032,
+    "sha256": "7920b38bc3c222d59fded7b3e06568901cf6ea38d2d820ea8bf8c9e7cfb82469"
+  },
+  "pass-2/shim-ProviderGraphV2-1.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-2/shim-NativeSerialFiles-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/baseline-types-installed-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-2/candidate-types-cohort-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/shim-Runtime-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/baseline-types-expanded-0.d": {
+    "bytes": 11687,
+    "sha256": "abdc27d7992ea7603d9d33d587a46180d024323b03a57901670ba155af3f1dd4"
+  },
+  "pass-3/candidate-types-installed-0.d": {
+    "bytes": 9833,
+    "sha256": "23ac89879e7de52ebf37160c4106f70c6177fb86dae63012a201551f7069c720"
+  },
+  "pass-3/shim-Runtime-1.log": {
+    "bytes": 630,
+    "sha256": "c61600c06ee7f0fd6cd01638b977bbe416eb5eeb5e112e08c111a092d6f794a3"
+  },
+  "pass-3/candidate-types-installed-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/shim-NativeSerialFiles-0.d": {
+    "bytes": 421,
+    "sha256": "645d3e67b5af7326d20f2836f2ec54d9d2384e4ced82b962bc0a451ad11aa949"
+  },
+  "pass-3/shim-NativeSerialStorage-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/baseline-types-installed-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-NativeSerialFiles-0.d": {
+    "bytes": 425,
+    "sha256": "0d30eb78ed06d0db0c70b952cb7c07d5c1c3b19e253f7ee88e3f67a71b16e37e"
+  },
+  "pass-3/candidate-types-installed-0-nm.log": {
+    "bytes": 177,
+    "sha256": "60f4a5d77c619b791cfb908b1c73c1549f89b99a5112e527a92ca370182f345f"
+  },
+  "pass-3/sdk-only-ProviderGraphV2-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-cohort-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/shim-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/baseline-types-legacy-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-expanded-1.d": {
+    "bytes": 9832,
+    "sha256": "ceb931247fff457b794fed65b45b39a6bdecc217be2effebf20cb7cddf867a35"
+  },
+  "pass-3/sdk-only-main-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-legacy-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-ProviderGraphV2-1.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-3/baseline-types-cohort-1.d": {
+    "bytes": 11685,
+    "sha256": "e2957f80f9a615cf9fab758cab38fcc140da17785fc140d5a562f91a1285c892"
+  },
+  "pass-3/candidate-types-legacy-1.d": {
+    "bytes": 9734,
+    "sha256": "e38d9195bfc0a93ca955695c37dbd6496afa1e749cdb5a06244c92ffe6c57669"
+  },
+  "pass-3/shim-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/baseline-types-legacy-1.o": {
+    "bytes": 28420,
+    "sha256": "65887697206f52e5dd4ac8e15ee85114a454bf301364c00e418749cfb3c6b92b"
+  },
+  "pass-3/baseline-types-installed-0.o": {
+    "bytes": 28032,
+    "sha256": "9dfd6c62b93638c5af3febba0979fc78b171b68de34cd351437fabcd6507064b"
+  },
+  "pass-3/shim-main-0.log": {
+    "bytes": 195,
+    "sha256": "fe7784f5a78952b5d7ab20a52f776b8a2475f04638fbf4c07a43f6d6263f8fb4"
+  },
+  "pass-3/baseline-types-legacy-0.o": {
+    "bytes": 27984,
+    "sha256": "f56c6f362de934d3d61c810aa600140092ba74ad588c8b32775ddaa1c45c81dd"
+  },
+  "pass-3/shim-NativeSerialFiles-0.o": {
+    "bytes": 5524,
+    "sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382"
+  },
+  "pass-3/sdk-only-NativeSerialStorage-1.log": {
+    "bytes": 349,
+    "sha256": "622c72b2140e188ad55e7887b7372a1be4b5e26973f8bf0637dfb7354042005c"
+  },
+  "pass-3/baseline-types-installed-0.d": {
+    "bytes": 11688,
+    "sha256": "76ee79ea2d7386f32fefa8a97081fdb031de058a31e5942779fe2fe90ce148a4"
+  },
+  "pass-3/candidate-types-legacy-1-nm.log": {
+    "bytes": 272,
+    "sha256": "a08d93ee8ea70c0e5a0a49e1cd511003aca726c97863ad802551e95ea1476d64"
+  },
+  "pass-3/shim-NativeSerialStorage-0.o": {
+    "bytes": 5532,
+    "sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8"
+  },
+  "pass-3/sdk-only-NativeSerialStorage-0.d": {
+    "bytes": 515,
+    "sha256": "f9ed83219a02bb75066cf7b780e2d7a9426925d2536e5a5ea5fe93be77362c27"
+  },
+  "pass-3/shim-ProviderGraphV2-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-Runtime-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/baseline-types-installed-1-nm.log": {
+    "bytes": 272,
+    "sha256": "bbe844857c6206f501a63937814b1e638eb5a9b99d819b2e6393a48cfbbb94c6"
+  },
+  "pass-3/shim-NativeSerialFiles-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-installed-1-nm.log": {
+    "bytes": 272,
+    "sha256": "bbe844857c6206f501a63937814b1e638eb5a9b99d819b2e6393a48cfbbb94c6"
+  },
+  "pass-3/sdk-only-Runtime-1.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "pass-3/baseline-types-cohort-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-cohort-1.d": {
+    "bytes": 9830,
+    "sha256": "7784bfbc3c8d67c932e1a70991c2fcdd3d5d20bd9d0309386986055fd3ec47e8"
+  },
+  "pass-3/sdk-only-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1861,
+    "sha256": "3befd05826f75af1832c45a4078bf5f626ba6fab945925bbe41f8c170e87dee9"
+  },
+  "pass-3/shim-NativeSerialFiles-1-objdump.log": {
+    "bytes": 20251,
+    "sha256": "34ed71e3f802c976ff9792a87003bb18abcf3b6f2389a73c8a35443fdb07f3ef"
+  },
+  "pass-3/baseline-types-cohort-1-nm.log": {
+    "bytes": 272,
+    "sha256": "63c95f322f826f4f88a537bfd7d662b664ab35bc1379ad30973365f4a19660f8"
+  },
+  "pass-3/shim-NativeSerialStorage-0.d": {
+    "bytes": 511,
+    "sha256": "45b0cd600510de8ed3c1e8f45e1a1c9c1511fc225bc0bb99fc0aaf15e69ec216"
+  },
+  "pass-3/commands.json": {
+    "bytes": 182497,
+    "sha256": "034d8bf121423eda0a6dce4d72bf5c6d9d6a6f0fe184b0a4423c645f8c321992"
+  },
+  "pass-3/candidate-types-cohort-0.d": {
+    "bytes": 9830,
+    "sha256": "f8762478748da2497d731a0fba37d7bb13b38f5b36934f1001b0ac85a728d794"
+  },
+  "pass-3/baseline-types-cohort-0-nm.log": {
+    "bytes": 177,
+    "sha256": "fafaebf8c51b438821deb24f348689d90929b7c8156dd6c4fcdd1935ba80324b"
+  },
+  "pass-3/baseline-types-legacy-1.d": {
+    "bytes": 11573,
+    "sha256": "a30e0e11d253832705b5a1f68ef81fe7ae8a17b1ee3e29b7d1e02b5473f31c9f"
+  },
+  "pass-3/candidate-types-expanded-0.d": {
+    "bytes": 9832,
+    "sha256": "55cd2d526774c5f1a219a835cd4dc159b3b6aafb37b956c58bdbd1712f4d5423"
+  },
+  "pass-3/candidate-types-installed-0.o": {
+    "bytes": 27792,
+    "sha256": "8d8d02daaec042f9be916ec86c68ee7567b1a6d7f6a316f56d20dd967e7858d5"
+  },
+  "pass-3/candidate-types-cohort-1-nm.log": {
+    "bytes": 272,
+    "sha256": "63c95f322f826f4f88a537bfd7d662b664ab35bc1379ad30973365f4a19660f8"
+  },
+  "pass-3/sdk-only-main-0.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "pass-3/candidate-types-installed-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/shim-NativeSerialStorage-1-objdump.log": {
+    "bytes": 16645,
+    "sha256": "f62f7c96541f889c6923d1c72cbf4891351eeddd03016bec2538d1f3fb0d69a2"
+  },
+  "pass-3/sdk-only-NativeSerialFiles-0.o": {
+    "bytes": 5524,
+    "sha256": "11b75a52c1eba7f7c8ab4755b211ef3757773ad3c845ac0a715897e928c09382"
+  },
+  "pass-3/baseline-types-installed-0-nm.log": {
+    "bytes": 177,
+    "sha256": "60f4a5d77c619b791cfb908b1c73c1549f89b99a5112e527a92ca370182f345f"
+  },
+  "pass-3/shim-main-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-NativeSerialFiles-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/shim-NativeSerialStorage-1-nm.log": {
+    "bytes": 2316,
+    "sha256": "27d77a1382f70213c2719eedde9419a5bee9b6bde4df8e55546d4eafab80ca65"
+  },
+  "pass-3/baseline-types-installed-1.o": {
+    "bytes": 28468,
+    "sha256": "af307c833b974c0e6f37cefff328006a12751bd8ffce004cf70c60e3b8ddc396"
+  },
+  "pass-3/sdk-only-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-legacy-0.o": {
+    "bytes": 27744,
+    "sha256": "74450f0fb6c0f4479785de09163be42b8eecda818160189dbf8ef510d8aba165"
+  },
+  "pass-3/shim-NativeSerialFiles-1.d": {
+    "bytes": 1994,
+    "sha256": "d55e4b74cc6ab5658b073fdd64615a0e0948b428aef90f0657013e73cee22b64"
+  },
+  "pass-3/sdk-only-NativeSerialStorage-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-installed-1.o": {
+    "bytes": 28228,
+    "sha256": "240679064f58e99c52b2fd24a42f24b38116a11080218311ee4d4ee586ca72bf"
+  },
+  "pass-3/shim-NativeSerialFiles-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-legacy-1.o": {
+    "bytes": 28180,
+    "sha256": "05145a01e4f5b9334f24f075064a176b9342470cb2b8a5999aa57feecdd31ceb"
+  },
+  "pass-3/shim-NativeSerialStorage-1.d": {
+    "bytes": 2168,
+    "sha256": "ff00555333e753b16566a65f58338e9786c05c09086da7cebb815e0c5009e863"
+  },
+  "pass-3/shim-NativeSerialFiles-1.su": {
+    "bytes": 3205,
+    "sha256": "1711887490abd5c9780eaab8a9c709c96bc1321eb198ce4cbb35fb5f69e5b593"
+  },
+  "pass-3/candidate-types-expanded-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-NativeSerialFiles-1.log": {
+    "bytes": 429,
+    "sha256": "2d38aa6bb76a7ea3b565735385f518742462e7683a22bb3a735431c312027fbd"
+  },
+  "pass-3/baseline-types-expanded-1.o": {
+    "bytes": 28468,
+    "sha256": "8b206d240aa2b061014b22dd1629b53c585461c0aa17f36fb53a1452dc2b0da0"
+  },
+  "pass-3/shim-ProviderGraphV2-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-main-1.log": {
+    "bytes": 402,
+    "sha256": "b902d15420ee4b3567abe03ef3e0ed20eac55081e4d13b5284ff24ddb064d862"
+  },
+  "pass-3/shim-NativeSerialFiles-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/shim-NativeSerialFiles-1-nm.log": {
+    "bytes": 3287,
+    "sha256": "9f877c548aae2ff088bfd5a4cceb55a7e774e92b2b58d31f01bae7d4cb614ee1"
+  },
+  "pass-3/baseline-types-installed-1.d": {
+    "bytes": 11688,
+    "sha256": "d41895aab25ddac6ac2b083a5e1ba9d322d81fe70c15564400905ef8f1ad895f"
+  },
+  "pass-3/shim-main-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-legacy-0.d": {
+    "bytes": 9734,
+    "sha256": "4834a4b803145ab0c86e031fd61c050798d529aceed593d7f1a6b411807f9ac5"
+  },
+  "pass-3/baseline-types-legacy-1-nm.log": {
+    "bytes": 272,
+    "sha256": "a08d93ee8ea70c0e5a0a49e1cd511003aca726c97863ad802551e95ea1476d64"
+  },
+  "pass-3/shim-NativeSerialStorage-0-objdump.log": {
+    "bytes": 1857,
+    "sha256": "726f2e3c03f546228d873bc4812cbc3b5e5eea11eb2ff8e97296e9500cbf3f58"
+  },
+  "pass-3/sdk-only-NativeSerialStorage-0-nm.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/shim-Runtime-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/baseline-types-legacy-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/shim-main-1.log": {
+    "bytes": 195,
+    "sha256": "fe7784f5a78952b5d7ab20a52f776b8a2475f04638fbf4c07a43f6d6263f8fb4"
+  },
+  "pass-3/candidate-types-expanded-0-nm.log": {
+    "bytes": 177,
+    "sha256": "f5d4b24695637c02ae423658f22a3dcba25aeccc467afbd0e80fe425833048d7"
+  },
+  "pass-3/candidate-types-expanded-0.o": {
+    "bytes": 27792,
+    "sha256": "3ba69bbb5acde97643da33d460fd4a59285b4ada8d927ed35d247a005214b499"
+  },
+  "pass-3/sdk-only-NativeSerialStorage-0.o": {
+    "bytes": 5532,
+    "sha256": "ac3469013109bc71c2aa4934b1b2c512ceeecda75a8d894ab8132dd1bacaabb8"
+  },
+  "pass-3/candidate-types-expanded-1-nm.log": {
+    "bytes": 272,
+    "sha256": "dea2773cbb75113a8d05ae1ed5c10a40991edae775680a6958de2c6171bb7b7f"
+  },
+  "pass-3/candidate-types-expanded-1.o": {
+    "bytes": 28228,
+    "sha256": "67cf3cc00b606b6d51c2fa3553df86c9741012e246f432c5a22fb9941d6fa2a7"
+  },
+  "pass-3/shim-NativeSerialStorage-1.o": {
+    "bytes": 64392,
+    "sha256": "03eb4deb4721846f5e7899f6059b7c82efbeb2027713785e592d8151c3b50401"
+  },
+  "pass-3/baseline-types-expanded-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-expanded-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-cohort-0-nm.log": {
+    "bytes": 177,
+    "sha256": "fafaebf8c51b438821deb24f348689d90929b7c8156dd6c4fcdd1935ba80324b"
+  },
+  "pass-3/sdk-only-Runtime-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/baseline-types-cohort-0.d": {
+    "bytes": 11685,
+    "sha256": "064a1e7ddb615df52b52912b9f79f114125c335fac93d2810508c6317ccdfbbb"
+  },
+  "pass-3/baseline-types-expanded-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/shim-NativeSerialStorage-1.su": {
+    "bytes": 2367,
+    "sha256": "07cd84980c9147b4edda4fca0ed5abcc9ebc02f80b109e66761107d3b2a79b92"
+  },
+  "pass-3/result.json": {
+    "bytes": 286301,
+    "sha256": "dcfd3e1f0a293faeff6a0f5aef6b8c811d3145e1057d1978cb57abc56c14d418"
+  },
+  "pass-3/candidate-types-cohort-1.o": {
+    "bytes": 28228,
+    "sha256": "22f3e28a090b099b2ebd6feaa0ae0ed1524175db7ebc1f1351380e72aaa4b35a"
+  },
+  "pass-3/sdk-only-NativeSerialStorage-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-installed-1.d": {
+    "bytes": 9833,
+    "sha256": "09f97788cd2015b655483a5107c4f77d4296cdff1ecae776e4baed5884305a4d"
+  },
+  "pass-3/baseline-types-legacy-0-nm.log": {
+    "bytes": 177,
+    "sha256": "90ce9cc08c03b7f21f964b471d5005c38f47f1f092e7f2c1977d3ffd9eabec66"
+  },
+  "pass-3/sdk-only-Runtime-0.log": {
+    "bytes": 515,
+    "sha256": "db2e2f6e01dd5d90b4e1ccfea6860d96e19a1ff9199b46eddc45fdd23c95798b"
+  },
+  "pass-3/baseline-types-expanded-1.d": {
+    "bytes": 11687,
+    "sha256": "da5e52899821f0b9b25454881d15ce026ea554accbe7a86d47c2d012a021ea0c"
+  },
+  "pass-3/shim-Runtime-0.log": {
+    "bytes": 630,
+    "sha256": "c61600c06ee7f0fd6cd01638b977bbe416eb5eeb5e112e08c111a092d6f794a3"
+  },
+  "pass-3/shim-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1857,
+    "sha256": "e06a21ca5a6f5a1d5c5fd50dfb9007af6029ac6e932932ba739ebcd6a126066e"
+  },
+  "pass-3/shim-NativeSerialFiles-0-objdump.log": {
+    "bytes": 1853,
+    "sha256": "77897dc22d080bb23ed6ee6056cc650b2008e9bf907204ce8eedc1d45e3972e6"
+  },
+  "pass-3/baseline-types-cohort-0.o": {
+    "bytes": 28032,
+    "sha256": "18231f0683561142bdee658467d16fc5eab8ed526d579e0afe592e1f148fce29"
+  },
+  "pass-3/sdk-only-NativeSerialStorage-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-legacy-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/baseline-types-legacy-0.d": {
+    "bytes": 11573,
+    "sha256": "a2616e96dd5593320132426c2756a6cb5f7f1746667b82c3cfe2cdd1078ca539"
+  },
+  "pass-3/baseline-types-cohort-1.o": {
+    "bytes": 28468,
+    "sha256": "407c8ca2d2658e8bcbd480ac231638d18da938051de93b178fd93587bf26aa05"
+  },
+  "pass-3/baseline-types-cohort-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-cohort-0.o": {
+    "bytes": 27792,
+    "sha256": "059d36f57b57e6481680feb237116dde9ccdcd503643341d74816181da2bd1e7"
+  },
+  "pass-3/shim-ProviderGraphV2-0.log": {
+    "bytes": 775,
+    "sha256": "8cbe73472c1059d31274bca56543d1ea817963d4d939b17a0d725d0438a060b2"
+  },
+  "pass-3/baseline-types-expanded-1-nm.log": {
+    "bytes": 272,
+    "sha256": "dea2773cbb75113a8d05ae1ed5c10a40991edae775680a6958de2c6171bb7b7f"
+  },
+  "pass-3/sdk-only-ProviderGraphV2-0.log": {
+    "bytes": 560,
+    "sha256": "05bf7ebdde4302b8a2a12a0e8819e1170e5e78809dc4a390b3199d453273fdf9"
+  },
+  "pass-3/sdk-only-ProviderGraphV2-0.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/sdk-only-main-1.su": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-legacy-0-nm.log": {
+    "bytes": 177,
+    "sha256": "90ce9cc08c03b7f21f964b471d5005c38f47f1f092e7f2c1977d3ffd9eabec66"
+  },
+  "pass-3/baseline-types-expanded-0-nm.log": {
+    "bytes": 177,
+    "sha256": "f5d4b24695637c02ae423658f22a3dcba25aeccc467afbd0e80fe425833048d7"
+  },
+  "pass-3/shim-NativeSerialFiles-1.o": {
+    "bytes": 72352,
+    "sha256": "0a680b3998a0226a056b9219edc8bcdf9011c811066d1d5144b99751284815f9"
+  },
+  "pass-3/baseline-types-expanded-0.o": {
+    "bytes": 28032,
+    "sha256": "7920b38bc3c222d59fded7b3e06568901cf6ea38d2d820ea8bf8c9e7cfb82469"
+  },
+  "pass-3/shim-ProviderGraphV2-1.log": {
+    "bytes": 775,
+    "sha256": "8cbe73472c1059d31274bca56543d1ea817963d4d939b17a0d725d0438a060b2"
+  },
+  "pass-3/shim-NativeSerialFiles-1.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/baseline-types-installed-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "pass-3/candidate-types-cohort-0.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "boundary-shims/mbedtls/platform.h": {
+    "bytes": 110,
+    "sha256": "d898a4874bdba6feded5407cbd0b248c7c7d88cc199fe439e8c96367fdd5b389"
+  },
+  "boundary-shims/mbedtls/sha256.h": {
+    "bytes": 627,
+    "sha256": "62ccc7092c529e5085962947cab1a029303198044597ceee4106995647646333"
+  },
+  "prior-evidence/bootloader/compile_commands.json": {
+    "bytes": 550924,
+    "sha256": "e800bc753c6a3d8c2b687a1ff64527bb34f9de81f27faf0cc7f7d74a9f97502c"
+  },
+  "prior-evidence/config/sdkconfig.h": {
+    "bytes": 52510,
+    "sha256": "d5de88b11b2c416518303f036e3a8c3ec2cd3a1d0a26dda4390c3c79f25a9602"
+  },
+  "prior-evidence/toolchain/cxxflags": {
+    "bytes": 108,
+    "sha256": "50190b4d3a273c3a2ccc13a3a908cda254f065b34ea9949f9fedc2477ef4f889"
+  },
+  "prior-evidence/toolchain/asmflags": {
+    "bytes": 98,
+    "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+  },
+  "prior-evidence/toolchain/cflags": {
+    "bytes": 98,
+    "sha256": "8d77b3e2357b4da3073a354dc18e17e3790259eb28ea4d188a14c8c97beb0043"
+  },
+  "prior-evidence/toolchain/ldflags": {
+    "bytes": 24,
+    "sha256": "0882bd89337f1e7949a99b6d96b1fff733639561359a71d6f0507168ac7c42dc"
+  },
+  "prior-evidence/bootloader/config/sdkconfig.h": {
+    "bytes": 29072,
+    "sha256": "571bc9b48de002ec6fa180871957e500a3ea43a2f691027324ae575aa37256fa"
+  }
+}

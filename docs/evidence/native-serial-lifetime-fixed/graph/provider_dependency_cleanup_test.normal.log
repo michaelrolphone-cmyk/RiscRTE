@@ -1,0 +1,25 @@
++ set -euo pipefail
++++ dirname test/run_provider_dependency_cleanup_test.sh
+++ cd test/..
+++ pwd
++ repo=/workspace/shared/serial-lifetime-20261018
+++ mktemp -d
++ build=/tmp/tmp.NGZxZZG0Yo
++ trap 'rm -rf "$build"' EXIT
++ san=(-g)
++ [[ 0 == 1 ]]
++ shared=()
+++ uname -s
++ [[ Linux == Darwin ]]
++ for i in 0 1 2 3
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=0 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_dependency_cleanup_fixture.c -o /tmp/tmp.NGZxZZG0Yo/provider-0.so
++ for i in 0 1 2 3
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=1 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_dependency_cleanup_fixture.c -o /tmp/tmp.NGZxZZG0Yo/provider-1.so
++ for i in 0 1 2 3
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=2 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_dependency_cleanup_fixture.c -o /tmp/tmp.NGZxZZG0Yo/provider-2.so
++ for i in 0 1 2 3
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=3 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_dependency_cleanup_fixture.c -o /tmp/tmp.NGZxZZG0Yo/provider-3.so
++ c++ -std=c++17 -Wall -Wextra -Werror -g -rdynamic -I/workspace/shared/serial-lifetime-20261018/src -I/workspace/shared/serial-lifetime-20261018/sdk/app -I/workspace/shared/serial-lifetime-20261018/sdk/driver -I/workspace/shared/serial-lifetime-20261018/sdk/hardware -I/workspace/shared/serial-lifetime-20261018/test/drivers/stubs /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderModuleV2.cpp /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp /workspace/shared/serial-lifetime-20261018/src/runtime/streams/ProviderQueueHost.cpp /workspace/shared/serial-lifetime-20261018/test/drivers/provider_dependency_cleanup_test.cpp -ldl -o /tmp/tmp.NGZxZZG0Yo/test
++ /tmp/tmp.NGZxZZG0Yo/test /tmp/tmp.NGZxZZG0Yo/provider-0.so /tmp/tmp.NGZxZZG0Yo/provider-1.so /tmp/tmp.NGZxZZG0Yo/provider-2.so /tmp/tmp.NGZxZZG0Yo/provider-3.so
+Stream graph lower-dependency cleanup: checked failure, bounded retention, exact retry and no double unpin PASS
++ rm -rf /tmp/tmp.NGZxZZG0Yo

@@ -1,0 +1,378 @@
+00000000 0000000b t _GLOBAL__sub_I_risc_app_policy_rows
+         U esp_vfs_spiffs_register(esp_vfs_spiffs_conf_t const*)
+         U esp_ota_get_running_partition()
+00000000 0000002c t __static_initialization_and_destruction_0()
+00000000 0000001a T loop()
+00000000 0000090e T setup()
+00000000 00000008 V guard variable for RiscNvs::backend()::value
+         U RiscAppData::custodySafe()
+         U RiscAppData::backend()
+         U RiscAppData::prepare(bool (*)(), bool (*)())
+         U RiscAppData::exitSafe()
+00000000 0000001d W RiscRuntime::ScopedBufferWipe::~ScopedBufferWipe()
+00000000 0000001d W RiscRuntime::ScopedBufferWipe::~ScopedBufferWipe()
+00000000 n RiscRuntime::ScopedBufferWipe::~ScopedBufferWipe()
+00000000 000000c1 W RiscStorage::PosixFiles::pathIdentity(char const*, risc_storage_files_identity_value_v1*)
+00000000 000001ac W RiscStorage::PosixFiles::directoryNext(unsigned long, risc_storage_files_stat_v1*, char*, unsigned long, unsigned long*)
+00000000 0000003d W RiscStorage::PosixFiles::find(unsigned long, bool)
+00000000 00000087 W RiscStorage::PosixFiles::info(unsigned long, unsigned long long*, unsigned long long*)
+00000000 000001ee W RiscStorage::PosixFiles::open(char const*, unsigned long, unsigned long*)
+00000000 000000f7 W RiscStorage::PosixFiles::stat(char const*, risc_storage_files_stat_v1*)
+00000000 00000051 W RiscStorage::PosixFiles::close(unsigned long)
+00000000 0000005d W RiscStorage::PosixFiles::error()
+00000000 0000003f W RiscStorage::PosixFiles::mkdir(char const*)
+00000000 00000042 W RiscStorage::PosixFiles::remove(char const*)
+00000000 00000026 t _ZN11RiscStorage10PosixFiles6renameEPKcS2_$part$0
+00000000 00000031 W RiscStorage::PosixFiles::vacant()
+00000000 00000134 W RiscStorage::PosixFiles::dirNext(unsigned long, risc_storage_files_entry_v1*)
+00000000 00000094 W RiscStorage::PosixFiles::dirOpen(char const*, unsigned long*)
+00000000 0000006d W RiscStorage::PosixFiles::dirSeek(unsigned long, unsigned long long)
+00000000 00000055 W RiscStorage::PosixFiles::dirTell(unsigned long, unsigned long long*)
+00000000 00000049 W RiscStorage::PosixFiles::dirClose(unsigned long)
+00000000 00000032 W RiscStorage::SdFirstKeyValue::crc(unsigned char const*, unsigned int)
+00000000 0000018b W RiscStorage::SdFirstKeyValue::put(RiscStorage::SdFirstKeyValue::State&, RiscStorage::SdFirstKeyValue::Workspace&, RiscStorage::SdFirstKeyValue::Journal const&, unsigned long, char const*, void const*, unsigned int)
+00000000 00000020 W RiscStorage::SdFirstKeyValue::word(unsigned char const*)
+00000000 0000001a W RiscStorage::SdFirstKeyValue::word(unsigned char*, unsigned long)
+00000000 0000016b W RiscStorage::SdFirstKeyValue::decode(RiscStorage::SdFirstKeyValue::State&, unsigned long, char const*, void const*, unsigned int, bool&)
+00000000 000000d5 W RiscStorage::SdFirstKeyValue::encode(RiscStorage::SdFirstKeyValue::State const&, unsigned long, bool, unsigned char*)
+00000000 00000018 W RiscStorage::SdFirstKeyValue::keyValid(char const*)
+00000000 00000042 t _ZN11RiscStorage15SdFirstKeyValue8keyValidEPKc$part$0
+00000000 0000002e W RiscStorage::ScalableSettings::Collection::clear()
+00000000 00000051 W RiscStorage::ScalableSettings::Collection::create(unsigned int)
+00000000 00000263 W RiscStorage::ScalableSettings::acknowledge(RiscStorage::ScalableSettings::State&, RiscStorage::ScalableSettings::Backend const&, unsigned long, unsigned long long)
+00000000 00000051 W RiscStorage::ScalableSettings::validHeader(unsigned char const*, unsigned long, char const*)
+00000000 0000017d W RiscStorage::ScalableSettings::advanceRestore(RiscStorage::ScalableSettings::State&, RiscStorage::ScalableSettings::Backend const&, unsigned long)
+00000000 00000031 W RiscStorage::ScalableSettings::crc(void const*, unsigned long)
+00000000 00000018 W RiscStorage::ScalableSettings::key(char const*)
+00000000 00000042 t _ZN11RiscStorage16ScalableSettings3keyEPKc$part$0
+00000000 00000180 W RiscStorage::ScalableSettings::put(RiscStorage::ScalableSettings::State&, RiscStorage::ScalableSettings::Backend const&, unsigned long, char const*, void const*, unsigned long)
+00000000 0000001d W RiscStorage::ScalableSettings::find(RiscStorage::ScalableSettings::State&, char const*)
+00000000 0000001b W RiscStorage::ScalableSettings::wide(unsigned char const*)
+00000000 00000019 W RiscStorage::ScalableSettings::wide(unsigned char*, unsigned long long)
+00000000 00000020 W RiscStorage::ScalableSettings::word(unsigned char const*)
+00000000 0000001a W RiscStorage::ScalableSettings::word(unsigned char*, unsigned long)
+00000000 0000002d W RiscStorage::ScalableSettings::State::clear()
+00000000 0000009a W RiscStorage::ScalableSettings::assign(RiscStorage::ScalableSettings::State&, char const*, void const*, unsigned long)
+00000000 00000059 W RiscStorage::ScalableSettings::header(unsigned char*, unsigned long, RiscStorage::ScalableSettings::State const&, unsigned long, unsigned long)
+00000000 0000059c W RiscStorage::ScalableSettings::restore(RiscStorage::ScalableSettings::State&, RiscStorage::ScalableSettings::Backend const&, unsigned long, char const*, void const*, unsigned long, bool)
+00000000 00000153 W RiscStorage::validPath(char const*)
+         U RiscPlatform::Console::begin(unsigned int)
+         U RiscPlatform::console
+00000000 0000000f t (anonymous namespace)::diagnostic(char const*)
+00000000 00000065 t (anonymous namespace)::appExitSafe()
+00000000 0000001a t (anonymous namespace)::confirmBoot()
+00000000 00000041 t (anonymous namespace)::restartSafe()
+00000000 00000059 t (anonymous namespace)::priorFailure(risc_resident_failure_v1*)
+00000000 0000003d t (anonymous namespace)::bindPlatforms(RiscBoot::Runtime&)
+00000000 00000004 b (anonymous namespace)::serialRuntime
+00000000 00000036 t (anonymous namespace)::schedulerDelay(unsigned long)
+00000000 0000001a t (anonymous namespace)::monotonicMillis(unsigned long*)
+00000000 00000004 b (anonymous namespace)::retainedRuntime
+00000000 00000040 t (anonymous namespace)::diagnosticFormat(char const*, ...)
+00000000 00000017 t (anonymous namespace)::updateStorageSafe()
+00000000 0000005d t (anonymous namespace)::providerStorageSafe()
+00000000 00000010 t (anonymous namespace)::nativeOwnerCheckpoint(bool)
+00000000 0000000d t (anonymous namespace)::nativeSettingsShutdown()
+00000000 0000000d t (anonymous namespace)::nativeDiscoveryCheckpoint()
+00000000 000027d8 b (anonymous namespace)::cpu
+00000000 00000004 b (anonymous namespace)::owner
+00000000 00000045 t (anonymous namespace)::health(risc_runtime_health_v1*)
+00000000 00000019 t (anonymous namespace)::isOwner()
+00000000 00000024 t (anonymous namespace)::cooperate(unsigned long)
+         U RiscBankStore::rejectBoot()
+         U RiscBankStore::confirmBoot()
+         U RiscBankStore::prepareBoot(bool (*)(), bool (*)(), bool (*)(), RiscBoot::RuntimeFileSources const*)
+         U RiscBankStore::bind(RiscBoot::Runtime&)
+         U RiscBankStore::exitSafe()
+         U RiscBankStore::bootLabel()
+         U RiscBootstrap::reasonName(RiscBootstrap::Reason)
+         U RiscBootstrap::configuredFreshTime(RiscProvision::Input, unsigned long long (*)())
+         U RiscBootstrap::run(RiscBootstrap::Port const&, char const*)
+         U RiscFileSource::backend()
+         U RiscFileSource::prepare(bool (*)(), bool (*)())
+         U RiscFileSource::exitSafe()
+         U RiscFileSource::resetSafe()
+         U RuntimeStreams::runtimeProviderStreamHost()
+         U RiscDiagnostics::checkpoint(char const*, unsigned long long, char const*, unsigned long)
+         U RiscDiagnostics::serialStat(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&)
+         U RiscDiagnostics::monotonicUs()
+         U RiscDiagnostics::timestamped(char const*, ...)
+         U RiscDiagnostics::prepareSerial()
+         U RiscDiagnostics::serialControl(unsigned long, unsigned long, char const*, unsigned long, bool, unsigned long)
+         U RiscDiagnostics::line(char const*)
+         U RiscDiagnostics::poll()
+         U RiscDiagnostics::start()
+         U RiscPackageVolume::bind(RiscBoot::Runtime&, bool (*)())
+         U RiscPackageVolume::exitSafe()
+         U RiscProvisionRequest::releaseBootInput()
+         U RiscProvisionRequest::bind(RiscBoot::Runtime&, bool (*)())
+         U RiscProvisionRequest::bootInput(RiscProvision::Input, bool&)
+00000000 00000061 W RiscCpu::memoryHeap(risc_memory_heap_snapshot_v1*)
+00000000 0000001e W RiscCpu::randomBytes(void*, unsigned long)
+         U RiscCpu::NativeRealtime::start()
+         U RiscCpu::nativeHardware(bool (*)())
+00000000 00000004 V RiscCpu::NativeTlsMemory::state
+         U RiscCpu::NativeSerialFiles::checkpoint()
+         U RiscCpu::NativeSerialFiles::custodySafe()
+         U RiscCpu::NativeSerialFiles::controlCheckpoint()
+         U RiscCpu::NativeSerialFiles::stop()
+         U RiscCpu::NativeSerialFiles::prepare(RiscCpu::NativeSerialFiles::Admission const*, bool (*)(), bool (*)(), void (*)(unsigned long, unsigned long, char const*, unsigned long, bool), void (*)(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&))
+         U RiscCpu::NativeSerialFiles::exitSafe()
+         U RiscCpu::NativeSerialFiles::shutdown()
+00000000 000000d4 W RiscCpu::NativeSpiffsFiles::NativeSpiffsFiles(char const*)
+00000000 000000d4 W RiscCpu::NativeSpiffsFiles::NativeSpiffsFiles(char const*)
+00000000 n RiscCpu::NativeSpiffsFiles::NativeSpiffsFiles(char const*)
+         U RiscCpu::NativeRetainedWake::start()
+         U RiscCpu::NativeRetainedWake::backend()
+         U RiscCpu::NativeRetainedWake::coldBoot()
+00000000 00000021 W RiscCpu::NativeRuntimeFiles::custodySafe()
+00000000 000000fa W RiscCpu::NativeRuntimeFiles::prepare(bool (*)(), bool (*)())
+00000000 0000003f W RiscCpu::NativeRuntimeFiles::exitSafe()
+         U RiscCpu::NativeCrownRecovery::endInvocation()
+         U RiscCpu::NativeCrownRecovery::exitRequested()
+         U RiscCpu::NativeCrownRecovery::previousReason()
+         U RiscCpu::NativeCrownRecovery::beginInvocation(bool)
+00000000 0000000c r RiscCpu::NativeSerialStorage::Detail::sdProvider
+         U RiscCpu::NativeSerialStorage::prepare(bool (*)(), bool (*)())
+         U RiscCpu::NativeSerialStorage::sdFiles()
+         U RiscCpu::NativeSerialStorage::admission()
+         U RiscCpu::NativeSettingsBackend::prepare(bool (*)())
+         U RiscCpu::nativeRadioResourceEnd()
+         U RiscCpu::nativeRadioResourceTry()
+         U RiscCpu::NativeSettingsLifecycle::checkpoint(bool)
+         U RiscCpu::NativeSettingsLifecycle::continuing()
+         U RiscCpu::NativeSettingsLifecycle::attachOwner(RiscBoot::Runtime&, RiscCpu::Port&)
+         U RiscCpu::NativeSettingsLifecycle::diagnosticState()
+         U RiscCpu::NativeSettingsLifecycle::discoveryCheckpoint()
+         U RiscCpu::NativeSettingsLifecycle::bind(RiscBoot::Runtime&)
+         U RiscCpu::NativeSettingsLifecycle::hydrate(RiscBoot::Runtime&, RiscCpu::Port&)
+         U RiscCpu::NativeSettingsLifecycle::prepare(RiscCpu::NativeSettingsLifecycle::Admission const*, RiscCpu::NativeSettingsLifecycle::Hooks)
+         U RiscCpu::NativeSettingsLifecycle::exitSafe()
+         U RiscCpu::NativeSettingsLifecycle::retained()
+         U RiscCpu::NativeSettingsLifecycle::shutdown()
+         U RiscCpu::NativeSettingsLifecycle::cooperate()
+00000000 00000010 W RiscCpu::NativeRadioResourceGuard::~NativeRadioResourceGuard()
+00000000 00000010 W RiscCpu::NativeRadioResourceGuard::~NativeRadioResourceGuard()
+00000000 n RiscCpu::NativeRadioResourceGuard::~NativeRadioResourceGuard()
+         U RiscCpu::nativeRadioResourceReady()
+         U RiscCpu::NativeSettingsStartupEntropy::capture(bool (*)())
+         U RiscCpu::Port::bind(RiscBoot::Runtime&)
+00000000 00000228 W RiscCpu::Port::Port(RiscCpu::Hardware)
+00000000 00000228 W RiscCpu::Port::Port(RiscCpu::Hardware)
+00000000 n RiscCpu::Port::Port(RiscCpu::Hardware)
+00000000 000000fb W RiscNvs::getUnlocked(void*, unsigned long, char const*, void*, unsigned long, unsigned long*)
+         U RiscNvs::initializationStatus()
+00000000 0000003a W RiscNvs::get(void*, unsigned long, char const*, void*, unsigned long, unsigned long*)
+00000000 000000f0 W RiscNvs::put(void*, unsigned long, char const*, void const*, unsigned long)
+00000000 00000060 W RiscNvs::valid(unsigned long, char const*)
+00000000 00000035 W RiscNvs::Handle::open(unsigned long, nvs_open_mode_t, bool)
+00000000 00000012 W RiscNvs::Handle::~Handle()
+00000000 00000012 W RiscNvs::Handle::~Handle()
+00000000 n RiscNvs::Handle::~Handle()
+00000000 00000021 W RiscNvs::backend()
+00000000 0000019d W RiscNvs::Settings::next(void*, unsigned long, bool, char const*, char*, void*, unsigned long, unsigned long*)
+00000000 0000002f W RiscNvs::Settings::open(RiscNvs::Handle&, unsigned long, char const*, nvs_open_mode_t)
+00000000 0000007b W RiscNvs::Settings::read(void*, unsigned long, void*, unsigned long, unsigned long*)
+00000000 00000089 W RiscNvs::Settings::erase(void*, unsigned long, char const*)
+00000000 00000122 W RiscNvs::Settings::write(unsigned long, char const*, char const*, void const*, unsigned long)
+00000000 0000009b W RiscNvs::Settings::readRaw(unsigned long, char const*, void*, unsigned long, unsigned long*)
+00000000 00000094 W RiscBoot::RuntimeFiles::bind(risc_storage_files_v1 const*, bool (*)(), bool (*)(), risc_storage_files_identity_v1 const*, risc_storage_files_directory_v1 const*)
+00000000 0000002e W RiscBoot::RuntimeFiles::RuntimeFiles()
+00000000 0000002e W RiscBoot::RuntimeFiles::RuntimeFiles()
+00000000 n RiscBoot::RuntimeFiles::RuntimeFiles()
+00000000 00000032 W RiscBoot::openLegacySettings(RiscBoot::KeyValueBackend const&)
+00000000 000000aa W RiscBoot::LegacySettingsSession::acknowledge(unsigned long, unsigned long long)
+00000000 00000205 W RiscBoot::LegacySettingsSession::get(unsigned long, char const*, void*, unsigned long, unsigned long*, unsigned long, bool)
+00000000 000000a0 W RiscBoot::LegacySettingsSession::put(unsigned long, char const*, void const*, unsigned long, bool)
+00000000 000002d1 W RiscBoot::LegacySettingsSession::restore(unsigned long, char const*, void const*, unsigned long, bool)
+00000000 000001ae W RiscBoot::LegacySettingsSession::snapshot(unsigned long, void*, unsigned long, unsigned long*, unsigned long long*)
+00000000 0000014f W RiscBoot::LegacySettingsSession::configure(unsigned long, unsigned long, bool, unsigned long const*, unsigned long)
+00000000 00000017 W RiscBoot::LegacySettingsSession::~LegacySettingsSession()
+00000000 0000003a W RiscBoot::LegacySettingsSession::~LegacySettingsSession()
+00000000 0000003a W RiscBoot::LegacySettingsSession::~LegacySettingsSession()
+00000000 n RiscBoot::LegacySettingsSession::~LegacySettingsSession()
+00000000 00000099 W RiscBoot::StorageFilesVolumeAdapter::bindFiles(risc_storage_files_v1 const*)
+         U RiscBoot::Board::reservePin(int)
+00000000 000000de W RiscBoot::Board::Board()
+00000000 000000de W RiscBoot::Board::Board()
+00000000 n RiscBoot::Board::Board()
+         U RiscBoot::Runtime::streamYield(void*)
+         U RiscBoot::Runtime::streamRetain(void*)
+         U RiscBoot::Runtime::bindNativeFiles(char const*, unsigned long long, RiscBoot::RuntimeFiles&, bool (*)(), bool (*)(), bool, RiscBoot::Runtime::NativeBindingLifetime)
+         U RiscBoot::Runtime::streamBindingValid(void*, RuntimeStreams::AppStreamBinding const&, bool)
+         U RiscBoot::Runtime::nativeFilesCheckpoint()
+         U RiscBoot::Runtime::run()
+         U RiscBoot::Runtime::prepare(char const*)
+00000000 000004ea W RiscBoot::Runtime::Runtime(RiscBoot::Port)
+00000000 000004ea W RiscBoot::Runtime::Runtime(RiscBoot::Port)
+00000000 n RiscBoot::Runtime::Runtime(RiscBoot::Port)
+00000000 0000001d W RiscPerf::now()
+00000000 00000d40 V RiscPerf::data
+00000000 00000017 W RiscPerf::emit(unsigned long, unsigned long)
+00000000 00000037 W RiscPerf::Scope::Scope(unsigned long, unsigned long, unsigned long)
+00000000 00000037 W RiscPerf::Scope::Scope(unsigned long, unsigned long, unsigned long)
+00000000 n RiscPerf::Scope::Scope(unsigned long, unsigned long, unsigned long)
+00000000 00000086 W RiscPerf::Scope::~Scope()
+00000000 00000086 W RiscPerf::Scope::~Scope()
+00000000 n RiscPerf::Scope::~Scope()
+00000000 000000ed W RiscPerf::record(unsigned long, unsigned long)
+00000000 0000001b W RiscPerf::allowed()
+00000000 00000004 V RiscPerf::clockUs
+00000000 00000001 V RiscPerf::enabled
+00000000 0000000e W RiscPerf::saturate(unsigned long&)
+00000000 00000004 V RiscPerf::ownerTask
+00000000 00000051 t _ZNK11RiscStorage10PosixFiles4pathEPKcRA512_c$isra$0
+00000000 0000002e W RiscStorage::PosixFiles::exitSafe() const
+         U RiscCpu::Port::appExitSafe() const
+         U RiscCpu::Port::providerStorageSafe() const
+         U RiscCpu::Port::restartResourcesSafe() const
+         U RiscCpu::Port::nativeStorageAttached() const
+         U RiscCpu::Port::nativeDiscoveryAppExitSafe() const
+         U RiscCpu::Port::nativeDiscoveryProviderSafe() const
+00000000 0000001b W RiscBoot::RuntimeFiles::bound() const
+00000000 00000025 W RiscBoot::RuntimeFiles::exitSafe() const
+00000000 00000007 W RiscBoot::SettingsSession::retained() const
+00000000 0000002f W RiscBoot::RuntimeFileSources::retained() const
+00000000 00000070 W RiscBoot::LegacySettingsSession::launchReady(unsigned long, bool*) const
+00000000 00000013 W RiscBoot::LegacySettingsSession::maxBlobSize() const
+00000000 00000007 W RiscBoot::LegacySettingsSession::sharedCount() const
+00000000 00000007 W RiscBoot::LegacySettingsSession::checkpointCount() const
+00000000 00000015 W RiscBoot::LegacySettingsSession::sharedNamespace(unsigned long) const
+00000000 00000010 W RiscBoot::LegacySettingsSession::format() const
+00000000 00000036 W RiscBoot::LegacySettingsSession::status(unsigned long) const
+00000000 00000045 W RiscBoot::LegacySettingsSession::scalable(unsigned long) const
+00000000 0000001a W RiscBoot::LegacySettingsSession::installed(unsigned long) const
+00000000 00000026 W RiscBoot::LegacySettingsSession::nameSpace(unsigned long) const
+00000000 00000024 W RiscBoot::StorageFilesVolumeAdapter::exitSafe() const
+         U std::nothrow
+00000000 00000048 V vtable for RiscBoot::LegacySettingsSession
+00000000 00000003 b risc_perf_loader_event::live
+00000000 00000018 b risc_perf_loader_event::starts
+00000000 00000045 t setup()::{lambda(unsigned long, unsigned long, char const*, unsigned long, bool)#1}::_FUN(unsigned long, unsigned long, char const*, unsigned long, bool)
+00000000 00000017 t setup()::{lambda(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&)#1}::_FUN(unsigned long, unsigned long, unsigned long long, long, RiscBoot::StatObservation const&)
+00000000 0000001a t setup()::{lambda()#2}::_FUN()
+00000000 0000001a t setup()::{lambda()#3}::_FUN()
+00000000 00000018 t setup()::{lambda()#4}::_FUN()
+00000000 0000000f t setup()::{lambda()#1}::_FUN()
+00000000 00000011 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*)#2}::_FUN(void*, char const*)
+00000000 00000011 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*)#13}::_FUN(void*, char const*)
+00000000 00000011 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*)#15}::_FUN(void*, char const*)
+00000000 00000011 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*)#1}::_FUN(void*, char const*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, risc_storage_files_stat_v1*)#12}::_FUN(void*, char const*, risc_storage_files_stat_v1*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, risc_storage_files_stat_v1*)#1}::_FUN(void*, char const*, risc_storage_files_stat_v1*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, risc_storage_files_identity_value_v1*)#2}::_FUN(void*, char const*, risc_storage_files_identity_value_v1*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, risc_storage_files_identity_value_v1*)#1}::_FUN(void*, char const*, risc_storage_files_identity_value_v1*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, unsigned long*)#16}::_FUN(void*, char const*, unsigned long*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, unsigned long*)#1}::_FUN(void*, char const*, unsigned long*)
+00000000 0000001d W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, char const*)#14}::_FUN(void*, char const*, char const*)
+00000000 0000001d W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, char const*)#1}::_FUN(void*, char const*, char const*)
+00000000 00000015 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, unsigned long, unsigned long*)#4}::_FUN(void*, char const*, unsigned long, unsigned long*)
+00000000 00000015 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, char const*, unsigned long, unsigned long*)#1}::_FUN(void*, char const*, unsigned long, unsigned long*)
+00000000 00000033 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long)#2}::_FUN(void*, unsigned long)
+00000000 00000011 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long)#18}::_FUN(void*, unsigned long)
+00000000 00000058 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long)#19}::_FUN(void*, unsigned long)
+00000000 00000011 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long)#3}::_FUN(void*, unsigned long)
+00000000 00000058 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long)#4}::_FUN(void*, unsigned long)
+00000000 00000011 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long)#5}::_FUN(void*, unsigned long)
+00000000 00000033 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long)#10}::_FUN(void*, unsigned long)
+00000000 00000011 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long)#1}::_FUN(void*, unsigned long)
+00000000 00000019 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, risc_storage_files_stat_v1*, char*, unsigned long, unsigned long*)#1}::_FUN(void*, unsigned long, risc_storage_files_stat_v1*, char*, unsigned long, unsigned long*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, risc_storage_files_entry_v1*)#17}::_FUN(void*, unsigned long, risc_storage_files_entry_v1*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, risc_storage_files_entry_v1*)#1}::_FUN(void*, unsigned long, risc_storage_files_entry_v1*)
+00000000 000000b6 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, risc_storage_files_identity_value_v1*)#3}::_FUN(void*, unsigned long, risc_storage_files_identity_value_v1*)
+00000000 000000b6 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, risc_storage_files_identity_value_v1*)#1}::_FUN(void*, unsigned long, risc_storage_files_identity_value_v1*)
+00000000 00000090 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, void const*, unsigned long, unsigned long*)#7}::_FUN(void*, unsigned long, void const*, unsigned long, unsigned long*)
+00000000 00000090 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, void const*, unsigned long, unsigned long*)#1}::_FUN(void*, unsigned long, void const*, unsigned long, unsigned long*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long*)#20}::_FUN(void*, unsigned long, unsigned long long*)
+00000000 00000013 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long*)#1}::_FUN(void*, unsigned long, unsigned long long*)
+00000000 00000015 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long*, unsigned long long*)#9}::_FUN(void*, unsigned long, unsigned long long*, unsigned long long*)
+00000000 00000015 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long*, unsigned long long*)#1}::_FUN(void*, unsigned long, unsigned long long*, unsigned long long*)
+00000000 00000071 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, void*, unsigned long, unsigned long*)#6}::_FUN(void*, unsigned long, void*, unsigned long, unsigned long*)
+00000000 00000071 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, void*, unsigned long, unsigned long*)#1}::_FUN(void*, unsigned long, void*, unsigned long, unsigned long*)
+00000000 00000066 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long)#2}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000015 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long)#21}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000015 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long)#3}::_FUN(void*, unsigned long, unsigned long long)
+00000000 0000006e W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long)#8}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000066 W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long)#11}::_FUN(void*, unsigned long, unsigned long long)
+00000000 0000006e W RiscStorage::PosixFiles::PosixFiles(char const*, RiscStorage::PosixFiles::OpenBehavior, bool)::{lambda(void*, unsigned long, unsigned long long)#1}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000017 t (anonymous namespace)::nativePort(RiscBoot::Port)::{lambda()#1}::_FUN()
+00000000 000000a7 W RiscBootstrap::nvsInput()::{lambda(void*, char const*, void*, unsigned long, unsigned long*)#1}::_FUN(void*, char const*, void*, unsigned long, unsigned long*)
+00000000 00000004 V RiscCpu::NativeRuntimeFiles::state()::value
+00000000 00000024 V RiscNvs::backend()::value
+00000000 00000018 W RiscNvs::backend()::{lambda(void*, unsigned long, void const*, unsigned long)#2}::_FUN(void*, unsigned long, void const*, unsigned long)
+00000000 00000018 W RiscNvs::backend()::{lambda(void*, unsigned long, void const*, unsigned long)#1}::_FUN(void*, unsigned long, void const*, unsigned long)
+00000000 0000006f W RiscNvs::backend()::{lambda(void*, unsigned long, bool*)#3}::_FUN(void*, unsigned long, bool*)
+00000000 0000006f W RiscNvs::backend()::{lambda(void*, unsigned long, bool*)#1}::_FUN(void*, unsigned long, bool*)
+00000000 0000001a W RiscNvs::backend()::{lambda(void*, unsigned long, void*, unsigned long, unsigned long*)#1}::_FUN(void*, unsigned long, void*, unsigned long, unsigned long*)
+00000000 0000001c V RiscNvs::Settings::backend()::api
+00000000 00000018 W RiscNvs::Settings::backend()::{lambda(void*, unsigned long, char const*, void const*, unsigned long)#2}::_FUN(void*, unsigned long, char const*, void const*, unsigned long)
+00000000 00000018 W RiscNvs::Settings::backend()::{lambda(void*, unsigned long, char const*, void const*, unsigned long)#1}::_FUN(void*, unsigned long, char const*, void const*, unsigned long)
+00000000 00000019 W RiscNvs::Settings::backend()::{lambda(void*, unsigned long, void const*, unsigned long)#1}::_FUN(void*, unsigned long, void const*, unsigned long)
+00000000 0000001a W RiscNvs::Settings::backend()::{lambda(void*, unsigned long, void*, unsigned long, unsigned long*)#3}::_FUN(void*, unsigned long, void*, unsigned long, unsigned long*)
+00000000 0000001a W RiscNvs::Settings::backend()::{lambda(void*, unsigned long, void*, unsigned long, unsigned long*)#1}::_FUN(void*, unsigned long, void*, unsigned long, unsigned long*)
+         U operator delete(void*, unsigned int)
+         U operator new(unsigned int, std::nothrow_t const&)
+         U __cxa_guard_acquire
+         U __cxa_guard_release
+         U __errno
+         U __udivdi3
+         U abort
+00000000 00000018 T app_main
+         U close
+         U closedir
+         U esp_efuse_mac_get_default
+         U esp_get_free_heap_size
+         U esp_reset_reason
+         U esp_sleep_get_wakeup_cause
+         U esp_timer_get_time
+         U free
+         U fstat
+         U fsync
+         U ftruncate
+         U heap_caps_get_info
+         U heap_caps_get_total_size
+         U heap_caps_malloc
+         U lseek
+         U memchr
+         U memcmp
+         U memcpy
+         U memset
+         U mkdir
+         U nvs_close
+         U nvs_commit
+         U nvs_entry_find
+         U nvs_entry_info
+         U nvs_entry_next
+         U nvs_erase_key
+         U nvs_flash_init
+         U nvs_get_blob
+         U nvs_get_used_entry_count
+         U nvs_open
+         U nvs_release_iterator
+         U nvs_set_blob
+         U open
+         U opendir
+         U read
+         U readdir
+         U remove
+         U rewinddir
+00000000 00000018 R risc_app_policy_rows
+00000000 0000001d R risc_app_requirement_rows
+         w risc_native_settings_admission
+         w risc_native_startup_error
+00000000 00000115 T risc_perf_loader_event
+         U seekdir
+         U snprintf
+         U stat
+         U strchr
+         U strcmp
+         U strcpy
+         U strdup
+         U strlen
+         U strnlen
+         U strstr
+         U telldir
+         U vTaskDelay
+         U vsnprintf
+         U write
+         U xTaskGetCurrentTaskHandle

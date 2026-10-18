@@ -1,0 +1,108 @@
+{
+  "started_utc": "2026-10-18T05:46:42.646827+00:00",
+  "repository": "/workspace/shared/serial-lifetime-20261018",
+  "git_head_before": "20d2dcb1be398f69f0a668677737fbf43f1c5d35",
+  "host": "Linux cc56fa2c1b11 6.18.55 #1 SMP Wed Oct 14 19:45:18 UTC 2026 x86_64 GNU/Linux",
+  "compilers": {
+    "CC": {
+      "requested": "cc",
+      "path": "/usr/bin/cc",
+      "version": "cc (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+      "resolved_path": "/usr/bin/x86_64-linux-gnu-gcc-14",
+      "binary_sha256": "a23ecab8ff08f09ad8c80602c2c5df7f49e09c25905cb8975902e101bf72635f"
+    },
+    "CXX": {
+      "requested": "c++",
+      "path": "/usr/bin/c++",
+      "version": "c++ (Debian 14.2.0-19) 14.2.0\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+      "resolved_path": "/usr/bin/x86_64-linux-gnu-g++-14",
+      "binary_sha256": "6b3696e4dcb85e1c949c732a02befa50e3983ecf94ce7e8e58d9d503b954b79d"
+    }
+  },
+  "source_input_count": 168,
+  "source_scope": [
+    "src/runtime/drivers",
+    "src/runtime/streams",
+    "src/runtime/packages",
+    "src/diagnostics",
+    "sdk",
+    "test/drivers",
+    "lib/hal",
+    "lib/elf_loader/include",
+    "test/run_provider_keep_set_test.sh",
+    "test/run_provider_graph_v2_test.sh",
+    "test/run_provider_dependency_cleanup_test.sh",
+    "src/runtime/RuntimeLimits.h"
+  ],
+  "runs": [
+    {
+      "command": "env CC=cc CXX=c++ SANITIZE=0 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_keep_set_test.sh",
+      "cwd": "/workspace/shared/serial-lifetime-20261018",
+      "log": "/workspace/shared/serial-lifetime-evidence/graph/provider_keep_set_test.normal.log",
+      "started_utc": "2026-10-18T05:46:42.660641+00:00",
+      "return_code": 0,
+      "finished_utc": "2026-10-18T05:46:46.365041+00:00",
+      "seconds": 3.704,
+      "log_sha256": "3bc002a1677b91791400eeca26d2847e0f80b2f06c823805e8e0f9187f093a55"
+    },
+    {
+      "command": "env CC=cc CXX=c++ SANITIZE=0 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_graph_v2_test.sh",
+      "cwd": "/workspace/shared/serial-lifetime-20261018",
+      "log": "/workspace/shared/serial-lifetime-evidence/graph/provider_graph_v2_test.normal.log",
+      "started_utc": "2026-10-18T05:46:46.365357+00:00",
+      "return_code": 0,
+      "finished_utc": "2026-10-18T05:46:50.037046+00:00",
+      "seconds": 3.672,
+      "log_sha256": "57af91708863430c4af018b87acaa6327c6b09d994edb9a89ff3ddc645f818e6"
+    },
+    {
+      "command": "env CC=cc CXX=c++ SANITIZE=0 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_dependency_cleanup_test.sh",
+      "cwd": "/workspace/shared/serial-lifetime-20261018",
+      "log": "/workspace/shared/serial-lifetime-evidence/graph/provider_dependency_cleanup_test.normal.log",
+      "started_utc": "2026-10-18T05:46:50.037493+00:00",
+      "return_code": 0,
+      "finished_utc": "2026-10-18T05:46:50.944711+00:00",
+      "seconds": 0.907,
+      "log_sha256": "05178d67e6be17eb446effc23e72bd6daa936e047e1fac6e10536eb53c1e8d7e"
+    },
+    {
+      "command": "env CC=cc CXX=c++ SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_keep_set_test.sh",
+      "cwd": "/workspace/shared/serial-lifetime-20261018",
+      "log": "/workspace/shared/serial-lifetime-evidence/graph/provider_keep_set_test.asan-ubsan.log",
+      "started_utc": "2026-10-18T05:46:50.945100+00:00",
+      "return_code": 0,
+      "finished_utc": "2026-10-18T05:46:57.536963+00:00",
+      "seconds": 6.592,
+      "log_sha256": "6f4ae348fea17c3b89a19f7a6d2a2be9979f742580395b461532f36794156934"
+    },
+    {
+      "command": "env CC=cc CXX=c++ SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_graph_v2_test.sh",
+      "cwd": "/workspace/shared/serial-lifetime-20261018",
+      "log": "/workspace/shared/serial-lifetime-evidence/graph/provider_graph_v2_test.asan-ubsan.log",
+      "started_utc": "2026-10-18T05:46:57.537520+00:00",
+      "return_code": 0,
+      "finished_utc": "2026-10-18T05:47:05.265628+00:00",
+      "seconds": 7.728,
+      "log_sha256": "1da1ae87f06454d76e3f48f393a5b4c01b6d201407469cfef230fa82fb09d5bd"
+    },
+    {
+      "command": "env CC=cc CXX=c++ SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_dependency_cleanup_test.sh",
+      "cwd": "/workspace/shared/serial-lifetime-20261018",
+      "log": "/workspace/shared/serial-lifetime-evidence/graph/provider_dependency_cleanup_test.asan-ubsan.log",
+      "started_utc": "2026-10-18T05:47:05.265985+00:00",
+      "return_code": 0,
+      "finished_utc": "2026-10-18T05:47:06.960055+00:00",
+      "seconds": 1.694,
+      "log_sha256": "8954bae367302626f33233a93ce8e046265b28766064fd8527bb545d019d1eb8"
+    }
+  ],
+  "source_immutability": {
+    "verified": true,
+    "changed": []
+  },
+  "git_head_after": "20d2dcb1be398f69f0a668677737fbf43f1c5d35",
+  "finished_utc": "2026-10-18T05:47:06.967570+00:00",
+  "all_passed": true,
+  "timestamp_note": "Run timestamps use the execution host UTC clock. Independent assistant clock verification after the runs: 2026-10-18T05:47:11Z.",
+  "execution_host_utc_at_receipt_annotation": "2026-10-18T05:47:21.215494+00:00"
+}

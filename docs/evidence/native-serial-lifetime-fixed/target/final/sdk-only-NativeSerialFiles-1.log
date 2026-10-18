@@ -1,0 +1,6 @@
+In file included from /workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativePlatform.h:6,
+                 from /workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:3:
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeTime.h:4:10: fatal error: esp_timer.h: No such file or directory
+    4 | #include <esp_timer.h>
+      |          ^~~~~~~~~~~~~
+compilation terminated.

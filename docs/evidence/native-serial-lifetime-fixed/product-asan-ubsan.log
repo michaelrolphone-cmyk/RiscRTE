@@ -1,0 +1,29 @@
+Incomplete, empty/embedded-NUL/oversized provider and out-of-range product selection rejected PASS
+Product startup sdmmc-fatfs instance 12, wire namespace 12: healthy PASS
+Product startup sdmmc-fatfs instance 12, wire namespace 12: absent-media PASS
+Product startup sdmmc-fatfs instance 12, wire namespace 12: refresh-refused PASS
+Product startup terminal custody retained PASS
+Product startup terminal custody retained PASS
+Product final-stop failed release retains custody PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+legacyWave12: shared production startup binding, exact graph admission, NS12 and custody PASS
+Product startup x4pro-sd instance 9, wire namespace 12: healthy PASS
+Product startup x4pro-sd instance 9, wire namespace 12: absent-media PASS
+Product startup x4pro-sd instance 9, wire namespace 12: refresh-refused PASS
+Product startup terminal custody retained PASS
+Product startup terminal custody retained PASS
+Product final-stop failed release retains custody PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+Product startup exact selection rejected before activation PASS
+X4SD9: shared production startup binding, exact graph admission, NS12 and custody PASS

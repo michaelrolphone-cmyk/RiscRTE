@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "date_utc": "2026-10-18T05:55:42.192033+00:00",
+  "status": "scoped_target_object_and_layout_pass_full_sdk_link_blocked",
+  "source_root": "/workspace/shared/serial-lifetime-20261018",
+  "source_head": "20d2dcb1be398f69f0a668677737fbf43f1c5d35",
+  "source_hashes_stable_during_pass": true,
+  "source_hashes_still_match_at_report": true,
+  "files_changed_since_pass": [],
+  "source_hashes": {
+    "src/bootstrap/Runtime.cpp": "f154439976527da7c5c86655685a6fd0ad629fa56796b85fe27b2e7f8af3a9d3",
+    "src/bootstrap/Runtime.h": "cd836be9656d350095440b3ec813d47e90ba9f08c2d374dd19d13e0e26a545fe",
+    "src/main.cpp": "a571f245fd283ea606faf13d491b97ad25eea4f2436b6c9125d89528ec8068a1",
+    "src/ports/esp32s3/NativeSerialFiles.cpp": "d8f676d94c2c566872073abf7fcdc051deac310cc9cb03bc35ad79dad1ef5d52",
+    "src/ports/esp32s3/NativeSerialFiles.h": "cfb90cbdba8b436575a62cd8daebd9cef1591ffa027c15f04a8b9d3e904fb6b8",
+    "src/ports/esp32s3/NativeSerialStorage.cpp": "b90f644ebb5ea8794fa4935cbcfdce72e6781a13869c949dfa987522a6761d9b",
+    "src/ports/esp32s3/NativeSerialStorage.h": "9930af8718ee6b703dce820128113bc4c075eef0dcfa3a7e12fe67cac1832dec",
+    "src/ports/esp32s3/NativeSerialStorageBinding.h": "7fbf32a32fac4b6e28376ee0d98267cded449b8e61d87175fdc089346982c876",
+    "src/runtime/drivers/ProviderGraphV2.cpp": "194b3c47eb54e184f64a9625286358bade979ec31ebc012d6a84b102cf3b9530",
+    "src/runtime/drivers/ProviderGraphV2.h": "963c36f30917936b8c3fc557fd347113d92ea31ac96e011a0f428a1f2cc353d7"
+  },
+  "verified_inputs": "inputs.json",
+  "raw_results": "final/result.json",
+  "commands": "final/commands.json",
+  "compiler": "Xtensa ESP GCC 15.2.0 esp-15.2.0_20251204",
+  "tool_hash_matches_prior_record": true,
+  "boundary_shim_compiles": {
+    "shim-Runtime-0": true,
+    "shim-main-0": true,
+    "shim-NativeSerialFiles-0": true,
+    "shim-NativeSerialStorage-0": true,
+    "shim-ProviderGraphV2-0": true,
+    "shim-Runtime-1": true,
+    "shim-main-1": true,
+    "shim-NativeSerialFiles-1": true,
+    "shim-NativeSerialStorage-1": true,
+    "shim-ProviderGraphV2-1": true
+  },
+  "native_default_off_symbols_empty": true,
+  "profiles": {
+    "expanded": {
+      "providers": 40,
+      "grants": 56,
+      "Runtime_serial_off": 331616,
+      "Runtime_serial_on": 332216,
+      "Runtime_change_serial_off": 0,
+      "Runtime_change_serial_on": 0,
+      "Graph": 49600
+    },
+    "cohort": {
+      "providers": 28,
+      "grants": 44,
+      "Runtime_serial_off": 277696,
+      "Runtime_serial_on": 278296,
+      "Runtime_change_serial_off": 0,
+      "Runtime_change_serial_on": 0,
+      "Graph": 34816
+    },
+    "installed": {
+      "providers": 29,
+      "grants": 45,
+      "Runtime_serial_off": 282424,
+      "Runtime_serial_on": 283024,
+      "Runtime_change_serial_off": 0,
+      "Runtime_change_serial_on": 0,
+      "Graph": 36048
+    },
+    "legacy": {
+      "providers": 17,
+      "grants": 32,
+      "Runtime_serial_off": 228440,
+      "Runtime_serial_on": 229040,
+      "Runtime_change_serial_off": 0,
+      "Runtime_change_serial_on": 0,
+      "Graph": 21256
+    }
+  },
+  "new_fields": {
+    "NativeBindingLifetime_bytes": 1,
+    "NativeBindingLifetime_offset": 25,
+    "NativeFilesState_bytes": 1,
+    "NativeFilesBinding_before_and_after_bytes": 36,
+    "native_binding_array_before_and_after_bytes": 576,
+    "Port_before_bytes": 152,
+    "Port_after_bytes": 156,
+    "serialFilesStop_offset": 152
+  },
+  "native_workspaces_before_and_after": {
+    "measure_NativeSerialState": 24,
+    "measure_NativeSerialSessionWorkspace": 400,
+    "measure_NativeSerialPrivateProvider": 760,
+    "measure_NativeSerialWorkspace": 2800
+  },
+  "graph_validator_stack": {
+    "expanded": {
+      "own_frame_bytes": 336,
+      "classification": "static",
+      "raw_source_record": "/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:507:6:bool RuntimeProviders::GraphV2::validateKeepSet(const RuntimeProviders::GrantV2*, size_t) const\t336\tstatic",
+      "raw_array_bytes": 296
+    },
+    "cohort": {
+      "own_frame_bytes": 272,
+      "classification": "static",
+      "raw_source_record": "/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:507:6:bool RuntimeProviders::GraphV2::validateKeepSet(const RuntimeProviders::GrantV2*, size_t) const\t272\tstatic",
+      "raw_array_bytes": 212
+    },
+    "installed": {
+      "own_frame_bytes": 272,
+      "classification": "static",
+      "raw_source_record": "/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:507:6:bool RuntimeProviders::GraphV2::validateKeepSet(const RuntimeProviders::GrantV2*, size_t) const\t272\tstatic",
+      "raw_array_bytes": 219
+    },
+    "legacy": {
+      "own_frame_bytes": 176,
+      "classification": "static",
+      "raw_source_record": "/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:507:6:bool RuntimeProviders::GraphV2::validateKeepSet(const RuntimeProviders::GrantV2*, size_t) const\t176\tstatic",
+      "raw_array_bytes": 134
+    }
+  },
+  "stack_limitations": "Own static function frames, not complete call-chain bounds. Actual code calls memset, lease safety and stream safety callbacks; callback/library stack and target task stack adequacy are not established. No recursion in validator traversal.",
+  "placement": "Boundary attribute shim emits .ext_ram.bss.test; endpoint 2800, session 400, private provider 760 bytes; 24-byte serial control stays .bss. This proves compile selection and sizes only, not real SDK section placement.",
+  "full_link": {
+    "status": "blocked_missing_complete_sdk_and_build_inputs",
+    "sdk_original_path": "/opt/esp/idf",
+    "sdk_checkout_exists": false,
+    "sdk_headers_available_locally": [
+      "/workspace/shared/stat-observation-recovery/idf-headers/components/esp_common/include/esp_err.h",
+      "/workspace/shared/stat-observation-recovery/idf-headers/components/esp_common/include/esp_compiler.h"
+    ],
+    "missing_items": [
+      "complete ESP-IDF 6.1 pinned checkout and submodules",
+      "compiled SDK/static libraries and generated linker scripts for a current source link",
+      "complete reconstructed product native build environment"
+    ],
+    "prior_linked_elf_is_not_current_candidate_proof": true
+  },
+  "profile_scope": "Archived expanded Waveshare profile definitions and exact profile header. Other variants change capacity branches only; they are not independently reconstructed product configurations or X4 hardware qualification.",
+  "qualification_limits": [
+    "No complete SDK-only feature-on TU build, no current firmware ELF/bin link, no current static IQ-bank non-overlap proof",
+    "No device access, target code execution, serial access, flashing, release or external publication",
+    "No physical heap/stack/PSRAM availability or hardware acceptance claims"
+  ]
+}

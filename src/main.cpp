@@ -103,13 +103,14 @@ namespace {
 TaskHandle_t owner=nullptr;
 bool isOwner() { return xTaskGetCurrentTaskHandle()==owner; }
 #if RISC_NATIVE_SERIAL_FILES
-bool serialRuntimeSafe=false;
+RiscBoot::Runtime* serialRuntime=nullptr;
 #endif
 RiscBoot::Port nativePort(RiscBoot::Port port){
 #if RISC_NATIVE_SERIAL_FILES
   port.serialFilesCheckpoint=RiscCpu::NativeSerialFiles::checkpoint;
   port.serialFilesControlCheckpoint=RiscCpu::NativeSerialFiles::controlCheckpoint;
   port.serialFilesShutdown=RiscCpu::NativeSerialFiles::shutdown;
+  port.serialFilesStop=RiscCpu::NativeSerialFiles::stop;
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   port.serialFilesReady=RiscCpu::NativeSettingsLifecycle::exitSafe;
 #endif
@@ -554,9 +555,9 @@ void setup() {
   diagnosticLine(RISC_BUILD_IDENTITY);
   const bool ran=runtime.run();
 #if RISC_NATIVE_SERIAL_FILES
-  // A retained Runtime keeps all native dispatch fenced even if individual
-  // hardware readiness predicates still report idle.
-  serialRuntimeSafe=!runtime.retained() && !runtime.metadataCloseRetained();
+  // Keep the actual lifetime owner; every later dispatch rechecks its parked
+  // grants, retention and custody rather than caching a one-time safe result.
+  serialRuntime=&runtime;
 #endif
   RISC_STAGE_LOG("boot app-session returned result=%s reason=%s",ran?"ok":"failed",ran?"app-returned":runtime.error());
   if(!ran) diagnosticFormat("RTE_BOOT error=runtime detail=%s",runtime.error());
@@ -570,7 +571,7 @@ void setup() {
 void loop() {
 #if RISC_NATIVE_SERIAL_FILES
   // setup/run has returned: no application or provider callback is on-stack.
-  if(serialRuntimeSafe)RiscCpu::NativeSerialFiles::checkpoint();
+  if(serialRuntime)serialRuntime->nativeFilesCheckpoint();
 #endif
   cooperate(50);
 }

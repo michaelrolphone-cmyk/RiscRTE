@@ -1,0 +1,31 @@
+         U RiscStorage::ReopenedFiles::configure(char const*)
+         U RiscStorage::ReopenedFiles::provision()
+         U RiscStorage::ReopenedFiles::ReopenedFiles(RiscStorage::ReopenedFiles::Hooks)
+         U RiscAppDataMount::enter(RiscAppDataMount::Access)
+         U RiscAppDataMount::leave()
+         U RiscAppDataMount::usage(unsigned int*, unsigned int*)
+         U RiscAppDataMount::retain()
+         U RiscAppDataMount::retained()
+00000000 00000004 b RiscCpu::NativeSerialStorage::(anonymous namespace)::ownerCheck
+00000000 00000190 d RiscCpu::NativeSerialStorage::(anonymous namespace)::sessionStorage
+00000190 000002f8 d RiscCpu::NativeSerialStorage::(anonymous namespace)::privateProviderStorage
+00000000 0000001d t RiscCpu::NativeSerialStorage::(anonymous namespace)::safe()
+00000000 00000041 t RiscCpu::NativeSerialStorage::(anonymous namespace)::enter(void*)
+00000000 00000028 t RiscCpu::NativeSerialStorage::(anonymous namespace)::leave(void*)
+00000000 00000013 t RiscCpu::NativeSerialStorage::(anonymous namespace)::owner()
+00000000 0000000b t RiscCpu::NativeSerialStorage::(anonymous namespace)::ready()
+00000000 00000001 b RiscCpu::NativeSerialStorage::(anonymous namespace)::prepared
+00000000 00000001 b RiscCpu::NativeSerialStorage::(anonymous namespace)::resource
+00000000 00000001 b RiscCpu::NativeSerialStorage::(anonymous namespace)::selected
+00000000 00000004 b RiscCpu::NativeSerialStorage::(anonymous namespace)::safeCheck
+00000000 00000173 T RiscCpu::NativeSerialStorage::prepare(bool (*)(), bool (*)())
+00000000 00000008 T RiscCpu::NativeSerialStorage::sdFiles()
+00000000 00000012 T RiscCpu::NativeSerialStorage::admission()
+         U RiscCpu::nativeBackgroundResourceEnd()
+         U RiscCpu::nativeBackgroundResourceTry()
+00000000 00000092 W RiscBoot::StorageFilesVolumeAdapter::bindFiles(risc_storage_files_v1 const*)
+00000000 0000000b t RiscCpu::NativeSerialStorage::prepare(bool (*)(), bool (*)())::{lambda(void*)#2}::_FUN(void*)
+00000000 0000000d t RiscCpu::NativeSerialStorage::prepare(bool (*)(), bool (*)())::{lambda(void*)#1}::_FUN(void*)
+00000000 00000025 t RiscCpu::NativeSerialStorage::prepare(bool (*)(), bool (*)())::{lambda(void*, unsigned long long*, unsigned long long*)#1}::_FUN(void*, unsigned long long*, unsigned long long*)
+         U memcpy
+         U memset

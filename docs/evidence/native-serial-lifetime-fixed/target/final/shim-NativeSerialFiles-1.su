@@ -1,0 +1,18 @@
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:34:6:bool RiscCpu::NativeSerialFiles::{anonymous}::owner()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:35:6:bool RiscCpu::NativeSerialFiles::{anonymous}::safe()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:64:17:static constexpr uint32_t RiscCpu::NativeSerialFiles::prepare(const Admission*, Check, Check, ControlObserver, StatObserver)::<lambda()>::_FUN()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:66:12:static constexpr void RiscCpu::NativeSerialFiles::prepare(const Admission*, Check, Check, ControlObserver, StatObserver)::<lambda(uint32_t, uint32_t, uint64_t, int32_t, const RiscBoot::StatObservation&)>::_FUN(uint32_t, uint32_t, uint64_t, int32_t, const RiscBoot::StatObservation&)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:65:6:static constexpr void RiscCpu::NativeSerialFiles::prepare(const Admission*, Check, Check, ControlObserver, StatObserver)::<lambda(uint32_t, uint32_t, const char*, uint32_t, bool)>::_FUN(uint32_t, uint32_t, const char*, uint32_t, bool)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:44:6:bool RiscCpu::NativeSerialFiles::prepare(const Admission*, Check, Check, ControlObserver, StatObserver)	112	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:69:6:bool RiscCpu::NativeSerialFiles::checkpoint()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:75:6:bool RiscCpu::NativeSerialFiles::controlCheckpoint()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:81:6:bool RiscCpu::NativeSerialFiles::shutdown()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:86:6:bool RiscCpu::NativeSerialFiles::stop()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:90:6:void RiscCpu::NativeSerialFiles::input(uint8_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:91:6:void RiscCpu::NativeSerialFiles::disconnect()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:92:13:const char* RiscCpu::NativeSerialFiles::output()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:93:8:size_t RiscCpu::NativeSerialFiles::outputSize()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:94:6:void RiscCpu::NativeSerialFiles::consumeOutput(size_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:95:6:bool RiscCpu::NativeSerialFiles::pending()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:96:6:bool RiscCpu::NativeSerialFiles::exitSafe()	32	static
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativeSerialFiles.cpp:97:6:bool RiscCpu::NativeSerialFiles::custodySafe()	32	static
