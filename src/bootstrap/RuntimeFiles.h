@@ -45,7 +45,8 @@ class RuntimeFiles final {
   int32_t info(uint32_t h,uint64_t*n,uint64_t*o){return call([&]{return files_.info(h,n,o);});}
   int32_t sync(uint32_t h){return call([&]{return files_.sync(h);});}
   int32_t truncate(uint32_t h,uint64_t n){return call([&]{return files_.truncate(h,n);});}
-  int32_t stat(const char*p,risc_storage_files_stat_v1*s){return call([&]{return files_.stat(p,s);});}
+  // Caller-owned output; initialized for every outcome and never stored.
+  int32_t stat(const char*p,risc_storage_files_stat_v1*s,StatObservation* observation=nullptr){if(observation)*observation=emptyStatObservation();return call([&]{return files_.stat(p,s,observation);},observation);}
   int32_t mkdir(const char*p){return call([&]{return files_.mkdir(p);});}
   int32_t rename(const char*a,const char*b){return call([&]{return files_.rename(a,b);});}
   int32_t remove(const char*p){return call([&]{return files_.remove(p);});}
@@ -56,9 +57,10 @@ class RuntimeFiles final {
   int32_t dirTell(uint32_t h,uint64_t*o){return call([&]{return files_.dirTell(h,o);});}
   int32_t dirSeek(uint32_t h,uint64_t o){return call([&]{return files_.dirSeek(h,o);});}
  private:
-  template<class F>int32_t call(F f){
-    if(retained())return RISC_FILES_RETAINED;
+  template<class F>int32_t call(F f,StatObservation* observation=nullptr){
+    if(retained()){if(observation)observation->flags|=StatRetained;return RISC_FILES_RETAINED;}
     if(!bound())return RISC_FILES_UNAVAILABLE;
+    if(observation)observation->flags|=StatBound;
     if(calling_ || sleeping_)return RISC_FILES_BUSY;
     if(!owner_())return RISC_FILES_CONTEXT;
     if(!safe_())return RISC_FILES_BUSY;

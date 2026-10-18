@@ -10,6 +10,9 @@ struct Hooks {
  bool (*owner)();bool (*safe)();uint32_t (*millis)();
  // Bounded owner-only observation. Must not call providers, allocate or wait.
  void (*controlObserved)(uint32_t,uint32_t,const char*,uint32_t,bool)=nullptr;
+ // Accepted STAT only. Copy the borrowed output synchronously; no provider,
+ // allocation, wait or reentry. Identity describes the actual dispatch.
+ void (*statObserved)(uint32_t,uint32_t,uint64_t,int32_t,const RiscBoot::StatObservation&)=nullptr;
 };
 class Files final {
  public:

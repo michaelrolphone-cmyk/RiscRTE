@@ -178,7 +178,13 @@ void Files::command(bool storageReady){
    if(!ns->writable)reply(RISC_FILES_DENIED);
    else{selected_=ns;const uint32_t flags=RISC_FILES_WRITE|(!strcmp(words[5],"create")?(RISC_FILES_CREATE|RISC_FILES_EXCLUSIVE):RISC_FILES_TRUNCATE);
     int32_t rc=ns->files->open(path_,flags,&handle_);checkRetention();if(!rc){size_=b;offset_=0;crc_=0xffffffffu;writing_=true;failed_=false;}if(!handle_)clearTransfer();reply(retained_?RISC_FILES_RETAINED:rc,"PUT");}
-  }else if(!strcmp(cmd,"STAT") && count==5){risc_storage_files_stat_v1 st{sizeof(st),0,0,0};int32_t rc=ns->files->stat(path_,&st);checkRetention();reply(retained_?RISC_FILES_RETAINED:rc,"STAT %u %llu",unsigned(st.flags),(unsigned long long)st.size);}
+  }else if(!strcmp(cmd,"STAT") && count==5){
+   risc_storage_files_stat_v1 st{sizeof(st),0,0,0};RiscBoot::StatObservation observation;
+   int32_t rc=ns->files->stat(path_,&st,hooks_.statObserved?&observation:nullptr);
+   checkRetention();const int32_t status=retained_?RISC_FILES_RETAINED:rc;
+   if(hooks_.statObserved)hooks_.statObserved(replySession_,replySequence_,ns->id,status,observation);
+   reply(status,"STAT %u %llu",unsigned(st.flags),(unsigned long long)st.size);
+  }
   else if(!strcmp(cmd,"MKDIR") && count==5){int32_t rc=ns->writable?ns->files->mkdir(path_):int32_t(RISC_FILES_DENIED);checkRetention();reply(retained_?RISC_FILES_RETAINED:rc,"MKDIR");}
   else reply(RISC_FILES_INVALID);
  }else reply(RISC_FILES_INVALID);

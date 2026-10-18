@@ -28,7 +28,7 @@ Workspace& workspace(){return *std::launder(reinterpret_cast<Workspace*>(workspa
 // is one-shot even on failed admission; a retained endpoint is never replaced.
 struct State {
   Check owner=nullptr,platformSafe=nullptr,ready=nullptr;
-  ControlObserver observer=nullptr;
+  ControlObserver observer=nullptr;StatObserver stat=nullptr;
   bool selected=false,prepared=false,dispatching=false;
 } state;
 bool owner(){return !xPortInIsrContext() && state.owner && state.owner();}
@@ -41,9 +41,9 @@ struct Dispatch {
   ~Dispatch(){state.dispatching=false;}
 };
 } // namespace
-bool prepare(const Admission* admission,Check ownerCheck,Check platformSafe,ControlObserver observer){
+bool prepare(const Admission* admission,Check ownerCheck,Check platformSafe,ControlObserver observer,StatObserver stat){
   if(state.selected || !ownerCheck || !platformSafe || xPortInIsrContext() || !ownerCheck())return false;
-  state.selected=true;state.owner=ownerCheck;state.platformSafe=platformSafe;state.observer=observer;
+  state.selected=true;state.owner=ownerCheck;state.platformSafe=platformSafe;state.observer=observer;state.stat=stat;
   if(!admission)return true;
   if(!admission->ready || admission->count>RiscSerial::Files::NamespaceMax ||
      (admission->count && !admission->namespaces))return false;
@@ -62,7 +62,8 @@ bool prepare(const Admission* admission,Check ownerCheck,Check platformSafe,Cont
   Dispatch dispatch;
   state.prepared=workspace().endpoint.bind(workspace().namespaces,admission->count,
     {owner,safe,[]()->uint32_t{return RiscPlatform::millis();},
-     [](uint32_t sid,uint32_t seq,const char*op,uint32_t wait,bool deadline){if(state.observer)state.observer(sid,seq,op,wait,deadline);}});
+     [](uint32_t sid,uint32_t seq,const char*op,uint32_t wait,bool deadline){if(state.observer)state.observer(sid,seq,op,wait,deadline);},
+     stat?+[](uint32_t sid,uint32_t seq,uint64_t ns,int32_t rc,const RiscBoot::StatObservation& value){state.stat(sid,seq,ns,rc,value);}:nullptr});
   return state.prepared;
 }
 bool checkpoint(){
