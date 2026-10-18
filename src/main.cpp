@@ -535,7 +535,13 @@ void setup() {
 #else
       (void)sid;(void)seq;(void)op;(void)wait;(void)deadline;
 #endif
-    })){
+    },
+#if RISC_SLEEP_DIAGNOSTICS
+    [](uint32_t sid,uint32_t seq,uint64_t ns,int32_t status,const RiscBoot::StatObservation& decision){RiscDiagnostics::serialStat(sid,seq,ns,status,decision);}
+#else
+    nullptr
+#endif
+    )){
     diagnosticLine("RTE_BOOT error=serial-file-admission");return;
   }
 #endif

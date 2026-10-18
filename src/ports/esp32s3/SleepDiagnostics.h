@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include "bootstrap/StatObservation.h"
 #include "diagnostics/StageLog.h"
 #ifndef RISC_NATIVE_SERIAL_FILES
 #define RISC_NATIVE_SERIAL_FILES 0
@@ -44,8 +45,10 @@
 #define RISC_DIAGNOSTIC_ADAPTER (RISC_SLEEP_DIAGNOSTICS || RISC_HWCDC_SLEEP_RECOVERY || RISC_PERFORMANCE_TRACE || RISC_STAGE_LOGS || RISC_NATIVE_DIAGNOSTIC_OBSERVER || RISC_ENABLE_USB_PHY || RISC_NATIVE_SERIAL_FILES)
 namespace RiscDiagnostics {
 #if RISC_SLEEP_DIAGNOSTICS
-// At most first/deadline observations per serial connection, in the bounded
-// event ring (separate from app log chatter). No provider or live USB calls.
+// Copy each completed accepted STAT into bounded current/first-retained records.
+// No provider or live USB calls. The callback never stores its borrowed input.
+void serialStat(uint32_t session,uint32_t sequence,uint64_t ns,int32_t status,const RiscBoot::StatObservation&);
+// At most first/deadline observations per serial connection in the event ring.
 void serialControl(uint32_t session,uint32_t sequence,const char* operation,uint32_t waited,bool deadline,uint32_t state);
 int32_t checkpoint(const char* application,uint64_t invocation,const char* text,uint32_t length);
 #endif

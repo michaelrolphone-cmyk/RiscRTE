@@ -64,6 +64,7 @@ struct ReplayWorkspace {
 #if RISC_SLEEP_DIAGNOSTICS
   Replay sleep;
   Checkpoint checkpoint;
+  SerialStatSnapshot stat{};
 #endif
 #if RISC_PERFORMANCE_TRACE
   RiscPerf::Replay performance;
@@ -85,6 +86,7 @@ ReplayWorkspace& replayWorkspace(){
 #if RISC_SLEEP_DIAGNOSTICS
 Replay& sleepReplay(){return replayWorkspace().sleep;}
 Checkpoint& checkpointState(){return replayWorkspace().checkpoint;}
+SerialStatSnapshot& statState(){return replayWorkspace().stat;}
 #endif
 #if RISC_PERFORMANCE_TRACE
 RiscPerf::Replay& perfReplay(){return replayWorkspace().performance;}
@@ -94,8 +96,10 @@ RiscPerf::Replay& perfReplay(){return replayWorkspace().performance;}
 #if RISC_SLEEP_DIAGNOSTICS
 Replay replay;
 Checkpoint lastCheckpoint;
+SerialStatSnapshot lastStat{};
 Replay& sleepReplay(){return replay;}
 Checkpoint& checkpointState(){return lastCheckpoint;}
+SerialStatSnapshot& statState(){return lastStat;}
 #endif
 #if RISC_PERFORMANCE_TRACE
 RiscPerf::Replay performanceReplay;
@@ -300,6 +304,10 @@ bool prepareSerial(){
 }
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
+void serialStat(uint32_t sid,uint32_t seq,uint64_t ns,int32_t status,const RiscBoot::StatObservation& decision){
+  if(!ours() || xPortInIsrContext())return;
+  observeStat(statState(),RiscPlatform::millis(),sid,seq,ns,status,decision);
+}
 void serialControl(uint32_t session,uint32_t sequence,const char*operation,uint32_t waited,bool deadline,uint32_t state){
   if(!ours() || xPortInIsrContext() || outputting || !operation)return;
   const char*names[]={"HELLO","NS","PATH","STAT","GET","PUT","READ","WRITE","COMMIT","CLOSE","ABORT","MKDIR"};
@@ -341,7 +349,7 @@ void start(){
   recovery.reset();
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
-  sleepReplay().disconnect();checkpointState()={};
+  sleepReplay().disconnect();checkpointState()={};statState()={};
   const auto reset=esp_reset_reason();
   const bool retain=reset==ESP_RST_SW || reset==ESP_RST_DEEPSLEEP || reset==ESP_RST_PANIC ||
     reset==ESP_RST_INT_WDT || reset==ESP_RST_TASK_WDT || reset==ESP_RST_WDT;
@@ -502,7 +510,7 @@ void poll(){
 #if RISC_PERFORMANCE_TRACE
     if(!perfReplay().active())
 #endif
-      sleepReplay().input(char(c),journal,&checkpointState());
+      sleepReplay().input(char(c),journal,&checkpointState(),&statState());
 #endif
 #if RISC_PERFORMANCE_TRACE
 #if RISC_SLEEP_DIAGNOSTICS

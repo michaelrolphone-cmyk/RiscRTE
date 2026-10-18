@@ -12,6 +12,7 @@
 #include <RiscStorageVolumeFsV1.h>
 #include <cstring>
 #include <climits>
+#include "StatObservation.h"
 namespace RiscBoot {
 static_assert(int(RISC_FILES_READ)==int(RISC_STORAGE_OPEN_READ) &&
  int(RISC_FILES_WRITE)==int(RISC_STORAGE_OPEN_WRITE) && int(RISC_FILES_CREATE)==int(RISC_STORAGE_OPEN_CREATE) &&
@@ -165,18 +166,23 @@ class StorageFilesVolumeAdapter {
     if(files_)return directResult(files_->truncate(files_->context,h->native,size));
     return after(fs_->file_truncate(context(),h->native,size),false);
   }
-  int32_t stat(const char* path,risc_storage_files_stat_v1* out) {
+  int32_t stat(const char* path,risc_storage_files_stat_v1* out,StatObservation* observation=nullptr) {
     if(!RiscStorage::validPath(path) || !out || out->struct_size<sizeof(*out))return RISC_FILES_INVALID;
-    int32_t rc=before();if(rc!=RISC_FILES_OK)return rc;
+    int32_t rc=before(observation,true);if(rc!=RISC_FILES_OK)return rc;
     if(files_) {
       risc_storage_files_stat_v1 value{};value.struct_size=sizeof(value);
-      rc=directResult(files_->stat(files_->context,path,&value));if(rc!=RISC_FILES_OK)return rc;
+      if(observation)observation->flags|=StatMetadata;
+      const int32_t native=files_->stat(files_->context,path,&value);
+      if(observation)observation->metadataStatus=native;
+      rc=directResult(native);if(rc!=RISC_FILES_OK)return rc;
       if(value.struct_size<sizeof(value))return RISC_FILES_IO;
       *out=value;return RISC_FILES_OK;
     }
     risc_storage_metadata_v1 value{};value.struct_size=sizeof(value);
+    if(observation)observation->flags|=StatMetadata;
     int32_t native=fs_->metadata(context(),path,&value);
-    rc=after(native==RISC_STORAGE_FS_OK,native!=RISC_STORAGE_FS_OK);
+    if(observation)observation->metadataStatus=native;
+    rc=after(native==RISC_STORAGE_FS_OK,native!=RISC_STORAGE_FS_OK,observation);
     if(rc==RISC_FILES_RETAINED || rc==RISC_FILES_UNAVAILABLE)return rc;
     if(native==RISC_STORAGE_FS_NOT_FOUND)return RISC_FILES_NOT_FOUND;
     if(native==RISC_STORAGE_FS_INVALID)return RISC_FILES_INVALID;
@@ -272,11 +278,17 @@ class StorageFilesVolumeAdapter {
   int32_t retain(){retained_=true;return RISC_FILES_RETAINED;}
   Handle* vacant(){for(auto& h:handles_)if(!h.native)return &h;return nullptr;}
   Handle* find(uint32_t token,bool directory){for(auto& h:handles_)if(h.native && h.token==token && h.directory==directory)return &h;return nullptr;}
-  int32_t before() {
+  int32_t before(StatObservation* observation=nullptr,bool pre=false) {
     if(retained_)return RISC_FILES_RETAINED;
     if(files_)return RISC_FILES_OK;
     if(!volume_)return RISC_FILES_UNAVAILABLE;
     int32_t state=fs_->state.observe(context());
+    if(observation){
+      ++observation->stateCalls;
+      if(pre)observation->preState=state;
+      else if(observation->postState==INT32_MIN)observation->postState=state;
+      else observation->finalState=state;
+    }
     if(state==RISC_STORAGE_STATE_READY)return RISC_FILES_OK;
     if(state==RISC_STORAGE_STATE_UNAVAILABLE && exitSafe())return RISC_FILES_UNAVAILABLE;
     return retain();
@@ -299,13 +311,16 @@ class StorageFilesVolumeAdapter {
     if(native || rc==RISC_FILES_OK)return retain();
     return rc;
   }
-  int32_t after(bool success,bool ambiguous) {
-    int32_t rc=before();if(rc==RISC_FILES_RETAINED)return rc;
+  int32_t after(bool success,bool ambiguous,StatObservation* observation=nullptr) {
+    int32_t rc=before(observation);if(rc==RISC_FILES_RETAINED)return rc;
     // Failed legacy opens can have allocated a hidden native handle. A failed
     // readiness check after an attempted call cannot prove clean ownership.
     if(rc!=RISC_FILES_OK)return ambiguous?retain():rc;
     if(!success && ambiguous) {
-      bool ready=volume_->base.ready(context());rc=before();
+      if(observation)observation->flags|=StatReady;
+      bool ready=volume_->base.ready(context());
+      if(observation&&ready)observation->flags|=StatReadyTrue;
+      rc=before(observation);
       if(rc!=RISC_FILES_OK || !ready)return retain();
     }
     return success?RISC_FILES_OK:RISC_FILES_IO;
