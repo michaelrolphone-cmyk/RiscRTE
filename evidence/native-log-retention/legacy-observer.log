@@ -1,0 +1,7 @@
+native diagnostic observer present PASS
+native diagnostic observer absent PASS
+native diagnostic observer absent-read PASS
+native diagnostic observer absent-drain PASS
+native diagnostic observer absent-trace PASS
+native diagnostic observer observer-only PASS
+native diagnostic observer disabled PASS

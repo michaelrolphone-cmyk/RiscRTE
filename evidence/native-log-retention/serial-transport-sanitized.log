@@ -1,0 +1,53 @@
+Serial endpoint: 2976 raw bytes at 0xd1dcc0 in .bss; control objects remain internal PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+idle Light -> Deep kind=0 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=1 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=2 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=0 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=1 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=2 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+Native serial session sleep/USB/restart custody, bounded expiry and split PATH PASS
+Native serial actual Console/diagnostics: single RX, parse-only yield, immutable admission, bounded partial TX, disconnect close, sleep/USB/restart fences and no retained retry PASS
+Serial endpoint: 2976 raw bytes at 0xd4c740 in .bss; control objects remain internal PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+idle Light -> Deep kind=0 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=1 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=2 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=0 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=1 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=2 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+Native serial session sleep/USB/restart custody, bounded expiry and split PATH PASS
+Native serial actual Console/diagnostics: single RX, parse-only yield, immutable admission, bounded partial TX, disconnect close, sleep/USB/restart fences and no retained retry PASS
+Serial endpoint: 2976 raw bytes at 0xd1d258 in .ext_ram.bss.test; control objects remain internal PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+idle Light -> Deep kind=0 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=1 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=2 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=0 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=1 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=2 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+Native serial session sleep/USB/restart custody, bounded expiry and split PATH PASS
+Native serial actual Console/diagnostics: single RX, parse-only yield, immutable admission, bounded partial TX, disconnect close, sleep/USB/restart fences and no retained retry PASS
+Serial endpoint: 2976 raw bytes at 0xd52570 in .ext_ram.bss.test; control objects remain internal PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+Native serial absent/failed admission remains inert, one-shot and unchanged PASS
+idle Light -> Deep kind=0 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=1 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=2 host=0 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=0 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=1 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+idle Light -> Deep kind=2 host=1 pending=0 exit_safe=1 result=0 terminal=1 provider_calls=0
+Native serial session sleep/USB/restart custody, bounded expiry and split PATH PASS
+Native serial actual Console/diagnostics: single RX, parse-only yield, immutable admission, bounded partial TX, disconnect close, sleep/USB/restart fences and no retained retry PASS
+Native serial default-off empty object PASS

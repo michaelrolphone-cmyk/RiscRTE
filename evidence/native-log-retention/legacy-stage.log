@@ -1,0 +1,5 @@
+Plain stage logs: automatic timestamps, full app lines, no host, capacity, short/zero writes, loss/truncation, owner/reentry, replay arbitration PASS (diag=0 perf=0)
+Plain stage logs: automatic timestamps, full app lines, no host, capacity, short/zero writes, loss/truncation, owner/reentry, replay arbitration PASS (diag=0 perf=1)
+Plain stage logs: automatic timestamps, full app lines, no host, capacity, short/zero writes, loss/truncation, owner/reentry, replay arbitration PASS (diag=1 perf=0)
+Plain stage logs: automatic timestamps, full app lines, no host, capacity, short/zero writes, loss/truncation, owner/reentry, replay arbitration PASS (diag=1 perf=1)
+Disabled plain stage logs: no formatting, clock, storage or argument evaluation PASS

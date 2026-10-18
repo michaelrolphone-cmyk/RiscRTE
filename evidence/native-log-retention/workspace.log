@@ -1,0 +1,6 @@
+Native diagnostic workspace: diagnostics=1 performance=0 capacity=64 fixed_bytes=3704; construction, complete payload, snapshot custody, partial replay, owner/ISR gates and repeated start PASS
+Native diagnostic workspace: diagnostics=0 performance=1 capacity=64 fixed_bytes=3696; construction, complete payload, snapshot custody, partial replay, owner/ISR gates and repeated start PASS
+Native diagnostic workspace: diagnostics=1 performance=1 capacity=64 fixed_bytes=7400; construction, complete payload, snapshot custody, partial replay, owner/ISR gates and repeated start PASS
+Native diagnostic workspace: diagnostics=1 performance=0 capacity=128 fixed_bytes=3704; construction, complete payload, snapshot custody, partial replay, owner/ISR gates and repeated start PASS
+Native diagnostic workspace: diagnostics=0 performance=1 capacity=128 fixed_bytes=5744; construction, complete payload, snapshot custody, partial replay, owner/ISR gates and repeated start PASS
+Native diagnostic workspace: diagnostics=1 performance=1 capacity=128 fixed_bytes=9448; construction, complete payload, snapshot custody, partial replay, owner/ISR gates and repeated start PASS

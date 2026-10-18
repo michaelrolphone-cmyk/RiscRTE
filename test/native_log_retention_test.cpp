@@ -20,6 +20,7 @@ std::string wire,startup;
 size_t txCapacity=0,rxCapacity=0;
 unsigned rxReads=0,zeroWrites=0,polls=0,irqSteps=0,controlObservations=0;
 size_t writeLimit=128;
+bool inIsr=false;
 bool owner(){return task==reinterpret_cast<void*>(1);}
 bool ready(){return true;}
 const std::string hello="RTEF1 14cc1e14 1 HELLO\n";
@@ -33,7 +34,7 @@ void irqDrain(){
   for(size_t n=std::min(size_t(64),queued.size());n;--n){wire+=char(queued.front());queued.pop_front();}
 }
 void drainAll(){while(!queued.empty())irqDrain();}
-void ownerPoll(){++polls;RiscDiagnostics::poll();N::controlCheckpoint();}
+void ownerPoll(){++polls;const auto bytes=queued.size();RiscDiagnostics::poll();assert(queued.size()<=bytes+64);N::controlCheckpoint();}
 
 }
 extern "C" {
@@ -44,7 +45,7 @@ int esp_sleep_get_wakeup_cause(){return 0;}
 void vTaskDelay(TickType_t ticks){now+=int64_t(ticks)*10000;}
 BaseType_t xPortGetCoreID(){return core;}
 TaskHandle_t xTaskGetCurrentTaskHandle(){return task;}
-bool xPortInIsrContext(){return false;}
+bool xPortInIsrContext(){return inIsr;}
 esp_err_t usb_serial_jtag_driver_install(usb_serial_jtag_driver_config_t* config){
   assert(!installed && config && config->tx_buffer_size==8192 && config->rx_buffer_size==256);
   txCapacity=config->tx_buffer_size;rxCapacity=config->rx_buffer_size;
@@ -100,8 +101,27 @@ int main(int argc,char**argv){
     assert(wire==first+'\n'+response+last+'\n');
   }else if(scenario=="disconnected-burst"){
     host=false;std::string expected;
-    for(unsigned i=0;i<150;++i){auto line="startup-"+std::to_string(i)+std::string(120,'s');RiscDiagnostics::line(line.c_str());expected+=line+'\n';}
+    for(unsigned i=0;i<(CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY?150u:20u);++i){auto line="startup-"+std::to_string(i)+std::string(120,'s');RiscDiagnostics::line(line.c_str());expected+=line+'\n';}
     pump(10);assert(wire.empty());host=true;pump(2000);drainAll();assert(wire==expected);
+  }else if(scenario=="reconnect-partial"){
+    const std::string first(199,'p'),last="retained after disconnect";
+    writeLimit=17;RiscDiagnostics::line(first.c_str());ownerPoll();drainAll();
+    assert(wire==first.substr(0,17));host=false;ownerPoll();
+    RiscDiagnostics::line(last.c_str());pump(10);host=true;wire.clear();
+    rx.insert(rx.end(),hello.begin(),hello.end());ownerPoll();assert(rx.empty() && controlObservations==1);
+    pump(1000);drainAll();assert(wire=="\n"+response+first+'\n'+last+'\n');
+  }else if(scenario=="queue-wrap"){
+    std::string expected;
+    for(unsigned i=0;i<1000;++i){auto line=std::to_string(i)+std::string(95,'w');RiscDiagnostics::line(line.c_str());expected+=line+'\n';pump(4);}
+    pump(1000);drainAll();assert(wire==expected);
+  }else if(scenario=="foreign-owner"){
+    task=reinterpret_cast<void*>(2);RiscDiagnostics::line("foreign");RiscDiagnostics::poll();task=reinterpret_cast<void*>(1);
+    inIsr=true;RiscDiagnostics::line("isr");RiscDiagnostics::poll();inIsr=false;
+    pump(10);drainAll();assert(wire.empty());
+  }else if(scenario=="recovery-retention"){
+    host=false;RiscDiagnostics::line("before recovery");RiscDiagnostics::lightReturn(ESP_OK,4);
+    RiscDiagnostics::line("during recovery");RiscDiagnostics::poll();now+=20000;RiscDiagnostics::poll();
+    host=true;pump(1000);drainAll();assert(wire=="before recovery\nduring recovery\n");
   }else if(scenario=="overflow"){
     host=false;for(unsigned i=0;i<1000;++i)RiscDiagnostics::line(std::string(255,'z').c_str());
     host=true;rx.insert(rx.end(),hello.begin(),hello.end());ownerPoll();assert(rx.empty() && controlObservations==1);
