@@ -83,6 +83,10 @@ bool shutdown(){
   if(!owner() || state.dispatching)return false;
   Dispatch dispatch;return workspace().endpoint.shutdown();
 }
+bool stop(){
+  if(!shutdown())return false;
+  state.prepared=false;return true;
+}
 void input(uint8_t byte){if(state.prepared && owner() && !state.dispatching)workspace().endpoint.input(byte);}
 void disconnect(){if(state.prepared && owner())workspace().endpoint.disconnect();}
 const char* output(){return state.prepared && owner()?workspace().endpoint.output():nullptr;}

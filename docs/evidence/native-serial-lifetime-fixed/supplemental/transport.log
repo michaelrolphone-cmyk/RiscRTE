@@ -1,0 +1,12 @@
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/NativePlatform.cpp:5:10: fatal error: driver/usb_serial_jtag.h: No such file or directory
+    5 | #include <driver/usb_serial_jtag.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+/workspace/shared/serial-lifetime-20261018/src/ports/esp32s3/SleepDiagnostics.cpp:20:10: fatal error: esp_idf_version.h: No such file or directory
+   20 | #include <esp_idf_version.h>
+      |          ^~~~~~~~~~~~~~~~~~~
+compilation terminated.
+/workspace/shared/serial-lifetime-20261018/test/native_serial_files_transport_test.cpp:10:10: fatal error: driver/usb_serial_jtag.h: No such file or directory
+   10 | #include <driver/usb_serial_jtag.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~
+compilation terminated.

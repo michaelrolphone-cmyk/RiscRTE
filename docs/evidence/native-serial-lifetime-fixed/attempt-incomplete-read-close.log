@@ -1,0 +1,27 @@
+PIN esp_littlefs.c f26aa8bdc70c44e9676069a8d91e11921c770dceac989bbf63d9af73c95dcaeb
+PIN esp_littlefs.h f321f41845da8cc68f6c15a860311afe37a52ad57abb95949b820a92e9e8d9ad
+PIN littlefs_api.h cc806a02463db1516ed1a144189bc9267168b6cd79b543e95fb12099eeed18c2
+PIN littlefs_esp_part.c fe89617c72ab3d36ea833a58a8cb8e4208509dd32b4663f91d72ba02ea13e0ea
+PIN littlefs/lfs.c 0b9845f350c33aa448a916847d2246b76c8e296eed8e7e296ae0430242cfda6c
+PIN littlefs/lfs.h a8c8d70f0863fbbc46ce17c5dc7673b40f1b3c9e7e10f3bf33fd28f03dc67703
+PIN littlefs/lfs_util.c f2fbde533670560434bd9f5a547174cc7c5a4670a02c47b4bd85180dced8b2ec
+PIN littlefs/lfs_util.h 03e912a6e9894c9d10c61f5da22b89ebe0bb778af67972d7b67a5f160731bf72
+Waveshare async SD serial cold: native instance 12, actual driver/FatFs, RAM media PASS
+Waveshare async SD serial absent-card: native instance 12, actual driver/FatFs, RAM media PASS
+Waveshare async SD serial healthy: native instance 12, actual driver/FatFs, RAM media PASS
+Waveshare async SD serial disconnect: native instance 12, actual driver/FatFs, RAM media PASS
+Waveshare async SD serial failed-close: terminal custody pinned PASS
+Waveshare async SD serial failed-write: terminal custody pinned PASS
+Final native-service release failure retains exact custody PASS
+Waveshare async SD serial failed-prepare: terminal custody pinned PASS
+Waveshare async SD serial post-return: native instance 12, actual driver/FatFs, RAM media PASS
+test: /workspace/shared/serial-lifetime-20261018/test/native_serial_waveshare_sd_test.cpp:56: std::string command(const std::string&, int, bool): Assertion `dispatch()==(expected!=RISC_FILES_RETAINED)' failed.
+Verified ESP LittleFS 1.14.1 / LittleFS 2.9 pins; staged native ABI and mtime32 port
+Traceback (most recent call last):
+  File "/workspace/shared/serial-lifetime-20261018/test/run_native_serial_waveshare_sd_test.py", line 113, in <module>
+    run([build/'test', build, case])
+  File "/workspace/shared/serial-lifetime-20261018/test/run_native_serial_waveshare_sd_test.py", line 83, in run
+    subprocess.run(cmd, check=True, timeout=180)
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/workspace/shared/serial-lifetime-evidence/wave-normal/test', '/workspace/shared/serial-lifetime-evidence/wave-normal', 'post-failed-close']' died with <Signals.SIGABRT: 6>.

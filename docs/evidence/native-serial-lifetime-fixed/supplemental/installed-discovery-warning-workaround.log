@@ -1,0 +1,15 @@
++ c++ -std=c++17 -Wall -Wextra -Werror -Wno-misleading-indentation -Isrc -Isdk/app -Isdk/driver test/installed_app_discovery_test.cpp -o /workspace/shared/serial-lifetime-evidence/installed-discovery/test
++ /workspace/shared/serial-lifetime-evidence/installed-discovery/test
+discovery normal PASS
+discovery missing PASS
+discovery missing-io PASS
+discovery abandoned PASS
+discovery empty PASS
+discovery oversized PASS
+discovery truncated PASS
+discovery close-retained PASS
+discovery directory-retained PASS
+discovery directory-error PASS
+discovery read-error PASS
+discovery rejected PASS
+discovery cancel PASS

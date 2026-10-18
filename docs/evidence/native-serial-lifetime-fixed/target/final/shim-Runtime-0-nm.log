@@ -1,0 +1,1028 @@
+00000000 r .LC69
+00000000 00000008 r C$1254$18
+00000000 00000014 r C$1257$19
+00000000 0000000c r C$1459$20
+00000000 0000000c r C$1555$21
+00000000 0000000c r C$1676$22
+00000000 00000018 r C$1677$23
+00000000 00000018 r C$1688$24
+00000000 0000000c r C$1702$25
+00000000 0000000c r C$1710$26
+00000000 00000010 r C$1750$27
+00000000 0000000c r C$1753$28
+00000000 00000008 r C$1754$29
+00000000 0000000c r C$1759$30
+00000000 0000001c r C$2182$31
+00000000 0000001c r C$2183$32
+00000000 00000008 r C$2190$33
+00000000 00000008 r C$2515$34
+00000000 00000014 r C$2516$35
+00000000 00000008 r C$2532$36
+00000000 0000000c r C$2537$37
+00000000 0000000c r C$2548$38
+00000000 00000020 r C$562$0
+00000000 00000020 r C$563$1
+00000000 00000008 r C$573$2
+00000000 00000008 r C$577$3
+00000000 00000010 r C$588$4
+00000000 00000008 r C$678$5
+00000000 0000000c r C$679$6
+00000000 0000001c r C$682$7
+00000000 00000020 r C$683$8
+00000000 00000008 r C$698$9
+00000000 00000008 r C$699$10
+00000000 00000008 r C$707$11
+00000000 00000018 r C$711$12
+00000000 0000000c r C$713$13
+00000000 00000010 r C$714$14
+00000000 00000008 r C$762$15
+00000000 0000002c r C$794$16
+00000000 0000000c r C$912$17
+00000000 00000028 t _Z14psa_hash_abortP20psa_hash_operation_t$isra$0
+00000000 00000064 t risc_storage_volume_fs(risc_storage_volume_api_v1 const*)
+00000000 000000a4 W RiscUpdate::readCohort(RiscBoot::RuntimeFileView, char const*, RiscUpdate::CohortIdentity&, bool*)
+00000000 00000088 W RiscUpdate::repository(char const*)
+00000000 0000029b W RiscUpdate::parseCohort(ArduinoJson::V742HB22::JsonDocument const&, RiscUpdate::CohortIdentity&)
+00000000 00000088 W RiscUpdate::parseVersion(char const*, unsigned long (&) [3])
+00000000 00000038 W RiscUpdate::migrationTarget(ArduinoJson::V742HB22::JsonObjectConst, RiscUpdate::CohortIdentity const&)
+00000000 000003ab W RiscUpdate::validCohortMigration(ArduinoJson::V742HB22::JsonVariantConst)
+00000000 00000042 W RiscUpdate::hex(char const*, unsigned int)
+00000000 000000d3 t _ZN11ArduinoJson8V742HB2210JsonObject3setENS0_15JsonObjectConstE$isra$0
+00000000 00000018 W ArduinoJson::V742HB22::JsonString::JsonString(char const*, bool)
+00000000 00000018 W ArduinoJson::V742HB22::JsonString::JsonString(char const*, bool)
+00000000 n ArduinoJson::V742HB22::JsonString::JsonString(char const*, bool)
+00000000 00000012 W ArduinoJson::V742HB22::JsonArrayConst ArduinoJson::V742HB22::JsonDocument::as<ArduinoJson::V742HB22::JsonArrayConst>()
+00000000 00000012 W ArduinoJson::V742HB22::JsonObjectConst ArduinoJson::V742HB22::JsonDocument::as<ArduinoJson::V742HB22::JsonObjectConst>()
+00000000 0000002e W ArduinoJson::V742HB22::JsonDocument::clear()
+00000000 00000037 W ArduinoJson::V742HB22::JsonPairConst::JsonPairConst(ArduinoJson::V742HB22::detail::CollectionIterator, ArduinoJson::V742HB22::detail::ResourceManager const*)
+00000000 00000037 W ArduinoJson::V742HB22::JsonPairConst::JsonPairConst(ArduinoJson::V742HB22::detail::CollectionIterator, ArduinoJson::V742HB22::detail::ResourceManager const*)
+00000000 n ArduinoJson::V742HB22::JsonPairConst::JsonPairConst(ArduinoJson::V742HB22::detail::CollectionIterator, ArduinoJson::V742HB22::detail::ResourceManager const*)
+00000000 0000000f t _ZN11ArduinoJson8V742HB2222JsonArrayConstIteratorppEv$isra$0
+00000000 0000001b t _ZN11ArduinoJson8V742HB2223JsonObjectConstIteratorppEv$isra$0
+00000000 00000055 W ArduinoJson::V742HB22::detail::ObjectData::addPair(ArduinoJson::V742HB22::detail::VariantData**, ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 00000017 t _ZN11ArduinoJson8V742HB226detail10ObjectData9getMemberINS1_9RamStringEEEPNS1_11VariantDataEPKS2_T_PKNS1_15ResourceManagerE$isra$0
+00000000 00000028 W ArduinoJson::V742HB22::detail::StringNode::create(unsigned int, ArduinoJson::V742HB22::Allocator*)
+00000000 00000010 W ArduinoJson::V742HB22::detail::StringNode::destroy(ArduinoJson::V742HB22::detail::StringNode*, ArduinoJson::V742HB22::Allocator*)
+00000000 0000003c W ArduinoJson::V742HB22::detail::enable_if<ArduinoJson::V742HB22::detail::is_signed<long long>::value, bool>::type ArduinoJson::V742HB22::detail::VariantData::setInteger<long long>(long long, ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 00000035 W ArduinoJson::V742HB22::detail::enable_if<ArduinoJson::V742HB22::detail::is_unsigned<unsigned long long>::value, bool>::type ArduinoJson::V742HB22::detail::VariantData::setInteger<unsigned long long>(unsigned long long, ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 00000032 W void ArduinoJson::V742HB22::detail::VariantData::setTinyString<ArduinoJson::V742HB22::detail::RamString>(ArduinoJson::V742HB22::detail::RamString const&)
+00000000 000000a5 W ArduinoJson::V742HB22::detail::VariantData* ArduinoJson::V742HB22::detail::VariantData::getOrAddMember<ArduinoJson::V742HB22::detail::RamString>(ArduinoJson::V742HB22::detail::RamString, ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 0000006f W ArduinoJson::V742HB22::detail::VariantData::clear(ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 00000014 W ArduinoJson::V742HB22::detail::VariantData::isNull(ArduinoJson::V742HB22::detail::VariantData const*)
+00000000 00000053 W ArduinoJson::V742HB22::detail::enable_if<(sizeof (double))==(8), bool>::type ArduinoJson::V742HB22::detail::VariantData::setFloat<double>(double, ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 0000001f t _ZN11ArduinoJson8V742HB226detail11VariantData9getMemberINS1_9RamStringEEEPS2_PKS2_T_PKNS1_15ResourceManagerE$isra$0
+00000000 00000070 W bool ArduinoJson::V742HB22::detail::VariantData::setString<ArduinoJson::V742HB22::detail::RamString>(ArduinoJson::V742HB22::detail::RamString, ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 00000027 W void ArduinoJson::V742HB22::detail::VariantData::setString<ArduinoJson::V742HB22::detail::RamString>(ArduinoJson::V742HB22::detail::VariantData*, ArduinoJson::V742HB22::detail::RamString, ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 00000057 t _ZN11ArduinoJson8V742HB226detail11deserializeINS1_16JsonDeserializerERNS0_12JsonDocumentERPKcJELi0EEENS0_20DeserializationErrorEOT0_OT1_DpT2_$isra$0
+00000000 00000057 t _ZN11ArduinoJson8V742HB226detail11deserializeINS1_16JsonDeserializerERNS0_12JsonDocumentERPcJELi0EEENS0_20DeserializationErrorEOT0_OT1_DpT2_$isra$0
+00000000 00000263 W ArduinoJson::V742HB22::detail::parseNumber(char const*)
+00000000 00000073 W unsigned int ArduinoJson::V742HB22::detail::parseNumber<unsigned int>(char const*)
+00000000 00000088 W unsigned long ArduinoJson::V742HB22::detail::parseNumber<unsigned long>(char const*)
+00000000 0000001c W ArduinoJson::V742HB22::detail::StringAdapter<char const*, void>::adapt(char const*)
+00000000 00000022 W ArduinoJson::V742HB22::detail::StringBuilder::startString()
+00000000 0000008f W ArduinoJson::V742HB22::detail::StringBuilder::save(ArduinoJson::V742HB22::detail::VariantData*)
+00000000 0000002e W ArduinoJson::V742HB22::detail::StringBuilder::append(char)
+00000000 00000013 W ArduinoJson::V742HB22::detail::StringBuilder::~StringBuilder()
+00000000 00000013 W ArduinoJson::V742HB22::detail::StringBuilder::~StringBuilder()
+00000000 n ArduinoJson::V742HB22::detail::StringBuilder::~StringBuilder()
+00000000 00000157 W ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::StaticStringWriter>::writeFloat(double, signed char)
+00000000 00000061 W ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::StaticStringWriter>::writeString(char const*, unsigned int)
+00000000 00000028 W ArduinoJson::V742HB22::detail::enable_if<ArduinoJson::V742HB22::detail::is_signed<long long>::value, void>::type ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::StaticStringWriter>::writeInteger<long long>(long long)
+00000000 0000004c W ArduinoJson::V742HB22::detail::enable_if<ArduinoJson::V742HB22::detail::is_unsigned<unsigned long long>::value, void>::type ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::StaticStringWriter>::writeInteger<unsigned long long>(unsigned long long)
+00000000 00000019 W ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::StaticStringWriter>::writeRaw(char const*)
+00000000 00000157 W ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::Writer<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, void> >::writeFloat(double, signed char)
+00000000 00000061 W ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::Writer<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, void> >::writeString(char const*, unsigned int)
+00000000 00000028 W ArduinoJson::V742HB22::detail::enable_if<ArduinoJson::V742HB22::detail::is_signed<long long>::value, void>::type ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::Writer<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, void> >::writeInteger<long long>(long long)
+00000000 0000004c W ArduinoJson::V742HB22::detail::enable_if<ArduinoJson::V742HB22::detail::is_unsigned<unsigned long long>::value, void>::type ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::Writer<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, void> >::writeInteger<unsigned long long>(unsigned long long)
+00000000 00000019 W ArduinoJson::V742HB22::detail::TextFormatter<ArduinoJson::V742HB22::detail::Writer<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, void> >::writeRaw(char const*)
+00000000 00000027 W unsigned int ArduinoJson::V742HB22::detail::convertNumber<unsigned int, float>(float)
+00000000 0000003f W ArduinoJson::V742HB22::detail::CollectionData::clear(ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 00000021 W ArduinoJson::V742HB22::detail::EscapeSequence::unescapeChar(char)
+00000000 0000003c W ArduinoJson::V742HB22::detail::MemoryPoolList<ArduinoJson::V742HB22::detail::ResourceManager::SlotData>::allocFromLastPool()
+00000000 0000004c W ArduinoJson::V742HB22::detail::MemoryPoolList<ArduinoJson::V742HB22::detail::ResourceManager::SlotData>::clear(ArduinoJson::V742HB22::Allocator*)
+00000000 000000e8 W ArduinoJson::V742HB22::detail::MemoryPoolList<ArduinoJson::V742HB22::detail::ResourceManager::SlotData>::allocSlot(ArduinoJson::V742HB22::Allocator*)
+00000000 00000015 t _ZN11ArduinoJson8V742HB226detail14VisitorAdapterINS1_17JsonVariantCopierEE5visitINS0_10JsonStringEEEbRKT_$isra$0
+00000000 0000002d t _ZN11ArduinoJson8V742HB226detail14VisitorAdapterINS1_17JsonVariantCopierEE5visitIxEEbRKT_$isra$0
+00000000 0000005e t _ZN11ArduinoJson8V742HB226detail14VisitorAdapterINS1_8ComparerINS0_10JsonStringEvEEE5visitIS4_EENS1_13CompareResultERKT_$isra$0
+00000000 00000015 t _ZN11ArduinoJson8V742HB226detail14VisitorAdapterINS1_8ComparerINS0_16JsonVariantConstEvEEE5visitINS0_10JsonStringEEENS1_13CompareResultERKT_$isra$0
+00000000 00000015 t _ZN11ArduinoJson8V742HB226detail14VisitorAdapterINS1_8ComparerINS1_11MemberProxyIRNS0_12JsonDocumentENS1_9RamStringEEEvEEE5visitINS0_10JsonStringEEENS1_13CompareResultERKT_$isra$0
+00000000 00000064 t _ZN11ArduinoJson8V742HB226detail14VisitorAdapterINS1_8ComparerIPKcvEEE5visitINS0_10JsonStringEEENS1_13CompareResultERKT_$isra$0
+00000000 00000068 t _ZN11ArduinoJson8V742HB226detail14VisitorAdapterINS1_8ComparerIPcvEEE5visitINS0_10JsonStringEEENS1_13CompareResultERKT_$isra$0
+00000000 000001d9 W ArduinoJson::V742HB22::detail::decomposeFloat(double, signed char)
+00000000 00000071 W ArduinoJson::V742HB22::detail::StringNode* ArduinoJson::V742HB22::detail::ResourceManager::saveString<ArduinoJson::V742HB22::detail::RamString>(ArduinoJson::V742HB22::detail::RamString)
+00000000 00000054 W ArduinoJson::V742HB22::detail::ResourceManager::shrinkToFit()
+00000000 00000037 W ArduinoJson::V742HB22::detail::ResourceManager::allocVariant()
+00000000 0000003c W ArduinoJson::V742HB22::detail::ResourceManager::resizeString(ArduinoJson::V742HB22::detail::StringNode*, unsigned int)
+00000000 00000027 W ArduinoJson::V742HB22::detail::ResourceManager::allocExtension()
+00000000 00000026 W ArduinoJson::V742HB22::detail::ResourceManager::~ResourceManager()
+00000000 00000026 W ArduinoJson::V742HB22::detail::ResourceManager::~ResourceManager()
+00000000 n ArduinoJson::V742HB22::detail::ResourceManager::~ResourceManager()
+00000000 00000031 W ArduinoJson::V742HB22::detail::CompareResult ArduinoJson::V742HB22::detail::VariantComparer::reverseResult<ArduinoJson::V742HB22::detail::RawComparer>(ArduinoJson::V742HB22::detail::RawComparer&)
+00000000 00000035 W ArduinoJson::V742HB22::detail::CompareResult ArduinoJson::V742HB22::detail::VariantComparer::reverseResult<ArduinoJson::V742HB22::detail::NullComparer>(ArduinoJson::V742HB22::detail::NullComparer&)
+00000000 0000002d W ArduinoJson::V742HB22::detail::CompareResult ArduinoJson::V742HB22::detail::VariantComparer::reverseResult<ArduinoJson::V742HB22::detail::Comparer<bool, void> >(ArduinoJson::V742HB22::detail::Comparer<bool, void>&)
+00000000 0000002d W ArduinoJson::V742HB22::detail::CompareResult ArduinoJson::V742HB22::detail::VariantComparer::reverseResult<ArduinoJson::V742HB22::detail::Comparer<long long, void> >(ArduinoJson::V742HB22::detail::Comparer<long long, void>&)
+00000000 0000002d W ArduinoJson::V742HB22::detail::CompareResult ArduinoJson::V742HB22::detail::VariantComparer::reverseResult<ArduinoJson::V742HB22::detail::Comparer<unsigned long long, void> >(ArduinoJson::V742HB22::detail::Comparer<unsigned long long, void>&)
+00000000 0000008e W ArduinoJson::V742HB22::detail::VariantComparer::visit(ArduinoJson::V742HB22::JsonString)
+00000000 00000033 W ArduinoJson::V742HB22::detail::VariantComparer::visit(double)
+00000000 0000000d W ArduinoJson::V742HB22::detail::DefaultAllocator::deallocate(void*)
+00000000 00000011 W ArduinoJson::V742HB22::detail::DefaultAllocator::reallocate(void*, unsigned int)
+00000000 0000000f W ArduinoJson::V742HB22::detail::DefaultAllocator::allocate(unsigned int)
+00000000 00000030 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::BoundedReader<char const*, void> >::skipKeyword(char const*)
+00000000 00000268 t _ZN11ArduinoJson8V742HB226detail16JsonDeserializerINS1_13BoundedReaderIPKcvEEE12parseVariantINS1_14AllowAllFilterEEENS0_20DeserializationError4CodeERNS1_11VariantDataET_NS0_21DeserializationOption12NestingLimitE$isra$0
+00000000 000000c8 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::BoundedReader<char const*, void> >::parseNumericValue(ArduinoJson::V742HB22::detail::VariantData&)
+00000000 000000d9 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::BoundedReader<char const*, void> >::parseQuotedString()
+00000000 00000037 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::BoundedReader<char const*, void> >::skipSpacesAndComments()
+00000000 0000001d W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::BoundedReader<char const*, void> >::canBeInNonQuotedString(char)
+00000000 00000027 t _ZN11ArduinoJson8V742HB226detail16JsonDeserializerINS1_13BoundedReaderIPKcvEEE22canBeInNonQuotedStringEc$part$0
+00000000 0000001c W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::BoundedReader<char const*, void> >::eat(char)
+00000000 0000002a W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::BoundedReader<char const*, void> >::current()
+00000000 00000030 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char const*, void> >::skipKeyword(char const*)
+00000000 00000268 t _ZN11ArduinoJson8V742HB226detail16JsonDeserializerINS1_6ReaderIPKcvEEE12parseVariantINS1_14AllowAllFilterEEENS0_20DeserializationError4CodeERNS1_11VariantDataET_NS0_21DeserializationOption12NestingLimitE$isra$0
+00000000 000000c8 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char const*, void> >::parseNumericValue(ArduinoJson::V742HB22::detail::VariantData&)
+00000000 000000d9 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char const*, void> >::parseQuotedString()
+00000000 00000037 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char const*, void> >::skipSpacesAndComments()
+00000000 0000001d W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char const*, void> >::canBeInNonQuotedString(char)
+00000000 00000027 t _ZN11ArduinoJson8V742HB226detail16JsonDeserializerINS1_6ReaderIPKcvEEE22canBeInNonQuotedStringEc$part$0
+00000000 0000001c W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char const*, void> >::eat(char)
+00000000 0000001e W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char const*, void> >::current()
+00000000 00000030 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char*, void> >::skipKeyword(char const*)
+00000000 00000268 t _ZN11ArduinoJson8V742HB226detail16JsonDeserializerINS1_6ReaderIPcvEEE12parseVariantINS1_14AllowAllFilterEEENS0_20DeserializationError4CodeERNS1_11VariantDataET_NS0_21DeserializationOption12NestingLimitE$isra$0
+00000000 000000c8 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char*, void> >::parseNumericValue(ArduinoJson::V742HB22::detail::VariantData&)
+00000000 000000d9 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char*, void> >::parseQuotedString()
+00000000 00000037 W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char*, void> >::skipSpacesAndComments()
+00000000 0000001d W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char*, void> >::canBeInNonQuotedString(char)
+00000000 00000027 t _ZN11ArduinoJson8V742HB226detail16JsonDeserializerINS1_6ReaderIPcvEEE22canBeInNonQuotedStringEc$part$0
+00000000 0000001c W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char*, void> >::eat(char)
+00000000 0000001e W ArduinoJson::V742HB22::detail::JsonDeserializer<ArduinoJson::V742HB22::detail::Reader<char*, void> >::current()
+00000000 0000002b W ArduinoJson::V742HB22::detail::CountingDecorator<ArduinoJson::V742HB22::detail::StaticStringWriter>::write(unsigned char const*, unsigned int)
+00000000 0000001d W ArduinoJson::V742HB22::detail::CountingDecorator<ArduinoJson::V742HB22::detail::StaticStringWriter>::write(unsigned char)
+00000000 0000002b W ArduinoJson::V742HB22::detail::CountingDecorator<ArduinoJson::V742HB22::detail::Writer<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, void> >::write(unsigned char const*, unsigned int)
+00000000 00000016 W ArduinoJson::V742HB22::detail::CountingDecorator<ArduinoJson::V742HB22::detail::Writer<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, void> >::write(unsigned char)
+00000000 0000002b W ArduinoJson::V742HB22::detail::CompareResult ArduinoJson::V742HB22::detail::arithmeticCompare<unsigned long long>(unsigned long long const&, unsigned long long const&)
+00000000 00000021 W ArduinoJson::V742HB22::detail::CollectionIterator::next(ArduinoJson::V742HB22::detail::ResourceManager const*)
+00000000 00000086 W void ArduinoJson::V742HB22::detail::Utf8::encodeCodepoint<ArduinoJson::V742HB22::detail::StringBuilder>(unsigned long, ArduinoJson::V742HB22::detail::StringBuilder&)
+00000000 00000044 W ArduinoJson::V742HB22::detail::Utf16::Codepoint::append(unsigned short)
+00000000 00000088 W ArduinoJson::V742HB22::detail::ArrayComparer::result_type ArduinoJson::V742HB22::detail::accept<ArduinoJson::V742HB22::detail::ArrayComparer>(ArduinoJson::V742HB22::JsonVariantConst, ArduinoJson::V742HB22::detail::ArrayComparer&)
+00000000 00000023 W ArduinoJson::V742HB22::detail::ObjectComparer::result_type ArduinoJson::V742HB22::detail::accept<ArduinoJson::V742HB22::detail::ObjectComparer>(ArduinoJson::V742HB22::JsonVariantConst, ArduinoJson::V742HB22::detail::ObjectComparer&)
+00000000 00000082 W ArduinoJson::V742HB22::detail::Comparer<char const*, void>::result_type ArduinoJson::V742HB22::detail::accept<ArduinoJson::V742HB22::detail::Comparer<char const*, void> >(ArduinoJson::V742HB22::JsonVariantConst, ArduinoJson::V742HB22::detail::Comparer<char const*, void>&)
+00000000 0000001d W ArduinoJson::V742HB22::detail::Comparer<unsigned long, void>::result_type ArduinoJson::V742HB22::detail::accept<ArduinoJson::V742HB22::detail::Comparer<unsigned long, void> >(ArduinoJson::V742HB22::JsonVariantConst, ArduinoJson::V742HB22::detail::Comparer<unsigned long, void>&)
+00000000 00000030 W ArduinoJson::V742HB22::detail::CompareResult ArduinoJson::V742HB22::detail::compare<ArduinoJson::V742HB22::JsonVariantConst>(ArduinoJson::V742HB22::JsonVariantConst, ArduinoJson::V742HB22::JsonVariantConst const&)
+00000000 0000000b t _ZN11ArduinoJson8V742HB226detail8ComparerIPcvE5visitEDn$isra$0
+00000000 0000003b W ArduinoJson::V742HB22::detail::ArrayData::addElement(ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 0000002b W ArduinoJson::V742HB22::detail::ArrayData::getElement(ArduinoJson::V742HB22::detail::ArrayData const*, unsigned int, ArduinoJson::V742HB22::detail::ResourceManager const*)
+00000000 0000007b W bool ArduinoJson::V742HB22::detail::ArrayData::addValue<ArduinoJson::V742HB22::JsonVariantConst>(ArduinoJson::V742HB22::JsonVariantConst const&, ArduinoJson::V742HB22::detail::ResourceManager*)
+00000000 0000003b W ArduinoJson::V742HB22::detail::enable_if<ArduinoJson::V742HB22::detail::JsonSerializer<ArduinoJson::V742HB22::detail::StaticStringWriter>::producesText, unsigned int>::type ArduinoJson::V742HB22::detail::serialize<ArduinoJson::V742HB22::detail::JsonSerializer>(ArduinoJson::V742HB22::JsonVariantConst, void*, unsigned int)
+00000000 00000019 W bool ArduinoJson::V742HB22::detail::operator==<ArduinoJson::V742HB22::JsonVariantConst>(ArduinoJson::V742HB22::JsonVariantConst const&, ArduinoJson::V742HB22::JsonVariantConst const&)
+00000000 00000080 W bool ArduinoJson::V742HB22::detail::operator==<char>(ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString> const&, char*)
+00000000 00000021 W ArduinoJson::V742HB22::Converter<char const*, void>::toJson(char const*, ArduinoJson::V742HB22::JsonVariant)
+00000000 00000021 t _ZN11ArduinoJson8V742HB229ConverterIyvE6toJsonEyNS0_11JsonVariantE$isra$0
+00000000 000000b8 W ArduinoJson::V742HB22::operator==(ArduinoJson::V742HB22::JsonObjectConst, ArduinoJson::V742HB22::JsonObjectConst)
+00000000 00000004 V RiscStorage::AppDataExport::nextHandle_
+00000000 00000004 V RiscStorage::AppDataExport::nextContext_
+00000000 0000015f W RiscStorage::AppDataExport::readRevision(char const*, unsigned long long, void*, unsigned long, unsigned long*, unsigned long long*)
+00000000 000000a4 W RiscStorage::AppDataExport::statRevision(char const*, unsigned long*, unsigned long long*)
+00000000 00000175 W RiscStorage::AppDataExport::validEntries(RiscStorage::AppDataExport::Entry const*, unsigned int)
+00000000 00000170 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)
+00000000 000000c7 W RiscStorage::AppDataExport::close(unsigned long, bool)
+00000000 00000080 W RiscStorage::AppDataExport::enter()
+00000000 00000063 W RiscStorage::AppDataExport::leave(long)
+00000000 00000010 V RiscStorage::AppDataExport::slots_
+00000000 000001ec W RiscStorage::AppDataExport::dirNext(unsigned long, risc_storage_dirent_v1*)
+00000000 00000026 W RiscStorage::AppDataExport::resolve(void*)
+00000000 0000003d W RiscStorage::AppDataExport::dirClose(unsigned long)
+00000000 00000022 W RiscStorage::AppDataExport::dropRead()
+00000000 00000123 W RiscStorage::AppDataExport::openRead(char const*, unsigned long long*)
+00000000 0000002a W RiscStorage::AppDataExport::dropWrite()
+00000000 000000bc W RiscStorage::AppDataExport::openWrite(char const*)
+00000000 000000a8 W RiscStorage::AppDataExport::validPath(char const*, bool)
+00000000 00000035 W RiscStorage::AppDataExport::~AppDataExport()
+00000000 00000035 W RiscStorage::AppDataExport::~AppDataExport()
+00000000 n RiscStorage::AppDataExport::~AppDataExport()
+00000000 000000f5 W RiscStorage::VolumeImageFiles::open(char const*, unsigned long, unsigned long*)
+00000000 00000153 W RiscStorage::validPath(char const*)
+00000000 00000050 t (anonymous namespace)::keyValueKey(char const*)
+00000000 00000004 b (anonymous namespace)::currentRuntime
+00000000 00000004 b (anonymous namespace)::keyValueGeneration
+00000000 00000004 b (anonymous namespace)::atomicKeyValueOwner
+         U RuntimeStreams::AppStreamSessions::closeGrant(RuntimeStreams::AppStreamBinding const&)
+         U RuntimeStreams::AppStreamSessions::beginInvocation()
+         U RuntimeStreams::AppStreamSessions::revokeAuthority()
+         U RuntimeStreams::AppStreamSessions::call(unsigned long long, unsigned long long, void const*, unsigned long, unsigned long, void*, unsigned long, unsigned long*)
+         U RuntimeStreams::AppStreamSessions::info(unsigned long long, unsigned long long, risc_stream_client_info_v1*)
+         U RuntimeStreams::AppStreamSessions::open(RuntimeStreams::AppStreamBinding const&, void const*, unsigned long, unsigned long, risc_stream_opened_v1*)
+         U RuntimeStreams::AppStreamSessions::read(unsigned long long, unsigned long long, void*, unsigned long, unsigned long*)
+         U RuntimeStreams::AppStreamSessions::close(unsigned long long, unsigned long long, unsigned long)
+         U RuntimeStreams::AppStreamSessions::write(unsigned long long, unsigned long long, void const*, unsigned long, unsigned long*)
+         U RuntimeStreams::AppStreamSessions::closeAll()
+         U RuntimeStreams::AppStreamSessions::~AppStreamSessions()
+         U RiscDiagnostics::monotonicUs()
+         U RiscDiagnostics::timestamped(char const*, ...)
+00000000 0000008d W RuntimePackages::safeVersion(char const*)
+00000000 00000083 W RuntimePackages::safeArtifact(char const*)
+00000000 0000002b W RuntimePackages::PackageJsonGuard::skipWhitespace()
+00000000 00000023 W RuntimePackages::PackageJsonGuard::take(char)
+00000000 00000074 W RuntimePackages::PackageJsonGuard::array()
+00000000 00000087 W RuntimePackages::PackageJsonGuard::value()
+00000000 0000002f W RuntimePackages::PackageJsonGuard::digits()
+00000000 0000009f W RuntimePackages::PackageJsonGuard::number()
+00000000 000000fb W RuntimePackages::PackageJsonGuard::object()
+00000000 00000110 W RuntimePackages::PackageJsonGuard::string(bool, unsigned int*, unsigned int*)
+00000000 00000037 W RuntimePackages::PackageJsonGuard::literal(char const*)
+00000000 0000005d W RuntimePackages::PackageJsonGuard::unicode(unsigned short*)
+00000000 0000008f W RuntimePackages::safeId(char const*)
+00000000 0000008b W RiscRetainedWake::Store::stageBytes(RiscRetainedWake::Identity const&, unsigned long, unsigned long, void const*, unsigned long)
+00000000 00000023 W RiscRetainedWake::Store::cancel()
+00000000 0000002b W RiscRetainedWake::valid(risc_retained_wake_record_v1 const&)
+00000000 00000025 W RuntimeProviders::nativePolicyName(char const*, unsigned int)
+00000000 00000084 W RuntimeProviders::nativePolicyPath(char const*)
+00000000 0000019b W RuntimeProviders::nativeProviderPolicyValid(RuntimeProviders::NativeProviderPolicyV1 const&)
+00000000 0000006c W RuntimeProviders::nativeProviderPolicySetValid(RuntimeProviders::NativeProviderPolicySetV1 const&)
+00000000 00000083 W RuntimeProviders::NativeProviderPolicySnapshotV1::Row::Row()
+00000000 00000083 W RuntimeProviders::NativeProviderPolicySnapshotV1::Row::Row()
+00000000 n RuntimeProviders::NativeProviderPolicySnapshotV1::Row::Row()
+00000000 00000029 W RuntimeProviders::NativeProviderPolicySnapshotV1::copy(char*, unsigned int, char const*)
+00000000 000001d0 W RuntimeProviders::NativeProviderPolicySnapshotV1::capture(RuntimeProviders::NativeProviderPolicySetV1 const&)
+00000000 0000001a W RuntimeProviders::NativeProviderPolicySnapshotV1::destroy(RuntimeProviders::NativeProviderPolicySnapshotV1*)
+00000000 00000022 W RuntimeProviders::NativeProviderPolicySnapshotV1::allocate(unsigned int)
+         U RuntimeProviders::GraphV2::acquireFrom(char const*, char const*, unsigned long, unsigned long long)
+         U RuntimeProviders::GraphV2::addVerified(RuntimeProviders::SpecV2 const&)
+         U RuntimeProviders::GraphV2::publishOrdinaryBatch(RuntimeProviders::SpecV2 const*, unsigned int const*, unsigned int, bool)
+         U RuntimeProviders::GraphV2::addManagerValidatedPrivileged(RuntimeProviders::SpecV2 const&, RuntimeProviders::NativeProviderPolicyV1 const&)
+         U RuntimeProviders::GraphV2::poll(unsigned long (*)(), void (*)())
+         U RuntimeProviders::GraphV2::release(RuntimeProviders::GrantV2)
+         U RuntimeProviders::GraphV2::service(unsigned long)
+         U RuntimeProviders::GraphV2::shutdown()
+         U RuntimeProviders::GraphV2::~GraphV2()
+00000000 00000034 t RiscBoot::(anonymous namespace)::fileOpenMatches(RiscBoot::FileOpenMetadata const&, char const*)
+00000000 000000ec t RiscBoot::(anonymous namespace)::sourceExtension(char const*, char (&) [16])
+00000000 0000019f t RiscBoot::(anonymous namespace)::fileOpenMetadata(ArduinoJson::V742HB22::JsonObjectConst, RiscBoot::FileOpenMetadata&)
+00000000 00000075 t RiscBoot::(anonymous namespace)::providerFileName(char const*)
+00000000 00000126 t RiscBoot::(anonymous namespace)::fileOpenExtension(char const*, char (&) [16])
+00000000 00000028 t RiscBoot::(anonymous namespace)::elfPath(char const*)
+00000000 00000047 W std::unique_ptr<RiscStorage::AppDataExport::Entry [], RiscBoot::MetadataDelete<RiscStorage::AppDataExport::Entry> > RiscBoot::metadataArray<RiscStorage::AppDataExport::Entry>(unsigned int)
+00000000 0000005a W std::unique_ptr<RuntimeProviders::SpecV2 [], RiscBoot::MetadataDelete<RuntimeProviders::SpecV2> > RiscBoot::metadataArray<RuntimeProviders::SpecV2>(unsigned int)
+00000000 00000036 W std::unique_ptr<RiscBoot::InstalledFiles::Name [], RiscBoot::MetadataDelete<RiscBoot::InstalledFiles::Name> > RiscBoot::metadataArray<RiscBoot::InstalledFiles::Name>(unsigned int)
+00000000 00000037 W std::unique_ptr<RiscBoot::FileOpenMetadata [], RiscBoot::MetadataDelete<RiscBoot::FileOpenMetadata> > RiscBoot::metadataArray<RiscBoot::FileOpenMetadata>(unsigned int)
+00000000 00000036 W std::unique_ptr<RiscBoot::Runtime::InstalledAppMetadata [], RiscBoot::MetadataDelete<RiscBoot::Runtime::InstalledAppMetadata> > RiscBoot::metadataArray<RiscBoot::Runtime::InstalledAppMetadata>(unsigned int)
+00000000 000000ac W std::unique_ptr<RiscBoot::Runtime::Driver [], RiscBoot::MetadataDelete<RiscBoot::Runtime::Driver> > RiscBoot::metadataArray<RiscBoot::Runtime::Driver>(unsigned int)
+00000000 000000c0 W std::unique_ptr<RiscBoot::Runtime::AppPolicy [], RiscBoot::MetadataDelete<RiscBoot::Runtime::AppPolicy> > RiscBoot::metadataArray<RiscBoot::Runtime::AppPolicy>(unsigned int)
+00000000 00000028 W std::unique_ptr<unsigned char [], RiscBoot::MetadataDelete<unsigned char> > RiscBoot::metadataArray<unsigned char>(unsigned int)
+00000000 0000002e W RiscBoot::InstalledFiles::end()
+00000000 00000034 W RiscBoot::InstalledFiles::copy(char*, unsigned int, char const*)
+00000000 000000a6 W RiscBoot::InstalledFiles::valid(char const*, bool)
+00000000 000001db W RiscBoot::InstalledFiles::dirNext(unsigned long, risc_storage_dirent_v1*)
+00000000 00000089 W RiscBoot::InstalledFiles::inspect(char const*, risc_storage_files_identity_value_v1&)
+00000000 00000233 W RiscBoot::InstalledFiles::fileRead(unsigned long, void*, unsigned int)
+00000000 00000103 W RiscBoot::InstalledFiles::configure(char const*, RiscBoot::InstalledFiles::Name const*, unsigned int, RiscBoot::RuntimeFileSources const*)
+00000000 0000005f W RiscBoot::InstalledFiles::InstalledFiles()
+00000000 0000005f W RiscBoot::InstalledFiles::InstalledFiles()
+00000000 n RiscBoot::InstalledFiles::InstalledFiles()
+00000000 00000027 W RiscBoot::AppDeclarations::AppDeclarations(ArduinoJson::V742HB22::JsonObjectConst)
+00000000 00000027 W RiscBoot::AppDeclarations::AppDeclarations(ArduinoJson::V742HB22::JsonObjectConst)
+00000000 n RiscBoot::AppDeclarations::AppDeclarations(ArduinoJson::V742HB22::JsonObjectConst)
+00000000 0000009d W RiscBoot::RuntimeFileView::info(unsigned long, unsigned long long*, unsigned long long*)
+00000000 000000bd W RiscBoot::RuntimeFileView::open(char const*, unsigned long*)
+00000000 000000ad W RiscBoot::RuntimeFileView::read(unsigned long, void*, unsigned long, unsigned long*)
+00000000 0000009d W RiscBoot::RuntimeFileView::seek(unsigned long, unsigned long long)
+00000000 000000ae W RiscBoot::RuntimeFileView::close(unsigned long)
+00000000 000000b3 W RiscBoot::RuntimeFileView::identity(char const*, risc_storage_files_identity_value_v1*)
+00000000 0000009f W RiscBoot::RuntimeFileView::identity(unsigned long, risc_storage_files_identity_value_v1*)
+00000000 0000029f W RiscBoot::RuntimeFileImage::read(RiscBoot::RuntimeFileView, char const*, RiscBoot::RuntimeFileImage::Hooks, unsigned int, unsigned int)
+00000000 00000044 W RiscBoot::sameFileIdentity(risc_storage_files_identity_value_v1 const&, risc_storage_files_identity_value_v1 const&)
+00000000 000001b6 W RiscBoot::RemovableAppImage::read(void const*, bool, char const*, RiscBoot::RuntimeFileImage::Hooks)
+00000000 000000bc W RiscBoot::coreAppImageDigest(char const*, unsigned char*)
+00000000 000000c0 W RiscBoot::coreAppImageMatches(char const*, unsigned char const*, unsigned int)
+00000000 00000012 W RiscBoot::nextKeyValueContext(unsigned int&)
+00000000 0000008c W RiscBoot::StorageFilesVolumeAdapter::closeHandle(unsigned long, bool)
+00000000 00000035 W RiscBoot::StorageFilesVolumeAdapter::directResult(long)
+00000000 0000002d W RiscBoot::StorageFilesVolumeAdapter::handleStatus(RiscBoot::StorageFilesVolumeAdapter::Handle const&)
+00000000 000001b4 W RiscBoot::StorageFilesVolumeAdapter::directoryNext(risc_storage_files_directory_v1 const*, unsigned long, risc_storage_files_stat_v1*, char*, unsigned long, unsigned long*)
+00000000 00000098 W RiscBoot::StorageFilesVolumeAdapter::bind(risc_storage_volume_api_v1 const*)
+00000000 0000002b W RiscBoot::StorageFilesVolumeAdapter::find(unsigned long, bool)
+00000000 00000096 W RiscBoot::StorageFilesVolumeAdapter::info(unsigned long, unsigned long long*, unsigned long long*)
+00000000 00000145 W RiscBoot::StorageFilesVolumeAdapter::open(char const*, unsigned long, unsigned long*)
+00000000 000000ae W RiscBoot::StorageFilesVolumeAdapter::read(unsigned long, void*, unsigned long, unsigned long*)
+00000000 00000061 W RiscBoot::StorageFilesVolumeAdapter::seek(unsigned long, unsigned long long)
+00000000 0000010d W RiscBoot::StorageFilesVolumeAdapter::stat(char const*, risc_storage_files_stat_v1*, RiscBoot::StatObservation*)
+00000000 00000059 W RiscBoot::StorageFilesVolumeAdapter::sync(unsigned long)
+00000000 0000007b W RiscBoot::StorageFilesVolumeAdapter::after(bool, bool, RiscBoot::StatObservation*)
+00000000 00000085 W RiscBoot::StorageFilesVolumeAdapter::mkdir(char const*)
+00000000 000000ae W RiscBoot::StorageFilesVolumeAdapter::write(unsigned long, void const*, unsigned long, unsigned long*)
+00000000 0000005f W RiscBoot::StorageFilesVolumeAdapter::before(RiscBoot::StatObservation*, bool)
+00000000 0000008a W RiscBoot::StorageFilesVolumeAdapter::remove(char const*)
+00000000 000000a6 W RiscBoot::StorageFilesVolumeAdapter::rename(char const*, char const*)
+00000000 0000012d W RiscBoot::StorageFilesVolumeAdapter::dirNext(unsigned long, risc_storage_files_entry_v1*)
+00000000 00000109 W RiscBoot::StorageFilesVolumeAdapter::dirOpen(char const*, unsigned long*)
+00000000 00000064 W RiscBoot::StorageFilesVolumeAdapter::dirSeek(unsigned long, unsigned long long)
+00000000 00000075 W RiscBoot::StorageFilesVolumeAdapter::dirTell(unsigned long, unsigned long long*)
+00000000 000000e0 W RiscBoot::StorageFilesVolumeAdapter::identity(risc_storage_files_identity_v1 const*, char const*, unsigned long, risc_storage_files_identity_value_v1*)
+00000000 0000006a W RiscBoot::StorageFilesVolumeAdapter::truncate(unsigned long, unsigned long long)
+00000000 00000099 W RiscBoot::StorageFilesVolumeAdapter::bindFiles(risc_storage_files_v1 const*)
+00000000 0000005a W RiscBoot::StorageFilesVolumeAdapter::dirRewind(unsigned long)
+00000000 0000005f W RiscBoot::eq(ArduinoJson::V742HB22::JsonVariantConst, char const*)
+00000000 000000df W RiscBoot::keys(ArduinoJson::V742HB22::JsonObjectConst, std::initializer_list<char const*>, std::initializer_list<char const*>)
+00000000 000000c4 W RiscBoot::path(char const*, char const*, char*, unsigned int)
+00000000 00000079 W RiscBoot::text(ArduinoJson::V742HB22::JsonVariantConst, char*, unsigned int)
+00000000 000000aa W RiscBoot::utf8(char const*, unsigned int)
+         U RiscBoot::Board::load(ArduinoJson::V742HB22::JsonObjectConst)
+         U RiscBoot::Board::port(ArduinoJson::V742HB22::JsonObjectConst)
+00000000 000000d9 W RiscBoot::parse(char const*, unsigned int, ArduinoJson::V742HB22::JsonDocument&, unsigned int)
+00000000 0000005f W RiscBoot::Runtime::Invocation::~Invocation()
+00000000 0000005f W RiscBoot::Runtime::Invocation::~Invocation()
+00000000 n RiscBoot::Runtime::Invocation::~Invocation()
+00000000 00000050 T RiscBoot::Runtime::diagnostic(char const*)
+00000000 000000b2 T RiscBoot::Runtime::randomFill(void*, void*, unsigned long)
+00000000 00000046 T RiscBoot::Runtime::tcpConnect(void*, risc_tcp_listen_v1 const*, unsigned long long*)
+00000000 000000a4 T RiscBoot::Runtime::tcpContext(void*, bool)
+00000000 00000091 T RiscBoot::Runtime::appDataRead(void*, char const*, unsigned long long, void*, unsigned long, unsigned long*, unsigned long long*)
+00000000 00000074 T RiscBoot::Runtime::appDataStat(void*, char const*, unsigned long*, unsigned long long*)
+00000000 00001cc3 T RiscBoot::Runtime::appPolicies(ArduinoJson::V742HB22::JsonVariantConst, ArduinoJson::V742HB22::JsonVariantConst, unsigned int)
+00000000 00000086 T RiscBoot::Runtime::atomicState(void*, risc_key_value_atomic_state_v1*)
+00000000 00000062 T RiscBoot::Runtime::confirmBoot()
+00000000 00000162 T RiscBoot::Runtime::entropyFill(void*, void*, unsigned long)
+00000000 00000008 T RiscBoot::Runtime::fileOpenApi()
+00000000 000000df T RiscBoot::Runtime::keyValueGet(void*, char const*, void*, unsigned long, unsigned long*)
+00000000 000000d7 T RiscBoot::Runtime::keyValuePut(void*, char const*, void const*, unsigned long)
+00000000 00000052 T RiscBoot::Runtime::monotonicMs(unsigned long*)
+00000000 00000100 T RiscBoot::Runtime::sleepResume(unsigned long long)
+00000000 0000000f T RiscBoot::Runtime::streamYield(void*)
+00000000 0000004f T RiscBoot::Runtime::volumeTable(void*)
+00000000 0000004f T RiscBoot::Runtime::atomicCancel(void*, unsigned long long)
+00000000 00000014 T RiscBoot::Runtime::atomicResult(long)
+00000000 00000024 t _ZN8RiscBoot7Runtime12atomicResultEl$part$0
+00000000 000000a4 T RiscBoot::Runtime::atomicSubmit(void*, unsigned long long, risc_key_value_atomic_mutation_v1 const*, unsigned long, void const*, unsigned long, unsigned long long*)
+00000000 00000063 T RiscBoot::Runtime::openSettings()
+00000000 0000007c T RiscBoot::Runtime::readRealtime(risc_realtime_snapshot_v1*)
+00000000 0000001d T RiscBoot::Runtime::realtimeRead(void*, risc_realtime_snapshot_v1*)
+00000000 0000004c T RiscBoot::Runtime::realtimeSeed(void*, long long, unsigned long)
+00000000 0000005f T RiscBoot::Runtime::residentExit(unsigned long long)
+00000000 00000124 T RiscBoot::Runtime::sleepPrepare(unsigned long long*)
+00000000 00000082 T RiscBoot::Runtime::streamClient(risc_stream_client_v1*)
+00000000 00000024 T RiscBoot::Runtime::streamRetain(void*)
+00000000 0000003c T RiscBoot::Runtime::tcpConnected(void*, unsigned long long)
+00000000 00000142 T RiscBoot::Runtime::appCatalogGet(void*, unsigned long long, unsigned long, risc_app_catalog_entry_v1*)
+00000000 00000037 T RiscBoot::Runtime::atomicBinding(char const*, unsigned long)
+00000000 0000005d T RiscBoot::Runtime::atomicCollect(void*, unsigned long long, risc_key_value_atomic_receipt_v1*)
+00000000 000000dd T RiscBoot::Runtime::atomicContext(void*)
+00000000 000000a2 T RiscBoot::Runtime::beginProvider(void*)
+00000000 00000140 T RiscBoot::Runtime::launchDefault()
+00000000 000000f2 T RiscBoot::Runtime::preferenceGet(void*, unsigned long long, char const*, void*, unsigned long, unsigned long*)
+00000000 000000d0 T RiscBoot::Runtime::registerShell(unsigned long long, risc_resident_callbacks_v1 const*)
+00000000 00000744 T RiscBoot::Runtime::runForeground(unsigned long long, char const*, risc_resident_result_v1*)
+00000000 00000920 T RiscBoot::Runtime::validateGraph()
+00000000 0000008d T RiscBoot::Runtime::volumeContext(void*, bool)
+00000000 0000006d T RiscBoot::Runtime::appDataContext(void*)
+00000000 00000071 T RiscBoot::Runtime::appDataReplace(void*, char const*, unsigned long long, void const*, unsigned long)
+00000000 000002ba T RiscBoot::Runtime::appExitBarrier(bool)
+00000000 0000016d T RiscBoot::Runtime::fileSourceRead(unsigned long long, unsigned long long, void*, unsigned long, unsigned long*)
+00000000 00000072 T RiscBoot::Runtime::initialDefault()
+00000000 0000001e t _ZN8RiscBoot7Runtime14keyValuePolicyERKNS0_14AppGrantPolicyE$isra$0
+00000000 0000019f T RiscBoot::Runtime::providerPolicy(ArduinoJson::V742HB22::JsonObjectConst, RiscBoot::Runtime::ProviderStorage&)
+00000000 00000090 T RiscBoot::Runtime::residentClient(risc_resident_client_v1*)
+00000000 000003e5 T RiscBoot::Runtime::residentPolicy(ArduinoJson::V742HB22::JsonVariantConst)
+00000000 00000062 T RiscBoot::Runtime::revokeProvider(void*)
+00000000 000000bc t _ZN8RiscBoot7Runtime15ProviderStorageaSEOS1_$isra$0
+00000000 00000151 T RiscBoot::Runtime::appCatalogEnter(void*, long&)
+00000000 0000012c T RiscBoot::Runtime::atomicLegacyGet(unsigned long, char const*, void*, unsigned long, unsigned long*, unsigned long)
+00000000 000001e8 T RiscBoot::Runtime::fileOpenRequest(char const*, char const*, unsigned long long)
+00000000 0000014b T RiscBoot::Runtime::fileSourceBegin(char const*, unsigned long long, unsigned long long*)
+00000000 000000e3 T RiscBoot::Runtime::fileSourceWrite(unsigned long long, void const*, unsigned long, unsigned long*)
+00000000 00000205 T RiscBoot::Runtime::openDriverImage(void*, char const*, void const*)
+00000000 000000bb T RiscBoot::Runtime::preferenceState(void*, risc_key_value_atomic_state_v1*)
+00000000 0000008c T RiscBoot::Runtime::providerContext(void*)
+00000000 000000a2 T RiscBoot::Runtime::realtimeContext(void*, bool)
+00000000 00000080 T RiscBoot::Runtime::registerEntropy(RiscBoot::EntropyBackend const*)
+00000000 00000043 T RiscBoot::Runtime::residentFailure(unsigned long long, risc_resident_failure_v1*)
+00000000 000000ee T RiscBoot::Runtime::residentLoading(char const*)
+00000000 00000024 T RiscBoot::Runtime::revokeProviders()
+00000000 000000d1 T RiscBoot::Runtime::storageFilesGet(void*, unsigned long long, unsigned long, risc_storage_files_namespace_v1*)
+00000000 000000c3 T RiscBoot::Runtime::boundAppDataRead(void*, char const*, unsigned long long, void*, unsigned long, unsigned long*, unsigned long long*)
+00000000 0000009b T RiscBoot::Runtime::boundAppDataStat(void*, char const*, unsigned long*, unsigned long long*)
+00000000 000000ac T RiscBoot::Runtime::boundKeyValueGet(void*, char const*, void*, unsigned long, unsigned long*)
+00000000 000000a2 T RiscBoot::Runtime::boundKeyValuePut(void*, char const*, void const*, unsigned long)
+00000000 0000009d T RiscBoot::Runtime::endAppDataExport()
+00000000 00000198 T RiscBoot::Runtime::fileOpenAfterRun(bool)
+00000000 00000087 T RiscBoot::Runtime::fileSourceFinish(unsigned long long)
+00000000 0000003b T RiscBoot::Runtime::fileSourceStatus(long)
+00000000 000002a6 T RiscBoot::Runtime::loadRemovableApp(RiscBoot::Runtime::AppPolicy const&)
+00000000 0000006b T RiscBoot::Runtime::preferenceCancel(void*, unsigned long long)
+00000000 00000334 T RiscBoot::Runtime::preferenceSubmit(void*, unsigned long long, risc_key_value_atomic_mutation_v1 const*, unsigned long, void const*, unsigned long, unsigned long long*)
+00000000 000001d0 T RiscBoot::Runtime::promoteProviders(void*)
+00000000 0000001d T RiscBoot::Runtime::providerFileSafe(void*)
+00000000 000000c6 T RiscBoot::Runtime::readRuntimeImage(char const*, RiscBoot::RuntimeFileImage&, unsigned int, bool)
+00000000 00000007 T RiscBoot::Runtime::reclaimAppImages()
+00000000 00000494 T RiscBoot::Runtime::registerPlatform(char const*, unsigned long, RiscBoot::Runtime::Scope, unsigned long long, void const*)
+00000000 0000005a T RiscBoot::Runtime::registerRealtime(risc_realtime_control_api_v1 const*)
+00000000 00000083 T RiscBoot::Runtime::retainInvocation()
+00000000 000000db T RiscBoot::Runtime::retainedWakeRead(void*, unsigned long, unsigned long, risc_retained_wake_record_v1*, unsigned long*)
+00000000 00000058 T RiscBoot::Runtime::selectInvocation(RiscBoot::Runtime::Invocation&)
+00000000 000000d8 T RiscBoot::Runtime::serviceProviders()
+00000000 00000056 T RiscBoot::Runtime::settingsCallSafe()
+00000000 00000018 T RiscBoot::Runtime::admitInstalledApp(char const*, char const*)
+00000000 0000001f T RiscBoot::Runtime::appCatalogChanged()
+00000000 00000101 T RiscBoot::Runtime::appCatalogRefresh(unsigned long&)
+00000000 0000002c T RiscBoot::Runtime::appDataExportSafe(void*)
+00000000 0000006f T RiscBoot::Runtime::failureBreadcrumb(unsigned long, char const*)
+00000000 00000008 T RiscBoot::Runtime::fileOpenSourceApi()
+00000000 000000ad T RiscBoot::Runtime::fileSourceCleanup()
+00000000 00000070 T RiscBoot::Runtime::fileSourceDiscard(unsigned long long)
+00000000 00000199 T RiscBoot::Runtime::fileSourceRequest(unsigned long long, char const*, unsigned long long)
+00000000 00000d7b T RiscBoot::Runtime::installationAdmit(void*, char const*, char const*, char*, unsigned long)
+00000000 00000020 T RiscBoot::Runtime::installationCheck(void*, risc_install_candidate_v1 const*, unsigned long, risc_install_result_v1*, bool)
+00000000 00000047 T RiscBoot::Runtime::openInternalImage(char const*, bool)
+00000000 000000a9 T RiscBoot::Runtime::preferenceCollect(void*, unsigned long long, risc_key_value_atomic_receipt_v1*)
+00000000 000000de T RiscBoot::Runtime::preferenceContext(void*)
+00000000 000000cc T RiscBoot::Runtime::readInternalImage(void*, char const*, elf_file*)
+00000000 0000005c T RiscBoot::Runtime::retainedWakeClear(void*)
+00000000 0000005d T RiscBoot::Runtime::retainedWakeStage(void*, risc_retained_wake_record_v1 const*)
+00000000 0000004e T RiscBoot::Runtime::serviceCheckpoint()
+00000000 0000006e T RiscBoot::Runtime::storageFilesTable(void*)
+00000000 0000009d T RiscBoot::Runtime::takeLaunchFailure(risc_runtime_launch_failure_v1*)
+00000000 000000ca T RiscBoot::Runtime::appCatalogMetadata(ArduinoJson::V742HB22::JsonObjectConst, RiscBoot::Runtime::AppCatalogMetadata&)
+00000000 00000058 T RiscBoot::Runtime::appCatalogSnapshot(void*, risc_app_catalog_snapshot_v1*)
+00000000 0000005c T RiscBoot::Runtime::appDataExportOwner(void*)
+00000000 0000008c T RiscBoot::Runtime::fileOpenTakeResult(long*, unsigned long long*)
+00000000 00000020 T RiscBoot::Runtime::installationCommit(void*, risc_install_candidate_v1 const*, unsigned long, risc_install_result_v1*, bool)
+00000000 000000e6 T RiscBoot::Runtime::installationForget(void*, char const*, bool)
+00000000 000000e6 T RiscBoot::Runtime::memoryHeapSnapshot(void*, risc_memory_heap_snapshot_v1*)
+00000000 0000024b T RiscBoot::Runtime::providerFilePolicy(ArduinoJson::V742HB22::JsonObjectConst, RiscBoot::Runtime::ProviderStorage&)
+00000000 00000014 T RiscBoot::Runtime::providerFileResult(long)
+00000000 00000017 t _ZN8RiscBoot7Runtime18providerFileResultEl$part$0
+00000000 0000023a T RiscBoot::Runtime::residentCheckpoint(unsigned long long, risc_resident_request_v1 const*, risc_resident_reply_v1*)
+00000000 00000014 T RiscBoot::Runtime::storageFilesResult(long)
+00000000 00000024 t _ZN8RiscBoot7Runtime18storageFilesResultEl$part$0
+00000000 000000c4 T RiscBoot::Runtime::streamBindingValid(void*, RuntimeStreams::AppStreamBinding const&, bool)
+00000000 000003f5 T RiscBoot::Runtime::admitInstalledAppAt(char const*, char const*, unsigned int)
+00000000 000000a3 T RiscBoot::Runtime::boundAppDataReplace(void*, char const*, unsigned long long, void const*, unsigned long)
+00000000 00000036 T RiscBoot::Runtime::failureEvidenceRead(unsigned long long, risc_failure_evidence_v1*)
+00000000 00000060 T RiscBoot::Runtime::preferenceAvailable(char const*, unsigned long)
+00000000 00000040 T RiscBoot::Runtime::preferenceNamespace(unsigned long, bool)
+00000000 0000009f T RiscBoot::Runtime::providerFileContext(void*, long&)
+00000000 000000ae T RiscBoot::Runtime::registerTcpListener(RiscBoot::TcpListenerBackend const*)
+00000000 0000009a T RiscBoot::Runtime::retainedWakeContext(void*)
+00000000 0000002f T RiscBoot::Runtime::settingsMaxBlobSize()
+00000000 00000101 T RiscBoot::Runtime::storageFilesContext(void*, bool)
+00000000 0000022b T RiscBoot::Runtime::acquireAppDataExport()
+00000000 0000003b T RiscBoot::Runtime::atomicEndpointResult(RiscBoot::AtomicSettingsEndpoint const*, long)
+00000000 0000008f T RiscBoot::Runtime::fileSourceTakeResult(long*, unsigned long long*)
+00000000 00000148 T RiscBoot::Runtime::namespaceKeyValueGet(unsigned long, char const*, void*, unsigned long, unsigned long*, unsigned long, bool)
+00000000 00000092 T RiscBoot::Runtime::namespaceKeyValuePut(unsigned long, char const*, void const*, unsigned long, bool, bool)
+00000000 000000b7 T RiscBoot::Runtime::providerRealtimeRead(void*, risc_realtime_snapshot_v1*)
+00000000 0000013c T RiscBoot::Runtime::reserveInstalledApps(unsigned int)
+00000000 00000062 T RiscBoot::Runtime::storageFilesSnapshot(void*, risc_storage_files_catalog_snapshot_v1*)
+00000000 00000149 T RiscBoot::Runtime::acquireProviderDriver(signed char, char const*, unsigned long, RiscBoot::Runtime::AppGrant&)
+00000000 00000ac5 T RiscBoot::Runtime::configureInstallation(ArduinoJson::V742HB22::JsonVariantConst)
+00000000 00000068 T RiscBoot::Runtime::failureEvidenceClient(risc_failure_evidence_client_v1*)
+00000000 00000108 T RiscBoot::Runtime::installationAvailable(void*, char const*, unsigned long, unsigned long long)
+00000000 00000018 T RiscBoot::Runtime::installationProviders(void*, risc_install_provider_v1 const*, unsigned long, bool)
+00000000 00000060 T RiscBoot::Runtime::providerResourcesSafe(void*)
+00000000 000000a2 T RiscBoot::Runtime::recordResidentFailure(unsigned long, long, char const*, unsigned long long)
+00000000 000000d7 T RiscBoot::Runtime::retainedWakeReadBytes(void*, unsigned long, unsigned long, void*, unsigned long, unsigned long*, unsigned long*)
+00000000 00000136 T RiscBoot::Runtime::serviceNativeSettings(bool)
+00000000 00000027 T RiscBoot::Runtime::installationNamespaced(void*, risc_install_candidate_v1 const*, unsigned long const*, unsigned long, risc_install_result_v1*, bool, bool)
+00000000 0000011e T RiscBoot::Runtime::registerAtomicKeyValue(char const*, unsigned long, RiscBoot::AtomicSettingsEndpoint)
+00000000 00000086 T RiscBoot::Runtime::registerNativeProvider(RiscBoot::Runtime::Driver const&, RuntimeProviders::SpecV2&, RuntimeProviders::NativeProviderPolicyV1 const&)
+00000000 0000006d T RiscBoot::Runtime::retainedWakeStageBytes(void*, unsigned long, unsigned long, void const*, unsigned long)
+00000000 000003f2 T RiscBoot::Runtime::configureAppDataExports(ArduinoJson::V742HB22::JsonVariantConst)
+00000000 0000020c T RiscBoot::Runtime::configureInstalledFiles(ArduinoJson::V742HB22::JsonObjectConst)
+00000000 00000050 T RiscBoot::Runtime::installationSettingsAck(void*, unsigned long, unsigned long long)
+00000000 00000628 T RiscBoot::Runtime::installationTransaction(void*, risc_install_candidate_v1 const*, unsigned long, risc_install_result_v1*, bool, bool, unsigned long const*, unsigned long const*)
+00000000 000000f4 T RiscBoot::Runtime::boundAppDataBeginReplace(void*, char const*, unsigned long long, void const*, unsigned long, unsigned long long*)
+00000000 00000091 T RiscBoot::Runtime::registerProviderRealtime()
+00000000 00000098 T RiscBoot::Runtime::diagnosticCheckpointWrite(unsigned long long, char const*, unsigned long)
+00000000 0000007f T RiscBoot::Runtime::boundAppDataCollectReplace(void*, unsigned long long, long*)
+00000000 00000051 T RiscBoot::Runtime::diagnosticCheckpointClient(risc_diagnostic_checkpoint_client_v1*)
+00000000 0000002e T RiscBoot::Runtime::failureEvidenceAcknowledge(unsigned long long, unsigned long, unsigned long)
+00000000 0000001e T RiscBoot::Runtime::installationProvidersMedia(void*, risc_install_provider_v1 const*, unsigned long const*, unsigned long, bool)
+00000000 00000059 T RiscBoot::Runtime::installationSettingsStatus(void*, unsigned long)
+00000000 00000035 T RiscBoot::Runtime::installationNamespacedMedia(void*, risc_install_candidate_v1 const*, unsigned long const*, unsigned long const*, unsigned long, risc_install_result_v1*, bool, bool)
+00000000 0000005b T RiscBoot::Runtime::installationSettingsRestore(void*, unsigned long, char const*, void const*, unsigned long, bool)
+00000000 00000046 T RiscBoot::Runtime::installationSettingsSnapshot(void*, unsigned long, void*, unsigned long, unsigned long*, unsigned long long*)
+00000000 000000fb T RiscBoot::Runtime::keyValueAvailabilitySnapshot(void*, risc_key_value_availability_state_v1*)
+00000000 0000006f T RiscBoot::Runtime::registerKeyValueAvailability(unsigned long, RiscBoot::Runtime::KeyValueAvailability)
+00000000 0000111b T RiscBoot::Runtime::installationProviderTransaction(void*, risc_install_provider_v1 const*, unsigned long const*, unsigned long, bool)
+00000000 000000bb T RiscBoot::Runtime::registerAtomicKeyValueReadThrough(unsigned long, RiscBoot::AtomicSettingsEndpoint)
+00000000 00000059 T RiscBoot::Runtime::installationSharedSettingsNamespace(void*, unsigned long)
+00000000 00000719 T RiscBoot::Runtime::run()
+00000000 0000001b t _ZN8RiscBoot7Runtime4failEPKc$isra$0
+00000000 00000214 T RiscBoot::Runtime::yield(unsigned long)
+00000000 0000002f T RiscBoot::Runtime::health(risc_runtime_health_v1*)
+00000000 00000198 T RiscBoot::Runtime::launch(char const*)
+00000000 00000021 T RiscBoot::Runtime::runOne(char const*)
+00000000 0000084b t _ZN8RiscBoot7Runtime6runOneEPKc$part$0
+00000000 00000d09 T RiscBoot::Runtime::acquire(char const*, unsigned long, unsigned long long, risc_runtime_capability_v1*)
+00000000 000010f5 T RiscBoot::Runtime::prepare(char const*)
+00000000 000004e1 T RiscBoot::Runtime::release(risc_runtime_capability_v1*)
+00000000 0000004c T RiscBoot::Runtime::tcpRead(void*, unsigned long long, void*, unsigned long, unsigned long*)
+00000000 00000828 T RiscBoot::Runtime::manifest(ArduinoJson::V742HB22::JsonObjectConst, RiscBoot::Runtime::Driver&)
+00000000 00000038 T RiscBoot::Runtime::tcpClose(void*, unsigned long long)
+00000000 0000004c T RiscBoot::Runtime::tcpWrite(void*, unsigned long long, void const*, unsigned long, unsigned long*)
+00000000 000000b6 T RiscBoot::Runtime::atomicGet(void*, unsigned long long, char const*, void*, unsigned long, unsigned long*)
+00000000 000002a2 T RiscBoot::Runtime::revokeApp()
+00000000 00000044 T RiscBoot::Runtime::tcpAccept(void*, unsigned long long, unsigned long long*)
+00000000 00000042 T RiscBoot::Runtime::tcpListen(void*, risc_tcp_listen_v1 const*, unsigned long long*)
+00000000 0000001c T RiscBoot::Runtime::tcpResult(long)
+00000000 00000127 T RiscBoot::Runtime::~Runtime()
+00000000 00000127 T RiscBoot::Runtime::~Runtime()
+00000000 00000075 W RiscBoot::integer(ArduinoJson::V742HB22::JsonVariantConst, long long, long long, long long&)
+         U RiscBoot::readJson(RiscBoot::RuntimeFileView, char const*, ArduinoJson::V742HB22::JsonDocument&, bool*)
+00000000 0000001d W RiscPerf::now()
+00000000 00000d40 V RiscPerf::data
+00000000 00000017 W RiscPerf::emit(unsigned long, unsigned long)
+00000000 00000037 W RiscPerf::Scope::Scope(unsigned long, unsigned long, unsigned long)
+00000000 00000037 W RiscPerf::Scope::Scope(unsigned long, unsigned long, unsigned long)
+00000000 n RiscPerf::Scope::Scope(unsigned long, unsigned long, unsigned long)
+00000000 00000086 W RiscPerf::Scope::~Scope()
+00000000 00000086 W RiscPerf::Scope::~Scope()
+00000000 n RiscPerf::Scope::~Scope()
+00000000 0000007a W RiscPerf::finish(unsigned long, unsigned long, unsigned long long, unsigned long)
+00000000 000000ed W RiscPerf::record(unsigned long, unsigned long)
+00000000 0000001b W RiscPerf::allowed()
+00000000 00000004 V RiscPerf::clockUs
+00000000 00000001 V RiscPerf::enabled
+00000000 0000000e W RiscPerf::saturate(unsigned long&)
+00000000 00000004 V RiscPerf::ownerTask
+00000000 0000001a W ArduinoJson::V742HB22::JsonArrayConst::size() const
+00000000 0000002e W ArduinoJson::V742HB22::JsonArrayConst::begin() const
+00000000 00000015 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonArrayConst::operator[]<unsigned int, 0>(unsigned int) const
+00000000 0000002e W ArduinoJson::V742HB22::JsonObjectConst::begin() const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [10], 0>(char const (&) [10]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [11], 0>(char const (&) [11]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [12], 0>(char const (&) [12]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [13], 0>(char const (&) [13]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [15], 0>(char const (&) [15]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [16], 0>(char const (&) [16]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [17], 0>(char const (&) [17]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [18], 0>(char const (&) [18]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [21], 0>(char const (&) [21]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [23], 0>(char const (&) [23]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [3], 0>(char const (&) [3]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [4], 0>(char const (&) [4]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [5], 0>(char const (&) [5]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [6], 0>(char const (&) [6]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [7], 0>(char const (&) [7]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [8], 0>(char const (&) [8]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonObjectConst::operator[]<char [9], 0>(char const (&) [9]) const
+00000000 00000015 W ArduinoJson::V742HB22::JsonArrayConst ArduinoJson::V742HB22::JsonVariantConst::as<ArduinoJson::V742HB22::JsonArrayConst, 0>() const
+00000000 00000015 W ArduinoJson::V742HB22::JsonObjectConst ArduinoJson::V742HB22::JsonVariantConst::as<ArduinoJson::V742HB22::JsonObjectConst, 0>() const
+00000000 00000011 W char const* ArduinoJson::V742HB22::JsonVariantConst::as<char const*, 0>() const
+00000000 00000097 W bool ArduinoJson::V742HB22::JsonVariantConst::as<bool, 0>() const
+00000000 00000137 W unsigned long long ArduinoJson::V742HB22::JsonVariantConst::as<unsigned long long, 0>() const
+00000000 00000017 W bool ArduinoJson::V742HB22::JsonVariantConst::is<ArduinoJson::V742HB22::JsonArrayConst, 0>() const
+00000000 00000017 W bool ArduinoJson::V742HB22::JsonVariantConst::is<bool, 0>() const
+00000000 0000004a W bool ArduinoJson::V742HB22::JsonVariantConst::is<unsigned int, 0>() const
+00000000 00000032 W ArduinoJson::V742HB22::JsonVariantConst::size() const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [10], 0>(char const (&) [10]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [11], 0>(char const (&) [11]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [12], 0>(char const (&) [12]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [15], 0>(char const (&) [15]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [16], 0>(char const (&) [16]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [25], 0>(char const (&) [25]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [3], 0>(char const (&) [3]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [4], 0>(char const (&) [4]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [5], 0>(char const (&) [5]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [6], 0>(char const (&) [6]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [7], 0>(char const (&) [7]) const
+00000000 00000017 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<char [9], 0>(char const (&) [9]) const
+00000000 00000023 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::JsonVariantConst::operator[]<unsigned int, 0>(unsigned int) const
+00000000 0000008a t _ZNK11ArduinoJson8V742HB226detail10ObjectData9getMemberINS1_9RamStringEEEPNS1_11VariantDataET_PKNS1_15ResourceManagerE$isra$0
+00000000 0000002d t _ZNK11ArduinoJson8V742HB226detail10StringPool3getINS1_9RamStringEEEPNS1_10StringNodeERKT_$isra$0
+00000000 00000018 W ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString>::getOrCreateData() const
+00000000 00000016 W ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString>::getData() const
+00000000 000000d2 W unsigned int ArduinoJson::V742HB22::detail::VariantData::asIntegral<unsigned int>(ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 000000d2 W unsigned long ArduinoJson::V742HB22::detail::VariantData::asIntegral<unsigned long>(ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 00000124 W long long ArduinoJson::V742HB22::detail::VariantData::asIntegral<long long>(ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 00000016 t _ZNK11ArduinoJson8V742HB226detail11VariantData12getExtensionEPKNS1_15ResourceManagerE$isra$0
+00000000 000001ac W ArduinoJson::V742HB22::detail::JsonSerializer<ArduinoJson::V742HB22::detail::StaticStringWriter>::result_type ArduinoJson::V742HB22::detail::VariantData::accept<ArduinoJson::V742HB22::detail::JsonSerializer<ArduinoJson::V742HB22::detail::StaticStringWriter> >(ArduinoJson::V742HB22::detail::JsonSerializer<ArduinoJson::V742HB22::detail::StaticStringWriter>&, ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 000001a4 t _ZNK11ArduinoJson8V742HB226detail11VariantData6acceptINS1_14JsonSerializerINS1_6WriterINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEvEEEEEENT_11result_typeERSE_PKNS1_15ResourceManagerE$isra$0
+00000000 00000230 t _ZNK11ArduinoJson8V742HB226detail11VariantData6acceptINS1_14VisitorAdapterINS1_17JsonVariantCopierEEEEENT_11result_typeERS7_PKNS1_15ResourceManagerE$isra$0
+00000000 00000159 W ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<ArduinoJson::V742HB22::JsonVariantConst, void> >::result_type ArduinoJson::V742HB22::detail::VariantData::accept<ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<ArduinoJson::V742HB22::JsonVariantConst, void> > >(ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<ArduinoJson::V742HB22::JsonVariantConst, void> >&, ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 00000159 W ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString>, void> >::result_type ArduinoJson::V742HB22::detail::VariantData::accept<ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString>, void> > >(ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString>, void> >&, ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 0000013c W ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<bool, void> >::result_type ArduinoJson::V742HB22::detail::VariantData::accept<ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<bool, void> > >(ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<bool, void> >&, ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 000000df W ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<double, void> >::result_type ArduinoJson::V742HB22::detail::VariantData::accept<ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<double, void> > >(ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<double, void> >&, ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 0000011a W ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<int, void> >::result_type ArduinoJson::V742HB22::detail::VariantData::accept<ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<int, void> > >(ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<int, void> >&, ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 00000136 W ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<unsigned long, void> >::result_type ArduinoJson::V742HB22::detail::VariantData::accept<ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<unsigned long, void> > >(ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<unsigned long, void> >&, ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 00000166 W ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<long long, void> >::result_type ArduinoJson::V742HB22::detail::VariantData::accept<ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<long long, void> > >(ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<long long, void> >&, ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 000000fd W ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<unsigned long long, void> >::result_type ArduinoJson::V742HB22::detail::VariantData::accept<ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<unsigned long long, void> > >(ArduinoJson::V742HB22::detail::VisitorAdapter<ArduinoJson::V742HB22::detail::Comparer<unsigned long long, void> >&, ArduinoJson::V742HB22::detail::ResourceManager const*) const
+00000000 0000005e W ArduinoJson::V742HB22::detail::VariantData::asString() const
+00000000 00000027 t _ZNK11ArduinoJson8V742HB226detail14CollectionData14createIteratorEPKNS1_15ResourceManagerE$isra$0
+00000000 00000028 t _ZNK11ArduinoJson8V742HB226detail14CollectionData4sizeEPKNS1_15ResourceManagerE$isra$0
+00000000 0000001f t _ZNK11ArduinoJson8V742HB226detail14MemoryPoolListINS1_15ResourceManager8SlotDataEE7getSlotEt$isra$0
+00000000 00000011 t _ZNK11ArduinoJson8V742HB226detail14VariantRefBaseINS0_11JsonVariantEE5doSetINS0_9ConverterIDnvEEDnEEbRKT0_$isra$0
+00000000 0000001d W ArduinoJson::V742HB22::detail::VariantRefBase<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonObject, ArduinoJson::V742HB22::detail::RamString> >::getOrCreateVariant() const
+00000000 00000022 t _ZNK11ArduinoJson8V742HB226detail14VariantRefBaseINS1_11MemberProxyINS0_10JsonObjectENS1_9RamStringEEEE3setImEEbRKT_$isra$0
+00000000 0000001f t _ZNK11ArduinoJson8V742HB226detail14VariantRefBaseINS1_11MemberProxyINS0_10JsonObjectENS1_9RamStringEEEE3setIyEEbRKT_$isra$0
+00000000 00000035 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::detail::VariantRefBase<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::detail::ElementProxy<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString> >, ArduinoJson::V742HB22::detail::RamString> >::as<ArduinoJson::V742HB22::JsonVariantConst>() const
+00000000 00000023 W ArduinoJson::V742HB22::detail::VariantRefBase<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString>, ArduinoJson::V742HB22::detail::RamString> >::getOrCreateVariant() const
+00000000 0000001d W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::detail::VariantRefBase<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString>, ArduinoJson::V742HB22::detail::RamString> >::as<ArduinoJson::V742HB22::JsonVariantConst>() const
+00000000 00000013 W ArduinoJson::V742HB22::JsonVariantConst ArduinoJson::V742HB22::detail::VariantRefBase<ArduinoJson::V742HB22::detail::MemberProxy<ArduinoJson::V742HB22::JsonDocument&, ArduinoJson::V742HB22::detail::RamString> >::as<ArduinoJson::V742HB22::JsonVariantConst>() const
+00000000 00000030 W ArduinoJson::V742HB22::JsonObject ArduinoJson::V742HB22::JsonArray::add<ArduinoJson::V742HB22::JsonObject, 0>() const
+00000000 00000045 W RiscStorage::AppDataExport::find(char const*) const
+00000000 00000064 W RiscStorage::AppDataExport::directory(char const*) const
+00000000 00000014 W RiscStorage::VolumeImageFiles::safe() const
+         U RuntimeStreams::AppStreamSessions::retained() const
+         U RuntimeProviders::GraphV2::activeFrom(char const*, char const*, unsigned long, unsigned long long) const
+         U RuntimeProviders::GraphV2::holdsGrant(RuntimeProviders::GrantV2) const
+         U RuntimeProviders::GraphV2::liveGrants() const
+         U RuntimeProviders::GraphV2::interfaceFor(RuntimeProviders::GrantV2) const
+00000000 0000000b t _ZNK16RuntimeProviders7GraphV213lifecycleBusyEv$isra$0
+         U RuntimeProviders::GraphV2::activationSafe() const
+         U RuntimeProviders::GraphV2::metadataMutable(unsigned int) const
+         U RuntimeProviders::GraphV2::nativePolicyFor(char const*, char const*, unsigned long, unsigned long long) const
+         U RuntimeProviders::GraphV2::streamSessionsFor(RuntimeProviders::GrantV2, unsigned long long*) const
+         U RuntimeProviders::GraphV2::dependencyReadSafe() const
+00000000 0000001b W RiscBoot::RuntimeFiles::bound() const
+00000000 0000005d W RiscBoot::InstalledFiles::isDirectory(char const*) const
+00000000 00000032 W RiscBoot::InstalledFiles::admitted(char const*) const
+00000000 00000018 W RiscBoot::InstalledFiles::retained() const
+00000000 00000019 W RiscBoot::AppDeclarations::size() const
+00000000 0000017d W RiscBoot::AppDeclarations::error(unsigned int) const
+00000000 00000036 W RiscBoot::AppDeclarations::operator[](unsigned int) const
+00000000 0000004c t _ZNK8RiscBoot15RuntimeFileView4nameEPKc$isra$0
+00000000 00000013 t _ZNK8RiscBoot15RuntimeFileView8retainedEv$isra$0
+00000000 00000077 W RiscBoot::RuntimeFileSources::find(char const*) const
+00000000 0000002f W RiscBoot::RuntimeFileSources::retained() const
+00000000 00000010 W RiscBoot::AtomicSettingsEndpoint::namespaceId() const
+00000000 00000010 W RiscBoot::AtomicSettingsEndpoint::exitSafe() const
+00000000 00000010 W RiscBoot::AtomicSettingsEndpoint::retained() const
+00000000 00000034 W RiscBoot::AtomicSettingsEndpoint::operator bool() const
+00000000 00000024 W RiscBoot::StorageFilesVolumeAdapter::exitSafe() const
+         U RiscBoot::Board::device(unsigned long long) const
+         U RiscBoot::Board::deviceBus(unsigned long long) const
+00000000 000000d5 T RiscBoot::Runtime::grantUsage() const
+00000000 0000001a T RiscBoot::Runtime::appDataBusy() const
+00000000 00000184 T RiscBoot::Runtime::appInventory(unsigned int, void*, unsigned int, unsigned long*) const
+00000000 00000022 T RiscBoot::Runtime::exitRequested() const
+00000000 00000063 T RiscBoot::Runtime::fileOpenReady() const
+00000000 00000128 T RiscBoot::Runtime::inspectImages(bool (*)(void*, char const*, bool), void*) const
+00000000 00000065 T RiscBoot::Runtime::promotionSafe() const
+00000000 00000083 T RiscBoot::Runtime::residentToken(unsigned long long, unsigned long, bool) const
+00000000 00000086 T RiscBoot::Runtime::streamBinding(risc_runtime_capability_v1 const*, RuntimeStreams::AppStreamBinding&) const
+00000000 00000059 T RiscBoot::Runtime::atomicExitSafe(bool) const
+00000000 00000096 T RiscBoot::Runtime::fileHandlerGet(char const*, unsigned long, t5_file_handler_t*) const
+00000000 000000b2 T RiscBoot::Runtime::fileSourceInfo(risc_file_open_source_info_v1*) const
+00000000 00000026 W RiscBoot::Runtime::metadataSource(char const*) const
+00000000 00000023 T RiscBoot::Runtime::validateCohort(RiscBoot::Runtime&, char const*, bool (*)(void*, char const*, bool), void*, RiscBoot::Runtime::AppDataExportDelegation const*, unsigned int) const
+00000000 00000055 T RiscBoot::Runtime::appDataExitSafe() const
+00000000 0000003c T RiscBoot::Runtime::appManifestPath(unsigned int, char*, unsigned int) const
+00000000 000000ab t _ZNK8RiscBoot7Runtime15appManifestPathEjPcj$part$0
+00000000 00000068 T RiscBoot::Runtime::fileSourceOwned(unsigned long long) const
+00000000 0000006e T RiscBoot::Runtime::fileSourceReady() const
+00000000 0000004f T RiscBoot::Runtime::residentAllowed(char const*) const
+00000000 0000006d T RiscBoot::Runtime::fileHandlerCount(char const*) const
+00000000 00000033 T RiscBoot::Runtime::settingsReadSafe() const
+00000000 00000037 T RiscBoot::Runtime::appInventoryCount() const
+00000000 00000050 T RiscBoot::Runtime::appInventoryEntry(unsigned int, void*, unsigned int, unsigned long*) const
+00000000 00000039 T RiscBoot::Runtime::atomicReadThrough(unsigned long) const
+00000000 00000088 T RiscBoot::Runtime::fileSourcePathGet(char*, unsigned int) const
+00000000 00000080 T RiscBoot::Runtime::sleepBoundarySafe() const
+00000000 0000001c T RiscBoot::Runtime::fileSourceExitSafe() const
+00000000 00000016 T RiscBoot::Runtime::preferenceExitSafe(bool) const
+00000000 0000005b t _ZNK8RiscBoot7Runtime18preferenceExitSafeEb$part$0
+00000000 000029cf T RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, char const*, bool (*)(void*, char const*, bool), void*, RiscBoot::Runtime::AppDataExportDelegation const*, unsigned int, RiscUpdate::NativeAppDataExportPolicyV1 const*, RiscUpdate::NativeAppDataExportPolicyV2 const*) const
+00000000 00000073 T RiscBoot::Runtime::fileSourceSupported(char const*) const
+00000000 0000004a T RiscBoot::Runtime::fileSourceSupported(unsigned int) const
+00000000 000000a8 T RiscBoot::Runtime::installationMutable(unsigned int) const
+00000000 00000154 T RiscBoot::Runtime::installedLaunchPath(char const*, char*, unsigned int, bool*) const
+00000000 00000073 T RiscBoot::Runtime::providerStorageSafe() const
+00000000 0000011f T RiscBoot::Runtime::failureEvidenceToken(unsigned long long, bool) const
+00000000 00000096 T RiscBoot::Runtime::fileSourceHandlerGet(char const*, unsigned long, t5_file_handler_t*) const
+00000000 0000003e T RiscBoot::Runtime::keyValueAvailability(unsigned long) const
+00000000 0000005b T RiscBoot::Runtime::retainedWakeIdentity(RiscRetainedWake::Identity&) const
+00000000 0000003a T RiscBoot::Runtime::storageFilesExitSafe(bool) const
+00000000 00000021 T RiscBoot::Runtime::validateNativeCohort(RiscBoot::Runtime&, char const*, bool (*)(void*, char const*, bool), void*, RiscUpdate::NativeAppDataExportPolicyV1 const&) const
+00000000 00000021 T RiscBoot::Runtime::validateNativeCohort(RiscBoot::Runtime&, char const*, bool (*)(void*, char const*, bool), void*, RiscUpdate::NativeAppDataExportPolicyV2 const&) const
+00000000 00000046 T RiscBoot::Runtime::appDataExportExitSafe() const
+00000000 00000044 T RiscBoot::Runtime::keyValueAuthoritative(unsigned long) const
+00000000 00000021 W RiscBoot::Runtime::metadataCloseRetained() const
+00000000 0000004f T RiscBoot::Runtime::residentLegacyAllowed(char const*) const
+00000000 0000006d T RiscBoot::Runtime::fileSourceHandlerCount(char const*) const
+00000000 000000a9 T RiscBoot::Runtime::diagnosticCheckpointToken(unsigned long long) const
+00000000 0000000d T RiscBoot::Runtime::keyValueRetentionObserved() const
+00000000 000000d3 T RiscBoot::Runtime::keyValueReconciliationSafe(unsigned long) const
+00000000 00000395 T RiscBoot::Runtime::validateAppDataExportCohort(RiscBoot::Runtime const&, RiscBoot::Runtime::AppDataExportDelegation const*, unsigned int, bool) const
+00000000 000000a2 T RiscBoot::Runtime::nativeProviderPolicyForImage(char const*) const
+00000000 00000079 T RiscBoot::Runtime::needsAppDataExportDelegation(RiscBoot::Runtime const&) const
+00000000 0000011a T RiscBoot::Runtime::installationNamespaceRangeSafe() const
+00000000 00000069 T RiscBoot::Runtime::uses(unsigned long long, char const*, unsigned long) const
+00000000 00000039 W RiscBoot::Runtime::active() const
+00000000 00000032 T RiscBoot::Runtime::selected(unsigned long long) const
+00000000 000004a3 T RiscBoot::Runtime::appUpdate(char const*, void const*, unsigned int, RiscBoot::Runtime::UpdateApp&) const
+00000000 0000000f W std::unique_ptr<RiscBoot::InstalledFiles::Name [], RiscBoot::MetadataDelete<RiscBoot::InstalledFiles::Name> >::~unique_ptr()
+00000000 0000000f W std::unique_ptr<RiscBoot::InstalledFiles::Name [], RiscBoot::MetadataDelete<RiscBoot::InstalledFiles::Name> >::~unique_ptr()
+00000000 n std::unique_ptr<RiscBoot::InstalledFiles::Name [], RiscBoot::MetadataDelete<RiscBoot::InstalledFiles::Name> >::~unique_ptr()
+00000000 0000000f W std::unique_ptr<RiscBoot::FileOpenMetadata [], RiscBoot::MetadataDelete<RiscBoot::FileOpenMetadata> >::~unique_ptr()
+00000000 0000000f W std::unique_ptr<RiscBoot::FileOpenMetadata [], RiscBoot::MetadataDelete<RiscBoot::FileOpenMetadata> >::~unique_ptr()
+00000000 n std::unique_ptr<RiscBoot::FileOpenMetadata [], RiscBoot::MetadataDelete<RiscBoot::FileOpenMetadata> >::~unique_ptr()
+00000000 0000000f W std::unique_ptr<RiscBoot::Runtime::ProviderFile [], RiscBoot::MetadataDelete<RiscBoot::Runtime::ProviderFile> >::~unique_ptr()
+00000000 0000000f W std::unique_ptr<RiscBoot::Runtime::ProviderFile [], RiscBoot::MetadataDelete<RiscBoot::Runtime::ProviderFile> >::~unique_ptr()
+00000000 n std::unique_ptr<RiscBoot::Runtime::ProviderFile [], RiscBoot::MetadataDelete<RiscBoot::Runtime::ProviderFile> >::~unique_ptr()
+00000000 0000000f W std::unique_ptr<RiscBoot::Runtime::InstalledAppMetadata [], RiscBoot::MetadataDelete<RiscBoot::Runtime::InstalledAppMetadata> >::~unique_ptr()
+00000000 0000000f W std::unique_ptr<RiscBoot::Runtime::InstalledAppMetadata [], RiscBoot::MetadataDelete<RiscBoot::Runtime::InstalledAppMetadata> >::~unique_ptr()
+00000000 n std::unique_ptr<RiscBoot::Runtime::InstalledAppMetadata [], RiscBoot::MetadataDelete<RiscBoot::Runtime::InstalledAppMetadata> >::~unique_ptr()
+00000000 0000000f W std::unique_ptr<RiscBoot::Runtime::AppPolicy [], RiscBoot::MetadataDelete<RiscBoot::Runtime::AppPolicy> >::~unique_ptr()
+00000000 0000000f W std::unique_ptr<RiscBoot::Runtime::AppPolicy [], RiscBoot::MetadataDelete<RiscBoot::Runtime::AppPolicy> >::~unique_ptr()
+00000000 n std::unique_ptr<RiscBoot::Runtime::AppPolicy [], RiscBoot::MetadataDelete<RiscBoot::Runtime::AppPolicy> >::~unique_ptr()
+00000000 00000010 W std::unique_ptr<RiscBoot::SettingsSession, std::default_delete<RiscBoot::SettingsSession> >::~unique_ptr()
+00000000 00000010 W std::unique_ptr<RiscBoot::SettingsSession, std::default_delete<RiscBoot::SettingsSession> >::~unique_ptr()
+00000000 n std::unique_ptr<RiscBoot::SettingsSession, std::default_delete<RiscBoot::SettingsSession> >::~unique_ptr()
+00000000 00000012 W std::unique_ptr<RiscBoot::StorageFilesVolumeAdapter, std::default_delete<RiscBoot::StorageFilesVolumeAdapter> >::~unique_ptr()
+00000000 00000012 W std::unique_ptr<RiscBoot::StorageFilesVolumeAdapter, std::default_delete<RiscBoot::StorageFilesVolumeAdapter> >::~unique_ptr()
+00000000 n std::unique_ptr<RiscBoot::StorageFilesVolumeAdapter, std::default_delete<RiscBoot::StorageFilesVolumeAdapter> >::~unique_ptr()
+00000000 0000001b W std::__uniq_ptr_impl<RiscStorage::AppDataExport, RiscBoot::Runtime::AppDataExportDelete>::reset(RiscStorage::AppDataExport*)
+00000000 00000020 W std::__uniq_ptr_impl<RiscBoot::InstalledFiles, std::default_delete<RiscBoot::InstalledFiles> >::reset(RiscBoot::InstalledFiles*)
+00000000 00000012 W std::__uniq_ptr_impl<RiscBoot::SettingsSession, std::default_delete<RiscBoot::SettingsSession> >::reset(RiscBoot::SettingsSession*)
+00000000 00000014 W std::__uniq_ptr_impl<RiscBoot::StorageFilesVolumeAdapter, std::default_delete<RiscBoot::StorageFilesVolumeAdapter> >::reset(RiscBoot::StorageFilesVolumeAdapter*)
+00000000 00000021 W std::__uniq_ptr_impl<RiscBoot::Runtime::Invocation, std::default_delete<RiscBoot::Runtime::Invocation> >::reset(RiscBoot::Runtime::Invocation*)
+         U std::chrono::_V2::steady_clock::now()
+         U std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_dispose()
+         U std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_S_copy(char*, char const*, unsigned int)
+         U std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned int)
+         U std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_create(unsigned int&, unsigned int)
+         U std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::push_back(char)
+         U std::__throw_length_error(char const*)
+         U std::nothrow
+00000000 00000014 V vtable for ArduinoJson::V742HB22::detail::DefaultAllocator
+00000000 0000005c r risc_runtime_get_api::api
+00000000 00000018 t risc_runtime_get_api::{lambda(risc_stream_client_v1*)#1}::_FUN(risc_stream_client_v1*)
+00000000 00000018 t risc_runtime_get_api::{lambda(risc_runtime_health_v1*)#1}::_FUN(risc_runtime_health_v1*)
+00000000 00000018 t risc_runtime_get_api::{lambda(risc_resident_client_v1*)#1}::_FUN(risc_resident_client_v1*)
+00000000 00000018 t risc_runtime_get_api::{lambda(risc_runtime_capability_v1*)#1}::_FUN(risc_runtime_capability_v1*)
+00000000 00000018 t risc_runtime_get_api::{lambda(risc_runtime_launch_failure_v1*)#1}::_FUN(risc_runtime_launch_failure_v1*)
+00000000 00000018 t risc_runtime_get_api::{lambda(risc_failure_evidence_client_v1*)#1}::_FUN(risc_failure_evidence_client_v1*)
+00000000 00000018 t risc_runtime_get_api::{lambda(risc_diagnostic_checkpoint_client_v1*)#1}::_FUN(risc_diagnostic_checkpoint_client_v1*)
+00000000 00000018 t risc_runtime_get_api::{lambda(char const*)#2}::_FUN(char const*)
+00000000 00000018 t risc_runtime_get_api::{lambda(char const*)#1}::_FUN(char const*)
+00000000 00000020 t risc_runtime_get_api::{lambda(char const*, unsigned long, unsigned long long, risc_runtime_capability_v1*)#1}::_FUN(char const*, unsigned long, unsigned long long, risc_runtime_capability_v1*)
+00000000 00000018 t risc_runtime_get_api::{lambda(unsigned long*)#1}::_FUN(unsigned long*)
+00000000 00000020 t risc_runtime_get_api::{lambda(unsigned long long*)#1}::_FUN(unsigned long long*)
+00000000 00000014 t risc_runtime_get_api::{lambda(unsigned long)#1}::_FUN(unsigned long)
+00000000 0000007c t risc_runtime_get_api::{lambda(unsigned long, unsigned long, unsigned long)#1}::_FUN(unsigned long, unsigned long, unsigned long)
+00000000 00000016 t risc_runtime_get_api::{lambda()#2}::_FUN()
+00000000 00000016 t risc_runtime_get_api::{lambda()#3}::_FUN()
+00000000 00000016 t risc_runtime_get_api::{lambda()#4}::_FUN()
+00000000 00000016 t risc_runtime_get_api::{lambda()#5}::_FUN()
+00000000 00000016 t risc_runtime_get_api::{lambda()#6}::_FUN()
+00000000 00000016 t risc_runtime_get_api::{lambda()#1}::_FUN()
+00000000 0000001a t risc_runtime_get_api::{lambda(unsigned long long)#1}::_FUN(unsigned long long)
+00000000 00000048 V ArduinoJson::V742HB22::detail::FloatTraits<double, 8u>::negativeBinaryPowersOfTen()::factors
+00000000 00000048 V ArduinoJson::V742HB22::detail::FloatTraits<double, 8u>::positiveBinaryPowersOfTen()::factors
+00000000 00000018 V ArduinoJson::V742HB22::detail::FloatTraits<float, 4u>::negativeBinaryPowersOfTen()::factors
+00000000 00000018 V ArduinoJson::V742HB22::detail::FloatTraits<float, 4u>::positiveBinaryPowersOfTen()::factors
+00000000 00000004 V ArduinoJson::V742HB22::detail::DefaultAllocator::instance()::allocator
+00000000 00000088 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, risc_app_data_export_entry_v1*)#20}::operator()(void*, unsigned long, risc_app_data_export_entry_v1*) const
+00000000 00000088 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, risc_app_data_export_entry_v1*)#1}::operator()(void*, unsigned long, risc_app_data_export_entry_v1*) const
+00000000 0000002b W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*)#2}::_FUN(void*)
+00000000 0000002b W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*)#1}::_FUN(void*)
+00000000 0000001b W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*)#2}::_FUN(void*, char const*)
+00000000 00000084 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*)#5}::_FUN(void*, char const*)
+00000000 0000001b W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*)#10}::_FUN(void*, char const*)
+00000000 00000084 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*)#1}::_FUN(void*, char const*)
+00000000 0000002e W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long*, unsigned long long*)#16}::_FUN(void*, char const*, unsigned long*, unsigned long long*)
+00000000 0000002e W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long*, unsigned long long*)#1}::_FUN(void*, char const*, unsigned long*, unsigned long long*)
+00000000 0000001d W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long long*)#8}::_FUN(void*, char const*, unsigned long long*)
+00000000 0000001d W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long long*)#1}::_FUN(void*, char const*, unsigned long long*)
+00000000 0000006f W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long long*, bool*)#4}::_FUN(void*, char const*, unsigned long long*, bool*)
+00000000 0000006f W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long long*, bool*)#1}::_FUN(void*, char const*, unsigned long long*, bool*)
+00000000 000000d7 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long long, void const*, unsigned long)#18}::_FUN(void*, char const*, unsigned long long, void const*, unsigned long)
+00000000 000000d7 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long long, void const*, unsigned long)#1}::_FUN(void*, char const*, unsigned long long, void const*, unsigned long)
+00000000 0000003a W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long long, void*, unsigned long, unsigned long*, unsigned long long*)#17}::_FUN(void*, char const*, unsigned long long, void*, unsigned long, unsigned long*, unsigned long long*)
+00000000 0000003a W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char const*, unsigned long long, void*, unsigned long, unsigned long*, unsigned long long*)#1}::_FUN(void*, char const*, unsigned long long, void*, unsigned long, unsigned long*, unsigned long long*)
+00000000 00000051 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char*, unsigned int)#2}::_FUN(void*, char*, unsigned int)
+00000000 00000051 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char*, unsigned int)#13}::_FUN(void*, char*, unsigned int)
+00000000 00000066 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char*, unsigned int)#3}::_FUN(void*, char*, unsigned int)
+00000000 00000066 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, char*, unsigned int)#1}::_FUN(void*, char*, unsigned int)
+00000000 0000001b W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long)#2}::_FUN(void*, unsigned long)
+00000000 0000001b W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long)#14}::_FUN(void*, unsigned long)
+00000000 00000044 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long)#19}::_FUN(void*, unsigned long)
+00000000 00000044 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long)#3}::_FUN(void*, unsigned long)
+00000000 00000017 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long)#7}::_FUN(void*, unsigned long)
+00000000 00000017 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long)#1}::_FUN(void*, unsigned long)
+00000000 0000001d W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, risc_storage_dirent_v1*)#6}::_FUN(void*, unsigned long, risc_storage_dirent_v1*)
+00000000 0000001d W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, risc_storage_dirent_v1*)#1}::_FUN(void*, unsigned long, risc_storage_dirent_v1*)
+00000000 00000015 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, risc_app_data_export_entry_v1*)#20}::_FUN(void*, unsigned long, risc_app_data_export_entry_v1*)
+00000000 00000015 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, risc_app_data_export_entry_v1*)#1}::_FUN(void*, unsigned long, risc_app_data_export_entry_v1*)
+00000000 0000008d W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, void const*, unsigned int)#11}::_FUN(void*, unsigned long, void const*, unsigned int)
+00000000 0000008d W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, void const*, unsigned int)#1}::_FUN(void*, unsigned long, void const*, unsigned int)
+00000000 0000008f W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, void*, unsigned int)#9}::_FUN(void*, unsigned long, void*, unsigned int)
+00000000 0000008f W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, void*, unsigned int)#1}::_FUN(void*, unsigned long, void*, unsigned int)
+00000000 00000051 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, bool)#2}::_FUN(void*, unsigned long, bool)
+00000000 00000020 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, bool)#12}::_FUN(void*, unsigned long, bool)
+00000000 00000051 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, bool)#15}::_FUN(void*, unsigned long, bool)
+00000000 00000020 W RiscStorage::AppDataExport::begin(risc_app_data_export_v1*)::{lambda(void*, unsigned long, bool)#1}::_FUN(void*, unsigned long, bool)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*)#2}::_FUN(void*, char const*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*)#12}::_FUN(void*, char const*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*)#10}::_FUN(void*, char const*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*)#1}::_FUN(void*, char const*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*, risc_storage_files_stat_v1*)#9}::_FUN(void*, char const*, risc_storage_files_stat_v1*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*, risc_storage_files_stat_v1*)#1}::_FUN(void*, char const*, risc_storage_files_stat_v1*)
+00000000 0000000d W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*, unsigned long*)#13}::_FUN(void*, char const*, unsigned long*)
+00000000 0000000d W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*, unsigned long*)#1}::_FUN(void*, char const*, unsigned long*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*, char const*)#11}::_FUN(void*, char const*, char const*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*, char const*)#1}::_FUN(void*, char const*, char const*)
+00000000 00000015 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, char const*, unsigned long, unsigned long*)#1}::_FUN(void*, char const*, unsigned long, unsigned long*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long)#2}::_FUN(void*, unsigned long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long)#15}::_FUN(void*, unsigned long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long)#16}::_FUN(void*, unsigned long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long)#3}::_FUN(void*, unsigned long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long)#4}::_FUN(void*, unsigned long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long)#7}::_FUN(void*, unsigned long)
+00000000 0000004b W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long)#1}::_FUN(void*, unsigned long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, risc_storage_files_entry_v1*)#14}::_FUN(void*, unsigned long, risc_storage_files_entry_v1*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, risc_storage_files_entry_v1*)#1}::_FUN(void*, unsigned long, risc_storage_files_entry_v1*)
+00000000 0000000d W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, void const*, unsigned long, unsigned long*)#4}::_FUN(void*, unsigned long, void const*, unsigned long, unsigned long*)
+00000000 0000000d W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, void const*, unsigned long, unsigned long*)#1}::_FUN(void*, unsigned long, void const*, unsigned long, unsigned long*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long*)#17}::_FUN(void*, unsigned long, unsigned long long*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long*)#1}::_FUN(void*, unsigned long, unsigned long long*)
+00000000 00000037 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long*, unsigned long long*)#6}::_FUN(void*, unsigned long, unsigned long long*, unsigned long long*)
+00000000 00000037 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long*, unsigned long long*)#1}::_FUN(void*, unsigned long, unsigned long long*, unsigned long long*)
+00000000 000000c4 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, void*, unsigned long, unsigned long*)#3}::_FUN(void*, unsigned long, void*, unsigned long, unsigned long*)
+00000000 000000c4 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, void*, unsigned long, unsigned long*)#1}::_FUN(void*, unsigned long, void*, unsigned long, unsigned long*)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long)#2}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long)#18}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long)#3}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long)#5}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long)#8}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000007 W RiscStorage::VolumeImageFiles::VolumeImageFiles(risc_storage_volume_api_v1 const*, bool (*)(void*), void*)::{lambda(void*, unsigned long, unsigned long long)#1}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000050 W RiscBoot::RuntimeFileImage::read(RiscBoot::RuntimeFileView, char const*, RiscBoot::RuntimeFileImage::Hooks, unsigned int, unsigned int)::{lambda(unsigned int)#2}::operator()(unsigned int) const
+00000000 00000050 W RiscBoot::RuntimeFileImage::read(RiscBoot::RuntimeFileView, char const*, RiscBoot::RuntimeFileImage::Hooks, unsigned int, unsigned int)::{lambda(unsigned int)#1}::operator()(unsigned int) const
+00000000 00000020 W RiscBoot::RuntimeFileImage::read(RiscBoot::RuntimeFileView, char const*, RiscBoot::RuntimeFileImage::Hooks, unsigned int, unsigned int)::{lambda()#1}::operator()() const
+00000000 00000007 W RiscBoot::RemovableAppImage::read(void const*, bool, char const*, RiscBoot::RuntimeFileImage::Hooks)::{lambda()#2}::_FUN()
+00000000 00000007 W RiscBoot::RemovableAppImage::read(void const*, bool, char const*, RiscBoot::RuntimeFileImage::Hooks)::{lambda()#1}::_FUN()
+00000000 00000020 r RiscBoot::Runtime::fileOpenApi()::api
+00000000 00000018 t RiscBoot::Runtime::fileOpenApi()::{lambda(char const*)#1}::_FUN(char const*)
+00000000 0000001e t RiscBoot::Runtime::fileOpenApi()::{lambda(char const*, char const*, unsigned long long)#1}::_FUN(char const*, char const*, unsigned long long)
+00000000 0000002f t RiscBoot::Runtime::fileOpenApi()::{lambda(char const*, unsigned long, t5_file_handler_t*)#1}::_FUN(char const*, unsigned long, t5_file_handler_t*)
+00000000 00000023 t RiscBoot::Runtime::fileOpenApi()::{lambda(char*, unsigned int)#1}::_FUN(char*, unsigned int)
+00000000 0000001a t RiscBoot::Runtime::fileOpenApi()::{lambda(long*, unsigned long long*)#1}::_FUN(long*, unsigned long long*)
+00000000 00000016 t RiscBoot::Runtime::fileOpenApi()::{lambda()#1}::_FUN()
+00000000 00000033 t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*)#2}::_FUN(void*)
+00000000 00000030 t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*)#1}::_FUN(void*)
+00000000 0000007d t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*, char const*)#1}::_FUN(void*, char const*)
+00000000 000000a3 t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*, char const*, unsigned long long*)#1}::_FUN(void*, char const*, unsigned long long*)
+00000000 000000a0 t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*, char const*, unsigned long long*, bool*)#1}::_FUN(void*, char const*, unsigned long long*, bool*)
+00000000 00000034 t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*, char*, unsigned int)#2}::_FUN(void*, char*, unsigned int)
+00000000 00000022 t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*, char*, unsigned int)#1}::_FUN(void*, char*, unsigned int)
+00000000 00000046 t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*, unsigned long)#1}::_FUN(void*, unsigned long)
+00000000 0000002c t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*, unsigned long, risc_storage_dirent_v1*)#1}::_FUN(void*, unsigned long, risc_storage_dirent_v1*)
+00000000 0000002e t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*, unsigned long, void*, unsigned int)#1}::_FUN(void*, unsigned long, void*, unsigned int)
+00000000 0000004d t RiscBoot::Runtime::volumeTable(void*)::{lambda(void*, unsigned long, bool)#1}::_FUN(void*, unsigned long, bool)
+00000000 0000008b t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::{lambda(unsigned long long, risc_runtime_capability_v1 const*, void const*, unsigned long, unsigned long, risc_stream_opened_v1*)#1}::_FUN(unsigned long long, risc_runtime_capability_v1 const*, void const*, unsigned long, unsigned long, risc_stream_opened_v1*)
+00000000 0000005b t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::{lambda(unsigned long long, unsigned long long, risc_stream_client_info_v1*)#1}::_FUN(unsigned long long, unsigned long long, risc_stream_client_info_v1*)
+00000000 0000006a t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::{lambda(unsigned long long, unsigned long long, void const*, unsigned long, unsigned long*)#1}::_FUN(unsigned long long, unsigned long long, void const*, unsigned long, unsigned long*)
+00000000 00000079 t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::{lambda(unsigned long long, unsigned long long, void const*, unsigned long, unsigned long, void*, unsigned long, unsigned long*)#1}::_FUN(unsigned long long, unsigned long long, void const*, unsigned long, unsigned long, void*, unsigned long, unsigned long*)
+00000000 0000006a t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::{lambda(unsigned long long, unsigned long long, void*, unsigned long, unsigned long*)#1}::_FUN(unsigned long long, unsigned long long, void*, unsigned long, unsigned long*)
+00000000 0000005b t RiscBoot::Runtime::streamClient(risc_stream_client_v1*)::{lambda(unsigned long long, unsigned long long, unsigned long)#1}::_FUN(unsigned long long, unsigned long long, unsigned long)
+00000000 000000b7 t RiscBoot::Runtime::runForeground(unsigned long long, char const*, risc_resident_result_v1*)::{lambda()#1}::operator()() const
+00000000 00000069 t _ZZN8RiscBoot7Runtime14appExitBarrierEbENKUlRNS0_10InvocationEE_clES2_$isra$0
+00000000 0000000b t _ZZN8RiscBoot7Runtime14appExitBarrierEbENKUlbPKcE_clEbS2_$part$0$isra$0
+00000000 0000001a t RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::{lambda(unsigned long long)#1}::_FUN(unsigned long long)
+00000000 0000001c t RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::{lambda(unsigned long long, risc_resident_failure_v1*)#1}::_FUN(unsigned long long, risc_resident_failure_v1*)
+00000000 0000001e t RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::{lambda(unsigned long long, risc_resident_request_v1 const*, risc_resident_reply_v1*)#1}::_FUN(unsigned long long, risc_resident_request_v1 const*, risc_resident_reply_v1*)
+00000000 0000001c t RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::{lambda(unsigned long long, risc_resident_callbacks_v1 const*)#1}::_FUN(unsigned long long, risc_resident_callbacks_v1 const*)
+00000000 0000001e t RiscBoot::Runtime::residentClient(risc_resident_client_v1*)::{lambda(unsigned long long, char const*, risc_resident_result_v1*)#1}::_FUN(unsigned long long, char const*, risc_resident_result_v1*)
+00000000 0000002b t RiscBoot::Runtime::openDriverImage(void*, char const*, void const*)::{lambda(void*)#2}::_FUN(void*)
+00000000 0000000d t RiscBoot::Runtime::openDriverImage(void*, char const*, void const*)::{lambda(void*)#1}::_FUN(void*)
+00000000 00000013 t RiscBoot::Runtime::openDriverImage(void*, char const*, void const*)::{lambda(void*, char const*, elf_file*)#1}::_FUN(void*, char const*, elf_file*)
+00000000 00000091 t RiscBoot::Runtime::openDriverImage(void*, char const*, void const*)::{lambda(void*, unsigned int)#1}::_FUN(void*, unsigned int)
+00000000 0000000f t RiscBoot::Runtime::openDriverImage(void*, char const*, void const*)::{lambda(unsigned int)#1}::_FUN(unsigned int)
+00000000 0000006a t RiscBoot::Runtime::loadRemovableApp(RiscBoot::Runtime::AppPolicy const&)::{lambda()#1}::operator()() const
+00000000 00000039 t RiscBoot::Runtime::loadRemovableApp(RiscBoot::Runtime::AppPolicy const&)::{lambda(void*)#2}::_FUN(void*)
+00000000 0000000d t RiscBoot::Runtime::loadRemovableApp(RiscBoot::Runtime::AppPolicy const&)::{lambda(void*)#1}::_FUN(void*)
+00000000 00000019 t RiscBoot::Runtime::loadRemovableApp(RiscBoot::Runtime::AppPolicy const&)::{lambda(void*, char const*, elf_file*)#1}::_FUN(void*, char const*, elf_file*)
+00000000 00000091 t RiscBoot::Runtime::loadRemovableApp(RiscBoot::Runtime::AppPolicy const&)::{lambda(void*, unsigned int)#1}::_FUN(void*, unsigned int)
+00000000 00000011 t RiscBoot::Runtime::loadRemovableApp(RiscBoot::Runtime::AppPolicy const&)::{lambda(unsigned int)#1}::_FUN(unsigned int)
+00000000 0000001d t RiscBoot::Runtime::readRuntimeImage(char const*, RiscBoot::RuntimeFileImage&, unsigned int, bool)::{lambda(void*)#2}::_FUN(void*)
+00000000 0000000d t RiscBoot::Runtime::readRuntimeImage(char const*, RiscBoot::RuntimeFileImage&, unsigned int, bool)::{lambda(void*)#3}::_FUN(void*)
+00000000 0000000d t RiscBoot::Runtime::readRuntimeImage(char const*, RiscBoot::RuntimeFileImage&, unsigned int, bool)::{lambda(void*)#1}::_FUN(void*)
+00000000 0000009c t RiscBoot::Runtime::readRuntimeImage(char const*, RiscBoot::RuntimeFileImage&, unsigned int, bool)::{lambda(void*, unsigned int)#1}::_FUN(void*, unsigned int)
+00000000 00000022 t RiscBoot::Runtime::readRuntimeImage(char const*, RiscBoot::RuntimeFileImage&, unsigned int, bool)::{lambda(unsigned int)#2}::_FUN(unsigned int)
+00000000 0000000f t RiscBoot::Runtime::readRuntimeImage(char const*, RiscBoot::RuntimeFileImage&, unsigned int, bool)::{lambda(unsigned int)#1}::_FUN(unsigned int)
+00000000 00000034 r RiscBoot::Runtime::fileOpenSourceApi()::api
+00000000 00000018 t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(risc_file_open_source_info_v1*)#1}::_FUN(risc_file_open_source_info_v1*)
+00000000 00000018 t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(char const*)#2}::_FUN(char const*)
+00000000 00000018 t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(char const*)#1}::_FUN(char const*)
+00000000 0000002f t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(char const*, unsigned long, t5_file_handler_t*)#1}::_FUN(char const*, unsigned long, t5_file_handler_t*)
+00000000 00000026 t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(char const*, unsigned long long, unsigned long long*)#1}::_FUN(char const*, unsigned long long, unsigned long long*)
+00000000 0000001a t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(long*, unsigned long long*)#1}::_FUN(long*, unsigned long long*)
+00000000 0000001a t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(unsigned long long)#2}::_FUN(unsigned long long)
+00000000 0000001a t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(unsigned long long)#1}::_FUN(unsigned long long)
+00000000 00000020 t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(unsigned long long, char const*, unsigned long long)#1}::_FUN(unsigned long long, char const*, unsigned long long)
+00000000 00000026 t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(unsigned long long, void const*, unsigned long, unsigned long*)#1}::_FUN(unsigned long long, void const*, unsigned long, unsigned long*)
+00000000 0000002c t RiscBoot::Runtime::fileOpenSourceApi()::{lambda(unsigned long long, unsigned long long, void*, unsigned long, unsigned long*)#1}::_FUN(unsigned long long, unsigned long long, void*, unsigned long, unsigned long*)
+00000000 0000003f t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, char const*)#2}::_FUN(void*, char const*)
+00000000 0000003f t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, char const*)#1}::_FUN(void*, char const*)
+00000000 00000043 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, char const*, risc_storage_files_stat_v1*)#1}::_FUN(void*, char const*, risc_storage_files_stat_v1*)
+00000000 00000047 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, char const*, unsigned long*)#1}::_FUN(void*, char const*, unsigned long*)
+00000000 00000041 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, char const*, char const*)#1}::_FUN(void*, char const*, char const*)
+00000000 00000049 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, char const*, unsigned long, unsigned long*)#1}::_FUN(void*, char const*, unsigned long, unsigned long*)
+00000000 0000003f t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long)#2}::_FUN(void*, unsigned long)
+00000000 00000041 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long)#3}::_FUN(void*, unsigned long)
+00000000 0000003f t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long)#4}::_FUN(void*, unsigned long)
+00000000 00000041 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long)#1}::_FUN(void*, unsigned long)
+00000000 00000041 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long, risc_storage_files_entry_v1*)#1}::_FUN(void*, unsigned long, risc_storage_files_entry_v1*)
+00000000 0000004f t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long, void const*, unsigned long, unsigned long*)#1}::_FUN(void*, unsigned long, void const*, unsigned long, unsigned long*)
+00000000 00000041 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long, unsigned long long*)#1}::_FUN(void*, unsigned long, unsigned long long*)
+00000000 00000045 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long, unsigned long long*, unsigned long long*)#1}::_FUN(void*, unsigned long, unsigned long long*, unsigned long long*)
+00000000 0000004f t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long, void*, unsigned long, unsigned long*)#1}::_FUN(void*, unsigned long, void*, unsigned long, unsigned long*)
+00000000 00000045 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long, unsigned long long)#2}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000045 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long, unsigned long long)#3}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000045 t RiscBoot::Runtime::storageFilesTable(void*)::{lambda(void*, unsigned long, unsigned long long)#1}::_FUN(void*, unsigned long, unsigned long long)
+00000000 00000040 t _ZZN8RiscBoot7Runtime18appCatalogMetadataEN11ArduinoJson8V742HB2215JsonObjectConstERNS0_18AppCatalogMetadataEENKUlNS2_16JsonVariantConstEPcjE_clES6_S7_j$isra$0
+00000000 00000011 t RiscBoot::Runtime::acquireAppDataExport()::{lambda(unsigned int)#1}::_FUN(unsigned int)
+00000000 0000001c t RiscBoot::Runtime::failureEvidenceClient(risc_failure_evidence_client_v1*)::{lambda(unsigned long long, risc_failure_evidence_v1*)#1}::_FUN(unsigned long long, risc_failure_evidence_v1*)
+00000000 0000001e t RiscBoot::Runtime::failureEvidenceClient(risc_failure_evidence_client_v1*)::{lambda(unsigned long long, unsigned long, unsigned long)#1}::_FUN(unsigned long long, unsigned long, unsigned long)
+00000000 00000064 t RiscBoot::Runtime::configureInstalledFiles(ArduinoJson::V742HB22::JsonObjectConst)::{lambda(char const*)#1}::operator()(char const*) const
+00000000 0000001e t RiscBoot::Runtime::diagnosticCheckpointClient(risc_diagnostic_checkpoint_client_v1*)::{lambda(unsigned long long, char const*, unsigned long)#1}::_FUN(unsigned long long, char const*, unsigned long)
+00000000 00000010 r RiscBoot::Runtime::run()::symbols
+00000000 00000098 t RiscBoot::Runtime::run()::{lambda()#1}::operator()() const
+00000000 0000001c t RiscBoot::Runtime::yield(unsigned long)::{lambda()#1}::_FUN()
+00000000 00000024 t _ZZN8RiscBoot7Runtime7acquireEPKcmyP26risc_runtime_capability_v1ENKUlvE0_clEv$isra$0
+00000000 00000044 t RiscBoot::Runtime::acquire(char const*, unsigned long, unsigned long long, risc_runtime_capability_v1*)::{lambda()#1}::operator()() const
+00000000 00000050 t RiscBoot::Runtime::atomicExitSafe(bool) const::{lambda(RiscBoot::Runtime::Invocation const&)#1}::operator()(RiscBoot::Runtime::Invocation const&) const
+00000000 00000020 t _ZZNK8RiscBoot7Runtime18validateCohortImplERS0_PKcPFbPvS3_bES4_PKNS0_23AppDataExportDelegationEjPKN10RiscUpdate27NativeAppDataExportPolicyV1EPKNSA_27NativeAppDataExportPolicyV2EENKUlRKNS0_14AppGrantPolicyEE_clESJ_$isra$0
+00000000 00000077 t _ZZNK8RiscBoot7Runtime18validateCohortImplERS0_PKcPFbPvS3_bES4_PKNS0_23AppDataExportDelegationEjPKN10RiscUpdate27NativeAppDataExportPolicyV1EPKNSA_27NativeAppDataExportPolicyV2EENKUlRKNS0_14AppGrantPolicyESJ_E_clESJ_SJ_$isra$0
+00000000 00000054 t _ZZNK8RiscBoot7Runtime18validateCohortImplERS0_PKcPFbPvS3_bES4_PKNS0_23AppDataExportDelegationEjPKN10RiscUpdate27NativeAppDataExportPolicyV1EPKNSA_27NativeAppDataExportPolicyV2EENKUlRKNSA_27NativeAppDataExportCohortV1ERKNSA_14CohortIdentityEE0_clESJ_SM_$isra$0
+00000000 00000054 t _ZZNK8RiscBoot7Runtime18validateCohortImplERS0_PKcPFbPvS3_bES4_PKNS0_23AppDataExportDelegationEjPKN10RiscUpdate27NativeAppDataExportPolicyV1EPKNSA_27NativeAppDataExportPolicyV2EENKUlRKNSA_27NativeAppDataExportCohortV1ERKNSA_14CohortIdentityEE_clESJ_SM_$isra$0
+00000000 0000006b t RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, char const*, bool (*)(void*, char const*, bool), void*, RiscBoot::Runtime::AppDataExportDelegation const*, unsigned int, RiscUpdate::NativeAppDataExportPolicyV1 const*, RiscUpdate::NativeAppDataExportPolicyV2 const*) const::{lambda(char const*)#1}::operator()(char const*) const
+00000000 0000008e t _ZZNK8RiscBoot7Runtime18validateCohortImplERS0_PKcPFbPvS3_bES4_PKNS0_23AppDataExportDelegationEjPKN10RiscUpdate27NativeAppDataExportPolicyV1EPKNSA_27NativeAppDataExportPolicyV2EENKUlmE0_clEm$isra$0
+00000000 000000a3 t _ZZNK8RiscBoot7Runtime18validateCohortImplERS0_PKcPFbPvS3_bES4_PKNS0_23AppDataExportDelegationEjPKN10RiscUpdate27NativeAppDataExportPolicyV1EPKNSA_27NativeAppDataExportPolicyV2EENKUlmE_clEm$isra$0
+00000000 00000024 t RiscBoot::Runtime::validateCohortImpl(RiscBoot::Runtime&, char const*, bool (*)(void*, char const*, bool), void*, RiscBoot::Runtime::AppDataExportDelegation const*, unsigned int, RiscUpdate::NativeAppDataExportPolicyV1 const*, RiscUpdate::NativeAppDataExportPolicyV2 const*) const::{lambda(void*)#1}::_FUN(void*)
+00000000 0000003b t _ZZNK8RiscBoot7Runtime19installationMutableEjENKUlRKNS_13FileOpenStateEE_clES3_$isra$0
+00000000 00000077 t RiscBoot::Runtime::installedLaunchPath(char const*, char*, unsigned int, bool*) const::{lambda(unsigned int)#1}::operator()(unsigned int) const
+00000000 0000003b t _ZZNK8RiscBoot7Runtime20storageFilesExitSafeEbENKUlRKNS0_10InvocationEE_clES3_$isra$0
+00000000 00000041 t RiscBoot::Runtime::keyValueReconciliationSafe(unsigned long) const::{lambda(RiscBoot::Runtime::Invocation const&)#1}::operator()(RiscBoot::Runtime::Invocation const&) const
+00000000 000000d1 t _ZZNK8RiscBoot7Runtime27validateAppDataExportCohortERKS0_PKNS0_23AppDataExportDelegationEjbENKUlRKNS0_9AppPolicyEPKcPKN11RiscStorage13AppDataExport5EntryEjE_clES8_SA_SF_j$isra$0
+00000000 00000028 t _ZZZNK8RiscBoot7Runtime18validateCohortImplERS0_PKcPFbPvS3_bES4_PKNS0_23AppDataExportDelegationEjPKN10RiscUpdate27NativeAppDataExportPolicyV1EPKNSA_27NativeAppDataExportPolicyV2EENKUlRKNSA_27NativeAppDataExportCohortV1ERKNSA_14CohortIdentityEE_clESJ_SM_ENKUlS3_S3_jE_clES3_S3_j$isra$0
+         U operator delete(void*, unsigned int)
+         U operator new(unsigned int, std::nothrow_t const&)
+         U __adddf3
+         U __eqdf2
+         U __errno
+         U __extendsfdf2
+         U __fixdfdi
+         U __fixsfdi
+         U __fixunsdfdi
+         U __fixunsdfsi
+         U __fixunssfdi
+         U __floatdidf
+         U __floatsidf
+         U __floatundidf
+         U __floatunsidf
+         U __gedf2
+         U __gtdf2
+         U __ledf2
+         U __ltdf2
+         U __muldf3
+         U __nedf2
+         U __subdf3
+         U __truncdfsf2
+         U __udivdi3
+         U __umoddi3
+         U abort
+         U dlclose
+         U dlsym
+         U esp_dl_image_cache_reclaim
+         U esp_dlopen_cached_reader_instance
+         U esp_dlopen_reader_instance
+         U esp_elf_admit_managed_app
+         U esp_elf_free
+         U esp_elf_malloc
+         U esp_elf_privileged_selected_import_supported_with_diagnostics_v2
+         U esp_elf_register_symbol
+         U esp_elf_validate_file
+         U free
+         U heap_caps_free
+         U heap_caps_malloc
+         U malloc
+         U mbedtls_sha256_finish_ret
+         U mbedtls_sha256_free
+         U mbedtls_sha256_starts_ret
+         U mbedtls_sha256_update_ret
+         U memchr
+         U memcmp
+         U memcpy
+         U memmove
+         U memset
+00000000 00000004 V nativePsaHashLive
+         U native_app_memory_begin_for
+         U native_app_memory_end
+         U native_app_memory_relocation
+         U native_app_memory_retain_all
+         U native_app_memory_select
+         U realloc
+00000000 00000004 R risc_installed_app_capacity
+00000000 0000001a R risc_platform_capacity
+00000000 00000020 T risc_runtime_get_api
+00000000 00000007 T risc_runtime_reclaim_app_images
+         U snprintf
+         U strcat
+         U strchr
+         U strcmp
+         U strcpy
+         U strlen
+         U strncmp
+         U strnlen
+         U strrchr
+         U strstr
+         U vTaskDelay

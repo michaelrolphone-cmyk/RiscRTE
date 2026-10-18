@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'src/runtime/serial/**'
+      - 'src/runtime/drivers/ProviderGraphV2.*'
       - 'src/diagnostics/Journal.h'
       - 'test/*diagnostic_checkpoint*'
       - 'src/runtime/storage/**'
@@ -23,6 +24,10 @@ on:
       - 'test/native_serial_product_provider.c'
       - 'test/*serial_waveshare*'
       - 'test/*serial_x4*'
+      - 'test/*serial_lifetime*'
+      - 'test/native_serial_post_return_client_test.py'
+      - 'test/drivers/provider_keep_set*'
+      - 'test/run_provider_keep_set_test.sh'
       - 'test/*spiffs*'
       - 'test/*littlefs*'
       - 'test/native_littlefs_profile_stubs/**'
@@ -55,10 +60,30 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/RiscRTE-Wavshare-S3-Touch-AMOLED-2.06
-          ref: 51242f0bb9e20b5298b3a213a977fc3a18384f4a
+          ref: e1b2fc8b801b33e3bd6ea30626a8dda9bf2237a6
           path: .qualification/waveshare
-      - name: Exact async SD provider through independent native graph admission
-        run: WAVESHARE_SOURCE="$GITHUB_WORKSPACE/.qualification/waveshare" python3 test/run_native_serial_waveshare_sd_test.py
+      - name: Exact async SD plus independent LittleFS across clean Runtime return
+        run: |
+          set -o pipefail
+          python3 test/run_native_serial_waveshare_sd_test.py \
+            --waveshare "$GITHUB_WORKSPACE/.qualification/waveshare" \
+            --output "$RUNNER_TEMP/wave-native-serial" \
+            2>&1 | tee "$RUNNER_TEMP/wave-native-serial.log"
+      - name: Preserve post-return source and actual-client qualification
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: wave-post-return-serial-${{ matrix.sanitize }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/wave-native-serial/*.json
+            ${{ runner.temp }}/wave-native-serial/bounded-workspaces.txt
+            ${{ runner.temp }}/wave-native-serial.log
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Exact retained graph closure and immutable keep-set validation
+        run: bash test/run_provider_keep_set_test.sh
+      - name: Native lifetime admission, temporary readiness and leaked-custody fences
+        run: bash test/run_native_serial_lifetime_guards_test.sh
       - name: Exact X4 source reference for bounded RAM-media qualification
         uses: actions/checkout@v4
         with:

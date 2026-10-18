@@ -1,0 +1,7 @@
+In file included from /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/NativeProviderPolicyValidationV1.h:11,
+                 from /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderOwnedSpecV2.h:4,
+                 from /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:5:
+/workspace/shared/serial-lifetime-20261018/src/runtime/crypto/Sha256.h:5:10: fatal error: psa/crypto.h: No such file or directory
+    5 | #include <psa/crypto.h>
+      |          ^~~~~~~~~~~~~~
+compilation terminated.

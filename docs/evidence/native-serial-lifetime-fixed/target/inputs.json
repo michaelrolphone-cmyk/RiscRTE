@@ -1,0 +1,899 @@
+{
+  "archive": {
+    "path": "/workspace/shared/wave-stat-successor/wave060-first-native-evidence.zip",
+    "bytes": 108743947,
+    "sha256": "cd98455e4523234d8bcfc72fd0261abfc8c150c0660c2af521feac97cded31b1"
+  },
+  "qualification": {
+    "path": "/workspace/shared/wave-stat-successor/public-native-qualification.json",
+    "bytes": 1935814,
+    "sha256": "82dd159228783332e88cc86f54576cc12385ee6f089762228d6fc8f162e9ce24"
+  },
+  "compile_commands": {
+    "path": "/workspace/shared/serial-lifetime-evidence/target/prior-evidence/compile_commands.json",
+    "bytes": 6114750,
+    "sha256": "96bf7bcf7930ebbad5b921fb990f74865c066df3edb3d187ea437b146fb2c392",
+    "expected_record": {
+      "bytes": 6114750,
+      "sha256": "96bf7bcf7930ebbad5b921fb990f74865c066df3edb3d187ea437b146fb2c392"
+    },
+    "matches_recorded": true
+  },
+  "sdkconfig_header": {
+    "path": "/workspace/shared/serial-lifetime-evidence/target/prior-evidence/config/sdkconfig.h",
+    "bytes": 52510,
+    "sha256": "d5de88b11b2c416518303f036e3a8c3ec2cd3a1d0a26dda4390c3c79f25a9602",
+    "expected_record": {
+      "bytes": 52510,
+      "sha256": "d5de88b11b2c416518303f036e3a8c3ec2cd3a1d0a26dda4390c3c79f25a9602"
+    },
+    "matches_recorded": true
+  },
+  "profile_header": {
+    "path": "/workspace/shared/wave-stat-successor/wave/profiles/native-idf61-settings.h",
+    "bytes": 850,
+    "sha256": "37ddfd9feb4b70fbcd9f87b523dec3847a77d4c4bcb6d9b9da5f7fc39fb5382b",
+    "matching_prior_records": [
+      {
+        "path": "/__w/_temp/wave-stat-diagnostic-native/sources/product/profiles/native-idf61-settings.h",
+        "bytes": 850,
+        "kind": "source",
+        "sha256": "37ddfd9feb4b70fbcd9f87b523dec3847a77d4c4bcb6d9b9da5f7fc39fb5382b"
+      }
+    ],
+    "matches_prior_hash": true
+  },
+  "tools": {
+    "ar": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-ar",
+      "bytes": 1120536,
+      "sha256": "06a837360acecf0a4180177ebe2a9254db498f4fb9235167bd531893c3995ae0",
+      "expected_recorded_sha256": "06a837360acecf0a4180177ebe2a9254db498f4fb9235167bd531893c3995ae0",
+      "matches_recorded": true
+    },
+    "as": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-as",
+      "bytes": 1467320,
+      "sha256": "8721bc80576272b18243433b4f200b8eb5d73c1b0876befb36f1fbbb253c7334",
+      "expected_recorded_sha256": "8721bc80576272b18243433b4f200b8eb5d73c1b0876befb36f1fbbb253c7334",
+      "matches_recorded": true
+    },
+    "c++filt": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-c++filt",
+      "bytes": 1091504,
+      "sha256": "9230c8d0f63740c82d73873787eb5d927e3c72efeef0cad4a110c0acad270cf4",
+      "expected_recorded_sha256": "9230c8d0f63740c82d73873787eb5d927e3c72efeef0cad4a110c0acad270cf4",
+      "matches_recorded": true
+    },
+    "g++": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-g++",
+      "bytes": 2591648,
+      "sha256": "287bdc63948e61670bf7ae3de830e230d96291e91948df57ed91f215025f39eb",
+      "expected_recorded_sha256": "287bdc63948e61670bf7ae3de830e230d96291e91948df57ed91f215025f39eb",
+      "matches_recorded": true
+    },
+    "gcc": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-gcc",
+      "bytes": 2587552,
+      "sha256": "7a14f69f349e951d482bc7f1733ff601751858ae66778c01d0377046ede6e9c6",
+      "expected_recorded_sha256": "7a14f69f349e951d482bc7f1733ff601751858ae66778c01d0377046ede6e9c6",
+      "matches_recorded": true
+    },
+    "ld": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-ld",
+      "bytes": 1816000,
+      "sha256": "d2a1c895e7421feefed0b9d3d7c0a32fcc437ad93907630d1fb2c67c16c9d29a",
+      "expected_recorded_sha256": "d2a1c895e7421feefed0b9d3d7c0a32fcc437ad93907630d1fb2c67c16c9d29a",
+      "matches_recorded": true
+    },
+    "nm": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-nm",
+      "bytes": 1113232,
+      "sha256": "b415c1b542fc80f1fd414e0aecb23117e7bd899661f5aa377357d44bcd9b5850",
+      "expected_recorded_sha256": "b415c1b542fc80f1fd414e0aecb23117e7bd899661f5aa377357d44bcd9b5850",
+      "matches_recorded": true
+    },
+    "objcopy": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-objcopy",
+      "bytes": 1226008,
+      "sha256": "699e767c66f71daeb1967cf30e5f20ad9f3cc1b652f8c1a2b19fba5478fa9a6a",
+      "expected_recorded_sha256": "699e767c66f71daeb1967cf30e5f20ad9f3cc1b652f8c1a2b19fba5478fa9a6a",
+      "matches_recorded": true
+    },
+    "objdump": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-objdump",
+      "bytes": 1656272,
+      "sha256": "c7f9edebb12003b22aa8dd358a52799d01dc24391f639f01f390a94c6ef13ff7",
+      "expected_recorded_sha256": "c7f9edebb12003b22aa8dd358a52799d01dc24391f639f01f390a94c6ef13ff7",
+      "matches_recorded": true
+    },
+    "readelf": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp-elf-readelf",
+      "bytes": 1002968,
+      "sha256": "f605a0b145146157a267f82f92bf42d77175324ec3f3f3b05b9c504ca9d175c4",
+      "expected_recorded_sha256": "f605a0b145146157a267f82f92bf42d77175324ec3f3f3b05b9c504ca9d175c4",
+      "matches_recorded": true
+    },
+    "s3-g++": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++",
+      "bytes": 422608,
+      "sha256": "f556eb8b42ff8c0bb748243afa391a216b3482b7d3724e5c2aa6870952b76b74",
+      "expected_recorded_sha256": "f556eb8b42ff8c0bb748243afa391a216b3482b7d3724e5c2aa6870952b76b74",
+      "matches_recorded": true
+    },
+    "s3-gcc": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc",
+      "bytes": 422608,
+      "sha256": "f556eb8b42ff8c0bb748243afa391a216b3482b7d3724e5c2aa6870952b76b74",
+      "expected_recorded_sha256": "f556eb8b42ff8c0bb748243afa391a216b3482b7d3724e5c2aa6870952b76b74",
+      "matches_recorded": true
+    },
+    "xtensa-config": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/lib/xtensa_esp32s3.so",
+      "bytes": 820280,
+      "sha256": "ca668ce9174861ea337746fc70d7ae7f3eaeaca30568d2818e879b1e1ea84e95",
+      "expected_recorded_sha256": "ca668ce9174861ea337746fc70d7ae7f3eaeaca30568d2818e879b1e1ea84e95",
+      "matches_recorded": true
+    },
+    "local_compiler": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++",
+      "bytes": 422608,
+      "sha256": "f556eb8b42ff8c0bb748243afa391a216b3482b7d3724e5c2aa6870952b76b74"
+    },
+    "cc1": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/libexec/gcc/xtensa-esp-elf/15.2.0/cc1",
+      "bytes": 30857256,
+      "sha256": "39afccc9a1893f54d86bc101bed6cab217a2a75de2e2c0561c3a91a8e2727ce1",
+      "expected_recorded_sha256": "39afccc9a1893f54d86bc101bed6cab217a2a75de2e2c0561c3a91a8e2727ce1",
+      "matches_recorded": true
+    },
+    "cc1plus": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/libexec/gcc/xtensa-esp-elf/15.2.0/cc1plus",
+      "bytes": 33142792,
+      "sha256": "07bad7d4fa509041a40472e88c2a008a23125a9b6eb102929bb78e18b7d614a1",
+      "expected_recorded_sha256": "07bad7d4fa509041a40472e88c2a008a23125a9b6eb102929bb78e18b7d614a1",
+      "matches_recorded": true
+    },
+    "collect2": {
+      "path": "/workspace/shared/wave-stat-successor/toolchain/xtensa-esp-elf/libexec/gcc/xtensa-esp-elf/15.2.0/collect2",
+      "bytes": 1876096,
+      "sha256": "b66bc5f54176ff1d40b37168e547d511c9a2644fb9ba4541332212d052bb8fdf",
+      "expected_recorded_sha256": "b66bc5f54176ff1d40b37168e547d511c9a2644fb9ba4541332212d052bb8fdf",
+      "matches_recorded": true
+    }
+  },
+  "missing_sdk": true,
+  "prior_does_not_qualify_current_source": true,
+  "prior_include_paths": [
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/build/config",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/sources/runtime/src",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/sources/runtime/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/sources/runtime/sdk/app",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/sources/runtime/sdk/driver",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/sources/runtime/sdk/hardware",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/sources/runtime/lib/ArduinoJson/src",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/sources/runtime/lib/hal",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/build/esp-idf/runtime",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp-tls/private_include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_libc/platform_include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/freertos/config/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/freertos/config/include/freertos",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/freertos/config/xtensa/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/freertos/FreeRTOS-Kernel/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/freertos/esp_additions/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/include/soc",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/ldo/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/debug_probe/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/etm/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/mspi/mspi_timing_tuning/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/mspi/mspi_timing_tuning/tuning_scheme_impl/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/mspi/mspi_intr/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/power_supply/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/modem/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/include/soc/esp32s3",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/port/esp32s3/.",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/port/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/mspi/mspi_timing_tuning/port/esp32s3/.",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hw_support/mspi/mspi_timing_tuning/port/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/heap/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/heap/tlsf",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/log/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/soc/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/soc/esp32s3",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/soc/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/soc/esp32s3/register",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/hal/platform_port/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/hal/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/hal/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_rom/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_rom/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_rom/esp32s3/include/esp32s3",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_rom/esp32s3",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_common/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_system/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_system/port/soc",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_system/port/include/private",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_stdio/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/xtensa/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/xtensa/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/xtensa/deprecated_include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_gpio/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_gpio/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_usb/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_usb/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_pmu/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_pmu/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_regi2c/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_regi2c/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_uart/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_uart/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_ana_conv/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_ana_conv/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_dma/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_dma/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/lwip/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/lwip/include/apps",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/lwip/lwip/src/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/lwip/port/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/lwip/port/freertos/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/lwip/port/esp32xx/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/lwip/port/esp32xx/include/arch",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/lwip/port/esp32xx/include/sys",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/sources/runtime/lib/elf_loader/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/build/esp-idf/risc_littlefs/pinned",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_partition/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_blockdev/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/vfs/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/app_update/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bootloader_support/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bootloader_support/bootloader_flash/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_app_format/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_bootloader_format/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_timer/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/nvs_flash/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/spiffs/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/spi_flash/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_mspi/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_mspi/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_gpspi/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_gpspi/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_clock/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_clock/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_psram/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_psram/device/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_psram/xip_impl/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_wifi/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_wifi/include/local",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_wifi/wifi_apps/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_wifi/wifi_apps/nan_app/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_wifi/remote/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_event/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_phy/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_phy/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_netif/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/common/osi/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/common/api/include/api",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/common/btc/profile/esp/blufi/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/common/btc/profile/esp/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/common/hci_log/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/common/ble_log/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/common/ble_log/deprecated/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/common/tinycrypt/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/common/tinycrypt/port",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/bt/include/esp32c3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_spi/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_pm/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_dma/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_gpio/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_http_client/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_security/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_security/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_security/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp-tls",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp-tls/esp-tls-crypto",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/port/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/library",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/tf-psa-crypto/core",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/builtin/src",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/tf-psa-crypto/extras",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/esp_crt_bundle/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/port/psa_driver/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/port/psa_crypto_storage/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/tf-psa-crypto/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/builtin/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/__w/_temp/wave-stat-diagnostic-native/build/esp-idf/mbedtls/mbedtls/tf-psa-crypto/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/everest/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/p256-m/p256-m",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/mbedtls/mbedtls/tf-psa-crypto/drivers/pqcp/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/http_parser",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/fatfs/diskio",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/fatfs/src",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/fatfs/vfs",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/wear_levelling/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/sdmmc/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_sd/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_sd/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_sdmmc/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_sdmmc/legacy/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_sd_intf/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_sdspi/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/driver/i2c/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/driver/touch_sensor/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/driver/twai/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/driver/touch_sensor/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_i2c/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_i2c/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_twai/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_twai/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_touch_sens/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_touch_sens/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_i2s/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_i2s/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_i2s/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_ledc/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_ledc/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_hal_ledc/esp32s3/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_uart/include",
+      "exists_at_original_location": false
+    },
+    {
+      "path": "/opt/esp/idf/components/esp_driver_usb_serial_jtag/include",
+      "exists_at_original_location": false
+    }
+  ],
+  "boundary_headers": {
+    "boundary-shims/nvs.h": "8ba12b5d4433f819e6050893c68a518aa5a09e82e206a386e6b93fc0ab90934e",
+    "boundary-shims/nvs_flash.h": "f954c75d3b87bd9e559e40eeff9ca6d6b5f42d860cdfb1fb3576df9a597fdf68",
+    "boundary-shims/esp_attr.h": "891f90fb2b5767a2031fc2a5cb883d923fa45a0475b71efca709cc1ef1270c04",
+    "boundary-shims/esp_heap_caps.h": "2419f8a6747f999d82293035bc0b0c1c04ed237e641ac516771e608cdabb69b5",
+    "boundary-shims/esp_idf_version.h": "eeed620efc44342f1837f4ccafcab25696e897d73860793ce10e6451d9209ab5",
+    "boundary-shims/esp_mac.h": "45a94d6ef3a5ff24e13f7795ac096bf939e546b4e761d8c382fa81ae58ce00a5",
+    "boundary-shims/RiscBuildIdentity.h": "e2b6751f9c5ab53de936e64b53bbbce6bdfb59966f4d98ef1ceda79ec947cf26",
+    "boundary-shims/esp_partition.h": "239eb531812dc33ff8e9ce4340fdb52738405c485aeda1396929753b2c3d0075",
+    "boundary-shims/esp_vfs.h": "fcd83737262638e183d388bbb42be01c7754b5d8e5d3fd38383c19c647714e17",
+    "boundary-shims/mbedtls/platform.h": "d898a4874bdba6feded5407cbd0b248c7c7d88cc199fe439e8c96367fdd5b389",
+    "boundary-shims/mbedtls/sha256.h": "62ccc7092c529e5085962947cab1a029303198044597ceee4106995647646333"
+  },
+  "full_link": {
+    "status": "blocked_missing_complete_sdk_and_build_inputs",
+    "sdk_original_path": "/opt/esp/idf",
+    "sdk_checkout_exists": false,
+    "sdk_headers_available_locally": [
+      "/workspace/shared/stat-observation-recovery/idf-headers/components/esp_common/include/esp_err.h",
+      "/workspace/shared/stat-observation-recovery/idf-headers/components/esp_common/include/esp_compiler.h"
+    ],
+    "missing_items": [
+      "complete ESP-IDF 6.1 pinned checkout and submodules",
+      "compiled SDK/static libraries and generated linker scripts for a current source link",
+      "complete reconstructed product native build environment"
+    ],
+    "prior_linked_elf_is_not_current_candidate_proof": true
+  },
+  "baseline_elf": {
+    "path": "/workspace/shared/wave-stat-successor/baseline-native.elf",
+    "sha256": "fc414751584a9088e69f87263c62171d3e75ab301dfee02ce9d857b4582b11fe",
+    "bytes": 23872440,
+    "matches_prior_record": true
+  }
+}

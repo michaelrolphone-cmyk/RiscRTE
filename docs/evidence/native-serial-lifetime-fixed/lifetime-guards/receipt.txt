@@ -1,0 +1,41 @@
+Native serial lifetime guard host evidence
+UTC: 2026-10-18T05:54:11Z
+Repository: /workspace/shared/serial-lifetime-20261018
+Base commit: 20d2dcb1be398f69f0a668677737fbf43f1c5d35
+
+Normal command:
+bash test/run_native_serial_lifetime_guards_test.sh
+Exit status: 0
+
+Sanitized command:
+SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=print_stacktrace=1 bash test/run_native_serial_lifetime_guards_test.sh
+Exit status: 0
+
+Leak detector attempt:
+SANITIZE=1 ASAN_OPTIONS=detect_leaks=1 UBSAN_OPTIONS=print_stacktrace=1 bash test/run_native_serial_lifetime_guards_test.sh
+Exit status: 1; LeakSanitizer fatal environment/ptrace limitation, preserved separately. This attempt predates the added open handle in the parked leak fixtures. No leak-detection claim.
+
+Compiler versions:
+cc (Debian 14.2.0-19) 14.2.0
+c++ (Debian 14.2.0-19) 14.2.0
+
+Exact tested source SHA-256:
+53ff2b504adf7114eccbae2d97e54f96ea795bd06eb2894bd56cd09189f49de8  test/native_serial_lifetime_guards_test.cpp
+167816f7db09385019212853e2b87787767059b126d460fd3c251aa92938be79  test/run_native_serial_lifetime_guards_test.sh
+71c6c2e527bbc56c0a9bcbf9189329a6c1de7cbf9ef094517c9d28783bff31bd  test/fixtures/atomic_key_value_app.c
+df77a4dd03b54d5f7ce16d67f161b553785be97773519ebe72a18ac9718f6e03  test/RuntimeFileFixture.h
+f154439976527da7c5c86655685a6fd0ad629fa56796b85fe27b2e7f8af3a9d3  src/bootstrap/Runtime.cpp
+cd836be9656d350095440b3ec813d47e90ba9f08c2d374dd19d13e0e26a545fe  src/bootstrap/Runtime.h
+194b3c47eb54e184f64a9625286358bade979ec31ebc012d6a84b102cf3b9530  src/runtime/drivers/ProviderGraphV2.cpp
+963c36f30917936b8c3fc557fd347113d92ea31ac96e011a0f428a1f2cc353d7  src/runtime/drivers/ProviderGraphV2.h
+898bd098341d385280d06a10a85714e70c267d53a1413fd86961079612b01185  src/runtime/drivers/ProviderModuleV2.cpp
+5856a067ffb7fbea5e2c0bb44c036e8a3fe3981378665c78a411ee8840f024df  src/runtime/drivers/ProviderModuleV2.h
+a21aa94c9ccc0ab04c07eb85cd4919d28e041b4d36cd52ba4d3b7a3de6c352fa  src/bootstrap/RuntimeFiles.h
+33ff0d91ef215a9251803ff7ea6791cc0e1a0b5d1f07e0406c2d77da3df44121  src/runtime/storage/PosixFiles.h
+
+Raw receipts SHA-256:
+bc56720a2ca37fe1b7fb40c538260564fac45ac6b6a6396139a035015f1697fd  /workspace/shared/serial-lifetime-evidence/lifetime-guards/asan-ubsan-leak-detector-blocked.log
+4d81fb0eb6e9ffebedad6ef50ec3652d901815fd453c376cc722b21f50bd0459  /workspace/shared/serial-lifetime-evidence/lifetime-guards/asan-ubsan.log
+2da349cc8d5bdd11b07f177d8427e446ba8155d3b4acd53308ff600adc502c5e  /workspace/shared/serial-lifetime-evidence/lifetime-guards/normal.log
+
+Scope: Host-only exact-source test. No target build, hardware access, serial access, flashing, commit, merge or release. Admission exclusions and bad closure states use labeled private-access fault injection against an actually prepared Runtime. Parked tests run a real host app and ordinary host provider module. Retained cases intentionally exit without teardown.

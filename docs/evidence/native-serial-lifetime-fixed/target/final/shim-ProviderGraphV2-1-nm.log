@@ -1,0 +1,101 @@
+00000000 00000028 t _Z14psa_hash_abortP20psa_hash_operation_t$isra$0
+         U RiscDiagnostics::monotonicUs()
+         U RiscDiagnostics::timestamped(char const*, ...)
+00000000 0000008d W RuntimePackages::safeVersion(char const*)
+00000000 00000083 W RuntimePackages::safeArtifact(char const*)
+00000000 0000008f W RuntimePackages::safeId(char const*)
+00000000 00000058 W RuntimeProviders::OwnedNodeV2::copyString(char*, unsigned int, char const*)
+00000000 00000149 W RuntimeProviders::OwnedNodeV2::snapshotPolicy(RuntimeProviders::NativeProviderPolicyV1 const&)
+00000000 00000022 W RuntimeProviders::OwnedNodeV2::allocate(unsigned int)
+00000000 00000253 W RuntimeProviders::OwnedNodeV2::snapshot(RuntimeProviders::SpecV2 const&)
+00000000 000000a3 W RuntimeProviders::OwnedNodeV2::OwnedNodeV2()
+00000000 000000a3 W RuntimeProviders::OwnedNodeV2::OwnedNodeV2()
+00000000 n RuntimeProviders::OwnedNodeV2::OwnedNodeV2()
+00000000 00000023 W RuntimeProviders::OwnedNodeV2::~OwnedNodeV2()
+00000000 00000023 W RuntimeProviders::OwnedNodeV2::~OwnedNodeV2()
+00000000 n RuntimeProviders::OwnedNodeV2::~OwnedNodeV2()
+00000000 0000002e t void RuntimeProviders::(anonymous namespace)::copyError<160u>(char (&) [160u], char const*)
+00000000 0000002f t RuntimeProviders::(anonymous namespace)::validName(char const*)
+00000000 00000025 W RuntimeProviders::nativePolicyName(char const*, unsigned int)
+00000000 00000084 W RuntimeProviders::nativePolicyPath(char const*)
+00000000 00000128 W RuntimeProviders::nativeProviderEntryValid(unsigned char const*)
+00000000 000000d6 W RuntimeProviders::nativeProviderImageValid(RuntimeProviders::NativeProviderPolicyV1 const&, unsigned char const*, unsigned int)
+00000000 000000d3 W RuntimeProviders::nativePolicyMatchesModule(RuntimeProviders::NativeProviderPolicyV1 const&, unsigned char const*, unsigned int, unsigned char const*, char const* const*, unsigned int, char const*, char const*, unsigned long)
+00000000 0000019b W RuntimeProviders::nativeProviderPolicyValid(RuntimeProviders::NativeProviderPolicyV1 const&)
+00000000 0000035e T RuntimeProviders::GraphV2::addChecked(RuntimeProviders::SpecV2 const&, RuntimeProviders::NativeProviderPolicyV1 const*)
+00000000 000000c9 T RuntimeProviders::GraphV2::acquireFrom(char const*, char const*, unsigned long, unsigned long long)
+00000000 00000013 T RuntimeProviders::GraphV2::addVerified(RuntimeProviders::SpecV2 const&)
+00000000 00000092 T RuntimeProviders::GraphV2::grantStream(RuntimeProviders::GrantV2, unsigned long, unsigned long, unsigned long)
+00000000 000000f1 T RuntimeProviders::GraphV2::acquireIndex(unsigned int)
+00000000 00000094 T RuntimeProviders::GraphV2::deactivateIfUnused(unsigned int)
+00000000 00000097 T RuntimeProviders::GraphV2::revokeStreamGrants(RuntimeProviders::GrantV2)
+00000000 000000cf T RuntimeProviders::GraphV2::releaseDependencies(unsigned int)
+00000000 000002b0 T RuntimeProviders::GraphV2::publishOrdinaryBatch(RuntimeProviders::SpecV2 const*, unsigned int const*, unsigned int, bool)
+00000000 00000013 T RuntimeProviders::GraphV2::addManagerValidatedPrivileged(RuntimeProviders::SpecV2 const&, RuntimeProviders::NativeProviderPolicyV1 const&)
+00000000 0000001e T RuntimeProviders::GraphV2::fail(char const*, char const*)
+00000000 000001a8 T RuntimeProviders::GraphV2::poll(unsigned long (*)(), void (*)())
+00000000 000000bd T RuntimeProviders::GraphV2::acquire(char const*, unsigned long)
+00000000 00000107 T RuntimeProviders::GraphV2::release(RuntimeProviders::GrantV2)
+00000000 0000008f T RuntimeProviders::GraphV2::service(unsigned long)
+00000000 00000487 T RuntimeProviders::GraphV2::activate(unsigned int)
+00000000 000000e0 T RuntimeProviders::GraphV2::shutdown()
+00000000 0000004d T RuntimeProviders::GraphV2::~GraphV2()
+00000000 0000004d T RuntimeProviders::GraphV2::~GraphV2()
+         U RuntimeProviders::ModuleV2::pinConsumer()
+         U RuntimeProviders::ModuleV2::unpinConsumer()
+         U RuntimeProviders::ModuleV2::loadVerifiedBytes(unsigned char const*, unsigned int, unsigned char const*, char const* const*, unsigned int, char const*, char const*, unsigned long, risc_provider_dependency_v1 const*, unsigned int)
+         U RuntimeProviders::ModuleV2::load(char const*, char const*, char const*, unsigned long, risc_provider_dependency_v1 const*, unsigned int, bool, void* (*)(void*, char const*, void const*), void*, void const*)
+         U RuntimeProviders::ModuleV2::poll(unsigned long)
+         U RuntimeProviders::ModuleV2::unload()
+         U RuntimeProviders::ModuleV2::service(unsigned long)
+00000000 00000d40 V RiscPerf::data
+00000000 00000086 W RiscPerf::Scope::~Scope()
+00000000 00000086 W RiscPerf::Scope::~Scope()
+00000000 n RiscPerf::Scope::~Scope()
+00000000 000000ed W RiscPerf::record(unsigned long, unsigned long)
+00000000 0000001b W RiscPerf::allowed()
+00000000 00000004 V RiscPerf::clockUs
+00000000 00000001 V RiscPerf::enabled
+00000000 00000031 W RiscPerf::identity(char const*)
+00000000 0000000e W RiscPerf::saturate(unsigned long&)
+00000000 00000004 V RiscPerf::ownerTask
+00000000 0000002a W RuntimeProviders::ModuleLeaseV2::valid() const
+00000000 00000044 T RuntimeProviders::GraphV2::activeFrom(char const*, char const*, unsigned long, unsigned long long) const
+00000000 0000003a T RuntimeProviders::GraphV2::holdsGrant(RuntimeProviders::GrantV2) const
+00000000 0000001e T RuntimeProviders::GraphV2::liveGrants() const
+00000000 0000001c T RuntimeProviders::GraphV2::hasProvider(char const*, char const*, unsigned long) const
+00000000 00000090 T RuntimeProviders::GraphV2::findProvider(char const*, char const*, unsigned long, unsigned long long) const
+00000000 0000006a T RuntimeProviders::GraphV2::interfaceFor(RuntimeProviders::GrantV2) const
+00000000 0000003f T RuntimeProviders::GraphV2::hasProviderId(char const*) const
+00000000 0000000b t _ZNK16RuntimeProviders7GraphV213lifecycleBusyEv$isra$0
+00000000 00000033 T RuntimeProviders::GraphV2::activationSafe() const
+00000000 000000b2 T RuntimeProviders::GraphV2::metadataMutable(unsigned int) const
+00000000 00000034 T RuntimeProviders::GraphV2::nativePolicyFor(char const*, char const*, unsigned long, unsigned long long) const
+00000000 0000025f T RuntimeProviders::GraphV2::validateKeepSet(RuntimeProviders::GrantV2 const*, unsigned int) const
+00000000 00000079 T RuntimeProviders::GraphV2::streamSessionsFor(RuntimeProviders::GrantV2, unsigned long long*) const
+00000000 00000071 T RuntimeProviders::GraphV2::dependencyReadSafe() const
+00000000 0000005c T RuntimeProviders::GraphV2::find(char const*, unsigned long) const
+00000000 00000020 W RuntimeProviders::ModuleV2::streamSafe() const
+00000000 00000016 W RuntimeProviders::ModuleV2::leaseSafe() const
+         U std::nothrow
+         U operator delete(void*, unsigned int)
+         U operator new(unsigned int, std::nothrow_t const&)
+         U abort
+         U esp_elf_privileged_manifest_imports_match_v2
+         U esp_elf_privileged_selected_import_supported_with_diagnostics_v2
+         U esp_elf_validate_file
+         U heap_caps_free
+         U heap_caps_malloc
+         U mbedtls_sha256_finish_ret
+         U mbedtls_sha256_free
+         U mbedtls_sha256_starts_ret
+         U mbedtls_sha256_update_ret
+         U memcmp
+         U memcpy
+         U memmove
+         U memset
+00000000 00000004 V nativePsaHashLive
+         U snprintf
+         U strchr
+         U strcmp
+         U strcpy

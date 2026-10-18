@@ -66,6 +66,55 @@ Clean absent media remains catalogued but unavailable; failed preparation,
 close or graph release with uncertain custody retains the existing terminal
 fence. An X4 `NS` reply still advertises ID 12, regardless of instance 9.
 
+### Native binding lifetime and final teardown
+
+`Runtime::bindNativeFiles` defaults to `NativeBindingLifetime::Run`, preserving
+ordinary run-scoped cleanup. The shared `NativeSerialStorage::bindSd` explicitly
+selects `Firmware`, requiring both session-reset and final endpoint-stop
+callbacks. Clean Runtime completion still resets the old wire session,
+drains native Settings, unloads the app, cleans FileSource and releases ordinary
+boot grants. Only exact opted-in native slot/generation pairs and their actual
+acquired dependency closure remain parked. Unrelated zero-consumer modules have
+already unloaded recursively through normal release; there is no generic sweep
+or relaxed `GraphV2::shutdown`.
+
+The parked graph is accepted only when its occupied grants match the unique
+keep-set exactly, every retained node is active and safe, and each consumer
+count equals its retained root grants plus acquired incoming dependency edges.
+Stale, duplicate, pending, unrelated and leaked grants/consumers fail closed.
+Runtime-bound KV, app-data, entropy, TCP, realtime, installation, bank-store and
+provisioning authority cannot be kept through this route. Raw firmware callbacks
+must remain valid without an active invocation. Repeat run, late binding and
+post-return installed-app admission are unsupported.
+
+`NativeSerialFiles::shutdown()` is a wire-session reset: it safely closes known
+handles and clears SID, PATH, pending input and replies, while preserving prepared
+service admission. A fresh HELLO starts at sequence 1. It does not end a
+Firmware binding. The production outer loop calls
+`Runtime::nativeFilesCheckpoint()` after return; this uses live Runtime custody,
+exact parked-graph validation and native Settings readiness on every checkpoint.
+Temporary native busy state permits only control processing. Healthy open serial
+handles remain dispatchable; `RuntimeFiles::exitSafe()` is a teardown check, not
+a per-command readiness requirement. Clean unavailable SD does not suppress
+independent namespace 1/2 admission.
+
+`Runtime::stopNativeFiles()` is final service teardown. It safely stops the
+endpoint, releases and retires the remaining native clients, then invokes normal
+graph shutdown. The production port supplies `NativeSerialFiles::stop()`, which
+disables the endpoint only after successful wire cleanup. Successful final stop
+is idempotent and never permits re-admission. Failed close, release or lifetime
+validation retains the Runtime, client and dependency custody without retry.
+Destruction of a clean parked Runtime performs this final stop; destruction after
+uncertain custody remains a contract violation.
+
+The original host reproduction at
+`docs/evidence/native-serial-lifetime-baseline` pins Runtime
+`615bfaeeb9f8876255380994a95bebfafaa32779` and released Wave provider 0.2.2 source
+`e1b2fc8b801b33e3bd6ea30626a8dda9bf2237a6`. Its original-main predicate replay
+observed successful fresh HELLO/NS/PATH followed by SD STAT UNAVAILABLE after
+clean client retirement. This establishes the lifecycle mismatch in software;
+it does not identify the cause of the separate physical .59 incident.
+
 `test/run_native_serial_product_storage_test.py` exercises this shared startup
 path, Runtime graph admission, wire enumeration/transfers and terminal custody
 for explicit `X4SD9` and default `legacyWave12`. Its provider and media are

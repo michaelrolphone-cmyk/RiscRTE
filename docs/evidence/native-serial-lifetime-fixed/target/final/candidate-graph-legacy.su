@@ -1,0 +1,59 @@
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:14:6:void RuntimeProviders::{anonymous}::copyError(char (&)[N], const char*) [with unsigned int N = 160]	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:25:6:bool RuntimeProviders::{anonymous}::validName(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/test/native_bank_stubs/psa/crypto.h:16:12:int psa_hash_abort(psa_hash_operation_t*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.h:76:8:bool RuntimeProviders::GraphV2::lifecycleBusy() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:63:13:void RiscPerf::saturate(uint32_t&)	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:67:13:bool RiscPerf::allowed()	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:68:13:void RiscPerf::record(uint32_t, uint32_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:110:17:uint32_t RiscPerf::identity(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/diagnostics/Performance.h:134:3:RiscPerf::Scope::~Scope()	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/packages/PackageIdentity.h:25:13:bool RuntimePackages::safeId(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/packages/PackageIdentity.h:40:13:bool RuntimePackages::safeArtifact(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/packages/PackageIdentity.h:56:13:bool RuntimePackages::safeVersion(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderModuleV2.h:24:8:bool RuntimeProviders::ModuleLeaseV2::valid() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderModuleV2.h:87:8:bool RuntimeProviders::ModuleV2::leaseSafe() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderModuleV2.h:88:8:bool RuntimeProviders::ModuleV2::streamSafe() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/NativeProviderPolicyV1.h:41:13:bool RuntimeProviders::nativePolicyName(const char*, size_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/NativeProviderPolicyV1.h:46:13:bool RuntimeProviders::nativePolicyPath(const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/NativeProviderPolicyV1.h:57:13:bool RuntimeProviders::nativeProviderPolicyValid(const NativeProviderPolicyV1&)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/NativeProviderPolicyV1.h:98:13:bool RuntimeProviders::nativePolicyMatchesModule(const NativeProviderPolicyV1&, const uint8_t*, size_t, const uint8_t*, const char* const*, size_t, const char*, const char*, uint32_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/NativeProviderPolicyValidationV1.h:31:13:bool RuntimeProviders::nativeProviderEntryValid(const uint8_t*)	64	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/NativeProviderPolicyValidationV1.h:58:13:bool RuntimeProviders::nativeProviderImageValid(const NativeProviderPolicyV1&, const uint8_t*, size_t)	80	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderOwnedSpecV2.h:46:3:RuntimeProviders::OwnedNodeV2::~OwnedNodeV2()	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderOwnedSpecV2.h:54:16:static void* RuntimeProviders::OwnedNodeV2::allocate(size_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderOwnedSpecV2.h:69:15:static bool RuntimeProviders::OwnedNodeV2::copyString(char*, size_t, const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderOwnedSpecV2.h:78:8:bool RuntimeProviders::OwnedNodeV2::snapshotPolicy(const RuntimeProviders::NativeProviderPolicyV1&)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderOwnedSpecV2.h:104:8:bool RuntimeProviders::OwnedNodeV2::snapshot(const RuntimeProviders::SpecV2&)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:44:5:int RuntimeProviders::GraphV2::find(const char*, uint32_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:56:5:int RuntimeProviders::GraphV2::findProvider(const char*, const char*, uint32_t, uint64_t) const	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:70:6:bool RuntimeProviders::GraphV2::hasProvider(const char*, const char*, uint32_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:75:6:bool RuntimeProviders::GraphV2::hasProviderId(const char*) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:82:6:bool RuntimeProviders::GraphV2::activeFrom(const char*, const char*, uint32_t, uint64_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:95:31:const RuntimeProviders::NativeProviderPolicyV1* RuntimeProviders::GraphV2::nativePolicyFor(const char*, const char*, uint32_t, uint64_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderOwnedSpecV2.h:43:3:constexpr RuntimeProviders::OwnedNodeV2::OwnedNodeV2()	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:102:6:bool RuntimeProviders::GraphV2::addChecked(const RuntimeProviders::SpecV2&, const RuntimeProviders::NativeProviderPolicyV1*)	288	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:88:6:bool RuntimeProviders::GraphV2::addVerified(const RuntimeProviders::SpecV2&)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:92:6:bool RuntimeProviders::GraphV2::addManagerValidatedPrivileged(const RuntimeProviders::SpecV2&, const RuntimeProviders::NativeProviderPolicyV1&)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:258:6:bool RuntimeProviders::GraphV2::fail(const char*, const char*)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:240:6:bool RuntimeProviders::GraphV2::deactivateIfUnused(size_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:219:6:bool RuntimeProviders::GraphV2::releaseDependencies(size_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:263:6:bool RuntimeProviders::GraphV2::activate(size_t)	96	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:435:13:const void* RuntimeProviders::GraphV2::interfaceFor(RuntimeProviders::GrantV2) const	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:443:6:bool RuntimeProviders::GraphV2::grantStream(RuntimeProviders::GrantV2, uint32_t, uint32_t, uint32_t)	64	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:457:6:bool RuntimeProviders::GraphV2::revokeStreamGrants(RuntimeProviders::GrantV2)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:466:6:bool RuntimeProviders::GraphV2::release(RuntimeProviders::GrantV2)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:496:8:size_t RuntimeProviders::GraphV2::liveGrants() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:365:9:RuntimeProviders::GrantV2 RuntimeProviders::GraphV2::acquireIndex(size_t)	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:414:9:RuntimeProviders::GrantV2 RuntimeProviders::GraphV2::acquire(const char*, uint32_t)	64	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:424:9:RuntimeProviders::GrantV2 RuntimeProviders::GraphV2::acquireFrom(const char*, const char*, uint32_t, uint64_t)	80	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:501:6:bool RuntimeProviders::GraphV2::holdsGrant(RuntimeProviders::GrantV2) const	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:507:6:bool RuntimeProviders::GraphV2::validateKeepSet(const RuntimeProviders::GrantV2*, size_t) const	176	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:568:6:bool RuntimeProviders::GraphV2::shutdown()	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:33:1:RuntimeProviders::GraphV2::~GraphV2()	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:601:6:bool RuntimeProviders::GraphV2::dependencyReadSafe() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:384:6:void RuntimeProviders::GraphV2::poll(uint32_t (*)(), void (*)())	48	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:403:6:void RuntimeProviders::GraphV2::service(uint32_t)	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:598:6:bool RuntimeProviders::GraphV2::activationSafe() const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:180:6:bool RuntimeProviders::GraphV2::metadataMutable(size_t) const	32	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:187:6:bool RuntimeProviders::GraphV2::publishOrdinaryBatch(const RuntimeProviders::SpecV2*, const size_t*, size_t, bool)	64	static
+/workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp:450:40:const risc_stream_session_provider_v1* RuntimeProviders::GraphV2::streamSessionsFor(RuntimeProviders::GrantV2, uint64_t*) const	48	static

@@ -87,13 +87,14 @@ local_names = [
     'src/runtime/streams/AppStreamSessions.cpp', 'src/runtime/streams/ProviderQueueHost.cpp',
     'src/runtime/drivers/ProviderGraphV2.cpp', 'src/runtime/drivers/ProviderModuleV2.cpp',
     'src/runtime/serial/Files.cpp', 'src/ports/esp32s3/NativeSerialFiles.cpp',
-    'src/ports/esp32s3/NativeSerialStorage.cpp', 'test/native_serial_waveshare_sd_test.cpp']
+    'test/native_serial_waveshare_sd_test.cpp']
 local_records = {str(x.relative_to(ROOT)): hashlib.sha256(x.read_bytes()).hexdigest()
                  for folder in ('src', 'sdk', 'lib/ArduinoJson/src', 'test/drivers/stubs',
-                                'test/native_sleep_diagnostics_idf6_shim', 'test/native_platform_shim', 'test/fixtures/watch/sdk/driver')
+                                'test/native_sleep_diagnostics_idf6_shim', 'test/native_platform_shim', 'test/fixtures/watch/sdk/driver',
+                                'test/native_littlefs_profile_stubs', 'test/native_diagnostic_workspace_shim', 'experimental/native_replica/pinned_littlefs')
                  for x in (ROOT/folder).rglob('*') if x.is_file() and x.suffix in ('.h', '.hpp', '.cpp', '.c', '.inc')}
 for name in ('test/native_serial_waveshare_sd_fixture.c', 'test/native_serial_waveshare_sd_test.cpp',
-             'test/run_native_serial_waveshare_sd_test.py', 'test/RuntimeFileFixture.h', 'test/fixtures/atomic_key_value_app.c'):
+             'test/run_native_serial_waveshare_sd_test.py', 'test/native_serial_post_return_client_test.py', 'scripts/serial_files.py', 'test/compile_native_serial_littlefs.py', 'test/native_serial_littlefs_composition.cpp', 'test/RuntimeFileFixture.h', 'test/fixtures/atomic_key_value_app.c', 'test/native_littlefs_profile_fixture.c', 'test/native_littlefs_profile_fixture.h', 'test/native_app_data_mount_posix.cpp', 'test/run_native_littlefs_profile_test.py', 'experimental/native_replica/pinned_littlefs/prepare_idf6.py'):
     local_records[name] = hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
 run([cc, '-std=c11', *flags, *includes, '-shared', '-fPIC', '-fvisibility=hidden',
      ROOT/'test/fixtures/atomic_key_value_app.c', '-o', build/'default.elf'])
@@ -101,25 +102,37 @@ run([cc, '-std=c11', *flags, *includes, '-shared', '-fPIC', '-fvisibility=hidden
      '-DWAVE_SERIAL_TEST_SOURCE="'+str(a.waveshare/'tests/test_storage_async.c')+'"',
      ROOT/'test/native_serial_waveshare_sd_fixture.c', a.waveshare/'lib/storage_fatfs/fatfs/ff.c',
      a.waveshare/'lib/storage_fatfs/fatfs/ffunicode.c', '-o', build/'driver.elf'])
+import compile_native_serial_littlefs
+lfs_objects, lfs_selection, lfs_link = compile_native_serial_littlefs.build(ROOT, build/'littlefs-composition', run, a.sanitize)
 run([cxx, '-std=c++17', *flags, *includes, '-DRISC_NATIVE_SERIAL_FILES=1', '-DRISC_NATIVE_SERIAL_SD=1',
-     '-DRISC_NATIVE_ESP_IDF=1', '-rdynamic', '-no-pie', '-pthread',
-     *[ROOT/x for x in local_names], '-ldl', '-o', build/'test'])
-cases = ('cold', 'absent-card', 'healthy', 'disconnect', 'failed-close', 'failed-write', 'failed-release', 'failed-prepare')
+     *lfs_selection, '-rdynamic', '-no-pie', '-pthread',
+     *[ROOT/x for x in local_names], *lfs_objects, *lfs_link, '-ldl', '-o', build/'test'])
+generated_sources={str(x.relative_to(build)):hashlib.sha256(x.read_bytes()).hexdigest() for x in (build/'littlefs-composition').rglob('*') if x.is_file() and x.suffix in ('.c','.cpp','.h','.json')}
+cases = ('cold', 'absent-card', 'healthy', 'disconnect', 'failed-close', 'failed-write', 'failed-release', 'failed-prepare', 'post-return', 'post-failed-close', 'default-run')
 cases = tuple(a.case or cases)
 (build/'baseline-inputs.json').write_text(json.dumps(dict(product_revision=PIN, external_sources=external, runtime_sources=local_records, commands=commands, sanitizers=a.sanitize),indent=2)+'\n')
 for case in cases:
     run([build/'test', build, case])
+client_receipt=None
+if not a.case:
+    import native_serial_post_return_client_test
+    client_receipt=native_serial_post_return_client_test.run(build/'test',build)
 for item in external:
     assert hashlib.sha256((a.waveshare/item['path']).read_bytes()).hexdigest() == item['sha256'], 'Product input changed during test'
 for name, expected in local_records.items():
     if hashlib.sha256((ROOT/name).read_bytes()).hexdigest() != expected:
         raise SystemExit('Runtime input changed during build; rerun in a fresh directory: '+name)
+for name, expected in generated_sources.items():
+    assert hashlib.sha256((build/name).read_bytes()).hexdigest()==expected, 'Generated composition source changed: '+name
+footprint=subprocess.check_output(['nm','-S','--size-sort',str(build/'test')],text=True)
+footprint='\n'.join(line for line in footprint.splitlines() if any(name in line for name in ('workspaceStorage','sessionStorage','privateProviderStorage')))
+(build/'bounded-workspaces.txt').write_text(footprint+'\n')
 limits = ('Host source qualification only. Exact asynchronous sdmmc-fatfs 0.2.2, actual Runtime graph/native admission and serial protocol; '
-          'RAM card, GPIO/sync/storage-worker mocks and host ELF loading. Cold async activation stays UNAVAILABLE without explicit preparation; '
-          'selected transfers use actual Runtime prepareVolume=true before app activation. '
+          'RAM SD card plus independent actual pinned LittleFS namespace2, GPIO/sync/storage-worker mocks and host ELF loading. Cold async activation stays UNAVAILABLE without explicit preparation; '
+          'selected transfers use actual Runtime prepareVolume=true before app activation and actual post-return nativeFilesCheckpoint seam. '
           'No real CpuPort, native worker task, physical SD, USB serial or device qualification.')
 (build/'source-manifest.json').write_text(json.dumps(dict(product_root=str(a.waveshare), product_revision=PIN,
     external_sources=external, runtime_sources=local_records, staged_headers=headers, cases=cases,
-    commands=commands, sanitizers=a.sanitize, limits=limits), indent=2)+'\n')
+    commands=commands, sanitizers=a.sanitize, sanitizer_environment={key:os.environ.get(key) for key in ('ASAN_OPTIONS','UBSAN_OPTIONS','LSAN_OPTIONS')}, generated_sources=generated_sources, bounded_workspace_symbols=footprint, immutable_inputs_verified=True, client=client_receipt, limits=limits), indent=2)+'\n')
 print('Pinned Waveshare async SD native serial host qualification PASS:', build)
 print(limits)

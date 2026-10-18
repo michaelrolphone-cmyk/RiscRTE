@@ -1,0 +1,6 @@
+env CC=cc CXX=c++ SANITIZE=0 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_keep_set_test.sh
+env CC=cc CXX=c++ SANITIZE=0 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_graph_v2_test.sh
+env CC=cc CXX=c++ SANITIZE=0 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_dependency_cleanup_test.sh
+env CC=cc CXX=c++ SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_keep_set_test.sh
+env CC=cc CXX=c++ SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_graph_v2_test.sh
+env CC=cc CXX=c++ SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash -x test/run_provider_dependency_cleanup_test.sh

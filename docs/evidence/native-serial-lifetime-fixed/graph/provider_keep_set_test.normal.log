@@ -1,0 +1,167 @@
++ set -euo pipefail
++++ dirname test/run_provider_keep_set_test.sh
+++ cd test/..
+++ pwd
++ repo=/workspace/shared/serial-lifetime-20261018
++ source=/workspace/shared/serial-lifetime-20261018
+++ mktemp -d
++ build=/tmp/tmp.3GhrYnkLiG
++ trap 'rm -rf "$build"' EXIT
++ san=(-g)
++ [[ 0 == 1 ]]
++ shared=()
+++ uname -s
++ [[ Linux == Darwin ]]
++ (( i=0 ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=0 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-0.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=1 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-1.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=2 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-2.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=3 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-3.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=4 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-4.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=5 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-5.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=6 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-6.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=7 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-7.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=8 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-8.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=9 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-9.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=10 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-10.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=11 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-11.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=12 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-12.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=13 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-13.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=14 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-14.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=15 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-15.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=16 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-16.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=17 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-17.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=18 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-18.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=19 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-19.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=20 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-20.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=21 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-21.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=22 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-22.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=23 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-23.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=24 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-24.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=25 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-25.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=26 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-26.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=27 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-27.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=28 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-28.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=29 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-29.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=30 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-30.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=31 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-31.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=32 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-32.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=33 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-33.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=34 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-34.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=35 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-35.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=36 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-36.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=37 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-37.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=38 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-38.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=39 -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/provider-39.so
++ (( i++ ))
++ (( i<40 ))
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared -g -DFIXTURE_SLOT=0 '-DFIXTURE_CAPABILITY="storage.files"' -I/workspace/shared/serial-lifetime-20261018/sdk/driver /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_fixture.c -o /tmp/tmp.3GhrYnkLiG/image.so
++ for profile in ${PROFILES:-cohort legacy installed expanded}
++ options=()
++ case "$profile" in
++ c++ -std=c++17 -Wall -Wextra -Werror -g -rdynamic -I/workspace/shared/serial-lifetime-20261018/src -I/workspace/shared/serial-lifetime-20261018/sdk/driver -I/workspace/shared/serial-lifetime-20261018/sdk/hardware -I/workspace/shared/serial-lifetime-20261018/test/drivers/stubs /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderModuleV2.cpp /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_test.cpp -ldl -o /tmp/tmp.3GhrYnkLiG/test-cohort
++ /tmp/tmp.3GhrYnkLiG/test-cohort /tmp/tmp.3GhrYnkLiG
+Exact graph keep set: 28 providers / 44 grants PASS
++ for profile in ${PROFILES:-cohort legacy installed expanded}
++ options=()
++ case "$profile" in
++ mkdir -p /tmp/tmp.3GhrYnkLiG/legacy/runtime
++ sed 's/^#if defined(ESP_PLATFORM).*$/#if 1/' /workspace/shared/serial-lifetime-20261018/src/runtime/RuntimeLimits.h
++ options=(-I"$build/legacy")
++ c++ -std=c++17 -Wall -Wextra -Werror -g -I/tmp/tmp.3GhrYnkLiG/legacy -rdynamic -I/workspace/shared/serial-lifetime-20261018/src -I/workspace/shared/serial-lifetime-20261018/sdk/driver -I/workspace/shared/serial-lifetime-20261018/sdk/hardware -I/workspace/shared/serial-lifetime-20261018/test/drivers/stubs /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderModuleV2.cpp /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_test.cpp -ldl -o /tmp/tmp.3GhrYnkLiG/test-legacy
++ /tmp/tmp.3GhrYnkLiG/test-legacy /tmp/tmp.3GhrYnkLiG
+Exact graph keep set: 17 providers / 32 grants PASS
++ for profile in ${PROFILES:-cohort legacy installed expanded}
++ options=()
++ case "$profile" in
++ options=(-DRISC_INSTALLED_APP_CAPACITY=64)
++ c++ -std=c++17 -Wall -Wextra -Werror -g -DRISC_INSTALLED_APP_CAPACITY=64 -rdynamic -I/workspace/shared/serial-lifetime-20261018/src -I/workspace/shared/serial-lifetime-20261018/sdk/driver -I/workspace/shared/serial-lifetime-20261018/sdk/hardware -I/workspace/shared/serial-lifetime-20261018/test/drivers/stubs /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderModuleV2.cpp /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_test.cpp -ldl -o /tmp/tmp.3GhrYnkLiG/test-installed
++ /tmp/tmp.3GhrYnkLiG/test-installed /tmp/tmp.3GhrYnkLiG
+Exact graph keep set: 29 providers / 45 grants PASS
++ for profile in ${PROFILES:-cohort legacy installed expanded}
++ options=()
++ case "$profile" in
++ options=(-DRISC_INSTALLED_APP_CAPACITY=64 -DRISC_PROVIDER_CAPACITY=40)
++ c++ -std=c++17 -Wall -Wextra -Werror -g -DRISC_INSTALLED_APP_CAPACITY=64 -DRISC_PROVIDER_CAPACITY=40 -rdynamic -I/workspace/shared/serial-lifetime-20261018/src -I/workspace/shared/serial-lifetime-20261018/sdk/driver -I/workspace/shared/serial-lifetime-20261018/sdk/hardware -I/workspace/shared/serial-lifetime-20261018/test/drivers/stubs /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderModuleV2.cpp /workspace/shared/serial-lifetime-20261018/src/runtime/drivers/ProviderGraphV2.cpp /workspace/shared/serial-lifetime-20261018/test/drivers/provider_keep_set_test.cpp -ldl -o /tmp/tmp.3GhrYnkLiG/test-expanded
++ /tmp/tmp.3GhrYnkLiG/test-expanded /tmp/tmp.3GhrYnkLiG
+Exact graph keep set: 40 providers / 56 grants PASS
++ rm -rf /tmp/tmp.3GhrYnkLiG

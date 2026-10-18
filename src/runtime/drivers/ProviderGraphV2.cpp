@@ -504,6 +504,67 @@ bool GraphV2::holdsGrant(GrantV2 grant) const {
   return slot.occupied && slot.generation==grant.generation;
 }
 
+bool GraphV2::validateKeepSet(const GrantV2* keep, size_t count) const {
+  if (lifecycleBusy() || count_ > kMaxModules || count > kMaxGrants ||
+      (count && !keep)) return false;
+  bool allowed[kMaxGrants]{};
+  bool retained[kMaxModules]{};
+  uint32_t consumers[kMaxModules]{};
+  uint8_t pending[kMaxModules]{};
+  size_t pendingCount = 0;
+  for (size_t i = 0; i < count; ++i) {
+    const GrantV2 grant = keep[i];
+    if (!grant.slot || grant.slot > kMaxGrants || !grant.generation)
+      return false;
+    const size_t slotIndex = grant.slot - 1;
+    const GrantSlot& slot = grants_[slotIndex];
+    if (allowed[slotIndex] || !slot.occupied || slot.pendingRelease ||
+        slot.generation != grant.generation || slot.node >= count_)
+      return false;
+    allowed[slotIndex] = true;
+    ++consumers[slot.node];
+    if (!retained[slot.node]) {
+      retained[slot.node] = true;
+      pending[pendingCount++] = slot.node;
+    }
+  }
+  for (size_t i = 0; i < kMaxGrants; ++i)
+    if (grants_[i].occupied != allowed[i] || grants_[i].pendingRelease)
+      return false;
+  for (size_t i = 0; i < count_; ++i) {
+    const Node& node = nodes_[i];
+    if (node.visit == Visit::Visiting || node.visit == Visit::Releasing ||
+        node.module.state() == ModuleV2::State::Failed ||
+        node.dependencyReleasePending || node.acquired > kMaxRequirements + 1 ||
+        !node.module.leaseSafe() || !node.module.streamSafe()) return false;
+  }
+  // Count actual pins, including an image-source edge and repeated edges to
+  // the same dependency. A shared provider is expanded once, regardless of
+  // how many retained roots or diamond paths reach it.
+  for (size_t cursor = 0; cursor < pendingCount; ++cursor) {
+    const Node& node = nodes_[pending[cursor]];
+    if (node.visit != Visit::Active ||
+        node.module.state() != ModuleV2::State::Active) return false;
+    for (size_t edge = 0; edge < node.acquired; ++edge) {
+      const size_t dependency = node.dependencies[edge];
+      if (dependency >= count_) return false;
+      ++consumers[dependency];
+      if (!retained[dependency]) {
+        retained[dependency] = true;
+        pending[pendingCount++] = static_cast<uint8_t>(dependency);
+      }
+    }
+  }
+  for (size_t i = 0; i < count_; ++i) {
+    const Node& node = nodes_[i];
+    if (node.module.consumers() != consumers[i]) return false;
+    if (!retained[i] && (node.visit != Visit::Idle ||
+        node.module.state() != ModuleV2::State::Absent || node.acquired))
+      return false;
+  }
+  return true;
+}
+
 bool GraphV2::shutdown() {
   if (lifecycleBusy()) return false;
   LifecycleScope scope(lifecycle_);

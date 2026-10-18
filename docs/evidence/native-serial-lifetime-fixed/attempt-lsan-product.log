@@ -1,0 +1,13 @@
+Incomplete, empty/embedded-NUL/oversized provider and out-of-range product selection rejected PASS
+==71==LeakSanitizer has encountered a fatal error.
+==71==HINT: For debugging, try setting environment variable LSAN_OPTIONS=verbosity=1:log_threads=1
+==71==HINT: LeakSanitizer does not work under ptrace (strace, gdb, etc)
+Traceback (most recent call last):
+  File "/workspace/shared/serial-lifetime-20261018/test/run_native_serial_product_storage_test.py", line 69, in <module>
+    run([build/'test', build, case])
+  File "/workspace/shared/serial-lifetime-20261018/test/run_native_serial_product_storage_test.py", line 21, in run
+    return subprocess.run(command, check=True, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/tmp/native-serial-product-ago2lz9k/test', '/tmp/native-serial-product-ago2lz9k', 'healthy']' returned non-zero exit status 1.

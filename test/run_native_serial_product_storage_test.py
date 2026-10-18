@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Actual startup mapping and Runtime admission with synthetic storage, no device I/O."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import subprocess
@@ -15,6 +16,11 @@ includes = ['-I'+str(root/x) for x in ('', 'src', 'sdk/app', 'sdk/driver', 'sdk/
     'lib/ArduinoJson/src', 'test/drivers/stubs', 'test/native_sleep_diagnostics_idf6_shim', 'test/native_platform_shim')]
 selection = ['-DRISC_NATIVE_SERIAL_FILES=1', '-DRISC_NATIVE_SERIAL_SD=1', '-DRISC_NATIVE_ESP_IDF=1']
 commands = []
+local_records={str(x.relative_to(root)):hashlib.sha256(x.read_bytes()).hexdigest()
+    for folder in ('src','sdk','lib/ArduinoJson/src','test/drivers/stubs','test/native_sleep_diagnostics_idf6_shim','test/native_platform_shim')
+    for x in (root/folder).rglob('*') if x.is_file() and x.suffix in ('.h','.hpp','.c','.cpp','.inc')}
+for name in ('test/native_serial_product_storage_test.cpp','test/native_serial_product_provider.c','test/run_native_serial_product_storage_test.py','test/storage_files_adapter_test.cpp','test/RuntimeFileFixture.h','test/fixtures/atomic_key_value_app.c'):
+    local_records[name]=hashlib.sha256((root/name).read_bytes()).hexdigest()
 def run(command, **kwargs):
     command = [str(x) for x in command]
     commands.append(command)
@@ -68,8 +74,10 @@ with tempfile.TemporaryDirectory(prefix='native-serial-product-') as temp:
         for case in cases:
             run([build/'test', build, case])
         print(profile+': shared production startup binding, exact graph admission, NS12 and custody PASS', flush=True)
+    for name,expected in local_records.items():
+        assert hashlib.sha256((root/name).read_bytes()).hexdigest()==expected, 'Input changed during product qualification: '+name
     if os.environ.get('RECEIPT'):
         Path(os.environ['RECEIPT']).write_text(json.dumps(dict(commands=commands, cases=cases,
             profiles=['legacyWave12', 'X4SD9'], invalid_configurations=len(invalid),
-            sanitized=os.environ.get('SANITIZE')=='1',
+            sanitized=os.environ.get('SANITIZE')=='1', runtime_sources=local_records, immutable_inputs_verified=True, sanitizer_environment={key:os.environ.get(key) for key in ('ASAN_OPTIONS','UBSAN_OPTIONS','LSAN_OPTIONS')},
             limits='Host production startup/Runtime/serial integration with a synthetic hardware provider and memory backend; no X4 driver or physical device qualification.'), indent=2)+'\n')

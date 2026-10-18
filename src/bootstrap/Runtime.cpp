@@ -128,7 +128,7 @@ namespace RiscBoot {
 #endif
 Runtime::~Runtime() {
 #if RISC_NATIVE_SERIAL_FILES
-  if(!releaseNativeFiles())std::abort();
+  if(nativeFilesState_==NativeFilesState::Parked ? !stopNativeFiles() : !releaseNativeFiles())std::abort();
 #endif
 #if RISC_RUNTIME_STORAGE_FILES
   if(!storageFilesExitSafe(true))std::abort();
@@ -1596,8 +1596,10 @@ void Runtime::serviceProviders() {
 }
 #if RISC_NATIVE_SERIAL_FILES
 bool Runtime::bindNativeFiles(const char* provider,uint64_t instance,RuntimeFiles& files,
-                              RuntimeFiles::Check owner,RuntimeFiles::Check safe,bool prepareVolume) {
-  if(!prepared_ || currentRuntime || retained_ || !port_.owner() || !provider ||
+                              RuntimeFiles::Check owner,RuntimeFiles::Check safe,bool prepareVolume,NativeBindingLifetime lifetime) {
+  if(nativeFilesState_!=NativeFilesState::Admitting ||
+     (lifetime!=NativeBindingLifetime::Run && lifetime!=NativeBindingLifetime::Firmware) ||
+     !prepared_ || currentRuntime || retained_ || !port_.owner() || !provider ||
      !*provider || !owner || !safe || !owner() || !safe() || files.bound() || files.retained())return false;
   size_t selected=driverCount_;
   for(size_t i=0;i<driverCount_;++i)if(!strcmp(drivers_[i].id,provider) && drivers_[i].instance==instance &&
@@ -1607,10 +1609,11 @@ bool Runtime::bindNativeFiles(const char* provider,uint64_t instance,RuntimeFile
     selected=i;
   }
   if(selected==driverCount_ || (prepareVolume && strcmp(drivers_[selected].provides,"storage.volume")))return false;
+  if(lifetime==NativeBindingLifetime::Firmware && (!port_.serialFilesShutdown || !port_.serialFilesStop || !firmwareFilesCompatible(selected)))return false;
   NativeFilesBinding* slot=nullptr;
   for(auto& binding:nativeFiles_){if(binding.files==&files)return false;if(!binding.files && !slot)slot=&binding;}
   if(!slot)return false;
-  *slot={&files,owner,safe,{},selected,prepareVolume};return true;
+  *slot={&files,owner,safe,{},selected,prepareVolume,lifetime};return true;
 }
 bool Runtime::activateNativeFiles() {
   bool selected=false;for(const auto& binding:nativeFiles_)if(binding.files)selected=true;
@@ -1659,15 +1662,107 @@ bool Runtime::activateNativeFiles() {
   }
   return true;
 }
-bool Runtime::releaseNativeFiles() {
+bool Runtime::releaseNativeFiles(bool final) {
   for(auto& binding:nativeFiles_)if(binding.grant.slot) {
-    if(retained_ || !binding.files->exitSafe() || !port_.owner() || !providerStorageSafe()) {
+    if(retained_ || !binding.files->exitSafe() || binding.sleepFrozen || !binding.files->bound() ||
+       !port_.owner() || !providerStorageSafe()) {
       binding.files->retainCustody();retained_=true;return false;
     }
+    // Parking preserves ownership only after the old session has no handles.
+    // Later healthy post-return handles are allowed by the checkpoint gate.
+    if(!final && binding.lifetime==NativeBindingLifetime::Firmware)continue;
     if(!graph_.release(binding.grant)){binding.files->retainCustody();retained_=true;return false;}
     binding.grant={};
     if(!binding.files->retire()){binding.files->retainCustody();retained_=true;return false;}
   }
+  return true;
+}
+// This is admission-time capability compatibility, not the lifetime proof.
+// GraphV2 separately verifies the exact recorded acquired dependency closure.
+bool Runtime::firmwareFilesCompatible(size_t root) const {
+  bool seen[MaxDrivers]{};size_t pending[MaxDrivers]{},count=0;
+  if(driverCount_>MaxDrivers || root>=driverCount_)return false;
+  seen[root]=true;pending[count++]=root;
+  for(size_t at=0;at<count;++at) {
+    const size_t index=pending[at];const auto& driver=drivers_[index];
+    const auto& storage=providerStorage_[index];
+    if(storage.count || storage.fileCount || storage.needsEntropy || storage.needsTcp || storage.needsRealtime)return false;
+    const auto add=[&](size_t dependency) {
+      if(dependency>=driverCount_)return false;
+      if(!seen[dependency]){seen[dependency]=true;pending[count++]=dependency;}
+      return true;
+    };
+    if(driver.sourceDriver>=0 && !add(size_t(driver.sourceDriver)))return false;
+    for(size_t r=0;r<driver.count;++r) {
+      const auto& requirement=driver.requirements[r];
+      if(!strcmp(requirement.capability,RISC_INSTALLATION_CAPABILITY) ||
+         !strcmp(requirement.capability,"platform.bank-store") ||
+         !strcmp(requirement.capability,RISC_PROVISION_REQUEST_CAPABILITY))return false;
+      if(requirement.trustedApi || !strcmp(requirement.capability,"hardware.device"))continue;
+      size_t found=driverCount_;
+      for(size_t d=0;d<driverCount_;++d)if(requirement.providerId &&
+          !strcmp(drivers_[d].id,requirement.providerId) && drivers_[d].instance==requirement.providerInstance &&
+          drivers_[d].api==requirement.api && !strcmp(drivers_[d].provides,requirement.capability)) {
+        if(found!=driverCount_)return false;
+        found=d;
+      }
+      if(!add(found))return false;
+    }
+  }
+  return true;
+}
+size_t Runtime::nativeFilesKeepSet(RuntimeProviders::GrantV2* keep) const {
+  size_t count=0;
+  for(const auto& binding:nativeFiles_)if(binding.grant.slot && binding.lifetime==NativeBindingLifetime::Firmware)
+    keep[count++]=binding.grant;
+  return count;
+}
+bool Runtime::retainNativeFiles(const char* reason) {
+  retained_=true;
+  for(auto& binding:nativeFiles_)if(binding.grant.slot)binding.files->retainCustody();
+  return fail(reason);
+}
+bool Runtime::nativeFilesServiceSafe() const {
+  if(nativeFilesState_!=NativeFilesState::Parked || currentRuntime || !port_.owner() || retained_ ||
+     nativeCheckpointRunning_ || sleepToken_ || sleepCalling_ || yielding_ || promotionRunning_ ||
+     invocation_->active_ || invocation_->module || foregroundRunning_ ||
+     mainInvocation_.streams_.busy() || mainInvocation_.streams_.retained() ||
+     (foreground_ && (foreground_->active_ || foreground_->module || foreground_->streams_.busy() || foreground_->streams_.retained())) ||
+     metadataCloseRetained() || (settings_ && settings_->retained()) ||
+     !fileSourceExitSafe() || fileSource_.token || !appDataExportExitSafe())return false;
+  for(const auto& binding:nativeFiles_)if(binding.files && (binding.files->retained() || binding.sleepFrozen ||
+      (binding.grant.slot && (binding.lifetime!=NativeBindingLifetime::Firmware || !binding.files->bound() ||
+                             !firmwareFilesCompatible(binding.driver)))))return false;
+  RuntimeProviders::GrantV2 keep[sizeof(nativeFiles_)/sizeof(nativeFiles_[0])]{};
+  const size_t count=nativeFilesKeepSet(keep);
+  return graph_.validateKeepSet(keep,count);
+}
+bool Runtime::nativeFilesCheckpoint() {
+  if(nativeFilesState_!=NativeFilesState::Parked || currentRuntime || !port_.owner() || nativeCheckpointRunning_)return false;
+  if(!nativeFilesServiceSafe())return retainNativeFiles("native serial parked custody retained; restart required");
+  // Busy native work may defer I/O while control replies remain available. In
+  // particular, a healthy serial handle must not be tested with exitSafe().
+  const bool ready=(!port_.serialFilesReady || port_.serialFilesReady()) && providerStorageSafe();
+  const auto checkpoint=ready?port_.serialFilesCheckpoint:port_.serialFilesControlCheckpoint;
+  if(checkpoint) {
+    nativeCheckpointRunning_=true;const bool safe=checkpoint();nativeCheckpointRunning_=false;
+    if(!safe)return retainNativeFiles("native serial post-return custody retained; restart required");
+  }
+  if(!nativeFilesServiceSafe())return retainNativeFiles("native serial post-return graph retained; restart required");
+  return true;
+}
+bool Runtime::stopNativeFiles() {
+  if(currentRuntime || !port_.owner() || nativeCheckpointRunning_ || retained_)return false;
+  if(nativeFilesState_==NativeFilesState::Stopped)return true;
+  if(nativeFilesState_!=NativeFilesState::Parked)return false;
+  if(!nativeFilesServiceSafe() || !providerStorageSafe())return retainNativeFiles("native serial final custody retained; restart required");
+  const auto stop=port_.serialFilesStop?port_.serialFilesStop:port_.serialFilesShutdown;
+  if(stop) {
+    nativeCheckpointRunning_=true;const bool safe=stop();nativeCheckpointRunning_=false;
+    if(!safe)return retainNativeFiles("native serial final close retained; restart required");
+  }
+  if(!releaseNativeFiles() || !graph_.shutdown())return retainNativeFiles("native serial final shutdown retained; restart required");
+  nativeFilesState_=NativeFilesState::Stopped;
   return true;
 }
 #endif
@@ -2036,6 +2131,10 @@ bool Runtime::takeLaunchFailure(risc_runtime_launch_failure_v1* out) {
 }
 bool Runtime::run() {
   if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained()) return fail("runtime not launchable");
+#if RISC_NATIVE_SERIAL_FILES
+  if(nativeFilesState_!=NativeFilesState::Admitting)return fail("runtime not launchable");
+  nativeFilesState_=NativeFilesState::Running;
+#endif
   prepared_=false; currentRuntime=this;
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE || RISC_RUNTIME_PREFERENCE_STORE || RISC_RUNTIME_STORAGE_FILES
   atomicKeyValueOwner.store(port_.owner,std::memory_order_release);
@@ -2172,20 +2271,38 @@ bool Runtime::run() {
 #endif
   if(!retained_ && !fileSourceCleanup())ok=false;
 #if RISC_NATIVE_SERIAL_FILES
-  if(!retained_ && !releaseNativeFiles())ok=fail("native file provider shutdown retained; restart required");
+  if(!retained_ && !releaseNativeFiles(false))ok=fail("native file provider shutdown retained; restart required");
 #endif
   if(!retained_) {
-    for(size_t i=driverCount_;i--;) if(grants_[i].slot && !graph_.release(grants_[i])) {
-      retained_=true;
-      char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[i].id,graph_.lastError());port_.log(detail);
-      if(ok)ok=fail("driver quiescence failed; restart required");
-      break;
+    for(size_t i=driverCount_;i--;) if(grants_[i].slot) {
+      if(!graph_.release(grants_[i])) {
+        retained_=true;
+        char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[i].id,graph_.lastError());port_.log(detail);
+        if(ok)ok=fail("driver quiescence failed; restart required");
+        break;
+      }
+      grants_[i]={};
     }
-    if(!retained_ && !graph_.shutdown()) {
-      retained_=true;port_.log("RTE_CLEANUP driver-shutdown=retained");
-      if(ok)ok=fail("driver shutdown retained; restart required");
+    if(!retained_) {
+#if RISC_NATIVE_SERIAL_FILES
+      RuntimeProviders::GrantV2 keep[sizeof(nativeFiles_)/sizeof(nativeFiles_[0])]{};
+      const size_t count=nativeFilesKeepSet(keep);
+      // Releases above already recursively unload every unrelated zero-consumer
+      // module. A nonempty keep set is verified exactly, never swept or widened.
+      const bool clean=count?graph_.validateKeepSet(keep,count):graph_.shutdown();
+#else
+      const bool clean=graph_.shutdown();
+#endif
+      if(!clean) {
+        retained_=true;port_.log("RTE_CLEANUP driver-shutdown=retained");
+        if(ok)ok=fail("driver shutdown retained; restart required");
+      }
     }
   }
+#if RISC_NATIVE_SERIAL_FILES
+  if(retained_) {for(auto& binding:nativeFiles_)if(binding.grant.slot && binding.lifetime==NativeBindingLifetime::Firmware)binding.files->retainCustody();}
+  else nativeFilesState_=NativeFilesState::Parked;
+#endif
   // Cached input bytes are never borrowed by a mapping. Releasing them also
   // preserves an app/provider image retained after failed quiescence.
 #if defined(ESP_PLATFORM) || defined(RISC_APP_IMAGE_CACHE_TEST)
@@ -2201,6 +2318,9 @@ bool Runtime::run() {
 // The installation coordinator supplies owner-resolved policy separately from
 // untrusted package declarations. Discovering a file never confers authority.
 bool RiscBoot::Runtime::reserveInstalledApps(size_t capacity) {
+#if RISC_NATIVE_SERIAL_FILES
+  if(nativeFilesState_!=NativeFilesState::Admitting)return false;
+#endif
   if(currentRuntime==this || !default_[0] || retained_ || !port_.owner() ||
      capacity<policyCount_ || capacity>MaxAppPolicies || installedMetadata_)return false;
   auto policies=metadataArray<AppPolicy>(capacity);
@@ -2215,6 +2335,9 @@ bool RiscBoot::Runtime::admitInstalledApp(const char* policyJson,const char* man
  return admitInstalledAppAt(policyJson,manifestJson,policyCount_);
 }
 bool RiscBoot::Runtime::admitInstalledAppAt(const char* policyJson,const char* manifestJson,size_t slot) {
+#if RISC_NATIVE_SERIAL_FILES
+  if(nativeFilesState_==NativeFilesState::Parked || nativeFilesState_==NativeFilesState::Stopped)return false;
+#endif
   if(!installedMetadata_ || !port_.owner() || retained_ || metadataCloseRetained() ||
      !providerStorageSafe() || !graph_.activationSafe() || promotionRunning_ ||
      graph_.lifecycleBusy() || slot>=policyCapacity_ || slot>policyCount_ || !policyJson || !manifestJson ||

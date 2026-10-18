@@ -136,6 +136,9 @@ struct Port {
   // RAM-only protocol metadata and bounded Busy refusal, independent of SD
   // readiness. No provider calls, cancellation cleanup, allocation or wait.
   bool (*serialFilesControlCheckpoint)()=nullptr;
+  // Optional final endpoint teardown. Unlike shutdown/session reset, successful
+  // stop disables transport admission before native provider grants are released.
+  bool (*serialFilesStop)()=nullptr;
 #endif
 };
 class Runtime final {
@@ -262,13 +265,28 @@ class Runtime final {
   int32_t sleepPrepare(uint64_t*);
   int32_t sleepResume(uint64_t);
 #if RISC_NATIVE_SERIAL_FILES
-  // Explicit trusted native selection after prepare, before run. Independent
-  // of all app grants; Runtime pins the exact provider and dependencies until
-  // checked serial shutdown. Failed optional activation remains unavailable.
+  enum class NativeBindingLifetime : uint8_t { Run, Firmware };
+  // Explicit trusted native selection after prepare, before the single run.
+  // Run is the default and retires at clean run completion. Firmware retains
+  // only these exact grants and their acquired dependencies until final stop.
+  // Firmware clients and raw platform callbacks must outlive Runtime and work
+  // without currentRuntime/app authority; Runtime-bound brokers are rejected.
+  // Firmware requires both serialFilesShutdown (session reset) and
+  // serialFilesStop (final admission disable). Session reset alone does not
+  // end Firmware ownership.
+  // Failed optional activation remains unavailable.
   // prepareVolume explicitly requests one legacy provider refresh at activation;
   // generic file providers own their own readiness. No app/wire refresh exists.
   bool bindNativeFiles(const char* provider,uint64_t instance,RuntimeFiles&,
-                       RuntimeFiles::Check owner,RuntimeFiles::Check safe,bool prepareVolume=false);
+                       RuntimeFiles::Check owner,RuntimeFiles::Check safe,bool prepareVolume=false,
+                       NativeBindingLifetime lifetime=NativeBindingLifetime::Run);
+  // Settled post-return owner boundary used by the production outer loop.
+  // Checks live parked graph/custody each time; healthy open handles are legal.
+  bool nativeFilesServiceSafe() const;
+  bool nativeFilesCheckpoint();
+  // Terminal, idempotent after success. Closes/disables the endpoint, releases
+  // native grants and uses ordinary graph shutdown. Uncertainty pins custody.
+  bool stopNativeFiles();
 #endif
   bool active() const { return !sleepCalling_ &&
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
@@ -715,12 +733,18 @@ class Runtime final {
   struct NativeFilesBinding {
     RuntimeFiles* files=nullptr;RuntimeFiles::Check owner=nullptr,safe=nullptr;
     RuntimeProviders::GrantV2 grant{};size_t driver=0;bool prepareVolume=false;
+    NativeBindingLifetime lifetime=NativeBindingLifetime::Run;
     const risc_storage_volume_api_v1_sleep* sleep=nullptr;
     bool sleepFrozen=false,sleepAttempted=false,sleepPrepared=false;
   } nativeFiles_[16]{};
   bool activateNativeFiles();
   int32_t resumeNativeSleep();
-  bool releaseNativeFiles();
+  enum class NativeFilesState : uint8_t { Admitting, Running, Parked, Stopped };
+  NativeFilesState nativeFilesState_=NativeFilesState::Admitting;
+  bool releaseNativeFiles(bool final=true);
+  bool firmwareFilesCompatible(size_t driver) const;
+  size_t nativeFilesKeepSet(RuntimeProviders::GrantV2* keep) const;
+  bool retainNativeFiles(const char* reason);
 #endif
   struct AppDataExportDelete {
     void operator()(RiscStorage::AppDataExport* value) const {

@@ -33,7 +33,7 @@ if "-DRISC_NATIVE_ESP_IDF=1" not in flags:
     raise SystemExit("Use a selected native ESP-IDF compile database")
 commands = []
 for enabled in (0, 1):
-    for relative in ("src/main.cpp", "src/bootstrap/Runtime.cpp", "src/ports/esp32s3/CpuPort.cpp",
+    for relative in ("src/main.cpp", "src/bootstrap/Runtime.cpp", "src/runtime/drivers/ProviderGraphV2.cpp", "src/ports/esp32s3/CpuPort.cpp",
                      "src/ports/esp32s3/NativeSerialFiles.cpp", "src/ports/esp32s3/NativeSerialStorage.cpp", "src/ports/esp32s3/SleepDiagnostics.cpp",
                      "src/runtime/serial/Files.cpp"):
         source = root / relative

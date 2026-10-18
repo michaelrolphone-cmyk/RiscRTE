@@ -1,0 +1,7 @@
+In file included from /workspace/shared/serial-lifetime-20261018/src/bootstrap/InstalledFiles.h:3,
+                 from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.h:11,
+                 from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:3:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/MetadataArray.h:7:10: fatal error: esp_heap_caps.h: No such file or directory
+    7 | #include <esp_heap_caps.h>
+      |          ^~~~~~~~~~~~~~~~~
+compilation terminated.

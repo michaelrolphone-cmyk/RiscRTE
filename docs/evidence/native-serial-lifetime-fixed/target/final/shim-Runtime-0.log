@@ -1,0 +1,76 @@
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:100:40: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+  100 |     []()->int32_t{return currentRuntime?currentRuntime->serviceCheckpoint():RISC_RUNTIME_CHECKPOINT_CONTEXT;},
+      |                          ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:101:73: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+  101 |     [](uint64_t* token)->int32_t{if(token)*token=0;return currentRuntime?currentRuntime->sleepPrepare(token):RISC_RUNTIME_SLEEP_CONTEXT;},
+      |                                                           ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:102:54: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+  102 |     [](uint64_t token)->int32_t{return currentRuntime?currentRuntime->sleepResume(token):RISC_RUNTIME_SLEEP_CONTEXT;}};
+      |                                        ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:118:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FailureEvidenceRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FailureEvidenceRuntime.inc:22:28: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   22 |       return currentRuntime?currentRuntime->failureEvidenceRead(id,record):RISC_FAILURE_EVIDENCE_DENIED;
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FailureEvidenceRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FailureEvidenceRuntime.inc:25:28: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   25 |       return currentRuntime?currentRuntime->failureEvidenceAcknowledge(id,boot,sequence):RISC_FAILURE_EVIDENCE_DENIED;
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:119:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/DiagnosticCheckpointRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/DiagnosticCheckpointRuntime.inc:15:28: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   15 |       return currentRuntime?currentRuntime->diagnosticCheckpointWrite(id,text,length):RISC_DIAGNOSTIC_CHECKPOINT_DENIED;
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:155:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc:26:86: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   26 |     [](const char* n,uint64_t s,uint64_t* t)->int32_t{if(t)*t=0;return currentRuntime?currentRuntime->fileSourceBegin(n,s,t):RISC_FILE_SOURCE_CONTEXT;},
+      |                                                                        ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc:27:97: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   27 |     [](uint64_t t,const void* b,uint32_t n,uint32_t* a)->int32_t{if(a)*a=0;return currentRuntime?currentRuntime->fileSourceWrite(t,b,n,a):RISC_FILE_SOURCE_CONTEXT;},
+      |                                                                                   ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc:28:50: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   28 |     [](uint64_t t)->int32_t{return currentRuntime?currentRuntime->fileSourceFinish(t):RISC_FILE_SOURCE_CONTEXT;},
+      |                                    ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc:29:50: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   29 |     [](uint64_t t)->int32_t{return currentRuntime?currentRuntime->fileSourceDiscard(t):RISC_FILE_SOURCE_CONTEXT;},
+      |                                    ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc:32:72: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   32 |     [](risc_file_open_source_info_v1* o)->int32_t{return currentRuntime?currentRuntime->fileSourceInfo(o):RISC_FILE_SOURCE_CONTEXT;},
+      |                                                          ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/FileSourceRuntime.inc:33:102: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   33 |     [](uint64_t t,uint64_t o,void* b,uint32_t n,uint32_t* a)->int32_t{if(a)*a=0;return currentRuntime?currentRuntime->fileSourceRead(t,o,b,n,a):RISC_FILE_SOURCE_CONTEXT;}};
+      |                                                                                        ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp: In static member function 'static int32_t RiscBoot::Runtime::memoryHeapSnapshot(void*, risc_memory_heap_snapshot_v1*)':
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:847:59: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+  847 |   if(rc!=RISC_MEMORY_OK)return rc==RISC_MEMORY_UNSUPPORTED?rc:RISC_MEMORY_INVALID;
+      |                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~
+In file included from /workspace/shared/serial-lifetime-20261018/src/bootstrap/Runtime.cpp:1126:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc:57:28: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   57 |       return currentRuntime?currentRuntime->registerShell(token,callbacks):RISC_RESIDENT_DENIED;
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc:60:28: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   60 |       return currentRuntime?currentRuntime->runForeground(token,path,result):RISC_RESIDENT_DENIED;
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc:63:28: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   63 |       return currentRuntime?currentRuntime->residentCheckpoint(token,request,reply):RISC_RESIDENT_DENIED;
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc: In lambda function:
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc:65:55: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+   65 |     [](uint64_t token)->int32_t {return currentRuntime?currentRuntime->residentExit(token):RISC_RESIDENT_DENIED;},
+      |                                         ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc: In member function 'int32_t RiscBoot::Runtime::residentCheckpoint(uint64_t, const risc_resident_request_v1*, risc_resident_reply_v1*)':
+/workspace/shared/serial-lifetime-20261018/src/bootstrap/ResidentShellRuntime.inc:287:56: warning: enumerated and non-enumerated type in conditional expression [-Wextra]
+  287 |   return foregroundExit_ || status==RISC_RESIDENT_EXIT ? RISC_RESIDENT_EXIT : status;
+      |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~

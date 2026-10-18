@@ -83,7 +83,7 @@ int main(int argc,char** argv){
     backend.ready=mode!="absent-media";backend.state=backend.ready?RISC_STORAGE_STATE_READY:RISC_STORAGE_STATE_UNAVAILABLE;return true;
   };
   RiscBoot::Port port{owner,[](risc_runtime_health_v1*){return true;},[](uint32_t){},[](const char*){return true;}};
-  port.appExitSafe=safe;port.providerStorageSafe=safe;port.serialFilesCheckpoint=checkpoint;port.serialFilesShutdown=N::shutdown;
+  port.appExitSafe=safe;port.providerStorageSafe=safe;port.serialFilesCheckpoint=checkpoint;port.serialFilesShutdown=N::shutdown;port.serialFilesStop=N::stop;
   RiscTest::FileSources sources({root.c_str()});runtime=new RiscBoot::Runtime(port);assert(sources.bind(*runtime));
   assert(!S::bindSd(*runtime,owner,safe));assert(S::prepare(owner,safe));
   assert(S::admission()->count==1 && S::admission()->namespaces[0].id==12);
@@ -99,7 +99,7 @@ int main(int argc,char** argv){
   assert(!starts && !refreshes && !backend.totalCalls() && !S::sdFiles().bound());
   if(rejected){delete runtime;puts("Product startup exact selection rejected before activation PASS");return 0;}
   assert(!S::bindSd(*runtime,owner,safe));assert(N::prepare(S::admission(),owner,safe));
-  const bool retained=mode=="failed-close"||mode=="failed-release"||mode=="refresh-retained";
+  const bool retained=mode=="failed-close"||mode=="refresh-retained";
   assert(runtime->run()!=retained);assert(runtime->retained()==retained && starts==1 && refreshes==1);
   if(retained){
     if(mode=="refresh-retained")assert(!appCalls);
@@ -108,6 +108,27 @@ int main(int argc,char** argv){
     assert(S::sdFiles().open("/file",RISC_FILES_READ,&handle)==RISC_FILES_RETAINED&&!handle);
     assert(backend.totalCalls()==calls);puts("Product startup terminal custody retained PASS");fflush(stdout);_exit(0);
   }
+  assert(S::sdFiles().bound() && S::sdFiles().exitSafe() && !stops && !quiesces);
+  assert(runtime->nativeFilesServiceSafe()&&!runtime->active()&&!risc_runtime_get_api(1));
+  for(unsigned i=0;i<8;++i)assert(!runtime->run()&&runtime->nativeFilesServiceSafe());
+  sequence=0;
+  auto post=[&](const std::string& body,int expected=0){
+    const std::string line="RTEF1 87654321 "+std::to_string(++sequence)+" "+body+"\n";
+    for(unsigned char c:line){N::input(c);}
+    assert(runtime->nativeFilesCheckpoint());
+    std::string out;while(N::outputSize()){out.append(N::output(),N::outputSize());N::consumeOutput(N::outputSize());}
+    const auto prefix="RTEF1 87654321 "+std::to_string(sequence)+" "+std::to_string(expected);
+    assert(out.rfind(prefix,0)==0);return out;
+  };
+  post("HELLO");post("NS 0");post("STAT 12",RISC_FILES_INVALID);
+  post("PATH 0 2f66696c65");post("STAT 12",mode=="absent-media"||mode=="refresh-refused"?RISC_FILES_UNAVAILABLE:0);
+  if(mode=="failed-release"){
+    assert(!runtime->stopNativeFiles()&&runtime->retained()&&!stops);
+    const auto calls=backend.totalCalls();for(unsigned i=0;i<8;++i)assert(!runtime->stopNativeFiles()&&!runtime->nativeFilesCheckpoint());
+    assert(backend.totalCalls()==calls&&S::sdFiles().retained());puts("Product final-stop failed release retains custody PASS");fflush(stdout);_exit(0);
+  }
+  assert(runtime->stopNativeFiles()&&!runtime->nativeFilesServiceSafe());
+  for(unsigned i=0;i<8;++i)assert(runtime->stopNativeFiles()&&!runtime->run());
   assert(!S::sdFiles().bound() && S::sdFiles().exitSafe() && stops==1 && quiesces==1);
   delete runtime;printf("Product startup %s instance %u, wire namespace 12: %s PASS\n",TEST_PRODUCT_PROVIDER,TEST_PRODUCT_INSTANCE,mode.c_str());
 }
