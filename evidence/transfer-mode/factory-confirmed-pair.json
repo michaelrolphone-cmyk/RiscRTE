@@ -1,0 +1,27 @@
+{
+  "sha256": "217c5ca2738df5f43452d49d2eecdfae04bc26e0e952f351d82578dbcda2226b",
+  "bytes": 16777216,
+  "otaOffset": "0xff0000",
+  "otaSequence": 1,
+  "otaState": 2,
+  "otaCRC": "0x4743989a",
+  "activeJournalOffset": "0xff2000",
+  "activeJournalCRC": "0x586900e1",
+  "activeBank": 0,
+  "firmwareSize": 1812736,
+  "storeSize": 5570560,
+  "storeAbi": 3,
+  "firmwareSha256": "6f8790c59e608b40b97e23b64d079832a18e8a768624ca7a064bb3499dadc405",
+  "storeSha256": "7c3b71dfcfd4a9cadd8a043393d4ffbaf9ac9d526ca263a63f85dcf519099119",
+  "sourceRuntime": "0aab2fd3b03b4190d638e23c79a465afeecf5dfb",
+  "sourceProduct": "f42a6e07133c599a22acfaa8b8a0672ff996dc1b",
+  "otaBytes": "01000000ffffffffffffffffffffffffffffffffffffffff020000009a984347",
+  "journalValidation": "NativeBankStore.cpp:572-574 calls Transaction::initialize; PairedBank.cpp:10-13,39-43 checks bank record before prepared=true",
+  "confirmation": "prepared && confirmed && !pending; confirmed means VALID; no independent confirmation flag in active journal",
+  "inactiveBank": "Bank1 app/store/journal erased; active bank0 journal valid, not erased",
+  "limits": "Packaged byte/source verification only; no physical readback or device execution",
+  "mycelium": {
+    "id": "wave063-transfer-mode-source-plan-20261019",
+    "revision": 3
+  }
+}

@@ -13,6 +13,9 @@ struct Hooks {
  // Accepted STAT only. Copy the borrowed output synchronously; no provider,
  // allocation, wait or reentry. Identity describes the actual dispatch.
  void (*statObserved)(uint32_t,uint32_t,uint64_t,int32_t,const RiscBoot::StatObservation&)=nullptr;
+ // Validated fresh HELLO only, before SID commitment: 0 ready, positive defer,
+ // negative wire refusal. RAM-only owner callback; no provider work or reentry.
+ int32_t (*helloAdmission)()=nullptr;
 };
 class Files final {
  public:
@@ -36,7 +39,9 @@ class Files final {
   // Owner-only RAM path: metadata replies and bounded admission refusal.
   // Never calls file providers, including close/cancel of a live handle.
   void controlCheckpoint();
-  bool shutdown();
+  // Internal app cleanup may preserve only a parser-validated deferred HELLO.
+  // Genuine disconnect always discards protocol state.
+  bool shutdown(bool preserveDeferredHello=false);
   bool exitSafe()const;
   bool custodySafe()const;
   bool pending()const{return (requestLength_>=6 && !strncmp(request_,"RTEF1 ",6)) || requestReady_ || outputSize() || handle_ || cancel_;}
@@ -57,5 +62,6 @@ class Files final {
   size_t requestLength_=0,responseLength_=0,sent_=0;
   uint32_t session_=0,sequence_=0,replySession_=0,replySequence_=0;
   bool discard_=false,requestReady_=false,observedControl_=false,observedDeadline_=false;
+  bool deferredHello_=false,deferredHelloReply_=false;
 };
 }

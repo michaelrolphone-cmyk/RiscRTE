@@ -1,0 +1,51 @@
++ set -euo pipefail
++++ dirname /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/run_native_bank_test.sh
+++ cd /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/..
+++ pwd
++ repo=/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs
+++ mktemp -d
++ build=/tmp/tmp.HBfBChEeEL
++ trap 'rm -rf "$build"' EXIT
++ san=()
++ [[ 0 == 1 ]]
++ extra=(-DARDUINO_USB_CDC_ON_BOOT=1 -DRISC_NATIVE_DIAGNOSTIC_OBSERVER="${NATIVE_DIAGNOSTIC_OBSERVER:-0}")
++ [[ 0 == 1 ]]
++ [[ 1 == 2 ]]
++ crypto_native=0
++ [[ 1 == 2 ]]
++ c++ -std=c++17 -Wall -Wextra -Werror -DRISC_NATIVE_ESP_IDF=0 -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/native_bank_stubs -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/native_bank_crypto_stub_test.cpp -lcrypto -o /tmp/tmp.HBfBChEeEL/crypto-stub
++ /tmp/tmp.HBfBChEeEL/crypto-stub
+Native-bank crypto fixtures: free capacity, abort/restart/destructor and one-shot cleanup PASS
++ [[ -n '' ]]
++ [[ 0 == 1 ]]
++ [[ -n '' ]]
++ cc -std=c11 -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/native_bank_stubs -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/lib/elf_loader/include -c /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/lib/elf_loader/src/esp_elf_validate.c -o /tmp/tmp.HBfBChEeEL/validate.o
++ native_objects=()
++ [[ -z '' ]]
++ extra+=(-DRISC_NATIVE_PROVIDER_ADMISSION_TEST=1 -DRISC_NATIVE_BANK_PROVIDER_TEST=1)
++ for source in esp_privileged_imports esp_privileged_manifest_imports
++ cc -std=gnu11 -Wall -Wextra -Werror -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/native_bank_stubs -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/lib/elf_loader/include -c /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/lib/elf_loader/src/esp_privileged_imports.c -o /tmp/tmp.HBfBChEeEL/esp_privileged_imports.o
++ native_objects+=("$build/$source.o")
++ for source in esp_privileged_imports esp_privileged_manifest_imports
++ cc -std=gnu11 -Wall -Wextra -Werror -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/native_bank_stubs -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/lib/elf_loader/include -c /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/lib/elf_loader/src/esp_privileged_manifest_imports.c -o /tmp/tmp.HBfBChEeEL/esp_privileged_manifest_imports.o
++ native_objects+=("$build/$source.o")
++ [[ 0 == 1 ]]
++ [[ 0 == 1 ]]
++ [[ -n '' ]]
++ [[ -n '' ]]
++ cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/fixtures/cohort_native_app.c -o /tmp/tmp.HBfBChEeEL/cohort-native.elf
++ c++ -rdynamic -Wl,--wrap=open,--wrap=close,--wrap=fopen,--wrap=fclose,--wrap=opendir,--wrap=stat,--wrap=lstat -DARDUINO_USB_CDC_ON_BOOT=1 -DRISC_NATIVE_DIAGNOSTIC_OBSERVER=0 -DRISC_NATIVE_PROVIDER_ADMISSION_TEST=1 -DRISC_NATIVE_BANK_PROVIDER_TEST=1 -DRISC_PAIRED_BANKS=1 -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/native_bank_stubs -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/drivers/stubs -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/lib/elf_loader/include -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/sdk/app -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/sdk/driver -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/sdk/hardware -I/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/lib/ArduinoJson/src /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/ports/esp32s3/CpuPort.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/bootstrap/Json.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/bootstrap/Board.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/bootstrap/Runtime.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/streams/AppStreamSessions.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/streams/ProviderQueueHost.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/drivers/ProviderGraphV2.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/drivers/ProviderModuleV2.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/provisioning/BootstrapInput.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/provisioning/Coordinator.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/provisioning/StoreFiles.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/provisioning/Profile.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/provisioning/PreservingPolicy.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/update/PairedBank.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/src/runtime/update/StoreAudit.cpp /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/native_bank_test.cpp /tmp/tmp.HBfBChEeEL/validate.o /tmp/tmp.HBfBChEeEL/esp_privileged_imports.o /tmp/tmp.HBfBChEeEL/esp_privileged_manifest_imports.o -lcrypto -ldl -o /tmp/tmp.HBfBChEeEL/test
++ [[ 0 == 1 ]]
++ [[ 0 == 1 ]]
++ [[ 0 == 1 ]]
++ [[ -n '' ]]
++ [[ -n '' ]]
++ /tmp/tmp.HBfBChEeEL/test markers
+Production native bank adapter: markers PASS
++ /tmp/tmp.HBfBChEeEL/test native-provider-admission /tmp/tmp.HBfBChEeEL/provider-admission
+Production NativeBank reader/hash budgets: 7 aggregate-deadline, zero-I/O expiry and 32KiB/2ms fairness cases PASS
+Production native provider bank admission: selected=0 exact bytes/imports, application/extra isolation, provisioning and immutable staged authority PASS; zero mapping/hardware/selection
++ /tmp/tmp.HBfBChEeEL/test boot-records
+test: /workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/boot_path_native.inc:70: void bootRecords(): Assertion `RiscBankStore::transferAvailable()==(state==ESP_OTA_IMG_VALID)' failed.
+/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/inputs/test/run_native_bank_test.sh: line 103:   271 Aborted                 "$build/test" boot-records
++ rm -rf /tmp/tmp.HBfBChEeEL

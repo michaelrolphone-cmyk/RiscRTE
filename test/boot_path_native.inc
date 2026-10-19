@@ -62,7 +62,16 @@ static void bootRecords(){
   memcpy(flash.data()+JournalOffset+bank*4096,&record,sizeof(record));
  }
  for(unsigned bank=0;bank<2;++bank)for(auto state:{ESP_OTA_IMG_VALID,ESP_OTA_IMG_PENDING_VERIFY}){
-  resetBoot(bank,state);assert(RiscBankStore::prepareBoot(own,restartSafe,safe));constantBootCost();
+  resetBoot(bank,state);assert(!RiscBankStore::transferAvailable());
+  assert(RiscBankStore::prepareBoot(own,restartSafe,safe));constantBootCost();
+  assert(RiscBankStore::transferAvailable()==(state==ESP_OTA_IMG_VALID));
+  // Healthy accepted work can make operation readiness temporarily false;
+  // intent still qualifies on the confirmed pair without doing flash I/O.
+  operationEnabled=false;assert(RiscBankStore::transferAvailable()==(state==ESP_OTA_IMG_VALID));operationEnabled=true;
+  ownerEnabled=false;assert(!RiscBankStore::transferAvailable());ownerEnabled=true;
+  RiscBankStore::provisionReadRetained=true;assert(!RiscBankStore::transferAvailable());RiscBankStore::provisionReadRetained=false;
+  RiscBankStore::retainedAdmissionFile=1;assert(!RiscBankStore::transferAvailable());RiscBankStore::retainedAdmissionFile=0;
+  RiscBankStore::mounted=true;assert(!RiscBankStore::transferAvailable());RiscBankStore::mounted=false;
   assert(!strcmp(RiscBankStore::bootLabel(),bank?"bootfs1":"bootfs0"));
   assert(!RiscBankStore::confirmBoot()); // application health still required
   const auto before=rollbacks;RiscBankStore::rejectBoot();
@@ -76,7 +85,7 @@ static void bootRecords(){
    memset(flash.data()+JournalOffset+bank*4096,0xff,4096);
    memcpy(flash.data()+JournalOffset+bank*4096,&record,cut);
    resetBoot(bank,ESP_OTA_IMG_PENDING_VERIFY);assert(!RiscBankStore::prepareBoot(own,restartSafe,safe));constantBootCost();
-   assert(!RiscBankStore::bootLabel());const auto before=rollbacks;RiscBankStore::rejectBoot();assert(rollbacks==before+1);
+   assert(!RiscBankStore::bootLabel()&&!RiscBankStore::transferAvailable());const auto before=rollbacks;RiscBankStore::rejectBoot();assert(rollbacks==before+1);
    // IDF rollback reselects the untouched prior pair; no inactive record scan.
    resetBoot(1-bank,ESP_OTA_IMG_VALID);assert(RiscBankStore::prepareBoot(own,restartSafe,safe));constantBootCost();
   }
@@ -89,6 +98,7 @@ static void bootRecords(){
  const auto restored=makeRecord(0,imageSize,digest,digest);memcpy(flash.data()+JournalOffset,&restored,sizeof(restored));
  for(auto state:{ESP_OTA_IMG_NEW,ESP_OTA_IMG_INVALID,ESP_OTA_IMG_ABORTED}){
   resetBoot(0,state);assert(!RiscBankStore::prepareBoot(own,restartSafe,safe));
+  assert(!RiscBankStore::transferAvailable());
   assert(!nativePartitionReads && !nativeFlashReads && !nativeHashStarts && !nativeImageVerifications && !delays);
  }
  resetBoot(0,ESP_OTA_IMG_PENDING_VERIFY);rollbackPossible=false;

@@ -30,15 +30,26 @@ struct State {
   Check owner=nullptr,platformSafe=nullptr,ready=nullptr;
   ControlObserver observer=nullptr;StatObserver stat=nullptr;
   bool selected=false,prepared=false,dispatching=false;
+  Check transferEligible=nullptr;
+  bool transferRequested=false,transferActive=false,fullDispatch=false;
 } state;
 bool owner(){return !xPortInIsrContext() && state.owner && state.owner();}
 bool safe(){
   return owner() && state.dispatching && state.platformSafe && state.platformSafe() &&
     state.ready && state.ready();
 }
+int32_t helloAdmission(){
+  if(!state.transferEligible)return 0;
+  if(!state.transferRequested){
+    if(!state.transferEligible())return RISC_FILES_BUSY;
+    state.transferRequested=true;
+  }
+  // A control-only checkpoint must never acknowledge transfer readiness.
+  return state.transferActive && state.fullDispatch && safe()?0:1;
+}
 struct Dispatch {
-  Dispatch(){state.dispatching=true;}
-  ~Dispatch(){state.dispatching=false;}
+  explicit Dispatch(bool full=false){state.dispatching=true;state.fullDispatch=full;}
+  ~Dispatch(){state.dispatching=false;state.fullDispatch=false;}
 };
 } // namespace
 bool prepare(const Admission* admission,Check ownerCheck,Check platformSafe,ControlObserver observer,StatObserver stat){
@@ -63,14 +74,21 @@ bool prepare(const Admission* admission,Check ownerCheck,Check platformSafe,Cont
   state.prepared=workspace().endpoint.bind(workspace().namespaces,admission->count,
     {owner,safe,[]()->uint32_t{return RiscPlatform::millis();},
      [](uint32_t sid,uint32_t seq,const char*op,uint32_t wait,bool deadline){if(state.observer)state.observer(sid,seq,op,wait,deadline);},
-     stat?+[](uint32_t sid,uint32_t seq,uint64_t ns,int32_t rc,const RiscBoot::StatObservation& value){state.stat(sid,seq,ns,rc,value);}:nullptr});
+     stat?+[](uint32_t sid,uint32_t seq,uint64_t ns,int32_t rc,const RiscBoot::StatObservation& value){state.stat(sid,seq,ns,rc,value);}:nullptr,helloAdmission});
   return state.prepared;
 }
+bool enableTransferMode(Check eligible){
+  if(!state.prepared || !owner() || state.dispatching || state.transferEligible || !eligible || !workspace().endpoint.exitSafe())return false;
+  state.transferEligible=eligible;return true;
+}
+bool transferRequested(){return state.prepared && owner() && state.transferRequested;}
+bool transferActive(){return transferRequested() && state.transferActive;}
+void enterTransferMode(){if(transferRequested() && !state.dispatching && workspace().endpoint.custodySafe())state.transferActive=true;}
 bool checkpoint(){
   if(!state.prepared)return true;
   if(!owner())return false;
   if(state.dispatching)return workspace().endpoint.custodySafe();
-  Dispatch dispatch;workspace().endpoint.checkpoint();return workspace().endpoint.custodySafe();
+  Dispatch dispatch(true);workspace().endpoint.checkpoint();return workspace().endpoint.custodySafe();
 }
 bool controlCheckpoint(){
   if(!state.prepared)return true;
@@ -81,10 +99,15 @@ bool controlCheckpoint(){
 bool shutdown(){
   if(!state.prepared)return true;
   if(!owner() || state.dispatching)return false;
-  Dispatch dispatch;return workspace().endpoint.shutdown();
+  // An entry can return after launch commitment but before its next service
+  // checkpoint. Validate pending HELLO through the real parser before cleanup.
+  if(state.transferEligible){if(!controlCheckpoint())return false;}
+  Dispatch dispatch;return workspace().endpoint.shutdown(state.transferRequested);
 }
 bool stop(){
-  if(!shutdown())return false;
+  if(!state.prepared)return true;
+  if(!owner() || state.dispatching)return false;
+  {Dispatch dispatch;if(!workspace().endpoint.shutdown())return false;}
   state.prepared=false;return true;
 }
 void input(uint8_t byte){if(state.prepared && owner() && !state.dispatching)workspace().endpoint.input(byte);}

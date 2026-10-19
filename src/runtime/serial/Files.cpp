@@ -47,7 +47,7 @@ void Files::input(uint8_t value){
 }
 void Files::consumeOutput(size_t n){if(n>outputSize())n=outputSize();sent_+=n;if(n)touched_=hooks_.millis();}
 void Files::disconnect(){
- observedControl_=observedDeadline_=false;
+ observedControl_=observedDeadline_=deferredHello_=deferredHelloReply_=false;
  // An idle transport has only protocol RAM to discard. Do not manufacture a
  // pending cleanup barrier after Light wake: Hybrid may enter Deep before the
  // next application checkpoint, even when no host ever connected.
@@ -85,11 +85,15 @@ void Files::checkpoint(){
  if(cancelling){
   (void)close();resetSession();cancel_=false;requestReady_=false;requestLength_=0;responseLength_=sent_=0;
  }else if(requestReady_ && !outputSize()){
-  command();requestReady_=false;requestLength_=0;
+  command();if(!deferredHello_){requestReady_=false;requestLength_=0;}
  }
  calling_=false;
 }
-bool Files::shutdown(){disconnect();checkpoint();return exitSafe();}
+bool Files::shutdown(bool preserveDeferredHello){
+ if(preserveDeferredHello && ((deferredHello_ && requestReady_) || (deferredHelloReply_ && outputSize())) &&
+    !handle_ && !calling_ && !cancel_ && custodySafe())return true;
+ disconnect();checkpoint();return exitSafe();
+}
 void Files::controlCheckpoint(){
  if(!bound_ || calling_ || !hooks_.owner())return;
  checkRetention();
@@ -120,9 +124,10 @@ void Files::controlCheckpoint(){
  const bool metadata=!strcmp(op,"HELLO") || !strncmp(op,"NS ",3) ||
    (!handle_ && !strncmp(op,"PATH ",5));
  if(!metadata && uint32_t(hooks_.millis()-touched_)<AdmissionWaitMs)return;
- calling_=true;command(false);requestReady_=false;requestLength_=0;calling_=false;
+ calling_=true;command(false);if(!deferredHello_){requestReady_=false;requestLength_=0;}calling_=false;
 }
 void Files::command(bool storageReady){
+ deferredHello_=deferredHelloReply_=false;
  // Parse a private copy so an exact duplicate can replay its cached response
  // without repeating any open/truncate/write/read/sync/close operation.
  char parsed[Line];memcpy(parsed,request_,requestLength_+1);char*words[8]{};unsigned count=0;
@@ -139,6 +144,14 @@ void Files::command(bool storageReady){
  }
  if(!strcmp(cmd,"HELLO") && count==4 && seq==1 && sid!=session_){
   if(handle_ || retained_){reply(retained_?RISC_FILES_RETAINED:RISC_FILES_BUSY);return;}
+  if(hooks_.helloAdmission){
+   const int32_t admission=hooks_.helloAdmission();
+   if(admission>0){
+    if(uint32_t(hooks_.millis()-touched_)<AdmissionWaitMs){deferredHello_=true;return;}
+    deferredHelloReply_=true;reply(RISC_FILES_BUSY);return;
+   }
+   if(admission<0){reply(admission);return;}
+  }
   resetSession();session_=uint32_t(sid);
  }else if(session_!=sid || sequence_==UINT32_MAX || seq!=uint64_t(sequence_)+1){reply(-10);return;}
  sequence_=uint32_t(seq);strcpy(previous_,request_);touched_=hooks_.millis();
