@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "cases": [
+    "cold",
+    "absent-card",
+    "healthy",
+    "disconnect",
+    "failed-close",
+    "failed-write",
+    "failed-release",
+    "failed-prepare"
+  ],
+  "runs": [
+    "transfer-storage-normal-1",
+    "transfer-storage-sanitized-1"
+  ],
+  "product_revision": "f42a6e07133c599a22acfaa8b8a0672ff996dc1b",
+  "exact_product_objects_verified": true,
+  "identical_runtime_inputs": true,
+  "identical_product_inputs": true,
+  "identical_generated_littlefs_inputs": true,
+  "runtime_revision": "0aab2fd3b03b4190d638e23c79a465afeecf5dfb",
+  "changed_files": [
+    "test/native_serial_transfer_storage_test.cpp",
+    "test/run_native_serial_transfer_storage_test.py"
+  ],
+  "source_hashes": {
+    "test/native_serial_transfer_storage_test.cpp": "bc618a63a2293adf6f9193f7f9dd9db81866331c13650844149fda1049fbe7d0",
+    "test/run_native_serial_transfer_storage_test.py": "3be06abedf03acbd41618036c19aeaf208ca7a349f2ee6c76a5399c8025e3a10",
+    "src/bootstrap/Runtime.cpp": "9a04b5519621dbc8e177030daea48315365f84f2997fa93c8f783032e3f3d713",
+    "src/ports/esp32s3/NativeSerialFiles.cpp": "7d6470b2491c18d7311ae96bb74c321cfeb3b049a70a04ccc452320cc9ced981",
+    "src/runtime/serial/Files.cpp": "762cb42228bfa736f5e20ea4eb5e704cb778e7df5c384647e6d6bcbedf326432"
+  },
+  "limits": "Host source qualification only. Exact current Waveshare f42a6e07133c599a22acfaa8b8a0672ff996dc1b asynchronous sdmmc-fatfs 0.2.2, actual Runtime graph/native admission and dedicated serial protocol. RAM SD card plus independent actual pinned LittleFS namespace2, GPIO/sync/storage-worker mocks and host ELF loading. Early HELLO skips all app hooks; only actual parked nativeFilesCheckpoint acknowledges readiness. Boot eligibility is an explicit always-eligible fixture; actual bank confirmation gate is qualified separately. Cold activation stays UNAVAILABLE without explicit preparation. No real CpuPort, native worker task, physical SD, USB serial, device, reset execution or timing qualification. LeakSanitizer disabled for ptrace environment; ASan/UBSan still enabled in sanitized runs."
+}

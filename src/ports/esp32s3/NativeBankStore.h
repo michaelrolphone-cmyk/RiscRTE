@@ -11,6 +11,8 @@ bool prepareBoot(bool (*owner)(),bool (*restartSafe)(),bool (*operationSafe)(),c
 const char* bootLabel();
 bool bind(RiscBoot::Runtime&);
 bool confirmBoot();
+// Confirmed committed pair and idle update custody. No app health acknowledgement.
+bool transferAvailable();
 void rejectBoot();
 bool exitSafe();
 bool provisionRequestSource(RiscProvision::RequestSource&,risc_bank_status_v1&,bool requireLive);

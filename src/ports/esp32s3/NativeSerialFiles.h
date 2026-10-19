@@ -4,6 +4,12 @@
 #ifndef RISC_NATIVE_SERIAL_FILES
 #define RISC_NATIVE_SERIAL_FILES 0
 #endif
+#ifndef RISC_NATIVE_SERIAL_TRANSFER_MODE
+#define RISC_NATIVE_SERIAL_TRANSFER_MODE 0
+#endif
+#if RISC_NATIVE_SERIAL_TRANSFER_MODE && !RISC_NATIVE_SERIAL_FILES
+#error "Dedicated serial transfer mode requires serial files"
+#endif
 #if RISC_NATIVE_SERIAL_FILES && defined(RISC_OWNER_INSTALLER)
 #error "Serial file transfer cannot share the owner installer's private transport"
 #endif
@@ -35,6 +41,13 @@ bool prepare(const Admission*,Check owner,Check platformSafe,ControlObserver obs
 // These two calls alone can dispatch file I/O. The caller must establish a
 // settled Runtime owner boundary, outside provider/capability callbacks and
 // ordinary cooperative yield (including the explicit app service checkpoint).
+// Optional product-owned policy. No new wire operation or implicit selection.
+// eligible qualifies an already-confirmed committed pair and idle update custody.
+bool enableTransferMode(Check eligible);
+bool transferRequested();
+bool transferActive();
+// Trusted Runtime full-ready parked boundary only; never app/provider/transport.
+void enterTransferMode();
 bool checkpoint();
 // Owner-only metadata/control replies; never calls a provider or waits.
 bool controlCheckpoint();

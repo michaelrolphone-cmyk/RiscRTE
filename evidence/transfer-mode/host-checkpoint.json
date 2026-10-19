@@ -1,0 +1,112 @@
+{
+  "qualification": [
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/qualification-3/receipt.json",
+      "sha256": "16a181f554359612594cf8e73313270d630decf372ae6c858e79d7ba9c719748",
+      "passed": true,
+      "sanitized": false,
+      "returncode": null,
+      "limits": "Host production Runtime, NativeSerialFiles and Files with a loaded shared ELF, synthetic generic provider and explicit synthetic boot confirmation. No target Waveshare build/profile configuration, physical timing, actual USB/SD, provider-graph hardware cohort, reboot, NativeBankStore boot-readiness policy or device qualification. Failed native shutdown is a fixture-injected custody refusal; failed generic provider close uses real RuntimeFiles retention. No network, hardware, CI or publication."
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/qualification-sanitized-3/receipt.json",
+      "sha256": "394be46f3b903d068480a0c2a860771311a0999c5e0ae700537d650bee880b87",
+      "passed": true,
+      "sanitized": true,
+      "returncode": null,
+      "limits": "Host production Runtime, NativeSerialFiles and Files with a loaded shared ELF, synthetic generic provider and explicit synthetic boot confirmation. No target Waveshare build/profile configuration, physical timing, actual USB/SD, provider-graph hardware cohort, reboot, NativeBankStore boot-readiness policy or device qualification. Failed native shutdown is a fixture-injected custody refusal; failed generic provider close uses real RuntimeFiles retention. No network, hardware, CI or publication."
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/settings-transfer-current-normal-1/receipt.json",
+      "sha256": "a6447855967654a5a8e86d6fe53e42ba69bb629521e4a92114a8f64d2fcbb2c7",
+      "passed": true,
+      "sanitized": false,
+      "returncode": 0,
+      "limits": "Host production Runtime, NativeSettingsLifecycle, NativeSerialFiles, CpuPort, Settings coordinators and checked AppData/NVS stores. Scheduler/NVS/internal-memory placement are modeled. The admitted maintenance client is deterministic Pending/Idle, not the concrete SD maintenance backend. Actual HELLO enters control-only path during accepted maintenance, yields drain accepted work without a fresh begin, and checked Runtime park precedes success. Boot eligibility is modeled. No target instructions, physical timing, USB, SD, or device qualification. Permanent native clients exit without artificial unregister; leak detection settings are recorded."
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/settings-transfer-current-sanitized-1/receipt.json",
+      "sha256": "edc72a0984eb233b4e23f8da135a96f916abf361f2d7a96e0d4799a4df108c24",
+      "passed": true,
+      "sanitized": true,
+      "returncode": 0,
+      "limits": "Host production Runtime, NativeSettingsLifecycle, NativeSerialFiles, CpuPort, Settings coordinators and checked AppData/NVS stores. Scheduler/NVS/internal-memory placement are modeled. The admitted maintenance client is deterministic Pending/Idle, not the concrete SD maintenance backend. Actual HELLO enters control-only path during accepted maintenance, yields drain accepted work without a fresh begin, and checked Runtime park precedes success. Boot eligibility is modeled. No target instructions, physical timing, USB, SD, or device qualification. Permanent native clients exit without artificial unregister; leak detection settings are recorded."
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-usb-current-normal-3/receipt.json",
+      "sha256": "d7e9d32f12284696fd6fb44a38d1cb2ad2ce4ee741940800ac778154c70e2583",
+      "passed": true,
+      "sanitized": null,
+      "returncode": 0,
+      "limits": "Real Runtime, NativeSerialFiles, Files, SleepDiagnostics, Console and shared main-loop service helper with modeled finite USB SDK boundary; main.cpp full translation unit and hardware timing not executed. Namespace catalog is unavailable in this fixture; separate actual-media composition covers data operations."
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-usb-current-sanitized-3/receipt.json",
+      "sha256": "2fc85afe386065c00106185273fe2cadc4f09c43006ecd836fb7f955283e1cc7",
+      "passed": true,
+      "sanitized": null,
+      "returncode": 0,
+      "limits": "Real Runtime, NativeSerialFiles, Files, SleepDiagnostics, Console and shared main-loop service helper with modeled finite USB SDK boundary; main.cpp full translation unit and hardware timing not executed. Namespace catalog is unavailable in this fixture; separate actual-media composition covers data operations."
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-current-normal-3/receipt.json",
+      "sha256": "66af71faabd4ddcfbe53aacb4cd659d8f04c1e7e5636c20138f0c8153a538793",
+      "passed": true,
+      "sanitized": null,
+      "returncode": 0,
+      "limits": "Real NativeBankStore/PairedBank production boot parsing and transfer eligibility with modeled flash, IDF and operation readiness; exact factory packaged bytes recorded separately. No device, target instructions or physical timing."
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-current-sanitized-3/receipt.json",
+      "sha256": "18f942654232171b4ac17aea8ebe3d69a9e8094a2d966df37730509c6aa42f2b",
+      "passed": true,
+      "sanitized": null,
+      "returncode": 0,
+      "limits": "Real NativeBankStore/PairedBank production boot parsing and transfer eligibility with modeled flash, IDF and operation readiness; exact factory packaged bytes recorded separately. No device, target instructions or physical timing."
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-bank-operation-gate-negative-3/receipt.json",
+      "sha256": "e88561f3dc56dc414e595e1f47ca665893532b7ca9333f1e9f538cfb38d336ab",
+      "passed": true,
+      "sanitized": null,
+      "returncode": 134,
+      "limits": "Real NativeBankStore/PairedBank production boot parsing and transfer eligibility with modeled flash, IDF and operation readiness; exact factory packaged bytes recorded separately. No device, target instructions or physical timing."
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/transfer-storage-summary.json",
+      "sha256": "163ecb2f89707421502a5371b43e586fada263aad98bf17188da9603273e8b8f"
+    },
+    {
+      "path": "/workspace/shared/wave-transfer-mode-20261019/evidence/independent-review-final-20261019T0213Z/review.json",
+      "sha256": "6cceec9d8672130d479ca3d4793289aae0256dc6f3a04374d8fbb015382a2deb"
+    }
+  ],
+  "candidateSourceSHA256": {
+    "runtime/src/bootstrap/Runtime.cpp": "9a04b5519621dbc8e177030daea48315365f84f2997fa93c8f783032e3f3d713",
+    "runtime/src/bootstrap/Runtime.h": "275b4e1b94adc9f496d76989f2c9262627c84202ad8d18c67e4d112e5ce2c025",
+    "runtime/src/main.cpp": "4acbe1389a2ece67433431944705531e1a9b620a9cb1acc282f5021e667ee6ec",
+    "runtime/src/ports/esp32s3/NativeBankStore.cpp": "90ae01379855c058f3349f00be5b2cbb9903906e1f5946cd932adc8cd31fe7f2",
+    "runtime/src/ports/esp32s3/NativeBankStore.h": "9ffdf1b79b7130db1021ee690b79f16f4a562b66f3c96dfe31c12d283d88ef45",
+    "runtime/src/ports/esp32s3/NativeSerialFiles.cpp": "7d6470b2491c18d7311ae96bb74c321cfeb3b049a70a04ccc452320cc9ced981",
+    "runtime/src/ports/esp32s3/NativeSerialFiles.h": "ccf924681adc471032f0e456d3f79999dafe1da03711bdb9fad37d3fa26208b8",
+    "runtime/src/runtime/serial/Files.cpp": "762cb42228bfa736f5e20ea4eb5e704cb778e7df5c384647e6d6bcbedf326432",
+    "runtime/src/runtime/serial/Files.h": "ce20aa08b52bcbb77caf0d2a201c00ad0abde9fd230ad4fd79efc1e71664a7be",
+    "runtime/test/boot_path_native.inc": "a0c006049cee9c27f28790d774d67c3e190f8fa95f7042e602ecd3c70751cfce",
+    "runtime/src/ports/esp32s3/NativeSerialService.h": "fa974efd4f40568c1e8bbe088d0f12abdf9e6546a5847f98b57ae1a60bcf2276",
+    "runtime/test/native_serial_transfer_mode_test.cpp": "bef18295095d638bc36d0a5b576620d074b5d9509b4578b19c171531ca138dea",
+    "runtime/test/native_serial_transfer_storage_test.cpp": "bc618a63a2293adf6f9193f7f9dd9db81866331c13650844149fda1049fbe7d0",
+    "runtime/test/native_serial_transfer_usb_test.cpp": "199d3cf4caa37619f617add6aa9eac473d87a5ea7488538802d31ac0f300b5ad",
+    "runtime/test/native_settings_transfer_mode_test.cpp": "a764fb959111928e0ff9b5d233633f80894a3473f867409f06c5ab7a9fc4f69e",
+    "runtime/test/run_native_serial_transfer_mode_test.py": "0cc482474eb8e31a0f9b77cf67657c7e48c6edee0103ba103fcf073152d5429b",
+    "runtime/test/run_native_serial_transfer_storage_test.py": "3be06abedf03acbd41618036c19aeaf208ca7a349f2ee6c76a5399c8025e3a10",
+    "runtime/test/run_native_serial_transfer_usb_test.sh": "107df617b70268a2e12140532827cf8a274b20e1bc381c93bd2663b98af96255",
+    "runtime/test/run_native_settings_transfer_mode_test.py": "944a39fd7288a58d6cc1f497b2dafab69c5b5d276bcd7abf4cab8f0a8c45fe93",
+    "watch/apps/clock/crown.c": "84e7fec2e01764e17aa0a5b9c03fd9e2c9bb6e157d1bb06bd09469aeebc6a605",
+    "watch/scripts/build.py": "e03d24b9028d0b1e192674873f562f0049827d67e409321d03cfb9a0cd93e30e",
+    "watch/scripts/test_runtime_service_checkpoint.py": "81a05b2aaca65252701fb651596aabf898ef736fb379e9ab77a0b32b5a9e0ef8",
+    "watch/scripts/test_home_transfer_exit.py": "7221f7541ca9d955b109d419e132095235d45e52cf49ae30e347194d1508edea",
+    "watch/tests/home_transfer_exit_controls.inc": "cd7539052fb04d3960361cdbc2d4834e3261249ffb8facd7b02066424211f25e",
+    "product/profiles/native-idf61.cmake": "ba25c1b6ccdc45ad81639220452563d0a44ab8c20708d73fae54a2094f9dce02"
+  },
+  "scope": "Host source qualification checkpoint; no target Runtime image, product package, device, physical timing or watchdog acceptance"
+}
