@@ -11,10 +11,17 @@
 namespace RuntimeStreams {
 namespace {
 // Serialized Runtime owner task. Exhaustion never wraps or revives an old ID.
+#if defined(RISC_STREAM_HOST_TESTING) && !defined(ESP_PLATFORM)
+uint64_t (*sessionClock)()=nullptr;
+void (*sessionTimingObserver)(const Testing::SessionCallbackTiming&)=nullptr;
+#endif
 uint64_t nextToken=0;
 uint32_t nextConsumer=0;
 uint64_t issue() { return nextToken==UINT64_MAX ? 0 : ++nextToken; }
 uint64_t nowUs() {
+#if defined(RISC_STREAM_HOST_TESTING) && !defined(ESP_PLATFORM)
+  if(sessionClock)return sessionClock();
+#endif
 #ifdef ESP_PLATFORM
   return uint64_t(esp_timer_get_time());
 #else
@@ -22,13 +29,29 @@ uint64_t nowUs() {
 #endif
 }
 bool budget(uint32_t ms) { return ms && ms<=RISC_STREAM_CONTROL_MAX_MS_V1; }
-bool exceeded(uint64_t began,uint32_t ms) { return nowUs()-began>uint64_t(ms)*1000; }
+bool exceeded(uint64_t elapsed,uint32_t ms) { return elapsed>uint64_t(ms)*1000; }
+#if defined(RISC_STREAM_HOST_TESTING) && !defined(ESP_PLATFORM)
+uint64_t observedElapsed(uint64_t began,uint32_t ms,const char* phase,int32_t rc) {
+  const uint64_t elapsed=nowUs()-began;
+  if(sessionTimingObserver)sessionTimingObserver({phase,rc,elapsed,ms});
+  return elapsed;
+}
+#define CALLBACK_EXCEEDED(began,ms,phase,rc) exceeded(observedElapsed(began,ms,phase,rc),ms)
+#else
+#define CALLBACK_EXCEEDED(began,ms,phase,rc) exceeded(nowUs()-began,ms)
+#endif
 bool cleanError(int32_t rc) { return rc<0 && rc>=RISC_STREAM_TIMEOUT; }
 bool same(const AppStreamBinding& a,const AppStreamBinding& b) {
   return a.invocation==b.invocation && a.slot==b.slot && a.generation==b.generation &&
     a.api==b.api && a.graph.slot==b.graph.slot && a.graph.generation==b.graph.generation;
 }
 }
+#if defined(RISC_STREAM_HOST_TESTING) && !defined(ESP_PLATFORM)
+namespace Testing {
+void setSessionClock(uint64_t (*clock)()) { sessionClock=clock; }
+void setSessionTimingObserver(void (*observer)(const SessionCallbackTiming&)) { sessionTimingObserver=observer; }
+}
+#endif
 AppStreamSessions::~AppStreamSessions() {
   // A retained Runtime cannot destroy custody before its graph abort guard.
   if(sessions_)for(const auto& s:*sessions_)if(s.state!=State::Free)std::abort();
@@ -94,7 +117,7 @@ int32_t AppStreamSessions::open(const AppStreamBinding& binding,const void* requ
   if(!graph_.beginStreamCallback()){s={};return RISC_STREAM_BUSY;}
   busy_=true;const uint64_t began=nowUs();
   const int32_t rc=adapter->open(copied,size,ms,&opened);
-  const bool over=exceeded(began,ms);busy_=false;graph_.endStreamCallback();
+  const bool over=CALLBACK_EXCEEDED(began,ms,"open",rc);busy_=false;graph_.endStreamCallback();
   s.providerSession=opened.session;s.rxEndpoint=opened.rx_endpoint;s.txEndpoint=opened.tx_endpoint;
   if(over || !valid(s) || rc==RISC_STREAM_RETAINED)return fence(s);
   if(rc!=RISC_STREAM_OK) {
@@ -129,7 +152,7 @@ int32_t AppStreamSessions::close(Session& s,uint32_t ms,bool active) {
   if(!graph_.revokeStreamGrants(s.binding.graph) || !graph_.beginStreamCallback())return fence(s);
   busy_=true;const uint64_t began=nowUs();
   const int32_t rc=s.adapter->close(s.providerSession,ms);
-  const bool over=exceeded(began,ms);busy_=false;graph_.endStreamCallback();
+  const bool over=CALLBACK_EXCEEDED(began,ms,"close",rc);busy_=false;graph_.endStreamCallback();
   if(rc!=RISC_STREAM_OK || over || !valid(s,active))return fence(s);
   if(releaseEndpointPair(s.providerContext,lease(s),consumer_,s.session,s.rxEndpoint,s.txEndpoint)!=RISC_STREAM_OK)return fence(s);
   s={};return RISC_STREAM_OK;
@@ -162,7 +185,7 @@ int32_t AppStreamSessions::call(uint64_t context,uint64_t token,const void* requ
   if(!graph_.beginStreamCallback())return RISC_STREAM_BUSY;
   busy_=true;const uint64_t began=nowUs();
   const int32_t rc=s->adapter->call(s->providerSession,copied,size,ms,response,capacity,&count);
-  const bool over=exceeded(began,ms);busy_=false;graph_.endStreamCallback();
+  const bool over=CALLBACK_EXCEEDED(began,ms,"call",rc);busy_=false;graph_.endStreamCallback();
   if(over || !valid(*s) || rc==RISC_STREAM_RETAINED || count>capacity ||
       (rc!=RISC_STREAM_OK && (!cleanError(rc) || count)))return fence(*s);
   if(rc==RISC_STREAM_OK){if(count)std::memcpy(reply,response,count);*actual=count;}
@@ -194,3 +217,5 @@ int32_t AppStreamSessions::info(uint64_t context,uint64_t token,risc_stream_clie
   return rc==RISC_STREAM_RETAINED || (rc==RISC_STREAM_OK && out->terminal==RISC_STREAM_RETAINED) ? fence(*s) : rc;
 }
 }
+
+#undef CALLBACK_EXCEEDED
