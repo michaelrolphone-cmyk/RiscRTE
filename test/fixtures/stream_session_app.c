@@ -77,9 +77,11 @@ __attribute__((visibility("default"))) void app_main(void){
  if(is("terminal-retained") || is("terminal-retained-busy")){assert(!risc_runtime_get_api(1));assert(client.read(client.context,opened.rx,bytes,sizeof(bytes),&count)==RISC_STREAM_CLOSED && !count);assert(client.write(client.context,opened.tx,"x",1,&count)==RISC_STREAM_CLOSED && !count);stream_test_event("app:fenced");return;}
  assert(client.read(client.context,opened.rx,bytes,sizeof(bytes),&count)==RISC_STREAM_OK && count==3 && !memcmp(bytes,"abc",3));
  risc_stream_client_info_v1 info={.struct_size=sizeof(info)};assert(client.info(client.context,opened.tx,&info)==RISC_STREAM_OK && info.bytes_written==7);
- if(is("copied-control")){
+ if(is("copied-control") || is("timing-call")){
   uint8_t input[512],output[512];for(unsigned i=0;i<512;i++)input[i]=(uint8_t)i;
-  assert(client.call(client.context,opened.session,input,sizeof(input),1,output,sizeof(output),&count)==RISC_STREAM_OK && count==512 && !memcmp(input,output,512));
+  rc=client.call(client.context,opened.session,input,sizeof(input),1,output,sizeof(output),&count);
+  if(is("timing-call") && rc==RISC_STREAM_RETAINED){assert(!count);stream_test_event("app:fenced");return;}
+  assert(rc==RISC_STREAM_OK && count==512 && !memcmp(input,output,512));
  }
  if(!strncmp(stream_test_mode(),"call-",5)){
   assert(client.call(client.context,opened.session,0,0,1,0,0,&count)==RISC_STREAM_RETAINED && !count);stream_test_event("app:fenced");return;

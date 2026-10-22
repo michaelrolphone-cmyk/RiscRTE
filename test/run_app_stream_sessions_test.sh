@@ -24,3 +24,15 @@ for activation in eager demand; do
 done
 "$build/test" "$build" quiesce-fail demand
 "$build/test" "$build" demand-retained demand-retained
+
+# Exact boundary checks use the fixture clock, never a relaxed client deadline.
+# STREAM_CLOCK=steady retains a diagnostic route through the default host clock.
+if [[ "${STREAM_CLOCK:-fixture}" == fixture ]]; then
+ for activation in eager demand; do
+  for phase in open call close; do
+   for elapsed in 999 1000 1001; do
+    STREAM_CALLBACK_US="$elapsed" "$build/test" "$build" "timing-$phase" "$activation"
+   done
+  done
+ done
+fi

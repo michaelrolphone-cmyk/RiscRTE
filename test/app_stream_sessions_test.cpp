@@ -11,7 +11,20 @@
 #include <thread>
 #include <vector>
 #include "RuntimeFileFixture.h"
-static std::string mode;
+static std::string mode,activation;
+static bool realClock=false;
+static uint64_t callbackClockUs=0,injectedUs=0;
+static std::string timedPhase;
+static std::vector<RuntimeStreams::Testing::SessionCallbackTiming> callbackTimings;
+static void printTiming(const RuntimeStreams::Testing::SessionCallbackTiming& t){
+ fprintf(stderr,"stream callback: mode=%s activation=%s clock=%s phase=%s provider_rc=%d elapsed_us=%llu deadline_ms=%u exceeded=%u\n",
+  mode.c_str(),activation.c_str(),realClock?"steady":"fixture",t.phase,t.providerResult,
+  static_cast<unsigned long long>(t.elapsedUs),t.deadlineMs,unsigned(t.elapsedUs>uint64_t(t.deadlineMs)*1000));
+}
+static void observeTiming(const RuntimeStreams::Testing::SessionCallbackTiming& t){
+ callbackTimings.push_back(t);
+ if(std::getenv("STREAM_TRACE") || timedPhase==t.phase || t.providerResult!=RISC_STREAM_OK || t.elapsedUs>uint64_t(t.deadlineMs)*1000)printTiming(t);
+}
 static std::vector<std::string> events;
 static bool owner=true,locked=false;
 static unsigned invocations=0;
@@ -23,8 +36,14 @@ static risc_stream_opened_v1 oldOpened{};
 static risc_runtime_capability_v1 oldGrant{};
 static const risc_runtime_api_v1* savedRuntime=nullptr;
 extern "C" const char* stream_test_mode(){return mode.c_str();}
-extern "C" void stream_test_event(const char* e){events.emplace_back(e);}
-extern "C" void stream_test_slow(){std::this_thread::sleep_for(std::chrono::milliseconds(4));}
+extern "C" void stream_test_event(const char* e){
+ events.emplace_back(e);
+ if(!timedPhase.empty() && std::string(e)=="provider:"+timedPhase)callbackClockUs+=injectedUs;
+}
+extern "C" void stream_test_slow(){
+ std::this_thread::sleep_for(std::chrono::milliseconds(4));
+ callbackClockUs+=4000;
+}
 extern "C" void stream_test_provider(const void* p){providerImage=p;}
 extern "C" void stream_test_root(const void* p){rootImage=p;}
 extern "C" void stream_test_app(const void* p){appImage=p;}
@@ -65,7 +84,19 @@ static unsigned count(const char* s){return unsigned(std::count(events.begin(),e
 static bool mapped(const void* p){Dl_info info{};return p && dladdr(p,&info);}
 static void write(const std::string& root,const char* p,const std::string& text){std::ofstream(root+"/"+p)<<text;}
 int main(int argc,char** argv){
- assert(argc==4);const std::string root=argv[1];mode=argv[2];const std::string activation=argv[3];
+ assert(argc==4);const std::string root=argv[1];mode=argv[2];activation=argv[3];
+ const char* clockMode=std::getenv("STREAM_CLOCK");
+ assert(!clockMode || std::string(clockMode)=="fixture" || std::string(clockMode)=="steady");
+ realClock=clockMode && std::string(clockMode)=="steady";
+ RuntimeStreams::Testing::setSessionClock(realClock?nullptr:+[](){return callbackClockUs;});
+ RuntimeStreams::Testing::setSessionTimingObserver(observeTiming);
+ if(mode.rfind("timing-",0)==0){
+  assert(!realClock);timedPhase=mode.substr(7);
+  assert(timedPhase=="open" || timedPhase=="call" || timedPhase=="close");
+  const char* value=std::getenv("STREAM_CALLBACK_US");assert(value);
+  char* end=nullptr;injectedUs=std::strtoull(value,&end,10);
+  assert(end && !*end && injectedUs>=999 && injectedUs<=1001);
+ }
  write(root,"board.json",R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})");
  write(root,"stream.json",R"({"type":"driver","id":"stream","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"stream.elf","requires":[{"capability":"test.root","api":1}],"provides":[{"capability":"test.stream","api":1}]})");
  write(root,"root.json",R"({"type":"driver","id":"stream-root","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"root.elf","requires":[],"provides":[{"capability":"test.root","api":1}]})");
@@ -80,11 +111,33 @@ int main(int argc,char** argv){
  assert(runtime->prepare(root.c_str()));
  const bool result=runtime->run();
  if(locked){RuntimeStreams::Testing::unlockRegistry();locked=false;}
- const bool retained=mode=="terminal-retained" || mode=="terminal-retained-busy" || mode=="start-retained" || mode=="quiesce-fail" || mode=="close-fail" || mode=="close-slow" || mode=="close-busy" || mode=="revoke-busy" || mode=="grant-rollback-retained" ||
+ const bool retained=(!timedPhase.empty() && injectedUs>1000) || mode=="terminal-retained" || mode=="terminal-retained-busy" || mode=="start-retained" || mode=="quiesce-fail" || mode=="close-fail" || mode=="close-slow" || mode=="close-busy" || mode=="revoke-busy" || mode=="grant-rollback-retained" ||
   mode=="open-retained-zero" || mode=="open-retained-token" || mode=="open-malformed" || mode=="open-duplicate" || mode=="open-foreign" || mode=="open-direction" || mode=="open-partial-error" || mode=="open-slow" || mode=="open-busy" || mode.rfind("call-",0)==0;
- assert(runtime->retained()==retained);
  const bool malformedExtension=mode=="unknown-version" || mode.rfind("truncated-",0)==0;
- assert(result==(!retained && (!malformedExtension || activation=="demand")));
+ const bool expectedResult=!retained && (!malformedExtension || activation=="demand");
+ if(runtime->retained()!=retained || result!=expectedResult){
+  fprintf(stderr,"stream outcome: mode=%s activation=%s expected_retained=%u actual_retained=%u run_result=%u\n",
+   mode.c_str(),activation.c_str(),unsigned(retained),unsigned(runtime->retained()),unsigned(result));
+  for(const auto& t:callbackTimings)printTiming(t);
+  for(const auto& e:events)fprintf(stderr,"stream event: %s\n",e.c_str());
+ }
+ assert(runtime->retained()==retained);
+ assert(result==expectedResult);
+ // The intended callback must account for retention; an earlier accidental
+ // fence must not make a slow/boundary case pass without reaching its target.
+ std::string expectedPhase=timedPhase;
+ if(mode=="open-slow" || mode=="call-slow" || mode=="close-slow")expectedPhase=mode.substr(0,mode.find('-'));
+ if(!expectedPhase.empty()){
+  unsigned measured=0;
+  for(const auto& t:callbackTimings){
+   if(expectedPhase==t.phase){
+    ++measured;assert(t.providerResult==RISC_STREAM_OK && t.deadlineMs==1);
+    if(realClock)assert(t.elapsedUs>=4000);
+    else assert(t.elapsedUs==(timedPhase.empty()?4000:injectedUs));
+   }else if(!realClock)assert(t.elapsedUs==0);
+  }
+  assert(measured==1);
+ }
  if(retained){
   assert(mapped(providerImage) && mapped(rootImage) && !count("root:stop"));
   if(mode!="start-retained")assert(mapped(appImage) && !count("app:fini"));

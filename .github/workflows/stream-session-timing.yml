@@ -1,0 +1,44 @@
+name: Stream session timing
+on:
+  pull_request:
+    paths:
+      - 'src/runtime/streams/**'
+      - 'test/app_stream_sessions_test.cpp'
+      - 'test/fixtures/stream_session_*.c'
+      - 'test/run_app_stream_*test.sh'
+      - 'test/*provider_queue*'
+      - '.github/workflows/stream-session-timing.yml'
+permissions:
+  contents: read
+jobs:
+  stream-timing:
+    name: Stream timing (rows ${{ matrix.rows }}, sanitize ${{ matrix.sanitize }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        rows: [16, 17]
+        sanitize: [0, 1]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Full fixture matrix and strict deadline boundaries
+        env:
+          RISC_APP_POLICY_ROWS: ${{ matrix.rows }}
+          SANITIZE: ${{ matrix.sanitize }}
+          ASAN_OPTIONS: detect_leaks=0
+        run: bash test/run_app_stream_sessions_test.sh
+      - name: Production host and ESP clock isolation
+        if: matrix.rows == 16 && matrix.sanitize == 0
+        run: bash test/run_app_stream_clock_contract_test.sh
+      - name: Queue custody and retained contention
+        if: matrix.rows == 16
+        env:
+          SANITIZE: ${{ matrix.sanitize }}
+          ASAN_OPTIONS: detect_leaks=0
+        run: |
+          bash test/run_provider_queue_host_test.sh
+          bash test/run_provider_queue_retained_fence_test.sh
