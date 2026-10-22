@@ -177,6 +177,7 @@ jobs:
           . "$IDF_PATH/export.sh"
           cd "$NATIVE_ROOT/sources/runtime"
           python test/test_native_idf61_ci.py
+          python test/test_native_diagnostic_workspace_layout.py
           python test/test_release_routing.py
           python test/test_native_startup.py
           python test/test_native_product_profile.py

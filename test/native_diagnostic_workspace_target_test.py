@@ -16,6 +16,23 @@ from elftools.elf.elffile import ELFFile
 PIN = 'fff9895c82d744c7237be8847347bdd1b07c6643'
 
 
+
+def verify_workspace_layout(sizes, storage_bytes, diagnostics, performance, capacity):
+    assert len(sizes) == 6
+    assert storage_bytes == sizes[0] == sum(sizes[2:]), (storage_bytes, sizes)
+    assert sizes[1] > 0 and sizes[0] % sizes[1] == 0
+    assert sizes[4] == (96 if diagnostics else 0), sizes
+    if not diagnostics:
+        assert sizes[2:5] == (0, 0, 0)
+    if not performance:
+        assert sizes[5] == 0
+    if diagnostics and performance:
+        # Current production carries one 96-byte STAT copy inside Replay and
+        # another in ReplayWorkspace. Preserve the prior replay-size bounds
+        # and account explicitly for both already-existing source members.
+        assert sizes[0] == (7160 if capacity == 64 else 9208) + 2 * 96, sizes
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--compile-commands', type=Path, required=True)
@@ -45,8 +62,9 @@ extern const uint32_t diagnostic_workspace_sizes[] = {
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
   sizeof(RiscDiagnostics::Replay), sizeof(RiscDiagnostics::Checkpoint),
+  sizeof(RiscDiagnostics::SerialStatSnapshot),
 #else
-  0, 0,
+  0, 0, 0,
 #endif
 #if RISC_PERFORMANCE_TRACE
   sizeof(RiscPerf::Replay),
@@ -84,20 +102,18 @@ extern const uint32_t diagnostic_workspace_sizes[] = {
                 return found[0]
             sizes_symbol = named('diagnostic_workspace_sizes')
             size_section = elf.get_section(sizes_symbol['st_shndx'])
-            sizes = struct.unpack('<5I', size_section.data()[sizes_symbol['st_value']:sizes_symbol['st_value'] + sizes_symbol['st_size']])
+            sizes = struct.unpack('<6I', size_section.data()[sizes_symbol['st_value']:sizes_symbol['st_value'] + sizes_symbol['st_size']])
             workspace = [s for s in objects if s.name.endswith('13replayStorageE')]
             if diagnostics or performance:
                 assert len(workspace) == 1
                 storage = workspace[0]
                 section = elf.get_section(storage['st_shndx'])
                 assert section.name.startswith('.ext_ram.bss.')
-                assert storage['st_size'] == sizes[0] == sum(sizes[2:])
+                verify_workspace_layout(sizes, storage['st_size'], diagnostics, performance, capacity)
                 assert section['sh_addralign'] >= sizes[1]
                 assert section['sh_type'] == 'SHT_NOBITS' or not any(section.data())
-                if diagnostics and performance:
-                    assert sizes[0] == (7160 if capacity == 64 else 9208)
             else:
-                assert not workspace and sizes == (0, 0, 0, 0, 0)
+                assert not workspace and sizes == (0, 0, 0, 0, 0, 0)
             # Synchronization/owner state, USB recovery and fencing remain internal.
             controls = {}
             for name in ('owner', 'outputting', 'unfinishedLine', 'recovery', 'usbFenced', 'draining'):
@@ -114,7 +130,7 @@ extern const uint32_t diagnostic_workspace_sizes[] = {
             assert not any('heap_caps_' in name or name in ('malloc', 'calloc', 'realloc', 'free', '_Znwj', '_Znaj') for name in imports)
             assert not any(section.name.startswith('.init_array') and section['sh_size'] for section in elf.iter_sections())
             report['objects'][obj.name] = {'workspace_bytes': sizes[0], 'alignment': sizes[1],
-                'sleep_replay_bytes': sizes[2], 'checkpoint_bytes': sizes[3], 'performance_replay_bytes': sizes[4],
+                'sleep_replay_bytes': sizes[2], 'checkpoint_bytes': sizes[3], 'stat_snapshot_bytes': sizes[4], 'performance_replay_bytes': sizes[5],
                 'internal_controls': controls, 'allocator_imports': False, 'global_constructor': False}
     disabled_boot = out / 'disable-psram-boot.h'
     disabled_boot.write_text('#include <sdkconfig.h>\n#undef CONFIG_SPIRAM_BOOT_INIT\n#define CONFIG_SPIRAM_BOOT_INIT 0\n')
