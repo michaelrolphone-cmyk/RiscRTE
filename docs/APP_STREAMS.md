@@ -130,3 +130,7 @@ The byte-ring rights/copy semantics follow Reader `StreamRuntime` and
 legacy serial, task and physical backend infrastructure. Existing Reader source
 provenance and licensing remain intact. Passing host/Xtensa software checks does
 not qualify physical USB/controller/PHY handoff, X4 VBUS/UART or transport power.
+
+The host integration suite uses isolated callback timing while preserving strict
+1 ms budgets and intentional 4 ms retention. See [fixture timing and diagnostics](STREAM_FIXTURE_TIMING.md)
+for exact boundary controls and the unchanged-clock reproduction mode.

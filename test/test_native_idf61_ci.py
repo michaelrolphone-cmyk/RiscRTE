@@ -119,12 +119,22 @@ class NativeCiInputs(unittest.TestCase):
 
 
 class NativeCiWorkflow(unittest.TestCase):
+    def test_pull_request_qualification_trigger(self):
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/native-idf6.yml').read_text()
+        trigger = workflow.split('  pull_request:\n', 1)[1].split('  workflow_dispatch:', 1)[0]
+        self.assertEqual(trigger.strip().splitlines(), [
+            'paths:',
+            '      - .github/workflows/native-idf6.yml',
+            '      - test/test_native_idf61_ci.py',
+            '      - docs/native-idf61/CURRENT_PRODUCT_FIXTURES.md'])
+
+
     def workflow(self):
         return (Path(__file__).resolve().parents[1] / '.github/workflows/native-idf6.yml').read_text()
 
     def test_publication_only_ignores_are_exact_and_bounded(self):
         workflow = self.workflow()
-        ignored = workflow.split('    paths-ignore:\n', 1)[1].split('  workflow_dispatch:', 1)[0]
+        ignored = re.split(r'^  [a-z_]+:', workflow.split('    paths-ignore:\n', 1)[1], maxsplit=1, flags=re.M)[0]
         paths = re.findall(r'^      - (.+)$', ignored, re.M)
         self.assertEqual(set(paths), {
             '.github/workflows/native-idf61-release.yml',
@@ -148,6 +158,20 @@ class NativeCiWorkflow(unittest.TestCase):
                      'esp-idf/runtime/RiscBuildIdentity.h'):
             self.assertIn('            ${{ env.NATIVE_ROOT }}/build/' + name + '\n', paths)
         self.assertIn('            ${{ env.NATIVE_ROOT }}/build/x4-native-idf61/\n', paths)
+
+    def test_current_fixture_source_set_and_historical_baselines(self):
+        workflow = self.workflow()
+        for revision in ('364bdd9ba58edd3f6fe1dc16d361db53d6de81af',
+                         '86876d56d5b60cce494c922916e8f22fbc553f2a',
+                         'fdef773ea7649744e53af66c5c1381c82de84a58'):
+            self.assertIn('source: ' + revision, workflow)
+        self.assertIn('IMAGE_HELPER_SOURCE: 364bdd9ba58edd3f6fe1dc16d361db53d6de81af', workflow)
+        self.assertIn('python tests/test_current_native_fixture.py', workflow)
+        for digest in ('0194fe7095edd50ee4e82b8077a9d154fddf5323143f3219f070bde952424370',
+                       '868933ecf2cb468b8d487333fbc6150641035015b58b62c884024fc8d8fc06da',
+                       '48145adc023a334885207100ce29596edef3f02c07a6d830ca53e3ab1fbf5993',
+                       '2b6dce3efb468f3cd728b50707e0c9552d84e225b65e2b27e683d3d726bc6cef'):
+            self.assertIn(digest, workflow)
 
     def test_product_contract_invocation_supplies_exact_inputs(self):
         workflow = self.workflow()

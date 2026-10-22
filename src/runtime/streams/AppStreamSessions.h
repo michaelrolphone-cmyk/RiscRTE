@@ -4,6 +4,20 @@
 #include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
 namespace RuntimeStreams {
+#if defined(RISC_STREAM_HOST_TESTING) && !defined(ESP_PLATFORM)
+namespace Testing {
+// Private host-fixture seam. Null hooks preserve the production steady clock.
+// Set only between invocations on the serialized Runtime owner thread.
+struct SessionCallbackTiming {
+  const char* phase;
+  int32_t providerResult;
+  uint64_t elapsedUs;
+  uint32_t deadlineMs;
+};
+void setSessionClock(uint64_t (*clock)());
+void setSessionTimingObserver(void (*observer)(const SessionCallbackTiming&));
+}
+#endif
 // Private app capability binding, copied from Runtime's authenticated ledger.
 struct AppStreamBinding {
   uint64_t invocation=0;

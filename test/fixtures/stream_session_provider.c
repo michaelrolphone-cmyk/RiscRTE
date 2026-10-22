@@ -54,7 +54,7 @@ static int32_t call_session(uint64_t id,const void* request,uint32_t size,uint32
  (void)request;(void)size;(void)ms;(void)reply;(void)cap;*count=0;
  stream_test_event("provider:call");
  if(!id)return RISC_STREAM_INVALID;
- if(is("copied-control")){if(size>cap)return RISC_STREAM_INVALID;memcpy(reply,request,size);*count=size;return RISC_STREAM_OK;}
+ if(is("copied-control") || is("timing-call")){if(size>cap)return RISC_STREAM_INVALID;memcpy(reply,request,size);*count=size;return RISC_STREAM_OK;}
  if(is("call-retained"))return RISC_STREAM_RETAINED;
  if(is("call-overflow"))*count=cap+1;
  if(is("call-slow"))stream_test_slow();
