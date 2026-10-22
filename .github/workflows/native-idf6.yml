@@ -10,6 +10,11 @@ on:
       - test/test_publish_native_idf61_release.py
       - docs/native-idf61/runtime-0.4.0-release.json
       - docs/native-idf61/RELEASE_TRANSPORT.md
+  pull_request:
+    paths:
+      - .github/workflows/native-idf6.yml
+      - test/test_native_idf61_ci.py
+      - docs/native-idf61/CURRENT_PRODUCT_FIXTURES.md
   workflow_dispatch:
 permissions:
   contents: read

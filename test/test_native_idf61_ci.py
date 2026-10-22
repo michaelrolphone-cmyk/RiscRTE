@@ -119,12 +119,22 @@ class NativeCiInputs(unittest.TestCase):
 
 
 class NativeCiWorkflow(unittest.TestCase):
+    def test_pull_request_qualification_trigger(self):
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/native-idf6.yml').read_text()
+        trigger = workflow.split('  pull_request:\n', 1)[1].split('  workflow_dispatch:', 1)[0]
+        self.assertEqual(trigger.strip().splitlines(), [
+            'paths:',
+            '      - .github/workflows/native-idf6.yml',
+            '      - test/test_native_idf61_ci.py',
+            '      - docs/native-idf61/CURRENT_PRODUCT_FIXTURES.md'])
+
+
     def workflow(self):
         return (Path(__file__).resolve().parents[1] / '.github/workflows/native-idf6.yml').read_text()
 
     def test_publication_only_ignores_are_exact_and_bounded(self):
         workflow = self.workflow()
-        ignored = workflow.split('    paths-ignore:\n', 1)[1].split('  workflow_dispatch:', 1)[0]
+        ignored = re.split(r'^  [a-z_]+:', workflow.split('    paths-ignore:\n', 1)[1], maxsplit=1, flags=re.M)[0]
         paths = re.findall(r'^      - (.+)$', ignored, re.M)
         self.assertEqual(set(paths), {
             '.github/workflows/native-idf61-release.yml',
