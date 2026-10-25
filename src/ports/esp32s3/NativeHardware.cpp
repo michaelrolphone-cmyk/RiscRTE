@@ -134,9 +134,11 @@ bool deepReady(){
 #endif
 #ifdef RISC_PAIRED_BANKS
   if(!RiscBankStore::exitSafe())return false;
-#ifdef RISC_PAIRED_APP_DATA
-  if(!RiscAppData::exitSafe())return false;
 #endif
+#ifdef RISC_PAIRED_APP_DATA
+  // Standalone AppData has the same writer/custody barrier as paired products.
+  // Sleep must not suspend an in-flight replacement or retained mount.
+  if(!RiscAppData::exitSafe())return false;
 #endif
   for(const auto& state:spi)if(state.held || state.pending)return false;
   return true;
@@ -158,9 +160,11 @@ bool lightSleep(uint32_t* cause){
 #endif
 #ifdef RISC_PAIRED_BANKS
   if(!RiscBankStore::exitSafe())return false;
-#ifdef RISC_PAIRED_APP_DATA
-  if(!RiscAppData::exitSafe())return false;
 #endif
+#ifdef RISC_PAIRED_APP_DATA
+  // Standalone AppData has the same writer/custody barrier as paired products.
+  // Sleep must not suspend an in-flight replacement or retained mount.
+  if(!RiscAppData::exitSafe())return false;
 #endif
   for(const auto& state:spi)if(state.held || state.pending)return false;
   if(!NativeCrownRecovery::pause())return false;
