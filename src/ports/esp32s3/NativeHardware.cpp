@@ -1,5 +1,8 @@
 #include "diagnostics/Performance.h"
 #ifdef ESP_PLATFORM
+#if defined(RISC_ENABLE_TIME_SAMPLE) && RISC_ENABLE_TIME_SAMPLE
+#include "NativeAsyncTimeSample.h"
+#endif
 #include "CpuPort.h"
 #include "CooperativeDelay.h"
 #include "NativeSleep.h"
@@ -134,9 +137,11 @@ bool deepReady(){
 #endif
 #ifdef RISC_PAIRED_BANKS
   if(!RiscBankStore::exitSafe())return false;
-#ifdef RISC_PAIRED_APP_DATA
-  if(!RiscAppData::exitSafe())return false;
 #endif
+#ifdef RISC_PAIRED_APP_DATA
+  // Standalone AppData has the same writer/custody barrier as paired products.
+  // Sleep must not suspend an in-flight replacement or retained mount.
+  if(!RiscAppData::exitSafe())return false;
 #endif
   for(const auto& state:spi)if(state.held || state.pending)return false;
   return true;
@@ -158,9 +163,11 @@ bool lightSleep(uint32_t* cause){
 #endif
 #ifdef RISC_PAIRED_BANKS
   if(!RiscBankStore::exitSafe())return false;
-#ifdef RISC_PAIRED_APP_DATA
-  if(!RiscAppData::exitSafe())return false;
 #endif
+#ifdef RISC_PAIRED_APP_DATA
+  // Standalone AppData has the same writer/custody barrier as paired products.
+  // Sleep must not suspend an in-flight replacement or retained mount.
+  if(!RiscAppData::exitSafe())return false;
 #endif
   for(const auto& state:spi)if(state.held || state.pending)return false;
   if(!NativeCrownRecovery::pause())return false;
@@ -249,6 +256,14 @@ Hardware nativeHardware(bool (*owner)()){
   hardware.tcpListener=NativeTcpListener::backend();
 #endif
   hardware.i2sOpenRx=NativeI2s::openRx;hardware.i2sRead=NativeI2s::read;hardware.i2sStandardOpen=NativeI2s::openStandard;
+#if defined(RISC_ENABLE_TIME_SAMPLE) && RISC_ENABLE_TIME_SAMPLE
+  NativeAsyncTimeSample::prepare(hardware.owner,[](){
+    uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;
+    return NativeRadioAsync::state(&state,&rssi) && state==2 && NativeRadioAsync::addresses(station,ap) &&
+      (station[0]||station[1]||station[2]||station[3]);
+  });
+  hardware.timeSample=NativeAsyncTimeSample::api();hardware.timeSampleIdle=NativeAsyncTimeSample::idle;hardware.timeSampleSafe=NativeAsyncTimeSample::safe;
+#endif
 #ifdef RISC_ENABLE_HTTP
   NativeHttp::configure(hardware.owner,[](){
     uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;

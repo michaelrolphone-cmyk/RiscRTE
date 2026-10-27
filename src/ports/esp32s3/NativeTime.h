@@ -2,8 +2,9 @@
 #include <cstdint>
 #if RISC_NATIVE_ESP_IDF
 #include <esp_timer.h>
+#include "NativeTimeQuotient.h"
 namespace RiscPlatform {
-inline uint32_t millis(){return uint32_t(uint64_t(esp_timer_get_time())/1000u);}
+inline uint32_t millis(){return unsignedMicrosToMillis32(uint64_t(esp_timer_get_time()));}
 }
 #else
 #include <Arduino.h>

@@ -12,3 +12,4 @@ c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers
   "$repo/src/runtime/drivers/ProviderGraphV2.cpp" "$repo/src/runtime/drivers/ProviderModuleV2.cpp" \
   "$repo/src/ports/esp32s3/CpuPort.cpp" "$repo/test/deep_prepare_test.cpp" -ldl -o "$build/test"
 "$build/test"
+python3 "$repo/test/run_native_appdata_sleep_guard_test.py"
