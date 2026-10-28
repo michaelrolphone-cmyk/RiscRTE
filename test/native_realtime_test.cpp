@@ -109,5 +109,19 @@ int main(int argc,char** argv){
                    timeval{1,-1},timeval{1,1000000}}) {
   wall=raw;before=s;assert(read(&s)==RISC_REALTIME_IO && !memcmp(&s,&before,sizeof(s)));
  }
+ // A seed belongs to the RTC-backed clock, not to a particular wake. Each
+ // consumed stamp must be recommitted from restored validity without reseeding.
+ assert(seed(1800000000,123456000)==RISC_REALTIME_OK);
+ const auto seedCount=sets;
+ for(unsigned cycle=0;cycle<1024;++cycle){
+  const int64_t expected=wall.tv_sec+1+(cycle%113);
+  try{enter(restart);}catch(int){}
+  wall.tv_sec=expected;monotonic=0;reset=ESP_RST_DEEPSLEEP;
+  start();assert(!stamp.magic&&!stamp.inverse);
+  assert(read(&s)==RISC_REALTIME_OK && s.validity==RISC_REALTIME_VALID);
+  assert(s.epoch_seconds==expected && s.nanoseconds==123456000 && s.monotonic_before_us==0);
+  assert(sets==seedCount);
+ }
+ puts("Native realtime: 1024 seed-once repeated deep resets retain SDK-advanced time without double counting PASS");
  puts("Native realtime: explicit seed, cold/reset invalidity, SDK deep-time advance, rollback, corrupt retention and failures PASS");
 }

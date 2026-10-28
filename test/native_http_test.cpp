@@ -49,10 +49,11 @@ static bool socketFail=false,fcntlFail=false,udpCloseFail=false,shortSend=false;
 static unsigned dnsCalls=0,dnsFrees=0,udpOpens=0,udpCloses=0,udpSends=0,udpReceives=0,randomCalls=0;
 static bool udpLive=false;
 static std::string resolvedName;
+static void (*dnsHook)()=nullptr;
 void esp_fill_random(void* out,size_t n){assert(online && n==8);++randomCalls;for(size_t i=0;i<n;++i)static_cast<uint8_t*>(out)[i]=uint8_t(randomCalls+i+1);}
 extern "C" int __wrap_getaddrinfo(const char* name,const char* service,const addrinfo* hints,addrinfo** out){
  assert(name && std::string(service)=="123" && hints->ai_family==AF_INET && hints->ai_socktype==SOCK_DGRAM && hints->ai_protocol==IPPROTO_UDP);
- resolvedName=name;++dnsCalls;clockMs+=dnsDelay;
+ resolvedName=name;++dnsCalls;clockMs+=dnsDelay;if(dnsHook)dnsHook();
  static addrinfo result;result={};timePeer={};timePeer.sin_family=AF_INET;timePeer.sin_port=htons(123);timePeer.sin_addr.s_addr=htonl(0xc0000201);
  result.ai_family=AF_INET;result.ai_addr=reinterpret_cast<sockaddr*>(&timePeer);result.ai_addrlen=sizeof(timePeer);
  *out=dnsResult?nullptr:&result;return dnsResult;
@@ -472,4 +473,5 @@ int main(){
   NativeHttp::session->~Session();heap_caps_free(NativeHttp::session);NativeHttp::session=nullptr;
  }
  std::cout<<"Native HTTPS: "<<cases<<" bounded transport/parser/lifecycle cases passed\n";
+ return 0;
 }

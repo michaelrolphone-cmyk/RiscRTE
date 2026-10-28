@@ -66,6 +66,7 @@ bool Port::providerStorageSafe() const {
   if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
+  if(hw_.timeSampleSafe && !hw_.timeSampleSafe())return false;
   for(const auto& pin:pins_)if(pin.held && !pin.retiredHeld)return false;
   for(const auto& c:i2ss_)if(c.closing)return false;
   for(const auto& c:radios_)if(c.closing)return false;
@@ -80,6 +81,7 @@ bool Port::appExitSafe() const {
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(!tcpIdle() || !entropyIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
+  if(hw_.timeSampleIdle && !hw_.timeSampleIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
   for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
@@ -99,6 +101,7 @@ bool Port::nativeDiscoveryProviderSafe() const {
   if(!available() || sleepRetained_ || transferring_ || iq_.closing || (iq_.token&&!iq_.worker))return false;
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.held)return false;
   if(hw_.httpSafe && !hw_.httpSafe())return false;
+  if(hw_.timeSampleSafe && !hw_.timeSampleSafe())return false;
   for(const auto& pin:pins_)if(pin.held && !pin.retiredHeld)return false;
   for(const auto& c:i2ss_)if(c.closing)return false;
   for(const auto& c:radios_)if(c.closing)return false;
@@ -114,6 +117,7 @@ bool Port::nativeDiscoveryAppExitSafe() const {
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(!tcpIdle() || !entropyIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
+  if(hw_.timeSampleIdle && !hw_.timeSampleIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
   for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
@@ -131,6 +135,7 @@ bool Port::restartResourcesSafe() const {
   for(const auto& pin:pins_)if(pin.wakeModes)return false;
   if(!tcpIdle() || !entropyIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
+  if(hw_.timeSampleIdle && !hw_.timeSampleIdle())return false;
   for(const auto& c:i2ss_)if(c.token)return false;
   for(const auto& c:radios_)if(c.active || c.serviceLease)return false;
   if(hci_.token || (hw_.hciIdle && !hw_.hciIdle()))return false;
@@ -143,11 +148,36 @@ bool Port::quiescent() const {
   for(size_t i=0;i<syncCount_;++i)for(const auto& lock:syncs_[i].locks)if(lock.token)return false;
   if(!tcpIdle() || !entropyIdle())return false;
   if(hw_.httpIdle && !hw_.httpIdle())return false;
+  if(hw_.timeSampleIdle && !hw_.timeSampleIdle())return false;
   if(hw_.maintenanceIdle && !hw_.maintenanceIdle())return false;
   for(const auto& c:radios_)if(c.token || c.active || c.closing || c.serviceLease)return false;
   if(hci_.token || hci_.closing || (hw_.hciIdle && !hw_.hciIdle()))return false;
   for(const auto& p:pins_)if(p.owner && !p.retiredHeld)return false;
   return !poisoned_;
+}
+int32_t Port::timeSampleOpen(void* context,const risc_time_sample_request_v1* request,uint64_t* out){
+  if(out)*out=0;
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.timeSample)return RISC_TIME_SAMPLE_CONTEXT;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(p.nativeDiscoveryBusy())return RISC_TIME_SAMPLE_BUSY;
+#endif
+  if(!p.providerStorageSafe())return RISC_TIME_SAMPLE_RETAINED;
+  p.transferring_=true;const auto result=p.hw_.timeSample->open(p.hw_.timeSample->context,request,out);p.transferring_=false;return result;
+}
+int32_t Port::timeSampleStep(void* context,uint64_t token,risc_time_sample_v1* out){
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.timeSample)return RISC_TIME_SAMPLE_CONTEXT;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(p.nativeDiscoveryBusy())return RISC_TIME_SAMPLE_BUSY;
+#endif
+  if(!p.providerStorageSafe())return RISC_TIME_SAMPLE_RETAINED;
+  p.transferring_=true;const auto result=p.hw_.timeSample->step(p.hw_.timeSample->context,token,out);p.transferring_=false;return result;
+}
+int32_t Port::timeSampleClose(void* context,uint64_t token){
+  auto& p=*static_cast<Port*>(context);
+  if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !p.hw_.timeSample)return RISC_TIME_SAMPLE_CONTEXT;
+  p.transferring_=true;const auto result=p.hw_.timeSample->close(p.hw_.timeSample->context,token);p.transferring_=false;return result;
 }
 int32_t Port::httpOpen(void* context,const risc_http_request_v1* request,uint64_t* out){
   if(out)*out=0;
@@ -286,6 +316,12 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       [](void* c){return static_cast<Port*>(c)->tcpSafe();}};
     if(b->connect && b->connected){tcp_.connect=tcpConnect;tcp_.connected=tcpConnected;}
     if(!runtime.registerTcpListener(&tcp_))return false;
+  }
+  if(hw_.timeSample){
+    const auto* t=hw_.timeSample;
+    if(!hw_.timeSampleIdle || !hw_.timeSampleSafe || t->api_version!=1 || t->struct_size<sizeof(*t) || !t->open || !t->step || !t->close)return false;
+    timeSample_={1,sizeof(timeSample_),this,timeSampleOpen,timeSampleStep,timeSampleClose};
+    if(!runtime.registerPlatform(RISC_TIME_SAMPLE_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&timeSample_))return false;
   }
   if(hw_.httpClient){
     const auto* h=hw_.httpClient;
@@ -567,7 +603,7 @@ bool Port::radioIqClaim(void* context,uint64_t* out){
   if(!context || !out)return false;
   auto& c=*static_cast<RadioIq*>(context);auto& p=*c.port;
   if(c.token || c.closing || !p.providerStorageSafe() || p.usb_.token || p.usb_.closing ||
-     (p.hw_.usbPhyIdle&&!p.hw_.usbPhyIdle()) || (p.hw_.httpIdle&&!p.hw_.httpIdle()) ||
+     (p.hw_.usbPhyIdle&&!p.hw_.usbPhyIdle()) || (p.hw_.httpIdle&&!p.hw_.httpIdle()) || (p.hw_.timeSampleIdle&&!p.hw_.timeSampleIdle()) ||
      (p.hw_.maintenanceIdle&&!p.hw_.maintenanceIdle()) ||
      !p.hw_.radioIdle || !p.hw_.radioIdle() || !p.hw_.hciIdle || !p.hw_.hciIdle() || p.hci_.token ||
      !p.hw_.radioIqReady)return false;
@@ -665,7 +701,7 @@ bool Port::radioLeave(void* context,uint64_t token){
   // Live TCP/TLS sockets depend on the station interface. Drain them first; a
   // rejected out-of-order leave is not itself failed native radio cleanup.
   if(!p.tcpIdle() || !p.entropyIdle())return false;
-  if(p.hw_.httpIdle && !p.hw_.httpIdle())return false;
+  if((p.hw_.httpIdle && !p.hw_.httpIdle()) || (p.hw_.timeSampleIdle && !p.hw_.timeSampleIdle()))return false;
   if(c.serviceLease)return false;
   if(c.operation)return radioAsyncCancel(context,token,c.operation)==RISC_RADIO_QUIESCENT;
   if(!c.active && !c.closing)return p.hw_.radioIdle();
@@ -857,7 +893,7 @@ int32_t Port::lightSleepImpl(void* context,uint64_t token,bool active,uint32_t m
   if(p.iq_.closing || p.usb_.closing || !p.tcpSafe() || !p.entropySafe())return RISC_LIGHT_SLEEP_RETAINED;
   if(!p.tcpIdle() || !p.entropyIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
-  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) || (p.hw_.timeSampleIdle && !p.hw_.timeSampleIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.display_.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;
@@ -918,7 +954,7 @@ int32_t Port::deepSleepImpl(void* context,uint64_t token,bool active,uint32_t ms
   if(!p.tcpIdle() || !p.entropyIdle())return RISC_DEEP_SLEEP_BUSY;
   if(p.runtime_ && !p.runtime_->residentResetSafe())return RISC_DEEP_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_DEEP_SLEEP_BUSY;
-  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) || (p.hw_.timeSampleIdle && !p.hw_.timeSampleIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_DEEP_SLEEP_BUSY;
   if(p.display_.token)return RISC_DEEP_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_DEEP_SLEEP_BUSY;
@@ -1017,7 +1053,7 @@ int32_t Port::sleepSetImpl(void* context,uint64_t token,bool active,uint32_t ms,
   if(!p.tcpIdle() || !p.entropyIdle())return RISC_LIGHT_SLEEP_BUSY;
   if(deep && p.runtime_ && !p.runtime_->residentResetSafe())return RISC_LIGHT_SLEEP_BUSY;
   if(p.usb_.token || (p.hw_.usbPhyIdle && !p.hw_.usbPhyIdle()))return RISC_LIGHT_SLEEP_BUSY;
-  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) ||
+  if(p.storageLifecycleBusy() || p.sleeping_ || p.transferring_ || p.iq_.token || (p.hw_.httpIdle && !p.hw_.httpIdle()) || (p.hw_.timeSampleIdle && !p.hw_.timeSampleIdle()) ||
      (p.hw_.maintenanceIdle && !p.hw_.maintenanceIdle()))return RISC_LIGHT_SLEEP_BUSY;
   if(p.display_.token)return RISC_LIGHT_SLEEP_BUSY;
   for(const auto& b:p.spiBuses_)if(b.held)return RISC_LIGHT_SLEEP_BUSY;

@@ -144,3 +144,24 @@ refusal with successful rollback permits the usual fini/unload/handoff path.
 provider in fresh subprocesses, including retained failures from a non-default
 app and a queued launch. It is software lifecycle evidence, not hardware wake or
 power qualification.
+
+## Standalone AppData sleep barrier
+
+Native Light/Deep readiness checks AppData independently of paired-bank
+selection. The Badge prototype selects standalone AppData: nesting its writer
+and retained-mount check inside `RISC_PAIRED_BANKS` silently omitted that check.
+In that configuration, the native readiness and CPU admission path could reach
+terminal Deep while a copied AppData write was pending or its custody retained.
+The independent check now refuses before native preparation or wake-source arm.
+It does not force a checkpoint, cancel a write, format storage, or change an ABI.
+Applications still complete their writes before sleep; successful synchronous
+replacement already syncs, closes and verifies the committed file.
+
+`test/run_native_appdata_sleep_guard_test.py` extracts the production native
+readiness functions and drives production CpuPort through all four Deep variants
+(single/set source, timed/untimed), plus the Light readiness path. No-AppData,
+standalone and paired configurations cover healthy, pending and retained states.
+The storage/SDK boundaries are doubles, not a flash or electrical qualification.
+The deep-prepare runner includes this regression. The realtime runner separately
+checks 1,024 successive simulated deep resets after one seed, with independently
+advanced SDK time and no reseeding or elapsed-duration double counting.
