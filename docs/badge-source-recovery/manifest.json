@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "repository": "michaelrolphone-cmyk/RiscRTE",
+  "source_commit": "046f4c22b263739f3bf3f96f888617d72eb3d498",
+  "source_tree": "876d77de61b53c05343a1de754c32eb476c3ed3b",
+  "object_count": 4200,
+  "pack_sha256": "fc7d8da7e7c7df2f3750b602012c477a623183b1d350ca6a4d9191e220312ad7",
+  "parts": [
+    {
+      "path": "objects-000.packpart",
+      "bytes": 524288,
+      "sha256": "3e680792ac18c6cfb86950cabdeb1232436462e85a50dc5f333e468a17a0bdc5"
+    },
+    {
+      "path": "objects-001.packpart",
+      "bytes": 524288,
+      "sha256": "475c7eaa1f4d9c045c4298c87a5d797c0d10deef9d443268bfcd2c9aa00f4b73"
+    },
+    {
+      "path": "objects-002.packpart",
+      "bytes": 524288,
+      "sha256": "7c28944fbdc4da1d6adef0258892fbff67679d2bd624dfd80eae21fcc50ecb7b"
+    },
+    {
+      "path": "objects-003.packpart",
+      "bytes": 524288,
+      "sha256": "f59a3c27bcbab1c59382120681dfa08ed4a46dc396290608016d5036dab30d4e"
+    },
+    {
+      "path": "objects-004.packpart",
+      "bytes": 524288,
+      "sha256": "c7acfd75bc0d72aa18b2fc81cdb7c4f05946e98309bcf4b1eed8390018d6834f"
+    },
+    {
+      "path": "objects-005.packpart",
+      "bytes": 524288,
+      "sha256": "182d347f6f5d8ea55039772c2fea42dd06c2140cbe377c1c69e6e58ad3c5a339"
+    },
+    {
+      "path": "objects-006.packpart",
+      "bytes": 524288,
+      "sha256": "8a210b78f128c4a697c8249fe8f99ed9e37f7f87b8e62c2ba2dd5c1a8604ad66"
+    },
+    {
+      "path": "objects-007.packpart",
+      "bytes": 524288,
+      "sha256": "f8801f1400aee660a31ad91eb29163c5f57c560ba468a044a13b593fd6c1dca6"
+    },
+    {
+      "path": "objects-008.packpart",
+      "bytes": 524288,
+      "sha256": "9ad3ee25a71d1a3c9a84e08762fd45305f872e9be4510769fc5210856bc53480"
+    },
+    {
+      "path": "objects-009.packpart",
+      "bytes": 524288,
+      "sha256": "956cdf43db7f52762dd4cc2cfbe5d51f2605d81b1fec08f57d52e9b77c2e6f28"
+    },
+    {
+      "path": "objects-010.packpart",
+      "bytes": 524288,
+      "sha256": "e4d9e82d1bec4a8b129a30d99ce85a92c1d162955500f58a519d1f12f2bf7ebb"
+    },
+    {
+      "path": "objects-011.packpart",
+      "bytes": 524288,
+      "sha256": "e5ca8f975d0fcabaad80fddd2b9c138139310478bc4d31c85f330e1b0365554f"
+    },
+    {
+      "path": "objects-012.packpart",
+      "bytes": 524288,
+      "sha256": "3a12daf4716be657007b38198d76fe0d269d55b8d99a0abc4b80dad05959e59e"
+    },
+    {
+      "path": "objects-013.packpart",
+      "bytes": 524288,
+      "sha256": "200e4fe4ad298dd9855820e9a90280276b914bacc3a5d7ba90eaefcaec585ff0"
+    },
+    {
+      "path": "objects-014.packpart",
+      "bytes": 524288,
+      "sha256": "ea99790db3d0b7c9cbc65ee30435cf590c08ccbe6a19a58f3d9394add4930632"
+    },
+    {
+      "path": "objects-015.packpart",
+      "bytes": 524288,
+      "sha256": "7cc740bd17ac9df77d0dadff02c2a7158c32c16377f6d2f551fcffb3f88d2276"
+    },
+    {
+      "path": "objects-016.packpart",
+      "bytes": 524288,
+      "sha256": "a3a0625cbb96f552c1bf56b3625b59421a0ed07f9d9a482349cf9ea86a69658b"
+    },
+    {
+      "path": "objects-017.packpart",
+      "bytes": 524288,
+      "sha256": "37213bbaba40467dcd60523a1b6fa4f3f36a064b8e76f5425220ebcb9dbdbb21"
+    },
+    {
+      "path": "objects-018.packpart",
+      "bytes": 524288,
+      "sha256": "0230c2c3570150486d2cc5ede3b29acdd7270b6feb881e03195ab1dc7b7f618f"
+    },
+    {
+      "path": "objects-019.packpart",
+      "bytes": 158778,
+      "sha256": "f96b09bd37d17cc0f07fee5a16d5f10c052f49436492a74f69ad4e7cafac5bf1"
+    }
+  ],
+  "shallow_boundaries": [
+    "13eca114cb58469cf6004fafc3da84fbd9d29beb",
+    "273bdbccf65647a803ab0586a418f8283732baec",
+    "274bc66f193cbe29018d2a85c9400cb0dce8aacc",
+    "341e6e38ce00b7c57d5daaf5f8c829c3575db931"
+  ],
+  "scope": "Original Git objects from verified recovery inputs. Original IDs and shallow boundaries retained; publication ancestry remains distinct."
+}
