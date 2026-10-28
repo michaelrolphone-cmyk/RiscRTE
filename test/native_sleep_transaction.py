@@ -42,6 +42,13 @@ namespace NativeSleep {bool stackReady(){return true;}}
 namespace NativeI2s {bool idle(){return true;}}
 namespace NativeRadioAsync {bool idle(){return true;}}
 namespace NativeHci {bool idle(){return true;}}
+// This serial/SD fixture composes the real private LittleFS mount, but not an
+// AppData writer task. Model its independent worker guard explicitly; retain
+// the real mount-held/retained barrier instead of an unconditional success stub.
+namespace RiscAppDataMount {bool held();bool retained();}
+static bool appDataPending,appDataRetained;
+namespace RiscAppData {bool exitSafe(){return !appDataPending&&!appDataRetained&&
+ !RiscAppDataMount::held()&&!RiscAppDataMount::retained();}}
 struct {bool held=false,pending=false;} spi[1];
 #include "deep_ready_exact.inc"
 struct Terminal {};
@@ -163,4 +170,4 @@ lfs_objects,lfs_selection,lfs_link=compile_native_serial_littlefs.build(R,O/'lit
 run(['c++','-std=c++17',*flags,*incs,*lfs_selection,'-DRISC_NATIVE_SERIAL_FILES=1','-DRISC_NATIVE_SERIAL_SD=1','-DRISC_NATIVE_ESP_IDF=1','-DRISC_ENABLE_SDMMC=1','-DRISC_NATIVE_STORAGE_CUSTODY=1','-rdynamic','-no-pie','-pthread',*[R/x for x in sources],O/'serial_sd_deep_repro.cpp',*lfs_objects,*lfs_link,'-ldl','-o',O/'test'])
 (O/'commands.json').write_text(json.dumps(cmds,indent=2))
 for mode in ('cold','absent-card','healthy','abandoned'):run([O/'test',O,mode])
-(O/'receipt.json').write_text(json.dumps({'hardware_tested':False,'sanitized':options.sanitize,'leak_detection':False,'modes':['cold','absent-card','healthy','abandoned'],'commands':cmds,'generated_source_sha256':{str(f.relative_to(O)):hashlib.sha256(f.read_bytes()).hexdigest() for f in O.rglob('*') if f.is_file() and f.suffix in ('.c','.cpp','.h','.inc')},'source_sha256':{str(f.relative_to(R)):hashlib.sha256(f.read_bytes()).hexdigest() for f in [*[R/x for x in sources],R/'src/bootstrap/RuntimeSleep.inc',R/'test/native_serial_waveshare_sd_test.cpp',R/'test/compile_native_serial_littlefs.py',R/'test/native_serial_littlefs_composition.cpp',R/'src/ports/esp32s3/NativeSerialStorage.cpp',R/'src/ports/esp32s3/NativeAppDataMount.cpp',R/'src/runtime/storage/ReopenedFiles.cpp',Path(__file__)]}},indent=2)+'\n')
+(O/'receipt.json').write_text(json.dumps({'hardware_tested':False,'modeled':['AppData worker pending/retained guard; real shared LittleFS mount barrier; standalone worker qualification is separate'],'sanitized':options.sanitize,'leak_detection':False,'modes':['cold','absent-card','healthy','abandoned'],'commands':cmds,'generated_source_sha256':{str(f.relative_to(O)):hashlib.sha256(f.read_bytes()).hexdigest() for f in O.rglob('*') if f.is_file() and f.suffix in ('.c','.cpp','.h','.inc')},'source_sha256':{str(f.relative_to(R)):hashlib.sha256(f.read_bytes()).hexdigest() for f in [*[R/x for x in sources],R/'src/bootstrap/RuntimeSleep.inc',R/'test/native_serial_waveshare_sd_test.cpp',R/'test/compile_native_serial_littlefs.py',R/'test/native_serial_littlefs_composition.cpp',R/'src/ports/esp32s3/NativeSerialStorage.cpp',R/'src/ports/esp32s3/NativeAppDataMount.cpp',R/'src/runtime/storage/ReopenedFiles.cpp',Path(__file__)]}},indent=2)+'\n')
