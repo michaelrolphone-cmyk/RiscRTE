@@ -2,11 +2,13 @@
   "runtime_commit": "13eca114cb58469cf6004fafc3da84fbd9d29beb",
   "sdk_commit": "fff9895c82d744c7237be8847347bdd1b07c6643",
   "candidate_paths": [
+    "sdk/driver/RiscDmaReservationV1.h",
     "sdk/driver/RiscResidentWorkerV1.h",
     "src/ports/esp32s3/CpuPort.cpp",
     "src/ports/esp32s3/CpuPort.h",
     "src/ports/esp32s3/NativeHardware.cpp",
     "src/ports/esp32s3/NativeResidentWorker.h",
+    "src/runtime/dma/DmaReservation.h",
     "src/runtime/workers/ResidentWorker.h",
     "test/fixtures/resident_worker.c",
     "test/fixtures/resident_worker_api.h",
