@@ -2,6 +2,7 @@
 """Verify a complete first-install image against its pinned component manifest."""
 import hashlib
 import json
+import re
 from pathlib import Path
 import struct
 import sys
@@ -37,6 +38,8 @@ for start, end in sorted(regions):
 require(all(b == 255 for b in image[cursor:]), 'non-erased tail')
 pair = paired_bank_images.parse_record(image[0xff2000:0xff2060], app_data=True)
 require(hashlib.sha256(image[0x10000:0x10000+pair[3]]).digest() == pair[6], 'paired firmware')
+identities = set(re.findall(rb'RTE_SOURCE=([0-9a-f]{40})\x00', image[0x10000:0x10000+pair[3]]))
+require(identities == {manifest['source']['runtime'].encode()}, 'embedded Runtime source identity')
 store = image[0x2f0000:0x800000]
 require(hashlib.sha256(store).digest() == pair[7], 'paired store')
 contents = spiffs_image.read_image(store, 0x510000)
