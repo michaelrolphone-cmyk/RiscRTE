@@ -38,6 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           cd "$WORKER_ROOT/source"
+          python test/test_resident_worker_dependency_scan.py
           python test/run_resident_worker.py --output "$WORKER_ROOT/receipts/consumer-normal.json"
           python test/run_resident_worker.py --output "$WORKER_ROOT/receipts/consumer-ubsan.json" --sanitize
           bash test/run_provider_sync_test.sh

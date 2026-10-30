@@ -31,9 +31,525 @@
       "git_blob": "b3e71d35e4c65de1f8b31bb5eb1cc0e791ae9f85",
       "sha256": "36695bc1cb58a4dbbc85f50f142f0476108cc676622b6ee945d43585107131b6"
     },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/ArrayData.hpp": {
+      "git_blob": "79ade355b21fb871f182c4ce810c5f0cfae0326a",
+      "sha256": "837ee2d89772f01a381872c48dc380537c5062ffe831855a0e4d005ea0cc0485"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/ArrayImpl.hpp": {
+      "git_blob": "b4fb1264f5d8c9552f659e91a31f9519719d2a69",
+      "sha256": "c26b99787dc06d9c1ed8bb431452602f233dc2f61e849260ab683f086c74b79d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/ElementProxy.hpp": {
+      "git_blob": "ec2ea54731f02a1517a736338a8078ff72d0affc",
+      "sha256": "6dbd8aa8dc3f50bdbec88c8f6e1e80ce22e396604dc05077ecbc2e14e2cbef9e"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/JsonArray.hpp": {
+      "git_blob": "436793adf5e242cdfdcb10e48cdcec6c6cb0bdf0",
+      "sha256": "ca547bc44a7fcf8952d4258c15b2cec7596756ffffde51fac76eaae0b2716d7b"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/JsonArrayConst.hpp": {
+      "git_blob": "b4c138a869f82fdefa983495e3d86770955b6c93",
+      "sha256": "f735457699d258d2565742813701fdbf22c1c28b6c02b85a479f3cdd6f53198a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/JsonArrayIterator.hpp": {
+      "git_blob": "39ca45e7f81732d476beca633790139a992cbd79",
+      "sha256": "bed9b03504b6f6624c1cc51fca0170b0514c6e602d2b56ef54b79f126c70dbc3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/Utilities.hpp": {
+      "git_blob": "d9ba143bb4a7a8733007f16abb4ab194c6d19a3a",
+      "sha256": "77d4249d8041736bec8dbedb097edd3512aa3be1a154700a78035327f96a55fc"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Collection/CollectionData.hpp": {
+      "git_blob": "937c10c950ae3d2c6c85536b21b56d4b246c86de",
+      "sha256": "f5891309dd32441f769d5511f568e8637b6fd418b70a482552aa9c935bd981f3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Collection/CollectionImpl.hpp": {
+      "git_blob": "559c0a5e722e36364953b7000af0932a9437dc56",
+      "sha256": "c71d8c6199b52f6ac8fbb00f36edc3a98ba0d7edf9de2e2ca579c1a0132e24d5"
+    },
     "runtime/lib/ArduinoJson/src/ArduinoJson/Configuration.hpp": {
       "git_blob": "696ce4c935f8da888c50e9b884241860c0049cba",
       "sha256": "905b896b905b04787f2b865484afa1a8a7cb7dc34dfb6de60713ee640f2199e4"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/DeserializationError.hpp": {
+      "git_blob": "7ec685fb4fbb95a0f8f91c79c47bf88ce5060dbb",
+      "sha256": "d10f21f44a137dfd68b844d78271d51b0d6fdf24235393a598719496db6f7353"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/DeserializationOptions.hpp": {
+      "git_blob": "0d31d2f1afc1f06a50ec6ec6d70642759dd3d22e",
+      "sha256": "9302870dc4130c426eb19e108a77acd2d4c2c88a85b5fe07d19e186f1f7e64ca"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Filter.hpp": {
+      "git_blob": "4cd564782f0f13b9130b3f3f49f2b332f31cb5bb",
+      "sha256": "af64fe15db2b647616a4da3346fecee1f5a88825cde03fcd7953b08e4e0c28fe"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/NestingLimit.hpp": {
+      "git_blob": "fb4610237b18356808a6353c66be05f8288cf228",
+      "sha256": "4bc0cb186c863b1728551f30e57500695d93c4090373c1faa22baeb9964892ac"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Reader.hpp": {
+      "git_blob": "b8e896b38e5cb8c8011baf69dcd2b692ee4460b7",
+      "sha256": "b75c0eb3f6fb9ad90013c26975ae50973516807dd0af4a40c14d492971db41b7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Readers/IteratorReader.hpp": {
+      "git_blob": "5fc8ba5208744c350232c8090bd612fe9f41aa5c",
+      "sha256": "3f2a6ae8dae4c25acab53e55f224d84aaa2fbe2b365d4f030378dd9911e6b384"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Readers/RamReader.hpp": {
+      "git_blob": "b778a24406a51fa595a220c883ccb49fe1d2b8f8",
+      "sha256": "905edbf0a2e1ef3dc0f50f4411034d699a09a9639bd4d1692f2782b39dd68927"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Readers/StdStreamReader.hpp": {
+      "git_blob": "5e1233b275e50a92858f2b3b563256a685f38bbf",
+      "sha256": "cc4027d58f9e4a69fb19544ff425768d6f2f43db40cc003307ed50d976f24eca"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Readers/VariantReader.hpp": {
+      "git_blob": "23d72605e080de253382d23fe4499eae4e2d2837",
+      "sha256": "bf1d3a8baa7d88a8f0932bee9f280c00cec7fdc60f611ec02b2bffbaf26213c9"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/deserialize.hpp": {
+      "git_blob": "4c3b229873a991768936f92bf42ec63dc056866a",
+      "sha256": "9da43a503753e25e263a98b4549424ccacaad55d47ea02e034691277a661c933"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Document/JsonDocument.hpp": {
+      "git_blob": "63902c4abc756c5781797cded3b4c38dd521f5a1",
+      "sha256": "04a458891be3b4667e62ad88e8dccb46db84be234be3f590ebdd37681e4e6b53"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/EscapeSequence.hpp": {
+      "git_blob": "687f29184e05d8882c61fbc9692ee7322f381c63",
+      "sha256": "e581927ef4baee76eb9e82069de21c6bfc41037835caf3185cb9fb901144c9ff"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/JsonDeserializer.hpp": {
+      "git_blob": "288a22ca6c53b5f6ca551de166d04768a168a382",
+      "sha256": "eab580ffc09cfb16ca9f5852455760e7d945ee4c7e5d506d2c46049cae1ca5dd"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/JsonSerializer.hpp": {
+      "git_blob": "e95bfc77314eb2d95ddcd163b8e312e57078dd7c",
+      "sha256": "165b257e03bbc35b93c04a3615c22667ad3b38c4d68f52e712b75ac5ab73cf05"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/Latch.hpp": {
+      "git_blob": "a7dcbe9b49635a4d2a69ec1b67a2614812b59e53",
+      "sha256": "253e02b7b6e1979851cd29f1c6d471845b91f909dd766452d8e0c3033a62b38d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/PrettyJsonSerializer.hpp": {
+      "git_blob": "2cfd1774811b6b4282030ae635d007849fd479ba",
+      "sha256": "7f014affaf7801e167a755ee9f83279854e373876bc75e474363775e153874f7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/TextFormatter.hpp": {
+      "git_blob": "91d55436a7101df74fa51e76f2b90b8f0be58f67",
+      "sha256": "57bfc74d015980fbd91a06193733c1ee33c0cc76969ff53e3f6a290b520e4012"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/Utf16.hpp": {
+      "git_blob": "7f63d0813053954e62cf24dc3b9a1601e71edff2",
+      "sha256": "5af304d335fa27f697444c12fc32e21114479f9381aa75519819fc38c1a2745a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/Utf8.hpp": {
+      "git_blob": "8eb38e6849b72bf8d7c9063bd213b1c14e2023ab",
+      "sha256": "8efc9f909d1c258528e2788165fa24d315b74142d6f519b3414ef8be2c34ac0c"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/Alignment.hpp": {
+      "git_blob": "e844775ab20700edc46dac76e88e830afe3e5406",
+      "sha256": "2c2a04e89005b7e3e2bf3175410d660fb1a219e54408826f8a5e9c9b53e53fee"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/Allocator.hpp": {
+      "git_blob": "e98c7bf95226d18f99950592b2188caedfdbe8fe",
+      "sha256": "3b3ba7e2bb200d557a78859073b417b5f827f18c5a25cf57c77f2348c7631ce2"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/MemoryPool.hpp": {
+      "git_blob": "4663a61e124410f9969fb54455fdf7f1aea16f8d",
+      "sha256": "892850923c7771ad98338ecdacf0ae8ae383bd79309cd7ea77ac217750d6d4ff"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/MemoryPoolList.hpp": {
+      "git_blob": "7da08063e53d684e1c4f97dbd3b4e529ad736d15",
+      "sha256": "3fa44c52573cd7bb6f418f589773151cb01989250f97d9388ae8f187928fbd22"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/ResourceManager.hpp": {
+      "git_blob": "f74c91bc5ee1a12fe991fae2a246ca124156be12",
+      "sha256": "7c7dfef1e5f6593bdb032ff4a59ddaf6f6028fcdc6319699ad498985c107416d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/ResourceManagerImpl.hpp": {
+      "git_blob": "a701c0d470d2ed7a131c27c88032b612652d435e",
+      "sha256": "824f4ff2f5ca628050e3d6e20aafcb5a23c4520ea4e3f8c4831d256128c4d2cc"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/StringBuffer.hpp": {
+      "git_blob": "4d5caa7523bd72bc1db2c6bccaa527215d5f5347",
+      "sha256": "f5d58605a4bfc609842d8e308685cfbbf2a67a600535a4a7e6f267a29fa39d4d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/StringBuilder.hpp": {
+      "git_blob": "db6c35444cbbbec895622e7f798397cf189968cc",
+      "sha256": "afd5a44e855bc96cc1d655c44c1bc60e6cb738d09db50f1e1b0a0aef4545aac5"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/StringNode.hpp": {
+      "git_blob": "26bd1803788cf4b9d9a206ab5e387497aad5dc52",
+      "sha256": "860225203715dcfcb399b193b2196ca388c59eca7aeedbf3587a525915cae3b1"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/StringPool.hpp": {
+      "git_blob": "0b71ed222cb53a40f9cd43af47cf71a8bafffc83",
+      "sha256": "51271fd322ea1b3787242e0d43196f92b84725a022844674040518a6dfef9fe9"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Misc/SerializedValue.hpp": {
+      "git_blob": "42691921daa87ad1f0054d1e94e96f65f2dad3a4",
+      "sha256": "d4c3c3ef7805bbc92aa759c50497ddcb7af6890b28c5405c3ee055dd866a430f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/MsgPackBinary.hpp": {
+      "git_blob": "2c0f6b717ae6de14ce2893bf4d965c9dbbcdc31f",
+      "sha256": "ac66968129fa0d537f4bcbf085c5b5c6c2a9076b7943361b12bce97ef849a8e5"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/MsgPackDeserializer.hpp": {
+      "git_blob": "904da179fc0d89c5f23708261f6a533a3699966e",
+      "sha256": "8d82a6c6ed575826a0a462d62c8b2973d3aac783ddaf7d588e20c2a238881cbc"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/MsgPackExtension.hpp": {
+      "git_blob": "b51eb30bd430a210187e32d9cc178564ba10b075",
+      "sha256": "763501aee1773a80de806ded6ede3620f480959bdc0d3fb1cca5f726997e7147"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/MsgPackSerializer.hpp": {
+      "git_blob": "43f4cd2621f514b6bfc13a3fe1f3778ee00abc40",
+      "sha256": "4672f7e6a4422f8f75d7839462278969ce8d1c92d538e16f1e9ec7325a704884"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/endianness.hpp": {
+      "git_blob": "1328f9e26a4b312852110773952eddc2176b9b9f",
+      "sha256": "1553671272918ee19331576c4ad279cae0614309feea2fa5b6ad7bed0fb1b8e4"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/ieee754.hpp": {
+      "git_blob": "ad8e2f0417b5de1a81d6a880371fd204865fcb6c",
+      "sha256": "6884f01acb37bf41a35f772fe9443bed8bb7fefbba83c1ddbd470cd49ed84635"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Namespace.hpp": {
+      "git_blob": "feb580a17f64d7578292cdfa3e577bcbb1416fe0",
+      "sha256": "a54e347ce43fb1fb44ab473b34efb5fadadb37d614801c63bc1a1ac1de4e93c0"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/FloatParts.hpp": {
+      "git_blob": "4a06016c0b55a7a9b94632f0cbf839ec49e3934f",
+      "sha256": "d7317069a5e814d595ad0dc2efb87c7d0f01a36e5bf419fe1fd445fcf2fbd4f3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/FloatTraits.hpp": {
+      "git_blob": "65df83820121421027b8e0445e198b2b13db3b99",
+      "sha256": "e47728474bb23a8627bf977bc8f0dc0dff3e2219300bbaa86f9bc68881dd6304"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/JsonFloat.hpp": {
+      "git_blob": "400cec44ff4463704fe941b4b7d3e62a8061d5fc",
+      "sha256": "c5acc45159813dfe91974d083897b733da310d81c63acfc71f45e28509f8cf9d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/JsonInteger.hpp": {
+      "git_blob": "f626d090740e2dbd2e194a39aec0c0174ebef97b",
+      "sha256": "530ec42a392467a6b4f9bae248093038265e9a8e8cfd449a04c2b93e3083ba25"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/arithmeticCompare.hpp": {
+      "git_blob": "f9f30a2f815de0dd992ad159fdcb4d57bb77b7b0",
+      "sha256": "09b0baa129e52874c13eb30eb4c5426b6a18dc931850525892faf3fcbb1351d1"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/convertNumber.hpp": {
+      "git_blob": "e83d6ce3b4141f6ea49ad8ec57316d12a1e9c02a",
+      "sha256": "6f266f21da8aa051534a334300855acaaa447ea3ad2ec59868a47210e8ce4191"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/parseNumber.hpp": {
+      "git_blob": "ab3452898ca0f6ee0229c28ae2a58c5c0b8e744b",
+      "sha256": "d5fcedcbbe39d51be47d6ee8dd9c3519ff120b0dfca193cb3bd27f3f4284e914"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/JsonObject.hpp": {
+      "git_blob": "662851b1824270548d9720ffcb46b42a4aa56036",
+      "sha256": "a5a2d622428dd75e29e7861fdc443f8c9f022f50a6229db1375e12d6761e12cf"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/JsonObjectConst.hpp": {
+      "git_blob": "99540c41118ce0d9840e58be96fff73024fb0ccd",
+      "sha256": "9f0e2965d503e5cbf11b632a1fd119694a4eb32b00f6173de3d2e9f0b6ce2d0a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/JsonObjectIterator.hpp": {
+      "git_blob": "90637f58bf36c8cd19459c006505cee1e8141c28",
+      "sha256": "651189ebe60ed87096fc188688d8cb019e1ba4a545c63bcb0232bfee148aa9bb"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/JsonPair.hpp": {
+      "git_blob": "f0dcb50a80c6c538abcfd5f71a11dea62986f710",
+      "sha256": "daa3c26c2a89b9f7ff8b96e88c77a526ed7e4360c849fc420829451f30987b17"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/MemberProxy.hpp": {
+      "git_blob": "7e43d38d2962c58dd2db434f257d690d9d1b9c81",
+      "sha256": "2182c5b13889a8b07c157e5a6987b0a8fcf74f47595f3dc11f7d66d9ee307e5a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/ObjectData.hpp": {
+      "git_blob": "9b98962835f2638b0778f4ddacfaceac8a8d68c3",
+      "sha256": "4fa596fcd4d6014a46781fe0972423258c4a3a3d0b67984cd3f5c9fe4f3f91d3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/ObjectImpl.hpp": {
+      "git_blob": "67677d744d45cdecdd8955289bf88e815e2e70c2",
+      "sha256": "2d41a186c71897e3fe056b728429fa746b813fb138e62ab1a060cf8c24b785a1"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/alias_cast.hpp": {
+      "git_blob": "9529b05844044703630ccd571251a02dab80eda3",
+      "sha256": "3a7505ae51ebc04cbbeadc5e199e78c78c2eef85b7dc398c2a92dd6a7b8cb934"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/assert.hpp": {
+      "git_blob": "e7d42a738b3fef543a904e155e890ec407563693",
+      "sha256": "b5252fe977be572cfdec8c887fc24c45dc24edf6bab6ddcc794d11cfeb463764"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/attributes.hpp": {
+      "git_blob": "99e1b33b8b966ffb257444208074ee5cea6f9a0c",
+      "sha256": "f7422477c513753ae0d70e30cf61e99bcc4734cd9157bd1b856faa15b6bd68d7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/ctype.hpp": {
+      "git_blob": "afb8e84a57fbe1b51743c747eb7bf07d1c2fd20c",
+      "sha256": "a85de0bc1f7b83ab6bd2acf6e81fcfdaa6f23a68c19443d354d1f01a3b38e1b3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/integer.hpp": {
+      "git_blob": "6dded6ff875d47d3510a8d218f6e63dc641928b9",
+      "sha256": "72296ae7f2a1d41d313ac7a07424ac318e6f32066afdb21160f6f2e206196dd0"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/limits.hpp": {
+      "git_blob": "9e87bbd0fb597290cc0fa6c182304f01d025fccb",
+      "sha256": "af2ee86ce21c3f8765ed740e9043148080a494b0cdaf1173a2629057655d815f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/math.hpp": {
+      "git_blob": "78375fdaf9accf84badcaa1a07ed0493b603f174",
+      "sha256": "128e8add4c1989fb96b9b76017239cf8c728ee877777cc69aad02952c52236a6"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/pgmspace_generic.hpp": {
+      "git_blob": "8ee166dd1a43c243092f0a71855f9d9f4fc75f37",
+      "sha256": "042e78afcd10161b708033902fe9613c949b6a272989deba3758cb3828f8545a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/preprocessor.hpp": {
+      "git_blob": "8402cfd5df38671fc9ac91257b1393c7736b9180",
+      "sha256": "5b2c815ea646000f58e92e8f81338b623c98100039c08df4ad50d110a6b8fc0d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits.hpp": {
+      "git_blob": "a4dd1d41b0d96391b2a8bae80d59955d15dcb52b",
+      "sha256": "595300e35e6dbbe946880c62e41252ad1811cc96dcd1fceb7f66a00d5039f54a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/conditional.hpp": {
+      "git_blob": "d699b6b8a79110590fa3ca4ff5fd0c8316eee44e",
+      "sha256": "b55cbe4e5464c5673e9fbff94ff9a4db377db5e01a55421d14b875dd508c8ff6"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/decay.hpp": {
+      "git_blob": "9a1075cda12779c984172b4d34c320ae7fd434d4",
+      "sha256": "cba214f0ddae81d9341e06f909a9ddce9109120e8908c990924be667d54f77bd"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/declval.hpp": {
+      "git_blob": "b16b575481ffbcdfbe9fdd2db482f07ce819eb89",
+      "sha256": "68c3fd5b4fd7a194257df4213b1df4b26865eee43015db43de6728448b8ea7a8"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/enable_if.hpp": {
+      "git_blob": "8fb8af4b519176a3a5f38b8b389d7f727c00aa2b",
+      "sha256": "47577979433842ea55b65398f54d4aa4f4bf28ca095890cafc22e10d8f7f42c1"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/function_traits.hpp": {
+      "git_blob": "9d957417588111b1065117b73d54c072d70a252e",
+      "sha256": "8ead527bc1d4e79c1a66d4cc37d3820c3e36ecfda2469209c5ef29987ca98c61"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/integral_constant.hpp": {
+      "git_blob": "cc893d7ce8c7c619f3d523f7ed205b8f2e2678fd",
+      "sha256": "c9f3cd3fdd00797a23ee1e3e4a52bda5eae2bc211dbabbbd72a92254758a1363"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_array.hpp": {
+      "git_blob": "e259b2d765c9ce6995c7c33cbcaf5d2e20c707d1",
+      "sha256": "068ae1616d3b89b245bc8fcaca819037f7f7659517399e47c538b43eb593ff6f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_base_of.hpp": {
+      "git_blob": "5d93d785a3782e0f32ed7381e05edeeb79c5f2b7",
+      "sha256": "684cf9616274e83ca3378d90db361967aa556e4afa3b845d41fad6b0c4e63991"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_class.hpp": {
+      "git_blob": "3946e595f1c1dabace2f569789bdf8d54e2415c9",
+      "sha256": "58fa2c0d9b8b44101457458f6d2e68127adc4dee3f8fc9b22a079352b40c66b8"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_const.hpp": {
+      "git_blob": "b8e848f3a0009ad3be3e918e5cb8e68d9b5bdfc8",
+      "sha256": "0a5f6411e1d30bf1af49e9dd9d065ce650f604a4a8e49de273e1d93a01712afe"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_convertible.hpp": {
+      "git_blob": "e48b353437eaaa9d74aa8564de60721dc2b91b59",
+      "sha256": "41696f28f53615eeb2a62335dcc7210bff05f2531c1376bb6504629e45ccb8ea"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_enum.hpp": {
+      "git_blob": "73a721bc69849634625f4f9071004352b9105edb",
+      "sha256": "860e3dec40ab1a2e4da676e24be4c13b1894269fa8fbcaf04c5742d4780bab6a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_floating_point.hpp": {
+      "git_blob": "2cba9e721d78f4e462c3f4b714fba6e72453ae7c",
+      "sha256": "b0551306d4e34dd5867b534040a984cfe9a8980cd46a90571afa9b4df7851851"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_integral.hpp": {
+      "git_blob": "08e4c47509b0e29e603dd26164273ff939049782",
+      "sha256": "68adf519deefab1240675e310b8b221f2b4380dde7a73bd92386f96d9d2a7994"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_pointer.hpp": {
+      "git_blob": "5a5e7eec7f406314cb64134e33ecc513725bdc74",
+      "sha256": "1b1c0735093bca4d1c87eb7312b34c79dcfb059ec1553d8f06178c9b4fa8325f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_same.hpp": {
+      "git_blob": "fe1dad892beb6f719644ef0693dc64b6cfaf4899",
+      "sha256": "23675f383d58591b548acccc07ca21ee4d748624c587c806bb7bee65e2535c16"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_signed.hpp": {
+      "git_blob": "25004e370d58d0cecb39d9583759f2569acd1a3e",
+      "sha256": "9cb22cd44f3e8a6641f4ec1ab37abba2010bfbbfaf190e6b44601160a5383b7a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_unsigned.hpp": {
+      "git_blob": "2665c8821f27e05ddce11ca75ba5b835a8610643",
+      "sha256": "3840c0556287ade9a15f1062a5a437d444471902ae86dba1acc79530c1496f17"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/make_unsigned.hpp": {
+      "git_blob": "016e716410c11ddab6a7768775ab1fc46797bb52",
+      "sha256": "0f544cce3804309aa54e2418fe6ebc2ed3ab5a3778c761e88ade1c29fc66e1c6"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/remove_const.hpp": {
+      "git_blob": "090f849d411bdcbda044dfad2c53e5305b52945d",
+      "sha256": "4359448d59ef880a498aee52df2025ee7f725cfedec804660663423995a8022d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/remove_cv.hpp": {
+      "git_blob": "114696ea886a6282accc87b2595cc3096bdcf8a8",
+      "sha256": "70abe18102c8647939bb5a19547838687f981ab40a85e269ea721b7e35d99079"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/remove_reference.hpp": {
+      "git_blob": "c3894c0213246c547dec6e71be9955142cd8e5a9",
+      "sha256": "a6a125233312f34bd4bb56329141ee98e75ee1833d764d2817f0fbc60eade2dc"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/type_identity.hpp": {
+      "git_blob": "63252081840ddc060d4e372566da56ff684ac014",
+      "sha256": "2b4754a94e97558104cbadd72e87a4232c06bd68f68fba6a7100ee8c10834914"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/void_t.hpp": {
+      "git_blob": "c9bca15b7a2dfcd6e7773577b0824e73ff729e8f",
+      "sha256": "d8c4e357864d6d0d883351fd73c25e1ca9eead8aaf7c335e5ce4cb3018191000"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/utility.hpp": {
+      "git_blob": "afbac7c5eb36fc97e6b460abbbaa412dfa26c0ff",
+      "sha256": "ac45a4b5a85a00ae5eb7102a684dfe3eaf30496eb83eb117859d864eea250b9b"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/CountingDecorator.hpp": {
+      "git_blob": "2e153be34d33dda97434f006ad64cf7ec539066a",
+      "sha256": "4cfab0eba58b207dbf34b2a349cb94ffecb62d5f99cdb73291ccd8d9d08a9114"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writer.hpp": {
+      "git_blob": "f736d8686d7e3e746f746dec0c733878927aab9d",
+      "sha256": "35b4927299e24ff719395e5608da402207d174f2bb74cbdff7a98224300b02ac"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writers/DummyWriter.hpp": {
+      "git_blob": "a308a4b5dfda804072ee6e1b218d96e91f514a58",
+      "sha256": "5bdce40e2aad008af7b793a05b4701850a8872e0f38554067574bb86f25939bd"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writers/StaticStringWriter.hpp": {
+      "git_blob": "f9407c37a3dc380b2bbcdf3582a67f0a6425a566",
+      "sha256": "612199f335cb95ad66bd6dde33965f0bbe6dfda66f10b952913baa840cf31b47"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writers/StdStreamWriter.hpp": {
+      "git_blob": "44758d49a3e108ebdc232ec921b23860e6a70f7e",
+      "sha256": "eca1c78e623ac7a9399f6c14cd278dac2819a2d4951002fdef18bf7f75a43123"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writers/StdStringWriter.hpp": {
+      "git_blob": "e2ffc72e7ac5b32a3ad2aa24856760fe1b9af8ac",
+      "sha256": "59cc23eab10479b37df381c9efe7be7d2d33bf1b9f76b8012aed3fa8f59e6c86"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/measure.hpp": {
+      "git_blob": "62d8fce1bcdf5e5977cd8e48ed455081e40da669",
+      "sha256": "afdd5d7e645f73d04aef10dcd93d2ee4f12fb03acbc31e2d1ec304245fcae0db"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/serialize.hpp": {
+      "git_blob": "ad93adecacc0e4b4c309b28944f9c87eb1923c6e",
+      "sha256": "2f6a41290337ab2c6d992811211706f9dfd988bf3f14b80b663ec3ce12811d5d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/Adapters/RamString.hpp": {
+      "git_blob": "c269ffb7cecb8ffa1a2a55e0adc92529c850d792",
+      "sha256": "eb72a8224a4f92d7b54b54c303ed49a8e7cd0a951f7574541864e3201bf3fc5d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/Adapters/StringObject.hpp": {
+      "git_blob": "43bd330c4c658af04407fc14b199020c7f7df7d5",
+      "sha256": "4006612eda3de1a348367b4c5b4c7b7a853d1d133cb3a0c801735628615cc076"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/IsString.hpp": {
+      "git_blob": "094f53b52b0b27e1ebf6cbc7f31f45fe68f3e7ad",
+      "sha256": "597367d5b755192db6ed8355fe70ab41b9464a251fdc413c164546f14d87a13b"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/JsonString.hpp": {
+      "git_blob": "98bae43f48197d761875665561faaf90d9c22d3a",
+      "sha256": "a00ae607eb05f6dcfc57e8aae4338d9f9b9d856758eacb4c17829e914fad9c5c"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/StringAdapter.hpp": {
+      "git_blob": "a31d2a5d7187a0efba02ae412b5c2c56937f498a",
+      "sha256": "e8812647aeb2e723b5d9d941a03fed5745448bbd4d0c0ee23ce4734067b77393"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/StringAdapters.hpp": {
+      "git_blob": "e0ae9f3e5965ba332d56459d8078a718490bb3c0",
+      "sha256": "a197878f0dfe8ddb6642d3851a849a139e022814bd6ebffcd49260c55a14ba4a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/StringTraits.hpp": {
+      "git_blob": "bd1a50bddaa09f875468c1a2a3f45b42be4a0ccb",
+      "sha256": "c7a6d9c862b4347f6d693bd23beb7da3226ff7f07759ab0c0b33d49affcad1f6"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/Converter.hpp": {
+      "git_blob": "07f6a516aa73a2c09db34e99fd55906cc4c8d44a",
+      "sha256": "8fbde36244011ff4be133896c07a4e72389f7cd556fe8df5dd188dbcb8300306"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/ConverterImpl.hpp": {
+      "git_blob": "6c5fcda80b4167bfddd448f0f844c9c0a1d4ec08",
+      "sha256": "5eca9fb6dc47eb1dc68ccac73f75e3573125ad9ba6caf39ef4a4e6412b487d5f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/JsonVariant.hpp": {
+      "git_blob": "aed1ba95e30d819de4ca536a1713988cc636e0f7",
+      "sha256": "5e78cf8441f7757969717d1902c733bb9a5f66f46e8994edae1d1745e1737635"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/JsonVariantConst.hpp": {
+      "git_blob": "4c960597c11686a2d5a401b61368e980d7042939",
+      "sha256": "eabdd67fba07b5d9e5ab2d36f830e12a34bce42023564d2e2d657b6b5ef081a3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/JsonVariantCopier.hpp": {
+      "git_blob": "6875c9acb986e70a1d2928a93a1dc1b8bd3bf51a",
+      "sha256": "688e6d4c0737ca861f8cccdd9579f0a1f30d0d0065487dae1273704ebddc5a47"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/JsonVariantVisitor.hpp": {
+      "git_blob": "28f99ed54e0bc8b9ffc3e7118a24b81dcf96c740",
+      "sha256": "8d8acb8de6c0bada3704967e785dd45a2f7b9c2bdcb2fd424e025cd49dc326f7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantAttorney.hpp": {
+      "git_blob": "d97641bbd03c3dd888958fa95a75c46e75b430d2",
+      "sha256": "b3d072e949e4b4908137c53654bb4f428f8af03802fbd0a9c8f799a2d1b148f7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantCompare.hpp": {
+      "git_blob": "5f56016d73bafebc130ea7e01d336d5089f1c8fa",
+      "sha256": "133daa388eeb63ebfc84ad156701bfbf2634da24beea1070717e65513826c2e2"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantContent.hpp": {
+      "git_blob": "d6ee6c78c110643e5a3adf6be366390477154d13",
+      "sha256": "0ce1ebbc005d8d3af9d278da5b69f8c167b0a6123ab497215f675d013bf7f8c5"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantData.hpp": {
+      "git_blob": "6b0d474b13a9774011c23a39d9b2bc76126e5db4",
+      "sha256": "12d6e766e33f2027f4bfe5dbe04bc35ac8eb653d77b59dec58677ae724563fa9"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantDataVisitor.hpp": {
+      "git_blob": "7df61874439b7ee9e4709225f6de8c90c8eeb1e0",
+      "sha256": "bf1d66bbebfbc06d095a2d94d3ace488b637b4d3301a0f3395e140a1e074a59f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantImpl.hpp": {
+      "git_blob": "98289ed0c585ec09090f29ceb2aa60a82972083f",
+      "sha256": "26ed0fcb210f83f9dcd0c2f3e7314238e7453d9334f98d1c08875ddc6504d250"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantOperators.hpp": {
+      "git_blob": "30bbd66474eb51fd0432d2b8e8893cf5411ba0bb",
+      "sha256": "23ec13c033ce9ffe060e3aa2b4a354974284f2f220249d5ddaa31615fd2650ff"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantRefBase.hpp": {
+      "git_blob": "975c9610ae500d074a6e387a797a2ef4cf877a24",
+      "sha256": "5b837847df20e83244d2e253d5bf130ccde9f344bc7431e356f68595afe2121c"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantRefBaseImpl.hpp": {
+      "git_blob": "da1b1e6bf5d8ea839d870b0a110fb17592ffa952",
+      "sha256": "d0907cd1abb0f92782d1dd42adda9fa5c329da18505b2133e29b5aee25df1929"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantTag.hpp": {
+      "git_blob": "a476c301c0f04a18e9e0796ad3b4b247e46c4bab",
+      "sha256": "df26f34e70bf722fe11ca44eda05ef35d40649effe7383d74d0a61dddcaac18e"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantTo.hpp": {
+      "git_blob": "928d459788bddf162fbc233b62d3ea5aff442921",
+      "sha256": "9f7fde152ea25afabdbe77954ee4ac87dff13455d320e87c71fb2df191961db5"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/compatibility.hpp": {
+      "git_blob": "2e83e6d681ff7e70d33451de9adf7806ab69cbd1",
+      "sha256": "fba78fa73fb71ea2074db774c8e892c8d3bb348e8bc4b1242bfb29f4ab9247dd"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/version.hpp": {
+      "git_blob": "c4ab196f14111c2e92d4a37c7de0d2d64bf6d449",
+      "sha256": "e99a24ab66d8a1b316a196b3b2a68d5f76a1d72989569273a605a3461cb9ac18"
     },
     "runtime/lib/elf_loader/include/esp_elf_image.h": {
       "git_blob": "e9b94e345d3a6436d9fcb1aecce73b8f201ccc66",
