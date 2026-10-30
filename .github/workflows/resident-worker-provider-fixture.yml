@@ -44,7 +44,7 @@ jobs:
           . "$IDF_PATH/export.sh"
           python "$WORKER_ROOT/source/test/native_worker_provider/test_build_fixture.py"
           mkdir -p "$WORKER_ROOT/build/fixture"
-          python "$WORKER_ROOT/source/test/native_worker_provider/build_fixture.py" --runtime "$WORKER_ROOT/source" --cc xtensa-esp-elf-gcc --mode "${{ matrix.profile }}" --output "$WORKER_ROOT/build/fixture"
+          python "$WORKER_ROOT/source/test/native_worker_provider/build_fixture.py" --runtime "$WORKER_ROOT/source" --cc xtensa-esp32s3-elf-gcc --mode "${{ matrix.profile }}" --output "$WORKER_ROOT/build/fixture"
           idf.py -C "$WORKER_ROOT/source/idf" -B "$WORKER_ROOT/build" -D "RISC_SOURCE_SHA=$SOURCE_SHA" -D "SDKCONFIG=$WORKER_ROOT/build/sdkconfig" -D CCACHE_ENABLE=0 -D "RISC_NATIVE_EXTRA_SOURCES=$WORKER_ROOT/source/test/native_worker_provider/native.cpp" -D "RISC_NATIVE_INCLUDE_DIRECTORIES=$WORKER_ROOT/build/fixture" -D 'RISC_NATIVE_DEFINITIONS=RISC_EMBEDDED_BOOTSTORE=1;RISC_NATIVE_PROVIDER_POLICY_HEADER="WorkerGraphPolicy.h"' -D "RISC_NATIVE_LINK_OPTIONS=-Wl,--wrap=app_main;-Wl,--wrap=esp_elf_deinit" reconfigure
           cmake --build "$WORKER_ROOT/build" -- -j1
           python "$WORKER_ROOT/source/scripts/verify_resident_worker_target.py" --runtime "$WORKER_ROOT/source" --sdk "$IDF_PATH" --build "$WORKER_ROOT/build" --output "$WORKER_ROOT/receipts/target.json" --provider-fixture "${{ matrix.profile }}"
