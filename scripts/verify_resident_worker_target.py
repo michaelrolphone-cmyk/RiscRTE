@@ -4,11 +4,12 @@ import argparse,hashlib,json,shlex,shutil,struct,subprocess
 from pathlib import Path
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--sdk',type=Path,required=True);p.add_argument('--build',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--execution-fixture',action='store_true');a=p.parse_args();root=a.runtime.resolve();sdk=a.sdk.resolve();build=a.build.resolve()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--sdk',type=Path,required=True);p.add_argument('--build',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--execution-fixture',action='store_true');p.add_argument('--provider-fixture',choices=['clean','retained']);a=p.parse_args();assert not(a.execution_fixture and a.provider_fixture);root=a.runtime.resolve();sdk=a.sdk.resolve();build=a.build.resolve()
  commit=subprocess.check_output(['git','-C',root,'rev-parse','HEAD'],text=True).strip();sdkcommit=subprocess.check_output(['git','-C',sdk,'rev-parse','HEAD'],text=True).strip();assert sdkcommit=='fff9895c82d744c7237be8847347bdd1b07c6643'
  config=(build/'config/sdkconfig.h').read_text();assert '#define CONFIG_FREERTOS_SMP 1' not in config,'Unreviewed Amazon SMP worker-create path';assert '#define CONFIG_FREERTOS_NUMBER_OF_CORES 2' in config
  entries=json.loads((build/'compile_commands.json').read_text());wanted={'src/ports/esp32s3/CpuPort.cpp','src/ports/esp32s3/NativeHardware.cpp'};commands=[];inputs={};objects={};compiler=None
  if a.execution_fixture:wanted.add('test/native_worker_target/probe.cpp')
+ if a.provider_fixture:wanted.update({'test/native_worker_provider/native.cpp','src/bootstrap/EmbeddedStore.cpp'})
  for entry in entries:
   source=Path(entry['file']);source=(source if source.is_absolute() else Path(entry['directory'])/source).resolve()
   if not source.is_relative_to(root) or str(source.relative_to(root)) not in wanted:continue
@@ -37,15 +38,41 @@ def main():
  authority=[line for line in symbols.splitlines() if line.endswith('RiscCpu::NativeResidentWorker::authority')];assert len(authority)==1
  fields=authority[0].split();address=int(fields[0],16);size=int(fields[1],16);assert 0x3fc00000<=address<0x3fd00000 and 0<size<=4096,'Worker atomics are not linked in internal DRAM'
  assert 'RiscCpu::NativeResidentWorker::residentEntry' in symbols
- if a.execution_fixture:
+ if a.execution_fixture or a.provider_fixture:
   assert '__wrap_app_main' in symbols and commit.encode() in data
-  assert b'WORKER_PROBE result=scheduler_cases_passed' in data
+  if a.execution_fixture:assert b'WORKER_PROBE result=scheduler_cases_passed' in data
+  else:assert b'WORKER_GRAPH result=provider_case_passed' in data and '__wrap_esp_elf_deinit' in symbols
   links=subprocess.check_output(['ninja','-C',str(build),'-t','commands','riscrte_native.elf'],text=True).splitlines()
   selected=[]
   for line in links:
    args=shlex.split(line)
    if any(arg=='-o' and i+1<len(args) and Path(args[i+1]).name=='riscrte_native.elf' for i,arg in enumerate(args)):selected.append(args)
   assert len(selected)==1 and '-Wl,--wrap=app_main' in selected[0], 'Native test startup wrapper not selected'
- receipt=dict(execution_fixture=a.execution_fixture,provider_graph_qualified=False,runtime_commit=commit,sdk_commit=sdkcommit,compiler={'path':str(compiler),'sha256':sha(compiler),'version':subprocess.check_output([str(compiler),'--version'],text=True)},objects=objects,inputs=dict(sorted(inputs.items())),commands=commands,authority={'address':address,'bytes':size},elf={'bytes':len(data),'sha256':sha(elf)},binary={'bytes':(build/'riscrte_native.bin').stat().st_size,'sha256':sha(build/'riscrte_native.bin')},sdkconfig_sha256=sha(build/'config/sdkconfig.h'),hardware_tested=False,target_execution=False,private_import_cohort_changed=False)
+ provider=None
+ if a.provider_fixture:
+  assert '-Wl,--wrap=esp_elf_deinit' in selected[0]
+  assert '#define CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT 1' in config
+  generated=build/'fixture';producer=json.loads((generated/'producer.json').read_text())
+  assert producer['runtime_commit']==commit and producer['mode']==a.provider_fixture
+  assert producer['recipe_sha256']==sha(root/'test/native_worker_provider/build_fixture.py')
+  assert len(producer['commands'])==2
+  producer_compilers={Path(command[0]).resolve() for command in producer['commands']}
+  assert len(producer_compilers)==1
+  producer_cc=producer_compilers.pop()
+  assert producer_cc.parent==compiler.parents[1]/'bin' and producer_cc.name.endswith('gcc'), 'Producer compiler is outside the pinned native toolchain'
+  assert sha(producer_cc)==producer['compiler_sha256'], 'Producer gcc hash mismatch'
+  assert subprocess.check_output([str(producer_cc),'--version'],text=True)==producer['compiler_version']
+  assert producer['target_execution'] is False and producer['provider_lifecycle_qualified'] is False
+  for name,digest in producer['generated'].items():assert sha(generated/name)==digest
+  for name,item in producer['artifacts'].items():
+   payload=(generated/name).read_bytes();assert len(payload)==item['bytes'] and sha(generated/name)==item['sha256']
+   assert payload in data, 'Selected payload is absent from linked immutable store: '+name
+  for key,digest in producer['inputs'].items():
+   label,path=key.split('/',1);base={'runtime':root,'toolchain':compiler.parents[1]}[label]
+   assert sha(base/path)==digest,'Producer input drift: '+key
+  for name in ['WorkerGraphPolicy.h','WorkerGraphProfile.h','RiscEmbeddedStore.h']:
+   assert inputs['generated/fixture/'+name]==sha(generated/name)
+  provider={'compiler':{'path':str(producer_cc),'sha256':sha(producer_cc),'version':producer['compiler_version']},'profile':a.provider_fixture,'producer_sha256':sha(generated/'producer.json'),'payloads':producer['artifacts'],'compiled_cases':1,'executed_cases':0}
+ receipt=dict(provider_fixture=provider,execution_fixture=a.execution_fixture,provider_graph_qualified=False,runtime_commit=commit,sdk_commit=sdkcommit,compiler={'path':str(compiler),'sha256':sha(compiler),'version':subprocess.check_output([str(compiler),'--version'],text=True)},objects=objects,inputs=dict(sorted(inputs.items())),commands=commands,authority={'address':address,'bytes':size},elf={'bytes':len(data),'sha256':sha(elf)},binary={'bytes':(build/'riscrte_native.bin').stat().st_size,'sha256':sha(build/'riscrte_native.bin')},sdkconfig_sha256=sha(build/'config/sdkconfig.h'),hardware_tested=False,target_execution=False,private_import_cohort_changed=False)
  a.output.parent.mkdir(parents=True,exist_ok=True);a.output.write_text(json.dumps(receipt,indent=2)+'\n');print('Actual native Runtime worker objects/link/DRAM/SDK provenance PASS; not device execution')
 if __name__=='__main__':main()
