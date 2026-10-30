@@ -59,6 +59,7 @@ extern "C" __attribute__((used)) const uint32_t risc_sdmmc_host_abi=1;
 #endif
 #if RISC_NATIVE_ESP_IDF
 #include "NativeResidentWorker.h"
+#include "NativeDmaReservation.h"
 #endif
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
@@ -122,7 +123,7 @@ bool i2cClose(uint8_t physical){
 #include "NativeSpi.inc"
 bool deepReady(){
 #if RISC_NATIVE_ESP_IDF
-  if(!NativeResidentWorker::authority.idle())return false;
+  if(!NativeResidentWorker::authority.idle()||!NativeDma::authority.idle())return false;
 #endif
 #if RISC_ENABLE_SDMMC
   if(!NativeStorageWorker::idle() || !NativeSdmmc::closed())return false;
@@ -150,7 +151,7 @@ bool deepReady(){
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
 bool lightSleep(uint32_t* cause){
 #if RISC_NATIVE_ESP_IDF
-  if(!NativeResidentWorker::authority.idle())return false;
+  if(!NativeResidentWorker::authority.idle()||!NativeDma::authority.idle())return false;
 #endif
 #if RISC_ENABLE_SDMMC
   if(!NativeStorageWorker::idle() || !NativeSdmmc::idle())return false;
@@ -188,7 +189,12 @@ bool nativeBackgroundResourceTry(){return !xPortInIsrContext()&&ownerTask&&owner
 void nativeBackgroundResourceEnd(){if(!xPortInIsrContext()&&ownerTask&&ownerTask())NativeRadioAsync::endShared();}
 // Optional build-owned implementation; ordinary Runtime has no panel backend.
 const DisplayBackend* selectedDisplayBackend() __attribute__((weak));
+// Optional compiled board policy; absence grants no DMA route authority.
+uint32_t selectedDmaRoutes(const risc_hardware_device_v1&) __attribute__((weak));
 Hardware nativeHardware(bool (*owner)()){
+#if RISC_NATIVE_ESP_IDF
+  if(!NativeDma::configure(owner))return {};
+#endif
   ownerTask=owner;
   resourceOwner.configure([](){return !xPortInIsrContext() && ownerTask && ownerTask();},NativeRadioAsync::tryShared,NativeRadioAsync::endShared,NativeRadioAsync::sharedPhaseReady,NativeRadioAsync::sharedReady);
   Hardware hardware{[](){return !xPortInIsrContext() && ownerTask && ownerTask();},[]()->uint64_t{return uint64_t(esp_timer_get_time())/1000;},
@@ -277,6 +283,8 @@ Hardware nativeHardware(bool (*owner)()){
   #if RISC_NATIVE_ESP_IDF
   NativeResidentWorker::configure(owner);
   hardware.residentWorker=&NativeResidentWorker::authority;
+  hardware.dmaReservation=&NativeDma::authority;
+  hardware.dmaRoutes=selectedDmaRoutes?selectedDmaRoutes:nullptr;
 #endif
   return hardware;
 }

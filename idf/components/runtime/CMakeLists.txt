@@ -7,7 +7,7 @@ idf_component_register(SRCS ${runtime_sources} ${RISC_NATIVE_EXTRA_SOURCES}
     REQUIRES riscrte_loader risc_littlefs app_update esp_app_format esp_timer esp_system
              nvs_flash spiffs spi_flash esp_psram esp_wifi bt lwip esp_netif esp_event
              esp_http_client esp-tls http_parser mbedtls fatfs driver esp_driver_gpio esp_driver_i2s
-             esp_driver_ledc esp_driver_sdmmc esp_driver_sdspi esp_driver_spi
+             esp_driver_dma esp_driver_ledc esp_driver_sdmmc esp_driver_sdspi esp_driver_spi
              esp_driver_uart esp_driver_usb_serial_jtag esp_hal_usb)
 set_target_properties(${COMPONENT_LIB} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_compile_options(${COMPONENT_LIB} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++17>"

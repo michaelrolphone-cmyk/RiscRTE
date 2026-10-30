@@ -59,7 +59,7 @@ bool Port::radioSharedReady() const {
   return !hw_.radioIdle || hw_.radioIdle();
 }
 bool Port::providerStorageSafe() const {
-  if(!residentWorkerIdle())return false;
+  if(!residentWorkerIdle()||!dmaIdle())return false;
   if(display_.closing)return false;
   if(nativeStoragePinned())return false;
   if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe() || !entropySafe())return false;
@@ -93,7 +93,7 @@ bool Port::nativeDiscoveryBusy() const {
 #endif
 #if RISC_NATIVE_STORAGE_CUSTODY
 bool Port::nativeDiscoveryProviderSafe() const {
-  if(!residentWorkerIdle())return false;
+  if(!residentWorkerIdle()||!dmaIdle())return false;
   if(!nativeStoragePinned())return providerStorageSafe();
   if(!nativeStorageHeld(nativeStorageLease_))return false;
   if((storageWork_.gpio && !storageWorkBusy() && storageWork_.fault) || sdmmc_.closing || !tcpSafe() || !entropySafe())return false;
@@ -139,7 +139,7 @@ bool Port::restartResourcesSafe() const {
   return true;
 }
 bool Port::quiescent() const {
-  if(!residentWorkerIdle())return false;
+  if(!residentWorkerIdle()||!dmaIdle())return false;
   if(storageWork_.gpio || storageWorkBusy() || sdmmc_.token || sdmmc_.closing)return false;
   if(usb_.token || usb_.closing || (hw_.usbPhyIdle && !hw_.usbPhyIdle()))return false;
   if(iq_.token || iq_.closing)return false;
@@ -303,6 +303,29 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   const auto& board=runtime.board();
   for(size_t n=0;n<board.deviceCount();++n){
     const auto& d=*board.deviceAt(n);const uint64_t id=d.hardware.instance_id;
+    if(runtime.uses(id,RISC_DMA_RESERVATION_CAPABILITY,1)){
+      if(!hw_.dmaReservation||!hw_.dmaRoutes||dmaCount_==RuntimeProviders::GraphV2::kMaxModules)return false;
+      const uint32_t routes=hw_.dmaRoutes(d.hardware);
+      if(!routes||(routes&~RISC_DMA_ROUTES_ALL))return false;
+      auto& c=dmas_[dmaCount_++];c.port=this;c.instance=id;c.routes=routes;
+      c.api={1,sizeof(c.api),&c,
+        [](void*x){auto&c=*static_cast<DmaScope*>(x);return c.port->available()&&!c.port->sleepRetained_&&!c.port->transferring_&&c.port->hw_.dmaReservation->owner();},
+        [](void*x,uint32_t route,uint64_t*out,risc_dma_channel_v1*channel)->int32_t{
+          auto&c=*static_cast<DmaScope*>(x);if(out)*out=0;
+          if(!c.port->available()||c.port->sleepRetained_||c.port->transferring_)return RISC_DMA_CONTEXT;
+          if(route<RISC_DMA_SPI2||route>RISC_DMA_RMT0||!(c.routes&RISC_DMA_ROUTE_BIT(route)))return RISC_DMA_INVALID;
+          return c.port->hw_.dmaReservation->reserve(c.instance,route,out,channel);},
+        [](void*x,uint64_t t)->int32_t{auto&c=*static_cast<DmaScope*>(x);return c.port->hw_.dmaReservation->release(c.instance,t);},
+        [](void*x,uint64_t t,risc_dma_irq_handler_v1 fn,void*arg)->int32_t{
+          auto&c=*static_cast<DmaScope*>(x);
+          if(!c.port->available()||c.port->sleepRetained_||c.port->transferring_)return RISC_DMA_CONTEXT;
+          return c.port->hw_.dmaReservation->irqClaim(c.instance,t,fn,arg);},
+        [](void*x,uint64_t t,bool enable)->int32_t{auto&c=*static_cast<DmaScope*>(x);
+          if(enable&&(!c.port->available()||c.port->sleepRetained_||c.port->transferring_))return RISC_DMA_CONTEXT;
+          return c.port->hw_.dmaReservation->irqEnable(c.instance,t,enable);},
+        [](void*x,uint64_t t)->int32_t{auto&c=*static_cast<DmaScope*>(x);return c.port->hw_.dmaReservation->irqRetire(c.instance,t);}};
+      if(!runtime.registerPlatform(RISC_DMA_RESERVATION_CAPABILITY,1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
+    }
     if(runtime.uses(id,RISC_RESIDENT_WORKER_CAPABILITY,1)){
       if(!hw_.residentWorker||workerCount_==RuntimeProviders::GraphV2::kMaxModules)return false;
       auto& c=workers_[workerCount_++];c.port=this;c.instance=id;

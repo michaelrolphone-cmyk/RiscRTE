@@ -11,6 +11,7 @@
 #include <RiscPlatformClockWaitV1.h>
 #include <RiscProviderSyncV1.h>
 #include "runtime/workers/ResidentWorker.h"
+#include "runtime/dma/DmaReservation.h"
 #include "runtime/storage/StorageWorker.h"
 #include <RiscStorageWorkerAdmissionV1.h>
 #include <RiscHttpTimeV1.h>
@@ -134,6 +135,10 @@ struct Hardware {
   bool (*deepCancel)()=nullptr;
   const DisplayBackend* displayBackend=nullptr;
   RiscWorkers::ResidentWorker* residentWorker=nullptr; // native, explicitly selected per device
+  // Selected board policy over the already validated device descriptor. No
+  // implicit route authority follows from requesting the capability.
+  uint32_t (*dmaRoutes)(const risc_hardware_device_v1&)=nullptr;
+  RiscDma::Reservation* dmaReservation=nullptr; // explicitly selected device-scoped SDK authority
 };
 // Compiled-in custody seam only. No SDK export, application grant or default
 // selection. Hooks run only on the native owner and must outlive attachment.
@@ -187,6 +192,9 @@ class Port final {
   const RiscBoot::Runtime* runtime_=nullptr;
   struct WorkerScope {Port*port=nullptr;uint64_t instance=0;risc_resident_worker_api_v1 api{};} workers_[RuntimeProviders::GraphV2::kMaxModules];
   size_t workerCount_=0;
+  struct DmaScope {Port*port=nullptr;uint64_t instance=0;uint32_t routes=0;risc_dma_reservation_api_v1 api{};} dmas_[RuntimeProviders::GraphV2::kMaxModules];
+  size_t dmaCount_=0;
+  bool dmaIdle()const{return !hw_.dmaReservation||hw_.dmaReservation->idle();}
   bool residentWorkerIdle()const{return !hw_.residentWorker||hw_.residentWorker->idle();}
   struct Sync {
     Port* port=nullptr; uint64_t instance=0;
