@@ -36,6 +36,14 @@ extern "C" bool wave_native_sd_close(){
  }
  return NS::closed()||NS::close();
 }
+// Actual resident descriptor authority; only task dispatch is modeled here.
+namespace NativeResidentWorker {
+static void(*pending)(void*)=nullptr;static void* argument=nullptr;static uint64_t tick=0;
+static RiscWorkers::ResidentWorker authority({nativeOwned,[]()->uint64_t{return tick;},
+ [](uint32_t ms){tick+=ms;},
+ [](void(*entry)(void*),void*arg,uint32_t,uint32_t,int32_t){pending=entry;argument=arg;return true;},2,25});
+bool idle(){return authority.idle();}
+}
 namespace NativeStorageWorker {bool idle(){return true;}}
 namespace NativeSdmmc {bool closed(){return NS::closed();}}
 namespace NativeSleep {bool stackReady(){return true;}}
@@ -106,6 +114,15 @@ extern "C" void test_atomic_app(unsigned hook,unsigned){
   assert(app->sleep_resume(sleepToken)==RISC_RUNTIME_SLEEP_CONTEXT);
  }
  assert(app->sleep_prepare(&sleepToken)==RISC_RUNTIME_SLEEP_OK&&sleepToken&&NS::closed());
+ // The copied production deepReady must refuse both an active callback and
+ // a completed-but-unreleased resident descriptor, without touching SD custody.
+ assert(deepReady());uint64_t workerToken=0;
+ assert(NativeResidentWorker::authority.start(1,[](void*,const risc_worker_control_v1*){},nullptr,4096,1,0,&workerToken)==0);
+ assert(!deepReady());NativeResidentWorker::pending(NativeResidentWorker::argument);
+ assert(!deepReady());
+ assert(NativeResidentWorker::authority.join(1,workerToken,0)==0);
+ assert(!deepReady());assert(NativeResidentWorker::authority.release(1,workerToken)==0);
+ assert(deepReady());
  int rc=0;bool entered=false;
  try{rc=RiscCpu::Port::gpioDeepSleep(&g,key,false);}catch(const Terminal&){entered=true;}
  printf("REPRO mode=%s provider_open=%u serial_exit_safe=%u native_idle=%u native_closed=%u native_custody_pin=%u deepReady=%u result=%d terminal=%u\n",mode.c_str(),counter(7),N::exitSafe(),NS::idle(),NS::closed(),cpu.nativeStoragePinned(),deepReady(),rc,entered);
@@ -163,4 +180,4 @@ lfs_objects,lfs_selection,lfs_link=compile_native_serial_littlefs.build(R,O/'lit
 run(['c++','-std=c++17',*flags,*incs,*lfs_selection,'-DRISC_NATIVE_SERIAL_FILES=1','-DRISC_NATIVE_SERIAL_SD=1','-DRISC_NATIVE_ESP_IDF=1','-DRISC_ENABLE_SDMMC=1','-DRISC_NATIVE_STORAGE_CUSTODY=1','-rdynamic','-no-pie','-pthread',*[R/x for x in sources],O/'serial_sd_deep_repro.cpp',*lfs_objects,*lfs_link,'-ldl','-o',O/'test'])
 (O/'commands.json').write_text(json.dumps(cmds,indent=2))
 for mode in ('cold','absent-card','healthy','abandoned'):run([O/'test',O,mode])
-(O/'receipt.json').write_text(json.dumps({'hardware_tested':False,'sanitized':options.sanitize,'leak_detection':False,'modes':['cold','absent-card','healthy','abandoned'],'commands':cmds,'generated_source_sha256':{str(f.relative_to(O)):hashlib.sha256(f.read_bytes()).hexdigest() for f in O.rglob('*') if f.is_file() and f.suffix in ('.c','.cpp','.h','.inc')},'source_sha256':{str(f.relative_to(R)):hashlib.sha256(f.read_bytes()).hexdigest() for f in [*[R/x for x in sources],R/'src/bootstrap/RuntimeSleep.inc',R/'test/native_serial_waveshare_sd_test.cpp',R/'test/compile_native_serial_littlefs.py',R/'test/native_serial_littlefs_composition.cpp',R/'src/ports/esp32s3/NativeSerialStorage.cpp',R/'src/ports/esp32s3/NativeAppDataMount.cpp',R/'src/runtime/storage/ReopenedFiles.cpp',Path(__file__)]}},indent=2)+'\n')
+(O/'receipt.json').write_text(json.dumps({'hardware_tested':False,'sanitized':options.sanitize,'leak_detection':False,'modes':['cold','absent-card','healthy','abandoned'],'commands':cmds,'generated_source_sha256':{str(f.relative_to(O)):hashlib.sha256(f.read_bytes()).hexdigest() for f in O.rglob('*') if f.is_file() and f.suffix in ('.c','.cpp','.h','.inc')},'source_sha256':{str(f.relative_to(R)):hashlib.sha256(f.read_bytes()).hexdigest() for f in [*[R/x for x in sources],R/'src/bootstrap/RuntimeSleep.inc',R/'src/ports/esp32s3/NativeHardware.cpp',R/'src/runtime/workers/ResidentWorker.h',R/'sdk/driver/RiscResidentWorkerV1.h',R/'test/native_serial_waveshare_sd_test.cpp',R/'test/compile_native_serial_littlefs.py',R/'test/native_serial_littlefs_composition.cpp',R/'src/ports/esp32s3/NativeSerialStorage.cpp',R/'src/ports/esp32s3/NativeAppDataMount.cpp',R/'src/runtime/storage/ReopenedFiles.cpp',Path(__file__)]}},indent=2)+'\n')

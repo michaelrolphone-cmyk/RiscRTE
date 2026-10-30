@@ -1,0 +1,53 @@
+name: Native worker execution fixture build
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONNOUSERSITE: '1'
+      IDF_CCACHE_ENABLE: '0'
+      CCACHE_DISABLE: '1'
+      CMAKE_BUILD_PARALLEL_LEVEL: '1'
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Own immutable source and pinned SDK
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/resident-worker-fixture"
+          mkdir -p "$root"/receipts
+          echo "WORKER_ROOT=$root" >> "$GITHUB_ENV"
+          git init -q "$root/source"
+          git -C "$root/source" remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -C "$root/source" fetch --no-tags --depth=1 origin "$SOURCE_SHA"
+          git -C "$root/source" checkout -q --detach FETCH_HEAD
+          git -C "$root/source" submodule update --init --recursive --depth=1
+          test "$(git -C "$root/source" rev-parse HEAD)" = "$SOURCE_SHA"
+          . "$IDF_PATH/export.sh"
+          python "$root/source/scripts/native_idf61_ci.py" sources --source "runtime=$root/source@$SOURCE_SHA" --source "sdk=$IDF_PATH@fff9895c82d744c7237be8847347bdd1b07c6643" --output "$root/receipts/source-custody.json"
+      - name: Compile actual native scheduler fixture without executing or flashing
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          idf.py -C "$WORKER_ROOT/source/idf" -B "$WORKER_ROOT/build" -D "RISC_SOURCE_SHA=$SOURCE_SHA" -D "SDKCONFIG=$WORKER_ROOT/build/sdkconfig" -D CCACHE_ENABLE=0 -D "RISC_NATIVE_EXTRA_SOURCES=$WORKER_ROOT/source/test/native_worker_target/probe.cpp" -D "RISC_NATIVE_LINK_OPTIONS=-Wl,--wrap=app_main" reconfigure
+          cmake --build "$WORKER_ROOT/build" -- -j1
+          python "$WORKER_ROOT/source/scripts/verify_resident_worker_target.py" --runtime "$WORKER_ROOT/source" --sdk "$IDF_PATH" --build "$WORKER_ROOT/build" --output "$WORKER_ROOT/receipts/target.json" --execution-fixture
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resident-worker-fixture-${{ env.SOURCE_SHA }}
+          path: |
+            ${{ env.WORKER_ROOT }}/receipts/
+            ${{ env.WORKER_ROOT }}/build/riscrte_native.elf
+            ${{ env.WORKER_ROOT }}/build/riscrte_native.bin
+            ${{ env.WORKER_ROOT }}/build/config/sdkconfig.h
+          if-no-files-found: error
