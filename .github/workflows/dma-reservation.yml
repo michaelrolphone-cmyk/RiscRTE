@@ -1,0 +1,61 @@
+name: Native shared DMA reservation authority
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONNOUSERSITE: '1'
+      IDF_CCACHE_ENABLE: '0'
+      CCACHE_DISABLE: '1'
+      CMAKE_BUILD_PARALLEL_LEVEL: '1'
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Own immutable source and pinned SDK
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/dma-reservation"
+          mkdir -p "$root"/receipts
+          echo "DMA_ROOT=$root" >> "$GITHUB_ENV"
+          git init -q "$root/source"
+          git -C "$root/source" remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -C "$root/source" fetch --no-tags --depth=1 origin "$SOURCE_SHA"
+          git -C "$root/source" checkout -q --detach FETCH_HEAD
+          git -C "$root/source" submodule update --init --recursive --depth=1
+          test "$(git -C "$root/source" rev-parse HEAD)" = "$SOURCE_SHA"
+          . "$IDF_PATH/export.sh"
+          python "$root/source/scripts/native_idf61_ci.py" sources --source "runtime=$root/source@$SOURCE_SHA" --source "sdk=$IDF_PATH@fff9895c82d744c7237be8847347bdd1b07c6643" --output "$root/receipts/source-custody.json"
+      - name: Actual reservation, native adapter and consumer lifecycle
+        run: |
+          set -euo pipefail
+          cd "$DMA_ROOT/source"
+          python test/run_dma_reservation.py --output "$DMA_ROOT/receipts/consumer-normal.json"
+          python test/run_dma_reservation.py --output "$DMA_ROOT/receipts/consumer-ubsan.json" --sanitize
+          python test/test_dma_dependency_scan.py
+          python test/test_dma_target_symbols.py
+      - name: Build actual native Runtime with one compiler job
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          idf.py -C "$DMA_ROOT/source/idf" -B "$DMA_ROOT/build" -D "RISC_SOURCE_SHA=$SOURCE_SHA" -D "SDKCONFIG=$DMA_ROOT/build/sdkconfig" -D CCACHE_ENABLE=0 reconfigure
+          cmake --build "$DMA_ROOT/build" -- -j1
+          python "$DMA_ROOT/source/scripts/verify_resident_worker_target.py" --required-input runtime/src/runtime/dma/DmaReservation.h --required-input runtime/src/ports/esp32s3/NativeDmaReservation.h --required-input runtime/sdk/driver/RiscDmaReservationV1.h --required-input sdk/components/esp_driver_dma/include/esp_private/gdma.h --dram-symbol RiscCpu::NativeDma::authority --dram-symbol RiscCpu::NativeDma::slots --runtime "$DMA_ROOT/source" --sdk "$IDF_PATH" --build "$DMA_ROOT/build" --output "$DMA_ROOT/receipts/target.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dma-reservation-${{ env.SOURCE_SHA }}
+          path: |
+            ${{ env.DMA_ROOT }}/receipts/
+            ${{ env.DMA_ROOT }}/build/riscrte_native.elf
+            ${{ env.DMA_ROOT }}/build/riscrte_native.bin
+            ${{ env.DMA_ROOT }}/build/config/sdkconfig.h
+          if-no-files-found: error
