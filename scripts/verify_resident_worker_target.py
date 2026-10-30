@@ -14,11 +14,19 @@ def required_dram_symbols(symbols,names):
   assert 0x3fc00000<=addr<0x3fd00000 and 0<length<=4096 and addr+length<=0x3fd00000,'Required state is not internal DRAM: '+name
   additional_dram[name]={'address':addr,'bytes':length}
  return additional_dram
+def fixture_sources(extra,marker,legacy=False):
+ assert bool(extra)==bool(marker),'Additional fixture TUs require an explicit startup marker'
+ assert not(marker and legacy),'Ambiguous fixture selection'
+ assert len(set(extra))==len(extra),'Duplicate fixture translation unit'
+ for name in extra:assert not Path(name).is_absolute() and '..' not in Path(name).parts and name.endswith(('.c','.cpp')),'Invalid fixture translation unit'
+ return set(extra)
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--sdk',type=Path,required=True);p.add_argument('--build',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--execution-fixture',action='store_true');p.add_argument('--provider-fixture',choices=['clean','retained']);p.add_argument('--required-input',action='append',default=[]);p.add_argument('--dram-symbol',action='append',default=[]);a=p.parse_args();assert not(a.execution_fixture and a.provider_fixture);root=a.runtime.resolve();sdk=a.sdk.resolve();build=a.build.resolve()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--sdk',type=Path,required=True);p.add_argument('--build',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--execution-fixture',action='store_true');p.add_argument('--provider-fixture',choices=['clean','retained']);p.add_argument('--required-input',action='append',default=[]);p.add_argument('--dram-symbol',action='append',default=[]);p.add_argument('--extra-translation-unit',action='append',default=[]);p.add_argument('--app-main-fixture-marker');a=p.parse_args();assert not(a.execution_fixture and a.provider_fixture);root=a.runtime.resolve();sdk=a.sdk.resolve();build=a.build.resolve()
+ fixture_sources(a.extra_translation_unit,a.app_main_fixture_marker,a.execution_fixture or a.provider_fixture)
  commit=subprocess.check_output(['git','-C',root,'rev-parse','HEAD'],text=True).strip();sdkcommit=subprocess.check_output(['git','-C',sdk,'rev-parse','HEAD'],text=True).strip();assert sdkcommit=='fff9895c82d744c7237be8847347bdd1b07c6643'
  config=(build/'config/sdkconfig.h').read_text();assert '#define CONFIG_FREERTOS_SMP 1' not in config,'Unreviewed Amazon SMP worker-create path';assert '#define CONFIG_FREERTOS_NUMBER_OF_CORES 2' in config
  entries=json.loads((build/'compile_commands.json').read_text());wanted={'src/ports/esp32s3/CpuPort.cpp','src/ports/esp32s3/NativeHardware.cpp'};commands=[];inputs={};objects={};compiler=None
+ wanted.update(a.extra_translation_unit)
  if a.execution_fixture:wanted.add('test/native_worker_target/probe.cpp')
  if a.provider_fixture:wanted.update({'test/native_worker_provider/native.cpp','src/bootstrap/EmbeddedStore.cpp'})
  for entry in entries:
@@ -50,10 +58,11 @@ def main():
  fields=authority[0].split();address=int(fields[0],16);size=int(fields[1],16);assert 0x3fc00000<=address<0x3fd00000 and 0<size<=4096,'Worker atomics are not linked in internal DRAM'
  additional_dram=required_dram_symbols(symbols,a.dram_symbol)
  assert 'RiscCpu::NativeResidentWorker::residentEntry' in symbols
- if a.execution_fixture or a.provider_fixture:
+ if a.execution_fixture or a.provider_fixture or a.app_main_fixture_marker:
   assert '__wrap_app_main' in symbols and commit.encode() in data
   if a.execution_fixture:assert b'WORKER_PROBE result=scheduler_cases_passed' in data
-  else:assert b'WORKER_GRAPH result=provider_case_passed' in data and '__wrap_esp_elf_deinit' in symbols
+  elif a.provider_fixture:assert b'WORKER_GRAPH result=provider_case_passed' in data and '__wrap_esp_elf_deinit' in symbols
+  else:assert a.app_main_fixture_marker.encode() in data,'Selected native fixture marker is absent'
   links=subprocess.check_output(['ninja','-C',str(build),'-t','commands','riscrte_native.elf'],text=True).splitlines()
   selected=[]
   for line in links:
@@ -85,6 +94,6 @@ def main():
   for name in ['WorkerGraphPolicy.h','WorkerGraphProfile.h','RiscEmbeddedStore.h']:
    assert inputs['generated/fixture/'+name]==sha(generated/name)
   provider={'compiler':{'path':str(producer_cc),'sha256':sha(producer_cc),'version':producer['compiler_version']},'profile':a.provider_fixture,'producer_sha256':sha(generated/'producer.json'),'payloads':producer['artifacts'],'compiled_cases':1,'executed_cases':0}
- receipt=dict(additional_dram=additional_dram,required_inputs=a.required_input,provider_fixture=provider,execution_fixture=a.execution_fixture,provider_graph_qualified=False,runtime_commit=commit,sdk_commit=sdkcommit,compiler={'path':str(compiler),'sha256':sha(compiler),'version':subprocess.check_output([str(compiler),'--version'],text=True)},objects=objects,inputs=dict(sorted(inputs.items())),commands=commands,authority={'address':address,'bytes':size},elf={'bytes':len(data),'sha256':sha(elf)},binary={'bytes':(build/'riscrte_native.bin').stat().st_size,'sha256':sha(build/'riscrte_native.bin')},sdkconfig_sha256=sha(build/'config/sdkconfig.h'),hardware_tested=False,target_execution=False,private_import_cohort_changed=False)
+ receipt=dict(additional_translation_units=a.extra_translation_unit,app_main_fixture_marker=a.app_main_fixture_marker,additional_dram=additional_dram,required_inputs=a.required_input,provider_fixture=provider,execution_fixture=a.execution_fixture,provider_graph_qualified=False,runtime_commit=commit,sdk_commit=sdkcommit,compiler={'path':str(compiler),'sha256':sha(compiler),'version':subprocess.check_output([str(compiler),'--version'],text=True)},objects=objects,inputs=dict(sorted(inputs.items())),commands=commands,authority={'address':address,'bytes':size},elf={'bytes':len(data),'sha256':sha(elf)},binary={'bytes':(build/'riscrte_native.bin').stat().st_size,'sha256':sha(build/'riscrte_native.bin')},sdkconfig_sha256=sha(build/'config/sdkconfig.h'),hardware_tested=False,target_execution=False,private_import_cohort_changed=False)
  a.output.parent.mkdir(parents=True,exist_ok=True);a.output.write_text(json.dumps(receipt,indent=2)+'\n');print('Actual native Runtime worker objects/link/DRAM/SDK provenance PASS; not device execution')
 if __name__=='__main__':main()
