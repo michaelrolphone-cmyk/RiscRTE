@@ -299,7 +299,8 @@ const risc_diagnostic_source_api_v1* nativeSource(){
 #if RISC_STAGE_LOGS && RISC_HWCDC_SERIAL
 bool prepareSerial(){
   // Reuse the pinned driver's own bounded ring for startup bursts. Allocation
-  // failure preserves begin()'s ordinary 256-byte fallback, never a host wait.
+  // Legacy HWCDC needs explicit sizing. Native Console already defaults to
+  // 8192 for every profile and owns its capacity accounting independently.
   return RiscPlatform::console.setTxBufferSize(8192)==8192;
 }
 #endif

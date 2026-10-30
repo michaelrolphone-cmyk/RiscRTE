@@ -15,7 +15,10 @@ inline void delay(uint32_t ms){vTaskDelay(ms?pdMS_TO_TICKS(ms)+1:1);}
 class Console {
   bool installed_=false;
   int core_=-1,cached_=-1;
-  size_t txBytes_=256;
+  // The shared native console owns startup buffering for every USB profile.
+  // This is independent of stage logging and product-specific build flags.
+  size_t txBytes_=8192;
+  mutable size_t txPending_=0;
 public:
   Console()=default;
   Console(const Console&)=delete;
@@ -27,7 +30,10 @@ public:
   explicit operator bool()const;
   int available();
   int read();
-  // Upper bound for one nonblocking write; write may accept fewer bytes.
+  // Conservative free TX capacity for whole-record admission. This is distinct
+  // from the 128-byte per-call write budget. Native USB credits are reclaimed
+  // only when the public SDK reports complete drain, never from guessed FIFO
+  // capacity or private driver state. Calls never wait for the host.
   int availableForWrite()const;
   size_t write(const uint8_t*,size_t);
   size_t println(const char*);

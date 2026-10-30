@@ -25,7 +25,7 @@ void Console::begin(unsigned baud){
   if(uart_param_config(UART_NUM_0,&config)!=ESP_OK)return;
   if(uart_driver_install(UART_NUM_0,256,0,0,nullptr,0)!=ESP_OK)return;
 #endif
-  core_=xPortGetCoreID();installed_=true;cached_=-1;
+  core_=xPortGetCoreID();installed_=true;cached_=-1;txPending_=0;
 }
 void Console::end(){
   if(!installed_ || core_!=xPortGetCoreID())return;
@@ -34,7 +34,7 @@ void Console::end(){
 #else
   const auto result=uart_driver_delete(UART_NUM_0);
 #endif
-  if(result==ESP_OK){installed_=false;cached_=-1;core_=-1;}
+  if(result==ESP_OK){installed_=false;cached_=-1;core_=-1;txPending_=0;}
 }
 Console::operator bool()const{
   if(!installed_)return false;
@@ -56,12 +56,26 @@ int Console::available(){
   if(n==1){cached_=byte;return 1;}return 0;
 }
 int Console::read(){if(available()<=0)return -1;const int value=cached_;cached_=-1;return value;}
-int Console::availableForWrite()const{return installed_?128:0;}
+int Console::availableForWrite()const{
+  if(!installed_ || core_!=xPortGetCoreID())return 0;
+#if RISC_CONSOLE_USB_SERIAL_JTAG
+  // The SDK exposes completion, not ring free-space. Count accepted bytes
+  // conservatively until its zero-timeout completion probe succeeds. Partial
+  // drain never invents room, and a missing host never blocks the owner.
+  if(txPending_ && usb_serial_jtag_wait_tx_done(0)==ESP_OK)txPending_=0;
+  return int(txBytes_-txPending_);
+#else
+  return 128; // UART FIFO writes retain their independent partial-write API.
+#endif
+}
 size_t Console::write(const uint8_t* data,size_t count){
   if(!installed_ || !data || !count || core_!=xPortGetCoreID())return 0;
   if(count>128)count=128;
 #if RISC_CONSOLE_USB_SERIAL_JTAG
+  const size_t room=size_t(availableForWrite());if(count>room)count=room;
+  if(!count)return 0;
   const int n=usb_serial_jtag_write_bytes(data,count,0);
+  if(n>0 && size_t(n)<=count)txPending_+=size_t(n);
 #else
   const int n=uart_tx_chars(UART_NUM_0,reinterpret_cast<const char*>(data),count);
 #endif

@@ -34,6 +34,7 @@ esp_err_t usb_serial_jtag_driver_uninstall(){
 bool usb_serial_jtag_is_driver_installed(){return installed;}
 bool usb_serial_jtag_is_connected(){return host;}
 int usb_serial_jtag_read_bytes(void*,uint32_t length,uint32_t ticks){assert(installed && length==1 && ticks==0);return 0;}
+esp_err_t usb_serial_jtag_wait_tx_done(uint32_t ticks){assert(installed && ticks==0);return ESP_OK;}
 int usb_serial_jtag_write_bytes(const void*,size_t length,uint32_t ticks){assert(installed && length<=128 && ticks==0);++writes;return int(length);}
 void risc_native_diagnostic_observer(const char*){++observed;}
 void risc_native_diagnostic_drain(){++drained;}
