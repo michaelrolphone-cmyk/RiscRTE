@@ -10,6 +10,7 @@
 #include <RiscHciControllerStatusV1.h>
 #include <RiscPlatformClockWaitV1.h>
 #include <RiscProviderSyncV1.h>
+#include <RiscPsramCacheV1.h>
 #include "runtime/workers/ResidentWorker.h"
 #include "runtime/storage/StorageWorker.h"
 #include <RiscStorageWorkerAdmissionV1.h>
@@ -134,6 +135,8 @@ struct Hardware {
   bool (*deepCancel)()=nullptr;
   const DisplayBackend* displayBackend=nullptr;
   RiscWorkers::ResidentWorker* residentWorker=nullptr; // native, explicitly selected per device
+  const risc_psram_cache_v1* psramCache=nullptr; // explicit qualified native config only
+
 };
 // Compiled-in custody seam only. No SDK export, application grant or default
 // selection. Hooks run only on the native owner and must outlive attachment.

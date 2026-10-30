@@ -41,6 +41,9 @@ extern "C" __attribute__((used)) const uint32_t risc_tcp_listener_abi=1;
 #include <driver/spi_master.h>
 #include <esp_timer.h>
 #include "NativeRealtime.h"
+#if RISC_NATIVE_ESP_IDF
+#include "NativePsramCache.h"
+#endif
 #include <esp_sleep.h>
 #include <esp_rom_gpio.h>
 #include <soc/gpio_sig_map.h>
@@ -277,6 +280,9 @@ Hardware nativeHardware(bool (*owner)()){
   #if RISC_NATIVE_ESP_IDF
   NativeResidentWorker::configure(owner);
   hardware.residentWorker=&NativeResidentWorker::authority;
+#endif
+#if RISC_NATIVE_ESP_IDF
+  hardware.psramCache=NativePsramCache::api();
 #endif
   return hardware;
 }

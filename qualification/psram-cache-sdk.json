@@ -1,0 +1,72 @@
+{
+  "repository": "espressif/esp-idf",
+  "commit": "fff9895c82d744c7237be8847347bdd1b07c6643",
+  "files": [
+    {
+      "path": "components/esp_mm/esp_cache_msync.c",
+      "git_blob": "5ef4f9a5323991100d986839704a5c9a09b059b7",
+      "sha256": "68faefeb975ad9c932a291fbd59215fe5a5c10b785f2c5c4d43493fad5d8c0bc",
+      "bytes": 6684
+    },
+    {
+      "path": "components/esp_mm/include/esp_cache.h",
+      "git_blob": "b76636a9ef759831e24d47e4ac3a5b09194f1eb1",
+      "sha256": "8f9aa5d956113b797a3b46ce2d9cd492c375bc3052c0f2ec1a3746fb3dd98c4c",
+      "bytes": 3635
+    },
+    {
+      "path": "components/hal/cache_hal.c",
+      "git_blob": "73cec715594523ae767983a5675535ff3405c966",
+      "sha256": "3356e84e8831711ecf9a659d288e8aefb131d78130361292c8e9a6d69c98b8bf",
+      "bytes": 10105
+    },
+    {
+      "path": "components/hal/esp32s3/include/hal/cache_ll.h",
+      "git_blob": "1006360bd3268d992436288e16d8d9f1ebe52df3",
+      "sha256": "6085f50145a73e52bd5fd09a348ec84975bad4c0ffef8399b9a221c302fb740a",
+      "bytes": 28313
+    },
+    {
+      "path": "components/esp_rom/patches/esp_rom_cache_esp32s2_esp32s3.c",
+      "git_blob": "34e4bd11dde6fbf847b54554425ae3900ce22127",
+      "sha256": "73ecacf0310ab41f0d85d343623b1be101eeb292beb3c664bee9596f07b3a144",
+      "bytes": 4766
+    },
+    {
+      "path": "components/esp_rom/patches/esp_rom_cache_writeback_esp32s3.S",
+      "git_blob": "9a742fe5965dd264890044f702d85edb15d6d3e1",
+      "sha256": "38001eb4e54ba222e0d68a83f8df9ca1721eaa32bb780c8a74b6b7f185b4c287",
+      "bytes": 5246
+    },
+    {
+      "path": "components/esp_mm/test_apps/mm/main/test_cache_msync.c",
+      "git_blob": "b0d802a56a2c411b83a6900f1cdd6d43a5994211",
+      "sha256": "4c90784f6fcc82603a9dba248ce6e200c6039239d1a8fb497a49f18aabe2186b",
+      "bytes": 7816
+    },
+    {
+      "path": "components/esp_driver_dma/include/esp_async_memcpy.h",
+      "git_blob": "392c80c53724dc06eefdbecafe4ba93b5f518e70",
+      "sha256": "dc8747cf57594454c10283c7dc54b57892617239daeaf87cd5f517a547ee5eb6",
+      "bytes": 8023
+    },
+    {
+      "path": "components/esp_driver_dma/src/esp_async_memcpy.c",
+      "git_blob": "47d48404633d50798fae28f017271b18bce30e08",
+      "sha256": "26ee748868ac941c10d7179aeed29352f39cf4b2941093f56da709e83cafa419",
+      "bytes": 1154
+    },
+    {
+      "path": "components/esp_driver_dma/src/async_memcpy_gdma.c",
+      "git_blob": "ae0fc8ea77d946bf91f0d390d4dee84f09d9d33d",
+      "sha256": "aa08102cf26395f2235b3ec4017ecf940200b23c0db3861d1370e0fc6a9149bc",
+      "bytes": 22883
+    },
+    {
+      "path": "components/esp_driver_dma/src/gdma.c",
+      "git_blob": "4991d93cf6a06c89af7b6393156980e0c35ae169",
+      "sha256": "60885758fc19ae899b69b39e64103235cd5ec983a675e5bd9a960fbb273729e0",
+      "bytes": 48134
+    }
+  ]
+}

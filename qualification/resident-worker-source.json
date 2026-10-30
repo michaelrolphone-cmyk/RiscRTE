@@ -20,7 +20,8 @@
     "test/resident_worker_shim/freertos/FreeRTOS.h",
     "test/resident_worker_shim/freertos/task.h",
     "test/resident_worker_test.cpp",
-    "test/run_resident_worker.py"
+    "test/run_resident_worker.py",
+    "sdk/driver/RiscPsramCacheV1.h"
   ],
   "dependency_inputs": {
     "runtime/lib/ArduinoJson/src/ArduinoJson.h": {

@@ -317,6 +317,12 @@ bool Port::bind(RiscBoot::Runtime& runtime){
         [](void*x,uint64_t t)->int32_t{auto&c=*static_cast<WorkerScope*>(x);return c.port->hw_.residentWorker->release(c.instance,t);}};
       if(!runtime.registerPlatform(RISC_RESIDENT_WORKER_CAPABILITY,1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;
     }
+    if(runtime.uses(id,RISC_PSRAM_CACHE_CAPABILITY,1)){
+      const auto* cache=hw_.psramCache;
+      if(!cache || cache->api_version!=1 || cache->struct_size<sizeof(*cache) || !cache->cache_line_bytes ||
+         cache->cache_line_bytes>4096 || (cache->cache_line_bytes&(cache->cache_line_bytes-1)) || !cache->writeback)return false;
+      if(!runtime.registerPlatform(RISC_PSRAM_CACHE_CAPABILITY,1,RiscBoot::Runtime::Scope::Device,id,cache))return false;
+    }
     if(runtime.uses(id,RISC_PROVIDER_SYNC_CAPABILITY,RISC_PROVIDER_SYNC_API_V1)){
       if(syncCount_==RuntimeProviders::GraphV2::kMaxModules)return false;
       auto& c=syncs_[syncCount_++];c.port=this;c.instance=id;
