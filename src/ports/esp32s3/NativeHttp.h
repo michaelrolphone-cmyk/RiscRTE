@@ -2,9 +2,10 @@
 /* Generic nonblocking TLS/HTTP transport for pinned IDF4.4 and IDF6.1.
  * A single native-owned session has bounded PSRAM metadata and no app
  * pointers/tasks/callbacks.
- * SDK DNS may take its configured resolver timeout; all later TLS/read/write
- * calls are nonblocking. Each caller step yields through the runtime. */
+ * Native IDF6 DNS uses a copied worker mailbox; TLS/read/write stay on the
+ * owner task. Each caller step yields through the runtime. */
 #include "HttpResponse.h"
+#include <RiscHttpClientV2.h>
 #include "NativeTlsMemory.h"
 #include "diagnostics/StageLog.h"
 #include "HttpTimeSample.h"
@@ -33,6 +34,7 @@
 #endif
 #include <new>
 #include <cstdio>
+#include <initializer_list>
 #include <unistd.h>
 namespace RiscCpu { namespace NativeHttp {
 inline uint64_t now(){return static_cast<uint64_t>(esp_timer_get_time()/1000);}
@@ -45,6 +47,13 @@ struct Session {
   Phase phase=Phase::Connect;int32_t error=0;bool retained=false;unsigned redirects=0;
   char url[RISC_HTTP_URL_MAX+1]{},host[254]{},request[RISC_HTTP_URL_MAX+384]{};
   uint32_t requestBytes=0,sent=0,wire=0;
+  char* requestV2=nullptr;uint32_t requestV2Bytes=0;
+  uint8_t pending[512]{};uint32_t pendingBytes=0,pendingAt=0;
+  int32_t terminal=RISC_HTTP_AGAIN;
+#if RISC_NATIVE_ESP_IDF
+  char address[INET_ADDRSTRLEN]{};uint64_t closingAt=0;
+#endif
+  ~Session(){if(requestV2){volatile char* p=requestV2;for(uint32_t i=0;i<requestV2Bytes;++i)p[i]=0;heap_caps_free(requestV2);}}
   Session(uint64_t id,const risc_http_request_v1& r):token(id),started(now()),utc(r.utc_seconds),utcAt(started),
     budget(started,r.timeout_ms,r.max_bytes),decoder(r.max_bytes){std::strcpy(url,r.url);}
 };
@@ -115,9 +124,12 @@ inline bool prepare(Session& s){
   const int n=std::snprintf(s.request,sizeof(s.request),
     "GET %s%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: RiscRTE/1\r\nAccept: */*\r\nAccept-Encoding: identity\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n",prefix,path,s.host);
   if(n<=0 || static_cast<size_t>(n)>=sizeof(s.request))return false;
-  s.requestBytes=n;s.sent=0;s.phase=Phase::Connect;
+  s.requestBytes=s.requestV2?s.requestV2Bytes:static_cast<uint32_t>(n);s.sent=0;s.phase=Phase::Connect;
   s.config={};s.config.non_block=true;s.config.timeout_ms=1;
   s.config.skip_common_name=false;s.config.crt_bundle_attach=attachBundle;
+#if RISC_NATIVE_ESP_IDF
+  s.address[0]=0;s.config.common_name=s.host;
+#endif
   NativeTlsMemory::DmaHeadroom dma;
   if(!dma)return false;
   s.tls=esp_tls_init();return s.tls!=nullptr;
@@ -142,6 +154,15 @@ inline int32_t close(void*,uint64_t token){
   if(!owner || !owner() || !token)return RISC_HTTP_INVALID;
   if(!session)return token==lastClosed?RISC_HTTP_OK:RISC_HTTP_CLOSED;
   if(token!=session->token)return RISC_HTTP_CLOSED;
+  if(session->retained)return RISC_HTTP_RETAINED;
+#if RISC_NATIVE_ESP_IDF
+  if(NativeDns::pending()){
+    if(!session->closingAt)session->closingAt=now();
+    if(now()-session->closingAt<30000)return RISC_HTTP_AGAIN;
+    session->retained=true;return RISC_HTTP_RETAINED;
+  }
+  NativeDns::discard();
+#endif
   if(!destroy(*session))return RISC_HTTP_RETAINED;
   lastClosed=token;session->~Session();heap_caps_free(session);session=nullptr;return RISC_HTTP_OK;
 }
@@ -223,6 +244,9 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
     return RISC_HTTP_AGAIN;
   }
   if(s->phase==Phase::Connect){
+#if RISC_NATIVE_ESP_IDF
+    if(s->requestV2&&!s->address[0]){sockaddr_in resolved{};const int code=NativeDns::resolve(s->host,resolved);if(code==1)return RISC_HTTP_AGAIN;if(code<0||!inet_ntop(AF_INET,&resolved.sin_addr,s->address,sizeof(s->address)))return s->error=RISC_HTTP_NETWORK;}
+#endif
     // Both pinned IDF4.4 and IDF6.1 reuse select()'s output fd_sets across asynchronous calls.
     // A timeout clears them. Re-arm the SDK-owned connecting socket before
     // polling again; otherwise ordinary Internet RTTs can stall until timeout.
@@ -231,7 +255,11 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
       FD_ZERO(&s->tls->rset);FD_SET(s->tls->sockfd,&s->tls->rset);
       s->tls->wset=s->tls->rset;
     }
+#if RISC_NATIVE_ESP_IDF
+    const int code=esp_tls_conn_new_async(s->requestV2?s->address:s->host,std::strlen(s->requestV2?s->address:s->host),443,&s->config,s->tls);
+#else
     const int code=esp_tls_conn_new_async(s->host,std::strlen(s->host),443,&s->config,s->tls);
+#endif
     if(!s->budget.alive(now()))return s->error=RISC_HTTP_TIMEOUT;
     if(s->error)return s->error;
     if(code<0)return s->error=transportError(*s);
@@ -240,7 +268,7 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
   }
   if(s->phase==Phase::Send){
     const uint32_t left=s->requestBytes-s->sent;const uint32_t n=left>512?512:left;
-    const ssize_t sent=esp_tls_conn_write(s->tls,s->request+s->sent,n);
+    const ssize_t sent=esp_tls_conn_write(s->tls,(s->requestV2?s->requestV2:s->request)+s->sent,n);
     if(again(sent))return RISC_HTTP_AGAIN;
     if(sent<0)return s->error=transportError(*s,int(sent));
     if(static_cast<uint32_t>(sent)>n)return s->error=RISC_HTTP_TRANSPORT;
@@ -270,6 +298,96 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
   if(s->decoder.complete)return RISC_HTTP_EOF;
   if(n==0)return s->error=RISC_HTTP_TRANSPORT;
   return RISC_HTTP_AGAIN;
+}
+
+inline bool headerName(const char* p){
+  if(!p || !*p)return false;
+  size_t n=0;for(;p[n]&&n<=64;++n){const unsigned char c=p[n];
+    if(!((c>='A'&&c<='Z')||(c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='-'))return false;}
+  return n<=64;
+}
+inline bool sameHeader(const char* a,const char* b){
+  while(*a&&*b){char x=*a++,y=*b++;if(x>='A'&&x<='Z')x+=32;if(y>='A'&&y<='Z')y+=32;if(x!=y)return false;}
+  return *a==*b;
+}
+inline int32_t openV2(void*,const risc_http_request_v2* r,uint64_t* out){
+  if(out)*out=0;
+  if(!out||!owner||!owner()||!r||r->struct_size<sizeof(*r)||!HttpBounds::url(r->url)||
+     (r->method!=RISC_HTTP_GET&&r->method!=RISC_HTTP_POST)||r->redirect_policy||
+     r->header_count>8||(r->header_count&&!r->headers)||r->body_bytes>16384||
+     (r->body_bytes&&!r->body)||(r->method==RISC_HTTP_GET&&r->body_bytes)||
+     !r->max_response_bytes||r->max_response_bytes>32768||!r->timeout_ms||r->timeout_ms>30000||
+     (r->time_server?(r->utc_seconds||!HttpTimeSample::hostname(r->time_server)):
+        (r->utc_seconds<HttpBounds::FirstUtc||r->utc_seconds>HttpBounds::LastUtc)))return RISC_HTTP_INVALID;
+  size_t headerBytes=0;
+  for(uint32_t i=0;i<r->header_count;++i){const auto& h=r->headers[i];
+    if(!headerName(h.name)||!h.value)return RISC_HTTP_INVALID;
+    for(const char* reserved:{"host","content-length","transfer-encoding","connection","accept-encoding","expect"})
+      if(sameHeader(h.name,reserved))return RISC_HTTP_INVALID;
+    for(uint32_t j=0;j<i;++j)if(sameHeader(h.name,r->headers[j].name))return RISC_HTTP_INVALID;
+    size_t len=0;for(;len<=2048&&h.value[len];++len){const unsigned char c=h.value[len];if(c<32||c==127)return RISC_HTTP_INVALID;}
+    headerBytes+=std::strlen(h.name)+len+4;if(len>2048||headerBytes>2048)return RISC_HTTP_SIZE;
+  }
+  if(session)return RISC_HTTP_BUSY;
+  if(!networkReady||!networkReady())return RISC_HTTP_NETWORK;
+  if(generation==UINT64_MAX)return RISC_HTTP_CLOSED;
+  if(!NativeTlsMemory::ready())return RISC_HTTP_MEMORY;
+  const size_t cap=RISC_HTTP_URL_MAX+512+headerBytes+r->body_bytes;
+  char* request=static_cast<char*>(heap_caps_malloc(cap,NativeTlsMemory::ExternalCaps));
+  if(!request)return RISC_HTTP_MEMORY;
+  const char* path=r->url+8;while(*path&&*path!='/'&&*path!='?')++path;
+  const int hostBytes=static_cast<int>(path-(r->url+8));
+  int used=std::snprintf(request,cap,"%s %s%s HTTP/1.1\r\nHost: %.*s\r\nUser-Agent: RiscRTE/2\r\nAccept-Encoding: identity\r\nConnection: close\r\nContent-Length: %lu\r\n",
+    r->method==RISC_HTTP_POST?"POST":"GET",*path=='?'?"/":"",*path?path:"/",hostBytes,r->url+8,static_cast<unsigned long>(r->body_bytes));
+  for(uint32_t i=0;used>0&&static_cast<size_t>(used)<cap&&i<r->header_count;++i)
+    used+=std::snprintf(request+used,cap-used,"%s: %s\r\n",r->headers[i].name,r->headers[i].value);
+  if(used<=0||static_cast<size_t>(used)+2+r->body_bytes>=cap){std::memset(request,0,cap);heap_caps_free(request);return RISC_HTTP_SIZE;}
+  request[used++]='\r';request[used++]='\n';if(r->body_bytes)std::memcpy(request+used,r->body,r->body_bytes);used+=r->body_bytes;
+  void* memory=heap_caps_malloc(sizeof(Session),NativeTlsMemory::ExternalCaps);
+  if(!memory){std::memset(request,0,cap);heap_caps_free(request);return RISC_HTTP_MEMORY;}
+  risc_http_request_v1 base{sizeof(base),r->url,r->max_response_bytes,r->timeout_ms,r->utc_seconds};
+  session=new(memory)Session(++generation,base);*out=session->token;
+  session->requestV2=request;session->requestV2Bytes=used;session->decoder.v2=true;
+  if(r->time_server){session->time.asyncDns=true;session->time.begin(r->time_server,session->started);session->phase=Phase::SampleTime;return RISC_HTTP_OK;}
+  if(!prepare(*session)){const auto c=close(nullptr,*out);if(c==RISC_HTTP_OK)*out=0;return c==RISC_HTTP_OK?RISC_HTTP_MEMORY:c;}
+  return RISC_HTTP_OK;
+}
+inline int32_t advanceV2(void*,uint64_t token){
+  if(!owner||!owner())return RISC_HTTP_INVALID;
+  auto* s=session;if(!s||token!=s->token||!s->requestV2)return RISC_HTTP_CLOSED;
+  if(s->retained)return RISC_HTTP_RETAINED;
+  if(s->pendingBytes)return RISC_HTTP_OK;
+  if(s->terminal!=RISC_HTTP_AGAIN)return s->terminal;
+  uint32_t count=0;const auto result=read(nullptr,token,s->pending,sizeof(s->pending),&count);
+  s->pendingBytes=count;s->pendingAt=0;
+  if(result<0||result==RISC_HTTP_EOF)s->terminal=result;
+  return result;
+}
+inline int32_t readV2(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* count){
+  if(count)*count=0;
+  if(!owner||!owner()||!out||!count||!capacity||capacity>512)return RISC_HTTP_INVALID;
+  auto* s=session;if(!s||token!=s->token||!s->requestV2)return RISC_HTTP_CLOSED;
+  if(s->retained)return RISC_HTTP_RETAINED;
+  const auto left=s->pendingBytes-s->pendingAt;const auto n=left<capacity?left:capacity;
+  if(n){std::memcpy(out,s->pending+s->pendingAt,n);s->pendingAt+=n;*count=n;
+    if(s->pendingAt==s->pendingBytes)s->pendingBytes=s->pendingAt=0;
+    return RISC_HTTP_OK;}
+  return s->terminal;
+}
+inline int32_t infoV2(void*,uint64_t token,risc_http_response_v2* out){
+  if(!owner||!owner()||!out||out->struct_size<sizeof(*out))return RISC_HTTP_INVALID;
+  const auto size=out->struct_size;*out={};out->struct_size=size;out->content_length=-1;
+  auto* s=session;if(!s||s->token!=token||!s->requestV2)return RISC_HTTP_CLOSED;
+  out->phase=s->terminal!=RISC_HTTP_AGAIN?static_cast<uint32_t>(RISC_HTTP_PHASE_TERMINAL):static_cast<uint32_t>(s->phase)+1;
+  out->status_code=s->decoder.status;out->outcome=s->terminal;out->sent_bytes=s->sent;
+  out->received_bytes=s->decoder.received;out->content_length=s->decoder.length;out->cleanup_retained=s->retained;
+  out->utc_seconds=s->utc?s->utc+(now()-s->utcAt)/1000u:0;
+  std::memcpy(out->etag,s->decoder.etag,sizeof(out->etag));std::memcpy(out->last_modified,s->decoder.lastModified,sizeof(out->last_modified));
+  std::memcpy(out->content_type,s->decoder.contentType,sizeof(out->content_type));std::memcpy(out->retry_after,s->decoder.retryAfter,sizeof(out->retry_after));
+  return s->retained?RISC_HTTP_RETAINED:RISC_HTTP_OK;
+}
+inline const risc_http_client_v2* apiV2(){
+  static const risc_http_client_v2 value={2,sizeof(value),nullptr,openV2,advanceV2,readV2,infoV2,close};return &value;
 }
 inline const risc_http_client_v1* api(){
   static const risc_http_client_time_v1 value={{1,sizeof(value),nullptr,open,read,info,close},

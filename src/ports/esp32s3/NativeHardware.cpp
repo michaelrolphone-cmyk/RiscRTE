@@ -255,7 +255,7 @@ Hardware nativeHardware(bool (*owner)()){
     return NativeRadioAsync::state(&state,&rssi) && state==2 && NativeRadioAsync::addresses(station,ap) &&
       (station[0]||station[1]||station[2]||station[3]);
   });
-  hardware.httpClient=NativeHttp::api();hardware.httpIdle=NativeHttp::idle;hardware.httpSafe=NativeHttp::safe;
+  hardware.httpClient=NativeHttp::api();hardware.httpClientV2=NativeHttp::apiV2();hardware.httpIdle=NativeHttp::idle;hardware.httpSafe=NativeHttp::safe;
 #endif
 #ifdef RISC_PAIRED_BANKS
   hardware.maintenanceIdle=[](){return RiscBankStore::exitSafe()
