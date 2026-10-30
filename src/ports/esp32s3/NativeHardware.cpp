@@ -244,7 +244,11 @@ Hardware nativeHardware(bool (*owner)()){
   NativeTcpListener::configure(hardware.owner,[](){
     uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;
     return NativeRadioAsync::state(&state,&rssi) && state==2 && NativeRadioAsync::addresses(station,ap) &&
-      (station[0]||station[1]||station[2]||station[3]);
+      ((station[0]||station[1]||station[2]||station[3])
+#if RISC_NATIVE_CAPTIVE_PORTAL
+       || (ap[0]==192 && ap[1]==168 && ap[2]==4 && ap[3]==1)
+#endif
+      );
   });
   hardware.tcpListener=NativeTcpListener::backend();
 #endif
@@ -253,7 +257,11 @@ Hardware nativeHardware(bool (*owner)()){
   NativeHttp::configure(hardware.owner,[](){
     uint8_t state=0,station[12]{},ap[12]{};int8_t rssi=0;
     return NativeRadioAsync::state(&state,&rssi) && state==2 && NativeRadioAsync::addresses(station,ap) &&
-      (station[0]||station[1]||station[2]||station[3]);
+      ((station[0]||station[1]||station[2]||station[3])
+#if RISC_NATIVE_CAPTIVE_PORTAL
+       || (ap[0]==192 && ap[1]==168 && ap[2]==4 && ap[3]==1)
+#endif
+      );
   });
   hardware.httpClient=NativeHttp::api();hardware.httpClientV2=NativeHttp::apiV2();hardware.httpIdle=NativeHttp::idle;hardware.httpSafe=NativeHttp::safe;
 #endif

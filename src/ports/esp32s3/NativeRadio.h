@@ -329,6 +329,12 @@ inline bool accessPoint(const char* ssid,const char* password){
   const auto configured=sdkCall(Config,[&](){return esp_wifi_set_config(WIFI_IF_AP,&config);});
   wipe(&config,sizeof(config));
   if(!sdk("ap-config",configured) || !continueSetup()){leave();return false;}
+#if RISC_NATIVE_CAPTIVE_PORTAL
+  // AP DHCP starts on the subsequent AP_START event. Offer its own address as
+  // DNS so the product's bounded wildcard responder receives captive probes.
+  uint8_t offerDns=2;
+  if(!sdk("ap-dns-offer",sdkCall(Config,[&](){return esp_netif_dhcps_option(s.netif,ESP_NETIF_OP_SET,ESP_NETIF_DOMAIN_NAME_SERVER,&offerDns,sizeof(offerDns));})) || !continueSetup()){leave();return false;}
+#endif
   s.startAttempted=true;s.joinDeadline=esp_timer_get_time()+JoinTimeoutUs;
   if(!sdk("ap-start",sdkCall(Start,[](){return esp_wifi_start();})) || !continueSetup()){leave();return false;}
   s.started=true;

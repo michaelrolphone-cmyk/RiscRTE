@@ -321,6 +321,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       [](void* c,uint64_t owner){return static_cast<Port*>(c)->tcpIdle(owner);},
       [](void* c){return static_cast<Port*>(c)->tcpSafe();}};
     if(b->connect && b->connected){tcp_.connect=tcpConnect;tcp_.connected=tcpConnected;}
+    if(b->datagram_bind && b->datagram_receive && b->datagram_send){tcp_.datagram_bind=udpBind;tcp_.datagram_receive=udpReceive;tcp_.datagram_send=udpSend;}
     if(!runtime.registerTcpListener(&tcp_))return false;
   }
   if(hw_.httpClient){

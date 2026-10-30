@@ -9,7 +9,7 @@ wrap=()
 if [[ "$(uname -s)" == Darwin ]]; then
  wrap=(-include "$repo/test/native_tcp_shim/redirect.h")
 else
- for call in socket setsockopt fcntl bind listen accept recv send close connect select getsockopt;do wrap+=(-Wl,--wrap="$call");done
+ for call in socket setsockopt fcntl bind listen accept recv send recvfrom sendto close connect select getsockopt;do wrap+=(-Wl,--wrap="$call");done
 fi
 c++ "${flags[@]}" "${san[@]}" "${incs[@]}" -I"$repo/test/native_tcp_shim" "$repo/test/native_tcp_listener_test.cpp" "${wrap[@]}" -o "$build/native"
 "$build/native"

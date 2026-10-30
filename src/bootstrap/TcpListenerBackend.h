@@ -14,5 +14,8 @@ struct TcpListenerBackend {
  bool (*safe)(void*);          // false after uncertain cleanup/context loss
  int32_t (*connect)(void*,uint64_t,const risc_tcp_listen_v1*,uint64_t*)=nullptr;
  int32_t (*connected)(void*,uint64_t,uint64_t)=nullptr;
+ int32_t (*datagram_bind)(void*,uint64_t,const risc_tcp_listen_v1*,uint64_t*)=nullptr;
+ int32_t (*datagram_receive)(void*,uint64_t,uint64_t,void*,uint32_t,uint32_t*,risc_tcp_listen_v1*)=nullptr;
+ int32_t (*datagram_send)(void*,uint64_t,uint64_t,const void*,uint32_t,const risc_tcp_listen_v1*)=nullptr;
 };
 }

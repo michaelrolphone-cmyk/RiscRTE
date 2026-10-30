@@ -44,7 +44,16 @@ typedef struct {
  uint32_t connect_tag;
  int32_t (*connect)(void*,const risc_tcp_listen_v1*,uint64_t*);
  int32_t (*connected)(void*,uint64_t);
+ /* Optional bounded UDP transport. One socket, <=512 bytes per datagram.
+  * The peer address is explicit; receive copies it, send borrows it. A zero
+  * length datagram is OK. Close and retained-custody rules are unchanged. */
+ uint32_t datagram_tag;
+ int32_t (*datagram_bind)(void*,const risc_tcp_listen_v1*,uint64_t*);
+ int32_t (*datagram_receive)(void*,uint64_t,void*,uint32_t,uint32_t*,risc_tcp_listen_v1*);
+ int32_t (*datagram_send)(void*,uint64_t,const void*,uint32_t,const risc_tcp_listen_v1*);
 } risc_tcp_listener_v1;
+#define RISC_DATAGRAM_TAG UINT32_C(0x55445031)
+#define RISC_DATAGRAM_BYTES_MAX 512u
 #define RISC_TCP_CONNECT_TAG UINT32_C(0x54435031)
 
 #ifdef __cplusplus

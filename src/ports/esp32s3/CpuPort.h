@@ -258,6 +258,9 @@ class Port final {
   bool entropySafe() const;
   RiscBoot::TcpListenerBackend tcp_{};
   static int32_t tcpConnect(void*,uint64_t,const risc_tcp_listen_v1*,uint64_t*);
+  static int32_t udpBind(void*,uint64_t,const risc_tcp_listen_v1*,uint64_t*);
+  static int32_t udpReceive(void*,uint64_t,uint64_t,void*,uint32_t,uint32_t*,risc_tcp_listen_v1*);
+  static int32_t udpSend(void*,uint64_t,uint64_t,const void*,uint32_t,const risc_tcp_listen_v1*);
   static int32_t tcpConnected(void*,uint64_t,uint64_t);
   static int32_t tcpListen(void*,uint64_t,const risc_tcp_listen_v1*,uint64_t*);
   static int32_t tcpAccept(void*,uint64_t,uint64_t,uint64_t*);

@@ -70,3 +70,35 @@ int32_t Port::tcpConnected(void* context,uint64_t owner,uint64_t handle){
  if(!p.providerStorageSafe())return RISC_TCP_RETAINED;
  p.transferring_=true;const auto result=b->connected(b->context,owner,handle);p.transferring_=false;return result;
 }
+
+int32_t Port::udpBind(void* context,uint64_t owner,const risc_tcp_listen_v1* request,uint64_t* out){
+ if(out)*out=0;
+ auto& p=*static_cast<Port*>(context);const auto* b=p.hw_.tcpListener;
+ if(!p.available() || p.sleepRetained_ || p.transferring_ || !b || !b->datagram_bind)return RISC_TCP_CONTEXT;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+ if(p.nativeDiscoveryBusy())return RISC_TCP_BUSY;
+#endif
+ if(!p.providerStorageSafe())return RISC_TCP_RETAINED;
+ p.transferring_=true;const auto result=b->datagram_bind(b->context,owner,request,out);p.transferring_=false;return result;
+}
+
+int32_t Port::udpReceive(void* context,uint64_t owner,uint64_t handle,void* bytes,uint32_t size,uint32_t* count,risc_tcp_listen_v1* peer){
+ if(count)*count=0;
+ auto& p=*static_cast<Port*>(context);const auto* b=p.hw_.tcpListener;
+ if(!p.available() || p.sleepRetained_ || p.transferring_ || !b || !b->datagram_receive)return RISC_TCP_CONTEXT;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+ if(p.nativeDiscoveryBusy())return RISC_TCP_BUSY;
+#endif
+ if(!p.providerStorageSafe())return RISC_TCP_RETAINED;
+ p.transferring_=true;const auto result=b->datagram_receive(b->context,owner,handle,bytes,size,count,peer);p.transferring_=false;return result;
+}
+
+int32_t Port::udpSend(void* context,uint64_t owner,uint64_t handle,const void* bytes,uint32_t size,const risc_tcp_listen_v1* peer){
+ auto& p=*static_cast<Port*>(context);const auto* b=p.hw_.tcpListener;
+ if(!p.available() || p.sleepRetained_ || p.transferring_ || !b || !b->datagram_send)return RISC_TCP_CONTEXT;
+#if RISC_NATIVE_SETTINGS_LIFECYCLE
+ if(p.nativeDiscoveryBusy())return RISC_TCP_BUSY;
+#endif
+ if(!p.providerStorageSafe())return RISC_TCP_RETAINED;
+ p.transferring_=true;const auto result=b->datagram_send(b->context,owner,handle,bytes,size,peer);p.transferring_=false;return result;
+}

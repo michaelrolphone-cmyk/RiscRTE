@@ -10,7 +10,7 @@ static sockaddr_in bound{};
 static bool owner(){return owns;}
 static bool network(){if(networkLose)owns=false;return online;}
 static int step(){++calls;if(calls==loseCall)owns=false;if(calls==failCall){errno=EIO;return -1;}return 0;}
-extern "C" int __wrap_socket(int domain,int type,int protocol){assert(domain==AF_INET&&type==SOCK_STREAM&&protocol==IPPROTO_TCP);return step()<0?-1:nextFd++;}
+extern "C" int __wrap_socket(int domain,int type,int protocol){assert(domain==AF_INET&&((type==SOCK_STREAM&&protocol==IPPROTO_TCP)||(type==SOCK_DGRAM&&protocol==IPPROTO_UDP)));return step()<0?-1:nextFd++;}
 extern "C" int __wrap_setsockopt(int,int level,int name,const void* data,socklen_t size){assert(level==SOL_SOCKET&&name==SO_SNDTIMEO&&size==sizeof(timeval));const auto* t=static_cast<const timeval*>(data);assert(t->tv_sec==0&&t->tv_usec==1000);return step();}
 extern "C" int __wrap_fcntl(int,int command,...){assert(command==F_SETFL);va_list args;va_start(args,command);assert(va_arg(args,int)==O_NONBLOCK);va_end(args);return step();}
 extern "C" int __wrap_bind(int,const sockaddr* address,socklen_t size){assert(size==sizeof(bound));memcpy(&bound,address,size);return step();}
@@ -18,6 +18,8 @@ extern "C" int __wrap_listen(int,int backlog){assert(backlog==4);return step();}
 extern "C" int __wrap_accept(int,sockaddr*,socklen_t*){if(step()<0)return -1;if(accepted<0){errno=EAGAIN;return -1;}return nextFd++;}
 extern "C" ssize_t __wrap_recv(int,void* bytes,size_t size,int flags){assert(flags==MSG_DONTWAIT);if(step()<0)return -1;if(readResult<0){errno=EWOULDBLOCK;return -1;}assert(unsigned(readResult)<=size);memset(bytes,'r',readResult);return readResult;}
 extern "C" ssize_t __wrap_send(int,const void*,size_t size,int flags){assert(flags==MSG_DONTWAIT);if(step()<0)return -1;if(writeResult<0){errno=EAGAIN;return -1;}assert(unsigned(writeResult)<=size);return writeResult;}
+extern "C" ssize_t __wrap_recvfrom(int,void* p,size_t size,int flags,sockaddr* address,socklen_t* length){assert(flags==MSG_DONTWAIT&&size==513&&*length==sizeof(sockaddr_in));if(step()<0)return -1;if(readResult<0){errno=EAGAIN;return -1;}auto* a=reinterpret_cast<sockaddr_in*>(address);a->sin_family=AF_INET;a->sin_port=htons(1234);const uint8_t ip[]={192,168,4,2};memcpy(&a->sin_addr.s_addr,ip,4);memset(p,'d',readResult);return readResult;}
+extern "C" ssize_t __wrap_sendto(int,const void*,size_t size,int flags,const sockaddr* address,socklen_t length){assert(flags==MSG_DONTWAIT&&length==sizeof(sockaddr_in)&&reinterpret_cast<const sockaddr_in*>(address)->sin_port==htons(1234));if(step()<0)return -1;return size;}
 extern "C" int __wrap_close(int){if(step()<0)return -1;return closeResult;}
 extern "C" int __wrap_connect(int,const sockaddr* address,socklen_t size){assert(size==sizeof(bound));memcpy(&bound,address,size);if(step()<0)return -1;errno=connectError;return connectResult;}
 extern "C" int __wrap_select(int,fd_set* read,fd_set* write,fd_set* except,timeval* timeout){assert(!read&&write&&!except&&timeout&&!timeout->tv_sec&&!timeout->tv_usec);return step()<0?-1:selectResult;}
@@ -43,6 +45,22 @@ static void noIo(uint64_t l,uint64_t c,int32_t result){
  assert(api->connected(nullptr,71,c)==result&&calls==old);
 }
 int main(){
+ reset();uint64_t udp=0;auto urequest=request;urequest.port=53;
+ assert(api->datagram_bind(nullptr,71,&urequest,&udp)==0&&udp&&!api->idle(nullptr,0));
+ uint8_t packet[512]{};uint32_t count=99;risc_tcp_listen_v1 peer{};int saved=calls;
+ assert(api->datagram_receive(nullptr,72,udp,packet,512,&count,&peer)==RISC_TCP_CONTEXT&&count==0&&calls==saved);
+ assert(api->datagram_receive(nullptr,71,udp,packet,513,&count,&peer)==RISC_TCP_INVALID&&calls==saved);
+ assert(api->datagram_receive(nullptr,71,udp,packet,512,&count,&peer)==0&&count==2&&peer.port==1234&&peer.address[3]==2);
+ assert(api->datagram_send(nullptr,71,udp,packet,512,&peer)==0);
+ readResult=513;assert(api->datagram_receive(nullptr,71,udp,packet,512,&count,&peer)==RISC_TCP_INVALID&&count==0);
+ readResult=0;assert(api->datagram_receive(nullptr,71,udp,packet,512,&count,&peer)==0&&count==0);
+ auto listener=listen();auto child=accept(listener);assert(api->read(nullptr,71,udp,packet,10,&count)==RISC_TCP_CONTEXT);
+ assert(api->close(nullptr,71,child)==0&&api->close(nullptr,71,listener)==0&&!api->idle(nullptr,0));assert(api->close(nullptr,71,udp)==0&&api->idle(nullptr,0));
+ for(int fail=1;fail<=4;++fail){reset();failCall=fail;assert(api->datagram_bind(nullptr,71,&urequest,&udp)==(fail==2?RISC_TCP_RETAINED:RISC_TCP_IO));assert(api->idle(nullptr,0)==(fail!=2));}
+ for(int loss=1;loss<=4;++loss){reset();loseCall=loss;assert(api->datagram_bind(nullptr,71,&urequest,&udp)==RISC_TCP_RETAINED&&calls==loss);}
+ reset();assert(api->datagram_bind(nullptr,71,&urequest,&udp)==0);loseCall=calls+1;assert(api->datagram_receive(nullptr,71,udp,packet,512,&count,&peer)==RISC_TCP_RETAINED&&count==0);
+ reset();assert(api->datagram_bind(nullptr,71,&urequest,&udp)==0);peer={sizeof(peer),{192,168,4,2},1234,0};loseCall=calls+1;assert(api->datagram_send(nullptr,71,udp,packet,12,&peer)==RISC_TCP_RETAINED);
+
  reset();auto l=listen();assert(bound.sin_port==htons(8080)&&!memcmp(&bound.sin_addr.s_addr,request.address,4));
  auto c=accept(l);char bytes[8]{};uint32_t n=99;uint64_t other=99;int before=calls;
  assert(api->read(nullptr,72,c,bytes,8,&n)==RISC_TCP_CONTEXT&&n==0);

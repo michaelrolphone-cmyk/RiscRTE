@@ -486,6 +486,9 @@ class Runtime final {
   static int32_t tcpWrite(void*,uint64_t,const void*,uint32_t,uint32_t*);
   static int32_t tcpClose(void*,uint64_t);
   static int32_t tcpConnect(void*,const risc_tcp_listen_v1*,uint64_t*);
+  static int32_t udpBind(void*,const risc_tcp_listen_v1*,uint64_t*);
+  static int32_t udpReceive(void*,uint64_t,void*,uint32_t,uint32_t*,risc_tcp_listen_v1*);
+  static int32_t udpSend(void*,uint64_t,const void*,uint32_t,const risc_tcp_listen_v1*);
   static int32_t tcpConnected(void*,uint64_t);
   int32_t tcpResult(int32_t);
   bool providerPolicy(JsonObjectConst,ProviderStorage&);
