@@ -39,6 +39,7 @@ jobs:
           set -euo pipefail
           cd "$CACHE_ROOT/source"
           python test/test_resident_worker_dependency_scan.py
+          python test/test_psram_cache_target_calls.py
           python test/run_psram_cache.py --output "$CACHE_ROOT/receipts/consumer-normal.json"
           python test/run_psram_cache.py --output "$CACHE_ROOT/receipts/consumer-ubsan.json" --sanitize
       - name: Build exact SDK diagnostic with one compiler job

@@ -3,6 +3,17 @@
 import argparse,hashlib,json,shlex,shutil,struct,subprocess
 from pathlib import Path
 def digest(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+def require_linked_calls(symbols, disassembly, sdkcalls, nativecalls):
+ # GCC emits callback lambdas separately and may alias equivalent thunks.
+ # Qualify actual call instructions, not symbol-header text or family size.
+ import re
+ def calls(name,target):
+  return bool(re.search(r"\bcall(?:0|4|8|12)\s+[^\n]*<"+re.escape(target)+r">",disassembly[name]))
+ assert len(sdkcalls)==1 and calls(sdkcalls[0],'__wrap_esp_cache_msync'), 'No demonstrated SDK wrap call'
+ hits={symbols[name][0] for name in nativecalls if calls(name,'__wrap_esp_cache_msync')}
+ assert len(hits)==1, 'Expected exactly one native writeback-family containing-function address with a wrap call'
+ assert calls('__wrap_esp_cache_msync','esp_cache_msync'), 'Wrapper must forward actual SDK operations'
+ return sorted(hits)
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--sdk',type=Path,required=True);p.add_argument('--build',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args();root=a.runtime.resolve();sdk=a.sdk.resolve();build=a.build.resolve()
  commit=subprocess.check_output(['git','-C',root,'rev-parse','HEAD'],text=True).strip();sdkcommit=subprocess.check_output(['git','-C',sdk,'rev-parse','HEAD'],text=True).strip()
@@ -43,16 +54,18 @@ def main():
  assert 'Cache_WriteBack_Addr' in symbols and symbols['Cache_WriteBack_Addr'][2] in ['T','t']
  assert 'cache_writeback_items_freeze' in symbols
  sdkcalls=[name for name in symbols if name.startswith('mcp_gdma_memcpy')];nativecalls=[name for name in symbols if 'NativePsramCache' in name and 'writeback' in name]
- assert len(sdkcalls)==len(nativecalls)==1,(sdkcalls,nativecalls)
+ assert len(sdkcalls)==1 and '_ZN7RiscCpu16NativePsramCache9writebackEPvjj' in nativecalls,(sdkcalls,nativecalls)
  disassembly={}
  for name in [*sdkcalls,*nativecalls,'__wrap_esp_cache_msync']:
-  text=subprocess.check_output([str(objdump),'-d','--disassemble='+name,str(elf)],text=True);disassembly[name]=text
-  if name!='__wrap_esp_cache_msync':assert '<__wrap_esp_cache_msync>' in text,'No demonstrated linked wrap call in '+name
-  else:assert '<esp_cache_msync>' in text,'Wrapper must forward actual SDK operations'
+  address,length,_=symbols[name];assert length>0
+  text=subprocess.check_output([str(objdump),'-d','--start-address='+str(address),'--stop-address='+str(address+length),str(elf)],text=True);disassembly[name]=text
+ a.output.parent.mkdir(parents=True,exist_ok=True)
+ a.output.with_suffix('.disassembly.json').write_text(json.dumps({'elf_sha256':digest(elf),'symbols':{name:symbols[name] for name in disassembly},'disassembly':disassembly},indent=2)+'\n')
+ native_wrap_function_addresses=require_linked_calls(symbols,disassembly,sdkcalls,nativecalls)
  globals_needed=['completed','suppressSourceFlush']
  for suffix in globals_needed:
   matches=[v for name,v in symbols.items() if 'GLOBAL__N_' in name and name.endswith(str(len(suffix))+suffix+'E')]
   assert len(matches)==1 and 0x3fc00000<=matches[0][0]<0x3fd00000,'Atomic probe state outside internal DRAM'
- receipt=dict(runtime_commit=commit,sdk_commit=sdkcommit,compiler={'sha256':digest(compiler),'version':subprocess.check_output([str(compiler),'--version'],text=True)},objects=objects,inputs=dict(sorted(inputs.items())),commands=commands,sdk_audit_sha256=digest(root/'qualification/psram-cache-sdk.json'),disassembly=disassembly,elf={'bytes':len(data),'sha256':digest(elf)},binary={'bytes':(build/'native_psram_cache_probe.bin').stat().st_size,'sha256':digest(build/'native_psram_cache_probe.bin')},sdkconfig_sha256=digest(build/'config/sdkconfig.h'),hardware_tested=False,target_execution=False,dma_visibility='unobserved',cleanup_qualified=False)
+ receipt=dict(runtime_commit=commit,sdk_commit=sdkcommit,compiler={'sha256':digest(compiler),'version':subprocess.check_output([str(compiler),'--version'],text=True)},objects=objects,inputs=dict(sorted(inputs.items())),commands=commands,sdk_audit_sha256=digest(root/'qualification/psram-cache-sdk.json'),disassembly=disassembly,native_wrap_function_addresses=native_wrap_function_addresses,elf={'bytes':len(data),'sha256':digest(elf)},binary={'bytes':(build/'native_psram_cache_probe.bin').stat().st_size,'sha256':digest(build/'native_psram_cache_probe.bin')},sdkconfig_sha256=digest(build/'config/sdkconfig.h'),hardware_tested=False,target_execution=False,dma_visibility='unobserved',cleanup_qualified=False)
  a.output.parent.mkdir(parents=True,exist_ok=True);a.output.write_text(json.dumps(receipt,indent=2)+'\n');print('Actual SDK/probe source, XIP config and linked flush interception verified; target execution and DMA visibility unobserved')
 if __name__=='__main__':main()
