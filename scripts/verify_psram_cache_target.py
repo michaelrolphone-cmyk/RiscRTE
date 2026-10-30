@@ -3,12 +3,37 @@
 import argparse,hashlib,json,shlex,shutil,struct,subprocess
 from pathlib import Path
 def digest(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
-def require_linked_calls(symbols, disassembly, sdkcalls, nativecalls):
+def elf_word(data,address):
+ assert data[:7]==b'\x7fELF\x01\x01\x01' and struct.unpack_from('<HH',data,16)==(2,94)
+ offset=struct.unpack_from('<I',data,32)[0];size,count=struct.unpack_from('<HH',data,46)
+ assert size==40 and offset+size*count<=len(data)
+ matches=[]
+ for i in range(count):
+  _,kind,flags,base,start,length,_,_,_,_=struct.unpack_from('<IIIIIIIIII',data,offset+i*size)
+  if kind!=8 and flags&2 and base<=address and address+4<=base+length:
+   assert start+length<=len(data);matches.append(struct.unpack_from('<I',data,start+address-base)[0])
+ assert len(matches)==1, 'Literal must resolve uniquely inside allocated file-backed ELF data'
+ return matches[0]
+def demonstrated_call(text,target,symbols,read_word):
+ import re
+ expected=symbols[target][0];previous=None
+ for line in text.splitlines():
+  match=re.match(r'^\s*([0-9a-f]+):\s+([0-9a-f]+)\s+([a-z0-9.]+)\s*(.*)$',line)
+  if not match:continue
+  pc,raw,op,args=match.groups();pc=int(pc,16);length=len(raw)//2
+  direct=re.match(r'([0-9a-f]+)\s+<'+re.escape(target)+r'>$',args)
+  if op in ('call0','call4','call8','call12') and direct and int(direct[1],16)==expected:return True
+  if op in ('callx0','callx4','callx8','callx12') and previous:
+   priorpc,priorlen,priorop,priorargs=previous
+   literal=re.match(r'(a(?:[0-9]|1[0-5])),\s*([0-9a-f]+)\s+.*$',priorargs)
+   if priorop=='l32r' and literal and pc==priorpc+priorlen and args==literal[1]:
+    if read_word(int(literal[2],16))==expected:return True
+  previous=(pc,length,op,args)
+ return False
+def require_linked_calls(symbols, disassembly, sdkcalls, nativecalls, read_word=lambda _: None):
  # GCC emits callback lambdas separately and may alias equivalent thunks.
  # Qualify actual call instructions, not symbol-header text or family size.
- import re
- def calls(name,target):
-  return bool(re.search(r"\bcall(?:0|4|8|12)\s+[^\n]*<"+re.escape(target)+r">",disassembly[name]))
+ def calls(name,target):return demonstrated_call(disassembly[name],target,symbols,read_word)
  assert len(sdkcalls)==1 and calls(sdkcalls[0],'__wrap_esp_cache_msync'), 'No demonstrated SDK wrap call'
  hits={symbols[name][0] for name in nativecalls if calls(name,'__wrap_esp_cache_msync')}
  assert len(hits)==1, 'Expected exactly one native writeback-family containing-function address with a wrap call'
@@ -61,7 +86,7 @@ def main():
   text=subprocess.check_output([str(objdump),'-d','--start-address='+str(address),'--stop-address='+str(address+length),str(elf)],text=True);disassembly[name]=text
  a.output.parent.mkdir(parents=True,exist_ok=True)
  a.output.with_suffix('.disassembly.json').write_text(json.dumps({'elf_sha256':digest(elf),'symbols':{name:symbols[name] for name in disassembly},'disassembly':disassembly},indent=2)+'\n')
- native_wrap_function_addresses=require_linked_calls(symbols,disassembly,sdkcalls,nativecalls)
+ native_wrap_function_addresses=require_linked_calls(symbols,disassembly,sdkcalls,nativecalls,lambda address:elf_word(data,address))
  globals_needed=['completed','suppressSourceFlush']
  for suffix in globals_needed:
   matches=[v for name,v in symbols.items() if 'GLOBAL__N_' in name and name.endswith(str(len(suffix))+suffix+'E')]
