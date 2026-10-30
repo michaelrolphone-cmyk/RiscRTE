@@ -1,15 +1,15 @@
 name: Publish complete ESP32-S3 infrastructure binary
 on:
   push:
-    branches: [release/esp32s3-infrastructure-v1.2.2-direct]
+    branches: [release/esp32s3-infrastructure-v1.2.3-direct]
     paths:
-      - artifacts/esp32s3-infrastructure-v1.2.2/**
+      - artifacts/esp32s3-infrastructure-v1.2.3/**
       - scripts/verify_infrastructure_initial_image.py
       - .github/workflows/publish-infrastructure-direct.yml
 permissions:
   contents: read
 concurrency:
-  group: esp32s3-infrastructure-v1.2.2-publication
+  group: esp32s3-infrastructure-v1.2.3-publication
   cancel-in-progress: false
 jobs:
   publish:
@@ -23,11 +23,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Expand complete binary
-        run: gzip -d artifacts/esp32s3-infrastructure-v1.2.2/riscrte-esp32s3-infrastructure-v1.2.2-initial.bin.gz
+        run: gzip -d artifacts/esp32s3-infrastructure-v1.2.3/riscrte-esp32s3-infrastructure-v1.2.3-initial.bin.gz
       - name: Verify exact complete image and embedded cohort
         run: |
-          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.2.2
-          cd artifacts/esp32s3-infrastructure-v1.2.2
+          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.2.3
+          cd artifacts/esp32s3-infrastructure-v1.2.3
           sha256sum -c SHA256SUMS
       - name: Publish direct binary and provenance
         env:
@@ -35,36 +35,38 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          tag=esp32s3-infrastructure-v1.2.2
+          tag=esp32s3-infrastructure-v1.2.3
           if gh release view "$tag" >/dev/null 2>&1; then
             echo 'Existing release must be inspected; refusing automatic overwrite.' >&2
             exit 1
           fi
           cat > /tmp/infrastructure-release-notes.md <<'NOTES'
-          Complete ESP32-S3 infrastructure-agent first-install binary. Download `riscrte-esp32s3-infrastructure-v1.2.2-initial.bin` directly; no extraction, Python, or compilation is needed to obtain the image.
+          Complete ESP32-S3 infrastructure-agent first-install binary. Download `riscrte-esp32s3-infrastructure-v1.2.3-initial.bin` directly; no extraction, Python, or compilation is needed to obtain the image.
 
           Target: ESP32-S3, 16 MiB flash, octal PSRAM at80MHz, CPU240MHz. Flash offset0. Includes bootloader, partition table, native runtime, boot-store with app and both providers, mutable-data template and paired-bank metadata. Layout riscrte-paired-appdata-v2 / ABI2.
 
           FIRST INSTALL ONLY: the full 16 MiB image replaces existing flash contents, including identity and data.
 
-          Fixes the infrastructure board's missing AP permission: the old station-only configuration was rejected by the Core radio gate before setup could broadcast. The generated board and station provider now admit station plus AP. The generic radio permission check remains enforced.
+          Fixes Save and connect: the parser incorrectly expected 19 bytes for the 20-byte POST request line, returning Use the setup page before attempting Wi-Fi. Request matching now uses exact literal lengths for HTTP/1.0 and HTTP/1.1.
 
-          Fixes shared Core native USB logging: the console previously reported only the 128-byte write budget even with an 8 KiB ring, causing longer status lines to be discarded. All native USB profiles now default to an 8 KiB ring with conservative complete-drain credit accounting, including builds with stage diagnostics disabled. Writes and completion queries remain bounded and zero-timeout.
+          Corrects test evidence: the bundled SHA header had disabled product test assertions. The wrapper now preserves assertions and every infrastructure suite rejects NDEBUG. The old parser fails with assertions restored; the corrected implementation passes the full portal suite. Earlier affected PASS text was not valid assertion evidence. Core USB logging/radio suites were unaffected.
 
-          After flashing: join RiscRTE-Setup (password RiscRTE-Setup), open http://192.168.4.1/ if needed, enter your Wi-Fi details and select the existing private pairing file. No Python, extraction, compilation or VSCode changes are required. Infra-node bytes and service pairing pins remain unchanged; infra-station is rebuilt with AP permission.
+          Android setup: join RiscRTE-Setup (password RiscRTE-Setup). If the sign-in window cannot choose files, stay connected, open Chrome and enter http://192.168.4.1/. Choose the existing private pairing file and save. Pasting remains available. The page now distinguishes local setup connectivity from router internet and retains input after errors. No Python, extraction, compilation or VSCode changes are required.
 
-          ASan/UBSan tests pass for the actual Core console and line sink, USB recovery, serial transport, the generated board + actual station provider + real Core radio gate, and portal/recovery/journal/transport/policy/boot health. Native target build and all image/source checks pass. These are concrete software fixes; physical SSID, portal, Wi-Fi join and service reconciliation still await device confirmation. This release is not hardware-qualified.
+          Existing v1.2/v1.2.1/v1.2.2 pairing files remain compatible: only the exact published prior provider cohort is migrated to the new image's revision-3 implementation pins. Mixed/tampered cohorts remain rejected. Credentials, identity and endpoints remain unchanged. New provider definitions are published to Capabilities Service.
+
+          Active ASan/UBSan tests cover exact HTTP framing, CSRF, pairing migration, durable save, retry/reboot and uncertain commits. The actual page script passes file/paste and status tests with DOM/network mocks. The service integration run passes 171 requests, 32 maintenance wakes, four reboots, lost-response recovery and composite dependency execution. Target compilation, complete image and source checks pass. Owner physically confirmed setup AP/page on v1.2.2; v1.2.3 save, station join and live reconciliation still await hardware confirmation.
 
 
           Exact source identities and every component hash are recorded in flash-manifest.json and direct-image.json. Publication does not flash any device.
           NOTES
-          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.2.2/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.2.2 — Portal and Core Logging Fix' --notes-file /tmp/infrastructure-release-notes.md --prerelease
+          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.2.3/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.2.3 — Setup Save Fix' --notes-file /tmp/infrastructure-release-notes.md --prerelease
       - name: Download published assets and verify actual bytes
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir /tmp/published-infrastructure
-          gh release download esp32s3-infrastructure-v1.2.2 --dir /tmp/published-infrastructure
+          gh release download esp32s3-infrastructure-v1.2.3 --dir /tmp/published-infrastructure
           cd /tmp/published-infrastructure
           sha256sum -c SHA256SUMS

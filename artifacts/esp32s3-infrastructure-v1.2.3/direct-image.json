@@ -1,0 +1,22 @@
+{
+  "schema": "riscrte-infrastructure-direct-image/1",
+  "tag": "esp32s3-infrastructure-v1.2.3",
+  "name": "ESP32-S3 Infrastructure Agent v1.2.3 \u2014 Setup Save Fix",
+  "asset": "riscrte-esp32s3-infrastructure-v1.2.3-initial.bin",
+  "bytes": 16777216,
+  "sha256": "22971aca1321584618c38314e7670ac3a5825878dea88e9eee70648408f4f39d",
+  "offset": 0,
+  "profile": "esp32s3-infrastructure",
+  "source": {
+    "runtime": "d9ae5f1a186999138a5b4aa4a8071ce3cc0f1535",
+    "system_apps": "987513fd2363d2bb5c89014cf741581ddb34fd94",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2"
+  },
+  "purpose": "Complete first installation; replaces all 16 MiB including existing identity/data. Not a data-preserving update.",
+  "provisioning": "On-device captive portal. Join RiscRTE-Setup (password RiscRTE-Setup), open http://192.168.4.1/, enter Wi-Fi and choose a private pairing file. Public image has no credentials.",
+  "hardware_qualified": false,
+  "layout": "riscrte-paired-appdata-v2",
+  "layout_abi": 2,
+  "startup_status": "Owner confirmed v1.2.2 setup SSID and captive page. Fixes malformed POST recognition that rejected Save before Wi-Fi connection, restores active test assertions, and explains Android file-picker handoff. Existing v1.2 pairing files remain compatible through exact pinned-cohort migration. Physical save/join/service confirmation pending."
+}
