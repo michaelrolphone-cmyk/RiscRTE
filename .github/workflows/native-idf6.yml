@@ -184,6 +184,7 @@ jobs:
           bash test/run_native_bank_provider_admission_test.sh
           bash test/run_native_i2s_idf6_test.sh
           bash test/run_native_platform_test.sh
+          bash test/run_native_console_records_test.sh
           bash test/run_native_sleep_diagnostics_idf6_test.sh
           bash test/run_native_diagnostic_workspace_test.sh
           ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 bash test/run_native_diagnostic_workspace_test.sh
