@@ -1,0 +1,22 @@
+{
+  "schema": "riscrte-infrastructure-direct-image/1",
+  "tag": "esp32s3-infrastructure-v1.2.1",
+  "name": "ESP32-S3 Infrastructure Agent v1.2.1 \u2014 Startup Diagnostics",
+  "asset": "riscrte-esp32s3-infrastructure-v1.2.1-initial.bin",
+  "bytes": 16777216,
+  "sha256": "5b37f7c2e245ec3ec64563d3dde294e9e3499c055ca33723884fecd1be51ea57",
+  "offset": 0,
+  "profile": "esp32s3-infrastructure",
+  "source": {
+    "runtime": "b8d969a172190c97278385b3a78b71cf4de3f03b",
+    "system_apps": "8df4e34e1ff774d0567f4579662701dfb79d9a76",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2"
+  },
+  "purpose": "Complete first installation; replaces all 16 MiB including existing identity/data. Not a data-preserving update.",
+  "provisioning": "On-device captive portal. Join RiscRTE-Setup (password RiscRTE-Setup), open http://192.168.4.1/, enter Wi-Fi and choose a private pairing file. Public image has no credentials.",
+  "hardware_qualified": false,
+  "layout": "riscrte-paired-appdata-v2",
+  "layout_abi": 2,
+  "startup_status": "Diagnostic follow-up to observed v1.2 application-entry stall and missing setup SSID. Correct source marker and startup boundary logs; root cause and hardware fix not yet confirmed."
+}
