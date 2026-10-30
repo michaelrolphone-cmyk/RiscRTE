@@ -57,3 +57,21 @@ injection. Hardware acceptance remains: SSID appears, phone opens 192.168.4.1,
 settings commit, station joins, reboot preserves settings and live service
 reconciliation completes. Release metadata must not claim those observations
 until the owner's device provides them.
+
+## v1.2.3 save rejection and test evidence correction
+
+The owner confirmed that v1.2.2 now broadcasts the setup SSID and opens the
+captive portal. Their screenshot shows `Use the setup page.` after Save. The
+product HTTP parser compared a valid 20-byte POST request line to a hardcoded
+19-byte length and returned 405 before station connection. The static setup-AP
+no-internet sentence was unrelated to the target Wi-Fi network.
+
+The prior product portal PASS output was invalid evidence: its SHA header
+defined NDEBUG, disabling its assertions. The product wrapper now preserves
+NDEBUG, all infrastructure test translation units reject disabled assertions,
+and the old parser demonstrably fails with assertions restored. The corrected
+parser and updated mobile setup guidance are covered by active assertions.
+Shared Core console/radio suites did not include that header and were unaffected.
+See the System Apps profile's v1.2.3 conformance amendment for exact boundaries.
+Native runtime code is unchanged from v1.2.2; source identity remains verified.
+Physical settings save, station join and live services are still pending.
