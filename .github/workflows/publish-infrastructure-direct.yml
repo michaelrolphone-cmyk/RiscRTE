@@ -1,0 +1,62 @@
+name: Publish complete ESP32-S3 infrastructure binary
+on:
+  push:
+    branches: [release/esp32s3-infrastructure-v1.1-direct]
+    paths:
+      - artifacts/esp32s3-infrastructure-v1.1/**
+      - scripts/verify_infrastructure_initial_image.py
+      - .github/workflows/publish-infrastructure-direct.yml
+permissions:
+  contents: read
+concurrency:
+  group: esp32s3-infrastructure-v1.1-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'michaelrolphone-cmyk/RiscRTE'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Unpack exact prebuilt binary
+        run: |
+          gzip -d artifacts/esp32s3-infrastructure-v1.1/riscrte-esp32s3-infrastructure-v1.1-initial.bin.gz
+      - name: Verify exact complete image and embedded cohort
+        run: |
+          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.1
+          cd artifacts/esp32s3-infrastructure-v1.1
+          sha256sum -c SHA256SUMS
+      - name: Publish direct binary and provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=esp32s3-infrastructure-v1.1
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo 'Existing release must be inspected; refusing automatic overwrite.' >&2
+            exit 1
+          fi
+          cat > /tmp/infrastructure-release-notes.md <<'NOTES'
+          Complete ESP32-S3 infrastructure-agent first-install binary. Download `riscrte-esp32s3-infrastructure-v1.1-initial.bin` directly; no extraction, Python, or compilation is needed to obtain the image.
+
+          Target: ESP32-S3, 16 MiB flash, octal PSRAM at80MHz, CPU240MHz. Flash offset0. Includes bootloader, partition table, native runtime, boot-store with app and both providers, mutable-data template and paired-bank metadata. Layout riscrte-paired-appdata-v2 / ABI2.
+
+          FIRST INSTALL ONLY: the full16MiB image replaces existing flash contents, including identity and data. It is not a data-preserving update. The public template contains no Wi-Fi or service credentials and remains unprovisioned. Hardware, measured cadence and live credentialed qualification are pending.
+
+          Exact source identities and every component hash are recorded in flash-manifest.json and direct-image.json. Publication does not flash any device.
+          NOTES
+          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.1/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.1' --notes-file /tmp/infrastructure-release-notes.md --prerelease
+      - name: Download published assets and verify actual bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir /tmp/published-infrastructure
+          gh release download esp32s3-infrastructure-v1.1 --dir /tmp/published-infrastructure
+          cd /tmp/published-infrastructure
+          sha256sum -c SHA256SUMS

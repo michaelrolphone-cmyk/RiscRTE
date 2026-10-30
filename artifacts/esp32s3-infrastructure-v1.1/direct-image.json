@@ -1,0 +1,21 @@
+{
+  "schema": "riscrte-infrastructure-direct-image/1",
+  "tag": "esp32s3-infrastructure-v1.1",
+  "name": "ESP32-S3 Infrastructure Agent v1.1",
+  "asset": "riscrte-esp32s3-infrastructure-v1.1-initial.bin",
+  "bytes": 16777216,
+  "sha256": "af3e2832a697fa867f2d97110dd44116f53d3018e7a0764bbf93e75f57df1264",
+  "offset": 0,
+  "profile": "esp32s3-infrastructure",
+  "source": {
+    "runtime": "921a3d1e2f5b0224bc9175d3b8eae3e2bbcda968",
+    "system_apps": "b41350bf720a3ede85a416f2ca78022f0564c9b5",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2"
+  },
+  "purpose": "Complete first installation only; overwrites all16MiB including existing identity/data. Not an in-place update.",
+  "provisioning": "Unprovisioned public template; contains no Wi-Fi or service credentials.",
+  "hardware_qualified": false,
+  "layout": "riscrte-paired-appdata-v2",
+  "layout_abi": 2
+}
