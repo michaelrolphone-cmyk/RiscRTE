@@ -49,9 +49,14 @@ static bool socketFail=false,fcntlFail=false,udpCloseFail=false,shortSend=false;
 static unsigned dnsCalls=0,dnsFrees=0,udpOpens=0,udpCloses=0,udpSends=0,udpReceives=0,randomCalls=0;
 static bool udpLive=false;
 static std::string resolvedName;
+#if RISC_NATIVE_ESP_IDF
+static bool delayWorker=false;static void(*dnsWork)(void*)=nullptr;
+int xTaskCreatePinnedToCore(void(*f)(void*),const char*,unsigned,void*,unsigned,void*,int){dnsWork=f;if(!delayWorker)f(nullptr);return pdPASS;}
+void vTaskDelete(void*){}
+#endif
 void esp_fill_random(void* out,size_t n){assert(online && n==8);++randomCalls;for(size_t i=0;i<n;++i)static_cast<uint8_t*>(out)[i]=uint8_t(randomCalls+i+1);}
 extern "C" int __wrap_getaddrinfo(const char* name,const char* service,const addrinfo* hints,addrinfo** out){
- assert(name && std::string(service)=="123" && hints->ai_family==AF_INET && hints->ai_socktype==SOCK_DGRAM && hints->ai_protocol==IPPROTO_UDP);
+ assert(name&&hints->ai_family==AF_INET);if(service)assert(std::string(service)=="123"&&hints->ai_socktype==SOCK_DGRAM&&hints->ai_protocol==IPPROTO_UDP);else assert(hints->ai_socktype==SOCK_STREAM);
  resolvedName=name;++dnsCalls;clockMs+=dnsDelay;
  static addrinfo result;result={};timePeer={};timePeer.sin_family=AF_INET;timePeer.sin_port=htons(123);timePeer.sin_addr.s_addr=htonl(0xc0000201);
  result.ai_family=AF_INET;result.ai_addr=reinterpret_cast<sockaddr*>(&timePeer);result.ai_addrlen=sizeof(timePeer);
@@ -114,6 +119,9 @@ int esp_tls_conn_destroy(esp_tls_t* p){assert(p->sockfd==-1&&p->server_fd.fd==-1
 esp_err_t esp_crt_bundle_attach(void* p){if(bundleError)return bundleError;if(!missingVerifier)static_cast<mbedtls_ssl_config*>(p)->MBEDTLS_PRIVATE(f_vrfy)=chain;return ESP_OK;}
 int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* cfg,esp_tls_t* tls){
  assert(n>0 && host[n]==0 && port==443 && cfg->non_block && !cfg->skip_common_name && cfg->timeout_ms>0);
+#if RISC_NATIVE_ESP_IDF
+ if(NativeHttp::session->requestV2)assert(std::string(host)=="192.0.2.1"&&std::string(cfg->common_name)=="example.test");
+#endif
  if(tls->conn_state==ESP_TLS_INIT)tls->sockfd=7;
  if(slowConnect)return 0;
  if(pendingConnect){
@@ -452,6 +460,37 @@ int main(){
   flags=0;assert(config.MBEDTLS_PRIVATE(f_vrfy)(nullptr,&cert,0,&flags)==MBEDTLS_ERR_X509_CERT_VERIFY_FAILED);
   close(t);cases+=8;
  }
+
+ // V2 exercises the same production transport with copied authenticated POST,
+ // all response statuses, validators, strict framing bounds and no redirects.
+ for(int status:{200,201,202,204,304,401,429,503,302}){
+  const bool empty=status==204||status==304;
+  reset({"HTTP/1.1 "+std::to_string(status)+" Test\r\nETag: \"v1\"\r\nLast-Modified: Fri, 30 Oct 2026 00:00:00 GMT\r\nContent-Length: "+(empty?"0":"2")+"\r\n\r\n"+(empty?"":"{}")});
+  char credential[]="Bearer secret",body[]="{\"a\":1}";
+  risc_http_header_v2 headers[]={{"Authorization",credential},{"Content-Type","application/json"}};
+  risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST,"https://example.test/v1/call",headers,2,body,7,32768,5000,1780000000,nullptr,0};
+  uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);
+  credential[0]='X';body[0]='X'; // native copy owns both before asynchronous use
+  uint64_t other=0;risc_http_request_v1 old{sizeof(old),"https://example.test/",10,5000,1780000000};
+  assert(NativeHttp::api()->open(nullptr,&old,&other)==RISC_HTTP_BUSY);
+  std::string output;int rc=1;
+  for(int i=0;i<100&&rc!=RISC_HTTP_EOF;++i){
+   const auto advanced=NativeHttp::apiV2()->advance(nullptr,t);assert(advanced>=0);
+   char data[512];uint32_t count=0;rc=NativeHttp::apiV2()->read(nullptr,t,data,sizeof(data),&count);assert(rc>=0);output.append(data,count);++clockMs;
+  }
+  risc_http_response_v2 info{};info.struct_size=sizeof(info);assert(NativeHttp::apiV2()->info(nullptr,t,&info)==0);
+  assert(rc==RISC_HTTP_EOF&&info.status_code==status&&info.sent_bytes==sent.size()&&std::string(info.etag)=="\"v1\"");
+  assert(output==(empty?"":"{}")&&sent.find("Authorization: Bearer secret\r\n")!=std::string::npos&&sent.substr(sent.size()-7)=="{\"a\":1}"&&opens==1);
+  assert(NativeHttp::apiV2()->close(nullptr,t)==0);assert(allocations==0);++cases;
+ }
+ for(const char* name:{"Host","Content-Length","Transfer-Encoding","Expect","Bad\r\n"}){
+  reset();risc_http_header_v2 header{name,"value"};risc_http_request_v2 r{sizeof(r),RISC_HTTP_GET,"https://example.test/",&header,1,nullptr,0,100,5000,1780000000,nullptr,0};uint64_t t=9;
+  assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==RISC_HTTP_INVALID&&t==0&&allocations==0);++cases;
+ }
+ reset();{risc_http_header_v2 h{"Authorization","secret\r\nInjected: yes"};risc_http_request_v2 r{sizeof(r),RISC_HTTP_GET,"https://example.test/",&h,1,nullptr,0,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==RISC_HTTP_INVALID);++cases;}
+ reset();{risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST,"https://example.test/",nullptr,0,"{}",2,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);readWait=true;
+  int rc=1;for(int i=0;i<6000&&rc>=0;++i){rc=NativeHttp::apiV2()->advance(nullptr,t);++clockMs;}
+  risc_http_response_v2 info{};info.struct_size=sizeof(info);assert(NativeHttp::apiV2()->info(nullptr,t,&info)==0&&info.sent_bytes>0&&rc==RISC_HTTP_TIMEOUT);close(t);++cases;}
  // A direct checked socket close observes failures that the SDK normally
  // discards. Ambiguous ownership never closes either descriptor.
  for(unsigned which=0;which<4;++which){
@@ -465,6 +504,9 @@ int main(){
   assert(NativeHttp::api()->close(nullptr,t)==RISC_HTTP_RETAINED&&closes==1);
   NativeHttp::session->~Session();heap_caps_free(NativeHttp::session);NativeHttp::session=nullptr;++cases;
  }
+#if RISC_NATIVE_ESP_IDF
+ for(unsigned retained:{0u,1u}){reset();delayWorker=true;clockMs=10;risc_http_request_v2 r{sizeof(r),RISC_HTTP_GET,"https://example.test/",nullptr,0,nullptr,0,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);assert(NativeHttp::apiV2()->advance(nullptr,t)==RISC_HTTP_AGAIN);assert(NativeHttp::apiV2()->close(nullptr,t)==RISC_HTTP_AGAIN);if(retained){clockMs+=30001;assert(NativeHttp::apiV2()->close(nullptr,t)==RISC_HTTP_RETAINED);dnsWork(nullptr);NativeDns::discard();NativeHttp::destroy(*NativeHttp::session);discardRetained();}else{dnsWork(nullptr);assert(NativeHttp::apiV2()->close(nullptr,t)==0);}delayWorker=false;++cases;}
+#endif
  // Last case intentionally retains native poison after SDK freed a socket
  // object but could not prove closure; no new requests or unsafe unload.
  reset();{auto t=open();closeFail=true;assert(NativeHttp::api()->close(nullptr,t)==RISC_HTTP_RETAINED&&!NativeHttp::idle()&&!NativeHttp::safe()&&live==0);assert(NativeHttp::api()->close(nullptr,t)==RISC_HTTP_RETAINED&&closes==1);++cases;

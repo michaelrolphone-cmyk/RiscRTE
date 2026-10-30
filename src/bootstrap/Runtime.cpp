@@ -841,7 +841,7 @@ int32_t Runtime::memoryHeapSnapshot(void* context,risc_memory_heap_snapshot_v1* 
   for(const auto& grant:r->invocation_->appGrants_)
     if(grant.live && grant.invocation==r->invocation_->streams_.context() && grant.api==&grant.memoryHeap && grant.memoryHeap.context==context)found=true;
   if(!found)return RISC_MEMORY_CONTEXT;
-  if(!out || out->struct_size<sizeof(*out) || out->memory_class>RISC_MEMORY_DMA)return RISC_MEMORY_INVALID;
+  if(!out || out->struct_size<sizeof(*out) || out->memory_class>RISC_MEMORY_STACK_HEADROOM)return RISC_MEMORY_INVALID;
   risc_memory_heap_snapshot_v1 value{};value.struct_size=sizeof(value);value.memory_class=out->memory_class;
   const int32_t rc=r->port_.memoryHeap(&value);
   if(rc!=RISC_MEMORY_OK)return rc==RISC_MEMORY_UNSUPPORTED?rc:RISC_MEMORY_INVALID;

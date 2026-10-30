@@ -69,6 +69,17 @@ extern unsigned int __fixunsdfsi(double a);
 extern int __gtdf2(double a, double b);
 extern double __floatunsidf(unsigned int i);
 extern double __divdf3(double a, double b);
+/* Pure compiler arithmetic helpers used by the pinned GCC15 PIC ABI. These
+ * grant no OS, device, allocator or task authority. Keep signedness/width exact. */
+extern int __nedf2(double,double), __gedf2(double,double), __eqdf2(double,double), __ledf2(double,double);
+extern int64_t __fixdfdi(double), __fixsfdi(float);
+extern uint64_t __fixunsdfdi(double), __fixunssfdi(float), __udivdi3(uint64_t,uint64_t), __umoddi3(uint64_t,uint64_t);
+extern int __fixdfsi(double);
+extern double __floatsidf(int), __floatdidf(int64_t), __floatundidf(uint64_t), __extendsfdf2(float);
+extern double __adddf3(double,double), __muldf3(double,double), __subdf3(double,double);
+extern float __truncdfsf2(double);
+extern uint32_t __bswapsi2(uint32_t);
+extern uint64_t __bswapdi2(uint64_t);
 
 static const char *TAG = "ELF_SYMBOL";
 // Ordinary app relocations receive invocation-owned allocators. Privileged
@@ -78,6 +89,12 @@ extern uintptr_t native_app_memory_symbol(const char *name);
 /** @brief Libc public functions symbols look-up table */
 
 static const struct esp_elfsym g_esp_libc_elfsyms[] = {
+    ESP_ELFSYM_EXPORT(__nedf2), ESP_ELFSYM_EXPORT(__gedf2), ESP_ELFSYM_EXPORT(__eqdf2), ESP_ELFSYM_EXPORT(__ledf2),
+    ESP_ELFSYM_EXPORT(__fixdfdi), ESP_ELFSYM_EXPORT(__fixsfdi), ESP_ELFSYM_EXPORT(__fixunsdfdi), ESP_ELFSYM_EXPORT(__fixunssfdi),
+    ESP_ELFSYM_EXPORT(__udivdi3), ESP_ELFSYM_EXPORT(__umoddi3), ESP_ELFSYM_EXPORT(__fixdfsi),
+    ESP_ELFSYM_EXPORT(__floatsidf), ESP_ELFSYM_EXPORT(__floatdidf), ESP_ELFSYM_EXPORT(__floatundidf), ESP_ELFSYM_EXPORT(__extendsfdf2),
+    ESP_ELFSYM_EXPORT(__adddf3), ESP_ELFSYM_EXPORT(__muldf3), ESP_ELFSYM_EXPORT(__subdf3), ESP_ELFSYM_EXPORT(__truncdfsf2),
+    ESP_ELFSYM_EXPORT(__bswapsi2), ESP_ELFSYM_EXPORT(__bswapdi2),
 
     /* string.h
      *

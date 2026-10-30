@@ -13,6 +13,7 @@
 #include "runtime/storage/StorageWorker.h"
 #include <RiscStorageWorkerAdmissionV1.h>
 #include <RiscHttpTimeV1.h>
+#include <RiscHttpClientV2.h>
 #include <RiscRadioIqResourceV1.h>
 #include <RiscUsbPhyResourceV1.h>
 #ifndef RISC_NATIVE_STORAGE_CUSTODY
@@ -76,6 +77,7 @@ struct Hardware {
   bool (*i2sOpenRx)(uint8_t,uint8_t,uint8_t,uint32_t)=nullptr;
   bool (*i2sRead)(uint8_t,int16_t*,size_t,size_t*,uint32_t)=nullptr;
   const risc_http_client_v1* httpClient=nullptr;
+  const risc_http_client_v2* httpClientV2=nullptr;
   bool (*httpIdle)()=nullptr;
   bool (*httpSafe)()=nullptr;
   // Generic native mutation exclusion; healthy activity need not revoke KV.
@@ -249,6 +251,7 @@ class Port final {
   risc_platform_clock_wait_v1 clock_{};
   risc_realtime_control_api_v1 realtime_{};
   risc_http_client_time_v1 http_{};
+  risc_http_client_v2 httpV2_{};
   RiscBoot::EntropyBackend entropy_{};
   static int32_t entropyFill(void*,uint64_t,void*,uint32_t);
   bool entropyIdle(uint64_t owner=0) const;
@@ -341,6 +344,11 @@ class Port final {
   static bool radioScanStart(void*,uint64_t);
   static bool radioScanPoll(void*,uint64_t,garden_radio_scan_result_v1*);
   static bool radioScanCancel(void*,uint64_t);
+  static int32_t httpOpenV2(void*,const risc_http_request_v2*,uint64_t*);
+  static int32_t httpAdvanceV2(void*,uint64_t);
+  static int32_t httpReadV2(void*,uint64_t,void*,uint32_t,uint32_t*);
+  static int32_t httpInfoV2(void*,uint64_t,risc_http_response_v2*);
+  static int32_t httpCloseV2(void*,uint64_t);
   static int32_t httpOpen(void*,const risc_http_request_v1*,uint64_t*);
   static int32_t httpOpenWithTime(void*,const risc_http_request_v1*,const char*,uint64_t*);
   static int32_t httpRead(void*,uint64_t,void*,uint32_t,uint32_t*);

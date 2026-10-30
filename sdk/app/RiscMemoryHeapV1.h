@@ -8,7 +8,11 @@
 extern "C" {
 #endif
 #define RISC_MEMORY_HEAP_CAPABILITY "memory.heap"
-enum {RISC_MEMORY_DEFAULT=0,RISC_MEMORY_INTERNAL=1,RISC_MEMORY_EXTERNAL=2,RISC_MEMORY_DMA=3};
+enum {RISC_MEMORY_DEFAULT=0,RISC_MEMORY_INTERNAL=1,RISC_MEMORY_EXTERNAL=2,RISC_MEMORY_DMA=3,
+ RISC_MEMORY_STACK_HEADROOM=4};
+/* STACK_HEADROOM is the current owner task's historical minimum unused stack,
+ * in bytes. All three byte fields contain that observation; it is not a heap
+ * capacity or reservation. Older ports return UNSUPPORTED. */
 enum {RISC_MEMORY_OK=0,RISC_MEMORY_INVALID=-1,RISC_MEMORY_CONTEXT=-2,RISC_MEMORY_UNSUPPORTED=-3};
 typedef struct {uint32_t struct_size,memory_class;uint64_t total_bytes,free_bytes,largest_block;} risc_memory_heap_snapshot_v1;
 typedef struct {

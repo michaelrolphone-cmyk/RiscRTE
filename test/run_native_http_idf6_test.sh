@@ -5,12 +5,12 @@ idf="${IDF_PATH:-$repo/../esp-idf}"
 mbed="$idf/components/mbedtls"
 [[ -f "$mbed/mbedtls/include/mbedtls/ssl.h" ]] || { echo "Set IDF_PATH to the selected ESP-IDF6 checkout" >&2;exit 1; }
 build="$(mktemp -d)";trap 'rm -rf "$build"' EXIT
-flags=(-DMBEDTLS_PLATFORM_MEMORY -Wall -Wextra -Werror -Wno-missing-field-initializers)
+flags=(-DRISC_NATIVE_ESP_IDF=1 -DMBEDTLS_PLATFORM_MEMORY -Wall -Wextra -Werror -Wno-missing-field-initializers)
 san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g);fi
 # Real selected SDK mbedTLS4/PSA declarations, HTTP parser and esp_mem.c. Only ESP-TLS
 # transport, heap capabilities and monotonic clock are fault-injected.
-include=(-I"$repo/test/native_http_idf6_shim" -I"$idf/components/esp_common/include"
+include=(-I"$repo/test/native_dns_shim" -I"$repo/test/native_http_idf6_shim" -I"$idf/components/esp_common/include"
  -I"$mbed/mbedtls/include" -I"$mbed/mbedtls/tf-psa-crypto/include"
  -I"$mbed/mbedtls/tf-psa-crypto/drivers/builtin/include" -I"$mbed/port/include"
  -I"$idf/components/http_parser" -I"$repo/src" -I"$repo/sdk/driver" -I"$repo/test/native_http_shim")
