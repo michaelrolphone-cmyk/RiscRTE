@@ -4,10 +4,11 @@ import argparse,hashlib,json,shlex,shutil,struct,subprocess
 from pathlib import Path
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--sdk',type=Path,required=True);p.add_argument('--build',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args();root=a.runtime.resolve();sdk=a.sdk.resolve();build=a.build.resolve()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--runtime',type=Path,required=True);p.add_argument('--sdk',type=Path,required=True);p.add_argument('--build',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--execution-fixture',action='store_true');a=p.parse_args();root=a.runtime.resolve();sdk=a.sdk.resolve();build=a.build.resolve()
  commit=subprocess.check_output(['git','-C',root,'rev-parse','HEAD'],text=True).strip();sdkcommit=subprocess.check_output(['git','-C',sdk,'rev-parse','HEAD'],text=True).strip();assert sdkcommit=='fff9895c82d744c7237be8847347bdd1b07c6643'
  config=(build/'config/sdkconfig.h').read_text();assert '#define CONFIG_FREERTOS_SMP 1' not in config,'Unreviewed Amazon SMP worker-create path';assert '#define CONFIG_FREERTOS_NUMBER_OF_CORES 2' in config
  entries=json.loads((build/'compile_commands.json').read_text());wanted={'src/ports/esp32s3/CpuPort.cpp','src/ports/esp32s3/NativeHardware.cpp'};commands=[];inputs={};objects={};compiler=None
+ if a.execution_fixture:wanted.add('test/native_worker_target/probe.cpp')
  for entry in entries:
   source=Path(entry['file']);source=(source if source.is_absolute() else Path(entry['directory'])/source).resolve()
   if not source.is_relative_to(root) or str(source.relative_to(root)) not in wanted:continue
@@ -36,6 +37,15 @@ def main():
  authority=[line for line in symbols.splitlines() if line.endswith('RiscCpu::NativeResidentWorker::authority')];assert len(authority)==1
  fields=authority[0].split();address=int(fields[0],16);size=int(fields[1],16);assert 0x3fc00000<=address<0x3fd00000 and 0<size<=4096,'Worker atomics are not linked in internal DRAM'
  assert 'RiscCpu::NativeResidentWorker::residentEntry' in symbols
- receipt=dict(runtime_commit=commit,sdk_commit=sdkcommit,compiler={'path':str(compiler),'sha256':sha(compiler),'version':subprocess.check_output([str(compiler),'--version'],text=True)},objects=objects,inputs=dict(sorted(inputs.items())),commands=commands,authority={'address':address,'bytes':size},elf={'bytes':len(data),'sha256':sha(elf)},binary={'bytes':(build/'riscrte_native.bin').stat().st_size,'sha256':sha(build/'riscrte_native.bin')},sdkconfig_sha256=sha(build/'config/sdkconfig.h'),hardware_tested=False,target_execution=False,private_import_cohort_changed=False)
+ if a.execution_fixture:
+  assert '__wrap_app_main' in symbols and commit.encode() in data
+  assert b'WORKER_PROBE result=scheduler_cases_passed' in data
+  links=subprocess.check_output(['ninja','-C',str(build),'-t','commands','riscrte_native.elf'],text=True).splitlines()
+  selected=[]
+  for line in links:
+   args=shlex.split(line)
+   if any(arg=='-o' and i+1<len(args) and Path(args[i+1]).name=='riscrte_native.elf' for i,arg in enumerate(args)):selected.append(args)
+  assert len(selected)==1 and '-Wl,--wrap=app_main' in selected[0], 'Native test startup wrapper not selected'
+ receipt=dict(execution_fixture=a.execution_fixture,provider_graph_qualified=False,runtime_commit=commit,sdk_commit=sdkcommit,compiler={'path':str(compiler),'sha256':sha(compiler),'version':subprocess.check_output([str(compiler),'--version'],text=True)},objects=objects,inputs=dict(sorted(inputs.items())),commands=commands,authority={'address':address,'bytes':size},elf={'bytes':len(data),'sha256':sha(elf)},binary={'bytes':(build/'riscrte_native.bin').stat().st_size,'sha256':sha(build/'riscrte_native.bin')},sdkconfig_sha256=sha(build/'config/sdkconfig.h'),hardware_tested=False,target_execution=False,private_import_cohort_changed=False)
  a.output.parent.mkdir(parents=True,exist_ok=True);a.output.write_text(json.dumps(receipt,indent=2)+'\n');print('Actual native Runtime worker objects/link/DRAM/SDK provenance PASS; not device execution')
 if __name__=='__main__':main()
