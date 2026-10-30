@@ -1,0 +1,11 @@
+idf_component_register(SRCS "probe.cpp" INCLUDE_DIRS "../../../src" "../../../sdk/driver"
+ REQUIRES esp_driver_dma esp_mm esp_psram esp_timer)
+target_link_libraries(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=esp_cache_msync")
+if(NOT RISC_SOURCE_SHA MATCHES "^[0-9a-f]+$")
+ message(FATAL_ERROR "Explicit source commit is required for the diagnostic")
+endif()
+string(LENGTH "${RISC_SOURCE_SHA}" source_length)
+if(NOT source_length EQUAL 40)
+ message(FATAL_ERROR "Expected exact40-character source commit")
+endif()
+target_compile_definitions(${COMPONENT_LIB} PRIVATE RISC_CACHE_PROBE_SOURCE_SHA="${RISC_SOURCE_SHA}")

@@ -4,7 +4,7 @@ idf_component_register(SRCS ${runtime_sources} ${RISC_NATIVE_EXTRA_SOURCES}
     INCLUDE_DIRS "${root}/src" "${root}/include" "${root}/sdk/app"
                  "${root}/sdk/driver" "${root}/sdk/hardware"
                  "${root}/lib/ArduinoJson/src" "${root}/lib/hal"
-    REQUIRES riscrte_loader risc_littlefs app_update esp_app_format esp_timer esp_system
+    REQUIRES riscrte_loader risc_littlefs app_update esp_app_format esp_timer esp_system esp_mm
              nvs_flash spiffs spi_flash esp_psram esp_wifi bt lwip esp_netif esp_event
              esp_http_client esp-tls http_parser mbedtls fatfs driver esp_driver_gpio esp_driver_i2s
              esp_driver_ledc esp_driver_sdmmc esp_driver_sdspi esp_driver_spi

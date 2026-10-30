@@ -1,0 +1,3 @@
+#pragma once
+#define SOC_EXTRAM_DATA_LOW 0x3c000000U
+#define SOC_EXTRAM_DATA_HIGH 0x3e000000U

@@ -1,0 +1,1264 @@
+{
+  "runtime_commit": "13eca114cb58469cf6004fafc3da84fbd9d29beb",
+  "sdk_commit": "fff9895c82d744c7237be8847347bdd1b07c6643",
+  "candidate_paths": [
+    "sdk/driver/RiscResidentWorkerV1.h",
+    "src/ports/esp32s3/CpuPort.cpp",
+    "src/ports/esp32s3/CpuPort.h",
+    "src/ports/esp32s3/NativeHardware.cpp",
+    "src/ports/esp32s3/NativeResidentWorker.h",
+    "src/runtime/workers/ResidentWorker.h",
+    "test/fixtures/resident_worker.c",
+    "test/fixtures/resident_worker_api.h",
+    "test/fixtures/resident_worker_app.c",
+    "test/native_resident_worker_test.cpp",
+    "test/resident_worker_binding_test.cpp",
+    "test/resident_worker_lifecycle_test.cpp",
+    "test/resident_worker_shim/esp_attr.h",
+    "test/resident_worker_shim/esp_heap_caps.h",
+    "test/resident_worker_shim/esp_timer.h",
+    "test/resident_worker_shim/freertos/FreeRTOS.h",
+    "test/resident_worker_shim/freertos/task.h",
+    "test/resident_worker_test.cpp",
+    "test/run_resident_worker.py",
+    "sdk/driver/RiscPsramCacheV1.h"
+  ],
+  "dependency_inputs": {
+    "runtime/lib/ArduinoJson/src/ArduinoJson.h": {
+      "git_blob": "eb4b94a69514d6d2eb7332e8b87cdfbc27f551da",
+      "sha256": "5d2f09f1bf64f0859918420fcaf3221a05b1f4dd75c26aacb0db4a18b208b636"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson.hpp": {
+      "git_blob": "b3e71d35e4c65de1f8b31bb5eb1cc0e791ae9f85",
+      "sha256": "36695bc1cb58a4dbbc85f50f142f0476108cc676622b6ee945d43585107131b6"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/ArrayData.hpp": {
+      "git_blob": "79ade355b21fb871f182c4ce810c5f0cfae0326a",
+      "sha256": "837ee2d89772f01a381872c48dc380537c5062ffe831855a0e4d005ea0cc0485"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/ArrayImpl.hpp": {
+      "git_blob": "b4fb1264f5d8c9552f659e91a31f9519719d2a69",
+      "sha256": "c26b99787dc06d9c1ed8bb431452602f233dc2f61e849260ab683f086c74b79d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/ElementProxy.hpp": {
+      "git_blob": "ec2ea54731f02a1517a736338a8078ff72d0affc",
+      "sha256": "6dbd8aa8dc3f50bdbec88c8f6e1e80ce22e396604dc05077ecbc2e14e2cbef9e"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/JsonArray.hpp": {
+      "git_blob": "436793adf5e242cdfdcb10e48cdcec6c6cb0bdf0",
+      "sha256": "ca547bc44a7fcf8952d4258c15b2cec7596756ffffde51fac76eaae0b2716d7b"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/JsonArrayConst.hpp": {
+      "git_blob": "b4c138a869f82fdefa983495e3d86770955b6c93",
+      "sha256": "f735457699d258d2565742813701fdbf22c1c28b6c02b85a479f3cdd6f53198a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/JsonArrayIterator.hpp": {
+      "git_blob": "39ca45e7f81732d476beca633790139a992cbd79",
+      "sha256": "bed9b03504b6f6624c1cc51fca0170b0514c6e602d2b56ef54b79f126c70dbc3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Array/Utilities.hpp": {
+      "git_blob": "d9ba143bb4a7a8733007f16abb4ab194c6d19a3a",
+      "sha256": "77d4249d8041736bec8dbedb097edd3512aa3be1a154700a78035327f96a55fc"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Collection/CollectionData.hpp": {
+      "git_blob": "937c10c950ae3d2c6c85536b21b56d4b246c86de",
+      "sha256": "f5891309dd32441f769d5511f568e8637b6fd418b70a482552aa9c935bd981f3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Collection/CollectionImpl.hpp": {
+      "git_blob": "559c0a5e722e36364953b7000af0932a9437dc56",
+      "sha256": "c71d8c6199b52f6ac8fbb00f36edc3a98ba0d7edf9de2e2ca579c1a0132e24d5"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Configuration.hpp": {
+      "git_blob": "696ce4c935f8da888c50e9b884241860c0049cba",
+      "sha256": "905b896b905b04787f2b865484afa1a8a7cb7dc34dfb6de60713ee640f2199e4"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/DeserializationError.hpp": {
+      "git_blob": "7ec685fb4fbb95a0f8f91c79c47bf88ce5060dbb",
+      "sha256": "d10f21f44a137dfd68b844d78271d51b0d6fdf24235393a598719496db6f7353"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/DeserializationOptions.hpp": {
+      "git_blob": "0d31d2f1afc1f06a50ec6ec6d70642759dd3d22e",
+      "sha256": "9302870dc4130c426eb19e108a77acd2d4c2c88a85b5fe07d19e186f1f7e64ca"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Filter.hpp": {
+      "git_blob": "4cd564782f0f13b9130b3f3f49f2b332f31cb5bb",
+      "sha256": "af64fe15db2b647616a4da3346fecee1f5a88825cde03fcd7953b08e4e0c28fe"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/NestingLimit.hpp": {
+      "git_blob": "fb4610237b18356808a6353c66be05f8288cf228",
+      "sha256": "4bc0cb186c863b1728551f30e57500695d93c4090373c1faa22baeb9964892ac"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Reader.hpp": {
+      "git_blob": "b8e896b38e5cb8c8011baf69dcd2b692ee4460b7",
+      "sha256": "b75c0eb3f6fb9ad90013c26975ae50973516807dd0af4a40c14d492971db41b7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Readers/IteratorReader.hpp": {
+      "git_blob": "5fc8ba5208744c350232c8090bd612fe9f41aa5c",
+      "sha256": "3f2a6ae8dae4c25acab53e55f224d84aaa2fbe2b365d4f030378dd9911e6b384"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Readers/RamReader.hpp": {
+      "git_blob": "b778a24406a51fa595a220c883ccb49fe1d2b8f8",
+      "sha256": "905edbf0a2e1ef3dc0f50f4411034d699a09a9639bd4d1692f2782b39dd68927"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Readers/StdStreamReader.hpp": {
+      "git_blob": "5e1233b275e50a92858f2b3b563256a685f38bbf",
+      "sha256": "cc4027d58f9e4a69fb19544ff425768d6f2f43db40cc003307ed50d976f24eca"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/Readers/VariantReader.hpp": {
+      "git_blob": "23d72605e080de253382d23fe4499eae4e2d2837",
+      "sha256": "bf1d3a8baa7d88a8f0932bee9f280c00cec7fdc60f611ec02b2bffbaf26213c9"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Deserialization/deserialize.hpp": {
+      "git_blob": "4c3b229873a991768936f92bf42ec63dc056866a",
+      "sha256": "9da43a503753e25e263a98b4549424ccacaad55d47ea02e034691277a661c933"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Document/JsonDocument.hpp": {
+      "git_blob": "63902c4abc756c5781797cded3b4c38dd521f5a1",
+      "sha256": "04a458891be3b4667e62ad88e8dccb46db84be234be3f590ebdd37681e4e6b53"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/EscapeSequence.hpp": {
+      "git_blob": "687f29184e05d8882c61fbc9692ee7322f381c63",
+      "sha256": "e581927ef4baee76eb9e82069de21c6bfc41037835caf3185cb9fb901144c9ff"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/JsonDeserializer.hpp": {
+      "git_blob": "288a22ca6c53b5f6ca551de166d04768a168a382",
+      "sha256": "eab580ffc09cfb16ca9f5852455760e7d945ee4c7e5d506d2c46049cae1ca5dd"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/JsonSerializer.hpp": {
+      "git_blob": "e95bfc77314eb2d95ddcd163b8e312e57078dd7c",
+      "sha256": "165b257e03bbc35b93c04a3615c22667ad3b38c4d68f52e712b75ac5ab73cf05"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/Latch.hpp": {
+      "git_blob": "a7dcbe9b49635a4d2a69ec1b67a2614812b59e53",
+      "sha256": "253e02b7b6e1979851cd29f1c6d471845b91f909dd766452d8e0c3033a62b38d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/PrettyJsonSerializer.hpp": {
+      "git_blob": "2cfd1774811b6b4282030ae635d007849fd479ba",
+      "sha256": "7f014affaf7801e167a755ee9f83279854e373876bc75e474363775e153874f7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/TextFormatter.hpp": {
+      "git_blob": "91d55436a7101df74fa51e76f2b90b8f0be58f67",
+      "sha256": "57bfc74d015980fbd91a06193733c1ee33c0cc76969ff53e3f6a290b520e4012"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/Utf16.hpp": {
+      "git_blob": "7f63d0813053954e62cf24dc3b9a1601e71edff2",
+      "sha256": "5af304d335fa27f697444c12fc32e21114479f9381aa75519819fc38c1a2745a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Json/Utf8.hpp": {
+      "git_blob": "8eb38e6849b72bf8d7c9063bd213b1c14e2023ab",
+      "sha256": "8efc9f909d1c258528e2788165fa24d315b74142d6f519b3414ef8be2c34ac0c"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/Alignment.hpp": {
+      "git_blob": "e844775ab20700edc46dac76e88e830afe3e5406",
+      "sha256": "2c2a04e89005b7e3e2bf3175410d660fb1a219e54408826f8a5e9c9b53e53fee"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/Allocator.hpp": {
+      "git_blob": "e98c7bf95226d18f99950592b2188caedfdbe8fe",
+      "sha256": "3b3ba7e2bb200d557a78859073b417b5f827f18c5a25cf57c77f2348c7631ce2"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/MemoryPool.hpp": {
+      "git_blob": "4663a61e124410f9969fb54455fdf7f1aea16f8d",
+      "sha256": "892850923c7771ad98338ecdacf0ae8ae383bd79309cd7ea77ac217750d6d4ff"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/MemoryPoolList.hpp": {
+      "git_blob": "7da08063e53d684e1c4f97dbd3b4e529ad736d15",
+      "sha256": "3fa44c52573cd7bb6f418f589773151cb01989250f97d9388ae8f187928fbd22"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/ResourceManager.hpp": {
+      "git_blob": "f74c91bc5ee1a12fe991fae2a246ca124156be12",
+      "sha256": "7c7dfef1e5f6593bdb032ff4a59ddaf6f6028fcdc6319699ad498985c107416d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/ResourceManagerImpl.hpp": {
+      "git_blob": "a701c0d470d2ed7a131c27c88032b612652d435e",
+      "sha256": "824f4ff2f5ca628050e3d6e20aafcb5a23c4520ea4e3f8c4831d256128c4d2cc"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/StringBuffer.hpp": {
+      "git_blob": "4d5caa7523bd72bc1db2c6bccaa527215d5f5347",
+      "sha256": "f5d58605a4bfc609842d8e308685cfbbf2a67a600535a4a7e6f267a29fa39d4d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/StringBuilder.hpp": {
+      "git_blob": "db6c35444cbbbec895622e7f798397cf189968cc",
+      "sha256": "afd5a44e855bc96cc1d655c44c1bc60e6cb738d09db50f1e1b0a0aef4545aac5"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/StringNode.hpp": {
+      "git_blob": "26bd1803788cf4b9d9a206ab5e387497aad5dc52",
+      "sha256": "860225203715dcfcb399b193b2196ca388c59eca7aeedbf3587a525915cae3b1"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Memory/StringPool.hpp": {
+      "git_blob": "0b71ed222cb53a40f9cd43af47cf71a8bafffc83",
+      "sha256": "51271fd322ea1b3787242e0d43196f92b84725a022844674040518a6dfef9fe9"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Misc/SerializedValue.hpp": {
+      "git_blob": "42691921daa87ad1f0054d1e94e96f65f2dad3a4",
+      "sha256": "d4c3c3ef7805bbc92aa759c50497ddcb7af6890b28c5405c3ee055dd866a430f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/MsgPackBinary.hpp": {
+      "git_blob": "2c0f6b717ae6de14ce2893bf4d965c9dbbcdc31f",
+      "sha256": "ac66968129fa0d537f4bcbf085c5b5c6c2a9076b7943361b12bce97ef849a8e5"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/MsgPackDeserializer.hpp": {
+      "git_blob": "904da179fc0d89c5f23708261f6a533a3699966e",
+      "sha256": "8d82a6c6ed575826a0a462d62c8b2973d3aac783ddaf7d588e20c2a238881cbc"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/MsgPackExtension.hpp": {
+      "git_blob": "b51eb30bd430a210187e32d9cc178564ba10b075",
+      "sha256": "763501aee1773a80de806ded6ede3620f480959bdc0d3fb1cca5f726997e7147"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/MsgPackSerializer.hpp": {
+      "git_blob": "43f4cd2621f514b6bfc13a3fe1f3778ee00abc40",
+      "sha256": "4672f7e6a4422f8f75d7839462278969ce8d1c92d538e16f1e9ec7325a704884"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/endianness.hpp": {
+      "git_blob": "1328f9e26a4b312852110773952eddc2176b9b9f",
+      "sha256": "1553671272918ee19331576c4ad279cae0614309feea2fa5b6ad7bed0fb1b8e4"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/MsgPack/ieee754.hpp": {
+      "git_blob": "ad8e2f0417b5de1a81d6a880371fd204865fcb6c",
+      "sha256": "6884f01acb37bf41a35f772fe9443bed8bb7fefbba83c1ddbd470cd49ed84635"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Namespace.hpp": {
+      "git_blob": "feb580a17f64d7578292cdfa3e577bcbb1416fe0",
+      "sha256": "a54e347ce43fb1fb44ab473b34efb5fadadb37d614801c63bc1a1ac1de4e93c0"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/FloatParts.hpp": {
+      "git_blob": "4a06016c0b55a7a9b94632f0cbf839ec49e3934f",
+      "sha256": "d7317069a5e814d595ad0dc2efb87c7d0f01a36e5bf419fe1fd445fcf2fbd4f3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/FloatTraits.hpp": {
+      "git_blob": "65df83820121421027b8e0445e198b2b13db3b99",
+      "sha256": "e47728474bb23a8627bf977bc8f0dc0dff3e2219300bbaa86f9bc68881dd6304"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/JsonFloat.hpp": {
+      "git_blob": "400cec44ff4463704fe941b4b7d3e62a8061d5fc",
+      "sha256": "c5acc45159813dfe91974d083897b733da310d81c63acfc71f45e28509f8cf9d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/JsonInteger.hpp": {
+      "git_blob": "f626d090740e2dbd2e194a39aec0c0174ebef97b",
+      "sha256": "530ec42a392467a6b4f9bae248093038265e9a8e8cfd449a04c2b93e3083ba25"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/arithmeticCompare.hpp": {
+      "git_blob": "f9f30a2f815de0dd992ad159fdcb4d57bb77b7b0",
+      "sha256": "09b0baa129e52874c13eb30eb4c5426b6a18dc931850525892faf3fcbb1351d1"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/convertNumber.hpp": {
+      "git_blob": "e83d6ce3b4141f6ea49ad8ec57316d12a1e9c02a",
+      "sha256": "6f266f21da8aa051534a334300855acaaa447ea3ad2ec59868a47210e8ce4191"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Numbers/parseNumber.hpp": {
+      "git_blob": "ab3452898ca0f6ee0229c28ae2a58c5c0b8e744b",
+      "sha256": "d5fcedcbbe39d51be47d6ee8dd9c3519ff120b0dfca193cb3bd27f3f4284e914"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/JsonObject.hpp": {
+      "git_blob": "662851b1824270548d9720ffcb46b42a4aa56036",
+      "sha256": "a5a2d622428dd75e29e7861fdc443f8c9f022f50a6229db1375e12d6761e12cf"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/JsonObjectConst.hpp": {
+      "git_blob": "99540c41118ce0d9840e58be96fff73024fb0ccd",
+      "sha256": "9f0e2965d503e5cbf11b632a1fd119694a4eb32b00f6173de3d2e9f0b6ce2d0a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/JsonObjectIterator.hpp": {
+      "git_blob": "90637f58bf36c8cd19459c006505cee1e8141c28",
+      "sha256": "651189ebe60ed87096fc188688d8cb019e1ba4a545c63bcb0232bfee148aa9bb"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/JsonPair.hpp": {
+      "git_blob": "f0dcb50a80c6c538abcfd5f71a11dea62986f710",
+      "sha256": "daa3c26c2a89b9f7ff8b96e88c77a526ed7e4360c849fc420829451f30987b17"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/MemberProxy.hpp": {
+      "git_blob": "7e43d38d2962c58dd2db434f257d690d9d1b9c81",
+      "sha256": "2182c5b13889a8b07c157e5a6987b0a8fcf74f47595f3dc11f7d66d9ee307e5a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/ObjectData.hpp": {
+      "git_blob": "9b98962835f2638b0778f4ddacfaceac8a8d68c3",
+      "sha256": "4fa596fcd4d6014a46781fe0972423258c4a3a3d0b67984cd3f5c9fe4f3f91d3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Object/ObjectImpl.hpp": {
+      "git_blob": "67677d744d45cdecdd8955289bf88e815e2e70c2",
+      "sha256": "2d41a186c71897e3fe056b728429fa746b813fb138e62ab1a060cf8c24b785a1"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/alias_cast.hpp": {
+      "git_blob": "9529b05844044703630ccd571251a02dab80eda3",
+      "sha256": "3a7505ae51ebc04cbbeadc5e199e78c78c2eef85b7dc398c2a92dd6a7b8cb934"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/assert.hpp": {
+      "git_blob": "e7d42a738b3fef543a904e155e890ec407563693",
+      "sha256": "b5252fe977be572cfdec8c887fc24c45dc24edf6bab6ddcc794d11cfeb463764"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/attributes.hpp": {
+      "git_blob": "99e1b33b8b966ffb257444208074ee5cea6f9a0c",
+      "sha256": "f7422477c513753ae0d70e30cf61e99bcc4734cd9157bd1b856faa15b6bd68d7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/ctype.hpp": {
+      "git_blob": "afb8e84a57fbe1b51743c747eb7bf07d1c2fd20c",
+      "sha256": "a85de0bc1f7b83ab6bd2acf6e81fcfdaa6f23a68c19443d354d1f01a3b38e1b3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/integer.hpp": {
+      "git_blob": "6dded6ff875d47d3510a8d218f6e63dc641928b9",
+      "sha256": "72296ae7f2a1d41d313ac7a07424ac318e6f32066afdb21160f6f2e206196dd0"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/limits.hpp": {
+      "git_blob": "9e87bbd0fb597290cc0fa6c182304f01d025fccb",
+      "sha256": "af2ee86ce21c3f8765ed740e9043148080a494b0cdaf1173a2629057655d815f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/math.hpp": {
+      "git_blob": "78375fdaf9accf84badcaa1a07ed0493b603f174",
+      "sha256": "128e8add4c1989fb96b9b76017239cf8c728ee877777cc69aad02952c52236a6"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/pgmspace_generic.hpp": {
+      "git_blob": "8ee166dd1a43c243092f0a71855f9d9f4fc75f37",
+      "sha256": "042e78afcd10161b708033902fe9613c949b6a272989deba3758cb3828f8545a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/preprocessor.hpp": {
+      "git_blob": "8402cfd5df38671fc9ac91257b1393c7736b9180",
+      "sha256": "5b2c815ea646000f58e92e8f81338b623c98100039c08df4ad50d110a6b8fc0d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits.hpp": {
+      "git_blob": "a4dd1d41b0d96391b2a8bae80d59955d15dcb52b",
+      "sha256": "595300e35e6dbbe946880c62e41252ad1811cc96dcd1fceb7f66a00d5039f54a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/conditional.hpp": {
+      "git_blob": "d699b6b8a79110590fa3ca4ff5fd0c8316eee44e",
+      "sha256": "b55cbe4e5464c5673e9fbff94ff9a4db377db5e01a55421d14b875dd508c8ff6"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/decay.hpp": {
+      "git_blob": "9a1075cda12779c984172b4d34c320ae7fd434d4",
+      "sha256": "cba214f0ddae81d9341e06f909a9ddce9109120e8908c990924be667d54f77bd"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/declval.hpp": {
+      "git_blob": "b16b575481ffbcdfbe9fdd2db482f07ce819eb89",
+      "sha256": "68c3fd5b4fd7a194257df4213b1df4b26865eee43015db43de6728448b8ea7a8"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/enable_if.hpp": {
+      "git_blob": "8fb8af4b519176a3a5f38b8b389d7f727c00aa2b",
+      "sha256": "47577979433842ea55b65398f54d4aa4f4bf28ca095890cafc22e10d8f7f42c1"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/function_traits.hpp": {
+      "git_blob": "9d957417588111b1065117b73d54c072d70a252e",
+      "sha256": "8ead527bc1d4e79c1a66d4cc37d3820c3e36ecfda2469209c5ef29987ca98c61"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/integral_constant.hpp": {
+      "git_blob": "cc893d7ce8c7c619f3d523f7ed205b8f2e2678fd",
+      "sha256": "c9f3cd3fdd00797a23ee1e3e4a52bda5eae2bc211dbabbbd72a92254758a1363"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_array.hpp": {
+      "git_blob": "e259b2d765c9ce6995c7c33cbcaf5d2e20c707d1",
+      "sha256": "068ae1616d3b89b245bc8fcaca819037f7f7659517399e47c538b43eb593ff6f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_base_of.hpp": {
+      "git_blob": "5d93d785a3782e0f32ed7381e05edeeb79c5f2b7",
+      "sha256": "684cf9616274e83ca3378d90db361967aa556e4afa3b845d41fad6b0c4e63991"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_class.hpp": {
+      "git_blob": "3946e595f1c1dabace2f569789bdf8d54e2415c9",
+      "sha256": "58fa2c0d9b8b44101457458f6d2e68127adc4dee3f8fc9b22a079352b40c66b8"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_const.hpp": {
+      "git_blob": "b8e848f3a0009ad3be3e918e5cb8e68d9b5bdfc8",
+      "sha256": "0a5f6411e1d30bf1af49e9dd9d065ce650f604a4a8e49de273e1d93a01712afe"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_convertible.hpp": {
+      "git_blob": "e48b353437eaaa9d74aa8564de60721dc2b91b59",
+      "sha256": "41696f28f53615eeb2a62335dcc7210bff05f2531c1376bb6504629e45ccb8ea"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_enum.hpp": {
+      "git_blob": "73a721bc69849634625f4f9071004352b9105edb",
+      "sha256": "860e3dec40ab1a2e4da676e24be4c13b1894269fa8fbcaf04c5742d4780bab6a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_floating_point.hpp": {
+      "git_blob": "2cba9e721d78f4e462c3f4b714fba6e72453ae7c",
+      "sha256": "b0551306d4e34dd5867b534040a984cfe9a8980cd46a90571afa9b4df7851851"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_integral.hpp": {
+      "git_blob": "08e4c47509b0e29e603dd26164273ff939049782",
+      "sha256": "68adf519deefab1240675e310b8b221f2b4380dde7a73bd92386f96d9d2a7994"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_pointer.hpp": {
+      "git_blob": "5a5e7eec7f406314cb64134e33ecc513725bdc74",
+      "sha256": "1b1c0735093bca4d1c87eb7312b34c79dcfb059ec1553d8f06178c9b4fa8325f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_same.hpp": {
+      "git_blob": "fe1dad892beb6f719644ef0693dc64b6cfaf4899",
+      "sha256": "23675f383d58591b548acccc07ca21ee4d748624c587c806bb7bee65e2535c16"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_signed.hpp": {
+      "git_blob": "25004e370d58d0cecb39d9583759f2569acd1a3e",
+      "sha256": "9cb22cd44f3e8a6641f4ec1ab37abba2010bfbbfaf190e6b44601160a5383b7a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/is_unsigned.hpp": {
+      "git_blob": "2665c8821f27e05ddce11ca75ba5b835a8610643",
+      "sha256": "3840c0556287ade9a15f1062a5a437d444471902ae86dba1acc79530c1496f17"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/make_unsigned.hpp": {
+      "git_blob": "016e716410c11ddab6a7768775ab1fc46797bb52",
+      "sha256": "0f544cce3804309aa54e2418fe6ebc2ed3ab5a3778c761e88ade1c29fc66e1c6"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/remove_const.hpp": {
+      "git_blob": "090f849d411bdcbda044dfad2c53e5305b52945d",
+      "sha256": "4359448d59ef880a498aee52df2025ee7f725cfedec804660663423995a8022d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/remove_cv.hpp": {
+      "git_blob": "114696ea886a6282accc87b2595cc3096bdcf8a8",
+      "sha256": "70abe18102c8647939bb5a19547838687f981ab40a85e269ea721b7e35d99079"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/remove_reference.hpp": {
+      "git_blob": "c3894c0213246c547dec6e71be9955142cd8e5a9",
+      "sha256": "a6a125233312f34bd4bb56329141ee98e75ee1833d764d2817f0fbc60eade2dc"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/type_identity.hpp": {
+      "git_blob": "63252081840ddc060d4e372566da56ff684ac014",
+      "sha256": "2b4754a94e97558104cbadd72e87a4232c06bd68f68fba6a7100ee8c10834914"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/type_traits/void_t.hpp": {
+      "git_blob": "c9bca15b7a2dfcd6e7773577b0824e73ff729e8f",
+      "sha256": "d8c4e357864d6d0d883351fd73c25e1ca9eead8aaf7c335e5ce4cb3018191000"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Polyfills/utility.hpp": {
+      "git_blob": "afbac7c5eb36fc97e6b460abbbaa412dfa26c0ff",
+      "sha256": "ac45a4b5a85a00ae5eb7102a684dfe3eaf30496eb83eb117859d864eea250b9b"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/CountingDecorator.hpp": {
+      "git_blob": "2e153be34d33dda97434f006ad64cf7ec539066a",
+      "sha256": "4cfab0eba58b207dbf34b2a349cb94ffecb62d5f99cdb73291ccd8d9d08a9114"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writer.hpp": {
+      "git_blob": "f736d8686d7e3e746f746dec0c733878927aab9d",
+      "sha256": "35b4927299e24ff719395e5608da402207d174f2bb74cbdff7a98224300b02ac"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writers/DummyWriter.hpp": {
+      "git_blob": "a308a4b5dfda804072ee6e1b218d96e91f514a58",
+      "sha256": "5bdce40e2aad008af7b793a05b4701850a8872e0f38554067574bb86f25939bd"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writers/StaticStringWriter.hpp": {
+      "git_blob": "f9407c37a3dc380b2bbcdf3582a67f0a6425a566",
+      "sha256": "612199f335cb95ad66bd6dde33965f0bbe6dfda66f10b952913baa840cf31b47"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writers/StdStreamWriter.hpp": {
+      "git_blob": "44758d49a3e108ebdc232ec921b23860e6a70f7e",
+      "sha256": "eca1c78e623ac7a9399f6c14cd278dac2819a2d4951002fdef18bf7f75a43123"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/Writers/StdStringWriter.hpp": {
+      "git_blob": "e2ffc72e7ac5b32a3ad2aa24856760fe1b9af8ac",
+      "sha256": "59cc23eab10479b37df381c9efe7be7d2d33bf1b9f76b8012aed3fa8f59e6c86"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/measure.hpp": {
+      "git_blob": "62d8fce1bcdf5e5977cd8e48ed455081e40da669",
+      "sha256": "afdd5d7e645f73d04aef10dcd93d2ee4f12fb03acbc31e2d1ec304245fcae0db"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Serialization/serialize.hpp": {
+      "git_blob": "ad93adecacc0e4b4c309b28944f9c87eb1923c6e",
+      "sha256": "2f6a41290337ab2c6d992811211706f9dfd988bf3f14b80b663ec3ce12811d5d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/Adapters/RamString.hpp": {
+      "git_blob": "c269ffb7cecb8ffa1a2a55e0adc92529c850d792",
+      "sha256": "eb72a8224a4f92d7b54b54c303ed49a8e7cd0a951f7574541864e3201bf3fc5d"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/Adapters/StringObject.hpp": {
+      "git_blob": "43bd330c4c658af04407fc14b199020c7f7df7d5",
+      "sha256": "4006612eda3de1a348367b4c5b4c7b7a853d1d133cb3a0c801735628615cc076"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/IsString.hpp": {
+      "git_blob": "094f53b52b0b27e1ebf6cbc7f31f45fe68f3e7ad",
+      "sha256": "597367d5b755192db6ed8355fe70ab41b9464a251fdc413c164546f14d87a13b"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/JsonString.hpp": {
+      "git_blob": "98bae43f48197d761875665561faaf90d9c22d3a",
+      "sha256": "a00ae607eb05f6dcfc57e8aae4338d9f9b9d856758eacb4c17829e914fad9c5c"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/StringAdapter.hpp": {
+      "git_blob": "a31d2a5d7187a0efba02ae412b5c2c56937f498a",
+      "sha256": "e8812647aeb2e723b5d9d941a03fed5745448bbd4d0c0ee23ce4734067b77393"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/StringAdapters.hpp": {
+      "git_blob": "e0ae9f3e5965ba332d56459d8078a718490bb3c0",
+      "sha256": "a197878f0dfe8ddb6642d3851a849a139e022814bd6ebffcd49260c55a14ba4a"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Strings/StringTraits.hpp": {
+      "git_blob": "bd1a50bddaa09f875468c1a2a3f45b42be4a0ccb",
+      "sha256": "c7a6d9c862b4347f6d693bd23beb7da3226ff7f07759ab0c0b33d49affcad1f6"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/Converter.hpp": {
+      "git_blob": "07f6a516aa73a2c09db34e99fd55906cc4c8d44a",
+      "sha256": "8fbde36244011ff4be133896c07a4e72389f7cd556fe8df5dd188dbcb8300306"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/ConverterImpl.hpp": {
+      "git_blob": "6c5fcda80b4167bfddd448f0f844c9c0a1d4ec08",
+      "sha256": "5eca9fb6dc47eb1dc68ccac73f75e3573125ad9ba6caf39ef4a4e6412b487d5f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/JsonVariant.hpp": {
+      "git_blob": "aed1ba95e30d819de4ca536a1713988cc636e0f7",
+      "sha256": "5e78cf8441f7757969717d1902c733bb9a5f66f46e8994edae1d1745e1737635"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/JsonVariantConst.hpp": {
+      "git_blob": "4c960597c11686a2d5a401b61368e980d7042939",
+      "sha256": "eabdd67fba07b5d9e5ab2d36f830e12a34bce42023564d2e2d657b6b5ef081a3"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/JsonVariantCopier.hpp": {
+      "git_blob": "6875c9acb986e70a1d2928a93a1dc1b8bd3bf51a",
+      "sha256": "688e6d4c0737ca861f8cccdd9579f0a1f30d0d0065487dae1273704ebddc5a47"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/JsonVariantVisitor.hpp": {
+      "git_blob": "28f99ed54e0bc8b9ffc3e7118a24b81dcf96c740",
+      "sha256": "8d8acb8de6c0bada3704967e785dd45a2f7b9c2bdcb2fd424e025cd49dc326f7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantAttorney.hpp": {
+      "git_blob": "d97641bbd03c3dd888958fa95a75c46e75b430d2",
+      "sha256": "b3d072e949e4b4908137c53654bb4f428f8af03802fbd0a9c8f799a2d1b148f7"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantCompare.hpp": {
+      "git_blob": "5f56016d73bafebc130ea7e01d336d5089f1c8fa",
+      "sha256": "133daa388eeb63ebfc84ad156701bfbf2634da24beea1070717e65513826c2e2"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantContent.hpp": {
+      "git_blob": "d6ee6c78c110643e5a3adf6be366390477154d13",
+      "sha256": "0ce1ebbc005d8d3af9d278da5b69f8c167b0a6123ab497215f675d013bf7f8c5"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantData.hpp": {
+      "git_blob": "6b0d474b13a9774011c23a39d9b2bc76126e5db4",
+      "sha256": "12d6e766e33f2027f4bfe5dbe04bc35ac8eb653d77b59dec58677ae724563fa9"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantDataVisitor.hpp": {
+      "git_blob": "7df61874439b7ee9e4709225f6de8c90c8eeb1e0",
+      "sha256": "bf1d66bbebfbc06d095a2d94d3ace488b637b4d3301a0f3395e140a1e074a59f"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantImpl.hpp": {
+      "git_blob": "98289ed0c585ec09090f29ceb2aa60a82972083f",
+      "sha256": "26ed0fcb210f83f9dcd0c2f3e7314238e7453d9334f98d1c08875ddc6504d250"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantOperators.hpp": {
+      "git_blob": "30bbd66474eb51fd0432d2b8e8893cf5411ba0bb",
+      "sha256": "23ec13c033ce9ffe060e3aa2b4a354974284f2f220249d5ddaa31615fd2650ff"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantRefBase.hpp": {
+      "git_blob": "975c9610ae500d074a6e387a797a2ef4cf877a24",
+      "sha256": "5b837847df20e83244d2e253d5bf130ccde9f344bc7431e356f68595afe2121c"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantRefBaseImpl.hpp": {
+      "git_blob": "da1b1e6bf5d8ea839d870b0a110fb17592ffa952",
+      "sha256": "d0907cd1abb0f92782d1dd42adda9fa5c329da18505b2133e29b5aee25df1929"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantTag.hpp": {
+      "git_blob": "a476c301c0f04a18e9e0796ad3b4b247e46c4bab",
+      "sha256": "df26f34e70bf722fe11ca44eda05ef35d40649effe7383d74d0a61dddcaac18e"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/Variant/VariantTo.hpp": {
+      "git_blob": "928d459788bddf162fbc233b62d3ea5aff442921",
+      "sha256": "9f7fde152ea25afabdbe77954ee4ac87dff13455d320e87c71fb2df191961db5"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/compatibility.hpp": {
+      "git_blob": "2e83e6d681ff7e70d33451de9adf7806ab69cbd1",
+      "sha256": "fba78fa73fb71ea2074db774c8e892c8d3bb348e8bc4b1242bfb29f4ab9247dd"
+    },
+    "runtime/lib/ArduinoJson/src/ArduinoJson/version.hpp": {
+      "git_blob": "c4ab196f14111c2e92d4a37c7de0d2d64bf6d449",
+      "sha256": "e99a24ab66d8a1b316a196b3b2a68d5f76a1d72989569273a605a3461cb9ac18"
+    },
+    "runtime/lib/elf_loader/include/esp_elf_image.h": {
+      "git_blob": "e9b94e345d3a6436d9fcb1aecce73b8f201ccc66",
+      "sha256": "5f8533febe111ec64ac4034fabfc050f5ccfb0d15f713801113db3b2b3cc25d2"
+    },
+    "runtime/lib/elf_loader/include/private/esp_privileged_cohort.h": {
+      "git_blob": "a4167712a60ce537988d5790b141a95cf387b6f9",
+      "sha256": "1c31269ab1abca74e016eb02096b3e3d879a9d98b7e4476fd7ebff99c8f70050"
+    },
+    "runtime/lib/hal/RuntimeFaultRetention.h": {
+      "git_blob": "b66c4d542da67cb91cd5bfc81a63535690970128",
+      "sha256": "f44b9a1390a0a8d639a7183956d0bd063c213ee8054eff694c4ca26bfc921128"
+    },
+    "runtime/lib/hal/RuntimeImageCacheConfig.h": {
+      "git_blob": "cbab8e3d21e48934eaf7993a339fb674c64cfe91",
+      "sha256": "6c8398502e6e25cb39da5862c4c1af254a60d6093fb7318383eb7ff1ecf01079"
+    },
+    "runtime/lib/hal/StorageGeneration.h": {
+      "git_blob": "7f23ac2367d2a5f538294104c62a9c15655a0f34",
+      "sha256": "b0f61f618d814ac07c699fb83040d3909a7554b79b0a6d16d21e52e95c30efd5"
+    },
+    "runtime/sdk/app/RiscAppCatalogV1.h": {
+      "git_blob": "732dcc077ef33015ac4f0cef58c8129565acb292",
+      "sha256": "34550d01d90513459ff7f3284681c4c108af9e64d5c20af6ae4696a1c051b0c5"
+    },
+    "runtime/sdk/app/RiscAppDataExportV1.h": {
+      "git_blob": "e6c27e8369fba8af75f67aac380aabf97a3c1a02",
+      "sha256": "56f9afd075f0fe3d8e7e8cdbec2d34813018dfe6cb3de3f18b326c4de948cddd"
+    },
+    "runtime/sdk/app/RiscAppDataV1.h": {
+      "git_blob": "c4be6368b45dfd5feedc6f8f740f92e083a26c5a",
+      "sha256": "9eb18840ea691f88e85cca6ede3de4833467745ec29225a51a58cb84c0aac84e"
+    },
+    "runtime/sdk/app/RiscDiagnosticCheckpointV1.h": {
+      "git_blob": "5b8b2ca60ace3976177bed17dd270f51be663318",
+      "sha256": "2c41504823df54a43e383baafa07f45191869f6ea5de4adaaf2651c2d78af017"
+    },
+    "runtime/sdk/app/RiscFailureEvidenceV1.h": {
+      "git_blob": "c94420a49c5b3400ad57f807b8e349d340c224f3",
+      "sha256": "f2b024c21780155bacf78bd67a279d8959365c1d25ff1ba421449dd5d3b35265"
+    },
+    "runtime/sdk/app/RiscFileOpenSourceV1.h": {
+      "git_blob": "4398bc912c765668d3485884f71113f5f6bec37b",
+      "sha256": "6f4592ea20f26262125e9a1a1ae030aa13bbc08d06eb319c7d7f09417598ad02"
+    },
+    "runtime/sdk/app/RiscKeyValueV1.h": {
+      "git_blob": "a7577ea3e3853fb200e4c6187fffd8d8be63a7fd",
+      "sha256": "0e73bf29c402be030baf52f5b2b324f5b872549cdf58aa31f45b72bd70977179"
+    },
+    "runtime/sdk/app/RiscKeyValueV2.h": {
+      "git_blob": "b464e86ef2cddd8e7b69db4fb18bbc5ea5d0ebdd",
+      "sha256": "c66337a93c6f5fff6dac9507e011655f4827c3d0ec06b3e6d9d039084b3ec4d3"
+    },
+    "runtime/sdk/app/RiscMemoryHeapV1.h": {
+      "git_blob": "e642ea1c2e2afc1aad7afea1c83a2df2318a9eed",
+      "sha256": "369965f04303c7dae3d52b5e3d47aeb01f417ab0a566919fdb94677a1d64dced"
+    },
+    "runtime/sdk/app/RiscProviderPromotionV1.h": {
+      "git_blob": "0381e9c6270fc1c030eec0a07090fd1a0c1ab1e9",
+      "sha256": "751585fed0336bf068cdde488d65b2e0191f113184e48eecbfb4f80861512c51"
+    },
+    "runtime/sdk/app/RiscRandomV1.h": {
+      "git_blob": "d969a2a658fec2b56cdf03ed64eef9e02f94ec00",
+      "sha256": "67e10d8b6d8b96f0ead5f0071e0eabbf73e30d2a6e0968e8bdd371ad492b6b57"
+    },
+    "runtime/sdk/app/RiscRealtimeV1.h": {
+      "git_blob": "cb7deea2af3fdde5530569f95f4e6457834396f0",
+      "sha256": "639781f728841cda6d40c3033877436b9e5d59519a4b15e11a9bc99b2365395d"
+    },
+    "runtime/sdk/app/RiscResidentShellV1.h": {
+      "git_blob": "26356c2b0a836c9d73efda058c80a71c3233fc38",
+      "sha256": "1a84715c03fcc7fae7f75cb72c0daf875e761567dda5d1b39ec0dc8b14fba8bd"
+    },
+    "runtime/sdk/app/RiscRetainedWakeV1.h": {
+      "git_blob": "19371a8211418aa0d926010535a0e42a85e6aa29",
+      "sha256": "7c7b6f0d56631f3aab521a43499d2ea840d075084536e4afa654a74c52e1e511"
+    },
+    "runtime/sdk/app/RiscRuntimeV1.h": {
+      "git_blob": "1c93649218aa5207706161b5718a23207e6b2daa",
+      "sha256": "f1b59491473b268722306ce63a97228f90487493e13aa4f470b1ce0c864d4565"
+    },
+    "runtime/sdk/app/RiscStorageFilesDirectoryV1.h": {
+      "git_blob": "952b05085cf25272b3ed1ba3a57b6bd3bd326f5a",
+      "sha256": "bf19f85ef1d4d0fa9664056026ac61dfbd3dc58b96600273a877489b8a576639"
+    },
+    "runtime/sdk/app/RiscStorageFilesIdentityV1.h": {
+      "git_blob": "5a30fb636802fa4b7d330b3a0571d0e2096c2e69",
+      "sha256": "4e6561f5a1f3402501ad12a13e097c019c7f3dfd6df2311071d7f2d5515716d7"
+    },
+    "runtime/sdk/app/RiscStorageFilesV1.h": {
+      "git_blob": "f564e3722a6090904d7613e50d860f0ae4f5163e",
+      "sha256": "0699725f95e574a22ef7892416e76a33cd0a57d06b96cc42021e10ba0aeb215b"
+    },
+    "runtime/sdk/app/RiscStorageVolumeV1.h": {
+      "git_blob": "800bc4c7feeb42595091627b707cc7fac745ff3d",
+      "sha256": "d477167a06004640b2c07c05d662c103be6e1b9e4a4d866f6fce13e754ef02f5"
+    },
+    "runtime/sdk/app/RiscStreamClientV1.h": {
+      "git_blob": "bb33457566f7ecd523455a25307512b820741ff2",
+      "sha256": "ef5deb9a3bf8d20c0af9859a83977b93acfb8e480a851d0dcf96caf2795babcb"
+    },
+    "runtime/sdk/app/T5FileOpenApi.h": {
+      "git_blob": "4b697ae5bc8e2613959954556ceab0c48e6ac4f6",
+      "sha256": "c1b873e364dba81ce39d8c8a62668db618735407a6291dca87b9795ce4accc30"
+    },
+    "runtime/sdk/driver/GardenPlatformV1.h": {
+      "git_blob": "e983549d4b0b72f1aac24daf95d5e05f909911d0",
+      "sha256": "2e8e32f52554b706fafce1af27a5fbaf99187f67ecb55dc0cf333144b48ef9d2"
+    },
+    "runtime/sdk/driver/GardenRadioAsyncV1.h": {
+      "git_blob": "556fff5f82ea788d539e8d8b632aacd2828ca105",
+      "sha256": "2cd46090528452cdb1f9d8368fa3f4afc568c0403f7acb38613fe63c6ac3b6aa"
+    },
+    "runtime/sdk/driver/RiscBankStoreV1.h": {
+      "git_blob": "73c0a57e2070caddc99407c60efdb41a3201179f",
+      "sha256": "4c20c21500f1c0724221f30cb5664e99b8316e3d0a9594319f63a206ed0e25a8"
+    },
+    "runtime/sdk/driver/RiscBoundAppDataAsyncV1.h": {
+      "git_blob": "e978315db93a4e6ea66c00c5f18a88834233ba0f",
+      "sha256": "3bdc04e0b27ba119139fe8ac81bcc59e3c979ca83847425ccff98f147242f7be"
+    },
+    "runtime/sdk/driver/RiscBoundAppDataV1.h": {
+      "git_blob": "418eff44fd9575bd74da70cc94c0532e14a0e89a",
+      "sha256": "f4c6b9e475409515ee3b385a85790f592e8d943b0f811707926a32be4e1a6a42"
+    },
+    "runtime/sdk/driver/RiscBoundKeyValueV1.h": {
+      "git_blob": "eeb8c7e15f27f12b8569df2f326000b1e279cdcf",
+      "sha256": "4a4c7ce1ea9a941e833afc0a5c796cae1b7ec49a813350288e4220a6b52bb4d3"
+    },
+    "runtime/sdk/driver/RiscBoundKeyValueV2.h": {
+      "git_blob": "cf85e0765a126cf15656681bdce21d2ae60ae94c",
+      "sha256": "f9c6589a346e6a79e784c37862228cc0c3ad3fe0c4cd8d6664800605f239b606"
+    },
+    "runtime/sdk/driver/RiscDeepSleepV1.h": {
+      "git_blob": "3e45758fe9c3127be2483b6f3c3bf58a70cdcede",
+      "sha256": "0949cf9591ef0f07b61c1306897287ea2eb1533755b5e569bfe1cb2c9b236161"
+    },
+    "runtime/sdk/driver/RiscDiagnosticSourceV1.h": {
+      "git_blob": "292e91a09b14ffc5adcadf4545470da4a0649341",
+      "sha256": "a2e246858df68fc5ad452f0d4b07d8eba10267176f75f17346417ef2b83fa845"
+    },
+    "runtime/sdk/driver/RiscDisplayBackendV1.h": {
+      "git_blob": "7238810e263c773a9c5f750159fc35a0428f2727",
+      "sha256": "ac21e77652597e7f211b5630c447327efe75536b7f13c468e2c168797f3f38f2"
+    },
+    "runtime/sdk/driver/RiscEntropyV1.h": {
+      "git_blob": "79169fc230a20b6b477faf6d841475e845743319",
+      "sha256": "08b4d52e71b1349a57d1713e54bcc7872ae63d55edf647ec17b0bbb2f509c0d1"
+    },
+    "runtime/sdk/driver/RiscGpioSdmmcV1.h": {
+      "git_blob": "8801a6945e57e10e8960dc07a012bb1d4c87a4fc",
+      "sha256": "00d7788c381be557deec18a959b55d474bad7edc0331ae8331b878a618b9818f"
+    },
+    "runtime/sdk/driver/RiscHciControllerStatusV1.h": {
+      "git_blob": "af9f0abf0253ed804babe7bce57f3e1612d92033",
+      "sha256": "235b388d91ed7e0becbb44dd476a29ef526fb2f7d9bf44b1072b86cbe5860e0e"
+    },
+    "runtime/sdk/driver/RiscHttpClientV1.h": {
+      "git_blob": "c8fc7f9de8cc66ac4160cbe0ca722096b3723989",
+      "sha256": "e966177d426d3fadcb420f5fa9dd7226d3450a208f7ed333808d6466ba7bf8d6"
+    },
+    "runtime/sdk/driver/RiscHttpTimeV1.h": {
+      "git_blob": "d67d6ee4a199850d517a635eec7d6651fc15d587",
+      "sha256": "1dad7f0d28f00ca7424ba95d4e08228f3b398eeaab68e64328362a6d3537a391"
+    },
+    "runtime/sdk/driver/RiscI2sStandardV1.h": {
+      "git_blob": "917b7f992955c1797e12f55494cda798704c2e2c",
+      "sha256": "22b2624c25f07085bb768d49e295f3a7e4ebf2891f5fb9948b12ead826cd35c0"
+    },
+    "runtime/sdk/driver/RiscInstallationMediaV1.h": {
+      "git_blob": "3c4d3163cf6c766618ff3e109ca30f70bebe8282",
+      "sha256": "bfceaef18bca72c67855adb7f0846c6a9cac92c6ac3b396ee8318aac5ddb7481"
+    },
+    "runtime/sdk/driver/RiscInstallationV1.h": {
+      "git_blob": "75407669ee97c884c2ee6e697911df9c65845d76",
+      "sha256": "cbf51953a4b8b11cfa0891cd3f16796123bc3e546e22b62b43285a83aa1496f4"
+    },
+    "runtime/sdk/driver/RiscInternalPackageVolumeV1.h": {
+      "git_blob": "7058e1928ea7b8c285535b934de6d6b2125bc330",
+      "sha256": "398d0003d98d4bed49bd0e667b25d76180d2657486c784ffeab10139d910dc9c"
+    },
+    "runtime/sdk/driver/RiscLightSleepV1.h": {
+      "git_blob": "8ccf341a266f9b21ddd9552a8f29fa6aebc946c4",
+      "sha256": "43cbd671265959ec2db7904bf6185e97a87c4cde9d389cdccf6fbb7c916f3b94"
+    },
+    "runtime/sdk/driver/RiscPackageResourcesV1.h": {
+      "git_blob": "c80cc6d7114cebcb600959f8c22ccd8d8b6a626b",
+      "sha256": "8aff53415cf68a46e8e492dd02d12bde802ce2a1d69629dd4f3b0aad5794e459"
+    },
+    "runtime/sdk/driver/RiscPlatformClockV1.h": {
+      "git_blob": "33a5b27dcea7e30698d0177ad5db065166082194",
+      "sha256": "41a12f6529f38731ee874f8bc166e1cf89fe376a1448fe5a4dd4c9abac90e5e2"
+    },
+    "runtime/sdk/driver/RiscPlatformClockWaitV1.h": {
+      "git_blob": "0f4245039944d1f594217031d3044070eb18da18",
+      "sha256": "c09d95c418f930f56c6e66004e07e38cb5726d8c7e5cd49b579bafbeebbe831c"
+    },
+    "runtime/sdk/driver/RiscPlatformRealtimeV1.h": {
+      "git_blob": "fbb893f26d9732eb5bed37b154d2a270494f6bf9",
+      "sha256": "ed642c0f37350f7f1402342c7710564019db9c4750f3572f153d2ef1e37eca98"
+    },
+    "runtime/sdk/driver/RiscProviderSyncV1.h": {
+      "git_blob": "b80b52407121020204a59c05bf1eaa7650f1f425",
+      "sha256": "c0981bde804b20c1b963323f91c4e9804c144c56535160bfd467be7e93028f45"
+    },
+    "runtime/sdk/driver/RiscProviderV2.h": {
+      "git_blob": "28dda87545c111c612d87f30337c1db2fe7da0e5",
+      "sha256": "62478822fa8943ddfd1607f8923de52d7b5b6fc8a0db2df6ca07c65c95c62d41"
+    },
+    "runtime/sdk/driver/RiscProvisionRequestV1.h": {
+      "git_blob": "e454ab7e4606efedbecc938ddec28956744b5775",
+      "sha256": "f7fdd7ca974150a1d9e5242d1cb994eb614c6853b1598d530e47d8fc898dc870"
+    },
+    "runtime/sdk/driver/RiscRadioAsyncV1.h": {
+      "git_blob": "9a5dc87db138e0886bcedac89a6e246a997cd545",
+      "sha256": "2b5a916cfe9e1fb6520043c2b8f3e8c13ea8e022166fcbdfa6b50ce691ebfe48"
+    },
+    "runtime/sdk/driver/RiscRadioIqResourceV1.h": {
+      "git_blob": "b7318d73fde40eec512bdabb4f259c340246b433",
+      "sha256": "5a1cc689b067ea59ca15ef62d943ef6fb8d4f75a887de210c859fb7e0f471874"
+    },
+    "runtime/sdk/driver/RiscRadioScanV1.h": {
+      "git_blob": "b0f99a78fb02de88da943ddd4aca438dcc1d8679",
+      "sha256": "696227eecfd124f941023673680e0a15917d5b03c8f769756ed12ec34f7ccc9b"
+    },
+    "runtime/sdk/driver/RiscSpiFrameV1.h": {
+      "git_blob": "c10b24edfcc318a114730cfe864343c2228c0a32",
+      "sha256": "189493301b8480f8f59a63bd894fa46a747d63e7e790d26da56d7469e88a1461"
+    },
+    "runtime/sdk/driver/RiscSpiQuadV1.h": {
+      "git_blob": "d912cf04029535066ceb1132f4a52b421934a7f9",
+      "sha256": "9f62ada4f4b5ecc62284afe6096ab039409a75769f61f08f57f73d68da9af6fe"
+    },
+    "runtime/sdk/driver/RiscStorageExportV1.h": {
+      "git_blob": "6ff69e1bd7c7c3bbd9ade20b4a40f12872b199b5",
+      "sha256": "4ba5a0cec6bd9514dd5f77982f1b94c22aeca72bf94d0c79b11f1f5b689189a2"
+    },
+    "runtime/sdk/driver/RiscStoragePackageAsyncV1.h": {
+      "git_blob": "4d9593cfd26a90c8503e6a4854e6610d0fdd88f8",
+      "sha256": "5a3703aede3c7ae523d0d0eb1ea31ab0e9915424af7b9db6d9c7d8f23118534f"
+    },
+    "runtime/sdk/driver/RiscStorageVolumeAsyncV1.h": {
+      "git_blob": "ba1cfeffa94ef7d341271e3682d6afcc097649a6",
+      "sha256": "e395dccfa5c89e1585acaed0e5c8932d8487940261759741e3e60b483aafcaec"
+    },
+    "runtime/sdk/driver/RiscStorageVolumeFsV1.h": {
+      "git_blob": "f4fcb29f1ade9657d27a10a800106a9977963c80",
+      "sha256": "e487352157e3c3d5c10a28a16fdfcce76db693bf45c612ff4e2f31ee83e9a329"
+    },
+    "runtime/sdk/driver/RiscStorageVolumeStateV1.h": {
+      "git_blob": "9468d66e68e99cdd7f035e5d27534a0a4c80eeed",
+      "sha256": "1f2f7dbfe9ec7ac27a57149ac720cf7f3a4801d6d34b5532f77c77db252b87a1"
+    },
+    "runtime/sdk/driver/RiscStorageWorkerAdmissionV1.h": {
+      "git_blob": "6043df0ae3dcd0f6d55f501094c6a571ef1bd545",
+      "sha256": "013322a0db332ee9e7b124399ac12dfe050c53fd4b018feb7c278edd2ef8d8bd"
+    },
+    "runtime/sdk/driver/RiscStorageWorkerV1.h": {
+      "git_blob": "3ba50c7de640274a2b517788b4ebe44f605ea08c",
+      "sha256": "9e859235403292a0108fd10b8122218d72c1c2d1dd460d94304d919f77b83b6f"
+    },
+    "runtime/sdk/driver/RiscStreamProviderV1.h": {
+      "git_blob": "04f61f2271ea356a1c6bd778767a9f099772ba01",
+      "sha256": "0fe306e060321387c816bb70ec4370a501a423f4fe19a20c9be80aa1b98f3432"
+    },
+    "runtime/sdk/driver/RiscStreamResultV1.h": {
+      "git_blob": "4bdf0f5789afe40c55ead97ec3d2ccf9b630efb1",
+      "sha256": "af140ee9ca4f6286c5f1beeecb0a0952264b14eb40d3ba4f313ff952e8824a6f"
+    },
+    "runtime/sdk/driver/RiscStreamSessionProviderV1.h": {
+      "git_blob": "09c382c4440e2827351e7e271248e4e9da94f598",
+      "sha256": "fe463661530c43ae7d1dd8b9c8227fdc6a7e4380bca3f5c8a13287cb0db9e873"
+    },
+    "runtime/sdk/driver/RiscTcpListenerV1.h": {
+      "git_blob": "26d80180114eb03432372b7683c5ab0b8f04e050",
+      "sha256": "63ed934c4cb1a505de539d06ad04c1551ec23f64d56b6ea07129698dde0ba886"
+    },
+    "runtime/sdk/driver/RiscTimedSleepV1.h": {
+      "git_blob": "e04f96e04f4213972b46953351dde6f0ed0c6815",
+      "sha256": "475ba9bfaf6c7497ace7baeb93f2bd9a6abe1e3a91f62eed24862a88d60dbf34"
+    },
+    "runtime/sdk/driver/RiscUsbPhyResourceV1.h": {
+      "git_blob": "9be113159abe6e5c4fc5b337d0e8ffddc03c72da",
+      "sha256": "fe668ff8e8f83ea454eafd059c61c633d2213bc2a77504d8794a64c1dc11b016"
+    },
+    "runtime/sdk/driver/RiscWakeSetV1.h": {
+      "git_blob": "fa7ec204896f658b757ad2db5d7ed2554ce82e98",
+      "sha256": "0b5a4914ac67d37b420e1ea19b591a71440f6e4c20149ca4324e1049517ba375"
+    },
+    "runtime/sdk/driver/TWatchPlatformV1.h": {
+      "git_blob": "0e5827f1c21985f4d4be64cb4664a47b0eabd20d",
+      "sha256": "88457c6cd36a8d2550c964ede1060b4006b72be5d290cff7cd108087bacc16dd"
+    },
+    "runtime/sdk/hardware/RiscDisplaySpiV2.h": {
+      "git_blob": "0689a355d99185dae4412a6f05cd716d865c4415",
+      "sha256": "362c056e5512fc99d500451f7758dba023cf7d096536959e3fab8b05cd1001ce"
+    },
+    "runtime/sdk/hardware/RiscHardwareConfigV1.h": {
+      "git_blob": "b2d2e3160f2c6cd8d15825c3d7c84cc7a9f5680d",
+      "sha256": "47fa4cd7d4f09f571a5aedc87376d2f57520ad7873f5556af0a932011633e240"
+    },
+    "runtime/sdk/hardware/RiscI2cFunctionV1.h": {
+      "git_blob": "9cf1de8120c0fac2dc1a2aebf495f0122502aced",
+      "sha256": "2706be5fb3ace2f85d37ac24e4559631c6a941e96f8a99a57d0067c3b24bf13c"
+    },
+    "runtime/sdk/hardware/RiscI2sStandardConfigV1.h": {
+      "git_blob": "02d5a48dd4dc5d385b046c023bb62f49e3c6c4ee",
+      "sha256": "45d9f1f080b2a8e118045286582612a750f95e41449add9bf75d1713152aa282"
+    },
+    "runtime/sdk/hardware/RiscTouchI2cV2.h": {
+      "git_blob": "05d1bc1b878f6978b64224be109b6847e3aa6eef",
+      "sha256": "78179bc7a8d2dbbb5fb738d1ffabe02b31312173e70c9573941d1c8a4fcad3cf"
+    },
+    "runtime/sdk/hardware/TWatchHardwareV1.h": {
+      "git_blob": "3bfa8e7b711343635b9633ba569ad466a4a35124",
+      "sha256": "ca48ca21a944565ae185f7c4e8cc0e73bcc18871d79b966f7e7da916e7ab2c99"
+    },
+    "runtime/src/bootstrap/AppCatalogRuntime.inc": {
+      "git_blob": "688e732f0fe26bcfd879cf0af0822ae6735537b2",
+      "sha256": "5335d7ab5b48e40c6f73acdf822ed4f7a9996d7b175ad1e7f84e6e4a6f4df443"
+    },
+    "runtime/src/bootstrap/AppDataBackend.h": {
+      "git_blob": "419588f6927b48d6250c6103fae32a49d46fa6db",
+      "sha256": "6836516a3d643733758f3eeb87960a58e45d67ef016e47240ab4c45315baa4a1"
+    },
+    "runtime/src/bootstrap/AppDataExportRuntime.inc": {
+      "git_blob": "ea1aad84c822a5632d361436003a26f6d63a9857",
+      "sha256": "f2b425c90e3d4dcdfad2971ec27d3bf0dd90c3225335e0b0ba85956e8de823b0"
+    },
+    "runtime/src/bootstrap/AppDataRuntime.inc": {
+      "git_blob": "4c0cc46f3363f67f07754328148b7728d4db7e0b",
+      "sha256": "fb4f130c8427b7633e0b885e1a172a0019b3c729a4cb313f9ed4618d636c918f"
+    },
+    "runtime/src/bootstrap/AppDeclarations.h": {
+      "git_blob": "a8c9876588ab99200e85f84347607d844be1792e",
+      "sha256": "b80c0e5b715c0073a8b121a1c79a48d58d28d17252da573bd09807f3da80a421"
+    },
+    "runtime/src/bootstrap/AppPolicyLimits.h": {
+      "git_blob": "612c1594a51eb15fc7491b6a685168814f1fc707",
+      "sha256": "3c47c920e80e3c6b8eaf8acbb1ee55792e59e29ee1816d349e82e5ac2ca8ffa6"
+    },
+    "runtime/src/bootstrap/AppRequirementLimits.h": {
+      "git_blob": "d4dd021fe01e3614050559938cda1391081261d1",
+      "sha256": "b7fa61c9efe043d0f7cdfa45dc4b5ae867d0da0a2a033ce8231ca0fdf894a42c"
+    },
+    "runtime/src/bootstrap/AppStreamsRuntime.inc": {
+      "git_blob": "1a77abf9211dc01ed80fb39e3b5ce868a318647e",
+      "sha256": "fc3feb9ddbb81a609a16aa3e0f59dbbce52dbd4102f0474be46d5bff0cfc41b0"
+    },
+    "runtime/src/bootstrap/AtomicKeyValueConfig.h": {
+      "git_blob": "4f334860d07c6716092e54784d9c329a0f82d279",
+      "sha256": "2fc3bb605ac374708ab4369f5be2403c651136a0dd294974e9f6b37093bb2ce5"
+    },
+    "runtime/src/bootstrap/Board.cpp": {
+      "git_blob": "358cffc951d700928d2833ece81b036f64f18593",
+      "sha256": "6d1dc67d76764daf70ef250b601a94092f8ea58e2f354ca703742c31cd5415d0"
+    },
+    "runtime/src/bootstrap/Board.h": {
+      "git_blob": "9c08aa4623d1f7d114dec73b892cd081c3dfb306",
+      "sha256": "5228ef194bbaf15870e20b318735d04c86c662eacd2b4e08c3757282114318ef"
+    },
+    "runtime/src/bootstrap/BoundAppDataRuntime.inc": {
+      "git_blob": "ae1b474d18ad7d4f033c539727b27837cebaeaf4",
+      "sha256": "3a42b108f6f3c2ecff57c959becacc4d1d4e0a9ed3365a5baf8347cf85c28b8d"
+    },
+    "runtime/src/bootstrap/CohortRuntime.inc": {
+      "git_blob": "e8603acf306fff0adf16bb61edfca9b384535103",
+      "sha256": "7d64600368ad5e3652341e155ba3841e5a1c85ee68c57acefe5c3ae6bcb0df61"
+    },
+    "runtime/src/bootstrap/CoreAppImageDigest.h": {
+      "git_blob": "83a98da68ff500bcbda6bb0148fc03b10d18a78e",
+      "sha256": "07549d7741f748a614ac931f5ea43d88a8d1bd6cc9634f8c3bde8d8e9737ee54"
+    },
+    "runtime/src/bootstrap/DiagnosticCheckpointRuntime.inc": {
+      "git_blob": "a44cb4896beea2b7fe28829de8ce26e74e9b2d18",
+      "sha256": "7b07942c8677f49277b7befc8057b8f6085afc9324c2361d59c0f4be8f4e9345"
+    },
+    "runtime/src/bootstrap/EntropyBackend.h": {
+      "git_blob": "6dac6f90db590a38781459c3342db5b87db23618",
+      "sha256": "ff3cf2134d1170f0131c7eeab242f297f7a23e3ad772d396da8578b03527fc3a"
+    },
+    "runtime/src/bootstrap/EntropyRuntime.inc": {
+      "git_blob": "4d9277c97c5275a6435dac60afb0f7725283f890",
+      "sha256": "05b35cca6c59845d8ce6c01edea2aeda315a7363b6cf14177dbb6731eab380e6"
+    },
+    "runtime/src/bootstrap/FailureEvidenceBackend.h": {
+      "git_blob": "3960412fdb3db179798b686b02ca8a16d26ad8c7",
+      "sha256": "fb460e37f359dc32aede1c3bc7d25fb20c0ed199611726e1bee7cf5e150066d4"
+    },
+    "runtime/src/bootstrap/FailureEvidenceRuntime.inc": {
+      "git_blob": "b03507f44a943724a7838ea44406a551dad8a337",
+      "sha256": "202ed9626c844eab919f50fd8d66399a6e29cef756bcacff2aa2a13dd6b65ac9"
+    },
+    "runtime/src/bootstrap/FileOpenRuntime.inc": {
+      "git_blob": "ef4a727b24e30153f8b3efbf9f674dfc08a05a5d",
+      "sha256": "1db35401d757f93a5fdd351938500101094bf40fe2446ae76f591afcdc261119"
+    },
+    "runtime/src/bootstrap/FileOpenState.h": {
+      "git_blob": "6af7b9811127b76a772bca12bd2b9f6ea59f878d",
+      "sha256": "e0796d974f4dcbe0bd5d596eb5e25a8110885a37ff870db020b5c6001eec32a2"
+    },
+    "runtime/src/bootstrap/FileSourceBackend.h": {
+      "git_blob": "649bf26f1ef0b47225ff06acbd2e9bc0c211d237",
+      "sha256": "48ce2ad3222fb760a7d1637a42bad0c0405d84667a25ef80363528ff4f17ce6e"
+    },
+    "runtime/src/bootstrap/FileSourceRuntime.inc": {
+      "git_blob": "0e6136960426a102d81fbaf1d3601dc8327b6506",
+      "sha256": "ae86203b7acf74ea3814391fdd517e678eacbc5dfdbf986782ccbf9440731a3a"
+    },
+    "runtime/src/bootstrap/InstallationProvidersRuntime.inc": {
+      "git_blob": "4d2e9dc220f5dfb4f08cd6f48c44d6431277871f",
+      "sha256": "ae13464da7209142b0aee11151b72c46793dae682842eb32796334da14531a96"
+    },
+    "runtime/src/bootstrap/InstallationRuntime.inc": {
+      "git_blob": "544715a2904f42901c3c864b982e75ad9e1bba9b",
+      "sha256": "eeda07559adbd1cba1c5be8d0accd644ca958ca06efcbaac83be660ced6e4a22"
+    },
+    "runtime/src/bootstrap/InstallationSettingsRuntime.inc": {
+      "git_blob": "2b1ce2393b3ca7a0260f03c562521d3773c670ce",
+      "sha256": "f5456e425b546e61e32f3adeed5b49598c3678761ad1a5c319083e5e46627226"
+    },
+    "runtime/src/bootstrap/InstalledFiles.h": {
+      "git_blob": "29531112d2cca558a9dfd51f0535a371de65fedb",
+      "sha256": "7fde87252318053e818c29fb3285c0040b680ce3f9b248be4adee310bb76835a"
+    },
+    "runtime/src/bootstrap/InstalledFilesRuntime.inc": {
+      "git_blob": "f136d54ea4d1859a9c8f9fe51ee3991d4eb1fe9c",
+      "sha256": "8458483079c7542439aae0b8467cbf6a68351d86b66cc68ca743695e08d2cfe0"
+    },
+    "runtime/src/bootstrap/Json.cpp": {
+      "git_blob": "700f38254cbb76198f2f745327c49f1b2cda7a12",
+      "sha256": "754947cab6e34fde87014e1178ab20a335abd3db1a4d53e5185ac2aa20b618a7"
+    },
+    "runtime/src/bootstrap/Json.h": {
+      "git_blob": "a047ed18a93377b01bdf3beb8866fb7775aa03f2",
+      "sha256": "9b915f6449482a4a5599523ebc44a783c3302e5859f0caa634578b4dbba166b5"
+    },
+    "runtime/src/bootstrap/KeyValueBackend.h": {
+      "git_blob": "415cf71d59b47d82f849101e00898a95ec318c91",
+      "sha256": "99ad385ff0ab2e88edc169d0109dffc3ffbbf05bf729ddfee1fa4250c92bbb9f"
+    },
+    "runtime/src/bootstrap/KeyValueGeneration.h": {
+      "git_blob": "c4018db2157ea0f62a7f38471834dbd6de08610c",
+      "sha256": "ae7d3cbb436ab011f46d63246670e1e86e674def3a0e7e84cef79ed7187ef4ad"
+    },
+    "runtime/src/bootstrap/LegacySettingsProvider.h": {
+      "git_blob": "461bdc9ae98eef35b2597ffd815ce42a78fee80d",
+      "sha256": "fd11bf19a98286140798b5b596f208cfb640e083851d04e8f08010adc453760c"
+    },
+    "runtime/src/bootstrap/MetadataArray.h": {
+      "git_blob": "bc354611f2216750dc98286bd115a609d915cce4",
+      "sha256": "893df5a68ed3580780b8c5a32c6945037304fed04856994d6db92531310a9a37"
+    },
+    "runtime/src/bootstrap/PlatformCapacity.h": {
+      "git_blob": "499482c7fc3cd21c89b292da10fc5a11f1bcc753",
+      "sha256": "449f43c3185048f26b17094835332ea0e5f2ba1661d3419f163846099784b2e9"
+    },
+    "runtime/src/bootstrap/PreferenceStoreConfig.h": {
+      "git_blob": "23f7741a6dce211debd5070ce4c490ccccc9719a",
+      "sha256": "73a11f0180d5780c66d4cb61c98ecd91e97ce1f765f3a064c7d413f0d6d4ef2a"
+    },
+    "runtime/src/bootstrap/ProviderPromotionRuntime.inc": {
+      "git_blob": "e3f89bb34e336ef87d9ffc998f396ae596198256",
+      "sha256": "773b4e3a13e48840f1e8821532034d874b7dc3c4ebda961f6b4a6039f28ef8a5"
+    },
+    "runtime/src/bootstrap/RealtimeRuntime.inc": {
+      "git_blob": "6d7384f9f31f7a8b5c8ccd9819f5260062d84c1c",
+      "sha256": "e737067c8a528fc4d99402c7f24e9e92d5550cbd82106ceeb205e16cbd9872dd"
+    },
+    "runtime/src/bootstrap/RemovableAppImage.h": {
+      "git_blob": "e0dcf51d5cfd899e15c4a02eb5a1250c369a68ea",
+      "sha256": "40189da8fa55fb10efbc64d5e72db31c065caaee498584018699985e1c6685ca"
+    },
+    "runtime/src/bootstrap/RemovableAppsRuntime.inc": {
+      "git_blob": "261bf285cf287efde749eb6fb9ddc00e89a5faa7",
+      "sha256": "301d11562ba4e4e5c5ef6ebfc91cac165abe8eb0766c2637ff74e78f2b901ad8"
+    },
+    "runtime/src/bootstrap/ResidentShellRuntime.inc": {
+      "git_blob": "0f7a4a6ba829f123c0fcc59ae57072f6476429ad",
+      "sha256": "a771c3d2f0b155085861df34c810b90611f6638b5606dcd7d07ef2940a45f2e2"
+    },
+    "runtime/src/bootstrap/RetainedWakeRuntime.inc": {
+      "git_blob": "a897b8d9170ae2c72bb09c9d3b6f38a1aba6e43e",
+      "sha256": "ff3ba318e2482ec8e603e3e124890a5fec13ed6eef6aaf1ab8fc793f74d3fe10"
+    },
+    "runtime/src/bootstrap/Runtime.cpp": {
+      "git_blob": "273b1fa025c3b9b52647d26f9d93695daf8a26ce",
+      "sha256": "dfe11833a792e2132749c67147a0837348c7eb5ca1dd198cdc9f46b9f5de126c"
+    },
+    "runtime/src/bootstrap/Runtime.h": {
+      "git_blob": "dc69c5735ab1bafbfcdd843c8aa49597ae4924e7",
+      "sha256": "9cf242942dd344bfd38a8211677b82975a6f2a92c57ad72f8d7d3abee47726ce"
+    },
+    "runtime/src/bootstrap/RuntimeFileImage.h": {
+      "git_blob": "f9302dece4e3ad8e6abb6c79089db2fa8c0c1ea1",
+      "sha256": "bd2740b672e9553101f2e6fb23e576937347072fc5c37f1a29b923c0752ae098"
+    },
+    "runtime/src/bootstrap/RuntimeFiles.h": {
+      "git_blob": "93cd662148021aba2b0775b4a015b65bbcf390a9",
+      "sha256": "a21aa94c9ccc0ab04c07eb85cd4919d28e041b4d36cd52ba4d3b7a3de6c352fa"
+    },
+    "runtime/src/bootstrap/RuntimeSleep.inc": {
+      "git_blob": "ca2065c9b238501b4c4faf5990cb2d030298ece1",
+      "sha256": "f66b4a55a84c8dc29e3aa81c94f621a4e63d4eedb9aa2126545c1752185b89d2"
+    },
+    "runtime/src/bootstrap/SettingsService.h": {
+      "git_blob": "981c03fd6f583a508a003a45067c61ec9f661f99",
+      "sha256": "126939f4effbc323a60c1c0fa538fa72688697722b94916d7c9ef6158627a807"
+    },
+    "runtime/src/bootstrap/StatObservation.h": {
+      "git_blob": "99f3cccc4c2452fb7bdb868b3c1e11482bdd7d12",
+      "sha256": "847c6e78ab7cad808692f3dde75797a6f9b79f90571a9292e8c61d7f03ebdbbc"
+    },
+    "runtime/src/bootstrap/StorageFilesConfig.h": {
+      "git_blob": "c5f1045e709aef3bcb41d36ca4bfabbea4492f20",
+      "sha256": "cc412b3d3199b56cc6c445539b0078a3a0c678e85791a6ca47ee03be614a437c"
+    },
+    "runtime/src/bootstrap/StorageFilesVolumeAdapter.h": {
+      "git_blob": "fb4692c8cc2f6322ef3525af211b8c273fa39d0f",
+      "sha256": "b0596fecb47e7b955efadf64ce864c084718ccb9c2adff7f5d9589c15f072192"
+    },
+    "runtime/src/bootstrap/TcpListenerBackend.h": {
+      "git_blob": "7a90d52c3338885970680e90417c5229ec351bad",
+      "sha256": "a2768f6d9518ce97679fc060d28cfdaf5e44be9d07fd2caca996bf111c4a9a4e"
+    },
+    "runtime/src/bootstrap/TcpListenerRuntime.inc": {
+      "git_blob": "c01ec952ba47e4efe4df794c76752e14ba7e2058",
+      "sha256": "bf83cf9aad6eca28a37b4f764fbde100aa435db64ada06dc8edca04fbabb5a53"
+    },
+    "runtime/src/diagnostics/Performance.h": {
+      "git_blob": "a01ee9bd7c7ca7649955971af85297f12e164f55",
+      "sha256": "a46e8c992b0c7ecf7c43655f2822ba34e1a87794a367877666bb046387aa02c0"
+    },
+    "runtime/src/diagnostics/StageLog.h": {
+      "git_blob": "c2b5f5d3b9530959eab550afcd27e68495aa503e",
+      "sha256": "61248a1345e0c48046106ad40194f4d2b091ce08c344a5957de75c32385c7182"
+    },
+    "runtime/src/ports/esp32s3/CpuDisplayBackend.inc": {
+      "git_blob": "b4aa18329528a609011cc2de9f8a741acdc80664",
+      "sha256": "cc862a331f9c3b59caa3d9f947de2452efe02cbdb7f889ea22437c48751e7999"
+    },
+    "runtime/src/ports/esp32s3/CpuEntropy.inc": {
+      "git_blob": "f8e85b47aea38338fd47e18a6d8bffc9801c6e20",
+      "sha256": "30384c5a94c2b6b1269ac5061075826c9db201632911a8c005b44873d1aca7e6"
+    },
+    "runtime/src/ports/esp32s3/CpuRadioAsync.inc": {
+      "git_blob": "3439ce39309d4c092a62676f8809134bb1b98b89",
+      "sha256": "2defb1d8f712e18361c00f7516e0aeb2ef773d426b594ee318faaf7eaf485c0a"
+    },
+    "runtime/src/ports/esp32s3/CpuSdmmc.inc": {
+      "git_blob": "bffbd2cbd2724f00b859e92faa045896a801d7d1",
+      "sha256": "48e04608dd53b363c75d920f3173f7c710a5551d854a9896779754ebb621f672"
+    },
+    "runtime/src/ports/esp32s3/CpuStorageWork.inc": {
+      "git_blob": "90c8cfdc2941af8b93bea6434db3821f3915a959",
+      "sha256": "e2b523537838a97bfe92b032eec11ff132189464ab2421a6d5396f872aeca01e"
+    },
+    "runtime/src/ports/esp32s3/CpuTcpListener.inc": {
+      "git_blob": "d232bc4b6bb85f5b2320641aa1c54c5f7f2d6b21",
+      "sha256": "0002ecfbc969357d06ed56a6a783b63f49217c0fb2b818ab486ec69be51d2ddd"
+    },
+    "runtime/src/ports/esp32s3/HciBounds.h": {
+      "git_blob": "a34b1f5d9196043e41d01d3d3af7dabb709a1040",
+      "sha256": "59ef0d4f8fcdf3bb5d3ae65f905fc9eb899ab48d1dde6bd8345d056c2b35dd34"
+    },
+    "runtime/src/ports/esp32s3/NativeSerialFiles.h": {
+      "git_blob": "8b38b6045b7abb8383ee290aedbb02507a79e038",
+      "sha256": "cfb90cbdba8b436575a62cd8daebd9cef1591ffa027c15f04a8b9d3e904fb6b8"
+    },
+    "runtime/src/runtime/RuntimeLimits.h": {
+      "git_blob": "2745e45282649261239c295d08b15f2e5da14c09",
+      "sha256": "ab93e61e683f0d496372323d83af5cc5e3cd9ca4b9fac74c7e8f35c77ee23b69"
+    },
+    "runtime/src/runtime/drivers/DeviceProviderExecutorV2.h": {
+      "git_blob": "6fb1f5508a99d1d350b192babd918f7aa441ca78",
+      "sha256": "47a7f12f93ea8f59fd49d06087116cfb86848d8d1be02b7c33b44ca65c29d37e"
+    },
+    "runtime/src/runtime/drivers/NativeProviderPolicySnapshotV1.h": {
+      "git_blob": "b43c46a279728cc0ecb4b3539776b88b49e86ca0",
+      "sha256": "2577bc29c2782c699136a772bf6411e638e02079db1521364ceb6aeda27600ec"
+    },
+    "runtime/src/runtime/drivers/NativeProviderPolicyV1.h": {
+      "git_blob": "48ccd9b83112472c062342bb45e538f0d1fca5a2",
+      "sha256": "e5f3ee4a2545e425760442537d87b99f027a3acc8687113e2ac7da29873a641f"
+    },
+    "runtime/src/runtime/drivers/NativeProviderPolicyValidationV1.h": {
+      "git_blob": "6200c7a93f229daf9d8051b4a022a29b712bd5ea",
+      "sha256": "0bf6ebef2f836c5375ae51d4648ce63f79b3ed27f1b82a29a46fdd1df66fc584"
+    },
+    "runtime/src/runtime/drivers/ProviderGraphV2.cpp": {
+      "git_blob": "af6016ef82a8b483732c0db5e767b271d144df3b",
+      "sha256": "194b3c47eb54e184f64a9625286358bade979ec31ebc012d6a84b102cf3b9530"
+    },
+    "runtime/src/runtime/drivers/ProviderGraphV2.h": {
+      "git_blob": "a5454ee21b9000763db745d0d7f584313cd37688",
+      "sha256": "963c36f30917936b8c3fc557fd347113d92ea31ac96e011a0f428a1f2cc353d7"
+    },
+    "runtime/src/runtime/drivers/ProviderModuleV2.cpp": {
+      "git_blob": "04aac9028f031e36e8bca62ba9e09202072f02e2",
+      "sha256": "898bd098341d385280d06a10a85714e70c267d53a1413fd86961079612b01185"
+    },
+    "runtime/src/runtime/drivers/ProviderModuleV2.h": {
+      "git_blob": "63b6ed834f9988f60b1a2af9cd30c7f6365cd69f",
+      "sha256": "5856a067ffb7fbea5e2c0bb44c036e8a3fe3981378665c78a411ee8840f024df"
+    },
+    "runtime/src/runtime/drivers/ProviderOwnedSpecV2.h": {
+      "git_blob": "2fa9e4961cad82bb6ae12ca6a944302c4707e5d4",
+      "sha256": "59f12aead70bdc3b888f6e8458ab866e1549bf2ce65e7d88d66a4e01c8f264cc"
+    },
+    "runtime/src/runtime/packages/PackageIdentity.h": {
+      "git_blob": "e8c8146acd7bb9ee96c6b39aa6b1d830eaf44d79",
+      "sha256": "b9438c33b9575f1198cbe0a32a408f6960a4c3b56724e4828e6b632e35aa8204"
+    },
+    "runtime/src/runtime/packages/PackageJsonGuard.h": {
+      "git_blob": "0a58a20e49fd871683844ade4594c86be4958a04",
+      "sha256": "913fe1b52a84f20465769e55ac76aa2ea6be367e766cae6837f117a1d1f6ef95"
+    },
+    "runtime/src/runtime/resources/ScopedBufferWipe.h": {
+      "git_blob": "84b391590fb8476baff6b10f9b339d8c344c8e41",
+      "sha256": "faf51fbf9a658781b04736bcca391fd4d80ab7118f9ee8d8dcaa0a77fb50a611"
+    },
+    "runtime/src/runtime/sleep/RetainedWake.h": {
+      "git_blob": "3de88f441af3ac28f145cf854542d7fa19295c47",
+      "sha256": "4efd72c01c0db20c915253e62661fd2430db21051c659cf52ec38a5d0e5cc741"
+    },
+    "runtime/src/runtime/sleep/RetainedWakeLimits.h": {
+      "git_blob": "eeaf185f01b6b993b9a692cd2b201d1bc744ee5d",
+      "sha256": "aabe97835283799483c6f8f0496c83400507b2f1e56d3006b338efc45dfd0f3e"
+    },
+    "runtime/src/runtime/storage/AppDataExport.h": {
+      "git_blob": "d6622df4acc6b03b7ad8ce9903f964364e97f1c6",
+      "sha256": "9d2c1c78e739cf469bcd38b650f52c93c381f7f47ec402c9cf9c521615f8a1bb"
+    },
+    "runtime/src/runtime/storage/AppDataExportImpl.h": {
+      "git_blob": "03ccf5747671f3b11c7cbf3e345de8b153cb1c82",
+      "sha256": "8a166c2fc1d56b110e709c0c73f2e8ba56b69148ca424bbd3c4c2194055771de"
+    },
+    "runtime/src/runtime/storage/FileValidation.h": {
+      "git_blob": "b5a33594c72a0f96560b13c2279953dea419a6aa",
+      "sha256": "d40d422a7fe50baebc5518fcfd12b7497117d63a3f33f383fad5826c5521f3be"
+    },
+    "runtime/src/runtime/storage/PosixFiles.h": {
+      "git_blob": "5f19589f879ca575e62e1a79b091e172c7a160be",
+      "sha256": "33ff0d91ef215a9251803ff7ea6791cc0e1a0b5d1f07e0406c2d77da3df44121"
+    },
+    "runtime/src/runtime/storage/ScalableSettings.h": {
+      "git_blob": "746d0ca6fd046ed0f8cada9a8bbddb0a3145f89c",
+      "sha256": "aa13db694fecae0297e7dd080118705d9f990f4c6ac49d75485091a781abe679"
+    },
+    "runtime/src/runtime/storage/SdFirstKeyValue.h": {
+      "git_blob": "ddfebb6ac6bdfd89a7924409e2baa3702bd2adc1",
+      "sha256": "8a9d43a0601f466fa0c9c3218b6cadde8e5faeb434a371a70248cc6eff3aeeb8"
+    },
+    "runtime/src/runtime/storage/StorageWorker.h": {
+      "git_blob": "f9432b6a33d669315551238465352b43ad76fd24",
+      "sha256": "07b9ef437436e5e51f52ad13fc11da3bdcdb08628b39203b68146bd786e90430"
+    },
+    "runtime/src/runtime/storage/VolumeImageFiles.h": {
+      "git_blob": "63c64d254314dfe72942a15553a279031b7a5e42",
+      "sha256": "5655c690b96c39745b579e21ad410bd35b5e16f3250e17885cb0ca70f66ccc50"
+    },
+    "runtime/src/runtime/streams/AppStreamSessions.cpp": {
+      "git_blob": "3e9cf52e80c1b9b6eed8faf321e8483967276d10",
+      "sha256": "517fdec0e58361d7373fb63ba55f753df0ac64630dfe78cdaf4ecc1c6c37866d"
+    },
+    "runtime/src/runtime/streams/AppStreamSessions.h": {
+      "git_blob": "77dd620055b0f1aceed27b5c5ee072a9f536222d",
+      "sha256": "65f7d29ada49078c99257f5dd77837c10ba5f8216de8d033e221ed485ee29db8"
+    },
+    "runtime/src/runtime/streams/ProviderQueueHost.cpp": {
+      "git_blob": "1e8c21a6501557d0dfe8990554e539129d44f1d4",
+      "sha256": "6ade240c39f57fc3ff5976367848280f40a526156fd435b75bae1652b8983257"
+    },
+    "runtime/src/runtime/streams/ProviderQueueHost.h": {
+      "git_blob": "ee55a0780309661529bf9b6293f260976b54cb12",
+      "sha256": "68a7816f9f035ca06563454eb9638cc95bee36d6f6cfe2eb43369af974ce2152"
+    },
+    "runtime/src/runtime/update/Cohort.h": {
+      "git_blob": "a526cc1448fcf5f9a07d531665b6aaa70237b455",
+      "sha256": "b472d06633ed013dba54ccb1be2d4e443bcab1158812b2defde85711a43b1822"
+    },
+    "runtime/src/runtime/update/CohortMigration.h": {
+      "git_blob": "3fe5007600f8877975c899deb95c5caaf888b43b",
+      "sha256": "f4ee1b18d2308545c5e6e6eedc40f96a852a5efed6f2e4937836fc4e560e75da"
+    },
+    "runtime/src/runtime/update/NativeAppDataExportPolicyV1.h": {
+      "git_blob": "8d3487a6dae3f39ce37503e4569649e8dba1b65d",
+      "sha256": "3c7a2882afcd8cf84dd4777e90ab1d5ef290e7ff1ae561672473020107d685e6"
+    },
+    "runtime/src/runtime/update/NativeAppDataExportPolicyV2.h": {
+      "git_blob": "a617d1a432cb0bf5d980a93d0cc008412f40e535",
+      "sha256": "c760f274fa32d2559aba3de49cd1c0c575aec925c1a7213cade4a9ca93d283d7"
+    },
+    "runtime/src/runtime/update/PairedBank.h": {
+      "git_blob": "bbc86b2fa32ac056765ec3cf02fa2f230da12df1",
+      "sha256": "8914d70a54ff3ada202843a50491ee0c73226bd539d3d2cc370ef7375f4e8406"
+    },
+    "runtime/src/runtime/update/Version.h": {
+      "git_blob": "2c4d6cb0ef7fb575d17f73781e716b0e8f00f47e",
+      "sha256": "e6f3df0a6152e250dcc7056c075c07c3bf3c57c7f4a28e59c98ac0d409e122a7"
+    },
+    "runtime/test/RuntimeFileFixture.h": {
+      "git_blob": "d667cc07ac1b06feae7fbe7f2f4b286838a69422",
+      "sha256": "df77a4dd03b54d5f7ce16d67f161b553785be97773519ebe72a18ac9718f6e03"
+    },
+    "runtime/test/drivers/stubs/esp_dlfcn.h": {
+      "git_blob": "c67fc3a64cd438cb3243067b37b5ab6dfe5c2e65",
+      "sha256": "b3dccf49f0d673560d6793af41f075117711c362c57bc2463db3fe49605a6395"
+    }
+  }
+}

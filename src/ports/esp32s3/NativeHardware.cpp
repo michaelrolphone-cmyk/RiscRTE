@@ -41,6 +41,9 @@ extern "C" __attribute__((used)) const uint32_t risc_tcp_listener_abi=1;
 #include <driver/spi_master.h>
 #include <esp_timer.h>
 #include "NativeRealtime.h"
+#if RISC_NATIVE_ESP_IDF
+#include "NativePsramCache.h"
+#endif
 #include <esp_sleep.h>
 #include <esp_rom_gpio.h>
 #include <soc/gpio_sig_map.h>
@@ -56,6 +59,9 @@ extern "C" const uint32_t risc_usb_phy_resource_enabled=1;
 #include "NativeSdmmc.h"
 #include "NativeStorageWorker.h"
 extern "C" __attribute__((used)) const uint32_t risc_sdmmc_host_abi=1;
+#endif
+#if RISC_NATIVE_ESP_IDF
+#include "NativeResidentWorker.h"
 #endif
 namespace RiscCpu { namespace {
 bool (*ownerTask)()=nullptr;
@@ -118,6 +124,9 @@ bool i2cClose(uint8_t physical){
 }
 #include "NativeSpi.inc"
 bool deepReady(){
+#if RISC_NATIVE_ESP_IDF
+  if(!NativeResidentWorker::authority.idle())return false;
+#endif
 #if RISC_ENABLE_SDMMC
   if(!NativeStorageWorker::idle() || !NativeSdmmc::closed())return false;
 #endif
@@ -143,6 +152,9 @@ bool deepReady(){
 }
 bool wakeValid(uint8_t pin){return GPIO_IS_VALID_GPIO(pin);}
 bool lightSleep(uint32_t* cause){
+#if RISC_NATIVE_ESP_IDF
+  if(!NativeResidentWorker::authority.idle())return false;
+#endif
 #if RISC_ENABLE_SDMMC
   if(!NativeStorageWorker::idle() || !NativeSdmmc::idle())return false;
 #endif
@@ -265,6 +277,13 @@ Hardware nativeHardware(bool (*owner)()){
     ;};
 #endif
   hardware.deepWakeSetValid=NativeSleep::setValid;hardware.deepWakeSetArm=NativeSleep::setArm;hardware.deepWakeSetClear=NativeSleep::setClear;
+  #if RISC_NATIVE_ESP_IDF
+  NativeResidentWorker::configure(owner);
+  hardware.residentWorker=&NativeResidentWorker::authority;
+#endif
+#if RISC_NATIVE_ESP_IDF
+  hardware.psramCache=NativePsramCache::api();
+#endif
   return hardware;
 }
 }
