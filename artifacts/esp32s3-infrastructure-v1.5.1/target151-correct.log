@@ -1,0 +1,71 @@
+{
+  "infra-node.elf": {
+    "sha256": "a5f92d847583c597c754e82761a4c9abf80c3377b5f7d3e5e61778a181a94563",
+    "size_bytes": 445628,
+    "imports": [
+      "__adddf3",
+      "__ashldi3",
+      "__bswapdi2",
+      "__bswapsi2",
+      "__eqdf2",
+      "__extendsfdf2",
+      "__fixdfdi",
+      "__fixdfsi",
+      "__fixsfdi",
+      "__fixunsdfdi",
+      "__fixunsdfsi",
+      "__fixunssfdi",
+      "__floatdidf",
+      "__floatsidf",
+      "__floatundidf",
+      "__floatunsidf",
+      "__gedf2",
+      "__gtdf2",
+      "__ledf2",
+      "__lshrdi3",
+      "__ltdf2",
+      "__muldf3",
+      "__nedf2",
+      "__subdf3",
+      "__truncdfsf2",
+      "__udivdi3",
+      "__umoddi3",
+      "free",
+      "malloc",
+      "memcmp",
+      "memcpy",
+      "memset",
+      "realloc",
+      "snprintf",
+      "strcmp",
+      "strcpy",
+      "strlen",
+      "strncmp"
+    ],
+    "entry": "t5_driver_get"
+  },
+  "infra-station.elf": {
+    "sha256": "c330dba5a31c5e3b89d5110cec8e5eaaf3fb02401c338de9575d63416976d1eb",
+    "size_bytes": 5640,
+    "imports": [
+      "memcpy",
+      "memset",
+      "strcmp",
+      "strcpy",
+      "strlen"
+    ],
+    "entry": "t5_driver_get"
+  },
+  "default.elf": {
+    "sha256": "f0967317aee6343632493ac554a3241bc385c33febada2b562161ab5e5bf531f",
+    "size_bytes": 4772,
+    "imports": [
+      "memset",
+      "risc_runtime_get_api",
+      "snprintf",
+      "strcmp",
+      "strcpy"
+    ],
+    "entry": "app_main"
+  }
+}
