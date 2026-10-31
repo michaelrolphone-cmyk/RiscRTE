@@ -1,0 +1,22 @@
+{
+  "schema": "riscrte-infrastructure-direct-image/1",
+  "tag": "esp32s3-infrastructure-v1.2.4",
+  "name": "ESP32-S3 Infrastructure Agent v1.2.4 \u2014 TLS Certificate Fix",
+  "asset": "riscrte-esp32s3-infrastructure-v1.2.4-initial.bin",
+  "bytes": 16777216,
+  "sha256": "80d841c95b45b154ec68da43cd22f6b412bec11bdc5477082615552575811037",
+  "offset": 0,
+  "profile": "esp32s3-infrastructure",
+  "source": {
+    "runtime": "bbfe0cc28e8e922bf4d0e24099d0b9cc4404b4b8",
+    "system_apps": "987513fd2363d2bb5c89014cf741581ddb34fd94",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2"
+  },
+  "purpose": "Complete first installation; replaces all 16 MiB including existing identity/data. Not a data-preserving update.",
+  "provisioning": "On-device captive portal. Join RiscRTE-Setup (password RiscRTE-Setup), open http://192.168.4.1/, enter Wi-Fi and choose a private pairing file. Public image has no credentials.",
+  "hardware_qualified": false,
+  "layout": "riscrte-paired-appdata-v2",
+  "layout_abi": 2,
+  "startup_status": "v1.2.3 device logs confirm settings save and station join, then TLS -0x3000. v1.2.4 fixes cross-signed trust-path construction and private-clock handling of bundle anchors in shared Core HTTPS. Real SDK cryptographic regression reproduces old failure and passes corrected chain plus negative controls. Radio diagnostics coalesce unchanged probes and retain stalled-call visibility. Live device service reconciliation remains pending."
+}

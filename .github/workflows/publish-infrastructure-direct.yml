@@ -1,15 +1,15 @@
 name: Publish complete ESP32-S3 infrastructure binary
 on:
   push:
-    branches: [release/esp32s3-infrastructure-v1.2.3-direct]
+    branches: [release/esp32s3-infrastructure-v1.2.4-direct]
     paths:
-      - artifacts/esp32s3-infrastructure-v1.2.3/**
+      - artifacts/esp32s3-infrastructure-v1.2.4/**
       - scripts/verify_infrastructure_initial_image.py
       - .github/workflows/publish-infrastructure-direct.yml
 permissions:
   contents: read
 concurrency:
-  group: esp32s3-infrastructure-v1.2.3-publication
+  group: esp32s3-infrastructure-v1.2.4-publication
   cancel-in-progress: false
 jobs:
   publish:
@@ -23,11 +23,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Expand complete binary
-        run: gzip -d artifacts/esp32s3-infrastructure-v1.2.3/riscrte-esp32s3-infrastructure-v1.2.3-initial.bin.gz
+        run: gzip -d artifacts/esp32s3-infrastructure-v1.2.4/riscrte-esp32s3-infrastructure-v1.2.4-initial.bin.gz
       - name: Verify exact complete image and embedded cohort
         run: |
-          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.2.3
-          cd artifacts/esp32s3-infrastructure-v1.2.3
+          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.2.4
+          cd artifacts/esp32s3-infrastructure-v1.2.4
           sha256sum -c SHA256SUMS
       - name: Publish direct binary and provenance
         env:
@@ -35,38 +35,40 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          tag=esp32s3-infrastructure-v1.2.3
+          tag=esp32s3-infrastructure-v1.2.4
           if gh release view "$tag" >/dev/null 2>&1; then
             echo 'Existing release must be inspected; refusing automatic overwrite.' >&2
             exit 1
           fi
           cat > /tmp/infrastructure-release-notes.md <<'NOTES'
-          Complete ESP32-S3 infrastructure-agent first-install binary. Download `riscrte-esp32s3-infrastructure-v1.2.3-initial.bin` directly; no extraction, Python, or compilation is needed to obtain the image.
+          Complete ESP32-S3 infrastructure-agent first-install binary. Download `riscrte-esp32s3-infrastructure-v1.2.4-initial.bin` directly; no extraction, Python, or compilation is needed to obtain the image.
 
           Target: ESP32-S3, 16 MiB flash, octal PSRAM at80MHz, CPU240MHz. Flash offset0. Includes bootloader, partition table, native runtime, boot-store with app and both providers, mutable-data template and paired-bank metadata. Layout riscrte-paired-appdata-v2 / ABI2.
 
-          FIRST INSTALL ONLY: the full 16 MiB image replaces existing flash contents, including identity and data.
+          FIRST INSTALL ONLY: the full 16 MiB image replaces existing flash contents, including saved Wi-Fi, pairing and data. Configure it through the captive portal after flashing; the existing private pairing file is still valid. This is not a data-preserving update.
 
-          Fixes Save and connect: the parser incorrectly expected 19 bytes for the 20-byte POST request line, returning Use the setup page before attempting Wi-Fi. Request matching now uses exact literal lengths for HTTP/1.0 and HTTP/1.1.
+          Fixes the failure after Save: v1.2.3 device logs confirm settings commit and station join, followed by ESP 32794 / Mbed TLS 12288. The shared Core HTTPS transport now constructs a trusted path for the services' cross-signed GTS Root R4 chain. The SDK bundle already trusts GTS Root R4; it no longer follows the unnecessary cross-sign to a retired GlobalSign root. Certificate authentication remains required.
 
-          Corrects test evidence: the bundled SHA header had disabled product test assertions. The wrapper now preserves assertions and every infrastructure suite rejects NDEBUG. The old parser fails with assertions restored; the corrected implementation passes the full portal suite. Earlier affected PASS text was not valid assertion evidence. Core USB logging/radio suites were unaffected.
+          The pinned SDK's disabled cross-signed branch also needed Mbed TLS 4 compatibility and allocator fixes. A digest-checked build transformation removes an obsolete ASN.1 field and uses the same PSRAM-backed allocator as Mbed TLS. Private session time still validates every real certificate in the verified chain; only the exact bundle-generated subject/key anchor skips nonexistent encoded dates. Wrong hostname, invalid signature, missing trust and invalid dates remain rejected. Certificate failure diagnostics now expose depth, flags and candidate errors.
 
-          Android setup: join RiscRTE-Setup (password RiscRTE-Setup). If the sign-in window cannot choose files, stay connected, open Chrome and enter http://192.168.4.1/. Choose the existing private pairing file and save. Pasting remains available. The page now distinguishes local setup connectivity from router internet and retains input after errors. No Python, extraction, compilation or VSCode changes are required.
+          Fixes a separate Core radio diagnostic overflow: unchanged ApInfo/NetifUp/IpInfo probes no longer enqueue six identical records per worker tick. Status changes, lifecycle events, stalled-call visibility and explicit overflow accounting remain. The bounded history ring is 64 records. The shared 8192-byte USB console fix remains included.
 
-          Existing v1.2/v1.2.1/v1.2.2 pairing files remain compatible: only the exact published prior provider cohort is migrated to the new image's revision-3 implementation pins. Mixed/tampered cohorts remain rejected. Credentials, identity and endpoints remain unchanged. New provider definitions are published to Capabilities Service.
+          Verification: actual pinned SDK cryptography and certificate bundle reproduce the old -0x3000 and accept the captured public service chain with zero flags after the fix. Tests reject wrong hostname, expired/future leaf, expired intermediate, invalid signature, untrusted signer, empty real-certificate dates and invalid clock. ASan covers 100 repeated verifications and 99 injected allocation failures with counted cleanup. ASan/UBSan radio tests cover 60000 unchanged edges, transitions, stalled calls, new operations and explicit saturation. Native HTTP lifecycle/parser tests, stage-on/off target compilation and the application integration suite pass (171 requests, 32 maintenance wakes, four reboots).
 
-          Active ASan/UBSan tests cover exact HTTP framing, CSRF, pairing migration, durable save, retry/reboot and uncertain commits. The actual page script passes file/paste and status tests with DOM/network mocks. The service integration run passes 171 requests, 32 maintenance wakes, four reboots, lost-response recovery and composite dependency execution. Target compilation, complete image and source checks pass. Owner physically confirmed setup AP/page on v1.2.2; v1.2.3 save, station join and live reconciliation still await hardware confirmation.
+          Join RiscRTE-Setup (password RiscRTE-Setup). Open http://192.168.4.1/; if Android's sign-in window cannot choose files, stay on the setup network and open that address in Chrome. Choose the same private pairing file and enter Wi-Fi. No Python, extraction, compilation or VSCode changes are required. Application and provider hashes remain the v1.2.3 cohort.
+
+          Hardware status: v1.2.3 setup/save/join are observed. v1.2.4 target build, real certificate regression and complete-image checks pass; live service reconciliation on the physical device remains pending.
 
 
           Exact source identities and every component hash are recorded in flash-manifest.json and direct-image.json. Publication does not flash any device.
           NOTES
-          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.2.3/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.2.3 — Setup Save Fix' --notes-file /tmp/infrastructure-release-notes.md --prerelease
+          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.2.4/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.2.4 — TLS Certificate Fix' --notes-file /tmp/infrastructure-release-notes.md --prerelease
       - name: Download published assets and verify actual bytes
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir /tmp/published-infrastructure
-          gh release download esp32s3-infrastructure-v1.2.3 --dir /tmp/published-infrastructure
+          gh release download esp32s3-infrastructure-v1.2.4 --dir /tmp/published-infrastructure
           cd /tmp/published-infrastructure
           sha256sum -c SHA256SUMS
