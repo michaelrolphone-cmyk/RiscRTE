@@ -582,6 +582,15 @@ bool confirmBoot(){
   if(!pending || esp_ota_mark_app_valid_cancel_rollback()!=ESP_OK)return false;
   confirmed=true;pending=false;return true;
 }
+bool transferAvailable(){
+  // Intent is not a flash operation. Healthy accepted Settings work may still
+  // be draining; its storage-readiness gate belongs to the final parked lane.
+  if(!prepared || !confirmed || pending || !owner() || !transaction || provisionFiles || provisionReadRetained ||
+     retainedAdmissionRuntime || retainedAdmissionFile || retainedAdmissionBytes || appFile || mounted ||
+     (fileSources && fileSources->retained()) || (runtime && (runtime->retained() || runtime->metadataCloseRetained())))return false;
+  risc_bank_status_v1 status{};status.struct_size=sizeof(status);
+  return transaction->status(&status) && status.state==RISC_BANK_IDLE;
+}
 void rejectBoot(){
   if(!owner() || !rollbackTrusted)return;
   // On an unverified pair, fail back through IDF only when a valid prior app

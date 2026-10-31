@@ -1,0 +1,37 @@
+{
+  "runtime_base": "0aab2fd3b03b4190d638e23c79a465afeecf5dfb",
+  "scope": "Exact-base source/test checkpoint; not release qualification",
+  "mycelium": {
+    "id": "wave063-transfer-mode-source-plan-20261019",
+    "revision": 4
+  },
+  "files": {
+    "src/bootstrap/Runtime.cpp": "9a04b5519621dbc8e177030daea48315365f84f2997fa93c8f783032e3f3d713",
+    "src/bootstrap/Runtime.h": "275b4e1b94adc9f496d76989f2c9262627c84202ad8d18c67e4d112e5ce2c025",
+    "src/main.cpp": "4acbe1389a2ece67433431944705531e1a9b620a9cb1acc282f5021e667ee6ec",
+    "src/ports/esp32s3/NativeBankStore.cpp": "90ae01379855c058f3349f00be5b2cbb9903906e1f5946cd932adc8cd31fe7f2",
+    "src/ports/esp32s3/NativeBankStore.h": "9ffdf1b79b7130db1021ee690b79f16f4a562b66f3c96dfe31c12d283d88ef45",
+    "src/ports/esp32s3/NativeSerialFiles.cpp": "7d6470b2491c18d7311ae96bb74c321cfeb3b049a70a04ccc452320cc9ced981",
+    "src/ports/esp32s3/NativeSerialFiles.h": "ccf924681adc471032f0e456d3f79999dafe1da03711bdb9fad37d3fa26208b8",
+    "src/ports/esp32s3/NativeSerialService.h": "fa974efd4f40568c1e8bbe088d0f12abdf9e6546a5847f98b57ae1a60bcf2276",
+    "src/runtime/serial/Files.cpp": "762cb42228bfa736f5e20ea4eb5e704cb778e7df5c384647e6d6bcbedf326432",
+    "src/runtime/serial/Files.h": "ce20aa08b52bcbb77caf0d2a201c00ad0abde9fd230ad4fd79efc1e71664a7be",
+    "test/boot_path_native.inc": "a0c006049cee9c27f28790d774d67c3e190f8fa95f7042e602ecd3c70751cfce",
+    "test/native_serial_transfer_mode_test.cpp": "bef18295095d638bc36d0a5b576620d074b5d9509b4578b19c171531ca138dea",
+    "test/run_native_serial_transfer_mode_test.py": "0cc482474eb8e31a0f9b77cf67657c7e48c6edee0103ba103fcf073152d5429b",
+    "test/native_settings_transfer_mode_test.cpp": "a764fb959111928e0ff9b5d233633f80894a3473f867409f06c5ab7a9fc4f69e",
+    "test/run_native_settings_transfer_mode_test.py": "944a39fd7288a58d6cc1f497b2dafab69c5b5d276bcd7abf4cab8f0a8c45fe93",
+    "test/native_serial_transfer_usb_test.cpp": "199d3cf4caa37619f617add6aa9eac473d87a5ea7488538802d31ac0f300b5ad",
+    "test/run_native_serial_transfer_usb_test.sh": "107df617b70268a2e12140532827cf8a274b20e1bc381c93bd2663b98af96255",
+    "docs/transfer-mode/README.md": "09f4049e5192e024d11defc40b3c03a44a8826e47fdcfec666ad8538c6000d37",
+    "evidence/transfer-mode/baseline.json": "4b7de67b20363a71618fa6aa6f695edb15250d30ca133788a6fe8e1df96c235c",
+    "evidence/transfer-mode/deadline-negative-control.json": "d425ff948c380629a0af76cb31dcc9b0407ddb6ae504f7bb9c58e7f8c57d8b21",
+    "evidence/transfer-mode/factory-confirmed-pair.json": "916460919be5bf7e1a601990bb6f5b03bdda1b27a3b9fa217de3e74eb259436b",
+    "evidence/transfer-mode/factory-gate.log": "b45098eedff951c30007da8a21ea14f4844e506e9a8afa45aa6b15777b709af8",
+    "evidence/transfer-mode/qualification-sanitized.json": "394be46f3b903d068480a0c2a860771311a0999c5e0ae700537d650bee880b87",
+    "evidence/transfer-mode/qualification.json": "16a181f554359612594cf8e73313270d630decf372ae6c858e79d7ba9c719748",
+    "evidence/transfer-mode/settings-qualification.json": "04e3481bd0a6bcb8bb556df27fb178ee195175b15f613b0934589552b5c6f2fc",
+    "evidence/transfer-mode/usb-loop.log": "4bb32cbae796125621c0c409661b2a1858f262ee0261ccf557a7b9320403b137"
+  },
+  "hardware_tested": false
+}

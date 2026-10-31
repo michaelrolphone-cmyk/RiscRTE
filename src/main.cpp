@@ -4,6 +4,9 @@
 #include <RiscBuildIdentity.h>
 #include "ports/esp32s3/NativeRuntimeFiles.h"
 #include "ports/esp32s3/NativeSerialFiles.h"
+#if RISC_NATIVE_SERIAL_TRANSFER_MODE
+#include "ports/esp32s3/NativeSerialService.h"
+#endif
 #include "ports/esp32s3/NativeSerialStorageBinding.h"
 #include <esp_ota_ops.h>
 #include <esp_system.h>
@@ -111,10 +114,18 @@ RiscBoot::Port nativePort(RiscBoot::Port port){
   port.serialFilesControlCheckpoint=RiscCpu::NativeSerialFiles::controlCheckpoint;
   port.serialFilesShutdown=RiscCpu::NativeSerialFiles::shutdown;
   port.serialFilesStop=RiscCpu::NativeSerialFiles::stop;
+#if RISC_NATIVE_SERIAL_TRANSFER_MODE
+  port.serialFilesPoll=RiscDiagnostics::poll;
+  port.serialTransferRequested=RiscCpu::NativeSerialFiles::transferRequested;
+  port.serialTransferEnter=RiscCpu::NativeSerialFiles::enterTransferMode;
+#endif
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   port.serialFilesReady=RiscCpu::NativeSettingsLifecycle::exitSafe;
 #endif
   port.sleepServicesReady=[](){return RiscCpu::NativeSerialFiles::exitSafe()
+#if RISC_NATIVE_SERIAL_TRANSFER_MODE
+    && !RiscCpu::NativeSerialFiles::transferRequested()
+#endif
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
     && RiscCpu::NativeSettingsLifecycle::exitSafe()
 #endif
@@ -546,6 +557,15 @@ void setup() {
     diagnosticLine("RTE_BOOT error=serial-file-admission");return;
   }
 #endif
+
+#if RISC_NATIVE_SERIAL_TRANSFER_MODE
+#ifndef RISC_PAIRED_BANKS
+#error "Dedicated serial transfer requires explicit paired-boot admission"
+#endif
+  if(!RiscCpu::NativeSerialFiles::enableTransferMode(RiscBankStore::transferAvailable)){
+    diagnosticLine("RTE_BOOT error=serial-transfer-admission");return;
+  }
+#endif
   RiscPerf::emit(59);
   RISC_STAGE_LOG("boot metadata-ready elapsed_us=%llu",(unsigned long long)(RiscDiagnostics::monotonicUs()-bootUs));
   diagnosticLine("RTE_BOOT board=validated drivers=admitted");
@@ -571,7 +591,11 @@ void setup() {
 void loop() {
 #if RISC_NATIVE_SERIAL_FILES
   // setup/run has returned: no application or provider callback is on-stack.
+#if RISC_NATIVE_SERIAL_TRANSFER_MODE
+  RiscCpu::NativeSerialFiles::serviceParkedOwner(serialRuntime);
+#else
   if(serialRuntime)serialRuntime->nativeFilesCheckpoint();
+#endif
 #endif
   cooperate(50);
 }

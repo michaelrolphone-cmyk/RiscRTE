@@ -36,6 +36,7 @@ jobs:
           if [[ '${{ matrix.mode }}' == sanitized ]]; then san=(--sanitize); fi
           python3 test/run_resident_attention.py --output qualification/attention "${san[@]}" 2>&1 | tee qualification/attention.log
           python3 test/run_resident_attention_regressions.py --output qualification/regressions "${san[@]}" 2>&1 | tee qualification/regressions.log
+          python3 test/run_resident_attention_transfer.py --output qualification/attention-transfer "${san[@]}" 2>&1 | tee qualification/attention-transfer.log
       - name: Preserve source custody
         if: always()
         shell: bash

@@ -1,0 +1,8 @@
+00000514 00000001 b RiscDiagnostics::(anonymous namespace)::outputting
+00000e60 00008010 d RiscDiagnostics::(anonymous namespace)::liveLogStorage
+00000510 00000004 b RiscDiagnostics::(anonymous namespace)::owner
+00000000 00000508 b RiscDiagnostics::(anonymous namespace)::journal
+00000000 l     O .bss	00000508 _ZN15RiscDiagnostics12_GLOBAL__N_1L7journalE
+00000e60 l     O .ext_ram.bss.test	00008010 _ZN15RiscDiagnostics12_GLOBAL__N_1L14liveLogStorageE
+00000510 l     O .bss	00000004 _ZN15RiscDiagnostics12_GLOBAL__N_1L5ownerE
+00000514 l     O .bss	00000001 _ZN15RiscDiagnostics12_GLOBAL__N_1L10outputtingE
