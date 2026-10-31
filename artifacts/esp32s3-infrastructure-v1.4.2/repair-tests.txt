@@ -1,0 +1,7 @@
+Seeded LittleFS2.1 image remounted and verified; no device operation.
+Seeded LittleFS2.1 image remounted and verified; no device operation.
+.
+----------------------------------------------------------------------
+Ran 1 test in 4.723s
+
+OK
