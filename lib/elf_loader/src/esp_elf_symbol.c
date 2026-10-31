@@ -80,6 +80,7 @@ extern double __adddf3(double,double), __muldf3(double,double), __subdf3(double,
 extern float __truncdfsf2(double);
 extern uint32_t __bswapsi2(uint32_t);
 extern uint64_t __bswapdi2(uint64_t);
+extern uint64_t __ashldi3(uint64_t, int), __lshrdi3(uint64_t, int);
 
 static const char *TAG = "ELF_SYMBOL";
 // Ordinary app relocations receive invocation-owned allocators. Privileged
@@ -95,6 +96,7 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
     ESP_ELFSYM_EXPORT(__floatsidf), ESP_ELFSYM_EXPORT(__floatdidf), ESP_ELFSYM_EXPORT(__floatundidf), ESP_ELFSYM_EXPORT(__extendsfdf2),
     ESP_ELFSYM_EXPORT(__adddf3), ESP_ELFSYM_EXPORT(__muldf3), ESP_ELFSYM_EXPORT(__subdf3), ESP_ELFSYM_EXPORT(__truncdfsf2),
     ESP_ELFSYM_EXPORT(__bswapsi2), ESP_ELFSYM_EXPORT(__bswapdi2),
+    ESP_ELFSYM_EXPORT(__ashldi3), ESP_ELFSYM_EXPORT(__lshrdi3),
 
     /* string.h
      *
