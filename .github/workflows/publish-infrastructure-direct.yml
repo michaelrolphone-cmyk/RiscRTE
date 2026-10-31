@@ -1,15 +1,15 @@
 name: Publish complete ESP32-S3 infrastructure binary
 on:
   push:
-    branches: [release/esp32s3-infrastructure-v1.4.0-direct]
+    branches: [release/esp32s3-infrastructure-v1.4.1-direct]
     paths:
-      - artifacts/esp32s3-infrastructure-v1.4.0/**
+      - artifacts/esp32s3-infrastructure-v1.4.1/**
       - scripts/verify_infrastructure_initial_image.py
       - .github/workflows/publish-infrastructure-direct.yml
 permissions:
   contents: read
 concurrency:
-  group: esp32s3-infrastructure-v1.4.0-publication
+  group: esp32s3-infrastructure-v1.4.1-publication
   cancel-in-progress: false
 jobs:
   publish:
@@ -23,11 +23,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Expand complete binary
-        run: gzip -d artifacts/esp32s3-infrastructure-v1.4.0/riscrte-esp32s3-infrastructure-v1.4.0-initial.bin.gz
+        run: gzip -d artifacts/esp32s3-infrastructure-v1.4.1/riscrte-esp32s3-infrastructure-v1.4.1-initial.bin.gz
       - name: Verify exact complete image and embedded cohort
         run: |
-          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.4.0
-          cd artifacts/esp32s3-infrastructure-v1.4.0
+          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.4.1
+          cd artifacts/esp32s3-infrastructure-v1.4.1
           sha256sum -c SHA256SUMS
       - name: Publish direct binary and provenance
         env:
@@ -35,18 +35,18 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          tag=esp32s3-infrastructure-v1.4.0
+          tag=esp32s3-infrastructure-v1.4.1
           if gh release view "$tag" >/dev/null 2>&1; then
             echo 'Existing release must be inspected; refusing automatic overwrite.' >&2
             exit 1
           fi
-          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.4.0/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.4.0 — Bus Webhook Enrollment' --notes-file artifacts/esp32s3-infrastructure-v1.4.0/RELEASE-NOTES.md --prerelease
+          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.4.1/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.4.1 — Captive Portal Startup Fix' --notes-file artifacts/esp32s3-infrastructure-v1.4.1/RELEASE-NOTES.md --prerelease
       - name: Download published assets and verify actual bytes
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir /tmp/published-infrastructure
-          gh release download esp32s3-infrastructure-v1.4.0 --dir /tmp/published-infrastructure
+          gh release download esp32s3-infrastructure-v1.4.1 --dir /tmp/published-infrastructure
           cd /tmp/published-infrastructure
           sha256sum -c SHA256SUMS

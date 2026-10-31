@@ -1,0 +1,22 @@
+{
+  "schema": "riscrte-infrastructure-direct-image/1",
+  "tag": "esp32s3-infrastructure-v1.4.1",
+  "name": "ESP32-S3 Infrastructure Agent v1.4.1 \u2014 Captive Portal Startup Fix",
+  "asset": "riscrte-esp32s3-infrastructure-v1.4.1-initial.bin",
+  "bytes": 16777216,
+  "sha256": "94ecb485651378b1a4327699da15c8a226cdb5bedd899d2a6bf285ba31bd89d0",
+  "offset": 0,
+  "profile": "esp32s3-infrastructure",
+  "source": {
+    "runtime": "a145310df02f44dd1c2f20dfa1b6967d6b22abf0",
+    "system_apps": "faf4d3135b4459a7c9508f50a24266d47bad2272",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2"
+  },
+  "purpose": "Complete first installation; replaces all 16 MiB including existing identity/data. Not a data-preserving update.",
+  "provisioning": "On-device captive portal. Join RiscRTE-Setup (password RiscRTE-Setup), open http://192.168.4.1/, enter Wi-Fi and choose a private pairing file. Public image has no credentials.",
+  "hardware_qualified": false,
+  "layout": "riscrte-paired-appdata-v2",
+  "layout_abi": 2,
+  "startup_status": "Corrects v1.4.0 first-boot storage refusal before Wi-Fi setup. Journal buffers and JSON guard obey the native 64 KiB file limit. Captive portal, bus webhook enrollment and Scheduler timeout correction retained. Production storage regression, ASan/UBSan suite and target build pass; physical v1.4.1 portal and Grok qualification pending."
+}
