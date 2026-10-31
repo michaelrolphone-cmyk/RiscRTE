@@ -1,0 +1,18 @@
+name: Inspect infrastructure TLS chain
+on:
+  push:
+    branches: [diagnose/infrastructure-v124-tls]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read public server certificate chains
+        shell: bash
+        run: |
+          set -euo pipefail
+          for host in capabilities-service.cantikash.chatgpt.site responsibility-scheduler.cantikash.chatgpt.site; do
+            echo "HOST=$host"
+            timeout 20 openssl s_client -connect "$host:443" -servername "$host" -showcerts -verify_return_error </dev/null
+          done
