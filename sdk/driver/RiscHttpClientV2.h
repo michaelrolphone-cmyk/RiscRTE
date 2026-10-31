@@ -13,7 +13,10 @@ extern "C" {
 #define RISC_HTTP_V2_HEADER_BYTES_MAX 2048u
 #define RISC_HTTP_V2_BODY_MAX 16384u
 #define RISC_HTTP_V2_RESPONSE_MAX 32768u
-enum { RISC_HTTP_GET=1, RISC_HTTP_POST=2 };
+/* POST_PUBLIC resolves and rejects non-public addresses before connecting to
+ * the checked address with the original TLS hostname. Older runtimes reject
+ * this method, so callback credentials never fall back to unrestricted POST. */
+enum { RISC_HTTP_GET=1, RISC_HTTP_POST=2, RISC_HTTP_POST_PUBLIC=3 };
 enum { RISC_HTTP_PHASE_TIME=1, RISC_HTTP_PHASE_CONNECT=2,
        RISC_HTTP_PHASE_SEND=3, RISC_HTTP_PHASE_RECEIVE=4, RISC_HTTP_PHASE_TERMINAL=5 };
 typedef struct { const char *name, *value; } risc_http_header_v2;

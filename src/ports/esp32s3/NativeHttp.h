@@ -5,6 +5,7 @@
  * Native IDF6 DNS uses a copied worker mailbox; TLS/read/write stay on the
  * owner task. Each caller step yields through the runtime. */
 #include "HttpResponse.h"
+#include "HttpPublicAddress.h"
 #include <RiscHttpClientV2.h>
 #include "NativeTlsMemory.h"
 #include "diagnostics/StageLog.h"
@@ -46,7 +47,7 @@ struct Session {
   HttpTimeSample::Sample time;
   esp_tls_t* tls=nullptr;esp_tls_cfg_t config{};Verify verify=nullptr;void* verifyContext=nullptr;
   HttpCertificate::BundleCandidates bundleCandidates;
-  Phase phase=Phase::Connect;int32_t error=0;bool retained=false;unsigned redirects=0;
+  Phase phase=Phase::Connect;int32_t error=0;bool retained=false,publicOnly=false;unsigned redirects=0;
   char url[RISC_HTTP_URL_MAX+1]{},host[254]{},request[RISC_HTTP_URL_MAX+384]{};
   uint32_t requestBytes=0,sent=0,wire=0;
   char* requestV2=nullptr;uint32_t requestV2Bytes=0;
@@ -243,7 +244,7 @@ inline int32_t read(void*,uint64_t token,void* out,uint32_t capacity,uint32_t* c
   }
   if(s->phase==Phase::Connect){
 #if RISC_NATIVE_ESP_IDF
-    if(s->requestV2&&!s->address[0]){sockaddr_in resolved{};const int code=NativeDns::resolve(s->host,resolved);if(code==1)return RISC_HTTP_AGAIN;if(code<0||!inet_ntop(AF_INET,&resolved.sin_addr,s->address,sizeof(s->address)))return s->error=RISC_HTTP_NETWORK;}
+    if(s->requestV2&&!s->address[0]){sockaddr_in resolved{};const int code=NativeDns::resolve(s->host,resolved);if(code==1)return RISC_HTTP_AGAIN;if(code<0||(s->publicOnly&&!HttpPublicAddress::ipv4(ntohl(resolved.sin_addr.s_addr)))||!inet_ntop(AF_INET,&resolved.sin_addr,s->address,sizeof(s->address)))return s->error=RISC_HTTP_NETWORK;}
 #endif
     // Both pinned IDF4.4 and IDF6.1 reuse select()'s output fd_sets across asynchronous calls.
     // A timeout clears them. Re-arm the SDK-owned connecting socket before
@@ -311,12 +312,16 @@ inline bool sameHeader(const char* a,const char* b){
 inline int32_t openV2(void*,const risc_http_request_v2* r,uint64_t* out){
   if(out)*out=0;
   if(!out||!owner||!owner()||!r||r->struct_size<sizeof(*r)||!HttpBounds::url(r->url)||
-     (r->method!=RISC_HTTP_GET&&r->method!=RISC_HTTP_POST)||r->redirect_policy||
+     (r->method!=RISC_HTTP_GET&&r->method!=RISC_HTTP_POST&&r->method!=RISC_HTTP_POST_PUBLIC)||r->redirect_policy||
      r->header_count>8||(r->header_count&&!r->headers)||r->body_bytes>16384||
      (r->body_bytes&&!r->body)||(r->method==RISC_HTTP_GET&&r->body_bytes)||
      !r->max_response_bytes||r->max_response_bytes>32768||!r->timeout_ms||r->timeout_ms>30000||
      (r->time_server?(r->utc_seconds||!HttpTimeSample::hostname(r->time_server)):
         (r->utc_seconds<HttpBounds::FirstUtc||r->utc_seconds>HttpBounds::LastUtc)))return RISC_HTTP_INVALID;
+#if !RISC_NATIVE_ESP_IDF
+  // The legacy native port has no pinned DNS path. Fail closed for public POST.
+  if(r->method==RISC_HTTP_POST_PUBLIC)return RISC_HTTP_INVALID;
+#endif
   size_t headerBytes=0;
   for(uint32_t i=0;i<r->header_count;++i){const auto& h=r->headers[i];
     if(!headerName(h.name)||!h.value)return RISC_HTTP_INVALID;
@@ -336,7 +341,7 @@ inline int32_t openV2(void*,const risc_http_request_v2* r,uint64_t* out){
   const char* path=r->url+8;while(*path&&*path!='/'&&*path!='?')++path;
   const int hostBytes=static_cast<int>(path-(r->url+8));
   int used=std::snprintf(request,cap,"%s %s%s HTTP/1.1\r\nHost: %.*s\r\nUser-Agent: RiscRTE/2\r\nAccept-Encoding: identity\r\nConnection: close\r\nContent-Length: %lu\r\n",
-    r->method==RISC_HTTP_POST?"POST":"GET",*path=='?'?"/":"",*path?path:"/",hostBytes,r->url+8,static_cast<unsigned long>(r->body_bytes));
+    r->method!=RISC_HTTP_GET?"POST":"GET",*path=='?'?"/":"",*path?path:"/",hostBytes,r->url+8,static_cast<unsigned long>(r->body_bytes));
   for(uint32_t i=0;used>0&&static_cast<size_t>(used)<cap&&i<r->header_count;++i)
     used+=std::snprintf(request+used,cap-used,"%s: %s\r\n",r->headers[i].name,r->headers[i].value);
   if(used<=0||static_cast<size_t>(used)+2+r->body_bytes>=cap){std::memset(request,0,cap);heap_caps_free(request);return RISC_HTTP_SIZE;}
@@ -345,7 +350,7 @@ inline int32_t openV2(void*,const risc_http_request_v2* r,uint64_t* out){
   if(!memory){std::memset(request,0,cap);heap_caps_free(request);return RISC_HTTP_MEMORY;}
   risc_http_request_v1 base{sizeof(base),r->url,r->max_response_bytes,r->timeout_ms,r->utc_seconds};
   session=new(memory)Session(++generation,base);*out=session->token;
-  session->requestV2=request;session->requestV2Bytes=used;session->decoder.v2=true;
+  session->publicOnly=r->method==RISC_HTTP_POST_PUBLIC;session->requestV2=request;session->requestV2Bytes=used;session->decoder.v2=true;
   if(r->time_server){session->time.asyncDns=true;session->time.begin(r->time_server,session->started);session->phase=Phase::SampleTime;return RISC_HTTP_OK;}
   if(!prepare(*session)){const auto c=close(nullptr,*out);if(c==RISC_HTTP_OK)*out=0;return c==RISC_HTTP_OK?RISC_HTTP_MEMORY:c;}
   return RISC_HTTP_OK;

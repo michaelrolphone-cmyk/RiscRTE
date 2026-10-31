@@ -50,7 +50,7 @@ struct Datagram { std::vector<uint8_t> bytes; sockaddr_in source{}; socklen_t le
 static std::deque<Datagram> datagrams;
 static std::array<uint8_t,48> query{};
 static sockaddr_in timePeer{};
-static uint32_t dnsDelay=0,udpDelay=0;
+static uint32_t dnsDelay=0,udpDelay=0,resolvedIpv4=0xc0000201;
 static int dnsResult=0,sendError=0,receiveError=0;
 static bool socketFail=false,fcntlFail=false,udpCloseFail=false,shortSend=false;
 static unsigned dnsCalls=0,dnsFrees=0,udpOpens=0,udpCloses=0,udpSends=0,udpReceives=0,randomCalls=0;
@@ -65,7 +65,7 @@ void esp_fill_random(void* out,size_t n){assert(online && n==8);++randomCalls;fo
 extern "C" int __wrap_getaddrinfo(const char* name,const char* service,const addrinfo* hints,addrinfo** out){
  assert(name&&hints->ai_family==AF_INET);if(service)assert(std::string(service)=="123"&&hints->ai_socktype==SOCK_DGRAM&&hints->ai_protocol==IPPROTO_UDP);else assert(hints->ai_socktype==SOCK_STREAM);
  resolvedName=name;++dnsCalls;clockMs+=dnsDelay;
- static addrinfo result;result={};timePeer={};timePeer.sin_family=AF_INET;timePeer.sin_port=htons(123);timePeer.sin_addr.s_addr=htonl(0xc0000201);
+ static addrinfo result;result={};timePeer={};timePeer.sin_family=AF_INET;timePeer.sin_port=htons(123);timePeer.sin_addr.s_addr=htonl(resolvedIpv4);
  result.ai_family=AF_INET;result.ai_addr=reinterpret_cast<sockaddr*>(&timePeer);result.ai_addrlen=sizeof(timePeer);
  *out=dnsResult?nullptr:&result;return dnsResult;
 }
@@ -135,7 +135,7 @@ esp_err_t esp_crt_bundle_attach(void* p){
 int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* cfg,esp_tls_t* tls){
  assert(n>0 && host[n]==0 && port==443 && cfg->non_block && !cfg->skip_common_name && cfg->timeout_ms>0);
 #if RISC_NATIVE_ESP_IDF
- if(NativeHttp::session->requestV2)assert(std::string(host)=="192.0.2.1"&&std::string(cfg->common_name)=="example.test");
+ if(NativeHttp::session->requestV2){char address[INET_ADDRSTRLEN];in_addr ip{htonl(resolvedIpv4)};assert(inet_ntop(AF_INET,&ip,address,sizeof(address)));assert(std::string(host)==address&&std::string(cfg->common_name)=="example.test");}
 #endif
  if(tls->conn_state==ESP_TLS_INIT)tls->sockfd=7;
  if(slowConnect)return 0;
@@ -192,7 +192,7 @@ static void reset(std::vector<std::string> response={"HTTP/1.1 200 OK\r\nContent
 #endif
  dnsDelay=udpDelay=0;dnsResult=sendError=receiveError=0;
  socketFail=fcntlFail=udpCloseFail=shortSend=false;
- dnsCalls=dnsFrees=udpOpens=udpCloses=udpSends=udpReceives=randomCalls=0;resolvedName.clear();datagrams.clear();query={};
+ resolvedIpv4=0xc0000201;dnsCalls=dnsFrees=udpOpens=udpCloses=udpSends=udpReceives=randomCalls=0;resolvedName.clear();datagrams.clear();query={};
 
  responses=std::move(response);opens=closes=0;inputAt=0;sent.clear();chunk=512;NativeHttp::configure(owner,ready);
 }
@@ -539,6 +539,12 @@ int main(){
   NativeHttp::session->~Session();heap_caps_free(NativeHttp::session);NativeHttp::session=nullptr;++cases;
  }
 #if RISC_NATIVE_ESP_IDF
+ // Validate the DNS result immediately before the pinned-address connection.
+ for(uint32_t address:{0x00000001u,0x0a000001u,0x64400001u,0x7f000001u,0xa9fe0001u,0xac100001u,0xc0000001u,0xc0a80001u,0xc6120001u,0xe0000001u,0xffffffffu,0x08080808u}){
+  reset();resolvedIpv4=address;risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST_PUBLIC,"https://example.test/callback",nullptr,0,"{}",2,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);int rc=RISC_HTTP_AGAIN;
+  for(unsigned i=0;i<20&&rc>=0&&rc!=RISC_HTTP_EOF;++i){rc=NativeHttp::apiV2()->advance(nullptr,t);char b[512];uint32_t count=0;NativeHttp::apiV2()->read(nullptr,t,b,sizeof(b),&count);}
+  assert(dnsCalls==1);if(address==0x08080808u){assert(rc==RISC_HTTP_EOF);assert(std::string(NativeHttp::session->address)=="8.8.8.8"&&std::string(NativeHttp::session->config.common_name)=="example.test");}else assert(rc==RISC_HTTP_NETWORK&&NativeHttp::session->sent==0);close(t);++cases;
+ }
  for(unsigned retained:{0u,1u}){reset();delayWorker=true;clockMs=10;risc_http_request_v2 r{sizeof(r),RISC_HTTP_GET,"https://example.test/",nullptr,0,nullptr,0,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);assert(NativeHttp::apiV2()->advance(nullptr,t)==RISC_HTTP_AGAIN);assert(NativeHttp::apiV2()->close(nullptr,t)==RISC_HTTP_AGAIN);if(retained){clockMs+=30001;assert(NativeHttp::apiV2()->close(nullptr,t)==RISC_HTTP_RETAINED);dnsWork(nullptr);NativeDns::discard();NativeHttp::destroy(*NativeHttp::session);discardRetained();}else{dnsWork(nullptr);assert(NativeHttp::apiV2()->close(nullptr,t)==0);}delayWorker=false;++cases;}
 #endif
  // Last case intentionally retains native poison after SDK freed a socket
