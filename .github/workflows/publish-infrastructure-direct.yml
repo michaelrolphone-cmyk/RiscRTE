@@ -1,15 +1,15 @@
 name: Publish complete ESP32-S3 infrastructure binary
 on:
   push:
-    branches: [release/esp32s3-infrastructure-v1.3.0-direct]
+    branches: [release/esp32s3-infrastructure-v1.4.0-direct]
     paths:
-      - artifacts/esp32s3-infrastructure-v1.3.0/**
+      - artifacts/esp32s3-infrastructure-v1.4.0/**
       - scripts/verify_infrastructure_initial_image.py
       - .github/workflows/publish-infrastructure-direct.yml
 permissions:
   contents: read
 concurrency:
-  group: esp32s3-infrastructure-v1.3.0-publication
+  group: esp32s3-infrastructure-v1.4.0-publication
   cancel-in-progress: false
 jobs:
   publish:
@@ -23,11 +23,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Expand complete binary
-        run: gzip -d artifacts/esp32s3-infrastructure-v1.3.0/riscrte-esp32s3-infrastructure-v1.3.0-initial.bin.gz
+        run: gzip -d artifacts/esp32s3-infrastructure-v1.4.0/riscrte-esp32s3-infrastructure-v1.4.0-initial.bin.gz
       - name: Verify exact complete image and embedded cohort
         run: |
-          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.3.0
-          cd artifacts/esp32s3-infrastructure-v1.3.0
+          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.4.0
+          cd artifacts/esp32s3-infrastructure-v1.4.0
           sha256sum -c SHA256SUMS
       - name: Publish direct binary and provenance
         env:
@@ -35,37 +35,18 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          tag=esp32s3-infrastructure-v1.3.0
+          tag=esp32s3-infrastructure-v1.4.0
           if gh release view "$tag" >/dev/null 2>&1; then
             echo 'Existing release must be inspected; refusing automatic overwrite.' >&2
             exit 1
           fi
-          cat > /tmp/infrastructure-release-notes.md <<'NOTES'
-          Complete ESP32-S3 infrastructure-agent first-install binary. Download `riscrte-esp32s3-infrastructure-v1.3.0-initial.bin` directly; no extraction, Python or compilation is needed.
-
-          Target: ESP32-S3, 16 MiB flash, octal PSRAM at 80 MHz, CPU 240 MHz. Flash offset 0. Contains bootloader, partition table, native runtime, complete boot-store ELF/provider cohort, mutable-data template and paired-bank metadata. Layout riscrte-paired-appdata-v2 / ABI 2.
-
-          FIRST INSTALL ONLY: this full 16 MiB image replaces saved Wi-Fi, pairing and device data. After flashing, join RiscRTE-Setup (password RiscRTE-Setup), open http://192.168.4.1/ and provision through the captive portal. If Android's sign-in window cannot choose a file, stay connected and open that address in Chrome. The updated private v1.3.0 pairing file enables the scoped relay connection. Older pairing files remain accepted for existing maintenance use and migrate the known implementation pins and Scheduler timing. No credentials are in this public binary.
-
-          Scheduler fix: freeze the transaction's due-query timestamp before lazy-read replay; changing it on each replay could consume the entire budget without making progress on a remote database. Begin processing accounting after authentication, receipt lookup and admission, with a fenced lease margin. The node now requests one bounded quantum, 8 seconds of processing, a 12-second HTTP timeout and a 60-second cadence. The deployed Scheduler binding independently admits up to 8 seconds. Other service binding budgets stay separate.
-
-          Webhook relay: poll event-only attachments on capabilities.events, bpmn.events, scheduler.events and relay.subscriptions. Persist the event and selected receivers before dispatch; use compact HTTPS JSON, stable Idempotency-Key, configured secret header and HMAC-SHA256 signature. Acknowledge only after all targets return 2xx or a terminal dead letter is confirmed. Five total attempts use 5-second, 30-second, 2-minute and 10-minute delays. Emit health every three minutes, including during backoff. Delivery is at least once; receivers must deduplicate. One event is in flight at a time, so failed recipients apply backpressure.
-
-          The deployed Channel Bus route uses a scoped relay token restricted to its own attachments plus relay.health/relay.deadletter publishing. It cannot claim commands or perform owner administration. Subscription updates contain credential references only and must stay within the privately provisioned HTTPS origin and secret-reference allowlists. Decision events now carry the narrow source.business_key field needed by Grok Worker 1's filter. The shared contract is profiles/esp32s3-infrastructure/RELAY-CONTRACT.md in the pinned System Apps source.
-
-          Native main-task stack increases from 16 KiB to 24 KiB to accommodate the relay while retaining the 4096-byte admission floor. Existing Core TLS certificate validation, radio diagnostic queue and USB console fixes are included.
-
-          Verification: production relay state-machine tests pass under ASan/UBSan, including power loss around delivery commits, identical replay identity/body, multiple targets, subscription validation, credential isolation, retry/dead-letter/ACK ordering and health during backoff. Independent HMAC verification passes. LeakSanitizer is unavailable under the test host's ptrace environment. The full application/service harness passes 173 calls, 28 maintenance wakes and four reboots. Target ELF import validation and native ESP32-S3 compilation pass. Scheduler tests reproduce the one-second failure with simulated remote database latency and commit one actual responsibility with the eight-second policy, including idempotent replay. Built Channel Bus Worker/D1 tests exercise scoped allow/deny cases; Capabilities tests cover the decision routing field. Exact source and component hashes accompany this release.
-
-          Qualification: the actual board has not been flashed with this release. Physical stack headroom, approximately 10-second delivery, Wi-Fi outage and brownout tests remain pending. Grok Worker 1's routine URL, secret header value and signing key have not been supplied; the private pairing therefore has no webhook subscriptions yet. This release does not claim that Grok notifications are active.
-          NOTES
-          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.3.0/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.3.0 — Webhook Relay and Scheduler Budget' --notes-file /tmp/infrastructure-release-notes.md --prerelease
+          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.4.0/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.4.0 — Bus Webhook Enrollment' --notes-file artifacts/esp32s3-infrastructure-v1.4.0/RELEASE-NOTES.md --prerelease
       - name: Download published assets and verify actual bytes
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir /tmp/published-infrastructure
-          gh release download esp32s3-infrastructure-v1.3.0 --dir /tmp/published-infrastructure
+          gh release download esp32s3-infrastructure-v1.4.0 --dir /tmp/published-infrastructure
           cd /tmp/published-infrastructure
           sha256sum -c SHA256SUMS
