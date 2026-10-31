@@ -20,6 +20,7 @@
 #include <esp_timer.h>
 #include <mbedtls/ssl.h>
 #include <mbedtls/x509_crt.h>
+#include "HttpCertificate.h"
 #include <mbedtls/asn1.h>
 #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
 #include <psa/crypto.h>
@@ -44,6 +45,7 @@ struct Session {
   uint64_t token,started,utc,utcAt;HttpBounds::Budget budget;HttpResponse::Decoder decoder;
   HttpTimeSample::Sample time;
   esp_tls_t* tls=nullptr;esp_tls_cfg_t config{};Verify verify=nullptr;void* verifyContext=nullptr;
+  HttpCertificate::BundleCandidates bundleCandidates;
   Phase phase=Phase::Connect;int32_t error=0;bool retained=false;unsigned redirects=0;
   char url[RISC_HTTP_URL_MAX+1]{},host[254]{},request[RISC_HTTP_URL_MAX+384]{};
   uint32_t requestBytes=0,sent=0,wire=0;
@@ -73,22 +75,17 @@ inline void memoryStage(const char* stage){
     static_cast<unsigned long>(heap_caps_get_largest_free_block(NativeTlsMemory::ExternalCaps)),
     static_cast<unsigned long>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA)));
 }
-inline int compare(const mbedtls_x509_time& a,const HttpBounds::Calendar& b){
-  const int left[]={a.year,a.mon,a.day,a.hour,a.min,a.sec};
-  const int right[]={b.year,b.month,b.day,b.hour,b.minute,b.second};
-  for(unsigned i=0;i<6;++i){if(left[i]<right[i])return -1;if(left[i]>right[i])return 1;}return 0;
-}
 inline int verifyCertificate(void* context,mbedtls_x509_crt* crt,int depth,uint32_t* flags){
   auto* s=static_cast<Session*>(context);
   if(!s || s!=session || !s->verify || !crt || !flags)return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
   const int result=s->verify(s->verifyContext,crt,depth,flags);
-  // The pinned SDK omits HAVE_TIME_DATE. Validate every presented certificate
-  // explicitly; do not alter global system time or disable chain/hostname checks.
+  // The pinned SDK omits HAVE_TIME_DATE. Validate real chain certificates
+  // against the session clock; bundle-generated anchors have no validity dates.
   const uint64_t seconds=s->utc+(now()-s->utcAt)/1000u;
-  HttpBounds::Calendar utc{};
-  if(!HttpBounds::calendar(seconds,utc))return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
-  if(compare(crt->valid_from,utc)>0)*flags|=MBEDTLS_X509_BADCERT_FUTURE;
-  if(compare(crt->valid_to,utc)<0)*flags|=MBEDTLS_X509_BADCERT_EXPIRED;
+  if(!HttpCertificate::validAt(*crt,*flags,seconds,s->bundleCandidates.anchor(crt)))
+    return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
+  if(result || *flags)RISC_STAGE_LOG("http certificate depth=%d result=%d flags=%lu utc=%llu bundle_anchor=%u",depth,result,
+    static_cast<unsigned long>(*flags),static_cast<unsigned long long>(seconds),unsigned(s->bundleCandidates.anchor(crt)));
   return result;
 }
 inline esp_err_t attachBundle(void* raw){
@@ -103,7 +100,7 @@ inline esp_err_t attachBundle(void* raw){
 #else
   s->verify=conf->f_vrfy;s->verifyContext=conf->p_vrfy;
 #endif
-  if(!s->verify){s->error=RISC_HTTP_TRANSPORT;return ESP_FAIL;}
+  if(!s->verify || !s->bundleCandidates.bind(conf)){s->error=RISC_HTTP_TRANSPORT;return ESP_FAIL;}
   mbedtls_ssl_conf_verify(conf,verifyCertificate,s);
 #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
   mbedtls_ssl_conf_min_tls_version(conf,MBEDTLS_SSL_VERSION_TLS1_2);
@@ -220,8 +217,9 @@ inline bool allocationError(int code){
 inline int32_t transportError(Session& s,int direct=0){
   int code=0,flags=0;
   const esp_err_t error=esp_tls_get_and_clear_last_error(s.tls->error_handle,&code,&flags);
-  const bool memory=error==ESP_ERR_NO_MEM || allocationError(code) || allocationError(direct);
+  const bool memory=error==ESP_ERR_NO_MEM || allocationError(code) || allocationError(direct) || allocationError(s.bundleCandidates.failure());
   RISC_STAGE_LOG("http failure esp=%d mbedtls=%d flags=%d memory=%u",int(error),code,flags,unsigned(memory));
+  if(s.bundleCandidates.failure())RISC_STAGE_LOG("http certificate candidate_error=%d",s.bundleCandidates.failure());
   memoryStage(memory?"tls-allocation-failed":"tls-transport-failed");
   return memory?RISC_HTTP_MEMORY:RISC_HTTP_TRANSPORT;
 }

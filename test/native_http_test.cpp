@@ -23,6 +23,13 @@ extern "C" {
 static void*(*tlsCalloc)(size_t,size_t)=esp_mbedtls_mem_calloc;
 static void(*tlsFree)(void*)=esp_mbedtls_mem_free;
 void mbedtls_ssl_conf_verify(mbedtls_ssl_config* c,NativeHttp::Verify f,void* p){c->MBEDTLS_PRIVATE(f_vrfy)=f;c->MBEDTLS_PRIVATE(p_vrfy)=p;}
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+void mbedtls_ssl_conf_ca_cb(mbedtls_ssl_config* c,mbedtls_x509_crt_ca_cb_t f,void* p){c->MBEDTLS_PRIVATE(f_ca_cb)=f;c->MBEDTLS_PRIVATE(p_ca_cb)=p;}
+static mbedtls_x509_crt bundleRoot{};
+static bool missingCandidates=false;
+static int candidatesError=0;
+static int candidates(void*,const mbedtls_x509_crt*,mbedtls_x509_crt** out){*out=candidatesError?nullptr:&bundleRoot;return candidatesError;}
+#endif
 #else
 static void*(*tlsCalloc)(size_t,size_t)=nullptr;static void(*tlsFree)(void*)=nullptr;
 #define MBEDTLS_PRIVATE(member) member
@@ -116,7 +123,15 @@ extern "C" int __wrap_close(int fd){
  assert(fd==7);++socketCloses;return socketCloseFail?-1:0;
 }
 int esp_tls_conn_destroy(esp_tls_t* p){assert(p->sockfd==-1&&p->server_fd.fd==-1);--live;++closes;for(void* b:p->buffers)if(b)tlsFree(b);delete p;return closeFail?-1:0;}
-esp_err_t esp_crt_bundle_attach(void* p){if(bundleError)return bundleError;if(!missingVerifier)static_cast<mbedtls_ssl_config*>(p)->MBEDTLS_PRIVATE(f_vrfy)=chain;return ESP_OK;}
+esp_err_t esp_crt_bundle_attach(void* p){
+ if(bundleError)return bundleError;
+ auto* conf=static_cast<mbedtls_ssl_config*>(p);
+ if(!missingVerifier)conf->MBEDTLS_PRIVATE(f_vrfy)=chain;
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+ if(!missingCandidates)conf->MBEDTLS_PRIVATE(f_ca_cb)=candidates;
+#endif
+ return ESP_OK;
+}
 int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* cfg,esp_tls_t* tls){
  assert(n>0 && host[n]==0 && port==443 && cfg->non_block && !cfg->skip_common_name && cfg->timeout_ms>0);
 #if RISC_NATIVE_ESP_IDF
@@ -145,7 +160,11 @@ int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* 
   if(!tls->buffers[i]){mbedError=-MBEDTLS_ERR_SSL_ALLOC_FAILED;return -1;}}
  config={};cfg->crt_bundle_attach(&config); // IDF ignores this return value.
 #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
- if(!bundleError&&!missingVerifier)assert(config.MBEDTLS_PRIVATE(min_tls_version)==MBEDTLS_SSL_VERSION_TLS1_2);
+ bool verifierReady=!bundleError&&!missingVerifier;
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+ verifierReady=verifierReady&&!missingCandidates;
+#endif
+ if(verifierReady)assert(config.MBEDTLS_PRIVATE(min_tls_version)==MBEDTLS_SSL_VERSION_TLS1_2);
 #else
  if(!bundleError&&!missingVerifier)assert(config.major==3&&config.minor==3);
 #endif
@@ -458,8 +477,23 @@ int main(){
   flags=0;assert(config.MBEDTLS_PRIVATE(f_vrfy)(config.MBEDTLS_PRIVATE(p_vrfy),&cert,0,&flags)==0&&flags==0);
   clockMs+=2000;flags=0;assert(config.MBEDTLS_PRIVATE(f_vrfy)(config.MBEDTLS_PRIVATE(p_vrfy),&cert,1,&flags)==0&&flags==MBEDTLS_X509_BADCERT_EXPIRED);
   flags=0;assert(config.MBEDTLS_PRIVATE(f_vrfy)(nullptr,&cert,0,&flags)==MBEDTLS_ERR_X509_CERT_VERIFY_FAILED);
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+  mbedtls_x509_crt* anchor=nullptr;
+  assert(config.MBEDTLS_PRIVATE(f_ca_cb)(config.MBEDTLS_PRIVATE(p_ca_cb),&cert,&anchor)==0&&anchor==&bundleRoot);
+  flags=0;assert(config.MBEDTLS_PRIVATE(f_vrfy)(config.MBEDTLS_PRIVATE(p_vrfy),anchor,2,&flags)==0&&flags==0);
+  // A lookalike empty certificate is not the bundle callback's actual anchor.
+  mbedtls_x509_crt fake{};flags=0;
+  assert(config.MBEDTLS_PRIVATE(f_vrfy)(config.MBEDTLS_PRIVATE(p_vrfy),&fake,2,&flags)==0&&flags==MBEDTLS_X509_BADCERT_EXPIRED);
+  candidatesError=MBEDTLS_ERR_X509_ALLOC_FAILED;
+  assert(config.MBEDTLS_PRIVATE(f_ca_cb)(config.MBEDTLS_PRIVATE(p_ca_cb),&cert,&anchor)==candidatesError&&!anchor);
+  assert(NativeHttp::transportError(*NativeHttp::session)==RISC_HTTP_MEMORY);
+  candidatesError=0;
+#endif
   close(t);cases+=8;
  }
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+ reset();missingCandidates=true;{auto t=open();std::string body;assert(run(t,body)==RISC_HTTP_TRANSPORT&&sent.empty());close(t);++cases;}missingCandidates=false;
+#endif
 
  // V2 exercises the same production transport with copied authenticated POST,
  // all response statuses, validators, strict framing bounds and no redirects.

@@ -195,6 +195,8 @@ jobs:
           bash test/run_native_internal_atomics_test.sh
           python test/run_native_settings_startup_entropy_test.py
           bash test/run_native_http_idf6_test.sh
+          bash test/native_http_certificates/run.sh
+          bash test/run_native_radio_diagnostics_test.sh
           bash test/run_native_tls_memory_idf6_test.sh
           bash test/run_image_pressure_realloc_test.sh
           bash test/run_provider_queue_native_placement_test.sh

@@ -75,3 +75,60 @@ Shared Core console/radio suites did not include that header and were unaffected
 See the System Apps profile's v1.2.3 conformance amendment for exact boundaries.
 Native runtime code is unchanged from v1.2.2; source identity remains verified.
 Physical settings save, station join and live services are still pending.
+
+## v1.2.4 certificate-chain failure after successful setup
+
+The v1.2.3 device session `4f0b2456-4ed4-47bb-b92d-07b2533a3038`,
+inspected through sequence 1709, advances through setup, station join, two
+durable writes, and an HTTPS request. It repeatedly reports ESP error 32794
+(`ESP_ERR_MBEDTLS_SSL_HANDSHAKE_FAILED`) and Mbed TLS magnitude 12288
+(`MBEDTLS_ERR_X509_FATAL_ERROR`). `memory=0` is not an allocation failure.
+This capture has zero browser capture gaps; it ends at 2026-10-31 00:13:37Z.
+
+Both public service endpoints present the chain wildcard cantikash.chatgpt.site
+-> WE1 -> cross-signed GTS Root R4 -> GlobalSign Root CA. The selected full
+bundle trusts GTS Root R4 but has retired GlobalSign Root CA. With cross-signed
+verification disabled, the SDK follows the extra peer certificate to the
+retired root. The regression compiles the actual pinned SDK X.509/PSA and bundle
+source against this captured chain and reproduces exactly -12288. Public chain
+capture: GitHub Actions run 41149393016; no credentials were used.
+
+The generic native build now enables the SDK CA-candidate callback so chain
+construction can terminate at the already trusted GTS root. The pinned SDK's
+previously disabled branch also references the removed Mbed TLS 4 `next_merged`
+field. A source-digest-checked build transformation removes that obsolete
+assignment and matches candidate allocations to the Mbed TLS allocator. The SDK
+checkout and trust store remain immutable. Target and host tests compile the
+same transformed source. Candidate allocations follow the existing PSRAM TLS
+policy and their original errors remain visible before SDK fatal-error mapping.
+
+The private session clock still checks all real certificates in the verified
+chain. Only the exact synthetic subject/key anchor returned by the bundle's
+CA callback skips a nonexistent encoded date interval. An arbitrary certificate
+with empty dates does not receive this exemption. Hostname, signature and trust
+checks remain enabled; existing failure flags are never cleared by the core.
+
+The real-chain regression accepts the service fixture with zero flags and
+rejects wrong hostname, expired/future leaf, expired intermediate, tampered
+signature, untrusted signer, empty real-certificate dates and invalid private
+clock. Enabling cross-signed verification with the old date wrapper is a
+separate failing control. ASan covers 100 repeated verifications plus the first
+99 allocation-failure positions. Counted allocator ownership returns to its
+baseline after every attempt and to zero after PSA shutdown. LeakSanitizer
+cannot inspect processes in this environment; these are explicit allocation
+checks, not a claim of a successful LeakSanitizer run. These tests use portable
+host cryptography, not the ESP32 hardware crypto accelerators.
+
+The same session reports 31,016 lost radio diagnostic records. The worker was
+queuing six unchanged status edges per poll while the owner was in HTTPS.
+The core now coalesces unchanged ApInfo/NetifUp/IpInfo results, retains every
+change, resets suppression per operation, and doubles the bounded ring to 64.
+The atomic latest edge still updates on every SDK call and exposes an unchanged
+probe that stalls for 100 ms. Lifecycle records and explicit overflow reporting
+remain. ASan/UBSan exercises 60,000 repeated edges, changed failures/recovery,
+stalled calls, new operations and intentional saturation, with diagnostics on
+and off. Existing USB console admission and its 8192-byte TX buffer remain.
+
+The application/package hashes and private pairing file remain compatible with
+v1.2.3. Hardware confirmation of the new certificate path and completed live
+service reconciliation remains pending; host checks do not establish it.

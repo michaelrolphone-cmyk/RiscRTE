@@ -5,7 +5,7 @@ idf="${IDF_PATH:-$repo/../esp-idf}"
 mbed="$idf/components/mbedtls"
 [[ -f "$mbed/mbedtls/include/mbedtls/ssl.h" ]] || { echo "Set IDF_PATH to the selected ESP-IDF6 checkout" >&2;exit 1; }
 build="$(mktemp -d)";trap 'rm -rf "$build"' EXIT
-flags=(-DRISC_NATIVE_ESP_IDF=1 -DMBEDTLS_PLATFORM_MEMORY -Wall -Wextra -Werror -Wno-missing-field-initializers)
+flags=(-DRISC_NATIVE_ESP_IDF=1 -DMBEDTLS_PLATFORM_MEMORY -DMBEDTLS_X509_TRUSTED_CERTIFICATE_CALLBACK -DCONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY=1 -Wall -Wextra -Werror -Wno-missing-field-initializers)
 san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g);fi
 # Real selected SDK mbedTLS4/PSA declarations, HTTP parser and esp_mem.c. Only ESP-TLS
