@@ -1,0 +1,77 @@
+{
+  "baseline": "ab41321d47de991c832c2cb8aeea99e095686a3c",
+  "sourceTreeDirty": true,
+  "hardware": false,
+  "actualSDKIRQ": false,
+  "sdkDeclarations": "fff9895c82d744c7237be8847347bdd1b07c6643",
+  "regressionTestCommit": "3e48690",
+  "casesPerProfile": 9,
+  "profiles": [
+    {
+      "external": false,
+      "sanitized": false,
+      "log": "final-0-0.log",
+      "sha256": "a7770809d31266e42b4906952cf5d2a6accc016233457d66e5a4c1e3fc7ed6cf",
+      "passed": true
+    },
+    {
+      "external": false,
+      "sanitized": true,
+      "log": "final-0-1.log",
+      "sha256": "a7770809d31266e42b4906952cf5d2a6accc016233457d66e5a4c1e3fc7ed6cf",
+      "passed": true
+    },
+    {
+      "external": true,
+      "sanitized": false,
+      "log": "final-1-0.log",
+      "sha256": "df09733109d46fd2e02e055ad041ed7d18df29e675e559514997fcf9dfd4d5e5",
+      "passed": true
+    },
+    {
+      "external": true,
+      "sanitized": true,
+      "log": "final-1-1.log",
+      "sha256": "df09733109d46fd2e02e055ad041ed7d18df29e675e559514997fcf9dfd4d5e5",
+      "passed": true
+    }
+  ],
+  "inputs": {
+    "src/diagnostics/LiveLogQueue.h": "c3f7e4b4d8f5c01e5db36107acde88a0ff567dc1d5f4c44be18d4e4b8ff7da09",
+    "src/ports/esp32s3/SleepDiagnostics.cpp": "b5351160e6ae17911b35e3a619303b1c101131ddb0ab062277ad96e249e8c3aa",
+    "src/ports/esp32s3/NativePlatform.cpp": "c39688bbf0638ed857d274585099f71448312edd741502cb7e050e1ac853c540",
+    "src/ports/esp32s3/NativeSerialFiles.cpp": "d8f676d94c2c566872073abf7fcdc051deac310cc9cb03bc35ad79dad1ef5d52",
+    "src/runtime/serial/Files.cpp": "58710f76e46b15867a4b6fe62854f39fe8a86389794d4a90614add969af2ff2a",
+    "test/native_log_retention_test.cpp": "37c7315b8ce6a39bc633bd3dc253c03ed53b2aa34d6f8bd904b1285b5605dd96",
+    "test/run_native_log_retention_test.sh": "bd676260372351580f2f16570701b2f42245c337533e37229b030acad9bfc992"
+  },
+  "compatibility": {
+    "recovery-fixed.log": {
+      "sha256": "46726502ba45d2ef4e3bf2d417fe815e1a74f51cd9c316171f19570d744fa393",
+      "tail": "Native IDF6 USB diagnostics: actual Console/driver declarations, atomic RCC, physical 20ms detach, same-core/foreign-owner safety, retained faults and lease fences PASS"
+    },
+    "workspace.log": {
+      "sha256": "f5f70288496630a349540f59799a1e0d19f3125c7630cb91b38a8d22fc5f3c0f",
+      "tail": "Native diagnostic workspace: diagnostics=1 performance=1 capacity=128 fixed_bytes=9448; construction, complete payload, snapshot custody, partial replay, owner/ISR gates and repeated start PASS"
+    },
+    "legacy-stage.log": {
+      "sha256": "d32a622ee5d6142fd3c9d8c620dce1bdd8a5b143075070f7a963b21f879c2481",
+      "tail": "Disabled plain stage logs: no formatting, clock, storage or argument evaluation PASS"
+    },
+    "legacy-observer.log": {
+      "sha256": "bacd2d01e2b57aa02f61c1368b930b6884571756a08906502dcce34d0aaa1756",
+      "tail": "native diagnostic observer disabled PASS"
+    },
+    "serial-transport.log": {
+      "sha256": "fc279e1f7c53cd4e1bdbd4fa004cbf358e8b1c48a9b837835545d92da114f6ff",
+      "tail": "Native serial default-off empty object PASS"
+    }
+  },
+  "targetLayout": {
+    "compiler": "xtensa-esp-elf-g++ (crosstool-NG esp-15.2.0_20251204) 15.2.0",
+    "queueBytes": 32784,
+    "section": ".ext_ram.bss.test",
+    "journalBytes": 1288,
+    "limitation": "Actual Xtensa object with SDK declarations and host peripheral stubs/section attributes. Full native CI and linked product map still required."
+  }
+}
