@@ -1,0 +1,2 @@
+PASS: actual published bundle, pinned no-import WASM, real LittleFS migration, exact pending bytes/large integers/keys, bank plan, corruption refusal and activation-last failure fencing.
+PASS: bounded Espressif read protocol consumes and validates device MD5; secure boot/encryption refused. Physical USB remains untested.

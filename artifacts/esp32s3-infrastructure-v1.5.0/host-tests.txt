@@ -1,0 +1,44 @@
+Generated board + actual infra-station + real CpuPort: station-only AP denied; portal AP and subsequent station join admitted; cleanup PASS
+Actual portal page script: file bytes/pasted data, Android WebView guidance, session token, save success/error and input retention PASS (DOM/network mocks; not Android hardware)
+infra core: strict JSON, corruption at every byte, capacity, coalescing, lease and overload PASS
+Policy fixture: accepted; overload and unknown safety fields rejected
+Journal: copied async writes, BUSY, both COMMIT_UNKNOWN outcomes, stale revision, corruption and retained fence PASS
+Transport: SNTP first request, cached UTC subsequent requests PASS
+Boot health: early/connect/backoff/unreconciled/unsynced/required-target/storage/capacity states rejected; healthy current boot accepted
+Journal production backend: setup seed, >60 KB save/reboot, oversize refusal preserves committed state PASS
+Portal: captive redirect, page/session, CSRF and framing, pin validation, save-before-disconnect, wrong Wi-Fi retry, durable reboot, DNS bounds, uncertain commits PASS
+Portal: captive redirect, page/session, CSRF and framing, pin validation, save-before-disconnect, wrong Wi-Fi retry, durable reboot, DNS bounds, uncertain commits PASS
+Portal: captive redirect, page/session, CSRF and framing, pin validation, save-before-disconnect, wrong Wi-Fi retry, durable reboot, DNS bounds, uncertain commits PASS
+Portal: captive redirect, page/session, CSRF and framing, pin validation, save-before-disconnect, wrong Wi-Fi retry, durable reboot, DNS bounds, uncertain commits PASS
+Portal: captive redirect, page/session, CSRF and framing, pin validation, save-before-disconnect, wrong Wi-Fi retry, durable reboot, DNS bounds, uncertain commits PASS
+Relay: policy scope, durable event before dispatch, reboot before/after delivery commit, idempotency headers, five bounded retries, dead-letter before ACK, health during retry, credential isolation PASS
+Terminal request recovery: exact non-application, durable redacted disposition, legacy replay, health, checkpoint reset, ambiguous custody and execution isolation PASS
+Bus enrollment: independent Node/OpenSSL seal, device X25519 key, new origin with empty pairing, approval binding, rotate/revoke, tamper/wrong-key, rejection/expiry, reboot atomicity and secret-free wire results PASS
+Unified relay: independent cursors, failure isolation across reboot, ordered catch-up, invocation identity, MCP wire/rotation, sealed enrollment, wrong challenge denial and key preservation PASS
+Standard Webhooks: independent Node HMAC checks exact body, ID, timestamp, old/new key rotation PASS
+Relay HMAC: independently verified exact body and timestamp PASS
+{
+  "result": "PASS",
+  "calls": 173,
+  "wakes": 28,
+  "polls": 10,
+  "progress": 2,
+  "inventory": 5,
+  "accepted": 2,
+  "stops": 3,
+  "reboots": 4,
+  "dependencyResults": 1,
+  "scenarios": [
+    "long-lived maintenance",
+    "cancel",
+    "lost enrollment response",
+    "lost claim response",
+    "lost prepare response",
+    "lost accepted result response",
+    "fresh-session recovery",
+    "304 heartbeat without flash",
+    "lost local observation checkpoint against existing service history",
+    "shared inventory",
+    "composite dependency prepare/start/result"
+  ]
+}

@@ -1,0 +1,1 @@
+PASS: actual phone UI handlers refuse backup failure, preserve local-only wire privacy, order backup before plan/write, prevent double tap and offer monitor reconnect. USB mocked.

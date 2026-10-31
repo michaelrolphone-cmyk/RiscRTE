@@ -1,0 +1,23 @@
+{
+  "schema": "riscrte-infrastructure-direct-image/1",
+  "tag": "esp32s3-infrastructure-v1.5.0",
+  "name": "ESP32-S3 Infrastructure Agent v1.5.0 \u2014 Unified ChatGPT and Webhook Relay",
+  "asset": "riscrte-esp32s3-infrastructure-v1.5.0-initial.bin",
+  "bytes": 16777216,
+  "sha256": "39e590af6638dc698c302a300caae6b18b697d64cc8f5eaa04108a83ddeca6a9",
+  "offset": 0,
+  "profile": "esp32s3-infrastructure",
+  "source": {
+    "runtime": "e04c42a9b09c8e90444e20dc61006db4a83b01fc",
+    "system_apps": "1f9031e68e32941c372b67132712a68f140735b7",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2"
+  },
+  "purpose": "First installation only; replaces all 16 MiB. Existing enrolled devices must use the preserving repair ZIP.",
+  "provisioning": "On-device Wi-Fi captive portal; webhook and MCP credentials enroll through the bus.",
+  "hardware_qualified": false,
+  "layout": "riscrte-paired-appdata-v2",
+  "layout_abi": 2,
+  "startup_status": "Native image and shared delivery core compiled; live ChatGPT activation and timing qualification pending. Preserving upgrade retains existing identity and enrollment requests.",
+  "repair_asset": "riscrte-esp32s3-infrastructure-v1.5.0-repair.zip"
+}

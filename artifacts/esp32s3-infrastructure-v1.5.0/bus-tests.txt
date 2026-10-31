@@ -1,0 +1,56 @@
+✔ versioned contracts reject mutation and malformed payloads (8.05476ms)
+✔ durable publish deduplication rejects conflicting retries (19.386578ms)
+✔ independent event offsets, redelivery until ack, bounded ack, replay (8.861371ms)
+✔ two competing consumers claim once; expiry retries and stale tokens fail (15.950831ms)
+✔ poison messages dead-letter after 5 attempts and can be redriven (9.862032ms)
+✔ type-filtered handler progresses past unrelated queued work (97.884209ms)
+✔ detach prevents further receive or acknowledgement (2.987214ms)
+✔ expired fifth lease becomes dead without a sixth claim (9.942062ms)
+✔ event pagination advances through unrelated types and never loses matched events (95.40032ms)
+✔ exact publication lookup preserves authoritative identity without claiming or republishing (4.825682ms)
+✔ native MCP discovery, one approval, sealed custody, idempotence, refresh, revoke and restart (173.116197ms)
+✔ event method refuses unsupported filters, callbacks, replay, invalid keys and old executors (24.699272ms)
+✔ two same-channel subscription attachments catch up independently; no cross-relay message fetch (768.347316ms)
+✔ one subscription preserves global Bus order across channels and filter skips (20.735342ms)
+✔ discovery advertises exact resource, DCR and S256; authentication cannot be supplied as labels (40.733585ms)
+✔ owner consent, CSRF, PKCE, exact binding, denial and completion link (108.182039ms)
+✔ concurrent code exchange and refresh reuse cannot duplicate execution authority (9.852107ms)
+bus_oauth_error { action: 'authorize' }
+✔ expiry, unknown bearer and registered redirect tampering are rejected (12.154378ms)
+✔ actual Capabilities approval, one question, binding, rotation/revoke and replay receipts (205.316703ms)
+✔ rejection, expiry, wrong key, tamper and pending cap never grant registration (57.860671ms)
+✔ catch-up skips 25 unmatched events but never skips the next matching event (26.981017ms)
+✔ relay scope cannot administer, invoke services, read or ack other attachments (81.622923ms)
+✔ event delivery remains unacked until explicit ack; never claims commands; oversized payload is a reference (36.430589ms)
+✔ health publication deduplicates and rejects another relay identity (10.991928ms)
+20k bus discovery bytes 5323
+✔ large retained history returns only bounded metadata; contract and history cursors are lossless (344.394415ms)
+✔ cold payload archive preserves replay, exact deduplication and conflicting retry rejection (20.694561ms)
+✔ failed archive upload keeps the full durable payload and retries safely (6.84241ms)
+✔ connect advertises capabilities; credentials stay encrypted and absent from discovery (57.477871ms)
+✔ published requests dispatch and correlated result events follow; duplicate publish does not rerun (71.471275ms)
+✔ custom reply channels receive results (9.058316ms)
+✔ large results are split into lossless correlated base64 parts (44.848004ms)
+✔ local and credential-bearing endpoints are refused (0.638999ms)
+✔ incompatible custom reply contracts fall back without losing the native outcome (13.629096ms)
+✔ private Site provider receives its separate access credential without exposing it (5.447457ms)
+✔ bus reads wake Scheduler, suppress recursive callbacks and coalesce bursts (6.408369ms)
+✔ concurrent Bus activity does not dispatch a second tick (6.964108ms)
+✔ failed tick delivery is retried with the same message and operation identity (7.768234ms)
+✔ explicit tick publication does not create an extra activity tick (9.837125ms)
+✔ tool errors are surfaced without failing the original Bus operation (7.085665ms)
+✔ orphaned clock lease recovers after expiry and missing service is harmless (7.423142ms)
+✔ 100 activity ticks retain one clock row and no additional messages (130.712607ms)
+✔ request returns before background Scheduler evaluation completes (5.53985ms)
+✔ legacy interrupted clock message completes before compact wakeups begin (8.758306ms)
+✔ background publication returns its durable identity before provider completion and retains delivery (8.923353ms)
+✔ service sync preserves immutable equivalent generic envelope bytes (5.920416ms)
+✔ service sync still rejects a narrower immutable envelope (3.37175ms)
+ℹ tests 46
+ℹ suites 0
+ℹ pass 46
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1160.656973
