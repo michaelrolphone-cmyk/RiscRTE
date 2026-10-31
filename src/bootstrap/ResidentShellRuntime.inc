@@ -48,22 +48,32 @@ bool Runtime::residentToken(uint64_t token,uint32_t role,bool entry) const {
     (!entry || (active() && invocation_->entryRunning_ && !retained_));
 }
 bool Runtime::residentClient(risc_resident_client_v1* out) {
-  if(!out || out->struct_size<sizeof(*out))return false;
-  *out={};
+  if(observationCall() || !out || out->struct_size<sizeof(*out))return false;
+  const size_t capacity=out->struct_size<sizeof(risc_resident_attention_client_v1)?out->struct_size:sizeof(risc_resident_attention_client_v1);
+  memset(out,0,capacity);
   if(!residentEnabled_ || !active() || !invocation_->entryRunning_ || retained_ ||
      !invocation_->role || !invocation_->streams_.context())return false;
-  *out={1,sizeof(*out),invocation_->streams_.context(),invocation_->role,0,
+  risc_resident_attention_client_v1 result={{1,(uint32_t)capacity,invocation_->streams_.context(),invocation_->role,0,
     [](uint64_t token,const risc_resident_callbacks_v1* callbacks)->int32_t {
-      return currentRuntime?currentRuntime->registerShell(token,callbacks):RISC_RESIDENT_DENIED;
+      return currentRuntime && !currentRuntime->observationCall()?currentRuntime->registerShell(token,callbacks):RISC_RESIDENT_DENIED;
     },
     [](uint64_t token,const char* path,risc_resident_result_v1* result)->int32_t {
-      return currentRuntime?currentRuntime->runForeground(token,path,result):RISC_RESIDENT_DENIED;
+      return currentRuntime && !currentRuntime->observationCall()?currentRuntime->runForeground(token,path,result):RISC_RESIDENT_DENIED;
     },
     [](uint64_t token,const risc_resident_request_v1* request,risc_resident_reply_v1* reply)->int32_t {
-      return currentRuntime?currentRuntime->residentCheckpoint(token,request,reply):RISC_RESIDENT_DENIED;
+      return currentRuntime && !currentRuntime->observationCall()?currentRuntime->residentCheckpoint(token,request,reply):RISC_RESIDENT_DENIED;
     },
-    [](uint64_t token)->int32_t {return currentRuntime?currentRuntime->residentExit(token):RISC_RESIDENT_DENIED;},
-    [](uint64_t token,risc_resident_failure_v1* failure)->bool {return currentRuntime && currentRuntime->residentFailure(token,failure);}};
+    [](uint64_t token)->int32_t {return currentRuntime && !currentRuntime->observationCall()?currentRuntime->residentExit(token):RISC_RESIDENT_DENIED;},
+    [](uint64_t token,risc_resident_failure_v1* failure)->bool {return currentRuntime && !currentRuntime->observationCall() && currentRuntime->residentFailure(token,failure);}},
+    RISC_RESIDENT_ATTENTION_TAG,1,
+    [](uint64_t token,const risc_resident_attention_callbacks_v1* callbacks)->int32_t {return currentRuntime?currentRuntime->registerAttention(token,callbacks):RISC_RESIDENT_DENIED;},
+    [](uint64_t token,risc_resident_attention_v1* state)->int32_t {return currentRuntime?currentRuntime->residentAttention(token,state):RISC_RESIDENT_DENIED;},
+    [](uint64_t token,uint32_t bits)->int32_t {
+      if(currentRuntime && currentRuntime->observationCall())return RISC_RESIDENT_RETAINED;
+      if(!bits || (bits&~(RISC_RESIDENT_ATTENTION_CONTROLS|RISC_RESIDENT_ATTENTION_EXIT)))return RISC_RESIDENT_INVALID;
+      risc_resident_attention_v1 state{sizeof(state),0,0,0};
+      return currentRuntime?currentRuntime->residentAttention(token,&state,bits):RISC_RESIDENT_DENIED;}};
+  memcpy(out,&result,capacity);
   return true;
 }
 int32_t Runtime::registerShell(uint64_t token,const risc_resident_callbacks_v1* callbacks) {
@@ -178,7 +188,7 @@ int32_t Runtime::runForeground(uint64_t token,const char* relative,risc_resident
       }
     }
   }
-  foregroundRunning_=true;foregroundExit_=false;
+  foregroundRunning_=true;foregroundExit_=false;attentionObservedToken_=0;attentionObservedManual_=0;
   invocation_=foreground_.get();strcpy(invocation_->current_,absolute);
   invocation_->fileOpen_=resume?residentTransferFileOpen_:FileOpenState{};
   residentContinuation_[0]=0;residentTransferFileOpen_={};
@@ -218,7 +228,7 @@ int32_t Runtime::runForeground(uint64_t token,const char* relative,risc_resident
     status=RISC_RESIDENT_RETAINED;recordResidentFailure(RISC_RESIDENT_FAILURE_RETAINED,status,absolute,out->invocation);
     invocation_=&mainInvocation_;
   }
-  foregroundRunning_=false;foregroundExit_=false;
+  foregroundRunning_=false;foregroundExit_=false;attentionObservedToken_=0;attentionObservedManual_=0;
   out->status=status;if(status<0)out->failure=lastFailure_;
   if(!retained_ && status<0 && shellCallbacks_.failed) {
     error_[0]=0;
@@ -231,6 +241,66 @@ int32_t Runtime::runForeground(uint64_t token,const char* relative,risc_resident
 int32_t Runtime::residentExit(uint64_t token) {
   if(!residentToken(token,RISC_RESIDENT_ROLE_HOST) || shellToken_!=token || !shellDispatching_ || shellLoading_ || !foregroundRunning_)return RISC_RESIDENT_DENIED;
   foregroundExit_=true;return RISC_RESIDENT_OK;
+}
+
+// Observation is deliberately not a lifecycle checkpoint. The child keeps all
+// provider/memory ownership; only the authority pointer is borrowed for already
+// held, qualified host observations. No appExitBarrier/selectInvocation here.
+int32_t Runtime::registerAttention(uint64_t token,const risc_resident_attention_callbacks_v1* callbacks) {
+  if(observationCall())return RISC_RESIDENT_RETAINED;
+  if(!residentToken(token,RISC_RESIDENT_ROLE_HOST) || shellToken_!=token)return RISC_RESIDENT_DENIED;
+  if(foregroundRunning_ || shellDispatching_ || yielding_ || promotionRunning_ || graph_.lifecycleBusy())return RISC_RESIDENT_BUSY;
+  if(attentionCallbacks_.observe || !callbacks || callbacks->api_version!=1 || callbacks->struct_size!=sizeof(*callbacks) ||
+     callbacks->tag!=RISC_RESIDENT_ATTENTION_TAG || !callbacks->supported_flags ||
+     (callbacks->supported_flags&~RISC_RESIDENT_ATTENTION_ALL) || !callbacks->observe ||
+     ((callbacks->supported_flags&(RISC_RESIDENT_ATTENTION_CONTROLS|RISC_RESIDENT_ATTENTION_EXIT)) && !callbacks->reject_manual))return RISC_RESIDENT_INVALID;
+  attentionCallbacks_=*callbacks;return RISC_RESIDENT_OK;
+}
+int32_t Runtime::residentAttention(uint64_t token,risc_resident_attention_v1* out,uint32_t reject) {
+  if(observationCall())return RISC_RESIDENT_RETAINED;
+  if(!residentToken(token,RISC_RESIDENT_ROLE_FOREGROUND) || !foregroundRunning_ || !shellToken_ ||
+     mainInvocation_.streams_.context()!=shellToken_ || mainInvocation_.role!=RISC_RESIDENT_ROLE_HOST)return RISC_RESIDENT_DENIED;
+  if(shellDispatching_ || yielding_ || promotionRunning_ || graph_.lifecycleBusy() || mainInvocation_.streams_.busy())return RISC_RESIDENT_BUSY;
+  if(!out || out->struct_size<sizeof(*out))return RISC_RESIDENT_INVALID;
+  if(!attentionCallbacks_.observe || !port_.monotonicMs || !port_.providerStorageSafe || (reject && !attentionCallbacks_.reject_manual))return RISC_RESIDENT_INCOMPATIBLE;
+  if(reject && (attentionObservedToken_!=token || (reject&~attentionObservedManual_)))return RISC_RESIDENT_INVALID;
+  auto* child=invocation_;const uint64_t host=shellToken_;
+  auto retain=[&](){
+    invocation_=child;attentionRunning_=false;retained_=true;
+    child->active_=false;mainInvocation_.active_=false;
+    fail("resident observation contract retained");return RISC_RESIDENT_RETAINED;
+  };
+  // The native custody predicate permits healthy capture/RF. Never use the
+  // Runtime wrapper here: its absent-hook fallback is the app-exit barrier.
+  const bool beforeSafe=port_.providerStorageSafe();
+  if(!beforeSafe || currentRuntime!=this || !port_.owner() || invocation_!=child ||
+     child->streams_.context()!=token || mainInvocation_.streams_.context()!=host || retained_)return retain();
+  uint32_t now=0;
+  const bool clockValid=port_.monotonicMs(&now);
+  if(currentRuntime!=this || !port_.owner() || invocation_!=child || child->streams_.context()!=token ||
+     mainInvocation_.streams_.context()!=host || retained_)return retain();
+  if(!clockValid)return RISC_RESIDENT_INCOMPATIBLE;
+  const auto callbacks=attentionCallbacks_;
+  risc_resident_attention_v1 result{sizeof(result),callbacks.supported_flags,0,now};
+  attentionViolation_=false;attentionRunning_=true;invocation_=&mainInvocation_;
+  const int32_t status=reject?callbacks.reject_manual(callbacks.context,reject):callbacks.observe(callbacks.context,now,&result);
+  bool same=currentRuntime==this && port_.owner() && invocation_==&mainInvocation_ &&
+    mainInvocation_.streams_.context()==host && shellToken_==host && child->streams_.context()==token;
+  const bool resultValid=(status==RISC_RESIDENT_OK || status==RISC_RESIDENT_BUSY) &&
+    result.struct_size==sizeof(result) && result.supported_flags==callbacks.supported_flags && result.monotonic_ms==now &&
+    !(result.pending_flags&~callbacks.supported_flags) && !(status==RISC_RESIDENT_BUSY && result.pending_flags);
+  if(same && !attentionViolation_ && !retained_ && resultValid) {
+    const bool afterSafe=port_.providerStorageSafe();
+    same=afterSafe && currentRuntime==this && port_.owner() && invocation_==&mainInvocation_ &&
+      mainInvocation_.streams_.context()==host && shellToken_==host && child->streams_.context()==token;
+  }
+  invocation_=child;attentionRunning_=false;
+  if(!same || attentionViolation_ || retained_ || !resultValid)return retain();
+  if(status==RISC_RESIDENT_OK){
+    if(reject)attentionObservedManual_&=~reject;
+    else {attentionObservedToken_=token;attentionObservedManual_=result.pending_flags&(RISC_RESIDENT_ATTENTION_CONTROLS|RISC_RESIDENT_ATTENTION_EXIT);*out=result;}
+  }
+  return status;
 }
 int32_t Runtime::residentCheckpoint(uint64_t token,const risc_resident_request_v1* request,risc_resident_reply_v1* reply) {
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
@@ -283,6 +353,7 @@ int32_t Runtime::residentCheckpoint(uint64_t token,const risc_resident_request_v
        (copied.reason==RISC_RESIDENT_CHECKPOINT_POLL && (copied.flags&RISC_RESIDENT_POLL_INHIBIT_POLICY)))child->residentPolicyPending_=false;
     else if(result.flags&RISC_RESIDENT_REPLY_POLICY_REQUEST)child->residentPolicyPending_=true;
   }
+  if(status==RISC_RESIDENT_OK && copied.reason==RISC_RESIDENT_CHECKPOINT_POLICY){attentionObservedToken_=0;attentionObservedManual_=0;}
   *reply=result;
   return foregroundExit_ || status==RISC_RESIDENT_EXIT ? RISC_RESIDENT_EXIT : status;
 }

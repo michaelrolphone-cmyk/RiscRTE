@@ -1,0 +1,53 @@
+name: Resident capture-safe attention
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'sdk/**'
+      - 'test/**'
+      - '.github/workflows/resident-attention.yml'
+  push:
+    paths:
+      - 'src/**'
+      - 'sdk/**'
+      - 'test/**'
+      - '.github/workflows/resident-attention.yml'
+permissions:
+  contents: read
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [normal, sanitized]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Qualify actual Runtime attention and unchanged resident contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p qualification
+          san=()
+          if [[ '${{ matrix.mode }}' == sanitized ]]; then san=(--sanitize); fi
+          python3 test/run_resident_attention.py --output qualification/attention "${san[@]}" 2>&1 | tee qualification/attention.log
+          python3 test/run_resident_attention_regressions.py --output qualification/regressions "${san[@]}" 2>&1 | tee qualification/regressions.log
+      - name: Preserve source custody
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p qualification
+          git rev-parse HEAD > qualification/source-commit.txt
+          git submodule status --recursive > qualification/submodule-commits.txt
+          tar --exclude=.git -czf qualification/source-inputs.tar.gz src sdk lib test .github/workflows/resident-attention.yml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resident-attention-${{ matrix.mode }}
+          path: qualification/
+          if-no-files-found: error
+          retention-days: 14

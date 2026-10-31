@@ -46,6 +46,7 @@ namespace RiscExperimental { class NativeAtomicKeyValue; }
 #include <RiscRuntimeV1.h>
 #include <RiscDiagnosticCheckpointV1.h>
 #include <RiscResidentShellV1.h>
+#include <RiscResidentAttentionV1.h>
 #include <RiscRealtimeV1.h>
 #include <RiscPlatformRealtimeV1.h>
 #include <RiscProviderPromotionV1.h>
@@ -289,7 +290,10 @@ class Runtime final {
   // native grants and uses ordinary graph shutdown. Uncertainty pins custody.
   bool stopNativeFiles();
 #endif
-  bool active() const { return !sleepCalling_ &&
+  bool observing() const { return attentionRunning_; }
+  bool observationCall() { if(!attentionRunning_)return false;attentionViolation_=true;return true; }
+  bool apiVisible() const { return attentionRunning_ ? (!attentionViolation_ && !retained_ && invocation_==&mainInvocation_ && port_.owner()) : active(); }
+  bool active() const { if(attentionRunning_){attentionViolation_=true;return false;} return !sleepCalling_ &&
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
     !nativeCheckpointRunning_ &&
 #endif
@@ -367,6 +371,8 @@ class Runtime final {
   int32_t residentLoading(const char* absolute);
   int32_t runForeground(uint64_t,const char*,risc_resident_result_v1*);
   int32_t residentCheckpoint(uint64_t,const risc_resident_request_v1*,risc_resident_reply_v1*);
+  int32_t registerAttention(uint64_t,const risc_resident_attention_callbacks_v1*);
+  int32_t residentAttention(uint64_t,risc_resident_attention_v1*,uint32_t reject=0);
   int32_t residentExit(uint64_t);
   bool residentFailure(uint64_t,risc_resident_failure_v1*);
   void recordResidentFailure(uint32_t,int32_t,const char*,uint64_t);
@@ -806,6 +812,11 @@ class Runtime final {
   char residentContinuation_[256]{};
   FileOpenState residentTransferFileOpen_{};
   risc_resident_callbacks_v1 shellCallbacks_{};
+  risc_resident_attention_callbacks_v1 attentionCallbacks_{};
+  uint64_t attentionObservedToken_=0;
+  uint32_t attentionObservedManual_=0;
+  bool attentionRunning_=false;
+  mutable bool attentionViolation_=false;
   uint64_t shellToken_=0;
   risc_resident_failure_v1 lastFailure_{};
   risc_runtime_launch_failure_v1 launchFailure_{};
