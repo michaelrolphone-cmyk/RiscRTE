@@ -77,30 +77,30 @@ bool keyValueKey(const char* key) {
 }
 extern "C" const risc_runtime_api_v1* risc_runtime_get_api(uint32_t version) {
   static const risc_runtime_api_v1 api={1,sizeof(api),
-    [](risc_runtime_health_v1* h){return currentRuntime && currentRuntime->health(h);},
+    [](risc_runtime_health_v1* h){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->health(h);},
     [](uint32_t ms){if(currentRuntime) currentRuntime->yield(ms);},
-    [](const char* line){return currentRuntime && currentRuntime->diagnostic(line);},
-    [](const char* path){return currentRuntime && currentRuntime->launch(path);},
-    [](const char* cap,uint32_t version,uint64_t instance,risc_runtime_capability_v1* out){return currentRuntime && currentRuntime->acquire(cap,version,instance,out);},
-    [](risc_runtime_capability_v1* grant){return currentRuntime && currentRuntime->release(grant);},
-    [](){return currentRuntime && currentRuntime->confirmBoot();},
-    [](){return currentRuntime && currentRuntime->retainInvocation();},
+    [](const char* line){return currentRuntime && !currentRuntime->observing() && currentRuntime->diagnostic(line);},
+    [](const char* path){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->launch(path);},
+    [](const char* cap,uint32_t version,uint64_t instance,risc_runtime_capability_v1* out){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->acquire(cap,version,instance,out);},
+    [](risc_runtime_capability_v1* grant){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->release(grant);},
+    [](){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->confirmBoot();},
+    [](){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->retainInvocation();},
     [](uint32_t id,uint32_t phase,uint32_t value)->uint32_t {
-      return currentRuntime && currentRuntime->active() ? RiscPerf::interaction(id,phase,value) : 0;
+      return currentRuntime && !currentRuntime->observationCall() && currentRuntime->active() ? RiscPerf::interaction(id,phase,value) : 0;
     },
-    [](risc_stream_client_v1* out){return currentRuntime && currentRuntime->streamClient(out);},
-    [](){return currentRuntime && currentRuntime->launchDefault();},
-    [](risc_resident_client_v1* out){return currentRuntime && currentRuntime->residentClient(out);},
-    [](risc_failure_evidence_client_v1* out){return currentRuntime && currentRuntime->failureEvidenceClient(out);},
-    [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && currentRuntime->diagnosticCheckpointClient(out);},
-    [](uint32_t* out){return currentRuntime && currentRuntime->monotonicMs(out);},
-    [](){return currentRuntime && currentRuntime->exitRequested();},
-    [](risc_runtime_launch_failure_v1* out){return currentRuntime && currentRuntime->takeLaunchFailure(out);},
-    [](){return currentRuntime && currentRuntime->initialDefault();},
-    []()->int32_t{return currentRuntime?currentRuntime->serviceCheckpoint():RISC_RUNTIME_CHECKPOINT_CONTEXT;},
-    [](uint64_t* token)->int32_t{if(token)*token=0;return currentRuntime?currentRuntime->sleepPrepare(token):RISC_RUNTIME_SLEEP_CONTEXT;},
-    [](uint64_t token)->int32_t{return currentRuntime?currentRuntime->sleepResume(token):RISC_RUNTIME_SLEEP_CONTEXT;}};
-  return version==1 && currentRuntime && currentRuntime->active() ? &api : nullptr;
+    [](risc_stream_client_v1* out){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->streamClient(out);},
+    [](){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->launchDefault();},
+    [](risc_resident_client_v1* out){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->residentClient(out);},
+    [](risc_failure_evidence_client_v1* out){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->failureEvidenceClient(out);},
+    [](risc_diagnostic_checkpoint_client_v1* out){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->diagnosticCheckpointClient(out);},
+    [](uint32_t* out){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->monotonicMs(out);},
+    [](){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->exitRequested();},
+    [](risc_runtime_launch_failure_v1* out){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->takeLaunchFailure(out);},
+    [](){return currentRuntime && !currentRuntime->observationCall() && currentRuntime->initialDefault();},
+    []()->int32_t{return currentRuntime && !currentRuntime->observationCall()?currentRuntime->serviceCheckpoint():RISC_RUNTIME_CHECKPOINT_CONTEXT;},
+    [](uint64_t* token)->int32_t{if(token)*token=0;return currentRuntime && !currentRuntime->observationCall()?currentRuntime->sleepPrepare(token):RISC_RUNTIME_SLEEP_CONTEXT;},
+    [](uint64_t token)->int32_t{return currentRuntime && !currentRuntime->observationCall()?currentRuntime->sleepResume(token):RISC_RUNTIME_SLEEP_CONTEXT;}};
+  return version==1 && currentRuntime && currentRuntime->apiVisible() ? &api : nullptr;
 }
 extern "C" bool risc_runtime_reclaim_app_images() {
 #if RISC_APP_IMAGE_CACHE
@@ -1825,6 +1825,7 @@ int32_t Runtime::serviceCheckpoint() {
   return RISC_RUNTIME_CHECKPOINT_OK;
 }
 void Runtime::yield(uint32_t ms) {
+  if(observationCall())return;
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
   // No app/provider polling while a native checkpoint owns its resources.
   if(nativeCheckpointRunning_){if(port_.owner()&&port_.retainedDelay)port_.retainedDelay(ms<1?1:ms>50?50:ms);return;}
@@ -2093,7 +2094,7 @@ bool Runtime::runOne(const char* name) {
   RISC_STAGE_LOG("app unload end file=%s result=ok elapsed_us=%llu",name,
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-unloadUs));
   invocation_->module=nullptr;
-  if(invocation_==&mainInvocation_){shellCallbacks_={};shellToken_=0;}
+  if(invocation_==&mainInvocation_){shellCallbacks_={};attentionCallbacks_={};shellToken_=0;}
   invocation_->streams_.endInvocation();
   failureBreadcrumb(RISC_FAILURE_PHASE_HANDOFF,name);
   const bool nativeExit=port_.controlEnd?control.finish():
