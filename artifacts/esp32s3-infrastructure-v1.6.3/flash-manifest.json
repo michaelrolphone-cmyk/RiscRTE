@@ -1,0 +1,371 @@
+{
+  "schema": "esp32s3-infrastructure-install/1",
+  "profile": "esp32s3-infrastructure",
+  "chip": "esp32s3",
+  "flash_bytes": 16777216,
+  "flash_mode_runtime": "qio",
+  "flash_mode_writer": "dio",
+  "flash_frequency_mhz": 80,
+  "cpu_mhz": 240,
+  "psram": "octal 80MHz, required; actual capacity qualification pending",
+  "layout": "riscrte-paired-appdata-v2",
+  "layout_abi": 2,
+  "source": {
+    "runtime": "f1b0c43eaa18ff099393a98d3a679e8319c512dd",
+    "system_apps": "cfde380bc3d202a176e381251917d6d3abbd6fe0",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2",
+    "native_reuse": {
+      "release": "https://github.com/michaelrolphone-cmyk/RiscRTE/releases/tag/esp32s3-infrastructure-v1.6.2",
+      "archive_sha256": "0a4a1528f96edfc09742658b4a9ace9b199da0e99278a21c32ae0f5bbac91a7b",
+      "manifest_sha256": "dd7975bf715e35b01636c57efbd6d97ab5b5596565667a2b8b53216c781552c3",
+      "native_rebuilt": false
+    },
+    "spiffsgen_sha256": "ed6ceee7fcecc02a0d427f274a695f15f160cc88f4744582d06b1d2ac0c8d6d9"
+  },
+  "qualification": {
+    "target_compiled": true,
+    "hardware_qualified": "pending",
+    "cadence_qualified": "pending",
+    "native_rebuilt": false
+  },
+  "omitted": {
+    "nvs": "Preserve; no NVS image distributed",
+    "bank1": "Must be blank on first install; populated only by explicit later paired update",
+    "camera": "No camera driver or grant",
+    "ota_agent": "Not advertised; serial update only"
+  },
+  "files": [
+    {
+      "path": "CONFORMANCE.md",
+      "sha256": "41b3d7522914dd66a626924908957a798686fec8b94899a4ececfa57b2f444db",
+      "size_bytes": 27443
+    },
+    {
+      "path": "INCIDENT-2026-11-01.md",
+      "sha256": "cdc9ed65dfa63248a0eca757c9075f540a5c139fbe6199edc22ebdcae874ab91",
+      "size_bytes": 6391
+    },
+    {
+      "path": "README.md",
+      "sha256": "6a8fa62e0bbe3dad4e3f9a80bdfff0433eab5278c4df8b0b69802dd7cf189b89",
+      "size_bytes": 8125
+    },
+    {
+      "path": "RECOVERY-QUALIFICATION.md",
+      "sha256": "ce59ac6a7169b36728e2c5f92f07ac8625209f0d86d48463fd2231c2357eea1e",
+      "size_bytes": 2288
+    },
+    {
+      "path": "RELAY-CONTRACT.md",
+      "sha256": "009d4774af59086cc08c91061a9d41a752f7c71bdb05e7ae0fb63fc916bda52d",
+      "size_bytes": 18406
+    },
+    {
+      "path": "WORKSTATION-MAINTENANCE.md",
+      "sha256": "58ca9d369eee4fe22e17664d0a979a5f2475e2ac020f7f99989ff0cc142161b9",
+      "size_bytes": 12618
+    },
+    {
+      "path": "appdata-unprovisioned.bin",
+      "sha256": "b9219e4ffba6ba51e21a339ba308368ec1079c35b43c89cf04097dc347910acf",
+      "size_bytes": 524288,
+      "offset": 2555904,
+      "partition_bytes": 524288,
+      "first_install": true
+    },
+    {
+      "path": "bank_state.bin",
+      "sha256": "cbf567bc72656ce5f681a2ebc471ca028aca09cba4bb3e6579ccea2dabd9a205",
+      "size_bytes": 8192,
+      "offset": 16719872,
+      "partition_bytes": 8192,
+      "first_install": true
+    },
+    {
+      "path": "bootfs/app.json",
+      "sha256": "73046cb088dfa21deb3c7c085899efb2c8a46ebbfe004f968e037911cf18631d",
+      "size_bytes": 307
+    },
+    {
+      "path": "bootfs/board.json",
+      "sha256": "4f5c48e35336f3034e23ed17b939e2982f4f06f463ecc1a5a23db91d0d2319b2",
+      "size_bytes": 512
+    },
+    {
+      "path": "bootfs/boot.json",
+      "sha256": "aa7adf9f1e32d4452fb5c0494c41ac5d1c37288be961b91924b8d46146105a6e",
+      "size_bytes": 945
+    },
+    {
+      "path": "bootfs/default.elf",
+      "sha256": "8d7336122f1bd8ac39887de5af861a953ea1eab95ed4b3c3948ac5871089f477",
+      "size_bytes": 4772
+    },
+    {
+      "path": "bootfs/infra-node.elf",
+      "sha256": "eed8039ba264fe221565b83227d6f2f788155d2e9ab8bef3812692b4015de205",
+      "size_bytes": 454064
+    },
+    {
+      "path": "bootfs/infra-node.json",
+      "sha256": "f7398aecc826288bf18360e9d680f0596f7066218446df802d80e5a3d8b11381",
+      "size_bytes": 744
+    },
+    {
+      "path": "bootfs/infra-station.elf",
+      "sha256": "c330dba5a31c5e3b89d5110cec8e5eaaf3fb02401c338de9575d63416976d1eb",
+      "size_bytes": 5640
+    },
+    {
+      "path": "bootfs/infra-station.json",
+      "sha256": "dfca9a1ea5faf1bb97492543f5c14065c5ad072b130e4fc329d440c195ecf70d",
+      "size_bytes": 611
+    },
+    {
+      "path": "bootloader.bin",
+      "sha256": "e8ffa5aeaa94262829dcf24032fe491dddafe82427556bbfe8b11d44cab35c49",
+      "size_bytes": 22640,
+      "offset": 0,
+      "partition_bytes": 32768,
+      "first_install": true
+    },
+    {
+      "path": "elf/default.elf",
+      "sha256": "8d7336122f1bd8ac39887de5af861a953ea1eab95ed4b3c3948ac5871089f477",
+      "size_bytes": 4772
+    },
+    {
+      "path": "elf/default.elf.map",
+      "sha256": "a64c2fee5c75b2e0acba1d394f0d7348a5711f145582156ece16b453ba0262bd",
+      "size_bytes": 33
+    },
+    {
+      "path": "elf/elf-build.json",
+      "sha256": "79a50c014d721a9dcc04443b6ee1fee0cad9671b9f2bcf5fe1919d3df9032672",
+      "size_bytes": 1670
+    },
+    {
+      "path": "elf/infra-node.elf",
+      "sha256": "eed8039ba264fe221565b83227d6f2f788155d2e9ab8bef3812692b4015de205",
+      "size_bytes": 454064
+    },
+    {
+      "path": "elf/infra-node.elf.map",
+      "sha256": "df89392f2425968b37dd5bd88ae520d21fe5fca7b011ef6116002ce32de4ca1e",
+      "size_bytes": 38
+    },
+    {
+      "path": "elf/infra-station.elf",
+      "sha256": "c330dba5a31c5e3b89d5110cec8e5eaaf3fb02401c338de9575d63416976d1eb",
+      "size_bytes": 5640
+    },
+    {
+      "path": "elf/infra-station.elf.map",
+      "sha256": "df89392f2425968b37dd5bd88ae520d21fe5fca7b011ef6116002ce32de4ca1e",
+      "size_bytes": 38
+    },
+    {
+      "path": "elf/monocypher.o",
+      "sha256": "f68304d6d2cebaa567fa023949cecb7df1964d7aa77d3bb7797b7f9223829666",
+      "size_bytes": 140588
+    },
+    {
+      "path": "elf/sha2.o",
+      "sha256": "c9fdc11a1439dcad835ff9d516829b1a5f92dba926a41bf2f27f63b63e87fc23",
+      "size_bytes": 4976
+    },
+    {
+      "path": "evidence/diagnostic-tests.log",
+      "sha256": "a6707d4eff38012da33ddc34bc6dc076a3b17151cfc9aef223c8790cbe64c3da",
+      "size_bytes": 100
+    },
+    {
+      "path": "evidence/host-storage-sanitized-final.log",
+      "sha256": "fa2a3ccfb6fe602e2c2b7edd72b5a484df35f8e83575ce1bef2b698b1470f269",
+      "size_bytes": 3738
+    },
+    {
+      "path": "evidence/install-tests.log",
+      "sha256": "d746d394723f2b641ced56018615da02b7f20feeed540c4341fe5ef42305686f",
+      "size_bytes": 112
+    },
+    {
+      "path": "evidence/journal-old-failure.log",
+      "sha256": "4d21725a670d8c615f0e2d28d5610957a953f6694b2a611ded042a4dcebc7d4c",
+      "size_bytes": 181
+    },
+    {
+      "path": "evidence/journal-roundtrip.log",
+      "sha256": "6898aa509d8d92882e02858dec20fe6e6b2db49710edf56f7f6a3d7555fa077b",
+      "size_bytes": 242
+    },
+    {
+      "path": "evidence/migration-tests.log",
+      "sha256": "0202b3218d5e1a2e3459a8c9b2d07cd425e15c33ef73d21733d09eb3b21776b6",
+      "size_bytes": 522
+    },
+    {
+      "path": "evidence/target-final-build.log",
+      "sha256": "5e594663552de224670b4acb718df12b9585566a887d12330b239707f2a386d3",
+      "size_bytes": 1437
+    },
+    {
+      "path": "evidence/validation.json",
+      "sha256": "5e253a4d974dc260dd0dd2c739acf8e86ec25dbcfc6863315748a21b5d38d737",
+      "size_bytes": 668
+    },
+    {
+      "path": "firmware.bin",
+      "sha256": "32ac1aa540ccaeb61c7c1e2482dbce61e55e637086e4fc26f06792fd35b15063",
+      "size_bytes": 1573232,
+      "offset": 65536,
+      "partition_bytes": 2490368,
+      "first_install": true
+    },
+    {
+      "path": "fixtures/bootfs/app.json",
+      "sha256": "73046cb088dfa21deb3c7c085899efb2c8a46ebbfe004f968e037911cf18631d",
+      "size_bytes": 307
+    },
+    {
+      "path": "fixtures/bootfs/board.json",
+      "sha256": "4f5c48e35336f3034e23ed17b939e2982f4f06f463ecc1a5a23db91d0d2319b2",
+      "size_bytes": 512
+    },
+    {
+      "path": "fixtures/bootfs/boot.json",
+      "sha256": "aa7adf9f1e32d4452fb5c0494c41ac5d1c37288be961b91924b8d46146105a6e",
+      "size_bytes": 945
+    },
+    {
+      "path": "fixtures/bootfs/infra-node.json",
+      "sha256": "f7398aecc826288bf18360e9d680f0596f7066218446df802d80e5a3d8b11381",
+      "size_bytes": 744
+    },
+    {
+      "path": "fixtures/bootfs/infra-station.json",
+      "sha256": "dfca9a1ea5faf1bb97492543f5c14065c5ad072b130e4fc329d440c195ecf70d",
+      "size_bytes": 611
+    },
+    {
+      "path": "fixtures/catalog.json",
+      "sha256": "e2673b6a51387a20a090da96a608eb8b2c415283cf687e4b062ea8d3210cafea",
+      "size_bytes": 21937
+    },
+    {
+      "path": "fixtures/configuration.schema.json",
+      "sha256": "251cd04a6006df151658c71879c7a8b64a798aca97909c7830c3a20183d0fc85",
+      "size_bytes": 5990
+    },
+    {
+      "path": "fixtures/node-policy.example.json",
+      "sha256": "b702783ad994800d62ce2596219737f28f7d295d5ff8dd3de387f639a1e262d0",
+      "size_bytes": 8261
+    },
+    {
+      "path": "fixtures/node-policy.schema.json",
+      "sha256": "73ec2802cd9599d8fac9eeb5537810d65e26f381763dae27dd8d73a73c015945",
+      "size_bytes": 22079
+    },
+    {
+      "path": "fixtures/node-state.example.json",
+      "sha256": "1087b7fb3a20bea554f8352a9916e917dddabc68037ee90d8f4ef40da01f4ed3",
+      "size_bytes": 245
+    },
+    {
+      "path": "fixtures/relay-subscription.schema.json",
+      "sha256": "9ea34ad7f3a8922fca728ae523aba75359afc1582e01f932753ec94bd3de72d0",
+      "size_bytes": 4676
+    },
+    {
+      "path": "otadata.bin",
+      "sha256": "8ba3b110139f45443d4f268d1a3373ef99a1718b71d51664531b83ee2d4b91a3",
+      "size_bytes": 8192,
+      "offset": 16711680,
+      "partition_bytes": 8192,
+      "first_install": true
+    },
+    {
+      "path": "partitions.bin",
+      "sha256": "475bd8da863027242a38a6401d45ee2251084037e92b19631f6468ad5ae5efc9",
+      "size_bytes": 3072,
+      "offset": 32768,
+      "partition_bytes": 4096,
+      "first_install": true
+    },
+    {
+      "path": "scripts/configure_infrastructure.mjs",
+      "sha256": "d1867c195c5b6d754e403d469323ce48448400d171edbd560712f12ae877759d",
+      "size_bytes": 2457
+    },
+    {
+      "path": "scripts/infrastructure_read.c",
+      "sha256": "b0d0e380329b65ccc0b65e4e04ae682ef7791a51659380ec43423825330b18ae",
+      "size_bytes": 1323
+    },
+    {
+      "path": "scripts/infrastructure_seed.c",
+      "sha256": "5323e723e2408da3199133be15d22c4f4515757295e50d4abf08842c4456adae",
+      "size_bytes": 3328
+    },
+    {
+      "path": "scripts/inspect_infrastructure_state.py",
+      "sha256": "5e0e5df006602ad1b7efbd73745a28d1d0d0ba679f0ce4891d987f745d059cee",
+      "size_bytes": 4204
+    },
+    {
+      "path": "scripts/install_infrastructure.py",
+      "sha256": "fa443fe6c3ea19198c583e04531ae095473cd189ed97204f0419e4bf4bdf28ae",
+      "size_bytes": 7824
+    },
+    {
+      "path": "scripts/provision_infrastructure.py",
+      "sha256": "9885cc66fcf7143304eb5dd5e9b300f8ba8ea584b40f6dd76e35774224c0d830",
+      "size_bytes": 5205
+    },
+    {
+      "path": "scripts/relay-enroll.mjs",
+      "sha256": "e76ef1c3f8167bfc5bb38e54f32bbd534831ba9270e5c0e2b7d732503e2bdca2",
+      "size_bytes": 2525
+    },
+    {
+      "path": "scripts/repair_infrastructure.py",
+      "sha256": "5a7cc30ab74ec8894a6aa7d876af09458e62bbf96f0e8f554c40671df86990b9",
+      "size_bytes": 3923
+    },
+    {
+      "path": "store.bin",
+      "sha256": "f542e0135124e53cb38e69834cf2e692f18152b0dab8b34cedd8b6780c54dbfc",
+      "size_bytes": 5308416,
+      "offset": 3080192,
+      "partition_bytes": 5308416,
+      "first_install": true
+    },
+    {
+      "path": "tools/littlefs/LICENSE.md",
+      "sha256": "0cb4ff1daf5fdc1359c6a6ee3116092f08fc100c9d58b1b77ab17bfd801f856d",
+      "size_bytes": 1523
+    },
+    {
+      "path": "tools/littlefs/lfs.c",
+      "sha256": "0b9845f350c33aa448a916847d2246b76c8e296eed8e7e296ae0430242cfda6c",
+      "size_bytes": 194506
+    },
+    {
+      "path": "tools/littlefs/lfs.h",
+      "sha256": "a8c8d70f0863fbbc46ce17c5dc7673b40f1b3c9e7e10f3bf33fd28f03dc67703",
+      "size_bytes": 26368
+    },
+    {
+      "path": "tools/littlefs/lfs_util.c",
+      "sha256": "f2fbde533670560434bd9f5a547174cc7c5a4670a02c47b4bd85180dced8b2ec",
+      "size_bytes": 988
+    },
+    {
+      "path": "tools/littlefs/lfs_util.h",
+      "sha256": "03e912a6e9894c9d10c61f5da22b89ebe0bb778af67972d7b67a5f160731bf72",
+      "size_bytes": 7499
+    }
+  ]
+}

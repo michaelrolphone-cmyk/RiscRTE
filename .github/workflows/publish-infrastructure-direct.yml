@@ -1,15 +1,15 @@
 name: Publish complete ESP32-S3 infrastructure binary
 on:
   push:
-    branches: [release/esp32s3-infrastructure-v1.6.2-direct]
+    branches: [release/esp32s3-infrastructure-v1.6.3-direct]
     paths:
-      - artifacts/esp32s3-infrastructure-v1.6.2/**
+      - artifacts/esp32s3-infrastructure-v1.6.3/**
       - scripts/verify_infrastructure_initial_image.py
       - .github/workflows/publish-infrastructure-direct.yml
 permissions:
   contents: read
 concurrency:
-  group: esp32s3-infrastructure-v1.6.2-publication
+  group: esp32s3-infrastructure-v1.6.3-publication
   cancel-in-progress: false
 jobs:
   publish:
@@ -23,31 +23,31 @@ jobs:
         with:
           persist-credentials: false
       - name: Expand complete binary
-        run: gzip -d artifacts/esp32s3-infrastructure-v1.6.2/riscrte-esp32s3-infrastructure-v1.6.2-initial.bin.gz
+        run: gzip -d artifacts/esp32s3-infrastructure-v1.6.3/riscrte-esp32s3-infrastructure-v1.6.3-initial.bin.gz
       - name: Verify exact complete image and embedded cohort
         run: |
-          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.6.2
-          cd artifacts/esp32s3-infrastructure-v1.6.2
+          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.6.3
+          cd artifacts/esp32s3-infrastructure-v1.6.3
           sha256sum -c SHA256SUMS
-          python3 -m zipfile -t riscrte-esp32s3-infrastructure-v1.6.2-repair.zip
+          python3 -m zipfile -t riscrte-esp32s3-infrastructure-v1.6.3-repair.zip
       - name: Publish direct binary and provenance
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          tag=esp32s3-infrastructure-v1.6.2
+          tag=esp32s3-infrastructure-v1.6.3
           if gh release view "$tag" >/dev/null 2>&1; then
             echo 'Existing release must be inspected; refusing automatic overwrite.' >&2
             exit 1
           fi
-          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.6.2/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.6.2 — Watchdog Crash Loop and Catalog Recovery Fix' --notes-file artifacts/esp32s3-infrastructure-v1.6.2/RELEASE-NOTES.md --prerelease
+          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.6.3/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.6.3 — Service Recovery and Journal Restart Repair' --notes-file artifacts/esp32s3-infrastructure-v1.6.3/RELEASE-NOTES.md --prerelease
       - name: Download published assets and verify actual bytes
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir /tmp/published-infrastructure
-          gh release download esp32s3-infrastructure-v1.6.2 --dir /tmp/published-infrastructure
+          gh release download esp32s3-infrastructure-v1.6.3 --dir /tmp/published-infrastructure
           cd /tmp/published-infrastructure
           sha256sum -c SHA256SUMS
