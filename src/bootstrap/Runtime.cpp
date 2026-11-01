@@ -221,7 +221,7 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
   if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
       (api!=RISC_DIAGNOSTIC_SOURCE_API_V1 || scope!=Scope::Global || id)) return false;
   if (scope==Scope::Global) {
-    if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
+    if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.recovery") && strcmp(capability,"platform.board") &&
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
                strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_ENTROPY_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
