@@ -522,6 +522,19 @@ int main(){
   assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==RISC_HTTP_INVALID&&t==0&&allocations==0);++cases;
  }
  reset();{risc_http_header_v2 h{"Authorization","secret\r\nInjected: yes"};risc_http_request_v2 r{sizeof(r),RISC_HTTP_GET,"https://example.test/",&h,1,nullptr,0,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==RISC_HTTP_INVALID);++cases;}
+ // A bounded v2 request must tolerate slow Internet without a hidden shorter
+ // idle timeout. Exercise actual native transport, then its exact total limit.
+ for(unsigned delay:{10000u,20000u,29000u}){
+  reset();risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST,"https://example.test/",nullptr,0,"{}",2,100,30000,1780000000,nullptr,0};uint64_t t=0;
+  assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);readWait=true;
+  for(unsigned i=0;i<20;++i){assert(NativeHttp::apiV2()->advance(nullptr,t)>=0);++clockMs;}
+  clockMs=delay;assert(NativeHttp::apiV2()->advance(nullptr,t)==RISC_HTTP_AGAIN);
+  readWait=false;responses={"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}"};inputAt=0;std::string output;int rc=RISC_HTTP_AGAIN;
+  for(unsigned i=0;i<100&&rc!=RISC_HTTP_EOF;++i){assert(NativeHttp::apiV2()->advance(nullptr,t)>=0);char bytes[512];uint32_t count=0;rc=NativeHttp::apiV2()->read(nullptr,t,bytes,sizeof(bytes),&count);assert(rc>=0);output.append(bytes,count);++clockMs;}
+  assert(rc==RISC_HTTP_EOF&&output=="{}");close(t);++cases;
+ }
+ reset();{risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST,"https://example.test/",nullptr,0,"{}",2,100,30000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);readWait=true;
+  clockMs=30000;assert(NativeHttp::apiV2()->advance(nullptr,t)==RISC_HTTP_TIMEOUT);close(t);++cases;}
  reset();{risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST,"https://example.test/",nullptr,0,"{}",2,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);readWait=true;
   int rc=1;for(int i=0;i<6000&&rc>=0;++i){rc=NativeHttp::apiV2()->advance(nullptr,t);++clockMs;}
   risc_http_response_v2 info{};info.struct_size=sizeof(info);assert(NativeHttp::apiV2()->info(nullptr,t,&info)==0&&info.sent_bytes>0&&rc==RISC_HTTP_TIMEOUT);close(t);++cases;}

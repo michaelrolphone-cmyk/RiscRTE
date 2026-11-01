@@ -46,18 +46,18 @@ inline bool request(const risc_http_request_v1* r){
 }
 class Budget {
  public:
-  Budget(uint64_t now,uint32_t ms,uint32_t maximum):start_(now),progress_(now),limit_(ms),maximum_(maximum){}
-  bool alive(uint64_t now)const{return now>=start_ && now-start_<limit_ && now>=progress_ && now-progress_<15000u;}
+  Budget(uint64_t now,uint32_t ms,uint32_t maximum,uint32_t idleMs=15000u):start_(now),progress_(now),limit_(ms),maximum_(maximum),idle_(idleMs){}
+  bool alive(uint64_t now)const{return now>=start_ && now-start_<limit_ && now>=progress_ && now-progress_<idle_;}
   bool accept(uint64_t now,uint32_t n){if(!alive(now)||n>maximum_-received_)return false;received_+=n;if(n)progress_=now;return true;}
   uint32_t received()const{return received_;}
   uint32_t remaining()const{return maximum_-received_;}
   uint32_t wait(uint64_t now,uint32_t cap)const{
     if(!alive(now))return 0;
-    const uint64_t total=limit_-(now-start_),idle=15000u-(now-progress_);
+    const uint64_t total=limit_-(now-start_),idle=idle_-(now-progress_);
     uint64_t n=total<idle?total:idle;if(n>cap)n=cap;return static_cast<uint32_t>(n);
   }
   void connected(uint64_t now){progress_=now;}
  private:
-  uint64_t start_,progress_;uint32_t limit_,maximum_,received_=0;
+  uint64_t start_,progress_;uint32_t limit_,maximum_,received_=0,idle_;
 };
 } }

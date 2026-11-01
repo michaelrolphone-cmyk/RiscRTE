@@ -1,4 +1,5 @@
 #include "CpuPort.h"
+#include "NativeInfrastructureRecovery.h"
 #include "NativeSerialFiles.h"
 #include "HciBounds.h"
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
@@ -277,6 +278,9 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       return p.hw_.owner && p.hw_.owner() && ms && ms<=RISC_PLATFORM_CLOCK_WAIT_MAX_MS && p.hw_.schedulerWait && p.hw_.schedulerWait(ms);
     };
   }
+#if RISC_NATIVE_INFRA_RECOVERY
+  if(!runtime.registerPlatform("platform.recovery",1,RiscBoot::Runtime::Scope::Global,0,infrastructureRecovery()))return false;
+#endif
   if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_.base))return false;
   if(hw_.usbPhyIdle || hw_.usbPhySuspend || hw_.usbPhyResume){
     if(!hw_.usbPhyIdle || !hw_.usbPhySuspend || !hw_.usbPhyResume)return false;
