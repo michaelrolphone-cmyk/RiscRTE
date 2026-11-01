@@ -35,6 +35,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           artifact-ids: '13094139866'
+          merge-multiple: true
           repository: michaelrolphone-cmyk/RiscRTE-System-Apps
           run-id: '41334154332'
           github-token: ${{ github.token }}
