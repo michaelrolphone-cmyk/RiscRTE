@@ -1,0 +1,16 @@
+{
+  "schema": "riscrte.direct-initial-image/1",
+  "asset": "riscrte-esp32s3-infrastructure-v1.6.2-initial.bin",
+  "bytes": 16777216,
+  "sha256": "320e1684a6f0feedf5b9368d573aca2d8d4fc9efa3967dbcd6ce37183db4ddd9",
+  "offset": 0,
+  "profile": "esp32s3-infrastructure",
+  "source": {
+    "runtime": "f1b0c43eaa18ff099393a98d3a679e8319c512dd",
+    "system_apps": "13135a5a86b6b672ad47012dce62daf3d3b2b706",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2"
+  },
+  "saved_data": "Full-image flashing replaces saved data. Use the preserving repair for an existing installation.",
+  "hardware_qualified": false
+}
