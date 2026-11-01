@@ -57,8 +57,8 @@ struct Session {
   char address[INET_ADDRSTRLEN]{};uint64_t closingAt=0;
 #endif
   ~Session(){if(requestV2){volatile char* p=requestV2;for(uint32_t i=0;i<requestV2Bytes;++i)p[i]=0;heap_caps_free(requestV2);}}
-  Session(uint64_t id,const risc_http_request_v1& r):token(id),started(now()),utc(r.utc_seconds),utcAt(started),
-    budget(started,r.timeout_ms,r.max_bytes),decoder(r.max_bytes){std::strcpy(url,r.url);}
+  Session(uint64_t id,const risc_http_request_v1& r,uint32_t idleMs=15000u):token(id),started(now()),utc(r.utc_seconds),utcAt(started),
+    budget(started,r.timeout_ms,r.max_bytes,idleMs),decoder(r.max_bytes){std::strcpy(url,r.url);}
 };
 static Session* session=nullptr;
 static uint64_t generation=0,lastClosed=0;
@@ -349,7 +349,9 @@ inline int32_t openV2(void*,const risc_http_request_v2* r,uint64_t* out){
   void* memory=heap_caps_malloc(sizeof(Session),NativeTlsMemory::ExternalCaps);
   if(!memory){std::memset(request,0,cap);heap_caps_free(request);return RISC_HTTP_MEMORY;}
   risc_http_request_v1 base{sizeof(base),r->url,r->max_response_bytes,r->timeout_ms,r->utc_seconds};
-  session=new(memory)Session(++generation,base);*out=session->token;
+  // V2 caps the whole transaction at 30 seconds. Honor the requested deadline
+  // during DNS/TLS and response wait; V1 keeps its download idle policy.
+  session=new(memory)Session(++generation,base,r->timeout_ms);*out=session->token;
   session->publicOnly=r->method==RISC_HTTP_POST_PUBLIC;session->requestV2=request;session->requestV2Bytes=used;session->decoder.v2=true;
   if(r->time_server){session->time.asyncDns=true;session->time.begin(r->time_server,session->started);session->phase=Phase::SampleTime;return RISC_HTTP_OK;}
   if(!prepare(*session)){const auto c=close(nullptr,*out);if(c==RISC_HTTP_OK)*out=0;return c==RISC_HTTP_OK?RISC_HTTP_MEMORY:c;}
