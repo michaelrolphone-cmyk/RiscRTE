@@ -6,6 +6,8 @@ on:
       - 'sdk/app/RiscResidentShellV1.h'
       - 'test/resident_shell_test.cpp'
       - 'test/run_resident_shell_test.sh'
+      - 'test/optional_app_requirements_test.cpp'
+      - 'test/run_optional_app_requirements_test.sh'
       - '.github/workflows/home-contexts-broker.yml'
   workflow_dispatch:
 permissions:
@@ -45,6 +47,21 @@ jobs:
           Path('test/.home-contexts-broker.sh').write_text(source)
           PY
           bash -x test/.home-contexts-broker.sh 2>&1 | tee evidence/home-contexts-broker/run.log
+      - name: Qualify declaration and owner-grant boundaries without adding live slots
+        env:
+          SANITIZE: ${{ matrix.sanitized }}
+          ASAN_OPTIONS: detect_leaks=0
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('test/run_optional_app_requirements_test.sh').read_text()
+          old="trap 'rm -rf \"$build\"' EXIT"
+          assert source.count(old)==1
+          source=source.replace(old,"trap 'cp -a \"$build\" evidence/home-contexts-broker/admission-compiled; rm -rf \"$build\"' EXIT")
+          Path('test/.home-contexts-admission.sh').write_text(source)
+          PY
+          bash -x test/.home-contexts-admission.sh 2>&1 | tee evidence/home-contexts-broker/admission.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

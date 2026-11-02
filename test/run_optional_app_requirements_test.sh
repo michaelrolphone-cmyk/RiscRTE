@@ -14,7 +14,7 @@ if [[ "$(uname)" == Darwin ]]; then shared=(-Wl,-undefined,dynamic_lookup); fi
 "${CC:-cc}" ${san[@]+"${san[@]}"} -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden -shared \
   ${shared[@]+"${shared[@]}"} -I"$repo/sdk/app" -I"$repo/sdk/driver" \
   "$repo/test/fixtures/app_catalog_provider.c" -o "$build/sd.elf"
-for bound in 16 24; do
+for bound in 16 24 32; do
   "${CXX:-c++}" ${san[@]+"${san[@]}"} -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic \
     -DRISC_APP_REQUIREMENT_ROWS="$bound" -DRISC_APP_POLICY_ROWS="$bound" \
     -I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" \
