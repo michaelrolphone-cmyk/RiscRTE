@@ -1248,7 +1248,7 @@ bool Runtime::prepare(const char* root) {
   if(installation_ && !reserveInstalledApps(MaxAppPolicies))return fail("installed registry reservation failed");
   return true;
 }
-bool Runtime::readRuntimeImage(const char* name,RuntimeFileImage& image,size_t expected,bool pinned) {
+bool Runtime::readRuntimeImage(const char* name,RuntimeFileImage& image,size_t expected,bool pinned,bool allowEnvelope) {
   struct Context {Runtime* runtime;std::chrono::steady_clock::time_point start,lastYield;size_t sinceYield=0;};
   const auto now=std::chrono::steady_clock::now();Context context{this,now,now,0};
   RuntimeFileImage::Hooks hooks{
@@ -1298,7 +1298,7 @@ bool Runtime::readRuntimeImage(const char* name,RuntimeFileImage& image,size_t e
 #endif
     };
   }
-  const bool ok=image.read(metadataSource(),name,hooks,expected);
+  const bool ok=image.read(metadataSource(),name,hooks,expected,8u*1024u*1024u,allowEnvelope&&!pinned);
   if(image.retained){retainedNativeProviderRead_=image.handle?image.handle:UINT32_MAX;retainedNativeProviderBytes_=image.bytes;metadataCloseRetained_=true;}
   errno=image.error;return ok;
 }
@@ -1306,12 +1306,21 @@ int Runtime::readInternalImage(void* raw,const char* name,::elf_file* file) {
   if(!raw || !file){errno=EINVAL;return -1;}
   auto& runtime=*static_cast<Runtime*>(raw);RuntimeFileImage image;
   RiscPerf::emit(40);
-  if(!runtime.readRuntimeImage(name,image)){RiscPerf::emit(44,uint32_t(-1));errno=image.error;return -1;}
+  bool ordinary=!strcmp(name,runtime.default_);
+  for(size_t i=0;i<runtime.policyCount_;++i)if(!strcmp(name,runtime.policies_[i].elf))ordinary=true;
+  for(size_t i=0;i<runtime.policyCount_;++i)if(runtime.policies_[i].sourceDriver>=0&&!strcmp(name,runtime.policies_[i].elf))ordinary=false;
+  // A conflicting driver route always wins: privileged/managed providers are raw only.
+  for(size_t i=0;i<runtime.driverCount_;++i)if(!strcmp(name,runtime.drivers_[i].elf))ordinary=false;
+  if(!runtime.readRuntimeImage(name,image,0,false,ordinary)){RiscPerf::emit(44,uint32_t(-1));errno=image.error;return -1;}
   RiscPerf::emit(41,uint32_t(image.size));RiscPerf::emit(45);
   const bool valid=esp_elf_validate_file(image.bytes,image.size);
   if(valid)RiscPerf::emit(46);
-  if(!valid ||
-     !esp_elf_admit_managed_app(name,image.bytes,image.size) || !runtime.providerStorageSafe()) {
+  const bool admitted=valid&&esp_elf_admit_managed_app(name,image.bytes,image.size);
+  if(!runtime.port_.owner()||!runtime.providerStorageSafe()){
+    runtime.retainedNativeProviderRead_=UINT32_MAX;runtime.retainedNativeProviderBytes_=image.bytes;
+    runtime.metadataCloseRetained_=true;errno=EIO;return -1;
+  }
+  if(!admitted) {
 #if defined(ESP_PLATFORM) || defined(RISC_REMOVABLE_APP_TEST) || defined(RISC_APP_IMAGE_CACHE_TEST)
     esp_elf_free(image.bytes);
 #else

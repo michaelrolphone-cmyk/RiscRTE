@@ -361,7 +361,7 @@ class Runtime final {
   bool registerNativeProvider(const Driver&, RuntimeProviders::SpecV2&, const RuntimeProviders::NativeProviderPolicyV1&);
   bool validateGraph();
   static void* openDriverImage(void*,const char*,const void*);
-  bool readRuntimeImage(const char*,RuntimeFileImage&,size_t expected=0,bool pinned=false);
+  bool readRuntimeImage(const char*,RuntimeFileImage&,size_t expected=0,bool pinned=false,bool allowEnvelope=false);
   static int readInternalImage(void*,const char*,::elf_file*);
   void* openInternalImage(const char*,bool cached=false);
   void serviceProviders();

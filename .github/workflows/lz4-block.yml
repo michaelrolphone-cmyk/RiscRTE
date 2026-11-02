@@ -13,9 +13,19 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-System-Apps
+          ref: 01944f4c1c3ad04df7c5f6c5a42dc10552a40821
+          path: .source/system
+          persist-credentials: false
       - run: python3 -m pip install 'lz4==4.3.3'
       - run: python3 test/run_lz4_block_test.py --output out/normal
       - run: python3 test/run_lz4_block_test.py --output out/sanitized --sanitize
+      - run: python3 test/run_runtime_image_envelope_test.py --system .source/system --output out/image-normal
+      - run: python3 test/run_runtime_image_envelope_test.py --system .source/system --output out/image-sanitized --sanitize
+      - run: bash test/run_runtime_file_image_test.sh
+      - run: SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_runtime_file_image_test.sh
       - name: Exact target compiler and resource measurement
         run: |
           mkdir -p toolchain out/target
