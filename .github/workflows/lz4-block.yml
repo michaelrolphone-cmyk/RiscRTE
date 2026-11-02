@@ -1,0 +1,45 @@
+name: Bounded standalone LZ4 block
+on:
+  push:
+    branches: [work/home-lz4-block-20261102]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  decoder:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install 'lz4==4.3.3'
+      - run: python3 test/run_lz4_block_test.py --output out/normal
+      - run: python3 test/run_lz4_block_test.py --output out/sanitized --sanitize
+      - name: Exact target compiler and resource measurement
+        run: |
+          mkdir -p toolchain out/target
+          curl --fail --location --retry 2 --max-time 180 https://github.com/espressif/crosstool-NG/releases/download/esp-15.2.0_20251204/xtensa-esp-elf-15.2.0_20251204-x86_64-linux-gnu.tar.xz -o "$RUNNER_TEMP/toolchain.tar.xz"
+          echo "3d50f5cd5f173acfd524e07c1cd69bc99585731a415ca2e5bce879997fe602b8  $RUNNER_TEMP/toolchain.tar.xz" | sha256sum --check
+          tar -xJf "$RUNNER_TEMP/toolchain.tar.xz" -C toolchain
+          CXX="$PWD/toolchain/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++"
+          "$CXX" --version > out/target/compiler.txt
+          "$CXX" -std=c++17 -Os -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fstack-usage -I src -c test/lz4_block_target_probe.cpp -o out/target/decoder.o
+          "${CXX%g++}size" -A out/target/decoder.o | tee out/target/size.txt
+          "${CXX%g++}nm" -u out/target/decoder.o | tee out/target/undefined.txt
+          cat out/target/decoder.su | tee out/target/stack.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('out/target/undefined.txt').read_text()
+          assert not any(x in text for x in ('malloc','calloc','realloc','_Zn','free'))
+          rows=[line.split('\t') for line in Path('out/target/decoder.su').read_text().splitlines()]
+          assert rows and all(row[-1]=='static' and int(row[-2])<=1024 for row in rows),rows
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: lz4-block-${{ github.sha }}
+          path: |
+            out/**/receipt.json
+            out/**/result.log
+            out/target/
