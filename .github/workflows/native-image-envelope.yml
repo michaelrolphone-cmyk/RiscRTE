@@ -14,14 +14,22 @@ jobs:
       matrix:
         abi: [1, 2]
         sanitize: [0, 1]
+        expanded: [0, 1]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE
+          ref: a27c7541e0fcaa40290d7bb8dc6db07b2ea92f21
+          path: .baseline
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y libssl-dev
       - name: Actual native bank paths and terminal custody
         env:
           NATIVE_PROVIDER_TEST_ABI: ${{ matrix.abi }}
+          APP_DATA_EXPANDED_TEST: ${{ matrix.expanded }}
           SANITIZE: ${{ matrix.sanitize }}
           ASAN_OPTIONS: detect_leaks=0
         run: |
@@ -30,8 +38,15 @@ jobs:
           for selection in 0 1; do
             NATIVE_PROVIDER_ADMISSION_ONLY=1 NATIVE_PROVIDER_TEST_SELECTION="$selection" bash test/run_native_bank_test.sh 2>&1 | tee "out/selection-$selection.log"
           done
+      - name: Exact predecoder Runtime refusal
+        env:
+          NATIVE_PROVIDER_TEST_ABI: ${{ matrix.abi }}
+          APP_DATA_EXPANDED_TEST: ${{ matrix.expanded }}
+          SANITIZE: ${{ matrix.sanitize }}
+          ASAN_OPTIONS: detect_leaks=0
+        run: python3 test/run_old_envelope_refusal.py --baseline .baseline --output out/old-refusal
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: native-envelope-${{ github.sha }}-abi${{ matrix.abi }}-san${{ matrix.sanitize }}
+          name: native-envelope-${{ github.sha }}-abi${{ matrix.abi }}-san${{ matrix.sanitize }}-expanded${{ matrix.expanded }}
           path: out/

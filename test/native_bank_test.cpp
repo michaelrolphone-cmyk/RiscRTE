@@ -282,6 +282,11 @@ static std::vector<uint8_t> validatedBootloader(const char* path){
 #include "native_bank_app_data_export_admission.inc"
 #endif
 int main(int argc,char** argv){
+#ifdef RISC_PAIRED_APP_DATA_EXPANDED
+ static_assert(RiscUpdate::StoreAbi==3 && RiscUpdate::StoreBytes==0x550000 && RiscUpdate::FirmwareBytes==0x260000);
+ static_assert(RiscUpdate::StoreOffset[0]==0x2f0000 && RiscUpdate::StoreOffset[1]==0xaa0000);
+ static_assert(RiscUpdate::FirmwareOffset[0]==0x10000 && RiscUpdate::FirmwareOffset[1]==0x840000);
+#endif
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
  if(mode=="preserving-native"||mode=="preserving-native-close"){assert(argc==4);preservingNative(argv[2],argv[3],mode=="preserving-native-close");return 0;}
