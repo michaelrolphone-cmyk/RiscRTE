@@ -153,6 +153,12 @@ extern "C" void test_cohort_update(){
 }
 static void cohortNative(const char* loader,const char* root){
  using namespace RiscBankStore;namespace fs=std::filesystem;
+#ifdef RISC_PAIRED_APP_DATA
+ // This entry is dispatched before main's generic-mode fixture setup. Seed
+ // existing saved bytes before any production callback, then retain the exact
+ // unchanged sentinel assertion below across admission and activation.
+ std::fill(flash.begin()+0x270000,flash.begin()+0x2f0000,0x5a);
+#endif
  fsRoot=root;fs::create_directories(fsRoot+"/bootfs");fs::create_directories(fsRoot+"/updatefs");
  static RiscTest::FileSources sources({RiscTest::FileSources::Mapping{"/bootfs",fsRoot+"/bootfs"},{"/updatefs",fsRoot+"/updatefs"}},own,safe);
  const auto boot=validatedBootloader(loader);
