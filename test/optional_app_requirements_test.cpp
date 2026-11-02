@@ -174,6 +174,19 @@ void ownerGrantBounds() {
   RiscTest::FileSources runtimeFiles3({root.c_str()});auto runtime=std::make_unique<Runtime>(port());assert(runtimeFiles3.bind(*runtime));assert(runtime->prepare(root.c_str()));
   run(*runtime,[&](){
     assert(runtime->policies_[0].count==Runtime::MaxAppPolicyGrants);
+    // Immutable rows may expand; each invocation still has exactly 16 live slots.
+    std::vector<risc_runtime_capability_v1> live(16);
+    for(unsigned i=0;i<16;++i){
+      live[i].struct_size=sizeof(live[i]);
+      assert(runtime->acquire(i?"storage.key-value":"platform.clock",1,i,&live[i]));
+    }
+    assert(runtime->grantUsage().hostLive==16);
+    risc_runtime_capability_v1 overflow{sizeof(overflow)};
+    assert(!runtime->acquire("storage.key-value",1,1,&overflow));
+    assert(!overflow.api&&!overflow.slot&&!overflow.generation);
+    for(auto& current:live)assert(runtime->release(&current));
+    assert(runtime->grantUsage().hostLive==0);
+
     Runtime::UpdateApp out{};
     auto candidate=manifest("[]",optional,"1.0.1");
     assert(runtime->appUpdate("test",candidate.data(),candidate.size(),out));
@@ -340,7 +353,7 @@ extern "C" void test_optional_entry() { ++entries;assert(entry);entry(); }
 extern "C" void app_catalog_test_installer(const void* api) { installer=static_cast<const risc_installation_v1*>(api); }
 int main(int argc,char** argv) {
   assert(argc==2);root=argv[1];
-  static_assert(Runtime::MaxAppRequirements==16||Runtime::MaxAppRequirements==24,"Run baseline and expanded admission bounds");
+  static_assert(Runtime::MaxAppRequirements==16||Runtime::MaxAppRequirements==24||Runtime::MaxAppRequirements==32,"Run every supported shared-app admission bound");
   schemaAndAuthority();declarationBounds();ownerGrantBounds();ordinaryProviderValidation();updates();discovery();reservedDiscovery();
   printf("Optional app declarations: %u checks, %u real app entries, prepare/update/discovery and unchanged authority PASS (declaration/grant bounds %zu/%zu)\n",cases,entries,Runtime::MaxAppRequirements,Runtime::MaxAppPolicyGrants);
 }

@@ -1,0 +1,39 @@
+name: Shared Home alarm facade graph
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: home-alarm-facade-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitized: [false, true]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-Utilities
+          ref: 474ab9d9cae1bea25d315f76fbe8eec61f9dba7b
+          path: .source/utilities
+          persist-credentials: false
+      - name: One admitted owner shared by legacy and facade consumers
+        env:
+          SANITIZED: ${{ matrix.sanitized }}
+        run: |
+          flag=""; [ "$SANITIZED" != true ] || flag="--sanitized"
+          python3 test/run_home_alarm_facade.py --utilities .source/utilities --output evidence/home-alarm-facade $flag
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: home-alarm-facade-${{ matrix.sanitized }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: evidence/home-alarm-facade
+          if-no-files-found: error

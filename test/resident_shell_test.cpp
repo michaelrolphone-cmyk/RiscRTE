@@ -48,6 +48,13 @@ static_assert(RISC_RUNTIME_DEFAULT_REQUEST_V1_SIZE==offsetof(risc_runtime_api_v1
 namespace {
 std::string root,mode;
 bool owned=true,exitSafe=true;
+// Application-specific reasons remain data, not Runtime dispatch branches.
+bool contextsMode(){return mode.rfind("contexts",0)==0;}
+static constexpr unsigned ContextReasonCount=1+16+16*16;
+static const risc_resident_request_v1* sentContextRequest=nullptr;
+static uint32_t expectedContextReason=0;
+uint32_t contextReason(unsigned i){assert(i<ContextReasonCount);return !i?0x43530000u:i<=16?0x43530100u+i-1:0x43530200u+i-17;}
+
 unsigned starts[4]{},entries[4]{},finis[4]{},dispatches=0,failures=0,quiesces=0;
 Runtime* volatile retainedRuntime=nullptr;
 Runtime* runningRuntime=nullptr;
@@ -93,7 +100,7 @@ int32_t get(void*,uint32_t ns,const char*,void* out,uint32_t cap,uint32_t* size)
 int32_t put(void*,uint32_t,const char*,const void*,uint32_t){return RISC_KEY_VALUE_OK;}
 KeyValueBackend kv{nullptr,get,put};
 bool prior(risc_resident_failure_v1* out){out->kind=RISC_RESIDENT_FAILURE_PRIOR_RESET;out->native_reason=77;return true;}
-bool terminal(){return mode=="serial-checkpoint-retained" || mode=="serial-shutdown-retained" || mode=="child-retained" || mode=="callback-retained" || mode=="fini-retained" || mode=="native-retained" || mode=="invalid-callback" || mode=="provider-retained" || mode=="stream-retained" || mode=="memory-lock-retained" || mode=="switch-lock-retained" || mode=="failure-callback-retained" || mode=="prelaunch-retained" || mode=="register-retained" || mode=="release-retained" || mode=="loading-retained" || mode=="loading-invalid" || mode=="loading-native-retained" || mode=="loading-provider-retained";}
+bool terminal(){return mode=="contexts-retained" || mode=="contexts-invalid" || mode=="serial-checkpoint-retained" || mode=="serial-shutdown-retained" || mode=="child-retained" || mode=="callback-retained" || mode=="fini-retained" || mode=="native-retained" || mode=="invalid-callback" || mode=="provider-retained" || mode=="stream-retained" || mode=="memory-lock-retained" || mode=="switch-lock-retained" || mode=="failure-callback-retained" || mode=="prelaunch-retained" || mode=="register-retained" || mode=="release-retained" || mode=="loading-retained" || mode=="loading-invalid" || mode=="loading-native-retained" || mode=="loading-provider-retained";}
 void save(const char* path,JsonDocument& doc){std::string bytes;serializeJson(doc,bytes);std::ofstream(root+"/"+path)<<bytes;}
 void setup(){
  std::ofstream(root+"/board.json")<<R"({"schema":"riscrte.board-hardware","schema_version":1,"board_id":"test","revision":"unspecified","buses":[],"devices":[]})";
@@ -138,6 +145,11 @@ void denied(const risc_key_value_v1& table){uint32_t value=0,n=0;assert(table.ge
 risc_runtime_capability_v1 acquire(const char* cap){risc_runtime_capability_v1 g{};g.struct_size=sizeof(g);assert(api->acquire(cap,1,0,&g));return g;}
 int32_t dispatch(void* context,const risc_resident_request_v1* request,risc_resident_reply_v1* reply){
  assert(context==hostStatic && *hostStatic==1 && request->reason);++dispatches;
+ if(contextsMode()){
+  assert(sentContextRequest && request!=sentContextRequest);
+  assert(request->reason==expectedContextReason && !request->flags && !request->reserved);
+  assert(!memcmp(request,sentContextRequest,sizeof(*request)));
+ }
  assert(!runningRuntime->residentResetSafe());
  assert(read(hostKv)==11);denied(childKv);auto childCopy=childGrant;assert(!api->release(&childCopy));
  uint32_t count=0;assert(childStreams.read(childStreams.context,1,nullptr,0,&count)==RISC_STREAM_CLOSED);
@@ -148,6 +160,13 @@ int32_t dispatch(void* context,const risc_resident_request_v1* request,risc_resi
  if(streamMode() && dispatches==1) {
   char byte=0;uint32_t count=0;
   assert(hostStreams.read(hostStreams.context,hostOpened.rx,&byte,1,&count)==RISC_STREAM_OK && count==1 && byte=='H');
+ }
+ if(contextsMode()){
+  reply->flags=0;
+  if(mode=="contexts-busy")return RISC_RESIDENT_BUSY;
+  if(mode=="contexts-retained"){assert(api->retain_invocation());return RISC_RESIDENT_RETAINED;}
+  if(mode=="contexts-invalid")return RISC_RESIDENT_INVALID;
+  return RISC_RESIDENT_OK;
  }
  if(mode=="busy")return RISC_RESIDENT_BUSY;
  if(mode=="callback-retained"){assert(api->retain_invocation());return RISC_RESIDENT_RETAINED;}
@@ -286,7 +305,7 @@ extern "C" void test_resident_main(unsigned role,unsigned* visits){
    risc_retained_wake_record_v1 record{sizeof(record),1,1,1,{73}};assert(hostWake.stage(hostWake.context,&record)==RISC_RETAINED_WAKE_OK);
   }
   const char* name=mode=="descriptor"?"bad.elf":"child.elf";
-  for(unsigned i=0;i<(mode=="normal"?3u:1u);++i){
+  for(unsigned i=0;i<(mode=="normal" || mode=="contexts"?3u:1u);++i){
    if(mode=="context-oom")failNothrow=1;
    if(mode=="inventory-oom")failNothrow=2;
    if(mode=="names-oom")failMetadata=true;
@@ -353,12 +372,24 @@ extern "C" void test_resident_main(unsigned role,unsigned* visits){
  else {
   if(mode=="native-retained")exitSafe=false;
   unsigned model=73;
-  for(unsigned i=0;i<4;++i){
+  for(unsigned i=0;i<(contextsMode()?ContextReasonCount:4u);++i){
    risc_resident_request_v1 request{sizeof(request),RISC_RESIDENT_CHECKPOINT_CONTROLS,0,0};risc_resident_reply_v1 reply{sizeof(reply),0};
+   if(contextsMode()){
+    request.reason=contextReason(i);expectedContextReason=request.reason;sentContextRequest=&request;
+    const unsigned before=dispatches;
+    auto malformed=request;malformed.flags=RISC_RESIDENT_POLL_ACTIVITY;
+    assert(client.checkpoint(client.invocation,&malformed,&reply)==RISC_RESIDENT_INVALID);
+    malformed=request;malformed.reserved=1;
+    assert(client.checkpoint(client.invocation,&malformed,&reply)==RISC_RESIDENT_INVALID);
+    malformed=request;malformed.reason=0;
+    assert(client.checkpoint(client.invocation,&malformed,&reply)==RISC_RESIDENT_INVALID);
+    assert(dispatches==before);
+   }
    owned=false;assert(client.checkpoint(client.invocation,&request,&reply)==RISC_RESIDENT_DENIED);owned=true;
    const int32_t rc=client.checkpoint(client.invocation,&request,&reply);
    if(terminal() && mode!="fini-retained" && mode!="provider-retained" && mode!="stream-retained" && mode!="memory-lock-retained" && mode!="release-retained" && mode!="serial-shutdown-retained"){assert(rc==RISC_RESIDENT_RETAINED);return;}
-   assert(rc==(mode=="busy"?RISC_RESIDENT_BUSY:mode=="exit"?RISC_RESIDENT_EXIT:RISC_RESIDENT_OK));
+   assert(rc==((mode=="busy" || mode=="contexts-busy")?RISC_RESIDENT_BUSY:mode=="exit"?RISC_RESIDENT_EXIT:RISC_RESIDENT_OK));
+   if(contextsMode())assert(!reply.flags);
    assert(model==73 && *visits==1 && read(childKv)==11+role);denied(hostKv);
 #ifdef RISC_NATIVE_APP_MEMORY_TEST
    assert(appMemory[role][0]==0x71+role);
@@ -400,6 +431,17 @@ int main(int argc,char**argv){
  assert(runtime->run()!=terminal());assert(runtime->retained()==terminal());assert(starts[0]==1 && entries[0]==1);
  assert(finis[0]==(terminal()?0u:1u));
  if(mode=="normal")assert(starts[1]==3 && finis[1]==3 && dispatches==12);
+ if(contextsMode()){
+  assert(dispatches==(terminal()?1u:ContextReasonCount*(mode=="contexts"?3u:1u)));
+  const unsigned before=dispatches;
+  risc_resident_request_v1 q{sizeof(q),0x43530000u,0,0};risc_resident_reply_v1 a{sizeof(a),0};
+  assert(child.checkpoint(child.invocation,&q,&a)==RISC_RESIDENT_DENIED);
+  assert(host.checkpoint(host.invocation,&q,&a)==RISC_RESIDENT_DENIED);
+  risc_resident_result_v1 result{sizeof(result)};
+  assert(host.run_foreground(host.invocation,"child.elf",&result)==RISC_RESIDENT_DENIED);
+  assert(host.register_shell(host.invocation,nullptr)==RISC_RESIDENT_DENIED);
+  assert(dispatches==before);
+ }
 #if RISC_NATIVE_SERIAL_FILES
  if(mode=="normal")assert(serialChecks==dispatches+1 && serialShutdowns==5);
 #endif
