@@ -1,0 +1,734 @@
+{
+  "contracts": [
+    {
+      "contract": {
+        "capability_id": "scheduler.drive",
+        "api_version": 1,
+        "operations": {
+          "maintain": {
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "binding_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "binding_revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "binding_id",
+                "binding_revision"
+              ],
+              "additionalProperties": false
+            },
+            "output_schema": {
+              "type": "object",
+              "properties": {
+                "target_epoch": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "progress": {
+                  "type": "object",
+                  "properties": {
+                    "items_examined": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 32
+                    },
+                    "items_advanced": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 32
+                    }
+                  },
+                  "required": [
+                    "items_examined",
+                    "items_advanced"
+                  ],
+                  "additionalProperties": false
+                },
+                "more_work": {
+                  "type": "boolean"
+                },
+                "coalescible": {
+                  "const": true
+                }
+              },
+              "required": [
+                "target_epoch",
+                "progress",
+                "more_work",
+                "coalescible"
+              ],
+              "additionalProperties": true
+            },
+            "evidence_schema": {
+              "type": "object",
+              "required": [
+                "observer",
+                "boot_id",
+                "observed_at_ms",
+                "monotonic_ms"
+              ],
+              "properties": {
+                "observer": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "boot_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "observed_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "monotonic_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "quiescent": {
+                  "const": true
+                },
+                "executor_identity": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "additionalProperties": false
+            },
+            "effect_semantics": "target_deduplicated",
+            "execution_modes": [
+              "desired_state",
+              "job"
+            ]
+          }
+        }
+      },
+      "reference": {
+        "capability_id": "scheduler.drive",
+        "api_version": 1,
+        "contract_digest": "1f191cd4ba541a1b13e5ab122e25ce25891f7157ecaa48e1da5f6a449b63fe97"
+      }
+    },
+    {
+      "contract": {
+        "capability_id": "service.reconcile",
+        "api_version": 1,
+        "operations": {
+          "maintain": {
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "binding_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "binding_revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "binding_id",
+                "binding_revision"
+              ],
+              "additionalProperties": false
+            },
+            "output_schema": {
+              "type": "object",
+              "properties": {
+                "target_epoch": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "progress": {
+                  "type": "object",
+                  "properties": {
+                    "items_examined": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 32
+                    },
+                    "items_advanced": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 32
+                    }
+                  },
+                  "required": [
+                    "items_examined",
+                    "items_advanced"
+                  ],
+                  "additionalProperties": false
+                },
+                "more_work": {
+                  "type": "boolean"
+                },
+                "coalescible": {
+                  "const": true
+                }
+              },
+              "required": [
+                "target_epoch",
+                "progress",
+                "more_work",
+                "coalescible"
+              ],
+              "additionalProperties": true
+            },
+            "evidence_schema": {
+              "type": "object",
+              "required": [
+                "observer",
+                "boot_id",
+                "observed_at_ms",
+                "monotonic_ms"
+              ],
+              "properties": {
+                "observer": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "boot_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "observed_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "monotonic_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "quiescent": {
+                  "const": true
+                },
+                "executor_identity": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "additionalProperties": false
+            },
+            "effect_semantics": "target_deduplicated",
+            "execution_modes": [
+              "desired_state",
+              "job"
+            ]
+          }
+        }
+      },
+      "reference": {
+        "capability_id": "service.reconcile",
+        "api_version": 1,
+        "contract_digest": "bf8c680a6667901ddc0e91f2bf982028b12a456679d50232d8b08ce88fdf3717"
+      }
+    },
+    {
+      "contract": {
+        "capability_id": "service.health.observe",
+        "api_version": 1,
+        "operations": {
+          "observe": {
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "binding_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "binding_revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "binding_id",
+                "binding_revision"
+              ],
+              "additionalProperties": false
+            },
+            "output_schema": {
+              "type": "object",
+              "properties": {
+                "binding_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "binding_revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "healthy": {
+                  "type": "boolean"
+                },
+                "unchanged": {
+                  "type": "boolean"
+                },
+                "http_status": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 599
+                },
+                "observed_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "vantage_point": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "coverage": {
+                  "const": "latest_state"
+                },
+                "lossless": {
+                  "const": false
+                }
+              },
+              "required": [
+                "binding_id",
+                "binding_revision",
+                "healthy",
+                "unchanged",
+                "http_status",
+                "observed_at_ms",
+                "vantage_point",
+                "coverage",
+                "lossless"
+              ],
+              "additionalProperties": true
+            },
+            "evidence_schema": {
+              "type": "object",
+              "required": [
+                "observer",
+                "boot_id",
+                "observed_at_ms",
+                "monotonic_ms"
+              ],
+              "properties": {
+                "observer": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "boot_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "observed_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "monotonic_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "quiescent": {
+                  "const": true
+                },
+                "executor_identity": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "additionalProperties": false
+            },
+            "effect_semantics": "repeatable_compute",
+            "execution_modes": [
+              "job"
+            ]
+          }
+        }
+      },
+      "reference": {
+        "capability_id": "service.health.observe",
+        "api_version": 1,
+        "contract_digest": "742a986d123ececf60ad6c715c5587b081f691adad992b04abbffe6aefcf998f"
+      }
+    },
+    {
+      "contract": {
+        "capability_id": "source.poll",
+        "api_version": 1,
+        "operations": {
+          "poll": {
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "binding_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "binding_revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "binding_id",
+                "binding_revision"
+              ],
+              "additionalProperties": false
+            },
+            "output_schema": {
+              "type": "object",
+              "properties": {
+                "binding_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "binding_revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "healthy": {
+                  "type": "boolean"
+                },
+                "unchanged": {
+                  "type": "boolean"
+                },
+                "http_status": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 599
+                },
+                "observed_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "vantage_point": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "coverage": {
+                  "const": "latest_state"
+                },
+                "lossless": {
+                  "const": false
+                }
+              },
+              "required": [
+                "binding_id",
+                "binding_revision",
+                "healthy",
+                "unchanged",
+                "http_status",
+                "observed_at_ms",
+                "vantage_point",
+                "coverage",
+                "lossless"
+              ],
+              "additionalProperties": true
+            },
+            "evidence_schema": {
+              "type": "object",
+              "required": [
+                "observer",
+                "boot_id",
+                "observed_at_ms",
+                "monotonic_ms"
+              ],
+              "properties": {
+                "observer": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "boot_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "observed_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "monotonic_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "quiescent": {
+                  "const": true
+                },
+                "executor_identity": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "additionalProperties": false
+            },
+            "effect_semantics": "repeatable_compute",
+            "execution_modes": [
+              "job"
+            ]
+          }
+        }
+      },
+      "reference": {
+        "capability_id": "source.poll",
+        "api_version": 1,
+        "contract_digest": "4f10b9ec48f8b47b43aed171d7b7074cf13663ae447c1a960026e52937a0e8c4"
+      }
+    }
+  ],
+  "providers": [
+    {
+      "provider": {
+        "provider_id": "esp32s3-infra-scheduler-drive",
+        "revision": 18,
+        "implementation_ref": {
+          "kind": "risc-elf",
+          "profile": "esp32s3-infrastructure",
+          "package_digest": "59af9eca184d0329316f333aa661c155f88d69c5b56d891661808052e07b3cd3"
+        },
+        "provides": [
+          {
+            "capability_id": "scheduler.drive",
+            "api_version": 1,
+            "contract_digest": "1f191cd4ba541a1b13e5ab122e25ce25891f7157ecaa48e1da5f6a449b63fe97"
+          }
+        ],
+        "requires": [],
+        "resource_bindings": [
+          {
+            "name": "tls",
+            "amount": 1,
+            "lifetime": "invocation"
+          },
+          {
+            "name": "job",
+            "amount": 1,
+            "lifetime": "invocation"
+          },
+          {
+            "name": "pending",
+            "amount": 2,
+            "lifetime": "invocation"
+          }
+        ],
+        "recovery_support": {
+          "checkpoint_formats": [
+            "infra.source/1"
+          ]
+        },
+        "cost_estimate": 1,
+        "cost_model": {
+          "network_transactions": 1,
+          "maximum_ms": 12000
+        },
+        "cost_evidence": "software_bounds_physical_qualification_pending"
+      },
+      "reference": {
+        "capability_id": "scheduler.drive",
+        "provider_id": "esp32s3-infra-scheduler-drive",
+        "revision": 18,
+        "definition_digest": "7d36264977c8a4619ee8b6bbb1e405a1b24db93beccc4821485e1f839a8fcf28",
+        "package_digest": "59af9eca184d0329316f333aa661c155f88d69c5b56d891661808052e07b3cd3"
+      }
+    },
+    {
+      "provider": {
+        "provider_id": "esp32s3-infra-service-reconcile",
+        "revision": 18,
+        "implementation_ref": {
+          "kind": "risc-elf",
+          "profile": "esp32s3-infrastructure",
+          "package_digest": "59af9eca184d0329316f333aa661c155f88d69c5b56d891661808052e07b3cd3"
+        },
+        "provides": [
+          {
+            "capability_id": "service.reconcile",
+            "api_version": 1,
+            "contract_digest": "bf8c680a6667901ddc0e91f2bf982028b12a456679d50232d8b08ce88fdf3717"
+          }
+        ],
+        "requires": [],
+        "resource_bindings": [
+          {
+            "name": "tls",
+            "amount": 1,
+            "lifetime": "invocation"
+          },
+          {
+            "name": "job",
+            "amount": 1,
+            "lifetime": "invocation"
+          },
+          {
+            "name": "pending",
+            "amount": 2,
+            "lifetime": "invocation"
+          }
+        ],
+        "recovery_support": {
+          "checkpoint_formats": [
+            "infra.source/1"
+          ]
+        },
+        "cost_estimate": 1,
+        "cost_model": {
+          "network_transactions": 1,
+          "maximum_ms": 5000
+        },
+        "cost_evidence": "software_bounds_physical_qualification_pending"
+      },
+      "reference": {
+        "capability_id": "service.reconcile",
+        "provider_id": "esp32s3-infra-service-reconcile",
+        "revision": 18,
+        "definition_digest": "8175a6d3b4688013ec88c21115edb6dff4c3557f69a70747109eca31402745bd",
+        "package_digest": "59af9eca184d0329316f333aa661c155f88d69c5b56d891661808052e07b3cd3"
+      }
+    },
+    {
+      "provider": {
+        "provider_id": "esp32s3-infra-service-health-observe",
+        "revision": 18,
+        "implementation_ref": {
+          "kind": "risc-elf",
+          "profile": "esp32s3-infrastructure",
+          "package_digest": "59af9eca184d0329316f333aa661c155f88d69c5b56d891661808052e07b3cd3"
+        },
+        "provides": [
+          {
+            "capability_id": "service.health.observe",
+            "api_version": 1,
+            "contract_digest": "742a986d123ececf60ad6c715c5587b081f691adad992b04abbffe6aefcf998f"
+          }
+        ],
+        "requires": [],
+        "resource_bindings": [
+          {
+            "name": "tls",
+            "amount": 1,
+            "lifetime": "invocation"
+          },
+          {
+            "name": "job",
+            "amount": 1,
+            "lifetime": "invocation"
+          },
+          {
+            "name": "pending",
+            "amount": 2,
+            "lifetime": "invocation"
+          }
+        ],
+        "recovery_support": {
+          "checkpoint_formats": [
+            "infra.source/1"
+          ]
+        },
+        "cost_estimate": 1,
+        "cost_model": {
+          "network_transactions": 1,
+          "maximum_ms": 5000
+        },
+        "cost_evidence": "software_bounds_physical_qualification_pending"
+      },
+      "reference": {
+        "capability_id": "service.health.observe",
+        "provider_id": "esp32s3-infra-service-health-observe",
+        "revision": 18,
+        "definition_digest": "425d019558c7fa961f8086c38da3543514fe4a8a8267487987ff2428f787b1cc",
+        "package_digest": "59af9eca184d0329316f333aa661c155f88d69c5b56d891661808052e07b3cd3"
+      }
+    },
+    {
+      "provider": {
+        "provider_id": "esp32s3-infra-source-poll",
+        "revision": 18,
+        "implementation_ref": {
+          "kind": "risc-elf",
+          "profile": "esp32s3-infrastructure",
+          "package_digest": "59af9eca184d0329316f333aa661c155f88d69c5b56d891661808052e07b3cd3"
+        },
+        "provides": [
+          {
+            "capability_id": "source.poll",
+            "api_version": 1,
+            "contract_digest": "4f10b9ec48f8b47b43aed171d7b7074cf13663ae447c1a960026e52937a0e8c4"
+          }
+        ],
+        "requires": [],
+        "resource_bindings": [
+          {
+            "name": "tls",
+            "amount": 1,
+            "lifetime": "invocation"
+          },
+          {
+            "name": "job",
+            "amount": 1,
+            "lifetime": "invocation"
+          },
+          {
+            "name": "pending",
+            "amount": 2,
+            "lifetime": "invocation"
+          }
+        ],
+        "recovery_support": {
+          "checkpoint_formats": [
+            "infra.source/1"
+          ]
+        },
+        "cost_estimate": 1,
+        "cost_model": {
+          "network_transactions": 1,
+          "maximum_ms": 5000
+        },
+        "cost_evidence": "software_bounds_physical_qualification_pending"
+      },
+      "reference": {
+        "capability_id": "source.poll",
+        "provider_id": "esp32s3-infra-source-poll",
+        "revision": 18,
+        "definition_digest": "08b1c207d61de35449b564a85bb301b0250927bbed48a48a6bf92b325e629915",
+        "package_digest": "59af9eca184d0329316f333aa661c155f88d69c5b56d891661808052e07b3cd3"
+      }
+    }
+  ]
+}
