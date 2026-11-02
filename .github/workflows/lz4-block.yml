@@ -26,6 +26,12 @@ jobs:
       - run: python3 test/run_runtime_image_envelope_test.py --system .source/system --output out/image-sanitized --sanitize
       - run: bash test/run_runtime_file_image_test.sh
       - run: SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_runtime_file_image_test.sh
+      - name: Actual Runtime canonical image cache, raw and encoded
+        run: |
+          for encoded in 0 1; do
+            ENCODED_IMAGES=$encoded bash test/run_image_cache_runtime_test.sh
+            ENCODED_IMAGES=$encoded SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_image_cache_runtime_test.sh
+          done
       - name: Exact target compiler and resource measurement
         run: |
           mkdir -p toolchain out/target
@@ -38,12 +44,20 @@ jobs:
           "${CXX%g++}size" -A out/target/decoder.o | tee out/target/size.txt
           "${CXX%g++}nm" -u out/target/decoder.o | tee out/target/undefined.txt
           cat out/target/decoder.su | tee out/target/stack.txt
+          "$CXX" -std=c++17 -Os -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fstack-usage -I src -I sdk/app -I sdk/driver -I sdk/hardware -c test/runtime_image_target_probe.cpp -o out/target/image.o
+          "${CXX%g++}size" -A out/target/image.o | tee out/target/image-size.txt
+          "${CXX%g++}nm" -u out/target/image.o | tee out/target/image-undefined.txt
+          cat out/target/image.su | tee out/target/image-stack.txt
           python3 - <<'PY'
           from pathlib import Path
           text=Path('out/target/undefined.txt').read_text()
           assert not any(x in text for x in ('malloc','calloc','realloc','_Zn','free'))
           rows=[line.split('\t') for line in Path('out/target/decoder.su').read_text().splitlines()]
           assert rows and all(row[-1]=='static' and int(row[-2])<=1024 for row in rows),rows
+          image=Path('out/target/image-undefined.txt').read_text()
+          assert not any(x in image for x in ('malloc','calloc','realloc','_Zn','free'))
+          rows=[line.split('\t') for line in Path('out/target/image.su').read_text().splitlines()]
+          assert rows and all(row[-1]=='static' and int(row[-2])<=2048 for row in rows),rows
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
