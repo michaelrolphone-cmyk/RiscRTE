@@ -19,8 +19,8 @@ constexpr size_t DefaultProviders=28;
 // Explicit source composition selection. Default and legacy targets retain
 // their existing allocations. Changing this requires graph and memory evidence.
 #if defined(RISC_PROVIDER_CAPACITY)
-static_assert(RISC_PROVIDER_CAPACITY>=DefaultProviders && RISC_PROVIDER_CAPACITY<=40,
-              "provider capacity must preserve the cohort and stay within 40");
+static_assert(RISC_PROVIDER_CAPACITY>=DefaultProviders && RISC_PROVIDER_CAPACITY<=48,
+              "provider capacity must preserve the cohort and stay within 48");
 constexpr size_t Providers=RISC_PROVIDER_CAPACITY;
 #else
 constexpr size_t Providers=DefaultProviders;

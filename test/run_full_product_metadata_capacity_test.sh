@@ -7,14 +7,16 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 source="${RUNTIME_SOURCE:-$repo}"
 expected="${EXPECTED_PROVIDER_LIMIT:-28}"
-[[ "$expected" == 24 || "$expected" == 26 || "$expected" == 28 ]] || { echo "Unsupported expected provider limit" >&2; exit 2; }
+[[ "$expected" == 24 || "$expected" == 26 || "$expected" == 28 || "$expected" == 40 || "$expected" == 48 ]] || { echo "Unsupported expected provider limit" >&2; exit 2; }
 build="$(mktemp -d)"
 trap 'rm -rf "$build"' EXIT
+capacity=()
+if [[ "$expected" == 40 || "$expected" == 48 ]];then capacity=(-DRISC_PROVIDER_CAPACITY="$expected");fi
 san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then
   san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g -no-pie)
 fi
-"${CXX:-c++}" "${san[@]}" -std=c++17 -Wall -Wextra -Werror \
+"${CXX:-c++}" "${san[@]}" "${capacity[@]}" -std=c++17 -Wall -Wextra -Werror \
   -Wno-missing-field-initializers -DFULL_PRODUCT_EXPECTED_PROVIDERS="$expected" -DRISC_APP_POLICY_ROWS=17 -DRISC_PAIRED_APP_DATA=1 \
   -I"$source/src" -I"$source/sdk/app" -I"$source/sdk/driver" -I"$source/sdk/hardware" \
   -I"$source/lib/ArduinoJson/src" -I"$source/test/drivers/stubs" \
