@@ -50,3 +50,47 @@ jobs:
         with:
           name: native-envelope-${{ github.sha }}-abi${{ matrix.abi }}-san${{ matrix.sanitize }}-expanded${{ matrix.expanded }}
           path: out/
+
+  upgrade:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: [0, 1]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - name: Exact selected Watch bootloader
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p out/boot
+          gh api repos/michaelrolphone-cmyk/RiscRTE-T-Watch-S3/actions/artifacts/13147620128/zip > out/boot/native.zip
+          echo 'ed658bc19cdf58664eb4ae02610d0c833412a7e76d483b7353c05fb1ec5225fa  out/boot/native.zip' | sha256sum --check
+          python3 - <<'PY'
+          import hashlib,pathlib,zipfile
+          with zipfile.ZipFile('out/boot/native.zip') as z: data=z.read('candidate/bootloader.bin')
+          assert len(data)==22640 and hashlib.sha256(data).hexdigest()=='459d11a2d2cfd56e98edfc3ae4a9c05389ca2c0767c3ef69d1dfb16050f017db'
+          pathlib.Path('out/boot/bootloader.bin').write_bytes(data)
+          PY
+      - name: Actual stale raw cohort to encoded app admission and paired cut matrix
+        env:
+          NATIVE_PROVIDER_TEST_ABI: 2
+          APP_DATA_EXPANDED_TEST: 1
+          SANITIZE: ${{ matrix.sanitize }}
+          ASAN_OPTIONS: detect_leaks=0
+        run: |
+          set -euo pipefail
+          BOOTLOADER_FILE="$PWD/out/boot/bootloader.bin" ENVELOPE_UPGRADE_ONLY=1 bash test/run_native_bank_test.sh 2>&1 | tee out/native-upgrade.log
+          bash test/run_paired_bank_test.sh 2>&1 | tee out/paired-upgrade.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-envelope-upgrade-${{ github.sha }}-san${{ matrix.sanitize }}
+          path: |
+            out/*.log
+            out/boot/bootloader.bin

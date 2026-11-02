@@ -7,7 +7,7 @@
 #include "RuntimeFileFixture.h"
 static std::string fsRoot;
 static unsigned receiptMode=0;
-static bool cohortLiveClose=false;
+static bool cohortLiveClose=false,cohortEncoded=false;
 static uint8_t consumedProfile[32]{};
 extern "C" FILE* __real_fopen(const char*,const char*);
 extern "C" int __real_fclose(FILE*);
@@ -152,7 +152,7 @@ static void cohortNative(const char* loader,const char* root){
  static RiscTest::FileSources sources({RiscTest::FileSources::Mapping{"/bootfs",fsRoot+"/bootfs"},{"/updatefs",fsRoot+"/updatefs"}},own,safe);
  const auto boot=validatedBootloader(loader);
  memcpy(flash.data(),boot.data(),boot.size());firmware(0,RISC_BUILD_VERSION);firmware(1,RISC_BUILD_VERSION);
- cohortBytes.assign(flash.begin()+0x800000,flash.begin()+0x800000+imageSize);cohortBytes.resize(imageSize+RiscUpdate::StoreBytes,0x79);
+ cohortBytes.assign(flash.begin()+RiscUpdate::FirmwareOffset[1],flash.begin()+RiscUpdate::FirmwareOffset[1]+imageSize);cohortBytes.resize(imageSize+RiscUpdate::StoreBytes,0x79);
  cohortImage={};cohortImage.struct_size=sizeof(cohortImage);cohortImage.store_abi=RiscUpdate::StoreAbi;cohortImage.firmware_size=imageSize;cohortImage.store_size=RiscUpdate::StoreBytes;
  strcpy(cohortImage.product,"twatch-s3");strcpy(cohortImage.version,"1.0.2");strcpy(cohortImage.runtime_version,RISC_BUILD_VERSION);strcpy(cohortImage.source_repo,"owner/watch");memset(cohortImage.source_revision,'b',40);
  SHA256(cohortBytes.data(),cohortBytes.size(),cohortImage.sha256);SHA256(cohortBytes.data(),imageSize,cohortImage.firmware_sha256);SHA256(cohortBytes.data()+imageSize,RiscUpdate::StoreBytes,cohortImage.store_sha256);
@@ -169,6 +169,12 @@ static void cohortNative(const char* loader,const char* root){
  saveNative("/updatefs/new.json",R"({"type":"application","id":"new","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"new.elf","entry":"app_main","requires":[{"capability":"test.new","api":1}]})");
  saveNative("/updatefs/new-driver.json",R"({"type":"driver","id":"new-provider","version":"1.0.0","driver_abi":2,"architecture":"xtensa-esp32s3","file_name":"new-driver.elf","requires":[],"provides":[{"capability":"test.new","api":1}]})");
  saveElf("/updatefs/default.elf",false);saveElf("/updatefs/new.elf",false);saveElf("/updatefs/new-driver.elf",true);
+ if(cohortEncoded){
+  const auto encoded=bankEnvelope(elf("memcpy"));
+  std::ofstream out(fsRoot+"/updatefs/default.elf",std::ios::binary);
+  out.write(reinterpret_cast<const char*>(encoded.data()),encoded.size());assert(out.good());
+ }
+
  if(receiptMode){
   bootNet.profile=R"({"schema":"riscrte.provisioning","schema_version":2,"wifi":{"ssid":"test-network","password":"test-only-password"},"base_url":"https://example.test/","files":[)";
   bool first=true;for(const char* name:{"boot.json","board.json","default.elf"}){
@@ -230,5 +236,6 @@ static void cohortNative(const char* loader,const char* root){
   assert(result.reason==RiscBootstrap::Reason::Unchanged && !writes&&!bootNet.joins&&!selectorCalls);
   std::cout<<"Full-cohort receipt carry: legacy/current source, uncertain write/readback, pending/confirmed reboot, rollback and overwritten former source PASS\n";
  }
+ if(cohortEncoded)std::cout<<"New Runtime boots unchanged raw store with stale cohort runtime metadata, then admits encoded default through actual cohort API; appdata/NVS preserved PASS\n";
  std::cout<<"Native cohort API/metadata/new-app-provider/real-ELF/mount/uncertain-write/cleanup/activation, NVS/appdata and old-pair preservation PASS\n";
 }

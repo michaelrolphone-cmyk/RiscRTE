@@ -267,7 +267,7 @@ bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole r
   const auto* policy=role==ElfRole::Driver && context.candidate?context.candidate->nativeProviderPolicyForImage(path):nullptr;
   RiscBoot::RuntimeFileImage image;
   if(!hashBegin(nullptr) ||
-     !readAdmissionImage(context.candidate,path,image,file.bytes,&context.started,role==ElfRole::Application,true))return false;
+     !readAdmissionImage(context.candidate,path,image,file.bytes,&context.started,role==ElfRole::Application && context.candidate->ordinaryImageEnvelopeAllowed(path),true))return false;
   uint8_t digest[32];
   bool ok=operationSafe() && hashEnd(nullptr,digest) && !memcmp(digest,file.sha256,32) &&
     image.physicalSize==file.bytes && admitElf(image.bytes,image.size,role,policy) &&
@@ -339,9 +339,12 @@ bool finishApp(void*,unsigned b){
   if(!written || !absolute(filename,sizeof(filename),scratch->appPaths.elf))return false;
   // Hash the stored representation through the very same open source as
   // decoding. Transaction size/digest remain physical; ELF admission is logical.
+  char activeImage[256];
+  if(!runtime || !RiscBoot::path("/bootfs",scratch->appPaths.elf,activeImage,sizeof(activeImage)))return false;
+  const bool allowEnvelope=runtime->ordinaryImageEnvelopeAllowed(activeImage);
   RiscBoot::RuntimeFileImage image;const uint32_t started=RiscPlatform::millis();
   if(!hashBegin(nullptr) || !readAdmissionSource(RiscBoot::RuntimeFileView(fileSources,"/updatefs"),runtime,
-      filename,image,scratch->appSize,&started,true,true))return false;
+      filename,image,scratch->appSize,&started,allowEnvelope,true))return false;
   uint8_t digest[32];
   const bool ok=operationSafe() && hashEnd(nullptr,digest) && !memcmp(digest,scratch->appDigest,32) &&
     image.physicalSize==scratch->appSize && admitElf(image.bytes,image.size);
@@ -428,7 +431,7 @@ bool admitFile(void* context,const char* filename,bool provider){
   auto* candidate=static_cast<RiscBoot::Runtime*>(context);
   const auto* policy=provider && candidate?candidate->nativeProviderPolicyForImage(filename):nullptr;
   RiscBoot::RuntimeFileImage image;
-  if(!readAdmissionImage(candidate,filename,image,0,nullptr,!provider))return false;
+  if(!readAdmissionImage(candidate,filename,image,0,nullptr,!provider && candidate && candidate->ordinaryImageEnvelopeAllowed(filename)))return false;
   const bool ok=admitElf(image.bytes,image.size,provider?ElfRole::Driver:ElfRole::Application,policy) && operationSafe();
   return releaseAdmissionImage(candidate,image) && ok;
 }

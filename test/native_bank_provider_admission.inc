@@ -75,15 +75,6 @@ class ProviderAdmissionSources final {
  }
 };
 // Actual NativeBankStore admission: stored SHA/length are not decoded ELF identity.
-static std::vector<uint8_t> bankEnvelope(const std::vector<uint8_t>& bytes){
- std::vector<uint8_t> out(32,0);memcpy(out.data(),"RTEIMG1\0",8);
- const auto word=[&](size_t at,uint32_t value){for(unsigned i=0;i<4;++i)out[at+i]=uint8_t(value>>(8*i));};
- uint32_t crc=~uint32_t(0);for(uint8_t b:bytes){crc^=b;for(unsigned k=0;k<8;++k)crc=(crc>>1)^(0xedb88320u&uint32_t(0-int32_t(crc&1)));}
- word(8,32);word(12,1);word(16,uint32_t(bytes.size()));word(24,~crc);
- out.push_back(uint8_t(std::min<size_t>(15,bytes.size())<<4));
- if(bytes.size()>=15){size_t left=bytes.size()-15;while(left>=255){out.push_back(255);left-=255;}out.push_back(uint8_t(left));}
- out.insert(out.end(),bytes.begin(),bytes.end());word(20,uint32_t(out.size()-32));return out;
-}
 static void nativeEnvelopeAdmissions(const std::string& root,const ProviderAdmissionSources& sources,unsigned custodyFault=0){
  using namespace RiscBankStore;
  const auto save=[](const std::string& path,const std::vector<uint8_t>& bytes){std::ofstream out(path,std::ios::binary);out.write(reinterpret_cast<const char*>(bytes.data()),bytes.size());assert(out.good());};
@@ -114,17 +105,47 @@ static void nativeEnvelopeAdmissions(const std::string& root,const ProviderAdmis
  assert(image.encoded && image.physicalSize==encoded.size() && image.size==raw.size() && !memcmp(image.bytes,raw.data(),raw.size()));
  assert(releaseAdmissionImage(candidate.get(),image));++cases;
  assert(admitFile(candidate.get(),path.c_str(),false));assert(!admitFile(candidate.get(),path.c_str(),true));++cases;
+
+ // Policy exclusions agree with the execution reader: even Application-role
+ // admission cannot decode a conflicting driver path or external image source.
+ for(bool external:{false,true}){
+   JsonDocument boot;boot["board"]="board.json";boot["default_app"]=external?"other.elf":"envelope.elf";
+   auto driver=boot["drivers"].to<JsonArray>().add<JsonObject>();driver["manifest"]="envelope-driver.json";
+   JsonDocument dm;dm["type"]="driver";dm["id"]="envelope-driver";dm["version"]="1.0.0";dm["driver_abi"]=2;
+   dm["architecture"]="xtensa-esp32s3";dm["file_name"]=external?"volume.elf":"envelope.elf";dm["requires"].to<JsonArray>();
+   auto cap=dm["provides"].to<JsonArray>().add<JsonObject>();cap["capability"]=external?"storage.volume":"test.envelope";cap["api"]=1;
+   JsonDocument app;app["type"]="application";app["id"]="envelope-app";app["version"]="1.0.0";app["architecture"]="xtensa-esp32s3";
+   app["file_name"]="envelope.elf";app["entry"]="app_main";app["requires"].to<JsonArray>();
+   auto row=boot["app_capabilities"].to<JsonArray>().add<JsonObject>();row["manifest"]="envelope-app.json";row["grants"].to<JsonArray>();
+   if(external){row["image_source"]["volume_instance"]=0;row["image_source"]["path"]="Apps/external/image.elf";}
+   const auto json=[&](const char* name,const JsonDocument& doc){std::ofstream out(root+"/"+name);serializeJson(doc,out);assert(out.good());};
+   json("boot.json",boot);json("envelope-driver.json",dm);json("envelope-app.json",app);
+   auto restricted=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,nullptr,nullptr,nullptr});
+   assert(sources.bind(*restricted) && restricted->prepare(root.c_str()));
+   assert(!restricted->ordinaryImageEnvelopeAllowed(path.c_str()));
+   save(path,encoded);auto& file=profile->files[0];file.bytes=encoded.size();SHA256(encoded.data(),encoded.size(),file.sha256);
+   AdmissionImages context{root.c_str(),ticks,restricted.get()};
+   assert(!inspectProvisionedImage(context,path.c_str(),ElfRole::Application) && !context.seen[0]);
+   assert(!admitFile(restricted.get(),path.c_str(),false));++cases;
+ }
  provisionState=nullptr;provisionProfile=nullptr;
  // Update-only uses staged source identity; active bytes remain untouched.
  // Both complete stores are identical except the two explicitly admitted replacements.
  std::filesystem::remove_all(fsRoot+"/bootfs");std::filesystem::remove_all(fsRoot+"/updatefs");
  std::filesystem::create_directories(fsRoot+"/bootfs");std::filesystem::create_directories(fsRoot+"/updatefs");
- const std::vector<uint8_t> manifest{'{','}'},unchanged{'s','a','v','e','d'};
+ const std::string manifestText=R"({"type":"application","id":"update-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"app.elf","entry":"app_main","requires":[]})";
+ const std::vector<uint8_t> manifest(manifestText.begin(),manifestText.end()),unchanged{'s','a','v','e','d'};
  for(const char* bank:{"bootfs","updatefs"}){
    save(fsRoot+"/"+bank+"/app.elf",raw);save(fsRoot+"/"+bank+"/app.json",manifest);save(fsRoot+"/"+bank+"/unchanged",unchanged);
  }
  strcpy(scratch->appPaths.elf,"app.elf");strcpy(scratch->appPaths.manifest,"app.json");
- memcpy(scratch->manifest,manifest.data(),manifest.size());scratch->manifestSize=manifest.size();runtime=candidate.get();
+ memcpy(scratch->manifest,manifest.data(),manifest.size());scratch->manifestSize=manifest.size();
+ for(const char* bank:{"bootfs","updatefs"}){
+   std::filesystem::copy_file(root+"/board.json",fsRoot+"/"+bank+"/board.json",std::filesystem::copy_options::overwrite_existing);
+   std::ofstream(fsRoot+"/"+bank+"/boot.json")<<R"({"board":"board.json","default_app":"app.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[]}]})";
+ }
+ auto updateRuntime=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,nullptr,nullptr,nullptr});
+ assert(sources.bind(*updateRuntime) && updateRuntime->prepare("/bootfs"));runtime=updateRuntime.get();
  for(unsigned fault=0;fault<4;++fault){
    auto stored=fault==3?raw:encoded;if(fault==2)stored[24]^=1;
    save(fsRoot+"/updatefs/app.elf",stored);scratch->appSize=stored.size();SHA256(stored.data(),stored.size(),scratch->appDigest);
@@ -133,7 +154,7 @@ static void nativeEnvelopeAdmissions(const std::string& root,const ProviderAdmis
    assert(finishApp(nullptr,1)==(fault==0 || fault==3));
    assert(!appFile && !provisionReadRetained && sources.sources()->exitSafe());mounted=false;++cases;
  }
- runtime=nullptr;assert(cases==15 && operationSafe());
+ runtime=nullptr;assert(cases==17 && operationSafe());
  if(custodyFault){
    save(path,encoded);providerCustodyReadPath=path;providerCustodyLoss=custodyFault;
    providerCustodySkipReads=0;providerRetainedRead=0;providerRetainedReadContext=nullptr;

@@ -273,6 +273,7 @@ static std::vector<uint8_t> validatedBootloader(const char* path){
  assert(hex==RISC_TEST_BOOTLOADER_SHA256);
  return boot;
 }
+#include "image_envelope_fixture.h"
 #include "cohort_native.inc"
 #include "boot_path_native.inc"
 #include "compact_image_native.inc"
@@ -289,6 +290,7 @@ int main(int argc,char** argv){
 #endif
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
+ if(mode=="cohort-envelope"){assert(argc==4);cohortEncoded=true;cohortNative(argv[2],argv[3]);return 0;}
  if(mode=="preserving-native"||mode=="preserving-native-close"){assert(argc==4);preservingNative(argv[2],argv[3],mode=="preserving-native-close");return 0;}
 #ifdef RISC_NATIVE_BANK_PROVIDER_TEST
  if(mode=="native-export-admission" || mode=="native-export-close"){assert(argc==3);nativeAppDataExportAdmission(argv[2],mode=="native-export-close");return 0;}

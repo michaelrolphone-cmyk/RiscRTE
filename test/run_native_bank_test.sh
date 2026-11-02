@@ -69,6 +69,12 @@ c++ -rdynamic -Wl,--wrap=open,--wrap=close,--wrap=fopen,--wrap=fclose,--wrap=ope
  "$repo/src/runtime/provisioning/BootstrapInput.cpp" "$repo/src/runtime/provisioning/Coordinator.cpp" \
  "$repo/src/runtime/provisioning/StoreFiles.cpp" "$repo/src/runtime/provisioning/Profile.cpp" "$repo/src/runtime/provisioning/PreservingPolicy.cpp" \
  "$repo/src/runtime/update/PairedBank.cpp" "$repo/src/runtime/update/StoreAudit.cpp" "$repo/test/native_bank_test.cpp" "$build/validate.o" "${native_objects[@]}" -lcrypto -ldl -o "$build/test"
+if [[ "${ENVELOPE_UPGRADE_ONLY:-0}" == 1 ]];then
+ [[ -n "${BOOTLOADER_FILE:-}" ]]
+ mkdir -p "$build/envelope-upgrade";cp "$build/cohort-native.elf" "$build/envelope-upgrade/cohort-native.elf"
+ "$build/test" cohort-envelope "$BOOTLOADER_FILE" "$build/envelope-upgrade"
+ exit 0
+fi
 if [[ "${NATIVE_EXPORT_ADMISSION_ONLY:-0}" == 1 ]];then
  "$build/test" native-export-admission "$build/export-admission"
  if [[ "${NATIVE_EXPORT_TEST_SELECTION:-0}" == 1 ]];then
