@@ -1302,15 +1302,20 @@ bool Runtime::readRuntimeImage(const char* name,RuntimeFileImage& image,size_t e
   if(image.retained){retainedNativeProviderRead_=image.handle?image.handle:UINT32_MAX;retainedNativeProviderBytes_=image.bytes;metadataCloseRetained_=true;}
   errno=image.error;return ok;
 }
+bool Runtime::ordinaryImageEnvelopeAllowed(const char* name) const {
+  if(!name || !*name)return false;
+  bool ordinary=!strcmp(name,default_);
+  for(size_t i=0;i<policyCount_;++i)if(!strcmp(name,policies_[i].elf))ordinary=true;
+  for(size_t i=0;i<policyCount_;++i)if(policies_[i].sourceDriver>=0&&!strcmp(name,policies_[i].elf))ordinary=false;
+  // A conflicting driver route always wins, even when it is also an app path.
+  for(size_t i=0;i<driverCount_;++i)if(!strcmp(name,drivers_[i].elf))ordinary=false;
+  return ordinary;
+}
 int Runtime::readInternalImage(void* raw,const char* name,::elf_file* file) {
   if(!raw || !file){errno=EINVAL;return -1;}
   auto& runtime=*static_cast<Runtime*>(raw);RuntimeFileImage image;
   RiscPerf::emit(40);
-  bool ordinary=!strcmp(name,runtime.default_);
-  for(size_t i=0;i<runtime.policyCount_;++i)if(!strcmp(name,runtime.policies_[i].elf))ordinary=true;
-  for(size_t i=0;i<runtime.policyCount_;++i)if(runtime.policies_[i].sourceDriver>=0&&!strcmp(name,runtime.policies_[i].elf))ordinary=false;
-  // A conflicting driver route always wins: privileged/managed providers are raw only.
-  for(size_t i=0;i<runtime.driverCount_;++i)if(!strcmp(name,runtime.drivers_[i].elf))ordinary=false;
+  const bool ordinary=runtime.ordinaryImageEnvelopeAllowed(name);
   if(!runtime.readRuntimeImage(name,image,0,false,ordinary)){RiscPerf::emit(44,uint32_t(-1));errno=image.error;return -1;}
   RiscPerf::emit(41,uint32_t(image.size));RiscPerf::emit(45);
   const bool valid=esp_elf_validate_file(image.bytes,image.size);

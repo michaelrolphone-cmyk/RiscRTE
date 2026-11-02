@@ -112,7 +112,12 @@ int main(int argc,char**argv){
     if(sourceUnavailable || sourceRetained){
       activeSource=&active;otherSource=&other;assert(runtime.bindFileSources(&faultSources));
     }else assert(runtimeFiles0.bind(runtime));
-    assert(runtime.prepare(root.c_str()));assert(runtime.run()!=retained);assert(runtime.retained()==retained);
+    assert(runtime.prepare(root.c_str()));
+    assert(runtime.ordinaryImageEnvelopeAllowed((root+"/default.elf").c_str()));
+    assert(runtime.ordinaryImageEnvelopeAllowed((root+"/child.elf").c_str()));
+    assert(!runtime.ordinaryImageEnvelopeAllowed((root+"/loose.elf").c_str()));
+    assert(!runtime.ordinaryImageEnvelopeAllowed(nullptr));
+    assert(runtime.run()!=retained);assert(runtime.retained()==retained);
     assert(risc_test_native_image_count()==0); // Including retained-failure exit.
     assert(risc_test_native_legacy_open_count()==legacyOpens); // No POSIX loader escape.
     const size_t readDelta=risc_test_native_read_count()-reads;
