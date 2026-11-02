@@ -32,6 +32,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p qualification
+          bash test/run_provider_sync_test.sh 2>&1 | tee qualification/sync.log
           bash test/run_provider_graph_v2_test.sh 2>&1 | tee qualification/graph.log
           bash test/run_full_product_metadata_capacity_test.sh 2>&1 | tee qualification/metadata.log
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

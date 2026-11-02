@@ -146,6 +146,13 @@ struct NativeStorageCustody {
 };
 class Port final {
  public:
+  // A device sync table consumes a distinct Runtime platform registration.
+  // Explicit provider counts above the old ceiling must not reserve impossible
+  // physical tables merely because software-only provider rows were added.
+  // Preserve every existing <=40 layout.
+  static constexpr size_t SyncCapacity = RuntimeProviders::GraphV2::kMaxModules>40 &&
+      RISC_PLATFORM_CAPACITY<RuntimeProviders::GraphV2::kMaxModules ?
+      RISC_PLATFORM_CAPACITY : RuntimeProviders::GraphV2::kMaxModules;
   explicit Port(Hardware hardware):hw_(hardware){}
   Port(const Port&)=delete; Port& operator=(const Port&)=delete;
   bool bind(RiscBoot::Runtime&);
@@ -190,7 +197,7 @@ class Port final {
  #endif
     struct Lock { uint64_t token=0; bool held=false; } locks[RISC_PROVIDER_SYNC_MAX_LOCKS]{};
     risc_provider_sync_api_v1 api{};
-  } syncs_[RuntimeProviders::GraphV2::kMaxModules];
+  } syncs_[SyncCapacity];
   struct Gpio { Port* port=nullptr; uint64_t instance=0,input=0,output=0,pullup=0; risc_gpio_sdmmc_api_v1 api{}; } gpios_[16];
   struct StorageWork {Gpio*gpio=nullptr;risc_storage_work_scope_v1 scope{};
  #if RISC_NATIVE_STORAGE_CUSTODY

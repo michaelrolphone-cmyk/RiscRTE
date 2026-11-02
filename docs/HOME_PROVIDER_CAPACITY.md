@@ -29,3 +29,6 @@ normal and ASan/UBSan. Firmware-only successor builds in the owning Watch/Wave
 repos retain actual compiler/header/link closure, actual selected profile sizes,
 and linked capacity evidence. Final Home composition must separately admit its
 complete real target ELF/store inventory; metadata placeholders are not ELFs.
+
+## Linked native platform storage
+The first actual Wave48 link rejected .dram0.bss overlap with the retained IQ bank. CpuPort had allocated one native sync table per software provider row. Each usable sync table also requires one distinct Runtime platform registration. For explicit provider capacities above40, SyncCapacity is therefore bounded by both provider and platform capacity; existing <=40 layouts remain unchanged. Platform32 and Invocation grant16 are unchanged. Actual full native linkage/IQ proof and target40/48 object/frame measurements remain required; this source rationale is not a memory-fit receipt.
