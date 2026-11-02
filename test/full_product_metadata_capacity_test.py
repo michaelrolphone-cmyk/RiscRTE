@@ -164,7 +164,7 @@ def main():
     parser.add_argument("--source-store", type=Path)
     parser.add_argument("--source-system", type=Path)
     parser.add_argument("--legacy-capacity", action="store_true")
-    parser.add_argument("--provider-limit", type=int, choices=(24,26,28), default=28)
+    parser.add_argument("--provider-limit", type=int, choices=(24,26,28,40,48), default=28)
     args = parser.parse_args()
     def source_hashes():
         if args.source_store is None:

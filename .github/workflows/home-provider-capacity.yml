@@ -1,0 +1,42 @@
+name: Explicit Home provider capacity48
+on:
+  pull_request:
+    paths: ['src/runtime/RuntimeLimits.h', 'platformio.ini', 'test/*provider*capacity*', 'test/*full_product_metadata_capacity*', 'test/run_provider_graph_v2_test.sh', '.github/workflows/home-provider-capacity.yml']
+permissions:
+  contents: read
+jobs:
+  capacity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        bound: [40,48]
+        sanitize: [0,1]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bounds and source version
+        run: |
+          python3 test/home_provider_capacity_limits_test.py
+          python3 scripts/check_versions.py --base 0052d1fc42e9cfc82d626c5a247d460919c87935
+      - name: Actual graph activation and complete metadata admission
+        env:
+          SANITIZE: ${{ matrix.sanitize }}
+          EXPECTED_PROVIDER_LIMIT: ${{ matrix.bound }}
+          RISC_TEST_PROVIDER_CAPACITY: ${{ matrix.bound }}
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          set -o pipefail
+          mkdir -p qualification
+          bash test/run_provider_sync_test.sh 2>&1 | tee qualification/sync.log
+          bash test/run_provider_graph_v2_test.sh 2>&1 | tee qualification/graph.log
+          bash test/run_full_product_metadata_capacity_test.sh 2>&1 | tee qualification/metadata.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: home-capacity-${{ matrix.bound }}-san${{ matrix.sanitize }}-${{ github.event.pull_request.head.sha || github.sha }}
+          path: qualification/
