@@ -50,6 +50,8 @@ int main(int argc,char**argv){
   assert(graph.release(newGrant)&&!graph.interfaceFor(newGrant)&&!stops);
   assert(!graph.release(oldGrant)&&!graph.interfaceFor(oldGrant)&&stops==0);
   assert(callbacks==at&&quiesces);
+  assert(graph.holdsGrant(oldGrant)&&graph.liveGrants()==1&&!graph.shutdown()&&callbacks==at);
+  assert(graph.release(oldGrant)&&!graph.holdsGrant(oldGrant)&&!graph.liveGrants());
   assert(graph.shutdown()&&stops==1&&callbacks==at);
   puts("Retained original owner stays mapped after both consumer grants revoke; retry quiescence does not dispatch callbacks PASS");return 0;
  }
