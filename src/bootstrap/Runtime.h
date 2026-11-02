@@ -196,6 +196,9 @@ class Runtime final {
   // default, app-policy and driver image paths, with their expected entry role.
   // No module is mapped or executed. Duplicate instances share one inspection.
   bool inspectImages(bool (*inspect)(void*,const char* path,bool driver),void*) const;
+  // Pure prepared-authority query; exact internal ordinary app path only.
+  // Excludes all image-source policies and any path also used by a driver.
+  bool ordinaryImageEnvelopeAllowed(const char* absolutePath) const;
   // Exact prepared driver only; returns the graph-owned immutable policy copy.
   const RuntimeProviders::NativeProviderPolicyV1* nativeProviderPolicyForImage(const char* absolutePath) const;
   bool uses(uint64_t instance,const char* capability,uint32_t api) const;
@@ -361,7 +364,7 @@ class Runtime final {
   bool registerNativeProvider(const Driver&, RuntimeProviders::SpecV2&, const RuntimeProviders::NativeProviderPolicyV1&);
   bool validateGraph();
   static void* openDriverImage(void*,const char*,const void*);
-  bool readRuntimeImage(const char*,RuntimeFileImage&,size_t expected=0,bool pinned=false);
+  bool readRuntimeImage(const char*,RuntimeFileImage&,size_t expected=0,bool pinned=false,bool allowEnvelope=false);
   static int readInternalImage(void*,const char*,::elf_file*);
   void* openInternalImage(const char*,bool cached=false);
   void serviceProviders();

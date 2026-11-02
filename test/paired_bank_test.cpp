@@ -10,7 +10,7 @@ using namespace RiscUpdate;
 struct Model {
   std::vector<uint8_t> bytes[2][2],hashBytes,app;
   Record records[2]{};
-  unsigned selected=0,operations=0,cut=0,clock=1,validations=0;
+  unsigned activeBank=0,selected=0,operations=0,cut=0,clock=1,validations=0;
   bool clean=true,admitted=true,firmwareValid=true,selectFailure=false,storeValid=true,mutateStore=false;
   unsigned storeValidations=0;
   unsigned storeOpens=0,storeFinishes=0;
@@ -23,20 +23,20 @@ struct Model {
   Backend backend(){return {this,
     [](void* p){return static_cast<Model*>(p)->clock;},
     [](void* p,unsigned b,unsigned r,uint32_t o,void* d,uint32_t n){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(n<=4096);memcpy(d,m.bytes[b][r].data()+o,n);return true;},
-    [](void* p,unsigned b,unsigned r,uint32_t o){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1 && !(o%4096));memset(m.bytes[b][r].data()+o,0xff,4096);return true;},
-    [](void* p,unsigned b,unsigned r,uint32_t o,const void* d,uint32_t n){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1 && n<=4096);memcpy(m.bytes[b][r].data()+o,d,n);return true;},
-    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1);m.records[b]={};return true;},
-    [](void* p,unsigned b,const Record& r){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1);m.records[b]=r;return true;},
+    [](void* p,unsigned b,unsigned r,uint32_t o){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1-m.activeBank && !(o%4096));memset(m.bytes[b][r].data()+o,0xff,4096);return true;},
+    [](void* p,unsigned b,unsigned r,uint32_t o,const void* d,uint32_t n){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1-m.activeBank && n<=4096);memcpy(m.bytes[b][r].data()+o,d,n);return true;},
+    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1-m.activeBank);m.records[b]={};return true;},
+    [](void* p,unsigned b,const Record& r){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1-m.activeBank);m.records[b]=r;return true;},
     [](void* p){static_cast<Model*>(p)->hashBytes.clear();return true;},
     [](void* p,const void* d,uint32_t n){auto& m=*static_cast<Model*>(p);auto b=static_cast<const uint8_t*>(d);m.hashBytes.insert(m.hashBytes.end(),b,b+n);return true;},
     [](void* p,uint8_t* digest){auto& m=*static_cast<Model*>(p);SHA256(m.hashBytes.data(),m.hashBytes.size(),digest);return true;},
-    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);assert(b==1);m.app.clear();return m.action();},
+    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);assert(b==1-m.activeBank);m.app.clear();return m.action();},
     [](void* p,const void* d,uint32_t n){auto& m=*static_cast<Model*>(p);if(!m.action())return false;auto b=static_cast<const uint8_t*>(d);m.app.insert(m.app.end(),b,b+n);return true;},
-    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);if(!m.action() || !m.admitted)return false;assert(b==1);memcpy(m.bytes[1][1].data()+8192,m.app.data(),m.app.size());return true;},
+    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);if(!m.action() || !m.admitted)return false;assert(b==1-m.activeBank);memcpy(m.bytes[b][1].data()+8192,m.app.data(),m.app.size());return true;},
     [](void* p){return static_cast<Model*>(p)->clean;},
-    [](void* p,unsigned b,uint32_t n){auto& m=*static_cast<Model*>(p);assert(b==1 && n>=32);++m.validations;return m.firmwareValid;},
-    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1 && validRecord(m.records[1],1));m.selected=b;return !m.selectFailure;},
-    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);assert(b==1);++m.storeValidations;if(m.mutateStore)m.bytes[b][1][90]^=1;return m.storeValid;}};}
+    [](void* p,unsigned b,uint32_t n){auto& m=*static_cast<Model*>(p);assert(b==1-m.activeBank && n>=32);++m.validations;return m.firmwareValid;},
+    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);if(!m.action())return false;assert(b==1-m.activeBank && validRecord(m.records[b],b));m.selected=b;return !m.selectFailure;},
+    [](void* p,unsigned b){auto& m=*static_cast<Model*>(p);assert(b==1-m.activeBank);++m.storeValidations;if(m.mutateStore)m.bytes[b][1][90]^=1;return m.storeValid;}};}
 };
 std::vector<uint8_t> payload(9127,0x71);
 risc_bank_image_v1 image(Model& m){risc_bank_image_v1 im{};im.struct_size=sizeof(im);im.size=payload.size();im.store_abi=StoreAbi;
@@ -108,7 +108,51 @@ void cohorts(){
   }
   std::cout<<"Full cohort split writes, independent SHA/readback, graph gate, mount-mutation rejection, cleanup, cancellation, cut/rollback and uncertain selection PASS\n";
 }
+
+// Two independently committed transactions: bridge firmware preserves the
+// exact raw store; after modeled health confirmation the next transaction can
+// replace the opposite pair. Native ELF/cohort admission is tested separately.
+void twoStepEnvelopeUpgrade(){
+ for(unsigned cut:{0u,1u,2u,3u,5u,16u,100u,2500u,5000u,6500u}){
+  Model m;Transaction bridge(m.backend());assert(bridge.initialize(0,m.records[0]));
+  const auto rawStore=m.bytes[0][1];const auto oldFirmware=m.bytes[0][0];
+  uint64_t token=0;auto request=image(m);
+  assert(bridge.begin(false,request,&token)==0 && advance(bridge,token)==0 && feed(bridge,token)==0 && advance(bridge,token)==0);
+  assert(m.bytes[1][1]==rawStore && m.bytes[0][0]==oldFirmware && m.bytes[0][1]==rawStore);
+  assert(bridge.activate(token)==0 && m.selected==1);
+  // Fresh process after health confirmation selects the bridge pair as source.
+  m.activeBank=1;m.operations=0;m.cut=cut;
+  Transaction final(m.backend());assert(final.initialize(1,m.records[1]));
+  std::vector<uint8_t> combined(payload);combined.resize(payload.size()+StoreBytes,0x42);
+  memcpy(combined.data()+payload.size(),"RTEIMG1",8);
+  risc_bank_cohort_v1 cohort{};cohort.struct_size=sizeof(cohort);cohort.store_abi=StoreAbi;
+  cohort.firmware_size=payload.size();cohort.store_size=StoreBytes;
+  memcpy(cohort.active_store_sha256,m.records[1].storeSha,32);
+  SHA256(combined.data(),combined.size(),cohort.sha256);
+  SHA256(combined.data(),payload.size(),cohort.firmware_sha256);
+  SHA256(combined.data()+payload.size(),StoreBytes,cohort.store_sha256);
+  int result=final.beginCohort(cohort,&token);
+  for(size_t at=0;!result && at<combined.size();){
+   const auto n=uint32_t(std::min<size_t>(4093,combined.size()-at));
+   result=final.write(token,combined.data()+at,n);at+=n;
+  }
+  if(!result)result=final.finish(token);
+  if(!result)result=advance(final,token);
+  assert(m.selected==1 && m.bytes[1][1]==rawStore && validRecord(m.records[1],1));
+  assert(!memcmp(m.bytes[1][0].data(),payload.data(),payload.size()));
+  if(result){m.cut=0;assert(final.abort(token)==0 && !validRecord(m.records[0],0));}
+  else {
+   assert(final.activate(token)==0 && m.selected==0 && validRecord(m.records[0],0));
+   // Before final health confirmation, bootloader rollback still has the
+   // confirmed decoder+rawstore pair, not the overwritten predecoder bank.
+   m.selected=1;assert(validRecord(m.records[1],1) && m.bytes[1][1]==rawStore);
+  }
+ }
+ std::cout<<"Two-step native-first raw clone then cohort: reverse bank direction, cuts and rollback preserve last confirmed pair PASS\n";
+}
+
 int main(){
+  twoStepEnvelopeUpgrade();
   cohorts();
   for(bool app:{false,true}){
     Model m;Transaction t(m.backend());assert(t.initialize(0,m.records[0]));auto im=image(m);uint64_t token;

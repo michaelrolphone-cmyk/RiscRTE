@@ -273,6 +273,7 @@ static std::vector<uint8_t> validatedBootloader(const char* path){
  assert(hex==RISC_TEST_BOOTLOADER_SHA256);
  return boot;
 }
+#include "image_envelope_fixture.h"
 #include "cohort_native.inc"
 #include "boot_path_native.inc"
 #include "compact_image_native.inc"
@@ -282,11 +283,20 @@ static std::vector<uint8_t> validatedBootloader(const char* path){
 #include "native_bank_app_data_export_admission.inc"
 #endif
 int main(int argc,char** argv){
+#ifdef RISC_PAIRED_APP_DATA_EXPANDED
+ static_assert(RiscUpdate::StoreAbi==3 && RiscUpdate::StoreBytes==0x550000 && RiscUpdate::FirmwareBytes==0x260000);
+ static_assert(RiscUpdate::StoreOffset[0]==0x2f0000 && RiscUpdate::StoreOffset[1]==0xaa0000);
+ static_assert(RiscUpdate::FirmwareOffset[0]==0x10000 && RiscUpdate::FirmwareOffset[1]==0x840000);
+#endif
  assert(argc>=2);std::string mode=argv[1];
  assert(verifyRollbackLater());
+ if(mode=="cohort-envelope"){assert(argc==4);cohortEncoded=true;cohortNative(argv[2],argv[3]);return 0;}
  if(mode=="preserving-native"||mode=="preserving-native-close"){assert(argc==4);preservingNative(argv[2],argv[3],mode=="preserving-native-close");return 0;}
 #ifdef RISC_NATIVE_BANK_PROVIDER_TEST
  if(mode=="native-export-admission" || mode=="native-export-close"){assert(argc==3);nativeAppDataExportAdmission(argv[2],mode=="native-export-close");return 0;}
+ if(mode=="native-envelope-owner"){assert(argc==3);nativeProviderAdmission(argv[2],0,false,false,1);return 0;}
+ if(mode=="native-envelope-unsafe"){assert(argc==3);nativeProviderAdmission(argv[2],0,false,false,3);return 0;}
+ if(mode=="native-envelope-close"){assert(argc==3);nativeProviderAdmission(argv[2],0,false,false,4);return 0;}
  if(mode=="native-provider-admission"){assert(argc==3);nativeProviderAdmission(argv[2]);return 0;}
  if(mode=="native-provider-custody-owner"){assert(argc==3);nativeProviderAdmission(argv[2],1);return 0;}
  if(mode=="native-provider-custody-storage"){assert(argc==3);nativeProviderAdmission(argv[2],2);return 0;}
