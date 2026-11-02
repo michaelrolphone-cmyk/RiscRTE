@@ -1,40 +1,50 @@
-# Standalone bounded raw LZ4 decoder (not deployed)
-Source: src/runtime/storage/Lz4Block.h. No RuntimeFileImage, store, manifest or
-loader selection is changed by this branch.
+# Bounded canonical-image envelopes (integration candidate)
+The raw LZ4 decoder is in `src/runtime/storage/Lz4Block.h`; the fixed envelope
+parser is `ImageEnvelope.h`. `RuntimeFileImage.h` owns the source handle and
+single caller-owned logical allocation. This branch implements internal
+ordinary-app reads and native bank admission; it is not a deployment receipt.
 
-The caller supplies exact compressed length, exact logical output length and
-output capacity separately. A read callback may return short reads; zero before
-the declared end is an I/O error. Reads never exceed 128 bytes. One raw LZ4 block
-is decoded directly into caller-owned output, including overlapping matches.
-The existing output is the match dictionary; no heap or 64 KiB history exists.
-Output checkpoints are at most 256 produced bytes apart. Every callback is
-preceded/followed by a safety check. Lost safety, explicit RETAINED and unknown
-callback results stop all subsequent callbacks; failures never free or close.
+## Representation and authority
+The 32-byte little-endian header is magic `RTEIMG1\0` (8 bytes), header size32,
+codec1, decoded size, payload size, decoded CRC32, reserved0 (six u32 fields).
+Physical EOF must equal32+payload; decoded size is at least52 and bounded by
+the caller's existing image limit. CRC32 detects corruption, not authenticity.
+Store inventory SHA and expected lengths describe physical bytes. Existing ELF
+validation/admission receives canonical decoded bytes and size. These authorities
+are never substituted for each other.
 
-Success requires all declared compressed bytes consumed, a final literal
-sequence, and exactly the expected output bytes. Token lengths are bounded by
-remaining output before addition; zero/out-of-history distances and truncation
-fail. Any partial output on failure is invalid and must never be loaded.
-A caller must independently validate envelope size/hash and physical EOF; this
-decoder deliberately never reads beyond the declared compressed block.
+The reader's envelope option defaults false. Runtime enables it only for its
+default or admitted application policies, excluding any image-source policy and
+every path also used by a driver. Native provider policies and removable/package
+images remain raw-only. No mirror, SD route, provider digest or saved data is
+rewritten. Cache keys retain the physical source path; cached content is canonical,
+and existing immutable-session invalidation and custody fences remain in force.
 
-## Future integration seam, not implemented
-RuntimeFileImage should own the existing file handle and output allocation.
-Its adapter should use RuntimeFileView reads, preserve current owner/safety and
-retained fences, and translate retained/uncertain cleanup to terminal custody.
-The envelope must bound logical length by the existing image cap before allocation.
-The loader must receive only exact canonical ELF bytes after logical digest and
-structural validation. No alternate source, retry, close or free after retained.
-Normal clean decode failure permits only the existing checked cleanup path.
-A physical envelope digest/length and logical ELF digest/length are distinct;
-neither can silently replace the other's inventory/admission meaning.
-This work does not yet define or publish an envelope or modify admission.
+## Bounded decoding and custody
+Input reads are at most128 bytes and output checkpoints at most256 produced
+bytes apart. Output itself is the match dictionary; no heap or64KiB history is
+used by the decoder. The reader allocates one decoded image, never a whole
+compressed image as well. Short reads are supported. Truncation, overflowing
+lengths, zero/out-of-history distances, wrong final size, trailing bytes,
+CRC mismatch and inconsistent same-open EOF/position fail closed.
+Every callback is fenced for source/owner safety. Retained, unknown or lost
+custody stops further I/O and cleanup; clean failure uses checked close/free.
+Physical observation includes the header and payload and is separate from
+decoded CRC. Input and output work both advance the existing checkpoint budget.
 
-## Qualification
-test/run_lz4_block_test.py uses pinned independent python-lz4 4.3.3 raw block
-compression for deterministic binary, repeated, random and million-byte inputs.
-The C++ test runs short-read fragmentation, exact byte comparisons, invalid
-bounds, truncation, overlap, malformed streams, and every read/checkpoint failure
-boundary including ordinary-success context loss. The owning workflow runs
-normal and ASan/UBSan, then exact Xtensa GCC15 compilation with stack/object and
-undefined-symbol receipts. Target compilation is not physical execution.
+## Qualification boundaries
+The owning workflow runs the actual decoder and RuntimeFileImage normal and
+ASan/UBSan suites, independent pinned python-lz4 and owning System encoder
+corpora, unchanged raw regression, actual Runtime/cache raw and encoded modes,
+and target compiler object/stack measurement. NativeBank's separate owning
+workflow covers provisioning/admission and custody. Host/target compilation is
+not physical-device execution. A passed decoder or reader test alone does not
+qualify a complete product update.
+
+An old raw-only Runtime must reject an encoded cohort. The preserving upgrade
+route requires a higher-version decoder firmware-only update first, cloning the
+original raw store unchanged, followed by reboot/confirmation, then admission of
+the encoded final cohort by the new Runtime. Both phases retain existing paired
+bank records, hashes, boot selection and rollback behavior. No repartition,
+factory erase, unpaired replacement or direct old-Runtime encoded admission is
+authorized by this format. Product-specific upgrade qualification is separate.

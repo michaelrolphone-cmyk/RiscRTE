@@ -40,11 +40,11 @@ jobs:
           tar -xJf "$RUNNER_TEMP/toolchain.tar.xz" -C toolchain
           CXX="$PWD/toolchain/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++"
           "$CXX" --version > out/target/compiler.txt
-          "$CXX" -std=c++17 -Os -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fstack-usage -I src -c test/lz4_block_target_probe.cpp -o out/target/decoder.o
+          "$CXX" -std=gnu++17 -Os -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fstack-usage -I src -c test/lz4_block_target_probe.cpp -o out/target/decoder.o
           "${CXX%g++}size" -A out/target/decoder.o | tee out/target/size.txt
           "${CXX%g++}nm" -u out/target/decoder.o | tee out/target/undefined.txt
           cat out/target/decoder.su | tee out/target/stack.txt
-          "$CXX" -std=c++17 -Os -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fstack-usage -I src -I sdk/app -I sdk/driver -I sdk/hardware -c test/runtime_image_target_probe.cpp -o out/target/image.o
+          "$CXX" -std=gnu++17 -Os -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fstack-usage -I src -I sdk/app -I sdk/driver -I sdk/hardware -c test/runtime_image_target_probe.cpp -o out/target/image.o
           "${CXX%g++}size" -A out/target/image.o | tee out/target/image-size.txt
           "${CXX%g++}nm" -u out/target/image.o | tee out/target/image-undefined.txt
           cat out/target/image.su | tee out/target/image-stack.txt
