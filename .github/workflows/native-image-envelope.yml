@@ -1,0 +1,37 @@
+name: Native paired image envelope admission
+on:
+  push:
+    branches: [work/home-lz4-block-20261102]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [1, 2]
+        sanitize: [0, 1]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - name: Actual native bank paths and terminal custody
+        env:
+          NATIVE_PROVIDER_TEST_ABI: ${{ matrix.abi }}
+          SANITIZE: ${{ matrix.sanitize }}
+          ASAN_OPTIONS: detect_leaks=0
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          for selection in 0 1; do
+            NATIVE_PROVIDER_ADMISSION_ONLY=1 NATIVE_PROVIDER_TEST_SELECTION="$selection" bash test/run_native_bank_test.sh 2>&1 | tee "out/selection-$selection.log"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: native-envelope-${{ github.sha }}-abi${{ matrix.abi }}-san${{ matrix.sanitize }}
+          path: out/

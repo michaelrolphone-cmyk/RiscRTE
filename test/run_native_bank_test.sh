@@ -77,6 +77,7 @@ if [[ "${NATIVE_EXPORT_ADMISSION_ONLY:-0}" == 1 ]];then
 fi
 if [[ "${NATIVE_PROVIDER_ADMISSION_ONLY:-0}" == 1 ]];then
  "$build/test" native-provider-admission "$build/provider-admission"
+ for mode in owner unsafe close;do "$build/test" "native-envelope-$mode" "$build/envelope-$mode";done
  "$build/test" native-provider-custody-owner "$build/provider-custody-owner"
  "$build/test" native-provider-custody-storage "$build/provider-custody-storage"
  for mode in owner unsafe close;do
