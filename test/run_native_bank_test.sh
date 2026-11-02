@@ -72,6 +72,9 @@ c++ -rdynamic -Wl,--wrap=open,--wrap=close,--wrap=fopen,--wrap=fclose,--wrap=ope
 if [[ "${ENVELOPE_UPGRADE_ONLY:-0}" == 1 ]];then
  [[ -n "${BOOTLOADER_FILE:-}" ]]
  mkdir -p "$build/envelope-upgrade";cp "$build/cohort-native.elf" "$build/envelope-upgrade/cohort-native.elf"
+ "$build/test" markers
+ "$build/test" restart "$BOOTLOADER_FILE"
+ "$build/test" restart-unknown "$BOOTLOADER_FILE"
  "$build/test" cohort-envelope "$BOOTLOADER_FILE" "$build/envelope-upgrade"
  exit 0
 fi

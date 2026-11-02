@@ -78,6 +78,11 @@ static void identityNative(const char* root,const char* version,const char* runt
 }
 extern "C" void test_cohort_update(){
  using namespace RiscBankStore;
+ if(cohortEncoded){
+  assert(pending && !confirmed && !confirms);
+  uint64_t refused=99;const unsigned priorWrites=writes;
+  assert(api.begin_cohort(nullptr,&cohortImage,&refused)==RISC_BANK_UNAVAILABLE && !refused && writes==priorWrites);
+ }
  assert(confirmBoot() && confirms==1);
  risc_bank_cohort_status_v1 installed{};installed.struct_size=sizeof(installed);assert(api.cohort_status(nullptr,&installed)==0 && !strcmp(installed.version,"1.0.1"));
  auto send=[](uint64_t token){

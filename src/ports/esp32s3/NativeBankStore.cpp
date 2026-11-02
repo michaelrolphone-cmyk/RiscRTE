@@ -267,7 +267,7 @@ bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole r
   const auto* policy=role==ElfRole::Driver && context.candidate?context.candidate->nativeProviderPolicyForImage(path):nullptr;
   RiscBoot::RuntimeFileImage image;
   if(!hashBegin(nullptr) ||
-     !readAdmissionImage(context.candidate,path,image,file.bytes,&context.started,role==ElfRole::Application && context.candidate->ordinaryImageEnvelopeAllowed(path),true))return false;
+     !readAdmissionImage(context.candidate,path,image,file.bytes,&context.started,role==ElfRole::Application && context.candidate && context.candidate->ordinaryImageEnvelopeAllowed(path),true))return false;
   uint8_t digest[32];
   bool ok=operationSafe() && hashEnd(nullptr,digest) && !memcmp(digest,file.sha256,32) &&
     image.physicalSize==file.bytes && admitElf(image.bytes,image.size,role,policy) &&
