@@ -290,6 +290,7 @@ void setup() {
 #endif
   RISC_STAGE_LOG("boot begin reset=%d wake=%lu setup_start_us=%llu",int(esp_reset_reason()),
                  (unsigned long)esp_sleep_get_wakeup_cause(),(unsigned long long)bootUs);
+  diagnosticLine("RiscRTE firmware " RISC_BUILD_VERSION);
   diagnosticLine(RISC_BUILD_IDENTITY);
   if(const uint32_t recovery=RiscCpu::NativeCrownRecovery::previousReason())
     diagnosticLine(recovery==1?"RTE_RECOVERY reset=crown-held-5000ms cleanup=bypassed":recovery==2?"RTE_RECOVERY reset=crown-exit-timeout cleanup=bypassed":"RTE_RECOVERY reset=crown-control-fault cleanup=bypassed");
