@@ -83,6 +83,7 @@ namespace RiscNvs{inline esp_err_t initializationStatus(){return ESP_OK;}inline 
 struct risc_memory_heap_snapshot_v1{};
 struct risc_runtime_health_v1{uint32_t uptime_ms,free_heap,app_address;uint8_t mac[6];char target[64];};
 #define RISC_BUILD_IDENTITY "RTE_SOURCE=test"
+#define RISC_BUILD_VERSION "1.2.3"
 #define RISC_DIAGNOSTIC_ADAPTER 1
 namespace RiscDiagnostics{inline void start(){mark("diagnostics");}inline void poll(){}inline void line(const char* s){mark(s);}}
 namespace RiscPerf{inline void configure(uint64_t(*)(),bool(*)(),int){}inline void emit(unsigned,unsigned=0){}struct Scope{Scope(unsigned,unsigned){}};}
@@ -232,7 +233,7 @@ int main(){
 #else
  setup();
 #endif
- std::vector<std::string> expected={"failure-evidence","retained-wake","realtime","serial","diagnostics","RTE_SOURCE=test",RISC_APP_POLICY_ROWS_MARKER};
+ std::vector<std::string> expected={"failure-evidence","retained-wake","realtime","serial","diagnostics","RiscRTE firmware 1.2.3","RTE_SOURCE=test",RISC_APP_POLICY_ROWS_MARKER};
 #ifdef STARTUP_HOOK
  expected.push_back("startup-status");
 #endif
