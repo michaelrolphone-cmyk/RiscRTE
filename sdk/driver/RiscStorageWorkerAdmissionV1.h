@@ -31,3 +31,17 @@ static inline const risc_storage_worker_admission_v2*risc_storage_worker_driver_
  const risc_storage_worker_admission_v2*a=(const risc_storage_worker_admission_v2*)v;
  return a->driver_tag==RISC_STORAGE_DRIVER_ADMISSION_TAG&&a->driver_version==1&&a->driver?a:NULL;
 }
+
+/* Additive worker-only streaming integrity check; no crypto import or execution
+ * authority is exposed to ordinary providers. Same checked-close custody. */
+#define RISC_STORAGE_DATA_ADMISSION_TAG UINT32_C(0x53414433)
+typedef struct {
+ risc_storage_worker_admission_v2 base;
+ uint32_t data_tag,data_version;
+ int32_t (*data)(void*,const risc_storage_volume_api_v1*,const char*,uint32_t,const uint8_t*,uint32_t*);
+} risc_storage_worker_admission_v3;
+static inline const risc_storage_worker_admission_v3*risc_storage_worker_data_admission(const risc_storage_worker_v1*v){
+ if(!risc_storage_worker_driver_admission(v)||v->struct_size<sizeof(risc_storage_worker_admission_v3))return NULL;
+ const risc_storage_worker_admission_v3*a=(const risc_storage_worker_admission_v3*)v;
+ return a->data_tag==RISC_STORAGE_DATA_ADMISSION_TAG&&a->data_version==1&&a->data?a:NULL;
+}

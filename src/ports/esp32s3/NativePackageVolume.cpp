@@ -66,9 +66,11 @@ bool initialize(){
  a.end=[](void*,uint64_t s){return owner()?risc_storage_async_end(&workspace->bridge,s):RISC_STORAGE_ASYNC_INVALID;};
  volume.base.package_tag=RISC_STORAGE_PACKAGE_TAG;volume.base.package_version=1;
  volume.base.submit_package=[](void*,uint64_t s,const risc_storage_package_request_v1*q,uint64_t*t){return owner()?risc_storage_package_submit(&workspace->bridge,s,q,t):RISC_STORAGE_ASYNC_INVALID;};
- volume.download_tag=RISC_STORAGE_DOWNLOAD_TAG;volume.download_version=2;
+ volume.download_tag=RISC_STORAGE_DOWNLOAD_TAG;volume.download_version=3;
  workspace->bridge.worker=&w;workspace->bridge.volume=&v;workspace->bridge.ext=risc_storage_volume_extension(&v);workspace->bridge.fs=&a.fs;
  workspace->bridge.package_free_bytes=[](void*c,uint64_t*out){bool ok=static_cast<RiscStorage::PackageFiles*>(c)->freeBytes(out);if(workspace->files.retained())workspace->bridge.retained=true;return ok;};
+ workspace->bridge.package_validate_data=RiscCpu::NativeStorageWorker::validateData;
+ workspace->bridge.package_remove_directory=[](void*c,const char*p){bool ok=static_cast<RiscStorage::PackageFiles*>(c)->removeDirectory(p);if(workspace->files.retained())workspace->bridge.retained=true;return ok;};
  if(workspace->mailbox.bind(risc_storage_async_execute,&workspace->bridge)!=RISC_STORAGE_WORK_OK||!RiscAppData::registerPackageWorker(pump)){discard();return false;}
  prepared=true;return true;
 }

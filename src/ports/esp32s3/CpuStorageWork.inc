@@ -187,7 +187,7 @@ bool Port::configureStorageWork(Gpio&g){
    if(!p.transportChanged())return false;
    if(!p.hw_.sdmmcClose()){w.fault=true;return false;}
    w.opened=w.fault=false;return true;}};
- storageWork_.api={{{1,sizeof(storageWork_.api),&g,workBind,workSubmit,workCollect,workCancel,workUnbind,workClaim,workRelease,&storageWork_.io},RISC_STORAGE_ADMISSION_TAG,1,
+ storageWork_.api={{{{1,sizeof(storageWork_.api),&g,workBind,workSubmit,workCollect,workCancel,workUnbind,workClaim,workRelease,&storageWork_.io},RISC_STORAGE_ADMISSION_TAG,1,
  [](void*c,const risc_storage_volume_api_v1*v,const char*path,uint32_t size,const uint8_t*digest,uint32_t*handle)->int32_t{
   if(handle)*handle=0;
   auto&g=*static_cast<Gpio*>(c);auto&p=*g.port;
@@ -199,5 +199,11 @@ bool Port::configureStorageWork(Gpio&g){
   auto&g=*static_cast<Gpio*>(c);auto&p=*g.port;
   if(!handle||!p.hw_.storageWork||!p.hw_.storageWork->isWorker()||!workIoAllowed(c)||!p.hw_.storageWork->admitDriver)return RISC_STORAGE_WORK_CONTEXT;
   return p.hw_.storageWork->admitDriver(v,path,size,digest,handle);
+ }},RISC_STORAGE_DATA_ADMISSION_TAG,1,
+ [](void*c,const risc_storage_volume_api_v1*v,const char*path,uint32_t size,const uint8_t*digest,uint32_t*handle)->int32_t{
+  if(handle)*handle=0;
+  auto&g=*static_cast<Gpio*>(c);auto&p=*g.port;
+  if(!handle||!p.hw_.storageWork||!p.hw_.storageWork->isWorker()||!workIoAllowed(c)||!p.hw_.storageWork->validateData)return RISC_STORAGE_WORK_CONTEXT;
+  return p.hw_.storageWork->validateData(v,path,size,digest,handle);
  }};return true;
 }

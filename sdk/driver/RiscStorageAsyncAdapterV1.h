@@ -20,6 +20,8 @@ typedef struct {
  int32_t(*native_capacity)(void*,const risc_storage_native_capacity_request_v1*,risc_storage_native_capacity_result_v1*);
  risc_storage_native_capacity_result_v1 capacity_receipt;uint64_t capacity_serial;
  bool(*package_free_bytes)(void*,uint64_t*);
+ bool(*package_remove_directory)(void*,const char*);
+ int32_t(*package_validate_data)(const risc_storage_volume_api_v1*,const char*,uint32_t,const uint8_t*,uint32_t*);
 } risc_storage_async_adapter_v1;
 static inline int32_t risc_storage_package_execute(risc_storage_async_adapter_v1*a,const risc_storage_package_request_v1*q,risc_storage_async_result_v1*r){
  const risc_storage_volume_api_v1*v=a->volume;r->status=RISC_STORAGE_ASYNC_IO;
@@ -43,6 +45,55 @@ static inline int32_t risc_storage_package_execute(risc_storage_async_adapter_v1
   memcpy(r->data,&bytes,sizeof(bytes));r->size=sizeof(bytes);return r->status=RISC_STORAGE_ASYNC_OK;
  }
  if(!memchr(q->path,0,sizeof(q->path))||!q->path[0]||!memchr(q->destination,0,sizeof(q->destination)))return r->status=RISC_STORAGE_ASYNC_INVALID;
+ if(q->operation==RISC_STORAGE_PACKAGE_REMOVE_DIRECTORY){
+  if(!a->package_remove_directory&&!v->remove)return r->status=RISC_STORAGE_ASYNC_INVALID;
+  risc_storage_metadata_v1 m={sizeof(m),0,0,0};int32_t found=a->fs->metadata(v->context,q->path,&m);
+  if(found==RISC_STORAGE_FS_NOT_FOUND)return r->status=RISC_STORAGE_ASYNC_OK;
+  if(found!=RISC_STORAGE_FS_OK||!(m.flags&RISC_STORAGE_DIRECTORY))return r->status=RISC_STORAGE_ASYNC_INVALID;
+  bool ok=a->package_remove_directory?a->package_remove_directory(v->context,q->path):v->remove(v->context,q->path);
+  return r->status=ok?RISC_STORAGE_ASYNC_OK:(a->retained?RISC_STORAGE_ASYNC_RETAINED:RISC_STORAGE_ASYNC_IO);
+ }
+ if(q->operation==RISC_STORAGE_PACKAGE_APPEND_AT){
+  uint64_t offset=0;memcpy(&offset,q->sha256,sizeof(offset));
+  for(size_t i=sizeof(offset);i<sizeof(q->sha256);++i)if(q->sha256[i])return r->status=RISC_STORAGE_ASYNC_INVALID;
+  if(!q->size||q->size>sizeof(q->data)||offset>UINT64_MAX-q->size||!v->file_open_write||!v->file_write||!v->file_close||!a->ext->file_open||!a->ext->file_info||!a->ext->file_seek||!a->ext->file_sync)return r->status=RISC_STORAGE_ASYNC_INVALID;
+  a->file=offset?a->ext->file_open(v->context,q->path,RISC_STORAGE_OPEN_WRITE):v->file_open_write(v->context,q->path);
+  if(!a->file)return r->status;
+  uint64_t length=0,position=0;
+  bool ok=a->ext->file_info(v->context,a->file,&length,&position)&&length==offset&&a->ext->file_seek(v->context,a->file,offset);
+  uint32_t at=0;
+  while(ok&&at<q->size){
+   size_t wanted=q->size-at;if(wanted>512)wanted=512;
+   size_t got=v->file_write(v->context,a->file,q->data+at,wanted);
+   if(got!=wanted){ok=false;break;}at+=(uint32_t)got;
+  }
+  ok=ok&&!a->ext->handle_error(v->context,a->file,false)&&a->ext->file_sync(v->context,a->file);
+  if(!v->file_close(v->context,a->file,ok)){a->retained=true;r->status=RISC_STORAGE_ASYNC_RETAINED;}else{a->file=0;r->status=ok?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_IO;}
+  return r->status;
+ }
+ if(q->operation==RISC_STORAGE_PACKAGE_READ_RANGE){
+  uint64_t offset=0;memcpy(&offset,q->sha256,sizeof(offset));
+  for(size_t i=sizeof(offset);i<sizeof(q->sha256);++i)if(q->sha256[i])return r->status=RISC_STORAGE_ASYNC_INVALID;
+  if(!q->size||q->size>sizeof(r->data)||!v->file_open_read||!v->file_read||!v->file_close||!a->ext->file_seek)return r->status=RISC_STORAGE_ASYNC_INVALID;
+  uint64_t bytes=0;a->file=v->file_open_read(v->context,q->path,&bytes);
+  if(!a->file){
+   risc_storage_metadata_v1 m={sizeof(m),0,0,0};
+   return r->status=a->fs->metadata(v->context,q->path,&m)==RISC_STORAGE_FS_NOT_FOUND?RISC_STORAGE_ASYNC_NOT_FOUND:RISC_STORAGE_ASYNC_IO;
+  }
+  if(offset>bytes||q->size>bytes-offset)r->status=RISC_STORAGE_ASYNC_INVALID;
+  else if(a->ext->file_seek(v->context,a->file,offset)){
+   while(r->size<q->size){
+    size_t wanted=q->size-r->size;if(wanted>512)wanted=512;
+    size_t got=v->file_read(v->context,a->file,r->data+r->size,wanted);
+    if(!got||got>wanted)break;
+    r->size+=(uint32_t)got;
+   }
+   if(r->size==q->size&&!a->ext->handle_error(v->context,a->file,false))r->status=RISC_STORAGE_ASYNC_OK;
+  }
+  if(!v->file_close(v->context,a->file,false)){a->retained=true;r->status=RISC_STORAGE_ASYNC_RETAINED;}else a->file=0;
+  if(r->status!=RISC_STORAGE_ASYNC_OK){r->size=0;memset(r->data,0,sizeof(r->data));}
+  return r->status;
+ }
  if(q->operation==RISC_STORAGE_PACKAGE_OPEN_WRITE){
   if(!v->file_open_write||!v->file_write||!a->ext->file_sync)return r->status=RISC_STORAGE_ASYNC_INVALID;
   a->file=v->file_open_write(v->context,q->path);a->writing=a->file!=0;a->written=0;
@@ -52,6 +103,13 @@ static inline int32_t risc_storage_package_execute(risc_storage_async_adapter_v1
   risc_storage_metadata_v1 m={sizeof(m),0,0,0};int32_t found=a->fs->metadata(v->context,q->path,&m);
   if(found==RISC_STORAGE_FS_OK)return r->status=(m.flags&RISC_STORAGE_DIRECTORY)?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_INVALID;
   return r->status=found==RISC_STORAGE_FS_NOT_FOUND&&a->ext->mkdir&&a->ext->mkdir(v->context,q->path)?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_IO;
+ }
+ if(q->operation==RISC_STORAGE_PACKAGE_VALIDATE_DATA){
+  const risc_storage_worker_admission_v3*n=risc_storage_worker_data_admission(a->worker);
+  if(!a->package_validate_data&&!n)return r->status=RISC_STORAGE_ASYNC_INVALID;
+  int32_t rc=a->package_validate_data?a->package_validate_data(v,q->path,q->size,q->sha256,&a->file):n->data(a->worker->context,v,q->path,q->size,q->sha256,&a->file);
+  if(rc==RISC_STORAGE_WORK_RETAINED){a->retained=true;return r->status=RISC_STORAGE_ASYNC_RETAINED;}
+  return r->status=rc==RISC_STORAGE_WORK_OK?RISC_STORAGE_ASYNC_OK:RISC_STORAGE_ASYNC_INVALID;
  }
  if(q->operation==RISC_STORAGE_PACKAGE_VALIDATE_DRIVER){
   const risc_storage_worker_admission_v2*n=risc_storage_worker_driver_admission(a->worker);
@@ -167,7 +225,7 @@ static inline int32_t risc_storage_async_submit(risc_storage_async_adapter_v1*a,
 }
 static inline int32_t risc_storage_package_submit(risc_storage_async_adapter_v1*a,uint64_t session,const risc_storage_package_request_v1*q,uint64_t*out){
  if(out)*out=0;
- if(!out||!q||!session||session!=a->session||q->operation<RISC_STORAGE_PACKAGE_VALIDATE||q->operation>RISC_STORAGE_PACKAGE_FREE_BYTES||!memchr(q->path,0,sizeof(q->path))||!memchr(q->destination,0,sizeof(q->destination)))return RISC_STORAGE_ASYNC_INVALID;
+ if(!out||!q||!session||session!=a->session||q->operation<RISC_STORAGE_PACKAGE_VALIDATE||q->operation>RISC_STORAGE_PACKAGE_VALIDATE_DATA||!memchr(q->path,0,sizeof(q->path))||!memchr(q->destination,0,sizeof(q->destination)))return RISC_STORAGE_ASYNC_INVALID;
  if(a->ending||a->operation)return RISC_STORAGE_ASYNC_BUSY;
  if(a->retained)return RISC_STORAGE_ASYNC_RETAINED;
  if(a->worker->submit(a->worker->context,q,sizeof(*q),&a->operation)!=RISC_STORAGE_WORK_OK)return RISC_STORAGE_ASYNC_BUSY;

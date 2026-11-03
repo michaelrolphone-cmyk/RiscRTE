@@ -257,8 +257,9 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
 bool Runtime::validateGraph() {
   bool edges[MaxDrivers][MaxDrivers]{};
   for(size_t i=0;i<driverCount_;++i) {
-    Driver& d=drivers_[i];
+    Driver& d=drivers_[i];if(d.installedRetired)continue;
     for(size_t j=0;j<i;++j) {
+      if(drivers_[j].installedRetired)continue;
       if (!strcmp(d.id,drivers_[j].id) && (strcmp(d.version,drivers_[j].version) || strcmp(d.elf,drivers_[j].elf))) return fail("package instances disagree on artifact/version");
       if ((!strcmp(d.id,drivers_[j].id) && (!d.instance || !drivers_[j].instance)) ||
           (d.instance && d.instance==drivers_[j].instance)) return fail("duplicate package singleton/hardware owner");
@@ -329,7 +330,7 @@ bool Runtime::validateGraph() {
       if (!strncmp(req.capability,"platform.",9) || !strcmp(req.capability,"spi.bus")) return fail("missing scoped trusted platform provider");
       if(hw && !wanted) return fail("hardware dependency requires explicit instance binding");
       int found=-1;
-      for(size_t j=0;j<driverCount_;++j) if(drivers_[j].api==req.api && !strcmp(drivers_[j].provides,req.capability) && ((!wanted && !explicitlyBound) || drivers_[j].instance==wanted)) {
+      for(size_t j=0;j<driverCount_;++j) if(!drivers_[j].installedRetired&&drivers_[j].api==req.api && !strcmp(drivers_[j].provides,req.capability) && ((!wanted && !explicitlyBound) || drivers_[j].instance==wanted)) {
         if(found>=0) return fail("ambiguous dependency");
         found=static_cast<int>(j);
       }
@@ -347,10 +348,10 @@ bool Runtime::validateGraph() {
   }
   // Source access is a loader dependency, not an extra capability passed to
   // the provider. Keep the entire mount closure internal, even with fallback.
-  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].sourcePath[0]) {
+  for(size_t i=0;i<driverCount_;++i)if(!drivers_[i].installedRetired&&drivers_[i].sourcePath[0]) {
     auto& d=drivers_[i];d.sourceDriver=-1;
     for(size_t j=0;j<driverCount_;++j)
-      if(drivers_[j].instance==d.sourceVolume && drivers_[j].api==1 &&
+      if(!drivers_[j].installedRetired&&drivers_[j].instance==d.sourceVolume && drivers_[j].api==1 &&
          !strcmp(drivers_[j].provides,d.sourceFiles?"storage.files":"storage.volume")) {
         if(d.sourceDriver>=0)return fail("ambiguous driver image source");
         d.sourceDriver=int(j);
@@ -360,7 +361,7 @@ bool Runtime::validateGraph() {
   // Bounded transitive closure catches every cycle before ANY ELF entry point.
   for(size_t k=0;k<driverCount_;++k) for(size_t i=0;i<driverCount_;++i) for(size_t j=0;j<driverCount_;++j) edges[i][j]=edges[i][j] || (edges[i][k] && edges[k][j]);
   for(size_t i=0;i<driverCount_;++i) if(edges[i][i]) return fail("driver dependency cycle");
-  for(size_t i=0;i<driverCount_;++i)if(drivers_[i].sourceDriver>=0) {
+  for(size_t i=0;i<driverCount_;++i)if(!drivers_[i].installedRetired&&drivers_[i].sourceDriver>=0) {
     const size_t source=size_t(drivers_[i].sourceDriver);
     for(size_t j=0;j<driverCount_;++j)
       if((j==source || edges[source][j]) && drivers_[j].sourceDriver>=0)
@@ -599,7 +600,7 @@ bool Runtime::appPolicies(JsonVariantConst value,JsonVariantConst suppliedManife
           if (!strcmp(capability,"storage.preferences"))return fail("preference store broker unavailable");
           if (!strcmp(capability,"storage.key-value.atomic"))return fail("atomic key-value broker unavailable");
           if (!strncmp(capability,"platform.",9) || !strcmp(capability,"spi.bus") || !strcmp(capability,"hardware.device")) return fail("raw platform capability denied to app");
-          for (size_t d=0;d<driverCount_;++d) if (!strcmp(drivers_[d].provides,capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
+          for (size_t d=0;d<driverCount_;++d) if (!drivers_[d].installedRetired && !strcmp(drivers_[d].provides,capability) && drivers_[d].api==grant.api && (!grant.instance || drivers_[d].instance==grant.instance)) {
             if (grant.driver>=0) return fail("ambiguous app provider");
             grant.driver=static_cast<PolicyIndex>(d);
           }

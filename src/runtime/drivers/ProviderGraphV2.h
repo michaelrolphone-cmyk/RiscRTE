@@ -134,7 +134,7 @@ class GraphV2 final {
   // must not retain the returned string across graph destruction.
   const char* matchingProviderId(size_t index, const char* capability,
                                  uint32_t api) const {
-    if (index >= count_ || !capability || !*capability || !api) return nullptr;
+    if (index >= count_ || nodes_[index].retired || !capability || !*capability || !api) return nullptr;
     const SpecV2& spec = nodes_[index].spec;
     return spec.provides && spec.id && spec.api == api &&
                    std::strcmp(spec.provides, capability) == 0 ? spec.id : nullptr;
@@ -153,12 +153,17 @@ class GraphV2 final {
   // Runtime-only atomic metadata publication. Existing slots must be fully
   // unloaded; staged declarations never execute code or acquire resources.
   bool metadataMutable(size_t index) const;
+  bool reservePackageMutation(const char* id);
+  bool retirePackageMutation();
+  void releasePackageMutation() { packageMutationId_[0]=0; }
+  char packageMutationId_[96]{};
   bool publishOrdinaryBatch(const SpecV2*,const size_t* slots,size_t count,bool checkOnly);
 
 
   enum class Visit : uint8_t { Idle, Visiting, Active, Releasing };
   struct Node {
     SpecV2 spec{};
+    bool retired=false;
     OwnedNodeV2* owned = nullptr;
     ModuleV2 module;
     Visit visit = Visit::Idle;

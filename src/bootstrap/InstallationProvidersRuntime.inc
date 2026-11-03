@@ -5,6 +5,7 @@ bool Runtime::installationAvailable(void* context,const char* capability,uint32_
     !capability||strnlen(capability,96)>=96||!api)return false;
  unsigned matches=0;
  for(size_t i=0;i<r->driverCount_;++i){const auto&d=r->drivers_[i];
+  if(d.installedRetired)continue;
   if(d.api==api&&!strcmp(d.provides,capability)&&(!instance||d.instance==instance))++matches;
  }
  for(size_t i=0;i<r->platformCount_;++i){const auto&p=r->platforms_[i];
@@ -48,7 +49,7 @@ int32_t Runtime::installationProviderTransaction(void*context,const risc_install
  JsonDocument permissions;if(deserializeJson(permissions,r->installation_[0].providerGrants))return RISC_INSTALL_INVALID;
  for(uint32_t n=0;n<count;++n){
   const uint32_t selected=media?media[n]:0;
-  if(selected>1||!(r->installation_[0].api.media_mask&(1u<<selected)))return RISC_INSTALL_DENIED;
+  if(selected>1||!(r->installation_[0].api.base.media_mask&(1u<<selected)))return RISC_INSTALL_DENIED;
   const auto&record=input[n];
   if(!record.manifest_json||strnlen(record.manifest_json,4097)>4096||!record.image_path||
      strnlen(record.image_path,193)>192||record.instance>INT32_MAX)return RISC_INSTALL_INVALID;
@@ -73,7 +74,7 @@ int32_t Runtime::installationProviderTransaction(void*context,const risc_install
   if(!strncmp(d.provides,"platform.",9)||!strncmp(d.provides,"runtime.",8)||
      !strncmp(d.provides,"storage.app-data",16)||!strcmp(d.provides,"storage.key-value")||!strcmp(d.provides,"spi.bus"))return RISC_INSTALL_DENIED;
   strcpy(d.sourcePath,record.image_path);d.sourceOwner=r;d.sourceVolume=media&&media[n]==1?r->installation_[0].internalVolume:r->installation_[0].volume;
-  bool same=slot<before&&saved[slot].sourceVolume==d.sourceVolume&&!strcmp(saved[slot].version,d.version)&&!strcmp(saved[slot].sourcePath,d.sourcePath)&&
+  bool same=slot<before&&!saved[slot].installedRetired&&saved[slot].sourceVolume==d.sourceVolume&&!strcmp(saved[slot].version,d.version)&&!strcmp(saved[slot].sourcePath,d.sourcePath)&&
     !strcmp(saved[slot].provides,d.provides)&&saved[slot].api==d.api&&saved[slot].count==d.count;
   for(size_t j=0;same&&j<d.count;++j)same=saved[slot].requirements[j].api==d.requirements[j].api&&!strcmp(saved[slot].names[j],d.names[j]);
   if(same){d=saved[slot];continue;}
@@ -82,7 +83,7 @@ int32_t Runtime::installationProviderTransaction(void*context,const risc_install
    uint32_t oldVersion[3],newVersion[3];
    if(strcmp(saved[slot].provides,d.provides)||saved[slot].api!=d.api||
       !RiscUpdate::parseVersion(saved[slot].version,oldVersion)||!RiscUpdate::parseVersion(d.version,newVersion)||
-      RiscUpdate::compareVersion(newVersion,oldVersion)<=0)return RISC_INSTALL_DENIED;
+      (RiscUpdate::compareVersion(newVersion,oldVersion)<0||(!saved[slot].installedRetired&&RiscUpdate::compareVersion(newVersion,oldVersion)==0)))return RISC_INSTALL_DENIED;
   }
   storage[slot]=std::move(r->providerStorage_[slot]);r->providerStorage_[slot]={};touched[slot]=true;
   if(slot==r->driverCount_)++r->driverCount_;
@@ -95,7 +96,7 @@ int32_t Runtime::installationProviderTransaction(void*context,const risc_install
   for(size_t j=0;j<d.count;++j){const auto&need=d.requirements[j];uint64_t wanted=0;bool allowed=false;
    if(!strcmp(need.capability,"hardware.device"))wanted=d.instance;
    else if(need.providerId){wanted=need.providerInstance;
-    for(size_t k=r->bootDriverCount_;k<r->driverCount_;++k)if(!strcmp(r->drivers_[k].id,need.providerId)&&r->drivers_[k].instance==wanted)allowed=true;
+    for(size_t k=r->bootDriverCount_;k<r->driverCount_;++k)if(!r->drivers_[k].installedRetired&&!strcmp(r->drivers_[k].id,need.providerId)&&r->drivers_[k].instance==wanted)allowed=true;
    }else for(size_t k=0;k<r->platformCount_;++k){const auto&p=r->platforms_[k];
     if(p.api==need.api&&!strcmp(p.capability,need.capability)&&
        (p.scope==Scope::Global||(p.scope==Scope::Device&&p.id==d.instance)||(p.scope==Scope::Bus&&p.id==r->board_.deviceBus(d.instance))))wanted=p.id;
@@ -112,6 +113,62 @@ int32_t Runtime::installationProviderTransaction(void*context,const risc_install
  }
  if(!r->graph_.publishOrdinaryBatch(specs.get(),slots,changed,check))return RISC_INSTALL_BUSY;
  if(!check)rollback.committed=true;
+ return RISC_INSTALL_OK;
+}
+}
+
+namespace RiscBoot {
+int32_t Runtime::installationReserveDriver(void*context,const char*id,uint32_t medium,uint64_t*out){
+ if(out)*out=0;
+ auto*r=static_cast<Runtime*>(context);
+ if(!r||r!=currentRuntime||!r->installation_||!r->installation_[0].providersEnabled||
+    !r->active()||!r->port_.owner()||r->retained_||!out)return RISC_INSTALL_DENIED;
+ auto&s=r->installation_[0];
+ if(!id||!id[0]||strnlen(id,96)>=96||medium>1)return RISC_INSTALL_INVALID;
+ for(const char*p=id;*p;++p)if(!((*p>='a'&&*p<='z')||(*p>='A'&&*p<='Z')||(*p>='0'&&*p<='9')||*p=='_'||*p=='-'||*p=='.'))return RISC_INSTALL_INVALID;
+ if(strstr(id,"..")||!strcmp(id,"."))return RISC_INSTALL_INVALID;
+ if(!(s.api.base.media_mask&(1u<<medium)))return RISC_INSTALL_DENIED;
+ if(s.driverGateToken||s.call||r->graph_.lifecycleBusy()||!r->providerStorageSafe())return RISC_INSTALL_BUSY;
+ if(s.driverGateSerial==UINT64_MAX)return RISC_INSTALL_FULL;
+ const uint64_t volume=medium==RISC_INSTALL_MEDIA_INTERNAL?s.internalVolume:s.volume;
+ for(size_t i=0;i<r->driverCount_;++i)if(!strcmp(r->drivers_[i].id,id)){
+  if(i<r->bootDriverCount_||r->drivers_[i].sourceVolume!=volume)return RISC_INSTALL_DENIED;
+ }
+ if(!r->graph_.reservePackageMutation(id))return RISC_INSTALL_BUSY;
+ s.driverGateToken=++s.driverGateSerial;*out=s.driverGateToken;return RISC_INSTALL_OK;
+}
+int32_t Runtime::installationReleaseDriver(void*context,uint64_t token){
+ auto*r=static_cast<Runtime*>(context);
+ if(!r||r!=currentRuntime||!r->installation_||!r->active()||!r->port_.owner()||r->retained_)return RISC_INSTALL_DENIED;
+ auto&s=r->installation_[0];
+ if(!token||token!=s.driverGateToken)return RISC_INSTALL_INVALID;
+ if(s.call||r->graph_.lifecycleBusy()||!r->providerStorageSafe())return RISC_INSTALL_BUSY;
+ r->graph_.releasePackageMutation();s.driverGateToken=0;return RISC_INSTALL_OK;
+}
+}
+
+namespace RiscBoot {
+int32_t Runtime::installationForgetDriver(void*context,uint64_t token){
+ auto*r=static_cast<Runtime*>(context);
+ if(!r||r!=currentRuntime||!r->installation_||!r->active()||!r->port_.owner()||r->retained_)return RISC_INSTALL_DENIED;
+ auto&s=r->installation_[0];if(!token||token!=s.driverGateToken)return RISC_INSTALL_INVALID;
+ if(s.call||r->graph_.lifecycleBusy()||!r->providerStorageSafe())return RISC_INSTALL_BUSY;
+ const char*id=r->graph_.packageMutationId_;
+ if(!id[0])return RISC_INSTALL_INVALID;
+ for(size_t i=0;i<r->driverCount_;++i)if(!strcmp(r->drivers_[i].id,id)){
+  if(i<r->bootDriverCount_)return RISC_INSTALL_DENIED;
+  if(!r->graph_.metadataMutable(i))return RISC_INSTALL_BUSY;
+  for(size_t j=0;j<r->driverCount_;++j)if(!r->drivers_[j].installedRetired&&strcmp(r->drivers_[j].id,id)){
+   const auto&d=r->drivers_[j];if(d.sourceDriver==int(i))return RISC_INSTALL_DENIED;
+   for(size_t k=0;k<d.count;++k)if(d.requirements[k].providerId&&!strcmp(d.requirements[k].providerId,id))return RISC_INSTALL_DENIED;
+  }
+  for(size_t j=0;j<r->policyCount_;++j)if(r->policies_[j].enabled){
+   const auto&p=r->policies_[j];if(p.sourceDriver==int(i))return RISC_INSTALL_DENIED;
+   for(size_t k=0;k<p.count;++k)if(p.grants[k].driver==int(i))return RISC_INSTALL_DENIED;
+  }
+ }
+ if(!r->graph_.retirePackageMutation())return RISC_INSTALL_BUSY;
+ for(size_t i=r->bootDriverCount_;i<r->driverCount_;++i)if(!strcmp(r->drivers_[i].id,id))r->drivers_[i].installedRetired=true;
  return RISC_INSTALL_OK;
 }
 }

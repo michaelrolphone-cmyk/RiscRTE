@@ -45,7 +45,7 @@ int GraphV2::find(const char* capability, uint32_t api) const {
   if (!validName(capability) || !api) return -1;
   int match = -1;
   for (size_t i = 0; i < count_; ++i) {
-    if (nodes_[i].spec.api != api ||
+    if (nodes_[i].retired || nodes_[i].spec.api != api ||
         std::strcmp(nodes_[i].spec.provides, capability) != 0) continue;
     if (match >= 0) return -2;
     match = static_cast<int>(i);
@@ -58,7 +58,7 @@ int GraphV2::findProvider(const char* id, const char* capability, uint32_t api, 
   int result=-1;
   for (size_t i=0;i<count_;++i) {
     const auto& s=nodes_[i].spec;
-    if (s.api==api && !std::strcmp(s.id,id) && !std::strcmp(s.provides,capability) &&
+    if (!nodes_[i].retired && s.api==api && !std::strcmp(s.id,id) && !std::strcmp(s.provides,capability) &&
         (!instance || (s.hardware && s.hardware->instance_id==instance))) {
       if (result>=0) return -2;
       result=static_cast<int>(i);
@@ -75,7 +75,7 @@ bool GraphV2::hasProvider(const char* providerId, const char* capability,
 bool GraphV2::hasProviderId(const char* providerId) const {
   if (!validName(providerId)) return false;
   for (size_t i = 0; i < count_; ++i)
-    if (std::strcmp(nodes_[i].spec.id, providerId) == 0) return true;
+    if (!nodes_[i].retired && std::strcmp(nodes_[i].spec.id, providerId) == 0) return true;
   return false;
 }
 
@@ -194,7 +194,7 @@ bool GraphV2::publishOrdinaryBatch(const SpecV2* specs,const size_t* slots,size_
     else if(slot!=next++ || slot>=kMaxModules)return false;
     for(size_t j=0;j<count_;++j){
       bool replaced=false;for(size_t k=0;k<size;++k)replaced|=slots[k]==j;
-      if(replaced)continue;
+      if(replaced||nodes_[j].retired)continue;
       const auto& old=nodes_[j].spec;
       if(!specs[i].id || (!std::strcmp(old.id,specs[i].id) &&
          (!old.hardware || !specs[i].hardware || old.hardware->instance_id==specs[i].hardware->instance_id)))return false;
@@ -209,7 +209,7 @@ bool GraphV2::publishOrdinaryBatch(const SpecV2* specs,const size_t* slots,size_
   // modules retain their exact fixed node, dependency table and grant slots.
   for(size_t i=0;i<size;++i){
     auto& node=nodes_[slots[i]];delete node.owned;
-    node.owned=staged->nodes_[i].owned;node.spec=node.owned->spec;
+    node.owned=staged->nodes_[i].owned;node.spec=node.owned->spec;node.retired=false;
     staged->nodes_[i].owned=nullptr;
     node.module.bindGraphOwnedImage(nullptr,0,nullptr);
   }
@@ -262,6 +262,8 @@ bool GraphV2::fail(const char* stage, const char* identity) {
 
 bool GraphV2::activate(size_t index) {
   Node& node = nodes_[index];
+  if(node.retired)return fail("Provider withdrawn",node.spec.id);
+  if(packageMutationId_[0]&&!std::strcmp(packageMutationId_,node.spec.id))return fail("Package mutation in progress",node.spec.id);
   if (node.visit == Visit::Visiting) return fail("Dependency cycle", node.spec.id);
   if (node.visit == Visit::Releasing) return fail("Provider dependency cleanup pending", node.spec.id);
   if (node.module.state() == ModuleV2::State::Failed) {
@@ -604,4 +606,21 @@ bool RuntimeProviders::GraphV2::dependencyReadSafe() const {
        (nodes_[i].module.state()==ModuleV2::State::Failed || !nodes_[i].module.leaseSafe() || !nodes_[i].module.streamSafe()))return false;
   for(const auto& grant:grants_)if(grant.occupied && grant.pendingRelease)return false;
   return true;
+}
+
+namespace RuntimeProviders {
+bool GraphV2::reservePackageMutation(const char*id){
+ if(!id||!id[0]||std::strlen(id)>=sizeof(packageMutationId_)||packageMutationId_[0]||lifecycleBusy()||!activationSafe())return false;
+ for(size_t i=0;i<count_;++i)if(!std::strcmp(id,nodes_[i].spec.id)&&!metadataMutable(i))return false;
+ std::strcpy(packageMutationId_,id);return true;
+}
+}
+
+namespace RuntimeProviders {
+bool GraphV2::retirePackageMutation(){
+ if(!packageMutationId_[0]||lifecycleBusy()||!activationSafe())return false;
+ for(size_t i=0;i<count_;++i)if(!std::strcmp(packageMutationId_,nodes_[i].spec.id)&&!metadataMutable(i))return false;
+ for(size_t i=0;i<count_;++i)if(!std::strcmp(packageMutationId_,nodes_[i].spec.id))nodes_[i].retired=true;
+ return true;
+}
 }
