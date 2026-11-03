@@ -20,7 +20,7 @@ jobs:
           for mode in normal sanitized; do
             export SANITIZE=0
             if [ "$mode" = sanitized ]; then export SANITIZE=1 SANITIZERS=address,undefined; fi
-            for test in storage_async_adapter package_files provider_graph_v2; do
+            for test in storage_async_adapter storage_admission package_files provider_graph_v2; do
               bash "test/run_${test}_test.sh" 2>&1 | tee "out/${test}-${mode}.log"
             done
           done

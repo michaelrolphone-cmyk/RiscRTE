@@ -6,6 +6,7 @@
 #include "ports/esp32s3/NativeStorageAdmission.h"
 int64_t admission_test_time=0;bool admission_test_oom=false;
 static bool worker=true,closeFail=false,readFail=false,present=true;
+static bool dataRead=false,slowRead=false;
 static unsigned opens,reads,closes;static size_t position;
 static const char*missing=nullptr;
 namespace RiscCpu {namespace NativeStorageWorker {
@@ -36,7 +37,7 @@ static std::vector<uint8_t> image;
 int main(){
  risc_storage_volume_api_v1_ext volume{};auto&v=volume.base;v.api_version=1;v.struct_size=sizeof(volume);
  v.file_open_read=[](void*,const char*,uint64_t*n)->uint32_t{assert(worker);++opens;position=0;*n=image.size();return present?3:0;};
- v.file_read=[](void*,uint32_t,void*out,size_t n)->size_t{assert(worker);++reads;if(readFail)return 0;n=std::min(n,image.size()-position);memcpy(out,image.data()+position,n);position+=n;return n;};
+ v.file_read=[](void*,uint32_t,void*out,size_t n)->size_t{assert(worker);++reads;if(dataRead)assert(n<=512);if(slowRead)admission_test_time+=31000000;if(readFail)return 0;n=std::min(n,image.size()-position);memcpy(out,image.data()+position,n);position+=n;return n;};
  v.file_close=[](void*,uint32_t f,bool commit){assert(worker&&f==3&&!commit);++closes;return !closeFail;};
  volume.handle_error=[](void*,uint32_t,bool)->uint32_t{return readFail?1:0;};
  auto validate=[&](bool corrupt=false,uint32_t size=0){unsigned char digest[32];SHA256(image.data(),image.size(),digest);if(corrupt)digest[0]^=1;uint32_t held=99;
@@ -57,5 +58,18 @@ int main(){
  unsigned before=opens;worker=false;assert(validate()==RISC_STORAGE_WORK_INVALID&&opens==before);worker=true;
  admission_test_oom=true;assert(validate()==RISC_STORAGE_WORK_BUSY&&opens==before);admission_test_oom=false;
  closeFail=true;assert(validate()==RISC_STORAGE_WORK_RETAINED);closeFail=false;
+ auto validateData=[&](bool corrupt=false,uint32_t size=UINT32_MAX){unsigned char digest[32];SHA256(image.data(),image.size(),digest);if(corrupt)digest[0]^=1;uint32_t held=99;
+  dataRead=true;int rc=RiscCpu::NativeStorageWorker::validateData(&v,"/Drivers/new/resource",size==UINT32_MAX?uint32_t(image.size()):size,digest,&held);dataRead=false;
+  assert(held==(closeFail?3u:0u));return rc;};
+ image.assign(8193,0xa5);assert(validateData()==RISC_STORAGE_WORK_OK); // not an ELF
+ assert(validateData(true)==RISC_STORAGE_WORK_INVALID);
+ assert(validateData(false,8192)==RISC_STORAGE_WORK_INVALID);
+ readFail=true;assert(validateData()==RISC_STORAGE_WORK_INVALID);readFail=false;
+ slowRead=true;assert(validateData()==RISC_STORAGE_WORK_INVALID);slowRead=false;
+ closeFail=true;assert(validateData()==RISC_STORAGE_WORK_RETAINED);closeFail=false;
+ before=opens;worker=false;assert(validateData()==RISC_STORAGE_WORK_INVALID&&opens==before);worker=true;
+ image.clear();assert(validateData()==RISC_STORAGE_WORK_OK);
+ image.assign(8388608,0x5a);assert(validateData()==RISC_STORAGE_WORK_OK);
+ before=opens;assert(validateData(false,8388609)==RISC_STORAGE_WORK_INVALID&&opens==before);
  puts("Native staged-image admission: exact snapshot SHA, ELF/import/role rejection, worker-only I/O, OOM and retained close PASS");
 }

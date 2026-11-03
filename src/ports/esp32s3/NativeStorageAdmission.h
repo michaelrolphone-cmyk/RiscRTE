@@ -42,7 +42,7 @@ static int32_t admitPackage(const risc_storage_volume_api_v1*v,const char*path,u
 static inline int32_t validateData(const risc_storage_volume_api_v1*v,const char*path,uint32_t size,const uint8_t*digest,uint32_t*retained){
  if(retained)*retained=0;
  const auto*ext=risc_storage_volume_extension(v);
- if(!isWorker()||!retained||!ext||!ext->handle_error||!v->file_open_read||!v->file_read||!v->file_close||!path||!digest||size>4259840u)return RISC_STORAGE_WORK_INVALID;
+ if(!isWorker()||!retained||!ext||!ext->handle_error||!v->file_open_read||!v->file_read||!v->file_close||!path||!digest||size>8388608u)return RISC_STORAGE_WORK_INVALID;
  uint8_t bytes[512],actualHash[32];uint64_t actual=0;
  const uint64_t started=uint64_t(esp_timer_get_time());
  uint32_t file=v->file_open_read(v->context,path,&actual),at=0;
@@ -50,7 +50,7 @@ static inline int32_t validateData(const risc_storage_volume_api_v1*v,const char
  while(ok&&at<size){
   uint32_t want=size-at;if(want>sizeof(bytes))want=sizeof(bytes);
   size_t got=v->file_read(v->context,file,bytes,want);
-  ok=got==want&&hash.add(bytes,got);at+=uint32_t(got);delayMs(1);
+  ok=got==want&&hash.add(bytes,got);at+=uint32_t(got);if((at&4095u)==0||at==size)delayMs(1);
   if(uint64_t(esp_timer_get_time())-started>30000000u)ok=false;
  }
  ok=ok&&!ext->handle_error(v->context,file,false)&&hash.finish(actualHash)&&!memcmp(actualHash,digest,32);hash.release();
