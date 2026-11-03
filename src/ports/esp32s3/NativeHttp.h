@@ -72,8 +72,8 @@ inline void memoryStage(const char* stage){
     unsigned(NativeTlsMemory::ready()),
     static_cast<unsigned long>(heap_caps_get_free_size(NativeTlsMemory::InternalCaps)),
     static_cast<unsigned long>(heap_caps_get_largest_free_block(NativeTlsMemory::InternalCaps)),
-    static_cast<unsigned long>(heap_caps_get_free_size(NativeTlsMemory::ExternalCaps)),
-    static_cast<unsigned long>(heap_caps_get_largest_free_block(NativeTlsMemory::ExternalCaps)),
+    static_cast<unsigned long>(heap_caps_get_free_size(NativeTlsMemory::HttpCaps)),
+    static_cast<unsigned long>(heap_caps_get_largest_free_block(NativeTlsMemory::HttpCaps)),
     static_cast<unsigned long>(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL|MALLOC_CAP_DMA)));
 }
 inline int verifyCertificate(void* context,mbedtls_x509_crt* crt,int depth,uint32_t* flags){
@@ -179,7 +179,7 @@ inline int32_t openImpl(const risc_http_request_v1* r,const char* server,uint64_
   // 80 KiB free / a 36 KiB internal block for records now allocated externally.
   memoryStage("open");
   if(!NativeTlsMemory::ready())return RISC_HTTP_MEMORY;
-  void* memory=heap_caps_malloc(sizeof(Session),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+  void* memory=heap_caps_malloc(sizeof(Session),NativeTlsMemory::HttpCaps);
   if(!memory){memoryStage("session-allocation-failed");return RISC_HTTP_MEMORY;}
   session=new(memory)Session(++generation,*r);*out=session->token;
   if(sample){session->time.begin(server,session->started);session->phase=Phase::SampleTime;return RISC_HTTP_OK;}
@@ -336,7 +336,7 @@ inline int32_t openV2(void*,const risc_http_request_v2* r,uint64_t* out){
   if(generation==UINT64_MAX)return RISC_HTTP_CLOSED;
   if(!NativeTlsMemory::ready())return RISC_HTTP_MEMORY;
   const size_t cap=RISC_HTTP_URL_MAX+512+headerBytes+r->body_bytes;
-  char* request=static_cast<char*>(heap_caps_malloc(cap,NativeTlsMemory::ExternalCaps));
+  char* request=static_cast<char*>(heap_caps_malloc(cap,NativeTlsMemory::HttpCaps));
   if(!request)return RISC_HTTP_MEMORY;
   const char* path=r->url+8;while(*path&&*path!='/'&&*path!='?')++path;
   const int hostBytes=static_cast<int>(path-(r->url+8));
@@ -346,7 +346,7 @@ inline int32_t openV2(void*,const risc_http_request_v2* r,uint64_t* out){
     used+=std::snprintf(request+used,cap-used,"%s: %s\r\n",r->headers[i].name,r->headers[i].value);
   if(used<=0||static_cast<size_t>(used)+2+r->body_bytes>=cap){std::memset(request,0,cap);heap_caps_free(request);return RISC_HTTP_SIZE;}
   request[used++]='\r';request[used++]='\n';if(r->body_bytes)std::memcpy(request+used,r->body,r->body_bytes);used+=r->body_bytes;
-  void* memory=heap_caps_malloc(sizeof(Session),NativeTlsMemory::ExternalCaps);
+  void* memory=heap_caps_malloc(sizeof(Session),NativeTlsMemory::HttpCaps);
   if(!memory){std::memset(request,0,cap);heap_caps_free(request);return RISC_HTTP_MEMORY;}
   risc_http_request_v1 base{sizeof(base),r->url,r->max_response_bytes,r->timeout_ms,r->utc_seconds};
   // V2 caps the whole transaction at 30 seconds. Honor the requested deadline
