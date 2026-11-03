@@ -3,6 +3,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_heap_caps.h>
+#include <esp_log.h>
 #include <new>
 #include "NativeStorageAdmission.h"
 namespace RiscCpu { namespace NativeStorageWorker {
@@ -15,7 +16,10 @@ static bool isWorker(){return !xPortInIsrContext()&&taskHandle&&xTaskGetCurrentT
 static void delayMs(uint32_t ms){vTaskDelay(pdMS_TO_TICKS(ms)?pdMS_TO_TICKS(ms):1);}
 static StorageWorkBackend backend{nullptr,prepare,isWorker,delayMs,admitApplication,admitDriver};
 static bool idle(){return !backend.mailbox||backend.mailbox->idle();}
-static void run(void*){for(;;){backend.mailbox->workerStep();delayMs(1);}}
+static void run(void*){
+ ESP_LOGI("storage-worker","hello-world");
+ for(;;){backend.mailbox->workerStep();delayMs(1);}
+}
 static bool prepare(){
  using Worker=RiscStorage::Worker; // Keep the explicit failure-path destructor in scope.
  if(taskHandle)return true;
