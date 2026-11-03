@@ -12,6 +12,8 @@ using RuntimeProviders::SpecV2;
 namespace RiscBoot { class Runtime { public:
  static bool reserve(RuntimeProviders::GraphV2&g,const char*id){return g.reservePackageMutation(id);}
  static void release(RuntimeProviders::GraphV2&g){g.releasePackageMutation();}
+ static bool retire(RuntimeProviders::GraphV2&g){return g.retirePackageMutation();}
+ static bool publish(RuntimeProviders::GraphV2&g,const RuntimeProviders::SpecV2&s,size_t slot){return g.publishOrdinaryBatch(&s,&slot,1,false);}
 };}
 int main(int argc, char** argv) {
   assert(argc == 5);
@@ -38,7 +40,13 @@ int main(int argc, char** argv) {
     assert(RiscBoot::Runtime::reserve(guarded,"fixture-other"));
     assert(guarded.addVerified(other));
     assert(!guarded.acquire("cap.other",1).slot); // newly published identity too
+    assert(RiscBoot::Runtime::retire(guarded));
     RiscBoot::Runtime::release(guarded);assert(guarded.shutdown());
+    assert(!guarded.hasProviderId("fixture-other")&&!guarded.hasProvider("fixture-other","cap.other",1));
+    assert(!guarded.matchingProviderId(2,"cap.other",1));assert(!guarded.acquire("cap.other",1).slot);
+    assert(RiscBoot::Runtime::reserve(guarded,"fixture-other"));assert(RiscBoot::Runtime::publish(guarded,other,2));
+    assert(!guarded.acquire("cap.other",1).slot);RiscBoot::Runtime::release(guarded);
+    auto restored=guarded.acquire("cap.other",1);assert(restored.slot);assert(guarded.release(restored)&&guarded.shutdown());
   }
   GraphV2 graph;
   assert(graph.addVerified(root) && graph.addVerified(child));

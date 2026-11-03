@@ -355,7 +355,7 @@ class Runtime final {
     char names[RuntimeProviders::GraphV2::kMaxRequirements][96]{};
     size_t count=0;
     bool explicitBinding[RuntimeProviders::GraphV2::kMaxRequirements]{};
-    bool coldBootStart=false;
+    bool coldBootStart=false,installedRetired=false;
     Runtime* sourceOwner=nullptr;uint64_t sourceVolume=0;int sourceDriver=-1;
     char sourcePath[193]{};bool internalFallback=false,sourceFiles=false;
   };
@@ -655,6 +655,7 @@ class Runtime final {
   bool installationMutable(size_t)const;
   static int32_t installationReserveDriver(void*,const char*,uint32_t,uint64_t*);
   static int32_t installationReleaseDriver(void*,uint64_t);
+  static int32_t installationForgetDriver(void*,uint64_t);
   static int32_t installationProviders(void*,const risc_install_provider_v1*,uint32_t,bool);
   static int32_t installationProvidersMedia(void*,const risc_install_provider_v1*,const uint32_t*,uint32_t,bool);
   static int32_t installationProviderTransaction(void*,const risc_install_provider_v1*,const uint32_t*,uint32_t,bool);

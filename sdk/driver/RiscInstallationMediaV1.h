@@ -30,9 +30,12 @@ typedef struct {
  uint32_t driver_gate_tag,driver_gate_version;
  int32_t (*reserve_driver)(void*,const char*id,uint32_t medium,uint64_t*token);
  int32_t (*release_driver)(void*,uint64_t token);
+ /* Withdraw exact reserved identity after durable uninstall intent. Stable
+  * slots remain tombstones for same-identity replay; dependents reject. */
+ int32_t (*forget_driver)(void*,uint64_t token);
 } risc_installation_driver_gate_v1;
 static inline const risc_installation_driver_gate_v1*risc_installation_driver_gate(const risc_installation_v1*a){
  if(!risc_installation_media(a)||a->struct_size<sizeof(risc_installation_driver_gate_v1))return NULL;
  const risc_installation_driver_gate_v1*g=(const risc_installation_driver_gate_v1*)a;
- return g->driver_gate_tag==RISC_INSTALLATION_DRIVER_GATE_TAG&&g->driver_gate_version==1&&g->reserve_driver&&g->release_driver?g:NULL;
+ return g->driver_gate_tag==RISC_INSTALLATION_DRIVER_GATE_TAG&&g->driver_gate_version==1&&g->reserve_driver&&g->release_driver&&g->forget_driver?g:NULL;
 }

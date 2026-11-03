@@ -84,7 +84,7 @@ bool Runtime::configureInstallation(JsonVariantConst value){
  installation_[0].api.base.media_tag=RISC_INSTALLATION_MEDIA_TAG;installation_[0].api.base.media_version=1;installation_[0].api.base.media_mask=(sdEnabled?1u:0u)|(internalEnabled?2u:0u);
  installation_[0].api.base.namespaced_media=installationNamespacedMedia;installation_[0].api.base.providers_media=installationProvidersMedia;
  installation_[0].api.driver_gate_tag=RISC_INSTALLATION_DRIVER_GATE_TAG;installation_[0].api.driver_gate_version=1;
- installation_[0].api.reserve_driver=installationReserveDriver;installation_[0].api.release_driver=installationReleaseDriver;
+ installation_[0].api.reserve_driver=installationReserveDriver;installation_[0].api.release_driver=installationReleaseDriver;installation_[0].api.forget_driver=installationForgetDriver;
  return registerPlatform(RISC_INSTALLATION_CAPABILITY,1,Scope::Global,0,&installation_[0].api);
 }
 bool Runtime::installationNamespaceRangeSafe()const{
@@ -168,7 +168,7 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
      ++matches;
     }
    if(!matches && r->installation_[0].providersEnabled){
-    for(size_t d=r->bootDriverCount_;d<r->driverCount_;++d){const auto& provider=r->drivers_[d];
+    for(size_t d=r->bootDriverCount_;d<r->driverCount_;++d){const auto& provider=r->drivers_[d];if(provider.installedRetired)continue;
      if(requirement["capability"]!=provider.provides || requirement["api"]!=provider.api)continue;
      auto grant=grants.add<JsonObject>();grant["capability"]=provider.provides;grant["api"]=provider.api;grant["instance_id"]=provider.instance;++matches;
     }
