@@ -32,7 +32,8 @@ int main(){
  v.file_open_read=[](void*,const char*,uint64_t*n)->uint32_t{assert(!file);file=true;*n=4;return 2;};
  v.file_read=[](void*,uint32_t,void*p,size_t)->size_t{
   if(delayed){std::unique_lock<std::mutex>lock(mutex);entered=true;cv.notify_all();cv.wait(lock,[](){return proceed;});}
-  if(readError||!present)return 0;memcpy(p,"DATA",4);return 4;
+  if(readError||!present)return 0;
+  memcpy(p,"DATA",4);return 4;
  };
  v.file_close=[](void*,uint32_t,bool){assert(file);++closes;if(retainedClose)return false;file=false;return true;};
  ext.handle_error=[](void*,uint32_t,bool)->uint32_t{return 0;};
