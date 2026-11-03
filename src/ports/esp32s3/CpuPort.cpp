@@ -1,5 +1,9 @@
 #include "CpuPort.h"
 #include "NativeInfrastructureRecovery.h"
+#if RISC_NATIVE_STILL_CAMERA
+#include <RiscStillCameraV1.h>
+extern "C" const risc_still_camera_v1* risc_product_still_camera();
+#endif
 #include "NativeSerialFiles.h"
 #include "HciBounds.h"
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
@@ -280,6 +284,9 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   }
 #if RISC_NATIVE_INFRA_RECOVERY
   if(!runtime.registerPlatform("platform.recovery",1,RiscBoot::Runtime::Scope::Global,0,infrastructureRecovery()))return false;
+#endif
+#if RISC_NATIVE_STILL_CAMERA
+  if(!runtime.registerPlatform(RISC_STILL_CAMERA_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,risc_product_still_camera()))return false;
 #endif
   if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_.base))return false;
   if(hw_.usbPhyIdle || hw_.usbPhySuspend || hw_.usbPhyResume){
