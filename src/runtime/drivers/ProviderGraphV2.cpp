@@ -262,6 +262,7 @@ bool GraphV2::fail(const char* stage, const char* identity) {
 
 bool GraphV2::activate(size_t index) {
   Node& node = nodes_[index];
+  if(packageMutationId_[0]&&!std::strcmp(packageMutationId_,node.spec.id))return fail("Package mutation in progress",node.spec.id);
   if (node.visit == Visit::Visiting) return fail("Dependency cycle", node.spec.id);
   if (node.visit == Visit::Releasing) return fail("Provider dependency cleanup pending", node.spec.id);
   if (node.module.state() == ModuleV2::State::Failed) {
@@ -604,4 +605,12 @@ bool RuntimeProviders::GraphV2::dependencyReadSafe() const {
        (nodes_[i].module.state()==ModuleV2::State::Failed || !nodes_[i].module.leaseSafe() || !nodes_[i].module.streamSafe()))return false;
   for(const auto& grant:grants_)if(grant.occupied && grant.pendingRelease)return false;
   return true;
+}
+
+namespace RuntimeProviders {
+bool GraphV2::reservePackageMutation(const char*id){
+ if(!id||!id[0]||std::strlen(id)>=sizeof(packageMutationId_)||packageMutationId_[0]||lifecycleBusy()||!activationSafe())return false;
+ for(size_t i=0;i<count_;++i)if(!std::strcmp(id,nodes_[i].spec.id)&&!metadataMutable(i))return false;
+ std::strcpy(packageMutationId_,id);return true;
+}
 }

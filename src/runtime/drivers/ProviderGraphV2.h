@@ -153,6 +153,9 @@ class GraphV2 final {
   // Runtime-only atomic metadata publication. Existing slots must be fully
   // unloaded; staged declarations never execute code or acquire resources.
   bool metadataMutable(size_t index) const;
+  bool reservePackageMutation(const char* id);
+  void releasePackageMutation() { packageMutationId_[0]=0; }
+  char packageMutationId_[96]{};
   bool publishOrdinaryBatch(const SpecV2*,const size_t* slots,size_t count,bool checkOnly);
 
 

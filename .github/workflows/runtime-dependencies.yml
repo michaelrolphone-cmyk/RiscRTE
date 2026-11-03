@@ -1,0 +1,76 @@
+name: Driver Manager Runtime dependencies
+on:
+  pull_request:
+    paths: ['sdk/driver/RiscStorage*', 'sdk/driver/RiscInstallation*', 'src/bootstrap/**', 'src/runtime/drivers/**', 'src/runtime/storage/**', 'src/ports/esp32s3/**', 'test/**', 'platformio.ini', '.github/workflows/runtime-dependencies.yml']
+permissions:
+  contents: read
+jobs:
+  package-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Native package and loader-use contracts
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          for mode in normal sanitized; do
+            export SANITIZE=0
+            if [ "$mode" = sanitized ]; then export SANITIZE=1 SANITIZERS=address,undefined; fi
+            for test in storage_async_adapter package_files provider_graph_v2; do
+              bash "test/run_${test}_test.sh" 2>&1 | tee "out/${test}-${mode}.log"
+            done
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: driver-manager-runtime-contracts-${{ github.event.pull_request.head.sha }}
+          path: out/
+          if-no-files-found: error
+  native-compile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    container: espressif/idf:v6.1@sha256:81893c71bb5e570088901f21def8684c25cd2a9020281bd01b843a7655edb18c
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+      CMAKE_BUILD_PARALLEL_LEVEL: '1'
+      CCACHE_DISABLE: '1'
+      IDF_CCACHE_ENABLE: '0'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Exact source and official SDK
+        run: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y --no-install-recommends git libssl-dev
+          root="$RUNNER_TEMP/driver-manager-runtime"
+          git init --quiet "$root"
+          git -C "$root" remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git -C "$root" fetch --no-tags --depth=1 origin "$SOURCE_SHA"
+          git -C "$root" checkout --quiet --detach FETCH_HEAD
+          test "$(git -C "$root" rev-parse HEAD)" = "$SOURCE_SHA"
+          git -C "$root" submodule update --init --recursive --depth=1
+          echo "NATIVE_ROOT=$root" >> "$GITHUB_ENV"
+      - name: Single-job native target compile
+        run: |
+          set -euo pipefail
+          . "$IDF_PATH/export.sh"
+          test "$(git -C "$IDF_PATH" rev-parse HEAD)" = fff9895c82d744c7237be8847347bdd1b07c6643
+          mkdir -p "$NATIVE_ROOT/out"
+          idf.py -C "$NATIVE_ROOT/idf" -B "$NATIVE_ROOT/build/native" -D "RISC_SOURCE_SHA=$SOURCE_SHA" -D "SDKCONFIG=$NATIVE_ROOT/build/native/sdkconfig" -D CCACHE_ENABLE=0 reconfigure 2>&1 | tee "$NATIVE_ROOT/out/configure.log"
+          cmake --build "$NATIVE_ROOT/build/native" -- -j1 2>&1 | tee "$NATIVE_ROOT/out/build.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: driver-manager-runtime-native-compile-${{ github.event.pull_request.head.sha }}
+          path: |
+            ${{ env.NATIVE_ROOT }}/out/
+            ${{ env.NATIVE_ROOT }}/build/native/compile_commands.json
+            ${{ env.NATIVE_ROOT }}/build/native/riscrte_native.elf
+            ${{ env.NATIVE_ROOT }}/build/native/riscrte_native.map
+          if-no-files-found: error

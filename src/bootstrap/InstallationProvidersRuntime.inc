@@ -48,7 +48,7 @@ int32_t Runtime::installationProviderTransaction(void*context,const risc_install
  JsonDocument permissions;if(deserializeJson(permissions,r->installation_[0].providerGrants))return RISC_INSTALL_INVALID;
  for(uint32_t n=0;n<count;++n){
   const uint32_t selected=media?media[n]:0;
-  if(selected>1||!(r->installation_[0].api.media_mask&(1u<<selected)))return RISC_INSTALL_DENIED;
+  if(selected>1||!(r->installation_[0].api.base.media_mask&(1u<<selected)))return RISC_INSTALL_DENIED;
   const auto&record=input[n];
   if(!record.manifest_json||strnlen(record.manifest_json,4097)>4096||!record.image_path||
      strnlen(record.image_path,193)>192||record.instance>INT32_MAX)return RISC_INSTALL_INVALID;
@@ -113,5 +113,35 @@ int32_t Runtime::installationProviderTransaction(void*context,const risc_install
  if(!r->graph_.publishOrdinaryBatch(specs.get(),slots,changed,check))return RISC_INSTALL_BUSY;
  if(!check)rollback.committed=true;
  return RISC_INSTALL_OK;
+}
+}
+
+namespace RiscBoot {
+int32_t Runtime::installationReserveDriver(void*context,const char*id,uint32_t medium,uint64_t*out){
+ if(out)*out=0;
+ auto*r=static_cast<Runtime*>(context);
+ if(!r||r!=currentRuntime||!r->installation_||!r->installation_[0].providersEnabled||
+    !r->active()||!r->port_.owner()||r->retained_||!out)return RISC_INSTALL_DENIED;
+ auto&s=r->installation_[0];
+ if(!id||!id[0]||strnlen(id,96)>=96||medium>1)return RISC_INSTALL_INVALID;
+ for(const char*p=id;*p;++p)if(!((*p>='a'&&*p<='z')||(*p>='A'&&*p<='Z')||(*p>='0'&&*p<='9')||*p=='_'||*p=='-'||*p=='.'))return RISC_INSTALL_INVALID;
+ if(strstr(id,"..")||!strcmp(id,"."))return RISC_INSTALL_INVALID;
+ if(!(s.api.base.media_mask&(1u<<medium)))return RISC_INSTALL_DENIED;
+ if(s.driverGateToken||s.call||r->graph_.lifecycleBusy()||!r->providerStorageSafe())return RISC_INSTALL_BUSY;
+ if(s.driverGateSerial==UINT64_MAX)return RISC_INSTALL_FULL;
+ const uint64_t volume=medium==RISC_INSTALL_MEDIA_INTERNAL?s.internalVolume:s.volume;
+ for(size_t i=0;i<r->driverCount_;++i)if(!strcmp(r->drivers_[i].id,id)){
+  if(i<r->bootDriverCount_||r->drivers_[i].sourceVolume!=volume)return RISC_INSTALL_DENIED;
+ }
+ if(!r->graph_.reservePackageMutation(id))return RISC_INSTALL_BUSY;
+ s.driverGateToken=++s.driverGateSerial;*out=s.driverGateToken;return RISC_INSTALL_OK;
+}
+int32_t Runtime::installationReleaseDriver(void*context,uint64_t token){
+ auto*r=static_cast<Runtime*>(context);
+ if(!r||r!=currentRuntime||!r->installation_||!r->active()||!r->port_.owner()||r->retained_)return RISC_INSTALL_DENIED;
+ auto&s=r->installation_[0];
+ if(!token||token!=s.driverGateToken)return RISC_INSTALL_INVALID;
+ if(s.call||r->graph_.lifecycleBusy()||!r->providerStorageSafe())return RISC_INSTALL_BUSY;
+ r->graph_.releasePackageMutation();s.driverGateToken=0;return RISC_INSTALL_OK;
 }
 }

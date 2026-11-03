@@ -47,12 +47,12 @@ int32_t PackageFiles::metadata(const char*p,risc_storage_metadata_v1*out){
  if(!S_ISREG(st.st_mode)&&!S_ISDIR(st.st_mode))return RISC_STORAGE_FS_INVALID;
  *out={sizeof(*out),S_ISDIR(st.st_mode)?uint32_t(RISC_STORAGE_DIRECTORY):0u,uint64_t(st.st_size),0};return RISC_STORAGE_FS_OK;
 }
-uint32_t PackageFiles::open(const char*p,bool write,uint64_t*size){
+uint32_t PackageFiles::open(const char*p,bool write,uint64_t*size,bool exclusive){
  if(size)*size=0;
  Call call(*this);char full[512];if(!call.ok||file_||!path(p,full,sizeof(full))||(write&&!mutation(p))||serial_==UINT32_MAX)return 0;
- int fd=::open(full,write?(O_WRONLY|O_CREAT|O_EXCL):O_RDONLY,0600);if(fd<0){fault(false);return 0;}
+ int fd=::open(full,write?(exclusive?(O_WRONLY|O_CREAT|O_EXCL):O_WRONLY):O_RDONLY,0600);if(fd<0){fault(false);return 0;}
  // Publish custody before any further fallible operation.
- descriptor_=fd;file_=next();writing_=write;error_=0;if(write)strcpy(writePath_,full);
+ descriptor_=fd;file_=next();writing_=write;exclusive_=write&&exclusive;error_=0;if(write)strcpy(writePath_,full);
  struct stat st{};if(fstat(fd,&st)||!S_ISREG(st.st_mode)){error_=1;close(file_,false);return 0;}
  if(size)*size=uint64_t(st.st_size);
  return file_;
@@ -62,8 +62,8 @@ bool PackageFiles::close(uint32_t token,bool commit){
  if(writing_&&commit&&fsync(descriptor_)){fault(false);return false;}
  if(::close(descriptor_)){retained_=true;return false;}
  descriptor_=-1;file_=0;
- if(writing_&&!commit&&unlink(writePath_)){if(errno!=ENOENT){retained_=true;return false;}}
- writing_=false;writePath_[0]=0;return true;
+ if(exclusive_&&!commit&&unlink(writePath_)){if(errno!=ENOENT){retained_=true;return false;}}
+ writing_=exclusive_=false;writePath_[0]=0;return true;
 }
 bool PackageFiles::freeBytes(uint64_t*out){
  if(out)*out=0;
@@ -71,6 +71,9 @@ bool PackageFiles::freeBytes(uint64_t*out){
  uint64_t total=0,used=0;if(!hooks_.usage(hooks_.context,&total,&used)||used>total)return fault(false);
  // Leave two maximum catalog copies plus metadata for protected state.
  *out=total-used>139264?total-used-139264:0;return true;
+}
+bool PackageFiles::removeDirectory(const char*p){
+ Call call(*this);char full[512];return call.ok&&!file_&&!directory_&&mutation(p)&&path(p,full,sizeof(full))&&fault(!rmdir(full));
 }
 bool PackageFiles::configure(const char*root){
  if(configured_||!root||root[0]!='/'||strlen(root)>=sizeof(root_)||strstr(root,"..")||root[strlen(root)-1]=='/'||!hooks_.enter||!hooks_.leave||!hooks_.retained||!hooks_.usage)return false;
@@ -92,6 +95,7 @@ bool PackageFiles::configure(const char*root){
  [](void*c,uint32_t t,bool commit){return static_cast<PackageFiles*>(c)->close(t,commit);},
  [](void*c,const char*p){auto&s=*static_cast<PackageFiles*>(c);Call call(s);char full[512];return call.ok&&!s.file_&&!s.directory_&&s.mutation(p)&&s.path(p,full,sizeof(full))&&s.fault(!unlink(full));},
  [](void*,char*out,size_t n){if(!out||n<15)return false;strcpy(out,"package volume");return true;}};
+ e.file_open=[](void*c,const char*p,uint32_t flags)->uint32_t{auto&s=*static_cast<PackageFiles*>(c);if(flags==RISC_STORAGE_OPEN_READ)return s.open(p,false,nullptr,false);if(flags==RISC_STORAGE_OPEN_WRITE)return s.open(p,true,nullptr,false);return 0;};
  e.file_sync=[](void*c,uint32_t t){auto&s=*static_cast<PackageFiles*>(c);Call call(s);return call.ok&&t&&t==s.file_&&s.fault(!fsync(s.descriptor_));};
  e.file_seek=[](void*c,uint32_t t,uint64_t offset){auto&s=*static_cast<PackageFiles*>(c);Call call(s);struct stat st{};return call.ok&&t&&t==s.file_&&offset<=INT32_MAX&&!fstat(s.descriptor_,&st)&&offset<=uint64_t(st.st_size)&&s.fault(lseek(s.descriptor_,off_t(offset),SEEK_SET)>=0);};
  e.file_info=[](void*c,uint32_t t,uint64_t*n,uint64_t*o){auto&s=*static_cast<PackageFiles*>(c);Call call(s);struct stat st{};if(!call.ok||!n||!o||!t||t!=s.file_||fstat(s.descriptor_,&st))return false;off_t at=lseek(s.descriptor_,0,SEEK_CUR);if(at<0)return s.fault(false);*n=uint64_t(st.st_size);*o=uint64_t(at);return true;};

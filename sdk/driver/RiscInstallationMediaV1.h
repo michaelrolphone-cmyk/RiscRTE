@@ -18,3 +18,21 @@ static inline const risc_installation_media_v1*risc_installation_media(const ris
  const risc_installation_media_v1*m=(const risc_installation_media_v1*)a;
  return m->media_tag==RISC_INSTALLATION_MEDIA_TAG&&m->media_version==1&&m->namespaced_media&&m->providers_media?m:NULL;
 }
+
+/* Native live-loader reservation, not a cached in-use flag. The trusted catalog
+ * holds the token through durable filesystem reconciliation and checked worker
+ * session end. Failed/uncertain cleanup must retain the token and owner.
+ * All instances of the exact identity are fenced against activation, including
+ * dependency activation. Boot identities are never mutable. No grants change. */
+#define RISC_INSTALLATION_DRIVER_GATE_TAG UINT32_C(0x49444731)
+typedef struct {
+ risc_installation_media_v1 base;
+ uint32_t driver_gate_tag,driver_gate_version;
+ int32_t (*reserve_driver)(void*,const char*id,uint32_t medium,uint64_t*token);
+ int32_t (*release_driver)(void*,uint64_t token);
+} risc_installation_driver_gate_v1;
+static inline const risc_installation_driver_gate_v1*risc_installation_driver_gate(const risc_installation_v1*a){
+ if(!risc_installation_media(a)||a->struct_size<sizeof(risc_installation_driver_gate_v1))return NULL;
+ const risc_installation_driver_gate_v1*g=(const risc_installation_driver_gate_v1*)a;
+ return g->driver_gate_tag==RISC_INSTALLATION_DRIVER_GATE_TAG&&g->driver_gate_version==1&&g->reserve_driver&&g->release_driver?g:NULL;
+}

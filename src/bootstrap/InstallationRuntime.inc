@@ -80,9 +80,11 @@ bool Runtime::configureInstallation(JsonVariantConst value){
  }
  installation_[0].volume=uint64_t(volume);installation_[0].namespaceFirst=uint32_t(first);installation_[0].namespaceCount=uint32_t(count);
  installation_[0].internalEnabled=internalEnabled;installation_[0].internalVolume=uint64_t(internal);
- installation_[0].api.base={1,sizeof(risc_installation_media_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),checkpointCount,installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,checkpointFormat,checkpointShared,installationSharedSettingsNamespace};
- installation_[0].api.media_tag=RISC_INSTALLATION_MEDIA_TAG;installation_[0].api.media_version=1;installation_[0].api.media_mask=(sdEnabled?1u:0u)|(internalEnabled?2u:0u);
- installation_[0].api.namespaced_media=installationNamespacedMedia;installation_[0].api.providers_media=installationProvidersMedia;
+ installation_[0].api.base.base={1,sizeof(risc_installation_driver_gate_v1),this,installationAdmit,installationForget,installationCommit,installationCheck,uint32_t(count),installationNamespaced,installationProviders,installationAvailable,uint32_t(installation_[0].providersEnabled?MaxDrivers-bootDriverCount_:0),checkpointCount,installationSettingsStatus,installationSettingsRestore,installationSettingsSnapshot,installationSettingsAck,checkpointFormat,checkpointShared,installationSharedSettingsNamespace};
+ installation_[0].api.base.media_tag=RISC_INSTALLATION_MEDIA_TAG;installation_[0].api.base.media_version=1;installation_[0].api.base.media_mask=(sdEnabled?1u:0u)|(internalEnabled?2u:0u);
+ installation_[0].api.base.namespaced_media=installationNamespacedMedia;installation_[0].api.base.providers_media=installationProvidersMedia;
+ installation_[0].api.driver_gate_tag=RISC_INSTALLATION_DRIVER_GATE_TAG;installation_[0].api.driver_gate_version=1;
+ installation_[0].api.reserve_driver=installationReserveDriver;installation_[0].api.release_driver=installationReleaseDriver;
  return registerPlatform(RISC_INSTALLATION_CAPABILITY,1,Scope::Global,0,&installation_[0].api);
 }
 bool Runtime::installationNamespaceRangeSafe()const{
@@ -115,7 +117,7 @@ int32_t Runtime::installationAdmit(void*ctx,const char*relative,const char*json,
     r->graph_.lifecycleBusy()||!r->providerStorageSafe()||!relative||!json||!out||cap<2)return RISC_INSTALL_DENIED;
  if(r->installation_[0].call)return RISC_INSTALL_BUSY;
  if(strnlen(relative,193)>192||strnlen(json,4097)>4096)return RISC_INSTALL_INVALID;
- if(!(r->installation_[0].api.media_mask&(1u<<r->installation_[0].medium)))return RISC_INSTALL_DENIED;
+ if(!(r->installation_[0].api.base.media_mask&(1u<<r->installation_[0].medium)))return RISC_INSTALL_DENIED;
  const uint64_t selectedVolume=r->installation_[0].medium==RISC_INSTALL_MEDIA_INTERNAL?r->installation_[0].internalVolume:r->installation_[0].volume;
  // Exact managed-directory manifest only; grants and volume never come from SD.
  const char*slash=strrchr(relative,'/');
@@ -243,7 +245,7 @@ int32_t Runtime::installationTransaction(void*ctx,const risc_install_candidate_v
     r->graph_.lifecycleBusy()||count>64||(count&&(!items||!out)))return RISC_INSTALL_DENIED;
  for(uint32_t i=0;i<count;++i){
   const uint32_t selected=media?media[i]:0;
-  if(selected>1||!(r->installation_[0].api.media_mask&(1u<<selected)))return RISC_INSTALL_DENIED;
+  if(selected>1||!(r->installation_[0].api.base.media_mask&(1u<<selected)))return RISC_INSTALL_DENIED;
   if(!items[i].manifest_path||!items[i].manifest_json||(slots&&slots[i]>r->installation_[0].namespaceCount))return RISC_INSTALL_INVALID;
   JsonDocument a;if(deserializeJson(a,items[i].manifest_json))return RISC_INSTALL_INVALID;
   for(uint32_t j=0;j<i;++j){

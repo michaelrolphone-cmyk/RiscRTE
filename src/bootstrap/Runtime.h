@@ -631,7 +631,7 @@ class Runtime final {
   struct InstalledAppMetadata {char manifest[4097]{};uint32_t namespaceSlot=0;};
   MetadataArray<InstalledAppMetadata> installedMetadata_;
   struct InstallationState {
-    risc_installation_media_v1 api{};uint64_t volume=0,internalVolume=0;bool internalEnabled=false;uint32_t medium=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
+    risc_installation_driver_gate_v1 api{};uint64_t driverGateSerial=0,driverGateToken=0;uint64_t volume=0,internalVolume=0;bool internalEnabled=false;uint32_t medium=0;char grants[4097]{},providerGrants[4097]{};bool providersEnabled=false;uint32_t namespaceFirst=0,namespaceCount=0,namespaceSlot=0;bool call=false;
   };
   MetadataArray<InstallationState> installation_;
   std::unique_ptr<SettingsSession> settings_;
@@ -653,6 +653,8 @@ class Runtime final {
   static int32_t installationCheck(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool);
   static int32_t installationTransaction(void*,const risc_install_candidate_v1*,uint32_t,risc_install_result_v1*,bool,bool,const uint32_t* slots=nullptr,const uint32_t* media=nullptr);
   bool installationMutable(size_t)const;
+  static int32_t installationReserveDriver(void*,const char*,uint32_t,uint64_t*);
+  static int32_t installationReleaseDriver(void*,uint64_t);
   static int32_t installationProviders(void*,const risc_install_provider_v1*,uint32_t,bool);
   static int32_t installationProvidersMedia(void*,const risc_install_provider_v1*,const uint32_t*,uint32_t,bool);
   static int32_t installationProviderTransaction(void*,const risc_install_provider_v1*,const uint32_t*,uint32_t,bool);
