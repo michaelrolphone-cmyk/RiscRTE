@@ -9,6 +9,10 @@ idf_component_register(SRCS ${runtime_sources} ${RISC_NATIVE_EXTRA_SOURCES}
              esp_http_client esp-tls http_parser mbedtls fatfs driver esp_driver_gpio esp_driver_i2s
              esp_driver_ledc esp_driver_sdmmc esp_driver_sdspi esp_driver_spi
              esp_driver_uart esp_driver_usb_serial_jtag esp_hal_usb)
+foreach(component IN LISTS RISC_NATIVE_PRIVATE_COMPONENTS)
+    idf_component_get_property(product_lib ${component} COMPONENT_LIB)
+    target_link_libraries(${COMPONENT_LIB} PRIVATE ${product_lib})
+endforeach()
 set_target_properties(${COMPONENT_LIB} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_compile_options(${COMPONENT_LIB} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++17>"
     ${RISC_NATIVE_COMPILE_OPTIONS})
