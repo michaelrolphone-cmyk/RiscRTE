@@ -1,12 +1,12 @@
 name: Publish complete ESP32-S3 infrastructure binary
 on:
   push:
-    branches: [release/esp32s3-infrastructure-v1.10.0-direct]
+    branches: [release/esp32s3-infrastructure-v1.10.1-direct]
     paths: [.github/workflows/publish-infrastructure-direct.yml]
 permissions:
   contents: read
 concurrency:
-  group: esp32s3-infrastructure-v1.10.0-publication
+  group: esp32s3-infrastructure-v1.10.1-publication
   cancel-in-progress: false
 jobs:
   publish:
@@ -24,37 +24,37 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh run watch 41580719626 --repo michaelrolphone-cmyk/RiscRTE-System-Apps --exit-status --interval 15
-          gh api repos/michaelrolphone-cmyk/RiscRTE-System-Apps/actions/runs/41580719626 > /tmp/qualified-run.json
+          gh run watch 41582851992 --repo michaelrolphone-cmyk/RiscRTE-System-Apps --exit-status --interval 15
+          gh api repos/michaelrolphone-cmyk/RiscRTE-System-Apps/actions/runs/41582851992 > /tmp/qualified-run.json
           python3 - <<'PY'
           import json
           r=json.load(open('/tmp/qualified-run.json'))
-          assert r['head_sha']=='1abde9cb7fe315b24de790a43cf10a888aa835cc'
+          assert r['head_sha']=='baf90700e06c597f5f2acc7d7ce1f18b82a4801e'
           assert r['status']=='completed' and r['conclusion']=='success'
           PY
       - uses: actions/download-artifact@v4
         with:
-          name: infrastructure-modes-elf-1abde9cb7fe315b24de790a43cf10a888aa835cc
+          name: infrastructure-modes-elf-baf90700e06c597f5f2acc7d7ce1f18b82a4801e
           repository: michaelrolphone-cmyk/RiscRTE-System-Apps
-          run-id: '41580719626'
+          run-id: '41582851992'
           github-token: ${{ github.token }}
           path: download
       - name: Verify exact complete image and embedded cohort
         run: |
           set -euo pipefail
           test -f download/direct-image.json
-          mkdir -p artifacts/esp32s3-infrastructure-v1.10.0
-          cp download/* artifacts/esp32s3-infrastructure-v1.10.0/
-          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.10.0
-          cd artifacts/esp32s3-infrastructure-v1.10.0
+          mkdir -p artifacts/esp32s3-infrastructure-v1.10.1
+          cp download/* artifacts/esp32s3-infrastructure-v1.10.1/
+          python3 scripts/verify_infrastructure_initial_image.py artifacts/esp32s3-infrastructure-v1.10.1
+          cd artifacts/esp32s3-infrastructure-v1.10.1
           sha256sum -c SHA256SUMS
           python3 - <<'PY'
           import json,zipfile,hashlib
           m=json.load(open('flash-manifest.json'))
-          assert m['source']['system_apps']=='1abde9cb7fe315b24de790a43cf10a888aa835cc'
+          assert m['source']['system_apps']=='baf90700e06c597f5f2acc7d7ce1f18b82a4801e'
           assert m['source']['runtime']=='889e0df02fc1efd410d7540b07cb1a8f0c48a85c'
-          with zipfile.ZipFile('riscrte-esp32s3-infrastructure-v1.10.0-repair.zip') as z:
-            data=z.read('esp32s3-infrastructure-v1.10.0/fixtures/catalog.json')
+          with zipfile.ZipFile('riscrte-esp32s3-infrastructure-v1.10.1-repair.zip') as z:
+            data=z.read('esp32s3-infrastructure-v1.10.1/fixtures/catalog.json')
           entry=next(f for f in m['files'] if f['path']=='fixtures/catalog.json')
           assert hashlib.sha256(data).hexdigest()==entry['sha256']
           assert open('catalog.json','rb').read()==data
@@ -65,23 +65,23 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          tag=esp32s3-infrastructure-v1.10.0
+          tag=esp32s3-infrastructure-v1.10.1
           if gh release view "$tag" >/dev/null 2>&1; then
             echo 'Existing release must be inspected; refusing automatic overwrite.' >&2
             exit 1
           fi
-          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.10.0/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.10.0 — Optional Onboard Camera' --notes-file artifacts/esp32s3-infrastructure-v1.10.0/RELEASE-NOTES.md --prerelease
+          gh release create "$tag" artifacts/esp32s3-infrastructure-v1.10.1/* --target "$GITHUB_SHA" --title 'ESP32-S3 Infrastructure Agent v1.10.1 — Request-only Onboard Camera Images' --notes-file artifacts/esp32s3-infrastructure-v1.10.1/RELEASE-NOTES.md --prerelease
       - name: Download published assets and verify actual bytes
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir /tmp/published-infrastructure
-          gh release download esp32s3-infrastructure-v1.10.0 --dir /tmp/published-infrastructure
+          gh release download esp32s3-infrastructure-v1.10.1 --dir /tmp/published-infrastructure
           cd /tmp/published-infrastructure
           sha256sum -c SHA256SUMS
       - name: Retain verified catalog source for registry publication
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/artifacts/esp32s3-infrastructure-v1.10.0/catalog.json" -f message='Retain verified v1.10.0 catalog pins from qualified release' -f branch="$GITHUB_REF_NAME" -f content="$(base64 -w0 artifacts/esp32s3-infrastructure-v1.10.0/catalog.json)" > /tmp/catalog-commit.json
+          gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/artifacts/esp32s3-infrastructure-v1.10.1/catalog.json" -f message='Retain verified v1.10.1 catalog pins from qualified release' -f branch="$GITHUB_REF_NAME" -f content="$(base64 -w0 artifacts/esp32s3-infrastructure-v1.10.1/catalog.json)" > /tmp/catalog-commit.json
