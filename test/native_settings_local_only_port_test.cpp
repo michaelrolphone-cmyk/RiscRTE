@@ -68,8 +68,8 @@ extern "C" void test_local_port_app(){
  assert(api->acquire(RISC_KEY_VALUE_AVAILABILITY_CAPABILITY,1,6,&status));
  const auto&kv=*static_cast<const risc_key_value_v1*>(data.api);const auto&writer=*static_cast<const risc_key_value_atomic_v1*>(atomic.api);
  const auto before=nvs;char bytes[16]="draft";uint32_t size=0;
- assert(kv.get(kv.context,"opaque:nonwifi",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_NOT_FOUND&&!strcmp(bytes,"draft"));
- assert(kv.put(kv.context,"opaque:nonwifi","default",7)!=RISC_KEY_VALUE_OK&&nvs==before);
+ assert(kv.get(kv.context,"opaque_nonwifi",bytes,sizeof(bytes),&size)==RISC_KEY_VALUE_NOT_FOUND&&!strcmp(bytes,"draft"));
+ assert(kv.put(kv.context,"opaque_nonwifi","default",7)!=RISC_KEY_VALUE_OK&&nvs==before);
  discovery();localProof();assert(availability(6)==RISC_KEY_VALUE_RECONCILIATION_PENDING);
  risc_key_value_atomic_state_v1 captured{sizeof(captured)};assert(writer.state(writer.context,&captured)==RISC_ATOMIC_BUSY);
  assert(api->release(&atomic));assert(L::checkpoint(false)&&availability(6)==RISC_KEY_VALUE_RECONCILIATION_PENDING);
@@ -92,7 +92,7 @@ int main(int argc,char**argv){
  const bool resume=mode=="fresh-resume"||mode=="legacy-resume";
  const bool reboot=mode=="legacy-reboot"||mode=="fresh-reboot";
  const bool imported=mode=="legacy"||mode=="legacy-reboot"||mode=="legacy-cut"||mode=="legacy-resume"||mode=="held-grants"||mode=="retained-init"||mode=="cancel-inspect"||mode=="cancel-init"||mode=="cancel-committed";
- if(imported)nvs["rte00000006"]["opaque:nonwifi"]={'k','e','e','p'};
+ if(imported)nvs["rte00000006"]["opaque_nonwifi"]={'k','e','e','p'};
  if(reboot||resume)loadLocalState(output+"/../"+(imported?(resume?"legacy-cut":"legacy"):(resume?"fresh-cut":"fresh")));
  const auto original=nvs;
  native_lfs_fixture_shutdown();native_lfs_fixture_select_appdata();
@@ -150,7 +150,9 @@ int main(int argc,char**argv){
   }
  }
  if(mode=="retained-init"){
-  assert(retainedFaultArmed&&L::retained()&&!L::exitSafe()&&!W::exitSafe()&&M::retained()&&availability(6)!=RISC_KEY_VALUE_AVAILABLE);
+  assert(retainedFaultArmed&&L::retained()&&!L::exitSafe()&&!W::exitSafe()&&M::retained());
+  risc_key_value_availability_state_v1 retainedAvailability{sizeof(retainedAvailability)};
+  assert(L::availability(6,&retainedAvailability)==RISC_KEY_VALUE_AVAILABILITY_CONTEXT&&retainedAvailability.availability!=RISC_KEY_VALUE_AVAILABLE);
   assert(nvs.at("rte00000001")==peer&&nvs.at("rte00000006")==original.at("rte00000006"));
   native_lfs_fixture_counters beforeCalls{},afterCalls{};native_lfs_fixture_get_counters(&beforeCalls);const auto beforeNvsCalls=nvsCalls;
   assert(!L::checkpoint(true)&&!L::shutdown());native_lfs_fixture_get_counters(&afterCalls);
@@ -167,16 +169,16 @@ int main(int argc,char**argv){
   assert(!core(6)->ready()&&availability(6)!=RISC_KEY_VALUE_AVAILABLE&&nvs==original&&flashBytes()==before);
  }else{
   localProof();assert(availability(6)==RISC_KEY_VALUE_AVAILABLE);
-  if(reboot){assert(!enteredInitializations&&!queuedInitializations&&core(6)->revision()==2&&core(6)->sequence()==1);value(*core(6),"opaque:new","value");}
+  if(reboot){assert(!enteredInitializations&&!queuedInitializations&&core(6)->revision()==2&&core(6)->sequence()==1);value(*core(6),"opaque_new","value");}
   if(mode=="cancel-committed")assert(cancelledCommitted&&enteredInitializations==1&&queuedInitializations==1);
-  if(imported){assert(core(6)->baseline().archiveObligation());value(*core(6),"opaque:nonwifi","keep");assert(nvs.at("rte00000006")==original.at("rte00000006"));}
+  if(imported){assert(core(6)->baseline().archiveObligation());value(*core(6),"opaque_nonwifi","keep");assert(nvs.at("rte00000006")==original.at("rte00000006"));}
   assert(!writer.state(writer.context,&state));
-  risc_key_value_atomic_mutation_v1 mutation{"opaque:new",RISC_ATOMIC_PUT,"value",5};uint64_t token=0;
+  risc_key_value_atomic_mutation_v1 mutation{"opaque_new",RISC_ATOMIC_PUT,"value",5};uint64_t token=0;
   assert(!writer.submit(writer.context,state.revision,&mutation,1,"native-local-edit",17,&token)&&token);
   schedule(1);assert(!W::exitSafe()); // accepted receipt deliberately remains uncollected
   risc_key_value_atomic_receipt_v1 receipt{sizeof(receipt)};int rc;
   do{schedule(1);rc=writer.collect(writer.context,token,&receipt);}while(rc==RISC_ATOMIC_PENDING);
-  assert(!rc&&!receipt.status);value(*core(6),"opaque:new","value");localProof();
+  assert(!rc&&!receipt.status);value(*core(6),"opaque_new","value");localProof();
   assert(L::checkpoint(true)&&L::exitSafe());noExternal();
  }
  assert(nvs.at("rte00000001")==peer);
