@@ -7,6 +7,7 @@ p.add_argument('--sdk',type=lambda v:pathlib.Path(v).resolve(),required=True)
 p.add_argument('--output',type=lambda v:pathlib.Path(v).resolve(),required=True)
 p.add_argument('--sanitize',action='store_true')
 p.add_argument('--allow-fresh',action='store_true')
+p.add_argument('--producer-only',action='store_true')
 a=p.parse_args();build=a.output;build.mkdir(parents=True,exist_ok=False)
 commands=[]
 def run(cmd):
@@ -63,7 +64,14 @@ selected=['-DBOARD_XTEINK_X4_PRO','-DRISC_PAIRED_BANKS','-DRISC_PAIRED_APP_DATA'
 raw=(root/'test/native_settings_complete_path_test.cpp').read_text()
 marker='int main(int argc,char**argv){'
 assert raw.count(marker)==1
-prefix=build/'local-port-fixture.inc';prefix.write_text(raw.split(marker)[0])
+prefix=build/'local-port-fixture.inc'
+fixture_prefix=raw.split(marker)[0]
+assert fixture_prefix.count('#include "ports/esp32s3/NativeAppDataMount.h"')==1
+fixture_prefix=fixture_prefix.replace('#include "ports/esp32s3/NativeAppDataMount.h"','#include "native_settings_local_mount_bridge.h"').replace('namespace M=RiscAppDataMount;','namespace M=NativeLocalMount;')
+commit='extern "C" esp_err_t nvs_commit(nvs_handle_t h){safe();assert(handles.count(h));return ESP_OK;}'
+assert fixture_prefix.count(commit)==1
+fixture_prefix=fixture_prefix.replace(commit,commit.replace('return ESP_OK;','local_port_after_nvs_commit();return ESP_OK;'))
+prefix.write_text(fixture_prefix)
 selected+=['-DNATIVE_LOCAL_PORT_FIXTURE="'+str(prefix)+'"']
 actual=selected+['-DESP_PLATFORM','-DRISC_NATIVE_APP_DATA_MOUNT=1','-DRISC_NATIVE_SETTINGS_BACKEND=1','-DRISC_NATIVE_SETTINGS_ASSEMBLY=1','-DRISC_NATIVE_SETTINGS_PSRAM_PAYLOAD=1','-DRISC_NATIVE_SETTINGS_STARTUP_ENTROPY=1']
 objects=[]
@@ -71,9 +79,9 @@ for i,source in enumerate([vendor/'littlefs/lfs.c',vendor/'littlefs/lfs_util.c',
  obj=build/f'c-{i}.o';run(['cc','-std=c11',*flags,*incs,'-include',stubs/'sdkconfig.h','-c',source,'-o',obj]);objects.append(obj)
 sources=['src/bootstrap/Json.cpp','src/bootstrap/Board.cpp','src/bootstrap/Runtime.cpp','src/runtime/streams/AppStreamSessions.cpp','src/runtime/streams/ProviderQueueHost.cpp','src/runtime/drivers/ProviderGraphV2.cpp','src/runtime/drivers/ProviderModuleV2.cpp','src/ports/esp32s3/CpuPort.cpp','src/runtime/storage/AppDataFiles.cpp','src/ports/esp32s3/NativeSettingsMaintenance.cpp','src/ports/esp32s3/NativeSettingsBootstrap.cpp','test/native_settings_complete_posix.cpp']
 for source in ['NativeAppDataMount','NativeSettingsBackend','NativeSettingsAssembly','NativeSettingsWorker','NativeSettingsLifecycle','NativeSettingsPayloadAllocator','NativeSettingsStartupEntropy']:sources.append('src/ports/esp32s3/'+source+'.cpp')
-sources.append('test/native_settings_local_only_port_test.cpp')
+sources+=['test/native_settings_local_mount_bridge.cpp','test/native_settings_local_only_port_test.cpp']
 for i,name in enumerate(sources):
- source=root/name;obj=build/f'cpp-{i}.o';defines=actual if source.stem.startswith('NativeSettings') or source.stem in ['NativeAppDataMount','AppDataFiles','native_settings_local_only_port_test'] else selected
+ source=root/name;obj=build/f'cpp-{i}.o';defines=actual if source.stem.startswith('NativeSettings') or source.stem in ['NativeAppDataMount','AppDataFiles','native_settings_local_only_port_test','native_settings_local_mount_bridge'] else selected
  instrument=['-finstrument-functions'] if source.stem in ['NativeSettingsBootstrap','NativeSettingsMaintenance','native_settings_local_only_port_test'] else []
  run(['c++','-std=c++17',*flags,*instrument,*incs,*defines,'-Wall','-Wextra','-Werror','-Wno-unused-function','-Wno-misleading-indentation','-Wno-missing-field-initializers','-Wno-deprecated-declarations','-MMD','-MF',build/f'cpp-{i}.d','-c',source,'-o',obj]);objects.append(obj)
 layout=build/'layout.cpp';layout.write_text('#include "bootstrap/Runtime.h"\n#include "ports/esp32s3/CpuPort.h"\nextern "C" size_t complete_host_runtime_size(){return sizeof(RiscBoot::Runtime);}\nextern "C" size_t complete_host_port_size(){return sizeof(RiscCpu::Port);}\n');obj=build/'layout.o';run(['c++','-std=c++17',*flags,*incs,*selected,'-c',layout,'-o',obj]);objects.append(obj)
@@ -92,9 +100,24 @@ probe=[str(build/'test'),str(build),'probe-external-acquire',str(probe_dir)]
 commands.append(probe)
 negative=subprocess.run(probe,timeout=30)
 assert negative.returncode==86,'External acquire instrumentation did not intercept real acquire'
-cases=['fresh','legacy','held-grants','cancel-inspect','cancel-init','cancel-committed','external-fresh','external-import','external-unclassified','malformed-root']
-cases+=['legacy-reboot']+(['fresh-reboot'] if a.allow_fresh else [])
+if not a.allow_fresh:
+ # A separate explicitly Fresh-enabled producer creates genuine checked receipts.
+ # The resumed binary retains its own Fresh=0 flag in every compilation unit.
+ producer=build/'genesis-producer'
+ cmd=[pathlib.Path(__file__).resolve(),'--sdk',a.sdk,'--output',producer,'--allow-fresh','--producer-only']
+ if a.sanitize:cmd+=['--sanitize']
+ run(['python3',*cmd])
+ shutil.copytree(producer/'fresh-cut',build/'fresh-cut')
+cases=['fresh-cut'] if a.producer_only else ['fresh','legacy','held-grants','cancel-inspect','cancel-init','cancel-committed','retained-init','external-fresh','external-import','external-unclassified','malformed-root','legacy-reboot','legacy-cut','legacy-resume','fresh-resume']
+if not a.producer_only and a.allow_fresh:cases[0:0]=['fresh-cut'];cases+=['fresh-reboot']
+failures=[]
 for case in cases:
- out=build/case;out.mkdir();run([build/'test',build,case,out])
+ out=build/case;out.mkdir();cmd=[str(x) for x in [build/'test',build,case,out]];commands.append(cmd)
+ try:
+  result=subprocess.run(cmd,timeout=180)
+  expected=77 if case.endswith('-cut') else 87 if case=='retained-init' else 0
+  if result.returncode!=expected:failures.append(dict(case=case,actual=result.returncode,expected=expected))
+ except subprocess.TimeoutExpired:failures.append(dict(case=case,error='timeout'))
+if failures:raise SystemExit(json.dumps(dict(failures=failures)))
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
 (build/'manifest.json').write_text(json.dumps(dict(cases=cases,commands=commands,local_fresh_permission=a.allow_fresh,source_hashes={str(p.relative_to(root)):sha(p) for directory in ['src','experimental/native_replica','test','sdk'] for p in (root/directory).rglob('*') if p.is_file() and p.suffix in ['.h','.cpp','.c','.py']},sdk_hashes={p.name:sha(p) for p in sdk.glob('*.h')},generated_fixture_sha256=sha(prefix),generated_stubs={str(p.relative_to(stubs)):sha(p) for p in stubs.rglob('*') if p.is_file()},sanitizers='address,undefined' if a.sanitize else 'none',binary_sha256=sha(build/'test')),indent=2)+'\n')

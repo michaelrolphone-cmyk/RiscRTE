@@ -16,6 +16,7 @@ on:
       - 'test/native_settings_backend_test.cpp'
       - 'test/run_native_settings_backend_test.py'
       - 'src/ports/esp32s3/NativeSettings*'
+      - 'test/native_settings_local_mount_bridge.*'
       - 'test/native_settings_local_only_port_test.cpp'
       - 'test/run_native_settings_local_only_port_test.py'
       - '.github/workflows/native-local-only-core.yml'

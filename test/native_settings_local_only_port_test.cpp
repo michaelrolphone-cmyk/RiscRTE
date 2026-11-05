@@ -1,6 +1,7 @@
 // Reuse only host NVS/RTOS/heap/port fixtures. This binary never creates an SD
 // pin in ordinary cases, loads a volume driver, imports a card image or runs
 // the external main. The isolated probe must intercept a forbidden acquire.
+extern "C" void local_port_after_nvs_commit();
 #include NATIVE_LOCAL_PORT_FIXTURE
 
 extern "C" void attemptedExternalAcquire() asm("_ZN16RiscExperimental19NativeSdPortAttempt7acquireEv");
@@ -32,6 +33,18 @@ static void loadLocalState(const std::string&path){
  auto str=[&](){auto n=word();assert(n<64);std::string v(n,' ');rows.read(v.data(),n);assert(rows);return v;};
  nvs.clear();auto count=word();assert(count<16);for(unsigned i=0;i<count;++i){auto space=str();auto entries=word();assert(entries<64);for(unsigned j=0;j<entries;++j){auto key=str();auto n=word();auto&v=nvs[space][key];v.resize(n);rows.read(reinterpret_cast<char*>(v.data()),n);assert(rows);}}
 }
+
+extern "C" void local_port_after_nvs_commit(){
+ if(mode!="fresh-cut"&&mode!="legacy-cut")return;
+ auto it=nvs.find("rnr00000006");if(it==nvs.end())return;
+ auto row=it->second.find("root");if(row==it->second.end()||row->second.size()!=48)return;
+ const char*expected=mode=="fresh-cut"?"RTENFL1":"RTENLL1";
+ if(memcmp(row->second.data(),expected,8))return;
+ assert(task==Task::NativeSettings&&M::held()&&!core(6)->ready());
+ saveLocalState(output);noExternal();
+ puts("PROCESS CUT after exact durable local initialization receipt, before bank publication");fflush(stdout);std::_Exit(77);
+}
+
 static void seedRefusedMetadata(const std::string&kind){
  Bytes root(48,0);const char*magic=kind=="external-fresh"?"RTENFI1":kind=="external-import"?"RTENLI1":kind=="external-unclassified"?"RTENINIT":"BADROOT!";
  memcpy(root.data(),magic,8);root[8]=6;
@@ -76,15 +89,16 @@ int main(int argc,char**argv){
  const auto peer=nvs.at("rte00000001");
  const bool refused=mode=="external-fresh"||mode=="external-import"||mode=="external-unclassified"||mode=="malformed-root";
  if(refused)seedRefusedMetadata(mode);
+ const bool resume=mode=="fresh-resume"||mode=="legacy-resume";
  const bool reboot=mode=="legacy-reboot"||mode=="fresh-reboot";
- const bool imported=mode=="legacy"||mode=="legacy-reboot"||mode=="held-grants"||mode=="cancel-inspect"||mode=="cancel-init"||mode=="cancel-committed";
+ const bool imported=mode=="legacy"||mode=="legacy-reboot"||mode=="legacy-cut"||mode=="legacy-resume"||mode=="held-grants"||mode=="retained-init"||mode=="cancel-inspect"||mode=="cancel-init"||mode=="cancel-committed";
  if(imported)nvs["rte00000006"]["opaque:nonwifi"]={'k','e','e','p'};
- if(reboot)loadLocalState(output+"/../"+(imported?"legacy":"fresh"));
+ if(reboot||resume)loadLocalState(output+"/../"+(imported?(resume?"legacy-cut":"legacy"):(resume?"fresh-cut":"fresh")));
  const auto original=nvs;
  native_lfs_fixture_shutdown();native_lfs_fixture_select_appdata();
- assert(M::prepare(static_cast<const esp_partition_t*>(native_lfs_fixture_partition())));
+ assert(M::prepare(native_lfs_fixture_partition()));
  assert(!native_lfs_fixture_reboot()&&M::finish());
- if(!reboot){M::Guard g(M::Access::AppData);assert(g.held);assert(!native_lfs_fixture_mkdir("/n00000001"));assert(!native_lfs_fixture_seed("/n00000001/peer","preserve",8));}
+ if(!reboot&&!resume){M::Guard g(M::Access::AppData);assert(g.held);assert(!native_lfs_fixture_mkdir("/n00000001"));assert(!native_lfs_fixture_seed("/n00000001/peer","preserve",8));}
  assert(B::prepare(owner));admission=B::admission();assert(admission&&F::maintenance());
  assert(core(1)->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1&&core(6)->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1);
  assert(L::prepare(admission,{owner,schedule,[](){return uint32_t(nowMs);},[](){return requestCancel;}}));
@@ -106,20 +120,24 @@ int main(int argc,char**argv){
  const auto before=flashBytes();
  if(refused){
   assert(!L::hydrate(runtime,cpu)&&!core(6)->ready()&&nvs==original&&flashBytes()==before);
-  const auto&e=W::coordinator(6)->endpoint();risc_key_value_atomic_state_v1 state{sizeof(state)};assert(e.state(e.context,&state)!=RISC_ATOMIC_OK);
+  const auto e=W::coordinator(6)->endpoint().api();risc_key_value_atomic_state_v1 state{sizeof(state)};assert(e.state(e.context,&state)!=RISC_ATOMIC_OK);
   assert(!queuedInitializations&&!enteredInitializations&&L::exitSafe()&&L::shutdown());Shim::stop();noExternal();
   printf("PASS local-only policy refusal %s: no availability or mutation\n",mode.c_str());return 0;
  }
  assert(L::hydrate(runtime,cpu)&&L::ready()&&L::attachOwner(runtime,cpu));
  assert(core(6)->ready()==reboot&&availability(6)==(reboot?RISC_KEY_VALUE_AVAILABLE:RISC_KEY_VALUE_UNAVAILABLE));
- const auto&writer=W::coordinator(6)->endpoint();risc_key_value_atomic_state_v1 state{sizeof(state)};
+ const auto writer=W::coordinator(6)->endpoint().api();risc_key_value_atomic_state_v1 state{sizeof(state)};
  if(!reboot)assert(writer.state(writer.context,&state)!=RISC_ATOMIC_OK);noExternal();
  if(mode=="held-grants"){assert(runtime.run()&&!runtime.retained());}
  else if(!reboot)assert(L::discoveryCheckpoint()&&L::discovering()&&!L::exitSafe());
  if(mode=="cancel-inspect")requestCancel=true;
- bool cancelledAtInit=false,cancelledCommitted=false;
+ bool cancelledAtInit=false,cancelledCommitted=false,retainedFaultArmed=false;
  for(unsigned i=0;i<300000&&L::discovering();++i){
-  assert(L::discoveryCheckpoint());
+  const bool checkpoint=L::discoveryCheckpoint();
+  if(!checkpoint){assert(mode=="retained-init"&&L::retained());break;}
+  if(mode=="retained-init"&&queuedInitializations&&!enteredInitializations&&!retainedFaultArmed){
+   native_lfs_fixture_fault(NATIVE_LFS_FLASH_PROG,2,NATIVE_LFS_FAIL_BEFORE);retainedFaultArmed=true;
+  }
   if(mode=="cancel-init"&&queuedInitializations&&!enteredInitializations&&!requestCancel){
    assert(!core(6)->ready()&&availability(6)!=RISC_KEY_VALUE_AVAILABLE);
    requestCancel=true;cancelledAtInit=true;
@@ -130,6 +148,16 @@ int main(int argc,char**argv){
    assert(L::discovering()&&!L::exitSafe()&&availability(6)!=RISC_KEY_VALUE_AVAILABLE);
    requestCancel=true;cancelledCommitted=true;
   }
+ }
+ if(mode=="retained-init"){
+  assert(retainedFaultArmed&&L::retained()&&!L::exitSafe()&&!W::exitSafe()&&M::retained()&&availability(6)!=RISC_KEY_VALUE_AVAILABLE);
+  assert(nvs.at("rte00000001")==peer&&nvs.at("rte00000006")==original.at("rte00000006"));
+  native_lfs_fixture_counters beforeCalls{},afterCalls{};native_lfs_fixture_get_counters(&beforeCalls);const auto beforeNvsCalls=nvsCalls;
+  assert(!L::checkpoint(true)&&!L::shutdown());native_lfs_fixture_get_counters(&afterCalls);
+  assert(!memcmp(&beforeCalls,&afterCalls,sizeof(beforeCalls))&&nvsCalls==beforeNvsCalls);noExternal();
+  // Permanent retained controls are not destroyed. Only this isolated process
+  // ends; all ordinary cases keep normal teardown and LeakSanitizer enabled.
+  puts("PASS local-only retained initialization: unavailable, custody held, later I/O blocked");fflush(stdout);std::_Exit(87);
  }
  assert(!L::discovering()&&L::exitSafe()&&!L::retained());
  if(mode=="cancel-inspect"||mode=="cancel-init"){
