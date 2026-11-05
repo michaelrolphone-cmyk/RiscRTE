@@ -46,6 +46,7 @@ class NativeBaselineAdmission {
   uint32_t importedInventoryVersion=0;
   int(*resumeImportedMaterialize)(void*,uint32_t,const C::ImportInitReceipt&,const Rows&,Witness*)=nullptr;
   int(*recheckImported)(void*,uint32_t,const C::ImportInitReceipt&,const Witness&)=nullptr;
+  C::DurabilityPolicy durabilityPolicy=C::DurabilityPolicy::ExternalVolume;
  };
  NativeBaselineAdmission(void*owner,C&core,Guard guard,Digest digest,Sources sources,C::Allocator alloc=C::heap())
   :owner_(owner),core_(core),guard_(guard),hash_(digest),sources_(sources),alloc_(alloc){}
@@ -120,18 +121,22 @@ class NativeBaselineAdmission {
  }
  int admit(const Selection*selection,C::Initialization*out,bool resume=false,bool resumeImport=false){
   const bool imported=selection||resumeImport,checkedImport=imported&&sources_.importedInventoryVersion;
+  if(sources_.durabilityPolicy!=core_.durabilityPolicy())return C::Conflict;
+  // LocalOnly receipt recovery is deliberately unavailable until its distinct
+  // checked-store protocol is wired. Never adopt an old external receipt.
+  if(core_.localOnly()&&(resume||resumeImport||checkedImport))return C::Conflict;
   if(entered_||core_.admissionBusy_)return C::Busy;
   if(retained_)return C::Retained;
   if(!out||out->prepared_||out->map_||!configured(imported)||(resumeImport&&!importRecovery())||!core_.validConfiguration())return C::Invalid;
   if(selection&&(!selection->kind||C::zero(selection->fingerprint,32)))return C::Invalid;
   Entry entry(*this,true);int rc=custody();if(rc)return rc;
   if(core_.bytes_)return C::Conflict;
-  if(core_.imageCapacity()<C::HeaderV3+4||serial_==UINT64_MAX)return C::NoSpace;
+  if(core_.imageCapacity()<core_.genesisHeaderSize()+4||serial_==UINT64_MAX)return C::NoSpace;
   const uint64_t epoch=guard_.leaseEpoch(guard_.context);C::FreshInitReceipt receipt;C::ImportInitReceipt importReceipt;
   rc=resumeImport?selectedImportReceipt(&importReceipt):resume?selectedReceipt(&receipt):absent();if(rc)return rc;
   Witness witness{};
   if(imported){
-   out->capacity_=core_.imageCapacity()-C::HeaderV3-4;out->alloc_=alloc_;
+   out->capacity_=core_.imageCapacity()-core_.genesisHeaderSize()-4;out->alloc_=alloc_;
    if(out->capacity_){out->map_=static_cast<uint8_t*>(alloc_.allocate(alloc_.context,out->capacity_));if(!out->map_){out->reset();return C::NoMemory;}std::memset(out->map_,0,out->capacity_);}
    Sink sink{this,out,C::Ok};Rows rows{&sink,row};rc=resumeImport?sources_.resumeImportedMaterialize(sources_.context,core_.namespaceId(),importReceipt,rows,&witness):sources_.materialize(sources_.context,core_.namespaceId(),*selection,rows,&witness);if(!rc)rc=sink.error;
   }else if(resume)rc=sources_.resumeFreshInventory(sources_.context,core_.namespaceId(),receipt,&witness);

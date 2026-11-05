@@ -1,0 +1,33 @@
+name: Native LocalOnly Core Policy
+on:
+  pull_request:
+    paths:
+      - 'experimental/native_replica/NativeReplicaCore.h'
+      - 'experimental/native_replica/NativeBaselineAdmission.h'
+      - 'test/native_local_only_core_test.cpp'
+      - 'test/native_replica_core_test.cpp'
+      - 'test/run_native_local_only_core_test.sh'
+      - 'test/run_native_replica_core_test.sh'
+      - '.github/workflows/native-local-only-core.yml'
+permissions:
+  contents: read
+jobs:
+  core-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      SANITIZERS: address,undefined
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Existing external Core regression
+        run: timeout 300 bash test/run_native_replica_core_test.sh
+      - name: LocalOnly genesis and bounded checkpoint model
+        if: ${{ !cancelled() }}
+        run: timeout 300 bash test/run_native_local_only_core_test.sh

@@ -13,6 +13,7 @@ class NativeReplicaCore {
  public:
  enum Result { Ok=0, Missing=-1, Invalid=-2, NoMemory=-3, NoSpace=-4,
                Io=-5, Uncertain=-6, Conflict=-7, Stale=-8, BufferSmall=-9, Busy=-10, Retained=-11, Initializing=-12 };
+ enum class DurabilityPolicy:uint32_t {ExternalVolume=0,LocalOnlyV1=1};
  struct Identity {
   bool known=false; uint64_t generation=0; uint8_t lineage[16]{}, digest[32]{};
  };
@@ -56,6 +57,8 @@ class NativeReplicaCore {
   int(*readSdInitialization)(void*,SdInitReceipt*)=nullptr;
   int(*beginSdInitialization)(void*,const Initialization&)=nullptr;
   void(*endSdInitialization)(void*)=nullptr;
+  // Explicit opt-in; absent means only the unchanged external protocol.
+  bool(*supportsLocalOnlyV1)(void*)=nullptr;
  };
  struct Ticket { uint64_t serial=0, revision=0, through=0; uint32_t mapCrc=0; };
  enum class Origin:uint32_t {Unclassified=0,FreshEmpty=1,ImportedLegacy=2};
@@ -155,7 +158,7 @@ class NativeReplicaCore {
   friend class NativeReplicaCore;
   uint8_t*bytes_=nullptr;uint32_t size_=0;Allocator alloc_{};Ticket ticket_{};const NativeReplicaCore*owner_=nullptr;
  };
- static constexpr uint32_t Header=128, HeaderV2=384, HeaderV3=480, HeaderV4=512, ProvenanceBytes=96, MarkerBytes=256, GroupHeader=88, RootBytes=48, ValueMax=2048;
+ static constexpr uint32_t Header=128, HeaderV2=384, HeaderV3=480, HeaderV4=512, HeaderV5=512, ProvenanceBytes=96, MarkerBytes=256, GroupHeader=88, RootBytes=48, ValueMax=2048;
  // A copied handle has authority only while these exact bytes are selected by
  // this native root. There is deliberately no decoder/import setter API.
  class ExportMarker {
@@ -181,23 +184,28 @@ class NativeReplicaCore {
 
  static void wipe(void*p,size_t n){auto*v=static_cast<volatile uint8_t*>(p);while(n--)*v++=0;}
  static Allocator heap(){return {nullptr,[](void*,size_t n)->void*{if(n>SIZE_MAX-sizeof(uint64_t))return nullptr;auto*p=static_cast<uint64_t*>(std::malloc(n+sizeof(uint64_t)));if(!p)return nullptr;*p=n;return p+1;},[](void*,void*p){auto*base=static_cast<uint64_t*>(p)-1;const size_t n=size_t(*base);wipe(p,n);wipe(base,sizeof(uint64_t));std::free(base);}};}
- NativeReplicaCore(uint32_t ns,const Backend&backend,const Limits&limits,const Allocator&alloc)
-  :ns_(ns),b_(backend),limits_(limits),alloc_(alloc){}
+ NativeReplicaCore(uint32_t ns,const Backend&backend,const Limits&limits,const Allocator&alloc,DurabilityPolicy policy=DurabilityPolicy::ExternalVolume)
+  :policy_(policy),ns_(ns),b_(backend),limits_(limits),alloc_(alloc){}
  ~NativeReplicaCore(){drop(bytes_);}
  NativeReplicaCore(const NativeReplicaCore&)=delete;
  NativeReplicaCore&operator=(const NativeReplicaCore&)=delete;
+ DurabilityPolicy durabilityPolicy()const{return policy_;}
+ bool localOnly()const{return policy_==DurabilityPolicy::LocalOnlyV1;}
+ uint32_t genesisHeaderSize()const{return localOnly()?HeaderV5:HeaderV3;}
+ uint64_t localCheckpointThrough()const{return ready()&&localOnly()?wide(bytes_+488):0;}
+ uint32_t localProofCount()const{return ready()&&localOnly()?word(bytes_+496):0;}
  bool ready()const{return bytes_&&!uncertain_;}
  uint32_t namespaceId()const{return ns_;}
  Allocator payloadAllocator()const{return alloc_;} // Native copied scratch uses the same no-fallback payload policy.
  // Read-only exact native composition check; it grants no initialization authority.
- bool usesBackend(const Backend&b)const{return b_.context==b.context&&b_.readRoot==b.readRoot&&b_.reserve==b.reserve&&b_.write==b.write&&b_.read==b.read&&b_.seal==b.seal&&b_.replaceRoot==b.replaceRoot&&b_.retire==b.retire&&b_.readInitialization==b.readInitialization&&b_.beginFreshInitialization==b.beginFreshInitialization&&b_.endFreshInitialization==b.endFreshInitialization&&b_.readImportedInitialization==b.readImportedInitialization&&b_.beginImportedInitialization==b.beginImportedInitialization&&b_.endImportedInitialization==b.endImportedInitialization&&b_.readSdInitialization==b.readSdInitialization&&b_.beginSdInitialization==b.beginSdInitialization&&b_.endSdInitialization==b.endSdInitialization;}
+ bool usesBackend(const Backend&b)const{return b_.context==b.context&&b_.readRoot==b.readRoot&&b_.reserve==b.reserve&&b_.write==b.write&&b_.read==b.read&&b_.seal==b.seal&&b_.replaceRoot==b.replaceRoot&&b_.retire==b.retire&&b_.readInitialization==b.readInitialization&&b_.beginFreshInitialization==b.beginFreshInitialization&&b_.endFreshInitialization==b.endFreshInitialization&&b_.readImportedInitialization==b.readImportedInitialization&&b_.beginImportedInitialization==b.beginImportedInitialization&&b_.endImportedInitialization==b.endImportedInitialization&&b_.readSdInitialization==b.readSdInitialization&&b_.beginSdInitialization==b.beginSdInitialization&&b_.endSdInitialization==b.endSdInitialization&&b_.supportsLocalOnlyV1==b.supportsLocalOnlyV1;}
  uint32_t imageCapacity()const{return limits_.imageBytes;}
  uint32_t headerSize()const{return ready()?imageHeader(bytes_):0;}
  uint32_t formatVersion()const{return ready()?imageVersion(bytes_):0;}
  Baseline baseline()const{return ready()?baselineAt(bytes_):Baseline{};}
- bool pendingOnlyAdoptionAllowed()const{return ready()&&(identity().known||baseline().origin()==Origin::FreshEmpty);}
- bool exportIncarnationRequired()const{return ready()&&(headerSize()==Header||zero(bytes_+112,16));}
- bool exportPrepared()const{return ready()&&headerSize()>=HeaderV2&&!zero(bytes_+Header,MarkerBytes);}
+ bool pendingOnlyAdoptionAllowed()const{return ready()&&!localOnly()&&(identity().known||baseline().origin()==Origin::FreshEmpty);}
+ bool exportIncarnationRequired()const{return ready()&&!localOnly()&&(headerSize()==Header||zero(bytes_+112,16));}
+ bool exportPrepared()const{return ready()&&!localOnly()&&headerSize()>=HeaderV2&&!zero(bytes_+Header,MarkerBytes);}
  uint64_t revision()const{return ready()?wide(bytes_+16):0;}
  uint64_t sequence()const{return ready()?wide(bytes_+24):0;}
  uint32_t pendingCount()const{return ready()?word(bytes_+100):0;}
@@ -220,6 +228,7 @@ class NativeReplicaCore {
  // Origin stays Unclassified even for an empty map. A known base requires a
  // trusted controller's complete validated selected-baseline values.
  int initialize(const Value*values,uint32_t count,const Identity&base){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!validConfiguration()||!validIdentity(base)||!validValues(values,count))return Invalid;
   if(bytes_)return Conflict;
@@ -259,10 +268,11 @@ class NativeReplicaCore {
   for(uint32_t i=0;i<word(bytes_+96);++i){const char*k=reinterpret_cast<const char*>(bytes_+at);const uint32_t n=word(bytes_+at+16);const auto*m=mutation(changes,count,k);
    if(!m){mapBytes+=20+n;++entries;}else if(m->kind==Put){mapBytes+=20+m->size;++entries;}at+=20+n;}
   for(uint32_t i=0;i<count;++i)if(changes[i].kind==Put&&!has(changes[i].key)){mapBytes+=20+changes[i].size;++entries;}
-  const uint32_t oldGroups=size_-headerSize()-word(bytes_+104)-4;
+  const uint32_t oldGroups=localOnly()?0:size_-headerSize()-word(bytes_+104)-4;
   const uint64_t total=headerSize()+mapBytes+oldGroups+groupSize+4;if(!fits(total))return NoSpace;
   auto*p=allocate(uint32_t(total));if(!p)return NoMemory;
-  makeHeader(p,revision()+1,sequence()+1,wide(bytes_+32),identity(),entries,pendingCount()+1,uint32_t(mapBytes),uint32_t(total));
+  makeHeader(p,revision()+1,sequence()+1,wide(bytes_+32),identity(),entries,localOnly()?0:pendingCount()+1,uint32_t(mapBytes),uint32_t(total));
+  if(localOnly()){putWide(p+488,sequence());putWord(p+496,1);}
   uint32_t out=headerSize();at=headerSize();
   for(uint32_t i=0;i<word(bytes_+96);++i){const char*k=reinterpret_cast<const char*>(bytes_+at);const uint32_t n=word(bytes_+at+16);const auto*m=mutation(changes,count,k);
    if(!m)out=writeValue(p,out,{k,bytes_+at+20,n});else if(m->kind==Put)out=writeValue(p,out,{k,m->data,m->size});at+=20+n;}
@@ -277,6 +287,7 @@ class NativeReplicaCore {
  // this exact captured map is durably on SD, including checked close, first.
  // No "generation zero beats newer SD" comparison is made here.
  int capture(Ticket*out){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!out)return Invalid;
   if(!ready())return Uncertain;
@@ -286,6 +297,7 @@ class NativeReplicaCore {
  // Call under the native serialization lease. No storage I/O; copy precedes
  // ticket replacement so an allocation failure cannot invalidate a live export.
  int captureSnapshot(Snapshot*out){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!out||out->valid())return Invalid;
   if(!ready())return Uncertain;
@@ -298,6 +310,7 @@ class NativeReplicaCore {
  // incarnation for a v1 upgrade or zero-incarnation v3, never SD lineage or clock-derived IDs.
  // Target digest/map identity comes from trusted transport. Arm before SD I/O.
  int prepareExport(const Snapshot&snapshot,const Identity&target,const uint8_t*newIncarnation,ExportMarker*out){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!out)return Invalid;
   if(!ready())return Uncertain;
@@ -329,6 +342,7 @@ class NativeReplicaCore {
   const int rc=publish(p,uint32_t(total));if(rc==Ok){ticketLive_=false;std::memcpy(out->bytes_,bytes_+Header,MarkerBytes);}return rc;
  }
  int preparedExport(ExportMarker*out)const{
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!out)return Invalid;
   if(!ready())return Uncertain;
@@ -339,6 +353,7 @@ class NativeReplicaCore {
  // the exclusive same-medium lease/quiescence through this native transition.
  // Marker/root equality confers native authority; an inactive bank never does.
  int acknowledgeExport(const ExportMarker&expected,const Identity&verifiedTarget){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!ready())return Uncertain;
   if(!selectedMarker(expected))return Stale;
@@ -357,6 +372,7 @@ class NativeReplicaCore {
  // Caller freshly verified the exact previous base under the same held lease.
  // Retiring an unpublished attempt never acknowledges or rewrites local edits.
  int retireExport(const ExportMarker&expected,const Identity&verifiedBase){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!ready())return Uncertain;
   if(!selectedMarker(expected))return Stale;
@@ -368,6 +384,7 @@ class NativeReplicaCore {
   const int rc=publish(p,size_);if(rc==Ok)ticketLive_=false;return rc;
  }
  int acknowledge(const Ticket&t,const Identity&confirmed){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!ready())return Uncertain;
   if(exportPrepared())return Busy;
@@ -390,6 +407,7 @@ class NativeReplicaCore {
  // until SD acknowledgement. This core cannot validate application semantics.
  // The revision compare prevents a newer local operation being overwritten.
  int installResolved(uint64_t expectedRevision,const Value*values,uint32_t count,const Identity&base,const uint64_t*resolved,uint32_t resolvedCount){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!ready())return Uncertain;
   if(exportPrepared())return Busy;
@@ -408,6 +426,18 @@ class NativeReplicaCore {
   int rc=publish(p,uint32_t(total));if(rc==Ok)ticketLive_=false;return rc;
  }
  // Copy one semantic intent, not credentials to logs. Cursor is a local op ID.
+ // Local proof is not an external replication obligation.
+ int localProof(uint64_t*id,void*out,uint32_t cap,uint32_t*size)const{
+  if(size)*size=0;
+  if(!id||!size||(!out&&cap))return Invalid;
+  if(admissionBusy_)return Busy;
+  if(!localOnly())return Conflict;
+  if(!ready())return Uncertain;
+  if(!localProofCount())return Missing;
+  const auto*g=bytes_+headerSize()+word(bytes_+104);*id=wide(g);*size=word(g+24);
+  if(cap<*size)return BufferSmall;
+  std::memcpy(out,g+GroupHeader+word(g+28),*size);return Ok;
+ }
  int pending(uint64_t after,uint64_t*id,void*out,uint32_t cap,uint32_t*size)const{
   if(admissionBusy_)return Busy;
   if(size)*size=0;
@@ -422,6 +452,7 @@ class NativeReplicaCore {
  // live vacant inventory. V4 carries the immutable captured map in every native
  // publication, so inactive-bank reuse and newer edits cannot destroy recovery.
  int prepareFirstExport(const Snapshot&s,const Identity&target,const uint8_t*incarnation,ExportMarker*out){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!ready())return Uncertain;
   if(!out||!s.valid())return Invalid;
@@ -450,6 +481,7 @@ class NativeReplicaCore {
   const int rc=publish(p,uint32_t(total));if(!rc){ticketLive_=false;std::memcpy(out->bytes_,bytes_+Header,MarkerBytes);}return rc;
  }
  int firstExportSnapshot(const ExportMarker&m,Snapshot*out){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!ready())return Uncertain;
   if(!out||out->valid())return Invalid;
@@ -478,6 +510,7 @@ class NativeReplicaCore {
  struct FreshScope {Backend&backend;bool started=false,imported=false;~FreshScope(){if(started){if(imported)backend.endImportedInitialization(backend.context);else backend.endFreshInitialization(backend.context);}}};
  struct SdScope {Backend&backend;bool started=false;~SdScope(){if(started)backend.endSdInitialization(backend.context);}};
  int initializeSdAdmitted(Initialization&a){
+  if(localOnly())return Conflict;
   if(admissionBusy_)return Busy;
   if(!validConfiguration()||!sdHooks()||!a.valid()||a.core_!=this||a.backendContext_!=b_.context||a.namespace_!=ns_||!a.factory_||!a.owner_||!a.revalidate_||!a.complete_||!a.sdCustody_||!a.sdIdentity_.known||!validIdentity(a.sdIdentity_)||(a.mode_!=Initialization::Mode::CreateSd&&a.mode_!=Initialization::Mode::ResumeSd))return Invalid;
   AdmissionScope scope(admissionBusy_);a.consumed_=true;int rc=Ok;AdmissionCompletion complete{a,rc};SdScope permit{b_};
@@ -508,13 +541,14 @@ class NativeReplicaCore {
   // canonical construction precede the final full source/root revalidation.
   rc=fresh?a.freshCustody_(a.factory_,a,nullptr):checkedImport?a.importCustody_(a.factory_,a,nullptr):a.revalidate_(a.factory_,a,*this);if(rc)return rc;
   if(!fresh&&!checkedImport){uint8_t root[RootBytes]{};rc=b_.readRoot(b_.context,root,sizeof root);if(rc!=Missing)return rc=rc?rc:int(Conflict);}
-  const uint64_t total=uint64_t(HeaderV3)+a.mapBytes_+4;if(!fits(total))return rc=NoSpace;
+  const uint32_t genesisHeader=genesisHeaderSize();
+  const uint64_t total=uint64_t(genesisHeader)+a.mapBytes_+4;if(!fits(total))return rc=NoSpace;
   auto*p=allocate(uint32_t(total));if(!p)return rc=NoMemory;
-  if(fresh)makeFreshEmpty(p,ns_);
+  if(fresh)makeFreshEmpty(p,ns_,policy_);
   else{
-   makeHeader(p,1,0,0,{},a.count_,0,a.mapBytes_,uint32_t(total),HeaderV3);
+   makeHeader(p,1,0,0,{},a.count_,0,a.mapBytes_,uint32_t(total),genesisHeader);
    std::memset(p+112,0,HeaderV3-112);std::memcpy(p+HeaderV2,a.baseline_.bytes_,ProvenanceBytes);
-   if(a.mapBytes_)std::memcpy(p+HeaderV3,a.map_,a.mapBytes_);
+   if(a.mapBytes_)std::memcpy(p+genesisHeader,a.map_,a.mapBytes_);
    finish(p,uint32_t(total));
   }
   if(!validate(p,uint32_t(total))){drop(p);return rc=Invalid;}
@@ -529,6 +563,7 @@ class NativeReplicaCore {
   }
   return rc=publish(p,uint32_t(total),&scratch);
  }
+ DurabilityPolicy policy_;
  uint32_t ns_;Backend b_;Limits limits_;Allocator alloc_;uint8_t*bytes_=nullptr;uint32_t size_=0;uint64_t object_=0;bool uncertain_=false;
  Ticket ticket_{};Identity ticketBase_{};uint64_t ticketSerial_=0;bool ticketLive_=false;
  static uint32_t word(const uint8_t*p){return uint32_t(p[0])|(uint32_t(p[1])<<8)|(uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);}
@@ -539,9 +574,11 @@ class NativeReplicaCore {
  static bool validFreshReceipt(const uint8_t*p){return !std::memcmp(p,"RTENFI1",8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
  static bool validSdReceipt(const uint8_t*p){return !std::memcmp(p,"RTENSI1",8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
  static bool validImportReceipt(const uint8_t*p){return !std::memcmp(p,"RTENLI1",8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
- static void makeFreshEmpty(uint8_t*p,uint32_t ns){
-  std::memset(p,0,HeaderV3+4);std::memcpy(p,"RTENR03",8);putWord(p+8,ns);putWide(p+16,1);putWord(p+108,HeaderV3+4);
-  auto*b=p+HeaderV2;std::memcpy(b,"RTENBP1",8);putWord(b+8,ns);putWord(b+12,uint32_t(Origin::FreshEmpty));putWord(b+92,crc(b,92));finish(p,HeaderV3+4);
+ static void makeFreshEmpty(uint8_t*p,uint32_t ns,DurabilityPolicy policy=DurabilityPolicy::ExternalVolume){
+  const bool local=policy==DurabilityPolicy::LocalOnlyV1;const uint32_t header=local?HeaderV5:HeaderV3;
+  std::memset(p,0,header+4);std::memcpy(p,local?"RTENR05":"RTENR03",8);putWord(p+8,ns);putWide(p+16,1);putWord(p+108,header+4);
+  if(local){putWord(p+480,1);putWord(p+484,1);}
+  auto*b=p+HeaderV2;std::memcpy(b,"RTENBP1",8);putWord(b+8,ns);putWord(b+12,uint32_t(Origin::FreshEmpty));putWord(b+92,crc(b,92));finish(p,header+4);
  }
  static uint32_t chunk(uint32_t n){return n>4096?4096:n;}
  static bool validKey(const char*s){if(!s||!*s)return false;for(unsigned i=0;i<16;++i){const char c=s[i];if(!c)return true;if(!((c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='.'||c=='_'||c=='-'))return false;}return false;}
@@ -550,8 +587,8 @@ class NativeReplicaCore {
  static bool sameIdentity(const Identity&a,const Identity&b){return a.known==b.known&&a.generation==b.generation&&!std::memcmp(a.lineage,b.lineage,16)&&!std::memcmp(a.digest,b.digest,32);}
  static bool sameTicket(const Ticket&a,const Ticket&b){return a.serial==b.serial&&a.revision==b.revision&&a.through==b.through&&a.mapCrc==b.mapCrc;}
  static Identity identityAt(const uint8_t*p){Identity i{};i.known=word(p+12)!=0;i.generation=wide(p+40);std::memcpy(i.lineage,p+48,16);std::memcpy(i.digest,p+64,32);return i;}
- static uint32_t imageVersion(const uint8_t*p){return !std::memcmp(p,"RTENR01",8)?1:!std::memcmp(p,"RTENR02",8)?2:!std::memcmp(p,"RTENR03",8)?3:!std::memcmp(p,"RTENR04",8)?4:0;}
- static uint32_t imageHeader(const uint8_t*p){const uint32_t v=imageVersion(p);return v==1?Header:v==2?HeaderV2:v==3?HeaderV3:v==4?HeaderV4+word(p+HeaderV3):0;}
+ static uint32_t imageVersion(const uint8_t*p){return !std::memcmp(p,"RTENR01",8)?1:!std::memcmp(p,"RTENR02",8)?2:!std::memcmp(p,"RTENR03",8)?3:!std::memcmp(p,"RTENR04",8)?4:!std::memcmp(p,"RTENR05",8)?5:0;}
+ static uint32_t imageHeader(const uint8_t*p){const uint32_t v=imageVersion(p);return v==1?Header:v==2?HeaderV2:v==3?HeaderV3:v==4?HeaderV4+word(p+HeaderV3):v==5?HeaderV5:0;}
  static Baseline baselineAt(const uint8_t*p){Baseline result;if(imageVersion(p)>=3)std::memcpy(result.bytes_,p+HeaderV2,ProvenanceBytes);return result;}
  bool validBaseline(const uint8_t*p)const{
   if(std::memcmp(p,"RTENBP1",8)||word(p+8)!=ns_||word(p+12)>uint32_t(Origin::ImportedLegacy)||word(p+92)!=crc(p,92))return false;
@@ -592,7 +629,7 @@ class NativeReplicaCore {
  bool selectedMarker(const ExportMarker&m)const{return exportPrepared()&&!std::memcmp(m.bytes_,bytes_+Header,MarkerBytes)&&validSelectedMarker(bytes_,size_);}
  static bool validValues(const Value*v,uint32_t n){if(n&&!v)return false;for(uint32_t i=0;i<n;++i){if(!validKey(v[i].key)||!v[i].data||!v[i].size||v[i].size>ValueMax)return false;for(uint32_t j=0;j<i;++j)if(!std::strcmp(v[i].key,v[j].key))return false;}return true;}
  static bool validMutations(const Mutation*m,uint32_t n){if(!n||!m)return false;for(uint32_t i=0;i<n;++i){if(!validKey(m[i].key)||(m[i].kind!=Put&&m[i].kind!=Delete)||(m[i].kind==Put&&(!m[i].data||!m[i].size||m[i].size>ValueMax))||(m[i].kind==Delete&&(m[i].size||m[i].data)))return false;for(uint32_t j=0;j<i;++j)if(!std::strcmp(m[i].key,m[j].key))return false;}return true;}
- bool validConfiguration()const{return ns_&&limits_.imageBytes>=Header+4&&limits_.groupBytes>=GroupHeader+25&&limits_.intentBytes&&limits_.intentBytes<=limits_.groupBytes&&alloc_.allocate&&alloc_.release&&b_.readRoot&&b_.reserve&&b_.write&&b_.read&&b_.seal&&b_.replaceRoot;}
+ bool validConfiguration()const{return (policy_==DurabilityPolicy::ExternalVolume||(localOnly()&&b_.supportsLocalOnlyV1&&b_.supportsLocalOnlyV1(b_.context)))&&ns_&&limits_.imageBytes>=Header+4&&limits_.groupBytes>=GroupHeader+25&&limits_.intentBytes&&limits_.intentBytes<=limits_.groupBytes&&alloc_.allocate&&alloc_.release&&b_.readRoot&&b_.reserve&&b_.write&&b_.read&&b_.seal&&b_.replaceRoot;}
  bool sdHooks()const{return ns_<=INT32_MAX&&b_.context&&b_.readSdInitialization&&b_.beginSdInitialization&&b_.endSdInitialization;}
  bool importHooks()const{return ns_<=INT32_MAX&&b_.context&&b_.readImportedInitialization&&b_.beginImportedInitialization&&b_.endImportedInitialization;}
  bool freshHooks()const{return ns_<=INT32_MAX&&b_.context&&b_.readInitialization&&b_.beginFreshInitialization&&b_.endFreshInitialization;}
@@ -604,13 +641,17 @@ class NativeReplicaCore {
  static uint32_t writeValue(uint8_t*p,uint32_t at,const Value&v){std::memset(p+at,0,20);std::strcpy(reinterpret_cast<char*>(p+at),v.key);putWord(p+at+16,v.size);std::memcpy(p+at+20,v.data,v.size);return at+20+v.size;}
  void makeHeader(uint8_t*p,uint64_t rev,uint64_t seq,uint64_t ack,const Identity&base,uint32_t entries,uint32_t groups,uint32_t mapBytes,uint32_t total,uint32_t header=0){
   if(!header)header=headerSize();
-  std::memset(p,0,header);std::memcpy(p,header>=HeaderV4?"RTENR04":header==HeaderV3?"RTENR03":header==HeaderV2?"RTENR02":"RTENR01",7);
+  std::memset(p,0,header);std::memcpy(p,localOnly()?"RTENR05":header>=HeaderV4?"RTENR04":header==HeaderV3?"RTENR03":header==HeaderV2?"RTENR02":"RTENR01",7);
   if(header>=HeaderV2&&bytes_&&imageHeader(bytes_)>=HeaderV2){std::memcpy(p+112,bytes_+112,HeaderV2-112);if(header>=HeaderV3&&imageVersion(bytes_)>=3)std::memcpy(p+HeaderV2,bytes_+HeaderV2,ProvenanceBytes);if(header>=HeaderV4&&imageVersion(bytes_)==4&&header==headerSize())std::memcpy(p+HeaderV3,bytes_+HeaderV3,header-HeaderV3);}
+  if(localOnly()){putWord(p+480,1);putWord(p+484,1);}
   putWord(p+8,ns_);putWord(p+12,base.known?1:0);putWide(p+16,rev);putWide(p+24,seq);putWide(p+32,ack);putWide(p+40,base.generation);std::memcpy(p+48,base.lineage,16);std::memcpy(p+64,base.digest,32);putWord(p+96,entries);putWord(p+100,groups);putWord(p+104,mapBytes);putWord(p+108,total);}
  static void finish(uint8_t*p,uint32_t n){putWord(p+n-4,crc(p,n-4));}
  static uint32_t groupSize(const uint8_t*p){return GroupHeader+word(p+24)+word(p+28);}
  bool validate(const uint8_t*p,uint32_t n)const{
   if(!fits(n))return false;
+  const bool local=imageVersion(p)==5;
+  if(local!=localOnly())return false;
+  if(local&&(n<HeaderV5+4||word(p+480)!=1||word(p+484)!=1||word(p+12)||!zero(p+32,64)||!zero(p+112,HeaderV2-112)||word(p+100)||!zero(p+500,12)||word(p+496)>1||((wide(p+24)==0)!=(word(p+496)==0))||wide(p+488)!=(wide(p+24)?wide(p+24)-1:0)||wide(p+24)==UINT64_MAX||wide(p+16)!=wide(p+24)+1||baselineAt(p).origin()==Origin::Unclassified))return false;
   if(imageVersion(p)==4&&(n<HeaderV4+4||word(p+HeaderV3)>n-HeaderV4-4||!zero(p+HeaderV3+4,28)||zero(p+Header,MarkerBytes)))return false;
   const uint32_t header=imageHeader(p);
   if(!header||n<header+4||word(p+8)!=ns_||word(p+12)>1||!wide(p+16)||wide(p+32)>wide(p+24)||word(p+108)!=n||(header==Header?!zero(p+112,16):header==HeaderV2?zero(p+112,16):(!validBaseline(p+HeaderV2)||(!zero(p+Header,MarkerBytes)&&zero(p+112,16))))||word(p+n-4)!=crc(p,n-4)||!validIdentity(identityAt(p))||word(p+104)>n-header-4)return false;
@@ -619,9 +660,9 @@ class NativeReplicaCore {
    for(uint32_t prev=header;prev<at;prev+=20+word(p+prev+16))if(!std::strcmp(reinterpret_cast<const char*>(p+prev),reinterpret_cast<const char*>(p+at)))return false;
    at+=20+len;}
   if(at!=mapEnd)return false;
-  uint64_t prior=wide(p+32);
-  for(uint32_t i=0;i<word(p+100);++i){if(at>n-4||n-4-at<GroupHeader)return false;const auto*g=p+at;const uint64_t size=uint64_t(GroupHeader)+word(g+24)+word(g+28);if(size>limits_.groupBytes||size>n-4-at||!word(g+24)||word(g+24)>limits_.intentBytes||!word(g+20)||wide(g)<=prior||wide(g)>wide(p+24)||word(g+16)>1||!zero(g+80,8))return false;
-   Identity base{};base.known=word(g+16)!=0;base.generation=wide(g+8);std::memcpy(base.lineage,g+32,16);std::memcpy(base.digest,g+48,32);if(!validIdentity(base))return false;
+  uint64_t prior=local?wide(p+488):wide(p+32);
+  for(uint32_t i=0;i<(local?word(p+496):word(p+100));++i){if(at>n-4||n-4-at<GroupHeader)return false;const auto*g=p+at;const uint64_t size=uint64_t(GroupHeader)+word(g+24)+word(g+28);if(size>limits_.groupBytes||size>n-4-at||!word(g+24)||word(g+24)>limits_.intentBytes||!word(g+20)||wide(g)<=prior||wide(g)>wide(p+24)||word(g+16)>1||!zero(g+80,8))return false;
+   Identity base{};base.known=word(g+16)!=0;base.generation=wide(g+8);std::memcpy(base.lineage,g+32,16);std::memcpy(base.digest,g+48,32);if(!validIdentity(base)||(local&&base.known))return false;
    uint32_t offset=GroupHeader;const uint32_t end=GroupHeader+word(g+28);
    for(uint32_t j=0;j<word(g+20);++j){if(offset>end||end-offset<24||!std::memchr(g+offset,0,16)||!validKey(reinterpret_cast<const char*>(g+offset)))return false;const uint32_t kind=word(g+offset+16),len=word(g+offset+20);if((kind!=Put&&kind!=Delete)||(kind==Put&&(!len||len>ValueMax))||(kind==Delete&&len)||len>end-offset-24)return false;
     for(uint32_t prev=GroupHeader;prev<offset;prev+=24+word(g+prev+20))if(!std::strcmp(reinterpret_cast<const char*>(g+prev),reinterpret_cast<const char*>(g+offset)))return false;
