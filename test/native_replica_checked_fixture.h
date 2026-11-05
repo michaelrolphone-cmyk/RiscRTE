@@ -49,7 +49,7 @@ struct Fixture {
  N metadata{{nullptr,[](void*){return onWorker&&lease;},[](void*){return initialized?ESP_OK:ESP_ERR_NVS_NOT_INITIALIZED;}}};
  RiscExperimental::CheckedFreshInitArtifacts inspector;
  S store;C core;
- explicit Fixture(uint32_t ns=6,C::Allocator allocation=C::heap()):inspector(ns,rootPath.c_str(),{&files,[](void*){return onWorker&&lease;},cooperate,[](void*p){return static_cast<RiscStorage::AppDataFiles*>(p)->retained()?int(C::Retained):int(C::Ok);}}),store(ns,files,metadata.api(),{nullptr,[](void*){return onWorker&&lease;},space},allocation,&inspector),core(ns,store.backend(),S::limits(),allocation){assert(files.configure(rootPath.c_str()));}
+ explicit Fixture(uint32_t ns=6,C::Allocator allocation=C::heap(),C::DurabilityPolicy policy=C::DurabilityPolicy::ExternalVolume):inspector(ns,rootPath.c_str(),{&files,[](void*){return onWorker&&lease;},cooperate,[](void*p){return static_cast<RiscStorage::AppDataFiles*>(p)->retained()?int(C::Retained):int(C::Ok);}}),store(ns,files,metadata.api(),{nullptr,[](void*){return onWorker&&lease;},space},allocation,&inspector,policy),core(ns,store.backend(),S::limits(),allocation,policy){assert(files.configure(rootPath.c_str()));}
 };
 void reset(){armed=false;onWorker=lease=initialized=true;nativeCalls=fsCalls=cut=0;fault.clear();after=false;otherUsed=0;totalBytes=0x80000;nvsCapacity=0x6000;assert(handles.empty());}
 void empty(){reset();nvs.clear();std::filesystem::remove_all(rootPath);std::filesystem::create_directories(rootPath);}

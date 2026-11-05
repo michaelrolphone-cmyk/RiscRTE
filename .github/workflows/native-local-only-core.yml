@@ -4,6 +4,11 @@ on:
     paths:
       - 'experimental/native_replica/NativeReplicaCore.h'
       - 'experimental/native_replica/NativeBaselineAdmission.h'
+      - 'experimental/native_replica/Checked*.h'
+      - 'test/native_local_only_checked_test.cpp'
+      - 'test/native_import_power_cut_test.cpp'
+      - 'test/native_replica_checked_fixture.h'
+      - 'test/run_native_local_only_checked_test.sh'
       - 'test/native_local_only_core_test.cpp'
       - 'test/native_replica_core_test.cpp'
       - 'test/run_native_local_only_core_test.sh'
@@ -31,3 +36,21 @@ jobs:
       - name: LocalOnly genesis and bounded checkpoint model
         if: ${{ !cancelled() }}
         run: timeout 300 bash test/run_native_local_only_core_test.sh
+      - name: Existing fresh artifact grammar
+        if: ${{ !cancelled() }}
+        run: timeout 300 bash test/run_native_fresh_init_artifacts_test.sh
+      - name: Existing fresh NVS inventory
+        if: ${{ !cancelled() }}
+        run: timeout 300 bash test/run_native_nvs_fresh_sources_test.sh
+      - name: Existing fresh initialization
+        if: ${{ !cancelled() }}
+        run: timeout 300 bash test/run_native_fresh_initialization_test.sh
+      - name: Existing imported initialization
+        if: ${{ !cancelled() }}
+        run: timeout 300 bash test/run_native_import_initialization_test.sh
+      - name: Existing external import process-death recovery
+        if: ${{ !cancelled() }}
+        run: timeout 300 bash test/run_native_import_power_cut_test.sh
+      - name: LocalOnly checked receipt and process-death recovery
+        if: ${{ !cancelled() }}
+        run: timeout 300 bash test/run_native_local_only_checked_test.sh

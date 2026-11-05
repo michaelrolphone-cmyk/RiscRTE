@@ -14,6 +14,8 @@ class NativeReplicaCore {
  enum Result { Ok=0, Missing=-1, Invalid=-2, NoMemory=-3, NoSpace=-4,
                Io=-5, Uncertain=-6, Conflict=-7, Stale=-8, BufferSmall=-9, Busy=-10, Retained=-11, Initializing=-12 };
  enum class DurabilityPolicy:uint32_t {ExternalVolume=0,LocalOnlyV1=1};
+ static const char*freshReceiptMagic(DurabilityPolicy p){return p==DurabilityPolicy::LocalOnlyV1?"RTENFL1":"RTENFI1";}
+ static const char*importReceiptMagic(DurabilityPolicy p){return p==DurabilityPolicy::LocalOnlyV1?"RTENLL1":"RTENLI1";}
  struct Identity {
   bool known=false; uint64_t generation=0; uint8_t lineage[16]{}, digest[32]{};
  };
@@ -76,7 +78,8 @@ class NativeReplicaCore {
  // store. No public decoder, setter, or caller-provided recovery argument.
  class FreshInitReceipt {
   public:
-  bool valid()const{return backendContext_&&NativeReplicaCore::validFreshReceipt(bytes_);}
+  DurabilityPolicy durabilityPolicy()const{return !std::memcmp(bytes_,"RTENFL1",8)?DurabilityPolicy::LocalOnlyV1:DurabilityPolicy::ExternalVolume;}
+  bool valid()const{return backendContext_&&NativeReplicaCore::validFreshReceipt(bytes_,durabilityPolicy());}
   uint32_t namespaceId()const{return valid()?NativeReplicaCore::word(bytes_+8):0;}
   const uint8_t*fingerprint()const{return bytes_+12;}
   private:
@@ -88,7 +91,8 @@ class NativeReplicaCore {
  // A store-selected receipt can only be constructed by the checked backend.
  class ImportInitReceipt {
   public:
-  bool valid()const{return backendContext_&&NativeReplicaCore::validImportReceipt(bytes_);}
+  DurabilityPolicy durabilityPolicy()const{return !std::memcmp(bytes_,"RTENLL1",8)?DurabilityPolicy::LocalOnlyV1:DurabilityPolicy::ExternalVolume;}
+  bool valid()const{return backendContext_&&NativeReplicaCore::validImportReceipt(bytes_,durabilityPolicy());}
   uint32_t namespaceId()const{return valid()?NativeReplicaCore::word(bytes_+8):0;}
   const uint8_t*fingerprint()const{return bytes_+12;}
   private:
@@ -571,9 +575,9 @@ class NativeReplicaCore {
  static uint64_t wide(const uint8_t*p){return word(p)|(uint64_t(word(p+4))<<32);}
  static void putWide(uint8_t*p,uint64_t v){putWord(p,uint32_t(v));putWord(p+4,uint32_t(v>>32));}
  static uint32_t crc(const void*v,uint32_t n){auto*p=static_cast<const uint8_t*>(v);uint32_t c=~0u;while(n--){c^=*p++;for(unsigned i=0;i<8;++i)c=(c>>1)^((c&1)?0xedb88320u:0);}return ~c;}
- static bool validFreshReceipt(const uint8_t*p){return !std::memcmp(p,"RTENFI1",8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
+ static bool validFreshReceipt(const uint8_t*p,DurabilityPolicy policy=DurabilityPolicy::ExternalVolume){return !std::memcmp(p,freshReceiptMagic(policy),8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
  static bool validSdReceipt(const uint8_t*p){return !std::memcmp(p,"RTENSI1",8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
- static bool validImportReceipt(const uint8_t*p){return !std::memcmp(p,"RTENLI1",8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
+ static bool validImportReceipt(const uint8_t*p,DurabilityPolicy policy=DurabilityPolicy::ExternalVolume){return !std::memcmp(p,importReceiptMagic(policy),8)&&word(p+8)&&word(p+8)<=INT32_MAX&&!zero(p+12,32)&&word(p+44)==crc(p,44);}
  static void makeFreshEmpty(uint8_t*p,uint32_t ns,DurabilityPolicy policy=DurabilityPolicy::ExternalVolume){
   const bool local=policy==DurabilityPolicy::LocalOnlyV1;const uint32_t header=local?HeaderV5:HeaderV3;
   std::memset(p,0,header+4);std::memcpy(p,local?"RTENR05":"RTENR03",8);putWord(p+8,ns);putWide(p+16,1);putWord(p+108,header+4);

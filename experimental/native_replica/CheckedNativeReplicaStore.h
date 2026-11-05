@@ -22,8 +22,8 @@ class CheckedNativeReplicaStore {
  };
  static constexpr uint32_t PartitionBytes=0x80000,RecoveryReserve=8*4096;
  static constexpr uint32_t ObjectHeader=24,ImageMax=RISC_APP_DATA_FILE_MAX-ObjectHeader;
- CheckedNativeReplicaStore(uint32_t ns,RiscStorage::AppDataFiles&files,Metadata metadata,Guard guard,C::Allocator allocator=C::heap(),FreshInitArtifactInspector fresh=nullptr)
-  :ns_(ns),files_(files),metadata_(metadata),guard_(guard),alloc_(allocator),fresh_(fresh){}
+ CheckedNativeReplicaStore(uint32_t ns,RiscStorage::AppDataFiles&files,Metadata metadata,Guard guard,C::Allocator allocator=C::heap(),FreshInitArtifactInspector fresh=nullptr,C::DurabilityPolicy policy=C::DurabilityPolicy::ExternalVolume)
+  :ns_(ns),files_(files),metadata_(metadata),guard_(guard),alloc_(allocator),fresh_(fresh),policy_(policy){}
  ~CheckedNativeReplicaStore(){finishOperation();}
  CheckedNativeReplicaStore(const CheckedNativeReplicaStore&)=delete;
  CheckedNativeReplicaStore&operator=(const CheckedNativeReplicaStore&)=delete;
@@ -43,7 +43,8 @@ class CheckedNativeReplicaStore {
   [](void*p){static_cast<CheckedNativeReplicaStore*>(p)->endImportedInitialization();},
   [](void*p,C::SdInitReceipt*out){return static_cast<CheckedNativeReplicaStore*>(p)->readSdInitialization(out);},
   [](void*p,const C::Initialization&a){return static_cast<CheckedNativeReplicaStore*>(p)->beginSdInitialization(a);},
-  [](void*p){static_cast<CheckedNativeReplicaStore*>(p)->endSdInitialization();}};}
+  [](void*p){static_cast<CheckedNativeReplicaStore*>(p)->endSdInitialization();},
+  [](void*p){return static_cast<CheckedNativeReplicaStore*>(p)->localOnly();}};}
  static C::Limits limits(){return {ImageMax,4096,1024};}
  // Export custody pins the physical bank under its logical object identity.
  // No namespace or filename enters from the caller. One independent lease per
@@ -70,7 +71,10 @@ class CheckedNativeReplicaStore {
  private:
  friend class CheckedSdNativeRestore;
  uint32_t ns_;RiscStorage::AppDataFiles&files_;Metadata metadata_;Guard guard_;C::Allocator alloc_;
- FreshInitArtifactInspector fresh_{};
+ FreshInitArtifactInspector fresh_{};C::DurabilityPolicy policy_;
+ bool localOnly()const{return policy_==C::DurabilityPolicy::LocalOnlyV1;}
+ uint32_t genesisHeader()const{return localOnly()?C::HeaderV5:C::HeaderV3;}
+ uint32_t freshImageBytes()const{return genesisHeader()+4;}
  uint8_t freshReceipt_[C::RootBytes]{};bool freshArmed_=false,transitioning_=false;const C::Initialization*freshAdmission_=nullptr;
  uint8_t importReceipt_[C::RootBytes]{};bool importArmed_=false;const C::Initialization*importAdmission_=nullptr;
  uint8_t sdReceipt_[C::RootBytes]{};bool sdArmed_=false;const C::Initialization*sdAdmission_=nullptr;
@@ -117,22 +121,22 @@ class CheckedNativeReplicaStore {
   }
   if(rc)return rc;
   if(validFreshReceipt(bytes)||validImportReceipt(bytes)||validSdReceipt(bytes)){active_=0;initialized_=true;return C::Initializing;}
-  if(validRoot(bytes,true)){active_=0;initialized_=true;return C::Missing;}
+  if(validRoot(bytes,true)){if(localOnly())return C::Conflict;active_=0;initialized_=true;return C::Missing;}
   if(!validRoot(bytes))return C::Io;
   active_=wide(bytes+24);initialized_=true;std::memcpy(out,bytes,n);return C::Ok;
  }
- bool validSdReceipt(const uint8_t*p)const{return C::validSdReceipt(p)&&word(p+8)==ns_;}
- bool validImportReceipt(const uint8_t*p)const{return C::validImportReceipt(p)&&word(p+8)==ns_;}
- bool validFreshReceipt(const uint8_t*p)const{return !std::memcmp(p,"RTENFI1",8)&&word(p+8)==ns_&&!zeros(p+12,32)&&word(p+44)==crc(p,44);}
- static constexpr uint32_t FreshImageBytes=484;
- void freshImage(uint8_t*p)const{C::makeFreshEmpty(p,ns_);}
- bool canonicalFresh(const uint8_t*p,uint32_t n)const{if(n!=FreshImageBytes)return false;uint8_t expected[FreshImageBytes]{};Scratch wipe{expected,sizeof expected};freshImage(expected);return !std::memcmp(p,expected,n);}
+ bool validSdReceipt(const uint8_t*p)const{return !localOnly()&&C::validSdReceipt(p)&&word(p+8)==ns_;}
+ bool validImportReceipt(const uint8_t*p)const{return C::validImportReceipt(p,policy_)&&word(p+8)==ns_;}
+ bool validFreshReceipt(const uint8_t*p)const{return !std::memcmp(p,C::freshReceiptMagic(policy_),8)&&word(p+8)==ns_&&!zeros(p+12,32)&&word(p+44)==crc(p,44);}
+ static constexpr uint32_t FreshImageBytes=C::HeaderV5+4;
+ void freshImage(uint8_t*p)const{C::makeFreshEmpty(p,ns_,policy_);}
+ bool canonicalFresh(const uint8_t*p,uint32_t n)const{if(n!=freshImageBytes())return false;uint8_t expected[FreshImageBytes]{};Scratch wipe{expected,sizeof expected};freshImage(expected);return !std::memcmp(p,expected,n);}
  int sequence(uint64_t*out,bool*missing){uint8_t p[24]{};Scratch wipe{p,sizeof p};int rc=metadata_.read(metadata_.context,ns_,"next",p,sizeof p);*out=0;*missing=rc==C::Missing;if(*missing)return C::Ok;if(rc)return rc;if(std::memcmp(p,"RTENSEQ",8)||word(p+16)||word(p+20)!=crc(p,20)||!wide(p+8)||wide(p+8)>UINT64_MAX/2)return C::Io;*out=wide(p+8);return C::Ok;}
  int inspectFreshArtifacts(){
   if(!fresh_||fresh_->namespaceId()!=ns_)return C::Invalid;
   uint64_t next=0;bool missing=false;int rc=sequence(&next,&missing);if(rc)return rc;
   uint8_t image[FreshImageBytes]{};Scratch wipe{image,sizeof image};freshImage(image);
-  rc=missing?fresh_->inspectAbsent():fresh_->inspectAttempt(image,sizeof image,next);if(rc==C::Retained)retained_=true;return rc;
+  rc=missing?fresh_->inspectAbsent():fresh_->inspectAttempt(image,freshImageBytes(),next);if(rc==C::Retained)retained_=true;return rc;
  }
  int freshCustody(const C::FreshInitReceipt*receipt){
   if(!freshAdmission_||!freshAdmission_->freshCustody_)return C::Invalid;
@@ -159,14 +163,14 @@ class CheckedNativeReplicaStore {
  int beginFreshInitialization(const C::Initialization&a){
   if(const int rc=admission())return rc;
   if(freshArmed_||importArmed_||sdArmed_)return C::Busy;
-  if(!fresh_||fresh_->namespaceId()!=ns_||!a.freshCustody_||!a.prepared_||!a.consumed_||!a.activating_||!a.core_||!a.core_->admissionBusy_||a.core_->b_.context!=this||a.backendContext_!=this||a.namespace_!=ns_||a.baseline_.origin()!=C::Origin::FreshEmpty||a.mapBytes_||a.count_||zeros(a.sourceFingerprint_,32))return C::Invalid;
+  if(!fresh_||fresh_->namespaceId()!=ns_||!a.freshCustody_||!a.prepared_||!a.consumed_||!a.activating_||!a.core_||a.core_->durabilityPolicy()!=policy_||!a.core_->admissionBusy_||a.core_->b_.context!=this||a.backendContext_!=this||a.namespace_!=ns_||a.baseline_.origin()!=C::Origin::FreshEmpty||a.mapBytes_||a.count_||zeros(a.sourceFingerprint_,32))return C::Invalid;
   Transition transition(transitioning_);freshAdmission_=&a;int rc=freshCustody(nullptr);if(rc)return rc;
   uint8_t p[C::RootBytes]{};Scratch wipe{p,sizeof p};rc=metadata_.read(metadata_.context,ns_,"root",p,sizeof p);
   if(a.mode_==C::Initialization::Mode::CreateFresh){
    if(rc!=C::Missing)return rc?rc:int(C::Conflict);
    uint64_t next=0;bool missing=false;rc=sequence(&next,&missing);if(rc)return rc;if(!missing)return C::Conflict;
    rc=fresh_->inspectAbsent();if(rc){if(rc==C::Retained)retained_=true;return rc;}
-   std::memcpy(p,"RTENFI1",8);putWord(p+8,ns_);std::memcpy(p+12,a.sourceFingerprint_,32);putWord(p+44,crc(p,44));
+   std::memcpy(p,C::freshReceiptMagic(policy_),8);putWord(p+8,ns_);std::memcpy(p+12,a.sourceFingerprint_,32);putWord(p+44,crc(p,44));
    rc=metadata_.write(metadata_.context,ns_,"root",p,sizeof p);if(rc)return rc==C::Retained?(retained_=true,C::Retained):C::Uncertain;
   }else if(a.mode_==C::Initialization::Mode::ResumeFresh){
    if(rc)return rc;
@@ -183,7 +187,7 @@ class CheckedNativeReplicaStore {
  bool canonicalImported(const uint8_t*p,uint32_t n)const{
   if(!importAdmission_)return false;
   const auto&a=*importAdmission_;
-  if(uint64_t(C::HeaderV3)+a.mapBytes_+4!=n||!a.baseline_.archiveObligation())return false;
+  if(uint64_t(genesisHeader())+a.mapBytes_+4!=n||!a.baseline_.archiveObligation())return false;
   // The receipt's fixed materializer produces a unique sorted encoding.
   // A caller cannot turn a differently ordered map into an owned candidate.
   const char*previous=nullptr;
@@ -193,11 +197,12 @@ class CheckedNativeReplicaStore {
    if(!std::memchr(key,0,16)||!bytes||bytes>a.mapBytes_-at-20||(previous&&std::strcmp(previous,key)>=0))return false;
    previous=key;at+=20+bytes;
   }
-  uint8_t expected[C::HeaderV3]{};Scratch wipe{expected,sizeof expected};
-  std::memcpy(expected,"RTENR03",8);putWord(expected+8,ns_);putWide(expected+16,1);
+  uint8_t expected[C::HeaderV5]{};Scratch wipe{expected,sizeof expected};
+  std::memcpy(expected,localOnly()?"RTENR05":"RTENR03",8);
+  if(localOnly()){putWord(expected+480,1);putWord(expected+484,1);}putWord(expected+8,ns_);putWide(expected+16,1);
   putWord(expected+96,a.count_);putWord(expected+104,a.mapBytes_);putWord(expected+108,n);
   std::memcpy(expected+C::HeaderV2,a.baseline_.bytes_,C::ProvenanceBytes);
-  return !std::memcmp(p,expected,sizeof expected)&&(!a.mapBytes_||!std::memcmp(p+C::HeaderV3,a.map_,a.mapBytes_))&&word(p+n-4)==crc(p,n-4);
+  return !std::memcmp(p,expected,genesisHeader())&&(!a.mapBytes_||!std::memcmp(p+genesisHeader(),a.map_,a.mapBytes_))&&word(p+n-4)==crc(p,n-4);
  }
  int checkImportReceiptAndArtifacts(){
   int rc=importCustody(nullptr);if(rc)return rc;
@@ -222,14 +227,14 @@ class CheckedNativeReplicaStore {
  int beginImportedInitialization(const C::Initialization&a){
   if(const int rc=admission())return rc;
   if(freshArmed_||importArmed_||sdArmed_)return C::Busy;
-  if(!fresh_||fresh_->namespaceId()!=ns_||!a.importCustody_||!a.prepared_||!a.consumed_||!a.activating_||!a.core_||!a.core_->admissionBusy_||a.core_->b_.context!=this||a.backendContext_!=this||a.namespace_!=ns_||a.baseline_.origin()!=C::Origin::ImportedLegacy||!a.baseline_.archiveObligation()||a.sourceKind_!=0x4e4c0001||a.sourceRevision_!=1||a.sourceState_!=1||zeros(a.sourceFingerprint_,32))return C::Invalid;
+  if(!fresh_||fresh_->namespaceId()!=ns_||!a.importCustody_||!a.prepared_||!a.consumed_||!a.activating_||!a.core_||a.core_->durabilityPolicy()!=policy_||!a.core_->admissionBusy_||a.core_->b_.context!=this||a.backendContext_!=this||a.namespace_!=ns_||a.baseline_.origin()!=C::Origin::ImportedLegacy||!a.baseline_.archiveObligation()||a.sourceKind_!=0x4e4c0001||a.sourceRevision_!=1||a.sourceState_!=1||zeros(a.sourceFingerprint_,32))return C::Invalid;
   Transition transition(transitioning_);importAdmission_=&a;int rc=importCustody(nullptr);if(rc)return rc;
   uint8_t p[C::RootBytes]{};Scratch wipe{p,sizeof p};rc=metadata_.read(metadata_.context,ns_,"root",p,sizeof p);
   if(a.mode_==C::Initialization::Mode::CreateImport){
    if(rc!=C::Missing)return rc?rc:int(C::Conflict);
    uint64_t next=0;bool missing=false;rc=sequence(&next,&missing);if(rc)return rc;if(!missing)return C::Conflict;
    rc=fresh_->inspectAbsent();if(rc){if(rc==C::Retained)retained_=true;return rc;}
-   std::memcpy(p,"RTENLI1",8);putWord(p+8,ns_);std::memcpy(p+12,a.sourceFingerprint_,32);putWord(p+44,crc(p,44));
+   std::memcpy(p,C::importReceiptMagic(policy_),8);putWord(p+8,ns_);std::memcpy(p+12,a.sourceFingerprint_,32);putWord(p+44,crc(p,44));
    rc=metadata_.write(metadata_.context,ns_,"root",p,sizeof p);if(rc)return rc==C::Retained?(retained_=true,C::Retained):C::Uncertain;
   }else if(a.mode_==C::Initialization::Mode::ResumeImport){
    if(rc)return rc;
@@ -272,9 +277,10 @@ class CheckedNativeReplicaStore {
   std::memcpy(out->bytes_,p,sizeof p);out->backendContext_=this;return C::Ok;
  }
  int beginSdInitialization(const C::Initialization&a){
+  if(localOnly())return C::Conflict;
   if(const int rc=admission())return rc;
   if(freshArmed_||importArmed_||sdArmed_)return C::Busy;
-  if(!fresh_||fresh_->namespaceId()!=ns_||!a.sdCustody_||!a.prepared_||!a.consumed_||!a.activating_||!a.core_||!a.core_->admissionBusy_||a.core_->b_.context!=this||a.backendContext_!=this||a.namespace_!=ns_||!a.sdIdentity_.known||!C::validIdentity(a.sdIdentity_)||zeros(a.sourceFingerprint_,32))return C::Invalid;
+  if(!fresh_||fresh_->namespaceId()!=ns_||!a.sdCustody_||!a.prepared_||!a.consumed_||!a.activating_||!a.core_||a.core_->durabilityPolicy()!=policy_||!a.core_->admissionBusy_||a.core_->b_.context!=this||a.backendContext_!=this||a.namespace_!=ns_||!a.sdIdentity_.known||!C::validIdentity(a.sdIdentity_)||zeros(a.sourceFingerprint_,32))return C::Invalid;
   Transition transition(transitioning_);sdAdmission_=&a;int rc=sdCustody(nullptr);if(rc)return rc;
   uint8_t p[C::RootBytes]{};Scratch wipe{p,sizeof p};rc=metadata_.read(metadata_.context,ns_,"root",p,sizeof p);
   if(a.mode_==C::Initialization::Mode::CreateSd){
@@ -297,9 +303,12 @@ class CheckedNativeReplicaStore {
   Transition transition(transitioning_);
   uint8_t current[C::RootBytes]{};Scratch wipeCurrent{current,sizeof current};const int selected=readRootRecord(current,sizeof current);
   if(selected!=C::Ok&&selected!=C::Missing&&selected!=C::Initializing)return selected;
+  // LocalOnly genesis always requires its selected policy-bound receipt.
+  // Never fall through to the external unclassified RTENINIT initializer.
+  if(localOnly()&&selected==C::Missing)return C::Conflict;
   if(selected==C::Initializing){if(!freshArmed_&&!importArmed_&&!sdArmed_)return C::Initializing;const int check=sdArmed_?checkSdReceiptAndArtifacts():importArmed_?checkImportReceiptAndArtifacts():checkFreshReceiptAndArtifacts();if(check)return check;}
   else if(freshArmed_||importArmed_||sdArmed_)return C::Stale;
-  if(!out||n<C::Header+4||(freshArmed_&&n!=FreshImageBytes)||(importArmed_&&n!=C::HeaderV3+importAdmission_->mapBytes_+4)||(sdArmed_&&n!=C::Header+sdAdmission_->mapBytes_+4))return C::Invalid;
+  if(!out||n<C::Header+4||(freshArmed_&&n!=freshImageBytes())||(importArmed_&&n!=genesisHeader()+importAdmission_->mapBytes_+4)||(sdArmed_&&n!=C::Header+sdAdmission_->mapBytes_+4))return C::Invalid;
   if(n>ImageMax)return C::NoSpace;
   const unsigned bank=active_?unsigned((active_&1)^1):0;
   if(pins_[bank])return C::Busy;

@@ -80,7 +80,7 @@ class NativeBaselineAdmission {
   uint8_t root[C::RootBytes]{};int rc=core_.b_.readRoot(core_.b_.context,root,sizeof root);C::wipe(root,sizeof root);
   if(rc!=C::Initializing)return retain(rc?rc:int(C::Conflict));
   rc=core_.b_.readInitialization(core_.b_.context,out);if(rc)return retain(rc);
-  return out->valid()&&out->backendContext_==core_.b_.context&&out->namespaceId()==core_.namespaceId()?int(C::Ok):int(C::Io);
+  return out->valid()&&out->durabilityPolicy()==core_.durabilityPolicy()&&out->backendContext_==core_.b_.context&&out->namespaceId()==core_.namespaceId()?int(C::Ok):int(C::Io);
  }
  int rootMatches(bool resume,const C::FreshInitReceipt&receipt){
   if(!resume)return absent();
@@ -91,7 +91,7 @@ class NativeBaselineAdmission {
   uint8_t root[C::RootBytes]{};int rc=core_.b_.readRoot(core_.b_.context,root,sizeof root);C::wipe(root,sizeof root);
   if(rc!=C::Initializing)return retain(rc?rc:int(C::Conflict));
   rc=core_.b_.readImportedInitialization(core_.b_.context,out);if(rc)return retain(rc);
-  return out->valid()&&out->backendContext_==core_.b_.context&&out->namespaceId()==core_.namespaceId()?int(C::Ok):int(C::Io);
+  return out->valid()&&out->durabilityPolicy()==core_.durabilityPolicy()&&out->backendContext_==core_.b_.context&&out->namespaceId()==core_.namespaceId()?int(C::Ok):int(C::Io);
  }
  int importRootMatches(bool resume,const C::ImportInitReceipt&receipt){
   if(!resume)return absent();
@@ -122,9 +122,6 @@ class NativeBaselineAdmission {
  int admit(const Selection*selection,C::Initialization*out,bool resume=false,bool resumeImport=false){
   const bool imported=selection||resumeImport,checkedImport=imported&&sources_.importedInventoryVersion;
   if(sources_.durabilityPolicy!=core_.durabilityPolicy())return C::Conflict;
-  // LocalOnly receipt recovery is deliberately unavailable until its distinct
-  // checked-store protocol is wired. Never adopt an old external receipt.
-  if(core_.localOnly()&&(resume||resumeImport||checkedImport))return C::Conflict;
   if(entered_||core_.admissionBusy_)return C::Busy;
   if(retained_)return C::Retained;
   if(!out||out->prepared_||out->map_||!configured(imported)||(resumeImport&&!importRecovery())||!core_.validConfiguration())return C::Invalid;
@@ -163,7 +160,7 @@ class NativeBaselineAdmission {
   if(!bound(a)||!a.prepared_||!a.consumed_||!core_.admissionBusy_||a.baseline_.origin()!=C::Origin::FreshEmpty||
      (consuming_!=&a&&(consuming_||receipt||active_!=a.serial_)))return C::Stale;
   Entry entry(*this,false);int rc=custody(a.leaseEpoch_);if(rc||!receipt)return rc;
-  if(!receipt->valid()||receipt->backendContext_!=a.backendContext_||receipt->namespaceId()!=a.namespace_||
+  if(!receipt->valid()||receipt->durabilityPolicy()!=core_.durabilityPolicy()||receipt->backendContext_!=a.backendContext_||receipt->namespaceId()!=a.namespace_||
      std::memcmp(receipt->fingerprint(),a.sourceFingerprint_,32)||
      (a.mode_==C::Initialization::Mode::ResumeFresh&&std::memcmp(receipt->bytes_,a.receipt_.bytes_,sizeof receipt->bytes_)))return C::Stale;
   Witness expected{a.namespace_,RootState(a.sourceState_),a.sourceKind_,a.sourceRevision_,{}};std::memcpy(expected.fingerprint,a.sourceFingerprint_,32);
@@ -178,7 +175,7 @@ class NativeBaselineAdmission {
   if(!bound(a)||!a.prepared_||!a.consumed_||!core_.admissionBusy_||a.baseline_.origin()!=C::Origin::ImportedLegacy||!importRecovery()||
      (consuming_!=&a&&(consuming_||receipt||active_!=a.serial_)))return C::Stale;
   Entry entry(*this,false);int rc=custody(a.leaseEpoch_);if(rc||!receipt)return rc;
-  if(!receipt->valid()||receipt->backendContext_!=a.backendContext_||receipt->namespaceId()!=a.namespace_||
+  if(!receipt->valid()||receipt->durabilityPolicy()!=core_.durabilityPolicy()||receipt->backendContext_!=a.backendContext_||receipt->namespaceId()!=a.namespace_||
      std::memcmp(receipt->fingerprint(),a.sourceFingerprint_,32)||
      (a.mode_==C::Initialization::Mode::ResumeImport&&std::memcmp(receipt->bytes_,a.importReceipt_.bytes_,sizeof receipt->bytes_)))return C::Stale;
   Witness expected{a.namespace_,RootState(a.sourceState_),a.sourceKind_,a.sourceRevision_,{}};std::memcpy(expected.fingerprint,a.sourceFingerprint_,32);
