@@ -12,6 +12,7 @@ namespace RiscExperimental {
 class CheckedNvsFreshSources final {
  public:
  using C=NativeReplicaCore;using A=NativeBaselineAdmission;
+ C::DurabilityPolicy durabilityPolicy()const{return policy_.get();}
  struct Hooks {
   void*context;
   bool(*workerWithLease)(void*);
@@ -20,8 +21,8 @@ class CheckedNvsFreshSources final {
  };
  // A stable firmware-native logical owner, never an address, boot ID or secret.
  // The 16-byte domain is copied and permanently bound with the namespace/schema.
- CheckedNvsFreshSources(uint32_t ns,const uint8_t owner[16],FreshInitArtifactInspector artifacts,Hooks hooks)
-  :ns_(ns),artifacts_(artifacts),hooks_(hooks){if(owner)std::memcpy(owner_,owner,16);}
+ CheckedNvsFreshSources(uint32_t ns,const uint8_t owner[16],FreshInitArtifactInspector artifacts,Hooks hooks,C::DurabilityPolicy policy=C::DurabilityPolicy::ExternalVolume)
+  :ns_(ns),artifacts_(artifacts),hooks_(hooks),policy_(policy){if(owner)std::memcpy(owner_,owner,16);}
  CheckedNvsFreshSources(const CheckedNvsFreshSources&)=delete;
  CheckedNvsFreshSources&operator=(const CheckedNvsFreshSources&)=delete;
  ~CheckedNvsFreshSources(){C::wipe(owner_,sizeof owner_);}
@@ -34,16 +35,19 @@ class CheckedNvsFreshSources final {
   [](void*p,uint32_t ns,A::Witness*out){return static_cast<CheckedNvsFreshSources*>(p)->collect(ns,out,nullptr,false);},nullptr,
   [](void*p,uint32_t ns,const A::Witness&w){auto&s=*static_cast<CheckedNvsFreshSources*>(p);A::Witness now{};const int rc=s.collect(ns,&now,nullptr,true);return rc?rc:s.same(w,now)?int(C::Ok):int(C::Conflict);},
   A::FreshAbsenceV1,
-  [](void*p,uint32_t ns,const C::FreshInitReceipt&r,A::Witness*out){return static_cast<CheckedNvsFreshSources*>(p)->collect(ns,out,&r,true);}};}
+  [](void*p,uint32_t ns,const C::FreshInitReceipt&r,A::Witness*out){return static_cast<CheckedNvsFreshSources*>(p)->collect(ns,out,&r,true);},0,nullptr,nullptr,durabilityPolicy()};}
  private:
  friend class CheckedSdNativeRestore;
  // Private bridge: the checked restore controller computes the receipt digest
  // from this collector's original absence witness and exact checked SD image.
  struct SdCheck {const C::SdInitReceipt*receipt;const uint8_t*fingerprint;const uint8_t*image;uint32_t imageBytes;};
- int sdInventory(const SdCheck&sd,bool allowReceipt,A::Witness*out){return collect(ns_,out,nullptr,allowReceipt,&sd);}
+ int sdInventory(const SdCheck&sd,bool allowReceipt,A::Witness*out){return localOnly()?int(C::Conflict):collect(ns_,out,nullptr,allowReceipt,&sd);}
  A::Witness sdOriginalWitness()const{return witness();}
- uint32_t ns_;FreshInitArtifactInspector artifacts_;Hooks hooks_;uint8_t owner_[16]{};
- bool entered_=false,retained_=false,opened_=false;nvs_handle_t handle_=0;nvs_iterator_t iterator_=nullptr;
+ uint32_t ns_;FreshInitArtifactInspector artifacts_;Hooks hooks_;
+ bool localOnly()const{return durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1;}
+ uint32_t freshBytes()const{return (localOnly()?C::HeaderV5:C::HeaderV3)+4;}
+ uint8_t owner_[16]{};
+ bool entered_=false,retained_=false,opened_=false;C::DurabilitySelection policy_;nvs_handle_t handle_=0;nvs_iterator_t iterator_=nullptr;
  struct Entry {bool&v;explicit Entry(bool&b):v(b){v=true;}~Entry(){v=false;}};
  struct Wipe {void*p;size_t n;~Wipe(){C::wipe(p,n);}};
  static uint32_t word(const uint8_t*p){return uint32_t(p[0])|(uint32_t(p[1])<<8)|(uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);}
@@ -53,7 +57,7 @@ class CheckedNvsFreshSources final {
  static bool nonzero(const uint8_t*p,size_t n){uint8_t v=0;while(n--)v|=*p++;return v;}
  static bool same(const A::Witness&a,const A::Witness&b){return a.namespaceId==b.namespaceId&&a.root==b.root&&a.kind==b.kind&&a.revision==b.revision&&!std::memcmp(a.fingerprint,b.fingerprint,32);}
  int retain(){retained_=true;return C::Retained;}
- int observation(){if(retained())return retain();if(!hooks_.observe)return C::Invalid;const int rc=hooks_.observe(hooks_.context);return rc==C::Retained?retain():rc;}
+ int observation(){if(retained())return retain();if(!policy_.valid())return C::Invalid;if(!hooks_.observe)return C::Invalid;const int rc=hooks_.observe(hooks_.context);return rc==C::Retained?retain():rc;}
  int check(){
   int rc=observation();if(rc)return rc;
   const bool held=hooks_.workerWithLease&&hooks_.workerWithLease(hooks_.context);
@@ -119,8 +123,8 @@ class CheckedNvsFreshSources final {
   if(rc)return cleanup(rc);
   if(!hasRoot||mask!=(1u|(hasNext?2u:0u)))return cleanup(C::Conflict);
   const auto expected=witness();
-  if(std::memcmp(root,sd?"RTENSI1":"RTENFI1",8)||word(root+8)!=ns_||std::memcmp(root+12,sd?sd->fingerprint:expected.fingerprint,32)||word(root+44)!=crc(root,44))return cleanup(C::Conflict);
-  if(receipt&&(!receipt->valid()||receipt->namespaceId()!=ns_||std::memcmp(receipt->fingerprint(),root+12,32)))return cleanup(C::Conflict);
+  if(std::memcmp(root,sd?"RTENSI1":C::freshReceiptMagic(durabilityPolicy()),8)||word(root+8)!=ns_||std::memcmp(root+12,sd?sd->fingerprint:expected.fingerprint,32)||word(root+44)!=crc(root,44))return cleanup(C::Conflict);
+  if(receipt&&(!receipt->valid()||receipt->durabilityPolicy()!=durabilityPolicy()||receipt->namespaceId()!=ns_||std::memcmp(receipt->fingerprint(),root+12,32)))return cleanup(C::Conflict);
   if(sd&&sd->receipt&&(!sd->receipt->valid()||sd->receipt->namespaceId()!=ns_||std::memcmp(sd->receipt->fingerprint(),root+12,32)))return cleanup(C::Conflict);
   if(hasNext){if(std::memcmp(next,"RTENSEQ",8)||word(next+16)||word(next+20)!=crc(next,20)||!wide(next+8)||wide(next+8)>UINT64_MAX/2)return cleanup(C::Io);*sequence=wide(next+8);}
   got=nvs_get_used_entry_count(handle_,&after);rc=check();if(rc||got!=ESP_OK||before!=after)return cleanup(rc?rc:int(C::Conflict));
@@ -128,21 +132,22 @@ class CheckedNvsFreshSources final {
  }
  void canonical(uint8_t*p)const{
   static_assert(C::HeaderV3==480&&C::ProvenanceBytes==96,"Fresh schema changed");
-  std::memset(p,0,484);std::memcpy(p,"RTENR03",8);put(p+8,ns_);p[16]=1;put(p+108,484);
-  std::memcpy(p+384,"RTENBP1",8);put(p+392,ns_);put(p+396,1);put(p+476,crc(p+384,92));put(p+480,crc(p,480));
+  std::memset(p,0,freshBytes());std::memcpy(p,localOnly()?"RTENR05":"RTENR03",8);put(p+8,ns_);p[16]=1;put(p+108,freshBytes());
+  if(localOnly()){put(p+480,1);put(p+484,1);}
+  std::memcpy(p+384,"RTENBP1",8);put(p+392,ns_);put(p+396,1);put(p+476,crc(p+384,92));put(p+freshBytes()-4,crc(p,freshBytes()-4));
  }
  int collect(uint32_t ns,A::Witness*out,const C::FreshInitReceipt*receipt,bool allowReceipt,const SdCheck*sd=nullptr){
   if(out)*out={};
   if(retained())return retain();
   if(entered_)return C::Busy;
-  if(!out||ns!=ns_||!ns||ns>INT32_MAX||artifacts_.namespaceId()!=ns||!nonzero(owner_,sizeof owner_))return C::Invalid;
+  if(!policy_.valid()||!out||ns!=ns_||!ns||ns>INT32_MAX||artifacts_.namespaceId()!=ns||!nonzero(owner_,sizeof owner_))return C::Invalid;
   Entry entered(entered_);int rc=check();if(rc)return rc;
   // Any native row, format-1 journal, format-2 anchor/delta or unknown key is a
   // competing source. Empty namespaces are harmless; no payload is read/logged.
   for(const char*prefix:{"rte","kvj","kvd"}){rc=empty(prefix);if(rc)return rc;}
   bool attempt=false;uint64_t sequence=0;rc=metadata(allowReceipt,receipt,&attempt,&sequence,sd);if(rc)return rc;
   if(attempt&&sequence&&sd)rc=artifacts_.inspectSdAttempt(sd->image,sd->imageBytes,sequence);
-  else if(attempt&&sequence){uint8_t image[484]{};Wipe wipe{image,sizeof image};canonical(image);rc=artifacts_.inspectAttempt(image,sizeof image,sequence);}
+  else if(attempt&&sequence){uint8_t image[C::HeaderV5+4]{};Wipe wipe{image,sizeof image};canonical(image);rc=artifacts_.inspectAttempt(image,freshBytes(),sequence);}
   else rc=artifacts_.inspectAbsent();
   if(rc)return rc==C::Retained?retain():rc;
   // Recheck metadata and all competing sources after filesystem callbacks.

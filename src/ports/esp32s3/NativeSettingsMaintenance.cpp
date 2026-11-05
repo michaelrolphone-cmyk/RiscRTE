@@ -39,10 +39,13 @@ NativeSettingsMaintenance::~NativeSettingsMaintenance(){
 }
 bool NativeSettingsMaintenance::registerBeforeActivate(Coordinator&preferences,Coordinator&wifi){
  static_assert(Coordinator::MaxClients>=2,"Lifecycle load and maintenance each require one permanent native client");
- if(registered_||!device_||!exitSafe())return false;
+ if(registered_||!exitSafe())return false;
  Coordinator*services[2]={&preferences,&wifi};
  for(unsigned i=0;i<2;++i){const auto&b=bindings_[i];const auto&n=b.input;
   if(!n.core||!n.store||!services[i]->owner()||n.core->namespaceId()!=(i?6u:1u)||n.store->namespaceId()!=n.core->namespaceId()||
+     n.core->durabilityPolicy()!=n.store->durabilityPolicy()||
+     (n.core->durabilityPolicy()!=C::DurabilityPolicy::ExternalVolume&&n.core->durabilityPolicy()!=C::DurabilityPolicy::LocalOnlyV1)||
+     (n.core->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1?device_!=0:device_==0)||
      !services[i]->binds(*n.core,*n.store)||!n.core->usesBackend(n.store->backend())||
      !n.digest.begin||!n.digest.update||!n.digest.finish||!n.allocator.allocate||!n.allocator.release)return false;
  }
@@ -50,7 +53,7 @@ bool NativeSettingsMaintenance::registerBeforeActivate(Coordinator&preferences,C
  // Partial registration is permanent too. There is no rollback destruction or
  // later replacement of a scheduler-reachable callback after a failed prepare.
  registered_=true;
- for(unsigned i=0;i<2;++i){auto&b=bindings_[i];b.service=services[i];b.sync=new(b.storage)Sync(*b.input.core,*b.input.store,*b.service,b.input.digest,b.input.allocator);
+ for(unsigned i=0;i<2;++i){auto&b=bindings_[i];b.service=services[i];if(b.input.core->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1)continue;b.sync=new(b.storage)Sync(*b.input.core,*b.input.store,*b.service,b.input.digest,b.input.allocator);
   if(b.sync->registerBeforeActivate()!=C::Ok)return false;
  }
  return !bootstrap_||bootstrap_->registerBeforeActivate(preferences,wifi);
@@ -84,7 +87,7 @@ NativeSettingsMaintenance::Progress NativeSettingsMaintenance::begin(RiscBoot::R
  // namespace within this checkpoint. A conflict cannot starve its sibling.
  runtime_=&r;port_=&p;remaining_=0;sweepResult_=Progress::Idle;
  for(unsigned n=0;n<2;++n){const unsigned i=(next_+n)%2;const auto&b=bindings_[i];
-  if(NativeSettingsLifecycle::namespaceSelected(i)&&b.input.core->ready()&&(b.input.core->pendingCount()||b.input.core->exportPrepared()||(!b.input.core->identity().known&&bootstrap_&&bootstrap_->firstAvailable(i))))remaining_|=1u<<i;}
+  if(b.input.core->durabilityPolicy()!=C::DurabilityPolicy::LocalOnlyV1&&NativeSettingsLifecycle::namespaceSelected(i)&&b.input.core->ready()&&(b.input.core->pendingCount()||b.input.core->exportPrepared()||(!b.input.core->identity().known&&bootstrap_&&bootstrap_->firstAvailable(i))))remaining_|=1u<<i;}
  return continueSweep(Progress::Idle);
 }
 NativeSettingsMaintenance::Progress NativeSettingsMaintenance::continueSweep(Progress completed){
@@ -100,6 +103,7 @@ NativeSettingsMaintenance::Progress NativeSettingsMaintenance::continueSweep(Pro
 NativeSettingsMaintenance::Progress NativeSettingsMaintenance::startOne(unsigned selected){
  auto&r=*runtime_;auto&p=*port_;
  current_=selected;next_=(selected+1)%2;auto&b=bindings_[current_];
+ if(b.input.core->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1){b.error=C::Conflict;b.result=Sync::State::Conflict;return Progress::Failed;}
  bool firstCreation=!b.input.core->identity().known;
  if(b.input.core->exportPrepared()){C::ExportMarker marker;if(!b.input.core->preparedExport(&marker)&&marker.firstCreation())firstCreation=true;C::wipe(&marker,sizeof marker);}
  if(firstCreation){
