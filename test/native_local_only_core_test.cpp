@@ -6,6 +6,16 @@
 #include "experimental/native_replica/NativeBaselineAdmission.h"
 using A=RiscExperimental::NativeBaselineAdmission;
 using P=C::DurabilityPolicy;
+// Test-only friend facade calls the actual private first-export entry points.
+// No production visibility or recovery setter is added.
+namespace RiscExperimental {
+class CheckedFirstSdCheckpoint {
+ public:
+ static int prepare(C&c,const C::Snapshot&s,const C::Identity&i,const uint8_t*inc,C::ExportMarker*m){return c.prepareFirstExport(s,i,inc,m);}
+ static int snapshot(C&c,const C::ExportMarker&m,C::Snapshot*s){return c.firstExportSnapshot(m,s);}
+};
+}
+using First=RiscExperimental::CheckedFirstSdCheckpoint;
 struct LocalSources {
  Disk&disk;bool imported=false;uint8_t digest=1;
  A::Witness witness()const{A::Witness w;w.namespaceId=6;w.root=A::RootState::NeverInitialized;w.kind=imported?1:0;w.revision=7;memset(w.fingerprint,0x5a,32);return w;}
@@ -52,6 +62,8 @@ void localBasics(bool imported){
  }
  C reboot(6,localBackend(d),{8192,4096,1024},C::heap(),P::LocalOnlyV1);assert(reboot.load()==C::Ok&&reboot.sequence()==2048);
  const auto before=d.root;C::Ticket ticket;C::Snapshot snap;C::ExportMarker marker;
+ assert(First::prepare(reboot,snap,base(1),nullptr,&marker)==C::Conflict);
+ assert(First::snapshot(reboot,marker,&snap)==C::Conflict);
  assert(reboot.capture(&ticket)==C::Conflict&&reboot.captureSnapshot(&snap)==C::Conflict);
  assert(reboot.prepareExport(snap,base(1),nullptr,&marker)==C::Conflict);
  assert(reboot.preparedExport(&marker)==C::Conflict&&reboot.acknowledgeExport(marker,base(1))==C::Conflict);
@@ -93,4 +105,63 @@ void localFaults(){
  }
  Disk full=initialDisk;C c(6,localBackend(full),{8192,4096,1024},C::heap(),P::LocalOnlyV1);assert(c.load()==C::Ok);const auto root=full.root;full.capacity=0;assert(put(c,"ssid","new")==C::NoSpace&&full.root==root&&get(c,"ssid")=="old");
 }
-int main(){localBasics(false);localBasics(true);policyRefusals();localFaults();puts("LocalOnly V5 core: bounded checkpoint, opaque provenance, policy refusal and fault model PASS");return 0;}
+
+void validExternalVersions(){
+ for(unsigned version:{2u,4u}){
+  Disk d;
+  {C external(6,localBackend(d),{8192,4096,1024},C::heap());
+   if(version==2)assert(external.initialize(nullptr,0,base(0))==C::Ok);
+   else assert(genesis(external,d,false,P::ExternalVolume)==C::Ok);
+   assert(put(external,"opaque.future","preserved")==C::Ok);
+   C::Snapshot snap;C::ExportMarker marker;uint8_t incarnation[16]={7};
+   assert(external.captureSnapshot(&snap)==C::Ok);
+   assert((version==2?external.prepareExport(snap,base(1),incarnation,&marker):First::prepare(external,snap,base(1),incarnation,&marker))==C::Ok);
+   assert(external.formatVersion()==version);
+  }
+  {C external(6,localBackend(d),{8192,4096,1024},C::heap());assert(external.load()==C::Ok&&external.formatVersion()==version&&external.exportPrepared());}
+  const auto root=d.root;const auto objects=d.objects;const auto next=d.next;
+  C local(6,localBackend(d),{8192,4096,1024},C::heap(),P::LocalOnlyV1);
+  assert(local.load()!=C::Ok&&genesis(local,d)!=C::Ok);
+  assert(d.root==root&&d.objects==objects&&d.next==next);
+ }
+}
+uint32_t policyCrc(const uint8_t*p,size_t n){uint32_t c=~0u;while(n--){c^=*p++;for(unsigned i=0;i<8;++i)c=(c>>1)^((c&1)?0xedb88320u:0);}return ~c;}
+void policyWord(Bytes&b,size_t at,uint32_t n){for(unsigned i=0;i<4;++i)b[at+i]=uint8_t(n>>(8*i));}
+uint64_t activeObject(const Disk&d){uint64_t id=0;for(unsigned i=0;i<8;++i)id|=uint64_t(d.root[24+i])<<(8*i);return id;}
+void malformedLocal(){
+ Disk initialDisk;
+ {C c(6,localBackend(initialDisk),{8192,4096,1024},C::heap(),P::LocalOnlyV1);assert(genesis(c,initialDisk,true)==C::Ok);assert(put(c,"ssid","old")==C::Ok);}
+ // All outer CRCs are recomputed; refusal must be semantic, not checksum-only.
+ for(unsigned scenario=0;scenario<16;++scenario){
+  Disk d=initialDisk;auto&image=d.objects.at(activeObject(d));
+  switch(scenario){
+   case 0:policyWord(image,480,0);break; // external policy in V5
+   case 1:policyWord(image,484,2);break; // unknown schema
+   case 2:policyWord(image,488,1);break; // frontier must precede op1
+   case 3:policyWord(image,496,0);break; // committed op lost proof
+   case 4:policyWord(image,496,2);break; // unbounded local history
+   case 5:policyWord(image,32,1);break; // fabricated external acknowledgment
+   case 6:policyWord(image,12,1);image[48]=1;break; // external lineage
+   case 7:image[500]=1;break; // reserved extension
+   case 8:policyWord(image,384+88,0);break; // archive obligation lost
+   case 9:memset(image.data()+384+24,0,32);break; // source witness lost
+   case 10:memset(image.data()+384+56,0,32);break; // original map digest lost
+   case 11:policyWord(image,384+12,0);break; // unclassified genesis
+   case 12:policyWord(image,100,1);break; // external pending work
+   case 13:image[112]=1;break; // export incarnation
+   case 14:image[128]=1;break; // export marker
+   case 15:policyWord(image,16,3);break; // revision/sequence mismatch
+  }
+  policyWord(image,384+92,policyCrc(image.data()+384,92));
+  policyWord(image,image.size()-4,policyCrc(image.data(),image.size()-4));
+  policyWord(d.root,32,policyCrc(image.data(),image.size()-4));
+  if(scenario==15)policyWord(d.root,16,3);
+  policyWord(d.root,44,policyCrc(d.root.data(),44));
+  const auto root=d.root;const auto objects=d.objects;const auto next=d.next;
+  C local(6,localBackend(d),{8192,4096,1024},C::heap(),P::LocalOnlyV1);
+  assert(local.load()!=C::Ok&&!local.ready()&&genesis(local,d,true)!=C::Ok);
+  assert(d.root==root&&d.objects==objects&&d.next==next);
+ }
+}
+
+int main(){validExternalVersions();malformedLocal();localBasics(false);localBasics(true);policyRefusals();localFaults();puts("LocalOnly V5 core: bounded checkpoint, opaque provenance, policy refusal and fault model PASS");return 0;}
