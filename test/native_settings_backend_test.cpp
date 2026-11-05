@@ -110,9 +110,9 @@ static void exercise(unsigned index,const char*mode){
  auto observed=[](void*p){const auto&v=*static_cast<F::Backend*>(p);return M::retained()||v.files->retained()||v.artifacts.retained()?int(C::Retained):int(C::Ok);};
  auto initialized=[](void*){return RiscNvs::initializationStatus();};
  auto epoch=[](void*){return generation;};
- A::Digest digest{input.digest.context,input.digest.begin,input.digest.update,input.digest.finish};
+ A::Digest admissionDigest{input.digest.context,input.digest.begin,input.digest.update,input.digest.finish};
  RiscExperimental::CheckedNvsFreshSources localFresh(ns,logicalOwner,b.artifacts,{context,held,initialized,observed},policy);
- RiscExperimental::CheckedNvsLegacySources localLegacy(ns,logicalOwner,ns==1?"shared-00000001":"shared-00000006",F::Store::ImageMax-C::HeaderV5-4,b.artifacts,digest,{context,held,epoch,initialized,observed},RiscCpu::NativeSettingsPayloadAllocator::allocator(),policy);
+ RiscExperimental::CheckedNvsLegacySources localLegacy(ns,logicalOwner,ns==1?"shared-00000001":"shared-00000006",F::Store::ImageMax-C::HeaderV5-4,b.artifacts,admissionDigest,{context,held,epoch,initialized,observed},RiscCpu::NativeSettingsPayloadAllocator::allocator(),policy);
  auto*legacySource=local?&localLegacy:b.legacy;
  auto sourceApi=local?(legacy?localLegacy.sources():localFresh.sources()):(legacy?b.legacy->sources():b.sources->sources());
  A factory(&store,core,{const_cast<F::Backend*>(&b),[](void*p){auto&v=*static_cast<F::Backend*>(p);return v.guard.workerWithExclusiveLease(v.guard.context);},[](void*){return generation;}},{input.digest.context,input.digest.begin,input.digest.update,input.digest.finish},sourceApi,RiscCpu::NativeSettingsPayloadAllocator::allocator());
