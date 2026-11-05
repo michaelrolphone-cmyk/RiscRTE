@@ -197,6 +197,7 @@ class NativeSettingsStartup(unittest.TestCase):
    shutil.copyfile(ROOT/'src/ports/esp32s3/NativeMemory.h',folder/'NativeMemory.h')
    shutil.copyfile(ROOT/'src/ports/esp32s3/NativeSettingsLifecycle.h',folder/'NativeSettingsLifecycle.h')
    shutil.copyfile(ROOT/'src/ports/esp32s3/NativeSettingsLifecycle.cpp',folder/'lifecycle.cpp')
+   shutil.copyfile(ROOT/'src/ports/esp32s3/NativeSettingsWriterRegistry.h',folder/'NativeSettingsWriterRegistry.h')
    shutil.copyfile(ROOT/'src/main.cpp',folder/'main.cpp')
    (folder/'NativeSettingsWorker.h').write_text(WORKER)
    (folder/'harness.cpp').write_text('#include <algorithm>\n'+HARNESS)
