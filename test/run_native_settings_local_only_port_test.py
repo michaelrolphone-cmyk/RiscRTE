@@ -94,7 +94,7 @@ run(['cc','-std=c11',*shared,app,'-o',build/'wifi.elf'])
 (build/'board.json').write_text(json.dumps(dict(schema='riscrte.board-hardware',schema_version=1,board_id='local-only-host',revision='test',buses=[],devices=[])))
 requires=[dict(capability=c,api=1) for c in ['storage.key-value','storage.key-value.atomic','storage.key-value.availability']]
 (build/'wifi.json').write_text(json.dumps(dict(type='application',id='wifi_settings',version='1.0.0',architecture='xtensa-esp32s3',file_name='wifi.elf',entry='app_main',requires=requires)))
-(build/'boot.json').write_text(json.dumps(dict(board='board.json',default_app='wifi.elf',provider_activation='demand',drivers=[],installation=dict(volume_instance=0,grants=[]),app_capabilities=[dict(manifest='wifi.json',grants=[dict(**v,instance_id=6) for v in requires])])))
+(build/'boot.json').write_text(json.dumps(dict(board='board.json',default_app='wifi.elf',provider_activation='demand',drivers=[],app_capabilities=[dict(manifest='wifi.json',grants=[dict(**v,instance_id=6) for v in requires])])))
 probe_dir=build/'probe';probe_dir.mkdir()
 probe=[str(build/'test'),str(build),'probe-external-acquire',str(probe_dir)]
 commands.append(probe)
@@ -111,7 +111,11 @@ if not a.allow_fresh:
 cases=['fresh-cut'] if a.producer_only else ['fresh','legacy','held-grants','cancel-inspect','cancel-init','cancel-committed','retained-init','external-fresh','external-import','external-unclassified','malformed-root','legacy-reboot','legacy-cut','legacy-resume','fresh-resume']
 if not a.producer_only and a.allow_fresh:cases[0:0]=['fresh-cut'];cases+=['fresh-reboot']
 failures=[]
+dependencies={'fresh-reboot':'fresh','legacy-reboot':'legacy','fresh-resume':'fresh-cut','legacy-resume':'legacy-cut'}
 for case in cases:
+ dependency=dependencies.get(case)
+ if dependency and (any(f['case']==dependency for f in failures) or not (build/dependency/'flash.bin').is_file() or not (build/dependency/'nvs.bin').is_file()):
+  failures.append(dict(case=case,error='dependency failed',dependency=dependency));continue
  out=build/case;out.mkdir();cmd=[str(x) for x in [build/'test',build,case,out]];commands.append(cmd)
  try:
   result=subprocess.run(cmd,timeout=180)
