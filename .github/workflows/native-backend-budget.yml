@@ -1,0 +1,67 @@
+name: Native backend resource refusal
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'test/native_settings_backend_budget_test.cpp'
+      - 'test/run_native_settings_backend_test.py'
+      - 'src/ports/esp32s3/NativeSettingsBackend*'
+      - 'src/ports/esp32s3/NativeSettingsPayloadAllocator*'
+      - 'experimental/native_replica/CheckedNativeReplicaStore.h'
+      - '.github/workflows/native-backend-budget.yml'
+permissions:
+  contents: read
+jobs:
+  negative-campaigns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO
+          ref: c8004c5c8362b142ebb35a0e1c5d266532a11581
+          path: .backend-inputs/x4
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/T5S3-Reader
+          ref: 45cf61ac013fb618e8d7fed63217a35350484d52
+          path: .backend-inputs/reader
+          persist-credentials: false
+      - name: Prepare existing pinned host fixture SDK
+        run: |
+          python3 .backend-inputs/x4/minimal/scripts/prepare_sdk.py --runtime . --reader .backend-inputs/reader --output .backend-inputs/sdk
+          python3 .backend-inputs/x4/minimal/scripts/prepare_sd_wire_fixture.py --output .backend-inputs/sdk
+      - name: Real LittleFS full-space and payload refusal
+        env:
+          BACKEND_SDK: ${{ github.workspace }}/.backend-inputs/sdk
+          BUILD_DIR: ${{ github.workspace }}/build/backend-budget
+          BACKEND_TEST_SOURCE: native_settings_backend_budget_test.cpp
+          BACKEND_TEST_CASES: '["full-space","payload-refusal"]'
+        run: |
+          mkdir -p build
+          set -o pipefail
+          python3 test/run_native_settings_backend_test.py 2>&1 | tee build/backend-budget.log
+      - name: Existing allocation refusal and wipe contracts
+        run: |
+          bash test/run_native_settings_payload_allocator_test.sh
+          bash test/run_native_settings_scratch_allocation_test.sh
+          bash test/run_native_settings_heap_budget_test.sh build/requested-payload
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-resource-refusal-${{ matrix.sanitize }}
+          path: |
+            build/
+            .backend-inputs/sdk/source-hashes.json
