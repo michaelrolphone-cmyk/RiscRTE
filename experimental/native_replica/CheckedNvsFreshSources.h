@@ -12,6 +12,7 @@ namespace RiscExperimental {
 class CheckedNvsFreshSources final {
  public:
  using C=NativeReplicaCore;using A=NativeBaselineAdmission;
+ C::DurabilityPolicy durabilityPolicy()const{return policy_;}
  struct Hooks {
   void*context;
   bool(*workerWithLease)(void*);

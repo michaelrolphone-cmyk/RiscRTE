@@ -15,6 +15,9 @@ on:
       - 'test/run_native_replica_core_test.sh'
       - 'test/native_settings_backend_test.cpp'
       - 'test/run_native_settings_backend_test.py'
+      - 'src/ports/esp32s3/NativeSettings*'
+      - 'test/native_settings_local_only_port_test.cpp'
+      - 'test/run_native_settings_local_only_port_test.py'
       - '.github/workflows/native-local-only-core.yml'
 permissions:
   contents: read
@@ -99,4 +102,48 @@ jobs:
           path: |
             .backend-inputs/sdk/source-hashes.json
             .backend-output/test
+          if-no-files-found: warn
+  local-only-port:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+        fresh: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO
+          ref: c8004c5c8362b142ebb35a0e1c5d266532a11581
+          path: .backend-inputs/x4
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/T5S3-Reader
+          ref: 7e91fa4a6819ba45659d9f8975c3e2646122137a
+          path: .backend-inputs/reader
+          persist-credentials: false
+      - name: Prepare existing pinned fixture SDK
+        run: |
+          python3 .backend-inputs/x4/minimal/scripts/prepare_sdk.py --runtime . --reader .backend-inputs/reader --output .backend-inputs/sdk
+          python3 .backend-inputs/x4/minimal/scripts/prepare_sd_wire_fixture.py --output .backend-inputs/sdk
+      - name: Real default-off local-only port
+        run: |
+          args=()
+          if [ "${{ matrix.sanitize }}" = 1 ]; then args+=(--sanitize); fi
+          if [ "${{ matrix.fresh }}" = 1 ]; then args+=(--allow-fresh); fi
+          timeout 1500 python3 test/run_native_settings_local_only_port_test.py --sdk .backend-inputs/sdk --output .local-port-output "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: native-local-only-port-${{ matrix.sanitize }}-${{ matrix.fresh }}
+          path: .local-port-output/manifest.json
           if-no-files-found: warn

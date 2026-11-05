@@ -12,6 +12,7 @@ namespace RiscExperimental {
 class CheckedNvsLegacySources final {
  public:
  using C=NativeReplicaCore;using A=NativeBaselineAdmission;
+ C::DurabilityPolicy durabilityPolicy()const{return policy_;}
  static constexpr uint32_t UnanchoredNativeV1=0x4e4c0001;
  static constexpr uint32_t MapMax=128*1024,SourceMax=3*MapMax+4096;
  enum class Reason {None,Absent,InvalidSource,UnknownSource,ExactSdBaseRequired,NativeArtifacts,SourceChanged,Capacity};

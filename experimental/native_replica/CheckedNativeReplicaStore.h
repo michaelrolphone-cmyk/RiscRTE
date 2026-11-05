@@ -10,6 +10,7 @@ namespace RiscExperimental {
 class CheckedNativeReplicaStore {
  public:
  using C=NativeReplicaCore;
+ C::DurabilityPolicy durabilityPolicy()const{return policy_;}
  struct Metadata {
   void*context;
   int(*read)(void*,uint32_t,const char*,void*,uint32_t);

@@ -10,9 +10,12 @@ bool NativeSettingsBootstrap::binds(const C&a,const Store&as,const C&b,const Sto
 bool NativeSettingsBootstrap::owner()const{return services_[0]&&services_[1]&&services_[0]->owner()&&services_[1]->owner();}
 bool NativeSettingsBootstrap::registerBeforeActivate(Coordinator&a,Coordinator&b){
  static_assert(Coordinator::MaxClients>=3,"Load, synchronization and bootstrap require three native clients");
- if(registered_||!device_||!exitSafe())return false;
+ if(registered_||!exitSafe())return false;
  Coordinator*services[2]={&a,&b};
- for(unsigned i=0;i<2;++i){const auto&n=inputs_[i];if(!n.core||!n.store||n.core->namespaceId()!=(i?6u:1u)||!services[i]->owner()||!services[i]->binds(*n.core,*n.store)||!n.core->usesBackend(n.store->backend())||!n.digest.begin||!n.digest.update||!n.digest.finish||!n.allocator.allocate||!n.allocator.release||(n.sources&&!n.sources->exitSafe())||(n.legacy&&!n.legacy->exitSafe()))return false;}
+ for(unsigned i=0;i<2;++i){const auto&n=inputs_[i];if(!n.core||!n.store||n.core->namespaceId()!=(i?6u:1u)||!services[i]->owner()||!services[i]->binds(*n.core,*n.store)||!n.core->usesBackend(n.store->backend())||n.core->durabilityPolicy()!=n.store->durabilityPolicy()||
+ (n.core->durabilityPolicy()!=C::DurabilityPolicy::ExternalVolume&&n.core->durabilityPolicy()!=C::DurabilityPolicy::LocalOnlyV1)||
+ (n.core->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1?device_!=0:device_==0)||
+ (n.sources&&n.sources->durabilityPolicy()!=n.core->durabilityPolicy())||(n.legacy&&n.legacy->durabilityPolicy()!=n.core->durabilityPolicy())||!n.digest.begin||!n.digest.update||!n.digest.finish||!n.allocator.allocate||!n.allocator.release||(n.sources&&!n.sources->exitSafe())||(n.legacy&&!n.legacy->exitSafe()))return false;}
  registered_=true;services_[0]=&a;services_[1]=&b;
  for(unsigned i=0;i<2;++i){const int rc=services_[i]->registerNative({this,sizeof(*this),
   [](void*p){return static_cast<NativeSettingsBootstrap*>(p)->workerStep();},
@@ -23,7 +26,7 @@ bool NativeSettingsBootstrap::registerBeforeActivate(Coordinator&a,Coordinator&b
 }
 bool NativeSettingsBootstrap::retained()const{if(fault_.load(std::memory_order_acquire))return true;for(auto*s:services_)if(s&&s->retained())return true;return false;}
 bool NativeSettingsBootstrap::exitSafe()const{return !active_&&!lease_.serial&&!gate_.load(std::memory_order_acquire)&&!retained()&&(!attempt_||attempt_->exitSafe());}
-bool NativeSettingsBootstrap::firstAvailable(unsigned i)const{if(!NativeSettingsLifecycle::namespaceSelected(i))return false;const auto&a=inputs_[i].first;return a.otherWritersStopped&&a.entropy;}
+bool NativeSettingsBootstrap::firstAvailable(unsigned i)const{if(!NativeSettingsLifecycle::namespaceSelected(i)||!inputs_[i].core||inputs_[i].core->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1)return false;const auto&a=inputs_[i].first;return a.otherWritersStopped&&a.entropy;}
 NativeSettingsBootstrap::Catalog::Guard NativeSettingsBootstrap::guard(){return {this,[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeOwner(s.lease_);},[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeWorker(s.slots_[s.current_]);}};}
 NativeSettingsBootstrap::Restore::Guard NativeSettingsBootstrap::restoreGuard(){return {this,[](void*p){return static_cast<NativeSettingsBootstrap*>(p)->owner();},[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeWorker(s.slots_[s.current_]);},[](void*p){auto&s=*static_cast<NativeSettingsBootstrap*>(p);return s.services_[s.current_]->nativeWorker(s.slots_[s.current_]);},[](void*p){return static_cast<NativeSettingsBootstrap*>(p)->lease_.serial;}};}
 void NativeSettingsBootstrap::destroy(){if(kind_==1)catalog()->~Catalog();else if(kind_==2)restore()->~Restore();else if(kind_==3)first()->~First();else if(kind_==4)native()->~NativeInitialization();kind_=0;C::wipe(storage_,sizeof storage_);}
@@ -51,8 +54,10 @@ int NativeSettingsBootstrap::inspectNative(){
  if(!rc){nativeMode_=NativeMode::FreshResume;return C::Ok;}if(rc!=C::Missing)return rc;
  C::ImportInitReceipt imported;rc=backend.readImportedInitialization(backend.context,&imported);
  if(!rc){if(!n.legacy)return C::Conflict;nativeMode_=NativeMode::ImportResume;return C::Ok;}if(rc!=C::Missing)return rc;
- C::SdInitReceipt sd;rc=backend.readSdInitialization(backend.context,&sd);
- if(!rc){nativeMode_=NativeMode::SdResume;return C::Ok;}if(rc!=C::Missing)return rc;
+ if(n.core->durabilityPolicy()!=C::DurabilityPolicy::LocalOnlyV1){
+  C::SdInitReceipt sd;rc=backend.readSdInitialization(backend.context,&sd);
+  if(!rc){nativeMode_=NativeMode::SdResume;return C::Ok;}if(rc!=C::Missing)return rc;
+ }
  if(n.legacy){rc=n.legacy->inventory(&nativeWitness_);if(!rc){nativeMode_=NativeMode::Import;return C::Ok;}if(rc!=C::Missing)return rc;}
  const auto source=n.sources->sources();rc=source.freshInventory(source.context,n.core->namespaceId(),&nativeWitness_);
  if(!rc)nativeMode_=NativeMode::Fresh;
@@ -92,6 +97,7 @@ NativeSettingsBootstrap::Progress NativeSettingsBootstrap::completeNamespace(){
  remaining_=0;return sweepResult_;
 }
 NativeSettingsBootstrap::Progress NativeSettingsBootstrap::startAttempt(){
+ if(inputs_[current_].core->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1){finish(C::Conflict);return Progress::Pending;}
  destroyAttempt();if(!refresh_.ensure(inputs_[current_].allocator)){finish(C::NoMemory);return Progress::Pending;}attempt_=new(attemptStorage_)Attempt(*runtime_,*port_,inputs_[current_].core->namespaceId(),device_,A::Profile::CheckedWarm);
  const int acquired=attempt_->acquire();
  if(acquired){
@@ -149,7 +155,12 @@ NativeSettingsBootstrap::Progress NativeSettingsBootstrap::poll(){
  case Phase::NativeInspect:case Phase::NativeInitialize:break; // worker-owned
  case Phase::NativeInspectResult:
   if(nativeResult_||cancelled_){finish(nativeResult_?nativeResult_:int(C::Stale),cancelled_);break;}
-  if(nativeMode_==NativeMode::FreshResume||nativeMode_==NativeMode::ImportResume)queueNative();
+  if(n.core->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1){
+   if(nativeMode_==NativeMode::Import||nativeMode_==NativeMode::ImportResume||nativeMode_==NativeMode::FreshResume||
+      (nativeMode_==NativeMode::Fresh&&n.allowLocalFresh))queueNative();
+   else finish(C::Conflict);
+  }
+  else if(nativeMode_==NativeMode::FreshResume||nativeMode_==NativeMode::ImportResume)queueNative();
   else return startAttempt();
   break;
  case Phase::NativeInitializeResult:finish(nativeResult_,cancelled_&&nativeResult_==C::Stale);break;

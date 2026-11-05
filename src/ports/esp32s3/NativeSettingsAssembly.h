@@ -37,6 +37,8 @@ struct Inputs {
  uint64_t device=0;
  const NativeSettingsLifecycle::Writer*writers=nullptr;size_t writerCount=0;
  bool(*owner)()=nullptr;
+ C::DurabilityPolicy policy=C::DurabilityPolicy::ExternalVolume;
+ bool allowLocalFresh=false; // explicit checked-empty genesis permission, not fallback
 };
 // Adapter for already provisioned private AppDataFiles. This is the exact same
 // PSRAM-only payload allocator used by every owned Core/store/catalog client.

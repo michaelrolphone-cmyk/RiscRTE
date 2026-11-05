@@ -21,7 +21,7 @@ class NativeSettingsBootstrap final {
  using Baseline=RiscExperimental::NativeBaselineAdmission;using Legacy=RiscExperimental::CheckedNvsLegacySources;
  using Attempt=RiscExperimental::NativeSdPortAttempt;using Progress=NativeSettingsLifecycle::Progress;
  using Result=RiscExperimental::NativeSdSynchronization::State;
- struct Namespace {C*core;Store*store;Catalog::Digest digest;C::Allocator allocator;Sources*sources=nullptr;First::Authority first{};Legacy*legacy=nullptr;};
+ struct Namespace {C*core;Store*store;Catalog::Digest digest;C::Allocator allocator;Sources*sources=nullptr;First::Authority first{};Legacy*legacy=nullptr;bool allowLocalFresh=false;};
  NativeSettingsBootstrap(Namespace preferences,Namespace wifi,uint64_t device):inputs_{preferences,wifi},device_(device){}
  ~NativeSettingsBootstrap();
  NativeSettingsBootstrap(const NativeSettingsBootstrap&)=delete;NativeSettingsBootstrap&operator=(const NativeSettingsBootstrap&)=delete;
