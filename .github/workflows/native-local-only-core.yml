@@ -80,7 +80,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: michaelrolphone-cmyk/T5S3-Reader
-          ref: 45cf61ac013fb618e8d7fed63217a35350484d52
+          ref: 7e91fa4a6819ba45659d9f8975c3e2646122137a
           path: .backend-inputs/reader
           persist-credentials: false
       - name: Prepare existing pinned fixture SDK

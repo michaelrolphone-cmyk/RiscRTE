@@ -30,7 +30,9 @@ static std::map<DIR*,int> directoryCustody;
 extern "C" DIR* __real_fdopendir(int);
 extern "C" int __real_closedir(DIR*);
 extern "C" DIR* __wrap_fdopendir(int fd){auto*d=__real_fdopendir(fd);if(d)assert(directoryCustody.emplace(d,fd).second);return d;}
-extern "C" int __wrap_closedir(DIR*d){assert(directoryCustody.erase(d)==1);return __real_closedir(d);}
+// std::filesystem can close directories opened inside libc (not through our
+// wrapped fdopendir). Only native fixture handles belong to this registry.
+extern "C" int __wrap_closedir(DIR*d){directoryCustody.erase(d);return __real_closedir(d);}
 static void rebootDirectoryCustody(){
  assert(liveFixtures==0);
  if(!directoryCustody.empty())assert(retainedFixtureDestroyed);
