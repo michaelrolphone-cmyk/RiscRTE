@@ -27,6 +27,11 @@ constexpr bool namespaceSelected(unsigned index){return index<2 && (RISC_NATIVE_
 #endif
 static_assert(RISC_NATIVE_SETTINGS_MAX_WRITERS>=2 && RISC_NATIVE_SETTINGS_MAX_WRITERS<=32,"Invalid native settings writer capacity");
 constexpr size_t MaxWriters=RISC_NATIVE_SETTINGS_MAX_WRITERS;
+#ifndef RISC_NATIVE_SETTINGS_MAX_IDENTITIES
+#define RISC_NATIVE_SETTINGS_MAX_IDENTITIES RISC_NATIVE_SETTINGS_MAX_WRITERS
+#endif
+static_assert(RISC_NATIVE_SETTINGS_MAX_IDENTITIES>=1 && RISC_NATIVE_SETTINGS_MAX_IDENTITIES<=RISC_NATIVE_SETTINGS_MAX_WRITERS,"Invalid native settings identity capacity");
+constexpr size_t MaxIdentities=RISC_NATIVE_SETTINGS_MAX_IDENTITIES;
 using Core=RiscExperimental::NativeReplicaCore;
 using Store=RiscExperimental::CheckedNativeReplicaStore;
 using Coordinator=RiscExperimental::NativeSettingsCoordinator;
