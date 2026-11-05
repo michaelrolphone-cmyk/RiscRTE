@@ -48,6 +48,9 @@ jobs:
       - name: Existing fresh NVS inventory
         if: ${{ !cancelled() }}
         run: timeout 300 bash test/run_native_nvs_fresh_sources_test.sh
+      - name: Existing legacy NVS inventory and policy validation
+        if: ${{ !cancelled() }}
+        run: timeout 300 bash test/run_native_nvs_legacy_sources_test.sh
       - name: Existing fresh initialization
         if: ${{ !cancelled() }}
         run: timeout 300 bash test/run_native_fresh_initialization_test.sh

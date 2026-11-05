@@ -118,8 +118,37 @@ static void sdk6IteratorErrors(){
  puts("SDK6 fresh-source find/next/info errors reject evidence and release live iterators without writes PASS");
 }
 #endif
+
+static void policySelection(){
+ static_assert(sizeof(C::DurabilityPolicy)==4&&sizeof(C::DurabilitySelection)==1,"policy widths");
+ for(uint32_t raw=0;raw<65536;++raw){
+  const auto input=static_cast<C::DurabilityPolicy>(raw);C::DurabilitySelection selected(input);
+  assert(selected.valid()==(raw<2));
+  assert(raw<2?selected.get()==input:selected.get()!=C::DurabilityPolicy::ExternalVolume&&selected.get()!=C::DurabilityPolicy::LocalOnlyV1);
+ }
+ for(unsigned bit=16;bit<32;++bit)for(uint32_t low:{0u,1u}){
+  C::DurabilitySelection selected(static_cast<C::DurabilityPolicy>((uint32_t(1)<<bit)|low));
+  assert(!selected.valid()&&selected.get()==static_cast<C::DurabilityPolicy>(UINT32_MAX));
+ }
+ reset();F::Fixture f;const auto before=F::nvs;const auto calls=F::nvsTotal;
+ for(uint32_t raw:{2u,3u,255u,256u,257u,65536u,0x80000000u,UINT32_MAX}){
+  Sources s(6,Owner,f.inspector,hooks(),static_cast<C::DurabilityPolicy>(raw));
+  auto api=s.sources();A::Witness w{};assert(s.durabilityPolicy()==static_cast<C::DurabilityPolicy>(UINT32_MAX)&&api.durabilityPolicy==s.durabilityPolicy());
+  assert(api.observe(api.context)==C::Invalid);
+  assert(api.freshInventory(api.context,6,&w)==C::Invalid&&!w.namespaceId);
+  C::FreshInitReceipt receipt;assert(api.resumeFreshInventory(api.context,6,receipt,&w)==C::Invalid);
+  assert(api.recheck(api.context,6,w)==C::Invalid);
+  assert(s.exitSafe()&&F::nvs==before&&F::nvsTotal==calls&&F::handles.empty()&&iterators.empty());
+ }
+ for(auto policy:{C::DurabilityPolicy::ExternalVolume,C::DurabilityPolicy::LocalOnlyV1}){
+  Sources s(6,Owner,f.inspector,hooks(),policy);
+  assert(s.durabilityPolicy()==policy&&s.sources().durabilityPolicy==policy);
+ }
+ puts("Checked compact policy: full-width valid identity, unsupported inputs refuse without NVS I/O or narrowing aliases PASS");
+}
+
 int main(int argc,char**argv){assert(argc==2);F::rootPath=argv[1];setbuf(stdout,nullptr);
 #if RISC_NATIVE_ESP_IDF
 sdk6IteratorErrors();
 #endif
-fresh();legacy();resumed();prefixes();faults();custody();reset();printf("Collector host size=%zu; no collector-owned heap allocation, no production selection, ESP artifact inspector remains unsupported\n",sizeof(Sources));}
+policySelection();fresh();legacy();resumed();prefixes();faults();custody();reset();printf("Collector host size=%zu; no collector-owned heap allocation, no production selection, ESP artifact inspector remains unsupported\n",sizeof(Sources));}

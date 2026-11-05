@@ -14,6 +14,19 @@ class NativeReplicaCore {
  enum Result { Ok=0, Missing=-1, Invalid=-2, NoMemory=-3, NoSpace=-4,
                Io=-5, Uncertain=-6, Conflict=-7, Stale=-8, BufferSmall=-9, Busy=-10, Retained=-11, Initializing=-12 };
  enum class DurabilityPolicy:uint32_t {ExternalVolume=0,LocalOnlyV1=1};
+ // Private-object selection storage, not a wire enum or serialized field.
+ // Compare the full input before encoding: unsupported values must never
+ // truncate into a supported policy (for example 0x100 -> ExternalVolume).
+ class DurabilitySelection final {
+  uint8_t value_;
+ public:
+  explicit constexpr DurabilitySelection(DurabilityPolicy p)
+   :value_(p==DurabilityPolicy::ExternalVolume?0:p==DurabilityPolicy::LocalOnlyV1?1:2){}
+  constexpr bool valid()const{return value_<2;}
+  constexpr DurabilityPolicy get()const{return value_==0?DurabilityPolicy::ExternalVolume:value_==1?DurabilityPolicy::LocalOnlyV1:static_cast<DurabilityPolicy>(UINT32_MAX);}
+ };
+ static_assert(sizeof(DurabilityPolicy)==sizeof(uint32_t),"public durability policy remains full width");
+ static_assert(sizeof(DurabilitySelection)==1,"compact selection must fit collector padding");
  static const char*freshReceiptMagic(DurabilityPolicy p){return p==DurabilityPolicy::LocalOnlyV1?"RTENFL1":"RTENFI1";}
  static const char*importReceiptMagic(DurabilityPolicy p){return p==DurabilityPolicy::LocalOnlyV1?"RTENLL1":"RTENLI1";}
  struct Identity {

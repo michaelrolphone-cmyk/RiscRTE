@@ -12,7 +12,7 @@ namespace RiscExperimental {
 class CheckedNvsLegacySources final {
  public:
  using C=NativeReplicaCore;using A=NativeBaselineAdmission;
- C::DurabilityPolicy durabilityPolicy()const{return policy_;}
+ C::DurabilityPolicy durabilityPolicy()const{return policy_.get();}
  static constexpr uint32_t UnanchoredNativeV1=0x4e4c0001;
  static constexpr uint32_t MapMax=128*1024,SourceMax=3*MapMax+4096;
  enum class Reason {None,Absent,InvalidSource,UnknownSource,ExactSdBaseRequired,NativeArtifacts,SourceChanged,Capacity};
@@ -48,12 +48,12 @@ class CheckedNvsLegacySources final {
   [](void*p,uint32_t ns,const A::Witness&w){auto&s=*static_cast<CheckedNvsLegacySources*>(p);A::Witness now{};int rc=s.collect(ns,nullptr,nullptr,&now);return rc?rc:same(w,now)?int(C::Ok):s.fail(C::Conflict,Reason::SourceChanged);},
   0,nullptr,A::ImportedRecoveryV1,
   [](void*p,uint32_t ns,const C::ImportInitReceipt&r,const A::Rows&rows,A::Witness*out){return static_cast<CheckedNvsLegacySources*>(p)->collectImported(ns,r,&rows,out);},
-  [](void*p,uint32_t ns,const C::ImportInitReceipt&r,const A::Witness&w){auto&s=*static_cast<CheckedNvsLegacySources*>(p);A::Witness now{};const int rc=s.collectImported(ns,r,nullptr,&now);return rc?rc:same(w,now)?int(C::Ok):s.fail(C::Conflict,Reason::SourceChanged);},policy_};}
+  [](void*p,uint32_t ns,const C::ImportInitReceipt&r,const A::Witness&w){auto&s=*static_cast<CheckedNvsLegacySources*>(p);A::Witness now{};const int rc=s.collectImported(ns,r,nullptr,&now);return rc?rc:same(w,now)?int(C::Ok):s.fail(C::Conflict,Reason::SourceChanged);},durabilityPolicy()};}
  private:
- uint32_t ns_,capacity_;FreshInitArtifactInspector artifacts_;A::Digest hash_;Hooks hooks_;C::Allocator alloc_;C::DurabilityPolicy policy_;
- bool localOnly()const{return policy_==C::DurabilityPolicy::LocalOnlyV1;}
+ uint32_t ns_,capacity_;FreshInitArtifactInspector artifacts_;A::Digest hash_;Hooks hooks_;C::Allocator alloc_;
+ bool localOnly()const{return durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1;}
  uint8_t owner_[16]{};char legacyOwner_[96]{};Reason reason_=Reason::None;
- bool entered_=false,retained_=false,opened_=false;nvs_handle_t handle_=0;nvs_iterator_t iterator_=nullptr;uint64_t epoch_=0;
+ bool entered_=false,retained_=false,opened_=false;C::DurabilitySelection policy_;nvs_handle_t handle_=0;nvs_iterator_t iterator_=nullptr;uint64_t epoch_=0;
  struct Entry {bool&v;explicit Entry(bool&b):v(b){v=true;}~Entry(){v=false;}};
  struct Wipe {void*p;size_t n;~Wipe(){C::wipe(p,n);}};
  struct Buffer {
@@ -72,7 +72,7 @@ class CheckedNvsLegacySources final {
  static bool same(const A::Witness&a,const A::Witness&b){return a.namespaceId==b.namespaceId&&a.root==b.root&&a.kind==b.kind&&a.revision==b.revision&&!std::memcmp(a.fingerprint,b.fingerprint,32);}
  int fail(int rc,Reason why){reason_=why;return rc;}
  int retain(){retained_=true;return C::Retained;}
- int observation(){if(retained())return retain();if(!hooks_.observe)return C::Invalid;const int rc=hooks_.observe(hooks_.context);return rc==C::Retained?retain():rc;}
+ int observation(){if(retained())return retain();if(!policy_.valid())return C::Invalid;if(!hooks_.observe)return C::Invalid;const int rc=hooks_.observe(hooks_.context);return rc==C::Retained?retain():rc;}
  int check(){
   int rc=observation();if(rc)return rc;
   const bool held=hooks_.workerWithLease&&hooks_.workerWithLease(hooks_.context);
@@ -171,8 +171,8 @@ class CheckedNvsLegacySources final {
   }
   uint8_t root[48]{},next[24]{};Wipe wipeRoot{root,sizeof root},wipeNext{next,sizeof next};bool hasRoot=false,hasNext=false;
   rc=importBlob("root",root,sizeof root,&hasRoot);if(!rc)rc=importBlob("next",next,sizeof next,&hasNext);if(rc)return cleanup(rc);
-  if(!hasRoot||mask!=(1u|(hasNext?2u:0u))||std::memcmp(root,C::importReceiptMagic(policy_),8)||word(root+8)!=ns_||word(root+44)!=crc(root,44)||
-     !receipt.valid()||receipt.durabilityPolicy()!=policy_||receipt.namespaceId()!=ns_||std::memcmp(root+12,receipt.fingerprint(),32))return cleanup(fail(C::Conflict,Reason::NativeArtifacts));
+  if(!hasRoot||mask!=(1u|(hasNext?2u:0u))||std::memcmp(root,C::importReceiptMagic(durabilityPolicy()),8)||word(root+8)!=ns_||word(root+44)!=crc(root,44)||
+     !receipt.valid()||receipt.durabilityPolicy()!=durabilityPolicy()||receipt.namespaceId()!=ns_||std::memcmp(root+12,receipt.fingerprint(),32))return cleanup(fail(C::Conflict,Reason::NativeArtifacts));
   if(hasNext){
    if(std::memcmp(next,"RTENSEQ",8)||word(next+16)||word(next+20)!=crc(next,20)||!wide(next+8)||wide(next+8)>UINT64_MAX/2)return cleanup(fail(C::Io,Reason::NativeArtifacts));
    *sequence=wide(next+8);
@@ -271,7 +271,7 @@ class CheckedNvsLegacySources final {
   if(out)*out={};
   if(retained())return retain();
   if(entered_)return C::Busy;
-  if(!out||ns!=ns_||!ns||ns>INT32_MAX||!capacity_||capacity_>MapMax||artifacts_.namespaceId()!=ns||!nonzero(owner_,sizeof owner_)||!legacyOwner_[0]||!hash_.begin||!hash_.update||!hash_.finish||!alloc_.allocate||!alloc_.release||!hooks_.workerWithLease||!hooks_.leaseEpoch||!hooks_.initializationStatus||!hooks_.observe||(rows&&!rows->append)||!receipt.valid()||receipt.durabilityPolicy()!=policy_||receipt.namespaceId()!=ns)return C::Invalid;
+  if(!policy_.valid()||!out||ns!=ns_||!ns||ns>INT32_MAX||!capacity_||capacity_>MapMax||artifacts_.namespaceId()!=ns||!nonzero(owner_,sizeof owner_)||!legacyOwner_[0]||!hash_.begin||!hash_.update||!hash_.finish||!alloc_.allocate||!alloc_.release||!hooks_.workerWithLease||!hooks_.leaseEpoch||!hooks_.initializationStatus||!hooks_.observe||(rows&&!rows->append)||!receipt.valid()||receipt.durabilityPolicy()!=durabilityPolicy()||receipt.namespaceId()!=ns)return C::Invalid;
   Entry entry(entered_);reason_=Reason::None;epoch_=0;int rc=check();if(rc)return rc;epoch_=hooks_.leaseEpoch(hooks_.context);rc=check();if(rc)return rc;
   Buffer raw{alloc_},map{alloc_},image{alloc_};const bool rawOk=raw.create(3*capacity_+4096);rc=check();if(rc)return rc;if(!rawOk)return C::NoMemory;
   const bool mapOk=map.create(capacity_);rc=check();if(rc)return rc;if(!mapOk)return C::NoMemory;
@@ -298,7 +298,7 @@ class CheckedNvsLegacySources final {
   if(out)*out={};
   if(retained())return retain();
   if(entered_)return C::Busy;
-  if(!out||ns!=ns_||!ns||ns>INT32_MAX||!capacity_||capacity_>MapMax||artifacts_.namespaceId()!=ns||!nonzero(owner_,sizeof owner_)||!legacyOwner_[0]||!hash_.begin||!hash_.update||!hash_.finish||!alloc_.allocate||!alloc_.release||!hooks_.workerWithLease||!hooks_.leaseEpoch||!hooks_.initializationStatus||!hooks_.observe||(selected&&(!rows||!rows->append)))return C::Invalid;
+  if(!policy_.valid()||!out||ns!=ns_||!ns||ns>INT32_MAX||!capacity_||capacity_>MapMax||artifacts_.namespaceId()!=ns||!nonzero(owner_,sizeof owner_)||!legacyOwner_[0]||!hash_.begin||!hash_.update||!hash_.finish||!alloc_.allocate||!alloc_.release||!hooks_.workerWithLease||!hooks_.leaseEpoch||!hooks_.initializationStatus||!hooks_.observe||(selected&&(!rows||!rows->append)))return C::Invalid;
   Entry entry(entered_);reason_=Reason::None;epoch_=0;int rc=check();if(rc)return rc;epoch_=hooks_.leaseEpoch(hooks_.context);rc=check();if(rc)return rc;
   Buffer raw{alloc_},map{alloc_};const bool rawOk=raw.create(3*capacity_+4096);rc=check();if(rc)return rc;if(!rawOk)return C::NoMemory;
   const bool mapOk=map.create(capacity_);rc=check();if(rc)return rc;if(!mapOk)return C::NoMemory;
