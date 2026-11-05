@@ -1,5 +1,6 @@
 #include "NativeSettingsLifecycle.h"
 #if defined(ESP_PLATFORM) && RISC_NATIVE_SETTINGS_LIFECYCLE
+#include "NativeSettingsWriterRegistry.h"
 #include "NativeSettingsWorker.h"
 #include "CpuPort.h"
 #include "NativeMemory.h"
@@ -31,7 +32,7 @@ struct Load {
   done=true;token=0;if(rc==RISC_STORAGE_WORK_CANCELLED)result.status=C::Stale;const int release=service->releaseNative(lease);if(release)return release;lease={};return result.status;}
 };
 struct State {
- Admission admission{};Hooks hooks{};Load loads[2];char appIds[MaxWriters][96]{};uint32_t namespaces[MaxWriters]{};
+ Admission admission{};Hooks hooks{};Load loads[2];WriterRegistry<MaxWriters,MaxIdentities> writers;
  RiscBoot::Runtime*runtime=nullptr;Port*port=nullptr;
  bool selected=false,prepared=false,bound=false,hydrated=false,attached=false,entered=false,active=false,terminal=false;
  Timing time{};uint32_t clockAt=0,nextRetry=0;
@@ -153,8 +154,7 @@ bool prepare(const Admission*a,Hooks hooks){
  }
  if(a->writerCount&&!internal(a->writers,a->writerCount*sizeof(Writer)))return false;
  for(size_t i=0;i<a->writerCount;++i){const auto&w=a->writers[i];if(!w.app||strnlen(w.app,96)>=96||!RuntimePackages::safeId(w.app)||(w.nameSpace!=1&&w.nameSpace!=6)||!namespaceSelected(w.nameSpace==6?1:0))return false;
-  for(size_t j=0;j<i;++j)if(a->writers[j].nameSpace==w.nameSpace&&!std::strcmp(a->writers[j].app,w.app))return false;
-  std::strcpy(state.appIds[i],w.app);state.namespaces[i]=w.nameSpace;
+  if(!state.writers.add(w.app,w.nameSpace))return false;
  }
  state.admission=*a;
  for(unsigned i=0;i<2;++i){auto&load=state.loads[i];load.core=bindings[i].core;load.store=bindings[i].store;
@@ -171,7 +171,7 @@ bool bind(RiscBoot::Runtime&r){
   if(!r.registerAtomicKeyValueReadThrough(load.core->namespaceId(),load.service->endpoint())||
      !r.registerKeyValueAvailability(load.core->namespaceId(),{nullptr,[](void*,uint32_t ns,risc_key_value_availability_state_v1*out){return availability(ns,out);}}))return false;
  }
- for(size_t i=0;i<state.admission.writerCount;++i)if(!r.registerAtomicKeyValue(state.appIds[i],state.namespaces[i],state.loads[state.namespaces[i]==6?1:0].service->endpoint()))return false;
+ for(size_t i=0;i<state.writers.bindingCount();++i)if(!r.registerAtomicKeyValue(state.writers.app(i),state.writers.nameSpace(i),state.loads[state.writers.nameSpace(i)==6?1:0].service->endpoint()))return false;
  state.runtime=&r;state.bound=true;return true;
 }
 bool hydrate(RiscBoot::Runtime&r,Port&p){
