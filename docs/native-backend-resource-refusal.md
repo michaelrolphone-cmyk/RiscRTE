@@ -24,7 +24,11 @@ also used by independent LocalOnly qualification; combining branches must retain
 other branch's default cases without changing production policy.
 
 Host fixture SDK inputs are X4 c8004c5c8362b142ebb35a0e1c5d266532a11581 and
-T5S3-Reader 45cf61ac013fb618e8d7fed63217a35350484d52. The runner obtains its
+T5S3-Reader 7e91fa4a6819ba45659d9f8975c3e2646122137a.
+Compared with earlier Reader45cf61ac, only sdk/driver/RiscStorageExportV1.h
+changes among SDK headers. Every Runtime-overlapping SDK header matches exactly;
+the existing prepare_sdk mismatch guard remains enabled. Export availability uses
+the direct API/version check independently of optional sleep support. The runner obtains its
 LittleFS inputs through the existing exact-profile checker. These are test helper
 pins, not a claim that an old X4 profile is the selected new firmware.
 
