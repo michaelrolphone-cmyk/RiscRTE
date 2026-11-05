@@ -84,11 +84,13 @@ static void entropyInputs(){
 static void active(uint32_t ns){liveWorker=true;onOwner=false;workerNs=ns;++generation;}
 static void verifyValue(C&core,const char*k,const char*v){char out[128]{};uint32_t n=0;assert(core.get(k,out,sizeof out,&n)==C::Ok&&n==strlen(v)&&!memcmp(out,v,n));}
 static void exercise(unsigned index,const char*mode){
+ const bool local=!strcmp(mode,"local-normal")||!strcmp(mode,"local-legacy");
+ const auto policy=local?C::DurabilityPolicy::LocalOnlyV1:C::DurabilityPolicy::ExternalVolume;
  auto&input=index?inputs.wifi:inputs.preferences;const auto&b=input.backend;const uint32_t ns=index?6:1;
  active(!strcmp(mode,"wrong-namespace")?7:ns);if(!strcmp(mode,"wrong-worker"))liveWorker=false;
  M::Guard guard(M::Access::Settings);assert(guard.held);
- F::Store store(ns,*b.files,b.metadata,b.guard,RiscCpu::NativeSettingsPayloadAllocator::allocator(),b.artifacts);
- C core(ns,store.backend(),F::Store::limits(),RiscCpu::NativeSettingsPayloadAllocator::allocator());
+ F::Store store(ns,*b.files,b.metadata,b.guard,RiscCpu::NativeSettingsPayloadAllocator::allocator(),b.artifacts,policy);
+ C core(ns,store.backend(),F::Store::limits(),RiscCpu::NativeSettingsPayloadAllocator::allocator(),policy);
  if(!strcmp(mode,"wrong-worker")||!strcmp(mode,"wrong-namespace")){auto calls=nvsCalls;assert(core.load()==C::Busy&&nvsCalls==calls);return;}
 #if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
  uint8_t first[16]{},next[16]{};assert(input.first.otherWritersStopped(input.first.context));
@@ -96,21 +98,35 @@ static void exercise(unsigned index,const char*mode){
  assert(memcmp(first,next,16)&&memcmp(first,input.initialIncarnation,16)&&entropyFills==1&&!entropyWindow);
 #endif
  assert(core.load()==C::Missing);
- const bool legacy=!strcmp(mode,"legacy");
+ const bool legacy=!strcmp(mode,"legacy")||!strcmp(mode,"local-legacy");
  const std::string originalSpace=ns==1?"rte00000001":"rte00000006";
  if(legacy)nvs[originalSpace]["original"]={'k','e','p','t'};
  const auto original=nvs[originalSpace];
- A factory(&store,core,{const_cast<F::Backend*>(&b),[](void*p){auto&v=*static_cast<F::Backend*>(p);return v.guard.workerWithExclusiveLease(v.guard.context);},[](void*){return generation;}},{input.digest.context,input.digest.begin,input.digest.update,input.digest.finish},legacy?b.legacy->sources():b.sources->sources(),RiscCpu::NativeSettingsPayloadAllocator::allocator());
+ // Local policy is explicitly composed only inside this qualification fixture.
+ // Backend prepare/default product selection remains ExternalVolume unchanged.
+ const uint8_t logicalOwner[16]={'X','4','-','R','T','E','-','S','E','T','T','I','N','G','S',1};
+ auto*context=const_cast<F::Backend*>(&b);
+ auto held=[](void*p){const auto&v=*static_cast<F::Backend*>(p);return v.guard.workerWithExclusiveLease(v.guard.context);};
+ auto observed=[](void*p){const auto&v=*static_cast<F::Backend*>(p);return M::retained()||v.files->retained()||v.artifacts.retained()?int(C::Retained):int(C::Ok);};
+ auto initialized=[](void*){return RiscNvs::initializationStatus();};
+ auto epoch=[](void*){return generation;};
+ A::Digest digest{input.digest.context,input.digest.begin,input.digest.update,input.digest.finish};
+ RiscExperimental::CheckedNvsFreshSources localFresh(ns,logicalOwner,b.artifacts,{context,held,initialized,observed},policy);
+ RiscExperimental::CheckedNvsLegacySources localLegacy(ns,logicalOwner,ns==1?"shared-00000001":"shared-00000006",F::Store::ImageMax-C::HeaderV5-4,b.artifacts,digest,{context,held,epoch,initialized,observed},RiscCpu::NativeSettingsPayloadAllocator::allocator(),policy);
+ auto*legacySource=local?&localLegacy:b.legacy;
+ auto sourceApi=local?(legacy?localLegacy.sources():localFresh.sources()):(legacy?b.legacy->sources():b.sources->sources());
+ A factory(&store,core,{const_cast<F::Backend*>(&b),[](void*p){auto&v=*static_cast<F::Backend*>(p);return v.guard.workerWithExclusiveLease(v.guard.context);},[](void*){return generation;}},{input.digest.context,input.digest.begin,input.digest.update,input.digest.finish},sourceApi,RiscCpu::NativeSettingsPayloadAllocator::allocator());
  C::Initialization init;
- if(legacy){A::Witness witness{};assert(b.legacy&&b.legacy->inventory(&witness)==C::Ok);A::Selection selection{witness.kind,witness.revision,{}};memcpy(selection.fingerprint,witness.fingerprint,32);assert(factory.admitImported(selection,&init)==C::Ok);}
+ if(legacy){A::Witness witness{};assert(legacySource&&legacySource->inventory(&witness)==C::Ok);A::Selection selection{witness.kind,witness.revision,{}};memcpy(selection.fingerprint,witness.fingerprint,32);assert(factory.admitImported(selection,&init)==C::Ok);}
  else assert(factory.admitFreshEmpty(&init)==C::Ok);
  if(!strcmp(mode,"retained-flash"))native_lfs_fixture_fault(NATIVE_LFS_FLASH_PROG,2,NATIVE_LFS_FAIL_BEFORE);
  const int rc=legacy?core.initializeImportedBaseline(init):core.initializeFreshEmpty(init);
  if(!strcmp(mode,"retained-flash")){fprintf(stderr,"retained-flash: result=%d mount=%d files=%d sources=%d\n",rc,int(M::retained()),int(b.files->retained()),int(b.sources->retained()));assert(rc!=C::Ok&&M::retained());native_lfs_fixture_counters a{},z{};native_lfs_fixture_get_counters(&a);uint32_t t=1,u=1;assert(!b.guard.space(b.guard.context,&t,&u)&&!t&&!u);assert(core.load()!=C::Ok);native_lfs_fixture_get_counters(&z);assert(!memcmp(&a,&z,sizeof a));store.finishOperation();return;}
  assert(rc==C::Ok&&core.baseline().origin()==(legacy?C::Origin::ImportedLegacy:C::Origin::FreshEmpty));store.finishOperation();
  const C::Mutation values[]={{index?"wifi.home":"ui.theme",C::Put,index?"synthetic-home":"dark",index?14u:4u},{index?"wifi.work":"ui.font",C::Put,index?"synthetic-work":"large",index?14u:5u}};
- for(unsigned i=0;i<20;++i){assert(core.apply(core.revision(),values,2,"synthetic-settings",18)==C::Ok);store.finishOperation();}
- assert(core.load()==C::Ok);verifyValue(core,values[0].key,index?"synthetic-home":"dark");verifyValue(core,values[1].key,index?"synthetic-work":"large");store.finishOperation();
+ for(unsigned i=0;i<(local?128u:20u);++i){assert(core.apply(core.revision(),values,2,"synthetic-settings",18)==C::Ok);store.finishOperation();}
+ assert(core.load()==C::Ok);if(local)assert(core.formatVersion()==5&&core.sequence()==128&&core.pendingCount()==0&&core.localProofCount()==1&&core.localCheckpointThrough()==127);
+ verifyValue(core,values[0].key,index?"synthetic-home":"dark");verifyValue(core,values[1].key,index?"synthetic-work":"large");store.finishOperation();
  uint32_t total=0,used=0;assert(b.guard.space(b.guard.context,&total,&used)&&total==0x80000&&used>0);
  uint8_t digest[32]{};assert(input.digest.begin(input.digest.context)&&input.digest.update(input.digest.context,"abc",3)&&input.digest.finish(input.digest.context,digest));assert(digest[0]==0xba&&digest[31]==0xad);
  if(legacy){verifyValue(core,"original","kept");assert(nvs[originalSpace]==original&&core.baseline().archiveObligation());}
@@ -130,7 +146,11 @@ int main(int argc,char**argv){assert(argc==2&&native_lfs_fixture_reset()==0);con
  entropyInputs();
 #endif
  {M::Guard g(M::Access::AppData);assert(g.held);assert(native_lfs_fixture_mkdir("/n00000001")==0);assert(native_lfs_fixture_seed("/n00000001/timecard.json","preserve",8)==0);}
- exercise(0,mode);if(!strcmp(mode,"normal")||!strcmp(mode,"legacy"))exercise(1,mode);
+ const bool local=!strcmp(mode,"local-normal")||!strcmp(mode,"local-legacy");
+ if(local){
+  nvs["rte00000001"]["legacy.peer"]={'p','r','e','s','e','r','v','e'};
+  const auto peer=nvs.at("rte00000001");exercise(1,mode);assert(nvs.at("rte00000001")==peer);
+ }else{exercise(0,mode);if(!strcmp(mode,"normal")||!strcmp(mode,"legacy"))exercise(1,mode);}
  if(!M::retained()){liveWorker=false;onOwner=true;M::Guard g(M::Access::AppData);assert(g.held);char bytes[8]{};int fd=native_lfs_fixture_open("/n00000001/timecard.json",O_RDONLY);assert(fd>=0&&native_lfs_fixture_read(fd,bytes,8)==8&&!memcmp(bytes,"preserve",8)&&native_lfs_fixture_close(fd)==0);}
- assert(blocks.empty());printf("PASS: concrete native settings backend %s; controls=%zu; NVS calls=%u\n",mode,B::controlBytes(),nvsCalls);
+ assert(blocks.empty());printf("PASS: concrete native settings backend %s; controls=%zu; NVS calls=%u\n",mode,B::controlBytes(),nvsCalls);return 0;
 }

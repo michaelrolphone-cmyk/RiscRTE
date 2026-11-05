@@ -91,8 +91,8 @@ void policyRefusals(){
   Disk old;old.root.resize(48);memcpy(old.root.data(),magic,8);const auto root=old.root;
   C local(6,localBackend(old),{8192,4096,1024},C::heap(),P::LocalOnlyV1);
   LocalSources s{old};A factory(&s,local,s.guard(),s.hash(),s.sources(P::LocalOnlyV1));C::Initialization a;
-  assert(factory.admitFreshResume(&a)==C::Conflict&&factory.admitImportedResume(&a)==C::Conflict);
-  assert(genesis(local,old)!=C::Ok&&old.root==root&&old.objects.empty());
+  assert(factory.admitFreshResume(&a)==C::Conflict&&factory.admitImportedResume(&a)==C::Invalid);
+  assert(genesis(local,old)!=C::Ok&&old.root==root&&old.objects.empty()&&old.next==1&&!a.valid());
  }
 }
 void localFaults(){

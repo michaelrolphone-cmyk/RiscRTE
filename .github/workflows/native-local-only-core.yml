@@ -13,6 +13,8 @@ on:
       - 'test/native_replica_core_test.cpp'
       - 'test/run_native_local_only_core_test.sh'
       - 'test/run_native_replica_core_test.sh'
+      - 'test/native_settings_backend_test.cpp'
+      - 'test/run_native_settings_backend_test.py'
       - '.github/workflows/native-local-only-core.yml'
 permissions:
   contents: read
@@ -54,3 +56,47 @@ jobs:
       - name: LocalOnly checked receipt and process-death recovery
         if: ${{ !cancelled() }}
         run: timeout 300 bash test/run_native_local_only_checked_test.sh
+  littlefs-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO
+          ref: c8004c5c8362b142ebb35a0e1c5d266532a11581
+          path: .backend-inputs/x4
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/T5S3-Reader
+          ref: 45cf61ac013fb618e8d7fed63217a35350484d52
+          path: .backend-inputs/reader
+          persist-credentials: false
+      - name: Prepare existing pinned fixture SDK
+        run: |
+          python3 .backend-inputs/x4/minimal/scripts/prepare_sdk.py --runtime . --reader .backend-inputs/reader --output .backend-inputs/sdk
+          python3 .backend-inputs/x4/minimal/scripts/prepare_sd_wire_fixture.py --output .backend-inputs/sdk
+      - name: Real backend and LittleFS external/local policy cases
+        env:
+          BACKEND_SDK: ${{ github.workspace }}/.backend-inputs/sdk
+          BUILD_DIR: ${{ github.workspace }}/.backend-output
+        run: timeout 900 python3 test/run_native_settings_backend_test.py
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: native-local-only-backend-${{ matrix.sanitize }}
+          path: |
+            .backend-inputs/sdk/source-hashes.json
+            .backend-output/test
+          if-no-files-found: warn
