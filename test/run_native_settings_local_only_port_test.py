@@ -35,7 +35,7 @@ static inline int xTaskCreate(void(*entry)(void*),const char*n,unsigned s,void*p
 ''')
 (stubs/'esp_heap_caps.h').write_text('#pragma once\n#include <stddef.h>\n#define MALLOC_CAP_SPIRAM 1\n#define MALLOC_CAP_8BIT 2\n#define MALLOC_CAP_INTERNAL 4\nvoid*heap_caps_malloc(size_t,unsigned);void heap_caps_free(void*);\n')
 (stubs/'esp_timer.h').write_text('#pragma once\n#include <stdint.h>\nstatic inline int64_t esp_timer_get_time(){return 1000;}\n')
-(stubs/'soc').mkdir(exist_ok=True);(stubs/'soc/soc_memory_types.h').write_text('#pragma once\nbool esp_ptr_external_ram(const void*);bool esp_ptr_internal(const void*);\n')
+(stubs/'soc').mkdir(exist_ok=True);(stubs/'soc/soc_memory_types.h').write_text('#pragma once\nbool esp_ptr_external_ram(const void*);bool esp_ptr_internal(const void*);\nstatic inline bool esp_ptr_in_dram(const void*p){return esp_ptr_internal(p);}\n')
 (stubs/'mbedtls').mkdir(exist_ok=True);(stubs/'mbedtls/sha256.h').write_text('''#pragma once
 #include <openssl/sha.h>
 #include <string.h>
@@ -81,17 +81,20 @@ wrapped=['stat','fstat','open','read','write','close','fsync','mkdir','unlink','
 run(['c++',*flags,'-rdynamic','-no-pie',*objects,'-ldl','-lcrypto','-Wl,'+','.join('--wrap='+x for x in wrapped),'-o',build/'test'])
 
 shared=[x for x in flags if x not in ['-fno-pie','-no-pie']]+['-fPIC','-shared']
-app=build/'wifi.c';app.write_text('void app_main(void){}\n')
+app=build/'wifi.c';app.write_text('extern void test_local_port_app(void); void app_main(void){test_local_port_app();}\n')
 run(['cc','-std=c11',*shared,app,'-o',build/'wifi.elf'])
 (build/'board.json').write_text(json.dumps(dict(schema='riscrte.board-hardware',schema_version=1,board_id='local-only-host',revision='test',buses=[],devices=[])))
 requires=[dict(capability=c,api=1) for c in ['storage.key-value','storage.key-value.atomic','storage.key-value.availability']]
 (build/'wifi.json').write_text(json.dumps(dict(type='application',id='wifi_settings',version='1.0.0',architecture='xtensa-esp32s3',file_name='wifi.elf',entry='app_main',requires=requires)))
 (build/'boot.json').write_text(json.dumps(dict(board='board.json',default_app='wifi.elf',provider_activation='demand',drivers=[],installation=dict(volume_instance=0,grants=[]),app_capabilities=[dict(manifest='wifi.json',grants=[dict(**v,instance_id=6) for v in requires])])))
-probe=[str(build/'test'),str(build),'probe-external-acquire']
+probe_dir=build/'probe';probe_dir.mkdir()
+probe=[str(build/'test'),str(build),'probe-external-acquire',str(probe_dir)]
 commands.append(probe)
 negative=subprocess.run(probe,timeout=30)
 assert negative.returncode==86,'External acquire instrumentation did not intercept real acquire'
-cases=['fresh','legacy','cancel-inspect','cancel-init','cancel-committed']
-for case in cases:run([build/'test',build,case])
+cases=['fresh','legacy','held-grants','cancel-inspect','cancel-init','cancel-committed','external-fresh','external-import','external-unclassified','malformed-root']
+cases+=['legacy-reboot']+(['fresh-reboot'] if a.allow_fresh else [])
+for case in cases:
+ out=build/case;out.mkdir();run([build/'test',build,case,out])
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
-(build/'manifest.json').write_text(json.dumps(dict(cases=cases,commands=commands,local_fresh_permission=a.allow_fresh,source_hashes={str(p.relative_to(root)):sha(p) for directory in ['src','experimental/native_replica','test','sdk'] for p in (root/directory).rglob('*') if p.is_file() and p.suffix in ['.h','.cpp','.c','.py']},sdk_hashes={p.name:sha(p) for p in sdk.glob('*.h')},sanitizers='address,undefined' if a.sanitize else 'none',binary_sha256=sha(build/'test')),indent=2)+'\n')
+(build/'manifest.json').write_text(json.dumps(dict(cases=cases,commands=commands,local_fresh_permission=a.allow_fresh,source_hashes={str(p.relative_to(root)):sha(p) for directory in ['src','experimental/native_replica','test','sdk'] for p in (root/directory).rglob('*') if p.is_file() and p.suffix in ['.h','.cpp','.c','.py']},sdk_hashes={p.name:sha(p) for p in sdk.glob('*.h')},generated_fixture_sha256=sha(prefix),generated_stubs={str(p.relative_to(stubs)):sha(p) for p in stubs.rglob('*') if p.is_file()},sanitizers='address,undefined' if a.sanitize else 'none',binary_sha256=sha(build/'test')),indent=2)+'\n')
