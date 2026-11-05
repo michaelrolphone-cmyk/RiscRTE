@@ -1,0 +1,81 @@
+name: Native shared-space admission
+on:
+  pull_request:
+    paths:
+      - 'test/native_settings_shared_space_test.cpp'
+      - 'test/native_settings_backend_test.cpp'
+      - 'test/run_native_settings_backend_test.py'
+      - 'src/ports/esp32s3/NativeAppDataMount*'
+      - 'src/ports/esp32s3/NativeSettingsBackend*'
+      - 'src/runtime/storage/AppDataFiles*'
+      - 'experimental/native_replica/NativeReplicaCore.h'
+      - 'experimental/native_replica/CheckedNativeReplicaStore.h'
+      - '.github/workflows/native-shared-space.yml'
+permissions:
+  contents: read
+jobs:
+  shared-space:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+        policy: ['external', 'local']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/RiscRTE-XTEINK-X4-PRO
+          ref: c8004c5c8362b142ebb35a0e1c5d266532a11581
+          path: .backend-inputs/x4
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: michaelrolphone-cmyk/T5S3-Reader
+          ref: 7e91fa4a6819ba45659d9f8975c3e2646122137a
+          path: .backend-inputs/reader
+          persist-credentials: false
+      - name: Prepare existing strict fixture SDK
+        run: |
+          python3 .backend-inputs/x4/minimal/scripts/prepare_sdk.py --runtime . --reader .backend-inputs/reader --output .backend-inputs/sdk
+          python3 .backend-inputs/x4/minimal/scripts/prepare_sd_wire_fixture.py --output .backend-inputs/sdk
+      - name: Real shared-space admission and separate-process reload
+        env:
+          BACKEND_SDK: ${{ github.workspace }}/.backend-inputs/sdk
+          BUILD_DIR: ${{ github.workspace }}/build/shared-space
+          BACKEND_TEST_SOURCE: native_settings_shared_space_test.cpp
+          BACKEND_TEST_CASES: '["${{ matrix.policy }}","${{ matrix.policy }}-reboot"]'
+          SHARED_SPACE_OUTPUT: ${{ github.workspace }}/build/shared-space-snapshots
+        run: |
+          mkdir -p build
+          set -o pipefail
+          timeout 900 python3 test/run_native_settings_backend_test.py 2>&1 | tee build/shared-space.log
+      - name: Sealed-bank process cut and selected-root recovery
+        if: ${{ !cancelled() && success() }}
+        env:
+          SHARED_SPACE_OUTPUT: ${{ github.workspace }}/build/shared-space-snapshots
+        run: |
+          set -o pipefail
+          set +e
+          timeout 180 build/shared-space/test "${{ matrix.policy }}-cut" >build/shared-space-cut.log 2>&1
+          status=$?
+          set -e
+          cat build/shared-space-cut.log
+          test "$status" = 77
+          timeout 180 build/shared-space/test "${{ matrix.policy }}-cut-reboot" | tee build/shared-space-cut-reboot.log
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: shared-space-${{ matrix.policy }}-${{ matrix.sanitize }}
+          path: |
+            build/shared-space*.log
+            build/shared-space-snapshots/
+            .backend-inputs/sdk/source-hashes.json
+          if-no-files-found: warn
