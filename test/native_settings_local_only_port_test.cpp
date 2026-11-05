@@ -7,16 +7,19 @@ extern "C" void local_port_after_nvs_commit();
 extern "C" void attemptedExternalAcquire() asm("_ZN16RiscExperimental19NativeSdPortAttempt7acquireEv");
 extern "C" void queuedNativeInitialization() asm("_ZN7RiscCpu23NativeSettingsBootstrap11queueNativeEv");
 extern "C" void enteredNativeInitialization() asm("_ZN7RiscCpu23NativeSettingsBootstrap16initializeNativeEv");
+extern "C" void steppedAtomicWorker() asm("_ZN16RiscExperimental20NativeAtomicKeyValue10workerStepEv");
+static std::atomic<unsigned> atomicWorkerExits{0};
+static bool externalProducer=false;
 static std::atomic<unsigned> externalAttempts{0},queuedInitializations{0},enteredInitializations{0},completedInitializations{0};
 static bool probeControl=false;
 extern "C" __attribute__((no_instrument_function)) void __cyg_profile_func_enter(void*fn,void*){
  if(fn==reinterpret_cast<void*>(&queuedNativeInitialization))++queuedInitializations;
  if(fn==reinterpret_cast<void*>(&enteredNativeInitialization))++enteredInitializations;
- if(fn==reinterpret_cast<void*>(&attemptedExternalAcquire)){++externalAttempts;if(probeControl)std::_Exit(86);std::abort();}
+ if(fn==reinterpret_cast<void*>(&attemptedExternalAcquire)){++externalAttempts;if(probeControl)std::_Exit(86);if(!externalProducer)std::abort();}
 }
-extern "C" __attribute__((no_instrument_function)) void __cyg_profile_func_exit(void*fn,void*){if(fn==reinterpret_cast<void*>(&enteredNativeInitialization))++completedInitializations;}
+extern "C" __attribute__((no_instrument_function)) void __cyg_profile_func_exit(void*fn,void*){if(fn==reinterpret_cast<void*>(&steppedAtomicWorker))++atomicWorkerExits;if(fn==reinterpret_cast<void*>(&enteredNativeInitialization))++completedInitializations;}
 static bool requestCancel=false;
-static void noExternal(){assert(!externalAttempts&&!loads&&!unloads&&!hardwareCalls&&!f&&!loadMedia&&!saveMedia&&!entropyFills&&!entropyWindow&&mailbox.idle());}
+static void noExternal(){assert((externalProducer||!externalAttempts)&&!loads&&!unloads&&!hardwareCalls&&!f&&!loadMedia&&!saveMedia&&!entropyFills&&!entropyWindow&&mailbox.idle());}
 static Bytes flashBytes(){Bytes b(native_lfs_fixture_flash_size());assert(native_lfs_fixture_snapshot(b.data(),b.size())==b.size());return b;}
 
 static void saveLocalState(const std::string&path){
@@ -78,29 +81,32 @@ extern "C" void test_local_port_app(){
 }
 
 int main(int argc,char**argv){
- assert(argc==4);mode=argv[2];output=argv[3];
+ assert(argc==4);mode=argv[2];output=argv[3];externalProducer=mode=="external-seed";
  if(mode=="probe-external-acquire"){
   Port cpu(hardware());port=&cpu;RiscBoot::Port boot{owner,[](risc_runtime_health_v1*){return true;},schedule,[](const char*){return true;},bind};
   RiscBoot::Runtime runtime(boot);P deliberatelyForbidden(runtime,cpu,6,0);
   probeControl=true;(void)deliberatelyForbidden.acquire();return 1; // must be intercepted before acquire body
  }
+ assert(bool(RISC_NATIVE_SETTINGS_LOCAL_ONLY)!=externalProducer);
  assert(native_lfs_fixture_reset()==0);
  nvs["rte00000001"]["quick_radio"]={1,0,0,0};
  const auto peer=nvs.at("rte00000001");
- const bool refused=mode=="external-fresh"||mode=="external-import"||mode=="external-unclassified"||mode=="malformed-root";
- if(refused)seedRefusedMetadata(mode);
+ const bool refused=mode=="external-root"||mode=="external-fresh"||mode=="external-import"||mode=="external-unclassified"||mode=="malformed-root";
+ if(refused&&mode!="external-root")seedRefusedMetadata(mode);
  const bool resume=mode=="fresh-resume"||mode=="legacy-resume";
  const bool reboot=mode=="legacy-reboot"||mode=="fresh-reboot";
- const bool imported=mode=="legacy"||mode=="legacy-reboot"||mode=="legacy-cut"||mode=="legacy-resume"||mode=="held-grants"||mode=="retained-init"||mode=="cancel-inspect"||mode=="cancel-init"||mode=="cancel-committed";
+ const bool imported=externalProducer||mode=="legacy"||mode=="legacy-reboot"||mode=="legacy-cut"||mode=="legacy-resume"||mode=="held-grants"||mode=="retained-init"||mode=="cancel-inspect"||mode=="cancel-init"||mode=="cancel-committed";
  if(imported)nvs["rte00000006"]["opaque_nonwifi"]={'k','e','e','p'};
  if(reboot||resume)loadLocalState(output+"/../"+(imported?(resume?"legacy-cut":"legacy"):(resume?"fresh-cut":"fresh")));
+ if(mode=="external-root")loadLocalState(output+"/../external-seed");
  const auto original=nvs;
  native_lfs_fixture_shutdown();native_lfs_fixture_select_appdata();
  assert(M::prepare(native_lfs_fixture_partition()));
  assert(!native_lfs_fixture_reboot()&&M::finish());
- if(!reboot&&!resume){M::Guard g(M::Access::AppData);assert(g.held);assert(!native_lfs_fixture_mkdir("/n00000001"));assert(!native_lfs_fixture_seed("/n00000001/peer","preserve",8));}
+ if(!reboot&&!resume&&mode!="external-root"){M::Guard g(M::Access::AppData);assert(g.held);assert(!native_lfs_fixture_mkdir("/n00000001"));assert(!native_lfs_fixture_seed("/n00000001/peer","preserve",8));}
  assert(B::prepare(owner));admission=B::admission();assert(admission&&F::maintenance());
- assert(core(1)->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1&&core(6)->durabilityPolicy()==C::DurabilityPolicy::LocalOnlyV1);
+ const auto expectedPolicy=externalProducer?C::DurabilityPolicy::ExternalVolume:C::DurabilityPolicy::LocalOnlyV1;
+ assert(core(1)->durabilityPolicy()==expectedPolicy&&core(6)->durabilityPolicy()==expectedPolicy);
  assert(L::prepare(admission,{owner,schedule,[](){return uint32_t(nowMs);},[](){return requestCancel;}}));
  assert(W::StackBytes==8192&&Shim::tasks.size()==2);
  Port cpu(hardware());port=&cpu;
@@ -167,6 +173,10 @@ int main(int argc,char**argv){
   assert(!enteredInitializations&&!core(6)->ready()&&nvs==original&&flashBytes()==before);
  }else if(mode=="fresh"&&!RISC_NATIVE_SETTINGS_LOCAL_FRESH){
   assert(!core(6)->ready()&&availability(6)!=RISC_KEY_VALUE_AVAILABLE&&nvs==original&&flashBytes()==before);
+ }else if(externalProducer){
+  assert(externalAttempts&&core(6)->ready()&&core(6)->formatVersion()==3&&core(6)->baseline().archiveObligation());
+  assert(availability(6)==RISC_KEY_VALUE_AVAILABLE&&!core(1)->ready()&&!core(6)->identity().known&&!core(6)->exportPrepared());
+  value(*core(6),"opaque_nonwifi","keep");assert(nvs.at("rte00000006")==original.at("rte00000006"));noExternal();
  }else{
   localProof();assert(availability(6)==RISC_KEY_VALUE_AVAILABLE);
   if(reboot){assert(!enteredInitializations&&!queuedInitializations&&core(6)->revision()==2&&core(6)->sequence()==1);value(*core(6),"opaque_new","value");}
@@ -174,8 +184,20 @@ int main(int argc,char**argv){
   if(imported){assert(core(6)->baseline().archiveObligation());value(*core(6),"opaque_nonwifi","keep");assert(nvs.at("rte00000006")==original.at("rte00000006"));}
   assert(!writer.state(writer.context,&state));
   risc_key_value_atomic_mutation_v1 mutation{"opaque_new",RISC_ATOMIC_PUT,"value",5};uint64_t token=0;
-  assert(!writer.submit(writer.context,state.revision,&mutation,1,"native-local-edit",17,&token)&&token);
-  schedule(1);assert(!W::exitSafe()); // accepted receipt deliberately remains uncollected
+  const auto completedBefore=atomicWorkerExits.load();
+  const std::string editIntent="native-local-edit:"+mode;
+  assert(!writer.submit(writer.context,state.revision,&mutation,1,editIntent.data(),editIntent.size(),&token)&&token);
+  assert(!W::exitSafe()); // accepted custody, before granting a worker ticket
+  for(unsigned i=0;i<300000&&(atomicWorkerExits.load()==completedBefore||core(6)->revision()==state.revision);++i)schedule(1);
+  // workerStep returns only after BasicWorker publishes its terminal mailbox.
+  // schedule parks both workers under the fixture mutex before owner reads.
+  assert(atomicWorkerExits.load()>completedBefore&&core(6)->revision()==state.revision+1);
+  assert(!W::exitSafe()&&!L::exitSafe());
+  const auto committedNvs=nvs;const auto committedFlash=flashBytes();
+  risc_key_value_atomic_state_v1 blocked{sizeof(blocked)};assert(writer.state(writer.context,&blocked)==RISC_ATOMIC_BUSY);
+  uint64_t refusedToken=0;assert(writer.submit(writer.context,state.revision,&mutation,1,"second-edit",11,&refusedToken)==RISC_ATOMIC_BUSY&&!refusedToken);
+  assert(nvs==committedNvs&&flashBytes()==committedFlash);
+  puts("PASS atomic worker completion observed: terminal receipt uncollected, custody held, second edit refused");
   risc_key_value_atomic_receipt_v1 receipt{sizeof(receipt)};int rc;
   do{schedule(1);rc=writer.collect(writer.context,token,&receipt);}while(rc==RISC_ATOMIC_PENDING);
   assert(!rc&&!receipt.status);value(*core(6),"opaque_new","value");localProof();
@@ -185,6 +207,6 @@ int main(int argc,char**argv){
  {M::Guard g(M::Access::AppData);assert(g.held);char b[8];int fd=native_lfs_fixture_open("/n00000001/peer",O_RDONLY);assert(fd>=0&&native_lfs_fixture_read(fd,b,8)==8&&!memcmp(b,"preserve",8)&&!native_lfs_fixture_close(fd));}
  assert(L::shutdown()&&W::exitSafe()&&!M::retained()&&handles.empty()&&iterators.empty());
  Shim::stop();noExternal();if(core(6)->ready())saveLocalState(output);
- printf("PASS local-only port %s fresh_permission=%d workers=2 stack_each=%u internal_peak=%zu payload_peak=%zu; host-only, not target capacity proof\n",mode.c_str(),RISC_NATIVE_SETTINGS_LOCAL_FRESH,unsigned(W::StackBytes),Shim::peakInternal,Shim::peakPayload);
+ printf("PASS native policy port %s fresh_permission=%d workers=2 stack_each=%u internal_peak=%zu payload_peak=%zu; host-only, not target capacity proof\n",mode.c_str(),RISC_NATIVE_SETTINGS_LOCAL_FRESH,unsigned(W::StackBytes),Shim::peakInternal,Shim::peakPayload);
  return 0;
 }

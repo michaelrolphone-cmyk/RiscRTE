@@ -8,7 +8,8 @@ p.add_argument('--output',type=lambda v:pathlib.Path(v).resolve(),required=True)
 p.add_argument('--sanitize',action='store_true')
 p.add_argument('--allow-fresh',action='store_true')
 p.add_argument('--producer-only',action='store_true')
-a=p.parse_args();build=a.output;build.mkdir(parents=True,exist_ok=False)
+p.add_argument('--external-producer',action='store_true')
+a=p.parse_args();assert not (a.external_producer and (a.allow_fresh or a.producer_only));build=a.output;build.mkdir(parents=True,exist_ok=False)
 commands=[]
 def run(cmd):
  cmd=list(map(str,cmd));commands.append(cmd);print('+',shlex.join(cmd),flush=True);subprocess.run(cmd,check=True,timeout=300)
@@ -60,7 +61,7 @@ for folder in ['sdk/app','sdk/driver','sdk/hardware']:
 flags=['-g','-O0','-pthread','-fno-omit-frame-pointer','-D_GNU_SOURCE','-DLFS_NO_DEBUG','-DLFS_NO_WARN','-DLFS_NO_ERROR']
 if a.sanitize:flags+=['-fsanitize=address,undefined','-fno-sanitize-recover=all','-fno-pie','-no-pie']
 incs=['-I'+str(x) for x in [stubs,vendor,vendor/'littlefs',root,root/'src',root/'test',root/'sdk/app',root/'sdk/driver',root/'sdk/hardware',root/'test/native_nvs_shim',sdk,root/'test/drivers/stubs']]+['-isystem',str(root/'lib/ArduinoJson/src')]
-selected=['-DBOARD_XTEINK_X4_PRO','-DRISC_PAIRED_BANKS','-DRISC_PAIRED_APP_DATA','-DRISC_NATIVE_SETTINGS_LIFECYCLE=1','-DRISC_NATIVE_SETTINGS_WORKER=1','-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1','-DRISC_NATIVE_STORAGE_CUSTODY=1','-DRISC_NATIVE_SETTINGS_NAMESPACE_MASK=2','-DRISC_NATIVE_SETTINGS_LOCAL_ONLY=1','-DRISC_NATIVE_SETTINGS_LOCAL_FRESH='+str(int(a.allow_fresh)), '-DRISC_NATIVE_SETTINGS_WRITERS={"wifi_settings",6}']
+selected=['-DBOARD_XTEINK_X4_PRO','-DRISC_PAIRED_BANKS','-DRISC_PAIRED_APP_DATA','-DRISC_NATIVE_SETTINGS_LIFECYCLE=1','-DRISC_NATIVE_SETTINGS_WORKER=1','-DRISC_RUNTIME_ATOMIC_KEY_VALUE=1','-DRISC_NATIVE_STORAGE_CUSTODY=1','-DRISC_NATIVE_SETTINGS_NAMESPACE_MASK=2','-DRISC_NATIVE_SETTINGS_LOCAL_ONLY='+str(int(not a.external_producer)),'-DRISC_NATIVE_SETTINGS_LOCAL_FRESH='+str(int(a.allow_fresh)), '-DRISC_NATIVE_SETTINGS_WRITERS={"wifi_settings",6}']
 raw=(root/'test/native_settings_complete_path_test.cpp').read_text()
 marker='int main(int argc,char**argv){'
 assert raw.count(marker)==1
@@ -82,7 +83,7 @@ for source in ['NativeAppDataMount','NativeSettingsBackend','NativeSettingsAssem
 sources+=['test/native_settings_local_mount_bridge.cpp','test/native_settings_local_only_port_test.cpp']
 for i,name in enumerate(sources):
  source=root/name;obj=build/f'cpp-{i}.o';defines=actual if source.stem.startswith('NativeSettings') or source.stem in ['NativeAppDataMount','AppDataFiles','native_settings_local_only_port_test','native_settings_local_mount_bridge'] else selected
- instrument=['-finstrument-functions'] if source.stem in ['NativeSettingsBootstrap','NativeSettingsMaintenance','native_settings_local_only_port_test'] else []
+ instrument=['-finstrument-functions'] if source.stem in ['NativeSettingsBootstrap','NativeSettingsMaintenance','NativeSettingsWorker','native_settings_local_only_port_test'] else []
  run(['c++','-std=c++17',*flags,*instrument,*incs,*defines,'-Wall','-Wextra','-Werror','-Wno-unused-function','-Wno-misleading-indentation','-Wno-missing-field-initializers','-Wno-deprecated-declarations','-MMD','-MF',build/f'cpp-{i}.d','-c',source,'-o',obj]);objects.append(obj)
 layout=build/'layout.cpp';layout.write_text('#include "bootstrap/Runtime.h"\n#include "ports/esp32s3/CpuPort.h"\nextern "C" size_t complete_host_runtime_size(){return sizeof(RiscBoot::Runtime);}\nextern "C" size_t complete_host_port_size(){return sizeof(RiscCpu::Port);}\n');obj=build/'layout.o';run(['c++','-std=c++17',*flags,*incs,*selected,'-c',layout,'-o',obj]);objects.append(obj)
 wrapped=['stat','fstat','open','read','write','close','fsync','mkdir','unlink','rename','opendir','readdir','closedir','esp_vfs_register','esp_vfs_unregister','esp_partition_read','esp_partition_write','esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
@@ -100,7 +101,7 @@ probe=[str(build/'test'),str(build),'probe-external-acquire',str(probe_dir)]
 commands.append(probe)
 negative=subprocess.run(probe,timeout=30)
 assert negative.returncode==86,'External acquire instrumentation did not intercept real acquire'
-if not a.allow_fresh:
+if not a.allow_fresh and not a.external_producer:
  # A separate explicitly Fresh-enabled producer creates genuine checked receipts.
  # The resumed binary retains its own Fresh=0 flag in every compilation unit.
  producer=build/'genesis-producer'
@@ -108,10 +109,20 @@ if not a.allow_fresh:
  if a.sanitize:cmd+=['--sanitize']
  run(['python3',*cmd])
  shutil.copytree(producer/'fresh-cut',build/'fresh-cut')
-cases=['fresh-cut'] if a.producer_only else ['fresh','legacy','held-grants','cancel-inspect','cancel-init','cancel-committed','retained-init','external-fresh','external-import','external-unclassified','malformed-root','legacy-reboot','legacy-cut','legacy-resume','fresh-resume']
-if not a.producer_only and a.allow_fresh:cases[0:0]=['fresh-cut'];cases+=['fresh-reboot']
+cases=['external-seed'] if a.external_producer else ['fresh-cut'] if a.producer_only else ['fresh','legacy','held-grants','cancel-inspect','cancel-init','cancel-committed','retained-init','external-fresh','external-import','external-unclassified','malformed-root','legacy-reboot','legacy-cut','legacy-resume','fresh-resume']
+if not a.producer_only and not a.external_producer and a.allow_fresh:cases[0:0]=['fresh-cut'];cases+=['fresh-reboot']
+if not a.producer_only and not a.external_producer:
+ # Produce a real external-policy V3 root and immutable bank with the unchanged
+ # external native import fallback. Only this separate binary may try acquire;
+ # its empty package has no external volume provider and never writes media.
+ producer=build/'external-producer'
+ cmd=[pathlib.Path(__file__).resolve(),'--sdk',a.sdk,'--output',producer,'--external-producer']
+ if a.sanitize:cmd+=['--sanitize']
+ run(['python3',*cmd])
+ shutil.copytree(producer/'external-seed',build/'external-seed')
+ cases+=['external-root']
 failures=[]
-dependencies={'fresh-reboot':'fresh','legacy-reboot':'legacy','fresh-resume':'fresh-cut','legacy-resume':'legacy-cut'}
+dependencies={'external-root':'external-seed','fresh-reboot':'fresh','legacy-reboot':'legacy','fresh-resume':'fresh-cut','legacy-resume':'legacy-cut'}
 for case in cases:
  dependency=dependencies.get(case)
  if dependency and (any(f['case']==dependency for f in failures) or not (build/dependency/'flash.bin').is_file() or not (build/dependency/'nvs.bin').is_file()):
@@ -124,4 +135,4 @@ for case in cases:
  except subprocess.TimeoutExpired:failures.append(dict(case=case,error='timeout'))
 if failures:raise SystemExit(json.dumps(dict(failures=failures)))
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
-(build/'manifest.json').write_text(json.dumps(dict(cases=cases,commands=commands,local_fresh_permission=a.allow_fresh,source_hashes={str(p.relative_to(root)):sha(p) for directory in ['src','experimental/native_replica','test','sdk'] for p in (root/directory).rglob('*') if p.is_file() and p.suffix in ['.h','.cpp','.c','.py']},sdk_hashes={p.name:sha(p) for p in sdk.glob('*.h')},generated_fixture_sha256=sha(prefix),generated_stubs={str(p.relative_to(stubs)):sha(p) for p in stubs.rglob('*') if p.is_file()},sanitizers='address,undefined' if a.sanitize else 'none',binary_sha256=sha(build/'test')),indent=2)+'\n')
+(build/'manifest.json').write_text(json.dumps(dict(cases=cases,commands=commands,local_fresh_permission=a.allow_fresh,external_policy_producer=a.external_producer,source_hashes={str(p.relative_to(root)):sha(p) for directory in ['src','experimental/native_replica','test','sdk'] for p in (root/directory).rglob('*') if p.is_file() and p.suffix in ['.h','.cpp','.c','.py']},sdk_hashes={p.name:sha(p) for p in sdk.glob('*.h')},generated_fixture_sha256=sha(prefix),generated_stubs={str(p.relative_to(stubs)):sha(p) for p in stubs.rglob('*') if p.is_file()},sanitizers='address,undefined' if a.sanitize else 'none',binary_sha256=sha(build/'test')),indent=2)+'\n')
