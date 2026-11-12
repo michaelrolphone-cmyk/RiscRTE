@@ -1,0 +1,9 @@
+Native-bank crypto fixtures: free capacity, abort/restart/destructor and one-shot cleanup PASS
+Production native bank adapter: markers PASS
+Production NativeBank reader/hash budgets: 7 aggregate-deadline, zero-I/O expiry and 32KiB/2ms fairness cases PASS
+Production native provider bank admission: selected=0 exact bytes/imports, application/extra isolation, provisioning and immutable staged authority PASS; zero mapping/hardware/selection
+Committed-pair boot: both banks, pending/confirmed/deep-wake path, torn commit, prior-pair rollback, invalid OTA states; 96-byte record only PASS
+Production native bank adapter: blank-record PASS
+Production provisioning candidate diagnostic binding: diagnostic-candidate flag=0 metadata-only PASS
+Production provisioning candidate diagnostic binding: diagnostic-candidate-absent flag=0 metadata-only PASS
+Bootloader-backed happy/unscanned-store/layout tests require BOOTLOADER_FILE from a verified paired target build.

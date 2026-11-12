@@ -7,6 +7,7 @@ san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g); fi
 extra=(-DARDUINO_USB_CDC_ON_BOOT=1 -DRISC_NATIVE_DIAGNOSTIC_OBSERVER="${NATIVE_DIAGNOSTIC_OBSERVER:-0}");if [[ "${APP_DATA_TEST:-0}" == 1 ]];then extra+=(-DRISC_PAIRED_APP_DATA=1);fi
 if [[ "${NATIVE_PROVIDER_TEST_ABI:-1}" == 2 ]];then extra+=(-DRISC_NATIVE_ESP_IDF=1);fi
+if [[ "${APP_DATA_EXPANDED_TEST:-0}" == 1 ]];then extra+=(-DRISC_PAIRED_APP_DATA=1 -DRISC_PAIRED_APP_DATA_EXPANDED=1);fi
 crypto_native=0;if [[ "${NATIVE_PROVIDER_TEST_ABI:-1}" == 2 ]];then crypto_native=1;fi
 c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -DRISC_NATIVE_ESP_IDF="$crypto_native" \
  -I"$repo/test/native_bank_stubs" -I"$repo/src" "$repo/test/native_bank_crypto_stub_test.cpp" -lcrypto -o "$build/crypto-stub"
@@ -68,6 +69,15 @@ c++ -rdynamic -Wl,--wrap=open,--wrap=close,--wrap=fopen,--wrap=fclose,--wrap=ope
  "$repo/src/runtime/provisioning/BootstrapInput.cpp" "$repo/src/runtime/provisioning/Coordinator.cpp" \
  "$repo/src/runtime/provisioning/StoreFiles.cpp" "$repo/src/runtime/provisioning/Profile.cpp" "$repo/src/runtime/provisioning/PreservingPolicy.cpp" \
  "$repo/src/runtime/update/PairedBank.cpp" "$repo/src/runtime/update/StoreAudit.cpp" "$repo/test/native_bank_test.cpp" "$build/validate.o" "${native_objects[@]}" -lcrypto -ldl -o "$build/test"
+if [[ "${ENVELOPE_UPGRADE_ONLY:-0}" == 1 ]];then
+ [[ -n "${BOOTLOADER_FILE:-}" ]]
+ mkdir -p "$build/envelope-upgrade";cp "$build/cohort-native.elf" "$build/envelope-upgrade/cohort-native.elf"
+ "$build/test" markers
+ "$build/test" restart "$BOOTLOADER_FILE"
+ "$build/test" restart-unknown "$BOOTLOADER_FILE"
+ "$build/test" cohort-envelope "$BOOTLOADER_FILE" "$build/envelope-upgrade"
+ exit 0
+fi
 if [[ "${NATIVE_EXPORT_ADMISSION_ONLY:-0}" == 1 ]];then
  "$build/test" native-export-admission "$build/export-admission"
  if [[ "${NATIVE_EXPORT_TEST_SELECTION:-0}" == 1 ]];then
@@ -77,6 +87,7 @@ if [[ "${NATIVE_EXPORT_ADMISSION_ONLY:-0}" == 1 ]];then
 fi
 if [[ "${NATIVE_PROVIDER_ADMISSION_ONLY:-0}" == 1 ]];then
  "$build/test" native-provider-admission "$build/provider-admission"
+ for mode in owner unsafe close;do "$build/test" "native-envelope-$mode" "$build/envelope-$mode";done
  "$build/test" native-provider-custody-owner "$build/provider-custody-owner"
  "$build/test" native-provider-custody-storage "$build/provider-custody-storage"
  for mode in owner unsafe close;do

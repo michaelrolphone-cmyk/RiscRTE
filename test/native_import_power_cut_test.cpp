@@ -5,6 +5,9 @@
 #undef main
 #include <sys/wait.h>
 #include <fcntl.h>
+static C::DurabilityPolicy testPolicy=C::DurabilityPolicy::ExternalVolume;
+struct PolicyFixture:F::Fixture {PolicyFixture():F::Fixture(6,C::heap(),testPolicy){}};
+
 static unsigned powerCut=0,powerAt=0;
 static std::string snapshotPath;
 static void exactWrite(int fd,const void*p,size_t n){const auto*b=static_cast<const uint8_t*>(p);while(n){auto done=F::__real_write(fd,b,n);assert(done>0);n-=size_t(done);b+=done;}}
@@ -21,28 +24,33 @@ static void restoreNvs(){
 }
 static void powerPoint(const char*){if(++powerAt!=powerCut)return;persistNvs();::_exit(77);}
 static Rows expected(){return {{"added",{6}},{"original",{5}},{"journal",{4}},{"untouched",{2}}};}
-static void checkImported(F::Fixture&f,const A::Witness&w){
+static void checkImported(PolicyFixture&f,const A::Witness&w){
+ assert(f.core.formatVersion()==(testPolicy==C::DurabilityPolicy::LocalOnlyV1?5u:3u));
  assert(f.core.ready()&&f.core.revision()==1&&f.core.sequence()==0&&!f.core.pendingCount()&&!f.core.identity().known);
  const auto b=f.core.baseline();assert(b.origin()==C::Origin::ImportedLegacy&&b.archiveObligation()&&!memcmp(b.sourceFingerprint(),w.fingerprint,32));
  for(const auto&r:expected()){std::string got;assert(F::get(f.core,r.first.c_str(),&got)==C::Ok&&Bytes(got.begin(),got.end())==r.second);}
 }
 static void assertOriginal(const decltype(F::nvs)&before){for(const char*space:{"rte00000006","kvj00000006","kvd00000006"})assert(F::nvs.at(space)==before.at(space));}
-static int finish(F::Fixture&f,bool resume,A::Witness*out){
- Hash sourceHash,mapHash;Sources s(6,Owner,LegacyOwner,30000,f.inspector,sourceHash.api(),hooks());A factory(&s,f.core,guard(),mapHash.api(),s.sources());C::Initialization a;
+static int finish(PolicyFixture&f,bool resume,A::Witness*out){
+ Hash sourceHash,mapHash;Sources s(6,Owner,LegacyOwner,30000,f.inspector,sourceHash.api(),hooks(),C::heap(),testPolicy);A factory(&s,f.core,guard(),mapHash.api(),s.sources());C::Initialization a;
  int rc=0;if(resume)rc=factory.admitImportedResume(&a);else{rc=s.inventory(out);if(!rc)rc=factory.admitImported(selection(*out),&a);}return rc?rc:f.core.initializeImportedBaseline(a);
 }
-int main(int argc,char**argv){assert(argc==2);F::rootPath=argv[1];snapshotPath=F::rootPath+"-power-nvs";setbuf(stdout,nullptr);unsigned reached=0;
+static int runImportCuts(int argc,char**argv){assert(argc==2);F::rootPath=argv[1];snapshotPath=F::rootPath+"-power-nvs";setbuf(stdout,nullptr);unsigned reached=0;
  for(bool startWithReceipt:{false,true})for(bool rnrExists:{false,true})for(unsigned cut=1;cut<200;++cut){
   reset();seed();if(!rnrExists)F::nvs.erase("rnr00000006");const auto before=F::nvs;A::Witness witness{};
-  {F::Fixture f;Hash h;Sources s(6,Owner,LegacyOwner,30000,f.inspector,h.api(),hooks());assert(s.inventory(&witness)==0);}
-  if(startWithReceipt){F::Fixture f;Hash h,m;Sources s(6,Owner,LegacyOwner,30000,f.inspector,h.api(),hooks());A factory(&s,f.core,guard(),m.api(),s.sources());C::Initialization a;assert(factory.admitImported(selection(witness),&a)==0);F::fault="nvs-set";F::cut=2;F::after=false;F::armed=true;assert(f.core.initializeImportedBaseline(a)!=0);F::armed=false;f.store.finishOperation();assert(!memcmp(F::nvs.at("rnr00000006").at("root").data(),"RTENLI1",8));}
+  {PolicyFixture f;Hash h;Sources s(6,Owner,LegacyOwner,30000,f.inspector,h.api(),hooks(),C::heap(),testPolicy);assert(s.inventory(&witness)==0);}
+  if(startWithReceipt){PolicyFixture f;Hash h,m;Sources s(6,Owner,LegacyOwner,30000,f.inspector,h.api(),hooks(),C::heap(),testPolicy);A factory(&s,f.core,guard(),m.api(),s.sources());C::Initialization a;assert(factory.admitImported(selection(witness),&a)==0);F::fault="nvs-set";F::cut=2;F::after=false;F::armed=true;assert(f.core.initializeImportedBaseline(a)!=0);F::armed=false;f.store.finishOperation();assert(!memcmp(F::nvs.at("rnr00000006").at("root").data(),C::importReceiptMagic(testPolicy),8));}
   powerCut=cut;powerAt=0;const pid_t pid=::fork();assert(pid>=0);
-  if(!pid){F::powerCheckpoint=powerPoint;F::Fixture child;A::Witness ignored{};assert(finish(child,startWithReceipt,&ignored)==C::Ok);persistNvs();::_exit(0);}
+  if(!pid){F::powerCheckpoint=powerPoint;PolicyFixture child;A::Witness ignored{};assert(finish(child,startWithReceipt,&ignored)==C::Ok);persistNvs();::_exit(0);}
   int status=0;assert(::waitpid(pid,&status,0)==pid&&WIFEXITED(status));const int result=WEXITSTATUS(status);assert(result==0||result==77);restoreNvs();F::reset();assertOriginal(before);
-  {F::Fixture reboot;int rc=reboot.core.load();if(rc==C::Missing){A::Witness now{};assert(finish(reboot,false,&now)==C::Ok&&!memcmp(now.fingerprint,witness.fingerprint,32));}else if(rc==C::Initializing){A::Witness ignored{};assert(finish(reboot,true,&ignored)==C::Ok);}else assert(rc==C::Ok);checkImported(reboot,witness);assertOriginal(before);reboot.store.finishOperation();}
-  {F::Fixture second;assert(second.core.load()==0);checkImported(second,witness);second.store.finishOperation();}
+  {PolicyFixture reboot;int rc=reboot.core.load();if(rc==C::Missing){A::Witness now{};assert(finish(reboot,false,&now)==C::Ok&&!memcmp(now.fingerprint,witness.fingerprint,32));}else if(rc==C::Initializing){A::Witness ignored{};assert(finish(reboot,true,&ignored)==C::Ok);}else assert(rc==C::Ok);checkImported(reboot,witness);assertOriginal(before);reboot.store.finishOperation();}
+  {PolicyFixture second;assert(second.core.load()==0);checkImported(second,witness);second.store.finishOperation();}
   if(result==0)break;
   assert(cut<199);++reached;
  }
- std::filesystem::remove(snapshotPath);reset();printf("Imported initialization: %u process-death cuts (initial/resume, originally absent/empty rnr), including partial writes, no destructors, exact-source reboot recovery PASS\n",reached);
+ std::filesystem::remove(snapshotPath);reset();printf("Imported initialization: %u process-death cuts (initial/resume, originally absent/empty rnr), including partial writes, no destructors, exact-source reboot recovery PASS\n",reached);return 0;
 }
+
+#ifndef RISC_NATIVE_IMPORT_POWER_CUT_NO_MAIN
+int main(int argc,char**argv){return runImportCuts(argc,argv);}
+#endif

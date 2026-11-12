@@ -3,6 +3,10 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 build="$(mktemp -d)";trap 'rm -rf "$build"' EXIT
 flags=(-std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers)
+if [[ -n "${RISC_TEST_PROVIDER_CAPACITY:-}" ]];then
+ [[ "$RISC_TEST_PROVIDER_CAPACITY" == 40 || "$RISC_TEST_PROVIDER_CAPACITY" == 48 ]] || exit 2
+ flags+=(-DRISC_PROVIDER_CAPACITY="$RISC_TEST_PROVIDER_CAPACITY" -DRISC_PLATFORM_CAPACITY=32)
+fi
 san=()
 if [[ "${SANITIZE:-0}" == 1 ]]; then san=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g);fi
 includes=(-I"$repo/src" -I"$repo/sdk/app" -I"$repo/sdk/driver" -I"$repo/sdk/hardware" -I"$repo/lib/ArduinoJson/src" -I"$repo/test/drivers/stubs")

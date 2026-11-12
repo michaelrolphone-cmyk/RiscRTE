@@ -37,13 +37,19 @@ using Legacy=RiscExperimental::CheckedNvsLegacySources;
 #define RISC_NATIVE_SETTINGS_LOGICAL_OWNER {'X','4','-','R','T','E','-','S','E','T','T','I','N','G','S',1}
 #endif
 #ifndef RISC_NATIVE_SETTINGS_VOLUME_INSTANCE
+#if RISC_NATIVE_SETTINGS_LOCAL_ONLY
+#define RISC_NATIVE_SETTINGS_VOLUME_INSTANCE 0
+#else
 #define RISC_NATIVE_SETTINGS_VOLUME_INSTANCE 9
+#endif
 #endif
 #ifndef RISC_NATIVE_SETTINGS_WRITERS
 #define RISC_NATIVE_SETTINGS_WRITERS {"settings",1},{"paper_clock",1},{"battery",1},{"ble_scanner",1},{"contexts",1},{"wifi_settings",6}
 #endif
 constexpr uint8_t LogicalOwner[16]=RISC_NATIVE_SETTINGS_LOGICAL_OWNER;
 constexpr uint64_t VolumeInstance=RISC_NATIVE_SETTINGS_VOLUME_INSTANCE;
+constexpr C::DurabilityPolicy Policy=RISC_NATIVE_SETTINGS_LOCAL_ONLY?C::DurabilityPolicy::LocalOnlyV1:C::DurabilityPolicy::ExternalVolume;
+static_assert(RISC_NATIVE_SETTINGS_LOCAL_ONLY?VolumeInstance==0:VolumeInstance!=0,"Explicit local-only has no external volume; external mode requires one");
 constexpr NativeSettingsLifecycle::Writer Writers[]={RISC_NATIVE_SETTINGS_WRITERS};
 bool internal(const void*p,size_t n){return p&&n&&uintptr_t(p)<=UINTPTR_MAX-(n-1)&&esp_ptr_internal(p)&&esp_ptr_internal(static_cast<const uint8_t*>(p)+n-1);}
 struct Backend {
@@ -53,7 +59,7 @@ struct Backend {
  Little::Mount binding;
  RiscCrypto::Sha256 hash;
  bool hashing=false;
-#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY && !RISC_NATIVE_SETTINGS_LOCAL_ONLY
  uint8_t incarnation[16]{};
 #endif
  F::Files::Hooks hooks;
@@ -65,9 +71,9 @@ struct Backend {
  explicit Backend(uint32_t space,bool(*ownerCheck)(),const M::Identity&id,const Little::Mount&bound)
   :ns(space),owner(ownerCheck),identity(id),binding(bound),hooks(F::fileHooks(this,now,cooperate)),files(hooks),
    metadata({this,held,initialized}),artifacts(space,bound,port()),
-   sources(space,LogicalOwner,artifacts,{this,held,initialized,observe}),
+   sources(space,LogicalOwner,artifacts,{this,held,initialized,observe},Policy),
    legacy(space,LogicalOwner,space==1?"shared-00000001":"shared-00000006",
-    F::Store::ImageMax-C::HeaderV3-4,artifacts,legacyDigest(),{this,held,epoch,initialized,observe},NativeSettingsPayloadAllocator::allocator()){
+    F::Store::ImageMax-(RISC_NATIVE_SETTINGS_LOCAL_ONLY?C::HeaderV5:C::HeaderV3)-4,artifacts,legacyDigest(),{this,held,epoch,initialized,observe},NativeSettingsPayloadAllocator::allocator(),Policy){
    hash.initialize();
   }
  static uint32_t now(void*){return uint32_t(esp_timer_get_time()/1000);}
@@ -122,7 +128,7 @@ struct Backend {
    [](void*p){auto&s=*static_cast<Backend*>(p);if(!digestAllowed(p))return false;s.hashing=s.hash.begin();return s.hashing;},
    [](void*p,const void*b,uint32_t n){auto&s=*static_cast<Backend*>(p);if(!s.hashing||!digestAllowed(p)||(!b&&n))return false;return s.hash.add(static_cast<const unsigned char*>(b),n);},
    [](void*p,uint8_t out[32]){auto&s=*static_cast<Backend*>(p);if(!out||!s.hashing||!digestAllowed(p))return false;const bool ok=s.hash.finish(out);s.hashing=false;return ok;}};}
-#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY && !RISC_NATIVE_SETTINGS_LOCAL_ONLY
  static bool ownerOrWorker(void*p){auto&s=*static_cast<Backend*>(p);return !xPortInIsrContext()&&!observe(p)&&((s.owner&&s.owner())||held(p));}
  static bool firstEntropy(void*p,uint8_t out[16]){auto&s=*static_cast<Backend*>(p);return NativeSettingsStartupEntropy::take(s.ns,NativeSettingsStartupEntropy::Purpose::FirstCheckpoint,p,held,out);}
 #endif
@@ -130,7 +136,7 @@ struct Backend {
   const F::Backend backend{&files,&artifacts,&sources,identity.settingsRoot,hooks,sizeof(*this),metadata.api(),sizeof(metadata),{this,held,space},sizeof(*this),&legacy};
   const auto hashApi=legacyDigest();
   const NativeSettingsBootstrap::Catalog::Digest digest{hashApi.context,hashApi.begin,hashApi.update,hashApi.finish};
-#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY && !RISC_NATIVE_SETTINGS_LOCAL_ONLY
   // The first-checkpoint guard separately proves the exact namespace lease on
   // owner and worker. All native file writers share the fixed fenced mount;
   // selected KV writers share the coordinator. The immutable table/root cannot
@@ -165,7 +171,7 @@ bool prepare(bool(*owner)()){
  std::strcpy(bound.mountPath,id.mountPath);std::strcpy(bound.privateRoot,id.settingsRoot+std::strlen(id.mountPath));
  auto*one=state.namespaces[0].construct(1,owner,id,bound);auto*six=state.namespaces[1].construct(6,owner,id,bound);
  if(!one->files.configure(id.settingsRoot)||!six->files.configure(id.settingsRoot)||M::retained())return false;
-#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY
+#if RISC_NATIVE_SETTINGS_STARTUP_ENTROPY && !RISC_NATIVE_SETTINGS_LOCAL_ONLY
  if(!NativeSettingsStartupEntropy::take(1,NativeSettingsStartupEntropy::Purpose::Incarnation,one,Backend::ownerOrWorker,one->incarnation)||
     !NativeSettingsStartupEntropy::take(6,NativeSettingsStartupEntropy::Purpose::Incarnation,six,Backend::ownerOrWorker,six->incarnation)) {
   // Failed entropy does not hide an existing native/SD baseline. Only operations
@@ -173,7 +179,7 @@ bool prepare(bool(*owner)()){
   C::wipe(one->incarnation,sizeof one->incarnation);C::wipe(six->incarnation,sizeof six->incarnation);
  }
 #endif
- state.selected=F::assemble({one->input(),six->input(),VolumeInstance,Writers,sizeof Writers/sizeof Writers[0],owner});
+ state.selected=F::assemble({one->input(),six->input(),VolumeInstance,Writers,sizeof Writers/sizeof Writers[0],owner,Policy,RISC_NATIVE_SETTINGS_LOCAL_FRESH!=0});
  return state.selected&&!M::retained();
 }
 const NativeSettingsLifecycle::Admission*admission(){return state.selected;}

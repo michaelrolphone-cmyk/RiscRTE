@@ -140,15 +140,25 @@ class CheckedFreshInitArtifacts {
  static uint32_t word(const uint8_t*p){return uint32_t(p[0])|(uint32_t(p[1])<<8)|(uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);}
  static bool zero(const uint8_t*p,uint32_t n){while(n--)if(*p++)return false;return true;}
  static uint32_t crc(const uint8_t*p,uint32_t n){uint32_t c=~0u;while(n--){c^=*p++;for(unsigned bit=0;bit<8;++bit)c=(c>>1)^((c&1)?0xedb88320u:0);}return ~c;}
+ bool validLocalFresh(const uint8_t*p,uint32_t n)const{
+  if(!p||n!=C::HeaderV5+4)return false;
+  const auto*b=p+C::HeaderV2;
+  return !std::memcmp(p,"RTENR05",8)&&word(p+8)==ns_&&zero(p+12,4)&&word(p+16)==1&&zero(p+20,88)&&word(p+108)==n&&zero(p+112,C::HeaderV2-112)&&
+   !std::memcmp(b,"RTENBP1",8)&&word(b+8)==ns_&&word(b+12)==uint32_t(C::Origin::FreshEmpty)&&zero(b+16,76)&&word(b+92)==crc(b,92)&&
+   word(p+480)==1&&word(p+484)==1&&zero(p+488,24)&&word(p+n-4)==crc(p,n-4);
+ }
  bool validImported(const uint8_t*p,uint32_t n)const{
   if(!p||n<ImageBytes||n>MaxImageBytes)return false;
-  const uint32_t bytes=n-ImageBytes,count=word(p+96);const auto*b=p+C::HeaderV2;
-  if(std::memcmp(p,"RTENR03",8)||word(p+8)!=ns_||!zero(p+12,4)||word(p+16)!=1||!zero(p+20,76)||word(p+100)||
+  const bool local=!std::memcmp(p,"RTENR05",8);
+  const uint32_t header=local?C::HeaderV5:C::HeaderV3;
+  if(n<header+4||(local&&(word(p+480)!=1||word(p+484)!=1||!zero(p+488,24))))return false;
+  const uint32_t bytes=n-header-4,count=word(p+96);const auto*b=p+C::HeaderV2;
+  if((!local&&std::memcmp(p,"RTENR03",8))||word(p+8)!=ns_||!zero(p+12,4)||word(p+16)!=1||!zero(p+20,76)||word(p+100)||
      word(p+104)!=bytes||word(p+108)!=n||!zero(p+112,C::HeaderV2-112)||
      std::memcmp(b,"RTENBP1",8)||word(b+8)!=ns_||word(b+12)!=uint32_t(C::Origin::ImportedLegacy)||
      word(b+16)!=bytes||word(b+20)!=count||zero(b+24,32)||zero(b+56,32)||word(b+88)!=1||
      word(b+92)!=crc(b,92)||word(p+n-4)!=crc(p,n-4)||(!bytes)!=(!count)||uint64_t(count)*21>bytes)return false;
-  uint32_t at=C::HeaderV3;const uint32_t end=n-4;const uint8_t*previous=nullptr;
+  uint32_t at=header;const uint32_t end=n-4;const uint8_t*previous=nullptr;
   for(uint32_t i=0;i<count;++i){
    if(at>end||end-at<21)return false;
    const uint8_t*key=p+at;unsigned length=0;
@@ -184,7 +194,7 @@ class CheckedFreshInitArtifacts {
   const bool attempt=mode!=Attempt::Absent;
   if(!ns_||ns_>INT32_MAX||!validRootPath()||(attempt&&(!image||next>UINT64_MAX/2)))return C::Invalid;
   Canonical expected{};
-  if(mode==Attempt::Imported||mode==Attempt::Sd){if(mode==Attempt::Imported?!validImported(image,bytes):!validSd(image,bytes))return C::Invalid;expected.imported=image;expected.bytes=bytes;expected.object=crc(image,bytes);}
+  if((mode==Attempt::Fresh&&validLocalFresh(image,bytes))||mode==Attempt::Imported||mode==Attempt::Sd){if(mode!=Attempt::Fresh&&(mode==Attempt::Imported?!validImported(image,bytes):!validSd(image,bytes)))return C::Invalid;expected.imported=image;expected.bytes=bytes;expected.object=crc(image,bytes);}
   else{expected=canonical();if(mode==Attempt::Fresh){if(bytes!=ImageBytes)return C::Invalid;for(uint32_t i=0;i<ImageBytes;++i)if(image[i]!=expectedAt(i+24,expected))return C::Invalid;}}
 #if defined(__linux__) && !defined(ESP_PLATFORM)
   rc=inventory(expected,next,attempt);return cleanup(rc);

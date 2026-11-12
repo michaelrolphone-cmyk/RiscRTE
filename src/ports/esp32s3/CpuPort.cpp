@@ -301,7 +301,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
   for(size_t n=0;n<board.deviceCount();++n){
     const auto& d=*board.deviceAt(n);const uint64_t id=d.hardware.instance_id;
     if(runtime.uses(id,RISC_PROVIDER_SYNC_CAPABILITY,RISC_PROVIDER_SYNC_API_V1)){
-      if(syncCount_==RuntimeProviders::GraphV2::kMaxModules)return false;
+      if(syncCount_==SyncCapacity)return false;
       auto& c=syncs_[syncCount_++];c.port=this;c.instance=id;
       c.api={RISC_PROVIDER_SYNC_API_V1,sizeof(c.api),&c,syncOwner,syncCreate,syncTryLock,syncUnlock,syncDestroy};
       if(!runtime.registerPlatform(RISC_PROVIDER_SYNC_CAPABILITY,RISC_PROVIDER_SYNC_API_V1,RiscBoot::Runtime::Scope::Device,id,&c.api))return false;

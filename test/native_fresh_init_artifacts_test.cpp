@@ -128,7 +128,9 @@ extern "C" int __wrap_openat(int parent,const char*p,int flags,...){bool hit=bef
 extern "C" DIR*__real_fdopendir(int);
 extern "C" DIR*__wrap_fdopendir(int fd){bool hit=before("fdopendir");if(fail(hit)){errno=EIO;return nullptr;}DIR*d=__real_fdopendir(fd);if(armed&&d){fds.erase(fd);dirs[d]=fd;}complete(hit);return d;}
 extern "C" dirent*__real_readdir(DIR*);
-extern "C" dirent*__wrap_readdir(DIR*d){bool hit=before("readdir");if(fail(hit)&&!after){errno=EIO;return nullptr;}dirent*e=__real_readdir(d);complete(hit);if(fail(hit)){errno=EIO;return nullptr;}if(hit&&fault=="omit"){errno=0;return nullptr;}if(hit&&fault=="duplicate"){static dirent entry{};strcpy(entry.d_name,"replica-a.bin");return &entry;}return e;}
+// Inject an extra entry without consuming the real stream; replacing its first
+// entry can accidentally replace replica-a with itself, depending on directory order.
+extern "C" dirent*__wrap_readdir(DIR*d){bool hit=before("readdir");if(fail(hit)&&!after){errno=EIO;return nullptr;}if(hit&&fault=="duplicate"){static dirent entry{};strcpy(entry.d_name,"replica-a.bin");complete(hit);return &entry;}dirent*e=__real_readdir(d);complete(hit);if(fail(hit)){errno=EIO;return nullptr;}if(hit&&fault=="omit"){errno=0;return nullptr;}return e;}
 extern "C" ssize_t __real_read(int,void*,size_t);
 extern "C" ssize_t __wrap_read(int fd,void*p,size_t n){if(armed)assert(n<=4096);bool hit=before("read");if(fail(hit)&&!after){errno=EIO;return -1;}ssize_t got=__real_read(fd,p,n);complete(hit);if(fail(hit)){errno=EIO;return -1;}if(hit&&fault=="short"&&got>0)return got-1;return got;}
 extern "C" int __real_close(int);
