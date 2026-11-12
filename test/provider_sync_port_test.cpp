@@ -7,6 +7,10 @@
 using namespace RiscCpu;
 static bool owned=true;
 int main(){
+ static_assert(Port::SyncCapacity<=RuntimeProviders::GraphV2::kMaxModules,"provider bound");
+#if defined(RISC_PROVIDER_CAPACITY) && RISC_PROVIDER_CAPACITY>40 && RISC_PLATFORM_CAPACITY==32
+ static_assert(Port::SyncCapacity==32,"every sync requires a platform slot");
+#endif
  Hardware hw{};hw.owner=[](){return owned;};
  Port p(hw);p.syncCount_=2;
  auto& a=p.syncs_[0];a.port=&p;a.instance=1;
@@ -47,8 +51,8 @@ int main(){
  assert(!Port::syncCreate(&a,&overflow) && !overflow && p.quiescent());
  // Every inherited provider slot is reachable, including the new last slot.
  // Tokens remain scoped to their exact table; the last lock fences the port.
- Port full(hw);full.syncCount_=RuntimeProviders::GraphV2::kMaxModules;
- uint64_t tokens[RuntimeProviders::GraphV2::kMaxModules]{};
+ Port full(hw);full.syncCount_=Port::SyncCapacity;
+ uint64_t tokens[Port::SyncCapacity]{};
  for(size_t i=0;i<full.syncCount_;++i) {
   auto& sync=full.syncs_[i];sync.port=&full;sync.instance=i+1;
   assert(Port::syncCreate(&sync,&tokens[i]) && tokens[i]);

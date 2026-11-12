@@ -14,9 +14,32 @@
 #include <string>
 #include <vector>
 #include <unistd.h>
+#ifdef NATIVE_FIXTURE_DIR_REBOOT
+#include <dirent.h>
+#endif
 using C=RiscExperimental::NativeReplicaCore;using S=RiscExperimental::CheckedNativeReplicaStore;
 using N=RiscExperimental::NvsReplicaMetadata;using J=RiscExperimental::NativeReplicaJob;using Bytes=std::vector<uint8_t>;
 namespace NativeFixture {
+#ifdef NATIVE_FIXTURE_DIR_REBOOT
+// Linux DIR storage is intentionally retained when production custody is lost.
+// Only a full fixture reboot, after every owner was destroyed, reclaims it.
+// Ordinary paths must close their own directories; this is not a suppression.
+static unsigned liveFixtures=0;
+static bool retainedFixtureDestroyed=false;
+static std::map<DIR*,int> directoryCustody;
+extern "C" DIR* __real_fdopendir(int);
+extern "C" int __real_closedir(DIR*);
+extern "C" DIR* __wrap_fdopendir(int fd){auto*d=__real_fdopendir(fd);if(d)assert(directoryCustody.emplace(d,fd).second);return d;}
+// std::filesystem can close directories opened inside libc (not through our
+// wrapped fdopendir). Only native fixture handles belong to this registry.
+extern "C" int __wrap_closedir(DIR*d){directoryCustody.erase(d);return __real_closedir(d);}
+static void rebootDirectoryCustody(){
+ assert(liveFixtures==0);
+ if(!directoryCustody.empty())assert(retainedFixtureDestroyed);
+ for(const auto&item:directoryCustody)assert(__real_closedir(item.first)==0);
+ directoryCustody.clear();retainedFixtureDestroyed=false;
+}
+#endif
 struct Handle {std::string name;nvs_open_mode_t mode;};
 std::map<std::string,std::map<std::string,Bytes>> nvs;
 std::map<nvs_handle_t,Handle> handles;uint32_t handleSerial=1;
@@ -49,9 +72,20 @@ struct Fixture {
  N metadata{{nullptr,[](void*){return onWorker&&lease;},[](void*){return initialized?ESP_OK:ESP_ERR_NVS_NOT_INITIALIZED;}}};
  RiscExperimental::CheckedFreshInitArtifacts inspector;
  S store;C core;
- explicit Fixture(uint32_t ns=6,C::Allocator allocation=C::heap()):inspector(ns,rootPath.c_str(),{&files,[](void*){return onWorker&&lease;},cooperate,[](void*p){return static_cast<RiscStorage::AppDataFiles*>(p)->retained()?int(C::Retained):int(C::Ok);}}),store(ns,files,metadata.api(),{nullptr,[](void*){return onWorker&&lease;},space},allocation,&inspector),core(ns,store.backend(),S::limits(),allocation){assert(files.configure(rootPath.c_str()));}
+ explicit Fixture(uint32_t ns=6,C::Allocator allocation=C::heap(),C::DurabilityPolicy policy=C::DurabilityPolicy::ExternalVolume):inspector(ns,rootPath.c_str(),{&files,[](void*){return onWorker&&lease;},cooperate,[](void*p){return static_cast<RiscStorage::AppDataFiles*>(p)->retained()?int(C::Retained):int(C::Ok);}}),store(ns,files,metadata.api(),{nullptr,[](void*){return onWorker&&lease;},space},allocation,&inspector,policy),core(ns,store.backend(),S::limits(),allocation,policy){assert(files.configure(rootPath.c_str()));
+#ifdef NATIVE_FIXTURE_DIR_REBOOT
+ ++liveFixtures;
+#endif
+ }
+#ifdef NATIVE_FIXTURE_DIR_REBOOT
+ ~Fixture(){assert(liveFixtures);--liveFixtures;if(!store.exitSafe()||!inspector.exitSafe()||files.retained())retainedFixtureDestroyed=true;}
+#endif
 };
-void reset(){armed=false;onWorker=lease=initialized=true;nativeCalls=fsCalls=cut=0;fault.clear();after=false;otherUsed=0;totalBytes=0x80000;nvsCapacity=0x6000;assert(handles.empty());}
+void reset(){
+#ifdef NATIVE_FIXTURE_DIR_REBOOT
+ rebootDirectoryCustody();
+#endif
+ armed=false;onWorker=lease=initialized=true;nativeCalls=fsCalls=cut=0;fault.clear();after=false;otherUsed=0;totalBytes=0x80000;nvsCapacity=0x6000;assert(handles.empty());}
 void empty(){reset();nvs.clear();std::filesystem::remove_all(rootPath);std::filesystem::create_directories(rootPath);}
 extern "C" esp_err_t nvs_open(const char*name,nvs_open_mode_t mode,nvs_handle_t*out){++nvsTotal;safe();bool fail=hit("nvs-open");if(fail&&!after)return ESP_FAIL;if((strncmp(name,"rnr",3)&&strncmp(name,"rte",3)&&strncmp(name,"kvj",3)&&strncmp(name,"kvd",3))||strlen(name)!=11)return ESP_ERR_INVALID_ARG;if(mode==NVS_READONLY&&!nvs.count(name))return ESP_ERR_NVS_NOT_FOUND;*out=handleSerial++;handles[*out]={name,mode};if(fail&&after){handles.erase(*out);return ESP_FAIL;}return ESP_OK;}
 extern "C" esp_err_t nvs_get_blob(nvs_handle_t h,const char*k,void*out,size_t*n){++nvsTotal;safe();bool fail=hit(out?"nvs-read":"nvs-probe");if(fail&&!after)return ESP_FAIL;auto it=handles.find(h);assert(it!=handles.end());auto ns=nvs.find(it->second.name);if(ns==nvs.end()||!ns->second.count(k))return ESP_ERR_NVS_NOT_FOUND;const auto&b=ns->second.at(k);if(!out){*n=b.size();return fail?ESP_FAIL:ESP_OK;}if(*n<b.size()){*n=b.size();return ESP_ERR_NVS_INVALID_LENGTH;}memcpy(out,b.data(),b.size());*n=b.size();return fail?ESP_FAIL:ESP_OK;}

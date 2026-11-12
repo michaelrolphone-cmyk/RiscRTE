@@ -1,0 +1,42 @@
+name: Native Settings writer identities
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/ports/esp32s3/NativeSettingsLifecycle.*'
+      - 'src/ports/esp32s3/NativeSettingsWriterRegistry.h'
+      - 'src/runtime/packages/PackageIdentity.h'
+      - 'test/native_settings_writer*'
+      - 'test/run_native_settings_writer*'
+      - '.github/workflows/native-settings-writer-identities.yml'
+permissions:
+  contents: read
+jobs:
+  writer-identities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitize: ['0', '1']
+    env:
+      SANITIZE: ${{ matrix.sanitize }}
+      ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Copied identities and real lifecycle
+        run: python3 test/run_native_settings_writer_registry_test.py --output build/writer-identities
+      - name: Existing lifecycle launch regression
+        run: python3 test/run_native_settings_launch_test.py --output build/launch-regression
+      - name: Existing coordinator and availability
+        run: |
+          bash test/run_native_settings_coordinator_test.sh
+          bash test/run_native_settings_availability_test.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-settings-writer-identities-${{ matrix.sanitize }}
+          path: build/

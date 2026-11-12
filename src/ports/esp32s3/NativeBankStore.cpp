@@ -121,12 +121,13 @@ static_assert(CONFIG_SPIFFS_PAGE_SIZE==RiscProvision::SpiffsCapacity::PageBytes 
 bool owner(){return isOwner && isOwner();}
 bool operationSafe(){return owner() && !retainedAdmissionRuntime && !retainedAdmissionFile && !retainedAdmissionBytes &&
   !provisionReadRetained && (!fileSources || !fileSources->retained()) && (!runtime || !runtime->metadataCloseRetained()) && operationIsSafe && operationIsSafe();}
-struct AdmissionReadContext {uint32_t started,lastYield;size_t sinceYield=0;};
-bool readAdmissionImage(RiscBoot::Runtime* candidate,const char* filename,
-                        RiscBoot::RuntimeFileImage& image,size_t expected=0,const uint32_t* admissionStarted=nullptr) {
-  if(!candidate || !operationSafe())return false;
-  const uint32_t now=RiscPlatform::millis();const uint32_t start=admissionStarted?*admissionStarted:now;AdmissionReadContext context{start,now,0};
-  const bool ok=image.read(candidate->imageSource(),filename,{
+struct AdmissionReadContext {uint32_t started,lastYield;size_t sinceYield=0;bool hashPhysical=false;};
+bool readAdmissionSource(RiscBoot::RuntimeFileView source,RiscBoot::Runtime* candidate,const char* filename,
+                        RiscBoot::RuntimeFileImage& image,size_t expected=0,const uint32_t* admissionStarted=nullptr,
+                        bool allowEnvelope=false,bool hashPhysical=false) {
+  if(!operationSafe())return false;
+  const uint32_t now=RiscPlatform::millis();const uint32_t start=admissionStarted?*admissionStarted:now;AdmissionReadContext context{start,now,0,hashPhysical};
+  const bool ok=image.read(source,filename,{
     [](size_t n)->void*{return heap_caps_malloc(n,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);},
     [](void* p){free(p);},
     [](void*)->bool{return operationSafe();},
@@ -136,10 +137,28 @@ bool readAdmissionImage(RiscBoot::Runtime* candidate,const char* filename,
       c.sinceYield+=n;
       if(c.sinceYield>=32*1024 || uint32_t(at-c.lastYield)>=2u){vTaskDelay(1);c.sinceYield=0;c.lastYield=RiscPlatform::millis();}
       return uint32_t(RiscPlatform::millis()-c.started)<30000u;
-    },&context},expected,RISC_BANK_APP_MAX);
+    },&context,[](void* raw,const uint8_t* bytes,size_t count)->bool {
+      const auto& c=*static_cast<AdmissionReadContext*>(raw);
+      return !c.hashPhysical || (scratch && scratch->hashContext.add(bytes,count));
+    }},expected,RISC_BANK_APP_MAX,allowEnvelope);
   if(image.retained){retainedAdmissionRuntime=candidate;retainedAdmissionFile=image.handle?image.handle:UINT32_MAX;
     retainedAdmissionBytes=image.bytes;provisionReadRetained=true;}
   return ok;
+}
+bool readAdmissionImage(RiscBoot::Runtime* candidate,const char* filename,
+                        RiscBoot::RuntimeFileImage& image,size_t expected=0,const uint32_t* admissionStarted=nullptr,
+                        bool allowEnvelope=false,bool hashPhysical=false) {
+  return candidate && readAdmissionSource(candidate->imageSource(),candidate,filename,image,expected,
+                                          admissionStarted,allowEnvelope,hashPhysical);
+}
+// Admission can lose custody during ELF callbacks after the image has closed.
+// Preserve the allocation and candidate rather than freeing under a lost owner.
+bool releaseAdmissionImage(RiscBoot::Runtime* candidate,RiscBoot::RuntimeFileImage& image){
+  if(!operationSafe()){
+    retainedAdmissionRuntime=candidate;retainedAdmissionBytes=image.bytes;provisionReadRetained=true;
+    return false;
+  }
+  free(image.bytes);image.bytes=nullptr;return true;
 }
 uint32_t now(void*){return RiscPlatform::millis();}
 bool hashBegin(void*){return scratch->hashContext.begin();}
@@ -247,16 +266,15 @@ bool inspectProvisionedImage(AdmissionImages& context,const char* path,ElfRole r
   if(!file.bytes || file.bytes>RISC_BANK_APP_MAX)return false;
   const auto* policy=role==ElfRole::Driver && context.candidate?context.candidate->nativeProviderPolicyForImage(path):nullptr;
   RiscBoot::RuntimeFileImage image;
-  if(!readAdmissionImage(context.candidate,path,image,file.bytes,&context.started))return false;
-  auto* bytes=image.bytes;
-  bool ok=operationSafe() && hashBegin(nullptr);uint32_t at=0,lastYield=RiscPlatform::millis();
-  while(ok && at<file.bytes){const uint32_t n=std::min<uint32_t>(4096u,file.bytes-at);
-    ok=operationSafe() && hashAdd(nullptr,bytes+at,n);at+=n;
-    if((at%(32*1024))==0 || uint32_t(RiscPlatform::millis()-lastYield)>=2u){vTaskDelay(1);lastYield=RiscPlatform::millis();}
-    if(uint32_t(RiscPlatform::millis()-context.started)>=30000u)ok=false;}
-  uint8_t digest[32];ok=ok && hashEnd(nullptr,digest) && !memcmp(digest,file.sha256,32);
-  ok=ok && admitElf(bytes,file.bytes,role,policy) && operationSafe() && uint32_t(RiscPlatform::millis()-context.started)<30000u;
-  free(bytes);if(ok)context.seen[index]=true;return ok;
+  if(!hashBegin(nullptr) ||
+     !readAdmissionImage(context.candidate,path,image,file.bytes,&context.started,role==ElfRole::Application && context.candidate && context.candidate->ordinaryImageEnvelopeAllowed(path),true))return false;
+  uint8_t digest[32];
+  bool ok=operationSafe() && hashEnd(nullptr,digest) && !memcmp(digest,file.sha256,32) &&
+    image.physicalSize==file.bytes && admitElf(image.bytes,image.size,role,policy) &&
+    operationSafe() && uint32_t(RiscPlatform::millis()-context.started)<30000u;
+  if(!releaseAdmissionImage(context.candidate,image))return false;
+  if(ok)context.seen[index]=true;
+  return ok;
 }
 bool admitProvisionedStore(const char* root,const RiscProvision::Profile& profile){
   if(!operationSafe() || !provisionState || &profile!=provisionProfile || candidateCpu || runtime || provisionReadRetained)return false;
@@ -319,17 +337,18 @@ bool finishApp(void*,unsigned b){
     fgetc(f)==EOF && !ferror(f) && !memcmp(scratch->buffer,scratch->manifest,scratch->manifestSize);
   if(fclose(f)!=0)written=false;
   if(!written || !absolute(filename,sizeof(filename),scratch->appPaths.elf))return false;
-  f=fopen(filename,"rb");if(!f)return false;
-  auto* data=static_cast<uint8_t*>(heap_caps_malloc(scratch->appSize,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
-  if(!data){fclose(f);return false;}
-  uint32_t offset=0,started=RiscPlatform::millis();bool ok=hashBegin(nullptr);
-  while(ok && offset<scratch->appSize){uint32_t n=std::min<uint32_t>(4096u,scratch->appSize-offset);
-    ok=operationSafe() && fread(data+offset,1,n,f)==n && hashAdd(nullptr,data+offset,n);offset+=n;vTaskDelay(1);
-    if(uint32_t(RiscPlatform::millis()-started)>30000u)ok=false;
-  }
-  uint8_t digest[32];ok=ok && fgetc(f)==EOF && !ferror(f) && hashEnd(nullptr,digest) && !memcmp(digest,scratch->appDigest,32) && admitElf(data,scratch->appSize);
-  if(fclose(f)!=0)ok=false;
-  free(data);if(!ok)return false;
+  // Hash the stored representation through the very same open source as
+  // decoding. Transaction size/digest remain physical; ELF admission is logical.
+  char activeImage[256];
+  if(!runtime || !RiscBoot::path("/bootfs",scratch->appPaths.elf,activeImage,sizeof(activeImage)))return false;
+  const bool allowEnvelope=runtime->ordinaryImageEnvelopeAllowed(activeImage);
+  RiscBoot::RuntimeFileImage image;const uint32_t started=RiscPlatform::millis();
+  if(!hashBegin(nullptr) || !readAdmissionSource(RiscBoot::RuntimeFileView(fileSources,"/updatefs"),runtime,
+      filename,image,scratch->appSize,&started,allowEnvelope,true))return false;
+  uint8_t digest[32];
+  const bool ok=operationSafe() && hashEnd(nullptr,digest) && !memcmp(digest,scratch->appDigest,32) &&
+    image.physicalSize==scratch->appSize && admitElf(image.bytes,image.size);
+  if(!releaseAdmissionImage(runtime,image) || !ok)return false;
   return RiscUpdate::auditStore("/bootfs","/updatefs",scratch->appPaths.elf,scratch->appPaths.manifest,
     scratch->buffer,sizeof(scratch->buffer),nullptr,now,[](void*){vTaskDelay(1);return operationSafe();});
 }
@@ -412,9 +431,9 @@ bool admitFile(void* context,const char* filename,bool provider){
   auto* candidate=static_cast<RiscBoot::Runtime*>(context);
   const auto* policy=provider && candidate?candidate->nativeProviderPolicyForImage(filename):nullptr;
   RiscBoot::RuntimeFileImage image;
-  if(!readAdmissionImage(candidate,filename,image))return false;
+  if(!readAdmissionImage(candidate,filename,image,0,nullptr,!provider && candidate && candidate->ordinaryImageEnvelopeAllowed(filename)))return false;
   const bool ok=admitElf(image.bytes,image.size,provider?ElfRole::Driver:ElfRole::Application,policy) && operationSafe();
-  free(image.bytes);return ok;
+  return releaseAdmissionImage(candidate,image) && ok;
 }
 // Kept as a linked, inspectable native witness of the selected coordinates,
 // delegation count and exact const maps. It is never an app/provider import.
@@ -581,6 +600,15 @@ bool confirmBoot(){
   if(confirmed)return true;
   if(!pending || esp_ota_mark_app_valid_cancel_rollback()!=ESP_OK)return false;
   confirmed=true;pending=false;return true;
+}
+bool transferAvailable(){
+  // Intent is not a flash operation. Healthy accepted Settings work may still
+  // be draining; its storage-readiness gate belongs to the final parked lane.
+  if(!prepared || !confirmed || pending || !owner() || !transaction || provisionFiles || provisionReadRetained ||
+     retainedAdmissionRuntime || retainedAdmissionFile || retainedAdmissionBytes || appFile || mounted ||
+     (fileSources && fileSources->retained()) || (runtime && (runtime->retained() || runtime->metadataCloseRetained())))return false;
+  risc_bank_status_v1 status{};status.struct_size=sizeof(status);
+  return transaction->status(&status) && status.state==RISC_BANK_IDLE;
 }
 void rejectBoot(){
   if(!owner() || !rollbackTrusted)return;

@@ -145,4 +145,4 @@ void creationAndConcurrentAckCuts(){
  printf("native replica: %u creation and concurrent-newer-ack error/power-cut interruption points PASS\n",cuts);
 }
 
-int main(){basics();reconciliation();failureMatrix();publicationScratchFailures();creationAndConcurrentAckCuts();failuresAndBounds();puts("UNCONNECTED HOST CORE ONLY: no .90 routing/ABI change, SD/NVS integration or Wi-Fi semantic reconciliation qualified");}
+int main(){basics();reconciliation();failureMatrix();publicationScratchFailures();creationAndConcurrentAckCuts();failuresAndBounds();puts("UNCONNECTED HOST CORE ONLY: no .90 routing/ABI change, SD/NVS integration or Wi-Fi semantic reconciliation qualified");return 0;}

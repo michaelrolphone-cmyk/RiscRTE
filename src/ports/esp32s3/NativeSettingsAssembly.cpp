@@ -31,12 +31,12 @@ bool internal(const void*p,size_t n){return p&&n&&uintptr_t(p)<=UINTPTR_MAX-(n-1
 bool context(const void*p,size_t n){return p?internal(p,n):n==0;}
 void*allocate(size_t n){const auto a=NativeSettingsPayloadAllocator::allocator();return a.allocate(a.context,n);}
 void release(void*p){const auto a=NativeSettingsPayloadAllocator::allocator();a.release(a.context,p);}
-bool valid(const Namespace&n,uint32_t ns){
+bool valid(const Namespace&n,uint32_t ns,C::DurabilityPolicy policy){
  const auto&b=n.backend;
  if(!internal(b.files,sizeof(Files))||!internal(b.artifacts.concreteAddress(),b.artifacts.concreteBytes())||!internal(b.sources,sizeof(Sources))||
     !b.root||strnlen(b.root,160)>=160||!b.artifacts->boundTo(ns,b.root)||!b.artifacts->exitSafe()||
-    !b.sources->boundTo(ns,b.artifacts)||!b.sources->exitSafe()||
-    (b.legacy&&(!internal(b.legacy,sizeof(NativeSettingsBootstrap::Legacy))||!b.legacy->boundTo(ns,b.artifacts)||!b.legacy->exitSafe()))||
+    !b.sources->boundTo(ns,b.artifacts)||b.sources->durabilityPolicy()!=policy||!b.sources->exitSafe()||
+    (b.legacy&&(!internal(b.legacy,sizeof(NativeSettingsBootstrap::Legacy))||!b.legacy->boundTo(ns,b.artifacts)||b.legacy->durabilityPolicy()!=policy||!b.legacy->exitSafe()))||
     !b.fileHooks.now||!b.fileHooks.cooperate||b.fileHooks.allocate!=allocate||b.fileHooks.deallocate!=release||
     !context(b.fileHooks.context,b.fileContextBytes)||!b.files->configuredFor(b.root,b.fileHooks)||
     !b.metadata.read||!b.metadata.write||!context(b.metadata.context,b.metadataContextBytes)||
@@ -52,8 +52,9 @@ Files::Hooks fileHooks(void*p,uint32_t(*now)(void*),bool(*cooperate)(void*)){ret
 const NativeSettingsLifecycle::Admission*assemble(const Inputs&i){
  if(attempted)return nullptr;
  attempted=true; // no reentrant selection or replacement, even on failure
- if(!i.owner||!i.owner()||!i.device||!i.writerCount||i.writerCount>NativeSettingsLifecycle::MaxWriters||!i.writers||
-    !valid(i.preferences,1)||!valid(i.wifi,6))return nullptr;
+ if((i.policy!=C::DurabilityPolicy::ExternalVolume&&i.policy!=C::DurabilityPolicy::LocalOnlyV1)||
+    (i.policy==C::DurabilityPolicy::LocalOnlyV1?i.device!=0:i.device==0)||!i.owner||!i.owner()||!i.writerCount||i.writerCount>NativeSettingsLifecycle::MaxWriters||!i.writers||
+    !valid(i.preferences,1,i.policy)||!valid(i.wifi,6,i.policy))return nullptr;
  for(size_t n=0;n<i.writerCount;++n){const auto&w=i.writers[n];
   if(!w.app||strnlen(w.app,96)>=96||!RuntimePackages::safeId(w.app)||(w.nameSpace!=1&&w.nameSpace!=6))return nullptr;
   for(size_t before=0;before<n;++before)if(i.writers[before].nameSpace==w.nameSpace&&!std::strcmp(i.writers[before].app,w.app))return nullptr;
@@ -74,9 +75,9 @@ const NativeSettingsLifecycle::Admission*assemble(const Inputs&i){
  NativeSettingsBootstrap::Namespace startup[2]{};
  const auto payload=NativeSettingsPayloadAllocator::allocator();
  for(unsigned n=0;n<2;++n){const auto&v=*inputs[n];const auto&b=v.backend;auto&out=state->namespaces[n];
-  auto*s=out.store.construct(n?6u:1u,*b.files,b.metadata,b.guard,payload,b.artifacts);
-  auto*c=out.core.construct(n?6u:1u,s->backend(),Store::limits(),payload);
-  normal[n]={c,s,v.digest,payload,v.initialIncarnation};startup[n]={c,s,v.digest,payload,b.sources,v.first,b.legacy};
+  auto*s=out.store.construct(n?6u:1u,*b.files,b.metadata,b.guard,payload,b.artifacts,i.policy);
+  auto*c=out.core.construct(n?6u:1u,s->backend(),Store::limits(),payload,i.policy);
+  normal[n]={c,s,v.digest,payload,v.initialIncarnation};startup[n]={c,s,v.digest,payload,b.sources,v.first,b.legacy,i.allowLocalFresh};
  }
  for(size_t n=0;n<i.writerCount;++n){std::strcpy(state->names[n],i.writers[n].app);state->writers[n]={state->names[n],i.writers[n].nameSpace};}
  auto*b=state->bootstrap.construct(startup[0],startup[1],i.device);

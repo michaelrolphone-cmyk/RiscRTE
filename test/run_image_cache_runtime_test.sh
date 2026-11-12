@@ -11,6 +11,9 @@ cc "${flags[@]}" "$repo/test/fixtures/image_cache_app.c" -o "$build/default.elf"
 cc "${flags[@]}" -DIMAGE_CACHE_CHILD "$repo/test/fixtures/image_cache_app.c" -o "$build/child.elf"
 cc "${flags[@]}" -DIMAGE_CACHE_CHILD -DIMAGE_REVISION=2 "$repo/test/fixtures/image_cache_app.c" -o "$build/replacement.elf"
 cp "$build/child.elf" "$build/loose.elf"
+if [[ "${ENCODED_IMAGES:-0}" == 1 ]]; then
+  python3 "$repo/test/encode_runtime_image_fixture.py" "$build/default.elf" "$build/child.elf" "$build/replacement.elf"
+fi
 bash "$repo/test/support/native_registry/build.sh" "$build"
 c++ "${san[@]}" -std=c++17 -Wall -Wextra -Werror -Wno-missing-field-initializers -rdynamic -pthread \
   -DRISC_APP_IMAGE_CACHE_TEST=1 -DRISC_APP_IMAGE_CACHE=1 -include "$repo/test/support/native_registry/redirect.h" \

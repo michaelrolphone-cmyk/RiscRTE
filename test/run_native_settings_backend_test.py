@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """Actual settings backend, fixed mount and source/store path; worker/factory/NVS host boundaries."""
-import importlib.util, os, pathlib, subprocess, tempfile, shutil
+import importlib.util, os, pathlib, subprocess, tempfile, shutil, json
 root=pathlib.Path(__file__).resolve().parent.parent
+test_source=(root/'test'/os.environ.get('BACKEND_TEST_SOURCE','native_settings_backend_test.cpp')).resolve()
+if test_source.parent!=(root/'test').resolve() or test_source.suffix!='.cpp' or not test_source.is_file():
+ raise SystemExit('BACKEND_TEST_SOURCE must name a checked-in test/*.cpp file')
+default_cases=[*(['no-entropy'] if os.environ.get('STARTUP_ENTROPY')=='1' else []),'normal','legacy','local-normal','local-legacy','no-mount','wrong-owner','nvs-unavailable','busy-mount','wrong-worker','wrong-namespace','retained-flash']
+test_cases=json.loads(os.environ['BACKEND_TEST_CASES']) if 'BACKEND_TEST_CASES' in os.environ else default_cases
+if not isinstance(test_cases,list) or not test_cases or any(not isinstance(case,str) or not case for case in test_cases):
+ raise SystemExit('BACKEND_TEST_CASES must be a nonempty JSON string array')
 spec=importlib.util.spec_from_file_location('profile',root/'test/run_native_littlefs_profile_test.py')
 profile=importlib.util.module_from_spec(spec);spec.loader.exec_module(profile)
 build=pathlib.Path(os.environ.get('BUILD_DIR',tempfile.mkdtemp(prefix='native-appdata-mount-')));build.mkdir(parents=True,exist_ok=True)
@@ -49,6 +56,6 @@ for name in ('NativeSettingsBackend','NativeSettingsPayloadAllocator',*(['Native
 obj=build/'appdata.o';profile.run(['c++',*flags,'-c',str(root/'src/runtime/storage/AppDataFiles.cpp'),'-o',str(obj)]);objects.append(str(obj))
 obj=build/'posix.o';profile.run(['c++',*flags,'-c',str(root/'test/native_app_data_mount_posix.cpp'),'-o',str(obj)]);objects.append(str(obj))
 wrapped=['stat','fstat','open','read','write','close','fsync','mkdir','unlink','rename','opendir','readdir','closedir','esp_vfs_register','esp_vfs_unregister','esp_partition_read','esp_partition_write','esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
-exe=build/'test';profile.run(['c++',*flags,str(root/'test/native_settings_backend_test.cpp'),*objects,'-Wl,'+','.join('--wrap='+f for f in wrapped),'-lcrypto','-no-pie','-o',str(exe)])
-for case in [*(['no-entropy'] if os.environ.get('STARTUP_ENTROPY')=='1' else []),'normal','legacy','no-mount','wrong-owner','nvs-unavailable','busy-mount','wrong-worker','wrong-namespace','retained-flash']:profile.run([str(exe),case])
+exe=build/'test';profile.run(['c++',*flags,str(test_source),*objects,'-Wl,'+','.join('--wrap='+f for f in wrapped),'-lcrypto','-no-pie','-o',str(exe)])
+for case in test_cases:profile.run([str(exe),case])
 print('PASS: real native settings backend/VFS, source checks, namespace preservation and retained failure; no firmware activation/hardware claim')

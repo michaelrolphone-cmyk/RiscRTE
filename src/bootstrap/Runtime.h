@@ -46,6 +46,7 @@ namespace RiscExperimental { class NativeAtomicKeyValue; }
 #include <RiscRuntimeV1.h>
 #include <RiscDiagnosticCheckpointV1.h>
 #include <RiscResidentShellV1.h>
+#include <RiscResidentAttentionV1.h>
 #include <RiscRealtimeV1.h>
 #include <RiscPlatformRealtimeV1.h>
 #include <RiscProviderPromotionV1.h>
@@ -140,6 +141,11 @@ struct Port {
   // Optional final endpoint teardown. Unlike shutdown/session reset, successful
   // stop disables transport admission before native provider grants are released.
   bool (*serialFilesStop)()=nullptr;
+  // Explicit product transfer policy; absent preserves ordinary app lifecycle.
+  // Poll copies USB bytes only. Enter runs solely in the full-ready parked lane.
+  void (*serialFilesPoll)()=nullptr;
+  bool (*serialTransferRequested)()=nullptr;
+  void (*serialTransferEnter)()=nullptr;
 #endif
 };
 class Runtime final {
@@ -190,6 +196,9 @@ class Runtime final {
   // default, app-policy and driver image paths, with their expected entry role.
   // No module is mapped or executed. Duplicate instances share one inspection.
   bool inspectImages(bool (*inspect)(void*,const char* path,bool driver),void*) const;
+  // Pure prepared-authority query; exact internal ordinary app path only.
+  // Excludes all image-source policies and any path also used by a driver.
+  bool ordinaryImageEnvelopeAllowed(const char* absolutePath) const;
   // Exact prepared driver only; returns the graph-owned immutable policy copy.
   const RuntimeProviders::NativeProviderPolicyV1* nativeProviderPolicyForImage(const char* absolutePath) const;
   bool uses(uint64_t instance,const char* capability,uint32_t api) const;
@@ -205,6 +214,7 @@ class Runtime final {
   bool diagnostic(const char*);
   bool confirmBoot();
   bool exitRequested()const;
+  bool serialTransferRequested()const;
   bool retainInvocation();
   bool streamClient(risc_stream_client_v1*);
   bool residentClient(risc_resident_client_v1*);
@@ -289,7 +299,10 @@ class Runtime final {
   // native grants and uses ordinary graph shutdown. Uncertainty pins custody.
   bool stopNativeFiles();
 #endif
-  bool active() const { return !sleepCalling_ &&
+  bool observing() const { return attentionRunning_; }
+  bool observationCall() { if(!attentionRunning_)return false;attentionViolation_=true;return true; }
+  bool apiVisible() const { return attentionRunning_ ? (!attentionViolation_ && !retained_ && invocation_==&mainInvocation_ && port_.owner()) : active(); }
+  bool active() const { if(attentionRunning_){attentionViolation_=true;return false;} return !sleepCalling_ &&
 #if RISC_NATIVE_SETTINGS_LIFECYCLE || RISC_NATIVE_SERIAL_FILES
     !nativeCheckpointRunning_ &&
 #endif
@@ -351,7 +364,7 @@ class Runtime final {
   bool registerNativeProvider(const Driver&, RuntimeProviders::SpecV2&, const RuntimeProviders::NativeProviderPolicyV1&);
   bool validateGraph();
   static void* openDriverImage(void*,const char*,const void*);
-  bool readRuntimeImage(const char*,RuntimeFileImage&,size_t expected=0,bool pinned=false);
+  bool readRuntimeImage(const char*,RuntimeFileImage&,size_t expected=0,bool pinned=false,bool allowEnvelope=false);
   static int readInternalImage(void*,const char*,::elf_file*);
   void* openInternalImage(const char*,bool cached=false);
   void serviceProviders();
@@ -367,6 +380,8 @@ class Runtime final {
   int32_t residentLoading(const char* absolute);
   int32_t runForeground(uint64_t,const char*,risc_resident_result_v1*);
   int32_t residentCheckpoint(uint64_t,const risc_resident_request_v1*,risc_resident_reply_v1*);
+  int32_t registerAttention(uint64_t,const risc_resident_attention_callbacks_v1*);
+  int32_t residentAttention(uint64_t,risc_resident_attention_v1*,uint32_t reject=0);
   int32_t residentExit(uint64_t);
   bool residentFailure(uint64_t,risc_resident_failure_v1*);
   void recordResidentFailure(uint32_t,int32_t,const char*,uint64_t);
@@ -806,6 +821,11 @@ class Runtime final {
   char residentContinuation_[256]{};
   FileOpenState residentTransferFileOpen_{};
   risc_resident_callbacks_v1 shellCallbacks_{};
+  risc_resident_attention_callbacks_v1 attentionCallbacks_{};
+  uint64_t attentionObservedToken_=0;
+  uint32_t attentionObservedManual_=0;
+  bool attentionRunning_=false;
+  mutable bool attentionViolation_=false;
   uint64_t shellToken_=0;
   risc_resident_failure_v1 lastFailure_{};
   risc_runtime_launch_failure_v1 launchFailure_{};

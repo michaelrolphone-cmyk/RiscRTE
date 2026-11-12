@@ -192,8 +192,8 @@ class CheckedLittleFsFreshInitArtifacts final {
   const bool attempt=mode!=Attempt::Absent;
   if(attempt&&(!p||next>UINT64_MAX/2))return C::Invalid;
   Canonical expected{};
-  if(mode==Attempt::Imported||mode==Attempt::Sd){
-   if(mode==Attempt::Imported?!encoding_.validImported(p,n):!encoding_.validSd(p,n))return C::Invalid;
+  if((mode==Attempt::Fresh&&encoding_.validLocalFresh(p,n))||mode==Attempt::Imported||mode==Attempt::Sd){
+   if(mode!=Attempt::Fresh&&(mode==Attempt::Imported?!encoding_.validImported(p,n):!encoding_.validSd(p,n)))return C::Invalid;
    expected.imported=p;expected.bytes=n;expected.object=encoding_.crc(p,n);
   }else{
    expected=encoding_.canonical();

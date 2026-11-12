@@ -74,6 +74,107 @@ class ProviderAdmissionSources final {
      sources()->find(root)==&it->second->files && it->second->opened.count(handle)==1;
  }
 };
+// Actual NativeBankStore admission: stored SHA/length are not decoded ELF identity.
+static void nativeEnvelopeAdmissions(const std::string& root,const ProviderAdmissionSources& sources,unsigned custodyFault=0){
+ using namespace RiscBankStore;
+ const auto save=[](const std::string& path,const std::vector<uint8_t>& bytes){std::ofstream out(path,std::ios::binary);out.write(reinterpret_cast<const char*>(bytes.data()),bytes.size());assert(out.good());};
+ std::ofstream(root+"/boot.json")<<R"({"board":"board.json","default_app":"envelope.elf","drivers":[]})";
+ auto candidate=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,nullptr,nullptr,nullptr});
+ assert(sources.bind(*candidate) && candidate->prepare(root.c_str()));
+ const auto raw=elf("memcpy");const auto encoded=bankEnvelope(raw);const std::string path=root+"/envelope.elf";
+ auto profile=std::make_unique<RiscProvision::Profile>();profile->count=1;strcpy(profile->files[0].path,"envelope.elf");
+ ProvisionState state({},admissionHardware(),nullptr,nullptr);provisionState=&state;provisionProfile=profile.get();
+ unsigned cases=0;
+ for(unsigned fault=0;fault<9;++fault){
+   auto stored=encoded;ElfRole role=ElfRole::Application;
+   if(fault==1)stored[24]^=1; // physical SHA valid, decoded corruption check fails
+   if(fault==2)stored.push_back(0); // exact source length mismatch
+   if(fault==3)stored.pop_back(); // truncated payload
+   if(fault==4)stored[28]=1; // reserved header
+   if(fault==5)role=ElfRole::Driver;
+   if(fault==6)role=ElfRole::Either;
+   save(path,stored);auto& file=profile->files[0];file.bytes=stored.size();SHA256(stored.data(),stored.size(),file.sha256);
+   if(fault==7)SHA256(raw.data(),raw.size(),file.sha256); // logical digest must NOT satisfy physical inventory
+   if(fault==8)file.bytes=raw.size(); // logical length must NOT satisfy physical inventory
+   AdmissionImages context{root.c_str(),ticks,candidate.get()};
+   assert(inspectProvisionedImage(context,path.c_str(),role)==(fault==0));
+   assert(context.seen[0]==(fault==0) && !provisionReadRetained && sources.sources()->exitSafe());++cases;
+ }
+ save(path,encoded);
+ RiscBoot::RuntimeFileImage image;assert(readAdmissionImage(candidate.get(),path.c_str(),image,encoded.size(),nullptr,true));
+ assert(image.encoded && image.physicalSize==encoded.size() && image.size==raw.size() && !memcmp(image.bytes,raw.data(),raw.size()));
+ assert(releaseAdmissionImage(candidate.get(),image));++cases;
+ assert(admitFile(candidate.get(),path.c_str(),false));assert(!admitFile(candidate.get(),path.c_str(),true));++cases;
+
+ // Policy exclusions agree with the execution reader: even Application-role
+ // admission cannot decode a conflicting driver path or external image source.
+ for(bool external:{false,true}){
+   JsonDocument boot;boot["board"]="board.json";boot["default_app"]=external?"other.elf":"envelope.elf";
+   auto driver=boot["drivers"].to<JsonArray>().add<JsonObject>();driver["manifest"]="envelope-driver.json";
+   JsonDocument dm;dm["type"]="driver";dm["id"]="envelope-driver";dm["version"]="1.0.0";dm["driver_abi"]=2;
+   dm["architecture"]="xtensa-esp32s3";dm["file_name"]=external?"volume.elf":"envelope.elf";dm["requires"].to<JsonArray>();
+   auto cap=dm["provides"].to<JsonArray>().add<JsonObject>();cap["capability"]=external?"storage.volume":"test.envelope";cap["api"]=1;
+   JsonDocument app;app["type"]="application";app["id"]="envelope-app";app["version"]="1.0.0";app["architecture"]="xtensa-esp32s3";
+   app["file_name"]="envelope.elf";app["entry"]="app_main";app["requires"].to<JsonArray>();
+   auto row=boot["app_capabilities"].to<JsonArray>().add<JsonObject>();row["manifest"]="envelope-app.json";row["grants"].to<JsonArray>();
+   if(external){row["image_source"]["volume_instance"]=0;row["image_source"]["path"]="Apps/external/image.elf";}
+   const auto json=[&](const char* name,const JsonDocument& doc){std::ofstream out(root+"/"+name);serializeJson(doc,out);assert(out.good());};
+   json("boot.json",boot);json("envelope-driver.json",dm);json("envelope-app.json",app);
+   auto restricted=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,nullptr,nullptr,nullptr});
+   assert(sources.bind(*restricted) && restricted->prepare(root.c_str()));
+   assert(!restricted->ordinaryImageEnvelopeAllowed(path.c_str()));
+   save(path,encoded);auto& file=profile->files[0];file.bytes=encoded.size();SHA256(encoded.data(),encoded.size(),file.sha256);
+   AdmissionImages context{root.c_str(),ticks,restricted.get()};
+   assert(!inspectProvisionedImage(context,path.c_str(),ElfRole::Application) && !context.seen[0]);
+   assert(!admitFile(restricted.get(),path.c_str(),false));++cases;
+ }
+ provisionState=nullptr;provisionProfile=nullptr;
+ // Update-only uses staged source identity; active bytes remain untouched.
+ // Both complete stores are identical except the two explicitly admitted replacements.
+ std::filesystem::remove_all(fsRoot+"/bootfs");std::filesystem::remove_all(fsRoot+"/updatefs");
+ std::filesystem::create_directories(fsRoot+"/bootfs");std::filesystem::create_directories(fsRoot+"/updatefs");
+ const std::string manifestText=R"({"type":"application","id":"update-app","version":"1.0.0","architecture":"xtensa-esp32s3","file_name":"app.elf","entry":"app_main","requires":[]})";
+ const std::vector<uint8_t> manifest(manifestText.begin(),manifestText.end()),unchanged{'s','a','v','e','d'};
+ for(const char* bank:{"bootfs","updatefs"}){
+   save(fsRoot+"/"+bank+"/app.elf",raw);save(fsRoot+"/"+bank+"/app.json",manifest);save(fsRoot+"/"+bank+"/unchanged",unchanged);
+ }
+ strcpy(scratch->appPaths.elf,"app.elf");strcpy(scratch->appPaths.manifest,"app.json");
+ memcpy(scratch->manifest,manifest.data(),manifest.size());scratch->manifestSize=manifest.size();
+ for(const char* bank:{"bootfs","updatefs"}){
+   std::filesystem::copy_file(root+"/board.json",fsRoot+"/"+bank+"/board.json",std::filesystem::copy_options::overwrite_existing);
+   std::ofstream(fsRoot+"/"+bank+"/boot.json")<<R"({"board":"board.json","default_app":"app.elf","drivers":[],"app_capabilities":[{"manifest":"app.json","grants":[]}]})";
+ }
+ auto updateRuntime=std::make_unique<RiscBoot::Runtime>(RiscBoot::Port{own,nullptr,nullptr,nullptr});
+ assert(sources.bind(*updateRuntime) && updateRuntime->prepare("/bootfs"));runtime=updateRuntime.get();
+ for(unsigned fault=0;fault<4;++fault){
+   auto stored=fault==3?raw:encoded;if(fault==2)stored[24]^=1;
+   save(fsRoot+"/updatefs/app.elf",stored);scratch->appSize=stored.size();SHA256(stored.data(),stored.size(),scratch->appDigest);
+   if(fault==1)SHA256(raw.data(),raw.size(),scratch->appDigest);
+   mounted=true;appFile=nativeOpen("/updatefs/app.elf","ab");assert(appFile);
+   assert(finishApp(nullptr,1)==(fault==0 || fault==3));
+   assert(!appFile && !provisionReadRetained && sources.sources()->exitSafe());mounted=false;++cases;
+ }
+ runtime=nullptr;assert(cases==17 && operationSafe());
+ if(custodyFault){
+   save(path,encoded);providerCustodyReadPath=path;providerCustodyLoss=custodyFault;
+   providerCustodySkipReads=0;providerRetainedRead=0;providerRetainedReadContext=nullptr;
+   const unsigned closes=providerCloseCalls;
+   RiscBoot::RuntimeFileImage retained;
+   assert(!readAdmissionImage(candidate.get(),path.c_str(),retained,encoded.size(),nullptr,true));
+   assert(retained.retained && provisionReadRetained && retainedAdmissionRuntime==candidate.get());
+   assert(providerRetainedRead && retainedAdmissionFile==providerRetainedRead &&
+          sources.owns(root.c_str(),providerRetainedReadContext,providerRetainedRead));
+   assert(providerCloseCalls-closes==(custodyFault==4?1u:0u));
+   const unsigned reads=providerReadCalls,opens=providerOpenCalls,closed=providerCloseCalls;
+   assert(!cleanup(nullptr) && !operationSafe());
+   assert(providerReadCalls==reads && providerOpenCalls==opens && providerCloseCalls==closed);
+   candidate.release();
+   std::cout<<"Production encoded admission terminal custody fault="<<custodyFault<<" no retry/free/cleanup PASS\n";
+   return;
+ }
+ std::cout<<"Production NativeBank envelope admission: "<<cases<<" physical SHA/length, canonical ELF, role isolation, staged update-only/raw cases PASS\n";
+}
+
 static void nativeAdmissionBudgets(const std::string& root,const ProviderAdmissionSources& sources){
  using namespace RiscBankStore;
  const auto save=[&](const char* name,const std::vector<uint8_t>& bytes){
@@ -122,52 +223,53 @@ static void nativeAdmissionBudgets(const std::string& root,const ProviderAdmissi
  };
  ProvisionState state({},admissionHardware(),nullptr,nullptr);provisionState=&state;provisionProfile=profile.get();
  // Both actual provisioning inspections share one started value. The first
- // image leaves 2 ms after both reader and ELF-audit yields; the second
- // consumes them and must not start a new budget.
+ // image leaves 3 ms after prefix/body reads and ELF-audit yields; the
+ // second consumes them and must not start a new budget.
  {
-   images(1024);reset(29996);AdmissionImages context{root.c_str(),ticks,candidate.get()};
+   images(1024);reset(14997);AdmissionImages context{root.c_str(),ticks,candidate.get()};
    assert(inspectProvisionedImage(context,path.c_str(),ElfRole::Application));
-   assert(context.seen[0] && !context.seen[1] && ticks-context.started==29998 && delays==2);
-   const size_t hashes=nativeHashStarts;providerBudgetReadMillis=2;
+   assert(context.seen[0] && !context.seen[1] && ticks-context.started==29997 && delays==3);
+   const size_t hashes=nativeHashStarts;providerBudgetReadMillis=3;
    assert(!inspectProvisionedImage(context,(root+"/budget-b.elf").c_str(),ElfRole::Application));
-   assert(!context.seen[1] && ticks-context.started==30000 && nativeHashStarts==hashes);
+   assert(!context.seen[1] && ticks-context.started==30000 && nativeHashStarts==hashes+1);
    assert(!provisionReadRetained && !retainedAdmissionFile && !candidate->metadataCloseRetained() && sources.sources()->exitSafe());
    const unsigned opens=providerOpenCalls,reads=providerReadCalls;
    assert(!inspectProvisionedImage(context,(root+"/budget-b.elf").c_str(),ElfRole::Application));
    assert(providerOpenCalls==opens && providerReadCalls==reads);++cases;
  }
- // Count read-pass and hash-pass fairness separately. With no elapsed time,
- // 64 KiB contributes two yields in each pass, plus one ELF-audit yield.
+ // The physical SHA observer shares the read pass. Prefix+bounded body
+ // chunks spend one byte-budget yield (32KiB plus at most one chunk),
+ // then ELF admission yields once. There is no redundant hash-only pass.
  {
    images(64*1024);reset(0);AdmissionImages context{root.c_str(),ticks,candidate.get()};
    const size_t updates=nativeHashUpdates;assert(inspectProvisionedImage(context,path.c_str(),ElfRole::Application));
-   assert(context.seen[0] && delays==5 && ticks-context.started==5 && nativeHashUpdates-updates==16);
-   assert(providerBudgetReadDelays.back()==2);++cases;
+   assert(context.seen[0] && delays==2 && ticks-context.started==2 && nativeHashUpdates-updates==17);
+   assert(providerBudgetReadDelays.back()==1);++cases;
  }
- // Inject time only in the SHA fixture boundary. The read pass is below both
- // budgets; each 4 KiB hash update then crosses the elapsed 2 ms threshold.
+ // Inject time at the SHA observer boundary: prefix and each bounded body
+ // chunk cross the 2ms threshold before the next provider read.
  {
    images(8192);reset(0);AdmissionImages context{root.c_str(),ticks,candidate.get()};
-   nativeHashUpdateHook=[](size_t n){assert(n==4096);providerBudgetHashDelays.push_back(delays);ticks+=2;};
+   nativeHashUpdateHook=[](size_t n){assert(n && n<=4096);providerBudgetHashDelays.push_back(delays);ticks+=2;};
    const bool accepted=inspectProvisionedImage(context,path.c_str(),ElfRole::Application);nativeHashUpdateHook=nullptr;
-   assert(accepted && context.seen[0] && delays==3 && ticks-context.started==7);
-   assert((providerBudgetReadDelays==std::vector<unsigned>{0,0,0}));
-   assert((providerBudgetHashDelays==std::vector<unsigned>{0,1}));++cases;
+   assert(accepted && context.seen[0] && delays==4 && ticks-context.started==10);
+   assert((providerBudgetReadDelays==std::vector<unsigned>{0,1,2,3}));
+   assert((providerBudgetHashDelays==std::vector<unsigned>{0,1,2}));++cases;
  }
  // Hash time also spends the same aggregate deadline, including the yield.
  {
    images(8192);reset(0);AdmissionImages context{root.c_str(),ticks-29998u,candidate.get()};
    const size_t updates=nativeHashUpdates,finishes=nativeHashFinishes;
-   nativeHashUpdateHook=[](size_t n){assert(n==4096);ticks+=2;};
+   nativeHashUpdateHook=[](size_t n){assert(n==32);ticks+=2;};
    const bool accepted=inspectProvisionedImage(context,path.c_str(),ElfRole::Application);nativeHashUpdateHook=nullptr;
-   assert(!accepted && !context.seen[0] && delays==1 && ticks-context.started==30001);
+   assert(!accepted && !context.seen[0] && delays==0 && ticks-context.started==30000);
    assert(nativeHashUpdates-updates==1 && nativeHashFinishes==finishes && sources.sources()->exitSafe());++cases;
  }
  providerBudgetActive=false;providerBudgetReadMillis=0;provisionState=nullptr;provisionProfile=nullptr;
  assert(cases==7 && operationSafe() && !hardwareCalls && !writes && !selectorCalls && !restarts);
  std::cout<<"Production NativeBank reader/hash budgets: "<<cases<<" aggregate-deadline, zero-I/O expiry and 32KiB/2ms fairness cases PASS\n";
 }
-static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0,bool provisioningCustody=false,bool secondRead=false){
+static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0,bool provisioningCustody=false,bool secondRead=false,unsigned envelopeFault=0){
  using namespace RiscBankStore;
  using namespace RuntimeProviders;
  using Files=std::map<std::string,std::vector<uint8_t>>;
@@ -414,6 +516,8 @@ static void nativeProviderAdmission(const char* directory,unsigned custodyLoss=0
    return;
  }
  nativeAdmissionBudgets(provisionRoot,sources);
+ nativeEnvelopeAdmissions(provisionRoot,sources,envelopeFault);
+ if(envelopeFault)return;
  fsRoot.clear();delete scratch;scratch=nullptr;
  assert(!hardwareCalls && !writes && !selectorCalls && !restarts);
  std::cout<<"Production native provider bank admission: selected="<<selected

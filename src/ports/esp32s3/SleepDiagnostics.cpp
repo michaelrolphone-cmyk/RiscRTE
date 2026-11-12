@@ -1,5 +1,9 @@
 #include "SleepDiagnostics.h"
 #if RISC_DIAGNOSTIC_ADAPTER
+#define RISC_NATIVE_LOG_RETENTION (RISC_NATIVE_ESP_IDF && RISC_STAGE_LOGS && RISC_HWCDC_SERIAL)
+#if RISC_NATIVE_LOG_RETENTION
+#include "diagnostics/LiveLogQueue.h"
+#endif
 #if RISC_PERFORMANCE_TRACE
 #include "diagnostics/Performance.h"
 #endif
@@ -28,7 +32,7 @@
 #endif
 #endif
 #include <cstdio>
-#if RISC_NATIVE_ESP_IDF && (RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE)
+#if RISC_NATIVE_ESP_IDF && (RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE || RISC_NATIVE_LOG_RETENTION)
 #include <esp_attr.h>
 #include <new>
 #include <type_traits>
@@ -108,6 +112,25 @@ RiscPerf::Replay& perfReplay(){return performanceReplay;}
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
 UsbSleepRecovery recovery;
+#endif
+#if RISC_NATIVE_LOG_RETENTION
+// A native stage build retains startup/transfer diagnostics in a bounded queue.
+// No ISR, panic/cache-disabled access, heap allocation or RTC enlargement.
+#if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+#if !CONFIG_SPIRAM_BOOT_INIT
+#error "External live log queue requires SDK PSRAM boot initialization"
+#endif
+using NativeLogQueue=LiveLogQueue<32768>;
+#else
+using NativeLogQueue=LiveLogQueue<4096>;
+#endif
+static_assert(std::is_trivially_destructible<NativeLogQueue>::value, "Live log storage owns no resources");
+alignas(NativeLogQueue)
+#if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+EXT_RAM_BSS_ATTR
+#endif
+unsigned char liveLogStorage[sizeof(NativeLogQueue)];
+NativeLogQueue& liveLogs(){return *std::launder(reinterpret_cast<NativeLogQueue*>(liveLogStorage));}
 #endif
 TaskHandle_t owner=nullptr;
 bool outputting=false,unfinishedLine=false;
@@ -334,6 +357,9 @@ void start(){
   owner=nullptr;
   new (replayStorage) ReplayWorkspace;
 #endif
+#if RISC_NATIVE_LOG_RETENTION
+  owner=nullptr;new (liveLogStorage) NativeLogQueue;
+#endif
   owner=xTaskGetCurrentTaskHandle();RiscPlatform::console.setTxTimeoutMs(0);
   outputting=unfinishedLine=false;
 #if RISC_NATIVE_SERIAL_FILES
@@ -450,6 +476,9 @@ bool resumeUsbPhy(){
 }
 #endif
 void poll(){
+#if RISC_NATIVE_LOG_RETENTION
+  if(xPortInIsrContext())return;
+#endif
   if(!ours() || outputting)return;
 #if RISC_ENABLE_USB_PHY
   if(usbFenced)return;
@@ -459,6 +488,9 @@ void poll(){
   if(!recovery.poll(transport))return;
 #endif
   if(!transport.connected()){
+#if RISC_NATIVE_LOG_RETENTION
+    liveLogs().disconnected();
+#endif
 #if RISC_NATIVE_SERIAL_FILES
     if(serialConnected)RiscCpu::NativeSerialFiles::disconnect();
     serialConnected=false;
@@ -474,6 +506,7 @@ void poll(){
 #if RISC_NATIVE_SERIAL_FILES
   serialConnected=true;
 #endif
+#if !RISC_NATIVE_LOG_RETENTION
   // A zero write may truncate a best-effort live line. Terminate it before a
   // command dump or another line; never retain or retry its abandoned payload.
   if(unfinishedLine){finishLine();return;}
@@ -487,6 +520,7 @@ void poll(){
   if(!RiscCpu::NativeSerialFiles::pending())
 #endif
   if(reportLoss())return;
+#endif
 #if RISC_SLEEP_DIAGNOSTICS || RISC_PERFORMANCE_TRACE || RISC_NATIVE_SERIAL_FILES
   for(unsigned i=0;i<(RISC_NATIVE_SERIAL_FILES?64u:16u) && RiscPlatform::console.available()>0;++i){
     int c=RiscPlatform::console.read();if(c<0)break;
@@ -525,6 +559,12 @@ void poll(){
     else if(perfReplay().active())sleepReplay().disconnect();
 #endif
   }
+#endif
+#if RISC_NATIVE_LOG_RETENTION
+  // Ingress above is independent of TX pressure. Finish only an already-started
+  // diagnostic line before a reply; never begin another queued line first.
+  if(liveLogs().partial()){liveLogs().poll(transport);return;}
+#endif
 #if RISC_NATIVE_SERIAL_FILES
   if(RiscCpu::NativeSerialFiles::pending()){
     if(unfinishedLine){finishLine();return;}
@@ -539,12 +579,18 @@ void poll(){
     return;
   }
 #endif
+#if RISC_NATIVE_LOG_RETENTION
+  if(unfinishedLine){finishLine();return;}
+#endif
 #if RISC_PERFORMANCE_TRACE
   if(perfReplay().active()){perfReplay().poll(transport);return;}
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
-  sleepReplay().poll(transport);
+  if(sleepReplay().active()){sleepReplay().poll(transport);return;}
 #endif
+#if RISC_NATIVE_LOG_RETENTION
+  if(reportLoss())return;
+  liveLogs().poll(transport);
 #endif
 }
 bool providerDiagnosticReady(){
@@ -555,6 +601,9 @@ bool providerDiagnosticReady(){
   return true; // USB/SD fences suppress drains, not bounded RAM capture.
 }
 void line(const char* text){
+#if RISC_NATIVE_LOG_RETENTION
+  if(xPortInIsrContext())return;
+#endif
   if(!ours() || !text)return;
 #if RISC_NATIVE_DIAGNOSTIC_OBSERVER
   if(draining){noteLost();return;}
@@ -569,6 +618,16 @@ void line(const char* text){
 #endif
 #if RISC_SLEEP_DIAGNOSTICS
   message(journal,RiscPlatform::millis(),text);
+#endif
+#if RISC_NATIVE_LOG_RETENTION
+  char bytes[256];size_t n=0;
+  while(n<sizeof(bytes)-1 && text[n]){bytes[n]=text[n];++n;}
+  if(n==sizeof(bytes)-1 && text[n])noteTruncation();
+  bytes[n++]='\n';
+  if(!liveLogs().append(bytes,n))noteLost();
+  return; // Only owner poll drains; capture also works behind USB fences.
+#else
+#if RISC_SLEEP_DIAGNOSTICS
   if(sleepReplay().active()){noteLost();return;}
 #endif
 #if RISC_PERFORMANCE_TRACE
@@ -611,6 +670,7 @@ void line(const char* text){
     if(!written){if(offset)noteTruncation();else noteLost();return;}
     offset+=written;unfinishedLine=offset<n;
   }
+#endif
 }
 #if RISC_STAGE_LOGS
 uint64_t monotonicUs(){return ours()?uint64_t(esp_timer_get_time()):0;}
@@ -653,6 +713,9 @@ void lightReturn(int32_t result,uint32_t cause){
 #endif
 #if RISC_HWCDC_SLEEP_RECOVERY
   if(result==ESP_OK){
+#if RISC_NATIVE_LOG_RETENTION
+    liveLogs().disconnected();
+#endif
 #if RISC_NATIVE_SERIAL_FILES
     RiscCpu::NativeSerialFiles::disconnect();serialConnected=false;
 #endif
