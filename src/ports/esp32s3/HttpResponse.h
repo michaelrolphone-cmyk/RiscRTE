@@ -8,7 +8,9 @@ namespace RiscCpu { namespace HttpResponse {
  * independent bounds; the parser never receives an unbounded stream. */
 struct Decoder {
   http_parser parser{};
-  uint32_t maximum=0,received=0,wire=0,headers=0;
+  uint32_t maximum=0,received=0,wire=0,headers=0,headerBytes=0;
+  bool v2=false;
+  char etag[513]{},lastModified[129]{},contentType[129]{},retryAfter[65]{};
   int32_t status=0,error=0;
   int64_t length=-1;
   bool complete=false,headersDone=false,redirect=false,lastValue=false,haveLocation=false;
@@ -20,7 +22,15 @@ struct Decoder {
   bool header(){
     if(!fieldBytes)return true;
     if(++headers>128){error=RISC_HTTP_SIZE;return false;}
-    if(!std::strcmp(field,"location")){
+    if(v2){
+      char* dest=nullptr;size_t cap=0;
+      if(!std::strcmp(field,"etag")){dest=etag;cap=sizeof(etag);}
+      if(!std::strcmp(field,"last-modified")){dest=lastModified;cap=sizeof(lastModified);}
+      if(!std::strcmp(field,"content-type")){dest=contentType;cap=sizeof(contentType);}
+      if(!std::strcmp(field,"retry-after")){dest=retryAfter;cap=sizeof(retryAfter);}
+      if(dest){if(dest[0] || valueBytes>=cap){error=RISC_HTTP_SIZE;return false;}std::memcpy(dest,value,valueBytes+1);}
+    }
+    if(!v2 && !std::strcmp(field,"location")){
       if(haveLocation || !HttpBounds::url(value)){error=RISC_HTTP_INVALID;return false;}
       std::memcpy(location,value,valueBytes+1);haveLocation=true;
     }
@@ -31,29 +41,30 @@ struct Decoder {
   }
   static int begin(http_parser* p){auto& s=self(p);if(s.complete){s.error=RISC_HTTP_INVALID;return 1;}return 0;}
   static int fieldPart(http_parser* p,const char* bytes,size_t n){
-    auto& s=self(p);if(s.lastValue && !s.header())return 1;
+    auto& s=self(p);if(s.v2 && (n>4096u-s.headerBytes)){s.error=RISC_HTTP_SIZE;return 1;}s.headerBytes+=n;
+    if(s.lastValue && !s.header())return 1;
     if(n>=sizeof(s.field)-s.fieldBytes){s.error=RISC_HTTP_SIZE;return 1;}
     for(size_t i=0;i<n;++i){unsigned char c=bytes[i];if(c>='A'&&c<='Z')c+=32;s.field[s.fieldBytes++]=static_cast<char>(c);}
     s.field[s.fieldBytes]=0;return 0;
   }
   static int valuePart(http_parser* p,const char* bytes,size_t n){
-    auto& s=self(p);s.lastValue=true;
+    auto& s=self(p);if(s.v2 && (n>4096u-s.headerBytes)){s.error=RISC_HTTP_SIZE;return 1;}s.headerBytes+=n;s.lastValue=true;
     if(n>=sizeof(s.value)-s.valueBytes){s.error=RISC_HTTP_SIZE;return 1;}
     std::memcpy(s.value+s.valueBytes,bytes,n);s.valueBytes+=n;s.value[s.valueBytes]=0;return 0;
   }
   static int ready(http_parser* p){
     auto& s=self(p);if(!s.header())return 1;
-    if(p->nread>16384u){s.error=RISC_HTTP_SIZE;return 1;}
+    if(p->nread>(s.v2?4096u:16384u)){s.error=RISC_HTTP_SIZE;return 1;}
     s.headersDone=true;s.status=p->status_code;
     if(p->http_major!=1 || p->http_minor>1 || p->upgrade){s.error=RISC_HTTP_INVALID;return 1;}
     s.length=p->content_length==UINT64_MAX?-1:static_cast<int64_t>(p->content_length);
     if(p->content_length!=UINT64_MAX && p->content_length>s.maximum){s.error=RISC_HTTP_SIZE;return 1;}
-    s.redirect=s.status==301||s.status==302||s.status==303||s.status==307||s.status==308;
+    s.redirect=!s.v2 && (s.status==301||s.status==302||s.status==303||s.status==307||s.status==308);
     if(s.redirect){
       if(!s.haveLocation){s.error=RISC_HTTP_INVALID;return 1;}
       http_parser_pause(p,1);return 0;
     }
-    if(s.status!=200){s.error=RISC_HTTP_STATUS;return 1;}
+    if(!s.v2 && s.status!=200){s.error=RISC_HTTP_STATUS;return 1;}
     return 0;
   }
   static int body(http_parser* p,const char* bytes,size_t n){
@@ -76,7 +87,7 @@ struct Decoder {
     const auto code=HTTP_PARSER_ERRNO(&parser);
     if(redirect && code==HPE_PAUSED && !error)return true;
     if(n!=count || code!=HPE_OK){if(!error)error=RISC_HTTP_TRANSPORT;return false;}
-    if(!headersDone && wire>16384u){error=RISC_HTTP_SIZE;return false;}
+    if(!headersDone && wire>(v2?4096u:16384u)){error=RISC_HTTP_SIZE;return false;}
     return !error;
   }
 };

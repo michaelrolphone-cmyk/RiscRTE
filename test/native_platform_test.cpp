@@ -32,7 +32,7 @@ static_assert(!std::is_move_assignable<RiscPlatform::Console>::value,
 namespace {
 struct ReadReply { int count; uint8_t byte; };
 struct Driver {
-  bool installed=false, connected=true, installConflict=false;
+  bool installed=false, connected=true, installConflict=false, txIdle=true;
   int core=0, installCore=-1;
   esp_err_t installResult=ESP_OK, uninstallResult=ESP_OK, configResult=ESP_OK;
   unsigned installCalls=0, uninstallCalls=0, configCalls=0;
@@ -102,10 +102,10 @@ void ownedStartupAndRestart(){
   console.begin(115200);
   CHECK(driver.installed);CHECK(driver.installCalls==1);CHECK(driver.installCore==0);
   CHECK(driver.rxBytes==256);CHECK(console.available()==0);
-  CHECK(console.availableForWrite()==128);CHECK(bool(console));
+  CHECK(console.availableForWrite()==(RISC_CONSOLE_USB_SERIAL_JTAG?8192:128));CHECK(bool(console));
 #if RISC_CONSOLE_USB_SERIAL_JTAG
-  CHECK(driver.txBytes==256);
-  driver.connected=false;CHECK(!console);CHECK(console.availableForWrite()==128);
+  CHECK(driver.txBytes==8192);
+  driver.connected=false;CHECK(!console);CHECK(console.availableForWrite()==(RISC_CONSOLE_USB_SERIAL_JTAG?8192:128));
   driver.connected=true;
 #else
   CHECK(driver.configCalls==1);CHECK(driver.txBytes==0);
@@ -238,7 +238,7 @@ void wrongCoreCannotReleaseOwnership(){
   reset();RiscPlatform::Console console;console.begin(115200);
   driver.reads={{1,'x'}};CHECK(console.available()==1);
   driver.core=1;console.end();CHECK(driver.uninstallCalls==0);
-  CHECK(driver.installed);CHECK(bool(console));CHECK(console.availableForWrite()==128);
+  CHECK(driver.installed);CHECK(bool(console));CHECK(console.availableForWrite()==0);
   CHECK(console.setTxBufferSize(8192)==0);
   driver.core=0;CHECK(console.read()=='x');CHECK(driver.readCalls==1);
   console.end();CHECK(driver.uninstallCalls==1);CHECK(!driver.installed);
@@ -248,7 +248,7 @@ void failedUninstallRetainsOwnershipAndCache(){
   driver.reads={{1,'y'}};CHECK(console.available()==1);
   driver.uninstallResult=ESP_FAIL;console.end();
   CHECK(driver.uninstallCalls==1);CHECK(driver.installed);CHECK(bool(console));
-  CHECK(console.availableForWrite()==128);CHECK(console.setTxBufferSize(8192)==0);
+  CHECK(console.availableForWrite()==(RISC_CONSOLE_USB_SERIAL_JTAG?8192:128));CHECK(console.setTxBufferSize(8192)==0);
   console.begin(115200);CHECK(driver.installCalls==1);
   CHECK(console.read()=='y');CHECK(driver.readCalls==1);
   const uint8_t byte=42;CHECK(console.write(&byte,1)==1);
@@ -303,6 +303,7 @@ esp_err_t usb_serial_jtag_driver_install(usb_serial_jtag_driver_config_t* config
   CHECK(config);return install(config->rx_buffer_size,config->tx_buffer_size);
 }
 esp_err_t usb_serial_jtag_driver_uninstall(void){return uninstall();}
+esp_err_t usb_serial_jtag_wait_tx_done(uint32_t ticks){CHECK(driver.installed && ticks==0 && driver.core==driver.installCore);return driver.txIdle?ESP_OK:ESP_ERR_TIMEOUT;}
 bool usb_serial_jtag_is_driver_installed(void){return driver.installed;}
 bool usb_serial_jtag_is_connected(void){++driver.connectedCalls;return driver.connected;}
 int usb_serial_jtag_read_bytes(void* data,uint32_t length,uint32_t ticks){return readBytes(data,length,ticks);}
@@ -329,7 +330,31 @@ int uart_tx_chars(uart_port_t port,const char* data,uint32_t count){
 }
 #endif
 }
+#if RISC_CONSOLE_USB_SERIAL_JTAG
+void wholeRecordCapacity(){
+  reset();RiscPlatform::Console console;console.begin(115200);
+  driver.txIdle=false;driver.connected=false;
+  // Default, untraced native console accepts the complete 8 KiB burst.
+  const std::string line(255,'s');
+  for(unsigned i=0;i<32;++i){CHECK(console.availableForWrite()>=256);CHECK(console.println(line.c_str())==256);}
+  CHECK(console.availableForWrite()==0);const auto calls=driver.writeCalls;
+  const uint8_t byte=1;CHECK(console.write(&byte,1)==0 && driver.writeCalls==calls);
+  CHECK(driver.accepted.size()==8192);
+  // Connection is not completion. Keep credits consumed until the SDK drains.
+  driver.connected=true;CHECK(console.availableForWrite()==0);
+  driver.txIdle=true;CHECK(console.availableForWrite()==8192);
+  driver.txIdle=false;CHECK(console.println(line.c_str())==256);
+  CHECK(console.availableForWrite()==7936);
+  // A failed uninstall retains pending bytes and capacity accounting.
+  driver.uninstallResult=ESP_FAIL;console.end();CHECK(console.availableForWrite()==7936);
+  driver.uninstallResult=ESP_OK;console.end();console.begin(115200);CHECK(console.availableForWrite()==8192);
+  console.end();CHECK(driver.delays.empty());
+}
+#endif
 int main(){
+#if RISC_CONSOLE_USB_SERIAL_JTAG
+  wholeRecordCapacity();
+#endif
   stoppedIsInert();ownedStartupAndRestart();foreignControllerIsNotAdopted();
   failedInstallDoesNotGainOwnership();installRaceDoesNotAdoptForeignController();
   txConfigurationBoundaries();

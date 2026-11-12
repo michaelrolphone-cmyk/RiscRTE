@@ -23,6 +23,13 @@ extern "C" {
 static void*(*tlsCalloc)(size_t,size_t)=esp_mbedtls_mem_calloc;
 static void(*tlsFree)(void*)=esp_mbedtls_mem_free;
 void mbedtls_ssl_conf_verify(mbedtls_ssl_config* c,NativeHttp::Verify f,void* p){c->MBEDTLS_PRIVATE(f_vrfy)=f;c->MBEDTLS_PRIVATE(p_vrfy)=p;}
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+void mbedtls_ssl_conf_ca_cb(mbedtls_ssl_config* c,mbedtls_x509_crt_ca_cb_t f,void* p){c->MBEDTLS_PRIVATE(f_ca_cb)=f;c->MBEDTLS_PRIVATE(p_ca_cb)=p;}
+static mbedtls_x509_crt bundleRoot{};
+static bool missingCandidates=false;
+static int candidatesError=0;
+static int candidates(void*,const mbedtls_x509_crt*,mbedtls_x509_crt** out){*out=candidatesError?nullptr:&bundleRoot;return candidatesError;}
+#endif
 #else
 static void*(*tlsCalloc)(size_t,size_t)=nullptr;static void(*tlsFree)(void*)=nullptr;
 #define MBEDTLS_PRIVATE(member) member
@@ -43,17 +50,22 @@ struct Datagram { std::vector<uint8_t> bytes; sockaddr_in source{}; socklen_t le
 static std::deque<Datagram> datagrams;
 static std::array<uint8_t,48> query{};
 static sockaddr_in timePeer{};
-static uint32_t dnsDelay=0,udpDelay=0;
+static uint32_t dnsDelay=0,udpDelay=0,resolvedIpv4=0xc0000201;
 static int dnsResult=0,sendError=0,receiveError=0;
 static bool socketFail=false,fcntlFail=false,udpCloseFail=false,shortSend=false;
 static unsigned dnsCalls=0,dnsFrees=0,udpOpens=0,udpCloses=0,udpSends=0,udpReceives=0,randomCalls=0;
 static bool udpLive=false;
 static std::string resolvedName;
+#if RISC_NATIVE_ESP_IDF
+static bool delayWorker=false;static void(*dnsWork)(void*)=nullptr;
+int xTaskCreatePinnedToCore(void(*f)(void*),const char*,unsigned,void*,unsigned,void*,int){dnsWork=f;if(!delayWorker)f(nullptr);return pdPASS;}
+void vTaskDelete(void*){}
+#endif
 void esp_fill_random(void* out,size_t n){assert(online && n==8);++randomCalls;for(size_t i=0;i<n;++i)static_cast<uint8_t*>(out)[i]=uint8_t(randomCalls+i+1);}
 extern "C" int __wrap_getaddrinfo(const char* name,const char* service,const addrinfo* hints,addrinfo** out){
- assert(name && std::string(service)=="123" && hints->ai_family==AF_INET && hints->ai_socktype==SOCK_DGRAM && hints->ai_protocol==IPPROTO_UDP);
+ assert(name&&hints->ai_family==AF_INET);if(service)assert(std::string(service)=="123"&&hints->ai_socktype==SOCK_DGRAM&&hints->ai_protocol==IPPROTO_UDP);else assert(hints->ai_socktype==SOCK_STREAM);
  resolvedName=name;++dnsCalls;clockMs+=dnsDelay;
- static addrinfo result;result={};timePeer={};timePeer.sin_family=AF_INET;timePeer.sin_port=htons(123);timePeer.sin_addr.s_addr=htonl(0xc0000201);
+ static addrinfo result;result={};timePeer={};timePeer.sin_family=AF_INET;timePeer.sin_port=htons(123);timePeer.sin_addr.s_addr=htonl(resolvedIpv4);
  result.ai_family=AF_INET;result.ai_addr=reinterpret_cast<sockaddr*>(&timePeer);result.ai_addrlen=sizeof(timePeer);
  *out=dnsResult?nullptr:&result;return dnsResult;
 }
@@ -111,9 +123,20 @@ extern "C" int __wrap_close(int fd){
  assert(fd==7);++socketCloses;return socketCloseFail?-1:0;
 }
 int esp_tls_conn_destroy(esp_tls_t* p){assert(p->sockfd==-1&&p->server_fd.fd==-1);--live;++closes;for(void* b:p->buffers)if(b)tlsFree(b);delete p;return closeFail?-1:0;}
-esp_err_t esp_crt_bundle_attach(void* p){if(bundleError)return bundleError;if(!missingVerifier)static_cast<mbedtls_ssl_config*>(p)->MBEDTLS_PRIVATE(f_vrfy)=chain;return ESP_OK;}
+esp_err_t esp_crt_bundle_attach(void* p){
+ if(bundleError)return bundleError;
+ auto* conf=static_cast<mbedtls_ssl_config*>(p);
+ if(!missingVerifier)conf->MBEDTLS_PRIVATE(f_vrfy)=chain;
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+ if(!missingCandidates)conf->MBEDTLS_PRIVATE(f_ca_cb)=candidates;
+#endif
+ return ESP_OK;
+}
 int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* cfg,esp_tls_t* tls){
  assert(n>0 && host[n]==0 && port==443 && cfg->non_block && !cfg->skip_common_name && cfg->timeout_ms>0);
+#if RISC_NATIVE_ESP_IDF
+ if(NativeHttp::session->requestV2){char address[INET_ADDRSTRLEN];in_addr ip{htonl(resolvedIpv4)};assert(inet_ntop(AF_INET,&ip,address,sizeof(address)));assert(std::string(host)==address&&std::string(cfg->common_name)=="example.test");}
+#endif
  if(tls->conn_state==ESP_TLS_INIT)tls->sockfd=7;
  if(slowConnect)return 0;
  if(pendingConnect){
@@ -137,7 +160,11 @@ int esp_tls_conn_new_async(const char* host,int n,int port,const esp_tls_cfg_t* 
   if(!tls->buffers[i]){mbedError=-MBEDTLS_ERR_SSL_ALLOC_FAILED;return -1;}}
  config={};cfg->crt_bundle_attach(&config); // IDF ignores this return value.
 #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
- if(!bundleError&&!missingVerifier)assert(config.MBEDTLS_PRIVATE(min_tls_version)==MBEDTLS_SSL_VERSION_TLS1_2);
+ bool verifierReady=!bundleError&&!missingVerifier;
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+ verifierReady=verifierReady&&!missingCandidates;
+#endif
+ if(verifierReady)assert(config.MBEDTLS_PRIVATE(min_tls_version)==MBEDTLS_SSL_VERSION_TLS1_2);
 #else
  if(!bundleError&&!missingVerifier)assert(config.major==3&&config.minor==3);
 #endif
@@ -165,7 +192,7 @@ static void reset(std::vector<std::string> response={"HTTP/1.1 200 OK\r\nContent
 #endif
  dnsDelay=udpDelay=0;dnsResult=sendError=receiveError=0;
  socketFail=fcntlFail=udpCloseFail=shortSend=false;
- dnsCalls=dnsFrees=udpOpens=udpCloses=udpSends=udpReceives=randomCalls=0;resolvedName.clear();datagrams.clear();query={};
+ resolvedIpv4=0xc0000201;dnsCalls=dnsFrees=udpOpens=udpCloses=udpSends=udpReceives=randomCalls=0;resolvedName.clear();datagrams.clear();query={};
 
  responses=std::move(response);opens=closes=0;inputAt=0;sent.clear();chunk=512;NativeHttp::configure(owner,ready);
 }
@@ -450,8 +477,67 @@ int main(){
   flags=0;assert(config.MBEDTLS_PRIVATE(f_vrfy)(config.MBEDTLS_PRIVATE(p_vrfy),&cert,0,&flags)==0&&flags==0);
   clockMs+=2000;flags=0;assert(config.MBEDTLS_PRIVATE(f_vrfy)(config.MBEDTLS_PRIVATE(p_vrfy),&cert,1,&flags)==0&&flags==MBEDTLS_X509_BADCERT_EXPIRED);
   flags=0;assert(config.MBEDTLS_PRIVATE(f_vrfy)(nullptr,&cert,0,&flags)==MBEDTLS_ERR_X509_CERT_VERIFY_FAILED);
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+  mbedtls_x509_crt* anchor=nullptr;
+  assert(config.MBEDTLS_PRIVATE(f_ca_cb)(config.MBEDTLS_PRIVATE(p_ca_cb),&cert,&anchor)==0&&anchor==&bundleRoot);
+  flags=0;assert(config.MBEDTLS_PRIVATE(f_vrfy)(config.MBEDTLS_PRIVATE(p_vrfy),anchor,2,&flags)==0&&flags==0);
+  // A lookalike empty certificate is not the bundle callback's actual anchor.
+  mbedtls_x509_crt fake{};flags=0;
+  assert(config.MBEDTLS_PRIVATE(f_vrfy)(config.MBEDTLS_PRIVATE(p_vrfy),&fake,2,&flags)==0&&flags==MBEDTLS_X509_BADCERT_EXPIRED);
+  candidatesError=MBEDTLS_ERR_X509_ALLOC_FAILED;
+  assert(config.MBEDTLS_PRIVATE(f_ca_cb)(config.MBEDTLS_PRIVATE(p_ca_cb),&cert,&anchor)==candidatesError&&!anchor);
+  assert(NativeHttp::transportError(*NativeHttp::session)==RISC_HTTP_MEMORY);
+  candidatesError=0;
+#endif
   close(t);cases+=8;
  }
+#if defined(CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY)
+ reset();missingCandidates=true;{auto t=open();std::string body;assert(run(t,body)==RISC_HTTP_TRANSPORT&&sent.empty());close(t);++cases;}missingCandidates=false;
+#endif
+
+ // V2 exercises the same production transport with copied authenticated POST,
+ // all response statuses, validators, strict framing bounds and no redirects.
+ for(int status:{200,201,202,204,304,401,429,503,302}){
+  const bool empty=status==204||status==304;
+  reset({"HTTP/1.1 "+std::to_string(status)+" Test\r\nETag: \"v1\"\r\nLast-Modified: Fri, 30 Oct 2026 00:00:00 GMT\r\nContent-Length: "+(empty?"0":"2")+"\r\n\r\n"+(empty?"":"{}")});
+  char credential[]="Bearer secret",body[]="{\"a\":1}";
+  risc_http_header_v2 headers[]={{"Authorization",credential},{"Content-Type","application/json"}};
+  risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST,"https://example.test/v1/call",headers,2,body,7,32768,5000,1780000000,nullptr,0};
+  uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);
+  credential[0]='X';body[0]='X'; // native copy owns both before asynchronous use
+  uint64_t other=0;risc_http_request_v1 old{sizeof(old),"https://example.test/",10,5000,1780000000};
+  assert(NativeHttp::api()->open(nullptr,&old,&other)==RISC_HTTP_BUSY);
+  std::string output;int rc=1;
+  for(int i=0;i<100&&rc!=RISC_HTTP_EOF;++i){
+   const auto advanced=NativeHttp::apiV2()->advance(nullptr,t);assert(advanced>=0);
+   char data[512];uint32_t count=0;rc=NativeHttp::apiV2()->read(nullptr,t,data,sizeof(data),&count);assert(rc>=0);output.append(data,count);++clockMs;
+  }
+  risc_http_response_v2 info{};info.struct_size=sizeof(info);assert(NativeHttp::apiV2()->info(nullptr,t,&info)==0);
+  assert(rc==RISC_HTTP_EOF&&info.status_code==status&&info.sent_bytes==sent.size()&&std::string(info.etag)=="\"v1\"");
+  assert(output==(empty?"":"{}")&&sent.find("Authorization: Bearer secret\r\n")!=std::string::npos&&sent.substr(sent.size()-7)=="{\"a\":1}"&&opens==1);
+  assert(NativeHttp::apiV2()->close(nullptr,t)==0);assert(allocations==0);++cases;
+ }
+ for(const char* name:{"Host","Content-Length","Transfer-Encoding","Expect","Bad\r\n"}){
+  reset();risc_http_header_v2 header{name,"value"};risc_http_request_v2 r{sizeof(r),RISC_HTTP_GET,"https://example.test/",&header,1,nullptr,0,100,5000,1780000000,nullptr,0};uint64_t t=9;
+  assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==RISC_HTTP_INVALID&&t==0&&allocations==0);++cases;
+ }
+ reset();{risc_http_header_v2 h{"Authorization","secret\r\nInjected: yes"};risc_http_request_v2 r{sizeof(r),RISC_HTTP_GET,"https://example.test/",&h,1,nullptr,0,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==RISC_HTTP_INVALID);++cases;}
+ // A bounded v2 request must tolerate slow Internet without a hidden shorter
+ // idle timeout. Exercise actual native transport, then its exact total limit.
+ for(unsigned delay:{10000u,20000u,29000u}){
+  reset();risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST,"https://example.test/",nullptr,0,"{}",2,100,30000,1780000000,nullptr,0};uint64_t t=0;
+  assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);readWait=true;
+  for(unsigned i=0;i<20;++i){assert(NativeHttp::apiV2()->advance(nullptr,t)>=0);++clockMs;}
+  clockMs=delay;assert(NativeHttp::apiV2()->advance(nullptr,t)==RISC_HTTP_AGAIN);
+  readWait=false;responses={"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}"};inputAt=0;std::string output;int rc=RISC_HTTP_AGAIN;
+  for(unsigned i=0;i<100&&rc!=RISC_HTTP_EOF;++i){assert(NativeHttp::apiV2()->advance(nullptr,t)>=0);char bytes[512];uint32_t count=0;rc=NativeHttp::apiV2()->read(nullptr,t,bytes,sizeof(bytes),&count);assert(rc>=0);output.append(bytes,count);++clockMs;}
+  assert(rc==RISC_HTTP_EOF&&output=="{}");close(t);++cases;
+ }
+ reset();{risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST,"https://example.test/",nullptr,0,"{}",2,100,30000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);readWait=true;
+  clockMs=30000;assert(NativeHttp::apiV2()->advance(nullptr,t)==RISC_HTTP_TIMEOUT);close(t);++cases;}
+ reset();{risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST,"https://example.test/",nullptr,0,"{}",2,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);readWait=true;
+  int rc=1;for(int i=0;i<6000&&rc>=0;++i){rc=NativeHttp::apiV2()->advance(nullptr,t);++clockMs;}
+  risc_http_response_v2 info{};info.struct_size=sizeof(info);assert(NativeHttp::apiV2()->info(nullptr,t,&info)==0&&info.sent_bytes>0&&rc==RISC_HTTP_TIMEOUT);close(t);++cases;}
  // A direct checked socket close observes failures that the SDK normally
  // discards. Ambiguous ownership never closes either descriptor.
  for(unsigned which=0;which<4;++which){
@@ -465,6 +551,15 @@ int main(){
   assert(NativeHttp::api()->close(nullptr,t)==RISC_HTTP_RETAINED&&closes==1);
   NativeHttp::session->~Session();heap_caps_free(NativeHttp::session);NativeHttp::session=nullptr;++cases;
  }
+#if RISC_NATIVE_ESP_IDF
+ // Validate the DNS result immediately before the pinned-address connection.
+ for(uint32_t address:{0x00000001u,0x0a000001u,0x64400001u,0x7f000001u,0xa9fe0001u,0xac100001u,0xc0000001u,0xc0a80001u,0xc6120001u,0xe0000001u,0xffffffffu,0x08080808u}){
+  reset();resolvedIpv4=address;risc_http_request_v2 r{sizeof(r),RISC_HTTP_POST_PUBLIC,"https://example.test/callback",nullptr,0,"{}",2,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);int rc=RISC_HTTP_AGAIN;
+  for(unsigned i=0;i<20&&rc>=0&&rc!=RISC_HTTP_EOF;++i){rc=NativeHttp::apiV2()->advance(nullptr,t);char b[512];uint32_t count=0;NativeHttp::apiV2()->read(nullptr,t,b,sizeof(b),&count);}
+  assert(dnsCalls==1);if(address==0x08080808u){assert(rc==RISC_HTTP_EOF);assert(std::string(NativeHttp::session->address)=="8.8.8.8"&&std::string(NativeHttp::session->config.common_name)=="example.test");}else assert(rc==RISC_HTTP_NETWORK&&NativeHttp::session->sent==0);close(t);++cases;
+ }
+ for(unsigned retained:{0u,1u}){reset();delayWorker=true;clockMs=10;risc_http_request_v2 r{sizeof(r),RISC_HTTP_GET,"https://example.test/",nullptr,0,nullptr,0,100,5000,1780000000,nullptr,0};uint64_t t=0;assert(NativeHttp::apiV2()->open(nullptr,&r,&t)==0);assert(NativeHttp::apiV2()->advance(nullptr,t)==RISC_HTTP_AGAIN);assert(NativeHttp::apiV2()->close(nullptr,t)==RISC_HTTP_AGAIN);if(retained){clockMs+=30001;assert(NativeHttp::apiV2()->close(nullptr,t)==RISC_HTTP_RETAINED);dnsWork(nullptr);NativeDns::discard();NativeHttp::destroy(*NativeHttp::session);discardRetained();}else{dnsWork(nullptr);assert(NativeHttp::apiV2()->close(nullptr,t)==0);}delayWorker=false;++cases;}
+#endif
  // Last case intentionally retains native poison after SDK freed a socket
  // object but could not prove closure; no new requests or unsafe unload.
  reset();{auto t=open();closeFail=true;assert(NativeHttp::api()->close(nullptr,t)==RISC_HTTP_RETAINED&&!NativeHttp::idle()&&!NativeHttp::safe()&&live==0);assert(NativeHttp::api()->close(nullptr,t)==RISC_HTTP_RETAINED&&closes==1);++cases;

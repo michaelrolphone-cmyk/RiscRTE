@@ -2,6 +2,7 @@
 /* Private HTTP-session-only, read-only SNTP exchange. No system SNTP service,
  * background callback, socket export or wall-clock/RTC mutation is involved. */
 #include "HttpBounds.h"
+#include "NativeDns.h"
 #include <RiscHttpTimeV1.h>
 #include <esp_random.h>
 #include <esp_timer.h>
@@ -44,7 +45,7 @@ struct Sample {
   enum class Phase { Resolve,Send,Receive,Done };
   char server[RISC_HTTP_TIME_SERVER_MAX+1]{};
   sockaddr_in peer{};uint8_t packet[48]{};
-  int fd=-1;bool retained=false,closeAttempted=false;
+  int fd=-1;bool asyncDns=false,retained=false,closeAttempted=false;
   Phase phase=Phase::Resolve;uint32_t rejected=0;uint64_t started=0;
   void begin(const char* hostname,uint64_t start){std::strcpy(server,hostname);started=start;}
   bool close(){
@@ -65,6 +66,12 @@ struct Sample {
     if(retained)return RISC_HTTP_RETAINED;
     if(!alive(budget))return RISC_HTTP_TIMEOUT;
     if(phase==Phase::Resolve){
+#if RISC_NATIVE_ESP_IDF
+      if(asyncDns){const int resolved=NativeDns::resolve(server,peer);
+      if(resolved==1)return RISC_HTTP_AGAIN;
+      if(resolved<0)return RISC_HTTP_CLOCK;}else
+#endif
+      {
       addrinfo hints{};hints.ai_family=AF_INET;hints.ai_socktype=SOCK_DGRAM;hints.ai_protocol=IPPROTO_UDP;
       addrinfo* found=nullptr;
       // The pinned SDK resolver is synchronous and bounded by its DNS retry
@@ -77,6 +84,7 @@ struct Sample {
       if(found)::freeaddrinfo(found);
       if(!alive(budget))return RISC_HTTP_TIMEOUT;
       if(!valid)return RISC_HTTP_CLOCK;
+      }
       peer.sin_port=htons(123);
       fd=::socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
       if(fd<0){fd=-1;return RISC_HTTP_TRANSPORT;}

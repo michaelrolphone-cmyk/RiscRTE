@@ -43,6 +43,22 @@ if(DEFINED RISC_SOURCE_SHA)
     # Git's ownership protections or relying on a user-wide safe.directory.
     set(source_sha "${RISC_SOURCE_SHA}")
 else()
+    # Reconfigure after a checkout/commit, including linked worktrees. Otherwise
+    # an incremental build can retain the SHA from its first configuration.
+    foreach(git_path HEAD)
+        execute_process(COMMAND git rev-parse --git-path "${git_path}" WORKING_DIRECTORY "${root}"
+            OUTPUT_VARIABLE identity_path OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+        get_filename_component(identity_path "${identity_path}" ABSOLUTE BASE_DIR "${root}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${identity_path}")
+    endforeach()
+    execute_process(COMMAND git symbolic-ref -q HEAD WORKING_DIRECTORY "${root}"
+        OUTPUT_VARIABLE identity_ref OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(identity_ref)
+        execute_process(COMMAND git rev-parse --git-path "${identity_ref}" WORKING_DIRECTORY "${root}"
+            OUTPUT_VARIABLE identity_path OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+        get_filename_component(identity_path "${identity_path}" ABSOLUTE BASE_DIR "${root}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${identity_path}")
+    endif()
     execute_process(COMMAND git rev-parse HEAD WORKING_DIRECTORY "${root}"
         OUTPUT_VARIABLE source_sha OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 endif()

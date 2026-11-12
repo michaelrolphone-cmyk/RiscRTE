@@ -1,0 +1,21 @@
+{
+  "schema": "riscrte-infrastructure-direct-image/1",
+  "tag": "esp32s3-infrastructure-v1.2",
+  "name": "ESP32-S3 Infrastructure Agent v1.2 \u2014 Captive Portal",
+  "asset": "riscrte-esp32s3-infrastructure-v1.2-initial.bin",
+  "bytes": 16777216,
+  "sha256": "68ddca270e2a173f763e5f7678fca0b83db16b890a7600e8c2d7a6a45206c4bf",
+  "offset": 0,
+  "profile": "esp32s3-infrastructure",
+  "source": {
+    "runtime": "cc8235aea70cfa776e88ba11c930185450e5457c",
+    "system_apps": "f93cb7158e17f178fb2e9a264b9ebd4bb89ee182",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2"
+  },
+  "purpose": "Complete first installation; replaces all 16 MiB including existing identity/data. Not a data-preserving update.",
+  "provisioning": "On-device captive portal. Join RiscRTE-Setup (password RiscRTE-Setup), open http://192.168.4.1/, enter Wi-Fi and choose a private pairing file. Public image has no credentials.",
+  "hardware_qualified": false,
+  "layout": "riscrte-paired-appdata-v2",
+  "layout_abi": 2
+}

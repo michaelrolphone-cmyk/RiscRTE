@@ -34,3 +34,6 @@ int __wrap_getsockopt(int,int,int,void*,socklen_t*);
 #define connect __wrap_connect
 #define select __wrap_select
 #define getsockopt __wrap_getsockopt
+
+#define recvfrom __wrap_recvfrom
+#define sendto __wrap_sendto

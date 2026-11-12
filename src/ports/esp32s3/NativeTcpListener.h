@@ -10,9 +10,9 @@
 #include <unistd.h>
 namespace RiscCpu { namespace NativeTcpListener {
 struct Socket {
- int fd=-1; uint64_t owner=0,token=0; bool listener=false,connecting=false,connectFailed=false;
+ int fd=-1; uint64_t owner=0,token=0; bool listener=false,connecting=false,connectFailed=false,datagram=false;
 };
-static Socket sockets[RISC_TCP_LISTENERS_MAX+RISC_TCP_CLIENTS_MAX];
+static Socket sockets[RISC_TCP_LISTENERS_MAX+RISC_TCP_CLIENTS_MAX+1];
 static uint64_t generation=0;
 static bool retained=false,busy=false;
 static bool (*ownerTask)()=nullptr;
@@ -75,7 +75,7 @@ inline int32_t listen(void*,uint64_t owner,const risc_tcp_listen_v1* request,uin
  if(out)*out=0;
  const int32_t allowed=gate();if(allowed)return allowed;
  if(!owner || !request || !out || request->struct_size!=sizeof(*request) || !request->port || request->reserved || request->address[0]>=224)return RISC_TCP_INVALID;
- for(const auto& s:sockets)if(s.token)return RISC_TCP_LIMIT;
+ for(const auto& s:sockets)if(s.token && !s.datagram)return RISC_TCP_LIMIT;
  if(generation==UINT64_MAX)return RISC_TCP_LIMIT;
  Operation operation;
  const int32_t online=network();if(online)return online;
@@ -101,7 +101,7 @@ inline int32_t accept(void*,uint64_t owner,uint64_t listener,uint64_t* out){
  const int32_t allowed=gate();if(allowed)return allowed;
  auto* parent=find(owner,listener);
  if(!out || !parent || !parent->listener)return RISC_TCP_CONTEXT;
- Socket* slot=nullptr;for(size_t i=1;i<sizeof(sockets)/sizeof(*sockets);++i)if(!sockets[i].token){slot=&sockets[i];break;}
+ Socket* slot=nullptr;for(size_t i=1;i<=RISC_TCP_CLIENTS_MAX;++i)if(!sockets[i].token){slot=&sockets[i];break;}
  if(!slot || generation==UINT64_MAX)return RISC_TCP_LIMIT;
  Operation operation;
  const int32_t online=network();if(online)return online;
@@ -115,7 +115,7 @@ inline int32_t accept(void*,uint64_t owner,uint64_t listener,uint64_t* out){
 inline int32_t transfer(uint64_t owner,uint64_t token,void* output,const void* input,uint32_t size,uint32_t* count){
  if(count)*count=0;
  const int32_t allowed=gate();if(allowed)return allowed;
- auto* s=find(owner,token);if(!s || s->listener)return RISC_TCP_CONTEXT;
+ auto* s=find(owner,token);if(!s || s->listener || s->datagram)return RISC_TCP_CONTEXT;
  if(!count || (!output && !input) || !size || size>RISC_TCP_BYTES_MAX)return RISC_TCP_INVALID;
  if(s->connectFailed)return RISC_TCP_IO;
  if(s->connecting)return RISC_TCP_WOULD_BLOCK;
@@ -134,14 +134,14 @@ inline int32_t write(void*,uint64_t owner,uint64_t token,const void* bytes,uint3
 inline int32_t close(void*,uint64_t owner,uint64_t token){
  const int32_t allowed=gate();if(allowed)return allowed;
  auto* s=find(owner,token);if(!s)return RISC_TCP_CONTEXT;
- if(s->listener)for(const auto& child:sockets)if(child.token && !child.listener)return RISC_TCP_BUSY;
+ if(s->listener)for(const auto& child:sockets)if(child.token && !child.listener && !child.datagram)return RISC_TCP_BUSY;
  Operation operation;return destroy(*s);
 }
 inline int32_t connect(void*,uint64_t owner,const risc_tcp_listen_v1* request,uint64_t* out){
  if(out)*out=0;
  const int32_t allowed=gate();if(allowed)return allowed;
  if(!owner || !request || !out || request->struct_size!=sizeof(*request) || !request->port || request->reserved || !request->address[0] || request->address[0]>=224)return RISC_TCP_INVALID;
- Socket* slot=nullptr;for(size_t i=1;i<sizeof(sockets)/sizeof(*sockets);++i)if(!sockets[i].token){slot=&sockets[i];break;}
+ Socket* slot=nullptr;for(size_t i=1;i<=RISC_TCP_CLIENTS_MAX;++i)if(!sockets[i].token){slot=&sockets[i];break;}
  if(!slot || generation==UINT64_MAX)return RISC_TCP_LIMIT;
  Operation operation;const int32_t online=network();if(online)return online;
  auto& s=*slot;s.fd=::socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
@@ -159,7 +159,7 @@ inline int32_t connect(void*,uint64_t owner,const risc_tcp_listen_v1* request,ui
 }
 inline int32_t connected(void*,uint64_t owner,uint64_t token){
  const int32_t allowed=gate();if(allowed)return allowed;
- auto* s=find(owner,token);if(!s || s->listener)return RISC_TCP_CONTEXT;
+ auto* s=find(owner,token);if(!s || s->listener || s->datagram)return RISC_TCP_CONTEXT;
  if(s->connectFailed)return RISC_TCP_IO;
  Operation operation;const int32_t online=network();if(online)return online;
  if(!s->connecting)return RISC_TCP_OK;
@@ -175,7 +175,50 @@ inline int32_t connected(void*,uint64_t owner,uint64_t token){
  if(rc || size!=sizeof(error) || error){s->connectFailed=true;return RISC_TCP_IO;}
  s->connecting=false;return RISC_TCP_OK;
 }
+inline int32_t datagram_bind(void*,uint64_t owner,const risc_tcp_listen_v1* request,uint64_t* out){
+ if(out)*out=0;
+ const int32_t allowed=gate();if(allowed)return allowed;
+ if(!owner || !out || !request || request->struct_size!=sizeof(*request) || !request->port || request->reserved || request->address[0]>=224)return RISC_TCP_INVALID;
+ auto& s=sockets[RISC_TCP_CLIENTS_MAX+1];if(s.token || generation==UINT64_MAX)return RISC_TCP_LIMIT;
+ Operation operation;const int32_t online=network();if(online)return online;
+ s.fd=::socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+ if(s.fd>=0){s.owner=owner;s.token=++generation;s.datagram=true;}
+ if(!checked())return RISC_TCP_RETAINED;
+ if(s.fd<0)return RISC_TCP_IO;
+ const int32_t result=nonblocking(s);if(result)return result;
+ sockaddr_in address{};address.sin_family=AF_INET;address.sin_port=htons(request->port);memcpy(&address.sin_addr.s_addr,request->address,4);
+ if(!checked())return RISC_TCP_RETAINED;
+ const int bound=::bind(s.fd,reinterpret_cast<const sockaddr*>(&address),sizeof(address));
+ if(!checked())return RISC_TCP_RETAINED;
+ if(bound)return failedSetup(s,RISC_TCP_IO);
+ *out=s.token;return RISC_TCP_OK;
+}
+inline int32_t datagram_receive(void*,uint64_t owner,uint64_t token,void* bytes,uint32_t size,uint32_t* count,risc_tcp_listen_v1* peer){
+ if(count)*count=0;
+ const int32_t allowed=gate();if(allowed)return allowed;
+ auto* s=find(owner,token);if(!s || !s->datagram)return RISC_TCP_CONTEXT;
+ if(!bytes || !count || !peer || !size || size>RISC_DATAGRAM_BYTES_MAX)return RISC_TCP_INVALID;
+ Operation operation;const int32_t online=network();if(online)return online;
+ // One extra byte detects oversized requests instead of parsing truncation.
+ uint8_t packet[RISC_DATAGRAM_BYTES_MAX+1];sockaddr_in address{};socklen_t length=sizeof(address);
+ const auto n=::recvfrom(s->fd,packet,sizeof(packet),MSG_DONTWAIT,reinterpret_cast<sockaddr*>(&address),&length);const int error=errno;
+ if(!checked())return RISC_TCP_RETAINED;
+ if(n<0)return wouldBlock(error)?RISC_TCP_WOULD_BLOCK:RISC_TCP_IO;
+ if(static_cast<uint64_t>(n)>size || length!=sizeof(address) || address.sin_family!=AF_INET)return RISC_TCP_INVALID;
+ memcpy(bytes,packet,n);*count=n;*peer={};peer->struct_size=sizeof(*peer);peer->port=ntohs(address.sin_port);memcpy(peer->address,&address.sin_addr.s_addr,4);return RISC_TCP_OK;
+}
+inline int32_t datagram_send(void*,uint64_t owner,uint64_t token,const void* bytes,uint32_t size,const risc_tcp_listen_v1* peer){
+ const int32_t allowed=gate();if(allowed)return allowed;
+ auto* s=find(owner,token);if(!s || !s->datagram)return RISC_TCP_CONTEXT;
+ if(!bytes || !size || size>RISC_DATAGRAM_BYTES_MAX || !peer || peer->struct_size!=sizeof(*peer) || !peer->port || peer->reserved || !peer->address[0] || peer->address[0]>=224)return RISC_TCP_INVALID;
+ Operation operation;const int32_t online=network();if(online)return online;
+ sockaddr_in address{};address.sin_family=AF_INET;address.sin_port=htons(peer->port);memcpy(&address.sin_addr.s_addr,peer->address,4);
+ const auto n=::sendto(s->fd,bytes,size,MSG_DONTWAIT,reinterpret_cast<const sockaddr*>(&address),sizeof(address));const int error=errno;
+ if(!checked())return RISC_TCP_RETAINED;
+ if(n<0)return wouldBlock(error)?RISC_TCP_WOULD_BLOCK:RISC_TCP_IO;
+ return static_cast<uint64_t>(n)==size?RISC_TCP_OK:RISC_TCP_IO;
+}
 inline const RiscBoot::TcpListenerBackend* backend(){
- static const RiscBoot::TcpListenerBackend value{nullptr,listen,accept,read,write,close,idle,safe,connect,connected};return &value;
+ static const RiscBoot::TcpListenerBackend value{nullptr,listen,accept,read,write,close,idle,safe,connect,connected,datagram_bind,datagram_receive,datagram_send};return &value;
 }
 } }

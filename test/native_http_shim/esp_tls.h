@@ -11,7 +11,7 @@
 using esp_err_t=int;
 enum esp_tls_conn_state_t { ESP_TLS_INIT,ESP_TLS_CONNECTING,ESP_TLS_HANDSHAKE };
 struct esp_tls_t { unsigned index=0;void* error_handle=nullptr;void* buffers[3]{};int sockfd=-1;struct {int fd=-1;} server_fd;esp_tls_conn_state_t conn_state=ESP_TLS_INIT;fd_set rset{},wset{}; };
-struct esp_tls_cfg_t { bool non_block=false;int timeout_ms=0;bool skip_common_name=false;esp_err_t(*crt_bundle_attach)(void*)=nullptr; };
+struct esp_tls_cfg_t { bool non_block=false;int timeout_ms=0;bool skip_common_name=false;const char* common_name=nullptr;esp_err_t(*crt_bundle_attach)(void*)=nullptr; };
 esp_tls_t* esp_tls_init();
 int esp_tls_conn_new_async(const char*,int,int,const esp_tls_cfg_t*,esp_tls_t*);
 ssize_t esp_tls_conn_write(esp_tls_t*,const void*,size_t);
