@@ -215,3 +215,48 @@ physical reset retention, wake reliability and current remain unmeasured. No
 serial/device operation, flashing, merging, release or BIN delivery is part of
 this source change. Product integration must explicitly pin this runtime source;
 the released Watch 1.0.2 and frozen SDR 0.1.34 cohort remain unchanged.
+
+## Native stage-log queue (2026-10-18 successor)
+
+The native IDF stage-log adapter now retains complete bounded lines in an
+owner-only RAM queue. This replaces the native path's mistaken full-line space
+check: `Console::availableForWrite()` is a maximum nonblocking write chunk
+(128 bytes), not a measurement of free driver-buffer capacity. Previously this
+check discarded every line longer than 128 bytes, even with an empty TX buffer.
+The native driver TX ring remains 8 KiB; the RTC journal remains 1,288 bytes.
+
+With initialized external BSS the queue holds 32 KiB of text (32,784 bytes total
+on Xtensa). Internal-only profiles use 4 KiB (4,112 bytes total). Neither uses a
+heap allocation, worker, timer, filesystem, flash or RTC expansion. Stage-log
+opt-out and legacy Arduino paths do not instantiate the queue. External memory
+is accessed only by the ordinary owner task after construction, never from ISR,
+panic or cache-disabled paths. Full queues reject a complete newest line and
+increment the saturating `RTE_LOG lost` count; no silent oldest-line eviction.
+Maximum line size remains 256 bytes including newline; longer text increments
+the existing truncation count.
+
+Each owner poll pumps at most 64 incoming protocol bytes before best-effort
+output. Loss-report backpressure no longer prevents that read. Protocol replies
+have priority over new diagnostic lines; an already-started line is completed
+before replying so diagnostic and RTEF bytes cannot interleave. At most 64 output
+bytes are attempted in a poll, with zero wait. A stalled host does not turn a
+failed write into successful delivery or cause an unbounded loop.
+
+Queued lines remain across an observed disconnect, replay, USB ownership fence
+and checked Light-sleep recovery. If a line was only partly enqueued, reconnect
+adds a framing newline and replays that line in full; a diagnostic fragment can
+therefore appear twice. Complete lines already accepted by the SDK driver are
+no longer queued and may still be lost before host receipt. A reset, new
+`start()`, power loss or unavailable owner checkpoints loses/blocks this RAM
+history. This is not durable crash logging and does not solve arbitrary USB
+reset/transport or provider availability failures.
+
+Regression-first receipts are in `evidence/native-log-retention/`. The baseline
+uses released Runtime `ab41321d47de991c832c2cb8aeea99e095686a3c`: it emits only
+155 of 513 expected long-line bytes, and with a full TX ring leaves all 23 bytes
+of an already-arrived HELLO unread. New controls run the production Console,
+SleepDiagnostics and serial endpoint with a finite SDK queue model. They cover
+long lines, full/partial TX, reply priority, 150 disconnected startup lines,
+partial-line reconnect, queue wrap, owner/ISR refusal, recovery and overflow.
+The 4 KiB and 32 KiB variants run normally and under ASan/UBSan. No physical USB,
+real SDK ISR or hardware success follows from these host tests.

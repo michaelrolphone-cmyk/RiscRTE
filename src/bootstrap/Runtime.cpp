@@ -1412,6 +1412,7 @@ bool Runtime::installedLaunchPath(const char* relative,char* out,size_t capacity
   return true;
 }
 bool Runtime::launch(const char* relative) {
+  if(serialTransferRequested())return false;
   if(residentEnabled_) {
     char selected[256];
     const bool legacy=invocation_==&mainInvocation_ && !invocation_->role && residentLegacyAllowed(invocation_->current_);
@@ -1434,7 +1435,14 @@ bool Runtime::launch(const char* relative) {
   if(ok)RiscPerf::emit(20);
   return ok;
 }
-bool Runtime::exitRequested()const {return active() && port_.controlExitRequested && port_.controlExitRequested();}
+bool Runtime::serialTransferRequested()const {
+#if RISC_NATIVE_SERIAL_FILES
+  return port_.serialTransferRequested && port_.serialTransferRequested();
+#else
+  return false;
+#endif
+}
+bool Runtime::exitRequested()const {return active() && (serialTransferRequested() || (port_.controlExitRequested && port_.controlExitRequested()));}
 bool Runtime::health(risc_runtime_health_v1* h) { return active() && h && h->struct_size>=sizeof(*h) && port_.health(h); }
 bool Runtime::monotonicMs(uint32_t* out) {
   if(!active() || !out)return false;
@@ -1444,6 +1452,7 @@ bool Runtime::monotonicMs(uint32_t* out) {
   *out=h.uptime_ms;return true;
 }
 bool Runtime::launchDefault() {
+  if(serialTransferRequested())return false;
   if(residentEnabled_ && invocation_->role!=RISC_RESIDENT_ROLE_FOREGROUND &&
      !(invocation_==&mainInvocation_ && !invocation_->role && residentLegacyAllowed(invocation_->current_)))return false;
   if(promotionRunning_ || graph_.lifecycleBusy() || !active() || !invocation_->entryRunning_ ||
@@ -1572,13 +1581,14 @@ void Runtime::serviceNativeSettings(bool discoveryOnly) {
   if((discoveryOnly?bool(port_.nativeDiscoveryCheckpoint):bool(port_.nativeOwnerCheckpoint)) && currentRuntime==this && port_.owner() &&
      !retained_ && !promotionRunning_ && !invocation_->streams_.busy() &&
      !graph_.lifecycleBusy() && appDataExitSafe()) {
-    bool admitNew=true;
+    bool admitNew=!serialTransferRequested();
 #if RISC_RUNTIME_ATOMIC_KEY_VALUE
     const auto draft=[](const Invocation&i){for(const auto&g:i.appGrants_)if(g.live&&g.atomicEndpoint)return true;return false;};
-    admitNew=!draft(mainInvocation_)&&(!foreground_||!draft(*foreground_));
+    admitNew=admitNew&&!draft(mainInvocation_)&&(!foreground_||!draft(*foreground_));
 #endif
     nativeCheckpointRunning_=true;
-    const bool safe=discoveryOnly?port_.nativeDiscoveryCheckpoint():port_.nativeOwnerCheckpoint(admitNew);
+    const bool safe=discoveryOnly&&!serialTransferRequested()?port_.nativeDiscoveryCheckpoint():
+      (!port_.nativeOwnerCheckpoint || port_.nativeOwnerCheckpoint(admitNew));
     nativeCheckpointRunning_=false;
     if(!safe){retained_=true;fail("native settings custody retained; restart required");(void)appExitBarrier();return;}
   }
@@ -1592,6 +1602,7 @@ void Runtime::serviceProviders() {
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
   serviceNativeSettings();
 #endif
+  if(serialTransferRequested())return; // checked cleanup keeps direct releases and accepted native work
   if(port_.providerServicesReady && !port_.providerServicesReady())return;
   if(currentRuntime!=this || !port_.owner() || retained_ || promotionRunning_ ||
      invocation_->streams_.busy() || graph_.lifecycleBusy() || !appDataExitSafe() ||
@@ -1749,6 +1760,7 @@ bool Runtime::nativeFilesCheckpoint() {
   // Busy native work may defer I/O while control replies remain available. In
   // particular, a healthy serial handle must not be tested with exitSafe().
   const bool ready=(!port_.serialFilesReady || port_.serialFilesReady()) && providerStorageSafe();
+  if(ready && port_.serialTransferEnter)port_.serialTransferEnter();
   const auto checkpoint=ready?port_.serialFilesCheckpoint:port_.serialFilesControlCheckpoint;
   if(checkpoint) {
     nativeCheckpointRunning_=true;const bool safe=checkpoint();nativeCheckpointRunning_=false;
@@ -1783,6 +1795,7 @@ int32_t Runtime::serviceCheckpoint() {
      invocation_->queued_[0] || graph_.lifecycleBusy() || invocation_->streams_.busy() ||
      mainInvocation_.streams_.busy() || (foreground_ && foreground_->streams_.busy()))
     return RISC_RUNTIME_CHECKPOINT_BUSY;
+  if(port_.serialFilesPoll)port_.serialFilesPoll();
   const auto deferSerial=[this]()->int32_t {
     if(port_.serialFilesControlCheckpoint) {
       nativeCheckpointRunning_=true;
@@ -1839,7 +1852,7 @@ void Runtime::yield(uint32_t ms) {
     if(retained_){if(port_.retainedDelay)port_.retainedDelay(ms<1?1:ms>50?50:ms);return;}
 #endif
     // Poll work is bounded separately; each admitted yield cooperates once.
-    if(appDataExitSafe())graph_.poll([](){uint32_t now=0;return currentRuntime->monotonicMs(&now)?now:0;},nullptr);
+    if(!serialTransferRequested() && appDataExitSafe())graph_.poll([](){uint32_t now=0;return currentRuntime->monotonicMs(&now)?now:0;},nullptr);
     // Yield is a display/input polling path. Synchronous provider services may
     // touch storage for up to a second, so run them only at explicit lifecycle
     // boundaries, never between a panel refresh command and its BUSY sample.
@@ -2049,6 +2062,7 @@ bool Runtime::runOne(const char* name) {
       (void)appExitBarrier(false);return false;
     }
 #if RISC_NATIVE_SERIAL_FILES
+    if(port_.serialFilesPoll)port_.serialFilesPoll();
     // End the native serial session before any application or provider image
     // can be revoked. Failed close pins all custody through real restart.
     if(!retained_ && port_.serialFilesShutdown) {
@@ -2166,6 +2180,14 @@ bool Runtime::run() {
   if(esp_elf_register_symbol(symbols)) { revokeProviders(); currentRuntime=nullptr; return fail("runtime API registration failed"); }
 #endif
   bool ok=true;
+#if RISC_NATIVE_SERIAL_FILES
+  const auto transferCheckpoint=[this](){
+    if(!port_.serialTransferRequested)return true;
+    if(port_.serialFilesPoll)port_.serialFilesPoll();
+    return !port_.serialFilesControlCheckpoint || port_.serialFilesControlCheckpoint();
+  };
+  if(!transferCheckpoint()){retained_=true;ok=fail("serial transfer admission retained; restart required");}
+#endif
   RISC_STAGE_LOG("providers activation mode=%s selected=%u",demandRetention_?"demand-retained":demandActivation_?"demand":"eager",unsigned(driverCount_));
 #if RISC_STAGE_LOGS
   if(demandActivation_)for(size_t i=0;i<driverCount_;++i){
@@ -2174,7 +2196,11 @@ bool Runtime::run() {
                    drivers_[i].coldBootStart?"non-cold-boot":"demand-until-acquired");
   }
 #endif
-  for(size_t i=0;i<driverCount_;++i) {
+  for(size_t i=0;ok && i<driverCount_;++i) {
+#if RISC_NATIVE_SERIAL_FILES
+    if(!transferCheckpoint()){retained_=true;ok=fail("serial transfer admission retained; restart required");break;}
+    if(serialTransferRequested())break;
+#endif
     const bool coldStart=demandActivation_ && coldBoot && drivers_[i].coldBootStart;
     if(demandActivation_ && !coldStart)continue;
     char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
@@ -2212,10 +2238,15 @@ bool Runtime::run() {
 #endif
   // One app at a time; no recursive ELF launch or implicit image discovery.
   while(ok) {
+#if RISC_NATIVE_SERIAL_FILES
+    if(!transferCheckpoint()){retained_=true;ok=fail("serial transfer admission retained; restart required");break;}
+    if(serialTransferRequested())break;
+#endif
     invocation_->queued_[0]=0;
     const bool isDefault=!strcmp(invocation_->current_,default_);
     const bool completed=runOne(invocation_->current_);
     if(retained_) { ok=false; break; }
+    if(serialTransferRequested())break;
     if(residentEnabled_ && !completed && !isDefault)
       recordResidentFailure(invocation_->failureKind?invocation_->failureKind:uint32_t(RISC_RESIDENT_FAILURE_LOAD),
                             invocation_->status==RISC_RESIDENT_INCOMPATIBLE?RISC_RESIDENT_INCOMPATIBLE:RISC_RESIDENT_FAILED,

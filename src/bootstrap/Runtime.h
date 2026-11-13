@@ -140,6 +140,11 @@ struct Port {
   // Optional final endpoint teardown. Unlike shutdown/session reset, successful
   // stop disables transport admission before native provider grants are released.
   bool (*serialFilesStop)()=nullptr;
+  // Explicit product transfer policy; absent preserves ordinary app lifecycle.
+  // Poll copies USB bytes only. Enter runs solely in the full-ready parked lane.
+  void (*serialFilesPoll)()=nullptr;
+  bool (*serialTransferRequested)()=nullptr;
+  void (*serialTransferEnter)()=nullptr;
 #endif
 };
 class Runtime final {
@@ -205,6 +210,7 @@ class Runtime final {
   bool diagnostic(const char*);
   bool confirmBoot();
   bool exitRequested()const;
+  bool serialTransferRequested()const;
   bool retainInvocation();
   bool streamClient(risc_stream_client_v1*);
   bool residentClient(risc_resident_client_v1*);
