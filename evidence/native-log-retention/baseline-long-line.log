@@ -1,0 +1,3 @@
+long-line expected=513 actual=155
+test: /workspace/shared/native-log-retention-20261018/test/native_log_retention_test.cpp:84: int main(int, char**): Assertion `wire==shortLine+'\n'+longLine+'\n'+maximum+'\n'' failed.
+test/run_native_log_retention_test.sh: line 18:    26 Aborted                 "$build/test" "$case"

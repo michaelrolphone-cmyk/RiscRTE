@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "19912b621bcf18ae2ed17e38048a0ae4c140783c",
+  "sourceTree": "3c6eb6f9ce9fc82891ecd2d2d8478aa23fc5a308",
+  "command": "IDF_PATH=/workspace/shared/x4-initial-hello-discriminator/sdk-source SANITIZE=1 ASAN_OPTIONS=detect_leaks=0 bash test/run_native_serial_files_transport_test.sh",
+  "exitCode": 0,
+  "log": "serial-transport-sanitized.log",
+  "sha256": "a5b29c807c1d391b9300e661597a125d64876784d620745b37044053897dc708",
+  "hardware": false,
+  "actualSDKIRQ": false,
+  "completedAt": "2026-10-18T08:57:00Z"
+}
