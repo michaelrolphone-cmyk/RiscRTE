@@ -1,4 +1,6 @@
 #include "NativeAppDataMount.h"
+#include "NativeAppDataLayout.h"
+#include "diagnostics/StageLog.h"
 #if RISC_NATIVE_APP_DATA_MOUNT
 #include "NativeRadioResources.h"
 #include "../../../experimental/native_replica/pinned_littlefs/littlefs_api.h"
@@ -204,7 +206,7 @@ void makeTable(){
  fenced.utime_p=&utime;
 
 }
-bool protectedPartition(const esp_partition_t* p){return p && p->address<0x2f0000 && uint64_t(p->address)+p->size>0x270000;}
+bool protectedPartition(const esp_partition_t* p){return p && RiscNativeAppDataLayout::overlaps(p->address,p->size);}
 bool partitionCall(const esp_partition_t*p){
  if(!partition||!protectedPartition(p))return true;
  if(p!=partition||retained()||owner.load()!=task()||(!mounting&&!inCall)){errno=EIO;return false;}
@@ -220,7 +222,7 @@ bool prepare(const esp_partition_t*p){
  if(!atomicsInternal())return false;
  if(attempted)return false;
  attempted=true;
- if(!p||p->encrypted||p->address!=0x270000||p->size!=0x80000||strcmp(p->label,"appdata")||!task())return false;
+ if(!p||p->encrypted||!RiscNativeAppDataLayout::exact(p->address,p->size)||strcmp(p->label,"appdata")||!task())return false;
  initializeDescriptors();partition=p;owner.store(task());++custodyGeneration;mounting=true;return true;
 }
 bool finish(){
@@ -265,11 +267,24 @@ extern "C" esp_err_t __wrap_esp_vfs_register(const char*p,const esp_vfs_t*v,void
  if(!p)return ESP_ERR_INVALID_ARG;
  // Block ancestors and descendants as well as the exact route forever.
  if(strcmp(p,"/")&&strcmp(p,Mount)&&!under(p,Mount)&&!under(Mount,p))return __real_esp_vfs_register(p,v,c);
- if(strcmp(p,Mount)||!mounting||registered||retained()||!v||!c||v->flags!=ESP_VFS_FLAG_CONTEXT_PTR)return ESP_ERR_INVALID_STATE;
+ if(strcmp(p,Mount)||!mounting||registered||retained()||!v||!c||v->flags!=ESP_VFS_FLAG_CONTEXT_PTR){
+  RISC_STAGE_LOG("appdata failed reason=vfs-route-or-state");return ESP_ERR_INVALID_STATE;
+ }
  auto*e=static_cast<esp_littlefs_t*>(c);
  if(e->partition!=partition||e->cfg.context!=e||e->read_only||!e->fs||e->fs->cfg!=&e->cfg||strcmp(e->base_path,Mount)||
- e->cfg.read_size!=128||e->cfg.prog_size!=128||e->cfg.block_size!=4096||e->cfg.block_count!=0||e->fs->block_count!=128||e->cfg.cache_size!=512||e->cfg.lookahead_size!=128||
- !v->open_p||!v->close_p||!v->stat_p||!v->fstat_p||!v->write_p||!v->read_p||!v->fsync_p||!v->mkdir_p||!v->opendir_p||!v->readdir_p||!v->closedir_p||v->link_p)return ESP_ERR_INVALID_STATE;
+ e->cfg.read_size!=128||e->cfg.prog_size!=128||e->cfg.block_size!=4096||e->cfg.block_count!=0||e->cfg.cache_size!=512||e->cfg.lookahead_size!=128||
+ !v->open_p||!v->close_p||!v->stat_p||!v->fstat_p||!v->write_p||!v->read_p||!v->fsync_p||!v->mkdir_p||!v->opendir_p||!v->readdir_p||!v->closedir_p||v->link_p){
+  RISC_STAGE_LOG("appdata failed reason=vfs-context-or-profile");return ESP_ERR_INVALID_STATE;
+ }
+ // The on-disk filesystem must fill the exact selected product partition.
+ // Preserve autodetection, but never accept a smaller filesystem or grow it.
+ const uint64_t expectedBlocks=RiscNativeAppDataLayout::Bytes/4096u;
+ RISC_STAGE_LOG("appdata fence block_bytes=%lu disk_blocks=%lu expected_blocks=%llu",
+   static_cast<unsigned long>(e->cfg.block_size),static_cast<unsigned long>(e->fs->block_count),
+   static_cast<unsigned long long>(expectedBlocks));
+ if(e->fs->block_count!=expectedBlocks){
+  RISC_STAGE_LOG("appdata failed reason=filesystem-geometry");return ESP_ERR_INVALID_STATE;
+ }
  context=e;original=*v;makeTable();
  esp_err_t r=__real_esp_vfs_register(p,&fenced,c);if(r==ESP_OK){registered=true;++mountGeneration;}else{context=nullptr;retain();}return r;
 }

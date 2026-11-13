@@ -5,7 +5,7 @@ int32_t Port::radioAsyncBegin(void* context,uint64_t token,const risc_radio_requ
   if(!out || !request || request->struct_size!=sizeof(*request))return RISC_RADIO_INVALID;
   if(!p.available() || p.sleepRetained_ || p.transferring_ || !token || token!=c.token)return RISC_RADIO_INVALID;
   if(!p.hw_.radioAsync || c.asyncUnavailable || (request->kind==RISC_RADIO_REQUEST_AP && !(c.config.features&2)))return RISC_RADIO_UNAVAILABLE;
-  if(((c.active || c.operation) && !(request->flags&RISC_RADIO_TEMPORARY)) || c.suspendedOperation || ((request->flags&RISC_RADIO_TEMPORARY) && (c.serviceLease || !p.tcpIdle() || (p.hw_.httpIdle && !p.hw_.httpIdle()))) || c.closing || p.iq_.token || p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_RADIO_BUSY;
+  if(((c.active || c.operation) && !(request->flags&RISC_RADIO_TEMPORARY)) || c.suspendedOperation || ((request->flags&RISC_RADIO_TEMPORARY) && (c.serviceLease || !p.tcpIdle() || ((p.hw_.httpIdle && !p.hw_.httpIdle()) || (p.hw_.timeSampleIdle && !p.hw_.timeSampleIdle())))) || c.closing || p.iq_.token || p.hci_.closing || (p.hw_.hciSafe && !p.hw_.hciSafe()))return RISC_RADIO_BUSY;
   const int32_t result=p.hw_.radioAsync->begin(request,out);
   if(result==RISC_RADIO_ACCEPTED && *out){
     c.suspendedOperation=c.operation;c.operation=*out;c.completed=0;c.active=true;c.scanning=request->kind==RISC_RADIO_REQUEST_SCAN;
@@ -43,7 +43,7 @@ int32_t Port::radioAsyncCancel(void* context,uint64_t token,uint32_t operation){
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !token || token!=c.token || !operation)return RISC_RADIO_INVALID;
   if(!p.hw_.radioAsync)return RISC_RADIO_UNAVAILABLE;
   if(operation!=c.operation && operation!=c.completed)return RISC_RADIO_STALE;
-  if(!p.tcpIdle() || (p.hw_.httpIdle && !p.hw_.httpIdle()))return RISC_RADIO_BUSY;
+  if(!p.tcpIdle() || ((p.hw_.httpIdle && !p.hw_.httpIdle()) || (p.hw_.timeSampleIdle && !p.hw_.timeSampleIdle())))return RISC_RADIO_BUSY;
   const int32_t result=p.hw_.radioAsync->cancel(operation);
   if(result==RISC_RADIO_QUIESCENT){
     if(operation==c.operation && !c.suspendedOperation && !p.hw_.radioIdle()){c.closing=true;return RISC_RADIO_RETAINED;}

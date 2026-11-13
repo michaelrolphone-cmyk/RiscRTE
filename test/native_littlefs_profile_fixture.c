@@ -15,10 +15,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define FLASH_BYTES (512U * 1024U)
+#ifndef RISC_TEST_APP_DATA_BYTES
+#define RISC_TEST_APP_DATA_BYTES (512U * 1024U)
+#endif
+#ifndef RISC_TEST_APP_DATA_OFFSET
+#define RISC_TEST_APP_DATA_OFFSET 0x270000U
+#endif
+#define FLASH_BYTES RISC_TEST_APP_DATA_BYTES
 #define HANDLE_LIMIT 128U
 static unsigned char flash_bytes[FLASH_BYTES];
-static const esp_partition_t flash_partition = { 0x270000U, FLASH_BYTES, "appdata", false };
+static const esp_partition_t flash_partition = { RISC_TEST_APP_DATA_OFFSET, FLASH_BYTES, "appdata", false };
 struct native_lfs_flash_chip g_rom_flashchip = { 256U };
 static esp_vfs_t registered_vfs;
 static void *registered_context;

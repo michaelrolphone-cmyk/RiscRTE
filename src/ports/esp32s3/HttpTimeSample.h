@@ -1,5 +1,5 @@
 #pragma once
-/* Private HTTP-session-only, read-only SNTP exchange. No system SNTP service,
+/* Shared native read-only SNTP exchange for explicit HTTP/time-sample sessions. No system SNTP service,
  * background callback, socket export or wall-clock/RTC mutation is involved. */
 #include "HttpBounds.h"
 #include <RiscHttpTimeV1.h>

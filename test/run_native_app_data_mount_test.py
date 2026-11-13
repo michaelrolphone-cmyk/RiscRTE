@@ -29,6 +29,13 @@ fixture=build/'fixture.c';fixture.write_text(s)
 sanitize=['-fsanitize=address,undefined','-fno-sanitize-recover=all','-fno-omit-frame-pointer','-g'] if os.environ.get('SANITIZE')=='1' else []
 common=['-D_GNU_SOURCE','-DLFS_NO_DEBUG','-DLFS_NO_WARN','-DLFS_NO_ERROR','-pthread',*sanitize,'-include',str(stubs/'sdkconfig.h')]
 includes=['-I'+str(p) for p in [stubs,vendor,vendor/'littlefs',root,root/'src',root/'test',root/'sdk/app',root/'sdk/driver',root/'sdk/hardware']]
+# Select the same physical partition and product fence in every translation unit.
+geometry=[]
+for env,macro,default in [('APPDATA_OFFSET','OFFSET',0x270000),('APPDATA_BYTES','BYTES',0x80000)]:
+ value=int(os.environ.get(env,str(default)),0)
+ geometry += [f'-DRISC_NATIVE_APP_DATA_{macro}={value}',f'-DRISC_TEST_APP_DATA_{macro}={value}']
+geometry += [f'-DRISC_NATIVE_FLASH_BYTES={int(os.environ.get("FLASH_BYTES","0x1000000"),0)}',f'-DRISC_STAGE_LOGS={int(os.environ.get("MOUNT_STAGE_LOGS","0"),0)}']
+common += geometry
 objects=[]
 for source in [vendor/'littlefs/lfs.c',vendor/'littlefs/lfs_util.c',vendor/'littlefs_esp_part.c',vendor/'esp_littlefs.c',fixture]:
  obj=build/(source.name+'.o');profile.run(['cc','-std=c11',*common,*includes,'-c',str(source),'-o',str(obj)]);objects.append(str(obj))
@@ -42,5 +49,5 @@ obj=build/'posix.o';profile.run(['c++',*flags,'-c',str(root/'test/native_app_dat
 wrapped=['stat','fstat','open','read','write','close','fsync','mkdir','unlink','rename','opendir','readdir','closedir','esp_vfs_register','esp_vfs_unregister','esp_partition_read','esp_partition_write','esp_partition_erase_range','esp_littlefs_format','esp_littlefs_format_partition']
 if os.environ.get('SDK6_VFS')=='1':wrapped+=['esp_vfs_register_fs','esp_vfs_unregister_fs']
 exe=build/'test';profile.run(['c++',*flags,str(root/'test/native_app_data_mount_test.cpp'),*objects,'-Wl,'+','.join('--wrap='+f for f in wrapped),'-o',str(exe)])
-for case in ['healthy','fault','close-failure','lost-custody','native-backend','recovery','packages']:profile.run([str(exe),case])
+for case in os.environ.get('APPDATA_CASES','healthy,fault,close-failure,lost-custody,native-backend,recovery,packages,geometry,wrong-geometry').split(','):profile.run([str(exe),case])
 print('PASS: native mount binding real pinned VFS; no firmware activation/hardware claim')

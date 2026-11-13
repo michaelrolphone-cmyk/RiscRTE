@@ -75,4 +75,5 @@ int main(){
  maintenance=false;
  suffixTests();
  puts("CPU HTTP: old/tagged suffix forwarding, healthy storage, exit/sleep, wrong-owner, retained no-I/O and transport-before-radio cleanup PASS");
+ return 0;
 }

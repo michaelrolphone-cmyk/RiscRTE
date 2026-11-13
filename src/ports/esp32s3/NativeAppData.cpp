@@ -1,6 +1,8 @@
 #if defined(ESP_PLATFORM) && defined(RISC_PAIRED_APP_DATA)
 #include "NativeAppData.h"
 #include "NativeAppDataMount.h"
+#include "NativeAppDataLayout.h"
+#include "diagnostics/StageLog.h"
 #include "NativeRadioResources.h"
 #include "runtime/storage/AppDataFiles.h"
 #include "runtime/storage/AsyncAppDataReplace.h"
@@ -94,26 +96,38 @@ const RiscBoot::AppDataBackend api={nullptr,
  [](void*){return pending();}};
 }
 bool prepare(bool (*owner)(),bool (*operationSafe)()){
- if(attempted)return false;
+ if(attempted){RISC_STAGE_LOG("appdata failed reason=already-attempted");return false;}
  attempted=true;ownerTask=owner;safeOperation=operationSafe;
- if(!safe())return false;
+ if(!safe()){RISC_STAGE_LOG("appdata failed reason=owner-or-provider-custody");return false;}
  const esp_partition_t*p=esp_partition_find_first(ESP_PARTITION_TYPE_DATA,esp_partition_subtype_t(0x41),"appdata");
- if(!p || p->encrypted || p->address!=0x270000 || p->size!=0x80000)return false;
+ RISC_STAGE_LOG("appdata partition found=%u offset=%lu bytes=%lu expected_offset=%llu expected_bytes=%llu encrypted=%u",
+   unsigned(p!=nullptr),static_cast<unsigned long>(p?p->address:0),static_cast<unsigned long>(p?p->size:0),
+   static_cast<unsigned long long>(RiscNativeAppDataLayout::Offset),
+   static_cast<unsigned long long>(RiscNativeAppDataLayout::Bytes),unsigned(p&&p->encrypted));
+ if(!p || p->encrypted || !RiscNativeAppDataLayout::exact(p->address,p->size)){
+  RISC_STAGE_LOG("appdata failed reason=partition-geometry-or-encryption");return false;
+ }
  esp_vfs_littlefs_conf_t conf{};conf.base_path="/appdata";conf.partition_label="appdata";
  conf.format_if_mount_failed=false;conf.grow_on_mount=false;conf.read_only=false;conf.dont_mount=false;
 #if RISC_NATIVE_APP_DATA_MOUNT
- RiscCpu::NativeRadioResourceGuard lease;if(!lease.held)return false;
- if(!RiscAppDataMount::prepare(p))return false;
- if(esp_vfs_littlefs_register(&conf)!=ESP_OK||!RiscAppDataMount::finish()){
+ RiscCpu::NativeRadioResourceGuard lease;if(!lease.held){RISC_STAGE_LOG("appdata failed reason=resource-custody");return false;}
+ if(!RiscAppDataMount::prepare(p)){RISC_STAGE_LOG("appdata failed reason=mount-owner-admission");return false;}
+ const esp_err_t mounted=esp_vfs_littlefs_register(&conf);
+ RISC_STAGE_LOG("appdata mount result=%d format=disabled grow=disabled",int(mounted));
+ const bool finished=mounted==ESP_OK&&RiscAppDataMount::finish();
+ if(!finished){
+  RISC_STAGE_LOG("appdata failed reason=%s retained=%u",mounted==ESP_OK?"mount-owner-finish":"littlefs-or-fence",unsigned(RiscAppDataMount::retained()));
   if(RiscAppDataMount::retained())lease.held=false;
   return false;
  }
- RiscAppDataMount::Guard custody(RiscAppDataMount::Access::AppData);if(!custody.held)return false;
+ RiscAppDataMount::Guard custody(RiscAppDataMount::Access::AppData);
+ if(!custody.held){RISC_STAGE_LOG("appdata failed reason=appdata-custody");return false;}
 #else
  if(esp_vfs_littlefs_register(&conf)!=ESP_OK)return false;
 #endif
  // Keep mount/provider state alive until reset, including allocation failure.
  const bool configured=files.configure("/appdata");
+ RISC_STAGE_LOG("appdata configure result=%s",configured?"ok":"root-unavailable");
 #if RISC_NATIVE_APP_DATA_MOUNT
  if(RiscAppDataMount::retained())lease.held=false;
 #endif
