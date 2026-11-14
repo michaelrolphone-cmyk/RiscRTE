@@ -5,6 +5,7 @@ Run from the Runtime root:
 ```sh
 ./test/run_native_platform_test.sh
 ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 ./test/run_native_platform_test.sh
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 ./test/run_native_console_records_test.sh
 ```
 
 `IDF_PATH` defaults to the sibling `../esp-idf` checkout. These tests compile the
@@ -25,6 +26,15 @@ Coverage:
 - Copy and move construction/assignment are forbidden at compile time.
 - TX buffer configuration honors lower/upper bounds and cannot mutate a live
   instance; failed configuration preserves the last accepted size.
+- Every native USB build defaults to an 8192-byte TX buffer, independent of
+  stage diagnostics. Whole-record capacity is distinct from the 128-byte write
+  budget. Accepted bytes consume credits; only the public SDK's zero-timeout
+  complete-drain query reclaims them. Partial drain conservatively retains
+  credits. Wrong-core and uninstalled callers receive zero capacity.
+- The actual Console and SleepDiagnostics line sink emit complete 127, 128,
+  129, 200 and 255-character records with stage logs both off and on. An 8 KiB
+  burst fills the buffer; full-buffer admission drops a whole record, and host
+  reconnection alone never fabricates space. Completion restores capacity.
 - Each write is bounded to 128 bytes. USB calls use timeout zero even after a
   nonzero timeout request. Both transports reject wrong-core writes. Null and
   empty inputs perform no SDK write.

@@ -1,0 +1,22 @@
+{
+  "schema": "riscrte-infrastructure-direct-image/1",
+  "tag": "esp32s3-infrastructure-v1.3.0",
+  "name": "ESP32-S3 Infrastructure Agent v1.3.0 \u2014 Webhook Relay and Scheduler Budget",
+  "asset": "riscrte-esp32s3-infrastructure-v1.3.0-initial.bin",
+  "bytes": 16777216,
+  "sha256": "73d92a8b3508c233570823ffc65bbb5db759eca7b2b7ebcf2e520de285e045e8",
+  "offset": 0,
+  "profile": "esp32s3-infrastructure",
+  "source": {
+    "runtime": "560d7635d689016baaa739607cd8245df9e651f3",
+    "system_apps": "684cef611f36085f85d5f3212cf9588ac370b71a",
+    "esp_idf": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "spec": "f0e52f9fb704bd984a1b7ed8d0bdc9c74b2596a875d58ea74b7354f2c6667ac2"
+  },
+  "purpose": "Complete first installation; replaces all 16 MiB including existing identity/data. Not a data-preserving update.",
+  "provisioning": "On-device captive portal. Join RiscRTE-Setup (password RiscRTE-Setup), open http://192.168.4.1/, enter Wi-Fi and choose a private pairing file. Public image has no credentials.",
+  "hardware_qualified": false,
+  "layout": "riscrte-paired-appdata-v2",
+  "layout_abi": 2,
+  "startup_status": "Signed durable Channel Bus webhook relay, scoped relay credential, private captive-portal configuration, and Scheduler 8-second processing/12-second transport policy. Server timestamp replay starvation fix is deployed. Native main-task stack is 24 KiB; admission floor remains 4096 bytes. Software tests and complete-image validation pass. Physical relay delivery, latency/outage/stack qualification and Grok receiver endpoint/credentials remain pending."
+}

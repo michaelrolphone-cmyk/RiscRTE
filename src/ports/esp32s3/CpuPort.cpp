@@ -1,4 +1,9 @@
 #include "CpuPort.h"
+#include "NativeInfrastructureRecovery.h"
+#if RISC_NATIVE_STILL_CAMERA
+#include <RiscStillCameraV1.h>
+extern "C" const risc_still_camera_v1* risc_product_still_camera();
+#endif
 #include "NativeSerialFiles.h"
 #include "HciBounds.h"
 #if RISC_NATIVE_SETTINGS_LIFECYCLE
@@ -188,6 +193,42 @@ int32_t Port::httpClose(void* context,uint64_t token){
   if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClient)return RISC_HTTP_CLOSED;
   p.transferring_=true;const auto result=p.hw_.httpClient->close(p.hw_.httpClient->context,token);p.transferring_=false;return result;
 }
+int32_t Port::httpOpenV2(void* context,const risc_http_request_v2* request,uint64_t* out){
+  if(out)*out=0;
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClientV2)return RISC_HTTP_CLOSED;
+  #if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(p.nativeDiscoveryBusy())return RISC_HTTP_BUSY;
+#endif
+  if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
+  p.transferring_=true;const auto result=p.hw_.httpClientV2->open(p.hw_.httpClientV2->context,request,out);p.transferring_=false;return result;
+}
+int32_t Port::httpReadV2(void* context,uint64_t token,void* out,uint32_t size,uint32_t* count){
+  if(count)*count=0;
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClientV2)return RISC_HTTP_CLOSED;
+  #if RISC_NATIVE_SETTINGS_LIFECYCLE
+  if(p.nativeDiscoveryBusy())return RISC_HTTP_BUSY;
+#endif
+  if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
+  p.transferring_=true;const auto result=p.hw_.httpClientV2->read(p.hw_.httpClientV2->context,token,out,size,count);p.transferring_=false;return result;
+}
+int32_t Port::httpInfoV2(void* context,uint64_t token,risc_http_response_v2* out){
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available() || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClientV2)return RISC_HTTP_CLOSED;
+  return p.hw_.httpClientV2->info(p.hw_.httpClientV2->context,token,out);
+}
+int32_t Port::httpCloseV2(void* context,uint64_t token){
+  auto& p=*static_cast<Port*>(context);
+  if(!p.hw_.owner || !p.hw_.owner() || p.sleeping_ || p.sleepRetained_ || p.transferring_ || !p.hw_.httpClientV2)return RISC_HTTP_CLOSED;
+  p.transferring_=true;const auto result=p.hw_.httpClientV2->close(p.hw_.httpClientV2->context,token);p.transferring_=false;return result;
+}
+int32_t Port::httpAdvanceV2(void* context,uint64_t token){
+  auto& p=*static_cast<Port*>(context);
+  if(!p.available()||p.sleepRetained_||p.transferring_||!p.hw_.httpClientV2)return RISC_HTTP_CLOSED;
+  if(!p.providerStorageSafe())return RISC_HTTP_RETAINED;
+  p.transferring_=true;const auto result=p.hw_.httpClientV2->advance(p.hw_.httpClientV2->context,token);p.transferring_=false;return result;
+}
 bool Port::gpioScope(const RiscBoot::Runtime& runtime,const RiscBoot::Board::Device& selected,Gpio& gpio){
   gpio.port=this;gpio.instance=selected.hardware.instance_id;
   if(!strcmp(selected.type,"controller.gpio")){
@@ -241,6 +282,12 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       return p.hw_.owner && p.hw_.owner() && ms && ms<=RISC_PLATFORM_CLOCK_WAIT_MAX_MS && p.hw_.schedulerWait && p.hw_.schedulerWait(ms);
     };
   }
+#if RISC_NATIVE_INFRA_RECOVERY
+  if(!runtime.registerPlatform("platform.recovery",1,RiscBoot::Runtime::Scope::Global,0,infrastructureRecovery()))return false;
+#endif
+#if RISC_NATIVE_STILL_CAMERA
+  if(!runtime.registerPlatform(RISC_STILL_CAMERA_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,risc_product_still_camera()))return false;
+#endif
   if(!runtime.registerPlatform("platform.clock",1,RiscBoot::Runtime::Scope::Global,0,&clock_.base))return false;
   if(hw_.usbPhyIdle || hw_.usbPhySuspend || hw_.usbPhyResume){
     if(!hw_.usbPhyIdle || !hw_.usbPhySuspend || !hw_.usbPhyResume)return false;
@@ -285,6 +332,7 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       [](void* c,uint64_t owner){return static_cast<Port*>(c)->tcpIdle(owner);},
       [](void* c){return static_cast<Port*>(c)->tcpSafe();}};
     if(b->connect && b->connected){tcp_.connect=tcpConnect;tcp_.connected=tcpConnected;}
+    if(b->datagram_bind && b->datagram_receive && b->datagram_send){tcp_.datagram_bind=udpBind;tcp_.datagram_receive=udpReceive;tcp_.datagram_send=udpSend;}
     if(!runtime.registerTcpListener(&tcp_))return false;
   }
   if(hw_.httpClient){
@@ -296,6 +344,12 @@ bool Port::bind(RiscBoot::Runtime& runtime){
       http_.time_version=RISC_HTTP_TIME_VERSION_V1;http_.open_with_time=httpOpenWithTime;
     }
     if(!runtime.registerPlatform(RISC_HTTP_CLIENT_CAPABILITY,1,RiscBoot::Runtime::Scope::Global,0,&http_.base))return false;
+  }
+  if(hw_.httpClientV2){
+    const auto* h=hw_.httpClientV2;
+    if(!hw_.httpIdle||!hw_.httpSafe||h->api_version!=2||h->struct_size<sizeof(*h)||!h->open||!h->advance||!h->read||!h->info||!h->close)return false;
+    httpV2_={2,sizeof(httpV2_),this,httpOpenV2,httpAdvanceV2,httpReadV2,httpInfoV2,httpCloseV2};
+    if(!runtime.registerPlatform(RISC_HTTP_CLIENT_CAPABILITY,2,RiscBoot::Runtime::Scope::Global,0,&httpV2_))return false;
   }
   const auto& board=runtime.board();
   for(size_t n=0;n<board.deviceCount();++n){

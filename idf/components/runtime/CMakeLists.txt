@@ -9,6 +9,10 @@ idf_component_register(SRCS ${runtime_sources} ${RISC_NATIVE_EXTRA_SOURCES}
              esp_http_client esp-tls http_parser mbedtls fatfs driver esp_driver_gpio esp_driver_i2s
              esp_driver_ledc esp_driver_sdmmc esp_driver_sdspi esp_driver_spi
              esp_driver_uart esp_driver_usb_serial_jtag esp_hal_usb)
+foreach(component IN LISTS RISC_NATIVE_PRIVATE_COMPONENTS)
+    idf_component_get_property(product_lib ${component} COMPONENT_LIB)
+    target_link_libraries(${COMPONENT_LIB} PRIVATE ${product_lib})
+endforeach()
 set_target_properties(${COMPONENT_LIB} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_compile_options(${COMPONENT_LIB} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-std=gnu++17>"
     ${RISC_NATIVE_COMPILE_OPTIONS})
@@ -43,6 +47,22 @@ if(DEFINED RISC_SOURCE_SHA)
     # Git's ownership protections or relying on a user-wide safe.directory.
     set(source_sha "${RISC_SOURCE_SHA}")
 else()
+    # Reconfigure after a checkout/commit, including linked worktrees. Otherwise
+    # an incremental build can retain the SHA from its first configuration.
+    foreach(git_path HEAD)
+        execute_process(COMMAND git rev-parse --git-path "${git_path}" WORKING_DIRECTORY "${root}"
+            OUTPUT_VARIABLE identity_path OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+        get_filename_component(identity_path "${identity_path}" ABSOLUTE BASE_DIR "${root}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${identity_path}")
+    endforeach()
+    execute_process(COMMAND git symbolic-ref -q HEAD WORKING_DIRECTORY "${root}"
+        OUTPUT_VARIABLE identity_ref OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(identity_ref)
+        execute_process(COMMAND git rev-parse --git-path "${identity_ref}" WORKING_DIRECTORY "${root}"
+            OUTPUT_VARIABLE identity_path OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+        get_filename_component(identity_path "${identity_path}" ABSOLUTE BASE_DIR "${root}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${identity_path}")
+    endif()
     execute_process(COMMAND git rev-parse HEAD WORKING_DIRECTORY "${root}"
         OUTPUT_VARIABLE source_sha OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 endif()

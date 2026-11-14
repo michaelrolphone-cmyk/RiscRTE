@@ -5,6 +5,8 @@
 #include <esp_system.h>
 #if RISC_NATIVE_ESP_IDF
 #include <esp_random.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #endif
 // Runtime validates explicit grants, owner task and invocation before dispatch.
 namespace RiscCpu {
@@ -16,6 +18,13 @@ inline int32_t memoryHeap(risc_memory_heap_snapshot_v1* out) {
  if(!out||out->struct_size<sizeof(*out))return RISC_MEMORY_INVALID;
  uint32_t caps=MALLOC_CAP_8BIT;
  switch(out->memory_class) {
+ case RISC_MEMORY_STACK_HEADROOM:
+#if RISC_NATIVE_ESP_IDF
+  out->total_bytes=out->free_bytes=out->largest_block=uxTaskGetStackHighWaterMark(nullptr);
+  return RISC_MEMORY_OK;
+#else
+  return RISC_MEMORY_UNSUPPORTED;
+#endif
  case RISC_MEMORY_DEFAULT:break;
  case RISC_MEMORY_INTERNAL:caps|=MALLOC_CAP_INTERNAL;break;
  case RISC_MEMORY_EXTERNAL:caps|=MALLOC_CAP_SPIRAM;break;

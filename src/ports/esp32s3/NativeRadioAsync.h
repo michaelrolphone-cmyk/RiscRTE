@@ -30,7 +30,12 @@ static uint32_t workerId=0; // worker-only
 static bool workingDone=false,terminalPublished=false;
 #if RISC_STAGE_LOGS
 struct Record {uint32_t operation,stage;int32_t result;uint32_t begin;int64_t captured;};
-constexpr uint32_t RecordCount=32;
+constexpr uint32_t RecordCount=64;
+// Worker-only cache for the three SDK status probes. Their begin/end records
+// otherwise fill the ring on every worker tick while the owner is doing TLS.
+struct ProbeRecord {uint32_t operation=0;int32_t result=0;};
+static ProbeRecord probes[3];
+static uint32_t reportedLatest=0; // owner-only
 #endif
 struct Buffers {
   risc_radio_request_v1 request{};
@@ -71,6 +76,11 @@ inline void capture(uint32_t stage,int32_t result,bool begin){
   latestResult.store(uint32_t(result),std::memory_order_seq_cst);latestBegin.store(uint32_t(begin),std::memory_order_seq_cst);
   latestLow.store(uint32_t(captured),std::memory_order_seq_cst);latestHigh.store(uint32_t(captured>>32),std::memory_order_seq_cst);
   latestSeq.fetch_add(1,std::memory_order_seq_cst);
+  if(stage>=NativeRadio::ApInfo && stage<=NativeRadio::IpInfo){
+    auto& previous=probes[stage-NativeRadio::ApInfo];
+    if(previous.operation==workerId && (begin || previous.result==result))return;
+    if(!begin)previous={workerId,result};
+  }
   const uint32_t write=recordWrite.load(std::memory_order_relaxed);
   if(write-recordRead.load(std::memory_order_acquire)>=RecordCount){lost.fetch_add(1,std::memory_order_relaxed);return;}
   buffers->records[write%RecordCount]={workerId,stage,result,uint32_t(begin),int64_t(captured)};
@@ -78,7 +88,7 @@ inline void capture(uint32_t stage,int32_t result,bool begin){
 }
 inline void drain(){
   if(!buffers || !internalAtomicsReady())return;
-  for(unsigned n=0;n<8;++n){
+  for(unsigned n=0;n<16;++n){
     const auto read=recordRead.load(std::memory_order_relaxed);
     if(read==recordWrite.load(std::memory_order_acquire))break;
     const Record value=buffers->records[read%RecordCount];recordRead.store(read+1,std::memory_order_release);
@@ -87,17 +97,23 @@ inline void drain(){
       static_cast<long>(value.result),static_cast<long long>(value.captured));
   }
   const uint32_t dropped=lost.exchange(0,std::memory_order_acq_rel);
-  if(dropped){
-    RISC_STAGE_LOG("radio wifi async records_lost=%lu",static_cast<unsigned long>(dropped));
+  if(dropped)RISC_STAGE_LOG("radio wifi async records_lost=%lu",static_cast<unsigned long>(dropped));
+  {
     const uint32_t before=latestSeq.load(std::memory_order_seq_cst);
     Record value{latestOperation.load(std::memory_order_seq_cst),latestStage.load(std::memory_order_seq_cst),
       int32_t(latestResult.load(std::memory_order_seq_cst)),latestBegin.load(std::memory_order_seq_cst),0};
     const uint32_t low=latestLow.load(std::memory_order_seq_cst),high=latestHigh.load(std::memory_order_seq_cst);
     value.captured=int64_t((uint64_t(high)<<32)|low);
-    if(!(before&1u) && before==latestSeq.load(std::memory_order_seq_cst))
+    // Even an unchanged status call can stall. Its atomic begin edge is
+    // always captured above; expose it once after 100 ms without flooding
+    // the history ring with successful repeated polling.
+    const bool stalled=value.begin && esp_timer_get_time()-value.captured>=100000;
+    if(before && before!=reportedLatest && !(before&1u) && before==latestSeq.load(std::memory_order_seq_cst) && (dropped || stalled)){
+      reportedLatest=before;
       RISC_STAGE_LOG("radio wifi async latest op=%lu stage=%lu edge=%s code=%ld captured_us=%lld",
         static_cast<unsigned long>(value.operation),static_cast<unsigned long>(value.stage),value.begin?"begin":"end",
         static_cast<long>(value.result),static_cast<long long>(value.captured));
+    }
   }
 }
 #else

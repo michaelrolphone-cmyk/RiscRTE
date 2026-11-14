@@ -103,6 +103,7 @@ int usb_serial_jtag_read_bytes(void* data,uint32_t length,uint32_t ticks){
   if(rx.empty())return 0;
   *static_cast<uint8_t*>(data)=rx.front();rx.pop_front();return 1;
 }
+esp_err_t usb_serial_jtag_wait_tx_done(uint32_t ticks){assert(installed && ticks==0);return ESP_OK;}
 int usb_serial_jtag_write_bytes(const void* data,size_t length,uint32_t ticks){
   assert(installed && length<=64 && ticks==0);++writes;
   length=std::min(length,maxWrite);tx.append(static_cast<const char*>(data),length);return int(length);

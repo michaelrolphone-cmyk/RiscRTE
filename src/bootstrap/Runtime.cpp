@@ -1,3 +1,6 @@
+#if RISC_NATIVE_STILL_CAMERA
+#include <RiscStillCameraV1.h>
+#endif
 #include <RiscProvisionRequestV1.h>
 #include <RiscInternalPackageVolumeV1.h>
 #include "Runtime.h"
@@ -221,7 +224,11 @@ bool Runtime::registerPlatform(const char* capability,uint32_t api,Scope scope,u
   if (!strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
       (api!=RISC_DIAGNOSTIC_SOURCE_API_V1 || scope!=Scope::Global || id)) return false;
   if (scope==Scope::Global) {
-    if (id || (strcmp(capability,"platform.clock") && strcmp(capability,"platform.board") &&
+    if (id || (
+#if RISC_NATIVE_STILL_CAMERA
+               strcmp(capability,RISC_STILL_CAMERA_CAPABILITY) &&
+#endif
+               strcmp(capability,"platform.clock") && strcmp(capability,"platform.recovery") && strcmp(capability,"platform.board") &&
                strcmp(capability,"platform.http-client") && strcmp(capability,"platform.bank-store") &&
                strcmp(capability,"platform.radio.iq.resource") && strcmp(capability,RISC_PLATFORM_REALTIME_CAPABILITY) &&
                strcmp(capability,RISC_TCP_LISTENER_CAPABILITY) && strcmp(capability,RISC_ENTROPY_CAPABILITY) && strcmp(capability,RISC_DIAGNOSTIC_SOURCE_CAPABILITY) &&
@@ -841,7 +848,7 @@ int32_t Runtime::memoryHeapSnapshot(void* context,risc_memory_heap_snapshot_v1* 
   for(const auto& grant:r->invocation_->appGrants_)
     if(grant.live && grant.invocation==r->invocation_->streams_.context() && grant.api==&grant.memoryHeap && grant.memoryHeap.context==context)found=true;
   if(!found)return RISC_MEMORY_CONTEXT;
-  if(!out || out->struct_size<sizeof(*out) || out->memory_class>RISC_MEMORY_DMA)return RISC_MEMORY_INVALID;
+  if(!out || out->struct_size<sizeof(*out) || out->memory_class>RISC_MEMORY_STACK_HEADROOM)return RISC_MEMORY_INVALID;
   risc_memory_heap_snapshot_v1 value{};value.struct_size=sizeof(value);value.memory_class=out->memory_class;
   const int32_t rc=r->port_.memoryHeap(&value);
   if(rc!=RISC_MEMORY_OK)return rc==RISC_MEMORY_UNSUPPORTED?rc:RISC_MEMORY_INVALID;

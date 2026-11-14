@@ -13,30 +13,43 @@
 namespace RiscCpu { namespace NativeTlsMemory {
 constexpr unsigned InternalCaps=MALLOC_CAP_INTERNAL|MALLOC_CAP_8BIT;
 constexpr unsigned ExternalCaps=MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT;
+// Explicit static-product selection for boards with no external RAM. The
+// default PSRAM-only policy and existing runtime products are unchanged.
+#if RISC_HTTP_INTERNAL_MEMORY
+constexpr unsigned HttpCaps=InternalCaps;
+#else
+constexpr unsigned HttpCaps=ExternalCaps;
+#endif
 enum class State { Uninitialized,Ready,Unavailable };
 inline State state=State::Uninitialized;
 
 inline void* calloc(size_t count,size_t bytes){
   if(bytes && count>SIZE_MAX/bytes)return nullptr;
-  // Match IDF's supported CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC policy, including
-  // small certificate/crypto controls. Failure must never spill into internal
-  // RAM. SDK AES/SHA DMA allocations keep their separate capability allocator.
-  return heap_caps_calloc(count,bytes,ExternalCaps);
+  // Match the explicitly selected SDK startup policy, including small crypto
+  // controls. Never change allocator or fall back across memory classes.
+  // SDK DMA allocations retain their independent capability allocator.
+  return heap_caps_calloc(count,bytes,HttpCaps);
 }
 inline void free(void* memory){heap_caps_free(memory);}
 inline bool ready(){return state==State::Ready;}
 inline bool initialize(){
   if(state!=State::Uninitialized)return ready();
   state=State::Unavailable;
-  if(!heap_caps_get_total_size(ExternalCaps))return false;
+  if(!heap_caps_get_total_size(HttpCaps))return false;
 #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 6
   // IDF6 initializes PSA crypto before app_main. Its allocator must therefore
-  // be PSRAM-only from system startup, not replaced while PSA objects exist.
+  // match the selected memory class from startup, without replacing live PSA objects.
   // The selected SDK's esp_mem.c implements this policy without any fallback.
+#if RISC_HTTP_INTERNAL_MEMORY
+#if !defined(CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC) || !CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC || defined(CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC) || defined(CONFIG_MBEDTLS_CUSTOM_MEM_ALLOC)
+  return false;
+#endif
+#else
 #if !defined(CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC) || !CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC || \
     defined(CONFIG_MBEDTLS_INTERNAL_MEM_ALLOC) || defined(CONFIG_MBEDTLS_CUSTOM_MEM_ALLOC) || \
     defined(CONFIG_MBEDTLS_IRAM_8BIT_MEM_ALLOC)
   return false;
+#endif
 #endif
 #if !defined(MBEDTLS_PLATFORM_MEMORY) || defined(MBEDTLS_PLATFORM_CALLOC_MACRO) || defined(MBEDTLS_PLATFORM_FREE_MACRO)
   return false; // An alternate compile-time allocator is not this policy.
