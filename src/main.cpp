@@ -367,6 +367,14 @@ void setup() {
     RiscBankStore::rejectBoot();
 #endif
     return; }
+#if RISC_NATIVE_STANDALONE_APP_DATA
+#if defined(RISC_PAIRED_BANKS) || !defined(RISC_PAIRED_APP_DATA) || !RISC_NATIVE_APP_DATA_MOUNT
+#error Standalone AppData requires explicit fenced AppData and a non-paired product
+#endif
+  const bool standaloneAppDataReady=RiscAppData::prepare(isOwner,[](){return cpu.providerStorageSafe();});
+  diagnosticFormat("RTE_STORAGE appdata=%s format_and_grow=disabled",standaloneAppDataReady?"mounted":"unavailable");
+  if(!standaloneAppDataReady)return; // No app receives an advertised writable store after a failed mount.
+#endif
 #ifdef RISC_PAIRED_BANKS
 #ifdef RISC_PAIRED_APP_DATA
   bool appDataReady;

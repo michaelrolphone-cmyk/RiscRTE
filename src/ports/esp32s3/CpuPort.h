@@ -13,6 +13,7 @@
 #include "runtime/storage/StorageWorker.h"
 #include <RiscStorageWorkerAdmissionV1.h>
 #include <RiscHttpTimeV1.h>
+#include <RiscTimeSampleV1.h>
 #include <RiscRadioIqResourceV1.h>
 #include <RiscUsbPhyResourceV1.h>
 #ifndef RISC_NATIVE_STORAGE_CUSTODY
@@ -132,6 +133,9 @@ struct Hardware {
   bool (*deepPrepare)()=nullptr;
   bool (*deepCancel)()=nullptr;
   const DisplayBackend* displayBackend=nullptr;
+  const risc_time_sample_api_v1* timeSample=nullptr;
+  bool (*timeSampleIdle)()=nullptr;
+  bool (*timeSampleSafe)()=nullptr;
 };
 // Compiled-in custody seam only. No SDK export, application grant or default
 // selection. Hooks run only on the native owner and must outlive attachment.
@@ -341,6 +345,10 @@ class Port final {
   static bool radioScanStart(void*,uint64_t);
   static bool radioScanPoll(void*,uint64_t,garden_radio_scan_result_v1*);
   static bool radioScanCancel(void*,uint64_t);
+  static int32_t timeSampleOpen(void*,const risc_time_sample_request_v1*,uint64_t*);
+  static int32_t timeSampleStep(void*,uint64_t,risc_time_sample_v1*);
+  static int32_t timeSampleClose(void*,uint64_t);
+  risc_time_sample_api_v1 timeSample_{};
   static int32_t httpOpen(void*,const risc_http_request_v1*,uint64_t*);
   static int32_t httpOpenWithTime(void*,const risc_http_request_v1*,const char*,uint64_t*);
   static int32_t httpRead(void*,uint64_t,void*,uint32_t,uint32_t*);

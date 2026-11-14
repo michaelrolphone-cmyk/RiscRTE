@@ -1,5 +1,6 @@
 #include "ports/esp32s3/NativeAppDataMount.h"
 #include "ports/esp32s3/NativeAppData.h"
+#include "ports/esp32s3/NativeAppDataLayout.h"
 #include "native_littlefs_profile_fixture.h"
 #include "experimental/native_replica/pinned_littlefs/littlefs_api.h"
 #include <esp_littlefs.h>
@@ -17,6 +18,11 @@
 #include <cstdlib>
 #include "runtime/storage/AppDataFiles.h"
 #include "runtime/storage/PackageFiles.h"
+#if RISC_STAGE_LOGS
+namespace RiscDiagnostics {
+void timestamped(const char*format,...){va_list args;va_start(args,format);vprintf(format,args);va_end(args);putchar('\n');}
+}
+#endif
 #if RISC_NATIVE_ESP_IDF
 #include <esp_vfs_ops.h>
 extern "C" unsigned native_sdk6_vfs_calls(void);
@@ -90,13 +96,14 @@ static void blocked(){
  assert(e->fd_count==descriptors&&e->fs);
 }
 const esp_vfs_t* test_fenced_table=nullptr;
-struct Outcome {native_lfs_fixture_counters counts;int status;bool retained;unsigned char image[0x80000];};
+static constexpr size_t FlashBytes=RiscNativeAppDataLayout::Bytes;
+struct Outcome {native_lfs_fixture_counters counts;int status;bool retained;unsigned char image[FlashBytes];};
 static void recovery(){
  assert(native_lfs_fixture_mkdir("/.native-settings")==0);
  assert(native_lfs_fixture_mkdir("/.native-settings/n00000001")==0);
  std::vector<unsigned char>old(8192,0x35),value(65536,0xa7);
  assert(native_lfs_fixture_seed("/.native-settings/n00000001/value",old.data(),old.size())==0);
- std::vector<unsigned char>baseline(0x80000);assert(native_lfs_fixture_snapshot(baseline.data(),baseline.size())==baseline.size());
+ std::vector<unsigned char>baseline(FlashBytes);assert(native_lfs_fixture_snapshot(baseline.data(),baseline.size())==baseline.size());
  auto*out=static_cast<Outcome*>(mmap(nullptr,sizeof(Outcome),PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0));assert(out!=MAP_FAILED);
  auto run=[&](native_lfs_fixture_operation op,unsigned nth,native_lfs_fixture_fault_mode mode){
   assert(native_lfs_fixture_restore(baseline.data(),baseline.size())==0);
@@ -168,7 +175,7 @@ static void healthy(){
   int fd=native_lfs_fixture_open("/.native-settings/n00000001/test",O_RDONLY);assert(fd>=0);
   std::vector<unsigned char>read(b.size());assert(native_lfs_fixture_read(fd,read.data(),read.size())==ptrdiff_t(read.size()));
   assert(read==b&&native_lfs_fixture_close(fd)==0);
-  size_t total=0,used=0;assert(usage(&total,&used)&&total==0x80000&&used>0);
+  size_t total=0,used=0;assert(usage(&total,&used)&&total==FlashBytes&&used>0);
  }
  assert(ready()&&!retained());
  {Guard g(Access::FileSource);assert(g.held);
@@ -239,8 +246,8 @@ static void packagePowerCuts(){
  assert(native_lfs_fixture_mkdir("/.packages/Apps/example")==0);
  assert(native_lfs_fixture_seed("/.packages/Apps/example/manifest.json","OLD",3)==0);
  assert(native_lfs_fixture_seed("/.packages/Apps/example/old.elf","OLDIMAGE",8)==0);
- std::vector<unsigned char>baseline(0x80000);assert(native_lfs_fixture_snapshot(baseline.data(),baseline.size())==baseline.size());
- struct Cut {unsigned at,seen;bool interrupted;unsigned char image[0x80000];};
+ std::vector<unsigned char>baseline(FlashBytes);assert(native_lfs_fixture_snapshot(baseline.data(),baseline.size())==baseline.size());
+ struct Cut {unsigned at,seen;bool interrupted;unsigned char image[FlashBytes];};
  auto*out=static_cast<Cut*>(mmap(nullptr,sizeof(Cut),PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0));assert(out!=MAP_FAILED);
  auto run=[&](unsigned cut){
   assert(native_lfs_fixture_restore(baseline.data(),baseline.size())==0);out->at=cut;out->seen=0;out->interrupted=false;
@@ -270,12 +277,43 @@ static void packagePowerCuts(){
  printf("Internal package activation: %u real LittleFS program/erase before/after cuts; old or complete new manifest and image, old image preserved PASS\n",boundaries);
  assert(munmap(out,sizeof(Cut))==0);
 }
+// Exercise real on-disk superblocks through the owning VFS fence, not merely
+// the geometry helper. All generated/loaded images exist only in host memory.
+static void geometry(bool wrong){
+ if(wrong){
+  std::vector<unsigned char> image(FlashBytes,255);
+  lfs_config cfg{};cfg.context=&image;
+  cfg.read=[](const lfs_config*c,lfs_block_t b,lfs_off_t o,void*p,lfs_size_t n){auto&v=*static_cast<std::vector<unsigned char>*>(c->context);assert(b<c->block_count&&o+n<=c->block_size);memcpy(p,v.data()+b*c->block_size+o,n);return 0;};
+  cfg.prog=[](const lfs_config*c,lfs_block_t b,lfs_off_t o,const void*p,lfs_size_t n){auto&v=*static_cast<std::vector<unsigned char>*>(c->context);assert(b<c->block_count&&o+n<=c->block_size);memcpy(v.data()+b*c->block_size+o,p,n);return 0;};
+  cfg.erase=[](const lfs_config*c,lfs_block_t b){auto&v=*static_cast<std::vector<unsigned char>*>(c->context);assert(b<c->block_count);memset(v.data()+b*c->block_size,255,c->block_size);return 0;};
+  cfg.sync=[](const lfs_config*){return 0;};cfg.read_size=128;cfg.prog_size=128;cfg.block_size=4096;
+  cfg.block_count=FlashBytes/4096/2;cfg.cache_size=512;cfg.lookahead_size=128;cfg.block_cycles=512;
+  lfs_t fs{};assert(lfs_format(&fs,&cfg)==0);
+  assert(native_lfs_fixture_restore(image.data(),image.size())==0);
+ }
+ auto*before=static_cast<const esp_littlefs_t*>(native_lfs_fixture_context());assert(before);
+ const auto diskBlocks=before->fs->block_count;
+ assert(diskBlocks==FlashBytes/4096/(wrong?2:1));
+ native_lfs_fixture_shutdown();native_lfs_fixture_select_appdata();
+ native_lfs_fixture_clear_counters();
+ const bool mounted=RiscAppData::prepare([]{return true;},[]{return true;});
+ native_lfs_fixture_counters calls{};native_lfs_fixture_get_counters(&calls);
+ if(wrong){assert(!mounted&&!ready());assert(!calls.flash_program_bytes&&!calls.flash_erase_bytes);}
+ else{assert(mounted&&ready());Guard g(Access::AppData);assert(g.held);size_t total=0,used=0;assert(usage(&total,&used)&&total==FlashBytes);}
+ printf("PASS owning VFS geometry: bytes=%zu disk_blocks=%lu result=%s writes=%llu erases=%llu\n",FlashBytes,static_cast<unsigned long>(diskBlocks),mounted?"accepted":"rejected",static_cast<unsigned long long>(calls.flash_program_bytes),static_cast<unsigned long long>(calls.flash_erase_bytes));
+}
 int main(int argc,char**argv){assert(argc==2);
 #if RISC_NATIVE_ESP_IDF
  sdk6VfsAliases();sdk6MountPlacement();
 #endif
 assert(native_lfs_fixture_reset()==0);
- if(!strcmp(argv[1],"packages"))packagePowerCuts();else if(!strcmp(argv[1],"healthy"))healthy();else if(!strcmp(argv[1],"recovery"))recovery();else if(!strcmp(argv[1],"close-failure"))closeFailure();else if(!strcmp(argv[1],"lost-custody"))lostCustody();else if(!strcmp(argv[1],"native-backend"))nativeBackend();else fault();
+ if(const char*path=std::getenv("APPDATA_IMAGE")){
+  std::vector<unsigned char> image(FlashBytes);FILE*f=std::fopen(path,"rb");assert(f);
+  assert(std::fread(image.data(),1,image.size(),f)==image.size()&&std::fgetc(f)==EOF&&std::fclose(f)==0);
+  assert(native_lfs_fixture_restore(image.data(),image.size())==0);
+  printf("Loaded exact caller-owned host image: %s\n",path);
+ }
+ if(!strcmp(argv[1],"geometry"))geometry(false);else if(!strcmp(argv[1],"wrong-geometry"))geometry(true);else if(!strcmp(argv[1],"packages"))packagePowerCuts();else if(!strcmp(argv[1],"healthy"))healthy();else if(!strcmp(argv[1],"recovery"))recovery();else if(!strcmp(argv[1],"close-failure"))closeFailure();else if(!strcmp(argv[1],"lost-custody"))lostCustody();else if(!strcmp(argv[1],"native-backend"))nativeBackend();else fault();
  puts("PASS: native retained mount binding");
  // Process exit models cold power loss; deliberately no runtime teardown.
 }
