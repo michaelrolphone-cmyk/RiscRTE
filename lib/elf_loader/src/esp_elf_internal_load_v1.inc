@@ -5,6 +5,7 @@ static void elf_internal_clear_v1(esp_elf_t *elf) {
     esp_elf_free(elf->internal_v1.text_owner);
     memset(&elf->internal_v1, 0, sizeof(elf->internal_v1));
 }
+#if RISC_ELF_INTERNAL_PLACEMENT_V1 == 1
 static int elf_internal_load_v1(esp_elf_t *elf, const uint8_t *pbuf, uint32_t external_bytes) {
     const elf32_hdr_t *h = (const elf32_hdr_t *)pbuf;
     const elf32_shdr_t *sections = (const elf32_shdr_t *)(pbuf + h->shoff);
@@ -85,3 +86,18 @@ static int elf_internal_load_v1(esp_elf_t *elf, const uint8_t *pbuf, uint32_t ex
     elf->internal_v1.tag = ESP_ELF_INTERNAL_TAG_V1;
     return 0;
 }
+
+#else
+static int elf_internal_load_v1(esp_elf_t *elf, const uint8_t *pbuf, uint32_t external_bytes) {
+    (void)elf; (void)external_bytes;
+    const elf32_hdr_t *h = (const elf32_hdr_t *)pbuf;
+    const elf32_shdr_t *sections = (const elf32_shdr_t *)(pbuf + h->shoff);
+    const char *names = (const char *)pbuf + sections[h->shstrndx].offset;
+    /* Structural validation precedes this loader. No allocation, support or
+     * publication callback is referenced when the explicit feature is off. */
+    for (unsigned i = 0; i < h->shnum; ++i)
+        if (!strncmp(names + sections[i].name, ESP_ELF_INTERNAL_PREFIX_V1,
+                     sizeof(ESP_ELF_INTERNAL_PREFIX_V1) - 1u)) return -ENOTSUP;
+    return 0;
+}
+#endif

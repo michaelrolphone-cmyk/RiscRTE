@@ -147,7 +147,7 @@ def main():
             binary = build('loader-' + mode,
                 [test / 'loader_test.c', lib / 'src/arch/esp_elf_xtensa.c',
                  lib / 'src/esp_elf_validate.c', test / 'instrumentation_leaf.c'],
-                [test / 'shims', lib / 'include', lib / 'src'], flags)
+                [test / 'shims', lib / 'include', lib / 'src'], flags + ['-DRISC_ELF_INTERNAL_PLACEMENT_V1=1'])
             for name in CASES:
                 case(mode + '-' + name, [binary, name, *([legacy] if name == 'legacy-real' else [])],
                      'PASS ' + name + '\n')
@@ -175,7 +175,29 @@ def main():
             binary = build('prefix-' + str(index) + '-test', [test / 'legacy_prefix_test.c'],
                            [host, root / 'lib/elf_loader/include'])
             case('prefix-' + str(index) + '-run', [binary], '')
-        if len(report['cases']) != len(modes) * 26 + 4:
+        for selection in ('absent', 'zero'):
+            label = 'default-off-' + selection
+            lib = root / 'lib/elf_loader'
+            binary = build(label, [test / 'default_off_test.c',
+                lib / 'src/arch/esp_elf_xtensa.c', lib / 'src/esp_elf_validate.c',
+                test / 'instrumentation_leaf.c'],
+                [test / 'shims', lib / 'include', lib / 'src'],
+                [] if selection == 'absent' else ['-DRISC_ELF_INTERNAL_PLACEMENT_V1=0'])
+            # Object-level check, not just link success or dead-strip behavior.
+            obj = out / (label + '.o')
+            run(label + '-object', [cc, '-isysroot', sdk, '-std=c11', '-D_DARWIN_C_SOURCE',
+                '-O0', '-I' + str(test / 'shims'), '-I' + str(lib / 'include'),
+                '-I' + str(lib / 'src'),
+                *([] if selection == 'absent' else ['-DRISC_ELF_INTERNAL_PLACEMENT_V1=0']),
+                '-c', lib / 'src/esp_elf.c', '-o', obj])
+            symbols = run(label + '-undefined', ['nm', '-u', obj])
+            forbidden = ('esp_elf_internal_alloc_text_v1', 'esp_elf_internal_alloc_data_v1',
+                         'esp_elf_internal_supported_v1', 'esp_elf_internal_publish_v1')
+            if any(name in symbols for name in forbidden):
+                raise RuntimeError('default loader references internal port')
+            case(label + '-ordinary', [binary], 'PASS ordinary-loader-equivalent\n')
+            case(label + '-internal', [binary, 'internal'], 'PASS default-off-internal-refused\n')
+        if len(report['cases']) != len(modes) * 26 + 8:
             raise RuntimeError('missing case coverage')
         for path, value in report['source_inputs'].items():
             if digest(path) != value:

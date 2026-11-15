@@ -2,6 +2,15 @@
 #include "private/elf_types.h"
 #include <string.h>
 
+/* Explicit build-time callback selection, not runtime privilege or port
+ * availability. Ordinary builds require no new internal allocator symbols. */
+#ifndef RISC_ELF_INTERNAL_PLACEMENT_V1
+#define RISC_ELF_INTERNAL_PLACEMENT_V1 0
+#endif
+#if RISC_ELF_INTERNAL_PLACEMENT_V1 != 0 && RISC_ELF_INTERNAL_PLACEMENT_V1 != 1
+#error "RISC_ELF_INTERNAL_PLACEMENT_V1 must be 0 or 1"
+#endif
+
 /* New optional private output classes. Input compiler section names are NOT a
  * placement contract. The package generator must collect code and its literal
  * pools together and prove relocation/reachability before selecting this lane. */

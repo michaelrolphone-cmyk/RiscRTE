@@ -1015,8 +1015,10 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
     if (ret) return ret;
 #endif
 
+#if RISC_ELF_INTERNAL_PLACEMENT_V1 == 1
     ret = esp_elf_internal_publish_v1(elf);
     if (ret) return ret;
+#endif
 
     return 0;
 }
