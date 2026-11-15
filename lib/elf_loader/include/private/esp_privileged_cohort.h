@@ -9,10 +9,19 @@
 #include <stdint.h>
 #define RISC_PRIVILEGED_OS_CPU_ABI_V1 1u
 #define RISC_PRIVILEGED_OS_CPU_ABI_V2 2u
+#define RISC_PRIVILEGED_OS_CPU_ABI_V5 5u
+/* Explicit opt-in only; v1/v2 inventories and profiles are unchanged. */
+#ifndef RISC_CPU_SCOPE_V5_CANDIDATE
+#define RISC_CPU_SCOPE_V5_CANDIDATE 0
+#endif
+#define RISC_PRIVILEGED_OS_CPU_COHORT_V5 "esp32s3-idf6.1-gcc15.2.0-20251204-task-scope-v1-candidate"
 #define RISC_PRIVILEGED_OS_CPU_COHORT_V2 "esp32s3-idf6.1-gcc15.2.0-20251204-v1"
 static inline bool esp_elf_privileged_os_cpu_abi_supported(uint32_t abi)
 {
 #if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
+#if RISC_CPU_SCOPE_V5_CANDIDATE == 1
+    if (abi == RISC_PRIVILEGED_OS_CPU_ABI_V5) return true;
+#endif
     return abi == RISC_PRIVILEGED_OS_CPU_ABI_V2;
 #else
     return abi == RISC_PRIVILEGED_OS_CPU_ABI_V1;

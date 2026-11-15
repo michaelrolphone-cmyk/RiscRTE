@@ -18,6 +18,9 @@ extern "C" {
 bool esp_elf_privileged_imports_valid_v1(const uint8_t *image, size_t length);
 bool esp_elf_privileged_imports_valid_v2(const uint8_t *image, size_t length);
 
+/* Explicit native5 selection; disabled cohorts fail closed. */
+bool esp_elf_privileged_imports_valid_v5(const uint8_t *image, size_t length);
+
 #ifdef __cplusplus
 }
 #endif

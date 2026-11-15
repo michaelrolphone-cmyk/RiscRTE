@@ -62,7 +62,8 @@ inline bool nativeProviderImageValid(const NativeProviderPolicyV1& p,const uint8
       nativeProviderDigest(bytes,length,digest) && !std::memcmp(digest,p.sha256,32) &&
       esp_elf_validate_file(bytes,length) && nativeProviderEntryValid(bytes) &&
 #if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
-      esp_elf_privileged_manifest_imports_match_v2(bytes,length,p.imports,p.importCount);
+      (p.osCpuAbi == 2 ? esp_elf_privileged_manifest_imports_match_v2(bytes,length,p.imports,p.importCount) :
+       p.osCpuAbi == 5 ? esp_elf_privileged_manifest_imports_match_v5(bytes,length,p.imports,p.importCount) : false);
 #else
       esp_elf_privileged_manifest_imports_match_v1(bytes,length,p.imports,p.importCount);
 #endif

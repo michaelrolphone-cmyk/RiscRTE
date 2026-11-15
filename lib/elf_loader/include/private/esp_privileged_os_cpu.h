@@ -60,6 +60,12 @@ bool esp_elf_privileged_os_cpu_authorize_relocation_v1(const void *module);
 bool esp_elf_privileged_os_cpu_relocation_enter_v1(const void *module);
 bool esp_elf_privileged_os_cpu_relocation_leave_v1(const void *module);
 
+/* Explicit native5 selection; disabled cohorts fail closed. */
+bool esp_elf_privileged_os_cpu_begin_selected_diagnostics_v5(
+    const char *const *imports, size_t count, uint32_t diagnostic_abi);
+uintptr_t esp_elf_privileged_os_cpu_lookup_v5(const char *symbol);
+size_t esp_elf_privileged_os_cpu_symbol_count_v5(void);
+
 #ifdef __cplusplus
 }
 #endif

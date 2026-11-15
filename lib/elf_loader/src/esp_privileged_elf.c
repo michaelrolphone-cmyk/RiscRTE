@@ -62,16 +62,20 @@ static int relocate_selected(esp_elf_t *module,
         !esp_elf_validate_file(verified_bytes, verified_length) ||
         !(abi == 1 ? esp_elf_privileged_manifest_imports_match_v1(
             verified_bytes, verified_length, imports, import_count) :
-          esp_elf_privileged_manifest_imports_match_v2(
-            verified_bytes, verified_length, imports, import_count)))
+          abi == 2 ? esp_elf_privileged_manifest_imports_match_v2(
+            verified_bytes, verified_length, imports, import_count) :
+          abi == 5 ? esp_elf_privileged_manifest_imports_match_v5(
+            verified_bytes, verified_length, imports, import_count) : false))
         return -EINVAL;
     for (size_t i = 0; i < import_count; ++i)
         if (!(abi == 1 ? esp_elf_privileged_selected_import_supported_with_diagnostics_v1(imports[i], diagnostic_abi) :
-              esp_elf_privileged_selected_import_supported_with_diagnostics_v2(imports[i], diagnostic_abi)))
+              abi == 2 ? esp_elf_privileged_selected_import_supported_with_diagnostics_v2(imports[i], diagnostic_abi) :
+              abi == 5 ? esp_elf_privileged_selected_import_supported_with_diagnostics_v5(imports[i], diagnostic_abi) : false))
             return -EINVAL;
     if (!esp_elf_privileged_diagnostic_abi_supported_v1(diagnostic_abi)) return -EINVAL;
     if (!(abi == 1 ? esp_elf_privileged_os_cpu_begin_selected_diagnostics_v1(imports, import_count, diagnostic_abi) :
-          esp_elf_privileged_os_cpu_begin_selected_diagnostics_v2(imports, import_count, diagnostic_abi)))
+          abi == 2 ? esp_elf_privileged_os_cpu_begin_selected_diagnostics_v2(imports, import_count, diagnostic_abi) :
+          abi == 5 ? esp_elf_privileged_os_cpu_begin_selected_diagnostics_v5(imports, import_count, diagnostic_abi) : false))
         return -EBUSY;
     int result = esp_elf_init(module);
     if (result == 0) {
@@ -96,3 +100,8 @@ int esp_elf_relocate_privileged_selected_diagnostics_v2(esp_elf_t *module,
     const uint8_t *bytes, size_t length, const char *const *imports,
     size_t count, uint32_t diagnostic_abi)
 { return relocate_selected(module, bytes, length, imports, count, diagnostic_abi, 2); }
+
+int esp_elf_relocate_privileged_selected_diagnostics_v5(esp_elf_t *module,
+    const uint8_t *bytes, size_t length, const char *const *imports,
+    size_t count, uint32_t diagnostic_abi)
+{ return relocate_selected(module, bytes, length, imports, count, diagnostic_abi, 5); }

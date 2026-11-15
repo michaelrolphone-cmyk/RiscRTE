@@ -8,6 +8,7 @@
 #if defined(ESP_PLATFORM) || defined(RISC_NATIVE_PROVIDER_ADMISSION_TEST)
 extern "C" bool esp_elf_privileged_selected_import_supported_with_diagnostics_v1(const char*, uint32_t);
 extern "C" bool esp_elf_privileged_selected_import_supported_with_diagnostics_v2(const char*, uint32_t);
+extern "C" bool esp_elf_privileged_selected_import_supported_with_diagnostics_v5(const char*, uint32_t);
 #endif
 
 namespace RuntimeProviders {
@@ -72,7 +73,8 @@ inline bool nativeProviderPolicyValid(const NativeProviderPolicyV1& p) {
       !std::strcmp(p.imports[i],"puts") || !std::strcmp(p.imports[i],"putchar");
 #if defined(ESP_PLATFORM) || defined(RISC_NATIVE_PROVIDER_ADMISSION_TEST)
     #if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
-    if (!esp_elf_privileged_selected_import_supported_with_diagnostics_v2(p.imports[i], p.diagnosticAbi)) return false;
+    if (!(p.osCpuAbi == 2 ? esp_elf_privileged_selected_import_supported_with_diagnostics_v2(p.imports[i], p.diagnosticAbi) :
+          p.osCpuAbi == 5 ? esp_elf_privileged_selected_import_supported_with_diagnostics_v5(p.imports[i], p.diagnosticAbi) : false)) return false;
 #else
     if (!esp_elf_privileged_selected_import_supported_with_diagnostics_v1(p.imports[i], p.diagnosticAbi)) return false;
 #endif

@@ -13,6 +13,11 @@ extern "C" {
 #include <esp_elf.h>
 #include <esp_heap_caps.h>
 #include <private/esp_privileged_elf.h>
+#include <private/elf_platform.h>
+#include <private/esp_elf_internal_v1.h>
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+#include <private/esp_cpu_task_scope_binding_v2.h>
+#endif
 }
 #endif
 extern "C" {
@@ -81,8 +86,9 @@ void ModuleV2::report(const char* id, const char* stage, int code) {
 }
 
 bool ModuleV2::closeMapped() {
-  if(!leaseSafe())return false;
+  if(!nativeTaskPrepareClose() || !leaseSafe())return false;
   revokeLease();
+  if(!nativeTaskSafe() || !leaseSafe() || !nativeTaskRelease())return false;
   risc_runtime_retention_guard();
   if (!handle_) return true;
 #ifdef ESP_PLATFORM
@@ -120,6 +126,27 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
   if (!valid) {
     report(expectedId, "elf-interface-or-identity");
     return false;
+  }
+  bool nativeRootValid=false;
+  if(candidate->struct_size>=offsetof(risc_driver_native_root_v1,extension_tag)+sizeof(uint32_t)) {
+    const auto* root=reinterpret_cast<const risc_driver_native_root_v1*>(candidate);
+    if(root->extension_tag==RISC_DRIVER_NATIVE_ROOT_TAG_V1) {
+      if(candidate->struct_size<sizeof(*root) ||
+         root->extension_version!=RISC_DRIVER_NATIVE_ROOT_VERSION_V1 ||
+         !ownedPolicy_ || !root->poll.streams.bind_streams || !hasQuiesce(candidate) ||
+         !lease_.context || !lease_.begin || !lease_.revoke || !lease_.safe) {
+        report(expectedId,"native-root-extension-invalid");return false;
+      }
+      const auto* api=root->native_root;
+      if(!api || api->api_version!=RISC_NATIVE_ROOT_API_V1 || api->struct_size!=sizeof(*api) ||
+         !api->call || !api->health) {
+        report(expectedId,"native-root-interface-invalid");return false;
+      }
+      nativeRootValid=true;
+    }
+  }
+  if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && (!nativeTaskStaging_ || !nativeRootValid)) {
+    report(expectedId,"native-task-root-required");return false;
   }
   const risc_stream_session_provider_v1* sessions = nullptr;
   if (candidate->struct_size >= offsetof(risc_driver_stream_sessions_v2,extension_tag) + sizeof(uint32_t)) {
@@ -161,6 +188,9 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
         return false;
       }
       streamsRevoked_ = false;
+      if(nativeRootValid && !streamApi_.streams.context) {
+        report(expectedId,"native-root-mapping-invalid");return false;
+      }
       bound = extended->bind_streams(&streamApi_.streams);
     }
   }
@@ -177,7 +207,10 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
 #endif
     RISC_STAGE_LOG("provider start begin id=%s",expectedId);
     RiscPerf::Scope startTrace(24,25,RiscPerf::identity(expectedId));
-    started=candidate->start(deps,count);
+    if(nativeTaskBegin(nativeRootValid)) {
+      started=candidate->start(deps,count);
+      started=nativeTaskEnd(started);
+    }
     // Revoke failed-start authority before calling any diagnostic sink.
     if(!started)revokeLease();
     RISC_STAGE_LOG("provider start end id=%s result=%s elapsed_us=%llu",expectedId,started?"ok":"failed",
@@ -186,7 +219,7 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     revokeLease();
     RISC_STAGE_LOG("provider start skipped id=%s reason=%s",expectedId,bound?"lease-rejected":"stream-bind-rejected");
   }
-  if(!leaseSafe()) {
+  if((!started && !nativeTaskPrepareClose()) || !leaseSafe()) {
     // Native retained storage may be reported during start itself. Preserve
     // code/dependencies without entering diagnostics, quiesce, stop or dlclose.
     revokeLease();driver_=candidate;api_=nullptr;state_=State::Failed;
@@ -194,6 +227,7 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
   }
   if (started) {
     driver_ = candidate;
+    nativeRootValid_=nativeRootValid;
     streamSessions_ = sessions;
     api_ = candidate->capability;
     state_ = State::Active;
@@ -214,18 +248,19 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
       if (detail[0]) std::snprintf(error_, sizeof(error_), "%s: %.111s", expectedId, detail);
     }
   }
-  if(!leaseSafe()){driver_=candidate;return false;}
+  if(!nativeTaskSafe() || !leaseSafe()){driver_=candidate;return false;}
   if (!error_[0]) report(expectedId, "start rejected; update driver for diagnostics");
   if (!revokeStreams()) { driver_ = candidate; report(expectedId, "stream-revoke-retained"); return false; }
+  if(!nativeTaskSafe() || !leaseSafe()){driver_=candidate;return false;}
   // A rejected start may still own DMA, tasks, IRQs or a lower provider.
   if (hasQuiesce(candidate) && !candidate->quiesce()) {
     driver_ = candidate;
     report(expectedId, "hardware-quiesce-rejected");
     return false;
   }
-  if(!leaseSafe()){driver_=candidate;return false;}
+  if(!nativeTaskSafe() || !leaseSafe()){driver_=candidate;return false;}
   candidate->stop();
-  if(!leaseSafe()){driver_=candidate;return false;}
+  if(!nativeTaskSafe() || !leaseSafe()){driver_=candidate;return false;}
   if (!closeStreams()) { report(expectedId, "stream-close-retained"); return false; }
   return false;
 }
@@ -235,7 +270,7 @@ bool ModuleV2::load(const char* path, const char* expectedId,
                     const risc_provider_dependency_v1* deps, size_t count, bool independent,
                     void* (*openImage)(void*,const char*,const void*), void* imageContext, const void* imageSource) {
   if (!handle_) error_[0] = 0;
-  if (handle_ || !path || !path[0] ||
+  if (handle_ || (ownedPolicy_ && ownedPolicy_->osCpuAbi==5) || !path || !path[0] ||
       !validRequest(expectedId, expectedCapability, expectedApi, deps, count)) {
     report(expectedId, "invalid-elf-request");
     return false;
@@ -268,7 +303,7 @@ bool ModuleV2::loadVerifiedBytes(const uint8_t* candidateBytes, size_t length,
                                  size_t count) {
   if (!handle_) error_[0] = 0;
 #ifdef ESP_PLATFORM
-  if (handle_ || !ownedPolicy_ || candidateBytes != ownedImage_ ||
+  if (handle_ || !ownedPolicy_ || (ownedPolicy_->osCpuAbi==5 && !nativeTaskStaging_) || candidateBytes != ownedImage_ ||
       !candidateBytes || length != ownedImageBytes_ ||
       !validRequest(expectedId, expectedCapability, expectedApi, deps, count) ||
       !nativePolicyMatchesModule(*ownedPolicy_, candidateBytes, length,
@@ -307,7 +342,8 @@ bool ModuleV2::loadVerifiedBytes(const uint8_t* candidateBytes, size_t length,
   trace(expectedId, "elf-relocate-begin");
   const int result =
 #if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF
-      esp_elf_relocate_privileged_selected_diagnostics_v2(
+      (ownedPolicy_->osCpuAbi==5 ? esp_elf_relocate_privileged_selected_diagnostics_v5 :
+       esp_elf_relocate_privileged_selected_diagnostics_v2)(
 #else
       esp_elf_relocate_privileged_selected_diagnostics_v1(
 #endif
@@ -345,7 +381,27 @@ bool ModuleV2::loadVerifiedBytes(const uint8_t* candidateBytes, size_t length,
 #endif
 }
 
+bool ModuleV2::nativeRootReady(const NativeProviderPolicyV1* policy,uint64_t mapping) const {
+  return !nativeRootRetained_ && nativeRootValid_ && policy && policy==ownedPolicy_ &&
+      mapping && mapping==streamApi_.streams.context && !streamsRevoked_ &&
+      !streamCleanupRetained_ && state_==State::Active && driver_ && consumers_ &&
+      leaseAttempted_ && lease_.context && lease_.begin && lease_.revoke && lease_.safe &&
+      leaseSafe() && streamSafe();
+}
+const void* ModuleV2::capability() const {
+  if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && !nativeTaskCommitted_)return nullptr;
+  return state_==State::Active ? api_ : nullptr;
+}
+void ModuleV2::retainNativeRoot() {
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  if(nativeTaskBinding_.token)esp_cpu_task_binding_retain_v1(nativeTaskBinding_);
+#endif
+  nativeRootRetained_=true;api_=nullptr;state_=State::Failed;
+}
+#include "ProviderModuleTaskScopeV5.inc"
+
 bool ModuleV2::poll(uint32_t budgetMs) {
+  if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && !nativeTaskCommitted_)return false;
   if (!budgetMs || state_ != State::Active || !leaseSafe() || !streamSafe() || !driver_ || !consumers_ ||
       driver_->struct_size < sizeof(risc_driver_poll_v2)) return false;
   const auto* extended = reinterpret_cast<const risc_driver_poll_v2*>(driver_);
@@ -354,6 +410,7 @@ bool ModuleV2::poll(uint32_t budgetMs) {
   return true;
 }
 bool ModuleV2::service(uint32_t budgetMs) {
+  if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && !nativeTaskCommitted_)return false;
   if (!budgetMs || budgetMs>RISC_DRIVER_SERVICE_MAX_MS || state_ != State::Active ||
       !leaseSafe() || !streamSafe() || !driver_ || !consumers_ || driver_->struct_size < sizeof(risc_driver_service_v2))return false;
   const auto* extended=reinterpret_cast<const risc_driver_service_v2*>(driver_);
@@ -398,7 +455,7 @@ bool ModuleV2::closeStreams() {
   return true;
 }
 void ModuleV2::reportQuiescence() {
-  if (!driver_ || !leaseSafe()) return;
+  if (!driver_ || !nativeTaskSafe() || !leaseSafe()) return;
   if (!error_[0] && driver_->struct_size >= sizeof(risc_driver_diagnostics_v2)) {
     const auto* diagnostics = reinterpret_cast<const risc_driver_diagnostics_v2*>(driver_);
     char detail[DetailCapacity]{};
@@ -413,14 +470,16 @@ void ModuleV2::reportQuiescence() {
   report(driver_->driver_id, "hardware-quiesce-rejected");
 }
 bool ModuleV2::unload() {
-  if (consumers_ || streamCleanupRetained_ || !leaseSafe()) return false;
+  if (consumers_ || streamCleanupRetained_ || nativeRootRetained_ || !nativeTaskPrepareClose() || !leaseSafe()) return false;
   auto hostSafe=[&](){
-    if(leaseSafe())return true;
+    if(nativeTaskSafe() && leaseSafe())return true;
     api_=nullptr;state_=State::Failed;return false;
   };
   revokeLease();
+  if(!hostSafe())return false; // Revocation is not physical retirement.
   risc_runtime_retention_guard();
   if (!revokeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
+  if(!hostSafe())return false;
   if (state_ == State::Failed && handle_ && driver_) {
     if (!hasQuiesce(driver_) || !driver_->quiesce()) { reportQuiescence(); return false; }
     if(!hostSafe())return false;
@@ -441,6 +500,7 @@ bool ModuleV2::unload() {
   }
   if (!closeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
   streamSessions_ = nullptr;
+  nativeRootValid_=false;nativeTaskCommitted_=false;
   api_ = nullptr;
   if (!closeMapped()) {
     state_ = State::Failed;

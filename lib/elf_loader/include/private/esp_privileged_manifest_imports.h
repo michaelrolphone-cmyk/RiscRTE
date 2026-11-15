@@ -24,6 +24,11 @@ bool esp_elf_privileged_manifest_imports_match_v2(
     const uint8_t *image, size_t length,
     const char *const *declared_imports, size_t declared_count);
 
+/* Explicit native5 selection; disabled cohorts fail closed. */
+bool esp_elf_privileged_manifest_imports_match_v5(
+    const uint8_t *image, size_t length,
+    const char *const *declared_imports, size_t declared_count);
+
 #ifdef __cplusplus
 }
 #endif

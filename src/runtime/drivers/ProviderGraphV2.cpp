@@ -260,8 +260,12 @@ bool GraphV2::fail(const char* stage, const char* identity) {
   return false;
 }
 
-bool GraphV2::activate(size_t index) {
+bool GraphV2::activate(size_t index,bool stageNative) {
   Node& node = nodes_[index];
+  // Recursive dependencies always use false, even within private staging.
+  if(node.spec.requiredOsCpuAbi==5 && !stageNative)return fail("Native task requires private staging",node.spec.id);
+  if(stageNative && (node.spec.requiredOsCpuAbi!=5 || node.visit!=Visit::Idle ||
+      node.module.state()!=ModuleV2::State::Absent))return false;
   if (node.visit == Visit::Visiting) return fail("Dependency cycle", node.spec.id);
   if (node.visit == Visit::Releasing) return fail("Provider dependency cleanup pending", node.spec.id);
   if (node.module.state() == ModuleV2::State::Failed) {
@@ -327,6 +331,7 @@ bool GraphV2::activate(size_t index) {
   const auto loadUs=RiscDiagnostics::monotonicUs();
 #endif
   RISC_STAGE_LOG("provider load begin id=%s",node.spec.id);
+  node.module.nativeTaskStaging_=stageNative;
   const bool loaded = node.spec.requiredOsCpuAbi
       ? node.module.loadVerifiedBytes(node.spec.verifiedElfBytes,
                                       node.spec.verifiedElfLength,
@@ -341,6 +346,7 @@ bool GraphV2::activate(size_t index) {
                          node.spec.provides, node.spec.api,
                          node.spec.requirementCount ? node.boundDependencies : nullptr,
                          node.spec.requirementCount, true, node.spec.openImage, node.spec.imageContext, imageSource);
+  node.module.nativeTaskStaging_=false;
   RISC_STAGE_LOG("provider load end id=%s result=%s elapsed_us=%llu",node.spec.id,loaded?"ok":"failed",
                  (unsigned long long)(RiscDiagnostics::monotonicUs()-loadUs));
   if (!loaded) {
@@ -362,13 +368,13 @@ bool GraphV2::activate(size_t index) {
   return true;
 }
 
-GrantV2 GraphV2::acquireIndex(size_t index) {
+GrantV2 GraphV2::acquireIndex(size_t index,bool stageNative) {
   if (streamCallback_ || polling_ || nextGeneration_ == UINT32_MAX) return {};
   size_t slot = kMaxGrants;
   for (size_t i = 0; i < kMaxGrants; ++i)
     if (!grants_[i].occupied) { slot = i; break; }
   if (slot == kMaxGrants) { fail("Grant table full", nodes_[index].spec.id); return {}; }
-  if (!activate(index)) return {};
+  if (!activate(index,stageNative)) return {};
   if (!nodes_[index].module.pinConsumer()) {
     fail("Provider pin failed", nodes_[index].spec.id);
     (void)deactivateIfUnused(index);
@@ -409,6 +415,54 @@ void GraphV2::service(uint32_t budgetMs) {
     if(nodes_[index].module.service(budgetMs) || !dependencyReadSafe())break;
   }
   polling_=false;
+}
+
+
+GrantV2 GraphV2::stageNativeTaskOwner(const NativeProviderPolicyV1* policy) {
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  if(!policy || lifecycleBusy() || !dependencyReadSafe())return {};
+  LifecycleScope scope(lifecycle_);
+  for(size_t i=0;i<count_;++i) {
+    const auto& node=nodes_[i];
+    if(node.owned && node.owned->nativePolicy && &node.owned->nativePolicy->policy==policy &&
+       policy->osCpuAbi==5 && node.spec.requiredOsCpuAbi==5)return acquireIndex(i,true);
+  }
+#else
+  (void)policy;
+#endif
+  return {};
+}
+bool GraphV2::nativeTaskIdentity(GrantV2 grant,const NativeProviderPolicyV1* policy,size_t& index) const {
+  if(!policy || policy->osCpuAbi!=5 || !grant.slot || grant.slot>kMaxGrants || !grant.generation)return false;
+  const auto& slot=grants_[grant.slot-1];
+  if(!slot.occupied || slot.pendingRelease || slot.generation!=grant.generation || slot.node>=count_)return false;
+  const auto& node=nodes_[slot.node];
+  if(!node.owned || !node.owned->nativePolicy || &node.owned->nativePolicy->policy!=policy ||
+     node.spec.requiredOsCpuAbi!=5 || node.visit!=Visit::Active ||
+     node.module.state()!=ModuleV2::State::Active || node.dependencyReleasePending)return false;
+  index=slot.node;return true;
+}
+bool GraphV2::nativeTaskMapping(GrantV2 grant,const NativeProviderPolicyV1* policy,uint64_t* mapping) {
+  if(!mapping || lifecycleBusy())return false;
+  LifecycleScope scope(lifecycle_);size_t index=0;
+  if(!nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe())return false;
+  const auto& module=nodes_[index].module;
+  const uint64_t value=module.streamContext();
+  if(!module.nativeRootReady(policy,value))return false;
+  *mapping=value;return true;
+}
+bool GraphV2::commitNativeTaskOwner(GrantV2 grant,const NativeProviderPolicyV1* policy,uint64_t mapping) {
+  if(lifecycleBusy())return false;
+  LifecycleScope scope(lifecycle_);size_t index=0;
+  if(!nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe())return false;
+  auto& module=nodes_[index].module;
+  // Invalid input before resident commit is a clean refusal, not lost custody.
+  if(module.nativeTaskCommitted_ || !module.nativeRootReady(policy,mapping))return false;
+  if(!module.commitNativeTaskOwner(policy,mapping) ||
+     !nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe()) {
+    module.retainNativeRoot();return false;
+  }
+  return true;
 }
 
 GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
