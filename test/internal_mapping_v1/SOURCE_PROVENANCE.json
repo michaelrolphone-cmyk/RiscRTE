@@ -1,0 +1,48 @@
+{
+  "captured_comparison_sha256": "7dca3fa660d7636629e06f695535b41028f476da9fd0341e1805f109947d1682",
+  "core_base": "13eca114cb58469cf6004fafc3da84fbd9d29beb",
+  "fixture_metadata_change": "Only local source_mac_path omitted; ELF bytes/hash unchanged",
+  "normal22_result_sha256": "d5c6bab5550b9e95d2f81f3c376248bd91972a0720b6b595cb0f7dcdcf253d41",
+  "production_files": {
+    "lib/elf_loader/include/private/elf_types.h": "c5113e28227646b9c13941a7eac9c0f476880ad9ebf9eac0a6e96eddabe15843",
+    "lib/elf_loader/include/private/esp_elf_internal_v1.h": "8035f758038a97289bdb6cc1cb9b62a13c0b77b7592137fb54aefb2bda8f6c4c",
+    "lib/elf_loader/src/arch/esp_elf_xtensa.c": "5bedd8a4c271753fcc91eb333184fdfb1b4ca1237dcfcf584a4f2eb78b6b329c",
+    "lib/elf_loader/src/esp_elf.c": "766c0634d23704f1117c0f5742cb90774b8e58ea20fa3f397182c1b770fa813b",
+    "lib/elf_loader/src/esp_elf_adapter.c": "3cb17cb9a5a366a4df9be1072a404923e6936e9b4f444279c0fca9c988970b6a",
+    "lib/elf_loader/src/esp_elf_internal_load_v1.inc": "4cf49e04ae0af56adecec65d14d588cc2539ffc04cdf9c658f302a32843a0bb8",
+    "lib/elf_loader/src/esp_elf_validate.c": "494bed699206e71d7e28a0817862b70f6c1533b931304e050a7ad1bd80f19b3b"
+  },
+  "publication_runner_status": "passed: 56 hosted executions, normal and UBSan; no target or physical qualification",
+  "schema": 1,
+  "support_files": {
+    "LEGACY_FIXTURE.json": "a3f4ca53596e54e2bdef5c1387ca580b808fa03738ea0018a4adb0fe5168e976",
+    "adapter-shims/esp_attr.h": "e0b644200e1b9cd436e63e1eb578665b476ac23176b3b9a86533e8c3034ab08f",
+    "adapter-shims/esp_heap_caps.h": "d08315ab0fcdfed8b8f17be55787ee9a53528a528ef3c63639cf172e35890aac",
+    "adapter-shims/esp_idf_version.h": "9fb8b45cc85d411e02f024cc06b818c031c3e33614e50f08905f1980254d3449",
+    "adapter-shims/sdkconfig.h": "da0910502c6442370ee22f4f192cf15673763e7fb4b59c5fbd3945241b357f01",
+    "adapter-shims/soc/soc.h": "fbcdb59a25f30efd50e1042aeffdbe04e629006d4d7e3335622119ce0188b495",
+    "adapter_leaf.c": "7bf4540174ee0ecc680f5778eebc66e2700b904650051c21b7d146663503f1fe",
+    "adapter_refusal_test.c": "4536984ff16ba0ff44cca816c24b8e7706bcef30c0d7acebede5c659024cda0e",
+    "instrumentation_leaf.c": "c78ffbf269377a44db3c5194b4f558dc8553d607265b6dbabd46887cf78a86ff",
+    "legacy_prefix_test.c": "66aa8417b40c63a946b66f1e8e3abb11f16cb1a816cac26fa6218b5ce3a59314",
+    "loader_test.c": "e44d37596d745c1d6d30035df143908ca415c5f721dae57b22b3ca2ed6ef5081",
+    "ordinary_test.c": "0392f218759453808fb08a56c4afc5ac2d166050b210e49c18d61a4428238efc",
+    "shims/esp_log.h": "6ff56259f341d356da50f46c9c0eedcabc5e1ab3f3786ea9596d7ed06b59532a",
+    "shims/freertos/FreeRTOS.h": "f4201297b6e24c96c8a06bbbf19e1b7f3be62e3b12aa1a7eb6e839c858a046c7",
+    "shims/freertos/task.h": "efa75de4c8b91dca105d83d62e0cc470e822b520b2e5dca5c1c083e84d7ef47a",
+    "shims/sdkconfig.h": "70bb930d872534271c828648daaaac652cd4056aebe782b47cd99b70eab11af2",
+    "shims/soc/soc_caps.h": "f9825b0c7186679c1450ea48e21a2ecf10f1e81959cfb31dca2e36cb31b96f70"
+  },
+  "publication_runner_sha256": "ca299910243041dcd7330cd0d69caa4ee0e49ae53cdd57e03e69865337d907a6",
+  "full56_private_result_sha256": "d8b8d9a133ee2ddd799666d2418a208b51f5e2d08bbc9a549d1e38c14cbfb1b5",
+  "portable56_result_sha256": "ed25464d2af45b394c9ca949fc33164686808525711f0e468d764376ddf457d2",
+  "portable56_report_sha256": "c10e7830390b79658edbc996dbbcd191348689945bd9131cf6bca71ab60e9a7e",
+  "publication_metadata_change": "After the measured run, this provenance status and the documentation's baseline-cast wording were updated only. Production, runner and C fixtures are unchanged.",
+  "remaining": [
+    "target compilation",
+    "physical internal memory port",
+    "cache-off reachability",
+    "complete native-owner link",
+    "native5 worker/Graph consumer prerequisite and Drivers binding"
+  ]
+}

@@ -15,6 +15,7 @@
 #include "soc/cache_reg.h"
 #endif
 #include "private/elf_platform.h"
+#include "private/esp_elf_internal_v1.h"
 #include "../../hal/RuntimeImagePressure.h"
 
 #if CONFIG_ELF_LOADER_LOAD_PSRAM && CONFIG_IDF_TARGET_ESP32S3 && \
@@ -90,6 +91,28 @@ void esp_elf_free(void *ptr)
     heap_caps_free(ptr);
 }
 
+/* Mapping metadata is supported, but this port has no admitted internal-code
+ * provisioning mechanism. Do not relax MEMPROT or borrow external executable
+ * memory as an internal allocation. A future port needs a separately reviewed
+ * allocation, write-alias, publication and ownership contract. */
+bool esp_elf_internal_supported_v1(void) { return false; }
+int esp_elf_internal_alloc_text_v1(uint32_t bytes, void **owner,
+                                  uintptr_t *writable, uintptr_t *executable) {
+    if (!owner || !writable || !executable || *owner || *writable || *executable ||
+        !bytes || (bytes & 3u)) return -EINVAL;
+    return -ENOTSUP;
+}
+int esp_elf_internal_alloc_data_v1(uint32_t bytes, void **owner) {
+    if (!owner || *owner || !bytes) return -EINVAL;
+    return -ENOTSUP;
+}
+int esp_elf_internal_publish_v1(const esp_elf_t *elf) {
+    if (!elf) return -EINVAL;
+    if (!elf->internal_v1.tag) return 0;
+    if (elf->internal_v1.tag != ESP_ELF_INTERNAL_TAG_V1) return -EINVAL;
+    return -ENOTSUP;
+}
+
 /**
  * @brief Remap symbol from ".data" to ".text" section.
  *
@@ -101,6 +124,11 @@ void esp_elf_free(void *ptr)
 #ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
 uintptr_t elf_remap_text(esp_elf_t *elf, uintptr_t sym)
 {
+    if (elf->internal_v1.tag == ESP_ELF_INTERNAL_TAG_V1) {
+        const esp_elf_sec_t *internal = &elf->internal_v1.sec[ESP_ELF_INTERNAL_TEXT_V1];
+        if (esp_elf_span_contains_v1(internal->addr, internal->size, sym, 1))
+            return elf->internal_v1.text_code + (sym - internal->addr);
+    }
     uintptr_t mapped_sym;
     esp_elf_sec_t *sec = &elf->sec[ELF_SEC_TEXT];
 

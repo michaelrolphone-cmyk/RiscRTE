@@ -6,6 +6,7 @@
 #include "private/elf_types.h"
 
 #include "private/esp_elf_data_layout.h"
+#include "private/esp_elf_internal_v1.h"
 #define MAX_IMAGE ESP_ELF_MAX_IMAGE_BYTES
 static bool range(size_t length, uint32_t offset, uint64_t size) {
     return offset <= length && size <= length - offset;
@@ -35,10 +36,22 @@ bool esp_elf_validate_file(const uint8_t *buf, size_t length) {
     if (names->type != SHT_STRTAB || !range(length, names->offset, names->size)) return false;
     uint64_t allocated = 0;
     bool text = false, dynsym = false;
+    bool internal_seen[ESP_ELF_INTERNAL_SECTIONS_V1] = {false};
     for (unsigned i = 0; i < h->shnum; ++i) {
         if (!string_at(buf, names, s[i].name) || s[i].size > MAX_IMAGE ||
             (s[i].type != SHT_NOBITS && !range(length, s[i].offset, s[i].size))) return false;
         const char *name = (const char *)buf + names->offset + s[i].name;
+        const int internal = esp_elf_internal_class_v1(name);
+        if (internal >= 0) {
+            uint32_t effective;
+            if (internal_seen[internal] || !esp_elf_internal_shape_v1((unsigned)internal, &s[i]) ||
+                !esp_elf_data_alignment(s[i].addralign, s[i].addr, &effective) ||
+                (internal == (int)ESP_ELF_INTERNAL_TEXT_V1 && ((s[i].addr & 3u) || s[i].addralign < 4u)))
+                return false;
+            internal_seen[internal] = true;
+        } else if (!strncmp(name, ESP_ELF_INTERNAL_PREFIX_V1, sizeof(ESP_ELF_INTERNAL_PREFIX_V1) - 1u)) {
+            return false;
+        }
         if (!strcmp(name, ELF_DYNSYM)) {
             if (dynsym || s[i].type != SHT_SYNSYM) return false;
             dynsym = true;
