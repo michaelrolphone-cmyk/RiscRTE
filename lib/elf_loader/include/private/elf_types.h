@@ -235,6 +235,18 @@ typedef struct esp_symtab {
     char            *name;              /*!< symbol name */
 } esp_symtab_t;
 
+/* Native-only optional placement. Keep the legacy five section slots and all
+ * preceding esp_elf_t fields unchanged. These are loader-owned ranges, never
+ * caller-supplied execution authority or an ELF import. */
+#define ESP_ELF_INTERNAL_SECTIONS_V1 4u
+typedef struct esp_elf_internal_v1 {
+    esp_elf_sec_t sec[ESP_ELF_INTERNAL_SECTIONS_V1];
+    void *text_owner;
+    void *data_owner;
+    uintptr_t text_code;
+    uint32_t tag;
+} esp_elf_internal_v1_t;
+
 /** @brief ELF object */
 
 typedef struct esp_elf {
@@ -261,6 +273,7 @@ typedef struct esp_elf {
     uint16_t        num;                /*!< number of symbols in the dynamic object */
     esp_symtab_t    *symtab;            /*!< symbol table of dynamic object pointer */
 #endif
+    esp_elf_internal_v1_t internal_v1;
 } esp_elf_t;
 
 #ifdef __cplusplus

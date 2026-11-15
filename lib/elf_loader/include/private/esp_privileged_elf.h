@@ -62,6 +62,14 @@ int esp_elf_relocate_privileged_selected_diagnostics_v2(esp_elf_t *module,
     const uint8_t *verified_bytes, size_t verified_length,
     const char *const *imports, size_t import_count, uint32_t diagnostic_abi);
 
+/* Explicit native5 selection; disabled cohorts fail closed. */
+bool esp_elf_privileged_selected_import_supported_v5(const char *symbol);
+bool esp_elf_privileged_selected_import_supported_with_diagnostics_v5(
+    const char *symbol, uint32_t diagnostic_abi);
+int esp_elf_relocate_privileged_selected_diagnostics_v5(esp_elf_t *module,
+    const uint8_t *verified_bytes, size_t verified_length,
+    const char *const *imports, size_t import_count, uint32_t diagnostic_abi);
+
 #ifdef __cplusplus
 }
 #endif

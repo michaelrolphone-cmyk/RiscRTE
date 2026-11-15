@@ -353,3 +353,31 @@ uintptr_t elf_find_sym_default(const char *sym_name)
     return 0;
 #endif
 }
+
+bool esp_elf_privileged_selected_import_supported_with_diagnostics_v5(
+    const char *symbol, uint32_t diagnostic_abi)
+{
+    if (!esp_elf_privileged_os_cpu_abi_supported(5) ||
+        !esp_elf_privileged_diagnostic_abi_supported_v1(diagnostic_abi)) return false;
+    if (diagnostic_abi == 1 && symbol && (!strcmp(symbol, "printf") ||
+        !strcmp(symbol, "puts") || !strcmp(symbol, "putchar"))) return true;
+    return esp_elf_privileged_selected_import_supported_v5(symbol);
+}
+
+bool esp_elf_privileged_selected_import_supported_v5(const char *symbol)
+{
+    if (!esp_elf_privileged_os_cpu_abi_supported(5) || !symbol || !symbol[0]) return false;
+#define RISC_OS_CPU_SYMBOL(name) if (!strcmp(symbol, #name)) return true;
+#include "private/privileged_os_cpu_symbols_v5.def"
+#undef RISC_OS_CPU_SYMBOL
+#ifdef CONFIG_ELF_LOADER_LIBC_SYMBOLS
+    bool compatible = false;
+#define RISC_PUBLIC_LIBC_COMPAT_SYMBOL(name) if (!strcmp(symbol, #name)) compatible = true;
+#include "private/privileged_public_libc_compat_v2.def"
+#undef RISC_PUBLIC_LIBC_COMPAT_SYMBOL
+    if (!compatible) return false;
+    for (const struct esp_elfsym *entry = g_esp_libc_elfsyms; entry->name; ++entry)
+        if (entry->sym && !strcmp(symbol, entry->name)) return true;
+#endif
+    return false;
+}

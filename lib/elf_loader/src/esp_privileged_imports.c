@@ -34,6 +34,13 @@ static const char *const s_privileged_v2[] = {
 #undef RISC_OS_CPU_SYMBOL
 };
 
+
+static const char *const s_privileged_v5[] = {
+#define RISC_OS_CPU_SYMBOL(name) #name,
+#include "private/privileged_os_cpu_symbols_v5.def"
+#undef RISC_OS_CPU_SYMBOL
+};
+
 static bool within(size_t length, uint32_t start, uint32_t size)
 {
     return start <= length && size <= length - start;
@@ -44,9 +51,11 @@ static bool permitted(const char *name, uint32_t abi)
     const char *const *libc = abi == 1 ? s_public_libc : s_public_libc_v2;
     const size_t libc_count = abi == 1 ? sizeof(s_public_libc)/sizeof(*s_public_libc) :
         sizeof(s_public_libc_v2)/sizeof(*s_public_libc_v2);
-    const char *const *priv = abi == 1 ? s_privileged : s_privileged_v2;
+    if (abi != 1 && abi != 2 && abi != 5) return false;
+    const char *const *priv = abi == 1 ? s_privileged : abi == 2 ? s_privileged_v2 : s_privileged_v5;
     const size_t priv_count = abi == 1 ? sizeof(s_privileged)/sizeof(*s_privileged) :
-        sizeof(s_privileged_v2)/sizeof(*s_privileged_v2);
+        abi == 2 ? sizeof(s_privileged_v2)/sizeof(*s_privileged_v2) :
+        sizeof(s_privileged_v5)/sizeof(*s_privileged_v5);
     for (size_t i = 0; i < libc_count; ++i)
         if (strcmp(name, libc[i]) == 0) return true;
     for (size_t i = 0; i < priv_count; ++i)
@@ -135,3 +144,13 @@ bool esp_elf_privileged_imports_valid_v1(const uint8_t *image, size_t length)
 { return imports_valid(image, length, 1); }
 bool esp_elf_privileged_imports_valid_v2(const uint8_t *image, size_t length)
 { return imports_valid(image, length, 2); }
+
+bool esp_elf_privileged_imports_valid_v5(const uint8_t *image, size_t length)
+{
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+ return imports_valid(image, length, 5);
+#else
+    (void)image; (void)length;
+    return false;
+#endif
+}

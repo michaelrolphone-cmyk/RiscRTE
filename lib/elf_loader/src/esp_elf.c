@@ -25,6 +25,7 @@
 
 #include "private/elf_platform.h"
 #include "private/esp_elf_data_layout.h"
+#include "private/esp_elf_internal_v1.h"
 #include "private/esp_privileged_os_cpu.h"
 
 #define stype(_s, _t)               ((_s)->type == (_t))
@@ -292,6 +293,8 @@ uintptr_t elf_find_sym(const char *sym_name)
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
 
+#include "esp_elf_internal_load_v1.inc"
+
 /**
  * @brief Load ELF section.
  *
@@ -302,7 +305,7 @@ uintptr_t elf_find_sym(const char *sym_name)
  */
 static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
 {
-    uint32_t entry;
+    uintptr_t entry;
     uint32_t size = 0;
     uint32_t alignments[ELF_SECS] = {0};
     uint32_t offsets[ELF_SECS] = {0};
@@ -420,11 +423,15 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
     }
     if (elf->sec[ELF_SEC_TEXT].size > ESP_ELF_MAX_IMAGE_BYTES ||
         size > ESP_ELF_MAX_IMAGE_BYTES - elf->sec[ELF_SEC_TEXT].size) return -EINVAL;
+    failure = elf_internal_load_v1(elf, pbuf, size + elf->sec[ELF_SEC_TEXT].size);
+    if (failure) goto layout_failed;
+    failure = -EINVAL;
     elf->ptext = esp_elf_malloc(elf->sec[ELF_SEC_TEXT].size, true);
     if (!elf->ptext) {
         ESP_LOGE(TAG, "Failed to malloc %"PRIu32" bytes for text section",
                  (uint32_t)elf->sec[ELF_SEC_TEXT].size);
-        return -ENOMEM;
+        failure = -ENOMEM;
+        goto layout_failed;
     }
     if (size) {
         elf->pdata = esp_elf_malloc(size, false);
@@ -447,7 +454,7 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
 
     /* Dump ".text" from ELF to executable space memory */
 
-    elf->sec[ELF_SEC_TEXT].addr = (Elf32_Addr)elf->ptext;
+    elf->sec[ELF_SEC_TEXT].addr = (uintptr_t)elf->ptext;
     memcpy(elf->ptext, pbuf + elf->sec[ELF_SEC_TEXT].offset,
            elf->sec[ELF_SEC_TEXT].size);
 
@@ -476,6 +483,11 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
 
     entry = ehdr->entry + elf->sec[ELF_SEC_TEXT].addr -
             elf->sec[ELF_SEC_TEXT].v_addr;
+    if (elf->internal_v1.tag == ESP_ELF_INTERNAL_TAG_V1) {
+        const esp_elf_sec_t *code = &elf->internal_v1.sec[ESP_ELF_INTERNAL_TEXT_V1];
+        if (code->size && ehdr->entry >= code->v_addr && ehdr->entry - code->v_addr < code->size)
+            entry = code->addr + (ehdr->entry - code->v_addr);
+    }
 
 #ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
     elf->entry = (void *)elf_remap_text(elf, (uintptr_t)entry);
@@ -486,6 +498,7 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
     return 0;
 
 layout_failed:
+    elf_internal_clear_v1(elf);
     esp_elf_free(elf->pdata);
     esp_elf_free(elf->ptext);
     elf->pdata = NULL;
@@ -632,13 +645,17 @@ void elf_reset_symbol_resolver(void)
  */
 uintptr_t esp_elf_map_sym(esp_elf_t *elf, uintptr_t sym)
 {
-    for (int i = 0; i < ELF_SECS; i++) {
-        if ((sym >= elf->sec[i].v_addr) &&
-                (sym < (elf->sec[i].v_addr + elf->sec[i].size))) {
-            return sym - elf->sec[i].v_addr + elf->sec[i].addr;
-        }
+    return esp_elf_map_span_v1(elf, sym, 1);
+}
+uintptr_t esp_elf_map_span_v1(esp_elf_t *elf, uintptr_t sym, size_t bytes)
+{
+    for (unsigned i = 0; i < ELF_SECS + ESP_ELF_INTERNAL_SECTIONS_V1; ++i) {
+        const esp_elf_sec_t *s = esp_elf_loaded_section_v1(elf, i);
+        if (!s || !s->addr || !s->size || !bytes || s->size > UINTPTR_MAX - s->v_addr ||
+            s->size > UINTPTR_MAX - s->addr) continue;
+        if (sym >= s->v_addr && sym - s->v_addr < s->size && bytes <= s->size - (sym - s->v_addr))
+            return s->addr + (sym - s->v_addr);
     }
-
     return 0;
 }
 
@@ -685,6 +702,16 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
         result = -EINVAL;
         goto perf_complete;
     }
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+    /* Relocation owns a freshly initialized image. Refuse reuse BEFORE section
+     * metadata or allocation custody can be changed. An invalid repeat must
+     * not route through cleanup and free a previously retained/live mapping. */
+    if (elf->ptext || elf->pdata || elf->internal_v1.tag ||
+        elf->internal_v1.text_owner || elf->internal_v1.data_owner) {
+        result = -EINVAL;
+        goto perf_complete;
+    }
+#endif
     if (!esp_elf_privileged_os_cpu_relocation_enter_v1(elf)) {
         result = -EPERM;
         goto perf_complete;
@@ -727,18 +754,24 @@ static uintptr_t elf_object_export_addr(const esp_elf_t *elf,
             symbol->value < section->addr || symbol->value - section->addr >= section->size ||
             symbol->size > section->size - (symbol->value - section->addr)) return 0;
     const char *name = section_names + section->name;
-    unsigned slot;
-    if (section->type == SHT_PROGBITS && !strcmp(name, ELF_DATA) && (section->flags & SHF_WRITE)) slot = ELF_SEC_DATA;
-    else if (section->type == SHT_PROGBITS && !strcmp(name, ELF_RODATA)) slot = ELF_SEC_RODATA;
-    else if (section->type == SHT_PROGBITS && !strcmp(name, ELF_DATA_REL_RO)) slot = ELF_SEC_DRLRO;
-    else if (section->type == SHT_NOBITS && !strcmp(name, ELF_BSS) && (section->flags & SHF_WRITE)) slot = ELF_SEC_BSS;
-    else return 0;
-    if (!elf->sec[slot].addr || elf->sec[slot].v_addr != section->addr ||
-            elf->sec[slot].size != section->size || elf->sec[slot].offset != section->offset) return 0;
+    const esp_elf_sec_t *loaded = NULL;
+    if (section->type == SHT_PROGBITS && !strcmp(name, ELF_DATA) && (section->flags & SHF_WRITE)) loaded = &elf->sec[ELF_SEC_DATA];
+    else if (section->type == SHT_PROGBITS && !strcmp(name, ELF_RODATA)) loaded = &elf->sec[ELF_SEC_RODATA];
+    else if (section->type == SHT_PROGBITS && !strcmp(name, ELF_DATA_REL_RO)) loaded = &elf->sec[ELF_SEC_DRLRO];
+    else if (section->type == SHT_NOBITS && !strcmp(name, ELF_BSS) && (section->flags & SHF_WRITE)) loaded = &elf->sec[ELF_SEC_BSS];
+    else {
+        const int slot = esp_elf_internal_class_v1(name);
+        if (slot <= (int)ESP_ELF_INTERNAL_TEXT_V1 ||
+            !esp_elf_internal_shape_v1((unsigned)slot, section) ||
+            elf->internal_v1.tag != ESP_ELF_INTERNAL_TAG_V1) return 0;
+        loaded = &elf->internal_v1.sec[slot];
+    }
+    if (!loaded->addr || loaded->v_addr != section->addr ||
+            loaded->size != section->size || loaded->offset != section->offset) return 0;
     const uintptr_t offset = symbol->value - section->addr;
-    if (offset > UINTPTR_MAX - elf->sec[slot].addr ||
-            symbol->size > UINTPTR_MAX - (elf->sec[slot].addr + offset)) return 0;
-    return elf->sec[slot].addr + offset;
+    if (offset > UINTPTR_MAX - loaded->addr ||
+            symbol->size > UINTPTR_MAX - (loaded->addr + offset)) return 0;
+    return loaded->addr + offset;
 #else
     /* The selected Runtime uses section loading. Other ports retain their
      * existing function-only export behavior until they supply section proof. */
@@ -746,6 +779,35 @@ static uintptr_t elf_object_export_addr(const esp_elf_t *elf,
     return 0;
 #endif
 }
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+static uintptr_t elf_function_export_addr(esp_elf_t *elf, const elf32_sym_t *symbol,
+                                           const elf32_shdr_t *sections, uint16_t count,
+                                           const char *names) {
+    if (ELF_ST_TYPE(symbol->info) != STT_FUNC || symbol->shndx == SHN_UNDEF || symbol->shndx >= count)
+        return 0;
+    const elf32_shdr_t *section = &sections[symbol->shndx];
+    const size_t bytes = symbol->size ? symbol->size : 1u;
+    if (section->type != SHT_PROGBITS ||
+        (section->flags & (SHF_ALLOC | SHF_EXECINSTR)) != (SHF_ALLOC | SHF_EXECINSTR) ||
+        symbol->value < section->addr || symbol->value - section->addr >= section->size ||
+        bytes > section->size - (symbol->value - section->addr)) return 0;
+    const char *name = names + section->name;
+    const esp_elf_sec_t *loaded = NULL;
+    if (!strcmp(name, ELF_TEXT)) loaded = &elf->sec[ELF_SEC_TEXT];
+    else if (esp_elf_internal_class_v1(name) == (int)ESP_ELF_INTERNAL_TEXT_V1 &&
+             esp_elf_internal_shape_v1(ESP_ELF_INTERNAL_TEXT_V1, section) &&
+             elf->internal_v1.tag == ESP_ELF_INTERNAL_TAG_V1)
+        loaded = &elf->internal_v1.sec[ESP_ELF_INTERNAL_TEXT_V1];
+    if (!loaded || !loaded->addr || loaded->v_addr != section->addr ||
+        loaded->size != section->size || loaded->offset != section->offset ||
+        loaded->size > UINTPTR_MAX - loaded->addr) return 0;
+    uintptr_t address = loaded->addr + symbol->value - section->addr;
+#ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
+    address = elf_remap_text(elf, address);
+#endif
+    return address && bytes <= UINTPTR_MAX - address ? address : 0;
+}
+#endif
 #endif
 
 static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
@@ -771,6 +833,9 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     ret = esp_elf_load_section(elf, pbuf);
 #else
+    for (unsigned i = 0; i < ehdr->shnum; ++i)
+        if (!strncmp(shstrab + shdr[i].name, ESP_ELF_INTERNAL_PREFIX_V1,
+                     sizeof(ESP_ELF_INTERNAL_PREFIX_V1) - 1u)) return -ENOTSUP;
     ret = esp_elf_load_segment(elf, pbuf);
 #endif
 
@@ -869,6 +934,13 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
                 symtab   = (const elf32_sym_t *)(pbuf + shdr[i].offset);
                 strtab   = (const char *)(pbuf + shdr[shdr[i].link].offset);
                 for (j = 0; j < shdr[i].size / sizeof(elf32_sym_t); j++) {
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+                    if (elf->internal_v1.tag == ESP_ELF_INTERNAL_TAG_V1 &&
+                        ELF_ST_BIND(symtab[j].info) == STB_GLOBAL &&
+                        ELF_ST_TYPE(symtab[j].info) == STT_FUNC && symtab[j].shndx != SHN_UNDEF &&
+                        !elf_function_export_addr(elf, &symtab[j], shdr, ehdr->shnum, shstrab))
+                        return -EINVAL;
+#endif
                     if ((ELF_ST_BIND(symtab[j].info) == STB_GLOBAL) &&
                             (ELF_ST_TYPE(symtab[j].info) == STT_FUNC ||
                              elf_object_export_addr(elf, &symtab[j], shdr, ehdr->shnum, shstrab)) &&
@@ -898,13 +970,23 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
                                 elf, &symtab[j], shdr, ehdr->shnum, shstrab);
                         } else {
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
-                        elf->symtab[num].addr =
-                            (void *)(elf->ptext + symtab[j].value - elf->sec[ELF_SEC_TEXT].v_addr);
+                        if (elf->internal_v1.tag == ESP_ELF_INTERNAL_TAG_V1) {
+                            elf->symtab[num].addr =
+                                (void *)elf_function_export_addr(elf, &symtab[j], shdr, ehdr->shnum, shstrab);
+                        } else {
+                            /* Preserve the ordinary loader's existing export path. */
+                            uintptr_t address = (uintptr_t)(elf->ptext + symtab[j].value -
+                                                          elf->sec[ELF_SEC_TEXT].v_addr);
+#ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
+                            address = elf_remap_text(elf, address);
+#endif
+                            elf->symtab[num].addr = (void *)address;
+                        }
 #else
                         elf->symtab[num].addr =
                             (void *)(elf->psegment + symtab[j].value - elf->svaddr);
 #endif
-#ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
+#if defined(CONFIG_ELF_LOADER_CACHE_OFFSET) && !CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
                         /* T5S3: dlsym must return the executable I-bus address. */
                         elf->symtab[num].addr = (void *)elf_remap_text(
                             elf, (uintptr_t)elf->symtab[num].addr);
@@ -930,6 +1012,11 @@ static int esp_elf_relocate_impl(esp_elf_t *elf, const uint8_t *pbuf)
 
 #ifdef CONFIG_ELF_LOADER_LOAD_PSRAM
     ret = esp_elf_arch_flush(elf);
+    if (ret) return ret;
+#endif
+
+#if RISC_ELF_INTERNAL_PLACEMENT_V1 == 1
+    ret = esp_elf_internal_publish_v1(elf);
     if (ret) return ret;
 #endif
 
@@ -983,6 +1070,7 @@ void esp_elf_deinit(esp_elf_t *elf)
         esp_elf_free(elf->ptext);
         elf->ptext = NULL;
     }
+    elf_internal_clear_v1(elf);
 #else
     if (elf->psegment) {
         esp_elf_free(elf->psegment);

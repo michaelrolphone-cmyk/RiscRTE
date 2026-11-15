@@ -1,6 +1,11 @@
 #pragma once
 #include "../../../lib/hal/StorageGeneration.h"
 #include <RiscProviderV2.h>
+#include <RiscNativeRootV1.h>
+#include <RiscNativeTerminalV1.h>
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+#include <private/esp_cpu_task_scope_binding_v1.h>
+#endif
 #include <RiscStreamSessionProviderV1.h>
 #include <RiscPackageResourcesV1.h>
 #include "runtime/packages/PackageIdentity.h"
@@ -91,12 +96,36 @@ class ModuleV2 final {
   bool pinConsumer();
   bool unpinConsumer();
   bool unload();
-  const void* capability() const { return state_ == State::Active ? api_ : nullptr; }
+  const void* capability() const;
   const char* lastError() const { return error_; }
   State state() const { return state_; }
   uint32_t consumers() const { return consumers_; }
  private:
   friend class GraphV2;
+  // Only Graph staging may open the ABI5 start window. No public setter.
+  bool nativeTaskStaging_=false,nativeTaskCommitted_=false,nativeRootValid_=false,nativeRootRetained_=false;
+  enum class NativeClose : uint8_t { Missing, Acknowledged, Pending, Refused, Retained };
+  NativeClose prepareNativeTaskClose(const NativeProviderPolicyV1*,uint64_t,uint32_t);
+  NativeClose prepareNativeStagedClose();
+  NativeClose nativeStagedCloseReady();
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  bool nativeTerminalAttempted_=false;
+  risc_native_terminal_v1 nativeTerminal_{};
+#endif
+  bool nativeRootReady(const NativeProviderPolicyV1*,uint64_t) const;
+  void retainNativeRoot();
+  bool commitNativeTaskOwner(const NativeProviderPolicyV1*,uint64_t);
+  bool nativeExecutableSpan(uintptr_t&,size_t&) const;
+  bool nativeExecutableSpan(unsigned,uintptr_t&,size_t&) const;
+  bool nativeTaskBegin(bool);
+  bool nativeTaskEnd(bool);
+  bool nativeTaskSafe() const;
+  bool nativeTaskPrepareClose();
+  bool nativeTaskRelease();
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  esp_cpu_task_binding_v1 nativeTaskBinding_{};
+  bool nativeTaskWindow_=false;
+#endif
   // Graph owns this private immutable allocation until after module shutdown.
   // Public loadVerifiedBytes callers cannot opt themselves into this proof.
   void bindGraphOwnedImage(const uint8_t* bytes, size_t size,

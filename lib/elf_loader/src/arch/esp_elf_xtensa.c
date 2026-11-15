@@ -9,6 +9,7 @@
 #include "esp_elf.h"
 #include "esp_log.h"
 #include "private/elf_platform.h"
+#include "private/esp_elf_internal_v1.h"
 #include "private/esp_privileged_os_cpu.h"
 
 /** @brief Xtensa relocations defined by the ABIs */
@@ -102,7 +103,7 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
     if (ELF_R_TYPE(rela->info) == R_XTENSA_NONE)
         return (!rela->info && !rela->offset && !rela->addend) ? 0 : -EINVAL;
 
-    where = (uint32_t *)esp_elf_map_sym(elf, rela->offset);
+    where = (uint32_t *)esp_elf_map_span_v1(elf, rela->offset, sizeof(uint32_t));
 
     ESP_LOGD(TAG, "type: %d, where=%p addr=0x%x offset=0x%x\n",
              ELF_R_TYPE(rela->info), where, (int)addr, (int)rela->offset);

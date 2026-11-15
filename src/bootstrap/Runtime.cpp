@@ -127,6 +127,10 @@ namespace RiscBoot {
 #include "StorageFilesRuntime.inc"
 #endif
 Runtime::~Runtime() {
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  for(const auto& owner:nativeOwners_)
+    if(owner.state!=RuntimePackages::DeviceProviderExecutorV2::NativeState::Empty)std::abort();
+#endif
 #if RISC_NATIVE_SERIAL_FILES
   if(nativeFilesState_==NativeFilesState::Parked ? !stopNativeFiles() : !releaseNativeFiles())std::abort();
 #endif
@@ -2135,6 +2139,7 @@ bool Runtime::takeLaunchFailure(risc_runtime_launch_failure_v1* out) {
      !graph_.activationSafe() || !launchFailure_.struct_size)return false;
   *out=launchFailure_;launchFailure_={};return true;
 }
+#include "RuntimeNativeOwnerV5.inc"
 bool Runtime::run() {
   if(!prepared_ || currentRuntime || !port_.owner() || retained_ || metadataCloseRetained()) return fail("runtime not launchable");
 #if RISC_NATIVE_SERIAL_FILES
@@ -2179,9 +2184,9 @@ bool Runtime::run() {
     if(demandActivation_ && !coldStart)continue;
     char stage[144];std::snprintf(stage,sizeof(stage),"RTE_PROVIDER id=%s phase=start",drivers_[i].id);port_.log(stage);
     serviceProviders();
-    grants_[i]=graph_.acquireFrom(drivers_[i].id,drivers_[i].provides,drivers_[i].api,drivers_[i].instance);
+    const bool started=startBootProvider(i);
     const bool coldSafe=!coldStart || promotionSafe();
-    if(!grants_[i].slot || !coldSafe) {
+    if(!started || !grants_[i].slot || !coldSafe) {
       ok=fail(coldSafe?graph_.lastError():"cold provider activation retained; restart required");port_.log(error_);
       // A grantless failed start can retain code and dependency custody too.
       // Do not run the final boot cleanup/retry path after that barrier.
@@ -2281,7 +2286,7 @@ bool Runtime::run() {
 #endif
   if(!retained_) {
     for(size_t i=driverCount_;i--;) if(grants_[i].slot) {
-      if(!graph_.release(grants_[i])) {
+      if(!closeBootProvider(i)) {
         retained_=true;
         char detail[256];std::snprintf(detail,sizeof(detail),"RTE_CLEANUP id=%.95s driver-quiescence=retained detail=%.108s",drivers_[i].id,graph_.lastError());port_.log(detail);
         if(ok)ok=fail("driver quiescence failed; restart required");

@@ -147,6 +147,18 @@ class GraphV2 final {
   // Friendship is an API boundary, not a memory-isolation guarantee.
   friend class ::RuntimePackages::DeviceProviderExecutorV2;
   friend class ::RiscBoot::Runtime;
+  // Selected native-only Runtime/executor lifecycle; never ordinary acquire.
+  // Policy must be the exact Graph-owned snapshot returned by nativePolicyFor.
+  GrantV2 stageNativeTaskOwner(const NativeProviderPolicyV1*);
+  bool nativeTaskMapping(GrantV2,const NativeProviderPolicyV1*,uint64_t*);
+  bool commitNativeTaskOwner(GrantV2,const NativeProviderPolicyV1*,uint64_t);
+  enum class NativeClosePreparation : uint8_t { Accepted, Refused, Retained };
+  enum class NativeCloseReadiness : uint8_t { Ready, Pending, Retained };
+  NativeClosePreparation prepareNativeTaskClose(GrantV2,const NativeProviderPolicyV1*,uint64_t,uint32_t);
+  NativeClosePreparation prepareNativeStagedClose(GrantV2,const NativeProviderPolicyV1*);
+  NativeCloseReadiness nativeStagedCloseReady(GrantV2,const NativeProviderPolicyV1*);
+  NativeCloseReadiness nativeTaskCloseReady(GrantV2,const NativeProviderPolicyV1*,uint64_t);
+  bool nativeTaskIdentity(GrantV2,const NativeProviderPolicyV1*,size_t&) const;
   bool addManagerValidatedPrivileged(const SpecV2& spec, const NativeProviderPolicyV1&);
   const NativeProviderPolicyV1* nativePolicyFor(const char* id, const char* capability, uint32_t api, uint64_t instance) const;
   bool addChecked(const SpecV2& spec, const NativeProviderPolicyV1*);
@@ -200,8 +212,8 @@ class GraphV2 final {
 
   int find(const char* capability, uint32_t api) const;
   int findProvider(const char* id, const char* capability, uint32_t api, uint64_t instance = 0) const;
-  GrantV2 acquireIndex(size_t index);
-  bool activate(size_t index);
+  GrantV2 acquireIndex(size_t index,bool stageNative=false);
+  bool activate(size_t index,bool stageNative=false);
   bool releaseDependencies(size_t index);
   bool deactivateIfUnused(size_t index);
 };

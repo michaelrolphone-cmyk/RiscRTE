@@ -16,7 +16,8 @@ static bool imports_match(
      * declaration remains distinguishable from an intentional empty list. */
     if (!image || !declared || declared_count > MAX_MANIFEST_IMPORTS ||
         !(abi == 1 ? esp_elf_privileged_imports_valid_v1(image, length) :
-          esp_elf_privileged_imports_valid_v2(image, length))) return false;
+          abi == 2 ? esp_elf_privileged_imports_valid_v2(image, length) :
+          abi == 5 ? esp_elf_privileged_imports_valid_v5(image, length) : false)) return false;
 
     for (size_t i = 0; i < declared_count; ++i) {
         if (!declared[i]) return false;
@@ -61,3 +62,14 @@ bool esp_elf_privileged_manifest_imports_match_v1(const uint8_t *image, size_t l
 bool esp_elf_privileged_manifest_imports_match_v2(const uint8_t *image, size_t length,
     const char *const *declared, size_t count)
 { return imports_match(image, length, declared, count, 2); }
+
+bool esp_elf_privileged_manifest_imports_match_v5(const uint8_t *image, size_t length,
+    const char *const *declared, size_t count)
+{
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+ return imports_match(image, length, declared, count, 5);
+#else
+    (void)image; (void)length; (void)declared; (void)count;
+    return false;
+#endif
+}
