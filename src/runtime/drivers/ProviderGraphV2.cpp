@@ -465,6 +465,74 @@ bool GraphV2::commitNativeTaskOwner(GrantV2 grant,const NativeProviderPolicyV1* 
   return true;
 }
 
+GraphV2::NativeClosePreparation GraphV2::prepareNativeTaskClose(GrantV2 grant,const NativeProviderPolicyV1* policy,
+                                    uint64_t mapping,uint32_t budgetMs) {
+  if(lifecycleBusy())return NativeClosePreparation::Refused;
+  LifecycleScope scope(lifecycle_);size_t index=0;
+  if(!nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe())return NativeClosePreparation::Refused;
+  auto& module=nodes_[index].module;
+  const auto result=module.prepareNativeTaskClose(policy,mapping,budgetMs);
+  if(result==ModuleV2::NativeClose::Refused)return NativeClosePreparation::Refused;
+  if(result==ModuleV2::NativeClose::Retained)return NativeClosePreparation::Retained;
+  if(!nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe() ||
+     !module.nativeRootReady(policy,mapping)) {
+    module.retainNativeRoot();return NativeClosePreparation::Retained;
+  }
+  // Includes the absent legacy suffix: acceptance permits only a separate
+  // readiness observation. It never certifies retirement or authorizes unmap.
+  return NativeClosePreparation::Accepted;
+}
+GraphV2::NativeCloseReadiness GraphV2::nativeTaskCloseReady(GrantV2 grant,const NativeProviderPolicyV1* policy,uint64_t mapping) {
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  if(lifecycleBusy())return NativeCloseReadiness::Retained;
+  LifecycleScope scope(lifecycle_);size_t index=0;
+  if(!nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe())return NativeCloseReadiness::Retained;
+  const auto& module=nodes_[index].module;
+  if(!module.nativeTaskCommitted_ || !module.nativeTerminalAttempted_ ||
+     !module.nativeRootReady(policy,mapping) || !module.leaseSafe() || !module.streamSafe())
+    return NativeCloseReadiness::Retained;
+  return module.nativeTaskSafe()?NativeCloseReadiness::Ready:NativeCloseReadiness::Pending;
+#else
+  (void)grant;(void)policy;(void)mapping;return NativeCloseReadiness::Retained;
+#endif
+}
+
+
+GraphV2::NativeClosePreparation GraphV2::prepareNativeStagedClose(GrantV2 grant,const NativeProviderPolicyV1* policy) {
+  if(lifecycleBusy())return NativeClosePreparation::Retained;
+  LifecycleScope scope(lifecycle_);size_t index=0;
+  if(!nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe())return NativeClosePreparation::Retained;
+  auto& module=nodes_[index].module;
+  const uint64_t mapping=module.streamContext();
+  if(module.nativeTaskCommitted_ || !module.nativeRootReady(policy,mapping))return NativeClosePreparation::Retained;
+  const auto result=module.prepareNativeStagedClose();
+  if(result==ModuleV2::NativeClose::Retained)return NativeClosePreparation::Retained;
+  if(!nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe() ||
+     !module.nativeRootReady(policy,mapping)) {
+    module.retainNativeRoot();return NativeClosePreparation::Retained;
+  }
+  return result==ModuleV2::NativeClose::Pending || result==ModuleV2::NativeClose::Acknowledged
+    ? NativeClosePreparation::Accepted : NativeClosePreparation::Retained;
+}
+
+GraphV2::NativeCloseReadiness GraphV2::nativeStagedCloseReady(GrantV2 grant,const NativeProviderPolicyV1* policy) {
+  if(lifecycleBusy())return NativeCloseReadiness::Retained;
+  LifecycleScope scope(lifecycle_);size_t index=0;
+  if(!nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe())return NativeCloseReadiness::Retained;
+  auto& module=nodes_[index].module;
+  const uint64_t mapping=module.streamContext();
+  if(module.nativeTaskCommitted_ || !module.nativeRootReady(policy,mapping))return NativeCloseReadiness::Retained;
+  const auto result=module.nativeStagedCloseReady();
+  if(result==ModuleV2::NativeClose::Retained)return NativeCloseReadiness::Retained;
+  if(!nativeTaskIdentity(grant,policy,index) || !dependencyReadSafe() ||
+     !module.nativeRootReady(policy,mapping)) {
+    module.retainNativeRoot();return NativeCloseReadiness::Retained;
+  }
+  if(result==ModuleV2::NativeClose::Pending)return NativeCloseReadiness::Pending;
+  return result==ModuleV2::NativeClose::Acknowledged && module.nativeTaskSafe()
+    ? NativeCloseReadiness::Ready : NativeCloseReadiness::Retained;
+}
+
 GrantV2 GraphV2::acquire(const char* capability, uint32_t api) {
   if(lifecycleBusy())return {};
   LifecycleScope scope(lifecycle_);

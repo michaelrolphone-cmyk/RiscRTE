@@ -86,7 +86,7 @@ void ModuleV2::report(const char* id, const char* stage, int code) {
 }
 
 bool ModuleV2::closeMapped() {
-  if(!nativeTaskPrepareClose() || !leaseSafe())return false;
+  if((!nativeTaskSafe() && !nativeTaskPrepareClose()) || !leaseSafe())return false;
   revokeLease();
   if(!nativeTaskSafe() || !leaseSafe() || !nativeTaskRelease())return false;
   risc_runtime_retention_guard();
@@ -128,6 +128,9 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     return false;
   }
   bool nativeRootValid=false;
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  risc_native_terminal_v1 terminal{};
+#endif
   if(candidate->struct_size>=offsetof(risc_driver_native_root_v1,extension_tag)+sizeof(uint32_t)) {
     const auto* root=reinterpret_cast<const risc_driver_native_root_v1*>(candidate);
     if(root->extension_tag==RISC_DRIVER_NATIVE_ROOT_TAG_V1) {
@@ -142,6 +145,22 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
          !api->call || !api->health) {
         report(expectedId,"native-root-interface-invalid");return false;
       }
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+      if(ownedPolicy_->osCpuAbi==5 && candidate->struct_size>sizeof(*root)) {
+        // Never read an absent or partial suffix, including its tag/pointer.
+        if(candidate->struct_size!=sizeof(risc_driver_native_terminal_v1)) {
+          report(expectedId,"native-terminal-size-invalid");return false;
+        }
+        const auto* extended=reinterpret_cast<const risc_driver_native_terminal_v1*>(candidate);
+        if(extended->terminal_tag!=RISC_DRIVER_NATIVE_TERMINAL_TAG_V1 ||
+           extended->terminal_version!=RISC_DRIVER_NATIVE_TERMINAL_VERSION_V1 || !extended->terminal ||
+           extended->terminal->api_version!=RISC_NATIVE_TERMINAL_API_V1 ||
+           extended->terminal->struct_size!=sizeof(terminal) || !extended->terminal->prepare_close) {
+          report(expectedId,"native-terminal-interface-invalid");return false;
+        }
+        terminal=*extended->terminal; // Copy once; no later descriptor-table reread.
+      }
+#endif
       nativeRootValid=true;
     }
   }
@@ -219,7 +238,7 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
     revokeLease();
     RISC_STAGE_LOG("provider start skipped id=%s reason=%s",expectedId,bound?"lease-rejected":"stream-bind-rejected");
   }
-  if((!started && !nativeTaskPrepareClose()) || !leaseSafe()) {
+  if((!started && !nativeTaskSafe() && !nativeTaskPrepareClose()) || !leaseSafe()) {
     // Native retained storage may be reported during start itself. Preserve
     // code/dependencies without entering diagnostics, quiesce, stop or dlclose.
     revokeLease();driver_=candidate;api_=nullptr;state_=State::Failed;
@@ -228,6 +247,9 @@ bool ModuleV2::activateMapped(risc_driver_get_v2_fn get, const char* expectedId,
   if (started) {
     driver_ = candidate;
     nativeRootValid_=nativeRootValid;
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+    nativeTerminal_=terminal;nativeTerminalAttempted_=false;
+#endif
     streamSessions_ = sessions;
     api_ = candidate->capability;
     state_ = State::Active;
@@ -390,6 +412,9 @@ bool ModuleV2::nativeRootReady(const NativeProviderPolicyV1* policy,uint64_t map
 }
 const void* ModuleV2::capability() const {
   if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && !nativeTaskCommitted_)return nullptr;
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && nativeTerminalAttempted_)return nullptr;
+#endif
   return state_==State::Active ? api_ : nullptr;
 }
 void ModuleV2::retainNativeRoot() {
@@ -398,10 +423,66 @@ void ModuleV2::retainNativeRoot() {
 #endif
   nativeRootRetained_=true;api_=nullptr;state_=State::Failed;
 }
+ModuleV2::NativeClose ModuleV2::prepareNativeTaskClose(const NativeProviderPolicyV1* policy,
+                                                       uint64_t mapping,uint32_t budgetMs) {
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  if(!budgetMs || budgetMs>RISC_NATIVE_TERMINAL_BUDGET_MAX_MS_V1 ||
+     !nativeTaskCommitted_ || nativeTerminalAttempted_ || !nativeRootReady(policy,mapping))
+    return NativeClose::Refused;
+  nativeTerminalAttempted_=true; // Never replay after uncertain callback/release.
+  if(!nativeTerminal_.prepare_close)return NativeClose::Missing;
+  const auto result=nativeTerminal_.prepare_close(mapping,budgetMs);
+  if(!nativeRootReady(policy,mapping)){retainNativeRoot();return NativeClose::Retained;}
+  if(result==RISC_NATIVE_TERMINAL_ACKNOWLEDGED_V1)return NativeClose::Acknowledged;
+  if(result==RISC_NATIVE_TERMINAL_PENDING_V1)return NativeClose::Pending;
+  if(result==RISC_NATIVE_TERMINAL_REFUSED_V1)return NativeClose::Refused;
+  retainNativeRoot();return NativeClose::Retained; // Includes unknown result values.
+#else
+  (void)policy;(void)mapping;(void)budgetMs;return NativeClose::Refused;
+#endif
+}
+
+ModuleV2::NativeClose ModuleV2::prepareNativeStagedClose() {
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  if(nativeTaskCommitted_ || nativeTaskWindow_ || !ownedPolicy_ || ownedPolicy_->osCpuAbi!=5)
+    return NativeClose::Retained;
+  if(nativeTaskSafe())return NativeClose::Acknowledged;
+  if(nativeTaskBinding_.token) {
+    // Called once by the exact owner's transition to Closing. No grant has
+    // been revoked; later readiness polls join without another cancellation.
+    const int rc=esp_cpu_task_binding_cancel_staged_v1(nativeTaskBinding_);
+    if(rc==RISC_CPU_SCOPE_PENDING)return NativeClose::Pending;
+    if(rc!=RISC_CPU_SCOPE_OK){retainNativeRoot();return NativeClose::Retained;}
+  }
+  if(!nativeTaskSafe()){retainNativeRoot();return NativeClose::Retained;}
+  return NativeClose::Acknowledged;
+#else
+  return NativeClose::Retained;
+#endif
+}
+
+ModuleV2::NativeClose ModuleV2::nativeStagedCloseReady() {
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  if(nativeTaskCommitted_ || nativeTaskWindow_ || !ownedPolicy_ || ownedPolicy_->osCpuAbi!=5)
+    return NativeClose::Retained;
+  if(nativeTaskBinding_.token) {
+    const int rc=risc_cpu_worker_join_v5(nativeTaskBinding_.token);
+    if(rc==RISC_CPU_SCOPE_PENDING)return NativeClose::Pending;
+    if(rc!=RISC_CPU_SCOPE_OK){retainNativeRoot();return NativeClose::Retained;}
+  }
+  if(!nativeTaskSafe()){retainNativeRoot();return NativeClose::Retained;}
+  return NativeClose::Acknowledged;
+#else
+  return NativeClose::Retained;
+#endif
+}
 #include "ProviderModuleTaskScopeV5.inc"
 
 bool ModuleV2::poll(uint32_t budgetMs) {
   if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && !nativeTaskCommitted_)return false;
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && nativeTerminalAttempted_)return false;
+#endif
   if (!budgetMs || state_ != State::Active || !leaseSafe() || !streamSafe() || !driver_ || !consumers_ ||
       driver_->struct_size < sizeof(risc_driver_poll_v2)) return false;
   const auto* extended = reinterpret_cast<const risc_driver_poll_v2*>(driver_);
@@ -411,6 +492,9 @@ bool ModuleV2::poll(uint32_t budgetMs) {
 }
 bool ModuleV2::service(uint32_t budgetMs) {
   if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && !nativeTaskCommitted_)return false;
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  if(ownedPolicy_ && ownedPolicy_->osCpuAbi==5 && nativeTerminalAttempted_)return false;
+#endif
   if (!budgetMs || budgetMs>RISC_DRIVER_SERVICE_MAX_MS || state_ != State::Active ||
       !leaseSafe() || !streamSafe() || !driver_ || !consumers_ || driver_->struct_size < sizeof(risc_driver_service_v2))return false;
   const auto* extended=reinterpret_cast<const risc_driver_service_v2*>(driver_);
@@ -470,7 +554,8 @@ void ModuleV2::reportQuiescence() {
   report(driver_->driver_id, "hardware-quiesce-rejected");
 }
 bool ModuleV2::unload() {
-  if (consumers_ || streamCleanupRetained_ || nativeRootRetained_ || !nativeTaskPrepareClose() || !leaseSafe()) return false;
+  if (consumers_ || streamCleanupRetained_ || nativeRootRetained_ ||
+      (!nativeTaskSafe() && !nativeTaskPrepareClose()) || !leaseSafe()) return false;
   auto hostSafe=[&](){
     if(nativeTaskSafe() && leaseSafe())return true;
     api_=nullptr;state_=State::Failed;return false;
@@ -501,6 +586,9 @@ bool ModuleV2::unload() {
   if (!closeStreams()) { api_ = nullptr; state_ = State::Failed; return false; }
   streamSessions_ = nullptr;
   nativeRootValid_=false;nativeTaskCommitted_=false;
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  nativeTerminal_={};nativeTerminalAttempted_=false;
+#endif
   api_ = nullptr;
   if (!closeMapped()) {
     state_ = State::Failed;

@@ -49,6 +49,32 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Reproduce actual Runtime native-owner callers
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          cc="$(xcrun --find clang)"
+          cxx="$(xcrun --find clang++)"
+          sdk="$(xcrun --sdk macosx --show-sdk-path)"
+          openssl_root="$(brew --prefix openssl@3)"
+          test -x "$cc"
+          test -x "$cxx"
+          test -d "$sdk"
+          test -f "$openssl_root/lib/libcrypto.dylib"
+          output="$RUNNER_TEMP/native-runtime-v5-$GITHUB_RUN_ATTEMPT"
+          python3 -B test/run_native_runtime_v5.py \
+            --repo "$GITHUB_WORKSPACE" \
+            --cc "$cc" --cxx "$cxx" --sdk "$sdk" \
+            --openssl-root "$openssl_root" --output "$output"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-runtime-v5-host-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/native-runtime-v5-${{ github.run_attempt }}/
+          if-no-files-found: error
+          retention-days: 14
+
 # Actual Graph/Module/worker code with explicit modeled kernel, ELF, export and
 # physical-retirement boundaries. This job installs nothing, activates no
 # target worker and performs no hardware or operational deployment.

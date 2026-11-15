@@ -2,6 +2,7 @@
 #include "../../../lib/hal/StorageGeneration.h"
 #include <RiscProviderV2.h>
 #include <RiscNativeRootV1.h>
+#include <RiscNativeTerminalV1.h>
 #if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
 #include <private/esp_cpu_task_scope_binding_v1.h>
 #endif
@@ -103,6 +104,14 @@ class ModuleV2 final {
   friend class GraphV2;
   // Only Graph staging may open the ABI5 start window. No public setter.
   bool nativeTaskStaging_=false,nativeTaskCommitted_=false,nativeRootValid_=false,nativeRootRetained_=false;
+  enum class NativeClose : uint8_t { Missing, Acknowledged, Pending, Refused, Retained };
+  NativeClose prepareNativeTaskClose(const NativeProviderPolicyV1*,uint64_t,uint32_t);
+  NativeClose prepareNativeStagedClose();
+  NativeClose nativeStagedCloseReady();
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  bool nativeTerminalAttempted_=false;
+  risc_native_terminal_v1 nativeTerminal_{};
+#endif
   bool nativeRootReady(const NativeProviderPolicyV1*,uint64_t) const;
   void retainNativeRoot();
   bool commitNativeTaskOwner(const NativeProviderPolicyV1*,uint64_t);

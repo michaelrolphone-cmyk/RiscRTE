@@ -41,6 +41,7 @@ namespace RiscExperimental { class NativeAtomicKeyValue; }
 #include "runtime/sleep/RetainedWake.h"
 #include <memory>
 #include "runtime/drivers/ProviderGraphV2.h"
+#include "runtime/drivers/DeviceProviderExecutorV2.h"
 #include "runtime/streams/ProviderQueueHost.h"
 #include "runtime/streams/AppStreamSessions.h"
 #include <RiscRuntimeV1.h>
@@ -59,6 +60,9 @@ namespace RuntimeProviders { struct NativeProviderPolicySnapshotV1; }
 namespace RiscUpdate { struct NativeAppDataExportPolicyV1; struct NativeAppDataExportPolicyV2; }
 namespace RiscExperimental { class NativeRuntimeStoragePin; }
 namespace RiscBoot {
+#if defined(RISC_NATIVE_RUNTIME_CALLER_TEST) && RISC_NATIVE_RUNTIME_CALLER_TEST == 1
+class RuntimeNativeCallerTestPeer;
+#endif
 class Runtime;
 struct Port {
   bool (*owner)();
@@ -323,6 +327,9 @@ class Runtime final {
   Board& board() { return board_; }
   const Board& board() const { return board_; }
  private:
+#if defined(RISC_NATIVE_RUNTIME_CALLER_TEST) && RISC_NATIVE_RUNTIME_CALLER_TEST == 1
+  friend class RuntimeNativeCallerTestPeer; // hosted tests only, absent from firmware
+#endif
   friend class ::RiscExperimental::NativeRuntimeStoragePin; // compiled-in custody only, never an SDK import
   bool diagnosticCheckpointToken(uint64_t) const;
   bool failureEvidenceToken(uint64_t,bool healthy) const;
@@ -811,6 +818,11 @@ class Runtime final {
   risc_runtime_launch_failure_v1 launchFailure_{};
 
   RuntimeProviders::GrantV2 grants_[MaxDrivers]{};
+#if defined(RISC_NATIVE_ESP_IDF) && RISC_NATIVE_ESP_IDF && defined(RISC_CPU_SCOPE_V5_CANDIDATE) && RISC_CPU_SCOPE_V5_CANDIDATE == 1
+  RuntimePackages::DeviceProviderExecutorV2::NativeOwner nativeOwners_[MaxDrivers]{};
+#endif
+  bool startBootProvider(size_t);
+  bool closeBootProvider(size_t);
   Driver drivers_[MaxDrivers]{};
   size_t driverCount_=0,bootDriverCount_=0;
   char root_[256]{}, default_[256]{}, error_[192]{};
