@@ -45,10 +45,27 @@ Historical reports remain private; only their identities are recorded here.
 
 After that run, only this documentation, the matching provenance pin, the CI
 runner label (`macos-14` to `macos-15`) and source version (`0.4.16` to `0.4.17`)
-were updated. Production, test, support, recipe and runner bytes are unchanged.
+were updated. At that stage, production, test, support, recipe and runner bytes were unchanged.
 The dedicated macOS workflow is not yet executed; its tools are resolved from
 that runner's existing Xcode and OpenSSL installation without installing packages.
 
 Target build, actual root startup/close, physical retirement, protected internal
 memory, cache-off reachability and complete native-owner qualification remain
 separate gates. This change does not activate hardware or deploy anything.
+
+## EOF-normalized publication successor
+
+A separate successor removed only six terminal LF bytes across four files:
+esp_cpu_task_scope_v1.h, privileged_os_cpu_symbols_v5.def,
+esp_cpu_task_scope_v1.c and the modeled kernel_bridge.cpp fixture.
+All nonterminal bytes, v5 inventory entries and ABI contracts are unchanged;
+v1/v2 inventory bytes are untouched. Matching source/package pins and provenance
+were refreshed. The normalized files are not claimed byte-identical to the
+prior copied snapshots.
+
+The same repository-native 20 cases passed again in normal and UBSan modes,
+with 58 fresh objects and 8 strict binaries. RESULT: 829a83cf7549e2ea2f5be6e9dcdf36b7f0115b17a1dbad478ceaf400ec29336c.
+Only these documentary result labels and their matching pin changed after that
+run. The runner, recipes and all executable source bytes remain exactly tested.
+Full stacked diff/ordinary hook/version checks are recorded in the local commit
+receipt. CI and the target/physical/caller gates above remain pending.

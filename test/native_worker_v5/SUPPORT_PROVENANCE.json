@@ -1,168 +1,171 @@
 {
-  "schema": 1,
-  "status": "repository-native Darwin runner passed 20 cases; earlier private lifecycle003 separately passed 20",
-  "qualified_report_sha256": "fcb2c0f7223680a5c207cfd680d72f3010b669fcd9affa2c6a57110740dde259",
-  "qualified_result_sha256": "826c4a07d92022df668d36f8fc891c357dabcf8cd0352d02ab1e4a2c270d722c",
+  "eof_normalization": {
+    "changes": {
+      "lib/elf_loader/include/private/esp_cpu_task_scope_v1.h": {
+        "after_sha256": "901573b15af233f9de3f60498c8b65d9428dfcfef2ef89a48ed27d125c836433",
+        "before_sha256": "7a443ecdb3ef0a2915ba126b9b77e8353f89833ae0531ba60e95512447f70eba",
+        "removed_terminal_LF": 2
+      },
+      "lib/elf_loader/include/private/privileged_os_cpu_symbols_v5.def": {
+        "after_sha256": "0a69dbd8e85fe9257d6aac0299745ceac24a16d768a137042390aab9a5113dca",
+        "before_sha256": "0845b4977ada280767f474f4737b457ebc1b8f56d74045dca7ff71a12f3a2924",
+        "removed_terminal_LF": 1
+      },
+      "lib/elf_loader/src/esp_cpu_task_scope_v1.c": {
+        "after_sha256": "c5dabc00a1ac88c5676b1ef038738cfe24c8de6804bfce745095b856813d9292",
+        "before_sha256": "e2cfb8c239deeceed5194f4e65db9cce19fab0fca06ea3c91b45d1e681f82061",
+        "removed_terminal_LF": 2
+      },
+      "test/native_worker_v5/support/fixtures/kernel_bridge.cpp": {
+        "after_sha256": "5c619d48b3b66d98e455e9096c7241c75f96b612dd5900e9eaf213b8902644ce",
+        "before_sha256": "29050d0495b02780f7314cd3c68714e7df036a1e655eda7bd8273b1be1c0d559",
+        "removed_terminal_LF": 1
+      }
+    },
+    "scope": "Only terminal LF count in four files; ABI/inventory entries and all nonterminal bytes unchanged"
+  },
   "files": {
     "c_only/pthread.h": {
-      "qualified_sha256": "27809b9f8c1348c465e2260c930e78bdb696d6e60238cf0a13b277606eb03eb6",
+      "derivation": "Byte-identical selected hosted support",
       "packaged_sha256": "27809b9f8c1348c465e2260c930e78bdb696d6e60238cf0a13b277606eb03eb6",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "fixtures/kernel_bridge.cpp": {
-      "qualified_sha256": "29050d0495b02780f7314cd3c68714e7df036a1e655eda7bd8273b1be1c0d559",
-      "packaged_sha256": "29050d0495b02780f7314cd3c68714e7df036a1e655eda7bd8273b1be1c0d559",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "fixtures/qualified_task_scope_fixture.cpp": {
-      "qualified_sha256": "8e7792613177cc077f9003f84440919794aeadd632663003db24ce67447ff023",
-      "packaged_sha256": "8e7792613177cc077f9003f84440919794aeadd632663003db24ce67447ff023",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "fixtures/stack_floor_cases.h": {
-      "qualified_sha256": "0e03b97da195109ac661b16c0f6ad53a482b55e7047708c0913236b757d859b3",
-      "packaged_sha256": "0e03b97da195109ac661b16c0f6ad53a482b55e7047708c0913236b757d859b3",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "kernel-shims/esp_attr.h": {
-      "qualified_sha256": "3169cbcf4229887cc322b6b16824155b526b32bb02ed1eeca14cd8da2c260388",
-      "packaged_sha256": "3169cbcf4229887cc322b6b16824155b526b32bb02ed1eeca14cd8da2c260388",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "kernel-shims/esp_err.h": {
-      "qualified_sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
-      "packaged_sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "kernel-shims/sys/lock.h": {
-      "qualified_sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
-      "packaged_sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "kernel-shims/esp_freertos_hooks.h": {
-      "qualified_sha256": "a165266d71cf7561c75fab42a5d61ae706867668d9346944c0770c2e27ac03d0",
-      "packaged_sha256": "a165266d71cf7561c75fab42a5d61ae706867668d9346944c0770c2e27ac03d0",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "kernel-shims/freertos/FreeRTOS.h": {
-      "qualified_sha256": "28660aad19fc7cc05c84c4677ddbae304c58e0bd8d9afe44361f5014ac138919",
-      "packaged_sha256": "28660aad19fc7cc05c84c4677ddbae304c58e0bd8d9afe44361f5014ac138919",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "kernel-shims/freertos/idf_additions.h": {
-      "qualified_sha256": "97a3e24017d67e087fc05169d41fa361b27bcdeb1b76e5fd50bc4772213a97d1",
-      "packaged_sha256": "97a3e24017d67e087fc05169d41fa361b27bcdeb1b76e5fd50bc4772213a97d1",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "kernel-shims/freertos/task.h": {
-      "qualified_sha256": "ea7e75b4de69dd33becaa281099a791c6101d94cac053af0c36023f74f284a23",
-      "packaged_sha256": "ea7e75b4de69dd33becaa281099a791c6101d94cac053af0c36023f74f284a23",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "kernel-shims/pthread_internal.h": {
-      "qualified_sha256": "80c25132e9ca0863e502dde37b84def51e4775412751f3d42a6c037b19ca04a9",
-      "packaged_sha256": "80c25132e9ca0863e502dde37b84def51e4775412751f3d42a6c037b19ca04a9",
-      "derivation": "Byte-identical selected hosted support"
+      "qualified_sha256": "27809b9f8c1348c465e2260c930e78bdb696d6e60238cf0a13b277606eb03eb6"
     },
     "dynamic-leaf.c": {
-      "qualified_sha256": "fa45e97ee5eedab59590d91f7753e25d1dd4404a1f384a26ca29f598219411f3",
+      "derivation": "Byte-identical selected hosted support",
       "packaged_sha256": "fa45e97ee5eedab59590d91f7753e25d1dd4404a1f384a26ca29f598219411f3",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "support/sdkconfig.h": {
-      "qualified_sha256": "3b5a2ff1d2edf4228d793d4682608721f8ea3edf7c675ae64dd0766d8bbd2c8c",
-      "packaged_sha256": "3b5a2ff1d2edf4228d793d4682608721f8ea3edf7c675ae64dd0766d8bbd2c8c",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "support/rom/ets_sys.h": {
-      "qualified_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "packaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "support/reent.h": {
-      "qualified_sha256": "7884d5aa1f74bb67bb9dbd03f7b2e2c23bfd8ea2b26ee16fae00e4c283b67105",
-      "packaged_sha256": "7884d5aa1f74bb67bb9dbd03f7b2e2c23bfd8ea2b26ee16fae00e4c283b67105",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "support/freertos/FreeRTOS.h": {
-      "qualified_sha256": "333d86ab4a9b14f945135918ff168cd277c16105cec21284f37626d389fce7b8",
-      "packaged_sha256": "333d86ab4a9b14f945135918ff168cd277c16105cec21284f37626d389fce7b8",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "support/freertos/task.h": {
-      "qualified_sha256": "1a225517f238b6c26033cf059dca1a524469ee6a1b9eea76a36d4ca00a075017",
-      "packaged_sha256": "1a225517f238b6c26033cf059dca1a524469ee6a1b9eea76a36d4ca00a075017",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "shims/Logging.h": {
-      "qualified_sha256": "16affe76188011ceb3cc390631e8af9efd08a9565082c139eb7f624504e67179",
-      "packaged_sha256": "16affe76188011ceb3cc390631e8af9efd08a9565082c139eb7f624504e67179",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "shims/esp_log.h": {
-      "qualified_sha256": "bc648ec5d45dae9f39b0f9eb3862425a7f624a9264f8d15d59507556c15deb75",
-      "packaged_sha256": "bc648ec5d45dae9f39b0f9eb3862425a7f624a9264f8d15d59507556c15deb75",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "shims/esp_heap_caps.h": {
-      "qualified_sha256": "9f7b06d125c84996923e1c0bde1b2a80a02128c99fed0ff7ff7f133535b271c8",
-      "packaged_sha256": "9f7b06d125c84996923e1c0bde1b2a80a02128c99fed0ff7ff7f133535b271c8",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "test-reference/stubs/esp_dlfcn.h": {
-      "qualified_sha256": "b3dccf49f0d673560d6793af41f075117711c362c57bc2463db3fe49605a6395",
-      "packaged_sha256": "b3dccf49f0d673560d6793af41f075117711c362c57bc2463db3fe49605a6395",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "support/admission.c": {
-      "qualified_sha256": "52e2048a2c77459e6de945b8afb11b010579874f3cdefb0665938780d75cf394",
-      "packaged_sha256": "52e2048a2c77459e6de945b8afb11b010579874f3cdefb0665938780d75cf394",
-      "derivation": "Byte-identical selected hosted support"
-    },
-    "shims/module-native.h": {
-      "qualified_sha256": "bd1ad54d87d3ef5d4c7d9e29180ce67a602c105d01138c6ff6d3733fae3c1b5e",
-      "packaged_sha256": "6dd3dc0ea992a715365880ecb552322f58210bd7db927705db3efb7c6143350b",
-      "derivation": "One exact source-root include replaced by @REPO@ template"
+      "qualified_sha256": "fa45e97ee5eedab59590d91f7753e25d1dd4404a1f384a26ca29f598219411f3"
     },
     "exports.c": {
-      "qualified_sha256": "663131c727afca2121cd49258c1abb419852a6a3382c7900f83d18e507f76df9",
+      "derivation": "Byte-identical selected hosted support",
       "packaged_sha256": "663131c727afca2121cd49258c1abb419852a6a3382c7900f83d18e507f76df9",
-      "derivation": "Byte-identical selected hosted support"
+      "qualified_sha256": "663131c727afca2121cd49258c1abb419852a6a3382c7900f83d18e507f76df9"
+    },
+    "fixtures/kernel_bridge.cpp": {
+      "derivation": "Qualified hosted support with only terminal extra blank LF bytes removed",
+      "packaged_sha256": "5c619d48b3b66d98e455e9096c7241c75f96b612dd5900e9eaf213b8902644ce",
+      "qualified_sha256": "29050d0495b02780f7314cd3c68714e7df036a1e655eda7bd8273b1be1c0d559"
+    },
+    "fixtures/qualified_task_scope_fixture.cpp": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "8e7792613177cc077f9003f84440919794aeadd632663003db24ce67447ff023",
+      "qualified_sha256": "8e7792613177cc077f9003f84440919794aeadd632663003db24ce67447ff023"
+    },
+    "fixtures/stack_floor_cases.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "0e03b97da195109ac661b16c0f6ad53a482b55e7047708c0913236b757d859b3",
+      "qualified_sha256": "0e03b97da195109ac661b16c0f6ad53a482b55e7047708c0913236b757d859b3"
+    },
+    "kernel-shims/esp_attr.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "3169cbcf4229887cc322b6b16824155b526b32bb02ed1eeca14cd8da2c260388",
+      "qualified_sha256": "3169cbcf4229887cc322b6b16824155b526b32bb02ed1eeca14cd8da2c260388"
+    },
+    "kernel-shims/esp_err.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
+      "qualified_sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201"
+    },
+    "kernel-shims/esp_freertos_hooks.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "a165266d71cf7561c75fab42a5d61ae706867668d9346944c0770c2e27ac03d0",
+      "qualified_sha256": "a165266d71cf7561c75fab42a5d61ae706867668d9346944c0770c2e27ac03d0"
+    },
+    "kernel-shims/freertos/FreeRTOS.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "28660aad19fc7cc05c84c4677ddbae304c58e0bd8d9afe44361f5014ac138919",
+      "qualified_sha256": "28660aad19fc7cc05c84c4677ddbae304c58e0bd8d9afe44361f5014ac138919"
+    },
+    "kernel-shims/freertos/idf_additions.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "97a3e24017d67e087fc05169d41fa361b27bcdeb1b76e5fd50bc4772213a97d1",
+      "qualified_sha256": "97a3e24017d67e087fc05169d41fa361b27bcdeb1b76e5fd50bc4772213a97d1"
+    },
+    "kernel-shims/freertos/task.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "ea7e75b4de69dd33becaa281099a791c6101d94cac053af0c36023f74f284a23",
+      "qualified_sha256": "ea7e75b4de69dd33becaa281099a791c6101d94cac053af0c36023f74f284a23"
+    },
+    "kernel-shims/pthread_internal.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "80c25132e9ca0863e502dde37b84def51e4775412751f3d42a6c037b19ca04a9",
+      "qualified_sha256": "80c25132e9ca0863e502dde37b84def51e4775412751f3d42a6c037b19ca04a9"
+    },
+    "kernel-shims/sys/lock.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201",
+      "qualified_sha256": "b3adf106d95b8934f690943f2921308b90be5b766c4c8ba250c792de56400201"
     },
     "pthread_local_storage.c": {
-      "qualified_sha256": "838b9ea24df5493cc648248110bc5ce2e28c98bbad945ac7cfd70912977cc378",
+      "derivation": "Exact official SDK source, compiled in copied location with pinned kernel-shims/pthread_internal.h",
       "packaged_sha256": "838b9ea24df5493cc648248110bc5ce2e28c98bbad945ac7cfd70912977cc378",
-      "derivation": "Exact official SDK source, compiled in copied location with pinned kernel-shims/pthread_internal.h"
+      "qualified_sha256": "838b9ea24df5493cc648248110bc5ce2e28c98bbad945ac7cfd70912977cc378"
+    },
+    "shims/Logging.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "16affe76188011ceb3cc390631e8af9efd08a9565082c139eb7f624504e67179",
+      "qualified_sha256": "16affe76188011ceb3cc390631e8af9efd08a9565082c139eb7f624504e67179"
+    },
+    "shims/esp_heap_caps.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "9f7b06d125c84996923e1c0bde1b2a80a02128c99fed0ff7ff7f133535b271c8",
+      "qualified_sha256": "9f7b06d125c84996923e1c0bde1b2a80a02128c99fed0ff7ff7f133535b271c8"
+    },
+    "shims/esp_log.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "bc648ec5d45dae9f39b0f9eb3862425a7f624a9264f8d15d59507556c15deb75",
+      "qualified_sha256": "bc648ec5d45dae9f39b0f9eb3862425a7f624a9264f8d15d59507556c15deb75"
+    },
+    "shims/module-native.h": {
+      "derivation": "One exact source-root include replaced by @REPO@ template",
+      "packaged_sha256": "6dd3dc0ea992a715365880ecb552322f58210bd7db927705db3efb7c6143350b",
+      "qualified_sha256": "bd1ad54d87d3ef5d4c7d9e29180ce67a602c105d01138c6ff6d3733fae3c1b5e"
+    },
+    "support/admission.c": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "52e2048a2c77459e6de945b8afb11b010579874f3cdefb0665938780d75cf394",
+      "qualified_sha256": "52e2048a2c77459e6de945b8afb11b010579874f3cdefb0665938780d75cf394"
+    },
+    "support/freertos/FreeRTOS.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "333d86ab4a9b14f945135918ff168cd277c16105cec21284f37626d389fce7b8",
+      "qualified_sha256": "333d86ab4a9b14f945135918ff168cd277c16105cec21284f37626d389fce7b8"
+    },
+    "support/freertos/task.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "1a225517f238b6c26033cf059dca1a524469ee6a1b9eea76a36d4ca00a075017",
+      "qualified_sha256": "1a225517f238b6c26033cf059dca1a524469ee6a1b9eea76a36d4ca00a075017"
+    },
+    "support/reent.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "7884d5aa1f74bb67bb9dbd03f7b2e2c23bfd8ea2b26ee16fae00e4c283b67105",
+      "qualified_sha256": "7884d5aa1f74bb67bb9dbd03f7b2e2c23bfd8ea2b26ee16fae00e4c283b67105"
+    },
+    "support/rom/ets_sys.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "qualified_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "support/sdkconfig.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "3b5a2ff1d2edf4228d793d4682608721f8ea3edf7c675ae64dd0766d8bbd2c8c",
+      "qualified_sha256": "3b5a2ff1d2edf4228d793d4682608721f8ea3edf7c675ae64dd0766d8bbd2c8c"
+    },
+    "test-reference/stubs/esp_dlfcn.h": {
+      "derivation": "Byte-identical selected hosted support",
+      "packaged_sha256": "b3dccf49f0d673560d6793af41f075117711c362c57bc2463db3fe49605a6395",
+      "qualified_sha256": "b3dccf49f0d673560d6793af41f075117711c362c57bc2463db3fe49605a6395"
     }
   },
-  "pthread": {
-    "path": "support/pthread_local_storage.c",
-    "upstream_repository": "https://github.com/espressif/esp-idf",
-    "commit": "fff9895c82d744c7237be8847347bdd1b07c6643",
-    "upstream_path": "components/pthread/pthread_local_storage.c",
-    "git_blob": "80b562edb533bf41ad2029df3fdc5437de49987a",
-    "sha256": "838b9ea24df5493cc648248110bc5ce2e28c98bbad945ac7cfd70912977cc378",
-    "license": "Apache-2.0; original copyright and SPDX header retained"
-  },
-  "scope": [
-    "Hosted ELF/kernel/physical-retirement substitutes are explicit",
-    "Generated exports and16 Darwin aliases are model-only",
-    "Actual Graph/Module/resident worker code, no Runtime/DeviceProviderExecutorV2 startup/close caller",
-    "ABI3/4 remain unsupported",
-    "No target execution or hardware/physical qualification"
-  ],
-  "repository_native_qualification": {
-    "operation": "native-core-v5-portable-001",
-    "result_sha256": "4a379aa44eb106411746f469f2fd53b95122ce7e7122919ec3b691061f52353a",
-    "report_sha256": "621c7dc496e90d21377f3ce3b70d8f51a5079d7807130d0d54ec06ed6916f2e0",
+  "normalized_qualification": {
     "cases": 20,
     "fresh_objects": 58,
-    "strict_binaries": 8,
     "modes": [
       "normal",
       "ubsan"
     ],
-    "runner_sha256": "16ad0f696ea3f9c1ae0a587bec2105499f1f64f472a0bbb853928e009a32ce60",
+    "operation": "native-core-v5-clean-001",
+    "result_sha256": "829a83cf7549e2ea2f5be6e9dcdf36b7f0115b17a1dbad478ceaf400ec29336c",
+    "strict_binaries": 8,
     "target_execution": false
   },
   "post_run_changes": [
@@ -170,5 +173,39 @@
     "Documentation shell line-continuations corrected",
     "CI label macos-14 changed to macos-15; CI remains unexecuted",
     "Source version 0.4.16 to 0.4.17; no other platform options"
-  ]
+  ],
+  "pthread": {
+    "commit": "fff9895c82d744c7237be8847347bdd1b07c6643",
+    "git_blob": "80b562edb533bf41ad2029df3fdc5437de49987a",
+    "license": "Apache-2.0; original copyright and SPDX header retained",
+    "path": "support/pthread_local_storage.c",
+    "sha256": "838b9ea24df5493cc648248110bc5ce2e28c98bbad945ac7cfd70912977cc378",
+    "upstream_path": "components/pthread/pthread_local_storage.c",
+    "upstream_repository": "https://github.com/espressif/esp-idf"
+  },
+  "qualified_report_sha256": "fcb2c0f7223680a5c207cfd680d72f3010b669fcd9affa2c6a57110740dde259",
+  "qualified_result_sha256": "826c4a07d92022df668d36f8fc891c357dabcf8cd0352d02ab1e4a2c270d722c",
+  "repository_native_qualification": {
+    "cases": 20,
+    "fresh_objects": 58,
+    "modes": [
+      "normal",
+      "ubsan"
+    ],
+    "operation": "native-core-v5-portable-001",
+    "report_sha256": "621c7dc496e90d21377f3ce3b70d8f51a5079d7807130d0d54ec06ed6916f2e0",
+    "result_sha256": "4a379aa44eb106411746f469f2fd53b95122ce7e7122919ec3b691061f52353a",
+    "runner_sha256": "16ad0f696ea3f9c1ae0a587bec2105499f1f64f472a0bbb853928e009a32ce60",
+    "strict_binaries": 8,
+    "target_execution": false
+  },
+  "schema": 1,
+  "scope": [
+    "Hosted ELF/kernel/physical-retirement substitutes are explicit",
+    "Generated exports and16 Darwin aliases are model-only",
+    "Actual Graph/Module/resident worker code, no Runtime/DeviceProviderExecutorV2 startup/close caller",
+    "ABI3/4 remain unsupported",
+    "No target execution or hardware/physical qualification"
+  ],
+  "status": "EOF-normalized repository-native Darwin successor passed 20; prior portable001 and lifecycle003 remain separate snapshots"
 }

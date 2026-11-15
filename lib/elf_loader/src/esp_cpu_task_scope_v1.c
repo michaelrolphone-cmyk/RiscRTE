@@ -572,5 +572,3 @@ esp_cpu_retirement_result_t esp_cpu_task_scope_resolve_v1(
     portEXIT_CRITICAL(&scope_lock);
     return rc;
 }
-
-

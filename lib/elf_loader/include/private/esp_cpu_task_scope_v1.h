@@ -98,5 +98,3 @@ esp_cpu_retirement_result_t esp_cpu_task_scope_resolve_v1(
 #ifdef __cplusplus
 }
 #endif
-
-

@@ -14,4 +14,3 @@ extern "C" unsigned integration_delete_count(){return deletes.load();}
 extern "C" bool integration_tasks_done(){std::lock_guard<std::mutex> g(tasks_mutex);return !tasks.empty()&&std::all_of(tasks.begin(),tasks.end(),[](FakeTask*t){return t->done.load();});}
 extern "C" void integration_finish_tasks(){finish();}
 extern "C" void integration_hold_resident_gate(bool held){hold_before_private=held;}
-

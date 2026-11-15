@@ -56,4 +56,3 @@ RISC_OS_CPU_SYMBOL(xQueueSemaphoreTake)
 RISC_OS_CPU_SYMBOL(xTaskGetCoreID)
 RISC_OS_CPU_SYMBOL(xTaskGetCurrentTaskHandle)
 RISC_OS_CPU_SYMBOL(xTaskGetTickCount)
-
